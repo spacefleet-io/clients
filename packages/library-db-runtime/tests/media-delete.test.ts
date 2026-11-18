@@ -102,8 +102,8 @@ describe("library media deletion", () => {
     const db = await LibraryDb.openLocal("token", "key");
     db.setSyncEnabled(false);
 
-    console.info(`[media-delete:jobs] adding TMDB tv "Delete Queue Show" (id=303)`);
-    const mediaId = await db.addMediaFromTmdb({
+    console.info(`[media-delete:jobs] adding catalog tv "Delete Queue Show" (id=303)`);
+    const mediaId = await db.addMediaFromCatalog({
       id: 303,
       type: "tv",
       title: "Delete Queue Show",
@@ -192,8 +192,8 @@ describe("library media deletion", () => {
     const db = await LibraryDb.openLocal("token", "key");
     db.setSyncEnabled(false);
 
-    console.info(`[media-delete:chunks] adding TMDB movie "Chunk Cleanup Movie" (id=500)`);
-    const mediaId = await db.addMediaFromTmdb({
+    console.info(`[media-delete:chunks] adding catalog movie "Chunk Cleanup Movie" (id=500)`);
+    const mediaId = await db.addMediaFromCatalog({
       id: 500,
       type: "movie",
       title: "Chunk Cleanup Movie",

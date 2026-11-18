@@ -30,8 +30,7 @@ import type { MediaDetails } from "@/lib/libraryDb";
 const makeMovieDetails = (overrides: Partial<MediaDetails> = {}): MediaDetails => ({
   id: "movie-1",
   type: "movie",
-  tmdbId: 1,
-  externalIds: null,
+  catalogId: 1,
   title: "Test Movie",
   originalTitle: null,
   originalLanguage: null,
@@ -72,8 +71,7 @@ const makeMovieDetails = (overrides: Partial<MediaDetails> = {}): MediaDetails =
 const makeTvDetails = (overrides: Partial<MediaDetails> = {}): MediaDetails => ({
   id: "show-1",
   type: "tv",
-  tmdbId: 100,
-  externalIds: null,
+  catalogId: 100,
   title: "Test Show",
   originalTitle: null,
   originalLanguage: null,

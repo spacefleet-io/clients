@@ -62,7 +62,14 @@ vi.mock("@space/shared/api", async () => ({
 vi.mock("../src/state/session", () => ({ useSession: () => ({ signIn: async () => undefined, signInNotice: null }) }));
 vi.mock("../src/lib/i18n", () => ({ setParrotLanguage: async () => undefined }));
 vi.mock("../src/brand", () => ({ PARROT_MASCOT: 1 }));
-vi.mock("../src/screens/PairingPanel", () => ({ PairingPanel: "PairingPanel" }));
+// The shared "Sign in with another device" page (UX-PHONE-10) is covered by packages/mobile-shell/tests/mobile-pair-sign-in.test.tsx.
+vi.mock("@space/mobile-shell/pair-sign-in", () => ({ MobilePairSignIn: "MobilePairSignIn" }));
+vi.mock("@space/mobile-shell/pairing", () => ({ completePairing: vi.fn() }));
+vi.mock("../src/setup/pairing", () => ({
+  createParrotCompletionDeps: vi.fn(),
+  createParrotPairingClient: vi.fn(),
+  PARROT_PAIRING_LOG_TAG: "parrot.pairing",
+}));
 
 import { ApiError } from "@space/shared/api";
 import { LoginScreen } from "../src/screens/LoginScreen";

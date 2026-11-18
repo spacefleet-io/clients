@@ -217,7 +217,7 @@ const queueFile = async (module: BadgerModule, userId: string, jobId: string) =>
             media: {
               id: `media-${jobId}`,
               type: "movie",
-              tmdbId: 9001,
+              catalogId: 9001,
               title: "Cancel Leak Movie",
               year: "2026",
               posterPath: null,

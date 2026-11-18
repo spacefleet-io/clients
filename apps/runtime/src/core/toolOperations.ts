@@ -51,7 +51,7 @@ const rows = (value: unknown): Row[] => (Array.isArray(value) ? (value as Row[])
 const MEDIA_FIELDS = [
   "id",
   "type",
-  "tmdbId",
+  "catalogId",
   "externalIds",
   "title",
   "originalTitle",
@@ -76,7 +76,7 @@ const DOWNLOAD_FIELDS = ["id", "mediaId", "fileId", "formatId", "quality", "cont
 /** `getMediaDetails` without storage: no object keys, chunk lists, init keys or format internals. */
 const projectMediaDetails = (details: Row): Row => ({
   ...pick(details, MEDIA_FIELDS),
-  cast: rows(details.cast).map((member) => pick(member, ["name", "role", "tmdbId"])),
+  cast: rows(details.cast).map((member) => pick(member, ["name", "role", "catalogId"])),
   playlistIds: Array.isArray(details.playlistIds) ? details.playlistIds : [],
   seasons: rows(details.seasons).map((season) =>
     pick(season, ["id", "seasonNumber", "name", "overview", "episodeCount", "airDate"])

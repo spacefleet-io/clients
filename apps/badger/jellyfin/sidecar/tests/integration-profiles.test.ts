@@ -108,8 +108,7 @@ const installFakeApi = (overrides: Partial<FakeApi> = {}) => {
 const row = (id: string, type: "movie" | "tv", progressPct = 0): MediaRow => ({
   id,
   type,
-  tmdbId: null,
-  externalIds: null,
+  catalogId: null,
   title: id,
   originalTitle: null,
   originalLanguage: null,

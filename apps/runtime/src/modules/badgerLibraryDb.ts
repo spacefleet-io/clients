@@ -653,7 +653,7 @@ export class BadgerLibraryDbService {
   }
 
   /**
-   * Persist TheIntroDB-fetched per-episode markers in `media_skip_markers`.
+   * Persist the service-fetched per-episode markers in `media_skip_markers`.
    * Idempotent — `replaceSkipMarkers` deletes existing rows for the
    * (mediaId, episodeId) scope and reinserts the supplied set.
    *

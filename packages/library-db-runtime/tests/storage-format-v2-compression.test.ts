@@ -252,7 +252,7 @@ const readStoredSnapshotCiphertext = async () => {
 const publishedBootstrap = async () => {
   const db = await LibraryDb.open(TOKEN, KEY);
   db.setSyncEnabled(true);
-  const mediaId = await db.addMediaFromTmdb(MOVIE);
+  const mediaId = await db.addMediaFromCatalog(MOVIE);
   await waitFor("seed ops flushed", () => drained(db));
   await db.flushPending();
   return { db, mediaId };

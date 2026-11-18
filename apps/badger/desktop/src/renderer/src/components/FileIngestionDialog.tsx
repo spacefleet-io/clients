@@ -30,20 +30,21 @@ import { useAuth } from "@/auth";
 import { useClientConfig } from "@/lib/useClientConfig";
 import { useDeviceFallbackCopy } from "@/lib/deviceTranscode";
 import { applyFallbackCopyToOutputs } from "../../../shared/transcodeDefault";
-import { getTmdbDetailsForLibrary, getTmdbTrailersForLanguages, localizeSearchResultForLibrary, searchTmdb } from "@/lib/metadata";
+import { getTitleDetailsForLibrary, getTitleTrailersForLanguages, localizeSearchResultForLibrary, searchTitles } from "@/lib/metadata";
 import { withMetadataRetry, withMetadataTimeout } from "@/lib/metadataRetry";
 import { parseFilename } from "@/lib/parseMediaFilename";
 import { searchFailureText } from "@/lib/metadataSearchError";
 import { onMetadataTicketsAvailable } from "@/lib/metadataTickets";
 import ImportCandidateImage from "@/components/ImportCandidateImage";
-import { TmdbSearchResult, TmdbTrailer, getAccountStorage, getMetadataSkipMarkers } from "@/api";
+import { TitleSearchResult, Trailer, getAccountStorage, getMetadataSkipMarkers } from "@/api";
 import {
   EXTERNAL_SKIP_MARKER_SHOW_KIND,
   type ExternalSkipMarkerCoverageEntry,
   type ShowSkipMarker,
   type ShowSkipCachePayload,
   createShowSkipCachePayload,
-  isShowSkipCachePayload,
+  parseShowSkipCachePayload,
+  SKIP_MARKER_PROVIDER,
   showEpisodeKey,
 } from "../../../shared/skipMarkerCache";
 import { rendererLogger } from "@/logger";
@@ -121,7 +122,7 @@ type Candidate = {
   size: number;
   kind: "video" | "subtitle";
   parsed: ReturnType<typeof parseFilename>;
-  match: TmdbSearchResult | null;
+  match: TitleSearchResult | null;
   probe?: {
     video: { codec: string | null; width: number | null; height: number | null } | null;
     audio: { count: number; languages: string[] };
@@ -142,7 +143,7 @@ type Candidate = {
   selected?: boolean;
   subtitleDraft?: { language: string; label: string };
   skipMarkerData?: {
-    showTmdbId: number;
+    showCatalogId: number;
     coverage: ExternalSkipMarkerCoverageEntry[];
     markersByEpisode: Record<string, ShowSkipMarker[]>;
     status: "fetching" | "ready" | "unavailable";
@@ -167,7 +168,7 @@ type EpisodeGroup = FileIngestionEpisodeGroup<
 
 type MergedGroup = FileIngestionMergedGroup<
   Candidate,
-  TmdbSearchResult,
+  TitleSearchResult,
   {
     audioTracks: Array<TrackKey & { refs: Array<{ candidateId: string; index: number }> }>;
     subtitleTracks: Array<TrackKey & { refs: Array<{ candidateId: string; index: number }> }>;
@@ -190,7 +191,7 @@ type E2eSeedCandidate = {
   size?: number;
   kind?: "video" | "subtitle";
   parsed?: ReturnType<typeof parseFilename>;
-  match?: TmdbSearchResult | null;
+  match?: TitleSearchResult | null;
   probe?: Candidate["probe"];
   probeError?: string;
   status?: Candidate["status"];
@@ -225,7 +226,7 @@ export default function FileIngestionDialog({ paths: initialPaths, pathsNonce, o
     getMediaDetails,
     fetchMediaDetails,
     getSharedSetting,
-    addMediaFromTmdb,
+    addMediaFromCatalog,
     addSubtitleTrackWithObject,
     listSkipAnalysis,
     upsertSkipAnalysis,
@@ -241,7 +242,7 @@ export default function FileIngestionDialog({ paths: initialPaths, pathsNonce, o
   const [adding, setAdding] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
   const [manualSearchQuery, setManualSearchQuery] = useState("");
-  const [manualSearchResults, setManualSearchResults] = useState<TmdbSearchResult[]>([]);
+  const [manualSearchResults, setManualSearchResults] = useState<TitleSearchResult[]>([]);
   const [searchingManual, setSearchingManual] = useState(false);
   const [manualSearchType, setManualSearchType] = useState<"movie" | "tv">("movie");
   const [manualSearchPage, setManualSearchPage] = useState(1);
@@ -249,7 +250,7 @@ export default function FileIngestionDialog({ paths: initialPaths, pathsNonce, o
   const [manualSearchLoadingMore, setManualSearchLoadingMore] = useState(false);
   const [manualSearchOpen, setManualSearchOpen] = useState(false);
   const [pendingFocusGroupKey, setPendingFocusGroupKey] = useState<string | null>(null);
-  const [trailerCache, setTrailerCache] = useState<Record<string, { status: "idle" | "loading" | "ready" | "empty" | "error"; trailers: TmdbTrailer[] }>>({});
+  const [trailerCache, setTrailerCache] = useState<Record<string, { status: "idle" | "loading" | "ready" | "empty" | "error"; trailers: Trailer[] }>>({});
   const [openTrailerId, setOpenTrailerId] = useState<string | null>(null);
   const [activeTrailerKey, setActiveTrailerKey] = useState<string | null>(null);
   const [isDraggingLocal, setIsDraggingLocal] = useState(false);
@@ -260,7 +261,7 @@ export default function FileIngestionDialog({ paths: initialPaths, pathsNonce, o
   const [showAddBlocker, setShowAddBlocker] = useState(false);
   const [dummyIngestOpen, setDummyIngestOpen] = useState(false);
   const [dummyIngestQuery, setDummyIngestQuery] = useState("");
-  const [dummyIngestResults, setDummyIngestResults] = useState<TmdbSearchResult[]>([]);
+  const [dummyIngestResults, setDummyIngestResults] = useState<TitleSearchResult[]>([]);
   const [dummyIngestLoading, setDummyIngestLoading] = useState(false);
   const [dummyIngestError, setDummyIngestError] = useState<string | null>(null);
   const [dummyIngestType, setDummyIngestType] = useState<"movie" | "tv">("movie");
@@ -345,10 +346,10 @@ export default function FileIngestionDialog({ paths: initialPaths, pathsNonce, o
   }, [candidates]);
 
   const applySkipDataToShow = useCallback(
-    (showTmdbId: number, data: Candidate["skipMarkerData"]) => {
+    (showCatalogId: number, data: Candidate["skipMarkerData"]) => {
       setCandidates((prev) =>
         prev.map((c) =>
-          c.match?.type === "tv" && c.match.id === showTmdbId ? { ...c, skipMarkerData: data } : c
+          c.match?.type === "tv" && c.match.id === showCatalogId ? { ...c, skipMarkerData: data } : c
         )
       );
     },
@@ -356,30 +357,30 @@ export default function FileIngestionDialog({ paths: initialPaths, pathsNonce, o
   );
 
   const resolveShowSkipData = useCallback(
-    (requestedShowTmdbId: number): Promise<Candidate["skipMarkerData"]> => {
-    const run = (showTmdbId: number): Promise<Candidate["skipMarkerData"]> => {
-      const existing = skipDataFetchRef.current.get(showTmdbId);
+    (requestedShowCatalogId: number): Promise<Candidate["skipMarkerData"]> => {
+    const run = (showCatalogId: number): Promise<Candidate["skipMarkerData"]> => {
+      const existing = skipDataFetchRef.current.get(showCatalogId);
       if (existing) {
         // A fetch for this show is in flight and enumerated the candidates
         // before this call's episode was matched: re-run once it settles so
         // that episode is fetched too.
-        skipRepassRef.current.add(showTmdbId);
+        skipRepassRef.current.add(showCatalogId);
         // eslint-disable-next-line no-console -- intentional [skip-markers] diagnostic (keep-diagnostic-logs)
-        console.info("[skip-markers] fetch in flight, re-pass queued", { showTmdbId });
+        console.info("[skip-markers] fetch in flight, re-pass queued", { showCatalogId });
         return existing;
       }
-      let session = skipSessionRef.current.get(showTmdbId);
+      let session = skipSessionRef.current.get(showCatalogId);
       if (!session) {
         session = { attempted: new Set(), coverage: [], markersByEpisode: {}, fetchedAt: null };
-        skipSessionRef.current.set(showTmdbId, session);
+        skipSessionRef.current.set(showCatalogId, session);
       }
       const sessionData = session;
 
       const promise = (async (): Promise<Candidate["skipMarkerData"]> => {
         // eslint-disable-next-line no-console -- intentional [skip-markers] diagnostic (keep-diagnostic-logs)
-        console.info("[skip-markers] resolveShowSkipData start", { showTmdbId });
-        applySkipDataToShow(showTmdbId, {
-          showTmdbId,
+        console.info("[skip-markers] resolveShowSkipData start", { showCatalogId });
+        applySkipDataToShow(showCatalogId, {
+          showCatalogId,
           coverage: [],
           markersByEpisode: {},
           status: "fetching",
@@ -389,16 +390,17 @@ export default function FileIngestionDialog({ paths: initialPaths, pathsNonce, o
 
         // 1) Load existing cache if the show is already in the local library.
         const showMedia = mediaRef.current?.find(
-          (item) => item.type === "tv" && Number(item.tmdbId) === showTmdbId
+          (item) => item.type === "tv" && Number(item.catalogId) === showCatalogId
         );
         let cached: ShowSkipCachePayload | null = null;
         if (showMedia) {
           try {
             const rows = await listSkipAnalysis(showMedia.id, EXTERNAL_SKIP_MARKER_SHOW_KIND);
             const fresh = rows
-              .filter((row) => isShowSkipCachePayload(row.payload))
+              .map((row) => ({ updatedAt: row.updatedAt, payload: parseShowSkipCachePayload(row.payload) }))
+              .filter((row) => row.payload !== null)
               .sort((a, b) => (b.updatedAt ?? "").localeCompare(a.updatedAt ?? ""))[0];
-            if (fresh && isShowSkipCachePayload(fresh.payload)) {
+            if (fresh?.payload) {
               const cacheAgeMs = Date.now() - new Date(fresh.payload.fetchedAt).getTime();
               if (cacheAgeMs < 30 * 24 * 60 * 60 * 1000) {
                 cached = fresh.payload;
@@ -415,7 +417,7 @@ export default function FileIngestionDialog({ paths: initialPaths, pathsNonce, o
             sessionData.coverage.map((c) => showEpisodeKey(c.seasonNumber, c.episodeNumber)),
           );
           cached = createShowSkipCachePayload({
-            showTmdbId,
+            showCatalogId,
             fetchedAt: sessionData.fetchedAt ?? cached?.fetchedAt ?? new Date().toISOString(),
             coverage: [
               ...(cached?.coverage ?? []).filter(
@@ -449,7 +451,7 @@ export default function FileIngestionDialog({ paths: initialPaths, pathsNonce, o
             candidateDebug.push({ name: c.name, matchType: c.match?.type, skipped: "not tv match", season: c.parsed?.season, episode: c.parsed?.episode });
             continue;
           }
-          if (c.match.id !== showTmdbId) {
+          if (c.match.id !== showCatalogId) {
             candidateDebug.push({ name: c.name, matchId: c.match.id, skipped: "different show", season: c.parsed?.season, episode: c.parsed?.episode });
             continue;
           }
@@ -471,21 +473,21 @@ export default function FileIngestionDialog({ paths: initialPaths, pathsNonce, o
         }
         // eslint-disable-next-line no-console -- intentional [skip-markers] diagnostic
         console.info("[skip-markers] candidates inspected", {
-          showTmdbId,
+          showCatalogId,
           totalCandidates: candidatesRef.current.length,
           toFetchCount: toFetch.length,
           alreadyCachedCount: attemptedKeys.size,
           candidates: candidateDebug,
         });
 
-        // 3) Fetch markers for any new episodes via TheIntroDB.
+        // 3) Fetch markers for any new episodes via the metadata service.
         const newMarkers: Record<string, ShowSkipMarker[]> = {};
         const newCoverage: ExternalSkipMarkerCoverageEntry[] = [];
         for (const target of toFetch) {
           try {
             // eslint-disable-next-line no-console -- intentional [skip-markers] diagnostic
             console.info("[skip-markers] fetching", {
-              showTmdbId,
+              showCatalogId,
               season: target.season,
               episode: target.episode,
               durationSeconds: target.durationSeconds,
@@ -493,14 +495,14 @@ export default function FileIngestionDialog({ paths: initialPaths, pathsNonce, o
             const result = await getMetadataSkipMarkers(
               token ?? "",
               "tv",
-              showTmdbId,
+              showCatalogId,
               target.season,
               target.episode,
               target.durationSeconds,
             );
             // eslint-disable-next-line no-console -- intentional [skip-markers] diagnostic
             console.info("[skip-markers] response", {
-              showTmdbId,
+              showCatalogId,
               season: target.season,
               episode: target.episode,
               markerCount: result?.markers?.length ?? 0,
@@ -536,7 +538,7 @@ export default function FileIngestionDialog({ paths: initialPaths, pathsNonce, o
             // resolve attempt can retry it.
             // eslint-disable-next-line no-console -- intentional [skip-markers] diagnostic
             console.error("[skip-markers] fetch failed", {
-              showTmdbId,
+              showCatalogId,
               season: target.season,
               episode: target.episode,
               error: err instanceof Error ? err.message : String(err),
@@ -570,7 +572,7 @@ export default function FileIngestionDialog({ paths: initialPaths, pathsNonce, o
         if (showMedia && toFetch.length > 0) {
           try {
             const payload = createShowSkipCachePayload({
-              showTmdbId,
+              showCatalogId,
               fetchedAt,
               coverage: mergedCoverage,
               markersByEpisode: mergedMarkers,
@@ -584,35 +586,35 @@ export default function FileIngestionDialog({ paths: initialPaths, pathsNonce, o
         // 6) Decide modal display status.
         const hasAny = Object.keys(mergedMarkers).length > 0;
         const data: Candidate["skipMarkerData"] = {
-          showTmdbId,
+          showCatalogId,
           coverage: mergedCoverage,
           markersByEpisode: mergedMarkers,
           status: hasAny ? "ready" : "unavailable",
           cacheHit: cached !== null && toFetch.length === 0,
           fetchedAt,
         };
-        applySkipDataToShow(showTmdbId, data);
+        applySkipDataToShow(showCatalogId, data);
         return data;
       })();
 
-      skipDataFetchRef.current.set(showTmdbId, promise);
+      skipDataFetchRef.current.set(showCatalogId, promise);
       // Clear the dedupe slot once this fetch completes so future calls for
       // the same show (e.g., after the user adds another episode) re-run and
       // pick up newly-needed episodes from candidatesRef. A call that arrived
       // while this fetch was in flight re-runs it now.
       void promise.finally(() => {
-        if (skipDataFetchRef.current.get(showTmdbId) === promise) {
-          skipDataFetchRef.current.delete(showTmdbId);
+        if (skipDataFetchRef.current.get(showCatalogId) === promise) {
+          skipDataFetchRef.current.delete(showCatalogId);
         }
-        if (skipRepassRef.current.delete(showTmdbId)) {
+        if (skipRepassRef.current.delete(showCatalogId)) {
           // eslint-disable-next-line no-console -- intentional [skip-markers] diagnostic
-          console.info("[skip-markers] running queued re-pass", { showTmdbId });
-          void run(showTmdbId);
+          console.info("[skip-markers] running queued re-pass", { showCatalogId });
+          void run(showCatalogId);
         }
       });
       return promise;
     };
-    return run(requestedShowTmdbId);
+    return run(requestedShowCatalogId);
     },
     [applySkipDataToShow, listSkipAnalysis, token, upsertSkipAnalysis],
   );
@@ -626,22 +628,22 @@ export default function FileIngestionDialog({ paths: initialPaths, pathsNonce, o
     const needs = new Map<number, string[]>();
     for (const c of candidates) {
       if (c.kind !== "video" || c.match?.type !== "tv" || !c.match.id) continue;
-      const showTmdbId = c.match.id;
+      const showCatalogId = c.match.id;
       const season = typeof c.parsed?.season === "number" ? c.parsed.season : null;
       const episode = typeof c.parsed?.episode === "number" ? c.parsed.episode : null;
-      const attempted = skipSessionRef.current.get(showTmdbId)?.attempted;
+      const attempted = skipSessionRef.current.get(showCatalogId)?.attempted;
       const key = season !== null && episode !== null ? showEpisodeKey(season, episode) : null;
       const unfetched = key !== null && !attempted?.has(key);
-      const notApplied = c.skipMarkerData?.showTmdbId !== showTmdbId;
+      const notApplied = c.skipMarkerData?.showCatalogId !== showCatalogId;
       if (!unfetched && !notApplied) continue;
-      const reasons = needs.get(showTmdbId) ?? [];
+      const reasons = needs.get(showCatalogId) ?? [];
       reasons.push(`${key ?? c.name}:${unfetched ? "unfetched" : "not-applied"}`);
-      needs.set(showTmdbId, reasons);
+      needs.set(showCatalogId, reasons);
     }
-    for (const [showTmdbId, reasons] of needs) {
+    for (const [showCatalogId, reasons] of needs) {
       // eslint-disable-next-line no-console -- intentional [skip-markers] diagnostic
-      console.info("[skip-markers] episodes need markers", { showTmdbId, reasons });
-      void resolveShowSkipData(showTmdbId);
+      console.info("[skip-markers] episodes need markers", { showCatalogId, reasons });
+      void resolveShowSkipData(showCatalogId);
     }
   }, [candidates, resolveShowSkipData]);
 
@@ -691,24 +693,24 @@ export default function FileIngestionDialog({ paths: initialPaths, pathsNonce, o
   };
 
   const waitForQueuedTitlesVisible = async (
-    tmdbKeys: Set<string>,
+    catalogKeys: Set<string>,
     timeoutMs = 2200,
     mode: "any" | "all" = "any"
   ) => {
-    if (tmdbKeys.size === 0) return;
+    if (catalogKeys.size === 0) return;
     const start = Date.now();
     const hasReady = () => {
       const current = mediaRef.current;
       if (!current || current.length === 0) return false;
       const found = new Set(
         current
-          .filter((item) => Number.isFinite(Number(item.tmdbId)))
-          .map((item) => `${item.type}:${Number(item.tmdbId)}`)
+          .filter((item) => Number.isFinite(Number(item.catalogId)))
+          .map((item) => `${item.type}:${Number(item.catalogId)}`)
       );
       if (mode === "all") {
-        return Array.from(tmdbKeys).every((key) => found.has(key));
+        return Array.from(catalogKeys).every((key) => found.has(key));
       }
-      return Array.from(tmdbKeys).some((key) => found.has(key));
+      return Array.from(catalogKeys).some((key) => found.has(key));
     };
     if (hasReady()) return;
     while (Date.now() - start < timeoutMs) {
@@ -1011,19 +1013,19 @@ export default function FileIngestionDialog({ paths: initialPaths, pathsNonce, o
     return `https://www.youtube.com/embed/${key}`;
   };
 
-  const pickPreferredTrailersByLanguage = (trailers: TmdbTrailer[]) => {
-    const grouped = new Map<string, TmdbTrailer[]>();
+  const pickPreferredTrailersByLanguage = (trailers: Trailer[]) => {
+    const grouped = new Map<string, Trailer[]>();
     trailers.forEach((trailer) => {
       const language = trailer.language || "und";
       const list = grouped.get(language) ?? [];
       list.push(trailer);
       grouped.set(language, list);
     });
-    const pickBest = (items: TmdbTrailer[]) => {
+    const pickBest = (items: Trailer[]) => {
       const sorted = [...items].sort((a, b) => (b.size ?? 0) - (a.size ?? 0));
       return sorted[0];
     };
-    const selected: TmdbTrailer[] = [];
+    const selected: Trailer[] = [];
     grouped.forEach((items) => {
       const official = items.filter((item) => item.official);
       if (official.length > 0) {
@@ -1037,8 +1039,8 @@ export default function FileIngestionDialog({ paths: initialPaths, pathsNonce, o
     return selected;
   };
 
-  const getExistingQualities = (match: TmdbSearchResult, season: number | null, episode: number | null) => {
-    const existingMedia = media.find((item) => item.tmdbId === match.id && item.type === match.type) ?? null;
+  const getExistingQualities = (match: TitleSearchResult, season: number | null, episode: number | null) => {
+    const existingMedia = media.find((item) => item.catalogId === match.id && item.type === match.type) ?? null;
     if (!existingMedia) return new Set<string>();
     const details = getMediaDetails(existingMedia.id);
     if (!details) return new Set<string>();
@@ -1107,16 +1109,16 @@ export default function FileIngestionDialog({ paths: initialPaths, pathsNonce, o
   );
   const searchingCandidates = useMemo(() => candidates.filter((c) => isLookupInProgress(c)), [candidates]);
 
-  const existingTmdbMap = useMemo(() => {
+  const existingCatalogMap = useMemo(() => {
     const map = new Map<string, MediaRow>();
     media.forEach((item) => {
-      if (typeof item.tmdbId !== "number") return;
-      map.set(`${item.type}:${item.tmdbId}`, item);
+      if (typeof item.catalogId !== "number") return;
+      map.set(`${item.type}:${item.catalogId}`, item);
     });
     return map;
   }, [media]);
 
-  const stagedTmdbKeys = useMemo(() => {
+  const stagedCatalogKeys = useMemo(() => {
     const keys = new Set<string>();
     candidates.forEach((candidate) => {
       if (!candidate.match) return;
@@ -1136,7 +1138,7 @@ export default function FileIngestionDialog({ paths: initialPaths, pathsNonce, o
       buildFileIngestionVideoDecisionItems({
         groups: mergedGroups,
         hasExistingFiles: (match) =>
-          Boolean(media.find((item) => item.tmdbId === match.id && item.type === match.type)?.hasFiles),
+          Boolean(media.find((item) => item.catalogId === match.id && item.type === match.type)?.hasFiles),
         getExistingQualities,
         selectVariants: (variants) => buildSelectedVideoVariants(variants, clientConfig.enableCodecSelection),
         movieLabel: t("ingestion.ui.movie"),
@@ -1203,7 +1205,7 @@ export default function FileIngestionDialog({ paths: initialPaths, pathsNonce, o
       countFileIngestionAutoIgnoredVideoOverlaps({
         groups: mergedGroups,
         hasExistingFiles: (match) =>
-          Boolean(media.find((item) => item.tmdbId === match.id && item.type === match.type)?.hasFiles),
+          Boolean(media.find((item) => item.catalogId === match.id && item.type === match.type)?.hasFiles),
         getExistingQualities,
         selectVariants: (variants) => buildSelectedVideoVariants(variants, clientConfig.enableCodecSelection),
       }),
@@ -1432,18 +1434,18 @@ export default function FileIngestionDialog({ paths: initialPaths, pathsNonce, o
 
       // A drop of many titles reaches the service's per-connection limit: wait it out rather than fail the title.
       // Each attempt has a deadline, so a lookup that never answers ends in a final state (INGS-IDENT-02).
-      const results = await withMetadataRetry(() => withMetadataTimeout(() => searchTmdb(token, type, query)));
+      const results = await withMetadataRetry(() => withMetadataTimeout(() => searchTitles(token, type, query)));
       // Staged matches are read from the latest state: on a retry other files of the drop may have matched since.
-      const staged = new Set(stagedTmdbKeys);
+      const staged = new Set(stagedCatalogKeys);
       for (const c of candidatesRef.current) if (c.match) staged.add(`${c.match.type}:${c.match.id}`);
       const bestRaw =
         candidate.kind === "subtitle"
-          ? results.results.find((entry: TmdbSearchResult) => {
+          ? results.results.find((entry: TitleSearchResult) => {
               const key = `${entry.type}:${entry.id}`;
-              return existingTmdbMap.has(key) || staged.has(key);
+              return existingCatalogMap.has(key) || staged.has(key);
             }) ?? null
           : results.results[0] ?? null;
-      // Search hits TMDB with language=en-US, so a French film returns the
+      // Search hits the catalog with language=en-US, so a French film returns the
       // English title/poster/overview. For library-resolved display, swap
       // those fields to the resolved-language variant before showing the
       // match in the preview pane. A found match is never dropped: if localizing fails or passes its deadline, the
@@ -1496,7 +1498,7 @@ export default function FileIngestionDialog({ paths: initialPaths, pathsNonce, o
   // auto-link it even when the media isn't in the existing library yet.
   const linkStagedSubtitles = () => {
     setCandidates((prev) => {
-      const stagedByFingerprint = new Map<string, TmdbSearchResult | null>();
+      const stagedByFingerprint = new Map<string, TitleSearchResult | null>();
       prev.forEach((candidate) => {
         if (!candidate.match) return;
         const key = candidateFingerprint(candidate);
@@ -1806,11 +1808,11 @@ export default function FileIngestionDialog({ paths: initialPaths, pathsNonce, o
       const selection = (selectedGroup?.candidates ?? [activeCandidate]).filter(Boolean) as Candidate[];
       const isSubtitleSelection =
         selection.length > 0 && selection.every((candidate) => candidate.kind === "subtitle");
-      const results = await searchTmdb(token, manualSearchType, manualSearchQuery.trim(), 1);
+      const results = await searchTitles(token, manualSearchType, manualSearchQuery.trim(), 1);
       const filtered = isSubtitleSelection
-        ? results.results.filter((item: TmdbSearchResult) => {
+        ? results.results.filter((item: TitleSearchResult) => {
             const key = `${item.type}:${item.id}`;
-            return existingTmdbMap.has(key) || stagedTmdbKeys.has(key);
+            return existingCatalogMap.has(key) || stagedCatalogKeys.has(key);
           })
         : results.results;
       setManualSearchResults(filtered);
@@ -1834,7 +1836,7 @@ export default function FileIngestionDialog({ paths: initialPaths, pathsNonce, o
     setOpenTrailerId(null);
   };
 
-  const getTrailerLanguages = (item: TmdbSearchResult) => {
+  const getTrailerLanguages = (item: TitleSearchResult) => {
     const shared = getSharedSetting("trailer_languages");
     let extras: string[] = [];
     if (shared) {
@@ -1851,7 +1853,7 @@ export default function FileIngestionDialog({ paths: initialPaths, pathsNonce, o
     return Array.from(new Set([base, ...extras].filter(Boolean)));
   };
 
-  const ensureTrailers = async (item: TmdbSearchResult, openMenu: boolean) => {
+  const ensureTrailers = async (item: TitleSearchResult, openMenu: boolean) => {
     if (!token) return;
     const key = `${item.type}:${item.id}`;
     const cached = trailerCache[key];
@@ -1864,7 +1866,7 @@ export default function FileIngestionDialog({ paths: initialPaths, pathsNonce, o
     setTrailerCache((prev) => ({ ...prev, [key]: { status: "loading", trailers: [] } }));
     try {
       const languages = getTrailerLanguages(item);
-      const trailers = await getTmdbTrailersForLanguages(token, item.type, item.id, languages);
+      const trailers = await getTitleTrailersForLanguages(token, item.type, item.id, languages);
       const selected = pickPreferredTrailersByLanguage(trailers);
       if (selected.length === 0) {
         setTrailerCache((prev) => ({ ...prev, [key]: { status: "empty", trailers: [] } }));
@@ -1892,17 +1894,17 @@ export default function FileIngestionDialog({ paths: initialPaths, pathsNonce, o
       const selection = (selectedGroup?.candidates ?? [activeCandidate]).filter(Boolean) as Candidate[];
       const isSubtitleSelection =
         selection.length > 0 && selection.every((candidate) => candidate.kind === "subtitle");
-      const results = await searchTmdb(token, manualSearchType, manualSearchQuery.trim(), nextPage);
+      const results = await searchTitles(token, manualSearchType, manualSearchQuery.trim(), nextPage);
       setManualSearchResults((prev) => {
         const seen = new Set(prev.map((item) => item.id));
         const merged = [...prev];
       const filtered = isSubtitleSelection
-          ? results.results.filter((item: TmdbSearchResult) => {
+          ? results.results.filter((item: TitleSearchResult) => {
               const key = `${item.type}:${item.id}`;
-              return existingTmdbMap.has(key) || stagedTmdbKeys.has(key);
+              return existingCatalogMap.has(key) || stagedCatalogKeys.has(key);
             })
           : results.results;
-        filtered.forEach((item: TmdbSearchResult) => {
+        filtered.forEach((item: TitleSearchResult) => {
           if (!seen.has(item.id)) {
             merged.push(item);
             seen.add(item.id);
@@ -1917,11 +1919,11 @@ export default function FileIngestionDialog({ paths: initialPaths, pathsNonce, o
     }
   };
 
-  const applyManualMatch = async (rawMatch: TmdbSearchResult) => {
+  const applyManualMatch = async (rawMatch: TitleSearchResult) => {
     const selection = (selectedGroup?.candidates ?? [activeCandidate]).filter(Boolean) as Candidate[];
     const isSubtitleSelection =
       selection.length > 0 && selection.every((candidate) => candidate.kind === "subtitle");
-    if (isSubtitleSelection && !existingTmdbMap.has(`${rawMatch.type}:${rawMatch.id}`) && !stagedTmdbKeys.has(`${rawMatch.type}:${rawMatch.id}`)) {
+    if (isSubtitleSelection && !existingCatalogMap.has(`${rawMatch.type}:${rawMatch.id}`) && !stagedCatalogKeys.has(`${rawMatch.type}:${rawMatch.id}`)) {
       toast(t("ingestion.toasts.pickExistingTitle"));
       return;
     }
@@ -1970,14 +1972,14 @@ export default function FileIngestionDialog({ paths: initialPaths, pathsNonce, o
 
   const handleDummySearch = async () => {
     if (!token) {
-      setDummyIngestError(t("ingestion.errors.signInSearchTmdb"));
+      setDummyIngestError(t("ingestion.errors.signInSearchTitles"));
       return;
     }
     if (!dummyIngestQuery.trim()) return;
     setDummyIngestLoading(true);
     setDummyIngestError(null);
     try {
-      const results = await searchTmdb(token, dummyIngestType, dummyIngestQuery.trim());
+      const results = await searchTitles(token, dummyIngestType, dummyIngestQuery.trim());
       setDummyIngestResults(results.results);
     } catch (error) {
       setDummyIngestError(t(searchFailureText(error).error));
@@ -1986,7 +1988,7 @@ export default function FileIngestionDialog({ paths: initialPaths, pathsNonce, o
     }
   };
 
-  const handleDummySelect = async (_result: TmdbSearchResult) => {
+  const handleDummySelect = async (_result: TitleSearchResult) => {
     // Dummy-ingest dev tool was removed alongside the legacy main-process
     // labQueue plumbing (Day 1A). The handler is retained as a no-op so
     // existing JSX bindings don't fail typecheck.
@@ -2491,7 +2493,7 @@ export default function FileIngestionDialog({ paths: initialPaths, pathsNonce, o
     for (const group of mergedGroups) {
       const match = group.match;
       if (!match) continue;
-      const existingMedia = media.find((item) => item.tmdbId === match.id && item.type === match.type) ?? null;
+      const existingMedia = media.find((item) => item.catalogId === match.id && item.type === match.type) ?? null;
       for (const episodeGroup of listEpisodeGroups(group)) {
         const videoCandidates = episodeGroup.candidates.filter(
           (candidate) => candidateIds.has(candidate.id) && candidate.kind === "video",
@@ -2640,7 +2642,7 @@ export default function FileIngestionDialog({ paths: initialPaths, pathsNonce, o
     }> = [];
     let uploadedSubtitleCount = 0;
     let skippedVideoOverlapCount = 0;
-    const queuedTmdbKeys = new Set<string>();
+    const queuedCatalogKeys = new Set<string>();
     // Titles whose metadata could not be fetched even after waiting out the service's Retry-After: the others are
     // still added, these stay in the dialog to try again (their candidate ids, subtitles included).
     const failedMetadataCandidateIds = new Set<string>();
@@ -2654,7 +2656,7 @@ export default function FileIngestionDialog({ paths: initialPaths, pathsNonce, o
       const hasVideoCandidates = groupCandidates.some((candidate) => candidate.kind === "video");
       const hasSubtitleCandidates = groupCandidates.some((candidate) => candidate.kind === "subtitle");
 
-      const existingMedia = media.find((item) => item.tmdbId === match.id && item.type === match.type) ?? null;
+      const existingMedia = media.find((item) => item.catalogId === match.id && item.type === match.type) ?? null;
 
       let resolvedMedia: MediaRow | null = existingMedia;
       if (!resolvedMedia && hasVideoCandidates) {
@@ -2665,15 +2667,14 @@ export default function FileIngestionDialog({ paths: initialPaths, pathsNonce, o
           // ACCT-PROF-03: titles + artwork are stored in the account's language; the original set a profile may
           // want is fetched in the background (`titleVariantsPass`). Descriptions stay live.
           const details = await withMetadataRetry(() =>
-            getTmdbDetailsForLibrary(token, match.type, match.id, { accountLanguage: i18n.language || "en" })
+            getTitleDetailsForLibrary(token, match.type, match.id, { accountLanguage: i18n.language || "en" })
           );
-          const mediaId = await addMediaFromTmdb(details);
+          const mediaId = await addMediaFromCatalog(details);
           const now = new Date().toISOString();
           resolvedMedia = {
             id: mediaId,
             type: details.type,
-            tmdbId: details.id ?? null,
-            externalIds: { tmdb: details.id },
+            catalogId: details.id ?? null,
             title: details.title ?? "",
             originalTitle: details.originalTitle ?? null,
             originalLanguage: details.originalLanguage ?? null,
@@ -2709,7 +2710,7 @@ export default function FileIngestionDialog({ paths: initialPaths, pathsNonce, o
         continue;
       }
       if (hasVideoCandidates && Number.isFinite(Number(match.id))) {
-        queuedTmdbKeys.add(`${match.type}:${Number(match.id)}`);
+        queuedCatalogKeys.add(`${match.type}:${Number(match.id)}`);
       }
 
       const episodeGroups = listEpisodeGroups(group);
@@ -2989,24 +2990,24 @@ export default function FileIngestionDialog({ paths: initialPaths, pathsNonce, o
       // `desiredFormats` itself, so forwarding the placeholder as a second
       // source produced 4 jobs per movie (2 sources × (1 source + 1 format)).
       // The translator filters non-source entries before flatMapping.
-      const showSkipDataByTmdbId = new Map<number, BadgerIngestShowSkipCache>();
+      const showSkipDataByCatalogId = new Map<number, BadgerIngestShowSkipCache>();
       candidates.forEach((c) => {
         const data = c.skipMarkerData;
         // "unavailable" (every episode a miss) still travels: the runtime
         // records the misses so the library backfill does not ask again.
         if (!data || data.status === "fetching" || data.coverage.length === 0) return;
         if (c.match?.type !== "tv") return;
-        if (showSkipDataByTmdbId.has(data.showTmdbId)) return;
-        showSkipDataByTmdbId.set(data.showTmdbId, {
-          showTmdbId: data.showTmdbId,
-          provider: "theintrodb-v3",
+        if (showSkipDataByCatalogId.has(data.showCatalogId)) return;
+        showSkipDataByCatalogId.set(data.showCatalogId, {
+          showCatalogId: data.showCatalogId,
+          provider: SKIP_MARKER_PROVIDER,
           fetchedAt: data.fetchedAt,
           coverage: data.coverage,
           markersByEpisode: data.markersByEpisode,
         });
       });
       const sources = translateActionsToV2Sources(actions, desiredFormats, {
-        showSkipDataByTmdbId,
+        showSkipDataByCatalogId,
       });
       submittedSources = sources;
       applyPromise = sources.length > 0 && window.sf?.runtimeJobs?.submitSources && user
@@ -3062,7 +3063,7 @@ export default function FileIngestionDialog({ paths: initialPaths, pathsNonce, o
       }
       const submitResult = actions.length > 0 ? await applyPromise : undefined;
       await uploadPendingSubtitles(placementIdsBySourceFilename(submittedSources, submitResult?.submitted ?? []));
-      await waitForQueuedTitlesVisible(queuedTmdbKeys, 2200, "any");
+      await waitForQueuedTitlesVisible(queuedCatalogKeys, 2200, "any");
       if (failedMetadataTitles > 0) {
         // Partial progress is kept: what was queued leaves the dialog, the failed titles stay for another try.
         setCandidates((prev) => prev.filter((candidate) => failedMetadataCandidateIds.has(candidate.id)));
@@ -4035,8 +4036,8 @@ export default function FileIngestionDialog({ paths: initialPaths, pathsNonce, o
                                       ? t("ingestion.ui.searchLibraryMoviesPlaceholder")
                                       : t("ingestion.ui.searchLibraryTvPlaceholder")
                                     : manualSearchType === "movie"
-                                      ? t("ingestion.ui.searchTmdbMoviesPlaceholder")
-                                      : t("ingestion.ui.searchTmdbTvPlaceholder")
+                                      ? t("ingestion.ui.searchTitlesMoviesPlaceholder")
+                                      : t("ingestion.ui.searchTitlesTvPlaceholder")
                                 } 
                                 className="flex-1"
                                 onKeyDown={(e) => e.key === "Enter" && handleManualSearch()}

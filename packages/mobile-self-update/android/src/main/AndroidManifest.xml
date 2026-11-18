@@ -1,0 +1,5 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- REL-UPD-06: lets the app hand its own update to the system installer. Merged only into the build that links
+         this module (every Google-free build, SF_FOSS=1): never the Play build. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+</manifest>

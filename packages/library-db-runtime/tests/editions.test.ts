@@ -233,7 +233,7 @@ describe("desktop LibraryDb", () => {
   it("a linked file lands in its film's unnamed edition, and details read it back; delete removes it", async () => {
     const db = await LibraryDb.openLocal("token", "key");
     db.setSyncEnabled(false);
-    const mediaId = await db.addMediaFromTmdb({
+    const mediaId = await db.addMediaFromCatalog({
       id: 45745,
       type: "movie",
       title: "Sintel",
@@ -263,7 +263,7 @@ describe("desktop LibraryDb", () => {
   });
 
   const sintel = (db: LibraryDb) =>
-    db.addMediaFromTmdb({
+    db.addMediaFromCatalog({
       id: 45745,
       type: "movie",
       title: "Sintel",
@@ -280,7 +280,7 @@ describe("desktop LibraryDb", () => {
       seasons: [],
       episodes: [],
       totalEpisodes: 0,
-    } as unknown as Parameters<LibraryDb["addMediaFromTmdb"]>[0]);
+    } as unknown as Parameters<LibraryDb["addMediaFromCatalog"]>[0]);
 
   it("named editions hold their own files; linking into one leaves the other alone", async () => {
     const db = await LibraryDb.openLocal("token", "key");

@@ -4,13 +4,13 @@ import { describe, expect, it } from "vitest";
 /**
  * @bugfix @regression-proof mpv-bundled-no-https-backdrop-first-file
  *
- * Issue #25 finding F1 (ultimate stress suite). With a TMDB backdrop on the
+ * Issue #25 finding F1 (ultimate stress suite). With a catalog backdrop on the
  * media, the renderer sends `launchExternalMpv({ backdropUrl: "data:image/jpeg;base64,...", url })`
  * and the main process used to launch mpv on the backdrop as its FIRST file
  * (`launchUrl = backdropUrl ?? payload.url`). The bundled mpv (linux-min-v1)
  * has NO https protocol and NO image decoders (video decoders: h264 + hevc
  * only), so it logged
- *   "No protocol handler found to open URL https://image.tmdb.org/..."
+ *   "No protocol handler found to open URL https://<image host>/..."
  *   "Exiting... (Errors when loading file)"
  * and exited before the renderer's `loadfile replace` swap could run — playback
  * never started for any media with a backdrop.
@@ -65,7 +65,7 @@ describe("@bugfix @regression-proof backdrop launch never hands mpv the https im
     console.info(`[mpv-backdrop-launch-plan:handoff] plan=${JSON.stringify(plan)} argc=${args.length}`);
     if (
       plan.launchUrl !== null ||
-      args.some((arg) => arg.includes("image.tmdb.org")) ||
+      args.some((arg) => arg.includes("images.example.test")) ||
       !args.includes("--idle=yes")
     ) {
       dump("handoff", ctx);
@@ -74,7 +74,7 @@ describe("@bugfix @regression-proof backdrop launch never hands mpv the https im
     expect(plan.launchUrl).toBeNull();
     expect(args).toContain("--idle=yes");
     expect(args.filter((arg) => /^https?:\/\//.test(arg))).toEqual([]);
-    expect(args.some((arg) => arg.includes("image.tmdb.org"))).toBe(false);
+    expect(args.some((arg) => arg.includes("images.example.test"))).toBe(false);
     // Positional file (anything not starting with "--") must be absent.
     expect(args.filter((arg) => !arg.startsWith("--"))).toEqual([]);
     // Handoff owns start/pause via the per-load loadfile options.

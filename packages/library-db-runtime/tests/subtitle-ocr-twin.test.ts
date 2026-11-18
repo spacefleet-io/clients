@@ -89,7 +89,7 @@ describe("OCR text twin rows (PLAY-TRACK-05)", () => {
   it("stores a twin linked to its picture row, idempotently, and getMediaDetails carries the link", async () => {
     const db = await openFresh();
     try {
-      const mediaId = await db.addMediaFromTmdb(MOVIE);
+      const mediaId = await db.addMediaFromCatalog(MOVIE);
       await addTrack(db, mediaId, "pic-fr", "fr", "mkv");
       const first = db.addOcrSubtitleTwin({ pictureSubtitleId: "pic-fr", objectKey: `${PLACEMENT}/subtitles/fr-ocr.srt` });
       const second = db.addOcrSubtitleTwin({ pictureSubtitleId: "pic-fr", objectKey: `${PLACEMENT}/subtitles/other.srt` });
@@ -125,7 +125,7 @@ describe("OCR text twin rows (PLAY-TRACK-05)", () => {
     const db = await LibraryDb.openLocal("token", "key");
     try {
       db.setSyncEnabled(true);
-      const mediaId = await db.addMediaFromTmdb(MOVIE);
+      const mediaId = await db.addMediaFromCatalog(MOVIE);
       await addTrack(db, mediaId, "pic-de", "de", "sup");
       const twin = db.addOcrSubtitleTwin({ pictureSubtitleId: "pic-de", objectKey: `${PLACEMENT}/subtitles/de-ocr.srt` });
       // Test seam: the op queue the sync uploads (PendingOp rows are LibraryOps on the wire).
@@ -162,7 +162,7 @@ describe("OCR text twin rows (PLAY-TRACK-05)", () => {
   it("lists only picture rows still owed a twin, honouring each status' retry window", async () => {
     const db = await openFresh();
     try {
-      const mediaId = await db.addMediaFromTmdb(MOVIE);
+      const mediaId = await db.addMediaFromCatalog(MOVIE);
       await addTrack(db, mediaId, "pic-a", "en", "sup");
       await addTrack(db, mediaId, "pic-b", "fr", "mkv");
       await addTrack(db, mediaId, "pic-c", "de", "PGS");
@@ -199,7 +199,7 @@ describe("OCR text twin rows (PLAY-TRACK-05)", () => {
   it("attempts never travel: exported empty, kept across a remote snapshot, dropped with their media", async () => {
     const db = await openFresh();
     try {
-      const mediaId = await db.addMediaFromTmdb(MOVIE);
+      const mediaId = await db.addMediaFromCatalog(MOVIE);
       await addTrack(db, mediaId, "pic-x", "fr", "mkv");
       db.recordSubtitleOcrAttempt({ subtitleId: "pic-x", mediaId, status: "failed", error: "decode" });
       const versionBefore = db.getVersion();
@@ -247,7 +247,7 @@ describe("OCR text twin rows (PLAY-TRACK-05)", () => {
       } finally {
         globalThis.fetch = originalFetch;
       }
-      await addTrack(db, await db.addMediaFromTmdb({ ...MOVIE, id: 77_002 }), "pic-x", "fr", "mkv");
+      await addTrack(db, await db.addMediaFromCatalog({ ...MOVIE, id: 77_002 }), "pic-x", "fr", "mkv");
       const afterDelete = db.listSubtitleOcrCandidates({ limit: 10, failedRetryBefore: FAR_FUTURE, noTextRetryBefore: FAR_FUTURE });
       console.info(`${TAG} afterDelete=${JSON.stringify(afterDelete)}`);
       expect(afterDelete.map((row) => [row.id, row.attempts])).toEqual([["pic-x", 0]]);

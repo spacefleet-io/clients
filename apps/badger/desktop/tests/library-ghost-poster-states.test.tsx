@@ -38,8 +38,7 @@ const t = (key: string) => key;
 /** Minimal valid MediaRow factory — only fields used by the projection layer. */
 const makeMediaRow = (overrides: Partial<MediaRow> & { id: string }): MediaRow => ({
   type: "movie",
-  tmdbId: 1,
-  externalIds: null,
+  catalogId: 1,
   title: "Test Movie",
   originalTitle: null,
   originalLanguage: "en",

@@ -39,8 +39,7 @@ const details = (overrides: Partial<MediaDetails> = {}): MediaDetails =>
   ({
     id: "media-1",
     type: "movie",
-    tmdbId: 42,
-    externalIds: {},
+    catalogId: 42,
     title: "Title",
     originalTitle: null,
     originalLanguage: "en",

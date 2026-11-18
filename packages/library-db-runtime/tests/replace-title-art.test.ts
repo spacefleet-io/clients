@@ -70,7 +70,7 @@ const english = { title: "Hate", posterPath: "/en-poster.jpg", backdropPath: "/e
 describe("replaceMediaTitleArt: compare-and-set of a title's title, poster and backdrop (ACCT-PROF-03)", () => {
   it("@req ACCT-PROF-03[badger-desktop] replaces the set while the row still holds what the pass read", async () => {
     const db = await open();
-    const mediaId = await db.addMediaFromTmdb(film());
+    const mediaId = await db.addMediaFromCatalog(film());
     const before = artOf(db, mediaId);
     log("phase: added", before);
     const replaced = await db.replaceMediaTitleArt(mediaId, before, english);
@@ -82,7 +82,7 @@ describe("replaceMediaTitleArt: compare-and-set of a title's title, poster and b
 
   it("@req ACCT-PROF-03[badger-desktop] a user edit made meanwhile wins: nothing is written", async () => {
     const db = await open();
-    const mediaId = await db.addMediaFromTmdb(film());
+    const mediaId = await db.addMediaFromCatalog(film());
     const read = artOf(db, mediaId);
     await db.updateMediaMetadata({ mediaId, media: { title: "My own title" } });
     const replaced = await db.replaceMediaTitleArt(mediaId, read, english);

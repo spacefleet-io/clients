@@ -7,7 +7,7 @@
 // Each media costs at most two lookups, the pass goes one media at a time with a pause between lookups, and it stops
 // when the ticket reserve says so or the app asks it to yield; every write is final, so the next pass resumes.
 // Portable: no React, no DOM, no node:*.
-import type { TmdbMediaType } from "@space/shared/api";
+import type { TitleType } from "@space/shared/api";
 import { normalizeMediaLanguageCode } from "@space/shared/mediaLanguageDisplay";
 import {
   isLatinOriginal,
@@ -26,9 +26,9 @@ import {
 /** One movie or show of the library, as its media row holds it. */
 export type TitleVariantsMedia = TitleArt & {
   id: string;
-  type: TmdbMediaType;
+  type: TitleType;
   /** Null for a media matched to nothing: it has no other language to fetch. */
-  tmdbId: number | null;
+  catalogId: number | null;
   originalTitle: string | null;
   originalLanguage: string | null;
 };
@@ -57,7 +57,7 @@ export type TitleArtItem = {
 };
 
 /** How the app asks the metadata service for one details answer. May reject (offline, no ticket, …). */
-export type AskTitleArt = (type: TmdbMediaType, tmdbId: number, language: string) => Promise<{ item: TitleArtItem }>;
+export type AskTitleArt = (type: TitleType, catalogId: number, language: string) => Promise<{ item: TitleArtItem }>;
 
 export type ReconcileTitleVariantsDeps = {
   library: TitleVariantsLibrary;
@@ -80,7 +80,7 @@ export type ReconcileTitleVariantsDeps = {
   /**
    * Copies one picture of an original set into the user's storage (the app's artwork copy `upload`, META-ART-01):
    * `{status: "ok", key}` stores the asset key in the variant row, `{status: "missing"}` drops the picture, anything
-   * else keeps the TMDB path for the next pass. Without it the original pictures stay TMDB paths.
+   * else keeps the catalog path for the next pass. Without it the original pictures stay catalog paths.
    */
   uploadArtwork?: (kind: "poster" | "backdrop", path: string) => Promise<{ status: "ok"; key: string } | { status: string }>;
   /** Pause after each lookup, in milliseconds. */
@@ -104,8 +104,8 @@ export type ReconcileTitleVariantsResult = {
 export const TITLE_VARIANTS_PAUSE_MS = 1_500;
 
 const AUTO = "auto";
-/** A TMDB image path (`/abc.jpg`), as `isTmdbImagePath` in `@space/library-db-definition/artworkCopy`. */
-const TMDB_PATH = /^\/[^/]/;
+/** A catalog image path (`/abc.jpg`), as `isCatalogImagePath` in `@space/library-db-definition/artworkCopy`. */
+const CATALOG_PATH = /^\/[^/]/;
 
 /**
  * The language a row of a library without variant rows was fetched in: unknown ("und", so it is fetched again) for a
@@ -157,11 +157,11 @@ export const reconcileTitleVariants = async (deps: ReconcileTitleVariantsDeps): 
   const result: ReconcileTitleVariantsResult = { checked: 0, lookups: 0, rowsReplaced: 0, variantsWritten: 0, failed: 0, stopped: false };
 
   /** One lookup, or null when the pass must stop (no ticket to spare). */
-  const ask = async (media: TitleVariantsMedia & { tmdbId: number }, language: string): Promise<TitleArtItem | null> => {
+  const ask = async (media: TitleVariantsMedia & { catalogId: number }, language: string): Promise<TitleArtItem | null> => {
     if (canSpend && !(await canSpend())) return null;
     result.lookups += 1;
     try {
-      return (await details(media.type, media.tmdbId, language)).item;
+      return (await details(media.type, media.catalogId, language)).item;
     } finally {
       if (pauseMs > 0) await sleep(pauseMs);
     }
@@ -172,8 +172,8 @@ export const reconcileTitleVariants = async (deps: ReconcileTitleVariantsDeps): 
       result.stopped = true;
       break;
     }
-    if (media.tmdbId === null) continue;
-    const matched = media as TitleVariantsMedia & { tmdbId: number };
+    if (media.catalogId === null) continue;
+    const matched = media as TitleVariantsMedia & { catalogId: number };
     result.checked += 1;
     try {
       const key = titleVariantsKey(media.id);
@@ -229,12 +229,12 @@ export const reconcileTitleVariants = async (deps: ReconcileTitleVariantsDeps): 
       }
 
       // META-ART-01: the original set's pictures are copied into the user's storage like the row's; a picture not
-      // copied yet keeps its TMDB path (the row's picture shows meanwhile) and the next pass retries it.
+      // copied yet keeps its catalog path (the row's picture shows meanwhile) and the next pass retries it.
       if (next.original && uploadArtwork) {
         let original = next.original;
         for (const [field, kind] of [["posterPath", "poster"], ["backdropPath", "backdrop"]] as const) {
           const path = original[field];
-          if (!path || !TMDB_PATH.test(path)) continue;
+          if (!path || !CATALOG_PATH.test(path)) continue;
           if (canSpend && !(await canSpend())) break;
           const outcome = await uploadArtwork(kind, path);
           if (outcome.status === "ok" && "key" in outcome) original = { ...original, [field]: outcome.key };

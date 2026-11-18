@@ -13,6 +13,7 @@ import { normalizePlaybackBlobRows } from "./library/playbackBlobMigration";
 import { MEDIA_CREW_DDL } from "@space/library-db-definition/crewDdl";
 import { editionsMigrationStatements } from "@space/library-db-definition/editionDdl";
 import { originalSizeMigrationStatements } from "@space/library-db-definition/originalSize";
+import { catalogSourceMigrationStatements } from "@space/library-db-definition/legacyFormat";
 
 /**
  * Mobile-facing migration shape. `up(db)` receives a `SQLiteDatabase`-shaped
@@ -84,6 +85,14 @@ export const coreMigrations: ReadonlyArray<Migration> = [
       await db.executeSql("CREATE INDEX IF NOT EXISTS media_items_updated_at_idx ON media_items(updated_at);");
     },
   },
+  {
+    version: 3,
+    description: "catalog_id_source_v3",
+    up: async (db) => {
+      // META-SRC-09: the title's catalog id under the neutral source. Same statements as the desktop's core step 2.
+      for (const statement of catalogSourceMigrationStatements("core")) await db.executeSql(statement);
+    },
+  },
 ];
 
 export const metadataMigrations: ReadonlyArray<Migration> = [
@@ -124,6 +133,14 @@ export const metadataMigrations: ReadonlyArray<Migration> = [
       const columns: string[] = [];
       for (let i = 0; i < (result?.rows.length ?? 0); i += 1) columns.push(String(result.rows.item(i)?.name ?? ""));
       for (const statement of originalSizeMigrationStatements(columns)) await db.executeSql(statement);
+    },
+  },
+  {
+    version: 5,
+    description: "catalog_id_source_v5",
+    up: async (db) => {
+      // META-SRC-09: each person's catalog id under the neutral source. Same statements as the desktop's metadata step 4.
+      for (const statement of catalogSourceMigrationStatements("metadata")) await db.executeSql(statement);
     },
   },
 ];

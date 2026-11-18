@@ -45,8 +45,8 @@ writeFileSync(
   JSON.stringify(
     {
       keys: [
-        { type: "tv", tmdbId: 1399, language: "fr", key: localizedTextKey("tv", 1399, "fr") },
-        { type: "movie", tmdbId: 27205, language: "en", key: localizedTextKey("movie", 27205, "en") },
+        { type: "tv", catalogId: 1399, language: "fr", key: localizedTextKey("tv", 1399, "fr") },
+        { type: "movie", catalogId: 27205, language: "en", key: localizedTextKey("movie", 27205, "en") },
       ],
       serialize: records.map((record) => ({ record, value: serializeLocalizedText(record) })),
       parse: parseInputs.map((value) => ({ value, record: parseLocalizedText(value) })),

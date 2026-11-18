@@ -1,6 +1,6 @@
 /**
  * Artwork for title lookups (META-ART-02): every poster, backdrop, cast photo and still comes from the
- * metadata service, never from the TMDB image CDN, so the CDN never sees a request from a SpaceFleet user.
+ * metadata service, never from the image source's CDN, so the CDN never sees a request from a SpaceFleet user.
  *
  * The service's `image` op answers `{ url }` where `url` is a self-contained `data:` URI, so an `<img>` can use
  * it as is (an `<img>` cannot send the `PrivateToken` header, and does not need to). One ticket is spent per

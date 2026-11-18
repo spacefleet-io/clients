@@ -6,7 +6,7 @@
 import type { DetailsTexts } from "./localizedTexts";
 import { OVERVIEW_FALLBACK_LANGUAGE } from "./overviews";
 
-/** One episode as TMDB names it in one language. */
+/** One episode as the catalog names it in one language. */
 export type EpisodeText = { seasonNumber: number; episodeNumber: number; name: string | null; overview: string | null };
 
 /** An episode's name and synopsis in the interface language, else English; null where neither has one. */
@@ -49,7 +49,7 @@ export interface LocalizedEpisodes {
    */
   covers(tvId: number, language: string, episodeKeys?: readonly string[]): boolean;
   /**
-   * The show's episodes in `language`, each name and synopsis TMDB lacks there taken from English. Never rejects: a
+   * The show's episodes in `language`, each name and synopsis the catalog lacks there taken from English. Never rejects: a
    * failure answers an empty map and is not kept, so the next call asks again. One request per (show, language) at a
    * time, plus one in English only when an episode lacks text; answers are kept for the session and asked again only
    * for an episode they do not cover.

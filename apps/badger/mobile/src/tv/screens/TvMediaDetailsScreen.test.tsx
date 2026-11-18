@@ -45,11 +45,11 @@ const ctl = vi.hoisted(() => ({
   os: "android" as "android" | "ios",
   warmed: [] as Array<{ token: string | null; mediaId: string; episodeId: string | null }>,
   token: null as string | null,
-  /** TMDB's synopsis per language ("de", "en", …), what the metadata service answers (LIB-LANG-01). */
-  tmdbOverviews: {} as Record<string, string>,
+  /** the catalog's synopsis per language ("de", "en", …), what the metadata service answers (LIB-LANG-01). */
+  catalogOverviews: {} as Record<string, string>,
   askedOverviews: [] as string[],
-  /** TMDB's episodes per language, what the metadata service's tv details answer carries (LIB-LANG-01). */
-  tmdbEpisodes: {} as Record<string, Array<{ seasonNumber: number; episodeNumber: number; name: string | null; overview: string | null }>>,
+  /** the catalog's episodes per language, what the metadata service's tv details answer carries (LIB-LANG-01). */
+  catalogEpisodes: {} as Record<string, Array<{ seasonNumber: number; episodeNumber: number; name: string | null; overview: string | null }>>,
   askedEpisodes: [] as string[],
   /** The library rows "More like this" picks from (UX-TV-40). */
   media: [] as unknown[],
@@ -188,11 +188,11 @@ vi.mock("../../store/auth", () => ({ useAuth: () => ({ token: ctl.token }) }));
 vi.mock("../../lib/metadata/runtime", () => ({
   fetchOverview: async (type: string, id: number, language: string) => {
     ctl.askedOverviews.push(`${type}:${id}:${language}`);
-    return ctl.tmdbOverviews[language] ?? null;
+    return ctl.catalogOverviews[language] ?? null;
   },
   fetchEpisodes: async (id: number, language: string) => {
     ctl.askedEpisodes.push(`${id}:${language}`);
-    return ctl.tmdbEpisodes[language] ?? [];
+    return ctl.catalogEpisodes[language] ?? [];
   },
 }));
 vi.mock("../../lib/playback/playStartWarm", () => ({
@@ -260,8 +260,8 @@ const track = (id: string, label: string, scope: { fileId?: string; episodeId?: 
 });
 
 const cast = [
-  { id: "c1", personId: "p1", tmdbId: null, name: "Adam Scott", role: "Mark", profilePath: null },
-  { id: "c2", personId: "p2", tmdbId: null, name: "Britt Lower", role: "Helly", profilePath: null },
+  { id: "c1", personId: "p1", catalogId: null, name: "Adam Scott", role: "Mark", profilePath: null },
+  { id: "c2", personId: "p2", catalogId: null, name: "Britt Lower", role: "Helly", profilePath: null },
 ];
 
 const show = {
@@ -294,7 +294,7 @@ const show = {
 } as unknown as MediaDetails;
 
 /**
- * Like a long-running sitcom in a real library: TMDB knows the specials and three seasons, the library has files for S1E1 and S1E2
+ * Like a long-running sitcom in a real library: the catalog knows the specials and three seasons, the library has files for S1E1 and S1E2
  * only. Season 2 has episodes but no file; season 3 has none listed yet.
  */
 const partialShow = {
@@ -752,9 +752,9 @@ describe("TV title page tabs and buttons (TV-DETAILS-TABS-001)", () => {
  */
 describe("TV title page director and writers (TV-DETAILS-CREW-001)", () => {
   const crew = [
-    { id: "k1", personId: "p9", tmdbId: null, name: "Joe Wright", job: "Director", profilePath: null },
-    { id: "k2", personId: "p8", tmdbId: null, name: "Deborah Moggach", job: "Screenplay", profilePath: null },
-    { id: "k3", personId: "p9", tmdbId: null, name: "Joe Wright", job: "Director", profilePath: null },
+    { id: "k1", personId: "p9", catalogId: null, name: "Joe Wright", job: "Director", profilePath: null },
+    { id: "k2", personId: "p8", catalogId: null, name: "Deborah Moggach", job: "Screenplay", profilePath: null },
+    { id: "k3", personId: "p9", catalogId: null, name: "Joe Wright", job: "Director", profilePath: null },
   ];
 
   it("lists the director then the writers before the cast, with their job as role", async () => {
@@ -1008,13 +1008,13 @@ describe("TV title page synopsis language (LIB-LANG-01)", () => {
    * @bugfix german-synopsis-under-english-ui
    * @regression-proof
    * "Anders als die Andern" (1919) added in "auto" title language stores its German synopsis; with English selected
-   * the TV and phone pages showed that German text. They now show TMDB's synopsis in the interface language.
+   * the TV and phone pages showed that German text. They now show the catalog's synopsis in the interface language.
    */
   it("shows the synopsis in the interface language instead of the stored German one", async () => {
     ctl.token = "session-token";
-    ctl.tmdbOverviews = { de: "Ein Geiger wird erpresst.", en: "A violinist is blackmailed." };
+    ctl.catalogOverviews = { de: "Ein Geiger wird erpresst.", en: "A violinist is blackmailed." };
     ctl.askedOverviews = [];
-    ctl.details["movie-de"] = { ...movie, id: "movie-de", tmdbId: 28055, originalLanguage: "de", overview: "Ein Geiger wird erpresst." };
+    ctl.details["movie-de"] = { ...movie, id: "movie-de", catalogId: 28055, originalLanguage: "de", overview: "Ein Geiger wird erpresst." };
     try {
       const renderer = await render("movie-de");
       console.info("[tv-details:synopsis] asked", JSON.stringify(ctl.askedOverviews));
@@ -1034,16 +1034,16 @@ describe("TV episode synopsis language (LIB-LANG-01)", () => {
    * @bugfix german-episode-synopsis-under-english-ui
    * @regression-proof
    * A show added in "auto" title language stores its episodes' German synopses; with English selected the episode rows
-   * showed that German text. They now show TMDB's English synopsis, and the stored one only where TMDB has none.
+   * showed that German text. They now show the catalog's English synopsis, and the stored one only where the catalog has none.
    */
-  it("shows each episode's synopsis in the interface language, the stored one where TMDB has none", async () => {
+  it("shows each episode's synopsis in the interface language, the stored one where the catalog has none", async () => {
     ctl.token = "session-token";
     ctl.askedEpisodes = [];
-    ctl.tmdbEpisodes = { en: [{ seasonNumber: 1, episodeNumber: 1, name: "The Beginning", overview: "It all begins." }, { seasonNumber: 1, episodeNumber: 2, name: "Episode 2", overview: null }] };
+    ctl.catalogEpisodes = { en: [{ seasonNumber: 1, episodeNumber: 1, name: "The Beginning", overview: "It all begins." }, { seasonNumber: 1, episodeNumber: 2, name: "Episode 2", overview: null }] };
     ctl.details["show-de"] = {
       ...show,
       id: "show-de",
-      tmdbId: 99001,
+      catalogId: 99001,
       originalLanguage: "de",
       episodes: [
         { ...episode("e1", 1), name: "Der Anfang", overview: "Alles beginnt." },

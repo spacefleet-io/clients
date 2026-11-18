@@ -11,7 +11,7 @@ namespace Jellyfin.Plugin.SpaceBadger.Sync;
 
 /// <summary>
 /// Generates the shortcut library (INTG-JF-02): one <c>.strm</c> per quality (movies: separate versions with the
-/// original quality first, INTG-QUAL-01), <c>.nfo</c> metadata with the TMDB id and local artwork (INTG-META-01).
+/// original quality first, INTG-QUAL-01), <c>.nfo</c> metadata and local artwork (INTG-META-01).
 /// The <c>.strm</c> content is the local service's HLS master URL, which only Jellyfin ever opens (INTG-JF-03).
 /// </summary>
 public sealed class LibraryWriter
@@ -126,7 +126,7 @@ public sealed class LibraryWriter
 
     private async Task<int> WriteMovieAsync(SbMovie movie, string root, IndexEntry entry, CancellationToken ct)
     {
-        var folderName = TitleFolder(movie.Title, movie.Year, movie.TmdbId);
+        var folderName = TitleFolder(movie.Title, movie.Year);
         var folder = Path.Combine(MoviesDir(root), folderName);
         var written = new HashSet<string>(StringComparer.Ordinal);
         var changed = 0;
@@ -148,7 +148,7 @@ public sealed class LibraryWriter
 
     private async Task<int> WriteShowAsync(SbShow show, string root, IndexEntry entry, CancellationToken ct)
     {
-        var folderName = TitleFolder(show.Title, show.Year, show.TmdbId);
+        var folderName = TitleFolder(show.Title, show.Year);
         var folder = Path.Combine(ShowsDir(root), folderName);
         StrmRef.RememberShowFolder(folder, show.Id);
         var written = new HashSet<string>(StringComparer.Ordinal);
@@ -346,17 +346,12 @@ public sealed class LibraryWriter
         return string.IsNullOrWhiteSpace(cleaned) ? "Untitled" : cleaned;
     }
 
-    private static string TitleFolder(string title, int? year, long? tmdbId)
+    private static string TitleFolder(string title, int? year)
     {
         var name = SafeName(title);
         if (year is > 0)
         {
             name += $" ({year})";
-        }
-
-        if (tmdbId is > 0)
-        {
-            name += $" [tmdbid-{tmdbId}]";
         }
 
         return name;
@@ -388,16 +383,6 @@ public sealed class LibraryWriter
         foreach (var genre in title.Genres)
         {
             root.Add(new XElement("genre", genre));
-        }
-
-        if (title.TmdbId is { } tmdb)
-        {
-            root.Add(new XElement("tmdbid", tmdb), new XElement("uniqueid", new XAttribute("type", "tmdb"), new XAttribute("default", "true"), tmdb));
-        }
-
-        if (!string.IsNullOrWhiteSpace(title.ImdbId))
-        {
-            root.Add(new XElement("imdbid", title.ImdbId), new XElement("uniqueid", new XAttribute("type", "imdb"), title.ImdbId));
         }
 
         if (DateTimeOffset.TryParse(title.AddedAt, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var added))

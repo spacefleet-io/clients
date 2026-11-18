@@ -11,12 +11,14 @@ import {
   LibraryMeta,
   putLibraryDb,
   putLibraryOp,
-  TmdbDetails,
+  TitleDetails,
 } from "./api";
 import { and, asc, desc, eq, inArray, isNotNull, isNull, ne, or, sql } from "drizzle-orm";
 import { encryptBytesToBytes } from "./crypto";
 import { decryptLibraryPayload, encryptOpPayload, encryptSnapshotBytes } from "./payloadCodec";
-import { artworkDisplaySource, isTmdbImagePath, type ArtworkApplyResult, type ArtworkCopy, type ArtworkSlot } from "@space/library-db-definition/artworkCopy";
+import { artworkDisplaySource, isCatalogImagePath, type ArtworkApplyResult, type ArtworkCopy, type ArtworkSlot } from "@space/library-db-definition/artworkCopy";
+import { CATALOG_ID_SOURCE } from "@space/library-db-definition/catalogId";
+import { CATALOG_ID_SOURCES } from "@space/library-db-definition/legacyFormat";
 import {
   assertAccountLibraryKey,
   buildChunks,
@@ -291,9 +293,9 @@ const validateDbRow = (label: string, row: Record<string, unknown>) => {
 const SQLITE_HEADER = "SQLite format 3\u0000";
 const normalizeOptionalNumber = (value: number | null | undefined) =>
   typeof value === "number" && Number.isFinite(value) ? value : null;
-// A TMDB person id is a positive integer. `Number(null)` is 0, so a cast member without an id (the metadata service
+// A catalog person id is a positive integer. `Number(null)` is 0, so a cast member without an id (the metadata service
 // answers some without) must stay "no id": as 0 every such member matched one person (LIB-CAST-01).
-const tmdbPersonId = (value: unknown): number | null => {
+const catalogPersonId = (value: unknown): number | null => {
   if (typeof value !== "number" && typeof value !== "string") return null;
   if (typeof value === "string" && value.trim() === "") return null;
   const id = Number(value);
@@ -736,17 +738,6 @@ const extractAssetObjectKey = (value: string | null) => {
   return value;
 };
 
-const parseExternalIds = (value: unknown) => {
-  if (typeof value !== "string" || !value.trim()) return null;
-  try {
-    const parsed = JSON.parse(value) as Record<string, number | string>;
-    if (!parsed || typeof parsed !== "object") return null;
-    return parsed;
-  } catch {
-    return null;
-  }
-};
-
 const parseGenres = (value: unknown) => {
   if (typeof value !== "string" || !value.trim()) return [];
   try {
@@ -773,18 +764,15 @@ const parseRecordJson = (value: unknown): Record<string, unknown> | null => {
 
 const mapMediaRows = (
   rows: any[],
-  externalIdsById: Map<string, Record<string, number | string> | null>,
+  catalogIdById: ReadonlyMap<string, number>,
   genresById: Map<string, number[]>
 ): MediaRow[] =>
   rows.map((row) => {
     const id = String(row.id);
-    const externalIds = externalIdsById.get(id) ?? null;
-    const tmdbId = externalIds && typeof externalIds.tmdb === "number" ? externalIds.tmdb : null;
     return {
       id,
       type: (row.type === "tv" ? "tv" : "movie") as MediaType,
-      externalIds,
-      tmdbId,
+      catalogId: catalogIdById.get(id) ?? null,
       title: String(row.title),
       originalTitle: row.originalTitle ? String(row.originalTitle) : null,
       originalLanguage: row.originalLanguage ? String(row.originalLanguage) : null,
@@ -823,7 +811,7 @@ type TvProgressStamp = {
 };
 
 type TvProgressState = {
-  /** Number(media_items.total_episodes): TMDB's count, used when the episode list has no air dates (LIB-PROG-01). */
+  /** Number(media_items.total_episodes): the catalog's count, used when the episode list has no air dates (LIB-PROG-01). */
   configuredTotalEpisodes: number;
   /** Season and air date of every listed episode: the show's total is its aired regular episodes. */
   episodes: EpisodeAirInfo[];
@@ -2557,8 +2545,8 @@ export class LibraryDb {
     });
     const mediaIds = rows.map((row) => String(row.id));
     const genresById = this.loadMediaGenres(mediaIds);
-    const externalIdsById = this.loadMediaExternalIds(mediaIds);
-    return mapMediaRows(rows, externalIdsById, genresById);
+    const catalogIdById = this.loadMediaCatalogIds(mediaIds);
+    return mapMediaRows(rows, catalogIdById, genresById);
   }
 
   /**
@@ -2583,14 +2571,6 @@ export class LibraryDb {
     return (row?.count ?? 0) > 0;
   }
 
-  private coerceExternalId(source: string, value: string) {
-    if (source === "tmdb") {
-      const parsed = Number(value);
-      if (Number.isFinite(parsed)) return parsed;
-    }
-    return value;
-  }
-
   private loadMediaGenres(mediaIds: string[]) {
     const map = new Map<string, number[]>();
     if (!mediaIds.length) return map;
@@ -2609,48 +2589,34 @@ export class LibraryDb {
     return map;
   }
 
-  private loadMediaExternalIds(mediaIds: string[]) {
-    const map = new Map<string, Record<string, number | string>>();
+  /** The catalog id of each title that has one (META-SRC-09: rows of older libraries under the old source too). */
+  private loadMediaCatalogIds(mediaIds: string[]) {
+    const map = new Map<string, number>();
     if (!mediaIds.length) return map;
     const rows = this.core
-      .select({
-        mediaId: mediaExternalIds.mediaId,
-        source: mediaExternalIds.source,
-        externalId: mediaExternalIds.externalId,
-      })
+      .select({ mediaId: mediaExternalIds.mediaId, externalId: mediaExternalIds.externalId })
       .from(mediaExternalIds)
-      .where(inArray(mediaExternalIds.mediaId, mediaIds))
+      .where(and(inArray(mediaExternalIds.mediaId, mediaIds), inArray(mediaExternalIds.source, CATALOG_ID_SOURCES)))
       .all();
     rows.forEach((row) => {
-      const id = String(row.mediaId);
-      const existing = map.get(id) ?? {};
-      const source = String(row.source);
-      const value = this.coerceExternalId(source, String(row.externalId));
-      existing[source] = value;
-      map.set(id, existing);
+      const value = Number(row.externalId);
+      if (Number.isFinite(value)) map.set(String(row.mediaId), value);
     });
     return map;
   }
 
-  private loadPeopleExternalIds(personIds: string[]) {
-    const map = new Map<string, Record<string, number | string>>();
+  /** The catalog id of each person that has one (META-SRC-09: rows of older libraries under the old source too). */
+  private loadPeopleCatalogIds(personIds: string[]) {
+    const map = new Map<string, number>();
     if (!personIds.length) return map;
     const rows = this.metadata
-      .select({
-        personId: peopleExternalIds.personId,
-        source: peopleExternalIds.source,
-        externalId: peopleExternalIds.externalId,
-      })
+      .select({ personId: peopleExternalIds.personId, externalId: peopleExternalIds.externalId })
       .from(peopleExternalIds)
-      .where(inArray(peopleExternalIds.personId, personIds))
+      .where(and(inArray(peopleExternalIds.personId, personIds), inArray(peopleExternalIds.source, CATALOG_ID_SOURCES)))
       .all();
     rows.forEach((row) => {
-      const id = String(row.personId);
-      const existing = map.get(id) ?? {};
-      const source = String(row.source);
-      const value = this.coerceExternalId(source, String(row.externalId));
-      existing[source] = value;
-      map.set(id, existing);
+      const value = Number(row.externalId);
+      if (Number.isFinite(value)) map.set(String(row.personId), value);
     });
     return map;
   }
@@ -3002,17 +2968,17 @@ export class LibraryDb {
     return map;
   }
 
-  private ensurePerson(member: { tmdbId: number | null; name: string; profilePath: string | null }) {
+  private ensurePerson(member: { catalogId: number | null; name: string; profilePath: string | null }) {
     const name = member.name.trim();
     const profilePath = member.profilePath ?? null;
-    const tmdbId = tmdbPersonId(member.tmdbId);
+    const catalogId = catalogPersonId(member.catalogId);
 
-    if (tmdbId !== null) {
+    if (catalogId !== null) {
       const match = this.metadata
         .select({ id: people.id, name: people.name, profilePath: people.profilePath })
         .from(peopleExternalIds)
         .innerJoin(people, eq(peopleExternalIds.personId, people.id))
-        .where(and(eq(peopleExternalIds.source, "tmdb"), eq(peopleExternalIds.externalId, String(tmdbId))))
+        .where(and(inArray(peopleExternalIds.source, CATALOG_ID_SOURCES), eq(peopleExternalIds.externalId, String(catalogId))))
         .limit(1)
         .all()[0];
       if (match?.id) {
@@ -3021,7 +2987,7 @@ export class LibraryDb {
         // META-ART-01: a person's photo already copied into the user's storage is shared by every title they are
         // in; importing or refreshing another title keeps that copy instead of putting the provider path back,
         // which would fetch and store the same photo once more for each title.
-        const keepsCopy = isTmdbImagePath(profilePath) && artworkDisplaySource(match.profilePath === null ? null : String(match.profilePath)) === "vault";
+        const keepsCopy = isCatalogImagePath(profilePath) && artworkDisplaySource(match.profilePath === null ? null : String(match.profilePath)) === "vault";
         if (profilePath && !keepsCopy && String(match.profilePath ?? "") !== profilePath) updates.profilePath = profilePath;
         if (Object.keys(updates).length > 0) {
           this.noteMediaOfPerson(String(match.id));
@@ -3029,10 +2995,10 @@ export class LibraryDb {
         }
         this.metadata
           .insert(peopleExternalIds)
-          .values({ id: randomUUID(), personId: String(match.id), source: "tmdb", externalId: String(tmdbId) })
+          .values({ id: randomUUID(), personId: String(match.id), source: CATALOG_ID_SOURCE, externalId: String(catalogId) })
           .onConflictDoNothing()
           .run();
-        this.dropTmdbPersonZero(String(match.id));
+        this.dropCatalogPersonZero(String(match.id));
         return String(match.id);
       }
     }
@@ -3045,13 +3011,13 @@ export class LibraryDb {
       .all()[0];
 
     if (existingByName?.id) {
-      if (tmdbId !== null) {
+      if (catalogId !== null) {
         this.metadata
           .insert(peopleExternalIds)
-          .values({ id: randomUUID(), personId: String(existingByName.id), source: "tmdb", externalId: String(tmdbId) })
+          .values({ id: randomUUID(), personId: String(existingByName.id), source: CATALOG_ID_SOURCE, externalId: String(catalogId) })
           .onConflictDoNothing()
           .run();
-        this.dropTmdbPersonZero(String(existingByName.id));
+        this.dropCatalogPersonZero(String(existingByName.id));
       }
       return String(existingByName.id);
     }
@@ -3065,10 +3031,10 @@ export class LibraryDb {
         profilePath,
       })
       .run();
-    if (tmdbId !== null) {
+    if (catalogId !== null) {
       this.metadata
         .insert(peopleExternalIds)
-        .values({ id: randomUUID(), personId, source: "tmdb", externalId: String(tmdbId) })
+        .values({ id: randomUUID(), personId, source: CATALOG_ID_SOURCE, externalId: String(catalogId) })
         .onConflictDoNothing()
         .run();
     }
@@ -3081,7 +3047,7 @@ export class LibraryDb {
     crew.forEach((member, index) => {
       if (!member.job || !member.name.trim()) return;
       const personId = this.ensurePerson({
-        tmdbId: member.tmdbId ?? null,
+        catalogId: member.catalogId ?? null,
         name: member.name,
         profilePath: member.profilePath ?? null,
       });
@@ -3093,16 +3059,16 @@ export class LibraryDb {
   }
 
   /**
-   * LIB-CAST-01: TMDB person id 0 only ever came from the old `Number(null)` bug. Once a person gets a real id, the
-   * 0 goes, so the details read (`tmdbId`) shows the real one after a cast refetch.
+   * LIB-CAST-01: catalog person id 0 only ever came from the old `Number(null)` bug. Once a person gets a real id, the
+   * 0 goes, so the details read (`catalogId`) shows the real one after a cast refetch.
    */
-  private dropTmdbPersonZero(personId: string) {
+  private dropCatalogPersonZero(personId: string) {
     this.metadata
       .delete(peopleExternalIds)
       .where(
         and(
           eq(peopleExternalIds.personId, personId),
-          eq(peopleExternalIds.source, "tmdb"),
+          inArray(peopleExternalIds.source, CATALOG_ID_SOURCES),
           eq(peopleExternalIds.externalId, "0")
         )
       )
@@ -3112,7 +3078,7 @@ export class LibraryDb {
   private ensurePersonFromDraft(member: MediaCastDraft) {
     const name = member.name.trim();
     const profilePath = member.profilePath ?? null;
-    const tmdbId = tmdbPersonId(member.tmdbId);
+    const catalogId = catalogPersonId(member.catalogId);
 
     if (member.personId) {
       const updates: { name?: string; profilePath?: string | null } = {};
@@ -3122,18 +3088,18 @@ export class LibraryDb {
         this.noteMediaOfPerson(String(member.personId));
         this.metadata.update(people).set(updates).where(eq(people.id, String(member.personId))).run();
       }
-      if (tmdbId !== null) {
+      if (catalogId !== null) {
         this.metadata
           .insert(peopleExternalIds)
-          .values({ id: randomUUID(), personId: String(member.personId), source: "tmdb", externalId: String(tmdbId) })
+          .values({ id: randomUUID(), personId: String(member.personId), source: CATALOG_ID_SOURCE, externalId: String(catalogId) })
           .onConflictDoNothing()
           .run();
-        this.dropTmdbPersonZero(String(member.personId));
+        this.dropCatalogPersonZero(String(member.personId));
       }
       return String(member.personId);
     }
 
-    return this.ensurePerson({ tmdbId, name, profilePath });
+    return this.ensurePerson({ catalogId, name, profilePath });
   }
 
   private mergeMediaRecords(targetMediaId: string, sourceMediaId: string) {
@@ -3256,7 +3222,7 @@ export class LibraryDb {
     });
   }
 
-  private reconcileOrphanedMediaRowsForTmdb(
+  private reconcileOrphanedMediaRowsForCatalog(
     targetMediaId: string,
     type: MediaType,
     title: string,
@@ -3290,34 +3256,34 @@ export class LibraryDb {
     candidates.forEach((candidate) => {
       if (normalizeIdentityText(candidate.title) !== normalizedTitle) return;
       if (normalizeIdentityText(candidate.originalTitle) !== normalizedOriginalTitle) return;
-      const hasTmdbExternal = this.core
+      const hasCatalogId = this.core
         .select({ id: mediaExternalIds.id })
         .from(mediaExternalIds)
-        .where(and(eq(mediaExternalIds.mediaId, String(candidate.id)), eq(mediaExternalIds.source, "tmdb")))
+        .where(and(eq(mediaExternalIds.mediaId, String(candidate.id)), inArray(mediaExternalIds.source, CATALOG_ID_SOURCES)))
         .limit(1)
         .all()[0];
-      if (hasTmdbExternal) return;
+      if (hasCatalogId) return;
       this.mergeMediaRecords(targetMediaId, String(candidate.id));
     });
   }
 
   /**
-   * LIB-SHOW-01: merges a show's TMDB season + episode lists into its stored rows instead of replacing them.
+   * LIB-SHOW-01: merges a show's catalog season + episode lists into its stored rows instead of replacing them.
    * Rows are matched by (season number, episode number) and keep their id, because everything per episode is
    * keyed by that id — resume progress (`episode_resume_v1:<episodeId>`), skip markers, subtitle and audio rows,
    * and the same rows on the TV / phone / Kodi, which get the ids through the `media.upsert` op. New seasons and
-   * episodes are added; nothing stored is ever deleted. An episode or season missing from the TMDB answer is not
+   * episodes are added; nothing stored is ever deleted. An episode or season missing from the catalog answer is not
    * proof it is gone: both fetchers drop entries whose name is empty in the requested language, and a failed
    * season fetch comes back empty. Whether a truly delisted episode should leave the library is LIB-SHOW-02.
-   * `mode: "ingest"` takes every TMDB field TMDB filled in. `mode: "refresh"` (the background refresh and the
+   * `mode: "ingest"` takes every catalog field the catalog filled in. `mode: "refresh"` (the background refresh and the
    * Restore follow-up) always updates air dates and episode counts, replaces an episode's name, overview and
    * still only while the episode is provisional (our own `Episode N` placeholder or an empty title, or an air
    * date today or later), and otherwise only fills fields stored empty.
    */
   private mergeShowSeasonsAndEpisodes(
     mediaId: string,
-    seasons: TmdbDetails["seasons"],
-    episodes: TmdbDetails["episodes"],
+    seasons: TitleDetails["seasons"],
+    episodes: TitleDetails["episodes"],
     mode: "ingest" | "refresh"
   ) {
     const result = { addedSeasons: 0, updatedSeasons: 0, addedEpisodes: 0, updatedEpisodes: 0 };
@@ -3354,7 +3320,7 @@ export class LibraryDb {
       }
       const placeholderTitle = !stored.title || stored.title === `Episode ${stored.episodeNumber}`;
       const provisional = mode === "ingest" || placeholderTitle || (stored.airDate !== null && stored.airDate >= today);
-      // An empty or missing TMDB value never blanks a stored one.
+      // An empty or missing catalog value never blanks a stored one.
       const next = provisional
         ? {
             title: episode.name || stored.title,
@@ -3439,12 +3405,12 @@ export class LibraryDb {
   }
 
   /**
-   * LIB-SHOW-01: the background refresh of a show still airing. Merges the fresh TMDB season + episode lists
+   * LIB-SHOW-01: the background refresh of a show still airing. Merges the fresh catalog season + episode lists
    * (`mergeShowSeasonsAndEpisodes`, refresh mode) and the episode total; the show's own title, artwork, cast and
    * the like are left alone (the user may have edited them). A change is published as one `media.upsert`, so the
    * TV / phone / Kodi get the new episodes with the desktop's ids.
    */
-  async refreshShowEpisodes(mediaId: string, item: TmdbDetails): Promise<ShowEpisodeRefreshResult> {
+  async refreshShowEpisodes(mediaId: string, item: TitleDetails): Promise<ShowEpisodeRefreshResult> {
     const mediaRow = this.core
       .select({ type: mediaItems.type, totalEpisodes: mediaItems.totalEpisodes })
       .from(mediaItems)
@@ -3484,23 +3450,23 @@ export class LibraryDb {
       this.queueMediaUpsert(mediaId);
       await this.persist();
     }
-    const notListed = this.episodesNotListedByTmdb(mediaId, seasons, episodes);
+    const notListed = this.episodesNotListedByCatalog(mediaId, seasons, episodes);
     logger.info({ mediaId, changed, totalChanged, ...merged, notListed: notListed.length }, "refreshShowEpisodes");
     return { changed, ...merged, notListed };
   }
 
   /**
-   * LIB-SHOW-02 / LIB-SHOW-04: stored episodes that TMDB no longer lists, as far as the answer can prove it. The
+   * LIB-SHOW-02 / LIB-SHOW-04: stored episodes that the catalog no longer lists, as far as the answer can prove it. The
    * fetchers drop episodes whose name is empty in the requested language and a failed season fetch comes back
    * empty, so an episode only counts when its season is in the answer and the answer holds exactly as many
-   * episodes for it as TMDB's own `episode_count` (language-independent): then the season list is complete. A
+   * episodes for it as the catalog's own `episode_count` (language-independent): then the season list is complete. A
    * season missing from the answer proves nothing (its name may be empty too). An episode with a file carries the
    * change suggested for it (`suggestEpisodeMoves`); it is never offered for removal.
    */
-  private episodesNotListedByTmdb(
+  private episodesNotListedByCatalog(
     mediaId: string,
-    seasons: TmdbDetails["seasons"],
-    episodes: TmdbDetails["episodes"]
+    seasons: TitleDetails["seasons"],
+    episodes: TitleDetails["episodes"]
   ): ShowEpisodeNotListed[] {
     const answered = new Map<number, Set<number>>();
     for (const episode of episodes) {
@@ -3558,11 +3524,11 @@ export class LibraryDb {
   }
 
   /**
-   * LIB-SHOW-02: removes the episodes the user agreed to drop after TMDB stopped listing them. Only episodes of
+   * LIB-SHOW-02: removes the episodes the user agreed to drop after the catalog stopped listing them. Only episodes of
    * this show without a file are removed (with their skip markers); one that has a file is kept and counted. The
    * change goes out as one `media.upsert`, whose episode list the TV / phone / Kodi apply.
    */
-  async removeEpisodesNotOnTmdb(mediaId: string, episodeIds: string[]): Promise<DelistedEpisodeRemovalResult> {
+  async removeEpisodesNotInCatalog(mediaId: string, episodeIds: string[]): Promise<DelistedEpisodeRemovalResult> {
     if (episodeIds.length === 0) return { removed: 0, keptWithFile: 0 };
     const rows = this.metadata
       .select({ id: mediaEpisodes.id, seasonNumber: mediaEpisodes.seasonNumber, episodeNumber: mediaEpisodes.episodeNumber })
@@ -3579,13 +3545,13 @@ export class LibraryDb {
       this.queueMediaUpsert(mediaId);
       await this.persist();
     }
-    logger.info({ mediaId, requested: episodeIds.length, ...result }, "removeEpisodesNotOnTmdb");
+    logger.info({ mediaId, requested: episodeIds.length, ...result }, "removeEpisodesNotInCatalog");
     return result;
   }
 
   /**
    * LIB-SHOW-04: moves an episode the user has a file for to another episode slot of the same show, once they said
-   * yes. The episode keeps its id and takes the slot's numbers and TMDB fields, and the slot's own empty row goes,
+   * yes. The episode keeps its id and takes the slot's numbers and catalog fields, and the slot's own empty row goes,
    * so everything keyed by the id moves with it on every device: watched state and resume spots
    * (`episode_resume_v1:<id>`, every profile), skip markers, subtitle and audio rows. Every version's file is
    * renumbered to the slot. A slot that has a file is refused: a move never adds a file to an episode that has one.
@@ -3658,8 +3624,8 @@ export class LibraryDb {
     return { moved: true, files };
   }
 
-  async addMediaFromTmdb(item: TmdbDetails) {
-    const normalized: TmdbDetails = {
+  async addMediaFromCatalog(item: TitleDetails) {
+    const normalized: TitleDetails = {
       ...item,
       title: item.title ?? "",
       originalTitle: item.originalTitle ?? null,
@@ -3673,7 +3639,7 @@ export class LibraryDb {
       genres: Array.isArray(item.genres) ? item.genres.filter((id) => Number.isFinite(Number(id))) : [],
       cast: Array.isArray(item.cast)
         ? item.cast.map((member) => ({
-            tmdbId: member.tmdbId ?? null,
+            personId: member.personId ?? null,
             name: member.name ?? "",
             role: member.role ?? null,
             profilePath: member.profilePath ?? null,
@@ -3718,7 +3684,7 @@ export class LibraryDb {
       .where(
         and(
           eq(mediaExternalIds.mediaType, normalized.type),
-          eq(mediaExternalIds.source, "tmdb"),
+          inArray(mediaExternalIds.source, CATALOG_ID_SOURCES),
           eq(mediaExternalIds.externalId, externalId)
         )
       )
@@ -3732,7 +3698,7 @@ export class LibraryDb {
             .from(mediaExternalIds)
             .where(
               and(
-                eq(mediaExternalIds.source, "tmdb"),
+                inArray(mediaExternalIds.source, CATALOG_ID_SOURCES),
                 eq(mediaExternalIds.externalId, externalId),
                 or(isNull(mediaExternalIds.mediaType), eq(mediaExternalIds.mediaType, normalized.type))
               )
@@ -3773,7 +3739,7 @@ export class LibraryDb {
           id: randomUUID(),
           mediaId: candidateId,
           mediaType: normalized.type,
-          source: "tmdb",
+          source: CATALOG_ID_SOURCE,
           externalId,
         })
         .onConflictDoNothing()
@@ -3783,7 +3749,7 @@ export class LibraryDb {
         .from(mediaExternalIds)
         .where(
           and(
-            eq(mediaExternalIds.source, "tmdb"),
+            inArray(mediaExternalIds.source, CATALOG_ID_SOURCES),
             eq(mediaExternalIds.externalId, externalId),
             or(isNull(mediaExternalIds.mediaType), eq(mediaExternalIds.mediaType, normalized.type))
           )
@@ -3804,7 +3770,7 @@ export class LibraryDb {
           .where(
             and(
               eq(mediaExternalIds.mediaId, id),
-              eq(mediaExternalIds.source, "tmdb"),
+              inArray(mediaExternalIds.source, CATALOG_ID_SOURCES),
               eq(mediaExternalIds.externalId, externalId),
               isNull(mediaExternalIds.mediaType)
             )
@@ -3818,7 +3784,7 @@ export class LibraryDb {
         .where(
           and(
             eq(mediaExternalIds.mediaId, id),
-            eq(mediaExternalIds.source, "tmdb"),
+            inArray(mediaExternalIds.source, CATALOG_ID_SOURCES),
             eq(mediaExternalIds.externalId, externalId),
             isNull(mediaExternalIds.mediaType)
           )
@@ -3883,13 +3849,13 @@ export class LibraryDb {
         id: randomUUID(),
         mediaId: id,
         mediaType: normalized.type,
-        source: "tmdb",
+        source: CATALOG_ID_SOURCE,
         externalId,
       })
       .onConflictDoNothing()
       .run();
 
-    this.reconcileOrphanedMediaRowsForTmdb(
+    this.reconcileOrphanedMediaRowsForCatalog(
       id,
       normalized.type,
       normalized.title,
@@ -3908,7 +3874,7 @@ export class LibraryDb {
 
     this.metadata.delete(mediaRoles).where(eq(mediaRoles.mediaId, id)).run();
     normalized.cast.forEach((member, index) => {
-      const personId = this.ensurePerson(member);
+      const personId = this.ensurePerson({ catalogId: member.personId, name: member.name, profilePath: member.profilePath });
       // `Number(null)` is 0: a cast without billing order kept as 0 everywhere lists alphabetically, not as billed.
       const orderIndex = normalizeOptionalNumber(member.order) ?? index;
       this.metadata
@@ -3941,7 +3907,7 @@ export class LibraryDb {
 
     // Merge, never replace: a show added again (or restored) keeps its episode ids (LIB-SHOW-01).
     const merged = this.mergeShowSeasonsAndEpisodes(id, normalized.seasons, normalized.episodes, "ingest");
-    logger.info({ mediaId: id, type: normalized.type, ...merged }, "addMediaFromTmdb: seasons + episodes merged");
+    logger.info({ mediaId: id, type: normalized.type, ...merged }, "addMediaFromCatalog: seasons + episodes merged");
 
     this.queueMediaUpsert(id);
     await this.persist();
@@ -4071,7 +4037,7 @@ export class LibraryDb {
   }
 
   /**
-   * META-ART-01: every image of `mediaId` still stored as a TMDB path, in display order (title poster and backdrop,
+   * META-ART-01: every image of `mediaId` still stored as a catalog path, in display order (title poster and backdrop,
    * season posters, cast photos, episode stills). Asset keys, user URLs and empty values are left out.
    */
   listArtworkToCopy(mediaId: string): ArtworkSlot[] {
@@ -4083,8 +4049,8 @@ export class LibraryDb {
       .limit(1)
       .all()[0];
     if (!media) return slots;
-    if (isTmdbImagePath(media.posterPath)) slots.push({ target: "mediaPoster", id: mediaId, path: media.posterPath });
-    if (isTmdbImagePath(media.backdropPath)) slots.push({ target: "mediaBackdrop", id: mediaId, path: media.backdropPath });
+    if (isCatalogImagePath(media.posterPath)) slots.push({ target: "mediaPoster", id: mediaId, path: media.posterPath });
+    if (isCatalogImagePath(media.backdropPath)) slots.push({ target: "mediaBackdrop", id: mediaId, path: media.backdropPath });
     const seasons = this.metadata
       .select({ id: mediaSeasons.id, posterPath: mediaSeasons.posterPath })
       .from(mediaSeasons)
@@ -4092,7 +4058,7 @@ export class LibraryDb {
       .orderBy(asc(mediaSeasons.seasonNumber))
       .all();
     for (const season of seasons) {
-      if (isTmdbImagePath(season.posterPath)) slots.push({ target: "seasonPoster", id: String(season.id), path: season.posterPath });
+      if (isCatalogImagePath(season.posterPath)) slots.push({ target: "seasonPoster", id: String(season.id), path: season.posterPath });
     }
     const cast = this.metadata
       .select({ id: people.id, profilePath: people.profilePath })
@@ -4106,7 +4072,7 @@ export class LibraryDb {
       const id = String(person.id);
       if (seenPeople.has(id)) continue;
       seenPeople.add(id);
-      if (isTmdbImagePath(person.profilePath)) slots.push({ target: "personProfile", id, path: person.profilePath });
+      if (isCatalogImagePath(person.profilePath)) slots.push({ target: "personProfile", id, path: person.profilePath });
     }
     const episodes = this.metadata
       .select({ id: mediaEpisodes.id, stillPath: mediaEpisodes.stillPath })
@@ -4115,13 +4081,13 @@ export class LibraryDb {
       .orderBy(asc(mediaEpisodes.seasonNumber), asc(mediaEpisodes.episodeNumber))
       .all();
     for (const episode of episodes) {
-      if (isTmdbImagePath(episode.stillPath)) slots.push({ target: "episodeStill", id: String(episode.id), path: episode.stillPath });
+      if (isCatalogImagePath(episode.stillPath)) slots.push({ target: "episodeStill", id: String(episode.id), path: episode.stillPath });
     }
     return slots;
   }
 
   /**
-   * META-ART-01: swaps copied artwork in. Compare-and-set: a field is written only while it still holds the TMDB
+   * META-ART-01: swaps copied artwork in. Compare-and-set: a field is written only while it still holds the catalog
    * path the copy was made from, so an edit, restore or refresh that ran meanwhile wins. Safe to repeat.
    * STOR-PLACE-09: `path` may also be a stored artwork reference whose object is gone, swapped for its fetched-back copy.
    */
@@ -4129,7 +4095,7 @@ export class LibraryDb {
     let applied = 0;
     const touchedPeople = new Set<string>();
     for (const copy of copies) {
-      if (!isTmdbImagePath(copy.path) && !artworkStorageKey(copy.path)) continue;
+      if (!isCatalogImagePath(copy.path) && !artworkStorageKey(copy.path)) continue;
       // Drizzle's `.run()` reports no row count on every driver, so each swap checks the current value first.
       let swapped = false;
       switch (copy.target) {
@@ -4233,12 +4199,12 @@ export class LibraryDb {
   }
 
   /**
-   * META-ART-01 migration: every title that still holds a TMDB image path in any slot `listArtworkToCopy` lists
+   * META-ART-01 migration: every title that still holds a catalog image path in any slot `listArtworkToCopy` lists
    * (poster, backdrop, season posters, cast photos, episode stills), in library order. One scan per table, so a
    * library of thousands of titles is listed without one call per title.
    */
   listMediaWithArtworkToCopy(): string[] {
-    const tmdbPath = (column: unknown) => sql`(${column} like '/%' and ${column} not like '//%')`;
+    const catalogPath = (column: unknown) => sql`(${column} like '/%' and ${column} not like '//%')`;
     const ids = new Set<string>();
     const add = (rows: { mediaId: string | number }[]) => {
       for (const row of rows) ids.add(String(row.mediaId));
@@ -4247,17 +4213,17 @@ export class LibraryDb {
       this.core
         .select({ mediaId: mediaItems.id })
         .from(mediaItems)
-        .where(or(tmdbPath(mediaItems.posterPath), tmdbPath(mediaItems.backdropPath)))
+        .where(or(catalogPath(mediaItems.posterPath), catalogPath(mediaItems.backdropPath)))
         .all()
     );
-    add(this.metadata.selectDistinct({ mediaId: mediaSeasons.mediaId }).from(mediaSeasons).where(tmdbPath(mediaSeasons.posterPath)).all());
-    add(this.metadata.selectDistinct({ mediaId: mediaEpisodes.mediaId }).from(mediaEpisodes).where(tmdbPath(mediaEpisodes.stillPath)).all());
+    add(this.metadata.selectDistinct({ mediaId: mediaSeasons.mediaId }).from(mediaSeasons).where(catalogPath(mediaSeasons.posterPath)).all());
+    add(this.metadata.selectDistinct({ mediaId: mediaEpisodes.mediaId }).from(mediaEpisodes).where(catalogPath(mediaEpisodes.stillPath)).all());
     add(
       this.metadata
         .selectDistinct({ mediaId: mediaRoles.mediaId })
         .from(mediaRoles)
         .innerJoin(people, eq(people.id, mediaRoles.personId))
-        .where(tmdbPath(people.profilePath))
+        .where(catalogPath(people.profilePath))
         .all()
     );
     return [...ids];
@@ -4265,8 +4231,8 @@ export class LibraryDb {
 
   /**
    * LIB-CAST-01: titles whose cast looks merged into one person by the old code (details without person ids
-   * became TMDB person 0, so every role matched one person): more roles than distinct people. This also matches an
-   * actor TMDB credits twice; `refetchCollapsedCasts` fetches each title once, so that costs one fetch. The person
+   * became catalog person 0, so every role matched one person): more roles than distinct people. This also matches an
+   * actor the catalog credits twice; `refetchCollapsedCasts` fetches each title once, so that costs one fetch. The person
    * id 0 itself is not tested: a refetch may keep that row for one of the roles.
    */
   listMediaWithCollapsedCast(): string[] {
@@ -4280,7 +4246,7 @@ export class LibraryDb {
   }
 
   /**
-   * LIB-CREW-01 backfill: titles TMDB knows (a `tmdb` external id) that hold no crew at all, in a stable order. A title
+   * LIB-CREW-01 backfill: titles the catalog knows (a catalog id) that hold no crew at all, in a stable order. A title
    * with any stored crew (fetched, restored or edited by the user) is never listed, so the backfill cannot overwrite it.
    */
   listMediaMissingCrew(): string[] {
@@ -4295,7 +4261,7 @@ export class LibraryDb {
       .selectDistinct({ mediaId: mediaExternalIds.mediaId })
       .from(mediaExternalIds)
       .innerJoin(mediaItems, eq(mediaItems.id, mediaExternalIds.mediaId))
-      .where(eq(mediaExternalIds.source, "tmdb"))
+      .where(inArray(mediaExternalIds.source, CATALOG_ID_SOURCES))
       .orderBy(asc(mediaExternalIds.mediaId))
       .all()
       .map((row) => String(row.mediaId))
@@ -6325,7 +6291,7 @@ export class LibraryDb {
     label: string,
     objectKey: string,
     format?: string | null,
-    /** Where the subtitle came from: "srt" for a file the user added, "opensubtitles" for a fetched one (PLAY-SUBGET-17). */
+    /** Where the subtitle came from: "srt" for a file the user added, "fetched" for a fetched one (PLAY-SUBGET-17). */
     source?: string | null
   ) {
     const timestamp = nowIso();
@@ -7057,9 +7023,9 @@ export class LibraryDb {
         }
       }
     }
-    const externalIdsById = this.loadMediaExternalIds([mediaId]);
+    const catalogIdById = this.loadMediaCatalogIds([mediaId]);
     const genresById = this.loadMediaGenres([mediaId]);
-    const media = mapMediaRows([mediaRow], externalIdsById, genresById)[0];
+    const media = mapMediaRows([mediaRow], catalogIdById, genresById)[0];
 
     const castRows = this.metadata
       .select({
@@ -7076,14 +7042,11 @@ export class LibraryDb {
       .orderBy(asc(mediaRoles.orderIndex), asc(people.name))
       .all();
     const personIds = castRows.map((row) => String(row.personId));
-    const peopleExternalIdsById = this.loadPeopleExternalIds(personIds);
+    const castCatalogIds = this.loadPeopleCatalogIds(personIds);
     const cast = castRows.map((row) => ({
       id: String(row.id),
       personId: String(row.personId),
-      tmdbId: (() => {
-        const parsed = peopleExternalIdsById.get(String(row.personId));
-        return parsed && typeof parsed.tmdb === "number" ? parsed.tmdb : null;
-      })(),
+      catalogId: castCatalogIds.get(String(row.personId)) ?? null,
       name: String(row.name),
       role: row.role ? String(row.role) : null,
       profilePath: row.profilePath ? String(row.profilePath) : null,
@@ -7102,13 +7065,12 @@ export class LibraryDb {
       .where(eq(mediaCrew.mediaId, mediaId))
       .orderBy(asc(mediaCrew.orderIndex))
       .all();
-    const crewExternalIds = this.loadPeopleExternalIds(crewRows.map((row) => String(row.personId)));
+    const crewCatalogIds = this.loadPeopleCatalogIds(crewRows.map((row) => String(row.personId)));
     const crew = crewRows.map((row) => {
-      const tmdb = crewExternalIds.get(String(row.personId))?.tmdb;
       return {
         id: String(row.id),
         personId: String(row.personId),
-        tmdbId: typeof tmdb === "number" ? tmdb : null,
+        catalogId: crewCatalogIds.get(String(row.personId)) ?? null,
         name: String(row.name),
         job: String(row.job),
         profilePath: row.profilePath ? String(row.profilePath) : null,

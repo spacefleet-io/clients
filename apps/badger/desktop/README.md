@@ -463,5 +463,5 @@ Desktop also disables Electron spellcheck by default because the app does not ne
 - If tray support is unavailable, close falls back to normal app exit behavior.
 
 ## Skip markers
-- Desktop playback now prefers provider-backed skip markers from TheIntroDB — asked through the SpaceBadger metadata service with an anonymous ticket (META-SKIP-01; the desktop never calls TheIntroDB itself) — and persists both marker rows and provider hit/miss state locally in SQLite.
+- Desktop playback now prefers provider-backed skip markers from the SpaceBadger metadata service — asked with an anonymous ticket (META-SKIP-01; the desktop never calls a source itself) — and persists both marker rows and provider hit/miss state locally in SQLite.
 - Internal skip detection remains the fallback path when provider markers are missing. That fallback now uses the POC-tuned season consensus/profile flow instead of the older single-episode sibling heuristic.

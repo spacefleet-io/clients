@@ -168,7 +168,7 @@ export interface EngineV2 {
   submit(job: IngestJobRecord): Promise<{ jobId: string }>;
   /**
    * Shallow-merge a payload patch onto an existing job. Used by
-   * `badger.ingest.attach_metadata` to thread TMDB hints onto a source job
+   * `badger.ingest.attach_metadata` to thread catalog hints onto a source job
    * mid-flight. Returns the post-merge record, or null if the job is unknown.
    */
   updateJobPayload(

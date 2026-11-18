@@ -24,8 +24,8 @@ export const uiLanguageOf = (tag: string | null | undefined) => {
 export const episodeKeysOf = (episodes: readonly { seasonNumber: number; episodeNumber: number }[]) =>
   episodes.map((episode) => `${episode.seasonNumber}:${episode.episodeNumber}`);
 
-const readRow = (reader: TextsReader, type: TextsMediaType, tmdbId: number, language: string) =>
-  parseLocalizedText(reader.getSetting(localizedTextKey(type, tmdbId, language))?.value ?? null);
+const readRow = (reader: TextsReader, type: TextsMediaType, catalogId: number, language: string) =>
+  parseLocalizedText(reader.getSetting(localizedTextKey(type, catalogId, language))?.value ?? null);
 
 const covers = (record: LocalizedTextRecord, episodeKeys: readonly string[]) => {
   const known = new Set(record.absent);
@@ -38,19 +38,19 @@ const lacking = (record: LocalizedTextRecord) =>
   record.overview === null || record.episodes.some((episode) => episode.name === null || episode.overview === null);
 
 /** True when a lookup is due: no row covers the library's episodes in `language`, or English where it lacks texts. */
-export const needsTexts = (reader: TextsReader, type: TextsMediaType, tmdbId: number, language: string, episodeKeys: readonly string[]) => {
-  const own = readRow(reader, type, tmdbId, language);
+export const needsTexts = (reader: TextsReader, type: TextsMediaType, catalogId: number, language: string, episodeKeys: readonly string[]) => {
+  const own = readRow(reader, type, catalogId, language);
   if (!own || !covers(own, episodeKeys)) return true;
   if (language === OVERVIEW_FALLBACK_LANGUAGE || !lacking(own)) return false;
-  const english = readRow(reader, type, tmdbId, OVERVIEW_FALLBACK_LANGUAGE);
+  const english = readRow(reader, type, catalogId, OVERVIEW_FALLBACK_LANGUAGE);
   return !english || !covers(english, episodeKeys);
 };
 
 /** Asks the texts of one title (the row when it covers the episodes, else one lookup kept as the row), then English
  * where the language lacks some. */
-export const askTexts = async (texts: DetailsTexts, type: TextsMediaType, tmdbId: number, language: string, episodeKeys: readonly string[]) => {
-  const own = await texts.texts(type, tmdbId, language, episodeKeys);
-  if (language !== OVERVIEW_FALLBACK_LANGUAGE && lacking(own)) await texts.texts(type, tmdbId, OVERVIEW_FALLBACK_LANGUAGE, episodeKeys);
+export const askTexts = async (texts: DetailsTexts, type: TextsMediaType, catalogId: number, language: string, episodeKeys: readonly string[]) => {
+  const own = await texts.texts(type, catalogId, language, episodeKeys);
+  if (language !== OVERVIEW_FALLBACK_LANGUAGE && lacking(own)) await texts.texts(type, catalogId, OVERVIEW_FALLBACK_LANGUAGE, episodeKeys);
 };
 
 export type KeptTexts = {
@@ -59,9 +59,9 @@ export type KeptTexts = {
 };
 
 /** The kept texts of one title in `language`, English filling what it lacks, field by field; null when no row is kept. */
-export const keptTexts = (reader: TextsReader, type: TextsMediaType, tmdbId: number, language: string): KeptTexts | null => {
-  const rows = [readRow(reader, type, tmdbId, language)];
-  if (language !== OVERVIEW_FALLBACK_LANGUAGE) rows.push(readRow(reader, type, tmdbId, OVERVIEW_FALLBACK_LANGUAGE));
+export const keptTexts = (reader: TextsReader, type: TextsMediaType, catalogId: number, language: string): KeptTexts | null => {
+  const rows = [readRow(reader, type, catalogId, language)];
+  if (language !== OVERVIEW_FALLBACK_LANGUAGE) rows.push(readRow(reader, type, catalogId, OVERVIEW_FALLBACK_LANGUAGE));
   const kept = rows.filter((row): row is LocalizedTextRecord => row !== null);
   if (kept.length === 0) return null;
   const episodes = new Map<string, { name: string | null; overview: string | null }>();
@@ -105,7 +105,7 @@ export const pacedDetails = (deps: {
       setTimeout(resolve, ms);
       return promise;
     });
-  return async (type, tmdbId, language) => {
+  return async (type, catalogId, language) => {
     for (let attempt = 1; ; attempt += 1) {
       for (let wait = deps.pausedForMs(); wait > 0; wait = deps.pausedForMs()) {
         if (!deps.alive()) throw new TextsHeldError("texts_stopped");
@@ -114,7 +114,7 @@ export const pacedDetails = (deps: {
       if (!deps.alive()) throw new TextsHeldError("texts_stopped");
       if ((await deps.countTickets()) <= TEXTS_TICKET_FLOOR) throw new TextsHeldError("ticket_floor");
       try {
-        return await deps.details(type, tmdbId, language);
+        return await deps.details(type, catalogId, language);
       } catch (error) {
         if (!deps.onFailure(error) || attempt >= TEXTS_LOOKUP_TRIES) throw error;
       }

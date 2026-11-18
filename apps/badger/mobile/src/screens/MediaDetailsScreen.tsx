@@ -173,12 +173,12 @@ export const MediaDetailsScreen = () => {
   const heroWaiting = artworkAwaitsSource(heroArt.state);
 
   const isTv = details?.type === "tv";
-  // "Get subtitles" (PLAY-SUBGET-01): a film's action cell, an episode row's captions button; searchable only with a TMDB ID.
+  // "Get subtitles" (PLAY-SUBGET-01): a film's action cell, an episode row's captions button; searchable only with a catalog id.
   const [subtitleRequest, setSubtitleRequest] = useState<SubtitleFetchRequest | null>(null);
   const closeSubtitleSheet = useCallback(() => setSubtitleRequest(null), []);
   const online = useNetworkOnline();
   const subtitleCopy = subtitleFetchCopy(getCurrentLanguage());
-  const canGetSubtitles = details?.tmdbId != null;
+  const canGetSubtitles = details?.catalogId != null;
 
   const uploadedEpisodeKeys = useMemo(() => uploadedEpisodeKeysOf(details), [details]);
   // OFFL-PLAY-03: offline, only what is downloaded on the phone starts; the rest is greyed and disabled.

@@ -18,6 +18,8 @@
  */
 
 import { mediaFilesAndEditionsStatements } from "./editionDdl";
+import { neutralMediaDetails } from "./legacyFormat";
+import { CATALOG_ID_SOURCE } from "./catalogId";
 import { systemPlaylistForSlug } from "./systemPlaylists";
 import type {
   IngestJob,
@@ -54,8 +56,11 @@ import type { LibraryDbGroup } from "./manifest";
  * feature (plan: virtual-puzzling-sketch.md). v1 streams replay correctly
  * because `is_source` defaults to `false` (schema column DEFAULT 0) when
  * absent; the next source-job commit re-derives it from `sourceQuality`.
+ *
+ * v3 (META-SRC-09): `media.upsert` details carry the title's and each person's catalog id as `catalogId`, and no
+ * other sites' ids. v1–v2 payloads still replay: `neutralMediaDetails` (`legacyFormat.ts`) reads their old keys.
  */
-export const OP_STREAM_VERSION = 2;
+export const OP_STREAM_VERSION = 3;
 
 /**
  * Lowest op-stream version this build can still apply. A stream whose
@@ -241,20 +246,11 @@ const appendMediaCore = (b: Builders, details: MediaDetails, newId: IdGenerator)
   const rowIsThisUpsert = "EXISTS (SELECT 1 FROM media_items WHERE id = ? AND updated_at = ?)";
   const rowParams = [mediaId, details.updatedAt];
   b.core.add(`DELETE FROM media_external_ids WHERE media_id = ? AND ${rowIsThisUpsert};`, [mediaId, ...rowParams]);
-  if (details.tmdbId !== null) {
+  if (details.catalogId !== null) {
     b.core.add(
       `INSERT OR IGNORE INTO media_external_ids (id, media_id, media_type, source, external_id)
        SELECT ?, ?, ?, ?, ? WHERE ${rowIsThisUpsert};`,
-      [newId(), mediaId, details.type, "tmdb", String(details.tmdbId), ...rowParams]
-    );
-  }
-  const externalIds = details.externalIds ?? {};
-  for (const [source, externalId] of Object.entries(externalIds)) {
-    if (!source || externalId === null || externalId === undefined) continue;
-    b.core.add(
-      `INSERT OR IGNORE INTO media_external_ids (id, media_id, media_type, source, external_id)
-       SELECT ?, ?, ?, ?, ? WHERE ${rowIsThisUpsert};`,
-      [newId(), mediaId, details.type, source, String(externalId), ...rowParams]
+      [newId(), mediaId, details.type, CATALOG_ID_SOURCE, String(details.catalogId), ...rowParams]
     );
   }
 
@@ -284,10 +280,10 @@ const appendMediaMetadata = (b: Builders, details: MediaDetails, newId: IdGenera
       "INSERT OR REPLACE INTO people (id, name, profile_path) VALUES (?, ?, ?);",
       [member.personId, member.name, member.profilePath ?? null]
     );
-    if (member.tmdbId !== null) {
+    if (member.catalogId !== null) {
       b.metadata.add(
         "INSERT OR IGNORE INTO people_external_ids (id, person_id, source, external_id) VALUES (?, ?, ?, ?);",
-        [newId(), member.personId, "tmdb", String(member.tmdbId)]
+        [newId(), member.personId, CATALOG_ID_SOURCE, String(member.catalogId)]
       );
     }
     b.metadata.add(
@@ -305,10 +301,10 @@ const appendMediaMetadata = (b: Builders, details: MediaDetails, newId: IdGenera
         member.name,
         member.profilePath ?? null,
       ]);
-      if (member.tmdbId !== null) {
+      if (member.catalogId !== null) {
         b.metadata.add(
           "INSERT OR IGNORE INTO people_external_ids (id, person_id, source, external_id) VALUES (?, ?, ?, ?);",
-          [newId(), member.personId, "tmdb", String(member.tmdbId)]
+          [newId(), member.personId, CATALOG_ID_SOURCE, String(member.catalogId)]
         );
       }
       b.metadata.add(
@@ -543,12 +539,13 @@ const appendMediaPlayback = (b: Builders, details: MediaDetails, newId: IdGenera
 };
 
 const appendMediaUpsert = (b: Builders, op: MediaUpsertOp, newId: IdGenerator) => {
-  appendMediaCore(b, op.payload.details, newId);
-  appendMediaMetadata(b, op.payload.details, newId);
-  appendMediaPlayback(b, op.payload.details, newId);
+  const details = neutralMediaDetails(op.payload.details);
+  appendMediaCore(b, details, newId);
+  appendMediaMetadata(b, details, newId);
+  appendMediaPlayback(b, details, newId);
   // Stale ML analysis must be cleared whenever the media payload is rewritten.
   // The templates group is desktop-only — mobile silently drops it.
-  b.templates.add("DELETE FROM media_skip_analysis WHERE media_id = ?;", [op.payload.details.id]);
+  b.templates.add("DELETE FROM media_skip_analysis WHERE media_id = ?;", [details.id]);
 };
 
 const appendMediaDelete = (b: Builders, op: MediaDeleteOp) => {

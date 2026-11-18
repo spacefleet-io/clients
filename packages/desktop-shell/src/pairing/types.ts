@@ -17,7 +17,7 @@ export const pairingModeOf = (raw: unknown): PairingMode =>
 
 export type PairingStart = {
   requestId: string;
-  /** Shown as typed, e.g. "ABCD-EFGH". */
+  /** The 8 plain characters, e.g. "ABCDEFGH", shown as two groups of 4, never with a dash (ACCT-PAIR-01). */
   shortCode: string;
   qrPayload: string;
   /** Inline SVG of the QR code (black on white, with the quiet zone scanners need). */

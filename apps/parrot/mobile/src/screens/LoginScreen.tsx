@@ -6,7 +6,7 @@
 // The Google, Apple and Microsoft rows the server offers sit above an "or" line over the form (ACCT-SIGNIN-05).
 // A session the server rejected comes back here with a short explanation.
 import React, { useCallback, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { ArrowRight, Lock, Mail } from "lucide-react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
@@ -36,8 +36,10 @@ import { useSession } from "../state/session";
 import { setParrotLanguage } from "../lib/i18n";
 import { PARROT_LINK_SCHEME } from "../lib/linkScheme";
 import { PARROT_MASCOT } from "../brand";
-import { PairingPanel } from "./PairingPanel";
+import { createParrotCompletionDeps, createParrotPairingClient, PARROT_PAIRING_LOG_TAG } from "../setup/pairing";
+import { completePairing } from "@space/mobile-shell/pairing";
 import { currentPhoneDeviceName } from "@space/mobile-shell/pairing-device";
+import { MobilePairSignIn } from "@space/mobile-shell/pair-sign-in";
 
 const log = scopeLogger("login");
 
@@ -153,6 +155,7 @@ export const LoginScreen = ({ onPaired, onBack }: { onPaired?: () => Promise<voi
   const theme = useMobileShellTheme();
   const { signIn } = useSession();
   const [mode, setMode] = useState<"password" | "phone">("password");
+  const showForm = useCallback(() => setMode("password"), []);
   const [email, setEmail] = useState("");
   const [resetOpen, setResetOpen] = useState(false);
   const [info, setInfo] = useState<string | null>(null);
@@ -200,6 +203,29 @@ export const LoginScreen = ({ onPaired, onBack }: { onPaired?: () => Promise<voi
     />
   );
 
+  // "Sign in with another device": the page both phones share (UX-PHONE-10); its Back returns to this form.
+  if (mode === "phone") {
+    return (
+      <MobilePairSignIn
+        app="parrot"
+        createClient={createParrotPairingClient}
+        complete={(approved) =>
+          completePairing(
+            createParrotCompletionDeps(async (token, user) => {
+              // The key is already stored: mark it so the key step is skipped, then sign in.
+              await onPaired?.();
+              await signIn({ token, user: { id: user.id, email: user.email, emailVerified: !!user.emailVerified } });
+            }),
+            approved
+          )
+        }
+        logTag={PARROT_PAIRING_LOG_TAG}
+        deviceName={currentPhoneDeviceName("Parrot")}
+        onBack={showForm}
+      />
+    );
+  }
+
   return (
     <View style={{ flex: 1 }} testID="sign-in">
       <MobileStartupPage controls={controls}>
@@ -212,30 +238,19 @@ export const LoginScreen = ({ onPaired, onBack }: { onPaired?: () => Promise<voi
             {t(providerNotice.key, providerNotice.values)}
           </Text>
         ) : null}
-        {mode === "password" ? (
+        <PasswordSignInForm email={email} setEmail={setEmail} onForgot={() => setResetOpen(true)} provider={providerStep} />
+        {providerSignIn.providers.length > 0 ? (
           <>
-            <PasswordSignInForm email={email} setEmail={setEmail} onForgot={() => setResetOpen(true)} provider={providerStep} />
-            {providerSignIn.providers.length > 0 ? (
-              <>
-                <MobileOrDivider label={t("login.provider.or")} testID="provider-sign-in-divider" />
-                <MobileProviderSignInRows
-                  providers={providerSignIn.providers}
-                  busy={providerSignIn.busy}
-                  label={(provider) => t("login.provider.signInWith", { provider: PROVIDER_NAMES[provider] })}
-                  onSelect={(provider) => void providerSignIn.start(provider)}
-                />
-              </>
-            ) : null}
-            <MobilePhoneSignInCard onPress={() => setMode("phone")} />
+            <MobileOrDivider label={t("login.provider.or")} testID="provider-sign-in-divider" />
+            <MobileProviderSignInRows
+              providers={providerSignIn.providers}
+              busy={providerSignIn.busy}
+              label={(provider) => t("login.provider.signInWith", { provider: PROVIDER_NAMES[provider] })}
+              onSelect={(provider) => void providerSignIn.start(provider)}
+            />
           </>
-        ) : (
-          <>
-            <PairingPanel onPaired={onPaired ?? (async () => undefined)} />
-            <Pressable testID="sign-in-use-password" accessibilityRole="button" onPress={() => setMode("password")} hitSlop={8}>
-              <Text style={[styles.switch, { color: theme.colors.accent }]}>{t("parrot.login.usePassword")}</Text>
-            </Pressable>
-          </>
-        )}
+        ) : null}
+        <MobilePhoneSignInCard onPress={() => setMode("phone")} />
       </MobileStartupPage>
       {resetOpen ? (
         <MobilePasswordReset
@@ -255,5 +270,4 @@ const styles = StyleSheet.create({
   fields: { gap: 12, alignSelf: "stretch" },
   notice: { fontSize: 13, textAlign: "center" },
   link: { fontSize: 12, fontWeight: "700", letterSpacing: 1.5, textAlign: "center" },
-  switch: { fontSize: 14, fontWeight: "600", textAlign: "center", paddingVertical: 8 },
 });

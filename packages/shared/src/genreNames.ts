@@ -1,6 +1,6 @@
 /**
- * TMDB genre names in every app language (en, fr, nl, de, es), shared by the Badger desktop app and web player so the
- * library filters and title pages name a genre the same way. Ids are TMDB's, as in `GENRES_BY_CATEGORY`.
+ * Genre names in every app language (en, fr, nl, de, es), shared by the Badger desktop app and web player so the
+ * library filters and title pages name a genre the same way. Ids are the metadata service's, as in `GENRES_BY_CATEGORY`.
  */
 import { GENRES_BY_CATEGORY, type GenreCategory } from "./genres";
 
@@ -214,7 +214,7 @@ export const GENRE_NAMES: Record<GenreLanguage, Record<GenreCategory, Record<num
   },
 };
 
-/** The genre's name in `language` (`fr-CA` reads as `fr`), else its English TMDB name; null for an unknown id. */
+/** The genre's name in `language` (`fr-CA` reads as `fr`), else its English name; null for an unknown id. */
 export const localizedGenreName = (category: GenreCategory, id: number, language?: string | null): string | null => {
   const base = (language ?? "en").slice(0, 2).toLowerCase();
   const names = GENRE_NAMES[(base in GENRE_NAMES ? base : "en") as GenreLanguage][category];

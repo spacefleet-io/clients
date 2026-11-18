@@ -101,7 +101,7 @@ describe("buildSubtitleEntries", () => {
       candidates: [candidate({ language: "es" }), candidate({ language: "es", hearingImpaired: true }), candidate({ language: "fr" })],
       existingTracks: [
         { language: "spa", label: "Spanish" },
-        { language: "fr", label: "French", source: "opensubtitles" },
+        { language: "fr", label: "French", source: "fetched" },
       ],
       uiLanguage: "en",
       labels,
@@ -178,7 +178,7 @@ describe("rankSubtitleCandidates (PLAY-SUBGET-14)", () => {
 describe("subtitleFetchTarget (PLAY-SUBGET-14)", () => {
   const show = {
     type: "tv",
-    tmdbId: 900104,
+    catalogId: 900104,
     episodes: [{ id: "ep-s3e4", seasonNumber: 3, episodeNumber: 4 }],
     files: [
       { filename: "The.Brigade.S03E03.mkv", season: 3, episode: 3 },
@@ -191,7 +191,7 @@ describe("subtitleFetchTarget (PLAY-SUBGET-14)", () => {
     ],
   };
 
-  it("searches an episode by TMDB ID, season and episode only, and ranks against its own file", () => {
+  it("searches an episode by catalog ID, season and episode only, and ranks against its own file", () => {
     expect(subtitleFetchTarget(show, "ep-s3e4")).toEqual({
       request: { type: "tv", id: 900104, season: 3, episode: 4 },
       libraryFileName: "The Brigade - S03E04 - 1080p WEB.mkv",
@@ -199,10 +199,10 @@ describe("subtitleFetchTarget (PLAY-SUBGET-14)", () => {
     });
   });
 
-  it("searches a movie by TMDB ID; nothing without one", () => {
-    const movie = { type: "movie", tmdbId: 900021, episodes: [], files: [{ filename: "Sandglass.mkv", season: null, episode: null }], subtitleTracks: [] };
+  it("searches a movie by catalog ID; nothing without one", () => {
+    const movie = { type: "movie", catalogId: 900021, episodes: [], files: [{ filename: "Sandglass.mkv", season: null, episode: null }], subtitleTracks: [] };
     expect(subtitleFetchTarget(movie, null)?.request).toEqual({ type: "movie", id: 900021 });
-    expect(subtitleFetchTarget({ ...movie, tmdbId: null }, null)).toBeNull();
+    expect(subtitleFetchTarget({ ...movie, catalogId: null }, null)).toBeNull();
     expect(subtitleFetchTarget(show, null)).toBeNull();
   });
 });
@@ -227,7 +227,7 @@ describe("storeFetchedSubtitle (PLAY-SUBGET-17, -19)", () => {
     expect(calls).toEqual([
       ["download", 77],
       ["upload", "1\n", "srt"],
-      ["addTrack", { language: "es", label: "Spanish 2", objectKey: "obj/key", format: "srt", source: "opensubtitles:77" }],
+      ["addTrack", { language: "es", label: "Spanish 2", objectKey: "obj/key", format: "srt", source: "fetched:77" }],
       ["remember", { language: "es", format: "srt" }],
     ]);
   });

@@ -9,7 +9,7 @@ const lowestRegular = (numbers: readonly number[]): number | null => {
 
 /**
  * Season a show's page opens on (UX-TV-08): the one being resumed, else the first season with a file in the library,
- * else the first regular season. Season 0 is TMDB's "Specials" (extras), so it is chosen only when no regular season
+ * else the first regular season. Season 0 is the catalog's "Specials" (extras), so it is chosen only when no regular season
  * qualifies.
  */
 export const defaultSeason = (

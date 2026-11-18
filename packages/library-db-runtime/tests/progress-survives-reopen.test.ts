@@ -346,7 +346,7 @@ const bootstrapWithMovie = async () => {
   log("phase:bootstrap LibraryDb.open on empty fake API");
   const db = await LibraryDb.open(TOKEN, KEY);
   db.setSyncEnabled(true);
-  const mediaId = await db.addMediaFromTmdb({
+  const mediaId = await db.addMediaFromCatalog({
     id: 25_007,
     type: "movie",
     title: "P7 Resume Movie",

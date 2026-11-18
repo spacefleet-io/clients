@@ -2,7 +2,7 @@
 
 The anonymous-ticket client every app reuses: a persisted **ticket reserve** with its own refill schedule, a **direct lookup client** for the metadata service and the **metadata URL resolver**. Specs: META-ANON-02, META-ANON-03, META-RELAY-01, META-RELAY-02. Contract: tracking issue #403. Token format and blinding live in `@space/privacy-pass` (`packages/privacy-pass/README.md`).
 
-Pure TypeScript: no `node:*`, no DOM-only API, no logging (a test walks the import graph). Runs in the Electron renderer, React Native / Hermes, Bun and Node. The host supplies `fetch`, storage and (optionally) timers and randomness. `@space/shared` is imported as types only (`TmdbSearchResult` etc.), except three pure modules the test walks and holds to the same rules: `@space/shared/localizedTexts`, the import-free codec of the kept synopsis and episode texts (LIB-LANG-02), and `@space/shared/titleLanguage` and `@space/shared/mediaLanguageDisplay`, the title-language codecs (#2822).
+Pure TypeScript: no `node:*`, no DOM-only API, no logging (a test walks the import graph). Runs in the Electron renderer, React Native / Hermes, Bun and Node. The host supplies `fetch`, storage and (optionally) timers and randomness. `@space/shared` is imported as types only (`TitleSearchResult` etc.), except three pure modules the test walks and holds to the same rules: `@space/shared/localizedTexts`, the import-free codec of the kept synopsis and episode texts (LIB-LANG-02), and `@space/shared/titleLanguage` and `@space/shared/mediaLanguageDisplay`, the title-language codecs (#2822).
 
 ## API
 
@@ -42,9 +42,9 @@ createMetadataClient(config: { reserve: { take(): Promise<string | null>; put?(t
 
 interface MetadataClient {
   lookup<T>(body: { op: "search" | "details" | "videos" | "image" | "skipMarkers"; ... }): Promise<T>;
-  search(type: TmdbMediaType, query: string, page = 1): Promise<{ results: TmdbSearchResult[]; page: number; totalPages: number }>;
-  details(type: TmdbMediaType, id: number, language = "en"): Promise<{ item: TmdbDetails }>;
-  videos(type: TmdbMediaType, id: number, language: string): Promise<{ trailers: TmdbTrailer[] }>;
+  search(type: TitleType, query: string, page = 1): Promise<{ results: TitleSearchResult[]; page: number; totalPages: number }>;
+  details(type: TitleType, id: number, language = "en"): Promise<{ item: TitleDetails }>;
+  videos(type: TitleType, id: number, language: string): Promise<{ trailers: Trailer[] }>;
   imageUrl(kind: "poster" | "backdrop" | "profile" | "still", path: string, language?: string): Promise<{ url: string | null }>;
   skipMarkers(request: { type: "movie"; id: number; durationSeconds?: number } | { type: "tv"; id: number; season: number; episode: number; durationSeconds?: number }): Promise<MetadataSkipMarkersResult>;
 }
@@ -53,7 +53,9 @@ resolveMetadataUrl(env?: { override?, METADATA_URL?, VITE_METADATA_URL?, EXPO_PU
 metadataUrlForApi(apiBaseUrl: string | null | undefined): string
 ```
 
-Each helper posts one lookup body and resolves to the service's answer as is: `search` sends `{ op: "search", type, query, page }` and gets `{ results, page, totalPages }`; `details` sends `{ op: "details", type, id, language }` and gets `{ item }`; `videos` sends `{ op: "videos", type, id, language }` and gets `{ trailers }`; `imageUrl` sends `{ op: "image", kind, path, language? }` and gets `{ url }` (`null` when there is no picture); `skipMarkers` sends `{ op: "skipMarkers", type, id, season?, episode?, durationSeconds? }` and gets TheIntroDB's intro and credits times, `{ provider: "theintrodb-v3", fetchedAt, markers, coverage }` (META-SKIP-01: apps never call TheIntroDB; `durationSeconds` only closes a credits time that runs to the end of the file). Use `lookup` for anything else.
+Each helper posts one lookup body and resolves to the service's answer as is: `search` sends `{ op: "search", type, query, page }` and gets `{ results, page, totalPages }`; `details` sends `{ op: "details", type, id, language }` and gets `{ item }`; `videos` sends `{ op: "videos", type, id, language }` and gets `{ trailers }`; `imageUrl` sends `{ op: "image", kind, path, language? }` and gets `{ url }` (`null` when there is no picture); `skipMarkers` sends `{ op: "skipMarkers", type, id, season?, episode?, durationSeconds? }` and gets the intro and credits times, `{ fetchedAt, markers, coverage }` (META-SKIP-01: apps never call a source; `durationSeconds` only closes a credits time that runs to the end of the file). Use `lookup` for anything else.
+
+The title, skip-marker and subtitle bodies also carry `contract: 2` (META-SRC-09): the service then answers in its neutral shape (cast and crew `personId`, a 410 `deleted`, skip markers without the source's name), so no app names where the metadata comes from.
 
 ### Behaviour
 

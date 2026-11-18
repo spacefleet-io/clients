@@ -3,7 +3,8 @@ import {
   base64ToBytes,
   bytesToBase64,
   bytesToBase64Url,
-  formatShortCode,
+  shortCodeGroups,
+  shortCodeInput,
   generateDeviceKeyPair,
   isSealedKey,
   normalizeShortCode,
@@ -89,7 +90,36 @@ describe("short code + QR payload", () => {
   it("normalises, folds look-alikes and rejects bad input (shared vectors)", () => {
     for (const c of vectors.shortCodes) {
       expect(normalizeShortCode(c.input)).toBe(c.normalized);
-      if (c.normalized && "formatted" in c) expect(formatShortCode(c.normalized)).toBe(c.formatted);
+      if (c.normalized && "groups" in c) expect(shortCodeGroups(c.normalized)).toEqual(c.groups);
+    }
+  });
+
+  // @bugfix @regression-proof Chris 2026-11-18: the code is shown without a dash and typed with or without one.
+  it("shows the code as two groups of 4, never with a dash", () => {
+    expect(shortCodeGroups("7RYREBTW")).toEqual(["7RYR", "EBTW"]);
+    expect(shortCodeGroups("7ryr-ebtw")).toEqual(["7RYR", "EBTW"]);
+    expect(shortCodeGroups("").join("")).toBe("");
+  });
+
+  // @bugfix @regression-proof Chris 2026-11-18: a code field takes the code typed or pasted any way.
+  it("keeps a typed or pasted code in its canonical form, up to 8 characters", () => {
+    // [typed or pasted, what the field keeps, what the server's lookup reads it as]
+    const cases: Array<[string, string, string | null]> = [
+      ["7RYR-EBTW", "7RYREBTW", "7RYREBTW"],
+      ["7ryrebtw", "7RYREBTW", "7RYREBTW"],
+      [" 7ryr ebtw ", "7RYREBTW", "7RYREBTW"],
+      ["7RYR\u2013EBTW", "7RYREBTW", "7RYREBTW"],
+      ["7ryr\u00a0ebtw", "7RYREBTW", "7RYREBTW"],
+      ["7RYR-", "7RYR", null],
+      ["o1Li", "0111", null],
+      ["7RYR-EBTW-XXXX", "7RYREBTW", null],
+      ["7RYRU", "7RYR", null],
+      ["https://spacefleet.io/pair/badger?code=7ryr-ebtw", "7RYREBTW", null],
+      ["", "", null],
+    ];
+    for (const [raw, kept, server] of cases) {
+      expect(shortCodeInput(raw)).toBe(kept);
+      expect(normalizeShortCode(raw)).toBe(server);
     }
   });
 
@@ -107,9 +137,9 @@ describe("short code + QR payload", () => {
 /** @req ACCT-PAIR-06[api,badger-mobile,parrot] */
 describe("pairing QR link names the asking app", () => {
   it("builds a web link under /pair/<app> on the website", () => {
-    expect(buildPairLink("https://spacefleet.io", "parrot", "ABCDEFGH")).toBe("https://spacefleet.io/pair/parrot?code=ABCD-EFGH");
-    expect(buildPairLink("https://spacefleet.io/", "badger", "ABCDEFGH")).toBe("https://spacefleet.io/pair/badger?code=ABCD-EFGH");
-    expect(buildPairLink("http://localhost:5173", "parrot", "ABCDEFGH")).toBe("http://localhost:5173/pair/parrot?code=ABCD-EFGH");
+    expect(buildPairLink("https://spacefleet.io", "parrot", "ABCDEFGH")).toBe("https://spacefleet.io/pair/parrot?code=ABCDEFGH");
+    expect(buildPairLink("https://spacefleet.io/", "badger", "ABCDEFGH")).toBe("https://spacefleet.io/pair/badger?code=ABCDEFGH");
+    expect(buildPairLink("http://localhost:5173", "parrot", "ABCDEFGH")).toBe("http://localhost:5173/pair/parrot?code=ABCDEFGH");
   });
 
   it("reads the app and the code back from a link (shared vectors)", () => {

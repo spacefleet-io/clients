@@ -1,8 +1,8 @@
 import { useEffect, useRef } from "react";
-import { TmdbDetails } from "@/api";
+import { TitleDetails } from "@/api";
 
 export const selectTrailersByLanguage = (
-  details: Pick<TmdbDetails, "trailers" | "originalLanguage">,
+  details: Pick<TitleDetails, "trailers" | "originalLanguage">,
   extraLanguages: string[]
 ) => {
   const original = details.originalLanguage?.trim();

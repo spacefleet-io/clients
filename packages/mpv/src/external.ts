@@ -70,7 +70,7 @@ export type ExternalMpvLaunchPlan = {
  * `start=`/`pause=`, so `--start` / `--pause` / `--audio-file` are omitted.
  *
  * mpv only ever opens the backdrop as a LOCAL FILE (`backdropFile`, cached by
- * the main process): the https TMDB URL made the old bundle exit "Errors when
+ * the main process): the https image URL made the old bundle exit "Errors when
  * loading file" before the swap (no https, no image decoders;
  * @bugfix mpv-bundled-no-https-backdrop-first-file, issue #25 F1). The bundle
  * now decodes png/jpeg/webp, so the still is shown while the stream loads

@@ -63,16 +63,16 @@ const PREVIEWS: MediaPreviewSheets = {
 };
 
 /** One imported video: a file, its source format and a 360p copy. Returns the source format id. */
-const importVideo = async (db: LibraryDb, tmdbId: number, title: string) => {
-  const mediaId = await db.addMediaFromTmdb(movie(tmdbId, title));
+const importVideo = async (db: LibraryDb, catalogId: number, title: string) => {
+  const mediaId = await db.addMediaFromCatalog(movie(catalogId, title));
   const fileId = await db.linkFileToMedia(mediaId, `/videos/${title}.mkv`);
-  const sourceId = await db.addMediaFormat(mediaId, fileId, "1080p", "h264", 10, [`${PLACEMENT}/${tmdbId}/c0`], 4000, {
-    initKey: `${PLACEMENT}/${tmdbId}/init`,
+  const sourceId = await db.addMediaFormat(mediaId, fileId, "1080p", "h264", 10, [`${PLACEMENT}/${catalogId}/c0`], 4000, {
+    initKey: `${PLACEMENT}/${catalogId}/init`,
     durationSeconds: 600,
     isSource: true,
   });
-  await db.addMediaFormat(mediaId, fileId, "360p", "h264", 2, [`${PLACEMENT}/${tmdbId}/f0`], 800, {
-    initKey: `${PLACEMENT}/${tmdbId}/finit`,
+  await db.addMediaFormat(mediaId, fileId, "360p", "h264", 2, [`${PLACEMENT}/${catalogId}/f0`], 800, {
+    initKey: `${PLACEMENT}/${catalogId}/finit`,
     durationSeconds: 600,
   });
   return { mediaId, fileId, sourceId };
@@ -121,15 +121,15 @@ describe("videos still owed preview sheets (MPV-PREV-03)", () => {
     try {
       db.setSyncEnabled(false);
       // An import that named no source quality flags no row (deps-adapter commit); its sheets go on the first row.
-      const unflagged = async (tmdbId: number, title: string) => {
-        const mediaId = await db.addMediaFromTmdb(movie(tmdbId, title));
+      const unflagged = async (catalogId: number, title: string) => {
+        const mediaId = await db.addMediaFromCatalog(movie(catalogId, title));
         const fileId = await db.linkFileToMedia(mediaId, `/videos/${title}.mkv`);
-        const low = await db.addMediaFormat(mediaId, fileId, "480p", "h264", 2, [`${PLACEMENT}/${tmdbId}/l0`], 800, {
-          initKey: `${PLACEMENT}/${tmdbId}/linit`,
+        const low = await db.addMediaFormat(mediaId, fileId, "480p", "h264", 2, [`${PLACEMENT}/${catalogId}/l0`], 800, {
+          initKey: `${PLACEMENT}/${catalogId}/linit`,
           durationSeconds: 60,
         });
-        const high = await db.addMediaFormat(mediaId, fileId, "720p", "h264", 18, [`${PLACEMENT}/${tmdbId}/h0`], 2500, {
-          initKey: `${PLACEMENT}/${tmdbId}/hinit`,
+        const high = await db.addMediaFormat(mediaId, fileId, "720p", "h264", 18, [`${PLACEMENT}/${catalogId}/h0`], 2500, {
+          initKey: `${PLACEMENT}/${catalogId}/hinit`,
           durationSeconds: 60,
         });
         return { mediaId, low, high };

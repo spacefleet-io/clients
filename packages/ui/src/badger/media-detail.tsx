@@ -165,7 +165,7 @@ export const MediaDetailChip = ({ tone = "plain", children, title, ...data }: Ch
 
 /**
  * The title's genres as pills, each with its icon (LIB-DETAIL-04), under the header's meta line. A genre id with no
- * name (one TMDB no longer lists) is left out rather than shown as an unnamed pill.
+ * name (one the catalog no longer lists) is left out rather than shown as an unnamed pill.
  */
 export const MediaDetailGenres = ({ category, ids, language }: { category: GenreCategory; ids: readonly number[]; language: string }) => {
   const genres = ids.flatMap((id) => {

@@ -1,7 +1,6 @@
 import * as sdk from "@space/sdk";
 import { ApiError, SPACE_APP_HEADER, unwrap, type ApiErrorPayload, type LibraryMeta, type LibraryPutResult } from "@space/sdk";
 import { getApiBaseUrl } from "./apiHost";
-import type { TmdbCrewMember } from "@space/shared/api";
 import type { SpaceAppId } from "@space/shared/appScope";
 import type { StorageObjectCounting } from "@space/shared/storageCounting";
 import { clientIdentityHeaders } from "@space/shared/appVersion";
@@ -20,70 +19,15 @@ export type { ApiErrorPayload };
 
 export type { LibraryMeta };
 
-export type TmdbMediaType = "movie" | "tv";
-
-export type TmdbSearchResult = {
-  id: number;
-  type: TmdbMediaType;
-  title: string;
-  originalTitle: string | null;
-  originalLanguage: string | null;
-  overview: string | null;
-  year: string | null;
-  rating: number | null;
-  posterPath: string | null;
-  backdropPath: string | null;
-};
-
-export type TmdbCastMember = {
-  tmdbId: number | null;
-  name: string;
-  role: string | null;
-  profilePath: string | null;
-  order: number | null;
-};
-
-export type TmdbTrailer = {
-  provider: "youtube";
-  key: string;
-  name: string | null;
-  language: string;
-  official: boolean;
-  size?: number | null;
-};
-
-export type TmdbSeason = {
-  seasonNumber: number;
-  name: string;
-  overview: string | null;
-  posterPath: string | null;
-  episodeCount: number;
-  airDate: string | null;
-};
-
-export type TmdbEpisode = {
-  seasonNumber: number;
-  episodeNumber: number;
-  name: string;
-  overview: string | null;
-  stillPath: string | null;
-  airDate: string | null;
-};
-
-export type TmdbDetails = TmdbSearchResult & {
-  cast: TmdbCastMember[];
-  /** Crew credits (LIB-CREW-01); absent from older answers. */
-  crew?: TmdbCrewMember[];
-  trailers: TmdbTrailer[];
-  totalEpisodes: number | null;
-  seasons: TmdbSeason[];
-  episodes: TmdbEpisode[];
-  genres: number[];
-  /** TMDB `status` of a show ("Returning Series", "Ended", "Canceled", ...); null or absent when unknown. */
-  status?: string | null;
-  /** TMDB `next_episode_to_air.air_date` (YYYY-MM-DD) of a show; null or absent when none is known. */
-  nextEpisodeAirDate?: string | null;
-};
+export type {
+  CastMember,
+  TitleDetails,
+  TitleEpisode,
+  TitleSearchResult,
+  TitleSeason,
+  TitleType,
+  Trailer,
+} from "@space/shared/api";
 
 const toBinaryBody = (payload: Uint8Array) => Uint8Array.from(payload);
 const tunnelLogger = scopeLogger("storage-tunnel-client");

@@ -5,7 +5,9 @@
  * and how to leave. Buttons use the shared face without the reanimated spring, since Parrot ships no reanimated.
  */
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { PermissionsAndroid, Platform, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { PermissionsAndroid, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
+import { SHORT_CODE_LENGTH } from "@space/pairing-crypto";
+import { ShortCodeInput } from "../short-code";
 import { Camera, CameraType, qrScannerAvailable } from "./qrScanner";
 import { useTranslation } from "../i18n";
 import { useMobileShellTheme } from "../theme";
@@ -216,27 +218,23 @@ export const PairDeviceScreen = ({ token, deps, initialCode, onApproved, onClose
             {typing ? (
               <MobileCard>
                 <Text style={[styles.label, muted]}>{t("pairing.scan.codeLabel")}</Text>
-                <TextInput
+                {/* ACCT-PAIR-01: 8 boxes in two groups of 4; typed or pasted with or without a dash or spaces, in any case. */}
+                <ShortCodeInput
                   testID={PAIR_DEVICE_TEST_IDS.codeInput}
                   value={typedCode}
-                  onChangeText={setTypedCode}
-                  placeholder="ABCD-EFGH"
-                  placeholderTextColor={theme.colors.textDim}
-                  autoCapitalize="characters"
-                  autoCorrect={false}
+                  onChange={setTypedCode}
+                  onSubmit={() => {
+                    if (typedCode.length === SHORT_CODE_LENGTH) void lookup(typedCode);
+                  }}
                   autoFocus
-                  maxLength={9}
-                  style={[
-                    styles.codeInput,
-                    { color: theme.colors.text, borderColor: theme.colors.controlBorder, backgroundColor: theme.colors.surfaceRaised },
-                  ]}
                   accessibilityLabel={t("pairing.scan.codeAccessibility")}
+                  style={styles.codeInput}
                 />
                 <MobileButtonFace
                   testID={PAIR_DEVICE_TEST_IDS.continue}
                   label={t("pairing.scan.continue")}
                   onPress={() => void lookup(typedCode)}
-                  disabled={typedCode.trim().length === 0}
+                  disabled={typedCode.length !== SHORT_CODE_LENGTH}
                 />
               </MobileCard>
             ) : null}
@@ -373,13 +371,5 @@ const styles = StyleSheet.create({
   label: { fontSize: 14 },
   question: { fontSize: 20, fontWeight: "800" },
   warning: { borderWidth: 1, borderRadius: 14, padding: 12 },
-  codeInput: {
-    borderWidth: 1,
-    borderRadius: 18,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 24,
-    letterSpacing: 4,
-    textAlign: "center",
-  },
+  codeInput: { marginVertical: 4 },
 });

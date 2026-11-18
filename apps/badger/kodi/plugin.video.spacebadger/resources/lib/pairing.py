@@ -48,16 +48,18 @@ class PairingDenied(PairingError):
 def normalize_short_code(text):
     if not isinstance(text, str):
         return None
-    code = re.sub(r"[\s-]+", "", text).upper()
+    code = re.sub(r"[\s\-\u2010-\u2015\u2212]+", "", text).upper()
     code = "".join(_CODE_SUBST.get(ch, ch) for ch in code)
     if len(code) != 8 or any(ch not in _CODE_ALPHABET for ch in code):
         return None
     return code
 
 
-def format_short_code(text):
-    code = normalize_short_code(text)
-    return "%s-%s" % (code[:4], code[4:]) if code else None
+def short_code_groups(text):
+    """ACCT-PAIR-01: the code's two groups of 4, shown with a gap between them and never a dash."""
+    plain = re.sub(r"[^0-9A-Za-z]+", "", text or "").upper()
+    half = (len(plain) + 1) // 2
+    return plain[:half], plain[half:]
 
 
 # ------------------------------------------------------------------ sealed key
@@ -136,7 +138,7 @@ class PairingSession(object):
         res = self.api.request_json("POST", "/pairing/requests", body, expect=(200, 201))
         self.request_id = res["requestId"]
         self.poll_secret = res["pollSecret"]
-        self.short_code = format_short_code(res["shortCode"]) or res["shortCode"]
+        self.short_code = normalize_short_code(res["shortCode"]) or res["shortCode"]
         self.qr_payload = res["qrPayload"]
         self.expires_at_epoch = _parse_iso(res.get("expiresAt")) or self.clock() + 300
         log("pairing: request %s created, code %s, expires in %.0fs" % (self.request_id, self.short_code, self.seconds_left()))

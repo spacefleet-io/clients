@@ -7,7 +7,7 @@
  * either. This also drops the near-zero "00:00:00" values written while playback briefly sits at ~0.
  *
  * PLAY-RESUME-02: a title counts as watched at COMPLETED_PCT_THRESHOLD, or earlier once the watched position
- * passes the start of the end credits when that start is known (TheIntroDB skip markers, fetched client-side).
+ * passes the start of the end credits when that start is known (the metadata service's skip markers, fetched client-side).
  * A watched title gets no resume offer: Play restarts it from 0.
  *
  * Every input is optional-tolerant: NaN / null / undefined degrade to the next available fallback.

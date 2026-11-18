@@ -5,7 +5,7 @@ import { localizedTextKey, serializeLocalizedText, type LocalizedTextRecord } fr
 
 /**
  * INTG-META-01 (badger-jellyfin, sidecar half): the library the plugin turns into `.nfo` files and local images carries
- * the Badger library's own titles, posters, backdrops, descriptions, years, seasons and episodes, and the TMDB id, read
+ * the Badger library's own titles, posters, backdrops, descriptions, years, seasons and episodes (no catalog id, META-SRC-09), read
  * from the library rows as they are. A match the user fixed by hand is simply the row's current values: the sidecar
  * never looks a title up again from the file name, so the fixed title, id and pictures are what Jellyfin gets.
  */
@@ -15,8 +15,7 @@ const phase = (test: string, message: string, data?: unknown) =>
   console.info(`[${T}] ${test}: ${message}${data === undefined ? "" : ` ${JSON.stringify(data)}`}`);
 
 const baseRow = (over: Partial<MediaRow> & Pick<MediaRow, "id" | "type" | "title">): MediaRow => ({
-  tmdbId: null,
-  externalIds: null,
+  catalogId: null,
   originalTitle: null,
   originalLanguage: null,
   overview: null,
@@ -50,19 +49,18 @@ const format = (mediaId: string, fileId: string) => ({
   chunks: [],
 });
 
-// A movie whose file is called "wrong-guess.mkv": the user fixed the match by hand to "Arrival" (TMDB 329865).
+// A movie whose file is called "wrong-guess.mkv": the user fixed the match by hand to "Arrival".
 const MOVIE = baseRow({
   id: "movie-fixed",
   type: "movie",
   title: "Arrival",
   originalTitle: "Arrival",
-  tmdbId: 329865,
-  externalIds: { imdb: "tt2543164" },
+  catalogId: 329865,
   overview: "A linguist works with the military to communicate with alien lifeforms.",
   year: "2016",
   rating: 7.6,
-  posterPath: "/x2FJsf1ElAgr63Y3PNPtJrcmpoe.jpg",
-  backdropPath: "/yIZ1xendyqKvY3FGeeUYUd5X9Mm.jpg",
+  posterPath: "/arrival-poster.jpg",
+  backdropPath: "/arrival-backdrop.jpg",
   genres: [18, 878],
 });
 
@@ -70,7 +68,7 @@ const SHOW = baseRow({
   id: "show-1",
   type: "tv",
   title: "Severance",
-  tmdbId: 95396,
+  catalogId: 95396,
   overview: "Mark leads a team of office workers whose memories have been surgically divided.",
   year: "2022",
   posterPath: "/show-poster.jpg",
@@ -89,7 +87,7 @@ const reader = (rows: MediaRow[], settings: Record<string, string> = {}): Librar
     const movie = r.type === "movie";
     return {
       ...r,
-      cast: movie ? [{ id: "c1", personId: "p1", tmdbId: 1, name: "Amy Adams", role: "Louise Banks", profilePath: null }] : [],
+      cast: movie ? [{ id: "c1", personId: "p1", catalogId: 1, name: "Amy Adams", role: "Louise Banks", profilePath: null }] : [],
       playlistIds: [],
       seasons: movie
         ? []
@@ -124,7 +122,7 @@ const reader = (rows: MediaRow[], settings: Record<string, string> = {}): Librar
 });
 
 describe("integration library metadata (INTG-META-01)", () => {
-  it("@req INTG-META-01[badger-jellyfin] carries the library's titles, pictures, descriptions, years, seasons, episodes and TMDB ids", () => {
+  it("@req INTG-META-01[badger-jellyfin] @req META-SRC-09[badger-jellyfin] carries the library's titles, pictures, descriptions, years, seasons, episodes, and no catalog id", () => {
     const test = "carries-metadata";
     phase(test, "build");
     const library = buildIntegrationLibrary(reader([MOVIE, SHOW]), "");
@@ -132,10 +130,10 @@ describe("integration library metadata (INTG-META-01)", () => {
 
     expect(library.movies).toHaveLength(1);
     const movie = library.movies[0]!;
+    // The catalog id stays in the library: neither the shortcut folders nor the .nfo files name it (META-SRC-09).
+    expect(movie).not.toHaveProperty("catalogId");
     expect(movie).toMatchObject({
       id: "movie-fixed",
-      tmdbId: 329865,
-      imdbId: "tt2543164",
       title: "Arrival",
       originalTitle: "Arrival",
       year: 2016,
@@ -150,7 +148,6 @@ describe("integration library metadata (INTG-META-01)", () => {
     expect(library.shows).toHaveLength(1);
     const show = library.shows[0]!;
     expect(show).toMatchObject({
-      tmdbId: 95396,
       title: "Severance",
       year: 2022,
       overview: SHOW.overview,
@@ -171,16 +168,16 @@ describe("integration library metadata (INTG-META-01)", () => {
   it("@req INTG-META-01[badger-jellyfin] a match the user fixed by hand reaches the integration as the row now holds it, not as the file name suggests", () => {
     const test = "hand-fixed-match";
     const rows = [{ ...MOVIE }];
-    phase(test, "before fix", { title: rows[0]!.title, tmdbId: rows[0]!.tmdbId });
+    phase(test, "before fix", { title: rows[0]!.title, catalogId: rows[0]!.catalogId });
     const before = buildIntegrationLibrary(reader(rows), "").movies[0]!;
 
     // The user picks another title for the same file (manual search): the row now names it.
-    rows[0] = { ...rows[0]!, title: "Contact", originalTitle: "Contact", tmdbId: 686, externalIds: { imdb: "tt0118884" }, year: "1997", overview: "Dr. Ellie Arroway finds a signal.", posterPath: "/contact-poster.jpg", backdropPath: "/contact-backdrop.jpg" };
+    rows[0] = { ...rows[0]!, title: "Contact", originalTitle: "Contact", catalogId: 686, year: "1997", overview: "Dr. Ellie Arroway finds a signal.", posterPath: "/contact-poster.jpg", backdropPath: "/contact-backdrop.jpg" };
     const after = buildIntegrationLibrary(reader(rows), "").movies[0]!;
-    phase(test, "after fix", { before: { title: before.title, tmdbId: before.tmdbId }, after: { title: after.title, tmdbId: after.tmdbId, poster: after.posterPath } });
+    phase(test, "after fix", { before: { title: before.title }, after: { title: after.title, poster: after.posterPath } });
 
     expect(before.title).toBe("Arrival");
-    expect(after).toMatchObject({ id: "movie-fixed", title: "Contact", tmdbId: 686, imdbId: "tt0118884", year: 1997, overview: "Dr. Ellie Arroway finds a signal.", posterPath: "/contact-poster.jpg", backdropPath: "/contact-backdrop.jpg" });
+    expect(after).toMatchObject({ id: "movie-fixed", title: "Contact", year: 1997, overview: "Dr. Ellie Arroway finds a signal.", posterPath: "/contact-poster.jpg", backdropPath: "/contact-backdrop.jpg" });
     expect(JSON.stringify(after)).not.toContain("wrong-guess");
   });
 

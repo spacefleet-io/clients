@@ -57,21 +57,8 @@ exports[`buildOpStatements drift guard > 50-op deterministic fixture produces st
             "gen-0001",
             "m-00",
             "movie",
-            "tmdb",
+            "catalog",
             "1000",
-            "m-00",
-            "2024-01-01T00:00:00.000Z",
-          ],
-          "sql": "INSERT OR IGNORE INTO media_external_ids (id, media_id, media_type, source, external_id)
-       SELECT ?, ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM media_items WHERE id = ? AND updated_at = ?);",
-        },
-        {
-          "params": [
-            "gen-0002",
-            "m-00",
-            "movie",
-            "imdb",
-            "ttm-00",
             "m-00",
             "2024-01-01T00:00:00.000Z",
           ],
@@ -88,7 +75,7 @@ exports[`buildOpStatements drift guard > 50-op deterministic fixture produces st
         },
         {
           "params": [
-            "gen-0003",
+            "gen-0002",
             "m-00",
             28,
             "m-00",
@@ -99,7 +86,7 @@ exports[`buildOpStatements drift guard > 50-op deterministic fixture produces st
         },
         {
           "params": [
-            "gen-0004",
+            "gen-0003",
             "m-00",
             18,
             "m-00",
@@ -191,7 +178,7 @@ exports[`buildOpStatements drift guard > 50-op deterministic fixture produces st
         },
         {
           "params": [
-            "gen-0005",
+            "gen-0004",
             "m-00",
             "file-m-00-1",
             "1080p",
@@ -266,7 +253,7 @@ exports[`buildOpStatements drift guard > 50-op deterministic fixture produces st
         },
         {
           "params": [
-            "gen-0006",
+            "gen-0005",
             "fmt-m-00-1",
             "c1",
             0,
@@ -306,7 +293,7 @@ exports[`buildOpStatements drift guard > 50-op deterministic fixture produces st
         },
         {
           "params": [
-            "gen-0007",
+            "gen-0006",
             "aud-m-00-1",
             "a1",
             0,
@@ -380,24 +367,11 @@ exports[`buildOpStatements drift guard > 50-op deterministic fixture produces st
         },
         {
           "params": [
-            "gen-0008",
+            "gen-0007",
             "m-01",
             "movie",
-            "tmdb",
+            "catalog",
             "1001",
-            "m-01",
-            "2024-01-01T00:00:00.000Z",
-          ],
-          "sql": "INSERT OR IGNORE INTO media_external_ids (id, media_id, media_type, source, external_id)
-       SELECT ?, ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM media_items WHERE id = ? AND updated_at = ?);",
-        },
-        {
-          "params": [
-            "gen-0009",
-            "m-01",
-            "movie",
-            "imdb",
-            "ttm-01",
             "m-01",
             "2024-01-01T00:00:00.000Z",
           ],
@@ -414,7 +388,7 @@ exports[`buildOpStatements drift guard > 50-op deterministic fixture produces st
         },
         {
           "params": [
-            "gen-0010",
+            "gen-0008",
             "m-01",
             28,
             "m-01",
@@ -425,7 +399,7 @@ exports[`buildOpStatements drift guard > 50-op deterministic fixture produces st
         },
         {
           "params": [
-            "gen-0011",
+            "gen-0009",
             "m-01",
             18,
             "m-01",
@@ -517,7 +491,7 @@ exports[`buildOpStatements drift guard > 50-op deterministic fixture produces st
         },
         {
           "params": [
-            "gen-0012",
+            "gen-0010",
             "m-01",
             "file-m-01-1",
             "1080p",
@@ -592,7 +566,7 @@ exports[`buildOpStatements drift guard > 50-op deterministic fixture produces st
         },
         {
           "params": [
-            "gen-0013",
+            "gen-0011",
             "fmt-m-01-1",
             "c1",
             0,
@@ -632,7 +606,7 @@ exports[`buildOpStatements drift guard > 50-op deterministic fixture produces st
         },
         {
           "params": [
-            "gen-0014",
+            "gen-0012",
             "aud-m-01-1",
             "a1",
             0,
@@ -706,24 +680,11 @@ exports[`buildOpStatements drift guard > 50-op deterministic fixture produces st
         },
         {
           "params": [
-            "gen-0015",
+            "gen-0013",
             "m-02",
             "movie",
-            "tmdb",
+            "catalog",
             "1002",
-            "m-02",
-            "2024-01-01T00:00:00.000Z",
-          ],
-          "sql": "INSERT OR IGNORE INTO media_external_ids (id, media_id, media_type, source, external_id)
-       SELECT ?, ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM media_items WHERE id = ? AND updated_at = ?);",
-        },
-        {
-          "params": [
-            "gen-0016",
-            "m-02",
-            "movie",
-            "imdb",
-            "ttm-02",
             "m-02",
             "2024-01-01T00:00:00.000Z",
           ],
@@ -740,7 +701,7 @@ exports[`buildOpStatements drift guard > 50-op deterministic fixture produces st
         },
         {
           "params": [
-            "gen-0017",
+            "gen-0014",
             "m-02",
             28,
             "m-02",
@@ -751,7 +712,7 @@ exports[`buildOpStatements drift guard > 50-op deterministic fixture produces st
         },
         {
           "params": [
-            "gen-0018",
+            "gen-0015",
             "m-02",
             18,
             "m-02",
@@ -843,7 +804,7 @@ exports[`buildOpStatements drift guard > 50-op deterministic fixture produces st
         },
         {
           "params": [
-            "gen-0019",
+            "gen-0016",
             "m-02",
             "file-m-02-1",
             "1080p",
@@ -918,7 +879,7 @@ exports[`buildOpStatements drift guard > 50-op deterministic fixture produces st
         },
         {
           "params": [
-            "gen-0020",
+            "gen-0017",
             "fmt-m-02-1",
             "c1",
             0,
@@ -958,7 +919,7 @@ exports[`buildOpStatements drift guard > 50-op deterministic fixture produces st
         },
         {
           "params": [
-            "gen-0021",
+            "gen-0018",
             "aud-m-02-1",
             "a1",
             0,
@@ -1032,24 +993,11 @@ exports[`buildOpStatements drift guard > 50-op deterministic fixture produces st
         },
         {
           "params": [
-            "gen-0022",
+            "gen-0019",
             "m-03",
             "movie",
-            "tmdb",
+            "catalog",
             "1003",
-            "m-03",
-            "2024-01-01T00:00:00.000Z",
-          ],
-          "sql": "INSERT OR IGNORE INTO media_external_ids (id, media_id, media_type, source, external_id)
-       SELECT ?, ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM media_items WHERE id = ? AND updated_at = ?);",
-        },
-        {
-          "params": [
-            "gen-0023",
-            "m-03",
-            "movie",
-            "imdb",
-            "ttm-03",
             "m-03",
             "2024-01-01T00:00:00.000Z",
           ],
@@ -1066,7 +1014,7 @@ exports[`buildOpStatements drift guard > 50-op deterministic fixture produces st
         },
         {
           "params": [
-            "gen-0024",
+            "gen-0020",
             "m-03",
             28,
             "m-03",
@@ -1077,7 +1025,7 @@ exports[`buildOpStatements drift guard > 50-op deterministic fixture produces st
         },
         {
           "params": [
-            "gen-0025",
+            "gen-0021",
             "m-03",
             18,
             "m-03",
@@ -1169,7 +1117,7 @@ exports[`buildOpStatements drift guard > 50-op deterministic fixture produces st
         },
         {
           "params": [
-            "gen-0026",
+            "gen-0022",
             "m-03",
             "file-m-03-1",
             "1080p",
@@ -1244,7 +1192,7 @@ exports[`buildOpStatements drift guard > 50-op deterministic fixture produces st
         },
         {
           "params": [
-            "gen-0027",
+            "gen-0023",
             "fmt-m-03-1",
             "c1",
             0,
@@ -1284,7 +1232,7 @@ exports[`buildOpStatements drift guard > 50-op deterministic fixture produces st
         },
         {
           "params": [
-            "gen-0028",
+            "gen-0024",
             "aud-m-03-1",
             "a1",
             0,
@@ -1358,24 +1306,11 @@ exports[`buildOpStatements drift guard > 50-op deterministic fixture produces st
         },
         {
           "params": [
-            "gen-0029",
+            "gen-0025",
             "m-04",
             "movie",
-            "tmdb",
+            "catalog",
             "1004",
-            "m-04",
-            "2024-01-01T00:00:00.000Z",
-          ],
-          "sql": "INSERT OR IGNORE INTO media_external_ids (id, media_id, media_type, source, external_id)
-       SELECT ?, ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM media_items WHERE id = ? AND updated_at = ?);",
-        },
-        {
-          "params": [
-            "gen-0030",
-            "m-04",
-            "movie",
-            "imdb",
-            "ttm-04",
             "m-04",
             "2024-01-01T00:00:00.000Z",
           ],
@@ -1392,7 +1327,7 @@ exports[`buildOpStatements drift guard > 50-op deterministic fixture produces st
         },
         {
           "params": [
-            "gen-0031",
+            "gen-0026",
             "m-04",
             28,
             "m-04",
@@ -1403,7 +1338,7 @@ exports[`buildOpStatements drift guard > 50-op deterministic fixture produces st
         },
         {
           "params": [
-            "gen-0032",
+            "gen-0027",
             "m-04",
             18,
             "m-04",
@@ -1495,7 +1430,7 @@ exports[`buildOpStatements drift guard > 50-op deterministic fixture produces st
         },
         {
           "params": [
-            "gen-0033",
+            "gen-0028",
             "m-04",
             "file-m-04-1",
             "1080p",
@@ -1570,7 +1505,7 @@ exports[`buildOpStatements drift guard > 50-op deterministic fixture produces st
         },
         {
           "params": [
-            "gen-0034",
+            "gen-0029",
             "fmt-m-04-1",
             "c1",
             0,
@@ -1610,7 +1545,7 @@ exports[`buildOpStatements drift guard > 50-op deterministic fixture produces st
         },
         {
           "params": [
-            "gen-0035",
+            "gen-0030",
             "aud-m-04-1",
             "a1",
             0,
@@ -1684,24 +1619,11 @@ exports[`buildOpStatements drift guard > 50-op deterministic fixture produces st
         },
         {
           "params": [
-            "gen-0036",
+            "gen-0031",
             "m-05",
             "movie",
-            "tmdb",
+            "catalog",
             "1005",
-            "m-05",
-            "2024-01-01T00:00:00.000Z",
-          ],
-          "sql": "INSERT OR IGNORE INTO media_external_ids (id, media_id, media_type, source, external_id)
-       SELECT ?, ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM media_items WHERE id = ? AND updated_at = ?);",
-        },
-        {
-          "params": [
-            "gen-0037",
-            "m-05",
-            "movie",
-            "imdb",
-            "ttm-05",
             "m-05",
             "2024-01-01T00:00:00.000Z",
           ],
@@ -1718,7 +1640,7 @@ exports[`buildOpStatements drift guard > 50-op deterministic fixture produces st
         },
         {
           "params": [
-            "gen-0038",
+            "gen-0032",
             "m-05",
             28,
             "m-05",
@@ -1729,7 +1651,7 @@ exports[`buildOpStatements drift guard > 50-op deterministic fixture produces st
         },
         {
           "params": [
-            "gen-0039",
+            "gen-0033",
             "m-05",
             18,
             "m-05",
@@ -1821,7 +1743,7 @@ exports[`buildOpStatements drift guard > 50-op deterministic fixture produces st
         },
         {
           "params": [
-            "gen-0040",
+            "gen-0034",
             "m-05",
             "file-m-05-1",
             "1080p",
@@ -1896,7 +1818,7 @@ exports[`buildOpStatements drift guard > 50-op deterministic fixture produces st
         },
         {
           "params": [
-            "gen-0041",
+            "gen-0035",
             "fmt-m-05-1",
             "c1",
             0,
@@ -1936,7 +1858,7 @@ exports[`buildOpStatements drift guard > 50-op deterministic fixture produces st
         },
         {
           "params": [
-            "gen-0042",
+            "gen-0036",
             "aud-m-05-1",
             "a1",
             0,
@@ -2010,24 +1932,11 @@ exports[`buildOpStatements drift guard > 50-op deterministic fixture produces st
         },
         {
           "params": [
-            "gen-0043",
+            "gen-0037",
             "m-06",
             "movie",
-            "tmdb",
+            "catalog",
             "1006",
-            "m-06",
-            "2024-01-01T00:00:00.000Z",
-          ],
-          "sql": "INSERT OR IGNORE INTO media_external_ids (id, media_id, media_type, source, external_id)
-       SELECT ?, ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM media_items WHERE id = ? AND updated_at = ?);",
-        },
-        {
-          "params": [
-            "gen-0044",
-            "m-06",
-            "movie",
-            "imdb",
-            "ttm-06",
             "m-06",
             "2024-01-01T00:00:00.000Z",
           ],
@@ -2044,7 +1953,7 @@ exports[`buildOpStatements drift guard > 50-op deterministic fixture produces st
         },
         {
           "params": [
-            "gen-0045",
+            "gen-0038",
             "m-06",
             28,
             "m-06",
@@ -2055,7 +1964,7 @@ exports[`buildOpStatements drift guard > 50-op deterministic fixture produces st
         },
         {
           "params": [
-            "gen-0046",
+            "gen-0039",
             "m-06",
             18,
             "m-06",
@@ -2147,7 +2056,7 @@ exports[`buildOpStatements drift guard > 50-op deterministic fixture produces st
         },
         {
           "params": [
-            "gen-0047",
+            "gen-0040",
             "m-06",
             "file-m-06-1",
             "1080p",
@@ -2222,7 +2131,7 @@ exports[`buildOpStatements drift guard > 50-op deterministic fixture produces st
         },
         {
           "params": [
-            "gen-0048",
+            "gen-0041",
             "fmt-m-06-1",
             "c1",
             0,
@@ -2262,7 +2171,7 @@ exports[`buildOpStatements drift guard > 50-op deterministic fixture produces st
         },
         {
           "params": [
-            "gen-0049",
+            "gen-0042",
             "aud-m-06-1",
             "a1",
             0,
@@ -2336,24 +2245,11 @@ exports[`buildOpStatements drift guard > 50-op deterministic fixture produces st
         },
         {
           "params": [
-            "gen-0050",
+            "gen-0043",
             "m-07",
             "movie",
-            "tmdb",
+            "catalog",
             "1007",
-            "m-07",
-            "2024-01-01T00:00:00.000Z",
-          ],
-          "sql": "INSERT OR IGNORE INTO media_external_ids (id, media_id, media_type, source, external_id)
-       SELECT ?, ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM media_items WHERE id = ? AND updated_at = ?);",
-        },
-        {
-          "params": [
-            "gen-0051",
-            "m-07",
-            "movie",
-            "imdb",
-            "ttm-07",
             "m-07",
             "2024-01-01T00:00:00.000Z",
           ],
@@ -2370,7 +2266,7 @@ exports[`buildOpStatements drift guard > 50-op deterministic fixture produces st
         },
         {
           "params": [
-            "gen-0052",
+            "gen-0044",
             "m-07",
             28,
             "m-07",
@@ -2381,7 +2277,7 @@ exports[`buildOpStatements drift guard > 50-op deterministic fixture produces st
         },
         {
           "params": [
-            "gen-0053",
+            "gen-0045",
             "m-07",
             18,
             "m-07",
@@ -2473,7 +2369,7 @@ exports[`buildOpStatements drift guard > 50-op deterministic fixture produces st
         },
         {
           "params": [
-            "gen-0054",
+            "gen-0046",
             "m-07",
             "file-m-07-1",
             "1080p",
@@ -2548,7 +2444,7 @@ exports[`buildOpStatements drift guard > 50-op deterministic fixture produces st
         },
         {
           "params": [
-            "gen-0055",
+            "gen-0047",
             "fmt-m-07-1",
             "c1",
             0,
@@ -2588,7 +2484,7 @@ exports[`buildOpStatements drift guard > 50-op deterministic fixture produces st
         },
         {
           "params": [
-            "gen-0056",
+            "gen-0048",
             "aud-m-07-1",
             "a1",
             0,
@@ -2662,24 +2558,11 @@ exports[`buildOpStatements drift guard > 50-op deterministic fixture produces st
         },
         {
           "params": [
-            "gen-0057",
+            "gen-0049",
             "m-08",
             "movie",
-            "tmdb",
+            "catalog",
             "1008",
-            "m-08",
-            "2024-01-01T00:00:00.000Z",
-          ],
-          "sql": "INSERT OR IGNORE INTO media_external_ids (id, media_id, media_type, source, external_id)
-       SELECT ?, ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM media_items WHERE id = ? AND updated_at = ?);",
-        },
-        {
-          "params": [
-            "gen-0058",
-            "m-08",
-            "movie",
-            "imdb",
-            "ttm-08",
             "m-08",
             "2024-01-01T00:00:00.000Z",
           ],
@@ -2696,7 +2579,7 @@ exports[`buildOpStatements drift guard > 50-op deterministic fixture produces st
         },
         {
           "params": [
-            "gen-0059",
+            "gen-0050",
             "m-08",
             28,
             "m-08",
@@ -2707,7 +2590,7 @@ exports[`buildOpStatements drift guard > 50-op deterministic fixture produces st
         },
         {
           "params": [
-            "gen-0060",
+            "gen-0051",
             "m-08",
             18,
             "m-08",
@@ -2799,7 +2682,7 @@ exports[`buildOpStatements drift guard > 50-op deterministic fixture produces st
         },
         {
           "params": [
-            "gen-0061",
+            "gen-0052",
             "m-08",
             "file-m-08-1",
             "1080p",
@@ -2874,7 +2757,7 @@ exports[`buildOpStatements drift guard > 50-op deterministic fixture produces st
         },
         {
           "params": [
-            "gen-0062",
+            "gen-0053",
             "fmt-m-08-1",
             "c1",
             0,
@@ -2914,7 +2797,7 @@ exports[`buildOpStatements drift guard > 50-op deterministic fixture produces st
         },
         {
           "params": [
-            "gen-0063",
+            "gen-0054",
             "aud-m-08-1",
             "a1",
             0,
@@ -2988,24 +2871,11 @@ exports[`buildOpStatements drift guard > 50-op deterministic fixture produces st
         },
         {
           "params": [
-            "gen-0064",
+            "gen-0055",
             "m-09",
             "movie",
-            "tmdb",
+            "catalog",
             "1009",
-            "m-09",
-            "2024-01-01T00:00:00.000Z",
-          ],
-          "sql": "INSERT OR IGNORE INTO media_external_ids (id, media_id, media_type, source, external_id)
-       SELECT ?, ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM media_items WHERE id = ? AND updated_at = ?);",
-        },
-        {
-          "params": [
-            "gen-0065",
-            "m-09",
-            "movie",
-            "imdb",
-            "ttm-09",
             "m-09",
             "2024-01-01T00:00:00.000Z",
           ],
@@ -3022,7 +2892,7 @@ exports[`buildOpStatements drift guard > 50-op deterministic fixture produces st
         },
         {
           "params": [
-            "gen-0066",
+            "gen-0056",
             "m-09",
             28,
             "m-09",
@@ -3033,7 +2903,7 @@ exports[`buildOpStatements drift guard > 50-op deterministic fixture produces st
         },
         {
           "params": [
-            "gen-0067",
+            "gen-0057",
             "m-09",
             18,
             "m-09",
@@ -3125,7 +2995,7 @@ exports[`buildOpStatements drift guard > 50-op deterministic fixture produces st
         },
         {
           "params": [
-            "gen-0068",
+            "gen-0058",
             "m-09",
             "file-m-09-1",
             "1080p",
@@ -3200,7 +3070,7 @@ exports[`buildOpStatements drift guard > 50-op deterministic fixture produces st
         },
         {
           "params": [
-            "gen-0069",
+            "gen-0059",
             "fmt-m-09-1",
             "c1",
             0,
@@ -3240,7 +3110,7 @@ exports[`buildOpStatements drift guard > 50-op deterministic fixture produces st
         },
         {
           "params": [
-            "gen-0070",
+            "gen-0060",
             "aud-m-09-1",
             "a1",
             0,

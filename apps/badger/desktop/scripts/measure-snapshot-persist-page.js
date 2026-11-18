@@ -14,8 +14,7 @@
     return {
       id: `media-${i.toString(36).padStart(6, "0")}-${"a".repeat(20)}`,
       type: tv ? "tv" : "movie",
-      tmdbId: 100_000 + i,
-      externalIds: { imdb: `tt${(1_000_000 + i).toString()}`, tvdb: 50_000 + i },
+      catalogId: 100_000 + i,
       title: `${text(i, 24)} ${i}`,
       originalTitle: text(i + 1, 24),
       originalLanguage: "en",

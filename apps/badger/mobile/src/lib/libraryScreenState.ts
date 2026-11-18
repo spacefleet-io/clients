@@ -54,7 +54,7 @@ export const updateLibraryTabPrefs = (tab: LibraryTab, patch: Partial<LibraryTab
   updateAppSettings({ libraryView: patchLibraryTabPrefs(getAppSettings().libraryView, tab, patch) });
 };
 
-/** Genre filter options for a tab: only genres at least one title in it has (and that have a name), in TMDB list order. */
+/** Genre filter options for a tab: only genres at least one title in it has (and that have a name), in the catalog list order. */
 export const availableGenreIds = (media: readonly MediaRow[], tab: LibraryTab): number[] => {
   const present = new Set<number>();
   for (const item of media) {

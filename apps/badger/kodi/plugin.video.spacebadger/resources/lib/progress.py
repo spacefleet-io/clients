@@ -101,7 +101,7 @@ def episode_resume_setting(episode_id, progress_pct, timestamp, position_seconds
 
 
 def air_date_today():
-    """Today as YYYY-MM-DD (UTC), the form TMDB air dates use (showProgress.ts airDateToday)."""
+    """Today as YYYY-MM-DD (UTC), the form catalog air dates use (showProgress.ts airDateToday)."""
     return time.strftime("%Y-%m-%d", time.gmtime())
 
 

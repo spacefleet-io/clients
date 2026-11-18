@@ -1,7 +1,8 @@
 const { getDefaultConfig, mergeConfig } = require('@react-native/metro-config');
 const path = require('path');
 // The Google-free Android build (SF_FOSS=1, PLAT-MOBILE-06): Google Cast and Firebase imports resolve to stand-ins.
-const { withFossStubs } = require('../../../packages/mobile-shell/foss.cjs');
+// Outside it (Play, iOS), @space/mobile-self-update resolves to its stand-in (REL-UPD-06).
+const { withFossStubs, withSelfUpdate } = require('../../../packages/mobile-shell/foss.cjs');
 
 /**
  * Metro configuration
@@ -18,6 +19,7 @@ const mobileShellRoot = path.resolve(repoRoot, 'packages/mobile-shell');
 const mobileMpvPlaybackRoot = path.resolve(repoRoot, 'packages/mobile-mpv-playback');
 const mobileMediaProxyRoot = path.resolve(repoRoot, 'packages/mobile-media-proxy');
 const mobileMediaVolumeRoot = path.resolve(repoRoot, 'packages/mobile-media-volume');
+const mobileSelfUpdateRoot = path.resolve(repoRoot, 'packages/mobile-self-update');
 const mobileMediaSessionRoot = path.resolve(repoRoot, 'packages/mobile-media-session');
 const mediaSessionRoot = path.resolve(repoRoot, 'packages/media-session');
 const playbackAbrRoot = path.resolve(repoRoot, 'packages/playback-abr');
@@ -37,7 +39,7 @@ const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 // can point to different versions than the app's copies (e.g. react@19.2.4 vs
 // react@19.2.3), causing dual-instance crashes. Blocking these directories
 // forces Metro to resolve everything from the app's node_modules instead.
-const workspaceNodeModulesBlockList = [sharedRoot, libraryDbRoot, libraryDbDefinitionRoot, mobileShellRoot, mobileMpvPlaybackRoot, mobileMediaProxyRoot, mobileMediaVolumeRoot, mobileMediaSessionRoot, mediaSessionRoot, playbackAbrRoot, errorReportRoot, metadataClientRoot, privacyPassRoot, sdkRoot, streamSlotsRoot, profileAvatarsRoot]
+const workspaceNodeModulesBlockList = [sharedRoot, libraryDbRoot, libraryDbDefinitionRoot, mobileShellRoot, mobileMpvPlaybackRoot, mobileMediaProxyRoot, mobileMediaVolumeRoot, mobileSelfUpdateRoot, mobileMediaSessionRoot, mediaSessionRoot, playbackAbrRoot, errorReportRoot, metadataClientRoot, privacyPassRoot, sdkRoot, streamSlotsRoot, profileAvatarsRoot]
   .map((dir) => new RegExp(`${escapeRegex(path.join(dir, 'node_modules'))}(/.*)?$`));
 
 const config = {
@@ -61,6 +63,7 @@ const config = {
       '@space/mobile-mpv-playback': mobileMpvPlaybackRoot,
       '@space/mobile-media-proxy': mobileMediaProxyRoot,
       '@space/mobile-media-volume': mobileMediaVolumeRoot,
+      '@space/mobile-self-update': mobileSelfUpdateRoot,
       '@space/mobile-media-session': mobileMediaSessionRoot,
       '@space/media-session': mediaSessionRoot,
       '@space/playback-abr': playbackAbrRoot,
@@ -83,7 +86,7 @@ const config = {
     // Shared packages also run on desktop/server and import Node's crypto
     // (e.g. randomUUID in library-db-definition migrations). On device that
     // API comes from react-native-quick-crypto, a drop-in replacement.
-    resolveRequest: withFossStubs((context, moduleName, platform) => {
+    resolveRequest: withSelfUpdate(withFossStubs((context, moduleName, platform) => {
       if (moduleName === 'node:crypto' || moduleName === 'crypto') {
         return context.resolveRequest(context, 'react-native-quick-crypto', platform);
       }
@@ -94,7 +97,7 @@ const config = {
         return context.resolveRequest({ ...context, originModulePath: path.join(__dirname, 'index.js') }, moduleName, platform);
       }
       return context.resolveRequest(context, moduleName, platform);
-    }, { 'react-native-google-cast': path.join(__dirname, 'src/lib/cast/googleCast.foss.ts') }),
+    }, { 'react-native-google-cast': path.join(__dirname, 'src/lib/cast/googleCast.foss.ts') })),
     nodeModulesPaths: [
       path.resolve(__dirname, 'node_modules'),
       path.resolve(repoRoot, 'node_modules'),

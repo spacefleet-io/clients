@@ -32,7 +32,7 @@ const details = (id: string, progressPct = 0): MediaDetails =>
     progressPct,
     lastWatchedAt: null,
     updatedAt: "2026-10-09T07:09:42.991Z",
-    cast: [{ id: `${id}-c1`, personId: "p1", tmdbId: null, name: "Actor", role: null, profilePath: null }],
+    cast: [{ id: `${id}-c1`, personId: "p1", catalogId: null, name: "Actor", role: null, profilePath: null }],
     playlistIds: ["p1"],
     seasons: [],
     episodes: [],

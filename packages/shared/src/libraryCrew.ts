@@ -1,7 +1,7 @@
 import type { MediaCrewDraft } from "./libraryTypes";
 
 /**
- * LIB-CREW-01: the crew jobs a library keeps, in the order the detail page lists them. TMDB's other jobs (Story,
+ * LIB-CREW-01: the crew jobs a library keeps, in the order the detail page lists them. The other jobs (Story,
  * Novel, Producer, Editor…) are not kept.
  */
 export const LIBRARY_CREW_JOBS = ["Director", "Screenplay", "Writer"] as const;
@@ -14,11 +14,11 @@ const MAX_PER_JOB = 4;
 const jobRank = (job: string | null | undefined) => LIBRARY_CREW_JOBS.indexOf(job as LibraryCrewJob);
 
 /**
- * The crew to store for a title from TMDB's credits: kept jobs only, one credit per person and job, at most
- * `MAX_PER_JOB` per job, directors first. TMDB's order is kept within a job.
+ * The crew to store for a title from the metadata service's credits: kept jobs only, one credit per person and job,
+ * at most `MAX_PER_JOB` per job, directors first. The service's order is kept within a job.
  */
 export const pickLibraryCrew = (
-  crew: ReadonlyArray<{ tmdbId?: number | null; name?: string | null; job?: string | null; profilePath?: string | null }>
+  crew: ReadonlyArray<{ personId?: number | null; name?: string | null; job?: string | null; profilePath?: string | null }>
 ): MediaCrewDraft[] => {
   const seen = new Set<string>();
   const perJob = new Map<string, number>();
@@ -27,13 +27,13 @@ export const pickLibraryCrew = (
     const name = member.name?.trim() ?? "";
     const job = member.job ?? null;
     if (!name || jobRank(job) < 0) continue;
-    const key = `${member.tmdbId ?? name}:${job}`;
+    const key = `${member.personId ?? name}:${job}`;
     if (seen.has(key)) continue;
     const count = perJob.get(job as string) ?? 0;
     if (count >= MAX_PER_JOB) continue;
     seen.add(key);
     perJob.set(job as string, count + 1);
-    picked.push({ tmdbId: member.tmdbId ?? null, name, job, profilePath: member.profilePath ?? null });
+    picked.push({ catalogId: member.personId ?? null, name, job, profilePath: member.profilePath ?? null });
   }
   return picked.sort((a, b) => jobRank(a.job) - jobRank(b.job));
 };

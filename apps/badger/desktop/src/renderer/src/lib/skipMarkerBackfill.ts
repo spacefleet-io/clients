@@ -6,7 +6,8 @@ import {
   createExternalSkipMarkerFetchPayload,
   createShowSkipCachePayload,
   isExternalSkipMarkerFetchPayload,
-  isShowSkipCachePayload,
+  isServiceSkipMarkerSource,
+  parseShowSkipCachePayload,
   showEpisodeKey,
   type ExternalSkipMarkerCoverageEntry,
   type ExternalSkipMarkerFetchResult,
@@ -16,13 +17,13 @@ import {
 
 /**
  * PLAY-NEXT-02 backfill: TV episodes already in the library with a file but no
- * TheIntroDB marker get their intro/credits fetched once, in the background,
- * through the metadata service (META-SKIP-01; the desktop never calls TheIntroDB itself),
+ * service marker get their intro/credits fetched once, in the background,
+ * through the metadata service (META-SKIP-01; the desktop never calls a source itself),
  * so TV and mobile (which read markers from the synced library and never call
- * TheIntroDB) can offer "Skip intro". Episodes imported before the import path
+ * a source) can offer "Skip intro". Episodes imported before the import path
  * carried markers to the runtime are the main target.
  *
- * An episode is skipped when it already has an `external:theintrodb*` marker,
+ * An episode is skipped when it already has a service-fetched marker,
  * or when the show cache / per-episode fetch rows record a hit or a miss for
  * it. A cached hit whose markers never reached the episode is written from the
  * cache without asking the metadata service again.
@@ -61,7 +62,7 @@ export type SkipBackfillDeps = {
   ) => Promise<void>;
   replaceSkipMarkers: (mediaId: string, episodeId: string | null, markers: ShowSkipMarker[]) => Promise<void>;
   fetchMarkers: (input: {
-    tmdbId: number;
+    catalogId: number;
     seasonNumber: number;
     episodeNumber: number;
     durationSeconds: number | null;
@@ -83,20 +84,20 @@ export type SkipBackfillSummary = {
   stoppedEarly: string | null;
 };
 
-const isTheIntroDbSource = (source: string) => source.startsWith("external:theintrodb");
-
 /** Newest show cache row for the show, or null when absent or older than the freshness window. */
 export const pickShowSkipCache = (rows: SkipAnalysisRow[], nowMs: number): ShowSkipCachePayload | null => {
   const fresh = rows
-    .filter((row) => row.episodeId === null && isShowSkipCachePayload(row.payload))
+    .filter((row) => row.episodeId === null)
+    .map((row) => ({ updatedAt: row.updatedAt, payload: parseShowSkipCachePayload(row.payload) }))
+    .filter((row) => row.payload !== null)
     .sort((a, b) => (b.updatedAt ?? "").localeCompare(a.updatedAt ?? ""))[0];
-  if (!fresh || !isShowSkipCachePayload(fresh.payload)) return null;
+  if (!fresh?.payload) return null;
   const ageMs = nowMs - new Date(fresh.payload.fetchedAt).getTime();
   return ageMs < SHOW_SKIP_CACHE_MAX_AGE_MS ? fresh.payload : null;
 };
 
 /**
- * META-SKIP-02 timing: TheIntroDB's times are added by its community, often days after an episode airs, so an
+ * META-SKIP-02 timing: Skip times are added by a community, often days after an episode airs, so an
  * empty answer is asked again after 1 day and a partial one (intro or credits only) after 7 days. An episode
  * with both an intro and a credits marker is never asked again.
  */
@@ -105,7 +106,7 @@ export const SKIP_BACKFILL_PARTIAL_RETRY_MS = 7 * 24 * 60 * 60 * 1000;
 
 /**
  * Episodes of one show that need markers: they have a file, no complete
- * (intro + credits) TheIntroDB markers, and no answer recent enough to wait on
+ * (intro + credits) service markers, and no answer recent enough to wait on
  * (see SKIP_BACKFILL_MISS_RETRY_MS / SKIP_BACKFILL_PARTIAL_RETRY_MS).
  */
 export const selectSkipBackfillEpisodes = (
@@ -120,12 +121,12 @@ export const selectSkipBackfillEpisodes = (
     const key = showEpisodeKey(file.season, file.episode);
     fileIdsByKey.set(key, [...(fileIdsByKey.get(key) ?? []), file.id]);
   }
-  const theIntroDbTypesByEpisode = new Map<string, Set<string>>();
+  const serviceTypesByEpisode = new Map<string, Set<string>>();
   for (const marker of details.skipMarkers) {
-    if (marker.episodeId === null || !isTheIntroDbSource(marker.source)) continue;
-    const types = theIntroDbTypesByEpisode.get(marker.episodeId) ?? new Set<string>();
+    if (marker.episodeId === null || !isServiceSkipMarkerSource(marker.source)) continue;
+    const types = serviceTypesByEpisode.get(marker.episodeId) ?? new Set<string>();
     types.add(marker.type);
-    theIntroDbTypesByEpisode.set(marker.episodeId, types);
+    serviceTypesByEpisode.set(marker.episodeId, types);
   }
   const lastFetchByEpisode = new Map<string, { status: string; fetchedAtMs: number }>();
   for (const row of episodeFetchRows) {
@@ -148,7 +149,7 @@ export const selectSkipBackfillEpisodes = (
     const key = showEpisodeKey(episode.seasonNumber, episode.episodeNumber);
     const fileIds = fileIdsByKey.get(key);
     if (!fileIds || fileIds.length === 0) continue;
-    const types = theIntroDbTypesByEpisode.get(episode.id) ?? new Set<string>();
+    const types = serviceTypesByEpisode.get(episode.id) ?? new Set<string>();
     if (types.has("intro") && types.has("credits")) continue;
     const cachedStatus = cacheStatusByKey.get(key);
     const cachedMarkers = showCache?.markersByEpisode[key] ?? null;
@@ -178,7 +179,7 @@ export const selectSkipBackfillEpisodes = (
   return selected;
 };
 
-/** Keeps the episode's non-TheIntroDB markers of types the fetch did not return, like the playback lazy fetch. */
+/** Keeps the episode's non-service markers of types the fetch did not return, like the playback lazy fetch. */
 const mergeEpisodeMarkers = (details: MediaDetails, episodeId: string, fetched: ShowSkipMarker[]): ShowSkipMarker[] => {
   const fetchedTypes = new Set(fetched.map((marker) => marker.type));
   return [
@@ -195,7 +196,7 @@ const mergeEpisodeMarkers = (details: MediaDetails, episodeId: string, fetched: 
   ].sort((left, right) => left.startSeconds - right.startSeconds);
 };
 
-/** The metadata service said "not now" (429 rate limit or 503 TheIntroDB capacity): stop and retry at the next app start. */
+/** The metadata service said "not now" (429 rate limit or 503 source capacity): stop and retry at the next app start. */
 const isRateLimited = (err: unknown) => err instanceof MetadataUnavailableError;
 
 /**
@@ -217,8 +218,8 @@ export const runSkipMarkerBackfill = async (media: MediaRow[], deps: SkipBackfil
     stoppedEarly: null,
   };
   const shows = media.filter(
-    (item): item is MediaRow & { tmdbId: number } =>
-      item.type === "tv" && item.hasFiles && typeof item.tmdbId === "number" && item.tmdbId > 0,
+    (item): item is MediaRow & { catalogId: number } =>
+      item.type === "tv" && item.hasFiles && typeof item.catalogId === "number" && item.catalogId > 0,
   );
   summary.shows = shows.length;
   deps.log("[skip-markers] backfill start", { shows: shows.length, mediaCount: media.length });
@@ -242,10 +243,10 @@ export const runSkipMarkerBackfill = async (media: MediaRow[], deps: SkipBackfil
     deps.log("[skip-markers] backfill show", {
       mediaId: show.id,
       title: show.title,
-      tmdbId: show.tmdbId,
+      catalogId: show.catalogId,
       episodes: details.episodes.length,
       files: details.files.length,
-      theIntroDbMarkers: details.skipMarkers.filter((marker) => isTheIntroDbSource(marker.source)).length,
+      serviceMarkers: details.skipMarkers.filter((marker) => isServiceSkipMarkerSource(marker.source)).length,
       showCacheCoverage: showCache?.coverage.length ?? 0,
       episodeFetchRows: episodeFetchRows.length,
       todo: todo.map((episode) => `${showEpisodeKey(episode.seasonNumber, episode.episodeNumber)}${episode.cachedMarkers ? ":cache" : ""}`),
@@ -273,7 +274,7 @@ export const runSkipMarkerBackfill = async (media: MediaRow[], deps: SkipBackfil
       requestsSent += 1;
       try {
         const result = await deps.fetchMarkers({
-          tmdbId: show.tmdbId,
+          catalogId: show.catalogId,
           seasonNumber: episode.seasonNumber,
           episodeNumber: episode.episodeNumber,
           durationSeconds: episode.durationSeconds,
@@ -300,7 +301,7 @@ export const runSkipMarkerBackfill = async (media: MediaRow[], deps: SkipBackfil
           show.id,
           episode.episodeId,
           EXTERNAL_SKIP_MARKER_FETCH_KIND,
-          createExternalSkipMarkerFetchPayload(coverage, result.fetchedAt, result.provider),
+          createExternalSkipMarkerFetchPayload(coverage, result.fetchedAt),
         );
         newCoverage.push(coverage);
         if (markers.length > 0) {
@@ -332,7 +333,7 @@ export const runSkipMarkerBackfill = async (media: MediaRow[], deps: SkipBackfil
     if (newCoverage.length > 0) {
       const fetchedKeys = new Set(newCoverage.map((entry) => showEpisodeKey(entry.seasonNumber, entry.episodeNumber)));
       const payload = createShowSkipCachePayload({
-        showTmdbId: show.tmdbId,
+        showCatalogId: show.catalogId,
         fetchedAt: new Date(now()).toISOString(),
         coverage: [
           ...(showCache?.coverage ?? []).filter(

@@ -1,8 +1,8 @@
 import type { MediaRow } from "@/lib/libraryDb";
 
 const mediaIdentityKey = (item: MediaRow) => {
-  if (Number.isFinite(Number(item.tmdbId))) {
-    return `${item.type}:tmdb:${Number(item.tmdbId)}`;
+  if (Number.isFinite(Number(item.catalogId))) {
+    return `${item.type}:catalog:${Number(item.catalogId)}`;
   }
   const normalize = (value: string | null | undefined) => (value ?? "").trim().toLowerCase();
   return `${item.type}:local:${normalize(item.title)}:${normalize(item.originalTitle)}:${item.year ?? ""}`;
@@ -11,10 +11,10 @@ const mediaIdentityKey = (item: MediaRow) => {
 const pickPreferredMedia = (current: MediaRow, next: MediaRow) => {
   if (next.hasFiles && !current.hasFiles) return next;
   if (!next.hasFiles && current.hasFiles) return current;
-  const currentHasTmdb = Number.isFinite(Number(current.tmdbId));
-  const nextHasTmdb = Number.isFinite(Number(next.tmdbId));
-  if (nextHasTmdb && !currentHasTmdb) return next;
-  if (!nextHasTmdb && currentHasTmdb) return current;
+  const currentHasCatalog = Number.isFinite(Number(current.catalogId));
+  const nextHasCatalog = Number.isFinite(Number(next.catalogId));
+  if (nextHasCatalog && !currentHasCatalog) return next;
+  if (!nextHasCatalog && currentHasCatalog) return current;
   return next.updatedAt > current.updatedAt ? next : current;
 };
 

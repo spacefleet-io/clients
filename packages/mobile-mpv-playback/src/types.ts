@@ -60,7 +60,7 @@ export type SubtitleTrack = {
   ocrTwin?: { id: string; url: string } | null;
   /**
    * Where the library says the track came from (`media_subtitles.source`, e.g. a fetched subtitle's
-   * `opensubtitles:<fileId>`), for the owner's own use ("Try another version", PLAY-SUBGET-07); never shown, and the
+   * `fetched:<fileId>`), for the owner's own use ("Try another version", PLAY-SUBGET-07); never shown, and the
    * native side ignores it.
    */
   source?: string | null;

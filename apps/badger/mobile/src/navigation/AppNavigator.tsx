@@ -227,7 +227,7 @@ export const AppNavigator = () => {
   // TV: reachable for "Play on TV" from the phone while signed in and the library is open (UX-TV-02).
   usePlayOnTvReceiver(IS_TV && screen === "main");
 
-  // https://spacefleet.io/pair/badger?code=ABCD-EFGH (ACCT-PAIR-06: a QR scanned with the system camera, or a tapped
+  // https://spacefleet.io/pair/badger?code=ABCDEFGH (ACCT-PAIR-06: a QR scanned with the system camera, or a tapped
   // link) opens the pairing flow. The code is held until the user is signed in and the navigator is ready.
   // spacebadger://auth/provider?... (the browser back from Google, Apple or Microsoft, ACCT-SIGNIN-05) goes to the
   // sign-in screen, which may mount after a cold start through that link.

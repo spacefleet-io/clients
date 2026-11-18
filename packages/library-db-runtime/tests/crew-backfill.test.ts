@@ -3,15 +3,15 @@
  *
  * The one-time crew backfill: a library from before crew was stored gets the director and writers of each title it
  * already holds, once, without touching anything else. Real engine (bun:sqlite, full LibraryDb); the "old library"
- * is titles added from TMDB without crew, which is what the code before LIB-CREW-01 wrote.
+ * is titles added from the catalog without crew, which is what the code before LIB-CREW-01 wrote.
  */
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { pickLibraryCrew } from "@space/shared/libraryCrew";
-import type { TmdbCrewMember } from "@space/shared/api";
-import type { TmdbDetails } from "../src/api";
+import type { CrewMember } from "@space/shared/api";
+import type { TitleDetails } from "../src/api";
 import { LibraryDb } from "../src/libraryDb";
 import {
   CREW_BACKFILL_BACKOFF_MS,
@@ -37,21 +37,21 @@ afterEach(() => {
   delete process.env.SF_USER_DATA_PATH;
 });
 
-// What TMDB credits, per TMDB id.
-const TMDB_CREW: Record<number, TmdbCrewMember[]> = {
+// What the catalog credits, per catalog id.
+const CATALOG_CREW: Record<number, CrewMember[]> = {
   961: [
-    { tmdbId: 8635, name: "Buster Keaton", job: "Director", department: "Directing", profilePath: null },
-    { tmdbId: 8636, name: "Clyde Bruckman", job: "Director", department: "Directing", profilePath: null },
-    { tmdbId: 8637, name: "Al Boasberg", job: "Writer", department: "Writing", profilePath: null },
+    { personId: 8635, name: "Buster Keaton", job: "Director", department: "Directing", profilePath: null },
+    { personId: 8636, name: "Clyde Bruckman", job: "Director", department: "Directing", profilePath: null },
+    { personId: 8637, name: "Al Boasberg", job: "Writer", department: "Writing", profilePath: null },
   ],
-  44441: [{ tmdbId: 2, name: "Richard Oswald", job: "Director", department: "Directing", profilePath: null }],
-  19: [{ tmdbId: 3, name: "Fritz Lang", job: "Director", department: "Directing", profilePath: null }],
-  // A title TMDB credits with nobody the library keeps.
-  777: [{ tmdbId: 4, name: "Someone", job: "Editor", department: "Editing", profilePath: null }],
+  44441: [{ personId: 2, name: "Richard Oswald", job: "Director", department: "Directing", profilePath: null }],
+  19: [{ personId: 3, name: "Fritz Lang", job: "Director", department: "Directing", profilePath: null }],
+  // A title the catalog credits with nobody the library keeps.
+  777: [{ personId: 4, name: "Someone", job: "Editor", department: "Editing", profilePath: null }],
 };
 
 const addMovie = (db: LibraryDb, id: number, title: string) =>
-  db.addMediaFromTmdb({
+  db.addMediaFromCatalog({
     id,
     type: "movie",
     title,
@@ -68,7 +68,7 @@ const addMovie = (db: LibraryDb, id: number, title: string) =>
     seasons: [],
     episodes: [],
     totalEpisodes: 0,
-  } satisfies TmdbDetails);
+  } satisfies TitleDetails);
 
 const openLibrary = async () => {
   const db = await LibraryDb.openLocal("token", "key");
@@ -95,7 +95,7 @@ const makeDeps = (db: LibraryDb, overrides: Partial<CrewBackfillDeps> = {}) => {
       calls.push(mediaId);
       const details = db.getMediaDetails(mediaId)!;
       if (details.crew?.length) return details.crew.length;
-      const crew = pickLibraryCrew(TMDB_CREW[details.tmdbId!] ?? []);
+      const crew = pickLibraryCrew(CATALOG_CREW[details.catalogId!] ?? []);
       if (crew.length) db.updateMediaMetadata({ mediaId, crew });
       return crew.length;
     },
@@ -119,7 +119,7 @@ describe("LIB-CREW-01 one-time crew backfill", () => {
     const edited = await addMovie(db, 19, "Metropolis");
     db.updateMediaMetadata({
       mediaId: edited,
-      crew: [{ tmdbId: null, name: "Thea von Harbou", job: "Director", profilePath: null }],
+      crew: [{ catalogId: null, name: "Thea von Harbou", job: "Director", profilePath: null }],
     });
     const before = db.getMediaDetails(general)!;
 
@@ -209,7 +209,7 @@ describe("LIB-CREW-01 one-time crew backfill", () => {
     expect(sleeps.slice(3)).toEqual([CREW_BACKFILL_BACKOFF_MS, CREW_BACKFILL_BACKOFF_MS * 2]);
   });
 
-  it("marks a title TMDB credits with no director or writer so it is not asked again, and retries a failed one on the next start", async () => {
+  it("marks a title the catalog credits with no director or writer so it is not asked again, and retries a failed one on the next start", async () => {
     const db = await openLibrary();
     const untitled = await addMovie(db, 777, "Untitled");
     const general = await addMovie(db, 961, "The General");

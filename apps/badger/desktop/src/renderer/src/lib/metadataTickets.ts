@@ -117,8 +117,8 @@ export const metadataClient: MetadataClient = {
   musicRecordings: (query) => getDesktopMetadata().client.musicRecordings(query),
   musicAlbums: (query) => getDesktopMetadata().client.musicAlbums(query),
   musicLyrics: (query) => getDesktopMetadata().client.musicLyrics(query),
-  musicCover: (mbidReleaseGroup, size) => getDesktopMetadata().client.musicCover(mbidReleaseGroup, size),
-  musicArtistImage: (mbidArtist) => getDesktopMetadata().client.musicArtistImage(mbidArtist),
+  musicCover: (album, size) => getDesktopMetadata().client.musicCover(album, size),
+  musicArtistImage: (artist) => getDesktopMetadata().client.musicArtistImage(artist),
   musicCopyChanges: (since) => getDesktopMetadata().client.musicCopyChanges(since),
 };
 
@@ -139,7 +139,7 @@ const getImageResolver = (): MetadataImageResolver => {
 /**
  * Artwork for `path` from the metadata service, as a `data:` URI. Only the import, refresh and copy paths ask
  * (META-ART-01: the copy into the user's storage, the heal of a lost copy); browsing never does, it shows the
- * user's own copy (`useMediaImage`). The desktop never asks TMDB's image CDN itself (META-DIRECT-03). Never
+ * user's own copy (`useMediaImage`). The desktop never asks the catalog's image CDN itself (META-DIRECT-03). Never
  * rejects; the outcome says why an image is missing.
  */
 export const resolveArtwork = (kind: ImageKind, path: string): Promise<ImageOutcome> =>

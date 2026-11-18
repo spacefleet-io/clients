@@ -27,6 +27,7 @@ const fakePairingApi = () => {
       return json({
         requestId: state.requestId,
         pollSecret: state.pollSecret,
+        // An API from before Chris 2026-11-18 sent the dash; the sidecar still hands on the plain 8 characters.
         shortCode: "ABCD-EFGH",
         qrPayload: "https://spacefleet.io/pair/badger?code=ABCDEFGH",
         expiresAt: new Date(Date.now() + 300_000).toISOString(),
@@ -61,7 +62,8 @@ describe("pairing flow (new-device side)", () => {
     });
 
     const started = await flow.start({ apiUrl: "http://api.test/", deviceName: "Chris Jellyfin" });
-    expect(started.shortCode).toBe("ABCD-EFGH");
+    // @bugfix @regression-proof Chris 2026-11-18: no dash in the code the Jellyfin page shows.
+    expect(started.shortCode).toBe("ABCDEFGH");
     expect(started.qrPayload).toBe("https://spacefleet.io/pair/badger?code=ABCDEFGH");
     expect(api.state.deviceType).toBe("jellyfin");
     expect(api.state.deviceName).toBe("Chris Jellyfin");
@@ -158,15 +160,15 @@ describe("sidecar routes", () => {
   });
 
   it("@req ACCT-PAIR-01[badger-jellyfin] pairing/start returns the code and pairing/status reports it", async () => {
-    const pairing = { state: "pending", requestId: "r", shortCode: "ABCD-EFGH", qrPayload: "https://spacefleet.io/pair/badger?code=ABCDEFGH", expiresAt: "2030-01-01T00:00:00Z", deviceName: "Jf", error: null } as const;
+    const pairing = { state: "pending", requestId: "r", shortCode: "ABCDEFGH", qrPayload: "https://spacefleet.io/pair/badger?code=ABCDEFGH", expiresAt: "2030-01-01T00:00:00Z", deviceName: "Jf", error: null } as const;
     const startPairing = vi.fn(async () => pairing);
     const handlers = deps({ startPairing, getStatus: () => status({ state: "needs_login", signedIn: false, pairing }), isLibraryReady: () => false });
     const start = await handleIntegrationRequest(new Request("http://127.0.0.1:8790/integration/v1/pairing/start", { method: "POST", body: JSON.stringify({ deviceName: "Jf" }) }), handlers);
     expect(start.status).toBe(200);
     expect(startPairing).toHaveBeenCalledWith({ deviceName: "Jf", apiUrl: null });
-    expect(((await start.json()) as { shortCode: string }).shortCode).toBe("ABCD-EFGH");
+    expect(((await start.json()) as { shortCode: string }).shortCode).toBe("ABCDEFGH");
     const polled = await handleIntegrationRequest(new Request("http://127.0.0.1:8790/integration/v1/pairing/status"), handlers);
-    expect(((await polled.json()) as { pairing: { shortCode: string } }).pairing.shortCode).toBe("ABCD-EFGH");
+    expect(((await polled.json()) as { pairing: { shortCode: string } }).pairing.shortCode).toBe("ABCDEFGH");
   });
 });
 

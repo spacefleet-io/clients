@@ -20,13 +20,13 @@ export const ARTWORK_HEAL_KIND_BY_TARGET: Record<ArtworkHealTarget, ArtworkHealK
   episodeStill: "still",
 };
 
-type HealablePerson = { personId: string; tmdbId: number | null; profilePath?: string | null };
+type HealablePerson = { personId: string; catalogId: number | null; profilePath?: string | null };
 
 /** The library's view of one media: the parts of `MediaDetails` that carry artwork. */
 export type HealableMedia = {
   id: string;
   type: "movie" | "tv";
-  tmdbId: number | null;
+  catalogId: number | null;
   originalLanguage?: string | null;
   posterPath?: string | null;
   backdropPath?: string | null;
@@ -36,14 +36,14 @@ export type HealableMedia = {
   crew?: HealablePerson[];
 };
 
-/** Metadata-service details of the same media (TMDB image paths). */
+/** Metadata-service details of the same media (catalog image paths). */
 export type HealSourceDetails = {
   posterPath?: string | null;
   backdropPath?: string | null;
   seasons?: { seasonNumber: number; posterPath?: string | null }[];
   episodes?: { seasonNumber: number; episodeNumber: number; stillPath?: string | null }[];
-  cast?: { tmdbId: number | null; profilePath?: string | null }[];
-  crew?: { tmdbId: number | null; profilePath?: string | null }[];
+  cast?: { personId: number | null; profilePath?: string | null }[];
+  crew?: { personId: number | null; profilePath?: string | null }[];
 };
 
 /** One library slot holding a stored artwork reference (`asset:<type>::<key>` or a bare key). */
@@ -57,7 +57,7 @@ export type ArtworkHealSlot = {
   kind: ArtworkHealKind;
   seasonNumber?: number;
   episodeNumber?: number;
-  personTmdbId?: number | null;
+  personCatalogId?: number | null;
 };
 
 /** A compare-and-set swap: written only while the slot still holds `path` (the broken reference). */
@@ -74,7 +74,7 @@ export type ArtworkHealerDeps = {
   listMediaIds(): Promise<string[]>;
   /** The media as the library holds it now; null when it is no longer in the library. */
   loadMedia(mediaId: string): Promise<HealableMedia | null>;
-  /** Details from the metadata service (anonymous ticket path, TMDB id only); null when unavailable. */
+  /** Details from the metadata service (anonymous ticket path, catalog id only); null when unavailable. */
   fetchDetails(media: HealableMedia): Promise<HealSourceDetails | null>;
   /** One image through the metadata service; null when unavailable. */
   fetchImage(kind: ArtworkHealKind, path: string): Promise<FetchedArtwork | null>;
@@ -133,7 +133,7 @@ export const listHealSlots = (media: HealableMedia): ArtworkHealSlot[] => {
   for (const person of [...(media.cast ?? []), ...(media.crew ?? [])]) {
     if (seenPeople.has(person.personId)) continue;
     seenPeople.add(person.personId);
-    add("personProfile", person.personId, person.profilePath, { personTmdbId: person.tmdbId });
+    add("personProfile", person.personId, person.profilePath, { personCatalogId: person.catalogId });
   }
   for (const episode of media.episodes ?? []) {
     add("episodeStill", episode.id, episode.stillPath, { seasonNumber: episode.seasonNumber, episodeNumber: episode.episodeNumber });
@@ -141,7 +141,7 @@ export const listHealSlots = (media: HealableMedia): ArtworkHealSlot[] => {
   return slots;
 };
 
-/** The TMDB image path the slot was originally copied from, read from fresh metadata details. */
+/** The catalog image path the slot was originally copied from, read from fresh metadata details. */
 export const sourcePathFor = (slot: ArtworkHealSlot, details: HealSourceDetails): string | null => {
   let path: string | null | undefined;
   switch (slot.target) {
@@ -160,8 +160,8 @@ export const sourcePathFor = (slot: ArtworkHealSlot, details: HealSourceDetails)
       )?.stillPath;
       break;
     case "personProfile":
-      if (slot.personTmdbId == null) return null;
-      path = [...(details.cast ?? []), ...(details.crew ?? [])].find((person) => person.tmdbId === slot.personTmdbId)?.profilePath;
+      if (slot.personCatalogId == null) return null;
+      path = [...(details.cast ?? []), ...(details.crew ?? [])].find((person) => person.personId === slot.personCatalogId)?.profilePath;
       break;
   }
   return typeof path === "string" && /^\/[^/]/.test(path) ? path : null;
@@ -266,8 +266,8 @@ export const createArtworkHealer = (deps: ArtworkHealerDeps): ArtworkHealer => {
       log("artworkHeal.skip", { mediaId, reason: "reference_changed" });
       return result;
     }
-    if (media.tmdbId == null) {
-      for (const slot of slots) coolDown(slot.key, "no_tmdb_id");
+    if (media.catalogId == null) {
+      for (const slot of slots) coolDown(slot.key, "no_catalog_id");
       return result;
     }
     const details = await detailsFor(media);

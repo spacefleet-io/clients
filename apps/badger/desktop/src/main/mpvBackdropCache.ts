@@ -4,7 +4,7 @@
 // a LOCAL FILE: the bundled mpv has no https protocol (and gains nothing from
 // one — every stream is served over 127.0.0.1 http). The renderer resolves the
 // image through the metadata service (META-ART-02: artwork never comes from the
-// TMDB image CDN), which answers a base64 `data:` URI. The main process writes
+// catalog image CDN), which answers a base64 `data:` URI. The main process writes
 // it to a file once, keyed by the URI, and hands mpv the path. It makes no
 // network request. Anything that is not a small image data URI returns null and
 // the launch falls back to an idle (black) window — never a slower start.

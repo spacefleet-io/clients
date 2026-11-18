@@ -1938,7 +1938,7 @@ export const useMpvPlaybackEngine = ({
               // offline-playback-ignored-local-file
               metadata: async () => (isOfflineSource ? buildOfflineMetadataPayload() : await buildExternalMetadataPayload()),
               prewarm: runPrewarm,
-              // A data URI of the user's own copy (META-ART-01), never the metadata service nor the TMDB CDN.
+              // A data URI of the user's own copy (META-ART-01), never a source nor its image CDN.
               // Null when there is no copy yet, after a short wait or on failure: mpv then launches straight on the stream.
               backdrop: () =>
                 resolvePlaybackBackdrop(media.backdropPath, {
@@ -1976,7 +1976,7 @@ export const useMpvPlaybackEngine = ({
               );
               throw new Error("playback_source_unreachable");
             }
-            // Backdrop-first launch path. Resolve the TMDB backdrop URL from
+            // Backdrop-first launch path. Resolve the catalog backdrop URL from
             // the media; if available, launch mpv with the static image as
             // the source, then signalPlaybackReady IMMEDIATELY so the
             // Electron window hides within ~1 s of the user click. The

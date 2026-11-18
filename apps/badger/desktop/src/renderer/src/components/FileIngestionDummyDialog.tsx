@@ -2,7 +2,7 @@ import { Button, Dialog, DialogContent, DialogHeader, DialogTitle, Input } from 
 import { Check, Loader2 } from "lucide-react";
 
 import ImportCandidateImage from "@/components/ImportCandidateImage";
-import type { TmdbSearchResult } from "@/api";
+import type { TitleSearchResult } from "@/api";
 
 type FileIngestionDummyDialogProps = {
   open: boolean;
@@ -13,10 +13,10 @@ type FileIngestionDummyDialogProps = {
   onQueryChange: (query: string) => void;
   loading: boolean;
   error: string | null;
-  results: TmdbSearchResult[];
+  results: TitleSearchResult[];
   running: boolean;
   onSearch: () => void;
-  onSelect: (result: TmdbSearchResult) => void;
+  onSelect: (result: TitleSearchResult) => void;
   t: (key: string, options?: Record<string, unknown>) => string;
 };
 
@@ -62,7 +62,7 @@ export default function FileIngestionDummyDialog({
             <Input
               value={query}
               onChange={(event) => onQueryChange(event.target.value)}
-              placeholder={t("ingestion.ui.searchTmdbPlaceholder")}
+              placeholder={t("ingestion.ui.searchTitlesPlaceholder")}
               className="flex-1"
               onKeyDown={(event) => event.key === "Enter" && onSearch()}
             />

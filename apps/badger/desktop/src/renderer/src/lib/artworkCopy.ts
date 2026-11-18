@@ -1,11 +1,11 @@
 /**
  * META-ART-01 on the desktop: after a title is matched (or refreshed, restored, or opened), its artwork still stored
- * as TMDB paths is copied into the user's storage, encrypted, and the library is pointed at the copies.
+ * as catalog paths is copied into the user's storage, encrypted, and the library is pointed at the copies.
  *
  * The shared runtime (`@space/library-db-definition/artworkCopy`) decides what to copy and how to apply it; this file
  * only supplies the desktop's uploader (metadata service `image` op, META-ART-02, then encrypt and upload under a
  * random name: `uploadEncryptedAssetFromMetadata`) and the ticket floor. It runs in the background, one title at a
- * time; a failure leaves the TMDB path in place and the next schedule of that title retries it.
+ * time; a failure leaves the catalog path in place and the next schedule of that title retries it.
  */
 import {
   ARTWORK_COPY_PAUSE_MS,

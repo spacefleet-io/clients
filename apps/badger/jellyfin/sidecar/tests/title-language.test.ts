@@ -6,7 +6,7 @@ import { buildIntegrationLibrary, type IntegrationLibrary, type LibraryReader } 
 /**
  * ACCT-PROF-03 (badger-jellyfin): the followed profile's `titleLanguage` picks the titles and pictures the plugin turns
  * into `.nfo` files and local images. "Original version" shows each title's original set from its
- * `title_variants_v1:<media id>` row, a picture only once copied into the user's storage (a TMDB path keeps the row's);
+ * `title_variants_v1:<media id>` row, a picture only once copied into the user's storage (a catalog path keeps the row's);
  * "App language everywhere", an unset option or a title without an original set show the library row as stored.
  */
 
@@ -15,8 +15,7 @@ const phase = (test: string, message: string, data?: unknown) =>
   console.info(`[${T}] ${test}: ${message}${data === undefined ? "" : ` ${JSON.stringify(data)}`}`);
 
 const row = (over: Partial<MediaRow> & Pick<MediaRow, "id" | "type" | "title">): MediaRow => ({
-  tmdbId: null,
-  externalIds: null,
+  catalogId: null,
   originalTitle: null,
   originalLanguage: null,
   overview: null,
@@ -35,9 +34,9 @@ const row = (over: Partial<MediaRow> & Pick<MediaRow, "id" | "type" | "title">):
   ...over,
 });
 
-const HATE = row({ id: "m-hate", type: "movie", title: "Hate", originalTitle: "La Haine", originalLanguage: "fr", tmdbId: 406, posterPath: "vault/hate-en.jpg", backdropPath: "vault/hate-bd-en.jpg" });
-const DBZ = row({ id: "m-dbz", type: "movie", title: "Dragon Ball Z: Battle of Gods", originalLanguage: "ja", tmdbId: 126963, posterPath: "vault/dbz.jpg" });
-const DARK = row({ id: "s-dark", type: "tv", title: "Dark", originalLanguage: "de", tmdbId: 70523, posterPath: "vault/dark-en.jpg", backdropPath: "vault/dark-bd-en.jpg" });
+const HATE = row({ id: "m-hate", type: "movie", title: "Hate", originalTitle: "La Haine", originalLanguage: "fr", catalogId: 406, posterPath: "vault/hate-en.jpg", backdropPath: "vault/hate-bd-en.jpg" });
+const DBZ = row({ id: "m-dbz", type: "movie", title: "Dragon Ball Z: Battle of Gods", originalLanguage: "ja", catalogId: 126963, posterPath: "vault/dbz.jpg" });
+const DARK = row({ id: "s-dark", type: "tv", title: "Dark", originalLanguage: "de", catalogId: 70523, posterPath: "vault/dark-en.jpg", backdropPath: "vault/dark-bd-en.jpg" });
 
 const reader = (rows: MediaRow[], settings: Record<string, string>): LibraryReader => ({
   getVersion: () => 1,
@@ -74,10 +73,10 @@ const settings = (titleLanguage: string) =>
   JSON.stringify({ titleLanguage, fieldUpdatedAt: { titleLanguage: "2026-11-16T00:00:00.000Z" }, updatedAt: "2026-11-16T00:00:00.000Z" });
 
 const VARIANTS: Record<string, string> = {
-  [titleVariantsKey(HATE.id)]: variants("Hate", { language: "fr", title: "La Haine", posterPath: "vault/hate-fr.jpg", backdropPath: "/tmdbHateBackdrop.jpg" }),
+  [titleVariantsKey(HATE.id)]: variants("Hate", { language: "fr", title: "La Haine", posterPath: "vault/hate-fr.jpg", backdropPath: "/catalogHateBackdrop.jpg" }),
   // Non-Latin original: the background pass keeps no original set, the English row is shown with both options.
   [titleVariantsKey(DBZ.id)]: variants(DBZ.title, null),
-  [titleVariantsKey(DARK.id)]: variants("Dark", { language: "de", title: "Dark", posterPath: "/tmdbDarkPoster.jpg", backdropPath: "vault/dark-bd-de.jpg" }),
+  [titleVariantsKey(DARK.id)]: variants("Dark", { language: "de", title: "Dark", posterPath: "/catalogDarkPoster.jpg", backdropPath: "vault/dark-bd-de.jpg" }),
 };
 
 const shown = (library: IntegrationLibrary) =>
@@ -89,13 +88,13 @@ describe("how titles appear for the followed profile (ACCT-PROF-03)", () => {
     const library = buildIntegrationLibrary(reader([HATE, DBZ, DARK], { ...VARIANTS, profile_settings_v1: settings("original") }), "");
     phase(test, "built", shown(library));
     expect(shown(library)).toEqual({
-      // The copied French poster replaces the row's; the backdrop is still a TMDB path, the row's stays.
+      // The copied French poster replaces the row's; the backdrop is still a catalog path, the row's stays.
       [HATE.id]: ["La Haine", "vault/hate-fr.jpg", "vault/hate-bd-en.jpg"],
       [DBZ.id]: ["Dragon Ball Z: Battle of Gods", "vault/dbz.jpg", null],
       [DARK.id]: ["Dark", "vault/dark-en.jpg", "vault/dark-bd-de.jpg"],
     });
     // Synopsis, original title and the rest stay the row's.
-    expect(library.movies.find((movie) => movie.id === HATE.id)).toMatchObject({ originalTitle: "La Haine", tmdbId: 406 });
+    expect(library.movies.find((movie) => movie.id === HATE.id)).toMatchObject({ originalTitle: "La Haine" });
   });
 
   it("@req ACCT-PROF-03[badger-jellyfin] App language everywhere, unset or unreadable options show the library row", () => {

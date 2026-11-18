@@ -1,11 +1,12 @@
 /**
  * @test-id PARROT-MOBILE-LOGIN-DEFAULT-001
  * @level unit
- * @req ACCT-SIGNIN-04[parrot]
+ * @req ACCT-SIGNIN-04[parrot] @req UX-PHONE-10[parrot]
  * @why Chris 2026-11-12: every client but the TV defaults to "the login/password screen with the option to use the qr
  *   code to log in with an already logged in device, not the other way around". The real LoginScreen is rendered
  *   (shell components and native modules stubbed as host elements): it opens on the email form with the shared
- *   highlighted card under it; the card swaps in the pairing panel, and "Sign in with email and password" comes back.
+ *   highlighted card under it; the card swaps in the shared `MobilePairSignIn` view (the one Badger's phone shows, Chris
+ *   2026-11-18), and its "Sign in with email and password" link comes back.
  */
 import { createElement, type ReactNode } from "react";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
@@ -61,7 +62,14 @@ vi.mock("@space/shared/signInError", () => ({
 vi.mock("../src/state/session", () => ({ useSession: () => ({ signIn: async () => undefined, signInNotice: null }) }));
 vi.mock("../src/lib/i18n", () => ({ setParrotLanguage: async () => undefined }));
 vi.mock("../src/brand", () => ({ PARROT_MASCOT: 1 }));
-vi.mock("../src/screens/PairingPanel", () => ({ PairingPanel: "PairingPanel" }));
+// The shared "Sign in with another device" page (UX-PHONE-10) is covered by packages/mobile-shell/tests/mobile-pair-sign-in.test.tsx.
+vi.mock("@space/mobile-shell/pair-sign-in", () => ({ MobilePairSignIn: "MobilePairSignIn" }));
+vi.mock("@space/mobile-shell/pairing", () => ({ completePairing: vi.fn() }));
+vi.mock("../src/setup/pairing", () => ({
+  createParrotCompletionDeps: vi.fn(),
+  createParrotPairingClient: vi.fn(),
+  PARROT_PAIRING_LOG_TAG: "parrot.pairing",
+}));
 
 import { LoginScreen } from "../src/screens/LoginScreen";
 
@@ -73,7 +81,7 @@ describe("Parrot phone sign-in: the form first, the QR card second", () => {
   });
 
   const host = (tree: ReactTestRenderer, testID: string) => tree.root.findAll((n) => n.props.testID === testID && typeof n.type === "string");
-  const panels = (tree: ReactTestRenderer) => tree.root.findAll((n) => String(n.type) === "PairingPanel");
+  const panels = (tree: ReactTestRenderer) => tree.root.findAll((n) => String(n.type) === "MobilePairSignIn");
 
   it("opens on the email form with the highlighted card; the card shows the QR and 'use password' comes back", async () => {
     let tree!: ReactTestRenderer;
@@ -91,9 +99,10 @@ describe("Parrot phone sign-in: the form first, the QR card second", () => {
     });
     expect(panels(tree)).toHaveLength(1);
     expect(tree.root.findAll((n) => String(n.type) === "MobileAuthInput")).toHaveLength(0);
+    expect(panels(tree)[0].props).toMatchObject({ app: "parrot", deviceName: "Parrot (test)", logTag: "parrot.pairing" });
 
     await act(async () => {
-      host(tree, "sign-in-use-password")[0].props.onPress();
+      panels(tree)[0].props.onBack();
     });
     expect(panels(tree)).toHaveLength(0);
     expect(host(tree, "login-qr-card")).toHaveLength(1);

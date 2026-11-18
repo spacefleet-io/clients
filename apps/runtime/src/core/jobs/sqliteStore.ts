@@ -183,7 +183,7 @@ export type SqliteRuntimeJobsStore = {
   /**
    * Transactional read-modify-write of `payload_json`. Shallow merges the
    * `patch` over the existing payload object. Used by `attach_metadata` so
-   * the identify/commit steps can pick up updated TMDB hints without losing
+   * the identify/commit steps can pick up updated catalog hints without losing
    * fields placed there at submit time.
    */
   updateJobPayload(

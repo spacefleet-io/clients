@@ -23,8 +23,8 @@ import {
   type HlsVideoVariant,
 } from "./hls";
 
-/** TMDB genre ids (movie + tv) -> names, so .nfo files carry readable genres. */
-const TMDB_GENRES: Record<number, string> = {
+/** Catalog genre ids (movie + tv) -> names, so .nfo files carry readable genres. */
+const CATALOG_GENRES: Record<number, string> = {
   28: "Action",
   12: "Adventure",
   16: "Animation",
@@ -220,8 +220,6 @@ export type IntegrationUnit = {
 export type IntegrationMovie = {
   id: string;
   type: "movie";
-  tmdbId: number | null;
-  imdbId: string | null;
   title: string;
   originalTitle: string | null;
   originalLanguage: string | null;
@@ -385,15 +383,13 @@ const movieResume = (reader: LibraryReader, prefix: string, row: MediaRow, durat
 
 const commonFields = (row: MediaRow, details: MediaDetails, prefs: TrackPrefs | null) => ({
   id: row.id,
-  tmdbId: row.tmdbId,
-  imdbId: typeof row.externalIds?.imdb === "string" ? (row.externalIds.imdb as string) : null,
   title: row.title,
   originalTitle: row.originalTitle,
   originalLanguage: row.originalLanguage,
   year: parseYear(row.year),
   overview: row.overview,
   rating: row.rating,
-  genres: (row.genres ?? []).map((id) => TMDB_GENRES[id]).filter((name): name is string => Boolean(name)),
+  genres: (row.genres ?? []).map((id) => CATALOG_GENRES[id]).filter((name): name is string => Boolean(name)),
   addedAt: row.addedAt,
   posterPath: row.posterPath,
   backdropPath: row.backdropPath,
@@ -416,7 +412,7 @@ export const buildIntegrationLibrary = (reader: LibraryReader, prefix: string, l
       titleLanguage === "original" ? shownTitleArt(stored, parseTitleVariants(reader.getSetting(titleVariantsKey(stored.id))?.value), titleLanguage) : stored;
     const details = reader.getMediaDetails(row.id);
     if (!details) continue;
-    const texts = row.tmdbId && (row.type === "movie" || row.type === "tv") ? keptTexts(reader, row.type, row.tmdbId, language) : null;
+    const texts = row.catalogId && (row.type === "movie" || row.type === "tv") ? keptTexts(reader, row.type, row.catalogId, language) : null;
     const overview = texts?.overview ?? row.overview;
     if (row.type === "movie") {
       const unit = resolvePlayableUnit(details, null);

@@ -83,8 +83,7 @@ const fixedIds = (prefix = "id"): IdGenerator => {
 const baseDetails = (overrides: Partial<MediaDetails> = {}): MediaDetails => ({
   id: "media-1",
   type: "movie",
-  tmdbId: 42,
-  externalIds: { imdb: "tt0001" },
+  catalogId: 42,
   title: "Test",
   originalTitle: "Test OT",
   originalLanguage: "en",
@@ -279,15 +278,14 @@ describe("buildOpStatements — media.upsert", () => {
     }
   });
 
-  test("uses idGen for external_ids without tmdb id", () => {
-    console.info(`[${SUITE}:setup] op.type=media.upsert tmdbId=null externalIds={imdb:tt000}`);
+  test("uses idGen for the catalog id row", () => {
+    console.info(`[${SUITE}:setup] op.type=media.upsert catalogId=7`);
     const op: LibraryOp = {
       ...opMeta,
       type: "media.upsert",
       payload: {
         details: baseDetails({
-          tmdbId: null,
-          externalIds: { imdb: "tt000" },
+          catalogId: 7,
           genres: [],
         }),
       },
@@ -301,7 +299,7 @@ describe("buildOpStatements — media.upsert", () => {
     try {
       expect(externalIdInsert).toBeDefined();
       expect(externalIdInsert!.params[0]).toBe("uuid-1");
-      expect(externalIdInsert!.params[3]).toBe("imdb");
+      expect(externalIdInsert!.params[3]).toBe("catalog");
     } catch (err) {
       dumpOpsSnapshot("media-upsert-extid-idGen-wrong", {
         op,
@@ -324,7 +322,7 @@ describe("buildOpStatements — media.upsert", () => {
             {
               id: "role-a",
               personId: "p-a",
-              tmdbId: null,
+              catalogId: null,
               name: "A",
               role: "lead",
               profilePath: null,
@@ -332,7 +330,7 @@ describe("buildOpStatements — media.upsert", () => {
             {
               id: "role-b",
               personId: "p-b",
-              tmdbId: null,
+              catalogId: null,
               name: "B",
               role: "supporting",
               profilePath: null,

@@ -163,7 +163,7 @@ export const parseTitleVariants = (value: string | null | undefined): TitleVaria
   };
 };
 
-/** A picture copied into the user's storage (not a TMDB path still waiting for its copy, META-ART-01). */
+/** A picture copied into the user's storage (not a catalog path still waiting for its copy, META-ART-01). */
 const copiedPicture = (path: string | null): path is string => !!path && !/^\/[^/]/.test(path);
 
 /**

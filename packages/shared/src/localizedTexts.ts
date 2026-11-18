@@ -3,7 +3,7 @@
  *
  * One `setting.set` record per title and language, keyed by the title's provider identity so a re-match reads the
  * right row:
- *   key   `localized_text_v1:<type>:<tmdbId>:<language>`
+ *   key   `localized_text_v1:<type>:<catalogId>:<language>`
  *   value JSON `{v: 1, overview, episodes: [[season, episode, name, overview], …], absent: ["s:e", …], fetchedAt,
  *               originalLanguage?}`
  * `absent` lists the library's episodes the answer did not have, so a library episode in neither list (new episodes)
@@ -15,8 +15,8 @@
 
 export const LOCALIZED_TEXT_KEY_PREFIX = "localized_text_v1:";
 
-export const localizedTextKey = (type: "movie" | "tv", tmdbId: number, language: string) =>
-  `${LOCALIZED_TEXT_KEY_PREFIX}${type}:${tmdbId}:${language}`;
+export const localizedTextKey = (type: "movie" | "tv", catalogId: number, language: string) =>
+  `${LOCALIZED_TEXT_KEY_PREFIX}${type}:${catalogId}:${language}`;
 
 export const isLocalizedTextKey = (key: string) => key.startsWith(LOCALIZED_TEXT_KEY_PREFIX);
 

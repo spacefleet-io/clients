@@ -77,8 +77,8 @@ export const subtitleFetchPhoneDeps = (params: {
 
 /**
  * The inputs of the shared "Get subtitles" flow (`useSubtitleFetchFlow`) for a film (`episodeId` null) or one episode:
- * the search by TMDB ID through the metadata service (PLAY-SUBGET-03, -14), the file name to rank against, the
- * subtitles it already has, and the phone's storage. Null when the title has no TMDB ID (nothing to search by).
+ * the search by catalog id through the metadata service (PLAY-SUBGET-03, -14), the file name to rank against, the
+ * subtitles it already has, and the phone's storage. Null when the title has no catalog id (nothing to search by).
  */
 export const subtitleFetchPhoneInput = (params: {
   media: MediaDetails;
@@ -104,7 +104,7 @@ export const subtitleFetchPhoneInput = (params: {
  * The inputs of the shared "Try another version" (`tryAnotherSubtitleVersion`, PLAY-SUBGET-07) for one fetched track of
  * a film or episode: the same search as "Get subtitles", and the phone's storage plus
  * dropping the old track (`replaceFetchedSubtitle`), so the title keeps one track of that name, and deleting the old
- * track's stored file once nothing names it. Null when the title has no TMDB ID (nothing to search by).
+ * track's stored file once nothing names it. Null when the title has no catalog id (nothing to search by).
  */
 export const subtitleTryAnotherPhoneInput = (params: {
   media: MediaDetails;

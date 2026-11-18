@@ -762,12 +762,12 @@ describe("TV player: Get subtitles and Try another version in the player (PLAY-S
     id: "media-1",
     type: "movie",
     title: "Sintel",
-    tmdbId: 45745,
+    catalogId: 45745,
     episodes: [],
     files: [{ filename: "Sintel (2010).mkv", season: null, episode: null }],
     subtitleTracks: [],
   };
-  const fetchedEs = { ...subtitle("sub-es", "es"), label: "Spanish", source: "opensubtitles:11" } as SubtitleTrack;
+  const fetchedEs = { ...subtitle("sub-es", "es"), label: "Spanish", source: "fetched:11" } as SubtitleTrack;
 
   /** @req PLAY-SUBGET-02[badger-tv] */
   it("offers Get more on TV, and opening it pauses and shows the panel holding the D-pad", async () => {
@@ -818,7 +818,7 @@ describe("TV player: Get subtitles and Try another version in the player (PLAY-S
       console.info(`${LOG} SUBGET-07 phase=back: open, then Back with nothing saved`);
       let pausedAt = fake.paused.length;
       await act(async () => tryAnother.onPress(fetchedEs));
-      expect(hosts(tree, "PlayerSubtitleVersion")[0]!.props.track).toEqual({ id: "sub-es", language: "es", label: "Spanish", source: "opensubtitles:11" });
+      expect(hosts(tree, "PlayerSubtitleVersion")[0]!.props.track).toEqual({ id: "sub-es", language: "es", label: "Spanish", source: "fetched:11" });
       await act(async () => (hosts(tree, "PlayerSubtitleVersion")[0]!.props.onClose as (r: null) => void)(null));
       console.info(`${LOG} SUBGET-07 back: paused=${JSON.stringify(fake.paused.slice(pausedAt))} picks=${JSON.stringify(picks)}`);
       expect(fake.paused.slice(pausedAt)).toEqual([true, false]);
@@ -829,7 +829,7 @@ describe("TV player: Get subtitles and Try another version in the player (PLAY-S
       console.info(`${LOG} SUBGET-07 phase=replaced`);
       pausedAt = fake.paused.length;
       await act(async () => tryAnother.onPress(fetchedEs));
-      const replacement = { id: "sub-es-2", language: "es", label: "Spanish", objectKey: "obj/es-2.srt", format: "srt", source: "opensubtitles:12" };
+      const replacement = { id: "sub-es-2", language: "es", label: "Spanish", objectKey: "obj/es-2.srt", format: "srt", source: "fetched:12" };
       await act(async () => (hosts(tree, "PlayerSubtitleVersion")[0]!.props.onClose as (r: typeof replacement) => void)(replacement));
       await advance(250);
       const tracks = controls(tree).subtitleTracks as SubtitleTrack[];
@@ -838,7 +838,7 @@ describe("TV player: Get subtitles and Try another version in the player (PLAY-S
       );
       expect(tracks.map((t) => [t.id, t.label, t.source ?? null])).toEqual([
         ["sub-en", "en", null],
-        ["sub-es-2", "Spanish", "opensubtitles:12"],
+        ["sub-es-2", "Spanish", "fetched:12"],
       ]);
       expect(picks).toEqual([[1, { reload: true }]]);
       expect(fake.paused.slice(pausedAt)).toEqual([true, false]);

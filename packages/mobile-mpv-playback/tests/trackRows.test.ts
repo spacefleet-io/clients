@@ -115,13 +115,13 @@ describe("the subtitle menu's \"Get more subtitles…\" row (PLAY-SUBGET-02, -12
 
 describe("the subtitle menu's \"Try another version\" row (PLAY-SUBGET-07)", () => {
   const fetchedSubs = [
-    { id: "s1", label: "French", language: "fr", source: "opensubtitles:9" },
+    { id: "s1", label: "French", language: "fr", source: "fetched:9" },
     { id: "s2", label: "English", language: "en", source: "srt" },
   ] as unknown as SubtitleTrack[];
   const getMore = { title: "Get more subtitles…", unavailableReason: null, onPress: () => {} };
   const tryAnother = (onPress: (track: SubtitleTrack) => void, unavailableReason: string | null = null) => ({
     title: "Try another version",
-    isFetched: (track: SubtitleTrack) => (track.source ?? "").startsWith("opensubtitles"),
+    isFetched: (track: SubtitleTrack) => (track.source ?? "").startsWith("fetched"),
     unavailableReason,
     onPress,
   });

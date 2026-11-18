@@ -93,8 +93,7 @@ const makeDetails = () =>
   ({
     id: "movie-1",
     type: "movie",
-    tmdbId: 1,
-    externalIds: null,
+    catalogId: 1,
     title: "The Matrix",
     originalTitle: null,
     originalLanguage: null,
@@ -133,8 +132,7 @@ const makeShowDetails = () =>
   ({
     id: "show-1",
     type: "tv",
-    tmdbId: 2,
-    externalIds: null,
+    catalogId: 2,
     title: "Test Show",
     originalTitle: null,
     originalLanguage: null,

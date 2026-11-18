@@ -303,7 +303,7 @@ describe("phone screens show only the user's stored copies (MOBILE-VAULT-ART-001
       const source = readFileSync(resolve(MOBILE_ROOT, file), "utf8");
       return {
         file,
-        pictureLookups: [...source.matchAll(/metadataImages|imageUrl\(|fetchArtworkImage|watchMediaImage|image\.tmdb\.org|themoviedb|metadata\/relay/gu)].map((m) => m[0]),
+        pictureLookups: [...source.matchAll(/metadataImages|imageUrl\(|fetchArtworkImage|watchMediaImage|\/t\/p\/(?:w\d+|original)\/|metadata\/relay/gu)].map((m) => m[0]),
       };
     });
     dump(T, "findings", findings);

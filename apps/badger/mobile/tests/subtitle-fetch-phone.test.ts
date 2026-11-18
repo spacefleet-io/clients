@@ -1,8 +1,8 @@
 /**
  * @test-id BADGER-MOBILE-SUBGET-001
  * @level unit
- * @why "Get subtitles" on the phone: the search goes through the metadata service by TMDB ID only, the picked file is
- *   downloaded there, stored in the vault, added as a fetched track naming its file ("opensubtitles:<fileId>") and
+ * @why "Get subtitles" on the phone: the search goes through the metadata service by catalog id only, the picked file is
+ *   downloaded there, stored in the vault, added as a fetched track naming its file ("fetched:<fileId>") and
  *   remembered as the title's subtitle; the player then lists the new track after the session's own ones and loads it
  *   like any library subtitle. "Try another version" (PLAY-SUBGET-07, #2502) runs the same search again, stores the
  *   next file of the same entry under the same name, drops the old track, and the player puts it in the old row.
@@ -21,7 +21,7 @@ const log = (label: string, value: unknown) => console.info(`BADGER-MOBILE-SUBGE
 const sintel = {
   id: "media-sintel",
   type: "movie",
-  tmdbId: 45745,
+  catalogId: 45745,
   episodes: [],
   files: [{ filename: "Sintel (2010) [1080p].mkv", season: null, episode: null }],
   subtitleTracks: [{ episodeId: null, language: "en", label: "English", source: "srt" }],
@@ -50,7 +50,7 @@ const setup = () => {
 
 describe("subtitleFetchPhoneInput", () => {
   /** @req PLAY-SUBGET-03[badger-mobile] @req PLAY-SUBGET-14[badger-mobile] */
-  it("searches the metadata service by TMDB ID only, ranking against the film's file", async () => {
+  it("searches the metadata service by catalog id only, ranking against the film's file", async () => {
     const { input, calls } = setup();
     expect(input?.libraryFileName).toBe("Sintel (2010) [1080p].mkv");
     expect(input?.existingTracks).toEqual([{ language: "en", label: "English", source: "srt" }]);
@@ -58,9 +58,9 @@ describe("subtitleFetchPhoneInput", () => {
     expect(calls).toEqual([["search", { type: "movie", id: 45745 }]]);
   });
 
-  it("is null for a title without a TMDB ID", () => {
+  it("is null for a title without a catalog id", () => {
     const input = subtitleFetchPhoneInput({
-      media: { ...sintel, tmdbId: null } as MediaDetails,
+      media: { ...sintel, catalogId: null } as MediaDetails,
       episodeId: null,
       uiLanguage: "en",
       client: { subtitles: async () => ({}) as never, subtitleFile: async () => ({}) as never },
@@ -77,16 +77,16 @@ describe("subtitleFetchPhoneInput", () => {
     await input!.store(entry, (stage) => stages.push(stage), new AbortController().signal);
     log("store calls", calls);
     expect(stages).toEqual(["downloading", "saving"]);
-    expect(fetchedSubtitleSource(9)).toBe("opensubtitles:9");
+    expect(fetchedSubtitleSource(9)).toBe("fetched:9");
     expect(calls.slice(0, 3)).toEqual([
       ["download", 9],
       ["upload", "media-sintel", null, "1\n", "srt"],
-      ["addTrack", { mediaId: "media-sintel", episodeId: null, language: "fr", label: "French", objectKey: "obj/fr.srt", format: "srt", source: "opensubtitles:9" }],
+      ["addTrack", { mediaId: "media-sintel", episodeId: null, language: "fr", label: "French", objectKey: "obj/fr.srt", format: "srt", source: "fetched:9" }],
     ]);
     const patch = subtitlePickPatch({ language: "fr", format: "srt" });
     expect(patch).not.toBeNull();
     expect(calls[3]).toEqual(["prefs", "media-sintel", patch]);
-    expect(added).toEqual([{ id: "sub-new", language: "fr", label: "French", objectKey: "obj/fr.srt", format: "srt", source: "opensubtitles:9" }]);
+    expect(added).toEqual([{ id: "sub-new", language: "fr", label: "French", objectKey: "obj/fr.srt", format: "srt", source: "fetched:9" }]);
   });
 });
 
@@ -99,7 +99,7 @@ describe("fetched subtitles in the player menu", () => {
       label: "French",
       objectKey: "obj/fr.srt",
       format: "srt",
-      source: "opensubtitles:9",
+      source: "fetched:9",
     });
     // Text subtitles are the player's "vtt" kind, as for library rows; the source lets the menu offer another version.
     expect(fetched).toEqual({
@@ -110,7 +110,7 @@ describe("fetched subtitles in the player menu", () => {
       format: "vtt",
       encrypted: false,
       url: "obj/fr.srt",
-      source: "opensubtitles:9",
+      source: "fetched:9",
     });
     const base = [{ id: "sub-en", language: "en", label: "English" }] as unknown as SubtitleTrack[];
     expect(withFetchedSubtitles(base, [fetched]).map((t) => t.id)).toEqual(["sub-en", "sub-new"]);
@@ -121,18 +121,18 @@ describe("fetched subtitles in the player menu", () => {
   /** @req PLAY-SUBGET-07[badger-mobile] */
   it("puts another version in the old one's row, whether the old one came with the session or was fetched in it", () => {
     const track = (id: string, source: string) => ({ id, language: "es", label: "Spanish", source }) as unknown as SubtitleTrack;
-    const base = [track("sub-en", "srt"), track("sub-es", "opensubtitles:11")];
+    const base = [track("sub-en", "srt"), track("sub-es", "fetched:11")];
 
     // A session track replaced, then replaced again: one Spanish row, at the same index, holding the latest file.
-    let state = replacePlayerSubtitle({ fetched: [], replaced: {} }, "sub-es", track("sub-es-2", "opensubtitles:12"));
-    state = replacePlayerSubtitle(state, "sub-es-2", track("sub-es-3", "opensubtitles:13"));
+    let state = replacePlayerSubtitle({ fetched: [], replaced: {} }, "sub-es", track("sub-es-2", "fetched:12"));
+    state = replacePlayerSubtitle(state, "sub-es-2", track("sub-es-3", "fetched:13"));
     const menu = withFetchedSubtitles(base, state.fetched, state.replaced);
     log("menu after two replacements", menu.map((t) => ({ id: t.id, source: t.source })));
     expect(menu.map((t) => t.id)).toEqual(["sub-en", "sub-es-3"]);
-    expect(state.replaced).toEqual({ "sub-es": track("sub-es-3", "opensubtitles:13") });
+    expect(state.replaced).toEqual({ "sub-es": track("sub-es-3", "fetched:13") });
 
     // A track fetched in this playback replaced: swapped in place in the fetched list.
-    const fetchedState = replacePlayerSubtitle({ fetched: [track("sub-fr", "opensubtitles:31")], replaced: {} }, "sub-fr", track("sub-fr-2", "opensubtitles:32"));
+    const fetchedState = replacePlayerSubtitle({ fetched: [track("sub-fr", "fetched:31")], replaced: {} }, "sub-fr", track("sub-fr-2", "fetched:32"));
     expect(withFetchedSubtitles(base, fetchedState.fetched, fetchedState.replaced).map((t) => t.id)).toEqual(["sub-en", "sub-es", "sub-fr-2"]);
   });
 });
@@ -149,12 +149,12 @@ describe("Try another version on the phone (PLAY-SUBGET-07)", () => {
     ready: true,
     ...over,
   });
-  const spanish = { id: "sub-es", language: "es", label: "Spanish", source: "opensubtitles:11" };
+  const spanish = { id: "sub-es", language: "es", label: "Spanish", source: "fetched:11" };
 
   // The library lists the fetched Spanish track with its stored file; the player only passes the track's id.
   const withSpanish = {
     ...sintel,
-    subtitleTracks: [...sintel.subtitleTracks, { id: "sub-es", episodeId: null, language: "es", label: "Spanish", source: "opensubtitles:11", objectKey: "obj/es-1.srt" }],
+    subtitleTracks: [...sintel.subtitleTracks, { id: "sub-es", episodeId: null, language: "es", label: "Spanish", source: "fetched:11", objectKey: "obj/es-1.srt" }],
   } as unknown as MediaDetails;
 
   const run = async (subtitles: SubtitleFetchCandidate[], abortAfter?: SubtitleVersionStep, inUse: string[] = []) => {
@@ -203,7 +203,7 @@ describe("Try another version on the phone (PLAY-SUBGET-07)", () => {
       ["search", { type: "movie", id: 45745 }],
       ["download", 12],
       ["upload", "media-sintel", null, "v12\n", "srt"],
-      ["addTrack", { mediaId: "media-sintel", episodeId: null, language: "es", label: "Spanish", objectKey: "obj/es-2.srt", format: "srt", source: "opensubtitles:12" }],
+      ["addTrack", { mediaId: "media-sintel", episodeId: null, language: "es", label: "Spanish", objectKey: "obj/es-2.srt", format: "srt", source: "fetched:12" }],
       ["removeTrack", "sub-es"],
     ]);
     // The old file is deleted once no track names it (#2502 follow-up: no leak like #2449).
@@ -212,18 +212,18 @@ describe("Try another version on the phone (PLAY-SUBGET-07)", () => {
       ["delete", ["obj/es-1.srt"]],
     ]);
     expect(calls[7]).toEqual(["prefs", "media-sintel", subtitlePickPatch({ language: "es", format: "srt" })]);
-    expect(added).toEqual([{ id: "sub-es-2", language: "es", label: "Spanish", objectKey: "obj/es-2.srt", format: "srt", source: "opensubtitles:12" }]);
+    expect(added).toEqual([{ id: "sub-es-2", language: "es", label: "Spanish", objectKey: "obj/es-2.srt", format: "srt", source: "fetched:12" }]);
 
     // What PlayerScreen does with it on close: the old row now holds the new track, nothing else changes.
     const base = [
       { id: "sub-en", language: "en", label: "English", source: "srt" },
-      { id: "sub-es", language: "es", label: "Spanish", source: "opensubtitles:11" },
+      { id: "sub-es", language: "es", label: "Spanish", source: "fetched:11" },
     ] as unknown as SubtitleTrack[];
     const state = replacePlayerSubtitle({ fetched: [], replaced: {} }, "sub-es", fetchedSubtitleToPlayerTrack(added[0]!));
     const menu = withFetchedSubtitles(base, state.fetched, state.replaced);
     expect(menu.map((t) => [t.id, t.label, t.source])).toEqual([
       ["sub-en", "English", "srt"],
-      ["sub-es-2", "Spanish", "opensubtitles:12"],
+      ["sub-es-2", "Spanish", "fetched:12"],
     ]);
   });
 
@@ -244,9 +244,9 @@ describe("Try another version on the phone (PLAY-SUBGET-07)", () => {
     expect(added).toEqual([]);
   });
 
-  it("is null for a title without a TMDB ID", () => {
+  it("is null for a title without a catalog id", () => {
     const input = subtitleTryAnotherPhoneInput({
-      media: { ...sintel, tmdbId: null } as MediaDetails,
+      media: { ...sintel, catalogId: null } as MediaDetails,
       episodeId: null,
       uiLanguage: "en",
       track: spanish,

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { addMediaFromTmdbWithSnapshotRefresh } from "../src/renderer/src/lib/libraryContext";
+import { addMediaFromCatalogWithSnapshotRefresh } from "../src/renderer/src/lib/libraryContext";
 
 // Dump-on-failure: surface the returned id plus the captured mock call counts &
 // args so a regression in the "return id even if refresh fails" contract is
@@ -9,7 +9,7 @@ const dumpAddMediaSnapshot = (
   label: string,
   ctx: {
     mediaId: unknown;
-    addMediaFromTmdb: ReturnType<typeof vi.fn>;
+    addMediaFromCatalog: ReturnType<typeof vi.fn>;
     requestSnapshotRefresh: ReturnType<typeof vi.fn>;
     consoleError: ReturnType<typeof vi.spyOn>;
   },
@@ -18,7 +18,7 @@ const dumpAddMediaSnapshot = (
     console.error(`=== [library-add-media:${label}] snapshot ===`);
     console.error(`returned mediaId=${JSON.stringify(ctx.mediaId)}`);
     console.error(
-      `addMediaFromTmdb: calls=${ctx.addMediaFromTmdb.mock.calls.length} args=${JSON.stringify(ctx.addMediaFromTmdb.mock.calls, null, 2)}`,
+      `addMediaFromCatalog: calls=${ctx.addMediaFromCatalog.mock.calls.length} args=${JSON.stringify(ctx.addMediaFromCatalog.mock.calls, null, 2)}`,
     );
     console.error(
       `requestSnapshotRefresh: calls=${ctx.requestSnapshotRefresh.mock.calls.length} args=${JSON.stringify(ctx.requestSnapshotRefresh.mock.calls, null, 2)}`,
@@ -31,17 +31,17 @@ const dumpAddMediaSnapshot = (
   }
 };
 
-describe("addMediaFromTmdbWithSnapshotRefresh", () => {
+describe("addMediaFromCatalogWithSnapshotRefresh", () => {
   it("[@bugfix][@regression-proof] returns the created media id even when snapshot refresh fails after the write", async () => {
-    console.info(`[library-add-media:setup] addMediaFromTmdb resolves; requestSnapshotRefresh throws SNAPSHOT_REFRESH_FAILED`);
-    const addMediaFromTmdb = vi.fn(async () => "lodgers-media");
+    console.info(`[library-add-media:setup] addMediaFromCatalog resolves; requestSnapshotRefresh throws SNAPSHOT_REFRESH_FAILED`);
+    const addMediaFromCatalog = vi.fn(async () => "lodgers-media");
     const requestSnapshotRefresh = vi.fn(async () => {
       throw new Error("SNAPSHOT_REFRESH_FAILED");
     });
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
-    const mediaId = await addMediaFromTmdbWithSnapshotRefresh({
-      db: { addMediaFromTmdb } as any,
+    const mediaId = await addMediaFromCatalogWithSnapshotRefresh({
+      db: { addMediaFromCatalog } as any,
       item: {
         id: 901668,
         type: "tv",
@@ -64,20 +64,20 @@ describe("addMediaFromTmdbWithSnapshotRefresh", () => {
     });
 
     console.info(
-      `[library-add-media:assert] returned mediaId=${JSON.stringify(mediaId)} addMediaCalls=${addMediaFromTmdb.mock.calls.length} refreshCalls=${requestSnapshotRefresh.mock.calls.length} consoleErrorCalls=${consoleError.mock.calls.length}`,
+      `[library-add-media:assert] returned mediaId=${JSON.stringify(mediaId)} addMediaCalls=${addMediaFromCatalog.mock.calls.length} refreshCalls=${requestSnapshotRefresh.mock.calls.length} consoleErrorCalls=${consoleError.mock.calls.length}`,
     );
     try {
       expect(mediaId).toBe("lodgers-media");
-      expect(addMediaFromTmdb).toHaveBeenCalledTimes(1);
+      expect(addMediaFromCatalog).toHaveBeenCalledTimes(1);
       expect(requestSnapshotRefresh).toHaveBeenCalledTimes(1);
       // rendererLogger.error emits `[<service>]`, `<message>`, <payload>` — the
       // payload includes the structured fields plus `level`/`service`/`scope`.
       expect(consoleError).toHaveBeenCalledWith(
         "[badger-desktop-renderer]",
-        "addMediaFromTmdb snapshot refresh failed",
+        "addMediaFromCatalog snapshot refresh failed",
         expect.objectContaining({
           mediaType: "tv",
-          tmdbId: 901668,
+          catalogId: 901668,
           message: "SNAPSHOT_REFRESH_FAILED",
           level: "error",
           scope: "library",
@@ -89,7 +89,7 @@ describe("addMediaFromTmdbWithSnapshotRefresh", () => {
       // before asserting, since mockRestore() clears the spy's recorded calls
       // that toHaveBeenCalledWith above depends on.
       consoleError.mockRestore();
-      dumpAddMediaSnapshot("assert", { mediaId, addMediaFromTmdb, requestSnapshotRefresh, consoleError });
+      dumpAddMediaSnapshot("assert", { mediaId, addMediaFromCatalog, requestSnapshotRefresh, consoleError });
       throw err;
     }
   });

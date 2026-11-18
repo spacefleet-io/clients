@@ -6,7 +6,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { MetadataRequestError, NoTicketError } from "@space/metadata-client";
 import { searchFailureText } from "../src/renderer/src/lib/metadataSearchError";
-import { searchTmdb } from "../src/renderer/src/lib/metadata";
+import { searchTitles } from "../src/renderer/src/lib/metadata";
 import type * as SpaceUi from "@space/ui";
 
 (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -97,7 +97,7 @@ vi.mock("../src/renderer/src/lib/libraryContext", () => ({
   useLibraryActions: () => ({
     getMediaDetails: () => null,
     getSharedSetting: () => null,
-    addMediaFromTmdb: vi.fn(),
+    addMediaFromCatalog: vi.fn(),
     addSubtitleTrackWithObject: vi.fn(),
   }),
 }));
@@ -107,11 +107,11 @@ vi.mock("../src/renderer/src/components/MediaImage", () => ({
 }));
 
 vi.mock("../src/renderer/src/lib/metadata", () => ({
-  getTmdbDetails: vi.fn(),
-  getTmdbDetailsForLibrary: vi.fn(),
-  getTmdbTrailersForLanguages: vi.fn().mockResolvedValue([]),
+  getTitleDetails: vi.fn(),
+  getTitleDetailsForLibrary: vi.fn(),
+  getTitleTrailersForLanguages: vi.fn().mockResolvedValue([]),
   localizeSearchResultForLibrary: vi.fn(async (_token: string, result: unknown) => result),
-  searchTmdb: vi.fn(),
+  searchTitles: vi.fn(),
 }));
 
 // The reserve's "tickets arrived" signal, driven by the test (a refill batch landing).
@@ -309,7 +309,7 @@ describe("FileIngestionDialog", () => {
   it(
     "[@bugfix][@regression-proof] META-ANON-10: a title search that found no ticket right after sign-in runs again on its own when tickets arrive",
     async () => {
-      const search = vi.mocked(searchTmdb);
+      const search = vi.mocked(searchTitles);
       search.mockReset();
       const unavailable = searchFailureText(new NoTicketError());
 
@@ -352,7 +352,7 @@ describe("FileIngestionDialog", () => {
         page: 1,
         totalPages: 1,
         // Only the fields the dialog reads; the fixture is not a full search payload.
-      } as unknown as Awaited<ReturnType<typeof searchTmdb>>);
+      } as unknown as Awaited<ReturnType<typeof searchTitles>>);
       await act(async () => {
         for (const listener of [...ticketListeners]) listener();
         for (let i = 0; i < 10; i += 1) await Promise.resolve();

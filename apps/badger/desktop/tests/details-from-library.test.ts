@@ -21,15 +21,15 @@ const read = (path: string) => readFileSync(resolve(SRC, path), "utf8");
 describe("desktop browsing asks no details lookup (LIB-LANG-02)", () => {
   it("DESKTOP-DETAILS-LIBRARY-001: the Library page and the detail dialog never fetch details for genres", () => {
     const library = read("pages/Library.tsx");
-    const libraryCalls = library.match(/getTmdbDetails\s*\(/g) ?? [];
-    console.info(`${LOG} pages/Library.tsx: getTmdbDetails calls=${libraryCalls.length}`);
+    const libraryCalls = library.match(/getTitleDetails\s*\(/g) ?? [];
+    console.info(`${LOG} pages/Library.tsx: getTitleDetails calls=${libraryCalls.length}`);
     expect(libraryCalls).toEqual([]);
     // The dialog never asks a title's details itself: not to fill genres on open, and not for its trailers after a
     // trailer-language change (the original language comes from the library row, else the kept texts:
     // `trailerOriginalLanguage`, tests/trailer-original-language.test.ts).
     const dialog = read("components/MediaDetailsDialog.tsx");
-    const dialogCalls = dialog.match(/getTmdbDetails\s*\(/g) ?? [];
-    console.info(`${LOG} components/MediaDetailsDialog.tsx: getTmdbDetails calls=${dialogCalls.length}`);
+    const dialogCalls = dialog.match(/getTitleDetails\s*\(/g) ?? [];
+    console.info(`${LOG} components/MediaDetailsDialog.tsx: getTitleDetails calls=${dialogCalls.length}`);
     expect(dialogCalls).toEqual([]);
     expect(/trailerOriginalLanguage\(/.test(dialog)).toBe(true);
   });
@@ -41,7 +41,7 @@ describe("desktop browsing asks no details lookup (LIB-LANG-02)", () => {
     expect(usesLibrary).toBe(true);
     for (const hook of ["lib/useLocalizedOverview.ts", "lib/useLocalizedEpisodes.ts"]) {
       const source = read(hook);
-      const direct = /getMetadataDetails|getTmdbDetails/.test(source);
+      const direct = /getMetadataDetails|getTitleDetails/.test(source);
       console.info(`${LOG} ${hook}: direct details call=${direct}`);
       expect(direct).toBe(false);
     }

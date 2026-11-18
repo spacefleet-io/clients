@@ -8,7 +8,7 @@ import { createArtworkHealer, type ArtworkHealer, type ArtworkRefChange } from "
 import { headStorageObjects } from "@/api";
 import { uploadEncryptedAssetBytes } from "@/lib/assets";
 import { getStoredLibraryKey } from "@/lib/onboarding";
-import { getTmdbDetailsForLibrary } from "@/lib/metadata";
+import { getTitleDetailsForLibrary } from "@/lib/metadata";
 import { resolveArtwork } from "@/lib/metadataTickets";
 import type { LibraryDb } from "@/lib/libraryDb";
 import { rendererLogger } from "@/logger";
@@ -40,7 +40,7 @@ export const createDesktopArtworkHealer = ({
     exists: (keys) => headStorageObjects(token, keys),
     listMediaIds: async () => (await db.listMedia()).map((media) => media.id),
     loadMedia: (mediaId) => db.getMediaDetails(mediaId),
-    fetchDetails: (media) => getTmdbDetailsForLibrary(token, media.type, media.tmdbId as number, language()),
+    fetchDetails: (media) => getTitleDetailsForLibrary(token, media.type, media.catalogId as number, language()),
     fetchImage: async (kind, path) => {
       const outcome = await resolveArtwork(kind, path);
       if (outcome.status !== "ok") {

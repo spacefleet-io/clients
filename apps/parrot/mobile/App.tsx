@@ -34,6 +34,7 @@ import { MobileShellThemeProvider } from "@space/mobile-shell/theme";
 import { AccountLanguagePromptHost } from "@space/mobile-shell/account-language-prompt";
 import { MobileRenderBoundary } from "@space/mobile-shell/render-boundary";
 import { MobileUpdateRequiredScreen, useAppUpdateRequired } from "@space/mobile-shell/update-required";
+import { SelfUpdateConsent, SelfUpdateDialog, startSelfUpdate } from "@space/mobile-self-update";
 import { MobileSkyLayer, MobileSkyScreenLayout, mobileNavigationTheme } from "@space/mobile-shell/components";
 import { colors, parrotShellTheme } from "./src/theme";
 import { PARROT_MASCOT } from "./src/brand";
@@ -149,6 +150,8 @@ const Gates = () => {
   const updateRequired = useAppUpdateRequired();
   useEffect(() => {
     void i18nStarted.finally(() => setI18nReady(true));
+    // REL-UPD-06: a hand-installed APK checks our repository for a newer Parrot (nothing in other builds).
+    void startSelfUpdate("parrot");
   }, []);
   // Google, Apple and Microsoft sign-in (ACCT-SIGNIN-05): the browser comes back through `parrot://auth/provider`, as
   // the link that started the app or one that arrives while it runs; the sign-in screen takes it, held until it mounts.
@@ -260,6 +263,9 @@ const App = () => (
           </SessionProvider>
           {/* UX-I18N-07: "Which language do you want?" right after a sign-in whose account speaks another language. */}
           <AccountLanguagePromptHost />
+          {/* REL-UPD-06: "Keep Parrot up to date?" once on a hand install, then the update dialog. */}
+          <SelfUpdateConsent />
+          <SelfUpdateDialog />
         </MobileSkyLayer>
       </SafeAreaView>
     </SafeAreaProvider>

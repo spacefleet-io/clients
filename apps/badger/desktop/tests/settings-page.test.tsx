@@ -61,9 +61,9 @@ vi.mock("@space/ui", () => ({
  * exercises the sections that own the asserted controls directly. The durable
  * @regression-proof intent is unchanged: certain unfinished / removed controls
  * (skip-mode, auto-transcode, auto-upload, watch-folders/-directories, the
- * legacy tmdb-proxy + file-management panels) must NEVER surface in release
+ * legacy lookup-proxy + file-management panels) must NEVER surface in release
  * settings, while the shipping controls (quality, autoplay, intro/credits skip,
- * codec/transcode outputs, own-TMDB-key, metadata tools) must be present.
+ * codec/transcode outputs, own-key, metadata tools) must be present.
  */
 describe("Settings sections", () => {
   let container: HTMLDivElement | null = null;
@@ -133,9 +133,9 @@ describe("Settings sections", () => {
     expect(text).not.toContain("settings.video.autoUpload.title");
     expect(text).not.toContain("settings.advanced.watchDirectories.title");
     expect(text).not.toContain("settings.video.watchFolders.title");
-    expect(text).not.toContain("settings.advanced.tmdbProxy.title");
-    // META-DIRECT-03: the own-TMDB-key setting was removed.
-    expect(text).not.toContain("settings.advanced.tmdbOwnKey.title");
+    expect(text).not.toContain("settings.advanced.catalogProxy.title");
+    // META-DIRECT-03: the own-key setting was removed.
+    expect(text).not.toContain("settings.advanced.catalogOwnKey.title");
     expect(text).not.toContain("settings.advanced.fileManagement.title");
   });
 

@@ -48,7 +48,7 @@ const countExports = (db: LibraryDb) => {
 };
 
 const seedMovie = (db: LibraryDb) =>
-  db.addMediaFromTmdb({
+  db.addMediaFromCatalog({
     id: 25_301,
     type: "movie",
     title: "Persist No Export Movie",

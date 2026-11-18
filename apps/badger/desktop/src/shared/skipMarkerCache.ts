@@ -4,15 +4,30 @@
 // the kind orphans the v1 rows (harmless) and forces a fresh fetch via v3.
 export const EXTERNAL_SKIP_MARKER_FETCH_KIND = "external-skip-markers-v2";
 
-// The provider tag historically carried "-v2" (a cache-format-era label, NOT
-// the API version). The metadata service now serves TheIntroDB's real v3
-// answers and tags fresh payloads "theintrodb-v3". We ACCEPT BOTH on read so
-// already-cached v2-tagged rows stay valid — no forced re-fetch storm against
-// the metadata service — while newly-written
-// payloads get the correct v3 tag and the cache self-heals over time. Do NOT
-// collapse this back to a single literal: that would invalidate every cached
-// marker. (The cache *key* is the `kind` const above, which is unchanged.)
-export type SkipMarkerProvider = "theintrodb-v2" | "theintrodb-v3";
+import {
+  LEGACY_SKIP_MARKER_PROVIDERS,
+  LEGACY_SKIP_MARKER_SOURCE_PREFIX,
+  readLegacyShowCatalogId,
+} from "./legacyFormat";
+
+// The provider tag fresh payloads carry. Older payloads carry the tags in
+// `legacyFormat.ts`; every tag is ACCEPTED on read so already-cached rows stay
+// valid — no forced re-fetch storm against the metadata service — while new
+// payloads get this tag and the cache self-heals over time. Do NOT drop the
+// legacy tags: that would invalidate every cached marker. (The cache *key* is
+// the `kind` const above, which is unchanged.)
+export const SKIP_MARKER_PROVIDER = "metadata-v1";
+export type SkipMarkerProvider = string;
+
+const isSkipMarkerProvider = (value: unknown): value is SkipMarkerProvider =>
+  value === SKIP_MARKER_PROVIDER || (typeof value === "string" && LEGACY_SKIP_MARKER_PROVIDERS.includes(value));
+
+/** The `source` of skip markers the metadata service answers (contract 2). */
+export const SERVICE_SKIP_MARKER_SOURCE = "metadata";
+
+/** True for a skip marker fetched from the metadata service, whatever Badger version stored it. */
+export const isServiceSkipMarkerSource = (source: string): boolean =>
+  source === SERVICE_SKIP_MARKER_SOURCE || source.startsWith(LEGACY_SKIP_MARKER_SOURCE_PREFIX);
 
 export type ExternalSkipMarkerFetchStatus = "hit" | "miss" | "pending_detail";
 
@@ -31,7 +46,6 @@ export type ExternalSkipMarkerCoverageEntry = {
 };
 
 export type ExternalSkipMarkerFetchResult = {
-  provider: SkipMarkerProvider;
   fetchedAt: string;
   markers: Array<{
     type: "intro" | "credits";
@@ -48,10 +62,9 @@ export type ExternalSkipMarkerFetchResult = {
 
 export const createExternalSkipMarkerFetchPayload = (
   entry: ExternalSkipMarkerCoverageEntry,
-  fetchedAt: string,
-  provider: SkipMarkerProvider = "theintrodb-v3"
+  fetchedAt: string
 ): ExternalSkipMarkerFetchPayload => ({
-  provider,
+  provider: SKIP_MARKER_PROVIDER,
   status: entry.status,
   fetchedAt,
   ...(entry.markerTypes && entry.markerTypes.length > 0 ? { markerTypes: [...entry.markerTypes].sort() } : {}),
@@ -60,7 +73,7 @@ export const createExternalSkipMarkerFetchPayload = (
 export const isExternalSkipMarkerFetchPayload = (value: unknown): value is ExternalSkipMarkerFetchPayload => {
   if (!value || typeof value !== "object") return false;
   const record = value as Record<string, unknown>;
-  if (record.provider !== "theintrodb-v2" && record.provider !== "theintrodb-v3") return false;
+  if (!isSkipMarkerProvider(record.provider)) return false;
   if (record.status !== "hit" && record.status !== "miss" && record.status !== "pending_detail") return false;
   if (typeof record.fetchedAt !== "string" || record.fetchedAt.length === 0) return false;
   if (!Array.isArray(record.markerTypes) && typeof record.markerTypes !== "undefined") return false;
@@ -98,7 +111,7 @@ export type ShowSkipMarker = {
 
 export type ShowSkipCachePayload = {
   provider: SkipMarkerProvider;
-  showTmdbId: number;
+  showCatalogId: number;
   fetchedAt: string;
   coverage: ExternalSkipMarkerCoverageEntry[];
   markersByEpisode: Record<string /* "s:e" */, ShowSkipMarker[]>;
@@ -108,26 +121,36 @@ export const showEpisodeKey = (seasonNumber: number, episodeNumber: number): str
   `${seasonNumber}:${episodeNumber}`;
 
 export const createShowSkipCachePayload = (params: {
-  showTmdbId: number;
+  showCatalogId: number;
   fetchedAt: string;
   coverage: ExternalSkipMarkerCoverageEntry[];
   markersByEpisode: Record<string, ShowSkipMarker[]>;
-  provider?: SkipMarkerProvider;
 }): ShowSkipCachePayload => ({
-  provider: params.provider ?? "theintrodb-v3",
-  showTmdbId: params.showTmdbId,
+  provider: SKIP_MARKER_PROVIDER,
+  showCatalogId: params.showCatalogId,
   fetchedAt: params.fetchedAt,
   coverage: params.coverage,
   markersByEpisode: params.markersByEpisode,
 });
 
-export const isShowSkipCachePayload = (value: unknown): value is ShowSkipCachePayload => {
-  if (!value || typeof value !== "object") return false;
+const isPositiveId = (value: unknown): value is number =>
+  typeof value === "number" && Number.isFinite(value) && value > 0;
+
+/** The show cache payload in `value`, with a legacy payload's keys read into the current shape; null when invalid. */
+export const parseShowSkipCachePayload = (value: unknown): ShowSkipCachePayload | null => {
+  if (!value || typeof value !== "object") return null;
   const record = value as Record<string, unknown>;
-  if (record.provider !== "theintrodb-v2" && record.provider !== "theintrodb-v3") return false;
-  if (typeof record.showTmdbId !== "number" || !Number.isFinite(record.showTmdbId) || record.showTmdbId <= 0) return false;
-  if (typeof record.fetchedAt !== "string" || record.fetchedAt.length === 0) return false;
-  if (!Array.isArray(record.coverage)) return false;
-  if (!record.markersByEpisode || typeof record.markersByEpisode !== "object") return false;
-  return true;
+  if (!isSkipMarkerProvider(record.provider)) return null;
+  const showCatalogId = record.showCatalogId ?? readLegacyShowCatalogId(record);
+  if (!isPositiveId(showCatalogId)) return null;
+  if (typeof record.fetchedAt !== "string" || record.fetchedAt.length === 0) return null;
+  if (!Array.isArray(record.coverage)) return null;
+  if (!record.markersByEpisode || typeof record.markersByEpisode !== "object") return null;
+  return {
+    provider: record.provider,
+    showCatalogId,
+    fetchedAt: record.fetchedAt,
+    coverage: record.coverage as ExternalSkipMarkerCoverageEntry[],
+    markersByEpisode: record.markersByEpisode as Record<string, ShowSkipMarker[]>,
+  };
 };

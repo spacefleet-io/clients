@@ -1,18 +1,18 @@
 /**
  * React wiring for LIB-LANG-01, shared by Badger desktop, phone, TV and web player: a title's synopsis in the
  * interface language. Shows the stored synopsis while the lookup runs, then the one in the interface language (or in
- * English when TMDB has none in it); the stored one stays when neither exists, offline, or with no way to ask.
+ * English when the catalog has none in it); the stored one stays when neither exists, offline, or with no way to ask.
  */
 import { useEffect, useState } from "react";
-import type { TmdbMediaType } from "@space/shared/api";
+import type { TitleType } from "@space/shared/api";
 import { localizedOverviews, type FetchOverview, type LocalizedOverviews } from "./overviews";
 import { EMPTY_EPISODES, episodeKey, localizedEpisodes, type FetchEpisodes, type LocalizedEpisodeMap, type LocalizedEpisodes } from "./episodes";
 
 export type OverviewTitle = {
-  /** Changes when another title is shown, even with the same TMDB id (a re-match). */
+  /** Changes when another title is shown, even with the same catalog id (a re-match). */
   id: string;
-  type: TmdbMediaType;
-  tmdbId: number | null;
+  type: TitleType;
+  catalogId: number | null;
   /** The synopsis the library stored for this title. */
   overview: string | null;
 } | null;
@@ -29,17 +29,17 @@ export function useLocalizedOverview(
 ): string | null {
   const stored = title?.overview ?? null;
   const type = title?.type ?? null;
-  const tmdbId = title?.tmdbId ?? null;
-  const known = type !== null && tmdbId !== null ? cache.peek(type, tmdbId, language) : undefined;
+  const catalogId = title?.catalogId ?? null;
+  const known = type !== null && catalogId !== null ? cache.peek(type, catalogId, language) : undefined;
   const [overview, setOverview] = useState<string | null>(known ?? stored);
   const canFetch = fetchOverview !== null;
 
   useEffect(() => {
-    if (type === null || tmdbId === null || !fetchOverview) {
+    if (type === null || catalogId === null || !fetchOverview) {
       setOverview(stored);
       return undefined;
     }
-    const cached = cache.peek(type, tmdbId, language);
+    const cached = cache.peek(type, catalogId, language);
     if (cached !== undefined) {
       setOverview(cached ?? stored);
       return undefined;
@@ -47,7 +47,7 @@ export function useLocalizedOverview(
     // Never the previous title's synopsis under a new poster.
     setOverview(stored);
     let live = true;
-    void cache.load(type, tmdbId, language, fetchOverview).then((fetched) => {
+    void cache.load(type, catalogId, language, fetchOverview).then((fetched) => {
       if (live && fetched !== null) setOverview(fetched);
     });
     return () => {
@@ -56,16 +56,16 @@ export function useLocalizedOverview(
     // `stored` and `fetchOverview` are left out on purpose: a library sync rewriting the same synopsis, or a new
     // closure each render, must not ask again. `canFetch` re-runs it when signing in makes asking possible.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [title?.id, type, tmdbId, language, canFetch, cache]);
+  }, [title?.id, type, catalogId, language, canFetch, cache]);
 
   return overview;
 }
 
 export type EpisodesShow = {
-  /** Changes when another title is shown, even with the same TMDB id (a re-match). */
+  /** Changes when another title is shown, even with the same catalog id (a re-match). */
   id: string;
-  type: TmdbMediaType;
-  tmdbId: number | null;
+  type: TitleType;
+  catalogId: number | null;
   /** The library's episodes: one the kept texts never heard of (new episodes) asks again (LIB-LANG-02). */
   episodes?: readonly { seasonNumber: number; episodeNumber: number }[];
 } | null;
@@ -84,7 +84,7 @@ export function useLocalizedEpisodes(
   fetchEpisodes: FetchEpisodes | null,
   cache: LocalizedEpisodes = localizedEpisodes
 ): LocalizedEpisodeMap {
-  const tvId = show?.type === "tv" ? show.tmdbId : null;
+  const tvId = show?.type === "tv" ? show.catalogId : null;
   const [episodes, setEpisodes] = useState<LocalizedEpisodeMap>(
     () => (tvId !== null ? cache.peek(tvId, language) : undefined) ?? EMPTY_EPISODES
   );

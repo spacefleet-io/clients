@@ -825,7 +825,7 @@ describe("runtime routes", () => {
         payload: {
           userId: "user-dummy",
           jobId: "dummy-job-1",
-          tmdbId: 603,
+          catalogId: 603,
           mediaType: "movie",
         },
       }),
@@ -856,7 +856,7 @@ describe("runtime routes", () => {
         payload: {
           jobId: "dummy-job-1",
           userId: "user-dummy",
-          tmdbId: 603,
+          catalogId: 603,
           mediaType: "movie",
           status: "running",
           progress: 45,

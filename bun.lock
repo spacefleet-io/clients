@@ -27,7 +27,7 @@
     },
     "apps/badger/desktop": {
       "name": "@space/badger-desktop",
-      "version": "0.1.9",
+      "version": "0.1.10",
       "dependencies": {
         "better-sqlite3": "^13.2.0",
         "drizzle-orm": "^0.45.3",
@@ -156,6 +156,7 @@
         "@space/mobile-media-session": "workspace:*",
         "@space/mobile-media-volume": "workspace:*",
         "@space/mobile-mpv-playback": "workspace:*",
+        "@space/mobile-self-update": "workspace:*",
         "@space/mobile-shell": "workspace:*",
         "@space/pairing-crypto": "workspace:*",
         "@space/playback-abr": "workspace:*",
@@ -226,7 +227,7 @@
     },
     "apps/parrot/desktop": {
       "name": "@space/parrot-desktop",
-      "version": "0.1.6",
+      "version": "0.1.7",
       "devDependencies": {
         "@playwright/test": "~1.65.1",
         "@rolldown/plugin-babel": "^0.3.1",
@@ -288,6 +289,7 @@
         "@space/mobile-audio-playback": "workspace:*",
         "@space/mobile-media-proxy": "workspace:*",
         "@space/mobile-media-volume": "workspace:*",
+        "@space/mobile-self-update": "workspace:*",
         "@space/mobile-shell": "workspace:*",
         "@space/pairing-crypto": "workspace:*",
         "@space/parrot-core": "workspace:*",
@@ -701,6 +703,24 @@
         "react-native": "^0.88.0",
         "react-native-fs": "^2.20.0",
         "react-native-svg": "^15.16.0",
+      },
+    },
+    "packages/mobile-self-update": {
+      "name": "@space/mobile-self-update",
+      "version": "0.0.1",
+      "dependencies": {
+        "@space/mobile-shell": "workspace:*",
+        "@space/shared": "workspace:*",
+      },
+      "devDependencies": {
+        "react": "19.3.1",
+        "react-native": "npm:react-native-tvos@0.88.1-0",
+        "vitest": "^5.1.0",
+      },
+      "peerDependencies": {
+        "@react-native-async-storage/async-storage": ">=1.0.0",
+        "react": "^19.0.0",
+        "react-native": "^0.88.0",
       },
     },
     "packages/mobile-shell": {
@@ -1962,6 +1982,8 @@
     "@space/mobile-media-volume": ["@space/mobile-media-volume@workspace:packages/mobile-media-volume"],
 
     "@space/mobile-mpv-playback": ["@space/mobile-mpv-playback@workspace:packages/mobile-mpv-playback"],
+
+    "@space/mobile-self-update": ["@space/mobile-self-update@workspace:packages/mobile-self-update"],
 
     "@space/mobile-shell": ["@space/mobile-shell@workspace:packages/mobile-shell"],
 

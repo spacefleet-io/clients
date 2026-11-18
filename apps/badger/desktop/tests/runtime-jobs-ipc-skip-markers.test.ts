@@ -1,6 +1,6 @@
 /**
  * @bugfix @regression-proof (Chris 2026-10-28, "Lodgers has no TIDB data? more
- * likely an error"): the import modal fetched TheIntroDB markers per episode
+ * likely an error"): the import modal fetched service markers per episode
  * and put them on each source (`skipMarkers`, `showSkipCache`), but the main
  * process `sf-runtime-jobs-submit-sources` handler rebuilt every source from a
  * fixed field list that did not include them. The runtime then defaulted both
@@ -53,13 +53,13 @@ const intro = {
   type: "intro" as const,
   startSeconds: 0,
   endSeconds: 46,
-  source: "external:theintrodb-v3",
+  source: "metadata",
   confidence: null,
 };
 
 const showSkipCache = {
-  provider: "theintrodb-v3",
-  showTmdbId: 901668,
+  provider: "metadata-v1",
+  showCatalogId: 901668,
   fetchedAt: "2026-10-28T00:00:00.000Z",
   coverage: [{ seasonNumber: 1, episodeNumber: 1, status: "hit" as const, markerTypes: ["intro" as const] }],
   markersByEpisode: { "1:1": [intro] },
@@ -85,7 +85,7 @@ beforeEach(() => {
   state.sent.length = 0;
 });
 
-describe("submit-sources forwards the TheIntroDB markers fetched at import", () => {
+describe("submit-sources forwards the service markers fetched at import", () => {
   it("skipMarkers and showSkipCache reach the runtime submit command", async () => {
     const rendererSource = {
       filename: "/videos/Lodgers - S01E01.mkv",

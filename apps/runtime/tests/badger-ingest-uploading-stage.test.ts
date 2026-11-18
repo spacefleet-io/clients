@@ -477,7 +477,7 @@ describe("BadgerModule.publishIngestJobsUpdate — bypass throttle on status cha
               media: {
                 id: `${jobId}-media`,
                 type: "movie" as const,
-                tmdbId: 1,
+                catalogId: 1,
                 title: jobId,
                 year: "2020",
                 posterPath: "/p.jpg",

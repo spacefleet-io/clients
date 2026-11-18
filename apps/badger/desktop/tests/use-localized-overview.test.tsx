@@ -3,7 +3,7 @@
 // Phase 1 — descriptions follow the device UI language.
 // Tests for the useLocalizedOverview hook: it shows the stored overview first,
 // swaps to the live UI-language overview once fetched, falls back to stored on
-// error / when there is no tmdbId, and caches per (type, tmdbId, language).
+// error / when there is no catalogId, and caches per (type, catalogId, language).
 // LIB-LANG-01: with no synopsis in the UI language it shows the English one, never the stored German one.
 
 import React from "react";
@@ -32,7 +32,7 @@ let container: HTMLDivElement;
 let root: Root;
 let lastValue: string | null = null;
 
-function Harness({ media }: { media: { id: string; type: "movie" | "tv"; tmdbId: number | null; overview: string | null } | null }) {
+function Harness({ media }: { media: { id: string; type: "movie" | "tv"; catalogId: number | null; overview: string | null } | null }) {
   lastValue = useLocalizedOverview(media);
   return null;
 }
@@ -53,7 +53,7 @@ const flush = async () => {
 const movie = (overrides: Record<string, unknown> = {}) => ({
   id: "m1",
   type: "movie" as const,
-  tmdbId: 42,
+  catalogId: 42,
   overview: "STORED OVERVIEW",
   ...overrides,
 });
@@ -139,18 +139,18 @@ describe("useLocalizedOverview", () => {
     expect(lastValue).toBe("STORED OVERVIEW");
   });
 
-  it("does not fetch when the work has no tmdbId", async () => {
-    console.info("[use-localized-overview:no-tmdb] rendering work with tmdbId=null → must not fetch");
-    await renderHarness(movie({ tmdbId: null }));
+  it("does not fetch when the work has no catalogId", async () => {
+    console.info("[use-localized-overview:no-catalog-id] rendering work with catalogId=null → must not fetch");
+    await renderHarness(movie({ catalogId: null }));
     await flush();
     if (getLocalizedOverviewMock.mock.calls.length !== 0 || lastValue !== "STORED OVERVIEW") {
-      dumpOverviewSnapshot("no-tmdb-failure");
+      dumpOverviewSnapshot("no-catalog-id-failure");
     }
     expect(getLocalizedOverviewMock).not.toHaveBeenCalled();
     expect(lastValue).toBe("STORED OVERVIEW");
   });
 
-  it("caches per (type, tmdbId, language) — re-mounting the same work does not re-fetch", async () => {
+  it("caches per (type, catalogId, language) — re-mounting the same work does not re-fetch", async () => {
     getLocalizedOverviewMock.mockResolvedValue("Synopsis en français");
 
     console.info("[use-localized-overview:cache] first mount → expect exactly 1 fetch");
@@ -176,15 +176,15 @@ describe("useLocalizedOverview", () => {
    * @req LIB-LANG-01
    * @bugfix german-synopsis-under-english-ui
    * @regression-proof
-   * A German film added in "auto" title language stores its German synopsis. With a UI language TMDB has no synopsis
+   * A German film added in "auto" title language stores its German synopsis. With a UI language the catalog has no synopsis
    * in, the desktop kept that German text; it now shows the English synopsis.
    */
-  it("shows the English synopsis, not the stored German one, when TMDB has none in the UI language", async () => {
+  it("shows the English synopsis, not the stored German one, when the catalog has none in the UI language", async () => {
     getLocalizedOverviewMock.mockImplementation(async (_token: string, _type: string, _id: number, language: string) =>
       language === "en" ? "A violinist is blackmailed." : null
     );
-    console.info("[use-localized-overview:fallback] uiLanguage=fr, TMDB has en only, stored overview is German");
-    await renderHarness(movie({ tmdbId: 28055, overview: "Ein Geiger wird erpresst." }));
+    console.info("[use-localized-overview:fallback] uiLanguage=fr, the catalog has en only, stored overview is German");
+    await renderHarness(movie({ catalogId: 28055, overview: "Ein Geiger wird erpresst." }));
     await flush();
     await flush();
     if (lastValue !== "A violinist is blackmailed.") dumpOverviewSnapshot("fallback-failure");

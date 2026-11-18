@@ -37,7 +37,7 @@ const languageLog = rendererLogger.child({ scope: "account-language" });
 /**
  * Flush any pending local library writes to the remote API before the local
  * SQLite cache is discarded as part of logout. Without this, writes made just
- * before logout (e.g., addMediaFromTmdb) are lost when the user logs back in
+ * before logout (e.g., addMediaFromCatalog) are lost when the user logs back in
  * because the snapshot never reached the API. Must not block logout: if the
  * API is unreachable we log a warning and let logout proceed — the user's
  * intent to sign out wins.

@@ -189,10 +189,10 @@ afterEach(() => {
 
 const seedMovieWithChunks = async (
   db: LibraryDb,
-  options: { tmdbId: number; title: string; chunkPrefix: string }
+  options: { catalogId: number; title: string; chunkPrefix: string }
 ) => {
-  const mediaId = await (db as any).addMediaFromTmdb({
-    id: options.tmdbId,
+  const mediaId = await (db as any).addMediaFromCatalog({
+    id: options.catalogId,
     type: "movie",
     title: options.title,
     originalTitle: null,
@@ -300,7 +300,7 @@ describe("media delete forwards chunk keys to /storage/delete (F1)", () => {
       let missing: string[] = [];
       try {
         const seeded = await seedMovieWithChunks(db, {
-          tmdbId: 7001,
+          catalogId: 7001,
           title: "Delete Leak Movie",
           chunkPrefix: "shards/gw/library/movies/leak1",
         });
@@ -375,7 +375,7 @@ describe("repeat-ingest+delete cycle does not accumulate keys (F1 cycle)", () =>
           console.info(`[badger-media-delete-storage-leak:cycle] starting cycle=${cycle}`);
           capturedFetches = [];
           const seeded = await seedMovieWithChunks(db, {
-            tmdbId: 8000 + cycle,
+            catalogId: 8000 + cycle,
             title: `Cycle ${cycle} Movie`,
             chunkPrefix: `shards/gw/library/movies/cycle${cycle}`,
           });

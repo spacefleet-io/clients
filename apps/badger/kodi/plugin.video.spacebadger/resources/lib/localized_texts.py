@@ -42,8 +42,8 @@ PAUSED_UNTIL_KEY = "textsPausedUntil"
 _LANGUAGE = re.compile(r"^([A-Za-z]{2,3})(?:[-_][A-Za-z0-9]+)*$")
 
 
-def key(media_type, tmdb_id, language):
-    return "%s%s:%s:%s" % (KEY_PREFIX, media_type, tmdb_id, language)
+def key(media_type, catalog_id, language):
+    return "%s%s:%s:%s" % (KEY_PREFIX, media_type, catalog_id, language)
 
 
 def episode_key(season, episode):
@@ -153,9 +153,9 @@ def _lacking(record):
     return record["overview"] is None or any(e["name"] is None or e["overview"] is None for e in record["episodes"])
 
 
-def _tmdb_id(media):
+def _catalog_id(media):
     try:
-        value = int(media.get("tmdb_id"))
+        value = int(media.get("catalog_id"))
     except (TypeError, ValueError):
         return None
     return value if value > 0 else None
@@ -163,12 +163,12 @@ def _tmdb_id(media):
 
 # ------------------------------------------------------------------ showing (rows only, never a lookup)
 
-def kept(read, media_type, tmdb_id, language):
+def kept(read, media_type, catalog_id, language):
     """The kept texts of one title: {"overview": str|None, "episodes": {(season, episode): (name, overview)}}, the
     interface language's row first, then the English one, field by field. `read(key)` answers a row value or None."""
-    rows = [parse(read(key(media_type, tmdb_id, language)))]
+    rows = [parse(read(key(media_type, catalog_id, language)))]
     if language != FALLBACK_LANGUAGE:
-        rows.append(parse(read(key(media_type, tmdb_id, FALLBACK_LANGUAGE))))
+        rows.append(parse(read(key(media_type, catalog_id, FALLBACK_LANGUAGE))))
     rows = [r for r in rows if r]
     overview = next((r["overview"] for r in rows if r["overview"] is not None), None)
     episodes = {}
@@ -189,12 +189,12 @@ class Localizer(object):
         self._kept = {}
 
     def _texts(self, media):
-        tmdb_id = _tmdb_id(media)
-        if not tmdb_id or media.get("type") not in ("movie", "tv"):
+        catalog_id = _catalog_id(media)
+        if not catalog_id or media.get("type") not in ("movie", "tv"):
             return None
-        cache_key = (media["type"], tmdb_id)
+        cache_key = (media["type"], catalog_id)
         if cache_key not in self._kept:
-            self._kept[cache_key] = kept(self.lib.setting_value, media["type"], tmdb_id, self.language)
+            self._kept[cache_key] = kept(self.lib.setting_value, media["type"], catalog_id, self.language)
         return self._kept[cache_key]
 
     def media(self, media):
@@ -236,7 +236,7 @@ def refresh(ctx, language, count_tickets=None, sleep=time.sleep, clock=time.time
         log("texts: lookups paused for %ds more" % int(paused_until - clock()))
         return stats
 
-    def ask(media_type, tmdb_id, lang, episode_keys):
+    def ask(media_type, catalog_id, lang, episode_keys):
         if stats["asked"] >= max_lookups:
             raise _Stop("budget")
         if count_tickets() <= TICKET_FLOOR:
@@ -245,7 +245,7 @@ def refresh(ctx, language, count_tickets=None, sleep=time.sleep, clock=time.time
             sleep(LOOKUP_PAUSE_SECONDS)
         stats["asked"] += 1
         try:
-            answer = ctx.metadata.lookup({"op": "details", "type": media_type, "id": tmdb_id, "language": lang})
+            answer = ctx.metadata.lookup({"op": "details", "type": media_type, "id": catalog_id, "language": lang})
         except NoTicketError:
             raise _Stop("no_ticket")
         except MetadataUnavailableError as exc:
@@ -259,29 +259,29 @@ def refresh(ctx, language, count_tickets=None, sleep=time.sleep, clock=time.time
             return None
         item = answer.get("item") if isinstance(answer, dict) else None
         record = record_of(item if isinstance(item, dict) else {}, episode_keys, now())
-        lib.write_op(ctx.api, ctx.key, "setting.set", {"key": key(media_type, tmdb_id, lang), "value": serialize(record), "updatedAt": now()})
+        lib.write_op(ctx.api, ctx.key, "setting.set", {"key": key(media_type, catalog_id, lang), "value": serialize(record), "updatedAt": now()})
         stats["written"] += 1
         return record
 
-    def ensure(media_type, tmdb_id, lang, episode_keys):
-        row = parse(lib.setting_value(key(media_type, tmdb_id, lang)))
+    def ensure(media_type, catalog_id, lang, episode_keys):
+        row = parse(lib.setting_value(key(media_type, catalog_id, lang)))
         if row and covers(row, episode_keys):
             stats["kept"] += 1
             return row
         # An out-of-date row still beats no text when the lookup fails.
-        return ask(media_type, tmdb_id, lang, episode_keys) or row
+        return ask(media_type, catalog_id, lang, episode_keys) or row
 
     try:
         for media_type in ("movie", "tv"):
             for media in lib.list_media(media_type):
-                tmdb_id = _tmdb_id(media)
-                if not tmdb_id:
+                catalog_id = _catalog_id(media)
+                if not catalog_id:
                     continue
                 stats["titles"] += 1
                 episode_keys = [episode_key(e["season_number"], e["episode_number"]) for e in lib.episodes(media["id"])] if media_type == "tv" else []
-                own = ensure(media_type, tmdb_id, language, episode_keys)
+                own = ensure(media_type, catalog_id, language, episode_keys)
                 if language != FALLBACK_LANGUAGE and own is not None and _lacking(own):
-                    ensure(media_type, tmdb_id, FALLBACK_LANGUAGE, episode_keys)
+                    ensure(media_type, catalog_id, FALLBACK_LANGUAGE, episode_keys)
     except _Stop as stop:
         stats["stopped"] = str(stop)
     log("texts: %s" % stats)

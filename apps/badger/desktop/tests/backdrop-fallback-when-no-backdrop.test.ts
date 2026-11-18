@@ -13,7 +13,7 @@ import { resolvePlaybackBackdrop, type PlaybackBackdropDeps } from "../src/rende
  * previously-stable behaviour, preserved unchanged.
  *
  * Why this matters:
- *  - Not every media item has a TMDB backdrop populated (custom
+ *  - Not every media item has a catalog backdrop populated (custom
  *    user-imported media, fresh metadata that hasn't been fetched yet,
  *    etc.).
  *  - The fallback path uses `--start=<time>` to handle the resume position

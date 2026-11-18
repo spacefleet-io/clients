@@ -48,8 +48,7 @@ const toChunks = (keys: string[]): MediaFormat["chunks"] =>
 export const buildMediaDetailsFixture = (input: MediaDetailsFixtureInput): MediaDetails => ({
   id: input.id,
   type: input.type,
-  tmdbId: null,
-  externalIds: null,
+  catalogId: null,
   title: input.title,
   originalTitle: null,
   originalLanguage: null,

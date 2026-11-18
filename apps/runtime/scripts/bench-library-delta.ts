@@ -34,7 +34,7 @@ const serviceModule = process.env.BENCH_SERVICE_MODULE ?? "../src/modules/badger
 const libraryDbModule = process.env.BENCH_LIBRARY_DB_MODULE ?? "../../../packages/library-db-runtime/src/libraryDb";
 const { BadgerLibraryDbService } = (await import(serviceModule)) as typeof ServiceModule;
 const { LibraryDb } = (await import(libraryDbModule)) as typeof LibraryDbModule;
-type TmdbItem = Parameters<LibraryDbModule.LibraryDb["addMediaFromTmdb"]>[0];
+type CatalogItem = Parameters<LibraryDbModule.LibraryDb["addMediaFromCatalog"]>[0];
 
 const mediaCount = Number(process.argv[2] ?? 1000);
 const writes = Number(process.argv[3] ?? 25);
@@ -51,7 +51,7 @@ db.setSyncEnabled(false);
 const ids: string[] = [];
 const seedStart = performance.now();
 for (let i = 0; i < mediaCount; i += 1) {
-  const id = await db.addMediaFromTmdb({
+  const id = await db.addMediaFromCatalog({
     id: 100_000 + i,
     type: "movie",
     title: `Bench movie ${i}`,
@@ -71,8 +71,8 @@ for (let i = 0; i < mediaCount; i += 1) {
     seasons: [],
     episodes: [],
     totalEpisodes: 0,
-    // Minimal movie; the rest of TmdbDetails is optional at runtime (as in the library-db-runtime suites).
-  } as unknown as TmdbItem);
+    // Minimal movie; the rest of TitleDetails is optional at runtime (as in the library-db-runtime suites).
+  } as unknown as CatalogItem);
   const fileId = await db.linkFileToMedia(id, `bench-${i}.mkv`);
   await db.addMediaFormat(id, fileId, "1080p", "h264", 800, [{ key: `c-${i}`, sizeBytes: 1000, startSeconds: 0 }], 5000, {
     isSource: true,

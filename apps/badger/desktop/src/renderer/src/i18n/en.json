@@ -186,7 +186,7 @@
       "cancel": "Cancel"
     },
     "errors": {
-      "tmdbNotConfigured": "Search is unavailable right now. Try again later.",
+      "catalogNotConfigured": "Search is unavailable right now. Try again later.",
       "searchFailed": "Search failed. Please try again.",
       "addFailed": "Could not add this media. Please try again.",
       "libraryLoading": "Library is still loading. Try again in a moment.",
@@ -1900,7 +1900,7 @@
       "searchTimedOut": "Title search took too long",
       "metadataUnavailable": "Title search is unavailable right now",
       "scanFailed": "We couldn't read the selected files.",
-      "signInSearchTmdb": "Sign in to search."
+      "signInSearchTitles": "Sign in to search."
     },
     "toasts": {
       "queuedTitle": "Import started",
@@ -1961,7 +1961,7 @@
       "dummyTitle": "Add with dummy data",
       "movie": "Movie",
       "tv": "TV",
-      "searchTmdbPlaceholder": "Search movies and TV shows...",
+      "searchTitlesPlaceholder": "Search movies and TV shows...",
       "search": "Search",
       "searchDummyHint": "Search for a title to add dummy data.",
       "trailer": "Trailer",
@@ -2017,8 +2017,8 @@
       "tvShows": "TV Shows",
       "searchLibraryMoviesPlaceholder": "Search library movies...",
       "searchLibraryTvPlaceholder": "Search library TV shows...",
-      "searchTmdbMoviesPlaceholder": "Search movies...",
-      "searchTmdbTvPlaceholder": "Search TV shows...",
+      "searchTitlesMoviesPlaceholder": "Search movies...",
+      "searchTitlesTvPlaceholder": "Search TV shows...",
       "clear": "Clear",
       "select": "Select",
       "loadingMore": "Loading more...",

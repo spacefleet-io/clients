@@ -52,7 +52,7 @@ export const posterLabel = (
 
 /**
  * Memoised poster tile with a fixed layout (no layout jank while images load),
- * TMDB `w342` art, a ripple, and an accessible label. With `showProgress`, drawn as the mockup's `posterCard`
+ * the catalog `w342` art, a ripple, and an accessible label. With `showProgress`, drawn as the mockup's `posterCard`
  * (UX-PHONE-06): an inset progress bar while watching, a yellow check in the top-right corner once watched; the offline
  * mark sits top-left so both can show.
  */

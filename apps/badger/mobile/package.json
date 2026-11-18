@@ -35,6 +35,7 @@
     "@space/mobile-media-proxy": "workspace:*",
     "@space/mobile-media-volume": "workspace:*",
     "@space/mobile-mpv-playback": "workspace:*",
+    "@space/mobile-self-update": "workspace:*",
     "@space/mobile-shell": "workspace:*",
     "@space/error-report": "workspace:*",
     "@space/legal": "workspace:*",

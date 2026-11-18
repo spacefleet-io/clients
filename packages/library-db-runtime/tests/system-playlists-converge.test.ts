@@ -264,7 +264,7 @@ describe("system playlists across devices (LIB-SYNC-10)", () => {
     useDevice(rootA);
     const a = await LibraryDb.open(TOKEN, KEY);
     a.setSyncEnabled(true);
-    const mediaId = await a.addMediaFromTmdb(MOVIE);
+    const mediaId = await a.addMediaFromCatalog(MOVIE);
     await waitFor("A seed flushed", () => drained(a));
     log("device A system playlists", { ids: systemIds(a), server: fake.dump() });
     a.close();
@@ -304,8 +304,8 @@ describe("system playlists across devices (LIB-SYNC-10)", () => {
     useDevice(rootA);
     const a = await LibraryDb.open(TOKEN, KEY);
     a.setSyncEnabled(true);
-    const first = await a.addMediaFromTmdb(MOVIE);
-    const second = await a.addMediaFromTmdb(MOVIE_2);
+    const first = await a.addMediaFromCatalog(MOVIE);
+    const second = await a.addMediaFromCatalog(MOVIE_2);
     await waitFor("A seed flushed", () => drained(a));
     a.close();
     useDevice(rootB);

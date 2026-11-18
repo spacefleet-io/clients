@@ -20,17 +20,42 @@
     {
       "input": "abcd-efgh",
       "normalized": "ABCDEFGH",
-      "formatted": "ABCD-EFGH"
+      "groups": [
+        "ABCD",
+        "EFGH"
+      ]
     },
     {
       "input": "  ab cd efgh ",
       "normalized": "ABCDEFGH",
-      "formatted": "ABCD-EFGH"
+      "groups": [
+        "ABCD",
+        "EFGH"
+      ]
     },
     {
       "input": "o1lI-0000",
       "normalized": "01110000",
-      "formatted": "0111-0000"
+      "groups": [
+        "0111",
+        "0000"
+      ]
+    },
+    {
+      "input": "abcd efgh",
+      "normalized": "ABCDEFGH",
+      "groups": [
+        "ABCD",
+        "EFGH"
+      ]
+    },
+    {
+      "input": "ABCD–EFGH",
+      "normalized": "ABCDEFGH",
+      "groups": [
+        "ABCD",
+        "EFGH"
+      ]
     },
     {
       "input": "ABCDEFG",

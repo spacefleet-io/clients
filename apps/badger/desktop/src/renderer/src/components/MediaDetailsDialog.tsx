@@ -16,7 +16,7 @@ import { subtitleFormatFromName, subtitleLanguageFromName } from "@space/shared/
 import { crewLines } from "@space/shared/libraryCrew";
 import { loadClientConfig } from "@/lib/config";
 import { isClientUiLanguage } from "@space/shared";
-import { getTmdbTrailersForLanguages, trailerOriginalLanguage } from "@/lib/metadata";
+import { getTitleTrailersForLanguages, trailerOriginalLanguage } from "@/lib/metadata";
 import { useLocalizedOverview } from "@/lib/useLocalizedOverview";
 import { useLocalizedEpisodes } from "@/lib/useLocalizedEpisodes";
 import { localizedEpisodeOverview } from "@space/metadata-client";
@@ -170,7 +170,7 @@ type ImageDraft = {
 type CastDraft = {
   id: string;
   personId?: string | null;
-  tmdbId?: number | null;
+  catalogId?: number | null;
   name: string;
   role: string;
   profile: ImageDraft;
@@ -239,7 +239,7 @@ export default function MediaDetailsDialog({ selectedId, onClose }: MediaDetails
     deleteMedia,
     replaceMediaTrailers,
     updateMediaMetadata,
-    restoreMediaFromTmdb,
+    restoreMediaFromCatalog,
     copyMediaArtwork,
     getSharedSetting,
     addSubtitleTrack,
@@ -369,7 +369,7 @@ export default function MediaDetailsDialog({ selectedId, onClose }: MediaDetails
   const prevMediaIdRef = useRef<string | null>(null);
 
   const hasCustomCast = useMemo(
-    () => selectedDetails?.cast.some((member) => member.tmdbId === null) ?? false,
+    () => selectedDetails?.cast.some((member) => member.catalogId === null) ?? false,
     [selectedDetails]
   );
 
@@ -402,7 +402,7 @@ export default function MediaDetailsDialog({ selectedId, onClose }: MediaDetails
     cast: details.cast.map((member) => ({
       id: member.id,
       personId: member.personId,
-      tmdbId: member.tmdbId ?? null,
+      catalogId: member.catalogId ?? null,
       name: member.name ?? "",
       role: member.role ?? "",
       profile: toImageDraft(member.profilePath ?? null),
@@ -621,7 +621,7 @@ export default function MediaDetailsDialog({ selectedId, onClose }: MediaDetails
   };
 
   const ensureTrailersFresh = async () => {
-    if (!token || !selectedDetails || selectedDetails.tmdbId === null) return;
+    if (!token || !selectedDetails || selectedDetails.catalogId === null) return;
     const shared = getSharedSetting("trailer_languages");
     if (!shared) return;
     let payload: { extras?: string[]; updatedAt?: string } | null = null;
@@ -641,11 +641,11 @@ export default function MediaDetailsDialog({ selectedId, onClose }: MediaDetails
       // and interface language, and that answer is kept as the detail page's texts.
       const originalLanguage = await trailerOriginalLanguage(
         token,
-        { type: selectedDetails.type, tmdbId: selectedDetails.tmdbId, originalLanguage: selectedDetails.originalLanguage },
+        { type: selectedDetails.type, catalogId: selectedDetails.catalogId, originalLanguage: selectedDetails.originalLanguage },
         isClientUiLanguage(i18n.language) ? i18n.language : "en"
       );
       const extras = Array.isArray(payload.extras) ? payload.extras : [];
-      const trailers = await getTmdbTrailersForLanguages(token, selectedDetails.type, selectedDetails.tmdbId, [
+      const trailers = await getTitleTrailersForLanguages(token, selectedDetails.type, selectedDetails.catalogId, [
         originalLanguage,
         ...extras,
       ]);
@@ -1033,7 +1033,7 @@ export default function MediaDetailsDialog({ selectedId, onClose }: MediaDetails
       const cast: MediaCastDraft[] = await Promise.all(
         draft.cast.map(async (member) => ({
           personId: member.personId,
-          tmdbId: member.tmdbId ?? null,
+          catalogId: member.catalogId ?? null,
           name: member.name.trim() || member.name,
           role: member.role.trim() || null,
           profilePath: await resolveImageDraft(member.profile, token, key),
@@ -1097,7 +1097,7 @@ export default function MediaDetailsDialog({ selectedId, onClose }: MediaDetails
     setRestoring(true);
     setEditError(null);
     try {
-      await restoreMediaFromTmdb(selectedDetails.id, { resetCast });
+      await restoreMediaFromCatalog(selectedDetails.id, { resetCast });
       setRestoreOpen(false);
       setEditMode(false);
       refreshSelected();
@@ -1315,7 +1315,7 @@ export default function MediaDetailsDialog({ selectedId, onClose }: MediaDetails
   );
 
   // Phase 2: per-episode credits-start lookup (from MediaDetails.skipMarkers,
-  // TheIntroDB-derived). Drives the credits-aware "completed" check in the
+  // service-derived). Drives the credits-aware "completed" check in the
   // picker and the episode-row band UI. Episodes with no credits marker
   // fall through to the legacy 95 % pct rule — no degradation.
   const episodeCreditsById = useMemo(
@@ -2073,7 +2073,7 @@ export default function MediaDetailsDialog({ selectedId, onClose }: MediaDetails
                                   {t("library.edit.edit")}
                                 </button>
                               ) : null}
-                              {clientConfig.enableMetadataTools && selectedDetails.tmdbId !== null ? (
+                              {clientConfig.enableMetadataTools && selectedDetails.catalogId !== null ? (
                                 <button
                                   className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-muted/50 transition text-left"
                                   onClick={() => {
@@ -2652,7 +2652,7 @@ export default function MediaDetailsDialog({ selectedId, onClose }: MediaDetails
                                                 }
                                                 if (!episodeResume) return null;
                                                 // Phase 2: pass credits-aware inputs so an episode watched past
-                                                // its TheIntroDB credits-start renders "Watched" even when its
+                                                // its the metadata service credits-start renders "Watched" even when its
                                                 // pct is below the flat 95 % ceiling.
                                                 const credits = episodeCreditsById.get(episode.id) ?? null;
                                                 const band = getProgressBand(episodeResume.progressPct, {

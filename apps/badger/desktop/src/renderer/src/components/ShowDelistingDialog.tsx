@@ -26,7 +26,7 @@ const episodeLabel = (episode: ShowEpisodeNotListed) => {
 };
 
 /**
- * LIB-SHOW-02: asks the user whether to remove the episodes TMDB stopped
+ * LIB-SHOW-02: asks the user whether to remove the episodes the catalog stopped
  * listing. Only episodes without a file ever reach it; nothing changes until
  * the user clicks Remove. Closing the dialog counts as keeping them.
  */

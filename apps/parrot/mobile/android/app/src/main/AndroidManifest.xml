@@ -42,7 +42,7 @@
             <category android:name="android.intent.category.BROWSABLE" />
             <data android:scheme="parrot" android:host="auth" />
         </intent-filter>
-        <!-- ACCT-PAIR-06: a Parrot device's pairing QR, https://spacefleet.io/pair/parrot?code=ABCD-EFGH, opens the
+        <!-- ACCT-PAIR-06: a Parrot device's pairing QR, https://spacefleet.io/pair/parrot?code=ABCDEFGH, opens the
              approve screen. Only Parrot's path: Badger claims /pair/badger. The website's
              /.well-known/assetlinks.json verifies it, so the link opens Parrot without asking. -->
         <intent-filter android:autoVerify="true">

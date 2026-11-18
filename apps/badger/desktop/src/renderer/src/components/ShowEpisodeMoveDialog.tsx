@@ -17,7 +17,7 @@ export type ShowEpisodeMoveDialogProps = {
   episode: ShowEpisodeMoveOffer;
   /** The other parts of a merge (LIB-SHOW-04), for the wording; empty otherwise. */
   otherParts: ShowEpisodeSlot[];
-  /** Episodes of the show the user can pick by hand: listed by TMDB and without a file. */
+  /** Episodes of the show the user can pick by hand: listed by the catalog and without a file. */
   choices: ShowEpisodeSlot[];
   busy: boolean;
   onMove: (targetEpisodeId: string) => void;
@@ -36,7 +36,7 @@ export const useEpisodePlace = () => {
 };
 
 /**
- * LIB-SHOW-04: TMDB stopped listing an episode the user has a file for. The
+ * LIB-SHOW-04: the catalog stopped listing an episode the user has a file for. The
  * dialog says in plain words what a move would do before the user says yes:
  * with one likely new place it names it (Yes / No); otherwise, and for each
  * part of a merged episode, it offers to keep the episode as it is or to pick

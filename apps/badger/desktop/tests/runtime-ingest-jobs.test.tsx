@@ -967,8 +967,7 @@ describe("buildIngestJobGroups + ingestJobsToLabJobs (media-aware converter)", (
   const mediaRow = (overrides: Record<string, unknown> = {}): any => ({
     id: "media-1",
     type: "movie",
-    tmdbId: 100,
-    externalIds: null,
+    catalogId: 100,
     title: "Orchard",
     originalTitle: null,
     originalLanguage: null,
@@ -1510,8 +1509,7 @@ describe("buildIngestJobGroups + findStaleOrphanGroupIds — orphan group filter
   const mediaRow = (overrides: Record<string, unknown> = {}): any => ({
     id: "media-real",
     type: "movie",
-    tmdbId: 100,
-    externalIds: null,
+    catalogId: 100,
     title: "Orchard",
     originalTitle: null,
     originalLanguage: null,

@@ -1,13 +1,12 @@
 import React from "react";
 import { useTranslation } from "@space/mobile-shell/i18n";
 import { completePairing } from "@space/mobile-shell/pairing";
-import { MobilePairingPanel } from "@space/mobile-shell/pairing-panel";
+import { MobilePairingPanel, MobilePairingText } from "@space/mobile-shell/pairing-panel";
 import { useAuth } from "../store/auth";
 import { useLibrary } from "../store/library";
 import { createPhoneCompletionDeps, createPhonePairingClient, currentPhoneDeviceName, PHONE_PAIRING_LOG_TAG } from "../lib/phonePairing";
 import { IS_TV } from "../tv/lib/tvRuntime";
 import { TV_PAIRING_LOG_TAG, createRuntimeCompletionDeps, createRuntimePairingClient, tvDeviceName } from "../tv/lib/pairingRuntime";
-import { PairingButton, PairingText } from "./PairSignInScreen";
 
 /**
  * The key screen's "Get the key from another device" (ACCT-PAIR-01, PRIV-KEY-05): the phone or TV, already signed in
@@ -30,13 +29,8 @@ export const KeyFromAnotherDevice = () => {
       deviceName={IS_TV ? tvDeviceName() : currentPhoneDeviceName()}
       app="badger"
       purpose="key"
-      heading={<PairingText tone="body">{t("phonePairing.keyTitle")}</PairingText>}
+      heading={<MobilePairingText tone="body">{t("phonePairing.keyTitle")}</MobilePairingText>}
       testIDPrefix="key-pairing"
-      Text={PairingText}
-      Button={PairingButton}
-      gap={10}
-      codeGap={8}
-      qrPadding={12}
     />
   );
 };

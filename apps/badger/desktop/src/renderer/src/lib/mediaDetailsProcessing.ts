@@ -16,7 +16,7 @@ export type EpisodeResumeEntry = {
 };
 
 // Phase 2: per-episode credits-start (absolute seconds) + episode duration.
-// Built from MediaDetails.skipMarkers (TheIntroDB times served by the metadata service)
+// Built from MediaDetails.skipMarkers (skip times served by the metadata service)
 // and MediaDetails.files/formats (per-file durationSeconds). Episodes
 // without a credits marker are NOT keyed in the map — the consumer falls
 // back to the legacy 95 % pct ceiling for those, which is the correct
@@ -122,7 +122,7 @@ export const buildEpisodeResumeMap = (
 };
 
 // Phase 2: build per-episode credits-start + duration map from MediaDetails.
-// - credits-start comes from MediaDetails.skipMarkers (TheIntroDB);
+// - credits-start comes from MediaDetails.skipMarkers (the metadata service);
 //   only entries with type === "credits" and a finite startSeconds > 0 are
 //   considered.
 // - duration is the MAX durationSeconds across the episode's formats
@@ -145,7 +145,7 @@ export const buildEpisodeCreditsMap = (
     const existing = creditsByEpisode.get(marker.episodeId);
     // If multiple credits markers exist for an episode, take the earliest
     // — the one farthest from EOF is the safer "watched past credits"
-    // boundary. (In practice TheIntroDB returns at most one per type.)
+    // boundary. (In practice the metadata service returns at most one per type.)
     if (existing === undefined || start < existing) {
       creditsByEpisode.set(marker.episodeId, start);
     }
@@ -194,7 +194,7 @@ export const resolveDefaultPlayableEpisodeId = (
   episodeResumeById: Map<string, EpisodeResumeEntry>,
   // Phase 2: optional per-episode credits-start lookup. When supplied,
   // an episode is considered "completed" if the watched absolute time is
-  // past the credits-start (TheIntroDB-derived). When absent (legacy
+  // past the credits-start (service-derived). When absent (legacy
   // callers, or markers not yet hydrated), the helper falls back to the
   // flat 95 % rule — same behavior as before Phase 2.
   episodeCreditsById?: Map<string, EpisodeCreditsEntry>

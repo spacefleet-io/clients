@@ -12,7 +12,7 @@ import {
   putLibraryOp,
   type LibraryMeta,
   type LibraryWriterFormats,
-  TmdbDetails,
+  TitleDetails,
 } from "@space/shared/api";
 import {
   CHUNK_SIZE_BYTES,
@@ -53,6 +53,8 @@ import {
   runIntegrityCheck,
 } from "./library/dbFiles";
 import { healSystemPlaylists, takeHealedSystemPlaylists } from "./library/systemPlaylists";
+import { CATALOG_ID_SOURCE } from "@space/library-db-definition/catalogId";
+import { CATALOG_ID_SOURCES_SQL } from "@space/library-db-definition/legacyFormat";
 import { systemPlaylistForSlug } from "@space/library-db-definition/systemPlaylists";
 import { listDetailsArtworkSlots, type ArtworkApplyResult, type ArtworkCopy, type ArtworkSlot } from "@space/library-db-definition/artworkCopy";
 import {
@@ -1362,15 +1364,15 @@ export class LibraryDb {
       last_watched_at: string | null;
       total_episodes: number | null;
       genre_ids: string | null;
-      external_id_pairs: string | null;
+      catalog_id: string | null;
     }>(
       this.coreDb,
       `SELECT m.*,
         GROUP_CONCAT(DISTINCT g.genre_id) AS genre_ids,
-        GROUP_CONCAT(DISTINCT e.source || ':' || e.external_id) AS external_id_pairs
+        MAX(e.external_id) AS catalog_id
       FROM media_items m
       LEFT JOIN media_genres g ON g.media_id = m.id
-      LEFT JOIN media_external_ids e ON e.media_id = m.id
+      LEFT JOIN media_external_ids e ON e.media_id = m.id AND e.source IN (${CATALOG_ID_SOURCES_SQL})
       GROUP BY m.id
       ORDER BY m.updated_at DESC;`
     );
@@ -1379,23 +1381,12 @@ export class LibraryDb {
       const genres = row.genre_ids
         ? row.genre_ids.split(",").map(Number).filter(Number.isFinite)
         : [];
-      const externalIds: Record<string, string | number> | null = row.external_id_pairs
-        ? Object.fromEntries(
-            row.external_id_pairs.split(",").map((pair) => {
-              const colonIdx = pair.indexOf(":");
-              const source = pair.slice(0, colonIdx);
-              const value = pair.slice(colonIdx + 1);
-              const num = Number(value);
-              return [source, Number.isFinite(num) && String(num) === value ? num : value];
-            })
-          )
-        : null;
-      const tmdbId = externalIds && typeof externalIds.tmdb === "number" ? externalIds.tmdb : null;
+      const catalogIdValue = row.catalog_id === null ? Number.NaN : Number(row.catalog_id);
+      const catalogId = Number.isFinite(catalogIdValue) ? catalogIdValue : null;
       return {
         id: String(row.id),
         type: (row.type === "tv" ? "tv" : "movie") as MediaType,
-        externalIds,
-        tmdbId,
+        catalogId,
         title: String(row.title),
         originalTitle: row.original_title ? String(row.original_title) : null,
         originalLanguage: row.original_language ? String(row.original_language) : null,
@@ -1670,18 +1661,10 @@ export class LibraryDb {
     );
 
     batch.add("DELETE FROM media_external_ids WHERE media_id = ?;", [mediaId]);
-    if (details.tmdbId !== null) {
+    if (details.catalogId !== null) {
       batch.add(
         "INSERT OR IGNORE INTO media_external_ids (id, media_id, media_type, source, external_id) VALUES (?, ?, ?, ?, ?);",
-        [randomUuid(), mediaId, details.type, "tmdb", String(details.tmdbId)]
-      );
-    }
-    const externalIds = details.externalIds ?? {};
-    for (const [source, externalId] of Object.entries(externalIds)) {
-      if (!source || externalId === null || externalId === undefined) continue;
-      batch.add(
-        "INSERT OR IGNORE INTO media_external_ids (id, media_id, media_type, source, external_id) VALUES (?, ?, ?, ?, ?);",
-        [randomUuid(), mediaId, details.type, source, String(externalId)]
+        [randomUuid(), mediaId, details.type, CATALOG_ID_SOURCE, String(details.catalogId)]
       );
     }
 
@@ -1713,10 +1696,10 @@ export class LibraryDb {
         "INSERT OR REPLACE INTO people (id, name, profile_path) VALUES (?, ?, ?);",
         [member.personId, member.name, member.profilePath]
       );
-      if (member.tmdbId !== null) {
+      if (member.catalogId !== null) {
         batch.add(
           "INSERT OR IGNORE INTO people_external_ids (id, person_id, source, external_id) VALUES (?, ?, ?, ?);",
-          [randomUuid(), member.personId, "tmdb", String(member.tmdbId)]
+          [randomUuid(), member.personId, CATALOG_ID_SOURCE, String(member.catalogId)]
         );
       }
       batch.add(
@@ -2328,7 +2311,7 @@ export class LibraryDb {
     });
   }
 
-  async addMediaFromTmdb(item: TmdbDetails) {
+  async addMediaFromCatalog(item: TitleDetails) {
     const id = randomUuid();
     const createdAt = nowIso();
     await this.coreDb.executeSql(
@@ -2560,7 +2543,7 @@ export class LibraryDb {
 
   /**
    * Adds a subtitle track whose object is already in the vault and syncs the title (`media.upsert`), as the computer
-   * app's `addSubtitleTrack` does. `source` is "opensubtitles" for a fetched subtitle (PLAY-SUBGET-17). Returns its id.
+   * app's `addSubtitleTrack` does. `source` is "fetched" for a fetched subtitle (PLAY-SUBGET-17). Returns its id.
    */
   async addSubtitleTrack(track: {
     mediaId: string;

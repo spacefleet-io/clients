@@ -229,7 +229,7 @@ const decimalFormatter = (locale: string, digits: number): Intl.NumberFormat => 
 export const localizedDecimal = (value: number, locale: string, digits = 1): string =>
   decimalFormatter(locale, digits).format(Number.isFinite(value) ? value : 0);
 
-/** A TMDB rating with one decimal in `locale`'s number style (UX-I18N-01): "7.5" in English, "7,5" in French, Dutch
+/** A title's rating with one decimal in `locale`'s number style (UX-I18N-01): "7.5" in English, "7,5" in French, Dutch
  * and German. */
 export const formatRating = (value: number, locale: string): string => localizedDecimal(value, locale, 1);
 

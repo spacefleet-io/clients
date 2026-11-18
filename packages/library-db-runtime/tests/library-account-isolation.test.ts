@@ -245,7 +245,7 @@ const waitFor = async (label: string, predicate: () => boolean, timeoutMs = 10_0
 
 const addMovie = async (db: Db, id: number, title: string) => {
   db.setSyncEnabled(true);
-  const mediaId = await db.addMediaFromTmdb({
+  const mediaId = await db.addMediaFromCatalog({
     id,
     type: "movie",
     title,

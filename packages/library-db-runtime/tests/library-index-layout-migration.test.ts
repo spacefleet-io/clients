@@ -95,7 +95,7 @@ describe("index layout pass", () => {
       const playbackResult = runMigrations(asSqlite(playback), "playback", desktopPlaybackMigrations);
       console.info(`${TAG} migrated core=${JSON.stringify(coreResult)} playback=${JSON.stringify(playbackResult)}`);
 
-      expect(coreResult).toEqual({ from: 0, to: 1, applied: [1] });
+      expect(coreResult).toEqual({ from: 0, to: 2, applied: [1, 2] });
       expect(playbackResult).toEqual({ from: 0, to: 1, applied: [1] });
       for (const name of ADDED) expect(indexNames(core)).toContain(name);
       for (const name of DUPLICATES) expect(indexNames(playback)).not.toContain(name);
@@ -147,7 +147,7 @@ describe("index layout pass", () => {
       for (const name of KEPT) expect(playbackIdx).toContain(name);
       for (const name of ADDED) expect(coreIdx).toContain(name);
       expect(userVersion(playback)).toBe(1);
-      expect(userVersion(core)).toBe(1);
+      expect(userVersion(core)).toBe(2);
     } finally {
       playback.close();
       core.close();

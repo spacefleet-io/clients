@@ -572,7 +572,7 @@ local function current_pill_action()
   end
 
   -- End-of-media fallback "Next episode" pill, for episodes without a
-  -- credits marker in TheIntroDB. Only meaningful when the file has
+  -- credits marker in the metadata service. Only meaningful when the file has
   -- actually loaded (duration > 0). During mpv's loading phase both
   -- duration and time_pos are 0 — without the duration guard the fallback
   -- would fire immediately on launch (remaining = 0 - 0 = 0 <= 15) and
@@ -590,7 +590,7 @@ local function current_pill_action()
       -- Carry `autoSkip` from the top-level auto_skip_next_episode flag so
       -- refresh_pill applies the 5s pre-roll here too — the user's
       -- creditsSkipEnabled toggle should fire next episode regardless of
-      -- whether TheIntroDB has a credits marker.
+      -- whether the metadata service has a credits marker.
       return {
         kind = "next_episode",
         label = "Next episode",
@@ -1009,7 +1009,7 @@ local function refresh_pill()
   --   skip_credits   — marker-keyed
   --   next_episode   — marker-keyed when driven by a credits marker;
   --                    end-of-media-fallback uses a synthetic per-file key
-  --                    so the same 5s pre-roll applies even when TheIntroDB
+  --                    so the same 5s pre-roll applies even when the metadata service
   --                    has no credits marker for this episode.
   local action = pill_state.active
   local has_eligible_kind =

@@ -7,12 +7,12 @@ import { rendererLogger } from "@/logger";
 
 const log = rendererLogger.child({ scope: "skip-marker-backfill" });
 
-/** Lets the library settle and the first screen render before the backfill starts asking TheIntroDB. */
+/** Lets the library settle and the first screen render before the backfill starts asking the metadata service. */
 export const SKIP_BACKFILL_START_DELAY_MS = 15_000;
 
 /**
  * PLAY-NEXT-02: once per app start, after the library has loaded, fetches the
- * TheIntroDB markers of every TV episode that has a file but no marker and no
+ * service markers of every TV episode that has a file but no marker and no
  * recorded hit/miss (see `runSkipMarkerBackfill`). Renders nothing.
  */
 export default function SkipMarkerBackfill() {
@@ -50,8 +50,8 @@ export default function SkipMarkerBackfill() {
           actionsRef.current.upsertSkipAnalysis(mediaId, episodeId, kind, payload),
         replaceSkipMarkers: (mediaId, episodeId, markers) =>
           actionsRef.current.replaceSkipMarkers(mediaId, episodeId, markers),
-        fetchMarkers: ({ tmdbId, seasonNumber, episodeNumber, durationSeconds }) =>
-          getMetadataSkipMarkers("", "tv", tmdbId, seasonNumber, episodeNumber, durationSeconds),
+        fetchMarkers: ({ catalogId, seasonNumber, episodeNumber, durationSeconds }) =>
+          getMetadataSkipMarkers("", "tv", catalogId, seasonNumber, episodeNumber, durationSeconds),
         sleep: (ms) => {
           const { promise, resolve } = Promise.withResolvers<void>();
           window.setTimeout(resolve, ms);

@@ -548,7 +548,6 @@ describe("MediaPlaybackController", () => {
 
   it("[@bugfix][@regression-proof] fetches proxied skip markers for older episodes without provider-backed markers", async () => {
     getMetadataSkipMarkersMock.mockResolvedValueOnce({
-      provider: "theintrodb-v3",
       fetchedAt: "2026-03-20T12:00:00.000Z",
       markers: [
         {
@@ -557,8 +556,8 @@ describe("MediaPlaybackController", () => {
           endSeconds: 108.5,
           extendsToEof: false,
           confidence: 0.94,
-          source: "external:theintrodb-v3",
-          version: "theintrodb-v3",
+          source: "metadata",
+          version: "metadata-v1",
           meta: { submissionCount: 4 },
         },
       ],
@@ -570,7 +569,7 @@ describe("MediaPlaybackController", () => {
     const tvMedia = {
       ...freshMedia,
       type: "tv",
-      tmdbId: 48891,
+      catalogId: 48891,
       episodes: [
         { id: "ep-1", seasonNumber: 1, episodeNumber: 1, name: "Pilot", overview: null, stillPath: null, airDate: null },
         { id: "ep-2", seasonNumber: 1, episodeNumber: 2, name: "The Tagger", overview: null, stillPath: null, airDate: null },
@@ -578,7 +577,7 @@ describe("MediaPlaybackController", () => {
       skipMarkers: [],
     };
 
-    console.info("[media-playback-controller-integration:skip-markers-fetch] rendering tv media tmdbId=48891 episodeId=ep-2 (requestId=109)");
+    console.info("[media-playback-controller-integration:skip-markers-fetch] rendering tv media catalogId=48891 episodeId=ep-2 (requestId=109)");
     await renderController(tvMedia, 109, "ep-2");
     await act(async () => {
       await Promise.resolve();
@@ -598,7 +597,7 @@ describe("MediaPlaybackController", () => {
             type: "intro",
             startSeconds: 88.5,
             endSeconds: 108.5,
-            source: "external:theintrodb-v3",
+            source: "metadata",
           }),
         ])
       );
@@ -607,7 +606,7 @@ describe("MediaPlaybackController", () => {
         "ep-2",
         "external-skip-markers-v2",
         expect.objectContaining({
-          provider: "theintrodb-v3",
+          provider: "metadata-v1",
           status: "hit",
           markerTypes: ["intro"],
         })
@@ -617,7 +616,7 @@ describe("MediaPlaybackController", () => {
         "ep-1",
         "external-skip-markers-v2",
         expect.objectContaining({
-          provider: "theintrodb-v3",
+          provider: "metadata-v1",
           status: "miss",
         })
       );
@@ -631,7 +630,7 @@ describe("MediaPlaybackController", () => {
     const tvMedia = {
       ...freshMedia,
       type: "tv",
-      tmdbId: 48891,
+      catalogId: 48891,
       episodes: [{ id: "ep-2", seasonNumber: 1, episodeNumber: 2, name: "The Tagger", overview: null, stillPath: null, airDate: null }],
       skipMarkers: [],
     };
@@ -641,7 +640,7 @@ describe("MediaPlaybackController", () => {
       episodeId: "ep-2",
       kind: "external-skip-markers-v2",
       payload: {
-        provider: "theintrodb-v2",
+        provider: "metadata-v1",
         status: "miss",
         fetchedAt: "2026-03-20T12:00:00.000Z",
       },

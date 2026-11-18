@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 /**
  * @bugfix @regression-proof PLAY-NEXT-02 (Chris 2026-10-28, "Lodgers has no TIDB
- * data? more likely an error"): the import window fetches TheIntroDB markers for
+ * data? more likely an error"): the import window fetches service markers for
  * every TV episode it matched, so each file is added with its intro/credits.
  *
  * Before the fix the resolver ran straight after `setCandidates`, read
@@ -9,9 +9,9 @@
  * fetch of the show, so a drop of 4 Lodgers episodes fetched only S01E01 and a
  * drop of 22 Brooklyn Nine-Nine episodes only E01-E13.
  *
- * Drives the real FileIngestionDialog drop path (scanFiles → probeMedia → TMDB
+ * Drives the real FileIngestionDialog drop path (scanFiles → probeMedia → the catalog
  * match → skip markers → Add) and asserts on the skip-marker lookups sent through
- * the metadata client (META-SKIP-01: never TheIntroDB itself) and on the sources
+ * the metadata client (META-SKIP-01: never a source itself) and on the sources
  * handed to `window.sf.runtimeJobs.submitSources`.
  */
 // @req PLAY-NEXT-02[badger-desktop] @req META-SKIP-03[badger-desktop]
@@ -89,7 +89,7 @@ vi.mock("../src/renderer/src/lib/libraryContext", () => ({
     getMediaDetails: () => null,
     fetchMediaDetails: async () => null,
     getSharedSetting: () => null,
-    addMediaFromTmdb: async () => "media-show",
+    addMediaFromCatalog: async () => "media-show",
     addSubtitleTrackWithObject: vi.fn(),
     listSkipAnalysis: async () => [],
     upsertSkipAnalysis: async () => undefined,
@@ -106,7 +106,7 @@ const sleep = (ms: number): Promise<void> => {
   return promise;
 };
 
-const show = vi.hoisted(() => ({ tmdbId: 901668, title: "Lodgers" }));
+const show = vi.hoisted(() => ({ catalogId: 901668, title: "Lodgers" }));
 
 // The anonymous metadata client: every skipMarkers lookup is handed to the current test's mock.
 const skipLookup = vi.hoisted(() => ({ current: null as null | ((req: SkipRequest) => Promise<unknown>) }));
@@ -115,7 +115,7 @@ vi.mock("../src/renderer/src/lib/metadataTickets", () => ({
     skipMarkers: (request: { type: string; id: number; season: number; episode: number; durationSeconds?: number }) => {
       if (request.type !== "tv" || !skipLookup.current) throw new Error(`unexpected skipMarkers lookup ${JSON.stringify(request)}`);
       return skipLookup.current({
-        tmdbId: request.id,
+        catalogId: request.id,
         seasonNumber: request.season,
         episodeNumber: request.episode,
         ...(request.durationSeconds !== undefined ? { durationSeconds: request.durationSeconds } : {}),
@@ -125,23 +125,23 @@ vi.mock("../src/renderer/src/lib/metadataTickets", () => ({
 }));
 
 vi.mock("../src/renderer/src/lib/metadata", () => ({
-  getTmdbDetails: vi.fn(),
-  getTmdbDetailsForLibrary: async () => ({
-    id: show.tmdbId,
+  getTitleDetails: vi.fn(),
+  getTitleDetailsForLibrary: async () => ({
+    id: show.catalogId,
     type: "tv",
     title: show.title,
     originalTitle: show.title,
     genres: [],
     totalEpisodes: 236,
   }),
-  getTmdbTrailersForLanguages: async () => [],
+  getTitleTrailersForLanguages: async () => [],
   localizeSearchResultForLibrary: async (_token: unknown, result: unknown) => result,
-  searchTmdb: async (_token: unknown, type: string) => {
+  searchTitles: async (_token: unknown, type: string) => {
     // A search slower than nothing lets each match land after the previous
     // episode's skip fetch started: the timing that lost episodes.
     await sleep(15);
     return {
-      results: [{ type, id: show.tmdbId, title: show.title, originalTitle: show.title, overview: "", year: 1994 }],
+      results: [{ type, id: show.catalogId, title: show.title, originalTitle: show.title, overview: "", year: 1994 }],
     };
   },
 }));
@@ -177,10 +177,10 @@ const probe = {
   subtitleTracks: [],
 };
 
-type SkipRequest = { tmdbId: number; seasonNumber: number; episodeNumber: number; durationSeconds?: number };
+type SkipRequest = { catalogId: number; seasonNumber: number; episodeNumber: number; durationSeconds?: number };
 type SubmitPayload = { userId: string; sources: BadgerIngestSubmitSourceItem[] };
 
-const intro = { type: "intro" as const, startSeconds: 0, endSeconds: 46, source: "external:theintrodb-v3", confidence: null };
+const intro = { type: "intro" as const, startSeconds: 0, endSeconds: 46, source: "metadata", confidence: null };
 
 let container: HTMLDivElement | null = null;
 let root: Root | null = null;
@@ -203,7 +203,6 @@ const setup = (opts: { hit: (req: SkipRequest) => boolean }): SkipMocks => {
     await sleep(40);
     const hit = opts.hit(req);
     return {
-      provider: "theintrodb-v3" as const,
       fetchedAt: new Date().toISOString(),
       markers: hit ? [intro] : [],
       coverage: [{ seasonNumber: req.seasonNumber, episodeNumber: req.episodeNumber, status: hit ? "hit" : "miss" }],
@@ -294,7 +293,7 @@ afterEach(() => {
 
 describe("import window fetches skip markers for every matched episode", () => {
   it("4 Lodgers episodes: each fetched once and added with its intro", async () => {
-    show.tmdbId = 901668;
+    show.catalogId = 901668;
     show.title = "Lodgers";
     const mocks = setup({ hit: () => true });
     const { fetched, sources } = await dropAndAdd(episodePaths(4), mocks);
@@ -308,7 +307,7 @@ describe("import window fetches skip markers for every matched episode", () => {
   }, 30_000);
 
   it("22 Brooklyn Nine-Nine episodes: all 22 fetched, none twice", async () => {
-    show.tmdbId = 48891;
+    show.catalogId = 48891;
     show.title = "Brooklyn Nine-Nine";
     const mocks = setup({ hit: () => true });
     const { fetched, sources } = await dropAndAdd(episodePaths(22), mocks);
@@ -318,8 +317,8 @@ describe("import window fetches skip markers for every matched episode", () => {
     expect(sources.filter((s) => (s.skipMarkers ?? []).length === 1)).toHaveLength(22);
   }, 30_000);
 
-  it("episodes TheIntroDB has nothing for still travel as recorded misses", async () => {
-    show.tmdbId = 901668;
+  it("episodes the metadata service has nothing for still travel as recorded misses", async () => {
+    show.catalogId = 901668;
     show.title = "Lodgers";
     const mocks = setup({ hit: () => false });
     const { sources } = await dropAndAdd(episodePaths(2), mocks);

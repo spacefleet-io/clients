@@ -37,7 +37,7 @@ export const parseSubtitleFetchMessage = (msg: unknown): MpvSubtitleFetchMessage
 
 export type MpvSubtitleFetchDeps = {
   uiLanguage: string;
-  /** The film or episode playing; null when it has no TMDB ID (nothing to search). */
+  /** The film or episode playing; null when it has no catalog id (nothing to search). */
   target: SubtitleFetchTarget | null;
   search: (request: SubtitleFetchRequest) => Promise<{ reachable: boolean; subtitles: SubtitleFetchCandidate[] }>;
   /** Stops before adding anything once `signal` aborts (Escape while downloading or saving). */

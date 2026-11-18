@@ -241,7 +241,7 @@ const runScenario = async (name: string, options: { stalePendingSnapshot: boolea
   await service.open(TOKEN, KEY, { userId: "user-n4-load" });
   const mediaIds: string[] = [];
   for (let i = 0; i < 20; i += 1) {
-    mediaIds.push((await service.call("addMediaFromTmdb", [movie(90_000 + i, `N4 Seed ${i}`)])) as string);
+    mediaIds.push((await service.call("addMediaFromCatalog", [movie(90_000 + i, `N4 Seed ${i}`)])) as string);
   }
   // Let the seed ops upload so the run starts from a synced library.
   await service.call("syncFromRemoteIfNewer", [null]);
@@ -304,7 +304,7 @@ const runScenario = async (name: string, options: { stalePendingSnapshot: boolea
       const id = 95_000 + n;
       await timed("commit:runBatch", () =>
         service.runBatch(`commit:n4-${n}`, async () => {
-          const mediaId = (await service.call("addMediaFromTmdb", [movie(id, `N4 Import ${n}`)])) as string;
+          const mediaId = (await service.call("addMediaFromCatalog", [movie(id, `N4 Import ${n}`)])) as string;
           await service.call("setProgress", [mediaId, 0.5]);
         })
       );

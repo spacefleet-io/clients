@@ -143,7 +143,7 @@ describe("SubtitleFetchFlow", () => {
       search: async () => ({ reachable: true, subtitles: [candidate("es"), candidate("fr"), candidate("de")] }),
       existingTracks: [
         { language: "es", label: "Spanish", source: "upload" },
-        { language: "fr", label: "French", source: "opensubtitles" },
+        { language: "fr", label: "French", source: "fetched" },
       ],
       store,
     });

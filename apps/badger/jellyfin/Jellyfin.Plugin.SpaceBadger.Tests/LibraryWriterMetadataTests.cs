@@ -13,7 +13,7 @@ namespace Jellyfin.Plugin.SpaceBadger.Tests;
 
 /// <summary>
 /// INTG-META-01 (Jellyfin half): the plugin writes `.nfo` files and local images beside each shortcut, from the Badger
-/// library the sidecar serves (titles, descriptions, years, seasons, episodes, TMDB id), and the artwork it fetches
+/// library the sidecar serves (titles, descriptions, years, seasons, episodes; no catalog id, META-SRC-09), and the artwork it fetches
 /// through the sidecar's `image` route. A match the user fixed by hand arrives as new library values and replaces what
 /// was written before. The fake sidecar here answers `/integration/v1/image` on a loopback port.
 /// </summary>
@@ -59,28 +59,24 @@ public sealed class LibraryWriterMetadataTests : IDisposable
         DumpTree("after first sync");
         Phase("write", $"changed={changed} images asked: {string.Join(", ", _imageRequests)}");
 
-        var movieFolder = Path.Combine(LibraryWriter.MoviesDir(_root), "Arrival (2016) [tmdbid-329865]");
+        var movieFolder = Path.Combine(LibraryWriter.MoviesDir(_root), "Arrival (2016)");
         var movie = XDocument.Load(Path.Combine(movieFolder, "movie.nfo")).Root!;
         Assert.Equal("movie", movie.Name.LocalName);
         Assert.Equal("Arrival", movie.Element("title")!.Value);
         Assert.Equal("A linguist works with the military to communicate with alien lifeforms.", movie.Element("plot")!.Value);
         Assert.Equal("2016", movie.Element("year")!.Value);
-        Assert.Equal("329865", movie.Element("tmdbid")!.Value);
-        var tmdbUnique = movie.Elements("uniqueid").Single(e => e.Attribute("type")!.Value == "tmdb");
-        Assert.Equal("329865", tmdbUnique.Value);
-        Assert.Equal("true", tmdbUnique.Attribute("default")!.Value);
-        Assert.Equal("tt2543164", movie.Element("imdbid")!.Value);
+        Assert.Empty(movie.Elements("uniqueid"));
         Assert.Equal(new[] { "Drama", "Science Fiction" }, movie.Elements("genre").Select(e => e.Value));
         // Jellyfin's own metadata refresh stays allowed: nothing is locked.
         Assert.Null(movie.Element("lockdata"));
         Assert.Equal(Jpeg, File.ReadAllBytes(Path.Combine(movieFolder, "poster.jpg")));
         Assert.Equal(Png, File.ReadAllBytes(Path.Combine(movieFolder, "fanart.png")));
 
-        var showFolder = Path.Combine(LibraryWriter.ShowsDir(_root), "Severance (2022) [tmdbid-95396]");
+        var showFolder = Path.Combine(LibraryWriter.ShowsDir(_root), "Severance (2022)");
         var show = XDocument.Load(Path.Combine(showFolder, "tvshow.nfo")).Root!;
         Assert.Equal("tvshow", show.Name.LocalName);
         Assert.Equal("Severance", show.Element("title")!.Value);
-        Assert.Equal("95396", show.Element("tmdbid")!.Value);
+        Assert.Empty(show.Elements("uniqueid"));
         Assert.Equal("2022", show.Element("year")!.Value);
         Assert.True(File.Exists(Path.Combine(showFolder, "poster.jpg")));
         Assert.True(File.Exists(Path.Combine(showFolder, "fanart.png")));
@@ -110,12 +106,10 @@ public sealed class LibraryWriterMetadataTests : IDisposable
         await writer.SyncAsync(new SbLibrary { Version = 1, Movies = { wrong } }, _root, StateFile(), CancellationToken.None);
         DumpTree("before the fix");
 
-        // The user fixed the match in Badger: same media id, now "Contact" (TMDB 686) with its own pictures.
+        // The user fixed the match in Badger: same media id, now "Contact" with its own pictures.
         var fixedMatch = Arrival();
         fixedMatch.Title = "Contact";
         fixedMatch.OriginalTitle = "Contact";
-        fixedMatch.TmdbId = 686;
-        fixedMatch.ImdbId = "tt0118884";
         fixedMatch.Year = 1997;
         fixedMatch.Overview = "Dr. Ellie Arroway finds a signal.";
         fixedMatch.PosterPath = "/contact-poster.jpg";
@@ -124,13 +118,13 @@ public sealed class LibraryWriterMetadataTests : IDisposable
         DumpTree("after the fix");
         Phase("fix", $"changed={changed}");
 
-        var oldFolder = Path.Combine(LibraryWriter.MoviesDir(_root), "Arrival (2016) [tmdbid-329865]");
-        var newFolder = Path.Combine(LibraryWriter.MoviesDir(_root), "Contact (1997) [tmdbid-686]");
+        var oldFolder = Path.Combine(LibraryWriter.MoviesDir(_root), "Arrival (2016)");
+        var newFolder = Path.Combine(LibraryWriter.MoviesDir(_root), "Contact (1997)");
         Assert.False(File.Exists(Path.Combine(oldFolder, "movie.nfo")));
         Assert.False(File.Exists(Path.Combine(oldFolder, "poster.jpg")));
         var nfo = XDocument.Load(Path.Combine(newFolder, "movie.nfo")).Root!;
         Assert.Equal("Contact", nfo.Element("title")!.Value);
-        Assert.Equal("686", nfo.Element("tmdbid")!.Value);
+        Assert.Empty(nfo.Elements("uniqueid"));
         Assert.Equal("Dr. Ellie Arroway finds a signal.", nfo.Element("plot")!.Value);
         Assert.True(File.Exists(Path.Combine(newFolder, "poster.jpg")));
         Assert.Contains("ref=/contact-poster.jpg&kind=poster", _imageRequests);
@@ -142,7 +136,7 @@ public sealed class LibraryWriterMetadataTests : IDisposable
     {
         var writer = new LibraryWriter(new SidecarClient(NullLogger<SidecarClient>.Instance), NullLogger<LibraryWriter>.Instance);
         await writer.SyncAsync(new SbLibrary { Version = 1, Shows = { Severance() } }, _root, StateFile(), CancellationToken.None);
-        var season = Path.Combine(LibraryWriter.ShowsDir(_root), "Severance (2022) [tmdbid-95396]", "Season 01");
+        var season = Path.Combine(LibraryWriter.ShowsDir(_root), "Severance (2022)", "Season 01");
         var baseName = "Severance - S01E01 - Good News About Hell - 1080p";
         var strmBefore = File.ReadAllText(Path.Combine(season, baseName + ".strm"));
 
@@ -161,7 +155,7 @@ public sealed class LibraryWriterMetadataTests : IDisposable
         var nfo = XDocument.Load(Path.Combine(season, baseName + ".nfo")).Root!;
         Assert.Equal("Bonne nouvelle de l'enfer", nfo.Element("title")!.Value);
         Assert.Equal("Mark est promu.", nfo.Element("plot")!.Value);
-        var show = XDocument.Load(Path.Combine(LibraryWriter.ShowsDir(_root), "Severance (2022) [tmdbid-95396]", "tvshow.nfo")).Root!;
+        var show = XDocument.Load(Path.Combine(LibraryWriter.ShowsDir(_root), "Severance (2022)", "tvshow.nfo")).Root!;
         Assert.Equal("Mark dirige une équipe dont les souvenirs ont été divisés.", show.Element("plot")!.Value);
         var other = XDocument.Load(Path.Combine(season, "Severance - S01E02 - Half Loop - 1080p.nfo")).Root!;
         Assert.Equal("Half Loop", other.Element("title")!.Value);
@@ -171,8 +165,6 @@ public sealed class LibraryWriterMetadataTests : IDisposable
     private static SbMovie Arrival() => new()
     {
         Id = "movie-1",
-        TmdbId = 329865,
-        ImdbId = "tt2543164",
         Title = "Arrival",
         OriginalTitle = "Arrival",
         Year = 2016,
@@ -188,7 +180,6 @@ public sealed class LibraryWriterMetadataTests : IDisposable
     private static SbShow Severance() => new()
     {
         Id = "show-1",
-        TmdbId = 95396,
         Title = "Severance",
         Year = 2022,
         Overview = "Mark leads a team of office workers whose memories have been surgically divided.",

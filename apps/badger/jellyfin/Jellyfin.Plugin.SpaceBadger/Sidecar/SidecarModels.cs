@@ -141,8 +141,6 @@ public sealed class SbCast
 public class SbTitle : SbUnit
 {
     public string Id { get; set; } = string.Empty;
-    public long? TmdbId { get; set; }
-    public string? ImdbId { get; set; }
     public string Title { get; set; } = string.Empty;
     public string? OriginalTitle { get; set; }
     public int? Year { get; set; }

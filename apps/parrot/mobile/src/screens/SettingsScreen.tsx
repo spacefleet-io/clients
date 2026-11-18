@@ -34,6 +34,7 @@ import { useSignOut } from "../state/useSignOut";
 import { colors, spacing } from "../theme";
 import { Body, Button } from "./ui";
 import type { RootStack } from "./routes";
+import { SelfUpdateSettings } from "@space/mobile-self-update";
 
 const log = scopeLogger("settings");
 
@@ -254,6 +255,8 @@ export const SettingsScreen = () => {
         />
         {errorReportsOffered() ? <ErrorReportsSwitch /> : null}
       </Section>
+      {/* REL-UPD-06: on a hand-installed APK, the version and its updates (nothing when a store manages the app). */}
+      <SelfUpdateSettings language={getCurrentLanguage()} />
       {/* Third-party code shipped in the app, with its licence (Apache-2.0 attribution of the ALAC decoder), then the outside
           data sources (UX-SET-02): the app's one credits place, opened by its own GPL-3.0 line and source link (UX-SET-03). */}
       <Section title={t("parrot.settings.openSource")}>

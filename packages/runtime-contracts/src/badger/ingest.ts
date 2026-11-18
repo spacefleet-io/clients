@@ -144,7 +144,7 @@ export type BadgerIngestTrackOverride = z.infer<
 >;
 
 /**
- * Per-episode intro/credits marker fetched from the TheIntroDB provider at
+ * Per-episode intro/credits marker fetched from the metadata service at
  * import-modal identify time. The renderer carries one of these per file (for
  * the file's specific episode); the runtime persists it on commit so the
  * lazy-fetch on first playback can be skipped.
@@ -174,7 +174,7 @@ export type BadgerIngestSkipMarker = z.infer<typeof badgerIngestSkipMarkerSchema
  */
 export const badgerIngestShowSkipCacheSchema = z.object({
   provider: z.string(),
-  showTmdbId: z.number().int().positive(),
+  showCatalogId: z.number().int().positive(),
   fetchedAt: z.string(),
   coverage: z.array(
     z.object({

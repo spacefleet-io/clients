@@ -523,11 +523,11 @@ export const confirmTotp = (token: string, code: string): Promise<{ user: User }
 export const disableTwoFactor = (token: string, reauth: ReauthInput): Promise<{ user: User }> =>
   unwrap(sdk.disableTwoFactor({ ...scoped(token), body: reauthBody(reauth) }));
 
-export type TmdbMediaType = "movie" | "tv";
+export type TitleType = "movie" | "tv";
 
-export type TmdbSearchResult = {
+export type TitleSearchResult = {
   id: number;
-  type: TmdbMediaType;
+  type: TitleType;
   title: string;
   originalTitle: string | null;
   originalLanguage: string | null;
@@ -540,8 +540,9 @@ export type TmdbSearchResult = {
   backdropUrl?: string | null;
 };
 
-export type TmdbCastMember = {
-  tmdbId: number | null;
+/** A person in a title's cast; `personId` is the metadata service's id of that person. */
+export type CastMember = {
+  personId: number | null;
   name: string;
   role: string | null;
   profilePath: string | null;
@@ -549,7 +550,7 @@ export type TmdbCastMember = {
   profileUrl?: string | null;
 };
 
-export type TmdbTrailer = {
+export type Trailer = {
   provider: "youtube";
   key: string;
   name: string | null;
@@ -558,7 +559,7 @@ export type TmdbTrailer = {
   size?: number | null;
 };
 
-export type TmdbSeason = {
+export type TitleSeason = {
   seasonNumber: number;
   name: string;
   overview: string | null;
@@ -567,7 +568,7 @@ export type TmdbSeason = {
   airDate: string | null;
 };
 
-export type TmdbEpisode = {
+export type TitleEpisode = {
   seasonNumber: number;
   episodeNumber: number;
   name: string;
@@ -576,27 +577,27 @@ export type TmdbEpisode = {
   airDate: string | null;
 };
 
-/** A TMDB crew credit as the metadata service returns it (`credits.crew`). */
-export type TmdbCrewMember = {
-  tmdbId: number | null;
+/** A crew credit as the metadata service returns it (`credits.crew`). */
+export type CrewMember = {
+  personId: number | null;
   name: string;
   job: string | null;
   department: string | null;
   profilePath: string | null;
 };
 
-export type TmdbDetails = TmdbSearchResult & {
-  cast: TmdbCastMember[];
+export type TitleDetails = TitleSearchResult & {
+  cast: CastMember[];
   /** Crew credits (LIB-CREW-01); absent from older answers. */
-  crew?: TmdbCrewMember[];
-  trailers: TmdbTrailer[];
+  crew?: CrewMember[];
+  trailers: Trailer[];
   totalEpisodes: number | null;
-  seasons: TmdbSeason[];
-  episodes: TmdbEpisode[];
+  seasons: TitleSeason[];
+  episodes: TitleEpisode[];
   genres: number[];
-  /** TMDB `status` of a show ("Returning Series", "Ended", "Canceled", ...); null or absent when unknown. */
+  /** A show's status ("Returning Series", "Ended", "Canceled", ...); null or absent when unknown. */
   status?: string | null;
-  /** TMDB `next_episode_to_air.air_date` (YYYY-MM-DD) of a show; null or absent when none is known. */
+  /** The air date (YYYY-MM-DD) of a show's next episode; null or absent when none is known. */
   nextEpisodeAirDate?: string | null;
 };
 
@@ -612,12 +613,11 @@ export type MetadataSkipMarker = {
 };
 
 /**
- * The metadata service's answer to a `skipMarkers` lookup (META-SKIP-01): TheIntroDB's best intro and credits times
- * for one movie or episode (META-SKIP-02). `fetchedAt` is when the service last asked
- * TheIntroDB. `coverage` has one entry for an episode (none for a movie): `hit` when it has times, `miss` otherwise.
+ * The metadata service's answer to a `skipMarkers` lookup (META-SKIP-01): the best intro and credits times it knows
+ * for one movie or episode (META-SKIP-02). `fetchedAt` is when the service last looked them up. `coverage` has one
+ * entry for an episode (none for a movie): `hit` when it has times, `miss` otherwise.
  */
 export type MetadataSkipMarkersResult = {
-  provider: "theintrodb-v3";
   fetchedAt: string;
   markers: MetadataSkipMarker[];
   coverage: Array<{

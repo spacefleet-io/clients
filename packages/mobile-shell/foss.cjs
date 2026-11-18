@@ -6,10 +6,38 @@
 //   `<name>.foss.ts(x)` for that sibling (`withFossStubs`);
 // - app/build.gradle and settings.gradle read the same variable for the native side.
 // Unset, every step is exactly the Play build.
+//
+// The self-update (REL-UPD-06) rides the same switch: every foss build links @space/mobile-self-update (its code and
+// its REQUEST_INSTALL_PACKAGES permission), so the APK we publish and the one f-droid.org rebuilds from
+// scripts/android-foss-build.sh stay one identical, reproducible APK. The Play build never has it (Google Play policy).
+// On device it acts only when no store or updater app manages the install.
 const fs = require("fs");
 const path = require("path");
 
 const fossBuild = process.env.SF_FOSS === "1";
+const selfUpdateBuild = fossBuild;
+
+const SELF_UPDATE_PACKAGE = "@space/mobile-self-update";
+const SELF_UPDATE_ROOT = path.resolve(__dirname, "../mobile-self-update");
+
+/**
+ * The `dependencies` entry for @space/mobile-self-update in an app's react-native.config.js: linked on Android in the
+ * self-update build, unlinked everywhere else.
+ */
+const selfUpdateAutolink = (enabled = selfUpdateBuild) => ({
+  [SELF_UPDATE_PACKAGE]: enabled ? { root: SELF_UPDATE_ROOT } : { root: SELF_UPDATE_ROOT, platforms: { android: null, ios: null } },
+});
+
+/**
+ * Wraps a Metro `resolveRequest`: outside the self-update build, `@space/mobile-self-update` resolves to its stand-in
+ * (`src/index.off.ts`, the same names doing nothing), so no updater code reaches the bundle.
+ */
+const withSelfUpdate = (resolveRequest, enabled = selfUpdateBuild) => {
+  if (enabled) return resolveRequest;
+  const stub = path.join(SELF_UPDATE_ROOT, "src/index.off.ts");
+  return (context, moduleName, platform) =>
+    moduleName === SELF_UPDATE_PACKAGE ? { type: "sourceFile", filePath: stub } : resolveRequest(context, moduleName, platform);
+};
 
 /** Native libraries that pull in Google Play services or Firebase (com.google.android.gms, com.google.mlkit, com.google.firebase). */
 const PLAY_SERVICES_LIBRARIES = Object.freeze([
@@ -61,4 +89,4 @@ const withFossStubs = (resolveRequest, stubs = {}, enabled = fossBuild) => {
   };
 };
 
-module.exports = { fossBuild, PLAY_SERVICES_LIBRARIES, fossAutolinkExclusions, withFossStubs };
+module.exports = { fossBuild, selfUpdateBuild, PLAY_SERVICES_LIBRARIES, fossAutolinkExclusions, withFossStubs, selfUpdateAutolink, withSelfUpdate };

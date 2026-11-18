@@ -106,8 +106,7 @@ const dumpSuppressSnapshot = (
 const baseDetails = (id: string, overrides: Partial<MediaDetails> = {}): MediaDetails => ({
   id,
   type: "movie",
-  tmdbId: null,
-  externalIds: {},
+  catalogId: null,
   title: `Movie ${id}`,
   originalTitle: null,
   originalLanguage: "en",

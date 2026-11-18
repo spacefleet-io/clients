@@ -1,12 +1,12 @@
 /**
- * Step: identify — parses the filename and (eventually) runs a TMDB match.
+ * Step: identify — parses the filename and (eventually) runs a catalog match.
  * If `job.payload.hints.mediaId` is already set (typical case: the desktop
  * has already identified the title via attach_metadata), this step is a
  * pass-through that just records the hint as the canonical id.
  *
  * Output shape (`step.outputs.identifyResult`): {@link IdentifyResult} from
  * `./deps`. Carries `mediaId | null`, parsed title, season/episode, year, and
- * `preexistingHint: boolean` so downstream commit can tell whether a TMDB
+ * `preexistingHint: boolean` so downstream commit can tell whether a catalog
  * match still needs to be made.
  *
  * Honors abort. Pure function w.r.t. the filesystem — no ffmpeg, no network.

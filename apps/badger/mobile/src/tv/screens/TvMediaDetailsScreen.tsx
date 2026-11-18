@@ -204,7 +204,7 @@ export const TvMediaDetailsScreen = () => {
     const crew = crewPeople(details.crew).map((member) => ({
       id: `crew-${member.group}-${member.personId}`,
       personId: member.personId,
-      tmdbId: member.tmdbId,
+      catalogId: member.catalogId,
       name: member.name,
       role: jobLabel[member.group],
       profilePath: member.profilePath,
@@ -416,7 +416,7 @@ export const TvMediaDetailsScreen = () => {
       })
     : t("details.play");
 
-  // UX-TV-06: the year, then a movie's length or a show's seasons, the TMDB rating, and the original language.
+  // UX-TV-06: the year, then a movie's length or a show's seasons, the catalog rating, and the original language.
   const runtime = show ? null : runtimeParts(movieBlock?.durationSeconds ?? null);
   const seasonCount = details.seasons.filter((season) => season.seasonNumber > 0).length;
   const languageCode = details.originalLanguage?.toLowerCase() ?? null;

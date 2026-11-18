@@ -165,7 +165,7 @@ describe("badger.ingest.attach_metadata", () => {
       const attach = createBadgerIngestAttachMetadataHandler({ engine });
       const result = await attach({
         jobId: sourceJobId,
-        mediaId: "tmdb-42",
+        mediaId: "catalog-42",
         season: 2,
         episode: 5,
       });
@@ -179,7 +179,7 @@ describe("badger.ingest.attach_metadata", () => {
 
       const got = await engine.get(sourceJobId);
       const hints = got!.job.payload.hints as Record<string, unknown>;
-      expect(hints.mediaId).toBe("tmdb-42");
+      expect(hints.mediaId).toBe("catalog-42");
       expect(hints.season).toBe(2);
       expect(hints.episode).toBe(5);
     } catch (err) {
@@ -210,7 +210,7 @@ describe("badger.ingest.attach_metadata", () => {
       const attach = createBadgerIngestAttachMetadataHandler({ engine });
       const result = await attach({
         jobId: sourceJobId,
-        mediaId: "tmdb-late",
+        mediaId: "catalog-late",
       });
       console.info(
         `[badger-ingest-attach-plan:attach-too-late] attach result=${JSON.stringify(result)}`,

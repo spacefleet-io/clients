@@ -268,9 +268,9 @@ export const summarize = (ops: DecodedServerOp[]) => {
   return { ops: ops.length, bytes, bytesPerOp: ops.length ? Math.round(bytes / ops.length) : 0, byType };
 };
 
-export const seedMovie = async (db: Db, tmdbId: number, title: string) =>
-  db.addMediaFromTmdb({
-    id: tmdbId,
+export const seedMovie = async (db: Db, catalogId: number, title: string) =>
+  db.addMediaFromCatalog({
+    id: catalogId,
     type: "movie",
     title,
     originalTitle: null,

@@ -18,6 +18,8 @@
     "./originalSize": "./src/originalSize.ts",
     "./ops": "./src/ops.ts",
     "./mediaDetails": "./src/mediaDetails.ts",
+    "./catalogId": "./src/catalogId.ts",
+    "./legacyFormat": "./src/legacyFormat.ts",
     "./artworkHeal": "./src/artworkHeal.ts",
     "./artworkCopy": "./src/artworkCopy.ts",
     "./opCompaction": "./src/opCompaction.ts",

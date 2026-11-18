@@ -38,6 +38,7 @@ import { NewsOptInRow } from "../components/NewsOptInRow";
 import { RIPPLE } from "../components/PosterCard";
 import { theme } from "../theme/theme";
 import { errorReportsOffered } from "@space/mobile-shell/error-reports-offered";
+import { SelfUpdateSettings } from "@space/mobile-self-update";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -411,8 +412,9 @@ export const SettingsScreen = memo(({ devicesRequest = 0 }: { devicesRequest?: n
 
       {/* UX-SET-03 then UX-SET-02: the GPL-3.0 line and the link to the source code, then the outside data sources,
           credited here out of the everyday screens under the panel's own About header row (closed by default), so the
-          group carries no second "About" title. */}
+          group carries no second "About" title. REL-UPD-06: on a hand-installed APK, the version and its updates first. */}
       <SettingsGroup>
+        <SelfUpdateSettings language={language} />
         <MobileOpenSourceNotice language={language} product="badger" openLinks />
         <MobileCreditsPanel language={language} product="badger" source={mobileCreditsSource} openLinks />
       </SettingsGroup>

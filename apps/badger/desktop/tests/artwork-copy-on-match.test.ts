@@ -1,8 +1,8 @@
 /**
  * @req META-ART-01
  *
- * Why this exists (#470): a matched title kept TMDB image paths, so its artwork never reached the user's storage.
- * The desktop's copy after a match goes through the metadata service `image` op (never the TMDB image CDN,
+ * Why this exists (#470): a matched title kept catalog image paths, so its artwork never reached the user's storage.
+ * The desktop's copy after a match goes through the metadata service `image` op (never the catalog image CDN,
  * META-ART-02), encrypts every image on the device and uploads it under a random name; the library then holds
  * asset keys. This drives the real desktop chain (`runDesktopArtworkCopy` → `uploadEncryptedAssetFromMetadata` →
  * real AES-GCM) with the metadata service and the storage tunnel mocked, and watches every fetch.
@@ -35,7 +35,7 @@ vi.mock("@/api", () => ({
 
 const KEY = Buffer.from(new Uint8Array(32).fill(7)).toString("base64");
 
-/** The library rows of a matched show: one slot per artwork kind, all still TMDB paths. */
+/** The library rows of a matched show: one slot per artwork kind, all still catalog paths. */
 const matchedShow = (): ArtworkSlot[] => [
   { target: "mediaPoster", id: "m1", path: "/poster.jpg" },
   { target: "mediaBackdrop", id: "m1", path: "/backdrop.jpg" },
@@ -96,7 +96,7 @@ const deps = (store: ArtworkCopyStore, ticketsLeft = 600) => ({
 });
 
 describe("desktop copy of matched artwork (META-ART-01)", () => {
-  it("@req META-ART-01[badger-desktop] every artwork kind ends as an encrypted asset key; no TMDB URL is fetched", async () => {
+  it("@req META-ART-01[badger-desktop] every artwork kind ends as an encrypted asset key; no catalog URL is fetched", async () => {
     const { store, values } = memoryStore(matchedShow());
     const d = deps(store);
     log("phase: run");
@@ -112,11 +112,11 @@ describe("desktop copy of matched artwork (META-ART-01)", () => {
     expect(uploads.every((upload) => upload.bytes > 0)).toBe(true);
     expect(fetched.length).toBe(5);
     expect(fetched.every((url) => url.startsWith("data:")), "only the metadata service's data: answers are read").toBe(true);
-    expect(fetched.some((url) => /image\.tmdb\.org|themoviedb/.test(url))).toBe(false);
+    expect(fetched.some((url) => /^https?:/.test(url))).toBe(false);
     expect(d.onApplied).toHaveBeenCalledTimes(1);
   });
 
-  it("@req META-ART-01[badger-desktop] a failure is non-fatal: the TMDB path stays and the next run copies it", async () => {
+  it("@req META-ART-01[badger-desktop] a failure is non-fatal: the catalog path stays and the next run copies it", async () => {
     const { store, values } = memoryStore(matchedShow());
     resolveArtwork.mockImplementation(async (kind: string, path: string) =>
       path === "/e1.jpg"

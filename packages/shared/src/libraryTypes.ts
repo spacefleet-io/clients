@@ -6,8 +6,8 @@ export type MediaType = "movie" | "tv";
 export type MediaRow = {
   id: string;
   type: MediaType;
-  tmdbId: number | null;
-  externalIds: Record<string, number | string> | null;
+  /** The metadata service's id of the title; null when the title has none. */
+  catalogId: number | null;
   title: string;
   originalTitle: string | null;
   originalLanguage: string | null;
@@ -44,7 +44,7 @@ export type MediaRow = {
 export type MediaCastMember = {
   id: string;
   personId: string;
-  tmdbId: number | null;
+  catalogId: number | null;
   name: string;
   role: string | null;
   profilePath: string | null;
@@ -52,7 +52,7 @@ export type MediaCastMember = {
 
 export type MediaCastDraft = {
   personId?: string | null;
-  tmdbId?: number | null;
+  catalogId?: number | null;
   name: string;
   role?: string | null;
   profilePath?: string | null;
@@ -62,14 +62,14 @@ export type MediaCastDraft = {
 export type MediaCrewMember = {
   id: string;
   personId: string;
-  tmdbId: number | null;
+  catalogId: number | null;
   name: string;
   job: string;
   profilePath: string | null;
 };
 
 export type MediaCrewDraft = {
-  tmdbId?: number | null;
+  catalogId?: number | null;
   name: string;
   job: string | null;
   profilePath?: string | null;
@@ -127,7 +127,7 @@ export type ShowEpisodeRefreshResult = {
   addedEpisodes: number;
   updatedEpisodes: number;
   /**
-   * LIB-SHOW-02 / LIB-SHOW-04: stored episodes TMDB provably no longer lists; nothing is changed. One without a
+   * LIB-SHOW-02 / LIB-SHOW-04: stored episodes the metadata service provably no longer lists; nothing is changed. One without a
    * file is offered for removal; one with a file carries `move`, the change suggested for it.
    */
   notListed: ShowEpisodeNotListed[];
@@ -137,8 +137,8 @@ export type ShowEpisodeRefreshResult = {
 export type ShowEpisodeSlot = { id: string; seasonNumber: number; episodeNumber: number; title: string };
 
 /**
- * LIB-SHOW-04: what the dialog suggests for a delisted episode that has a file. `move`: TMDB's new list points to
- * one likely new place (`target`). `merged`: TMDB merged this part and the other `partIds` into `into`; one episode
+ * LIB-SHOW-04: what the dialog suggests for a delisted episode that has a file. `move`: the service's new list points to
+ * one likely new place (`target`). `merged`: the service merged this part and the other `partIds` into `into`; one episode
  * cannot hold two halves, so each part gets the keep-or-pick-by-hand choice. `none`: no likely place; keep it or
  * pick its episode by hand.
  */
@@ -152,7 +152,7 @@ export type ShowEpisodeNotListed = ShowEpisodeSlot & {
   move?: EpisodeMoveSuggestion;
 };
 
-/** What `removeEpisodesNotOnTmdb` did (LIB-SHOW-02). */
+/** What `removeEpisodesNotInCatalog` did (LIB-SHOW-02). */
 export type DelistedEpisodeRemovalResult = { removed: number; keptWithFile: number };
 
 /** What `moveEpisodeToSlot` did (LIB-SHOW-04); `reason` says why nothing moved. */

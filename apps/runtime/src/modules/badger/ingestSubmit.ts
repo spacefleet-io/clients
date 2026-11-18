@@ -201,7 +201,7 @@ export function createBadgerIngestSubmitHandler(
             // chosen language/label baked in.
             audioOverrides: source.audioOverrides ?? [],
             subtitleOverrides: source.subtitleOverrides ?? [],
-            // TheIntroDB markers fetched at identify time in the import modal.
+            // service markers fetched at identify time in the import modal.
             // `skipMarkers` is per-episode (for this file's episode);
             // `showSkipCache` carries the full-show payload so commit can
             // refresh the local show-cache row idempotently. Both are
@@ -272,7 +272,7 @@ export function createBadgerIngestSubmitHandler(
 /**
  * `badger.ingest.attach_metadata`
  *
- * Threads TMDB match info (mediaId / season / episode) onto an in-flight
+ * Threads the catalog match info (mediaId / season / episode) onto an in-flight
  * source job's payload, under `payload.hints`. The next `identify` step run
  * picks up the new hints; if `identify` already ran, the metadata is still
  * stored on the job for the `commit` step's library write.

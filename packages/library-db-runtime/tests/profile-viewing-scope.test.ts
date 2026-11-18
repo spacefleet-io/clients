@@ -75,13 +75,13 @@ afterEach(() => {
   delete process.env.SF_USER_DATA_PATH;
 });
 
-type TmdbItem = Parameters<LibraryDb["addMediaFromTmdb"]>[0];
+type TitleItem = Parameters<LibraryDb["addMediaFromCatalog"]>[0];
 
-const seedMovie = (db: LibraryDb, tmdbId: number) =>
-  db.addMediaFromTmdb({
-    id: tmdbId,
+const seedMovie = (db: LibraryDb, catalogId: number) =>
+  db.addMediaFromCatalog({
+    id: catalogId,
     type: "movie",
-    title: `Movie ${tmdbId}`,
+    title: `Movie ${catalogId}`,
     originalTitle: null,
     originalLanguage: "en",
     overview: null,
@@ -95,13 +95,13 @@ const seedMovie = (db: LibraryDb, tmdbId: number) =>
     seasons: [],
     episodes: [],
     totalEpisodes: 0,
-  } as unknown as TmdbItem);
+  } as unknown as TitleItem);
 
-const seedShow = (db: LibraryDb, tmdbId: number) =>
-  db.addMediaFromTmdb({
-    id: tmdbId,
+const seedShow = (db: LibraryDb, catalogId: number) =>
+  db.addMediaFromCatalog({
+    id: catalogId,
     type: "tv",
-    title: `Show ${tmdbId}`,
+    title: `Show ${catalogId}`,
     originalTitle: null,
     originalLanguage: "en",
     overview: null,
@@ -122,7 +122,7 @@ const seedShow = (db: LibraryDb, tmdbId: number) =>
       stillPath: null,
     })),
     totalEpisodes: 4,
-  } as unknown as TmdbItem);
+  } as unknown as TitleItem);
 
 const episodeIds = (db: LibraryDb, mediaId: string) =>
   (db.getMediaDetails(mediaId)?.episodes ?? []).sort((a, b) => a.episodeNumber - b.episodeNumber).map((e) => String(e.id));

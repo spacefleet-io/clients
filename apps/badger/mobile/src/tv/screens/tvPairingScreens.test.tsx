@@ -215,7 +215,7 @@ const waiting = (expiresInMs: number): PairingState => ({
   renewals: 0,
   request: {
     requestId: "req-1",
-    shortCode: "ABCD-EFGH",
+    shortCode: "ABCDEFGH",
     qrPayload: "https://spacefleet.io/pair/badger?code=ABCDEFGH",
     expiresAt: new Date(Date.now() + expiresInMs).toISOString(),
     deviceName: "Chromecast with Google TV",
@@ -229,7 +229,7 @@ describe("TV sign-in screen", () => {
     const text = allText();
     console.info("[tv-screens:state]", { text });
 
-    expect(textOf(one("tv-pairing-short-code"))).toBe("ABCD-EFGH");
+    expect(textOf(one("tv-pairing-short-code"))).toBe("ABCDEFGH");
     expect(textOf(one("tv-pairing-countdown"))).toMatch(/^A new code appears by itself in 4:0[0-9]$/);
     expect(textOf(one("tv-pairing-device-name"))).toBe("This TV shows up as “Chromecast with Google TV”");
     const qr = renderer?.root.findAll((node) => String(node.type) === "Path") ?? [];
@@ -287,13 +287,19 @@ describe("TV sign-in screen", () => {
     const cardText = textOf(card);
     expect(cardText.indexOf("Scan with your phone")).toBeGreaterThanOrEqual(0);
     expect(cardText.indexOf("Or type this code")).toBeGreaterThan(cardText.indexOf("Scan with your phone"));
-    expect(cardText.indexOf("ABCD-EFGH")).toBeGreaterThan(cardText.indexOf("Or type this code"));
-    expect(cardText.indexOf("A new code appears")).toBeGreaterThan(cardText.indexOf("ABCD-EFGH"));
+    expect(cardText.indexOf("ABCDEFGH")).toBeGreaterThan(cardText.indexOf("Or type this code"));
+    expect(cardText.indexOf("A new code appears")).toBeGreaterThan(cardText.indexOf("ABCDEFGH"));
     expect(cardText.indexOf("This TV shows up as")).toBeGreaterThan(cardText.indexOf("A new code appears"));
     expect(card.findAll((node) => String(node.type) === "Svg").map((node) => node.props.testID ?? "qr")).toEqual(["qr", "tv-pairing-code-life"]);
-    // The dash between the code's halves is its own (amber) text.
-    const dash = one("tv-pairing-short-code").findAll((node) => String(node.type) === "Text" && node.children.join("") === "-");
-    expect(dash).toHaveLength(1);
+    // @bugfix @regression-proof Chris 2026-11-18: the code is two groups of 4 with a gap, never a dash (ACCT-PAIR-01),
+    // even when an older API still sends "ABCD-EFGH".
+    const halves = (code: ReactTestInstance) => code.findAll((node) => String(node.type) === "Text").map(textOf);
+    expect(halves(one("tv-pairing-short-code"))).toEqual(["ABCD", "EFGH"]);
+    expect(one("tv-pairing-short-code").props.accessibilityLabel).toBe("A B C D E F G H");
+    const legacy = waiting(300_000) as Extract<PairingState, { phase: "waiting" }>;
+    await mount(<TvSignInView state={{ ...legacy, request: { ...legacy.request, shortCode: "ABCD-EFGH" } }} onRetry={() => undefined} onUsePassword={() => undefined} />);
+    expect(halves(one("tv-pairing-short-code"))).toEqual(["ABCD", "EFGH"]);
+    expect(textOf(one("tv-pairing-short-code"))).not.toContain("-");
     // Under the card, one pill with the mail icon; the language button alone, with a globe.
     const button = one("tv-pairing-use-password");
     expect(textOf(button)).toContain("Use email and password instead");
@@ -351,10 +357,13 @@ describe("TV sign-in layout and Back", () => {
   it("keeps the short code on one line and draws the QR at the TV's scale", async () => {
     ctl.window = { width: 1920, height: 1080 };
     await mount(<TvSignInView state={waiting(300_000)} onRetry={() => undefined} onUsePassword={() => undefined} />);
-    const code = one("tv-pairing-short-code");
-    console.info("[tv-screens:state]", { numberOfLines: code.props.numberOfLines, fit: code.props.adjustsFontSizeToFit });
-    expect(code.props.numberOfLines).toBe(1);
-    expect(code.props.adjustsFontSizeToFit).toBe(true);
+    const halves = one("tv-pairing-short-code").findAll((node) => String(node.type) === "Text");
+    console.info("[tv-screens:state]", { halves: halves.map((half) => [half.props.numberOfLines, half.props.adjustsFontSizeToFit]) });
+    expect(halves).toHaveLength(2);
+    for (const half of halves) {
+      expect(half.props.numberOfLines).toBe(1);
+      expect(half.props.adjustsFontSizeToFit).toBe(true);
+    }
     const qr = renderer?.root.findAll((node) => String(node.type) === "Svg" && node.props.testID !== "tv-pairing-code-life") ?? [];
     expect(qr[0]?.props.width).toBe(TV_SIGN_IN_QR * 2);
   });

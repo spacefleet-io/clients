@@ -16,6 +16,10 @@
 # ABIs (default: the app's gradle.properties, every ABI for both apps). GRADLE_OPTS is passed through to Gradle.
 # MEDIA_DEPS_GH_TOKEN is needed by Badger's libmpv download while the media-deps repo is private.
 #
+# The APK carries the self-updater (REL-UPD-06: @space/mobile-self-update, its native module and the
+# REQUEST_INSTALL_PACKAGES permission), the same for our repository, the website and F-Droid's build server; on
+# device it acts only when no store or updater app manages the install.
+#
 # The last line of stdout is the absolute path of the built APK.
 set -euo pipefail
 

@@ -10,6 +10,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import Database from "bun:sqlite";
 import { getGroupDdlStatements } from "@space/library-db-definition";
+import { CATALOG_ID_SOURCE } from "@space/library-db-definition/catalogId";
 
 // ── Helpers ──────────────────────────────────────────────────────────
 
@@ -66,8 +67,7 @@ const generateMediaDetails = (index: number) => {
     progressPct: (index * 7) % 100,
     lastWatchedAt: index % 3 === 0 ? nowIso() : null,
     totalEpisodes: episodeCount || null,
-    tmdbId: 10000 + index,
-    externalIds: { imdb: `tt${100000 + index}` } as Record<string, string | number>,
+    catalogId: 10000 + index,
     genres: Array.from({ length: genreCount }, (_, i) => 28 + i),
     cast: Array.from({ length: castCount }, (_, i) => ({
       id: uuid(),
@@ -75,7 +75,7 @@ const generateMediaDetails = (index: number) => {
       name: `Actor ${i} of Movie ${index}`,
       role: i === 0 ? "Lead" : "Supporting",
       profilePath: `/person/${i}.jpg`,
-      tmdbId: 50000 + index * 100 + i,
+      catalogId: 50000 + index * 100 + i,
     })),
     trailers: Array.from({ length: trailerCount }, (_, i) => ({
       provider: "youtube",
@@ -134,10 +134,7 @@ const seedCoreDb = (db: Database, count: number) => {
       for (const genreId of d.genres) {
         insertGenre.run(uuid(), d.id, genreId);
       }
-      insertExtId.run(uuid(), d.id, d.type, "tmdb", String(d.tmdbId));
-      if (d.externalIds.imdb) {
-        insertExtId.run(uuid(), d.id, d.type, "imdb", String(d.externalIds.imdb));
-      }
+      insertExtId.run(uuid(), d.id, d.type, CATALOG_ID_SOURCE, String(d.catalogId));
     }
   });
   tx();
@@ -316,7 +313,7 @@ describe("library perf — batched vs sequential op application", () => {
         coreDb.run("DELETE FROM media_external_ids WHERE media_id = ?;", [d.id]);
         coreDb.run(
           "INSERT OR IGNORE INTO media_external_ids (id, media_id, media_type, source, external_id) VALUES (?, ?, ?, ?, ?);",
-          [uuid(), d.id, d.type, "tmdb", String(d.tmdbId)]
+          [uuid(), d.id, d.type, CATALOG_ID_SOURCE, String(d.catalogId)]
         );
         coreDb.run("DELETE FROM media_genres WHERE media_id = ?;", [d.id]);
         for (const genreId of d.genres) {
@@ -368,7 +365,7 @@ describe("library perf — batched vs sequential op application", () => {
         coreDb.run("DELETE FROM media_external_ids WHERE media_id = ?;", [d.id]);
         coreDb.run(
           "INSERT OR IGNORE INTO media_external_ids (id, media_id, media_type, source, external_id) VALUES (?, ?, ?, ?, ?);",
-          [uuid(), d.id, d.type, "tmdb", String(d.tmdbId)]
+          [uuid(), d.id, d.type, CATALOG_ID_SOURCE, String(d.catalogId)]
         );
         coreDb.run("DELETE FROM media_genres WHERE media_id = ?;", [d.id]);
         for (const genreId of d.genres) {
@@ -389,7 +386,7 @@ describe("library perf — batched vs sequential op application", () => {
     try {
       expect(mediaCount.cnt).toBe(200);
       expect(genreCount.cnt).toBeGreaterThan(400); // 2-5 genres per item
-      expect(extIdCount.cnt).toBe(200); // 1 tmdb ID per item
+      expect(extIdCount.cnt).toBe(200); // 1 catalog id per item
     } catch (err) {
       console.error(`[library-perf:row-counts-200] assertion failed (row counts off expected)`);
       dumpPerfSnapshot(

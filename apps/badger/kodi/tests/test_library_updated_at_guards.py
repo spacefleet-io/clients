@@ -47,7 +47,7 @@ SCHEMA = (
 )
 
 
-def upsert(updated_at, title="T", progress=0.0, last_watched=None, quality="1080p", genres=(28,), tmdb=120):
+def upsert(updated_at, title="T", progress=0.0, last_watched=None, quality="1080p", genres=(28,), catalog_id=120):
     return {
         "id": "op-" + updated_at,
         "type": "media.upsert",
@@ -55,7 +55,7 @@ def upsert(updated_at, title="T", progress=0.0, last_watched=None, quality="1080
             "id": "m1", "type": "movie", "title": title, "originalTitle": None, "originalLanguage": None, "overview": None,
             "year": "2001", "rating": None, "posterPath": None, "backdropPath": None, "addedAt": "2026-10-01T00:00:00Z",
             "updatedAt": updated_at, "hasFiles": True, "progressPct": progress, "lastWatchedAt": last_watched,
-            "totalEpisodes": None, "tmdbId": tmdb, "externalIds": {"tmdb": tmdb}, "genres": list(genres),
+            "totalEpisodes": None, "catalogId": catalog_id, "genres": list(genres),
             "cast": [], "trailers": [], "seasons": [], "episodes": [], "files": [],
             "formats": [{"id": "f-" + quality, "fileId": None, "quality": quality, "codec": "h264", "chunks": []}],
             "audioTracks": [], "subtitles": [], "chapters": [], "skipMarkers": [],
@@ -136,8 +136,8 @@ class UpdatedAtGuards(unittest.TestCase):
 
     def test_ops_sql_alone_leaves_child_rows_of_a_newer_item_untouched(self):
         # Bypasses the _apply_op early skip: the SQL itself must keep an older upsert away from the child tables.
-        self.apply(upsert("2026-10-16T00:00:00Z", title="New", genres=(35,), tmdb=5))
-        for sql, params in ops_sql.build_op_statements(upsert("2026-10-15T00:00:00Z", title="Old", genres=(28,), tmdb=9), _ids()):
+        self.apply(upsert("2026-10-16T00:00:00Z", title="New", genres=(35,), catalog_id=5))
+        for sql, params in ops_sql.build_op_statements(upsert("2026-10-15T00:00:00Z", title="Old", genres=(28,), catalog_id=9), _ids()):
             try:
                 self.c.execute(sql, params)
             except sqlite3.OperationalError as exc:

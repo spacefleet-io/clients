@@ -11,10 +11,10 @@ const log = (phase: string, data?: unknown) => console.log(`[crew.test] ${phase}
 
 test("pickLibraryCrew keeps director and writers, directors first, deduped", () => {
   const picked = pickLibraryCrew([
-    { tmdbId: 2, name: "Writer A", job: "Screenplay" },
-    { tmdbId: 1, name: "Director A", job: "Director" },
-    { tmdbId: 1, name: "Director A", job: "Director" },
-    { tmdbId: 3, name: "Editor", job: "Editor" },
+    { personId: 2, name: "Writer A", job: "Screenplay" },
+    { personId: 1, name: "Director A", job: "Director" },
+    { personId: 1, name: "Director A", job: "Director" },
+    { personId: 3, name: "Editor", job: "Editor" },
   ]);
   log("picked", picked);
   expect(picked.map((member) => `${member.job}:${member.name}`)).toEqual(["Director:Director A", "Screenplay:Writer A"]);
@@ -75,9 +75,9 @@ test("media details read crew, and a database without media_crew reads no crew",
 
   for (const ddl of MEDIA_CREW_DDL) db.run(ddl);
   db.run("INSERT INTO people VALUES ('p1', 'Jane Director', NULL)");
-  db.run("INSERT INTO people_external_ids VALUES ('e1', 'p1', 'tmdb', '42')");
+  db.run("INSERT INTO people_external_ids VALUES ('e1', 'p1', 'catalog', '42')");
   db.run("INSERT INTO media_crew VALUES ('c1', 'm1', 'p1', 'Director', 0)");
   const crew = readMediaDetailsSync(run, "m1")?.crew;
   log("phase: after table", crew);
-  expect(crew).toEqual([{ id: "c1", personId: "p1", tmdbId: 42, name: "Jane Director", job: "Director", profilePath: null }]);
+  expect(crew).toEqual([{ id: "c1", personId: "p1", catalogId: 42, name: "Jane Director", job: "Director", profilePath: null }]);
 });

@@ -1,19 +1,20 @@
 /**
- * UX-PHONE-05, ACCT-SIGNIN-04: the phone sign-in page opens on the email form, and the shared "Sign in with another
- * device" card under it opens the code sign-in screen. The real LoginScreen is rendered (shell components and native
- * modules stubbed as host elements) and the card is pressed.
+ * UX-PHONE-05, UX-PHONE-10, ACCT-SIGNIN-04: the phone sign-in page opens on the email form, and the shared "Sign in with
+ * another device" card under it opens the code sign-in screen, which is the shared page (`MobilePairSignIn`) Parrot's
+ * phone shows too. The real LoginScreen and PairSignInScreen are rendered (shell components and native modules stubbed
+ * as host elements).
  */
 import { createElement, type ReactNode } from "react";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
-const navigate = vi.hoisted(() => {
+const { navigate, goBack } = vi.hoisted(() => {
   // Metro turns `require("../assets/mascot.webp")` into an image reference; plain node would parse the bytes as JS.
   const { extensions } = process.getBuiltinModule("node:module").createRequire(import.meta.url);
   extensions[".webp"] = (m) => {
     m.exports = 1;
   };
-  return vi.fn();
+  return { navigate: vi.fn(), goBack: vi.fn() };
 });
 
 vi.mock("react-native", () => ({
@@ -24,7 +25,7 @@ vi.mock("react-native", () => ({
   StyleSheet: { create: <T,>(s: T) => s, hairlineWidth: 1 },
 }));
 vi.mock("lucide-react-native", () => ({ ArrowRight: "Icon", ChevronRight: "Icon", Lock: "Icon", Mail: "Icon", QrCode: "Icon" }));
-vi.mock("@react-navigation/native", () => ({ useNavigation: () => ({ navigate }) }));
+vi.mock("@react-navigation/native", () => ({ useNavigation: () => ({ navigate, goBack }) }));
 vi.mock("@space/mobile-shell/components", () => {
   const passthrough = (name: string) => (props: { children?: ReactNode }) => createElement(name, props, props.children);
   return {
@@ -71,12 +72,22 @@ vi.mock("@space/mobile-shell/logger", () => ({ scopeLogger: () => ({ info: () =>
 vi.mock("../src/lib/uiLanguage", () => ({ chooseUiLanguage: vi.fn(), ensureI18n: async () => undefined }));
 vi.mock("../src/tv/lib/tvRuntime", () => ({ IS_TV: false }));
 // The sign-in sends the device's name (ACCT-DEV-01); its native lookups are not under test here.
-vi.mock("../src/lib/phonePairing", () => ({ currentPhoneDeviceName: () => "Badger (phone)" }));
+vi.mock("../src/lib/phonePairing", () => ({
+  currentPhoneDeviceName: () => "Badger (phone)",
+  createPhonePairingClient: vi.fn(),
+  createPhoneCompletionDeps: vi.fn(),
+  PHONE_PAIRING_LOG_TAG: "phone.pairing",
+}));
+// The shared page itself is covered by packages/mobile-shell/tests/mobile-pair-sign-in.test.tsx.
+vi.mock("@space/mobile-shell/pair-sign-in", () => ({ MobilePairSignIn: "MobilePairSignIn" }));
+vi.mock("@space/mobile-shell/pairing", () => ({ completePairing: vi.fn() }));
+vi.mock("../src/setup/phoneSetupStore", () => ({ markPhoneSetupPaired: vi.fn() }));
 vi.mock("../src/tv/lib/pairingRuntime", () => ({ tvDeviceName: () => "TV" }));
 // The setup step bar (UX-SETUP-03) has its own test (phone-setup-gate.test.ts).
 vi.mock("../src/setup/BadgerSetupFlow", () => ({ SetupStepBar: () => null }));
 
 import { LoginScreen } from "../src/screens/LoginScreen";
+import { PairSignInScreen } from "../src/screens/PairSignInScreen";
 
 describe("phone sign-in: sign in with a code", () => {
   beforeAll(() => {
@@ -95,5 +106,23 @@ describe("phone sign-in: sign in with a code", () => {
       card.props.onPress();
     });
     expect(navigate).toHaveBeenCalledWith("PairSignIn");
+  });
+
+  /**
+   * @req UX-PHONE-10[badger-mobile]
+   * @bugfix @regression-proof Chris 2026-11-18: Badger's and Parrot's phones showed different "Sign in with another
+   * device" pages; Badger's screen is now the shared page, whose Back goes back to the form.
+   */
+  it("the code sign-in screen is the shared page", async () => {
+    let tree!: ReactTestRenderer;
+    await act(async () => {
+      tree = create(createElement(PairSignInScreen));
+    });
+    const page = tree.root.find((n) => String(n.type) === "MobilePairSignIn");
+    expect(page.props.app).toBe("badger");
+    expect(page.props.deviceName).toBe("Badger (phone)");
+    expect(page.props.onUsePassword).toBeUndefined();
+    page.props.onBack();
+    expect(goBack).toHaveBeenCalled();
   });
 });

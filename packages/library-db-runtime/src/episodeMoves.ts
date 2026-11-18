@@ -1,12 +1,12 @@
 import type { EpisodeMoveSuggestion, ShowEpisodeSlot } from "@space/shared/libraryTypes";
 
 /**
- * LIB-SHOW-04: where a delisted episode that has a file likely went in TMDB's new episode list.
+ * LIB-SHOW-04: where a delisted episode that has a file likely went in the catalog's new episode list.
  *
- * Spec reading (library.md, LIB-SHOW-04 notes): a likely new place is exactly one episode in TMDB's new list that
+ * Spec reading (library.md, LIB-SHOW-04 notes): a likely new place is exactly one episode in the catalog's new list that
  * has no file in the library and either has the same title (in any season, Season 0 included) or holds the same
  * position after a renumbering (same air date and order). With no such episode, or more than one, the suggestion is
- * keep-or-pick-by-hand. An episode that already has a file is never a likely place. When TMDB merged two episodes
+ * keep-or-pick-by-hand. An episode that already has a file is never a likely place. When the catalog merged two episodes
  * the user has files for into one, each part gets the keep-or-pick-by-hand choice and the dialog says so.
  */
 
@@ -20,7 +20,7 @@ export const normalizeEpisodeTitle = (title: string): string => {
     .toLowerCase()
     .replace(/[^\p{L}\p{N}]+/gu, " ")
     .trim();
-  // The `Episode N` placeholder of a file TMDB did not know names no episode.
+  // The `Episode N` placeholder of a file the catalog did not know names no episode.
   if (/^(episode|episodio|épisode|folge|aflevering) \d+$/u.test(plain) || /^\d+$/u.test(plain)) return "";
   return plain;
 };
@@ -47,8 +47,8 @@ const byNumber = (a: ShowEpisodeSlot, b: ShowEpisodeSlot) => a.seasonNumber - b.
 
 /**
  * The suggestion for every delisted episode with a file, by episode id.
- * `delisted`: stored episodes TMDB provably no longer lists (with and without a file).
- * `listed`: stored episodes at a slot TMDB's answer lists (after the refresh added the new ones).
+ * `delisted`: stored episodes the catalog provably no longer lists (with and without a file).
+ * `listed`: stored episodes at a slot the catalog's answer lists (after the refresh added the new ones).
  */
 export const suggestEpisodeMoves = (
   delisted: EpisodeForMatch[],

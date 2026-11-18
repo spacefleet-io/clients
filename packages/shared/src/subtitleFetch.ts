@@ -11,6 +11,7 @@
  *   cut ("French — Director's cut"); the stored track gets that name, numbered when taken (PLAY-SUBGET-17, -18).
  * - An entry whose language and kind the copy already has is marked (PLAY-SUBGET-18).
  */
+import { LEGACY_FETCHED_SUBTITLE_SOURCE } from "./legacyFormat";
 import { mediaLanguageNameWithoutIntl, normalizeMediaLanguageCode } from "./mediaLanguageDisplay";
 import de from "./subtitleFetchCopy/de.json";
 import en from "./subtitleFetchCopy/en.json";
@@ -112,20 +113,23 @@ export type BuildSubtitleEntriesInput = {
 
 /**
  * Stored on a fetched track (`source`) for the app's own use; never shown to the user (PLAY-SUBGET-17). A track fetched
- * since "Try another version" (PLAY-SUBGET-07) also names the file it holds: `opensubtitles:<fileId>`.
+ * since "Try another version" (PLAY-SUBGET-07) also names the file it holds: `fetched:<fileId>`. Tracks fetched by
+ * older apps carry the legacy name (`legacyFormat.ts`), alone or with the file id, and read the same.
  */
-export const OPENSUBTITLES_TRACK_SOURCE = "opensubtitles";
+export const FETCHED_SUBTITLE_SOURCE = "fetched";
 
-/** The `source` of a track holding the site's file `fileId`. */
-export const fetchedSubtitleSource = (fileId: number) => `${OPENSUBTITLES_TRACK_SOURCE}:${fileId}`;
+const FETCHED_SOURCE_NAMES: Record<string, true> = { [FETCHED_SUBTITLE_SOURCE]: true, [LEGACY_FETCHED_SUBTITLE_SOURCE]: true };
+
+/** The `source` of a track holding the subtitle file `fileId`. */
+export const fetchedSubtitleSource = (fileId: number) => `${FETCHED_SUBTITLE_SOURCE}:${fileId}`;
 
 export const isFetchedSubtitleSource = (source: string | null | undefined) =>
-  source === OPENSUBTITLES_TRACK_SOURCE || (source?.startsWith(`${OPENSUBTITLES_TRACK_SOURCE}:`) ?? false);
+  FETCHED_SOURCE_NAMES[(source ?? "").replace(/:\d+$/u, "")] === true;
 
-/** The site's file ID a fetched track holds; null for other tracks and for tracks fetched before it was recorded. */
+/** The subtitle file ID a fetched track holds; null for other tracks and for tracks fetched before it was recorded. */
 export const fetchedSubtitleFileId = (source: string | null | undefined): number | null => {
-  const match = /^opensubtitles:(\d+)$/.exec(source ?? "");
-  return match ? Number(match[1]) : null;
+  const match = /^([a-z]+):(\d+)$/u.exec(source ?? "");
+  return match && FETCHED_SOURCE_NAMES[match[1]!] === true ? Number(match[2]) : null;
 };
 
 const KIND_ORDER: Record<SubtitleFetchKind, number> = { plain: 0, hi: 1, foreign: 2 };
@@ -299,14 +303,14 @@ export const buildSubtitleEntries = ({
   );
 };
 
-/** The metadata service's subtitle search for one film or episode: its TMDB ID only, never the user's file (-14). */
+/** The metadata service's subtitle search for one film or episode: its catalog ID only, never the user's file (-14). */
 export type SubtitleFetchRequest =
   | { type: "movie"; id: number }
   | { type: "tv"; id: number; season: number; episode: number };
 
 type SubtitleFetchMedia = {
   type: string;
-  tmdbId: number | null;
+  catalogId: number | null;
   episodes: ReadonlyArray<{ id: string; seasonNumber: number; episodeNumber: number }>;
   files: ReadonlyArray<{ filename: string; season: number | null; episode: number | null }>;
   subtitleTracks: ReadonlyArray<{
@@ -326,17 +330,17 @@ export type SubtitleFetchTarget = {
 
 /**
  * What "Get subtitles" needs for a movie (`episodeId` null) or one episode: the search, the file name to rank
- * against, and the subtitles it already has (OCR twins are not tracks of their own). Null without a TMDB ID.
+ * against, and the subtitles it already has (OCR twins are not tracks of their own). Null without a catalog ID.
  */
 export const subtitleFetchTarget = (media: SubtitleFetchMedia, episodeId: string | null): SubtitleFetchTarget | null => {
-  if (media.tmdbId == null) return null;
+  if (media.catalogId == null) return null;
   const existingTracks = media.subtitleTracks
     .filter((track) => (track.episodeId ?? null) === episodeId && !track.derivedFromSubtitleId)
     .map(({ language, label, source }) => ({ language, label, source }));
   if (!episodeId) {
     if (media.type === "tv") return null;
     return {
-      request: { type: "movie", id: media.tmdbId },
+      request: { type: "movie", id: media.catalogId },
       libraryFileName: media.files[0]?.filename ?? null,
       existingTracks,
     };
@@ -345,7 +349,7 @@ export const subtitleFetchTarget = (media: SubtitleFetchMedia, episodeId: string
   if (!episode) return null;
   const file = media.files.find((item) => item.season === episode.seasonNumber && item.episode === episode.episodeNumber);
   return {
-    request: { type: "tv", id: media.tmdbId, season: episode.seasonNumber, episode: episode.episodeNumber },
+    request: { type: "tv", id: media.catalogId, season: episode.seasonNumber, episode: episode.episodeNumber },
     libraryFileName: file?.filename ?? null,
     existingTracks,
   };

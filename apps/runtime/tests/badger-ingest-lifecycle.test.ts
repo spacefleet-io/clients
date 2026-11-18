@@ -182,7 +182,7 @@ const queueFile = async (
             media: {
               id: `media-${jobId}`,
               type: "movie",
-              tmdbId: 550,
+              catalogId: 550,
               title: "Fight Club",
               year: "1999",
               posterPath: "/fight-club.jpg",
@@ -300,7 +300,7 @@ describe("badger ingest lifecycle", () => {
               { id: "multi-3", filename: "/tmp/multi-3.mkv", sizeMb: 50, includeSource: true, selectedFormats: [] },
             ],
             preset: {
-              media: { id: "media-multi", type: "movie", tmdbId: 1, title: "Test", year: "2020", posterPath: null, originalLanguage: "en" },
+              media: { id: "media-multi", type: "movie", catalogId: 1, title: "Test", year: "2020", posterPath: null, originalLanguage: "en" },
             },
           },
         ],

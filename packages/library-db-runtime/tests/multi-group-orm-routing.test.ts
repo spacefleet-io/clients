@@ -132,7 +132,7 @@ describe("Phase 3.6 multi-group ORM routing — every write lands in its claimed
     const db = await LibraryDb.openLocal("token", "key");
     db.setSyncEnabled(false);
 
-    const mediaId = await db.addMediaFromTmdb({
+    const mediaId = await db.addMediaFromCatalog({
       id: 700,
       type: "movie",
       title: "Routing Test Movie",
@@ -150,7 +150,7 @@ describe("Phase 3.6 multi-group ORM routing — every write lands in its claimed
       seasons: [],
       episodes: [],
     });
-    console.info(`[multi-group-orm-routing:core-writes] addMediaFromTmdb mediaId=${mediaId}`);
+    console.info(`[multi-group-orm-routing:core-writes] addMediaFromCatalog mediaId=${mediaId}`);
 
     await db.setSetting("routing.test.key", "value-A");
     db.createPlaylist("Routing Test Playlist");
@@ -213,7 +213,7 @@ describe("Phase 3.6 multi-group ORM routing — every write lands in its claimed
     const db = await LibraryDb.openLocal("token", "key");
     db.setSyncEnabled(false);
 
-    await db.addMediaFromTmdb({
+    await db.addMediaFromCatalog({
       id: 701,
       type: "tv",
       title: "Routing TV",
@@ -226,7 +226,7 @@ describe("Phase 3.6 multi-group ORM routing — every write lands in its claimed
       backdropPath: null,
       genres: [],
       cast: [
-        { tmdbId: 200, name: "Routing Actor", role: "Lead", profilePath: null, order: 0 },
+        { personId: 200, name: "Routing Actor", role: "Lead", profilePath: null, order: 0 },
       ],
       trailers: [
         { provider: "youtube", key: "rt-1", name: "Trailer", language: "en", official: true },
@@ -287,7 +287,7 @@ describe("Phase 3.6 multi-group ORM routing — every write lands in its claimed
 
     // Need a media row in core for the FK reference (FK isn't enforced
     // cross-file but the value is meaningful for the assertion).
-    const mediaId = await db.addMediaFromTmdb({
+    const mediaId = await db.addMediaFromCatalog({
       id: 702,
       type: "movie",
       title: "Ingest Routing Movie",

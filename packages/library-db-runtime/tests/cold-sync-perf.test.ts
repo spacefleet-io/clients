@@ -76,8 +76,7 @@ const generateMediaDetails = (index: number): MediaDetails => {
   return {
     id,
     type,
-    tmdbId: 10_000 + index,
-    externalIds: { imdb: `tt${100_000 + index}` },
+    catalogId: 10_000 + index,
     title: `Title ${index}`,
     originalTitle: `Original ${index}`,
     originalLanguage: "en",
@@ -97,7 +96,7 @@ const generateMediaDetails = (index: number): MediaDetails => {
     cast: Array.from({ length: 5 }, (_, i) => ({
       id: `${id}-role-${i}`,
       personId: `${id}-person-${i}`,
-      tmdbId: 50_000 + index * 100 + i,
+      catalogId: 50_000 + index * 100 + i,
       name: `Actor ${i} of ${index}`,
       role: i === 0 ? "Lead" : "Supporting",
       profilePath: `/p/${i}.jpg`,

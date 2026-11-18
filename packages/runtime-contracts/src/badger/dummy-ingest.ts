@@ -4,7 +4,7 @@ import { defineCommand } from "../helpers";
 const dummyIngestJobSchema = z.object({
   id: z.string(),
   userId: z.string(),
-  tmdbId: z.number(),
+  catalogId: z.number(),
   mediaType: z.string(),
   status: z.string(),
   progress: z.number(),
@@ -20,7 +20,7 @@ export const badgerDummyIngestStart = defineCommand({
   payloadSchema: z.object({
     userId: z.string().min(1),
     jobId: z.string().optional(),
-    tmdbId: z.number().int().positive(),
+    catalogId: z.number().int().positive(),
     mediaType: z.enum(["movie", "tv"]),
   }),
   resultSchema: z.object({
@@ -37,7 +37,7 @@ export const badgerDummyIngestUpsertJob = defineCommand({
   payloadSchema: z.object({
     jobId: z.string().min(1),
     userId: z.string().optional(),
-    tmdbId: z.number().optional(),
+    catalogId: z.number().optional(),
     mediaType: z.enum(["movie", "tv"]).optional(),
     status: z.enum(["queued", "running", "done", "error"]).optional(),
     progress: z.number().optional(),

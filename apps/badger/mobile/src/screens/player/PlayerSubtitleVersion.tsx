@@ -78,7 +78,7 @@ export const PlayerSubtitleVersion = memo(
       [addSubtitleTrack, deleteStoredObjects, episodeId, media, removeSubtitleTrack, setTrackPrefs, subtitleObjectInUse, track, uploadSubtitleContent],
     );
 
-    // A title without a TMDB ID has nothing to search by: the line says so (the row is only offered with one).
+    // A title without a catalog id has nothing to search by: the line says so (the row is only offered with one).
     useEffect(() => {
       if (media && !input) {
         console.warn("subtitle_version.player.no_target", JSON.stringify({ mediaId, episodeId }));

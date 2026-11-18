@@ -127,7 +127,7 @@ def _sub(media_id, file_id, episode_id, tid, lang, label, fmt, default):
 
 
 def _base(media_id, kind, title):
-    return {"id": media_id, "type": kind, "externalIds": {"tmdb": 27205, "imdb": "tt1375666"}, "tmdbId": 27205,
+    return {"id": media_id, "type": kind, "catalogId": 27205,
             "title": title, "originalTitle": title + " (orig)", "originalLanguage": "en", "overview": "Overview text",
             "year": "2010", "rating": 8.8, "posterPath": "/poster.jpg", "backdropPath": "/backdrop.jpg",
             "genres": [28, 878], "addedAt": ADDED, "updatedAt": UPDATED}
@@ -144,8 +144,8 @@ def movie_fixture():
         "progressPct": 12.5, "lastWatchedAt": "2026-02-02T02:02:02.000Z", "hasFiles": True,
         "preferredAudioLanguage": None, "totalEpisodes": 0, "episodeCount": 0,
         "cast": [
-            {"id": "role-1", "personId": "person-1", "tmdbId": 6193, "name": "Leonardo DiCaprio", "role": "Cobb", "profilePath": "/leo.jpg"},
-            {"id": "role-2", "personId": "person-2", "tmdbId": None, "name": "Elliot Page", "role": None, "profilePath": None}],
+            {"id": "role-1", "personId": "person-1", "catalogId": 6193, "name": "Leonardo DiCaprio", "role": "Cobb", "profilePath": "/leo.jpg"},
+            {"id": "role-2", "personId": "person-2", "catalogId": None, "name": "Elliot Page", "role": None, "profilePath": None}],
         "trailers": [{"provider": "youtube", "key": "YoHD9XEInc0", "name": "Trailer", "language": "en"},
                      {"provider": "youtube", "key": "abc", "name": None, "language": "und"}],
         "playlistIds": [], "seasons": [], "episodes": [],
@@ -173,8 +173,7 @@ def _previews(fid):
 def tv_fixture():
     m = "tv-1"
     d = _base(m, "tv", "Breaking Bad")
-    d["externalIds"] = {"tmdb": 1396}
-    d["tmdbId"] = 1396
+    d["catalogId"] = 1396
     e1, e2, e3 = "ep-1", "ep-2", "ep-3"
     fa, fb = "file-e1", "file-e2"
     subs = [_sub(m, fa, e1, "sub-e1-en", "en", "English", "srt", True), _sub(m, fa, e1, "sub-e1-fr", "fr", "Francais", "sup", False),
@@ -187,7 +186,7 @@ def tv_fixture():
     d.update({
         "progressPct": 50, "lastWatchedAt": "2026-02-03T00:00:00.000Z", "hasFiles": True, "preferredAudioLanguage": None,
         "totalEpisodes": 3, "episodeCount": 3,
-        "cast": [{"id": "role-t1", "personId": "person-3", "tmdbId": 17419, "name": "Bryan Cranston", "role": "Walter White", "profilePath": "/bc.jpg"}],
+        "cast": [{"id": "role-t1", "personId": "person-3", "catalogId": 17419, "name": "Bryan Cranston", "role": "Walter White", "profilePath": "/bc.jpg"}],
         "trailers": [], "playlistIds": [],
         "seasons": [{"id": "season-1", "seasonNumber": 1, "name": "Season 1", "overview": None, "posterPath": "/s1.jpg",
                      "episodeCount": 3, "airDate": "2008-01-20"}],

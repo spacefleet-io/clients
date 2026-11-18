@@ -5,8 +5,12 @@
  * another one of the same language). The shared steps every client's player runs: look the subtitles up again, take
  * the file after the one the track holds in its entry's ranked list, and put it in place of the track (same name,
  * same language, one track), or say none is left.
+ *
+ * @req META-SRC-09[badger-desktop,badger-mobile,badger-tv,badger-web-player] A fetched track's source names no metadata
+ * source; tracks stored by older apps under the legacy name still read as fetched.
  */
 import { describe, expect, it } from "vitest";
+import { LEGACY_FETCHED_SUBTITLE_SOURCE } from "../src/legacyFormat";
 import {
   buildSubtitleEntries,
   fetchedSubtitleFileId,
@@ -41,42 +45,51 @@ const entries = () => buildSubtitleEntries({ candidates: CANDIDATES, uiLanguage:
 const spanish = (source: string, label = "Spanish"): FetchedSubtitleTrack => ({ id: "track-1", language: "es", label, source });
 
 describe("the source of a fetched track names its file", () => {
-  it("writes and reads the file ID; the legacy source still reads as fetched", () => {
-    expect(fetchedSubtitleSource(42)).toBe("opensubtitles:42");
-    expect(fetchedSubtitleFileId("opensubtitles:42")).toBe(42);
-    expect(fetchedSubtitleFileId("opensubtitles")).toBeNull();
+  it("writes and reads the file ID", () => {
+    expect(fetchedSubtitleSource(42)).toBe("fetched:42");
+    expect(fetchedSubtitleFileId("fetched:42")).toBe(42);
+    expect(fetchedSubtitleFileId("fetched")).toBeNull();
     expect(fetchedSubtitleFileId("srt")).toBeNull();
-    expect(isFetchedSubtitleSource("opensubtitles:42")).toBe(true);
-    expect(isFetchedSubtitleSource("opensubtitles")).toBe(true);
+    expect(fetchedSubtitleFileId("srt:42")).toBeNull();
+    expect(isFetchedSubtitleSource("fetched:42")).toBe(true);
+    expect(isFetchedSubtitleSource("fetched")).toBe(true);
     expect(isFetchedSubtitleSource("srt")).toBe(false);
     expect(isFetchedSubtitleSource(null)).toBe(false);
+  });
+
+  it("reads a track stored by an older app under the legacy source name, with or without its file ID", () => {
+    expect(fetchedSubtitleFileId(`${LEGACY_FETCHED_SUBTITLE_SOURCE}:42`)).toBe(42);
+    expect(fetchedSubtitleFileId(LEGACY_FETCHED_SUBTITLE_SOURCE)).toBeNull();
+    expect(isFetchedSubtitleSource(`${LEGACY_FETCHED_SUBTITLE_SOURCE}:42`)).toBe(true);
+    expect(isFetchedSubtitleSource(LEGACY_FETCHED_SUBTITLE_SOURCE)).toBe(true);
+    expect(nextSubtitleVersion(entries(), spanish(`${LEGACY_FETCHED_SUBTITLE_SOURCE}:11`), labels)?.file.fileId).toBe(12);
   });
 });
 
 describe("nextSubtitleVersion walks down the track's entry", () => {
   it("takes the file after the one the track holds, then the next, then none", () => {
     const list = entries();
-    expect(nextSubtitleVersion(list, spanish("opensubtitles:11"), labels)?.file.fileId).toBe(12);
-    expect(nextSubtitleVersion(list, spanish("opensubtitles:12"), labels)?.file.fileId).toBe(13);
-    expect(nextSubtitleVersion(list, spanish("opensubtitles:13"), labels)).toBeNull();
+    expect(nextSubtitleVersion(list, spanish("fetched:11"), labels)?.file.fileId).toBe(12);
+    expect(nextSubtitleVersion(list, spanish("fetched:12"), labels)?.file.fileId).toBe(13);
+    expect(nextSubtitleVersion(list, spanish("fetched:13"), labels)).toBeNull();
   });
 
   it("stays inside the track's kind: the hearing-impaired entry has no second file", () => {
-    expect(nextSubtitleVersion(entries(), spanish("opensubtitles:21", "Spanish (Hearing impaired)"), labels)).toBeNull();
+    expect(nextSubtitleVersion(entries(), spanish("fetched:21", "Spanish (Hearing impaired)"), labels)).toBeNull();
   });
 
   it("a track fetched before its file was recorded held the best file: the next is the second", () => {
-    const next = nextSubtitleVersion(entries(), spanish("opensubtitles", "Spanish 2"), labels);
+    const next = nextSubtitleVersion(entries(), spanish("fetched", "Spanish 2"), labels);
     expect(next?.entry.name).toBe("Spanish");
     expect(next?.file.fileId).toBe(12);
   });
 
   it("a file no longer listed starts again from the best one", () => {
-    expect(nextSubtitleVersion(entries(), spanish("opensubtitles:99"), labels)?.file.fileId).toBe(11);
+    expect(nextSubtitleVersion(entries(), spanish("fetched:99"), labels)?.file.fileId).toBe(11);
   });
 
   it("no entry for the track's language: nothing to try", () => {
-    expect(nextSubtitleVersion(entries(), { id: "t", language: "de", label: "German", source: "opensubtitles:5" }, labels)).toBeNull();
+    expect(nextSubtitleVersion(entries(), { id: "t", language: "de", label: "German", source: "fetched:5" }, labels)).toBeNull();
   });
 });
 
@@ -106,7 +119,7 @@ describe("replaceFetchedSubtitle", () => {
     };
     return { calls, deleteFailures, deps };
   };
-  const stored = (label = "Spanish"): FetchedSubtitleTrack => ({ ...spanish("opensubtitles:11", label), objectKey: "obj/old" });
+  const stored = (label = "Spanish"): FetchedSubtitleTrack => ({ ...spanish("fetched:11", label), objectKey: "obj/old" });
 
   it("adds the new file under the same name and language, drops the old track, deletes its unused file, remembers it", async () => {
     const { calls, deps } = recording();
@@ -117,7 +130,7 @@ describe("replaceFetchedSubtitle", () => {
     expect(calls).toEqual([
       ["download", 12],
       ["upload", "1\n", "srt"],
-      ["addTrack", { language: "es", label: "Spanish 2", objectKey: "obj/new", format: "srt", source: "opensubtitles:12" }],
+      ["addTrack", { language: "es", label: "Spanish 2", objectKey: "obj/new", format: "srt", source: "fetched:12" }],
       ["removeTrack", "track-1"],
       ["inUse", "obj/old"],
       ["delete", "obj/old"],
@@ -134,7 +147,7 @@ describe("replaceFetchedSubtitle", () => {
 
   it("a track with no recorded file deletes nothing", async () => {
     const { calls, deps } = recording();
-    await replaceFetchedSubtitle(spanish("opensubtitles:11"), candidate(12), () => {}, deps);
+    await replaceFetchedSubtitle(spanish("fetched:11"), candidate(12), () => {}, deps);
     expect(calls.filter((call) => ["inUse", "delete"].includes((call as unknown[])[0] as string))).toEqual([]);
   });
 
@@ -176,7 +189,7 @@ describe("tryAnotherSubtitleVersion", () => {
     const outcome = await tryAnotherSubtitleVersion(
       {
         uiLanguage: "en",
-        track: spanish("opensubtitles:11"),
+        track: spanish("fetched:11"),
         search: async () => ({ reachable: true, subtitles: CANDIDATES }),
         replace: async (file, report) => {
           report("downloading");
@@ -197,7 +210,7 @@ describe("tryAnotherSubtitleVersion", () => {
   });
 
   it("says none is left at the end of the list", async () => {
-    expect(await run({ track: spanish("opensubtitles:13") })).toEqual({ outcome: "none-left", steps: ["looking", "none-left"], replaced: [] });
+    expect(await run({ track: spanish("fetched:13") })).toEqual({ outcome: "none-left", steps: ["looking", "none-left"], replaced: [] });
   });
 
   it("an unreachable site with nothing cached reads as unavailable, not as none left", async () => {

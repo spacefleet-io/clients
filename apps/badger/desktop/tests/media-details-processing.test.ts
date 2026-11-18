@@ -331,11 +331,11 @@ describe("mediaDetailsProcessing", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Phase 2: credits-aware completion (TheIntroDB skip-markers)
+// Phase 2: credits-aware completion (the metadata service skip-markers)
 // ---------------------------------------------------------------------------
 //
 // Phase 1 introduced a flat 95 % completion ceiling. Phase 2 upgrades the
-// boundary using the per-episode credits-start timestamp from TheIntroDB —
+// boundary using the per-episode credits-start timestamp from the metadata service —
 // the semantically correct "watched past credits" signal. The picker, the
 // resume prompt, and the band UI all consume the same isEpisodeCompleted
 // helper in @space/shared/playbackResume so the three layers can't drift.
@@ -400,7 +400,7 @@ const tvDetailsWithCredits = (params?: {
       type: "credits",
       startSeconds,
       endSeconds: 3600,
-      source: "theintrodb",
+      source: "metadata",
       confidence: 0.95,
       createdAt: "2026-05-25T00:00:00Z",
       updatedAt: "2026-05-25T00:00:00Z",
@@ -408,7 +408,7 @@ const tvDetailsWithCredits = (params?: {
   });
 };
 
-describe("Phase 2 — buildEpisodeCreditsMap (TheIntroDB-derived per-episode credits-start + duration)", () => {
+describe("Phase 2 — buildEpisodeCreditsMap (service-derived per-episode credits-start + duration)", () => {
   it("[@bugfix][@regression-proof] extracts a credits-start + duration entry for each episode with a credits marker", () => {
     const details = tvDetailsWithCredits();
     const map = buildEpisodeCreditsMap(details);
@@ -430,7 +430,7 @@ describe("Phase 2 — buildEpisodeCreditsMap (TheIntroDB-derived per-episode cre
         type: "intro",
         startSeconds: 30,
         endSeconds: 90,
-        source: "theintrodb",
+        source: "metadata",
         confidence: 0.9,
         createdAt: "2026-05-25T00:00:00Z",
         updatedAt: "2026-05-25T00:00:00Z",
@@ -456,7 +456,7 @@ describe("Phase 2 — buildEpisodeCreditsMap (TheIntroDB-derived per-episode cre
       type: "credits",
       startSeconds: 3300,
       endSeconds: 3600,
-      source: "theintrodb",
+      source: "metadata",
       confidence: 0.85,
       createdAt: "2026-05-25T00:00:00Z",
       updatedAt: "2026-05-25T00:00:00Z",
@@ -512,7 +512,7 @@ describe("Phase 2 — buildEpisodeCreditsMap (TheIntroDB-derived per-episode cre
         type: "credits",
         startSeconds: 6000,
         endSeconds: 6240,
-        source: "theintrodb",
+        source: "metadata",
         confidence: 0.95,
         createdAt: "",
         updatedAt: "",
@@ -535,7 +535,7 @@ describe("Phase 2 — buildEpisodeCreditsMap (TheIntroDB-derived per-episode cre
       type: "credits",
       startSeconds: 3120,
       endSeconds: 3600,
-      source: "theintrodb",
+      source: "metadata",
       confidence: 0.95,
       createdAt: "",
       updatedAt: "",

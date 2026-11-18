@@ -87,8 +87,8 @@ describe("library skip markers", () => {
     const db = await LibraryDb.openLocal("token", "key");
     db.setSyncEnabled(false);
 
-    console.info(`[skip-markers-runtime:persist] adding TMDB tv "Skip Test Show" (id=101)`);
-    const mediaId = await db.addMediaFromTmdb({
+    console.info(`[skip-markers-runtime:persist] adding catalog tv "Skip Test Show" (id=101)`);
+    const mediaId = await db.addMediaFromCatalog({
       id: 101,
       type: "tv",
       title: "Skip Test Show",
@@ -226,8 +226,8 @@ describe("library skip markers", () => {
     const db = await LibraryDb.openLocal("token", "key");
     db.setSyncEnabled(false);
 
-    console.info(`[skip-markers-runtime:scope] adding TMDB tv "Scoped Skip Show" (id=202)`);
-    const mediaId = await db.addMediaFromTmdb({
+    console.info(`[skip-markers-runtime:scope] adding catalog tv "Scoped Skip Show" (id=202)`);
+    const mediaId = await db.addMediaFromCatalog({
       id: 202,
       type: "tv",
       title: "Scoped Skip Show",

@@ -25,6 +25,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { MobileCreditsPanel, MobileOpenSourceNotice, useSkyScroll } from "@space/mobile-shell/components";
 import { isMobileUiLanguage, MOBILE_UI_LANGUAGES, useTranslation } from "@space/mobile-shell/i18n";
 import { MobileFlag } from "@space/mobile-shell/flag";
+import { SelfUpdateSettings } from "@space/mobile-self-update";
 import { founderBadgeText, useFounderStatus } from "@space/mobile-shell/founder";
 import { founderCopy } from "@space/shared/founder";
 import type { Session } from "@space/shared/api";
@@ -554,9 +555,11 @@ const TvSettingsContent = ({ token, email }: { token: string; email: string | nu
       case "about":
         // UX-SET-03 then UX-SET-02: the GPL-3.0 line with the source code's address and QR code (no browser on a TV),
         // then the outside data sources, credited here out of the everyday screens under the panel's own header row
-        // (closed by default, opened with the remote's select).
+        // (closed by default, opened with the remote's select). REL-UPD-06: on a hand-installed APK, the version and its
+        // updates first.
         return (
           <View style={styles.about}>
+            <SelfUpdateSettings language={language} scale={scale} />
             <MobileOpenSourceNotice language={language} product="badger" openLinks={false} scale={scale} />
             <MobileCreditsPanel language={language} product="badger" source={mobileCreditsSource} openLinks={false} scale={scale} />
           </View>

@@ -3,7 +3,7 @@
  * @regression-proof
  *
  * Phase 2 replaces the flat 95 % completion ceiling with the actual
- * credits-start timestamp from TheIntroDB skip-markers when available,
+ * credits-start timestamp from the skip markers when available,
  * falling back to 95 % when not. Rationale: "watched past the credits" is
  * the semantically correct "completed" signal; 95 % is a coarse
  * approximation that misclassifies long-credits episodes (60 min / 8 min

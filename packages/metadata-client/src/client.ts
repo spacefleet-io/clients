@@ -19,10 +19,10 @@ import type {
   SubtitleFileResult,
   SubtitlesRequest,
   SubtitlesResult,
-  TmdbDetails,
-  TmdbMediaType,
-  TmdbSearchResult,
-  TmdbTrailer,
+  TitleDetails,
+  TitleSearchResult,
+  TitleType,
+  Trailer,
 } from "@space/shared/api";
 import { parseRetryAfterSeconds, type FetchLike, type FetchResponse } from "./types";
 
@@ -72,13 +72,13 @@ export class MetadataRequestError extends Error {
 }
 
 /**
- * LIB-SHOW-05: the service answered 410 `tmdb_deleted`, TMDB deleted this media. `item` is the last details the service
+ * LIB-SHOW-05: the service answered 410 `deleted`: the title no longer exists. `item` is the last details the service
  * had, absent when it had none. Not an outage: callers offer the removal to the user.
  */
 export class MediaDeletedError extends Error {
-  readonly item: TmdbDetails | undefined;
-  constructor(item: TmdbDetails | undefined) {
-    super("media deleted on TMDB");
+  readonly item: TitleDetails | undefined;
+  constructor(item: TitleDetails | undefined) {
+    super("media deleted from the catalog");
     this.name = "MediaDeletedError";
     this.item = item;
   }
@@ -159,15 +159,29 @@ async function refusalCode(response: FetchResponse): Promise<string | undefined>
   }
 }
 
-/** The body of a 410 `tmdb_deleted` answer (LIB-SHOW-05), or null for any other or unreadable 410. */
-async function deletedBody(response: FetchResponse): Promise<{ item: TmdbDetails | undefined } | null> {
+/** The body of a 410 `deleted` answer (LIB-SHOW-05), or null for any other or unreadable 410. */
+async function deletedBody(response: FetchResponse): Promise<{ item: TitleDetails | undefined } | null> {
   try {
-    const body = (await response.json()) as { error?: unknown; item?: TmdbDetails } | null;
-    return body?.error === "tmdb_deleted" ? { item: body.item ?? undefined } : null;
+    const body = (await response.json()) as { error?: unknown; item?: TitleDetails } | null;
+    return body?.error === "deleted" ? { item: body.item ?? undefined } : null;
   } catch {
     return null;
   }
 }
+
+/**
+ * META-SRC-09: the ops that ask for the neutral lookup contract 2 (`contract: 2` in the body). The service answers
+ * them without naming where its data comes from.
+ */
+const CONTRACT_2_OPS: Partial<Record<LookupBody["op"], true>> = {
+  search: true,
+  details: true,
+  videos: true,
+  image: true,
+  skipMarkers: true,
+  subtitles: true,
+  subtitleFile: true,
+};
 
 /** One ticket is spent per attempt; a 401 drops it and the next ticket is tried, at most this many more times. */
 export const MAX_TICKET_RETRIES = 2;
@@ -175,11 +189,11 @@ export const MAX_TICKET_RETRIES = 2;
 export interface MetadataClient {
   /** POST /lookup with one ticket. Throws NoTicketError, MetadataUnavailableError, TicketRejectedError, MediaDeletedError, MetadataRequestError, or the transport's own error. */
   lookup<T = unknown>(body: LookupBody): Promise<T>;
-  search(type: TmdbMediaType, query: string, page?: number): Promise<{ results: TmdbSearchResult[]; page: number; totalPages: number }>;
-  details(type: TmdbMediaType, id: number, language?: string): Promise<{ item: TmdbDetails }>;
-  videos(type: TmdbMediaType, id: number, language: string): Promise<{ trailers: TmdbTrailer[] }>;
+  search(type: TitleType, query: string, page?: number): Promise<{ results: TitleSearchResult[]; page: number; totalPages: number }>;
+  details(type: TitleType, id: number, language?: string): Promise<{ item: TitleDetails }>;
+  videos(type: TitleType, id: number, language: string): Promise<{ trailers: Trailer[] }>;
   imageUrl(kind: ImageKind, path: string, language?: string): Promise<{ url: string | null }>;
-  /** Intro and credits times from TheIntroDB, through the metadata service (META-SKIP-01): apps never call TheIntroDB. */
+  /** Intro and credits times through the metadata service (META-SKIP-01): apps never ask a source themselves. */
   skipMarkers(request: SkipMarkersRequest): Promise<MetadataSkipMarkersResult>;
   /**
    * Parrot's music lookups through the metadata service, in lookup contract 2 (META-SRC-09): every music id is one
@@ -209,7 +223,7 @@ export function createMetadataClient(config: MetadataClientConfig): MetadataClie
   const now = config.now ?? Date.now;
 
   const lookup = async <T>(body: LookupBody): Promise<T> => {
-    const payload = JSON.stringify(body);
+    const payload = JSON.stringify(CONTRACT_2_OPS[body.op] ? { ...body, contract: 2 } : body);
     for (let attempt = 0; attempt <= MAX_TICKET_RETRIES; attempt += 1) {
       // The ticket is already gone from the store when it resolves: a crash from here on can never reuse it. An empty
       // reserve right after sign-in waits for the running refill's first batch rather than failing the lookup.

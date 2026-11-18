@@ -11,9 +11,9 @@ vi.mock("@/api", () => ({
 }));
 
 import {
-  getTmdbDetails,
+  getTitleDetails,
   getLocalizedOverview,
-  getTmdbDetailsForLibrary,
+  getTitleDetailsForLibrary,
 } from "@/lib/metadata";
 
 // On assertion failure, dump the metadata-lookup mock calls and any captured
@@ -40,16 +40,16 @@ const dumpThreadingSnapshot = (
   }
 };
 
-describe("getTmdbDetails language threading (Phase 0)", () => {
+describe("getTitleDetails language threading (Phase 0)", () => {
   beforeEach(() => {
     getMetadataDetailsMock.mockReset();
     vi.unstubAllGlobals();
   });
 
   it("forwards the requested language to the metadata service", async () => {
-    console.info(`[metadata-language-threading:proxy-fr] getTmdbDetails(movie, 123, lang=fr)`);
+    console.info(`[metadata-language-threading:proxy-fr] getTitleDetails(movie, 123, lang=fr)`);
     getMetadataDetailsMock.mockResolvedValue({ item: { id: 1, type: "movie", title: "X", genres: [] } });
-    await getTmdbDetails("tok", "movie", 123, "fr");
+    await getTitleDetails("tok", "movie", 123, "fr");
     const lastCall = getMetadataDetailsMock.mock.calls.at(-1);
     if (JSON.stringify(lastCall) !== JSON.stringify(["tok", "movie", 123, "fr"])) {
       dumpThreadingSnapshot("proxy-fr", {});
@@ -58,9 +58,9 @@ describe("getTmdbDetails language threading (Phase 0)", () => {
   });
 
   it("defaults to en when no language is supplied (back-compat)", async () => {
-    console.info(`[metadata-language-threading:proxy-default-en] getTmdbDetails(movie, 123, no lang)`);
+    console.info(`[metadata-language-threading:proxy-default-en] getTitleDetails(movie, 123, no lang)`);
     getMetadataDetailsMock.mockResolvedValue({ item: { id: 1, type: "movie", title: "X", genres: [] } });
-    await getTmdbDetails("tok", "movie", 123);
+    await getTitleDetails("tok", "movie", 123);
     const lastCall = getMetadataDetailsMock.mock.calls.at(-1);
     if (JSON.stringify(lastCall) !== JSON.stringify(["tok", "movie", 123, "en"])) {
       dumpThreadingSnapshot("proxy-default-en", {});
@@ -101,7 +101,7 @@ describe("getLocalizedOverview (Phase 1 description overlay source)", () => {
 });
 
 // @req ACCT-PROF-03[badger-desktop]
-describe("getTmdbDetailsForLibrary (a new import stores the account-language set)", () => {
+describe("getTitleDetailsForLibrary (a new import stores the account-language set)", () => {
   beforeEach(() => {
     getMetadataDetailsMock.mockReset();
     vi.unstubAllGlobals();
@@ -112,7 +112,7 @@ describe("getTmdbDetailsForLibrary (a new import stores the account-language set
     getMetadataDetailsMock.mockImplementation(async (_t: string, _ty: string, _id: number, lang: string) => ({
       item: { id: 1, type: "movie", title: `T-${lang}`, originalLanguage: "it", posterPath: `/p-${lang}`, backdropPath: `/b-${lang}`, genres: [] },
     }));
-    const details = await getTmdbDetailsForLibrary("tok", "movie", 1, { accountLanguage: "fr" });
+    const details = await getTitleDetailsForLibrary("tok", "movie", 1, { accountLanguage: "fr" });
     const langs = getMetadataDetailsMock.mock.calls.map((c) => c[3]);
     console.info(`[metadata-language-threading:account-fr] lang sequence=${JSON.stringify(langs)} title=${details.title}`);
     if (details.title !== "T-fr") dumpThreadingSnapshot("account-fr", { observed: { langs, title: details.title } });
@@ -126,7 +126,7 @@ describe("getTmdbDetailsForLibrary (a new import stores the account-language set
     getMetadataDetailsMock.mockImplementation(async (_t: string, _ty: string, _id: number, lang: string) => ({
       item: { id: 1, type: "movie", title: lang === "fr" ? "La Haine" : "Hate", originalLanguage: "fr", posterPath: `/p-${lang}`, backdropPath: null, genres: [] },
     }));
-    const details = await getTmdbDetailsForLibrary("tok", "movie", 1, { accountLanguage: "en" });
+    const details = await getTitleDetailsForLibrary("tok", "movie", 1, { accountLanguage: "en" });
     const langs = getMetadataDetailsMock.mock.calls.map((c) => c[3]);
     console.info(`[metadata-language-threading:account-en] lang sequence=${JSON.stringify(langs)} title=${details.title}`);
     expect(langs).toEqual(["en"]);
@@ -147,7 +147,7 @@ describe("getTmdbDetailsForLibrary (a new import stores the account-language set
         genres: [],
       },
     }));
-    const details = await getTmdbDetailsForLibrary("tok", "movie", 1, { accountLanguage: "fr" });
+    const details = await getTitleDetailsForLibrary("tok", "movie", 1, { accountLanguage: "fr" });
     const langs = getMetadataDetailsMock.mock.calls.map((c) => c[3]);
     console.info(`[metadata-language-threading:fallback] lang sequence=${JSON.stringify(langs)} title=${details.title} overview=${details.overview}`);
     if (details.title !== "Dragon Ball Z: Battle of Gods") dumpThreadingSnapshot("fallback", { observed: details });

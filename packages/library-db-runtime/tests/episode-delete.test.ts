@@ -41,7 +41,7 @@ describe("deleteEpisode (INTG-DEL-01)", () => {
   it("@req INTG-DEL-01 forwards only the episode's keys to /storage/delete and removes only its file", async () => {
     const db = await LibraryDb.openLocal("test-token", "key");
     db.setSyncEnabled(false);
-    const mediaId = await (db as any).addMediaFromTmdb({
+    const mediaId = await (db as any).addMediaFromCatalog({
       id: 9001,
       type: "tv",
       title: "Episode Delete Show",

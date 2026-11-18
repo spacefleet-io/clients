@@ -23,7 +23,7 @@ import profiles
 import tracks
 from api import ApiError, UnauthorizedError, next_state_hash
 from compat import data_dir, log
-from ops_sql import UnknownOpTypeError, build_op_statements
+from ops_sql import CATALOG_ID_SOURCES_SQL, UnknownOpTypeError, build_op_statements
 
 DB_NAME = "library.sqlite"
 PENDING_NAME = "pending_ops.json"
@@ -35,8 +35,8 @@ EPISODE_RESUME_PREFIX = "episode_resume_v1:"
 # (`packages/shared/src/titleLanguage.ts`), written by the apps' background pass; Kodi only reads them.
 PROFILE_SETTINGS_KEY = "profile_settings_v1"
 TITLE_VARIANTS_KEY_PREFIX = "title_variants_v1:"
-# A TMDB picture path still waiting for its copy into the user's storage (META-ART-01).
-_TMDB_PICTURE = re.compile(r"^/[^/]")
+# A catalog picture path still waiting for its copy into the user's storage (META-ART-01).
+_CATALOG_PICTURE = re.compile(r"^/[^/]")
 
 
 def profile_title_language(raw):
@@ -78,7 +78,7 @@ def parse_title_variants(raw):
 
 
 def _copied_picture(path):
-    return bool(path) and not _TMDB_PICTURE.match(path)
+    return bool(path) and not _CATALOG_PICTURE.match(path)
 
 
 def is_latin_script_text(text):
@@ -551,16 +551,16 @@ class LibraryStore(object):
 
     def list_media(self, media_type):
         rows = self.q(
-            """SELECT m.*, (SELECT external_id FROM media_external_ids e WHERE e.media_id = m.id AND e.source = 'tmdb' LIMIT 1) AS tmdb_id
-               FROM media_items m WHERE m.type = ? AND m.has_files = 1 ORDER BY m.title COLLATE NOCASE""",
+            """SELECT m.*, (SELECT external_id FROM media_external_ids e WHERE e.media_id = m.id AND e.source IN (%s) LIMIT 1) AS catalog_id
+               FROM media_items m WHERE m.type = ? AND m.has_files = 1 ORDER BY m.title COLLATE NOCASE""" % CATALOG_ID_SOURCES_SQL,
             (media_type,),
         )
         return self._with_title_language(self._with_profile_progress(rows))
 
     def get_media(self, media_id):
         row = self.q1(
-            """SELECT m.*, (SELECT external_id FROM media_external_ids e WHERE e.media_id = m.id AND e.source = 'tmdb' LIMIT 1) AS tmdb_id
-               FROM media_items m WHERE m.id = ?""",
+            """SELECT m.*, (SELECT external_id FROM media_external_ids e WHERE e.media_id = m.id AND e.source IN (%s) LIMIT 1) AS catalog_id
+               FROM media_items m WHERE m.id = ?""" % CATALOG_ID_SOURCES_SQL,
             (media_id,),
         )
         return self._with_title_language(self._with_profile_progress([row]))[0] if row else None

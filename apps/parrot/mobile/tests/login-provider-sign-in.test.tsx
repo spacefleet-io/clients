@@ -97,7 +97,14 @@ vi.mock("@space/shared/api", async () => ({
 vi.mock("../src/state/session", () => ({ useSession: () => ({ signIn: h.signIn, signInNotice: null }) }));
 vi.mock("../src/lib/i18n", () => ({ setParrotLanguage: async () => undefined }));
 vi.mock("../src/brand", () => ({ PARROT_MASCOT: 1 }));
-vi.mock("../src/screens/PairingPanel", () => ({ PairingPanel: "PairingPanel" }));
+// The shared "Sign in with another device" page (UX-PHONE-10) is covered by packages/mobile-shell/tests/mobile-pair-sign-in.test.tsx.
+vi.mock("@space/mobile-shell/pair-sign-in", () => ({ MobilePairSignIn: "MobilePairSignIn" }));
+vi.mock("@space/mobile-shell/pairing", () => ({ completePairing: vi.fn() }));
+vi.mock("../src/setup/pairing", () => ({
+  createParrotCompletionDeps: vi.fn(),
+  createParrotPairingClient: vi.fn(),
+  PARROT_PAIRING_LOG_TAG: "parrot.pairing",
+}));
 
 import { ApiError } from "@space/shared/api";
 import { handOffProviderReturn, PROVIDER_VERIFIER_KEY } from "@space/mobile-shell/provider-sign-in";
@@ -294,7 +301,7 @@ describe(`[${SUITE}] Google, Apple and Microsoft on the Parrot phone`, () => {
     await deliver("parrot://auth/provider?signinError=no_account");
     console.info(`[${SUITE}] no_account texts`, texts(tree));
     expect(texts(tree)).toContain(en.login.provider.errors.no_account);
-    expect(byType(tree, "PairingPanel")).toHaveLength(0);
+    expect(byType(tree, "MobilePairSignIn")).toHaveLength(0);
     expect(h.completeProviderSignIn).not.toHaveBeenCalled();
     expect(h.store.has(PROVIDER_VERIFIER_KEY)).toBe(false);
   });

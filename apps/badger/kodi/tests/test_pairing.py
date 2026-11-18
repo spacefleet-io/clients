@@ -81,7 +81,12 @@ class ShortCodes(unittest.TestCase):
         for case in V["shortCodes"]:
             self.assertEqual(pairing.normalize_short_code(case["input"]), case["normalized"], case["input"])
             if case["normalized"]:
-                self.assertEqual(pairing.format_short_code(case["input"]), case["formatted"])
+                self.assertEqual(list(pairing.short_code_groups(case["normalized"])), case["groups"])
+
+    # @bugfix @regression-proof Chris 2026-11-18: the code is shown as 4 + 4 with no dash, whatever the API sent.
+    def test_groups_never_show_a_dash(self):
+        self.assertEqual(pairing.short_code_groups("ABCD-EFGH"), ("ABCD", "EFGH"))
+        self.assertEqual(pairing.short_code_groups("abcdefgh"), ("ABCD", "EFGH"))
 
 
 class FakeApi(object):
@@ -96,7 +101,7 @@ class FakeApi(object):
         self.requests.append((method, path, body))
         if method == "POST" and path == "/pairing/requests":
             self.holder["public"] = b64(body["publicKey"])
-            return {"requestId": V["requestId"], "pollSecret": "s3cret", "shortCode": "ABCD-EFGH",
+            return {"requestId": V["requestId"], "pollSecret": "s3cret", "shortCode": "ABCDEFGH",
                     "qrPayload": "https://spacefleet.io/pair/badger?code=ABCDEFGH", "expiresAt": "2026-10-16T12:05:00.000Z"}
         self.polls += 1
         if self.polls == 1:
@@ -112,7 +117,7 @@ class SessionFlow(unittest.TestCase):
         holder = {}
         api = FakeApi(holder)
         session = pairing.PairingSession(api, "Living room Kodi", clock=lambda: 1792152000.0).start()
-        self.assertEqual(session.short_code, "ABCD-EFGH")
+        self.assertEqual(session.short_code, "ABCDEFGH")
         self.assertEqual(api.requests[0][2]["deviceType"], "kodi")
         self.assertEqual(api.requests[0][2]["deviceName"], "Living room Kodi")
         self.assertEqual(base64.b64decode(api.requests[0][2]["publicKey"]), session.public)

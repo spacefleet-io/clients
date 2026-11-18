@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { ALL_LIBRARY_DB_GROUPS, type LibraryDbGroup } from "./manifest";
 import { MEDIA_CREW_DDL } from "./crewDdl";
 import { MEDIA_EDITIONS_DDL } from "./editionDdl";
+import { hasPreExternalIdsLayout } from "./legacyFormat";
 import { straySystemPlaylistsQuery, systemPlaylistHealStatements } from "./systemPlaylists";
 
 export type SqliteDb = {
@@ -61,9 +62,7 @@ const resetLegacySchema = (db: SqliteDb) => {
     const rows = db.prepare("PRAGMA table_info(media_items);").all() as Array<{ name?: string }>;
     if (!rows.length) return;
     const columns = rows.map((row) => String(row?.name ?? ""));
-    const hasLegacyTmdb = columns.includes("tmdb_id");
-    const hasExternalIds = columns.includes("external_ids");
-    if (!hasLegacyTmdb || hasExternalIds) return;
+    if (!hasPreExternalIdsLayout(columns) || columns.includes("external_ids")) return;
 
     [
       "playlist_items",

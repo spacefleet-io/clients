@@ -72,7 +72,7 @@ vi.mock("../src/renderer/src/lib/libraryContext", () => ({
     getMediaDetails: () => null,
     fetchMediaDetails: async () => null,
     getSharedSetting: () => null,
-    addMediaFromTmdb: vi.fn(),
+    addMediaFromCatalog: vi.fn(),
     addSubtitleTrackWithObject: vi.fn(),
     listSkipAnalysis: async () => [],
     upsertSkipAnalysis: async () => undefined,
@@ -80,11 +80,11 @@ vi.mock("../src/renderer/src/lib/libraryContext", () => ({
 }));
 vi.mock("../src/renderer/src/components/MediaImage", () => ({ default: ({ alt }: { alt?: string }) => <img alt={alt ?? ""} /> }));
 vi.mock("../src/renderer/src/lib/metadata", () => ({
-  getTmdbDetails: vi.fn(),
-  getTmdbDetailsForLibrary: vi.fn(),
-  getTmdbTrailersForLanguages: vi.fn().mockResolvedValue([]),
+  getTitleDetails: vi.fn(),
+  getTitleDetailsForLibrary: vi.fn(),
+  getTitleTrailersForLanguages: vi.fn().mockResolvedValue([]),
   localizeSearchResultForLibrary: vi.fn(async (_token: unknown, result: unknown) => result),
-  searchTmdb: vi.fn(async (_token: unknown, type: string, query: string) => ({
+  searchTitles: vi.fn(async (_token: unknown, type: string, query: string) => ({
     results: [{ type, id: 900763, title: query, originalTitle: query, overview: "", year: 2018 }],
   })),
 }));

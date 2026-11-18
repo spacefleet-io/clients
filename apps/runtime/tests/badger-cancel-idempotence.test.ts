@@ -67,7 +67,7 @@ const queueFile = async (
             media: {
               id: `media-${jobId}`,
               type: "movie",
-              tmdbId: 1,
+              catalogId: 1,
               title: "Test Film",
               year: "2020",
               posterPath: null,

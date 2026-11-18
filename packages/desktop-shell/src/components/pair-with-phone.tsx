@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { shortCodeGroups } from "@space/pairing-crypto";
 import { Button } from "@space/ui";
 import type { ClientUiLanguage } from "@space/shared/i18n";
 import { RATE_LIMIT_DEFAULT_MINUTES, signInErrorText } from "@space/shared/signInError";
@@ -230,8 +231,10 @@ export default function PairWithPhone<A = PairingHandOver>({
           />
           <div className="grid gap-1">
             <span className="text-xs text-muted-foreground">{t("codeLabel")}</span>
+            {/* ACCT-PAIR-01: two groups of 4 with a gap, never a dash; copying it gives the plain 8 characters. */}
             <span className="font-mono text-2xl font-semibold tracking-[0.2em]" data-testid="pair-short-code">
-              {request.shortCode}
+              <span>{shortCodeGroups(request.shortCode)[0]}</span>
+              <span className="ml-3">{shortCodeGroups(request.shortCode)[1]}</span>
             </span>
           </div>
           <p className="text-sm text-muted-foreground" data-testid="pair-countdown">

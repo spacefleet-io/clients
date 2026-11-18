@@ -34,6 +34,7 @@
     "packages/mobile-media-session",
     "packages/mobile-media-volume",
     "packages/mobile-mpv-playback",
+    "packages/mobile-self-update",
     "packages/mobile-shell",
     "packages/mpv",
     "packages/mpv-protocol",

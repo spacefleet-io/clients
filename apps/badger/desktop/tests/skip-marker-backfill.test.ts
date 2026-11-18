@@ -1,11 +1,11 @@
 /**
  * PLAY-NEXT-02 backfill (Chris 2026-10-28, "Lodgers has no TIDB data? more
  * likely an error"): TV episodes already in the library with a file but no
- * TheIntroDB marker get their markers fetched once, one request at a time, and
+ * service marker get their markers fetched once, one request at a time, and
  * the hit/miss is recorded so the next app start does not ask again.
  *
  * Drives `runSkipMarkerBackfill` against an in-memory library (skip markers +
- * media_skip_analysis rows) and a fake TheIntroDB.
+ * media_skip_analysis rows) and a fake the metadata service.
  */
 // @req PLAY-NEXT-02[badger-desktop] @req META-SKIP-03[badger-desktop]
 import { describe, expect, it } from "vitest";
@@ -29,13 +29,12 @@ import {
 const P = "[skip-marker-backfill]";
 const NOW = Date.parse("2026-10-28T12:00:00.000Z");
 
-const intro: ShowSkipMarker = { type: "intro", startSeconds: 0, endSeconds: 46, source: "external:theintrodb-v3", confidence: null };
+const intro: ShowSkipMarker = { type: "intro", startSeconds: 0, endSeconds: 46, source: "metadata", confidence: null };
 
-const showRow = (id: string, tmdbId: number, title: string): MediaRow => ({
+const showRow = (id: string, catalogId: number, title: string): MediaRow => ({
   id,
   type: "tv",
-  tmdbId,
-  externalIds: null,
+  catalogId,
   title,
   originalTitle: title,
   originalLanguage: "en",
@@ -117,7 +116,7 @@ type FakeLibrary = {
 
 const makeDeps = (
   lib: FakeLibrary,
-  answer: (req: { tmdbId: number; seasonNumber: number; episodeNumber: number; durationSeconds: number | null }) => ExternalSkipMarkerFetchResult | Error,
+  answer: (req: { catalogId: number; seasonNumber: number; episodeNumber: number; durationSeconds: number | null }) => ExternalSkipMarkerFetchResult | Error,
 ): SkipBackfillDeps => ({
   fetchMediaDetails: async (mediaId) => lib.details.get(mediaId) ?? null,
   listSkipAnalysis: async (mediaId, kind) => lib.analysis.filter((row) => row.mediaId === mediaId && row.kind === kind),
@@ -137,7 +136,7 @@ const makeDeps = (
     }
   },
   fetchMarkers: async (req) => {
-    lib.requests.push(`${req.tmdbId}:${req.seasonNumber}:${req.episodeNumber}:dur=${req.durationSeconds}`);
+    lib.requests.push(`${req.catalogId}:${req.seasonNumber}:${req.episodeNumber}:dur=${req.durationSeconds}`);
     const result = answer(req);
     if (result instanceof Error) throw result;
     return result;
@@ -154,7 +153,6 @@ const makeDeps = (
 const hitOrMiss = (hits: number[]) => (req: { seasonNumber: number; episodeNumber: number }): ExternalSkipMarkerFetchResult => {
   const hit = hits.includes(req.episodeNumber);
   return {
-    provider: "theintrodb-v3",
     fetchedAt: new Date(NOW).toISOString(),
     markers: hit
       ? [{ ...intro, endSeconds: 46, extendsToEof: false, version: "v3", meta: null }]
@@ -177,25 +175,25 @@ const dump = (label: string, lib: FakeLibrary) => {
 describe("selectSkipBackfillEpisodes", () => {
   const row = showRow("lodgers", 901668, "Lodgers");
 
-  it("picks only episodes with a file and no complete TheIntroDB markers or recent answer", () => {
+  it("picks only episodes with a file and no complete service markers or recent answer", () => {
     const details = showDetails(row, 6, [1, 2, 3, 4, 5], [
-      storedMarker("lodgers", "lodgers-ep2", "external:theintrodb-v3", "intro"),
-      storedMarker("lodgers", "lodgers-ep2", "external:theintrodb-v3", "credits"),
-      // A marker from another source does not count as TheIntroDB data.
+      storedMarker("lodgers", "lodgers-ep2", "metadata", "intro"),
+      storedMarker("lodgers", "lodgers-ep2", "metadata", "credits"),
+      // A marker from another source does not count as the metadata service data.
       storedMarker("lodgers", "lodgers-ep3", "internal:chapters"),
     ]);
     const cache = createShowSkipCachePayload({
-      showTmdbId: 901668,
+      showCatalogId: 901668,
       fetchedAt: new Date(NOW - 1000).toISOString(),
       coverage: [{ seasonNumber: 1, episodeNumber: 4, status: "miss" }],
       markersByEpisode: {},
     });
     const fetchRows: SkipAnalysisRow[] = [
-      { episodeId: "lodgers-ep5", payload: { provider: "theintrodb-v3", status: "hit", fetchedAt: new Date(NOW).toISOString() }, updatedAt: "" },
+      { episodeId: "lodgers-ep5", payload: { provider: "metadata-v1", status: "hit", fetchedAt: new Date(NOW).toISOString() }, updatedAt: "" },
     ];
     const selected = selectSkipBackfillEpisodes(details, cache, fetchRows, NOW);
     console.info(`${P}:selected=${JSON.stringify(selected)}`);
-    // ep1: file, nothing known → fetch. ep2: intro + credits from TheIntroDB. ep3: other-source marker only → fetch.
+    // ep1: file, nothing known → fetch. ep2: intro + credits from the metadata service. ep3: other-source marker only → fetch.
     // ep4: cached miss 1 s ago. ep5: per-episode answer just now. ep6: no file.
     expect(selected.map((e) => e.episodeId)).toEqual(["lodgers-ep1", "lodgers-ep3"]);
     expect(selected[0]).toMatchObject({ seasonNumber: 1, episodeNumber: 1, durationSeconds: 1371, cachedMarkers: null });
@@ -204,7 +202,7 @@ describe("selectSkipBackfillEpisodes", () => {
   it("a cached hit whose markers never reached the episode is written from the cache", () => {
     const details = showDetails(row, 2, [1, 2]);
     const cache = createShowSkipCachePayload({
-      showTmdbId: 901668,
+      showCatalogId: 901668,
       fetchedAt: new Date(NOW - 1000).toISOString(),
       coverage: [{ seasonNumber: 1, episodeNumber: 1, status: "hit", markerTypes: ["intro"] }],
       markersByEpisode: { "1:1": [intro] },
@@ -221,15 +219,15 @@ describe("selectSkipBackfillEpisodes", () => {
     const DAY = 24 * 60 * 60 * 1000;
     const details = showDetails(row, 6, [1, 2, 3, 4, 5, 6], [
       // ep3, ep4: intro only. ep5: complete, asked long ago. ep6: intro only, never recorded when.
-      storedMarker("lodgers", "lodgers-ep3", "external:theintrodb-v3", "intro"),
-      storedMarker("lodgers", "lodgers-ep4", "external:theintrodb-v3", "intro"),
-      storedMarker("lodgers", "lodgers-ep5", "external:theintrodb-v3", "intro"),
-      storedMarker("lodgers", "lodgers-ep5", "external:theintrodb-v3", "credits"),
-      storedMarker("lodgers", "lodgers-ep6", "external:theintrodb-v3", "intro"),
+      storedMarker("lodgers", "lodgers-ep3", "metadata", "intro"),
+      storedMarker("lodgers", "lodgers-ep4", "metadata", "intro"),
+      storedMarker("lodgers", "lodgers-ep5", "metadata", "intro"),
+      storedMarker("lodgers", "lodgers-ep5", "metadata", "credits"),
+      storedMarker("lodgers", "lodgers-ep6", "metadata", "intro"),
     ]);
     const answered = (episodeId: string, status: "hit" | "miss", ageMs: number): SkipAnalysisRow => ({
       episodeId,
-      payload: { provider: "theintrodb-v3", status, fetchedAt: new Date(NOW - ageMs).toISOString() },
+      payload: { provider: "metadata-v1", status, fetchedAt: new Date(NOW - ageMs).toISOString() },
       updatedAt: "",
     });
     const fetchRows = [
@@ -275,7 +273,7 @@ describe("runSkipMarkerBackfill", () => {
       "lodgers-ep4:miss",
     ]);
     const showCache = lib.analysis.find((r) => r.kind === EXTERNAL_SKIP_MARKER_SHOW_KIND && r.episodeId === null);
-    expect(showCache?.payload).toMatchObject({ showTmdbId: 901668, markersByEpisode: { "1:1": [intro], "1:2": [intro], "1:3": [intro] } });
+    expect(showCache?.payload).toMatchObject({ showCatalogId: 901668, markersByEpisode: { "1:1": [intro], "1:2": [intro], "1:3": [intro] } });
 
     lib.requests.length = 0;
     const second = await runSkipMarkerBackfill([lodgers, movie], deps);
@@ -284,7 +282,7 @@ describe("runSkipMarkerBackfill", () => {
     expect(second).toMatchObject({ showsWithWork: 0, fetched: 0 });
   });
 
-  it("keeps a credits marker from another source when TheIntroDB only knows the intro", async () => {
+  it("keeps a credits marker from another source when the metadata service only knows the intro", async () => {
     const lib = newLibrary();
     const show = showRow("b99", 48891, "Brooklyn Nine-Nine");
     lib.details.set("b99", showDetails(show, 1, [1], [storedMarker("b99", "b99-ep1", "internal:chapters", "credits")]));
@@ -323,7 +321,7 @@ describe("runSkipMarkerBackfill", () => {
       episodeId: null,
       kind: EXTERNAL_SKIP_MARKER_SHOW_KIND,
       payload: createShowSkipCachePayload({
-        showTmdbId: 901668,
+        showCatalogId: 901668,
         fetchedAt: new Date(NOW - 60_000).toISOString(),
         coverage: [{ seasonNumber: 1, episodeNumber: 1, status: "hit", markerTypes: ["intro"] }],
         markersByEpisode: { "1:1": [intro] },

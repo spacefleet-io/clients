@@ -414,10 +414,10 @@ describe("index layout pass (LIB-FMT-01: a layout change is a registered migrati
     const playbackDb = makeFakeDb(2);
     const coreDb = makeFakeDb(1);
     console.info(`[library-migrations:index-layout] playback registry=${JSON.stringify(playbackMigrations.map((m) => m.version))} core registry=${JSON.stringify(coreMigrations.map((m) => m.version))}`);
-    // Up to v3 only: later playback passes (v4 adds a column) have their own test below.
+    // Up to playback v3 / core v2 only: later passes (playback v4 adds a column, core v3 rewrites rows) have their own tests.
     const upToV3 = playbackMigrations.filter((m) => m.version <= 3);
     const playbackResult = await runMigrations(dbAsSqlite(playbackDb), upToV3, { dbName: "playback" });
-    const coreResult = await runMigrations(dbAsSqlite(coreDb), coreMigrations, { dbName: "core" });
+    const coreResult = await runMigrations(dbAsSqlite(coreDb), coreMigrations.filter((m) => m.version <= 2), { dbName: "core" });
     console.info(`[library-migrations:index-layout] playback=${JSON.stringify(playbackResult)} core=${JSON.stringify(coreResult)}`);
     try {
       expect(playbackResult.applied).toEqual([3]);

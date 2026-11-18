@@ -193,12 +193,12 @@ describe("badger.db commands", () => {
 
   describe("badger.db.call", () => {
     it("accepts method with args", () => {
-      const payload = { method: "addMediaFromTmdb", args: [{ id: 1 }] };
+      const payload = { method: "addMediaFromCatalog", args: [{ id: 1 }] };
       const result = parsePayload(badgerDbCall, { payload });
       try {
         expect(result.ok).toBe(true);
         if (result.ok) {
-          expect(result.data.method).toBe("addMediaFromTmdb");
+          expect(result.data.method).toBe("addMediaFromCatalog");
           expect(result.data.args).toEqual([{ id: 1 }]);
         }
       } catch (err) {

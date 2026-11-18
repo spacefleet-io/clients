@@ -82,7 +82,7 @@ describe("per-device tables stay out of snapshots (LIB-FMT-07)", () => {
   it("exports media_local_downloads empty, and with no free pages", async () => {
     const db = await LibraryDb.openLocal("token", "key");
     db.setSyncEnabled(false);
-    const mediaId = await db.addMediaFromTmdb(MOVIE);
+    const mediaId = await db.addMediaFromCatalog(MOVIE);
     db.registerLocalDownload(download(mediaId, "mine", "/home/me/Videos/a.mkv"));
     expect(db.listLocalDownloads().length).toBe(1);
     const bytes = db.exportBytes();
@@ -107,7 +107,7 @@ describe("per-device tables stay out of snapshots (LIB-FMT-07)", () => {
   it("applying a remote copy keeps this device's downloads and drops a foreign device's rows", async () => {
     const db = await LibraryDb.openLocal("token", "key");
     db.setSyncEnabled(false);
-    const mediaId = await db.addMediaFromTmdb(MOVIE);
+    const mediaId = await db.addMediaFromCatalog(MOVIE);
     db.registerLocalDownload(download(mediaId, "mine", "/home/me/Videos/a.mkv"));
 
     // A copy saved by an older app on ANOTHER device: it still carries that device's download row.
@@ -156,7 +156,7 @@ describe("per-device tables stay out of snapshots (LIB-FMT-07)", () => {
     internals.scheduleOpsFlush = () => {};
     internals.flushOps = async () => {};
     internals.syncEnabled = true;
-    const mediaId = await db.addMediaFromTmdb(MOVIE);
+    const mediaId = await db.addMediaFromCatalog(MOVIE);
     await Promise.resolve();
     const opsBefore = internals.pendingOps.map((op) => op.type);
     const versionBefore = db.getVersion();

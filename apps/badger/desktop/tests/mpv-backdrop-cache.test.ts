@@ -13,7 +13,7 @@ vi.mock("../src/main/logger", () => ({
  *
  * The bundled mpv has no https, so the play-time backdrop is handed to mpv as a
  * local file. The renderer gets the image from the metadata service as a
- * base64 data URI (META-ART-02: never the TMDB image CDN); the main process
+ * base64 data URI (META-ART-02: never the catalog image CDN); the main process
  * writes it once. Contract: a cached copy is reused; the extension follows the
  * image type (mpv picks the demuxer by it); anything that is not a small image
  * data URI yields null (mpv then opens idle — never a slower start); no
@@ -66,7 +66,7 @@ describe("@bugfix @regression-proof cacheMpvBackdrop", () => {
 
   it("returns null (idle launch) for http(s) URLs, a non-image, a non-base64 URI, an empty or oversized body", async () => {
     const results = await Promise.all([
-      cacheMpvBackdrop("https://image.tmdb.org/t/p/w1280/a.jpg", { dir }),
+      cacheMpvBackdrop("https://images.example.test/backdrop/a.jpg", { dir }),
       cacheMpvBackdrop("file:///etc/passwd", { dir }),
       cacheMpvBackdrop(dataUrl(Buffer.from("<html>"), "text/html"), { dir }),
       cacheMpvBackdrop("data:image/png,not-base64", { dir }),

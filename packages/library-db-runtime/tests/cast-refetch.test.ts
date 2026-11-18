@@ -3,7 +3,7 @@
  * @bugfix cast-list-repeats-one-actor
  *
  * Libraries written before the LIB-CAST-01 fix still hold casts merged into one person: every role points at one
- * `people` row, which carries TMDB person id 0. `listMediaWithCollapsedCast` finds those titles and
+ * `people` row, which carries catalog person id 0. `listMediaWithCollapsedCast` finds those titles and
  * `refetchCollapsedCasts` fetches each one's cast once: a synced `cast_refetch_v1:<mediaId>` setting marks it, so a
  * later pass (or another device) never fetches it again, and a title whose fetch keeps failing stops after
  * `CAST_REFETCH_MAX_ATTEMPTS` passes.
@@ -15,7 +15,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { peopleExternalIds } from "@space/library-db-definition/schema";
-import type { TmdbCastMember, TmdbDetails } from "../src/api";
+import { LEGACY_CATALOG_ID_SOURCE } from "@space/library-db-definition/legacyFormat";
+import type { CastMember, TitleDetails } from "../src/api";
 import { LibraryDb } from "../src/libraryDb";
 import {
   CAST_REFETCH_MAX_ATTEMPTS,
@@ -38,15 +39,15 @@ afterEach(() => {
   delete process.env.SF_USER_DATA_PATH;
 });
 
-// "Anders als die Andern" (1919) as TMDB credits it.
-const TMDB_CAST: TmdbCastMember[] = [
-  { tmdbId: 11, name: "Conrad Veidt", role: "Paul Körner", profilePath: "/veidt.jpg", order: 0 },
-  { tmdbId: 12, name: "Reinhold Schünzel", role: "Franz Bollek", profilePath: "/schuenzel.jpg", order: 1 },
-  { tmdbId: 13, name: "Anita Berber", role: "Else", profilePath: "/berber.jpg", order: 2 },
+// "Anders als die Andern" (1919) as the catalog credits it.
+const CATALOG_CAST: CastMember[] = [
+  { personId: 11, name: "Conrad Veidt", role: "Paul Körner", profilePath: "/veidt.jpg", order: 0 },
+  { personId: 12, name: "Reinhold Schünzel", role: "Franz Bollek", profilePath: "/schuenzel.jpg", order: 1 },
+  { personId: 13, name: "Anita Berber", role: "Else", profilePath: "/berber.jpg", order: 2 },
 ];
 
-const addMovie = (db: LibraryDb, id: number, title: string, cast: TmdbCastMember[]) =>
-  db.addMediaFromTmdb({
+const addMovie = (db: LibraryDb, id: number, title: string, cast: CastMember[]) =>
+  db.addMediaFromCatalog({
     id,
     type: "movie",
     title,
@@ -63,9 +64,9 @@ const addMovie = (db: LibraryDb, id: number, title: string, cast: TmdbCastMember
     seasons: [],
     episodes: [],
     totalEpisodes: 0,
-  } satisfies TmdbDetails);
+  } satisfies TitleDetails);
 
-/** What the old code left: every role on the first person, which carries TMDB person id 0. */
+/** What the old code left: every role on the first person, which carries catalog person id 0. */
 const collapse = (db: LibraryDb, mediaId: string) => {
   const roles = db.getMediaDetails(mediaId)?.cast ?? [];
   const personId = roles[0]!.personId;
@@ -73,13 +74,13 @@ const collapse = (db: LibraryDb, mediaId: string) => {
     mediaId,
     cast: roles.map((role) => ({ personId, name: "Helga Molander", role: role.role, profilePath: "/molander.jpg" })),
   });
-  // The fixed code refuses TMDB person id 0, so the old row is written straight into the private metadata ORM.
+  // The fixed code refuses catalog person id 0, so the old row is written straight into the private metadata ORM.
   const legacyWriter = db as unknown as { metadata: { insert: (table: unknown) => any } };
-  legacyWriter.metadata.insert(peopleExternalIds).values({ id: `zero-${personId}`, personId, source: "tmdb", externalId: "0" }).run();
+  legacyWriter.metadata.insert(peopleExternalIds).values({ id: `zero-${personId}`, personId, source: LEGACY_CATALOG_ID_SOURCE, externalId: "0" }).run();
 };
 
 const castOf = (db: LibraryDb, mediaId: string) =>
-  (db.getMediaDetails(mediaId)?.cast ?? []).map((role) => [role.personId, role.name, role.role, role.tmdbId]);
+  (db.getMediaDetails(mediaId)?.cast ?? []).map((role) => [role.personId, role.name, role.role, role.catalogId]);
 
 const openLibrary = async () => {
   const db = await LibraryDb.openLocal("token", "key");
@@ -90,10 +91,10 @@ const openLibrary = async () => {
 describe("@bugfix one-time refetch of casts merged into one person", () => {
   it("lists only the collapsed title, refetches it once and marks it done", async () => {
     const db = await openLibrary();
-    const broken = await addMovie(db, 44441, "Anders als die Andern", TMDB_CAST);
+    const broken = await addMovie(db, 44441, "Anders als die Andern", CATALOG_CAST);
     const healthy = await addMovie(db, 961, "The General", [
-      { tmdbId: 21, name: "Buster Keaton", role: "Johnnie Gray", profilePath: "/keaton.jpg", order: 0 },
-      { tmdbId: 22, name: "Marion Mack", role: "Annabelle Lee", profilePath: "/mack.jpg", order: 1 },
+      { personId: 21, name: "Buster Keaton", role: "Johnnie Gray", profilePath: "/keaton.jpg", order: 0 },
+      { personId: 22, name: "Marion Mack", role: "Annabelle Lee", profilePath: "/mack.jpg", order: 1 },
     ]);
     collapse(db, broken);
     console.info(`[${SUITE}:setup] broken cast=${JSON.stringify(castOf(db, broken))}`);
@@ -107,7 +108,7 @@ describe("@bugfix one-time refetch of casts merged into one person", () => {
       calls.push(mediaId);
       db.updateMediaMetadata({
         mediaId,
-        cast: TMDB_CAST.map(({ tmdbId, name, role, profilePath }) => ({ tmdbId, name, role, profilePath })),
+        cast: CATALOG_CAST.map(({ personId, name, role, profilePath }) => ({ catalogId: personId, name, role, profilePath })),
       });
     };
     const first = await refetchCollapsedCasts(db, refetch);
@@ -118,10 +119,10 @@ describe("@bugfix one-time refetch of casts merged into one person", () => {
     expect(db.getSetting(`${CAST_REFETCH_SETTING_PREFIX}${broken}`)?.value).toBe("done");
 
     const roles = db.getMediaDetails(broken)?.cast ?? [];
-    expect(roles.map((role) => [role.name, role.role, role.tmdbId])).toEqual(
-      TMDB_CAST.map((member) => [member.name, member.role, member.tmdbId])
+    expect(roles.map((role) => [role.name, role.role, role.catalogId])).toEqual(
+      CATALOG_CAST.map((member) => [member.name, member.role, member.personId])
     );
-    expect(new Set(roles.map((role) => role.personId)).size).toBe(TMDB_CAST.length);
+    expect(new Set(roles.map((role) => role.personId)).size).toBe(CATALOG_CAST.length);
     expect(db.listMediaWithCollapsedCast()).toEqual([]);
 
     const second = await refetchCollapsedCasts(db, refetch);
@@ -132,7 +133,7 @@ describe("@bugfix one-time refetch of casts merged into one person", () => {
 
   it("never fetches a marked title again, even when it still lists (an actor credited twice)", async () => {
     const db = await openLibrary();
-    const mediaId = await addMovie(db, 44441, "Anders als die Andern", TMDB_CAST);
+    const mediaId = await addMovie(db, 44441, "Anders als die Andern", CATALOG_CAST);
     collapse(db, mediaId);
     db.setSetting(`${CAST_REFETCH_SETTING_PREFIX}${mediaId}`, "done");
 
@@ -147,7 +148,7 @@ describe("@bugfix one-time refetch of casts merged into one person", () => {
 
   it(`stops trying a title after ${CAST_REFETCH_MAX_ATTEMPTS} failed passes`, async () => {
     const db = await openLibrary();
-    const mediaId = await addMovie(db, 44441, "Anders als die Andern", TMDB_CAST);
+    const mediaId = await addMovie(db, 44441, "Anders als die Andern", CATALOG_CAST);
     collapse(db, mediaId);
 
     let calls = 0;

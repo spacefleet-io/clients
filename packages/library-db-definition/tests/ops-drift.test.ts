@@ -63,8 +63,7 @@ const TS = "2024-01-01T00:00:00.000Z";
 const minimalMediaDetails = (id: string): MediaDetails => ({
   id,
   type: "movie",
-  tmdbId: 1000 + Number(id.slice(2)),
-  externalIds: { imdb: `tt${id}` },
+  catalogId: 1000 + Number(id.slice(2)),
   title: `Title ${id}`,
   originalTitle: null,
   originalLanguage: "en",
@@ -85,7 +84,7 @@ const minimalMediaDetails = (id: string): MediaDetails => ({
     {
       id: `role-${id}-a`,
       personId: `person-${id}-a`,
-      tmdbId: null,
+      catalogId: null,
       name: "Actor A",
       role: "Lead",
       profilePath: null,

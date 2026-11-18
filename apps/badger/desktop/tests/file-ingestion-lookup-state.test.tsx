@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { MetadataRequestError } from "@space/metadata-client";
 import { searchFailureText } from "../src/renderer/src/lib/metadataSearchError";
 import { METADATA_LOOKUP_TIMEOUT_MS, MetadataLookupTimeoutError } from "../src/renderer/src/lib/metadataRetry";
-import { localizeSearchResultForLibrary, searchTmdb } from "../src/renderer/src/lib/metadata";
+import { localizeSearchResultForLibrary, searchTitles } from "../src/renderer/src/lib/metadata";
 import type * as SpaceUi from "@space/ui";
 
 (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -98,7 +98,7 @@ vi.mock("../src/renderer/src/lib/libraryContext", () => ({
   useLibraryActions: () => ({
     getMediaDetails: () => null,
     getSharedSetting: () => null,
-    addMediaFromTmdb: vi.fn(),
+    addMediaFromCatalog: vi.fn(),
     addSubtitleTrackWithObject: vi.fn(),
   }),
 }));
@@ -108,11 +108,11 @@ vi.mock("../src/renderer/src/components/MediaImage", () => ({
 }));
 
 vi.mock("../src/renderer/src/lib/metadata", () => ({
-  getTmdbDetails: vi.fn(),
-  getTmdbDetailsForLibrary: vi.fn(),
-  getTmdbTrailersForLanguages: vi.fn().mockResolvedValue([]),
+  getTitleDetails: vi.fn(),
+  getTitleDetailsForLibrary: vi.fn(),
+  getTitleTrailersForLanguages: vi.fn().mockResolvedValue([]),
   localizeSearchResultForLibrary: vi.fn(async (_token: string, result: unknown) => result),
-  searchTmdb: vi.fn(),
+  searchTitles: vi.fn(),
 }));
 
 // The reserve's "tickets arrived" signal, driven by the test (a refill batch landing).
@@ -142,7 +142,7 @@ vi.mock("../src/renderer/src/components/LoadingModalProvider", () => ({
 const LOG = "[file-ingestion-lookup-state]";
 const FILE_NAME = "Night of the Living Dead (1968).mkv";
 
-type SearchAnswer = Awaited<ReturnType<typeof searchTmdb>>;
+type SearchAnswer = Awaited<ReturnType<typeof searchTitles>>;
 const searchAnswer = (results: unknown[]) =>
   // Only the fields the dialog reads; the fixture is not a full search payload.
   ({ results, page: 1, totalPages: 1 }) as unknown as SearchAnswer;
@@ -165,7 +165,7 @@ const snapshot = (phase: string, container: HTMLElement | null) => {
     searchFailed: text.includes("ingestion.errors.searchFailed"),
     searchTimedOut: text.includes("ingestion.errors.searchTimedOut"),
   };
-  console.info(`${LOG}:${phase} markers=${JSON.stringify(markers)} searches=${JSON.stringify(vi.mocked(searchTmdb).mock.calls.map((c) => c.slice(1)))}`);
+  console.info(`${LOG}:${phase} markers=${JSON.stringify(markers)} searches=${JSON.stringify(vi.mocked(searchTitles).mock.calls.map((c) => c.slice(1)))}`);
   return { text, markers };
 };
 
@@ -211,7 +211,7 @@ describe("FileIngestionDialog lookup states (INGS-IDENT-02)", () => {
   it(
     "[@bugfix][@regression-proof] INGS-IDENT-02: a slow lookup shows a searching state, never \"No match found\", and \"No match found\" only once it ends empty",
     async () => {
-      const search = vi.mocked(searchTmdb);
+      const search = vi.mocked(searchTitles);
       search.mockReset();
       const answer = Promise.withResolvers<SearchAnswer>();
       search.mockImplementation(() => answer.promise);
@@ -245,7 +245,7 @@ describe("FileIngestionDialog lookup states (INGS-IDENT-02)", () => {
         hint: "ingestion.ui.searchTimedOutHint",
       });
       vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
-      const search = vi.mocked(searchTmdb);
+      const search = vi.mocked(searchTitles);
       search.mockReset();
       const late = Promise.withResolvers<SearchAnswer>();
       search.mockImplementation(() => late.promise);
@@ -298,7 +298,7 @@ describe("FileIngestionDialog lookup states (INGS-IDENT-02)", () => {
   it(
     "INGS-IDENT-02: a lookup that fails says the search failed, not \"No match found\"",
     async () => {
-      const search = vi.mocked(searchTmdb);
+      const search = vi.mocked(searchTitles);
       search.mockReset();
       // A 4xx is not retried, so the failure is final at once.
       search.mockRejectedValue(new MetadataRequestError(400));
@@ -317,7 +317,7 @@ describe("FileIngestionDialog lookup states (INGS-IDENT-02)", () => {
   it(
     "[@bugfix][@regression-proof] INGS-IDENT-02: next to a matched title, a file still being looked up is listed as searching, not under \"Unmatched\"",
     async () => {
-      const search = vi.mocked(searchTmdb);
+      const search = vi.mocked(searchTitles);
       search.mockReset();
       const second = Promise.withResolvers<SearchAnswer>();
       // The drop's files are looked up one after the other: the first answers at once, the second hangs.
@@ -356,7 +356,7 @@ describe("FileIngestionDialog lookup states (INGS-IDENT-02)", () => {
     "INGS-IDENT-02: a found match is kept when localizing it hangs past the deadline (the raw hit is shown)",
     async () => {
       vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
-      const search = vi.mocked(searchTmdb);
+      const search = vi.mocked(searchTitles);
       const localize = vi.mocked(localizeSearchResultForLibrary);
       search.mockReset();
       search.mockResolvedValue(searchAnswer([{ id: 10331, type: "movie", title: "Night of the Living Dead", year: 1968 }]));

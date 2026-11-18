@@ -97,7 +97,7 @@ afterEach(() => {
 });
 
 describe("Phase 7.3 — desktop wires shared runMigrations per group", () => {
-  it("baseline: ensureLibrarySchema leaves user_version=0, then the core registry applies v1 once", () => {
+  it("baseline: ensureLibrarySchema leaves user_version=0, then the core registry applies v1-v2 once", () => {
     console.info(`[desktop-migration-runner:baseline] ensureLibrarySchema(core)`);
     ensureLibrarySchema(db as unknown as SqliteDb, "core");
     const startVer = readUserVersion(db);
@@ -115,8 +115,8 @@ describe("Phase 7.3 — desktop wires shared runMigrations per group", () => {
         `[desktop-migration-runner:baseline] result=${JSON.stringify(result)} ` +
           `final user_version=${readUserVersion(db)}`,
       );
-      expect(result).toEqual({ from: 0, to: 1, applied: [1] });
-      expect(readUserVersion(db)).toBe(1);
+      expect(result).toEqual({ from: 0, to: 2, applied: [1, 2] });
+      expect(readUserVersion(db)).toBe(2);
     } catch (err) {
       console.error(`[desktop-migration-runner:baseline] assertion failed`);
       dumpMigrationSnapshot("baseline-failure", {
@@ -128,13 +128,13 @@ describe("Phase 7.3 — desktop wires shared runMigrations per group", () => {
     }
   });
 
-  it("pins the desktop registries: core v1, metadata v1 (media_crew) + v2 (media_editions) and playback v1, the rest at baseline", () => {
+  it("pins the desktop registries: core v1-v2, metadata v1-v4 and playback v1, the rest at baseline", () => {
     console.info(`[desktop-migration-runner:registry] pinning registry versions`);
     try {
       // New entries land here when an index change / column drop / data backfill is added.
-      expect(desktopCoreMigrations.map((m) => m.version)).toEqual([1]);
+      expect(desktopCoreMigrations.map((m) => m.version)).toEqual([1, 2]);
       expect(desktopPlaybackMigrations.map((m) => m.version)).toEqual([1]);
-      expect(desktopMetadataMigrations.map((m) => m.version)).toEqual([1, 2, 3]);
+      expect(desktopMetadataMigrations.map((m) => m.version)).toEqual([1, 2, 3, 4]);
       expect(desktopIngestMigrations.length).toBe(0);
       expect(desktopTemplatesMigrations.length).toBe(0);
     } catch (err) {

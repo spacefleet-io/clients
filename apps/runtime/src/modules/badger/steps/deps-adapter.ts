@@ -1361,7 +1361,7 @@ export function buildBadgerStepDeps(
       // Pre-fix the FK violation surfaced as the cryptic SQLite chain
       // `errno: 787 / SQLITE_CONSTRAINT_FOREIGNKEY / FOREIGN KEY constraint
       // failed` and stalled the source job in "Committing" with no actionable
-      // operator hint. Reproduces when the desktop's addMediaFromTmdb hasn't
+      // operator hint. Reproduces when the desktop's addMediaFromCatalog hasn't
       // been called for hints.mediaId yet, or the row was deleted before
       // commit ran (logout, attachMetadata-vs-engine race). The format-job
       // branch does NOT need this check — its parent source job already
@@ -1371,10 +1371,10 @@ export function buildBadgerStepDeps(
       if (!mediaDetails) {
         throw new Error(
           `STEP_COMMIT_MEDIA_ITEM_MISSING:${input.mediaId} — library_media row absent at commit time. ` +
-            `The desktop addMediaFromTmdb / attach_metadata pipeline must persist this row before the runtime ` +
+            `The desktop addMediaFromCatalog / attach_metadata pipeline must persist this row before the runtime ` +
             `engine reaches the commit step. Common causes: (a) attachMetadata never fired for this ingest, ` +
             `(b) the row was deleted mid-job (logout, library reset), (c) a race where the engine raced ` +
-            `attachMetadata. Check the desktop main-process logs for addMediaFromTmdb activity around jobId=${input.jobId}.`
+            `attachMetadata. Check the desktop main-process logs for addMediaFromCatalog activity around jobId=${input.jobId}.`
         );
       }
 

@@ -6,9 +6,9 @@
  *
  * Platform-neutral like `castRefetch`: the library database lists the titles (`listMediaMissingCrew`) and keeps the
  * progress; the app supplies `fetchCrew`, which asks the metadata service through its ticket pipeline (the same
- * details lookup "Restore from TMDB" uses) and writes the crew.
+ * details lookup "Restore" uses) and writes the crew.
  *
- * Progress survives a quit or a crash without a cursor: a filled title leaves the list by itself, and a title TMDB
+ * Progress survives a quit or a crash without a cursor: a filled title leaves the list by itself, and a title the catalog
  * credits with no director or writer gets a synced `crew_backfill_v1:<mediaId>` marker (`done`, or `failed:<n>` after
  * a failure). Once a pass ends with nothing left to try, the library-wide `crew_backfill_v1` marker is set and later
  * starts return at once.
@@ -18,7 +18,7 @@
  * title without counting a failed attempt.
  */
 
-/** Per title: `done` (TMDB credits no director or writer) or `failed:<attempts>`. */
+/** Per title: `done` (the catalog credits no director or writer) or `failed:<attempts>`. */
 export const CREW_BACKFILL_SETTING_PREFIX = "crew_backfill_v1:";
 /** Library-wide: `done` once a pass left nothing to try. */
 export const CREW_BACKFILL_COMPLETE_KEY = "crew_backfill_v1";
@@ -58,7 +58,7 @@ export type CrewBackfillResult = {
   /** Titles listed at the start of the pass. */
   found: number;
   filled: number;
-  /** TMDB credits no director or writer: marked so they are not asked again. */
+  /** The catalog credits no director or writer: marked so they are not asked again. */
   empty: number;
   failed: number;
   /** Already marked, or out of attempts. */

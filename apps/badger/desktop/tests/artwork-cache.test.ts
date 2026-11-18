@@ -8,7 +8,7 @@ import { describe, expect, it, vi } from "vitest";
 import { createMetadataImageResolver, MetadataUnavailableError, NoTicketError, type ImageKind } from "@space/metadata-client";
 import { createArtworkStore, createMemoryArtworkBackend } from "@space/metadata-client/artworkCache";
 import { AssetArtworkError } from "../src/renderer/src/lib/assetArtworkError";
-import { attachAssets } from "../src/renderer/src/lib/tmdbAssetsCore";
+import { attachAssets } from "../src/renderer/src/lib/catalogAssetsCore";
 
 const SUITE = "artwork-cache";
 const png = (name: string) => `data:image/png;base64,${name}`;
@@ -169,7 +169,7 @@ describe("artwork resolver", () => {
   });
 });
 
-describe("restoring artwork from TMDB", () => {
+describe("restoring artwork from the catalog", () => {
   const details = (episodeCount: number, castCount: number) =>
     ({
       title: "t",
@@ -181,7 +181,7 @@ describe("restoring artwork from TMDB", () => {
     }) as never;
 
   // @req META-ART-02[badger-desktop]
-  it("stops spending at the first empty reserve, keeps the TMDB paths it could not copy, and leaves stills lazy", async () => {
+  it("stops spending at the first empty reserve, keeps the catalog paths it could not copy, and leaves stills lazy", async () => {
     console.info(`[${SUITE}:restore] reserve runs out after 2 images`);
     let spent = 0;
     const uploaded: string[] = [];

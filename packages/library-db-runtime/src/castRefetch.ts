@@ -1,8 +1,8 @@
 /**
  * LIB-CAST-01: a one-time repair of casts the old code merged into one person. Before the fix, some metadata
- * details dropped each cast member's TMDB person id and the library turned the missing id into TMDB person 0, so
+ * details dropped each cast member's catalog person id and the library turned the missing id into catalog person 0, so
  * every role of the title pointed at one person. New titles are stored right; this pass fetches the cast of each
- * title stored the old way again, the same cast the desktop's "Restore from TMDB" writes, once per title.
+ * title stored the old way again, the same cast the desktop's "Restore" writes, once per title.
  *
  * Platform-neutral: the library database lists the titles (`listMediaWithCollapsedCast`) and keeps the marker in a
  * synced setting, so a title repaired on one device is not fetched again on another; the app supplies `refetch`,

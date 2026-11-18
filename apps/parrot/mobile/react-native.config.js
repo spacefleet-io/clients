@@ -1,6 +1,6 @@
 const path = require("path");
 // The Google-free Android build (SF_FOSS=1, PLAT-MOBILE-06) unlinks the libraries that pull in Google Play services.
-const { fossAutolinkExclusions } = require("../../../packages/mobile-shell/foss.cjs");
+const { fossAutolinkExclusions, selfUpdateAutolink } = require("../../../packages/mobile-shell/foss.cjs");
 
 // Workspace packages with native code: their names don't match the autolinker's `react-native-*` lookup, so they are
 // listed by root.
@@ -16,5 +16,7 @@ module.exports = {
       root: path.resolve(__dirname, "../../../packages/mobile-media-volume"),
     },
     ...fossAutolinkExclusions(__dirname),
+    // The self-update (REL-UPD-06): linked in every Google-free build (SF_FOSS=1), never the Play build.
+    ...selfUpdateAutolink(),
   },
 };

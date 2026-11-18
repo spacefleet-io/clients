@@ -13,7 +13,7 @@ const ALIASES: Record<string, string> = { O: "0", I: "1", L: "1" };
 export const normalizeShortCode = (input: string): string | null => {
   let out = "";
   for (const raw of input.toUpperCase()) {
-    if (raw === "-" || raw === " " || raw === "\u2013" || raw === "\u2014") continue;
+    if (/[\s\-\u2010-\u2015\u2212]/u.test(raw)) continue;
     const ch = ALIASES[raw] ?? raw;
     if (!SHORT_CODE_ALPHABET.includes(ch)) return null;
     out += ch;
@@ -21,8 +21,33 @@ export const normalizeShortCode = (input: string): string | null => {
   return out.length === SHORT_CODE_LENGTH ? out : null;
 };
 
-/** "ABCDEFGH" → "ABCD-EFGH". Input must already be normalised. */
-export const formatShortCode = (code: string): string => `${code.slice(0, 4)}-${code.slice(4)}`;
+/**
+ * ACCT-PAIR-01: a code is shown as two groups of 4 with a visual gap between them, never a typed dash, so
+ * what is copied or shared is the plain 8 characters. Drops anything that is not a letter or digit (an older
+ * API's "ABCD-EFGH") and splits the rest in two halves.
+ */
+export const shortCodeGroups = (code: string): [string, string] => {
+  const plain = code.replace(/[^0-9A-Za-z]/gu, "").toUpperCase();
+  const half = Math.ceil(plain.length / 2);
+  return [plain.slice(0, half), plain.slice(half)];
+};
+
+/**
+ * ACCT-PAIR-01: what a code field keeps while the code is typed or pasted, with or without a dash or spaces, in
+ * any case: a pasted pairing link gives its code; otherwise upper-case, look-alikes folded (O→0, I/L→1), every
+ * other character dropped, at most 8 characters. A full result is a canonical code (normalizeShortCode).
+ */
+export const shortCodeInput = (raw: string): string => {
+  const fromPayload = /^\s*[a-z][a-z0-9+.-]*:/iu.test(raw) ? parsePairQrPayload(raw) : null;
+  if (fromPayload) return fromPayload;
+  let out = "";
+  for (const upper of raw.toUpperCase()) {
+    const ch = ALIASES[upper] ?? upper;
+    if (SHORT_CODE_ALPHABET.includes(ch)) out += ch;
+    if (out.length === SHORT_CODE_LENGTH) break;
+  }
+  return out;
+};
 
 /** Maps CSPRNG bytes (at least 8) to a canonical short code. */
 export const shortCodeFromRandomBytes = (bytes: Uint8Array): string => {
@@ -34,12 +59,12 @@ export const shortCodeFromRandomBytes = (bytes: Uint8Array): string => {
 
 /**
  * ACCT-PAIR-06: the QR code of a new device is a web link on the website naming the app that asks,
- * `<website>/pair/<app>?code=ABCD-EFGH`. The phone's camera opens it in that app (Android App Links,
+ * `<website>/pair/<app>?code=ABCDEFGH`. The phone's camera opens it in that app (Android App Links,
  * iOS Universal Links, each app claiming only its own `/pair/<app>` path) and, when that app is not
  * installed, in the browser, on the website's page for that app.
  */
 export const buildPairLink = (webBaseUrl: string, app: SpaceAppId, code: string): string =>
-  `${webBaseUrl.trim().replace(/\/+$/u, "")}/pair/${app}?code=${formatShortCode(code)}`;
+  `${webBaseUrl.trim().replace(/\/+$/u, "")}/pair/${app}?code=${code}`;
 
 // scheme://host[:port]/[<lang>/]pair/<app>?query; the website's own page may carry a language segment.
 const PAIR_LINK = /^https?:\/\/[^/?#\s]+\/(?:[a-z]{2}\/)?pair\/([a-z]+)\/?\?([^#\s]*)/iu;

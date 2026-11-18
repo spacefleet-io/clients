@@ -391,7 +391,7 @@ const bootstrapWithMovie = async () => {
   log("phase:bootstrap LibraryDb.open on empty fake API");
   const db = await LibraryDb.open(TOKEN, KEY);
   db.setSyncEnabled(true);
-  const mediaId = await db.addMediaFromTmdb(MOVIE);
+  const mediaId = await db.addMediaFromCatalog(MOVIE);
   await waitFor("seed ops flushed", () => drained(db));
   dumpState("after-bootstrap", db, mediaId);
   return { db, mediaId };

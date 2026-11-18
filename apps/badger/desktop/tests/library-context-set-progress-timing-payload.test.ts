@@ -4,7 +4,7 @@
  *
  * Phase 2 augments the episode_resume_v1 JSON payload with optional
  * positionSeconds + durationSeconds fields so the credits-aware
- * completion check (TheIntroDB) can compare in absolute time, not just
+ * completion check (the metadata service) can compare in absolute time, not just
  * pct. The augmentation is ADDITIVE: old readers ignore unknown fields
  * and new readers gracefully degrade when the fields are absent.
  *

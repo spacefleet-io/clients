@@ -77,8 +77,7 @@
       }
     },
     "pairing": {
-      "title": "Sign in with another device",
-      "usePassword": "Sign in with email and password"
+      "title": "Sign in with another device"
     },
     "code": {
       "recheckHint": "Your account has no password, so we ask a code instead: from your authenticator app if it's on, otherwise one we email you.",
@@ -762,7 +761,7 @@
       "tryAnother": "Try another code"
     },
     "errors": {
-      "invalid_code": "That doesn't look like a pairing code. It has 8 letters and numbers, like ABCD-EFGH.",
+      "invalid_code": "That doesn't look like a pairing code. It has 8 letters and numbers, like ABCD EFGH.",
       "not_found": "We couldn't find that code. It may have expired (codes last 5 minutes), or it was already used. Ask the other device for a new code.",
       "expired": "That code has expired. Ask the other device for a new code and try again.",
       "already_used": "That code was already used. If you didn't approve it yourself, check your device list.",
@@ -792,9 +791,26 @@
     }
   },
   "phonePairing": {
+    "signIn": {
+      "subtitle": "Scan this with Badger or Parrot on a device that's signed in.",
+      "orTypeCode": "or type the code",
+      "waiting": "Waiting for the other device…",
+      "newCodeIn": "New code in {{time}}",
+      "help": "How does this work?",
+      "step1": {
+        "badger": "Open **Badger or Parrot** on a signed-in computer or phone, or **Badger** on a signed-in TV.",
+        "parrot": "Open **Badger or Parrot** on a signed-in computer or phone."
+      },
+      "step2": "Go to **Settings › Pair a device**.",
+      "step3": "Scan the QR code, or type the 8‑character code.",
+      "deviceName": "This phone will show up as **“{{name}}”**.",
+      "renews_one": "The code changes by itself every minute.",
+      "renews_other": "The code changes by itself every {{count}} minutes.",
+      "gotIt": "Got it"
+    },
     "step1": {
       "badger": "1. Open Badger or Parrot on a computer or another phone that is signed in, or Badger on a signed-in TV.",
-      "parrot": "1. Open Badger or Parrot on your computer or on another phone that is signed in."
+      "parrot": "1. Open Badger or Parrot on a computer or another phone that is signed in."
     },
     "step2": "2. Go to Settings, then Pair a device.",
     "step3": "3. Scan this code, or type the code below.",
@@ -850,7 +866,6 @@
       "title": "Pair a device",
       "subtitle": "Type the code shown on the other device's screen.",
       "codeLabel": "Code shown on the other device",
-      "codePlaceholder": "ABCD-EFGH",
       "continue": "Continue",
       "cancel": "Cancel",
       "back": "Back",
@@ -1175,7 +1190,6 @@
     },
     "signIn": {
       "title": "Sign in",
-      "pairTitle": "Approve this phone from another app",
       "orPassword": "Or sign in with your email and password",
       "signedInAs": "Signed in as {{email}}",
       "useAnother": "Use another account",

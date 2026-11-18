@@ -12,7 +12,7 @@
  *   `FOREIGN KEY constraint failed` persists in `runtime_jobs.db`. The
  *   underlying constraint is `media_files.media_id → media_items(id)` defined
  *   in `packages/library-db-definition/src/migrations.ts:323`.
- * - Reproduces when the desktop's `addMediaFromTmdb` either (a) hasn't been
+ * - Reproduces when the desktop's `addMediaFromCatalog` either (a) hasn't been
  *   called for the job's `hints.mediaId` yet, or (b) was called but the row
  *   was deleted before commit ran (logout, attachMetadata-vs-engine race).
  * - Round-10 evidence: media_id `38fb783b-...`, group `4373f4f8-...`. Same
@@ -22,7 +22,7 @@
  * - Before invoking `linkFileToMedia`, the source-scope commit calls
  *   `getMediaDetails(mediaId)`. A null result throws
  *   `STEP_COMMIT_MEDIA_ITEM_MISSING:<mediaId>` with a hint pointing at the
- *   desktop addMediaFromTmdb / attach_metadata pipeline.
+ *   desktop addMediaFromCatalog / attach_metadata pipeline.
  * - linkFileToMedia is NOT invoked when the row is missing — runtime_jobs.db
  *   gets the actionable error code instead of the opaque SQLite FK chain.
  *
@@ -168,7 +168,7 @@ describe("@bugfix @regression-proof Round-12 #1 — commit guards against missin
     }
   });
 
-  it("source-scope commit error message points at the addMediaFromTmdb / attach_metadata pipeline", async () => {
+  it("source-scope commit error message points at the addMediaFromCatalog / attach_metadata pipeline", async () => {
     console.info(`[badger-deps-commit-fk-guard:error-message] setup`);
     const libraryDb = {
       call: vi.fn(async (method: string) => {
@@ -206,7 +206,7 @@ describe("@bugfix @regression-proof Round-12 #1 — commit guards against missin
     try {
       // Operator-facing diagnostic must mention the desktop pipeline that owns
       // creating the row, so log readers can route the fix without spelunking.
-      expect(message).toContain("addMediaFromTmdb");
+      expect(message).toContain("addMediaFromCatalog");
       expect(message).toContain("attach_metadata");
     } catch (err) {
       dumpFkGuardSnapshot("error-message", { captured, libraryDb });

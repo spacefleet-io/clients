@@ -16,6 +16,7 @@ const SOURCE_PACKAGES = [
   "@space/mobile-mpv-playback",
   "@space/mobile-media-proxy",
   "@space/mobile-media-volume",
+  "@space/mobile-self-update",
   "@space/metadata-client",
   "@space/privacy-pass",
   "@space/pairing-crypto",

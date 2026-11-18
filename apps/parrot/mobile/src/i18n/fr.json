@@ -13,8 +13,7 @@
     "login": {
       "sameAsBadger": "Utilisez le même e-mail et le même mot de passe que pour Badger.",
       "codeTotp": "Code de votre app d'authentification",
-      "codeEmail": "Code reçu par e-mail",
-      "usePassword": "Se connecter avec votre mot de passe"
+      "codeEmail": "Code reçu par e-mail"
     },
     "key": {
       "title": "Saisissez votre clé de bibliothèque",

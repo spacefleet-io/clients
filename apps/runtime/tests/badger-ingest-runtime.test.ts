@@ -213,7 +213,7 @@ describe("badger ingest runtime", () => {
               media: {
                 id: "media-tv-cancelled",
                 type: "tv",
-                tmdbId: 123,
+                catalogId: 123,
                 title: "Lodgers",
                 year: "1994",
                 posterPath: "/lodgers.jpg",
@@ -507,7 +507,7 @@ describe("badger ingest runtime", () => {
               media: {
                 id: "media-1",
                 type: "movie",
-                tmdbId: 123,
+                catalogId: 123,
                 title: "Orchard",
                 year: "2017",
                 posterPath: "/orchard.jpg",
@@ -762,7 +762,7 @@ describe("badger ingest runtime", () => {
                 media: {
                   id: "media-1",
                   type: "movie",
-                  tmdbId: 123,
+                  catalogId: 123,
                   title: "Glass Circuit",
                   year: "1995",
                   posterPath: "/glass-circuit.jpg",
@@ -882,7 +882,7 @@ describe("badger ingest runtime", () => {
               media: {
                 id: "media-source-only",
                 type: "movie",
-                tmdbId: 321,
+                catalogId: 321,
                 title: "Only Source",
                 year: "2024",
                 posterPath: "/source.jpg",
@@ -1037,7 +1037,7 @@ describe("badger ingest runtime", () => {
               pendingMedia: {
                 id: "pending-tv-1",
                 type: "tv",
-                tmdbId: 901668,
+                catalogId: 901668,
                 title: "Lodgers",
                 year: "1994",
                 posterPath: "/lodgers.jpg",
@@ -1187,7 +1187,7 @@ describe("badger ingest runtime", () => {
               media: {
                 id: "lodgers-media",
                 type: "tv",
-                tmdbId: 901668,
+                catalogId: 901668,
                 title: "Lodgers",
                 year: "1994",
                 posterPath: "/lodgers.jpg",
@@ -1302,7 +1302,7 @@ describe("badger ingest runtime", () => {
               media: {
                 id: "lodgers-progress",
                 type: "tv",
-                tmdbId: 901668,
+                catalogId: 901668,
                 title: "Lodgers",
                 year: "1994",
                 posterPath: "/lodgers.jpg",
@@ -1421,7 +1421,7 @@ describe("badger ingest runtime", () => {
               media: {
                 id: "media-delete",
                 type: "tv",
-                tmdbId: 906059,
+                catalogId: 906059,
                 title: "Counsel Street",
                 year: "2015",
                 posterPath: "/counsel-street.jpg",

@@ -104,7 +104,7 @@ export const uploadEncryptedAssetFromUrl = async (token: string, keyBase64: stri
   encryptAndUploadResponse(token, keyBase64, await fetch(sourceUrl), sourceUrl);
 
 /**
- * Uploads artwork fetched from the metadata service (META-ART-02: never from the TMDB image CDN). The service's
+ * Uploads artwork fetched from the metadata service (META-ART-02: never from the catalog image CDN). The service's
  * answer is a `data:` URI, read back here as bytes; one
  * ticket is spent unless the image is already cached. Throws `AssetArtworkError` when there is no image to upload.
  */

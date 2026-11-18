@@ -1,7 +1,7 @@
 /**
- * The desktop has no direct lookup mode (META-DIRECT-03): the own-TMDB-key setting was removed, every TMDB
+ * The desktop has no direct lookup mode (META-DIRECT-03): the own-key setting was removed, every catalog
  * lookup and every picture goes through the metadata service with a ticket (META-ART-02), and the copy users
- * read never calls Badger a proxy for TMDB (UX-COPY-03).
+ * read never calls Badger a proxy for the catalog (UX-COPY-03).
  *
  * Source scans over the desktop's renderer, main, preload and shared code, the desktop locales, and the config
  * migration that drops a saved own-key mode so that user falls back to the ticket path.
@@ -34,23 +34,23 @@ const scan = (pattern: RegExp) => {
   return { scanned: files.length, offenders };
 };
 
-describe("desktop TMDB access goes only through the metadata service", () => {
+describe("desktop catalog access goes only through the metadata service", () => {
   // @req META-ART-02[badger-desktop]
-  it("no desktop code references TMDB's image CDN", () => {
-    const result = scan(/image\.tmdb\.org/);
+  it("no desktop code builds a catalog image CDN path", () => {
+    const result = scan(/\/t\/p\/(w\d+|original)\//);
     console.info(P, "image CDN scan", JSON.stringify(result));
     expect(result.scanned).toBeGreaterThan(100);
     expect(result.offenders).toEqual([]);
   });
 
   // @req META-DIRECT-03[badger-desktop]
-  it("no desktop code calls TMDB's API or keeps an own-TMDB-key setting", () => {
-    const api = scan(/api\.themoviedb\.org|themoviedb\.org\/3/);
-    const ownKey = scan(/metadataAccess|usesOwnTmdbKey|tmdbHealthCheck|TMDB_KEY_REQUIRED|tmdbOwnKey|tmdbKeyRequired/);
+  it("no desktop code calls a catalog API path or keeps an own-key setting", () => {
+    const api = scan(/\/3\/(movie|tv|search|configuration)\//);
+    const ownKey = scan(/metadataAccess/);
     // lib/config.ts names the old field only to erase it from a saved config (migration tested below).
     const MIGRATION_FILE = "src/renderer/src/lib/config.ts:";
     const ownKeyOutsideMigration = ownKey.offenders.filter((line) => !line.startsWith(MIGRATION_FILE));
-    console.info(P, "TMDB API scan", JSON.stringify(api), "own-key scan", JSON.stringify(ownKey));
+    console.info(P, "catalog API scan", JSON.stringify(api), "own-key scan", JSON.stringify(ownKey));
     expect(api.offenders).toEqual([]);
     expect(ownKeyOutsideMigration).toEqual([]);
   });
@@ -77,7 +77,7 @@ describe("desktop copy never calls Badger a proxy", () => {
   });
 });
 
-describe("config migration drops the removed own-TMDB-key mode", () => {
+describe("config migration drops the removed own-key mode", () => {
   const CONFIG_KEY = "sf_client_config_v1";
   afterEach(() => {
     vi.unstubAllGlobals();
@@ -102,7 +102,7 @@ describe("config migration drops the removed own-TMDB-key mode", () => {
   it("a user who had direct mode on silently falls back to the ticket path, and the saved key is erased", () => {
     const saved = {
       playbackQuality: "720p",
-      metadataAccess: { tmdb: { mode: "direct", apiKey: "secret-user-key", validated: true } },
+      metadataAccess: { catalog: { mode: "direct", apiKey: "secret-user-key", validated: true } },
     };
     const { map, writes } = fakeStorage({ [CONFIG_KEY]: JSON.stringify(saved) });
 

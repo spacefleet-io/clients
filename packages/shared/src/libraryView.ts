@@ -113,7 +113,7 @@ export const filterLibraryItems = <T extends LibraryListItem>(params: {
   items: T[];
   /** Search text (trimmed); case and accents are ignored. */
   query: string;
-  /** `<movie|tv>:<tmdb genre id>` keys. */
+  /** `<movie|tv>:<genre id>` keys. */
   selectedGenres: string[];
   /** Lower-cased actor names. */
   selectedActors: string[];

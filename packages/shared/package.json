@@ -38,6 +38,7 @@
     "./libraryTypes": "./src/libraryTypes.ts",
     "./libraryCrew": "./src/libraryCrew.ts",
     "./mediaEditions": "./src/mediaEditions.ts",
+    "./androidRepo": "./src/androidRepo.ts",
     "./libraryView": "./src/libraryView.ts",
     "./libraryFacets": "./src/libraryFacets.ts",
     "./fuzzySearch": "./src/fuzzySearch.ts",

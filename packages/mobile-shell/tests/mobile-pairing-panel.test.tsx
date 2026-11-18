@@ -2,31 +2,33 @@
  * @test-id MOBILE-SHELL-PAIRING-PANEL-001
  * @level unit
  * @req ACCT-PAIR-01[badger-mobile,parrot]
- * @why Badger's QR sign-in page and Parrot's setup sign-in step show the same pairing panel. It is one shared
- *   component: each phase (getting a code, showing it, signing in, refused, failed) must show the right lines in the
- *   app's own text style, and both apps must use it instead of their own copy.
+ * @why The key screens of Badger's and Parrot's phones show the same pairing panel. It is one shared component with
+ *   one look: each phase (getting a code, showing it, signing in, refused, failed) must show the right lines, and both
+ *   apps must use it instead of their own copy. The sign-in page is tested in mobile-pair-sign-in.test.tsx.
  */
 import React from "react";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("react-native", () => ({ View: "View" }));
+vi.mock("react-native", () => ({ Platform: { OS: "android" }, View: "View", Text: "Text", StyleSheet: { create: <T,>(styles: T) => styles } }));
 vi.mock("../src/i18n", () => ({
   useTranslation: () => ({
     t: (key: string, values?: Record<string, string>) => (values ? `${key}(${Object.values(values).join(",")})` : key),
   }),
 }));
+vi.mock("../src/theme", () => ({
+  useMobileShellTheme: () => ({ colors: { text: "#fff", textMuted: "#999", danger: "#e00", accent: "#ffb357" } }),
+}));
+vi.mock("../src/components/mobile-auth-form", () => ({ MobileAuthButton: "MobileAuthButton" }));
 vi.mock("../src/pairing-qr", () => ({ QrCode: "QrCode" }));
 vi.mock("../src/pairing-hook", () => ({ usePairing: () => ({ state: { phase: "idle" }, restart: () => undefined }) }));
 
-import { MobilePairingPanelView, type MobilePairingPanelLook } from "../src/pairing-panel";
+import { MobilePairingButton as Button, MobilePairingPanelView, MobilePairingText as Text } from "../src/pairing-panel";
+import { ShortCodeTiles } from "../src/short-code";
 import type { PairingState } from "../src/pairing/controller";
 
 type Element = { type: unknown; props: Record<string, unknown> & { children?: unknown } };
-
-const Text: MobilePairingPanelLook["Text"] = () => null;
-const Button: MobilePairingPanelLook["Button"] = () => null;
 
 const all = (node: unknown, out: Element[] = []): Element[] => {
   if (!node || typeof node !== "object") return out;
@@ -41,20 +43,7 @@ const all = (node: unknown, out: Element[] = []): Element[] => {
 };
 
 const render = (state: PairingState, restart = () => undefined, app: "badger" | "parrot" = "badger", purpose?: "key") => {
-  const tree = MobilePairingPanelView({
-    state,
-    app,
-    purpose,
-    restart,
-    now: 1_000,
-    deviceName: "Pixel 8",
-    testIDPrefix: "pair",
-    Text,
-    Button,
-    gap: 10,
-    codeGap: 8,
-    qrPadding: 12,
-  });
+  const tree = MobilePairingPanelView({ state, app, purpose, restart, now: 1_000, deviceName: "Pixel 8", testIDPrefix: "pair" });
   const elements = all(tree);
   const lines = elements.filter((e) => e.type === Text).map((e) => ({ tone: e.props.tone, text: e.props.children, testID: e.props.testID }));
   return { elements, lines };
@@ -64,7 +53,7 @@ describe("MobilePairingPanel", () => {
   it("shows the QR code, short code, expiry and device name while a code waits", () => {
     const { elements, lines } = render({
       phase: "waiting",
-      request: { qrPayload: "spacefleet-pair:abc", shortCode: "ABC-123" } as never,
+      request: { qrPayload: "spacefleet-pair:abc", shortCode: "K7M4QXR2" } as never,
       expiresAtMs: 1_000 + 125_000,
       renewals: 0,
     });
@@ -76,11 +65,11 @@ describe("MobilePairingPanel", () => {
       "phonePairing.step2",
       "phonePairing.step3",
       "phonePairing.codeLabel",
-      "ABC-123",
       "phonePairing.expiresIn(2:05)",
       "phonePairing.deviceName(Pixel 8)",
     ]);
-    expect(lines.find((l) => l.text === "ABC-123")).toMatchObject({ tone: "code", testID: "pair-code" });
+    // ACCT-PAIR-01: the code in the shared 4+4 boxes, never a dash (Chris 2026-11-18).
+    expect(elements.find((e) => e.type === ShortCodeTiles)?.props).toMatchObject({ code: "K7M4QXR2", testID: "pair-code" });
     expect(elements.some((e) => e.type === Button)).toBe(false);
   });
 
@@ -131,24 +120,14 @@ describe("MobilePairingPanel", () => {
     }
   });
 
-  it("is the one panel both phone apps use", () => {
-    const root = resolve(__dirname, "../../..");
-    for (const file of ["apps/badger/mobile/src/screens/PairSignInScreen.tsx", "apps/parrot/mobile/src/screens/PairingPanel.tsx"]) {
-      const source = readFileSync(resolve(root, file), "utf8");
-      expect(source).toContain('from "@space/mobile-shell/pairing-panel"');
-      expect(source).not.toContain("usePairing(");
-      expect(source).not.toContain("<QrCode");
-    }
-  });
-
   // @req UX-PHONE-05
   it("names the TV as an approver on Badger only, in every language, from one set of strings", () => {
     const parrot = render({ phase: "idle" }, () => undefined, "parrot");
     console.info("[pair-panel-app] parrot lines", parrot.lines.map((l) => l.text));
     expect(parrot.lines[0]?.text).toBe("phonePairing.step1.parrot");
     const root = resolve(__dirname, "..");
-    const tvWord: Record<string, RegExp> = { en: /\bTV\b/, fr: /télévision/, de: /Fernseher/, nl: /\btv\b/ };
-    for (const lang of ["en", "fr", "de", "nl"]) {
+    const tvWord: Record<string, RegExp> = { en: /\bTV\b/, fr: /télévision/, de: /Fernseher/, es: /\bTV\b/, nl: /\btv\b/ };
+    for (const lang of ["en", "fr", "de", "es", "nl"]) {
       const strings = JSON.parse(readFileSync(resolve(root, `src/i18n/${lang}.json`), "utf8")) as {
         phonePairing: { step1: { badger: string; parrot: string } };
       };
@@ -159,11 +138,7 @@ describe("MobilePairingPanel", () => {
       expect(badger).toMatch(tvWord[lang]);
       expect(parrotText).toMatch(/Parrot/);
       expect(parrotText).not.toMatch(tvWord[lang]);
-    }
-    for (const file of ["apps/badger/mobile/src/screens/PairSignInScreen.tsx", "apps/parrot/mobile/src/screens/PairingPanel.tsx"]) {
-      const source = readFileSync(resolve(root, "../..", file), "utf8");
-      const app = file.includes("parrot") ? "parrot" : "badger";
-      expect(source, file).toContain(`app="${app}"`);
+      expect(badger.startsWith(parrotText.slice(0, -1)), lang).toBe(true);
     }
   });
 });

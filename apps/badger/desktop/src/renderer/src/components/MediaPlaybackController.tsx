@@ -51,6 +51,7 @@ import {
   createExternalSkipMarkerFetchPayload,
   EXTERNAL_SKIP_MARKER_FETCH_KIND,
   isExternalSkipMarkerFetchPayload,
+  isServiceSkipMarkerSource,
 } from "../../../shared/skipMarkerCache";
 
 type MediaPlaybackControllerProps = {
@@ -993,11 +994,11 @@ export default function MediaPlaybackController({
 
   useEffect(() => {
     if (currentMedia.type !== "tv") return;
-    if (currentMedia.tmdbId == null) return;
+    if (currentMedia.catalogId == null) return;
     if (!currentEpisode) return;
 
     const externalMarkers = currentMedia.skipMarkers.filter(
-      (marker) => marker.episodeId === currentEpisode.id && marker.source.startsWith("external:theintrodb")
+      (marker) => marker.episodeId === currentEpisode.id && isServiceSkipMarkerSource(marker.source)
     );
     if (externalMarkers.length > 0) return;
 
@@ -1019,7 +1020,7 @@ export default function MediaPlaybackController({
         const result = await getMetadataSkipMarkers(
           "",
           "tv",
-          currentMedia.tmdbId as number,
+          currentMedia.catalogId as number,
           currentEpisode.seasonNumber,
           currentEpisode.episodeNumber,
           durationSeconds
@@ -1034,7 +1035,7 @@ export default function MediaPlaybackController({
             currentMedia.id,
             targetEpisodeId,
             EXTERNAL_SKIP_MARKER_FETCH_KIND,
-            createExternalSkipMarkerFetchPayload(coverageEntry, result.fetchedAt, result.provider)
+            createExternalSkipMarkerFetchPayload(coverageEntry, result.fetchedAt)
           );
         }
 

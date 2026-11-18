@@ -62,11 +62,11 @@ const openDb = async () => {
   return db;
 };
 
-const seedShow = (db: LibraryDb, tmdbId: number, episodeCount: number, totalEpisodes: number | null) =>
-  db.addMediaFromTmdb({
-    id: tmdbId,
+const seedShow = (db: LibraryDb, catalogId: number, episodeCount: number, totalEpisodes: number | null) =>
+  db.addMediaFromCatalog({
+    id: catalogId,
     type: "tv",
-    title: `Aggregate Show ${tmdbId}`,
+    title: `Aggregate Show ${catalogId}`,
     originalTitle: null,
     originalLanguage: "en",
     overview: null,
@@ -87,7 +87,7 @@ const seedShow = (db: LibraryDb, tmdbId: number, episodeCount: number, totalEpis
       airDate: null,
     })),
     totalEpisodes,
-  } as unknown as Parameters<LibraryDb["addMediaFromTmdb"]>[0]);
+  } as unknown as Parameters<LibraryDb["addMediaFromCatalog"]>[0]);
 
 const episodeIdsOf = (db: LibraryDb, mediaId: string) =>
   (db.getMediaDetails(mediaId)?.episodes ?? []).map((episode) => String(episode.id));
@@ -188,8 +188,8 @@ describe("issue #25 — TV episode progress saves do not recompute the show aggr
       let comparisons = 0;
       let cacheHits = 0;
       for (const [shapeIndex, shape] of shapes.entries()) {
-        const tmdbId = 25_400 + shapeIndex;
-        let mediaId = await seedShow(db, tmdbId, shape.episodes, shape.total);
+        const catalogId = 25_400 + shapeIndex;
+        let mediaId = await seedShow(db, catalogId, shape.episodes, shape.total);
         let episodeIds = episodeIdsOf(db, mediaId);
         log("shape", { shapeIndex, ...shape, seed });
 
@@ -237,7 +237,7 @@ describe("issue #25 — TV episode progress saves do not recompute the show aggr
             await db.setSetting(`episode_resume_v1:${episodeId}`, values[Math.floor(random() * values.length)]);
           } else if (roll < 0.8) {
             // Episodes replaced (new ids; old resume settings become orphans).
-            mediaId = await seedShow(db, tmdbId, Math.max(0, shape.episodes + Math.floor(random() * 5) - 2), shape.total);
+            mediaId = await seedShow(db, catalogId, Math.max(0, shape.episodes + Math.floor(random() * 5) - 2), shape.total);
             episodeIds = episodeIdsOf(db, mediaId);
           } else if (roll < 0.9) {
             // A movie-style progress save elsewhere touches core without touching the aggregate.

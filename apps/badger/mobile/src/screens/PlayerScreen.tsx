@@ -727,7 +727,7 @@ const PlayerScreenInner = ({
   }, []);
 
   // --- "Get more subtitles…" (PLAY-SUBGET-02, phone and TV) ---------------------------------------------------------
-  // The subtitle menu's last row when the title can be searched (a TMDB ID), and the only one that searches online: the
+  // The subtitle menu's last row when the title can be searched (a catalog id), and the only one that searches online: the
   // subtitles button (and the TV remote's captions key) always opens the menu first (PLAY-SUBGET-24). Picking it pauses and shows the search over
   // the video; closing resumes, with the stored subtitle added to this playback's menu and switched on like a pick in the
   // menu (the controls' handle, so the pick is remembered, PLAY-SUBGET-19). Unavailable offline (PLAY-SUBGET-12) and while

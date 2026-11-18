@@ -77,8 +77,7 @@
       }
     },
     "pairing": {
-      "title": "Se connecter avec un autre appareil",
-      "usePassword": "Se connecter avec e-mail et mot de passe"
+      "title": "Se connecter avec un autre appareil"
     },
     "code": {
       "recheckHint": "Votre compte n'a pas de mot de passe : nous demandons un code à la place, celui de votre application d'authentification si elle est activée, sinon un code envoyé par e-mail.",
@@ -762,7 +761,7 @@
       "tryAnother": "Essayer un autre code"
     },
     "errors": {
-      "invalid_code": "Ça ne ressemble pas à un code d'association. Il compte 8 lettres et chiffres, comme ABCD-EFGH.",
+      "invalid_code": "Ça ne ressemble pas à un code d'association. Il compte 8 lettres et chiffres, comme ABCD EFGH.",
       "not_found": "Code introuvable. Il a peut-être expiré (les codes durent 5 minutes) ou il a déjà été utilisé. Demandez un nouveau code à l'autre appareil.",
       "expired": "Ce code a expiré. Demandez un nouveau code à l'autre appareil puis réessayez.",
       "already_used": "Ce code a déjà été utilisé. Si vous ne l'avez pas approuvé vous-même, consultez votre liste d'appareils.",
@@ -792,9 +791,27 @@
     }
   },
   "phonePairing": {
+    "signIn": {
+      "subtitle": "Scannez ce code avec Badger ou Parrot sur un appareil connecté.",
+      "orTypeCode": "ou saisissez le code",
+      "waiting": "En attente de l'autre appareil…",
+      "newCodeIn": "Nouveau code dans {{time}}",
+      "help": "Comment ça marche\u202F?",
+      "step1": {
+        "badger": "Ouvrez **Badger ou Parrot** sur un ordinateur ou un téléphone connecté, ou **Badger** sur une télévision connectée.",
+        "parrot": "Ouvrez **Badger ou Parrot** sur un ordinateur ou un téléphone connecté."
+      },
+      "step2": "Allez dans **Réglages › Associer un appareil**.",
+      "step3": "Scannez le QR code, ou saisissez le code à 8 caractères.",
+      "deviceName": "Ce téléphone apparaîtra sous le nom **«\u202F{{name}}\u202F»**.",
+      "renews_one": "Le code change tout seul chaque minute.",
+      "renews_many": "Le code change tout seul toutes les {{count}} minutes.",
+      "renews_other": "Le code change tout seul toutes les {{count}} minutes.",
+      "gotIt": "Compris"
+    },
     "step1": {
       "badger": "1. Ouvrez Badger ou Parrot sur un ordinateur ou un autre téléphone connecté, ou Badger sur une télévision connectée.",
-      "parrot": "1. Ouvrez Badger ou Parrot sur votre ordinateur ou sur un autre téléphone connecté."
+      "parrot": "1. Ouvrez Badger ou Parrot sur un ordinateur ou un autre téléphone connecté."
     },
     "step2": "2. Allez dans Réglages, puis Associer un appareil.",
     "step3": "3. Scannez ce code, ou saisissez le code ci-dessous.",
@@ -850,7 +867,6 @@
       "title": "Associer un appareil",
       "subtitle": "Saisissez le code affiché sur l'écran de l'autre appareil.",
       "codeLabel": "Code affiché sur l'autre appareil",
-      "codePlaceholder": "ABCD-EFGH",
       "continue": "Continuer",
       "cancel": "Annuler",
       "back": "Retour",
@@ -1177,7 +1193,6 @@
     },
     "signIn": {
       "title": "Connexion",
-      "pairTitle": "Approuvez ce téléphone depuis une autre app",
       "orPassword": "Ou connectez-vous avec votre e-mail et votre mot de passe",
       "signedInAs": "Connecté en tant que {{email}}",
       "useAnother": "Utiliser un autre compte",

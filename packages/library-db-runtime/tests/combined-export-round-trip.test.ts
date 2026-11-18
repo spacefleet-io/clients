@@ -42,7 +42,7 @@ afterEach(() => {
 });
 
 const seedMediaAndPlaylist = async (db: LibraryDb) => {
-  const mediaId = await db.addMediaFromTmdb({
+  const mediaId = await db.addMediaFromCatalog({
     id: 555,
     type: "tv",
     title: "Round-Trip Show",
@@ -55,7 +55,7 @@ const seedMediaAndPlaylist = async (db: LibraryDb) => {
     backdropPath: null,
     genres: [],
     cast: [
-      { tmdbId: 100, name: "Anna Actor", role: "Lead", profilePath: null, order: 0 },
+      { personId: 100, name: "Anna Actor", role: "Lead", profilePath: null, order: 0 },
     ],
     trailers: [
       { provider: "youtube", key: "abc123", name: "Trailer", language: "en", official: true },

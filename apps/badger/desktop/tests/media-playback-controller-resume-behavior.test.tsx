@@ -298,7 +298,7 @@ const tvMedia = {
     },
   ],
   skipMarkers: [],
-  tmdbId: 99999,
+  catalogId: 99999,
   playlists: [],
 };
 

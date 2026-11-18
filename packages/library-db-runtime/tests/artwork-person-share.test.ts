@@ -36,7 +36,7 @@ afterEach(() => {
   delete process.env.SF_USER_DATA_PATH;
 });
 
-const movie = (id: number, title: string, cast: Array<{ tmdbId: number; name: string; profilePath: string }>) => ({
+const movie = (id: number, title: string, cast: Array<{ personId: number; name: string; profilePath: string }>) => ({
   id,
   type: "movie" as const,
   title,
@@ -57,8 +57,8 @@ const movie = (id: number, title: string, cast: Array<{ tmdbId: number; name: st
   nextEpisodeAirDate: null,
 });
 
-const anna = { tmdbId: 701, name: "Anna Shared", profilePath: "/anna.jpg" };
-const bob = { tmdbId: 702, name: "Bob Only", profilePath: "/bob.jpg" };
+const anna = { personId: 701, name: "Anna Shared", profilePath: "/anna.jpg" };
+const bob = { personId: 702, name: "Bob Only", profilePath: "/bob.jpg" };
 
 const fakeUpload = (calls: Array<[ArtworkKind, string]>) =>
   async (kind: ArtworkKind, path: string): Promise<ArtworkUploadOutcome> => {
@@ -78,13 +78,13 @@ const open = async () => {
 describe("a person's photo is copied once and shared by every title (META-ART-01)", () => {
   it("@req META-ART-01[badger-desktop] a second title with the same actor reuses the copy and fetches nothing for them", async () => {
     const db = await open();
-    const first = await db.addMediaFromTmdb(movie(9101, "First", [anna, bob]));
+    const first = await db.addMediaFromCatalog(movie(9101, "First", [anna, bob]));
     const calls: Array<[ArtworkKind, string]> = [];
     await copyMediaArtwork({ store: db, mediaId: first, upload: fakeUpload(calls) });
     log("phase: first title copied", { calls, cast: castOf(db, first) });
     expect(castOf(db, first)["Anna Shared"]).toBe("asset:image/jpeg::assets/profile-anna.txt");
 
-    const second = await db.addMediaFromTmdb(movie(9102, "Second", [anna]));
+    const second = await db.addMediaFromCatalog(movie(9102, "Second", [anna]));
     const slots = db.listArtworkToCopy(second);
     log("phase: second title imported", { slots, cast: castOf(db, second), firstCast: castOf(db, first) });
     expect(slots.filter((slot) => slot.target === "personProfile"), "the shared actor needs no new copy").toEqual([]);
@@ -100,7 +100,7 @@ describe("a person's photo is copied once and shared by every title (META-ART-01
 
   it("@req META-ART-01[badger-desktop] a user's own photo for a person survives importing another title with them", async () => {
     const db = await open();
-    const first = await db.addMediaFromTmdb(movie(9201, "First", [anna]));
+    const first = await db.addMediaFromCatalog(movie(9201, "First", [anna]));
     const personId = db.getMediaDetails(first)!.cast[0]!.personId;
     await db.updateMediaMetadata({
       mediaId: first,
@@ -108,7 +108,7 @@ describe("a person's photo is copied once and shared by every title (META-ART-01
     });
     log("phase: user set a photo", castOf(db, first));
 
-    const second = await db.addMediaFromTmdb(movie(9202, "Second", [anna]));
+    const second = await db.addMediaFromCatalog(movie(9202, "Second", [anna]));
     log("phase: second title imported", { first: castOf(db, first), second: castOf(db, second) });
     expect(castOf(db, second)["Anna Shared"]).toBe("asset:image/png::assets/user-anna.txt");
     expect(db.listArtworkToCopy(second).filter((slot) => slot.target === "personProfile")).toEqual([]);
@@ -116,17 +116,17 @@ describe("a person's photo is copied once and shared by every title (META-ART-01
 
   it("@req META-ART-01[badger-desktop] a provider path still replaces an older provider path (no copy yet)", async () => {
     const db = await open();
-    await db.addMediaFromTmdb(movie(9301, "First", [anna]));
-    const second = await db.addMediaFromTmdb(movie(9302, "Second", [{ ...anna, profilePath: "/anna-new.jpg" }]));
+    await db.addMediaFromCatalog(movie(9301, "First", [anna]));
+    const second = await db.addMediaFromCatalog(movie(9302, "Second", [{ ...anna, profilePath: "/anna-new.jpg" }]));
     log("phase: second title imported", castOf(db, second));
     expect(castOf(db, second)["Anna Shared"]).toBe("/anna-new.jpg");
   });
 
   it("@req META-ART-01[badger-desktop] deleting one title keeps a shared photo and frees a photo nobody else shows", async () => {
     const db = await open();
-    const first = await db.addMediaFromTmdb(movie(9401, "First", [anna, bob]));
+    const first = await db.addMediaFromCatalog(movie(9401, "First", [anna, bob]));
     await copyMediaArtwork({ store: db, mediaId: first, upload: fakeUpload([]) });
-    const second = await db.addMediaFromTmdb(movie(9402, "Second", [anna]));
+    const second = await db.addMediaFromCatalog(movie(9402, "Second", [anna]));
     await copyMediaArtwork({ store: db, mediaId: second, upload: fakeUpload([]) });
     expect(castOf(db, first)["Anna Shared"], "both titles show the one copy").toBe("asset:image/jpeg::assets/profile-anna.txt");
 

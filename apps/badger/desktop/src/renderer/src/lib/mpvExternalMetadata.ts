@@ -89,7 +89,7 @@ export const buildExternalPlaybackMetadataPayload = (params: {
   subtitlesOffLabel: string;
   /**
    * The subtitle menu's "Get more subtitles…" row (PLAY-SUBGET-02, shared copy `getMore`); empty or omitted hides
-   * the row (offline, no TMDB ID, an offline copy playing).
+   * the row (offline, no catalog id, an offline copy playing).
    */
   getMoreSubtitlesLabel?: string;
   /** The subtitle menu's "Try another version" row (PLAY-SUBGET-07); non-empty only while a fetched subtitle is on. */

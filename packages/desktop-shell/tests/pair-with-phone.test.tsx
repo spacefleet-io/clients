@@ -32,7 +32,7 @@ type StartResult = Record<string, unknown>;
 const request = (expiresInMs: number, requestId = "req-1"): StartResult => ({
   ok: true,
   requestId,
-  shortCode: "ABCD-EFGH",
+  shortCode: "ABCDEFGH",
   qrPayload: "https://spacefleet.io/pair/badger",
   qrSvg: "<svg xmlns='http://www.w3.org/2000/svg'></svg>",
   expiresAt: new Date(Date.now() + expiresInMs).toISOString(),
@@ -97,7 +97,9 @@ describe("PairWithPhone", () => {
 
     const qr = container.querySelector<HTMLImageElement>('[data-testid="pair-qr"]');
     expect(qr?.src).toContain("data:image/svg+xml");
-    expect(container.querySelector('[data-testid="pair-short-code"]')?.textContent).toBe("ABCD-EFGH");
+    // Chris 2026-11-18 (ACCT-PAIR-01): two groups of 4 with a gap, never a dash; copying it gives the plain 8 characters.
+    expect(container.querySelector('[data-testid="pair-short-code"]')?.textContent).toBe("ABCDEFGH");
+    expect([...container.querySelectorAll('[data-testid="pair-short-code"] > span')].map((group) => group.textContent)).toEqual(["ABCD", "EFGH"]);
     expect(container.querySelector('[data-testid="pair-countdown"]')?.textContent).toBe("This code expires in 2:30");
 
     await flush(10_000);
@@ -169,7 +171,7 @@ describe("PairWithPhone", () => {
     expect(text()).toContain("Get your library key from another device");
     expect(text()).toContain("already signed in to this account, open Badger or Parrot");
     expect(text()).toContain("Waiting for your other device…");
-    expect(container.querySelector('[data-testid="pair-short-code"]')?.textContent).toBe("ABCD-EFGH");
+    expect(container.querySelector('[data-testid="pair-short-code"]')?.textContent).toBe("ABCDEFGH");
     expect(buttonByText("Sign in with email and password instead")).toBeUndefined();
     await act(async () => buttonByText("Type the key instead")?.click());
     expect(onBack).toHaveBeenCalledTimes(1);

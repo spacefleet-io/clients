@@ -59,8 +59,6 @@ def movie_nfo(media):
     out = '<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>\n<movie>\n'
     out += _x("title", media.get("title")) + _x("originaltitle", media.get("original_title")) + _x("year", media.get("year"))
     out += _x("plot", media.get("overview"))
-    if media.get("tmdb_id"):
-        out += '  <uniqueid type="tmdb" default="true">%s</uniqueid>\n' % escape(str(media["tmdb_id"]))
     out += "  <spacebadger>%s</spacebadger>\n" % escape(media["id"])
     return out + "</movie>\n"
 
@@ -69,8 +67,6 @@ def tvshow_nfo(media):
     out = '<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>\n<tvshow>\n'
     out += _x("title", media.get("title")) + _x("originaltitle", media.get("original_title")) + _x("year", media.get("year"))
     out += _x("plot", media.get("overview"))
-    if media.get("tmdb_id"):
-        out += '  <uniqueid type="tmdb" default="true">%s</uniqueid>\n' % escape(str(media["tmdb_id"]))
     return out + "</tvshow>\n"
 
 

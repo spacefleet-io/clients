@@ -368,7 +368,7 @@ export interface BadgerStepDeps {
    */
   removeJobDir?(input: RemoveJobDirInput): Promise<void>;
   /**
-   * Persist TheIntroDB-fetched per-episode markers for the just-committed
+   * Persist the service-fetched per-episode markers for the just-committed
    * file's episode (or the show's media row for a movie — movies omit
    * markers entirely, so callers should not invoke this for them). Idempotent
    * delete-then-insert under the hood. Optional so unit tests for flows that

@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
  * @bugfix @regression-proof
  *
  * Regression test for the backdrop-then-stream UX rewire (pending
- * commit; source already in tree). The launch branch resolves a TMDB
+ * commit; source already in tree). The launch branch resolves a catalog
  * backdrop URL from `media.backdropPath` and passes it to
  * `launchExternalMpv` so mpv comes up displaying a still placeholder
  * within ~1 s of the user click. The window-hide path then fires
@@ -20,7 +20,7 @@ import { describe, expect, it } from "vitest";
  * This test pins:
  *  1. The launch IPC payload includes `backdropUrl` (not hardcoded null).
  *  2. The backdrop is resolved by `resolvePlaybackBackdrop` (library copy or the
- *     metadata service, as a data URI; never a TMDB CDN URL in the default mode).
+ *     metadata service, as a data URI; never a catalog CDN URL in the default mode).
  *  3. When no backdrop is available, `backdropUrl` falls through to
  *     null (the fallback branch) — the test asserts the conditional
  *     wiring is in place, not the runtime null value.
@@ -60,7 +60,7 @@ const dumpEngineSnapshot = (
 console.info(`[launch-with-backdrop:setup] loaded engine source from ${ENGINE_PATH} (${engineSource.length} bytes)`);
 
 describe("@bugfix @regression-proof launch IPC passes backdropUrl", () => {
-  it("resolves backdropUrl via resolvePlaybackBackdrop(media.backdropPath, ...) (metadata service, never the TMDB CDN)", () => {
+  it("resolves backdropUrl via resolvePlaybackBackdrop(media.backdropPath, ...) (metadata service, never the catalog CDN)", () => {
     // The renderer must resolve media.backdropPath through resolvePlaybackBackdrop at
     // launch time (as one of the parallel pre-launch loads, #928). The previous
     // hard-coded `backdropUrl: null` is the pre-fix shape we explicitly REJECTED.
@@ -70,8 +70,8 @@ describe("@bugfix @regression-proof launch IPC passes backdropUrl", () => {
       dumpEngineSnapshot("backdropUrl-resolution-missing", { pattern, anchor: "backdropUrl" });
     }
     expect(engineSource).toMatch(pattern);
-    // META-ART-02: no TMDB image CDN in the engine.
-    expect(engineSource).not.toMatch(/image\.tmdb\.org|tmdbImageUrl/);
+    // META-ART-02: no catalog image CDN in the engine.
+    expect(engineSource).not.toMatch(/\/t\/p\/(w\d+|original)\/|catalogImageUrl/);
   });
 
   it("launchExternalMpv IPC payload carries backdropUrl (not hard-coded null)", () => {

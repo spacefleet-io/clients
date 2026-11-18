@@ -1,7 +1,7 @@
 import React, { createContext, startTransition, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useRuntimeInstanceId } from "@space/desktop-shell/services/runtime-status";
 import { checkKeptLibraryKey } from "@space/desktop-shell/library-kept-key";
-import { ApiError, getLibraryMeta, getMe, getMetadataDetails, TmdbDetails } from "@/api";
+import { ApiError, getLibraryMeta, getMe, getMetadataDetails, TitleDetails } from "@/api";
 import { useAuth } from "@/auth";
 import { clearLibraryKey, getStoredLibraryKey, isLibraryKeyAcknowledged } from "@/lib/onboarding";
 import {
@@ -30,9 +30,9 @@ import { parseTitleVariants, profileTitleLanguage, shownTitleArt, titleVariantsK
 import { viewingScopeFor } from "@space/shared/profileViewing";
 import { loadComposedClientConfig, persistComposedClientConfig, type DeviceCapacityStore } from "@/lib/profileClientConfig";
 import { decryptBase64ToBytes } from "@/lib/crypto";
-import { getTmdbDetails, getTmdbTrailersForLanguages, setDesktopTextsLibrary } from "@/lib/metadata";
+import { getTitleDetails, getTitleTrailersForLanguages, setDesktopTextsLibrary } from "@/lib/metadata";
 import { pickLibraryCrew } from "@space/shared/libraryCrew";
-import { attachTmdbAssets } from "@/lib/tmdbAssets";
+import { attachCatalogAssets } from "@/lib/catalogAssets";
 import { ARTWORK_COPY_TICKET_FLOOR, ARTWORK_REFRESH_GAP_MS, createDesktopArtworkCopyQueue, toUploadOutcome } from "@/lib/artworkCopy";
 import { scheduleArtworkMigration } from "@space/library-db-definition/artworkCopy";
 import { coalesceRefresh } from "@/lib/coalesceRefresh";
@@ -93,7 +93,7 @@ type LibraryContextValue = {
   /** Re-runs the full library load; resolves once that load settled (UX-CRASH-01's "Try again" waits for it). */
   reload: () => Promise<void>;
   activateRemoteLibrary: (token: string, keyBase64: string) => Promise<void>;
-  addMediaFromTmdb: (item: TmdbDetails) => Promise<string>;
+  addMediaFromCatalog: (item: TitleDetails) => Promise<string>;
   linkFileToMedia: (mediaId: string, filename: string, season?: number | null, episode?: number | null) => Promise<string>;
   setProgress: (
     mediaId: string,
@@ -101,7 +101,7 @@ type LibraryContextValue = {
     episodeId?: string | null,
     // Phase 2: optional absolute position + duration so the persisted resume
     // payload can carry seconds (not just pct). Used by the credits-aware
-    // completion check (TheIntroDB) to compare "watched past credits-start"
+    // completion check (the metadata service) to compare "watched past credits-start"
     // in absolute time. Old callers stay on the pct-only payload.
     timing?: ProgressTiming | null,
     // Issue #25 P19-residual: persist only, leave library React state alone
@@ -122,7 +122,7 @@ type LibraryContextValue = {
   getPlaylistIdBySlug: (slug: string) => string | null;
   deleteMedia: (mediaId: string) => Promise<{ keys: string[] }>;
   deleteMediaFile: (fileId: string) => Promise<void>;
-  replaceMediaTrailers: (mediaId: string, trailers: TmdbDetails["trailers"]) => Promise<void>;
+  replaceMediaTrailers: (mediaId: string, trailers: TitleDetails["trailers"]) => Promise<void>;
   updateMediaMetadata: (payload: {
     mediaId: string;
     media?: {
@@ -142,13 +142,13 @@ type LibraryContextValue = {
     seasons?: MediaSeasonDraft[];
     episodes?: MediaEpisodeDraft[];
   }) => Promise<void>;
-  restoreMediaFromTmdb: (mediaId: string, options: { resetCast: boolean }) => Promise<void>;
-  /** META-ART-01: copy this title's artwork still stored as TMDB paths into the user's storage, in the background. */
+  restoreMediaFromCatalog: (mediaId: string, options: { resetCast: boolean }) => Promise<void>;
+  /** META-ART-01: copy this title's artwork still stored as catalog paths into the user's storage, in the background. */
   copyMediaArtwork: (mediaId: string) => void;
-  /** LIB-SHOW-01: merge a running show's fresh TMDB season + episode lists, keeping every stored episode id. */
-  refreshShowEpisodes: (mediaId: string, item: TmdbDetails) => Promise<ShowEpisodeRefreshResult>;
-  /** LIB-SHOW-02: remove the episodes the user agreed to drop after TMDB stopped listing them. */
-  removeEpisodesNotOnTmdb: (mediaId: string, episodeIds: string[]) => Promise<DelistedEpisodeRemovalResult>;
+  /** LIB-SHOW-01: merge a running show's fresh catalog season + episode lists, keeping every stored episode id. */
+  refreshShowEpisodes: (mediaId: string, item: TitleDetails) => Promise<ShowEpisodeRefreshResult>;
+  /** LIB-SHOW-02: remove the episodes the user agreed to drop after the catalog stopped listing them. */
+  removeEpisodesNotInCatalog: (mediaId: string, episodeIds: string[]) => Promise<DelistedEpisodeRemovalResult>;
   /** LIB-SHOW-04: move an episode the user has a file for to another episode slot, after they said yes. */
   moveEpisodeToSlot: (mediaId: string, episodeId: string, targetEpisodeId: string) => Promise<EpisodeMoveResult>;
   getSharedSetting: (key: string) => { value: string; updatedAt: string } | null;
@@ -670,24 +670,24 @@ const describeError = (error: unknown) => {
   return String(error ?? "unknown_error");
 };
 
-export const addMediaFromTmdbWithSnapshotRefresh = async ({
+export const addMediaFromCatalogWithSnapshotRefresh = async ({
   db,
   item,
   requestSnapshotRefresh,
 }: {
-  db: Pick<LibraryDb, "addMediaFromTmdb">;
-  item: TmdbDetails;
+  db: Pick<LibraryDb, "addMediaFromCatalog">;
+  item: TitleDetails;
   requestSnapshotRefresh: () => Promise<unknown>;
 }) => {
-  const mediaId = await db.addMediaFromTmdb(item);
+  const mediaId = await db.addMediaFromCatalog(item);
   try {
     await requestSnapshotRefresh();
   } catch (error) {
     libraryContextLog.error({
       mediaType: item.type,
-      tmdbId: item.id ?? null,
+      catalogId: item.id ?? null,
       message: describeError(error),
-    }, "addMediaFromTmdb snapshot refresh failed");
+    }, "addMediaFromCatalog snapshot refresh failed");
   }
   return mediaId;
 };
@@ -2031,7 +2031,7 @@ export const LibraryProvider = ({
   }, [db, token, handleForcedLogout, refreshSnapshot, syncClientConfigFromDb, confirmBackendOutage]);
 
   // META-ART-01: a matched title's artwork is copied into the user's storage in the background, one title at a
-  // time, after the match is saved (never on its critical path). A failed image keeps its TMDB path and is retried
+  // time, after the match is saved (never on its critical path). A failed image keeps its catalog path and is retried
   // the next time the title is matched, refreshed, restored or opened.
   const artworkCopyQueue = useMemo(() => {
     if (!db || !token) return null;
@@ -2086,10 +2086,10 @@ export const LibraryProvider = ({
     [artworkCopyQueue]
   );
 
-  const addMediaFromTmdb = useCallback(
-    async (item: TmdbDetails) => {
+  const addMediaFromCatalog = useCallback(
+    async (item: TitleDetails) => {
       if (!db) throw new Error("LIBRARY_NOT_READY");
-      const mediaId = await addMediaFromTmdbWithSnapshotRefresh({
+      const mediaId = await addMediaFromCatalogWithSnapshotRefresh({
         db,
         item,
         requestSnapshotRefresh: () => requestSnapshotRefresh(db),
@@ -2504,7 +2504,7 @@ export const LibraryProvider = ({
   );
 
   const replaceMediaTrailers = useCallback(
-    async (mediaId: string, trailers: TmdbDetails["trailers"]) => {
+    async (mediaId: string, trailers: TitleDetails["trailers"]) => {
       if (!db) throw new Error("LIBRARY_NOT_READY");
       await db.replaceMediaTrailers(mediaId, trailers);
       await requestSnapshotRefresh(db);
@@ -2538,7 +2538,7 @@ export const LibraryProvider = ({
     [db, requestSnapshotRefresh]
   );
 
-  const restoreMediaFromTmdb = useCallback(
+  const restoreMediaFromCatalog = useCallback(
     async (mediaId: string, options: { resetCast: boolean }) => {
       if (!db) throw new Error("LIBRARY_NOT_READY");
       if (!token) throw new Error("AUTH_REQUIRED");
@@ -2546,15 +2546,15 @@ export const LibraryProvider = ({
       if (!key) throw new Error("KEY_REQUIRED");
 
       const details = await db.getMediaDetails(mediaId);
-      if (!details || details.tmdbId === null) throw new Error("TMDB_REQUIRED");
+      if (!details || details.catalogId === null) throw new Error("CATALOG_REQUIRED");
 
-      const fresh = await getTmdbDetails(token, details.type, details.tmdbId);
+      const fresh = await getTitleDetails(token, details.type, details.catalogId);
       const config = loadClientConfig();
-      const trailers = await getTmdbTrailersForLanguages(token, details.type, details.tmdbId, [
+      const trailers = await getTitleTrailersForLanguages(token, details.type, details.catalogId, [
         fresh.originalLanguage,
         ...(config.trailerLanguages.extras ?? []),
       ]);
-      const withAssets = await attachTmdbAssets(token, key, { ...fresh, trailers }, { includeCast: options.resetCast });
+      const withAssets = await attachCatalogAssets(token, key, { ...fresh, trailers }, { includeCast: options.resetCast });
 
       const seasonByNumber = new Map(details.seasons.map((season) => [season.seasonNumber, season.id]));
       const episodeByKey = new Map(
@@ -2596,7 +2596,7 @@ export const LibraryProvider = ({
           .filter((episode) => episode.id),
         cast: options.resetCast
           ? withAssets.cast.map((member) => ({
-              tmdbId: member.tmdbId ?? null,
+              catalogId: member.personId ?? null,
               name: member.name,
               role: member.role ?? null,
               profilePath: member.profilePath ?? null,
@@ -2620,20 +2620,20 @@ export const LibraryProvider = ({
   );
 
   const refreshShowEpisodes = useCallback(
-    async (mediaId: string, item: TmdbDetails) => {
+    async (mediaId: string, item: TitleDetails) => {
       if (!db) throw new Error("LIBRARY_NOT_READY");
       const result = await db.refreshShowEpisodes(mediaId, item);
       if (result.changed) await requestSnapshotRefresh(db);
-      // New seasons and episodes arrive with TMDB paths; earlier failures are retried here too (META-ART-01).
+      // New seasons and episodes arrive with catalog paths; earlier failures are retried here too (META-ART-01).
       copyMediaArtwork(mediaId);
       return result;
     },
     [db, requestSnapshotRefresh, copyMediaArtwork]
   );
 
-  // LIB-CAST-01: once per opened library, titles whose cast the old code merged into one person get TMDB's cast
+  // LIB-CAST-01: once per opened library, titles whose cast the old code merged into one person get the catalog's cast
   // again, each title once (the marker is a synced setting). Only the cast is rewritten, unlike "Restore from
-  // TMDB": titles, synopsis and artwork stay as the user has them. Cast photos keep TMDB paths here and are copied
+  // the catalog": titles, synopsis and artwork stay as the user has them. Cast photos keep catalog paths here and are copied
   // by the background artwork copy (META-ART-01).
   const castRefetchDbRef = useRef<LibraryDb | null>(null);
   useEffect(() => {
@@ -2644,12 +2644,12 @@ export const LibraryProvider = ({
     let stopped = false;
     const refetchCast = async (mediaId: string) => {
       const details = await db.getMediaDetails(mediaId);
-      if (!details || details.tmdbId === null) return;
-      const fresh = await getTmdbDetails(token, details.type, details.tmdbId);
+      if (!details || details.catalogId === null) return;
+      const fresh = await getTitleDetails(token, details.type, details.catalogId);
       await db.updateMediaMetadata({
         mediaId,
         cast: fresh.cast.map((member) => ({
-          tmdbId: member.tmdbId ?? null,
+          catalogId: member.personId ?? null,
           name: member.name,
           role: member.role ?? null,
           profilePath: member.profilePath ?? null,
@@ -2712,7 +2712,7 @@ export const LibraryProvider = ({
     let finished = false;
     const run = startTitleVariantsReconcile({
       db,
-      details: (type, tmdbId, language) => getMetadataDetails(token, type, tmdbId, language),
+      details: (type, catalogId, language) => getMetadataDetails(token, type, catalogId, language),
       accountLanguage,
       profileOptions: profileOptionsKey.split(",").map((option) => (option === "original" ? "original" : "app")),
       legacyLibraryLanguage: settingsMapRef.current["library_metadata_language"]?.value ?? null,
@@ -2744,10 +2744,10 @@ export const LibraryProvider = ({
     };
   }, [db, token, systemIssue, datasetStatus.metadata, accountLanguage, profileOptionsKey, requestSnapshotRefresh, copyMediaArtwork]);
 
-  const removeEpisodesNotOnTmdb = useCallback(
+  const removeEpisodesNotInCatalog = useCallback(
     async (mediaId: string, episodeIds: string[]) => {
       if (!db) throw new Error("LIBRARY_NOT_READY");
-      const result = await db.removeEpisodesNotOnTmdb(mediaId, episodeIds);
+      const result = await db.removeEpisodesNotInCatalog(mediaId, episodeIds);
       if (result.removed > 0) await requestSnapshotRefresh(db);
       return result;
     },
@@ -3305,7 +3305,7 @@ export const LibraryProvider = ({
       awaitDatasetReady,
       reload,
       activateRemoteLibrary,
-      addMediaFromTmdb: guardWriteAction(addMediaFromTmdb),
+      addMediaFromCatalog: guardWriteAction(addMediaFromCatalog),
       linkFileToMedia: guardWriteAction(linkFileToMedia),
       setProgress: guardWriteAction(setProgress),
       getMediaDetails,
@@ -3322,10 +3322,10 @@ export const LibraryProvider = ({
       deleteMediaFile: guardWriteAction(deleteMediaFile),
       replaceMediaTrailers: guardWriteAction(replaceMediaTrailers),
       updateMediaMetadata: guardWriteAction(updateMediaMetadata),
-      restoreMediaFromTmdb: guardWriteAction(restoreMediaFromTmdb),
+      restoreMediaFromCatalog: guardWriteAction(restoreMediaFromCatalog),
       refreshShowEpisodes: guardWriteAction(refreshShowEpisodes),
       copyMediaArtwork,
-      removeEpisodesNotOnTmdb: guardWriteAction(removeEpisodesNotOnTmdb),
+      removeEpisodesNotInCatalog: guardWriteAction(removeEpisodesNotInCatalog),
       moveEpisodeToSlot: guardWriteAction(moveEpisodeToSlot),
       getSharedSetting,
       getActiveProfileSettings,
@@ -3366,7 +3366,7 @@ export const LibraryProvider = ({
       awaitDatasetReady,
       reload,
       activateRemoteLibrary,
-      addMediaFromTmdb,
+      addMediaFromCatalog,
       linkFileToMedia,
       setProgress,
       getMediaDetails,
@@ -3383,10 +3383,10 @@ export const LibraryProvider = ({
       deleteMediaFile,
       replaceMediaTrailers,
       updateMediaMetadata,
-      restoreMediaFromTmdb,
+      restoreMediaFromCatalog,
       refreshShowEpisodes,
       copyMediaArtwork,
-      removeEpisodesNotOnTmdb,
+      removeEpisodesNotInCatalog,
       moveEpisodeToSlot,
       getSharedSetting,
       getActiveProfileSettings,

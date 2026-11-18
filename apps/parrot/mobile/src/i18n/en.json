@@ -13,8 +13,7 @@
     "login": {
       "sameAsBadger": "Use the same email and password as Badger.",
       "codeTotp": "Code from your authenticator app",
-      "codeEmail": "Code we emailed you",
-      "usePassword": "Sign in with your password"
+      "codeEmail": "Code we emailed you"
     },
     "key": {
       "title": "Enter your library key",

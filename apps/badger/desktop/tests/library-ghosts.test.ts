@@ -17,7 +17,7 @@ const dumpGhostsSnapshot = (
       `jobs=${JSON.stringify((ctx.jobs ?? []).map((j) => ({ id: j.id, status: j.status, matchedMediaId: j.matchedMediaId, matchedTo: j.matchedTo })))}`,
     );
     console.error(
-      `media=${JSON.stringify((ctx.media ?? []).map((m) => ({ id: (m as { id?: string }).id, title: (m as { title?: string }).title, year: (m as { year?: string }).year, tmdbId: (m as { tmdbId?: number }).tmdbId })))}`,
+      `media=${JSON.stringify((ctx.media ?? []).map((m) => ({ id: (m as { id?: string }).id, title: (m as { title?: string }).title, year: (m as { year?: string }).year, catalogId: (m as { catalogId?: number }).catalogId })))}`,
     );
     if (ctx.exclude) console.error(`exclude=${JSON.stringify(Array.from(ctx.exclude))}`);
     console.error(`computed ghost items=${JSON.stringify(ctx.items, null, 2)}`);
@@ -47,8 +47,7 @@ describe("buildGhostLibraryItems", () => {
       {
         id: "media-1",
         type: "tv" as const,
-        tmdbId: 901668,
-        externalIds: { tmdb: 901668 },
+        catalogId: 901668,
         title: "Lodgers",
         originalTitle: "Lodgers",
         originalLanguage: "en",

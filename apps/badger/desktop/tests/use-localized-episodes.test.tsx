@@ -28,7 +28,7 @@ import { useLocalizedEpisodes } from "@/lib/useLocalizedEpisodes";
 type ShowInput = {
   id: string;
   type: "movie" | "tv";
-  tmdbId: number | null;
+  catalogId: number | null;
   episodes?: { seasonNumber: number; episodeNumber: number }[];
 } | null;
 
@@ -75,7 +75,7 @@ const ep = (episodeNumber: number, name: string | null, overview: string | null)
   overview,
 });
 
-const tvShow = (): NonNullable<ShowInput> => ({ id: "show1", type: "tv", tmdbId: 100 });
+const tvShow = (): NonNullable<ShowInput> => ({ id: "show1", type: "tv", catalogId: 100 });
 
 beforeEach(() => {
   localizedEpisodes.clear();
@@ -166,7 +166,7 @@ describe("useLocalizedEpisodes (desktop adapter)", () => {
     await renderHarness(tvShow());
     await flush();
     authToken = "tok";
-    await renderHarness({ id: "movie1", type: "movie", tmdbId: 5 });
+    await renderHarness({ id: "movie1", type: "movie", catalogId: 5 });
     await flush();
     check("guards", () => {
       expect(getLocalizedEpisodesMock).not.toHaveBeenCalled();

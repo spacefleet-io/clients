@@ -3,7 +3,7 @@ import { defaultSeason } from "../src/lib/defaultSeason";
 
 const all = new Set([0, 1, 2, 3]);
 
-// @bugfix @regression-proof: the movie page opened shows on season 0 (extras) when TMDB lists it first.
+// @bugfix @regression-proof: the movie page opened shows on season 0 (extras) when the catalog lists it first.
 describe("defaultSeason", () => {
   it("opens on the season being resumed, even season 0", () => {
     expect(defaultSeason([0, 1, 2], 2, all)).toBe(2);

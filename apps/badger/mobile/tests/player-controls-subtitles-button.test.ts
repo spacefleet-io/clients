@@ -2,7 +2,7 @@
  * @test-id BADGER-MOBILE-SUBGET-002
  * @level component
  * @why Issue #2500 (Chris 2026-11-15): on a video without subtitles the subtitles button looked dead. Chris 2026-11-18
- *   (Black Hawk Down on phone): it then searched OpenSubtitles instead of showing the subtitles the film already had.
+ *   (Black Hawk Down on phone): it then searched for subtitles online instead of showing the subtitles the film already had.
  *   The button (and the TV remote's subtitles key) now always opens the menu, with nothing searched: Off, every
  *   subtitle the title has, then "Get more subtitles…" (greyed offline with why) and, while a fetched subtitle is on,
  *   "Try another version" (#2502). Picking a stored subtitle downloads nothing (PLAY-SUBGET-24).
@@ -100,7 +100,7 @@ const spanish: SubtitleTrack = {
   format: "vtt",
   encrypted: false,
   url: "obj/es.srt",
-  source: "opensubtitles:11",
+  source: "fetched:11",
 };
 
 let renderer: ReactTestRenderer | null = null;
@@ -150,7 +150,7 @@ const mount = async (options: Options) => {
         tryAnotherSubtitle: options.tryAnother
           ? {
               title: "Try another version",
-              isFetched: (track: SubtitleTrack) => (track.source ?? "").startsWith("opensubtitles"),
+              isFetched: (track: SubtitleTrack) => (track.source ?? "").startsWith("fetched"),
               unavailableReason: options.unavailableReason ?? null,
               onPress: options.tryAnother,
             }

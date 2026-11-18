@@ -58,7 +58,7 @@
             <data android:scheme="spacebadger" android:host="pair" />
             <data android:scheme="spacebadger" android:host="auth" />
         </intent-filter>
-        <!-- ACCT-PAIR-06: a Badger device's pairing QR, https://spacefleet.io/pair/badger?code=ABCD-EFGH, opens the
+        <!-- ACCT-PAIR-06: a Badger device's pairing QR, https://spacefleet.io/pair/badger?code=ABCDEFGH, opens the
              approve screen. Only Badger's path: Parrot claims /pair/parrot. The website's
              /.well-known/assetlinks.json verifies it, so the link opens Badger without asking. -->
         <intent-filter android:autoVerify="true">

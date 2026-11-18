@@ -83,7 +83,7 @@ describe("variant row", () => {
   const record = {
     rowLanguage: "en",
     rowTitle: "Hate",
-    original: { language: "fr", title: "La Haine", posterPath: "asset:p::k", backdropPath: "/tmdb-backdrop.jpg" },
+    original: { language: "fr", title: "La Haine", posterPath: "asset:p::k", backdropPath: "/catalog-backdrop.jpg" },
     fetchedAt: "2026-11-17T10:00:00.000Z",
   };
 
@@ -103,7 +103,7 @@ describe("variant row", () => {
     expect(shownTitleArt(row, null, "original")).toEqual(row);
   });
 
-  // @bugfix @regression-proof Chris 2026-11-18: the Bardock TV special (TMDB 39323) showed its Japanese title under
+  // @bugfix @regression-proof Chris 2026-11-18: the Bardock TV special (catalog 39323) showed its Japanese title under
   // "Original version". An original set in non-Latin letters, from whatever app wrote it, is never shown.
   it("never shows an original set in non-Latin letters", () => {
     const row = { title: "Dragon Ball Z - Le Père de Son Gokû", posterPath: "asset:fr-poster::k", backdropPath: "asset:backdrop::k" };

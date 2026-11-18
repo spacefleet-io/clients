@@ -79,7 +79,7 @@ export const translateActionsToV2Sources = (
   actions: LabQueueAction[],
   desiredFormats: V2Quality[],
   options?: {
-    showSkipDataByTmdbId?: Map<number, BadgerIngestShowSkipCache>;
+    showSkipDataByCatalogId?: Map<number, BadgerIngestShowSkipCache>;
   }
 ): V2SubmitSource[] => {
   return actions
@@ -91,8 +91,8 @@ export const translateActionsToV2Sources = (
       const presetMediaId =
         (a.preset?.media as { id?: string } | undefined)?.id ??
         (
-          a.preset?.pendingMedia as { tmdbId?: number } | undefined
-        )?.tmdbId?.toString();
+          a.preset?.pendingMedia as { catalogId?: number } | undefined
+        )?.catalogId?.toString();
       // TV preset: thread season/episode onto the wire so the runtime's
       // commit step can stamp media_files / media_audio_tracks with the
       // correct (season, episode), which in turn allows the renderer to
@@ -117,13 +117,13 @@ export const translateActionsToV2Sources = (
       const presetType =
         (a.preset?.media as { type?: string } | undefined)?.type ??
         (a.preset?.pendingMedia as { type?: string } | undefined)?.type;
-      const presetTmdbId =
-        (a.preset?.media as { tmdbId?: number | null } | undefined)?.tmdbId ??
-        (a.preset?.pendingMedia as { tmdbId?: number | null } | undefined)?.tmdbId ??
+      const presetCatalogId =
+        (a.preset?.media as { catalogId?: number | null } | undefined)?.catalogId ??
+        (a.preset?.pendingMedia as { catalogId?: number | null } | undefined)?.catalogId ??
         null;
       const showSkipCache =
-        presetType === "tv" && typeof presetTmdbId === "number"
-          ? options?.showSkipDataByTmdbId?.get(presetTmdbId)
+        presetType === "tv" && typeof presetCatalogId === "number"
+          ? options?.showSkipDataByCatalogId?.get(presetCatalogId)
           : undefined;
       return a.files.filter(isV2SourceEntry).map((file) => {
         const isTvSource = presetType === "tv" && showSkipCache !== undefined;

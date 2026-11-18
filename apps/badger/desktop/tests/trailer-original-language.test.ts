@@ -46,7 +46,7 @@ beforeEach(() => {
 describe("a trailer refresh reads the title's original language without a new details lookup (LIB-LANG-02)", () => {
   it("DESKTOP-TRAILER-LANG-001: the stored original language asks nothing", async () => {
     setDesktopTextsLibrary(memoryLibrary() as never);
-    expect(await trailerOriginalLanguage("tok", { type: "movie", tmdbId: 603, originalLanguage: "ja" }, "fr")).toBe("ja");
+    expect(await trailerOriginalLanguage("tok", { type: "movie", catalogId: 603, originalLanguage: "ja" }, "fr")).toBe("ja");
     expect(getMetadataDetailsMock).not.toHaveBeenCalled();
   });
 
@@ -61,14 +61,14 @@ describe("a trailer refresh reads the title's original language without a new de
     // A later session (another device) with only the library row: the trailer refresh asks nothing.
     setDesktopTextsLibrary(null);
     setDesktopTextsLibrary(library as never);
-    expect(await trailerOriginalLanguage("tok", { type: "movie", tmdbId: 603, originalLanguage: null }, "fr")).toBe("en");
+    expect(await trailerOriginalLanguage("tok", { type: "movie", catalogId: 603, originalLanguage: null }, "fr")).toBe("en");
     expect(getMetadataDetailsMock).toHaveBeenCalledTimes(1);
   });
 
   it("DESKTOP-TRAILER-LANG-003: with no kept answer naming it, asks once per title and language and keeps the answer", async () => {
     const library = memoryLibrary();
     setDesktopTextsLibrary(library as never);
-    const title = { type: "movie" as const, tmdbId: 604, originalLanguage: null };
+    const title = { type: "movie" as const, catalogId: 604, originalLanguage: null };
     expect(await trailerOriginalLanguage("tok", title, "de")).toBe("en");
     expect(await trailerOriginalLanguage("tok", title, "de")).toBe("en");
     console.info(`${LOG} calls=${JSON.stringify(getMetadataDetailsMock.mock.calls)}`);
@@ -85,7 +85,7 @@ describe("a trailer refresh reads the title's original language without a new de
       value: JSON.stringify({ v: 1, overview: "Ancien.", episodes: [], absent: [], fetchedAt: "2026-11-16T00:00:00.000Z" }),
     });
     setDesktopTextsLibrary(library as never);
-    const title = { type: "movie" as const, tmdbId: 605, originalLanguage: null };
+    const title = { type: "movie" as const, catalogId: 605, originalLanguage: null };
     expect(await trailerOriginalLanguage("tok", title, "fr")).toBe("en");
     expect(await trailerOriginalLanguage("tok", title, "fr")).toBe("en");
     expect(getMetadataDetailsMock).toHaveBeenCalledTimes(1);

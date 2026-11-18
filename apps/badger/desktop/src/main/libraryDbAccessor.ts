@@ -46,7 +46,7 @@ export const setLibraryDbAccessorToken = (token: string | null) => {
 
 /** Methods that modify library state and should trigger a snapshot refresh. */
 const WRITE_METHODS = new Set([
-  "setSyncEnabled", "clearPendingSync", "addMediaFromTmdb", "refreshShowEpisodes", "removeEpisodesNotOnTmdb", "moveEpisodeToSlot", "updateMediaMetadata", "applyArtworkCopies", "replaceMediaTitleArt",
+  "setSyncEnabled", "clearPendingSync", "addMediaFromCatalog", "refreshShowEpisodes", "removeEpisodesNotInCatalog", "moveEpisodeToSlot", "updateMediaMetadata", "applyArtworkCopies", "replaceMediaTitleArt",
   "replaceMediaTrailers", "setSetting", "addMediaEdition", "linkFileToMedia", "markMediaPlayable", "deleteMediaFile",
   "setProgress", "addMediaFormat", "setMediaFormatChunks", "removeMediaFormat",
   "setMediaFileDesiredFormats", "addAudioTracksForFile", "addSubtitleTracksForFile",

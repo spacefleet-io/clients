@@ -77,8 +77,7 @@
       }
     },
     "pairing": {
-      "title": "Iniciar sesión con otro dispositivo",
-      "usePassword": "Iniciar sesión con correo y contraseña"
+      "title": "Iniciar sesión con otro dispositivo"
     },
     "code": {
       "recheckHint": "Tu cuenta no tiene contraseña, así que pedimos un código: el de tu app de autenticación si está activada, si no, uno que te enviamos por correo.",
@@ -762,7 +761,7 @@
       "tryAnother": "Probar otro código"
     },
     "errors": {
-      "invalid_code": "Eso no parece un código de vinculación. Tiene 8 letras y números, como ABCD-EFGH.",
+      "invalid_code": "Eso no parece un código de vinculación. Tiene 8 letras y números, como ABCD EFGH.",
       "not_found": "No encontramos ese código. Puede que haya caducado (los códigos duran 5 minutos) o que ya se haya usado. Pide un código nuevo en el otro dispositivo.",
       "expired": "Ese código ha caducado. Pide un código nuevo en el otro dispositivo y vuelve a intentarlo.",
       "already_used": "Ese código ya se ha usado. Si no lo aprobaste tú, revisa tu lista de dispositivos.",
@@ -792,9 +791,27 @@
     }
   },
   "phonePairing": {
+    "signIn": {
+      "subtitle": "Escanéalo con Badger o Parrot en un dispositivo con la sesión iniciada.",
+      "orTypeCode": "o escribe el código",
+      "waiting": "Esperando al otro dispositivo…",
+      "newCodeIn": "Código nuevo en {{time}}",
+      "help": "¿Cómo funciona?",
+      "step1": {
+        "badger": "Abre **Badger o Parrot** en una computadora o un teléfono con la sesión iniciada, o **Badger** en una TV con la sesión iniciada.",
+        "parrot": "Abre **Badger o Parrot** en una computadora o un teléfono con la sesión iniciada."
+      },
+      "step2": "Ve a **Ajustes › Vincular un dispositivo**.",
+      "step3": "Escanea el código QR o escribe el código de 8 caracteres.",
+      "deviceName": "Este teléfono aparecerá como **“{{name}}”**.",
+      "renews_one": "El código cambia solo cada minuto.",
+      "renews_many": "El código cambia solo cada {{count}} minutos.",
+      "renews_other": "El código cambia solo cada {{count}} minutos.",
+      "gotIt": "Entendido"
+    },
     "step1": {
       "badger": "1. Abre Badger o Parrot en una computadora o en otro teléfono con la sesión iniciada, o Badger en una TV con la sesión iniciada.",
-      "parrot": "1. Abre Badger o Parrot en tu computadora o en otro teléfono con la sesión iniciada."
+      "parrot": "1. Abre Badger o Parrot en una computadora o en otro teléfono con la sesión iniciada."
     },
     "step2": "2. Ve a Ajustes y luego a Vincular un dispositivo.",
     "step3": "3. Escanea este código o escribe el código de abajo.",
@@ -850,7 +867,6 @@
       "title": "Vincular un dispositivo",
       "subtitle": "Escribe el código que aparece en la pantalla del otro dispositivo.",
       "codeLabel": "Código que aparece en el otro dispositivo",
-      "codePlaceholder": "ABCD-EFGH",
       "continue": "Continuar",
       "cancel": "Cancelar",
       "back": "Atrás",
@@ -1177,7 +1193,6 @@
     },
     "signIn": {
       "title": "Iniciar sesión",
-      "pairTitle": "Aprueba este teléfono desde otra aplicación",
       "orPassword": "O inicia sesión con tu correo y tu contraseña",
       "signedInAs": "Sesión iniciada como {{email}}",
       "useAnother": "Usar otra cuenta",

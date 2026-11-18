@@ -1,6 +1,6 @@
 /**
  * LIB-CREW-01 backfill on the desktop: runs the shared `backfillMissingCrew` against the opened library, with the
- * metadata service's details lookup (the ticket pipeline "Restore from TMDB" uses) as the fetch. Writes only the
+ * metadata service's details lookup (the ticket pipeline "Restore from the catalog" uses) as the fetch. Writes only the
  * crew of a title that still holds none. Progress is published for the quiet line in the Jobs sidebar; nothing
  * else is shown.
  */
@@ -9,7 +9,7 @@ import { MetadataUnavailableError, NoTicketError } from "@space/metadata-client"
 import { backfillMissingCrew, type CrewBackfillResult } from "@space/library-db-runtime/crewBackfill";
 import { pickLibraryCrew } from "@space/shared/libraryCrew";
 import type { LibraryDb } from "@/lib/libraryDb";
-import { getTmdbDetails } from "@/lib/metadata";
+import { getTitleDetails } from "@/lib/metadata";
 import { rendererLogger } from "@/logger";
 
 const log = rendererLogger.child({ scope: "crew-backfill" });
@@ -54,10 +54,10 @@ export const startCrewBackfill = (
   let filledSinceRefresh = 0;
   const fetchCrew = async (mediaId: string): Promise<number> => {
     const details = await db.getMediaDetails(mediaId);
-    if (!details || details.tmdbId === null) return 0;
+    if (!details || details.catalogId === null) return 0;
     // Crew written meanwhile (a restore, an edit) is the user's: never replaced.
     if (details.crew?.length) return details.crew.length;
-    const fresh = await getTmdbDetails(token, details.type, details.tmdbId);
+    const fresh = await getTitleDetails(token, details.type, details.catalogId);
     const crew = pickLibraryCrew(fresh.crew ?? []);
     if (crew.length === 0) return 0;
     await db.updateMediaMetadata({ mediaId, crew });

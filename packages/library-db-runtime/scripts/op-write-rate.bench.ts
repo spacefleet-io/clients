@@ -48,7 +48,7 @@ describe("#25 op write-rate bench", () => {
     const db = await openSynced();
     try {
       const movieId = await seedMovie(db, 25_201, "Bench Movie");
-      const showId = await db.addMediaFromTmdb({
+      const showId = await db.addMediaFromCatalog({
         id: 25_202,
         type: "tv",
         title: "Bench Show",

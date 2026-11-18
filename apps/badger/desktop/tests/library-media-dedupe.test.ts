@@ -17,12 +17,12 @@ const dumpDedupeSnapshot = (label: string, input: unknown, output: unknown) => {
 
 describe("library media dedupe", () => {
   it("keeps the best duplicate row while merging aggregate tv progress and episode counts", () => {
-    console.info("[library-media-dedupe:tv-merge] deduping 2 tv rows with shared tmdbId=100 (Better Call Saul)");
+    console.info("[library-media-dedupe:tv-merge] deduping 2 tv rows with shared catalogId=100 (Better Call Saul)");
     const input = [
       {
         id: "a",
         type: "tv",
-        tmdbId: 100,
+        catalogId: 100,
         title: "Better Call Saul",
         originalTitle: "Better Call Saul",
         year: 2015,
@@ -37,7 +37,7 @@ describe("library media dedupe", () => {
       {
         id: "b",
         type: "tv",
-        tmdbId: 100,
+        catalogId: 100,
         title: "Better Call Saul",
         originalTitle: "Better Call Saul",
         year: 2015,
@@ -71,13 +71,13 @@ describe("library media dedupe", () => {
     }
   });
 
-  it("falls back to normalized local identity when tmdb ids are missing", () => {
-    console.info("[library-media-dedupe:local-identity] deduping 2 movie rows with null tmdbId via normalized title (Arrival / ' arrival ')");
+  it("falls back to normalized local identity when catalog ids are missing", () => {
+    console.info("[library-media-dedupe:local-identity] deduping 2 movie rows with null catalogId via normalized title (Arrival / ' arrival ')");
     const input = [
       {
         id: "a",
         type: "movie",
-        tmdbId: null,
+        catalogId: null,
         title: "Arrival",
         originalTitle: "Arrival",
         year: 2016,
@@ -89,7 +89,7 @@ describe("library media dedupe", () => {
       {
         id: "b",
         type: "movie",
-        tmdbId: null,
+        catalogId: null,
         title: " arrival ",
         originalTitle: "ARRIVAL",
         year: 2016,

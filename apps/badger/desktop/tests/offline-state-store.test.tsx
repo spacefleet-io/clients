@@ -106,8 +106,7 @@ const makeMediaRow = (
 ): import("../src/renderer/src/lib/libraryDb").MediaRow => ({
   id,
   type,
-  tmdbId: 1,
-  externalIds: null,
+  catalogId: 1,
   title: type === "movie" ? "Test Movie" : "Test Show",
   originalTitle: null,
   originalLanguage: null,
@@ -771,8 +770,7 @@ describe("computeOfflineLocalCountsForDetails", () => {
     const details = {
       id: "movie-det",
       type: "movie" as const,
-      tmdbId: 1,
-      externalIds: null,
+      catalogId: 1,
       title: "Test Movie",
       originalTitle: null,
       originalLanguage: null,

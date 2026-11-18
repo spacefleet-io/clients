@@ -4,7 +4,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "./utils";
 
 /**
- * One status pill for the whole app. The health pills for TMDB / Invidious (and
+ * One status pill for the whole app. The health pills for the metadata service / Invidious (and
  * the runtime status dot) were previously copy-pasted, byte-for-byte color
  * ladders that would inevitably drift. This centralizes the ok / fail / pending
  * / idle / info palette in a single place so every "connection / health /

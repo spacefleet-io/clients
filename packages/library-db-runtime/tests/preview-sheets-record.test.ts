@@ -120,7 +120,7 @@ describe("seek-bar preview sheets in the library (MPV-PREV-02)", () => {
     const db = await LibraryDb.openLocal("token", "key");
     try {
       db.setSyncEnabled(false);
-      const mediaId = await db.addMediaFromTmdb(MOVIE);
+      const mediaId = await db.addMediaFromCatalog(MOVIE);
       const pendingId = await db.addMediaFormat(mediaId, "file-1", "1080p", "h264", 10, [`${PLACEMENT}/v/c0`], 4000, { isSource: true });
       const pending = db.getMediaFormatPreviewSheets(pendingId);
       const missing = db.getMediaFormatPreviewSheets("no-such-format");
@@ -139,7 +139,7 @@ describe("seek-bar preview sheets in the library (MPV-PREV-02)", () => {
     const db = await LibraryDb.openLocal("token", "key");
     try {
       db.setSyncEnabled(false);
-      const mediaId = await db.addMediaFromTmdb(MOVIE);
+      const mediaId = await db.addMediaFromCatalog(MOVIE);
       await addFormats(db, mediaId);
       const formats = db.getMediaDetails(mediaId)?.formats ?? [];
       const listed = db.listMediaFormats(mediaId);
@@ -163,7 +163,7 @@ describe("seek-bar preview sheets in the library (MPV-PREV-02)", () => {
     const db = await LibraryDb.openLocal("token", "key");
     try {
       db.setSyncEnabled(true);
-      const mediaId = await db.addMediaFromTmdb(MOVIE);
+      const mediaId = await db.addMediaFromCatalog(MOVIE);
       await addFormats(db, mediaId);
       // Test seam: the op queue the sync uploads (PendingOp rows are LibraryOps on the wire).
       const ops = (db as unknown as { pendingOps: LibraryOp[] }).pendingOps;
@@ -196,7 +196,7 @@ describe("seek-bar preview sheets in the library (MPV-PREV-02)", () => {
     const db = await LibraryDb.openLocal("token", "key");
     try {
       db.setSyncEnabled(false);
-      const mediaId = await db.addMediaFromTmdb(MOVIE);
+      const mediaId = await db.addMediaFromCatalog(MOVIE);
       await addFormats(db, mediaId);
       const sheetKeys = PREVIEWS.sheets.map((sheet) => sheet.objectKey);
       const storageKeys = db.collectMediaStorageKeys(mediaId);
@@ -215,7 +215,7 @@ describe("seek-bar preview sheets in the library (MPV-PREV-02)", () => {
     const db = await LibraryDb.openLocal("token", "key");
     try {
       db.setSyncEnabled(false);
-      const mediaId = await db.addMediaFromTmdb(MOVIE);
+      const mediaId = await db.addMediaFromCatalog(MOVIE);
       await addFormats(db, mediaId);
       await db.purgeMissingObjects([PREVIEWS.sheets[1]!.objectKey]);
       const formats = db.getMediaDetails(mediaId)?.formats ?? [];

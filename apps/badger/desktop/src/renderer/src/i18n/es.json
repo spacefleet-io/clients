@@ -186,7 +186,7 @@
       "cancel": "Cancelar"
     },
     "errors": {
-      "tmdbNotConfigured": "La búsqueda no está disponible ahora. Vuelve a intentarlo más tarde.",
+      "catalogNotConfigured": "La búsqueda no está disponible ahora. Vuelve a intentarlo más tarde.",
       "searchFailed": "La búsqueda falló. Vuelve a intentarlo.",
       "addFailed": "No se pudo añadir este contenido. Vuelve a intentarlo.",
       "libraryLoading": "La mediateca aún se está cargando. Vuelve a intentarlo en un momento.",
@@ -1900,7 +1900,7 @@
       "searchTimedOut": "La búsqueda de títulos tardó demasiado",
       "metadataUnavailable": "La búsqueda de títulos no está disponible en este momento",
       "scanFailed": "No pudimos leer los archivos seleccionados.",
-      "signInSearchTmdb": "Inicia sesión para buscar."
+      "signInSearchTitles": "Inicia sesión para buscar."
     },
     "toasts": {
       "queuedTitle": "Importación iniciada",
@@ -1961,7 +1961,7 @@
       "dummyTitle": "Añadir con datos de prueba",
       "movie": "Película",
       "tv": "Serie",
-      "searchTmdbPlaceholder": "Buscar películas y series...",
+      "searchTitlesPlaceholder": "Buscar películas y series...",
       "search": "Buscar",
       "searchDummyHint": "Busca un título para añadir datos de prueba.",
       "trailer": "Tráiler",
@@ -2017,8 +2017,8 @@
       "tvShows": "Series",
       "searchLibraryMoviesPlaceholder": "Buscar películas en la mediateca...",
       "searchLibraryTvPlaceholder": "Buscar series en la mediateca...",
-      "searchTmdbMoviesPlaceholder": "Buscar películas...",
-      "searchTmdbTvPlaceholder": "Buscar series...",
+      "searchTitlesMoviesPlaceholder": "Buscar películas...",
+      "searchTitlesTvPlaceholder": "Buscar series...",
       "clear": "Borrar",
       "select": "Seleccionar",
       "loadingMore": "Cargando más...",

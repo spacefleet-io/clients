@@ -23,7 +23,7 @@ vi.mock("@/api", () => ({
 import {
   getLocalizedEpisodes,
   getLocalizedOverview,
-  getTmdbDetailsForLibrary,
+  getTitleDetailsForLibrary,
   localizeSearchResultForLibrary,
   setDesktopTextsLibrary,
 } from "@/lib/metadata";
@@ -67,7 +67,7 @@ beforeEach(() => {
 
 describe("an import keeps the interface-language answer it already fetched (LIB-LANG-02)", () => {
   it("DESKTOP-IMPORT-TEXTS-001: English account: the English answer is kept, the detail page asks nothing", async () => {
-    await getTmdbDetailsForLibrary("tok", "tv", 701, { accountLanguage: "en" });
+    await getTitleDetailsForLibrary("tok", "tv", 701, { accountLanguage: "en" });
     expect(getMetadataDetailsMock).toHaveBeenCalledTimes(1);
     expect(await getLocalizedOverview("tok", "tv", 701, "en")).toBe("Synopsis (en).");
     expect((await getLocalizedEpisodes("tok", 701, "en", ["1:1"]))[0]?.name).toBe("Pilot (en)");
@@ -75,7 +75,7 @@ describe("an import keeps the interface-language answer it already fetched (LIB-
   });
 
   it("DESKTOP-IMPORT-TEXTS-002: French account: the one French answer is kept", async () => {
-    await getTmdbDetailsForLibrary("tok", "movie", 702, { accountLanguage: "fr" });
+    await getTitleDetailsForLibrary("tok", "movie", 702, { accountLanguage: "fr" });
     console.info(`${LOG} calls=${JSON.stringify(getMetadataDetailsMock.mock.calls.map((call) => call[3]))}`);
     expect(getMetadataDetailsMock.mock.calls.map((call) => call[3])).toEqual(["fr"]);
     expect(await getLocalizedOverview("tok", "movie", 702, "fr")).toBe("Synopsis (fr).");
@@ -84,7 +84,7 @@ describe("an import keeps the interface-language answer it already fetched (LIB-
 
   it("DESKTOP-IMPORT-TEXTS-003: after a preview, the import's texts are kept and the detail page asks nothing", async () => {
     await localizeSearchResultForLibrary("tok", hit("tv", 703), { accountLanguage: "fr" });
-    await getTmdbDetailsForLibrary("tok", "tv", 703, { accountLanguage: "fr" });
+    await getTitleDetailsForLibrary("tok", "tv", 703, { accountLanguage: "fr" });
     console.info(`${LOG} calls=${JSON.stringify(getMetadataDetailsMock.mock.calls.map((call) => call[3]))}`);
     expect(getMetadataDetailsMock.mock.calls.map((call) => call[3])).toEqual(["fr", "fr"]);
     expect(await getLocalizedOverview("tok", "tv", 703, "fr")).toBe("Synopsis (fr).");

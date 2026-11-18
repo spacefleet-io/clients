@@ -78,7 +78,7 @@ const desktopUpsert = async (): Promise<UpsertOp> => {
   const db = await LibraryDb.openLocal("token", "key");
   try {
     db.setSyncEnabled(true);
-    const mediaId = await db.addMediaFromTmdb(MOVIE);
+    const mediaId = await db.addMediaFromCatalog(MOVIE);
     const sourceId = await db.addMediaFormat(
       mediaId,
       "file-1",

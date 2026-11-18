@@ -7,7 +7,7 @@
  * The phone and the TV store a show's watched percentage in `media_items.progress_pct` (and the `media.progress` op)
  * on every episode save; the TV poster bar and the phone's details read it. It must be the regular episodes' watched
  * parts over every AIRED regular episode of the show (LIB-PROG-01): specials and announced episodes never count, even
- * though TMDB's `number_of_episodes` (`total_episodes`) includes the announced ones.
+ * though the catalog's `number_of_episodes` (`total_episodes`) includes the announced ones.
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type * as SharedApi from "@space/shared/api";
@@ -18,7 +18,7 @@ const TAG = "[library-show-watched-pct]";
 const log = (phase: string, data?: unknown) =>
   console.info(`${TAG} ${phase}${data === undefined ? "" : ` ${JSON.stringify(data)}`}`);
 
-// 3 specials, 10 aired regular episodes (s1e1..s1e10), 4 announced for 2099; TMDB's count says 14.
+// 3 specials, 10 aired regular episodes (s1e1..s1e10), 4 announced for 2099; the catalog's count says 14.
 // The pre-fix formula gave 300/14 ≈ 21.4 (total_episodes) and 300/17 ≈ 17.6 (every listed row, specials included).
 const store = vi.hoisted(() => {
   const episodes: Array<{ id: string; season_number: number; air_date: string }> = [];

@@ -7,6 +7,7 @@ import { scopeLogger } from "@space/mobile-shell/logger";
 import { RATE_LIMIT_DEFAULT_MINUTES, TOO_MANY_ATTEMPTS_KEY } from "@space/shared/signInError";
 import { LoginScreen } from "../../screens/LoginScreen";
 import { QrCode } from "@space/mobile-shell/pairing-qr";
+import { shortCodeGroups } from "@space/pairing-crypto";
 import { formatCountdown, type PairingState } from "@space/mobile-shell/pairing";
 import { useTvPairing } from "../lib/useTvPairing";
 import { useTvMenuKeyHold } from "../lib/useTvMenuKey";
@@ -68,22 +69,18 @@ const CodeLifeRing = ({ left }: { left: number }) => {
   );
 };
 
-/** The short code with an amber dash between its two halves (mockup `KQ7M-X2PD`). */
+/** The short code in two groups of 4 with a gap, never a dash (ACCT-PAIR-01, Chris 2026-11-18); each half on one line. */
 const ShortCode = ({ code }: { code: string }) => {
   const styles = useTvStyles(baseStyles);
-  const dash = code.indexOf("-");
+  const [first, second] = shortCodeGroups(code);
   return (
-    <Text testID="tv-pairing-short-code" numberOfLines={1} adjustsFontSizeToFit style={styles.code}>
-      {dash > 0 ? (
-        <>
-          {code.slice(0, dash)}
-          <Text style={styles.codeDash}>-</Text>
-          {code.slice(dash + 1)}
-        </>
-      ) : (
-        code
-      )}
-    </Text>
+    <View testID="tv-pairing-short-code" accessible accessibilityLabel={(first + second).split("").join(" ")} style={styles.codeRow}>
+      {[first, second].map((half, index) => (
+        <Text key={index} numberOfLines={1} adjustsFontSizeToFit style={styles.code}>
+          {half}
+        </Text>
+      ))}
+    </View>
   );
 };
 
@@ -276,7 +273,7 @@ const baseStyles = StyleSheet.create({
   label: { marginTop: 11, fontSize: 11, lineHeight: 15 },
   codeLabel: { marginTop: 0, marginBottom: 10 },
   code: { fontFamily: TV_FONT.display, fontSize: 48, lineHeight: 52, fontWeight: "700", letterSpacing: 3.8, color: TV_COLOR.text },
-  codeDash: { color: TV_COLOR.amber },
+  codeRow: { flexDirection: "row", gap: 24 },
   timer: { marginTop: 13, flexDirection: "row", alignItems: "center", gap: 6 },
   timerText: { fontSize: 10.5, lineHeight: 14 },
   deviceName: { marginTop: 5, fontSize: 10, lineHeight: 14 },

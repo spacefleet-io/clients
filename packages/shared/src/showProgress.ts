@@ -4,12 +4,12 @@
  * metadata service share one formula.
  *
  * - "Aired" = a regular episode (season 1 and up; specials in season 0 never count) whose air date is today or earlier.
- * - The total is the aired regular episodes of the show's episode list (its TMDB metadata) when the list carries air
+ * - The total is the aired regular episodes of the show's episode list (its metadata) when the list carries air
  *   dates; else the metadata's episode count (`total_episodes`); else the regular episodes the list holds. A show added
  *   without metadata only lists the episodes in the vault, so only then does the vault decide the total.
  */
 
-/** Today as `YYYY-MM-DD` (UTC), the form TMDB air dates use. */
+/** Today as `YYYY-MM-DD` (UTC), the form the metadata's air dates use. */
 export const airDateToday = (now: Date = new Date()): string => now.toISOString().slice(0, 10);
 
 export type EpisodeAirInfo = { seasonNumber: number; airDate: string | null };

@@ -4,7 +4,7 @@ import { seasonDisplayName } from "../src/seasonName";
 const fr = (season: number) => ({ specials: "Épisodes spéciaux", season: `Saison ${season}` });
 
 // @bugfix badger-desktop-walk-8-season-names
-// @regression-proof The Office's season cards read "Specials" / "Season 1" (TMDB's English names) in a French UI.
+// @regression-proof The Office's season cards read "Specials" / "Season 1" (the catalog's English names) in a French UI.
 describe("seasonDisplayName", () => {
   it("names generic and missing season names in the UI language", () => {
     const cases: [number, string | null, string][] = [

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Python port of packages/library-db-definition/src/ops.ts (OP_STREAM_VERSION 2).
+"""Python port of packages/library-db-definition/src/ops.ts (OP_STREAM_VERSION 3).
 
 ``build_op_statements(op, id_gen)`` returns the ordered ``[(sql, params), ...]`` that the TypeScript
 ``buildOpStatements`` would run, flattened across its groups (the addon keeps ONE combined SQLite, so
@@ -10,8 +10,16 @@ An unknown op type raises UnknownOpTypeError; the caller logs and skips it (v0 p
 """
 import json
 
-OP_STREAM_VERSION = 2
+from legacy_format import LEGACY_CATALOG_ID_SOURCE, catalog_id
+
+OP_STREAM_VERSION = 3
 MIN_SUPPORTED_OP_STREAM_VERSION = 1
+
+# The source a catalog id row is written under (library-db-definition/src/catalogId.ts); readers also accept the
+# source older libraries used.
+CATALOG_ID_SOURCE = "catalog"
+CATALOG_ID_SOURCES = (CATALOG_ID_SOURCE, LEGACY_CATALOG_ID_SOURCE)
+CATALOG_ID_SOURCES_SQL = ", ".join("'%s'" % source for source in CATALOG_ID_SOURCES)
 
 TERMINAL_INGEST_STATUSES = ("completed", "failed", "cancelled")
 
@@ -123,16 +131,11 @@ def _append_media_core(b, details, new_id):
     row_is_this_upsert = "EXISTS (SELECT 1 FROM media_items WHERE id = ? AND updated_at = ?)"
     row_params = [media_id, details.get("updatedAt")]
     b.add("core", "DELETE FROM media_external_ids WHERE media_id = ? AND %s;" % row_is_this_upsert, [media_id] + row_params)
-    if details.get("tmdbId") is not None:
+    media_catalog_id = catalog_id(details)
+    if media_catalog_id is not None:
         b.add("core", """INSERT OR IGNORE INTO media_external_ids (id, media_id, media_type, source, external_id)
        SELECT ?, ?, ?, ?, ? WHERE %s;""" % row_is_this_upsert,
-              [new_id(), media_id, details.get("type"), "tmdb", _js_str(details["tmdbId"])] + row_params)
-    for source, external_id in (details.get("externalIds") or {}).items():
-        if not source or external_id is None:
-            continue
-        b.add("core", """INSERT OR IGNORE INTO media_external_ids (id, media_id, media_type, source, external_id)
-       SELECT ?, ?, ?, ?, ? WHERE %s;""" % row_is_this_upsert,
-              [new_id(), media_id, details.get("type"), source, _js_str(external_id)] + row_params)
+              [new_id(), media_id, details.get("type"), CATALOG_ID_SOURCE, _js_str(media_catalog_id)] + row_params)
     b.add("core", "DELETE FROM media_genres WHERE media_id = ? AND %s;" % row_is_this_upsert, [media_id] + row_params)
     for genre_id in details.get("genres") or []:
         b.add("core", """INSERT OR IGNORE INTO media_genres (id, media_id, genre_id)
@@ -152,9 +155,10 @@ def _append_media_metadata(b, details, new_id):
     for index, member in enumerate(cast):
         b.add("metadata", "INSERT OR REPLACE INTO people (id, name, profile_path) VALUES (?, ?, ?);",
               [member.get("personId"), member.get("name"), member.get("profilePath")])
-        if member.get("tmdbId") is not None:
+        member_catalog_id = catalog_id(member)
+        if member_catalog_id is not None:
             b.add("metadata", "INSERT OR IGNORE INTO people_external_ids (id, person_id, source, external_id) VALUES (?, ?, ?, ?);",
-                  [new_id(), member.get("personId"), "tmdb", _js_str(member["tmdbId"])])
+                  [new_id(), member.get("personId"), CATALOG_ID_SOURCE, _js_str(member_catalog_id)])
         b.add("metadata", "INSERT OR REPLACE INTO media_roles (id, media_id, person_id, role, order_index) VALUES (?, ?, ?, ?, ?);",
               [member.get("id"), media_id, member.get("personId"), member.get("role"), index])
 

@@ -384,7 +384,7 @@ describe.skipIf(!runnable)("MPV-OSC-05: the desktop player's controls keep one o
   }, 120_000);
 
   it("subtitle panel: in a window narrower than the panel it narrows to fit, 16 logical px clear each side, text inside", async () => {
-    const text = "Looking for subtitles in English, French and Dutch on OpenSubtitles and Podnapisi";
+    const text = "Looking for subtitles in English, French and Dutch online";
     for (const c of [{ window: "480x270", dpi: 96, hidpi: 1 }, { window: "1000x720", dpi: 192, hidpi: 2 }]) {
       const h = await launch(c);
       await playButton(h, h.ipc);

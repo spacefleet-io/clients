@@ -35,25 +35,25 @@ const makeWorld = () => {
   const orchard: HealableMedia = {
     id: "m-orchard",
     type: "movie",
-    tmdbId: 900912,
+    catalogId: 900912,
     posterPath: ref("assets/orchard-poster.txt"),
     backdropPath: ref("assets/orchard-backdrop.txt"),
-    cast: [{ personId: "p-ines", tmdbId: 1010, profilePath: ref("assets/ines.txt") }],
-    crew: [{ personId: "p-ines", tmdbId: 1010, profilePath: ref("assets/ines.txt") }],
+    cast: [{ personId: "p-ines", catalogId: 1010, profilePath: ref("assets/ines.txt") }],
+    crew: [{ personId: "p-ines", catalogId: 1010, profilePath: ref("assets/ines.txt") }],
   };
   const brigade: HealableMedia = {
     id: "m-brigade",
     type: "tv",
-    tmdbId: 900315,
+    catalogId: 900315,
     posterPath: ref("assets/brigade-poster.txt"),
-    backdropPath: "/tmdb-backdrop.jpg",
+    backdropPath: "/catalog-backdrop.jpg",
     seasons: [{ id: "s-brigade-3", seasonNumber: 3, posterPath: ref("assets/brigade-s3.txt") }],
     episodes: [{ id: "e-brigade-3-1", seasonNumber: 3, episodeNumber: 1, stillPath: ref("assets/brigade-s3e1.txt") }],
   };
   library.set(orchard.id, orchard);
   library.set(brigade.id, brigade);
   for (const media of library.values()) for (const slot of listHealSlots(media)) vault.set(slot.key, new Uint8Array([1, 2, 3]));
-  sourceDetails.set(900912, { posterPath: "/orchard.jpg", backdropPath: "/orchard-bd.jpg", cast: [{ tmdbId: 1010, profilePath: "/ines.jpg" }] });
+  sourceDetails.set(900912, { posterPath: "/orchard.jpg", backdropPath: "/orchard-bd.jpg", cast: [{ personId: 1010, profilePath: "/ines.jpg" }] });
   sourceDetails.set(900315, {
     posterPath: "/brigade.jpg",
     seasons: [{ seasonNumber: 3, posterPath: "/brigade-s3.jpg" }],
@@ -70,7 +70,7 @@ const makeWorld = () => {
     loadMedia: async (mediaId) => structuredClone(library.get(mediaId) ?? null),
     fetchDetails: async (media) => {
       calls.details.push(media.id);
-      return sourceDetails.get(media.tmdbId ?? -1) ?? null;
+      return sourceDetails.get(media.catalogId ?? -1) ?? null;
     },
     fetchImage: async (kind, path) => {
       calls.images.push(`${kind}:${path}`);
@@ -122,14 +122,14 @@ const makeWorld = () => {
 const keyOf = (value: string | null | undefined) => (value ?? "").split("::")[1];
 
 describe("artwork self-heal (STOR-PLACE-09)", () => {
-  it("lists every stored artwork slot once and maps it back to its TMDB path", () => {
+  it("lists every stored artwork slot once and maps it back to its catalog path", () => {
     const world = makeWorld();
     const slots = listHealSlots(world.library.get("m-brigade")!);
     phase("slots", slots);
     expect(slots.map((slot) => slot.target)).toEqual(["mediaPoster", "seasonPoster", "episodeStill"]);
     const orchard = listHealSlots(world.library.get("m-orchard")!);
     expect(orchard.filter((slot) => slot.target === "personProfile")).toHaveLength(1);
-    expect(sourcePathFor(orchard.find((slot) => slot.target === "personProfile")!, { cast: [{ tmdbId: 1010, profilePath: "/a.jpg" }] })).toBe("/a.jpg");
+    expect(sourcePathFor(orchard.find((slot) => slot.target === "personProfile")!, { cast: [{ personId: 1010, profilePath: "/a.jpg" }] })).toBe("/a.jpg");
     expect(sourcePathFor(slots[2], { episodes: [{ seasonNumber: 3, episodeNumber: 1, stillPath: "/s.jpg" }] })).toBe("/s.jpg");
     expect(sourcePathFor(slots[0], { posterPath: "assets/x.txt" })).toBeNull();
   });

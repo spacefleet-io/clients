@@ -1,13 +1,13 @@
-import type { TmdbDetails } from "@/api";
+import type { TitleDetails } from "@/api";
 import { AssetArtworkError } from "./assetArtworkError";
 import type { ImageKind } from "@space/metadata-client";
 
-export type TmdbAssetOptions = {
+export type CatalogAssetOptions = {
   includeCast?: boolean;
 };
 
 /** Images fetched at the same time: each one is a ticket and an upload, and a long cast must not stampede. */
-export const TMDB_ASSET_CONCURRENCY = 3;
+export const CATALOG_ASSET_CONCURRENCY = 3;
 
 const mapLimit = async <T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> => {
   const results = new Array<R>(items.length);
@@ -27,12 +27,12 @@ export type AttachAssetsDeps = {
   upload: (kind: ImageKind, path: string) => Promise<string>;
 };
 
-export const attachAssets = async (details: TmdbDetails, deps: AttachAssetsDeps, options: TmdbAssetOptions = {}) => {
+export const attachAssets = async (details: TitleDetails, deps: AttachAssetsDeps, options: CatalogAssetOptions = {}) => {
   const castSource = Array.isArray(details.cast) ? details.cast : [];
   const seasonsSource = Array.isArray(details.seasons) ? details.seasons : [];
 
   // Artwork comes from the metadata service (META-ART-02), one ticket per image not already cached. An image that
-  // cannot be fetched NOW (no ticket left, service down) keeps its TMDB path instead of being recorded as "no
+  // cannot be fetched NOW (no ticket left, service down) keeps its catalog path instead of being recorded as "no
   // artwork": the grid resolves such a path lazily, later, and caches it. Only an image the service says does not
   // exist becomes null. Once the reserve is empty nothing more is fetched.
   let outOfTickets = false;
@@ -55,17 +55,17 @@ export const attachAssets = async (details: TmdbDetails, deps: AttachAssetsDeps,
 
   const includeCast = options.includeCast ?? true;
   const cast = includeCast
-    ? await mapLimit(castSource, TMDB_ASSET_CONCURRENCY, async (member) => {
+    ? await mapLimit(castSource, CATALOG_ASSET_CONCURRENCY, async (member) => {
         return { ...member, profilePath: await safeUpload("profile", member.profilePath) };
       })
     : details.cast;
 
-  const seasons = await mapLimit(seasonsSource, TMDB_ASSET_CONCURRENCY, async (season) => {
+  const seasons = await mapLimit(seasonsSource, CATALOG_ASSET_CONCURRENCY, async (season) => {
     return { ...season, posterPath: await safeUpload("poster", season.posterPath) };
   });
 
   // A long series has hundreds of stills: through the metadata service each would cost a ticket, so they are left
-  // as TMDB paths here (`episodes` is returned unchanged) and fetched lazily, one ticket each, only when a screen
+  // as catalog paths here (`episodes` is returned unchanged) and fetched lazily, one ticket each, only when a screen
   // shows them (then cached on disk).
 
   return {
@@ -74,5 +74,5 @@ export const attachAssets = async (details: TmdbDetails, deps: AttachAssetsDeps,
     backdropPath: backdropKey,
     cast,
     seasons,
-  } satisfies TmdbDetails;
+  } satisfies TitleDetails;
 };

@@ -25,7 +25,7 @@ const log = scopeLogger("runtime-jobs-ipc");
 
 // Typed from the runtime contract so every field the renderer sets (skip
 // markers, show skip cache, overrides, dedupe key) reaches the runtime. The
-// old hand-written list lacked `skipMarkers`/`showSkipCache`, so TheIntroDB
+// old hand-written list lacked `skipMarkers`/`showSkipCache`, so the metadata service
 // markers fetched at import were dropped here (PLAY-NEXT-02).
 type SourceItem = BadgerIngestSubmitSourceItemInput;
 
@@ -383,7 +383,7 @@ export const registerRuntimeJobsIpc = (config: {
               episode: s.hints?.episode ?? null,
               skipMarkers: s.skipMarkers === undefined ? "absent" : s.skipMarkers.length,
               showSkipCache: s.showSkipCache
-                ? { showTmdbId: s.showSkipCache.showTmdbId, coverage: s.showSkipCache.coverage.length }
+                ? { showCatalogId: s.showSkipCache.showCatalogId, coverage: s.showSkipCache.coverage.length }
                 : "absent",
             },
             "[skip-markers] forwarding import markers to runtime",

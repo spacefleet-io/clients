@@ -1,19 +1,19 @@
 /**
  * META-ART-01: a matched title's artwork (poster, backdrop, cast photos, season posters, episode stills) is copied
- * into the user's own storage, encrypted, and the library points at those copies instead of TMDB paths.
+ * into the user's own storage, encrypted, and the library points at those copies instead of catalog paths.
  *
- * Platform-neutral: the library database lists what still holds a TMDB path (`listArtworkToCopy`) and swaps in the
+ * Platform-neutral: the library database lists what still holds a catalog path (`listArtworkToCopy`) and swaps in the
  * copies (`applyArtworkCopies`, compare-and-set so a user edit made meanwhile wins); the app supplies `upload`,
  * which fetches the image through the metadata service's `image` op (META-ART-02), encrypts it on the device and
  * stores it under a random name. The copy runs after the match, off its critical path; a failed or skipped image
- * keeps its TMDB path and is retried on the next run (next refresh, restore, or opening the title).
+ * keeps its catalog path and is retried on the next run (next refresh, restore, or opening the title).
  */
 
 export type ArtworkKind = "poster" | "backdrop" | "profile" | "still";
 
 export type ArtworkTarget = "mediaPoster" | "mediaBackdrop" | "seasonPoster" | "personProfile" | "episodeStill";
 
-/** One stored image field that still holds a TMDB path. `id` is the media, season, person or episode row id. */
+/** One stored image field that still holds a catalog path. `id` is the media, season, person or episode row id. */
 export type ArtworkSlot = { target: ArtworkTarget; id: string; path: string };
 
 /** The copy for a slot: an asset key, or null when the metadata service says the image does not exist. */
@@ -71,8 +71,8 @@ export const ARTWORK_COPY_RATE_LIMIT_MAX_WAIT_MS = 5 * 60_000;
 /** Refusals in a row (no picture answered in between) after which the run stops; the next schedule resumes it. */
 export const ARTWORK_COPY_RATE_LIMIT_MAX_RETRIES = 8;
 
-/** A TMDB image path (`/abc.jpg`). Asset keys, user URLs and empty values are never copied. */
-export const isTmdbImagePath = (value: unknown): value is string => typeof value === "string" && /^\/[^/]/.test(value);
+/** A catalog image path (`/abc.jpg`). Asset keys, user URLs and empty values are never copied. */
+export const isCatalogImagePath = (value: unknown): value is string => typeof value === "string" && /^\/[^/]/.test(value);
 
 export const copyMediaArtwork = async ({
   store,
@@ -302,7 +302,7 @@ export const createArtworkCopyQueue = ({
 
 /**
  * META-ART-01/02: where a stored picture is shown from. Browsing and playback show only the user's own encrypted
- * copy (`vault`: the local decrypted cache first, then the user's storage). A TMDB path still in the library
+ * copy (`vault`: the local decrypted cache first, then the user's storage). A catalog path still in the library
  * (`pending`: its copy is not made yet) shows the placeholder and is never asked of the metadata service at display;
  * the copy queue fills it in. Anything else (empty, a user URL) shows the placeholder (`none`).
  */
@@ -310,7 +310,7 @@ export type ArtworkDisplaySource = "vault" | "pending" | "none";
 
 export const artworkDisplaySource = (value: string | null | undefined): ArtworkDisplaySource => {
   if (typeof value !== "string" || value.length === 0) return "none";
-  if (isTmdbImagePath(value as unknown)) return "pending";
+  if (isCatalogImagePath(value as unknown)) return "pending";
   if (value.startsWith("asset:")) return value.indexOf("::") > 0 ? "vault" : "none";
   return /^[a-z][a-z0-9+.-]*:/i.test(value) ? "none" : "vault";
 };
@@ -330,19 +330,19 @@ export type ArtworkDetails = {
 /** `listArtworkToCopy` over a details object, same order and dedup as the library database's. */
 export const listDetailsArtworkSlots = (details: ArtworkDetails): ArtworkSlot[] => {
   const slots: ArtworkSlot[] = [];
-  if (isTmdbImagePath(details.posterPath)) slots.push({ target: "mediaPoster", id: details.id, path: details.posterPath });
-  if (isTmdbImagePath(details.backdropPath)) slots.push({ target: "mediaBackdrop", id: details.id, path: details.backdropPath });
+  if (isCatalogImagePath(details.posterPath)) slots.push({ target: "mediaPoster", id: details.id, path: details.posterPath });
+  if (isCatalogImagePath(details.backdropPath)) slots.push({ target: "mediaBackdrop", id: details.id, path: details.backdropPath });
   for (const season of details.seasons ?? []) {
-    if (isTmdbImagePath(season.posterPath)) slots.push({ target: "seasonPoster", id: season.id, path: season.posterPath });
+    if (isCatalogImagePath(season.posterPath)) slots.push({ target: "seasonPoster", id: season.id, path: season.posterPath });
   }
   const seen = new Set<string>();
   for (const member of details.cast ?? []) {
     if (seen.has(member.personId)) continue;
     seen.add(member.personId);
-    if (isTmdbImagePath(member.profilePath)) slots.push({ target: "personProfile", id: member.personId, path: member.profilePath });
+    if (isCatalogImagePath(member.profilePath)) slots.push({ target: "personProfile", id: member.personId, path: member.profilePath });
   }
   for (const episode of details.episodes ?? []) {
-    if (isTmdbImagePath(episode.stillPath)) slots.push({ target: "episodeStill", id: episode.id, path: episode.stillPath });
+    if (isCatalogImagePath(episode.stillPath)) slots.push({ target: "episodeStill", id: episode.id, path: episode.stillPath });
   }
   return slots;
 };
@@ -434,7 +434,7 @@ export const createDetailsArtworkStore = <T extends ArtworkDetails>({
 });
 
 /**
- * META-ART-01, existing libraries: schedules a copy for every title that still holds a TMDB path. Run once a
+ * META-ART-01, existing libraries: schedules a copy for every title that still holds a catalog path. Run once a
  * library is open (and again after a sync brought titles in); the queue paces the titles (`pauseMs`) and the
  * uploader's ticket floor keeps the reserve for the user's own lookups. Returns how many titles were scheduled.
  */

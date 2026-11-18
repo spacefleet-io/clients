@@ -3,9 +3,9 @@
  * @level integration (real LibraryDb over bun:sqlite, no server; the uploader is a fake)
  * @req META-ART-01
  *
- * Why this exists: a matched title kept TMDB image paths for its poster, backdrop, cast, season posters and
- * episode stills, so every client fetched TMDB again (or nothing, offline) instead of the user's own encrypted copy
- * (#470). The shared copy lists every slot still holding a TMDB path, uploads each through the client's uploader and
+ * Why this exists: a matched title kept catalog image paths for its poster, backdrop, cast, season posters and
+ * episode stills, so every client fetched the catalog again (or nothing, offline) instead of the user's own encrypted copy
+ * (#470). The shared copy lists every slot still holding a catalog path, uploads each through the client's uploader and
  * writes the asset key back, compare-and-set, so a user edit made meanwhile wins. A missing image becomes null, a
  * failure keeps the path for the next run, and an empty ticket reserve (or the client's floor) stops the run.
  */
@@ -49,8 +49,8 @@ const show = () => ({
   backdropPath: "/backdrop.jpg",
   genres: [],
   cast: [
-    { tmdbId: 501, name: "Anna Actor", role: "Lead", profilePath: "/anna.jpg", order: 0 },
-    { tmdbId: 502, name: "Bob Actor", role: "Support", profilePath: "/bob.jpg", order: 1 },
+    { personId: 501, name: "Anna Actor", role: "Lead", profilePath: "/anna.jpg", order: 0 },
+    { personId: 502, name: "Bob Actor", role: "Support", profilePath: "/bob.jpg", order: 1 },
   ],
   trailers: [],
   seasons: [{ seasonNumber: 1, name: "Season 1", overview: null, posterPath: "/s1.jpg", episodeCount: 2, airDate: null }],
@@ -91,7 +91,7 @@ const open = async () => {
 describe("copying matched artwork into the user's storage (META-ART-01)", () => {
   it("@req META-ART-01[badger-desktop] a match ends with asset keys for poster, backdrop, cast, season posters and stills", async () => {
     const db = await open();
-    const mediaId = await db.addMediaFromTmdb(show());
+    const mediaId = await db.addMediaFromCatalog(show());
     log("phase: matched", artworkOf(db, mediaId));
     const slots = db.listArtworkToCopy(mediaId);
     log("phase: slots", slots);
@@ -119,7 +119,7 @@ describe("copying matched artwork into the user's storage (META-ART-01)", () => 
 
   it("@req META-ART-01[badger-desktop] a user edit made during the copy wins (compare-and-set)", async () => {
     const db = await open();
-    const mediaId = await db.addMediaFromTmdb(show());
+    const mediaId = await db.addMediaFromCatalog(show());
     const result = await copyMediaArtwork({
       store: db,
       mediaId,
@@ -135,9 +135,9 @@ describe("copying matched artwork into the user's storage (META-ART-01)", () => 
     expect(result.applied).toBe(6);
   });
 
-  it("@req META-ART-01[badger-desktop] a missing image becomes null, a failure keeps its TMDB path for the next run", async () => {
+  it("@req META-ART-01[badger-desktop] a missing image becomes null, a failure keeps its catalog path for the next run", async () => {
     const db = await open();
-    const mediaId = await db.addMediaFromTmdb(show());
+    const mediaId = await db.addMediaFromCatalog(show());
     const calls: Array<[ArtworkKind, string]> = [];
     const result = await copyMediaArtwork({
       store: db,
@@ -160,7 +160,7 @@ describe("copying matched artwork into the user's storage (META-ART-01)", () => 
 
   it("@req META-ART-01[badger-desktop] no ticket (or the client's floor) stops the run without touching the rest", async () => {
     const db = await open();
-    const mediaId = await db.addMediaFromTmdb(show());
+    const mediaId = await db.addMediaFromCatalog(show());
     const calls: Array<[ArtworkKind, string]> = [];
     const noTicket = await copyMediaArtwork({
       store: db,
@@ -204,9 +204,9 @@ describe("copying matched artwork into the user's storage (META-ART-01)", () => 
 
   it("@req META-ART-01[badger-desktop] the migration lists every title still holding a provider path in any slot, and no other", async () => {
     const db = await open();
-    const copied = await db.addMediaFromTmdb(show());
-    const untouched = await db.addMediaFromTmdb({ ...show(), id: 8102, title: "Second Show" });
-    const oneStillLeft = await db.addMediaFromTmdb({ ...show(), id: 8103, title: "Third Show" });
+    const copied = await db.addMediaFromCatalog(show());
+    const untouched = await db.addMediaFromCatalog({ ...show(), id: 8102, title: "Second Show" });
+    const oneStillLeft = await db.addMediaFromCatalog({ ...show(), id: 8103, title: "Third Show" });
     log("phase: before", { listed: db.listMediaWithArtworkToCopy() });
     expect(new Set(db.listMediaWithArtworkToCopy())).toEqual(new Set([copied, untouched, oneStillLeft]));
 

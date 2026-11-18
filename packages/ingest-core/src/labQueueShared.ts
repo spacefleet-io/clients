@@ -118,7 +118,7 @@ export type QueuePreset = {
   pendingKey?: string;
   pendingMedia?: Pick<
     MediaRow,
-    "id" | "type" | "tmdbId" | "title" | "year" | "posterPath" | "originalLanguage"
+    "id" | "type" | "catalogId" | "title" | "year" | "posterPath" | "originalLanguage"
   >;
   pendingDetails?: LabJob["pendingDetails"];
 };

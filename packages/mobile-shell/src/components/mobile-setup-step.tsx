@@ -337,14 +337,14 @@ const MobileSetupStepTv = ({ step, total, title, body, children, secondary, onBa
 
 type Choice<T extends string> = { value: T; label: string; detail?: string };
 
-/** The answers of a setup question as cards with a radio; the recommended answer comes preselected by the caller. */
+/** The answers of a setup question as cards with a radio; the recommended answer comes preselected by the caller (null: none yet). */
 export const MobileSetupChoices = <T extends string>({
   choices,
   selected,
   onSelect,
 }: {
   choices: ReadonlyArray<Choice<T>>;
-  selected: T;
+  selected: T | null;
   onSelect: (value: T) => void;
 }) => {
   const theme = useMobileShellTheme();

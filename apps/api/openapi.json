@@ -12989,7 +12989,7 @@
           "Pairing"
         ],
         "summary": "Open a device pairing request (no auth)",
-        "description": "A new device (desktop, tv, kodi, jellyfin, mobile) sends `{ deviceType, deviceName (1..80), publicKey (base64 raw X25519, 32 bytes) }` and receives `{ requestId, pollSecret, shortCode (ABCD-EFGH), qrPayload (the web link `<website>/pair/<app>?code=ABCD-EFGH`, ACCT-PAIR-06), expiresAt }`. The `x-space-app` header names the app asking to sign in (badger, parrot, …; missing = badger, unknown = 400 `invalid_app_scope`): the approver is told which app asks, and the approved session's clientType is `<app>-<deviceType>` (ACCT-PAIR-05). The request lives 5 minutes and is single use. Rate limited per IP (10/min): 429 `rate_limited`. Use case: 'Sign in with your phone' screen of a Badger or Parrot app that has no session and no library key yet.",
+        "description": "A new device (desktop, tv, kodi, jellyfin, mobile) sends `{ deviceType, deviceName (1..80), publicKey (base64 raw X25519, 32 bytes) }` and receives `{ requestId, pollSecret, shortCode (8 characters, no dash: ABCDEFGH), qrPayload (the web link `<website>/pair/<app>?code=ABCDEFGH`, ACCT-PAIR-06), expiresAt }`. The `x-space-app` header names the app asking to sign in (badger, parrot, …; missing = badger, unknown = 400 `invalid_app_scope`): the approver is told which app asks, and the approved session's clientType is `<app>-<deviceType>` (ACCT-PAIR-05). The request lives 5 minutes and is single use. Rate limited per IP (10/min): 429 `rate_limited`. Use case: 'Sign in with your phone' screen of a Badger or Parrot app that has no session and no library key yet.",
         "parameters": [
           {
             "schema": {
@@ -13043,11 +13043,11 @@
                     },
                     "shortCode": {
                       "type": "string",
-                      "example": "ABCD-EFGH"
+                      "example": "ABCDEFGH"
                     },
                     "qrPayload": {
                       "type": "string",
-                      "example": "https://spacefleet.io/pair/parrot?code=ABCD-EFGH"
+                      "example": "https://spacefleet.io/pair/parrot?code=ABCDEFGH"
                     },
                     "expiresAt": {
                       "type": "string",
@@ -13185,11 +13185,11 @@
                     },
                     "shortCode": {
                       "type": "string",
-                      "example": "ABCD-EFGH"
+                      "example": "ABCDEFGH"
                     },
                     "qrPayload": {
                       "type": "string",
-                      "example": "https://spacefleet.io/pair/parrot?code=ABCD-EFGH"
+                      "example": "https://spacefleet.io/pair/parrot?code=ABCDEFGH"
                     },
                     "expiresAt": {
                       "type": "string",

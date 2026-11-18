@@ -20,6 +20,7 @@ import time
 import uuid
 
 import progress as prog
+from ops_sql import CATALOG_ID_SOURCES_SQL
 
 # Same prefixes as libraryDb.ts (buildTemplateFormatId / AudioId / SubtitleId).
 TEMPLATE_FORMAT_PREFIX = "tmpl-format:"
@@ -105,14 +106,6 @@ def _marks(n):
 
 
 # ---------------------------------------------------------------------------- loaders
-def _coerce_external_id(source, value):
-    if source == "tmdb":
-        parsed = _finite(value)
-        if parsed is not None:
-            return parsed
-    return value
-
-
 def _load_chunks(conn, table, owner_col, owner_sql, owner_params):
     """{owner id: [{key, sizeBytes, startSeconds}]} ordered by owner id then order_index."""
     out = {}
@@ -275,9 +268,9 @@ def build_media_details(conn, media_id, heal_is_source=True):
             if aggregate["lastWatchedAt"]:
                 last_watched_at = aggregate["lastWatchedAt"]
 
-    external = {}
-    for source, external_id in _rows(conn, "SELECT source, external_id FROM media_external_ids WHERE media_id IN (?)", (mid,)):
-        external[_s(source)] = _coerce_external_id(_s(source), _s(external_id))
+    catalog_row = conn.execute("SELECT external_id FROM media_external_ids WHERE media_id = ? AND source IN (%s) LIMIT 1;"
+                               % CATALOG_ID_SOURCES_SQL, (mid,)).fetchone()
+    catalog_id = _finite(_s(catalog_row[0])) if catalog_row else None
     genres = []
     for (genre_id,) in _rows(conn, "SELECT genre_id FROM media_genres WHERE media_id IN (?)", (mid,)):
         g = _finite(genre_id)
@@ -287,8 +280,7 @@ def build_media_details(conn, media_id, heal_is_source=True):
     media = {
         "id": mid,
         "type": "tv" if _s(mtype) == "tv" else "movie",
-        "externalIds": external or None,
-        "tmdbId": external.get("tmdb") if isinstance(external.get("tmdb"), (int, float)) else None,
+        "catalogId": catalog_id,
         "title": _s(title),
         "originalTitle": _opt_s(original_title),
         "originalLanguage": _opt_s(original_language),
@@ -312,19 +304,18 @@ def build_media_details(conn, media_id, heal_is_source=True):
     cast_rows = _rows(conn, "SELECT media_roles.id, media_roles.person_id, people.name, media_roles.role, people.profile_path "
                             "FROM media_roles INNER JOIN people ON media_roles.person_id = people.id "
                             "WHERE media_roles.media_id = ? ORDER BY media_roles.order_index ASC, people.name ASC", (mid,))
-    person_tmdb = {}
+    person_catalog_ids = {}
     person_ids = [_s(r[1]) for r in cast_rows]
     for part in _chunks(person_ids):
-        for person_id, source, external_id in _rows(
-                conn, "SELECT person_id, source, external_id FROM people_external_ids WHERE person_id IN (%s)" % _marks(len(part)), part):
-            if _s(source) == "tmdb":
-                person_tmdb[_s(person_id)] = _coerce_external_id("tmdb", _s(external_id))
+        for person_id, external_id in _rows(
+                conn, "SELECT person_id, external_id FROM people_external_ids WHERE person_id IN (%s) AND source IN (%s)"
+                % (_marks(len(part)), CATALOG_ID_SOURCES_SQL), part):
+            person_catalog_ids[_s(person_id)] = _finite(_s(external_id))
     cast = []
     for cid, person_id, name, role, profile_path in cast_rows:
-        tmdb = person_tmdb.get(_s(person_id))
         cast.append({
             "id": _s(cid), "personId": _s(person_id),
-            "tmdbId": tmdb if isinstance(tmdb, (int, float)) else None,
+            "catalogId": person_catalog_ids.get(_s(person_id)),
             "name": _s(name), "role": _opt_s(role), "profilePath": _opt_s(profile_path)})
 
     trailers = [{"provider": "youtube", "key": _s(k), "name": _opt_s(n), "language": _s(lang) if lang else "und"}

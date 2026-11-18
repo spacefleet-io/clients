@@ -23,6 +23,7 @@ import type { SqliteDb } from "@space/library-db-definition/migrations";
 import { MEDIA_CREW_DDL } from "@space/library-db-definition/crewDdl";
 import { editionsMigrationStatements } from "@space/library-db-definition/editionDdl";
 import { originalSizeMigrationStatements } from "@space/library-db-definition/originalSize";
+import { catalogSourceMigrationStatements } from "@space/library-db-definition/legacyFormat";
 
 export const desktopCoreMigrations: ReadonlyArray<LibraryMigration<SqliteDb>> = [
   {
@@ -33,6 +34,14 @@ export const desktopCoreMigrations: ReadonlyArray<LibraryMigration<SqliteDb>> = 
       // two columns; the baseline DDL creates them for new files. Indexes only.
       db.exec("CREATE INDEX IF NOT EXISTS media_items_added_at_idx ON media_items(added_at);");
       db.exec("CREATE INDEX IF NOT EXISTS media_items_updated_at_idx ON media_items(updated_at);");
+    },
+  },
+  {
+    version: 2,
+    description: "catalog_id_source",
+    up: (db) => {
+      // META-SRC-09: the title's catalog id under the neutral source; other sites' ids are no longer kept.
+      for (const statement of catalogSourceMigrationStatements("core")) db.exec(statement);
     },
   },
 ];
@@ -68,6 +77,14 @@ export const desktopMetadataMigrations: ReadonlyArray<LibraryMigration<SqliteDb>
         String(row?.name ?? "")
       );
       for (const statement of originalSizeMigrationStatements(columns)) db.exec(statement);
+    },
+  },
+  {
+    version: 4,
+    description: "catalog_id_source",
+    up: (db) => {
+      // META-SRC-09: each person's catalog id under the neutral source; other sites' ids are no longer kept.
+      for (const statement of catalogSourceMigrationStatements("metadata")) db.exec(statement);
     },
   },
 ];

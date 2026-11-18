@@ -127,7 +127,7 @@ describe("createMediaSessionBinderFor", () => {
 
   it("never passes a remote or blob image to the native card", () => {
     const { fake, binder, dump } = setup();
-    binder.update(episode({ info: { title: "Song", artworkUrl: "https://image.tmdb.org/x.jpg" } }));
+    binder.update(episode({ info: { title: "Song", artworkUrl: "https://images.example/x.jpg" } }));
     binder.update(episode({ info: { title: "Song", artworkUrl: "blob:abc" } }));
     dump();
     expect(fake.calls.map((call) => (call.op === "update" ? call.plan.artworkUri : "release"))).toEqual([null, null]);

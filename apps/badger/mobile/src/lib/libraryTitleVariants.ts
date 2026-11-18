@@ -26,7 +26,7 @@ export const startLibraryTitleVariants = (options: {
     db: options.db,
     profiles: () => profileStore.getSnapshot().profiles,
     accountLanguage: getCurrentLanguage,
-    details: (type, tmdbId, language) => metadataClient.details(type, tmdbId, language),
+    details: (type, catalogId, language) => metadataClient.details(type, catalogId, language),
     canSpend: async () => (await ticketsHeld()) > ARTWORK_COPY_TICKET_FLOOR,
     uploadArtwork: createVaultArtworkUpload({
       fetchImage: fetchArtworkImage,

@@ -41,7 +41,7 @@ afterEach(() => {
 });
 
 const addMovie = (db: LibraryDb, id: number, title: string) =>
-  db.addMediaFromTmdb({
+  db.addMediaFromCatalog({
     id,
     type: "movie",
     title,

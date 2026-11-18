@@ -3,13 +3,13 @@
  * its episode list fetched again once a day, and on the day its next episode
  * airs, one show at a time, standing down while an import runs. Ended and
  * cancelled shows are left alone. The check always runs on the desktop: the
- * own-TMDB-key mode that used to skip it was removed (META-DIRECT-03).
- * LIB-SHOW-02: an episode TMDB stopped listing is offered to the user only
+ * own-key mode that used to skip it was removed (META-DIRECT-03).
+ * LIB-SHOW-02: an episode the catalog stopped listing is offered to the user only
  * after two checks a day apart, and never again once kept.
  * LIB-SHOW-04: one the user has a file for gets a move suggested instead,
  * after the same proof; "No" is remembered like "Keep".
  *
- * Drives `runShowRefreshPass` against a fake TMDB, a fake library merge and an
+ * Drives `runShowRefreshPass` against a fake the catalog, a fake library merge and an
  * in-memory refresh-state store.
  */
 // @req LIB-SHOW-01[badger-desktop]
@@ -17,7 +17,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import type { TmdbDetails } from "../src/renderer/src/api";
+import type { TitleDetails } from "../src/renderer/src/api";
 import type { MediaRow, ShowEpisodeNotListed, ShowEpisodeRefreshResult } from "@space/shared/libraryTypes";
 import { MetadataRequestError } from "@space/metadata-client";
 import {
@@ -40,11 +40,10 @@ const P = "[show-refresh.test]";
 const NOW = Date.parse("2026-10-29T12:00:00.000Z");
 const DAY = 24 * 60 * 60 * 1000;
 
-const row = (id: string, tmdbId: number | null, type: MediaRow["type"] = "tv"): MediaRow => ({
+const row = (id: string, catalogId: number | null, type: MediaRow["type"] = "tv"): MediaRow => ({
   id,
   type,
-  tmdbId,
-  externalIds: null,
+  catalogId,
   title: id,
   originalTitle: id,
   originalLanguage: "en",
@@ -63,10 +62,10 @@ const row = (id: string, tmdbId: number | null, type: MediaRow["type"] = "tv"): 
   episodeCount: 10,
 });
 
-const details = (tmdbId: number, status: string | null, nextEpisodeAirDate: string | null): TmdbDetails => ({
+const details = (catalogId: number, status: string | null, nextEpisodeAirDate: string | null): TitleDetails => ({
   type: "tv",
-  id: tmdbId,
-  title: `show ${tmdbId}`,
+  id: catalogId,
+  title: `show ${catalogId}`,
   originalTitle: null,
   originalLanguage: "en",
   overview: null,
@@ -104,11 +103,11 @@ type Harness = {
 
 const harness = (opts: {
   state?: ShowRefreshState;
-  tmdb?: Record<number, TmdbDetails | Error>;
+  catalog?: Record<number, TitleDetails | Error>;
   busyAfter?: number;
   added?: number;
   notListed?: Record<string, ShowEpisodeNotListed[]>;
-  onFetch?: (tmdbId: number, h: Harness) => void;
+  onFetch?: (catalogId: number, h: Harness) => void;
 }): Harness => {
   const h: Harness = {
     deps: undefined as unknown as ShowRefreshDeps,
@@ -121,15 +120,15 @@ const harness = (opts: {
   let inFlight = 0;
   let busyChecks = 0;
   h.deps = {
-    fetchDetails: async (tmdbId) => {
+    fetchDetails: async (catalogId) => {
       inFlight += 1;
-      h.events.push(`fetch:${tmdbId}:inFlight=${inFlight}`);
-      h.fetched.push(tmdbId);
+      h.events.push(`fetch:${catalogId}:inFlight=${inFlight}`);
+      h.fetched.push(catalogId);
       await Promise.resolve();
       inFlight -= 1;
       // Stands in for the dialog saving an answer to the same store while this show is being fetched.
-      opts.onFetch?.(tmdbId, h);
-      const answer = opts.tmdb?.[tmdbId] ?? details(tmdbId, "Returning Series", null);
+      opts.onFetch?.(catalogId, h);
+      const answer = opts.catalog?.[catalogId] ?? details(catalogId, "Returning Series", null);
       if (answer instanceof Error) throw answer;
       return answer;
     },
@@ -160,9 +159,9 @@ const harness = (opts: {
 const iso = (ms: number) => new Date(ms).toISOString();
 
 describe("LIB-SHOW-01 background show refresh", () => {
-  it("refreshes every never-seen show with a TMDB id, one at a time, and records status + next air date", async () => {
+  it("refreshes every never-seen show with a catalog id, one at a time, and records status + next air date", async () => {
     const h = harness({
-      tmdb: { 11: details(11, "Returning Series", "2026-11-05"), 12: details(12, "Ended", null) },
+      catalog: { 11: details(11, "Returning Series", "2026-11-05"), 12: details(12, "Ended", null) },
     });
     const media = [row("a", 11), row("b", 12), row("movie", 13, "movie"), row("untagged", null)];
     const summary = await runShowRefreshPass(media, h.deps);
@@ -231,10 +230,10 @@ describe("LIB-SHOW-01 background show refresh", () => {
   });
 
   it("@bugfix @regression-proof isolates a failing show, stops after three network failures in a row, and forgets removed shows", async () => {
-    const boom = new Error("TMDB_503");
+    const boom = new Error("CATALOG_503");
     const h = harness({
       state: { gone: { refreshedAt: iso(NOW - 30 * DAY), status: "Returning Series", nextEpisodeAirDate: null } },
-      tmdb: { 51: boom, 53: boom, 54: boom, 55: boom },
+      catalog: { 51: boom, 53: boom, 54: boom, 55: boom },
     });
     const summary = await runShowRefreshPass([row("a", 51), row("b", 52), row("c", 53), row("d", 54), row("e", 55), row("f", 56)], h.deps);
     console.info(P, "summary", JSON.stringify(summary), "state", JSON.stringify(h.state.current));
@@ -245,10 +244,10 @@ describe("LIB-SHOW-01 background show refresh", () => {
     expect(h.state.current.a).toEqual({ refreshedAt: "", status: null, nextEpisodeAirDate: null, lastFailedAt: iso(NOW) });
   });
 
-  it("@bugfix @regression-proof does not let shows TMDB has no page for stop the pass", async () => {
+  it("@bugfix @regression-proof does not let shows the catalog has no page for stop the pass", async () => {
     const h = harness({
-      tmdb: {
-        61: new Error("TMDB_404"),
+      catalog: {
+        61: new Error("CATALOG_404"),
         62: new MetadataRequestError(404),
         63: new MetadataRequestError(404),
       },
@@ -260,7 +259,7 @@ describe("LIB-SHOW-01 background show refresh", () => {
   });
 
   it("@bugfix @regression-proof waits a day before retrying a failed show, and tries it after the others", async () => {
-    const h = harness({ tmdb: { 71: new Error("Failed to fetch") } });
+    const h = harness({ catalog: { 71: new Error("Failed to fetch") } });
     await runShowRefreshPass([row("a", 71)], h.deps);
     const failedState = h.state.current;
     console.info(P, "state after failure", JSON.stringify(failedState));
@@ -287,26 +286,26 @@ describe("LIB-SHOW-01 background show refresh", () => {
 
   it("keeps a failed show's last good refresh when it fails again", async () => {
     const stored = { refreshedAt: iso(NOW - 8 * DAY), status: "Returning Series", nextEpisodeAirDate: "2026-10-20" };
-    const h = harness({ state: { a: stored }, tmdb: { 81: new Error("TMDB_500") } });
+    const h = harness({ state: { a: stored }, catalog: { 81: new Error("CATALOG_500") } });
     await runShowRefreshPass([row("a", 81)], h.deps);
     expect(h.state.current.a).toEqual({ ...stored, lastFailedAt: iso(NOW) });
     expect(parseShowRefreshState(JSON.stringify(h.state.current)).a).toEqual({ ...stored, lastFailedAt: iso(NOW) });
   });
 
   it("@req LIB-SHOW-01[badger-desktop] always runs the daily check on the desktop: no own-key mode skips it", async () => {
-    // A user who had the removed own-TMDB-key mode on gets the same check as everyone else (META-DIRECT-03).
+    // A user who had the removed own-key mode on gets the same check as everyone else (META-DIRECT-03).
     const h = harness({});
     const summary = await runShowRefreshPass([row("a", 91), row("b", 92)], h.deps);
     console.info(P, "always-runs summary", JSON.stringify(summary), "fetched", JSON.stringify(h.fetched));
     expect(h.fetched).toEqual([91, 92]);
     expect(summary).toMatchObject({ candidates: 2, due: 2, refreshed: 2, stoppedBecause: "done" });
 
-    // The wiring has no skip either: neither the pass nor the component reads a TMDB-access mode.
+    // The wiring has no skip either: neither the pass nor the component reads a catalog-access mode.
     const sources = ["src/renderer/src/lib/showRefresh.ts", "src/renderer/src/components/ShowRefresh.tsx"].map((file) => ({
       file,
       text: readFileSync(join(DESKTOP_ROOT, file), "utf8"),
     }));
-    const offenders = sources.filter(({ text }) => /usesOwnTmdbKey|metadataAccess|own-key/.test(text)).map(({ file }) => file);
+    const offenders = sources.filter(({ text }) => /usesOwn\w*Key|metadataAccess|own-key/.test(text)).map(({ file }) => file);
     console.info(P, "skip-path scan", JSON.stringify({ scanned: sources.map(({ file }) => file), offenders }));
     expect(offenders).toEqual([]);
   });
@@ -321,7 +320,7 @@ describe("LIB-SHOW-01 background show refresh", () => {
   });
 });
 
-describe("LIB-SHOW-02 episodes TMDB no longer lists are offered to the user, never removed silently", () => {
+describe("LIB-SHOW-02 episodes the catalog no longer lists are offered to the user, never removed silently", () => {
   const e8: ShowEpisodeNotListed = { id: "ep-3-8", seasonNumber: 3, episodeNumber: 8, title: "The Lost One" };
   const passAt = async (state: ShowRefreshState, atMs: number, notListed: ShowEpisodeNotListed[]) => {
     const h = harness({ state, notListed: { a: notListed } });
@@ -341,7 +340,7 @@ describe("LIB-SHOW-02 episodes TMDB no longer lists are offered to the user, nev
     expect(SHOW_DELISTING_CONFIRM_MS).toBe(DAY);
   });
 
-  it("@req LIB-SHOW-02[badger-desktop] drops the offer once TMDB lists the episode again", async () => {
+  it("@req LIB-SHOW-02[badger-desktop] drops the offer once the catalog lists the episode again", async () => {
     const first = await passAt({}, NOW, [e8]);
     const back = await passAt(first, NOW + DAY, []);
     expect(back.a?.notListed).toBeUndefined();
@@ -365,7 +364,7 @@ describe("LIB-SHOW-02 episodes TMDB no longer lists are offered to the user, nev
 
   it("@req LIB-SHOW-02[badger-desktop] keeps the sightings when a check fails", async () => {
     const first = await passAt({}, NOW, [e8]);
-    const h = harness({ state: first, tmdb: { 101: new Error("TMDB_503") } });
+    const h = harness({ state: first, catalog: { 101: new Error("CATALOG_503") } });
     h.deps.now = () => NOW + DAY;
     await runShowRefreshPass([row("a", 101)], h.deps);
     expect(h.state.current.a?.notListed).toEqual(first.a?.notListed);
@@ -396,13 +395,13 @@ describe("LIB-SHOW-02 a dialog answer saved during a pass survives it", () => {
     expect(pendingShowDelistings(start).map((d) => d.mediaId), "both offers are open before the pass").toEqual(["a", "c"]);
     const h = harness({
       state: start,
-      tmdb: { 103: new Error("TMDB_503") },
+      catalog: { 103: new Error("CATALOG_503") },
       notListed: { a: [e8] },
-      onFetch: (tmdbId, current) => {
+      onFetch: (catalogId, current) => {
         // The user answers the open dialogs while the pass is busy with these shows.
-        if (tmdbId === 101) current.state.current = resolveShowDelisting(current.state.current, "a", [e8.id], "kept");
-        if (tmdbId === 102) current.state.current = resolveShowDelisting(current.state.current, "c", [e9.id], "removed");
-        console.info(P, "answer saved mid-pass", tmdbId, JSON.stringify(current.state.current));
+        if (catalogId === 101) current.state.current = resolveShowDelisting(current.state.current, "a", [e8.id], "kept");
+        if (catalogId === 102) current.state.current = resolveShowDelisting(current.state.current, "c", [e9.id], "removed");
+        console.info(P, "answer saved mid-pass", catalogId, JSON.stringify(current.state.current));
       },
     });
     await runShowRefreshPass([row("a", 101), row("b", 102), row("c", 103)], h.deps);
@@ -480,7 +479,7 @@ describe("LIB-SHOW-04 a delisted episode with a file gets a move suggested, neve
     expect(state.a?.notListed?.e3?.move, "a file-less sighting stays a removal offer").toBeUndefined();
   });
 
-  it("@req LIB-SHOW-04[badger-desktop] lets the user pick by hand only episodes TMDB lists that have no file", () => {
+  it("@req LIB-SHOW-04[badger-desktop] lets the user pick by hand only episodes the catalog lists that have no file", () => {
     const details = {
       episodes: [
         { id: "s2e10", seasonNumber: 2, episodeNumber: 10, name: "Christmas Party", overview: null, stillPath: null, airDate: null },

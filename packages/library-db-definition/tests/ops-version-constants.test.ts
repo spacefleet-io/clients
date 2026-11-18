@@ -100,12 +100,12 @@ describe("op-stream version constants", () => {
     `[${SUITE}:setup] OP_STREAM_VERSION=${OP_STREAM_VERSION} MIN_SUPPORTED=${MIN_SUPPORTED_OP_STREAM_VERSION}`,
   );
 
-  it("OP_STREAM_VERSION is 2 (bumped for media_formats.is_source in INSERT OR REPLACE)", () => {
+  it("OP_STREAM_VERSION is 3 (bumped for the neutral catalog id keys, META-SRC-09)", () => {
     try {
-      expect(OP_STREAM_VERSION).toBe(2);
+      expect(OP_STREAM_VERSION).toBe(3);
     } catch (err) {
       dumpVersionSnapshot("op-stream-version-drift", {
-        expectedCurrent: 2,
+        expectedCurrent: 3,
         note: "Surface #2 (op-stream) version drift — verify bump matches builder shape",
       });
       throw err;

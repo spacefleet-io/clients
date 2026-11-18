@@ -13,7 +13,7 @@ import { localizeEpisode, localizePlayback, localizeShowDetails } from "../src/l
 const episode = (n: number, name: string, overview: string | null = null): MediaEpisode => ({
   id: `ep-${n}`, seasonNumber: 1, episodeNumber: n, name, overview, stillPath: null, airDate: null,
 });
-const details = { id: "show", type: "tv", tmdbId: 1, title: "The Show", episodes: [episode(1, "Pilot", "Stored"), episode(2, "The Return"), episode(3, "Finale")] } as unknown as MediaDetails;
+const details = { id: "show", type: "tv", catalogId: 1, title: "The Show", episodes: [episode(1, "Pilot", "Stored"), episode(2, "The Return"), episode(3, "Finale")] } as unknown as MediaDetails;
 const fr: LocalizedEpisodeMap = new Map([
   [episodeKey(1, 1), { name: "Le pilote", overview: "Résumé" }],
   [episodeKey(1, 2), { name: "Le retour", overview: null }],

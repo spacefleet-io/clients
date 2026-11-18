@@ -506,7 +506,7 @@ describe("player screen: resume prompt follows the 2 % AND 15 s rule", () => {
 describe("player screen: episode names in the interface language, as on the title page", () => {
   const ID = "MOBILE-PLAYER-SCREEN-PLAYBACK-001/localized-names";
   const episode = (n: number, name: string) => ({ id: `ep-${n}`, seasonNumber: 1, episodeNumber: n, name, overview: null, stillPath: null, airDate: null });
-  const details = { id: "show-1", type: "tv", tmdbId: 4242, title: "The Show", posterPath: null, backdropPath: null, subtitleTracks: [], subtitles: [], audioTracks: [], files: [], formats: [], seasons: [], trailers: [], chapters: [], skipMarkers: [], cast: [], playlistIds: [], episodes: [episode(1, "Pilot"), episode(2, "The Return")] } as never;
+  const details = { id: "show-1", type: "tv", catalogId: 4242, title: "The Show", posterPath: null, backdropPath: null, subtitleTracks: [], subtitles: [], audioTracks: [], files: [], formats: [], seasons: [], trailers: [], chapters: [], skipMarkers: [], cast: [], playlistIds: [], episodes: [episode(1, "Pilot"), episode(2, "The Return")] } as never;
 
   afterEach(() => {
     Object.assign(metadata, { token: null, language: "en", episodes: {} });

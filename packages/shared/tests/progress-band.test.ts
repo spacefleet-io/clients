@@ -56,10 +56,10 @@ describe("[@bugfix][@regression-proof] getProgressBand — three-state classifie
   });
 });
 
-describe("[@bugfix][@regression-proof] getProgressBand — Phase 2 credits-aware classifier (TheIntroDB-derived ceiling)", () => {
+describe("[@bugfix][@regression-proof] getProgressBand — Phase 2 credits-aware classifier (skip-marker-derived ceiling)", () => {
   // Phase 2 lets callers pass per-episode credits-start so the band UI
   // marks an episode as "watched" the moment the user passes the actual
-  // credits start (TheIntroDB), not at the coarse 95 % approximation. The
+  // credits start (skip markers), not at the coarse 95 % approximation. The
   // 2nd-arg inputs object is optional — legacy calls (pct only) keep the
   // exact pre-Phase-2 behavior. These tests MUST FAIL against the
   // pre-Phase-2 getProgressBand (the 2nd arg was not accepted).

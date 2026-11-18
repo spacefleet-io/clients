@@ -74,13 +74,13 @@ vi.mock("../src/renderer/src/lib/useClientConfig", () => ({
   }),
 }));
 
-const addMediaFromTmdb = vi.fn();
+const addMediaFromCatalog = vi.fn();
 vi.mock("../src/renderer/src/lib/libraryContext", () => ({
   useLibraryData: () => ({ media: [] }),
   useLibraryActions: () => ({
     getMediaDetails: () => null,
     getSharedSetting: () => null,
-    addMediaFromTmdb,
+    addMediaFromCatalog,
     addSubtitleTrackWithObject: vi.fn(),
   }),
 }));
@@ -89,13 +89,13 @@ vi.mock("../src/renderer/src/components/MediaImage", () => ({
   default: ({ alt }: { alt?: string }) => <img alt={alt ?? ""} />,
 }));
 
-/** Every drop is identified (one TMDB movie per title) so "Add" can become clickable. */
+/** Every drop is identified (one the catalog movie per title) so "Add" can become clickable. */
 vi.mock("../src/renderer/src/lib/metadata", () => ({
-  getTmdbDetails: vi.fn(),
-  getTmdbDetailsForLibrary: vi.fn(),
-  getTmdbTrailersForLanguages: vi.fn().mockResolvedValue([]),
+  getTitleDetails: vi.fn(),
+  getTitleDetailsForLibrary: vi.fn(),
+  getTitleTrailersForLanguages: vi.fn().mockResolvedValue([]),
   localizeSearchResultForLibrary: vi.fn(async (_token: unknown, result: unknown) => result),
-  searchTmdb: vi.fn(async (_token: unknown, type: string, query: string) => ({
+  searchTitles: vi.fn(async (_token: unknown, type: string, query: string) => ({
     results: [{ type, id: 1000 + query.length * 7 + query.charCodeAt(0), title: query, originalTitle: query, overview: "", year: 2020 }],
   })),
 }));
@@ -214,7 +214,7 @@ describe("FileIngestionDialog — HEVC imports without a warning", () => {
     console.info(`${P}:after probes add=${String(addButton()?.disabled)} mentionsHevc=${/hevc/i.test(text)}`);
     expect(container?.querySelector('[data-testid="hevc-import-notice"]')).toBeNull();
     expect(text).not.toMatch(/hevcNotice/);
-    expect(addMediaFromTmdb).not.toHaveBeenCalled();
+    expect(addMediaFromCatalog).not.toHaveBeenCalled();
   });
 
   it("@req INGS-HEVC-01 no language carries the notice or its Settings switch", () => {

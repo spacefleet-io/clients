@@ -3,6 +3,8 @@ import { StyleSheet, Text, TextInput, type TextInputInstance, View } from "react
 import { useNavigation } from "@react-navigation/native";
 import { useMobileShellTheme } from "@space/mobile-shell/theme";
 import { useTranslation } from "@space/mobile-shell/i18n";
+import { ShortCodeInput } from "@space/mobile-shell/short-code";
+import { SHORT_CODE_LENGTH } from "@space/pairing-crypto";
 import { pairingDeps } from "../../lib/pairing/pairingDeps";
 import {
   PairingFlowError,
@@ -189,18 +191,26 @@ export const TvApprovePairingScreen = () => {
         {heading(t("tvPairing.approve.title"))}
         {body(t("tvPairing.approve.subtitle"))}
         {stage.error ? body(stage.error, "danger") : null}
-        {input({
-          testID: "tv-approve-code",
-          value: code,
-          onChangeText: setCode,
-          autoCapitalize: "characters",
-          autoCorrect: false,
-          placeholder: t("tvPairing.approve.codePlaceholder"),
-          accessibilityLabel: t("tvPairing.approve.codeLabel"),
-          onSubmitEditing: () => void submitCode(),
-        })}
+        {/* ACCT-PAIR-01: 8 boxes in two groups of 4; typed with or without a dash or spaces, in any case. */}
+        <ShortCodeInput
+          ref={inputRef}
+          testID="tv-approve-code"
+          value={code}
+          onChange={setCode}
+          accessibilityLabel={t("tvPairing.approve.codeLabel")}
+          onSubmit={() => {
+            if (code.length === SHORT_CODE_LENGTH) void submitCode();
+          }}
+          style={styles.code}
+        />
         <View style={styles.actions}>
-          <PairingButton testID="tv-approve-lookup" variant="primary" disabled={!code.trim()} label={t("tvPairing.approve.continue")} onPress={() => void submitCode()} />
+          <PairingButton
+            testID="tv-approve-lookup"
+            variant="primary"
+            disabled={code.length !== SHORT_CODE_LENGTH}
+            label={t("tvPairing.approve.continue")}
+            onPress={() => void submitCode()}
+          />
           <PairingButton testID="tv-approve-back" label={t("tvPairing.approve.back")} onPress={goBack} />
         </View>
       </>
@@ -258,4 +268,5 @@ const baseStyles = StyleSheet.create({
   body: { fontSize: 24, lineHeight: 34 },
   input: { fontSize: 32, paddingVertical: 14, paddingHorizontal: 20, borderRadius: TV_RADIUS.button, maxWidth: 700, letterSpacing: 4 },
   actions: { flexDirection: "row", gap: 24, marginTop: 8 },
+  code: { alignSelf: "flex-start" },
 });

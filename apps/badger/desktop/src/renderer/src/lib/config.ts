@@ -239,8 +239,8 @@ const normalizeClientConfig = (stored: Record<string, unknown> | null): ClientCo
   merged.enableWatchDirectories = Boolean((stored as any).enableWatchDirectories);
   merged.enableMetadataTools = Boolean((stored as any).enableMetadataTools);
   merged.forcePlaybackQuality = Boolean((stored as any).forcePlaybackQuality);
-  // META-DIRECT-03: the own-TMDB-key ("direct") mode was removed. A config saved before carries
-  // `metadataAccess.tmdb` (mode + apiKey); drop it silently so that user falls back to the ticket path.
+  // META-DIRECT-03: the own-key ("direct") mode was removed. A config saved before carries
+  // `metadataAccess` (mode + apiKey); drop it silently so that user falls back to the ticket path.
   Reflect.deleteProperty(merged, "metadataAccess");
 
   if (!merged.trailerSource) {
@@ -309,10 +309,8 @@ export function loadClientConfig(): ClientConfig {
   const stored = readJson<any>(CONFIG_KEY, null);
   const config = normalizeClientConfig(stored);
   if (stored && typeof stored === "object" && "metadataAccess" in stored) {
-    // META-DIRECT-03 migration: persist the config without the removed own-TMDB-key setting (and its key), once.
-    console.info("[config] dropped the removed own-TMDB-key setting (META-DIRECT-03)", {
-      hadDirectMode: stored.metadataAccess?.tmdb?.mode === "direct",
-    });
+    // META-DIRECT-03 migration: persist the config without the removed own-key setting (and its key), once.
+    console.info("[config] dropped the removed own-key setting (META-DIRECT-03)");
     writeJson(CONFIG_KEY, config);
   }
   return config;

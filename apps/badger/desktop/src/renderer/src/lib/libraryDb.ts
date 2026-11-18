@@ -1,4 +1,4 @@
-import type { LibraryMeta, TmdbDetails } from "@/api";
+import type { LibraryMeta, TitleDetails } from "@/api";
 import type {
   LibrarySnapshot,
   MediaCastDraft,
@@ -194,18 +194,18 @@ export class LibraryDb {
     return call<boolean>(this.handle, "hasAnyMedia");
   }
 
-  async addMediaFromTmdb(item: TmdbDetails) {
-    return call<string>(this.handle, "addMediaFromTmdb", [item]);
+  async addMediaFromCatalog(item: TitleDetails) {
+    return call<string>(this.handle, "addMediaFromCatalog", [item]);
   }
 
-  /** LIB-SHOW-01: merge a running show's fresh TMDB season + episode lists (keeps episode ids). */
-  refreshShowEpisodes(mediaId: string, item: TmdbDetails) {
+  /** LIB-SHOW-01: merge a running show's fresh catalog season + episode lists (keeps episode ids). */
+  refreshShowEpisodes(mediaId: string, item: TitleDetails) {
     return call<ShowEpisodeRefreshResult>(this.handle, "refreshShowEpisodes", [mediaId, item]);
   }
 
-  /** LIB-SHOW-02: remove episodes the user agreed to drop after TMDB stopped listing them (never one with a file). */
-  removeEpisodesNotOnTmdb(mediaId: string, episodeIds: string[]) {
-    return call<DelistedEpisodeRemovalResult>(this.handle, "removeEpisodesNotOnTmdb", [mediaId, episodeIds]);
+  /** LIB-SHOW-02: remove episodes the user agreed to drop after the catalog stopped listing them (never one with a file). */
+  removeEpisodesNotInCatalog(mediaId: string, episodeIds: string[]) {
+    return call<DelistedEpisodeRemovalResult>(this.handle, "removeEpisodesNotInCatalog", [mediaId, episodeIds]);
   }
 
   /** LIB-SHOW-04: move an episode the user has a file for to another episode slot (the user said yes). */
@@ -235,12 +235,12 @@ export class LibraryDb {
     return call<void>(this.handle, "updateMediaMetadata", [payload]);
   }
 
-  /** META-ART-01: images of `mediaId` still stored as TMDB paths. */
+  /** META-ART-01: images of `mediaId` still stored as catalog paths. */
   listArtworkToCopy(mediaId: string) {
     return call<ArtworkSlot[]>(this.handle, "listArtworkToCopy", [mediaId]);
   }
 
-  /** META-ART-01 migration: titles that still hold a TMDB image path somewhere. */
+  /** META-ART-01 migration: titles that still hold a catalog image path somewhere. */
   listMediaWithArtworkToCopy() {
     return call<string[]>(this.handle, "listMediaWithArtworkToCopy", []);
   }
@@ -250,12 +250,12 @@ export class LibraryDb {
     return call<string[]>(this.handle, "listMediaWithCollapsedCast", []);
   }
 
-  /** LIB-CREW-01: titles with a TMDB id and no crew at all (`@space/library-db-runtime/crewBackfill`). */
+  /** LIB-CREW-01: titles with a catalog id and no crew at all (`@space/library-db-runtime/crewBackfill`). */
   listMediaMissingCrew() {
     return call<string[]>(this.handle, "listMediaMissingCrew", []);
   }
 
-  /** META-ART-01: swap copied artwork in (compare-and-set against the TMDB path each copy was made from). */
+  /** META-ART-01: swap copied artwork in (compare-and-set against the catalog path each copy was made from). */
   applyArtworkCopies(mediaId: string, copies: ArtworkCopy[]) {
     return call<ArtworkApplyResult>(this.handle, "applyArtworkCopies", [mediaId, copies]);
   }
@@ -265,7 +265,7 @@ export class LibraryDb {
     return call<boolean>(this.handle, "replaceMediaTitleArt", [mediaId, expected, next]);
   }
 
-  replaceMediaTrailers(mediaId: string, trailers: TmdbDetails["trailers"]) {
+  replaceMediaTrailers(mediaId: string, trailers: TitleDetails["trailers"]) {
     return call<void>(this.handle, "replaceMediaTrailers", [mediaId, trailers]);
   }
 
@@ -319,7 +319,7 @@ export class LibraryDb {
     episodeId?: string | null,
     // Phase 2 optional 4th arg: absolute positionSeconds + durationSeconds.
     // The runtime persists them inside the episode_resume_v1 JSON payload
-    // so the credits-aware completion check (TheIntroDB) can compare in
+    // so the credits-aware completion check (the metadata service) can compare in
     // absolute time. Old callers without timing keep the legacy pct-only
     // payload — both reads stay backward-compatible.
     timing?: ProgressTiming | null

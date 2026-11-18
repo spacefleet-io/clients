@@ -22,13 +22,14 @@ import type {
   SubtitleTrack,
 } from "@space/shared/libraryTypes";
 import { parsePreviewSheets, previewSheetKeys } from "@space/shared/previewSheets";
+import { CATALOG_ID_SOURCES_SQL } from "./legacyFormat";
 import type { LibraryDbGroup } from "./manifest";
 
 type Row = Record<string, unknown>;
 
 export type MediaDetailsQueryName =
   | "item"
-  | "externalIds"
+  | "catalogId"
   | "genres"
   | "cast"
   | "crew"
@@ -71,14 +72,18 @@ export const mediaDetailsQueries = (mediaId: string, options: { chunks?: boolean
   });
   const queries = [
     q("item", "core", "SELECT * FROM media_items WHERE id = ? LIMIT 1;"),
-    q("externalIds", "core", "SELECT source, external_id FROM media_external_ids WHERE media_id = ?;"),
+    q(
+      "catalogId",
+      "core",
+      `SELECT external_id FROM media_external_ids WHERE media_id = ? AND source IN (${CATALOG_ID_SOURCES_SQL}) LIMIT 1;`
+    ),
     q("genres", "core", "SELECT genre_id FROM media_genres WHERE media_id = ?;"),
     q(
       "cast",
       "metadata",
       `SELECT media_roles.id, media_roles.person_id, media_roles.role, media_roles.order_index,
         people.name, people.profile_path,
-        (SELECT external_id FROM people_external_ids WHERE person_id = media_roles.person_id AND source = 'tmdb' LIMIT 1) as external_id
+        (SELECT external_id FROM people_external_ids WHERE person_id = media_roles.person_id AND source IN (${CATALOG_ID_SOURCES_SQL}) LIMIT 1) as external_id
       FROM media_roles
       JOIN people ON people.id = media_roles.person_id
       WHERE media_roles.media_id = ?
@@ -88,7 +93,7 @@ export const mediaDetailsQueries = (mediaId: string, options: { chunks?: boolean
       "crew",
       "metadata",
       `SELECT media_crew.id, media_crew.person_id, media_crew.job, people.name, people.profile_path,
-        (SELECT external_id FROM people_external_ids WHERE person_id = media_crew.person_id AND source = 'tmdb' LIMIT 1) as external_id
+        (SELECT external_id FROM people_external_ids WHERE person_id = media_crew.person_id AND source IN (${CATALOG_ID_SOURCES_SQL}) LIMIT 1) as external_id
       FROM media_crew
       JOIN people ON people.id = media_crew.person_id
       WHERE media_crew.media_id = ?
@@ -181,26 +186,15 @@ const groupChunks = (rows: Row[] | undefined, ownerColumn: string) => {
   return byOwner;
 };
 
-/** `media_external_ids` rows of one title as `{ source: id }` (numeric ids as numbers); null when it has none. */
-const externalIdsOf = (rows: Row[]): Record<string, number | string> | null => {
-  if (!rows.length) return null;
-  const entry: Record<string, number | string> = {};
-  for (const row of rows) {
-    const value = Number(row.external_id);
-    entry[String(row.source)] = Number.isFinite(value) ? value : String(row.external_id);
-  }
-  return entry;
-};
-
 /** The title's `MediaDetails` from the rows of `mediaDetailsQueries`; null when `media_items` has no such title. */
 export const assembleMediaDetails = (mediaId: string, rows: MediaDetailsRows): MediaDetails | null => {
   const base = rows.item?.[0];
   if (!base) return null;
-  const externalIds = externalIdsOf(rows.externalIds ?? []);
+  const catalogId = Number(rows.catalogId?.[0]?.external_id);
   const cast: MediaCastMember[] = (rows.cast ?? []).map((row) => ({
     id: String(row.id),
     personId: String(row.person_id),
-    tmdbId: row.external_id ? Number(row.external_id) : null,
+    catalogId: row.external_id ? Number(row.external_id) : null,
     name: String(row.name),
     role: row.role ? String(row.role) : null,
     profilePath: row.profile_path ? String(row.profile_path) : null,
@@ -288,8 +282,7 @@ export const assembleMediaDetails = (mediaId: string, rows: MediaDetailsRows): M
   return {
     id: String(base.id),
     type: base.type === "tv" ? "tv" : "movie",
-    externalIds,
-    tmdbId: externalIds && typeof externalIds.tmdb === "number" ? externalIds.tmdb : null,
+    catalogId: Number.isFinite(catalogId) && catalogId > 0 ? catalogId : null,
     title: String(base.title),
     originalTitle: base.original_title ? String(base.original_title) : null,
     originalLanguage: base.original_language ? String(base.original_language) : null,
@@ -310,7 +303,7 @@ export const assembleMediaDetails = (mediaId: string, rows: MediaDetailsRows): M
     crew: (rows.crew ?? []).map((row) => ({
       id: String(row.id),
       personId: String(row.person_id),
-      tmdbId: row.external_id ? Number(row.external_id) : null,
+      catalogId: row.external_id ? Number(row.external_id) : null,
       name: String(row.name),
       job: String(row.job),
       profilePath: row.profile_path ? String(row.profile_path) : null,
@@ -414,7 +407,7 @@ export const collectMediaStorageKeys = (
 
 /**
  * The storage key an artwork field points at, or null when it is not a stored piece. The library holds a copied
- * image (META-ART-01) as `asset:<content type>::<key>` (older rows: the bare key); a TMDB path (`/abc.jpg`), a URL
+ * image (META-ART-01) as `asset:<content type>::<key>` (older rows: the bare key); a catalog path (`/abc.jpg`), a URL
  * or an empty value is not in the user's storage.
  */
 export const artworkStorageKey = (value: string | null | undefined): string | null => {

@@ -186,7 +186,7 @@
       "cancel": "Annuleren"
     },
     "errors": {
-      "tmdbNotConfigured": "Zoeken is nu niet beschikbaar. Probeer het later opnieuw.",
+      "catalogNotConfigured": "Zoeken is nu niet beschikbaar. Probeer het later opnieuw.",
       "searchFailed": "Zoeken mislukt. Probeer het opnieuw.",
       "addFailed": "Kan deze media niet toevoegen. Probeer het opnieuw.",
       "libraryLoading": "De mediatheek wordt nog geladen. Probeer het zo opnieuw.",
@@ -1900,7 +1900,7 @@
       "searchTimedOut": "Titels zoeken duurde te lang",
       "metadataUnavailable": "Titels zoeken is nu niet beschikbaar",
       "scanFailed": "We konden de geselecteerde bestanden niet lezen.",
-      "signInSearchTmdb": "Log in om te zoeken."
+      "signInSearchTitles": "Log in om te zoeken."
     },
     "toasts": {
       "queuedTitle": "Import gestart",
@@ -1961,7 +1961,7 @@
       "dummyTitle": "Toevoegen met dummydata",
       "movie": "Film",
       "tv": "Tv",
-      "searchTmdbPlaceholder": "Films en series zoeken...",
+      "searchTitlesPlaceholder": "Films en series zoeken...",
       "search": "Zoeken",
       "searchDummyHint": "Zoek een titel om dummydata toe te voegen.",
       "trailer": "Trailer",
@@ -2017,8 +2017,8 @@
       "tvShows": "Series",
       "searchLibraryMoviesPlaceholder": "Films in mediatheek zoeken...",
       "searchLibraryTvPlaceholder": "Series in mediatheek zoeken...",
-      "searchTmdbMoviesPlaceholder": "Films zoeken...",
-      "searchTmdbTvPlaceholder": "Series zoeken...",
+      "searchTitlesMoviesPlaceholder": "Films zoeken...",
+      "searchTitlesTvPlaceholder": "Series zoeken...",
       "clear": "Wissen",
       "select": "Selecteren",
       "loadingMore": "Meer laden...",

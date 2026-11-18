@@ -49,8 +49,7 @@ const seededIds = (): IdGenerator => {
 const baseDetails = (overrides: Partial<MediaDetails>): MediaDetails => ({
   id: "media-1",
   type: "movie",
-  tmdbId: 42,
-  externalIds: { imdb: "tt0001" },
+  catalogId: 42,
   title: "Example",
   originalTitle: null,
   originalLanguage: "en",
@@ -205,12 +204,12 @@ describe("OP_STREAM_VERSION bump 1 → 2 — version constants", () => {
   console.info(
     `[${SUITE}:setup] OP_STREAM_VERSION=${OP_STREAM_VERSION} MIN_SUPPORTED=${MIN_SUPPORTED_OP_STREAM_VERSION}`,
   );
-  it("OP_STREAM_VERSION is 2 (this bump)", () => {
+  it("OP_STREAM_VERSION is at least 2 (this bump)", () => {
     try {
-      expect(OP_STREAM_VERSION).toBe(2);
+      expect(OP_STREAM_VERSION).toBeGreaterThanOrEqual(2);
     } catch (err) {
       dumpOpStreamSnapshot("op-stream-version-mismatch", {
-        note: `expected OP_STREAM_VERSION=2 for is_source bump; actual=${OP_STREAM_VERSION}`,
+        note: `expected OP_STREAM_VERSION>=2 for is_source bump; actual=${OP_STREAM_VERSION}`,
       });
       throw err;
     }

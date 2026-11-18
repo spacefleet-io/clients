@@ -2,13 +2,13 @@
   "keys": [
     {
       "type": "tv",
-      "tmdbId": 1399,
+      "catalogId": 1399,
       "language": "fr",
       "key": "localized_text_v1:tv:1399:fr"
     },
     {
       "type": "movie",
-      "tmdbId": 27205,
+      "catalogId": 27205,
       "language": "en",
       "key": "localized_text_v1:movie:27205:en"
     }

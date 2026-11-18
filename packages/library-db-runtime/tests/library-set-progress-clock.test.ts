@@ -36,7 +36,7 @@ describe("setProgress and the details clock", () => {
     const db = await LibraryDb.openLocal("token", "key");
     db.setSyncEnabled(false);
     try {
-      const mediaId = await db.addMediaFromTmdb({
+      const mediaId = await db.addMediaFromCatalog({
         id: 25_401,
         type: "movie",
         title: "Progress Clock Movie",

@@ -1,8 +1,8 @@
 """Kodi takes titles, posters, backdrops, descriptions, years, seasons and episodes from the Badger library, including a
-match the user fixed by hand, and names each title to Kodi by its TMDB id.
+match the user fixed by hand; no title carries an id of the catalog it was matched in (META-SRC-09).
 
 @req INTG-META-01 the plugin's directory items and the exported .nfo files carry the library rows loaded by the real
-                  sync op (media.upsert): title, plot, year, tmdb uniqueid, poster/fanart/thumb art, season and episode
+                  sync op (media.upsert): title, plot, year, poster/fanart/thumb art, season and episode
                   numbers; a hand-fixed match reaches Kodi as the new row values, never a guess from the file name
 """
 import json
@@ -121,7 +121,7 @@ class KodiItemsCarryLibraryMetadata(unittest.TestCase):
         self.assertEqual(m["info"]["Plot"], "Overview text")
         self.assertEqual(m["info"]["Year"], 2010)
         self.assertEqual(m["info"]["MediaType"], "movie")
-        self.assertEqual(m["info"]["UniqueIDs"], [{"tmdb": "27205"}, "tmdb"])
+        self.assertNotIn("UniqueIDs", m["info"])
         self.assertEqual(m["art"], {"poster": "cache/poster/poster.jpg", "thumb": "cache/poster/poster.jpg",
                                     "fanart": "cache/backdrop/backdrop.jpg"})
 
@@ -129,7 +129,7 @@ class KodiItemsCarryLibraryMetadata(unittest.TestCase):
         shows = self.listed(router.list_shows)
         log("state", "shows", shows)
         self.assertEqual([s["info"]["Title"] for s in shows], ["Breaking Bad"])
-        self.assertEqual(shows[0]["info"]["UniqueIDs"], [{"tmdb": "1396"}, "tmdb"])
+        self.assertNotIn("UniqueIDs", shows[0]["info"])
         self.assertEqual(shows[0]["info"]["MediaType"], "tvshow")
         self.assertEqual(shows[0]["art"]["fanart"], "cache/backdrop/backdrop.jpg")
 
@@ -151,7 +151,7 @@ class KodiItemsCarryLibraryMetadata(unittest.TestCase):
         self.assertEqual(episodes[0]["art"], {"thumb": "cache/still/e1.jpg", "fanart": "cache/backdrop/backdrop.jpg"})
         self.assertNotIn("thumb", episodes[1]["art"])  # no still in the library: no invented picture
 
-    def test_exported_nfo_files_carry_the_tmdb_id(self):
+    def test_exported_nfo_files_carry_the_library_rows(self):
         # @req INTG-META-01
         movie = self.ctx.lib.get_media("movie-1")
         show = self.ctx.lib.get_media("tv-1")
@@ -161,8 +161,8 @@ class KodiItemsCarryLibraryMetadata(unittest.TestCase):
         self.assertIn("<title>Inception</title>", movie_nfo)
         self.assertIn("<year>2010</year>", movie_nfo)
         self.assertIn("<plot>Overview text</plot>", movie_nfo)
-        self.assertIn('<uniqueid type="tmdb" default="true">27205</uniqueid>', movie_nfo)
-        self.assertIn('<uniqueid type="tmdb" default="true">1396</uniqueid>', show_nfo)
+        self.assertNotIn("<uniqueid", movie_nfo)
+        self.assertNotIn("<uniqueid", show_nfo)
         self.assertIn("<title>Breaking Bad</title>", show_nfo)
         self.assertIn("<title>Pilot</title>", ep_nfo)
         self.assertIn("<season>1</season>", ep_nfo)
@@ -175,9 +175,9 @@ class KodiItemsCarryLibraryMetadata(unittest.TestCase):
         log("state", "before the fix", before)
         fixed = td.movie_fixture()
         fixed.update({"title": "Interstellar", "originalTitle": "Interstellar", "overview": "Fixed overview", "year": "2014",
-                      "tmdbId": 157336, "externalIds": {"tmdb": 157336}, "posterPath": "/fixed-poster.jpg",
+                      "catalogId": 157336, "posterPath": "/fixed-poster.jpg",
                       "backdropPath": "/fixed-backdrop.jpg"})
-        log("phase", "the user's fix arrives through sync as media.upsert", {"title": fixed["title"], "tmdbId": fixed["tmdbId"]})
+        log("phase", "the user's fix arrives through sync as media.upsert", {"title": fixed["title"], "catalogId": fixed["catalogId"]})
         gen = td._ids()
         for sql, params in ops_sql.build_op_statements({"type": "media.upsert", "payload": {"details": fixed}}, gen):
             self.conn.execute(sql, params)
@@ -188,14 +188,14 @@ class KodiItemsCarryLibraryMetadata(unittest.TestCase):
         self.assertEqual(m["info"]["Title"], "Interstellar")
         self.assertEqual(m["info"]["Year"], 2014)
         self.assertEqual(m["info"]["Plot"], "Fixed overview")
-        self.assertEqual(m["info"]["UniqueIDs"], [{"tmdb": "157336"}, "tmdb"])
+        self.assertNotIn("UniqueIDs", m["info"])
         self.assertEqual(m["art"]["poster"], "cache/poster/fixed-poster.jpg")
         self.assertEqual(m["art"]["fanart"], "cache/backdrop/fixed-backdrop.jpg")
         # the file is still Inception.mkv: Kodi never re-guesses from it
         self.assertNotIn("Inception", json.dumps(m))
         nfo = export.movie_nfo(self.ctx.lib.get_media("movie-1"))
         log("state", "nfo after the fix", nfo)
-        self.assertIn('<uniqueid type="tmdb" default="true">157336</uniqueid>', nfo)
+        self.assertNotIn("<uniqueid", nfo)
         self.assertIn("<title>Interstellar</title>", nfo)
 
 

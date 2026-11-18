@@ -154,20 +154,20 @@ describe("translateActionsToV2Sources (V2 ingest translator) — bugfix efferves
     }
   });
 
-  it("falls back to pendingMedia.tmdbId for the mediaId hint", () => {
+  it("falls back to pendingMedia.catalogId for the mediaId hint", () => {
     const action: Extract<LabQueueAction, { type: "queue_files" }> = {
       type: "queue_files",
       files: [baseFile({ filename: "a.mkv", jobType: "source" })],
-      preset: { pendingMedia: { tmdbId: 12345 } } as never,
+      preset: { pendingMedia: { catalogId: 12345 } } as never,
     };
     let sources: ReturnType<typeof translateActionsToV2Sources> | undefined;
     try {
        
-      console.log("[v2-translate:pending-tmdb-fallback] tmdbId=12345 → mediaId='12345'");
+      console.log("[v2-translate:pending-catalog-fallback] catalogId=12345 → mediaId='12345'");
       sources = translateActionsToV2Sources([action], desired);
       expect(sources[0].hints).toEqual({ mediaId: "12345" });
     } catch (assertionError) {
-      dumpV2TranslateSnapshot("pending-tmdb-fallback:fail", {
+      dumpV2TranslateSnapshot("pending-catalog-fallback:fail", {
         actions: [action],
         sources,
         desired,
@@ -500,12 +500,12 @@ describe("@bugfix @regression-proof TV preset — translateActionsToV2Sources fo
     }
   });
 
-  it("falls back to pendingMedia.tmdbId + season/episode when no real mediaId yet", () => {
+  it("falls back to pendingMedia.catalogId + season/episode when no real mediaId yet", () => {
     const action: Extract<LabQueueAction, { type: "queue_files" }> = {
       type: "queue_files",
       files: [baseFile({ filename: "pending.mkv", jobType: "source" })],
       preset: {
-        pendingMedia: { tmdbId: 907633 },
+        pendingMedia: { catalogId: 907633 },
         season: 1,
         episode: 2,
       } as never,
@@ -513,7 +513,7 @@ describe("@bugfix @regression-proof TV preset — translateActionsToV2Sources fo
     let sources: ReturnType<typeof translateActionsToV2Sources> | undefined;
     try {
        
-      console.log("[v2-translate:pending-tmdb-tv-hints] tmdbId=907633 + s1e2");
+      console.log("[v2-translate:pending-catalog-tv-hints] catalogId=907633 + s1e2");
       sources = translateActionsToV2Sources([action], desired);
       expect(sources[0].hints).toEqual({
         mediaId: "907633",
@@ -521,7 +521,7 @@ describe("@bugfix @regression-proof TV preset — translateActionsToV2Sources fo
         episode: 2,
       });
     } catch (assertionError) {
-      dumpV2TranslateSnapshot("pending-tmdb-tv-hints:fail", {
+      dumpV2TranslateSnapshot("pending-catalog-tv-hints:fail", {
         actions: [action],
         sources,
         desired,

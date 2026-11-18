@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { AlertTriangle } from "lucide-react";
-import type { ApprovePairingProof, ApprovePairingResult, PairingRequestView } from "@space/pairing-crypto";
+import { SHORT_CODE_LENGTH, type ApprovePairingProof, type ApprovePairingResult, type PairingRequestView } from "@space/pairing-crypto";
 import {
   Button,
   Dialog,
@@ -16,6 +16,7 @@ import { SPACE_APP_NAMES } from "@space/shared/appScope";
 import type { ClientUiLanguage } from "@space/shared/i18n";
 import { retryAfterSecondsToMinutes, signInErrorText } from "@space/shared/signInError";
 import { pairDeviceText, type PairDeviceKind } from "./pair-device-strings";
+import { ShortCodeInput } from "./short-code-input";
 
 const PAIR_DEVICE_KINDS: readonly PairDeviceKind[] = ["desktop", "mobile", "tv", "kodi", "jellyfin", "web"];
 
@@ -93,7 +94,7 @@ export function PairDeviceDialog<R extends PairingRequestView>({
 
   const submitCode = async (event: FormEvent) => {
     event.preventDefault();
-    if (!code.trim()) return;
+    if (code.length !== SHORT_CODE_LENGTH) return;
     setStage({ name: "looking" });
     const result = await actions.lookup(code).catch((): ApprovePairingResult<R> => ({ ok: false, kind: "unknown" }));
     if (!mounted.current) return;
@@ -141,18 +142,8 @@ export function PairDeviceDialog<R extends PairingRequestView>({
       <form className="grid gap-4" onSubmit={(event) => void submitCode(event)} data-testid="pair-approve-code-step">
         <div className="grid gap-2">
           <Label htmlFor="pairApproveCode">{t("code.label")}</Label>
-          <Input
-            id="pairApproveCode"
-            data-testid="pair-approve-code"
-            value={code}
-            onChange={(event) => setCode(event.target.value)}
-            placeholder="ABCD-EFGH"
-            autoComplete="off"
-            autoCapitalize="characters"
-            spellCheck={false}
-            autoFocus
-            disabled={busy}
-          />
+          {/* ACCT-PAIR-01: 8 boxes in two groups of 4; typed or pasted with or without a dash or spaces, in any case. */}
+          <ShortCodeInput id="pairApproveCode" testId="pair-approve-code" value={code} onChange={setCode} autoFocus disabled={busy} />
         </div>
         {stage.name === "code" && stage.error ? (
           <p className="text-sm text-destructive" role="alert" data-testid="pair-approve-error">
@@ -163,7 +154,7 @@ export function PairDeviceDialog<R extends PairingRequestView>({
           <Button type="button" variant="secondary" onClick={() => onOpenChange(false)} data-testid="pair-approve-cancel">
             {t("cancel")}
           </Button>
-          <Button type="submit" disabled={busy || !code.trim()} data-testid="pair-approve-continue">
+          <Button type="submit" disabled={busy || code.length !== SHORT_CODE_LENGTH} data-testid="pair-approve-continue">
             {busy ? t("code.looking") : t("code.submit")}
           </Button>
         </DialogFooter>

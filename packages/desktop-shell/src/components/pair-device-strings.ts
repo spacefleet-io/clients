@@ -70,7 +70,7 @@ export const pairDeviceStrings: Record<
     "done.added": "{name} is signed in to your account.",
     "done.denied": "{name} was declined. Its code no longer works.",
     "errors.invalid_code":
-      "That is not a pairing code. It has 8 letters and numbers, like ABCD-EFGH.",
+      "That is not a pairing code. It has 8 letters and numbers, like ABCD EFGH.",
     "errors.not_found":
       "No device is waiting with this code. Check it, or get a new code on the device.",
     "errors.expired": "This code has expired. Get a new code on the device.",
@@ -125,7 +125,7 @@ export const pairDeviceStrings: Record<
     "done.added": "{name} est connecté à votre compte.",
     "done.denied": "{name} a été refusé. Son code ne fonctionne plus.",
     "errors.invalid_code":
-      "Ce n’est pas un code d’association. Il compte 8 lettres et chiffres, comme ABCD-EFGH.",
+      "Ce n’est pas un code d’association. Il compte 8 lettres et chiffres, comme ABCD EFGH.",
     "errors.not_found":
       "Aucun appareil n’attend avec ce code. Vérifiez-le ou obtenez un nouveau code sur l’appareil.",
     "errors.expired":
@@ -182,7 +182,7 @@ export const pairDeviceStrings: Record<
     "done.added": "{name} is aangemeld bij je account.",
     "done.denied": "{name} is geweigerd. De code werkt niet meer.",
     "errors.invalid_code":
-      "Dat is geen koppelcode. Die heeft 8 letters en cijfers, zoals ABCD-EFGH.",
+      "Dat is geen koppelcode. Die heeft 8 letters en cijfers, zoals ABCD EFGH.",
     "errors.not_found":
       "Er wacht geen apparaat met deze code. Controleer hem of vraag een nieuwe code op het apparaat.",
     "errors.expired":
@@ -239,7 +239,7 @@ export const pairDeviceStrings: Record<
     "done.added": "{name} ist bei deinem Konto angemeldet.",
     "done.denied": "{name} wurde abgelehnt. Sein Code funktioniert nicht mehr.",
     "errors.invalid_code":
-      "Das ist kein Kopplungscode. Er hat 8 Buchstaben und Ziffern, etwa ABCD-EFGH.",
+      "Das ist kein Kopplungscode. Er hat 8 Buchstaben und Ziffern, etwa ABCD EFGH.",
     "errors.not_found":
       "Kein Gerät wartet mit diesem Code. Prüfe ihn oder hol dir einen neuen Code auf dem Gerät.",
     "errors.expired":
@@ -296,7 +296,7 @@ export const pairDeviceStrings: Record<
     "done.added": "{name} inició sesión en tu cuenta.",
     "done.denied": "{name} fue rechazado. Su código ya no funciona.",
     "errors.invalid_code":
-      "Eso no es un código de vinculación. Tiene 8 letras y números, como ABCD-EFGH.",
+      "Eso no es un código de vinculación. Tiene 8 letras y números, como ABCD EFGH.",
     "errors.not_found":
       "Ningún dispositivo está esperando con este código. Revísalo u obtén un código nuevo en el dispositivo.",
     "errors.expired":

@@ -1,4 +1,4 @@
-import type { TmdbDetails } from "@/api";
+import type { TitleDetails } from "@/api";
 import type {
   EpisodeMoveSuggestion,
   MediaDetails,
@@ -15,7 +15,7 @@ import { MetadataRequestError } from "@space/metadata-client";
  * episodes into the library (keeping every stored episode id). The library op
  * stream then carries them to the TV, the phone and Kodi.
  *
- * Per show, the desktop remembers when it last refreshed it and what TMDB said
+ * Per show, the desktop remembers when it last refreshed it and what the catalog said
  * about it (status, next air date), in `localStorage` under
  * `SHOW_REFRESH_STATE_KEY`. That bookkeeping is per machine on purpose: the
  * library only holds what every device shows, and a second desktop refreshing
@@ -24,13 +24,13 @@ import { MetadataRequestError } from "@space/metadata-client";
  * A show is refreshed when:
  *   - it was never refreshed on this machine, or
  *   - its last refresh is `SHOW_REFRESH_MAX_AGE_MS` (1 day) old, or
- *   - the next episode TMDB announced airs today (or aired) and the show was
+ *   - the next episode the catalog announced airs today (or aired) and the show was
  *     last checked before that day.
  * Ended and cancelled shows are not refreshed again. The check always runs on
- * the desktop (the own-TMDB-key mode that skipped it was removed, META-DIRECT-03).
+ * the desktop (the mode with the user's own key that skipped it was removed, META-DIRECT-03).
  * A show whose last attempt failed waits `SHOW_REFRESH_FAILURE_RETRY_MS` (1 day) and is tried after the others.
  *
- * LIB-SHOW-02: the merge never removes anything. Episodes TMDB provably stopped
+ * LIB-SHOW-02: the merge never removes anything. Episodes the catalog provably stopped
  * listing are remembered per show (`notListed`), and `pendingShowDelistings`
  * offers them to the user once two checks a day apart both missed them.
  * LIB-SHOW-04: an episode the user has a file for is never offered for removal;
@@ -42,7 +42,7 @@ import { MetadataRequestError } from "@space/metadata-client";
 export const SHOW_REFRESH_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 /** LIB-SHOW-02: an episode is offered for removal only once two checks this far apart both missed it. */
 export const SHOW_DELISTING_CONFIRM_MS = 24 * 60 * 60 * 1000;
-/** Gap between two shows: one TMDB fetch at a time. */
+/** Gap between two shows: one catalog fetch at a time. */
 export const SHOW_REFRESH_REQUEST_GAP_MS = 2_000;
 /** Consecutive network or service failures after which the pass stops until the next one. */
 export const SHOW_REFRESH_MAX_CONSECUTIVE_FAILURES = 3;
@@ -50,10 +50,10 @@ export const SHOW_REFRESH_MAX_CONSECUTIVE_FAILURES = 3;
 export const SHOW_REFRESH_FAILURE_RETRY_MS = 24 * 60 * 60 * 1000;
 export const SHOW_REFRESH_STATE_KEY = "sf.showRefresh.v1";
 
-/** TMDB statuses of a show that will not get new episodes. */
+/** catalog statuses of a show that will not get new episodes. */
 const FINISHED_STATUSES: Record<string, true> = { ended: true, canceled: true, cancelled: true };
 
-/** An episode TMDB did not list at a check (LIB-SHOW-02), with when it was first and last found missing. */
+/** An episode the catalog did not list at a check (LIB-SHOW-02), with when it was first and last found missing. */
 export type NotListedSighting = {
   seasonNumber: number;
   episodeNumber: number;
@@ -71,7 +71,7 @@ export type ShowRefreshEntry = {
   nextEpisodeAirDate: string | null;
   /** Set when the last attempt failed; cleared by the next success. */
   lastFailedAt?: string;
-  /** LIB-SHOW-02/04: stored episodes the last successful check found missing from TMDB. */
+  /** LIB-SHOW-02/04: stored episodes the last successful check found missing from the catalog. */
   notListed?: Record<string, NotListedSighting>;
   /** LIB-SHOW-02/04: episode ids the user chose to keep ("Keep", "No"); not offered again while they stay missing. */
   declined?: string[];
@@ -80,8 +80,8 @@ export type ShowRefreshEntry = {
 export type ShowRefreshState = Record<string, ShowRefreshEntry>;
 
 export type ShowRefreshDeps = {
-  fetchDetails: (tmdbId: number, media: MediaRow) => Promise<TmdbDetails>;
-  refreshShowEpisodes: (mediaId: string, item: TmdbDetails) => Promise<ShowEpisodeRefreshResult>;
+  fetchDetails: (catalogId: number, media: MediaRow) => Promise<TitleDetails>;
+  refreshShowEpisodes: (mediaId: string, item: TitleDetails) => Promise<ShowEpisodeRefreshResult>;
   /** True while an import is running: the pass stands down and leaves the rest for the next one. */
   isLibraryBusy: () => Promise<boolean>;
   loadState: () => ShowRefreshState;
@@ -107,12 +107,12 @@ export const isFinishedShowStatus = (status: string | null | undefined) =>
 
 /**
  * True when a failure says the metadata service or the network is down, so the
- * rest of the pass would fail too. A show TMDB has no page for (a 404, or the
+ * rest of the pass would fail too. A show the catalog has no page for (a 404, or the
  * metadata server's `missing_metadata` answer) fails on its own and does not.
  */
 export const isPassWideFailure = (err: unknown): boolean => {
   if (err instanceof MetadataRequestError) return err.status !== 404;
-  if (err instanceof Error && err.message === "TMDB_404") return false;
+  if (err instanceof Error && err.message === "CATALOG_404") return false;
   return true;
 };
 
@@ -214,7 +214,7 @@ export const parseShowRefreshState = (raw: string | null): ShowRefreshState => {
 };
 
 /**
- * The sightings after a successful check: an episode still missing keeps its first sighting, one TMDB lists
+ * The sightings after a successful check: an episode still missing keeps its first sighting, one the catalog lists
  * again is forgotten (a later sighting starts over), and a "keep" only lasts while the episode stays missing.
  */
 const trackNotListed = (
@@ -272,7 +272,7 @@ export const pendingShowDelistings = (state: ShowRefreshState): ShowDelisting[] 
 };
 
 /**
- * LIB-SHOW-04 pick-by-hand list: the show's episodes that have no file and that TMDB still lists (not one of
+ * LIB-SHOW-04 pick-by-hand list: the show's episodes that have no file and that the catalog still lists (not one of
  * `notListedIds`), in season order. A move never adds a file to an episode that has one.
  */
 export const episodeMoveChoices = (
@@ -313,7 +313,7 @@ export const resolveShowDelisting = (
 
 export const runShowRefreshPass = async (media: MediaRow[], deps: ShowRefreshDeps): Promise<ShowRefreshSummary> => {
   const now = deps.now ?? Date.now;
-  const shows = media.filter((row) => row.type === "tv" && typeof row.tmdbId === "number" && row.tmdbId > 0);
+  const shows = media.filter((row) => row.type === "tv" && typeof row.catalogId === "number" && row.catalogId > 0);
   const state = deps.loadState();
   const known = new Set(shows.map((row) => row.id));
   // The dialog (LIB-SHOW-02) saves the user's answers to the same store while a pass runs, so every write
@@ -355,9 +355,9 @@ export const runShowRefreshPass = async (media: MediaRow[], deps: ShowRefreshDep
       summary.stoppedBecause = "busy";
       break;
     }
-    const tmdbId = row.tmdbId as number;
+    const catalogId = row.catalogId as number;
     try {
-      const details = await deps.fetchDetails(tmdbId, row);
+      const details = await deps.fetchDetails(catalogId, row);
       const result = await deps.refreshShowEpisodes(row.id, details);
       const refreshedAt = new Date(now()).toISOString();
       writeEntry(row.id, (previous) => ({
@@ -372,7 +372,7 @@ export const runShowRefreshPass = async (media: MediaRow[], deps: ShowRefreshDep
       consecutiveFailures = 0;
       deps.log("library.showRefresh", {
         mediaId: row.id,
-        tmdbId,
+        catalogId,
         reason,
         source: "background",
         status: details.status ?? null,
@@ -392,7 +392,7 @@ export const runShowRefreshPass = async (media: MediaRow[], deps: ShowRefreshDep
       }));
       deps.log("[show-refresh] show failed", {
         mediaId: row.id,
-        tmdbId,
+        catalogId,
         passWide,
         retryInMs: SHOW_REFRESH_FAILURE_RETRY_MS,
         error: err instanceof Error ? err.message : String(err),

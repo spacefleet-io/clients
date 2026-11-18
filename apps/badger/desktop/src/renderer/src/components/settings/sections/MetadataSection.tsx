@@ -3,7 +3,7 @@ import { Switch } from "@space/ui";
 import { useClientSettings } from "@/lib/settings/useClientSettings";
 import { SettingGroup, SettingRow } from "../kit";
 
-// The own-TMDB-key setting was removed (META-DIRECT-03): every lookup goes through the metadata service.
+// The own-key setting was removed (META-DIRECT-03): every lookup goes through the metadata service.
 export default function MetadataSection() {
   const { t } = useTranslation();
   const { config, updateNestedSetting } = useClientSettings();

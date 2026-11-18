@@ -139,7 +139,7 @@ export const mediaRoles = sqliteTable("media_roles", {
   orderIndex: integer("order_index"),
 });
 
-/** LIB-CREW-01: director and writer credits; `job` is TMDB's crew job ("Director", "Screenplay", "Writer"). */
+/** LIB-CREW-01: director and writer credits; `job` is the catalog's crew job ("Director", "Screenplay", "Writer"). */
 export const mediaCrew = sqliteTable("media_crew", {
   id: text("id").primaryKey(),
   mediaId: text("media_id").notNull(),

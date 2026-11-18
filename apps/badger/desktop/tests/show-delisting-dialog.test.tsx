@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 /**
- * LIB-SHOW-02 (Chris 2026-10-29): when TMDB stops listing episodes the user
+ * LIB-SHOW-02 (Chris 2026-10-29): when the catalog stops listing episodes the user
  * already has, the desktop asks before changing the library. The dialog lists
  * the episodes, says episodes with a file are never offered, and only removes
  * on an explicit click.
@@ -69,7 +69,7 @@ describe("ShowDelistingDialog", () => {
 
   const button = (testId: string) => container.querySelector<HTMLButtonElement>(`[data-testid="${testId}"]`);
 
-  it("@req LIB-SHOW-02[badger-desktop] lists the episodes TMDB dropped and says episodes with a file are never offered", () => {
+  it("@req LIB-SHOW-02[badger-desktop] lists the episodes the catalog dropped and says episodes with a file are never offered", () => {
     render();
     const text = container.textContent ?? "";
     expect(text).toContain("library.showDelisting.title");

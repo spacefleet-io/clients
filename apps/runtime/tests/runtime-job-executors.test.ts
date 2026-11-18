@@ -250,7 +250,7 @@ describe("runtime job executors", () => {
               media: {
                 id: "media-tv-1",
                 type: "tv",
-                tmdbId: 123,
+                catalogId: 123,
                 title: "Friends",
                 year: "1994",
                 posterPath: "/friends.jpg",
@@ -414,7 +414,7 @@ describe("runtime job executors", () => {
               media: {
                 id: "media-tv-2",
                 type: "tv",
-                tmdbId: 123,
+                catalogId: 123,
                 title: "Friends",
                 year: "1994",
                 posterPath: "/friends.jpg",

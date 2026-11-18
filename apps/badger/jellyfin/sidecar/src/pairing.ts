@@ -1,4 +1,4 @@
-import { bytesToBase64, formatShortCode, generateDeviceKeyPair, isSealedKey, openSealedKey, type SealedKey } from "@space/pairing-crypto";
+import { bytesToBase64, generateDeviceKeyPair, isSealedKey, normalizeShortCode, openSealedKey, type SealedKey } from "@space/pairing-crypto";
 import { errorMessage } from "./errors";
 
 /**
@@ -12,7 +12,7 @@ export type PairingState = "pending" | "approved" | "needs_profile" | "expired" 
 export type PairingSnapshot = {
   state: PairingState;
   requestId: string;
-  /** "ABCD-EFGH" */
+  /** The plain 8 characters, "ABCDEFGH" (ACCT-PAIR-01: shown as 4 + 4 with a gap, never a dash). */
   shortCode: string;
   /** What the phone's QR scanner reads. */
   qrPayload: string;
@@ -114,7 +114,7 @@ export class PairingFlow {
     const snapshot: PairingSnapshot = {
       state: "pending",
       requestId: created.requestId,
-      shortCode: created.shortCode.includes("-") ? created.shortCode : formatShortCode(created.shortCode),
+      shortCode: normalizeShortCode(created.shortCode) ?? created.shortCode,
       qrPayload: created.qrPayload,
       expiresAt: created.expiresAt,
       deviceName: input.deviceName,

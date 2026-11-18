@@ -68,7 +68,7 @@ describe("parseSubtitleFetchMessage", () => {
 });
 
 describe("createMpvSubtitleFetch", () => {
-  it("no TMDB target: shows the unavailable message", async () => {
+  it("no catalog target: shows the unavailable message", async () => {
     const { deps, views, flow } = setup({ target: null });
     flow.handle({ action: "open" });
     await flush();
@@ -117,7 +117,7 @@ describe("createMpvSubtitleFetch", () => {
         ...target,
         existingTracks: [
           { language: "fr", label: "French", source: "upload" },
-          { language: "de", label: "German", source: "opensubtitles:7" },
+          { language: "de", label: "German", source: "fetched:7" },
         ],
       },
     });

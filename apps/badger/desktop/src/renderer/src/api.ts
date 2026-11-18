@@ -9,10 +9,10 @@ import {
 import { setClientIdentity } from "@space/shared/appVersion";
 import type {
   MetadataSkipMarkersResult,
-  TmdbDetails,
-  TmdbMediaType,
-  TmdbSearchResult,
-  TmdbTrailer,
+  TitleDetails,
+  TitleType,
+  TitleSearchResult,
+  Trailer,
 } from "@space/shared/api";
 import type { createUserStorageTunnelClient, StorageTunnelPurpose } from "@space/shared/storageTunnel";
 import type { StorageObjectCounting } from "@space/shared/storageCounting";
@@ -59,29 +59,29 @@ export const getMetadataImageUrl = (
   language?: string
 ) => metadataClient.imageUrl(kind, path, language);
 
-export const searchMetadata = (_token: string, type: TmdbMediaType, query: string, page = 1) =>
+export const searchMetadata = (_token: string, type: TitleType, query: string, page = 1) =>
   metadataClient.search(type, query, page);
 
-export const getMetadataDetails = (_token: string, type: TmdbMediaType, id: number, language = "en") =>
+export const getMetadataDetails = (_token: string, type: TitleType, id: number, language = "en") =>
   metadataClient.details(type, id, language);
 
-export const getMetadataTrailers = (_token: string, type: TmdbMediaType, id: number, language: string) =>
+export const getMetadataTrailers = (_token: string, type: TitleType, id: number, language: string) =>
   metadataClient.videos(type, id, language);
 
 /**
- * TheIntroDB's intro and credits times for one episode, through the metadata service with one anonymous ticket
- * (META-SKIP-01): the desktop never calls TheIntroDB itself.
+ * Intro and credits times for one episode, through the metadata service with one anonymous ticket
+ * (META-SKIP-01): the desktop never calls a source itself.
  */
 export const getMetadataSkipMarkers = (
   _token: string,
-  type: TmdbMediaType,
+  type: TitleType,
   id: number,
   season: number,
   episode: number,
   durationSeconds?: number | null
 ): Promise<MetadataSkipMarkersResult> => {
   if (type !== "tv") {
-    return Promise.resolve({ provider: "theintrodb-v3" as const, fetchedAt: new Date().toISOString(), markers: [], coverage: [] });
+    return Promise.resolve({ fetchedAt: new Date().toISOString(), markers: [], coverage: [] });
   }
   return metadataClient.skipMarkers({
     type: "tv",

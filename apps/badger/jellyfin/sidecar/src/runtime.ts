@@ -1110,9 +1110,9 @@ export class IntegrationRuntime {
     let scheduled = 0;
     try {
       for (const media of db.listMedia()) {
-        if (!media.tmdbId || (media.type !== "movie" && media.type !== "tv")) continue;
+        if (!media.catalogId || (media.type !== "movie" && media.type !== "tv")) continue;
         const episodeKeys = media.type === "tv" ? episodeKeysOf(db.getMediaDetails(media.id)?.episodes ?? []) : [];
-        if (!needsTexts(db, media.type, media.tmdbId, language, episodeKeys)) continue;
+        if (!needsTexts(db, media.type, media.catalogId, language, episodeKeys)) continue;
         this.textsQueue.schedule(media.id, { background: true });
         scheduled += 1;
       }
@@ -1160,9 +1160,9 @@ export class IntegrationRuntime {
     const textsOfRun = () =>
       createDetailsTexts({
         // A failed lookup with an older row kept answers that row and throws nothing: say why nothing was asked.
-        details: async (type, tmdbId, language) => {
+        details: async (type, catalogId, language) => {
           try {
-            return await details(type, tmdbId, language);
+            return await details(type, catalogId, language);
           } catch (error) {
             // The language and the reason only, never a title.
             this.log("texts lookup not sent or failed", {
@@ -1180,11 +1180,11 @@ export class IntegrationRuntime {
       pauseMs: ARTWORK_COPY_PAUSE_MS,
       run: async (mediaId) => {
         const media = current() ? db?.getMediaDetails(mediaId) : null;
-        if (!media?.tmdbId || (media.type !== "movie" && media.type !== "tv")) return;
+        if (!media?.catalogId || (media.type !== "movie" && media.type !== "tv")) return;
         const episodeKeys = media.type === "tv" ? episodeKeysOf(media.episodes) : [];
         const before = written;
         try {
-          await askTexts(textsOfRun(), media.type, media.tmdbId, this.config.uiLanguage, episodeKeys);
+          await askTexts(textsOfRun(), media.type, media.catalogId, this.config.uiLanguage, episodeKeys);
         } finally {
           // Counts and the title id only, never a text.
           this.log("texts done", { mediaId, written: written - before });

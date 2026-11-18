@@ -19,7 +19,7 @@ import qrimage
 from api import ApiClient
 from compat import ADDON_ID, addon_path, data_dir, localized, log, notify, ok_dialog, select, set_prop
 
-CTRL_QR, CTRL_CODE, CTRL_COUNTDOWN, CTRL_TEXT = 100, 101, 102, 103
+CTRL_QR, CTRL_CODE, CTRL_COUNTDOWN, CTRL_TEXT, CTRL_CODE_END = 100, 101, 102, 103, 104
 BTN_NEW, BTN_ADVANCED, BTN_CANCEL = 200, 201, 202
 
 RESULT_PAIRED, RESULT_ADVANCED, RESULT_CANCELLED = "paired", "advanced", "cancelled"
@@ -87,7 +87,10 @@ class PairDialog(xbmcgui.WindowXMLDialog):
         os.replace(png, shown)
         self._cleanup_png(keep=shown)
         self.getControl(CTRL_QR).setImage(shown, False)
-        self.getControl(CTRL_CODE).setLabel(self.session.short_code)
+        # ACCT-PAIR-01: two groups of 4 in two labels, a gap between them and no dash.
+        first, second = pairing.short_code_groups(self.session.short_code)
+        self.getControl(CTRL_CODE).setLabel(first)
+        self.getControl(CTRL_CODE_END).setLabel(second)
 
     @staticmethod
     def _cleanup_png(keep):

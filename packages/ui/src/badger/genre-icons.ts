@@ -1,5 +1,5 @@
 /**
- * The icon drawn beside each TMDB genre in Badger (the title page's genre pills, the library's genre filter, Home's
+ * The icon drawn beside each catalog genre in Badger (the title page's genre pills, the library's genre filter, Home's
  * genre rows), shared by the desktop app and the web player (REL-FAM-02).
  */
 import type { GenreCategory } from "@space/shared";

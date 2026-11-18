@@ -109,7 +109,7 @@ const MEDIA = {
 };
 const DETAILS = {
   ...MEDIA,
-  cast: [{ id: "c1", personId: "p1", tmdbId: 1, name: "Sigourney", role: "Ripley", profilePath: null }],
+  cast: [{ id: "c1", personId: "p1", catalogId: 1, name: "Sigourney", role: "Ripley", profilePath: null }],
   playlistIds: [],
   seasons: [],
   episodes: [{ id: "e1", seasonNumber: 1, episodeNumber: 1, name: "Pilot", overview: null, airDate: null }],

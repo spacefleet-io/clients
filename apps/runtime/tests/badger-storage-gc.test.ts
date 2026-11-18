@@ -238,7 +238,7 @@ const mockSnapshot = (
     formatKeys?: { initKey?: string; chunks: string[]; previewKeys?: string[] }[];
     audioKeys?: { initKey?: string; chunks: string[] }[];
     subtitleKeys?: string[];
-    /** Artwork fields as the library stores them (`asset:<type>::<key>`, a bare key or a TMDB path). */
+    /** Artwork fields as the library stores them (`asset:<type>::<key>`, a bare key or a catalog path). */
     artwork?: {
       posterPath?: string | null;
       backdropPath?: string | null;
@@ -257,7 +257,7 @@ const mockSnapshot = (
         id: "media-1",
         title: "Test Movie",
         type: "movie",
-        tmdbId: 1,
+        catalogId: 1,
         year: "2024",
         posterPath: opts.artwork?.posterPath ?? null,
         originalLanguage: "en",
@@ -267,7 +267,7 @@ const mockSnapshot = (
         cast: (opts.artwork?.castProfilePaths ?? []).map((profilePath, i) => ({
           id: `cast-${i}`,
           personId: `person-cast-${i}`,
-          tmdbId: null,
+          catalogId: null,
           name: `Actor ${i}`,
           role: null,
           profilePath,
@@ -275,7 +275,7 @@ const mockSnapshot = (
         crew: (opts.artwork?.crewProfilePaths ?? []).map((profilePath, i) => ({
           id: `crew-${i}`,
           personId: `person-crew-${i}`,
-          tmdbId: null,
+          catalogId: null,
           name: `Director ${i}`,
           job: "Director",
           profilePath,
@@ -587,9 +587,9 @@ describe("badger storage gc", () => {
       artwork: {
         posterPath: `asset:image/jpeg::${art("poster.jpg")}`,
         backdropPath: `asset:image/jpeg::${art("backdrop.jpg")}`,
-        castProfilePaths: [`asset:image/jpeg::${art("cast.jpg")}`, "/tmdbOnlyActor.jpg", null],
+        castProfilePaths: [`asset:image/jpeg::${art("cast.jpg")}`, "/catalogOnlyActor.jpg", null],
         crewProfilePaths: [art("crew.jpg")],
-        seasonPosterPaths: [`asset:image/jpeg::${art("season.jpg")}`, "/tmdbSeason.jpg"],
+        seasonPosterPaths: [`asset:image/jpeg::${art("season.jpg")}`, "/catalogSeason.jpg"],
         episodeStillPaths: [`asset:image/jpeg::${art("still.jpg")}`, "https://example.test/still.jpg"],
       },
     });
@@ -612,7 +612,7 @@ describe("badger storage gc", () => {
       expect(response.ok).toBe(true);
       expect(deletedKeys).toEqual([orphanArtworkKey]);
       for (const key of liveArtworkKeys) expect(deletedKeys).not.toContain(key);
-      // TMDB paths and URLs are not storage pieces: never counted as missing.
+      // Catalog paths and URLs are not storage pieces: never counted as missing.
       expect(response.result).toMatchObject({ orphanedKeys: 1, deletedKeys: 1, missingKeys: 0, failedKeys: 0 });
     } catch (err) {
       dumpBadgerStorageGcSnapshot(label, {

@@ -1,5 +1,5 @@
 /**
- * A season's name on a show's Seasons tab (LIB-DETAIL-01). TMDB stores the generic names in English ("Specials",
+ * A season's name on a show's Seasons tab (LIB-DETAIL-01). The metadata service stores the generic names in English ("Specials",
  * "Season 3") whatever the interface language, so a French library read "Season 1" next to "Fichiers manquants": a
  * missing or generic name reads in the interface language, a season's own name ("The Final Chapter") stays as stored.
  */

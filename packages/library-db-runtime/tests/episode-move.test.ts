@@ -2,7 +2,7 @@
  * @test-id LIB-SHOW-MOVE-001
  * @level unit (pure matcher) + integration (real LibraryDb over bun:sqlite, no server)
  *
- * LIB-SHOW-04: when TMDB stops listing an episode the user has a file for, the daily check suggests where it went
+ * LIB-SHOW-04: when the catalog stops listing an episode the user has a file for, the daily check suggests where it went
  * (one likely new place: same title in any season, or same air date and order after a renumbering; merges get the
  * keep-or-pick-by-hand choice per part), and a move the user accepts keeps the episode's id so its watched state,
  * resume spot, skip markers and subtitles go along, renumbers every version's file and publishes one media.upsert.
@@ -75,7 +75,7 @@ describe("suggestEpisodeMoves finds one likely new place (LIB-SHOW-04)", () => {
     expect(moves.has("nofile")).toBe(false);
   });
 
-  it("@req LIB-SHOW-04[runtime] reports two parts TMDB merged into one episode as a merge, for each part", () => {
+  it("@req LIB-SHOW-04[runtime] reports two parts the catalog merged into one episode as a merge, for each part", () => {
     const p1 = ep("p1", 3, 1, "The Beginning (1)", { hasFile: true });
     const p2 = ep("p2", 3, 2, "The Beginning, Part 2", { hasFile: true });
     expect(episodeTitleBase("The Beginning (1)")).toBe("the beginning");
@@ -176,7 +176,7 @@ describe("moveEpisodeToSlot carries everything of the episode's (LIB-SHOW-04)", 
       { s: 2, e: 9, name: "E-Mail Surveillance" },
       { s: 2, e: 10, name: "Christmas Party" },
     ];
-    const mediaId = await db.addMediaFromTmdb(show(before));
+    const mediaId = await db.addMediaFromCatalog(show(before));
     // One file row per slot; its versions (formats) hang off the file id, so they follow the file.
     const fileA = await db.linkFileToMedia(mediaId, "office.s02e10.1080p.mkv", 2, 10);
     const partyId = slots(db, mediaId)["2:10"]!;
@@ -185,7 +185,7 @@ describe("moveEpisodeToSlot carries everything of the episode's (LIB-SHOW-04)", 
     await db.addSubtitleTrackWithObject({ mediaId, fileId: fileA, season: 2, episode: 10, language: "en", label: "English", objectKey: "s2e10/sub", format: "vtt" });
     log("seeded", { mediaId, partyId, fileA, slots: slots(db, mediaId) });
 
-    // TMDB moved it to Specials: season 2 now lists only E09, Specials list "Christmas Party" as episode 3.
+    // the catalog moved it to Specials: season 2 now lists only E09, Specials list "Christmas Party" as episode 3.
     const refresh = await db.refreshShowEpisodes(
       mediaId,
       show([
@@ -246,7 +246,7 @@ describe("moveEpisodeToSlot carries everything of the episode's (LIB-SHOW-04)", 
   it("@req LIB-SHOW-04[runtime] refuses a move onto an episode with a file, from one without a file, or within nothing", async () => {
     const db = await LibraryDb.openLocal("token", "key");
     db.setSyncEnabled(false);
-    const mediaId = await db.addMediaFromTmdb(show([{ s: 1, e: 1, name: "A" }, { s: 1, e: 2, name: "B" }, { s: 1, e: 3, name: "C" }]));
+    const mediaId = await db.addMediaFromCatalog(show([{ s: 1, e: 1, name: "A" }, { s: 1, e: 2, name: "B" }, { s: 1, e: 3, name: "C" }]));
     await db.linkFileToMedia(mediaId, "a.mkv", 1, 1);
     await db.linkFileToMedia(mediaId, "b.mkv", 1, 2);
     const ids = slots(db, mediaId);

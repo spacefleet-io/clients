@@ -33,7 +33,7 @@ describe("library snapshot job-event growth (#25) @bugfix @regression-proof", ()
     const db = await LibraryDb.openLocal("token", "key");
     db.setSyncEnabled(false);
     try {
-      const mediaId = await db.addMediaFromTmdb({
+      const mediaId = await db.addMediaFromCatalog({
         id: 404,
         type: "movie",
         title: "Snapshot Growth",

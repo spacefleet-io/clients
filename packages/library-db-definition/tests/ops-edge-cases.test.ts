@@ -90,8 +90,7 @@ const opMeta = { id: "op-edge", createdAt: "2024-01-01T00:00:00.000Z" };
 const baseDetails = (overrides: Partial<MediaDetails> = {}): MediaDetails => ({
   id: "media-edge",
   type: "movie",
-  tmdbId: 1,
-  externalIds: {},
+  catalogId: 1,
   title: "T",
   originalTitle: null,
   originalLanguage: "en",
@@ -315,14 +314,14 @@ describe("media.upsert — empty nested arrays still emit DELETE preambles", () 
   });
 });
 
-describe("media.upsert — external ID handling", () => {
-  test("null tmdbId + empty externalIds emits the DELETE only (no inserts)", () => {
-    console.info(`[${SUITE}:extid:setup] tmdbId=null externalIds={}`);
+describe("media.upsert — catalog id handling", () => {
+  test("null catalogId emits the DELETE only (no inserts)", () => {
+    console.info(`[${SUITE}:extid:setup] catalogId=null`);
     const op: LibraryOp = {
       ...opMeta,
       type: "media.upsert",
       payload: {
-        details: baseDetails({ tmdbId: null, externalIds: {} }),
+        details: baseDetails({ catalogId: null }),
       },
     };
     const out = buildOpStatements(op, fixedIds());
@@ -333,7 +332,7 @@ describe("media.upsert — external ID handling", () => {
       expect(core.some((s) => s.sql.includes("INSERT OR IGNORE INTO media_external_ids"))).toBe(false);
     } catch (err) {
       dumpEdgeCaseSnapshot("extid-empty-inserts-leaked", {
-        edgeCaseInput: { tmdbId: null, externalIds: {} },
+        edgeCaseInput: { catalogId: null },
         opType: op.type,
         parsedOutput: out,
       });
@@ -341,106 +340,27 @@ describe("media.upsert — external ID handling", () => {
     }
   });
 
-  test("tmdbId present + non-tmdb externalIds emits both kinds of insert", () => {
-    console.info(`[${SUITE}:extid:setup] tmdbId=42 externalIds={imdb,tvdb}`);
+  /** @req META-SRC-09[badger-desktop,badger-mobile,badger-tv,badger-web-player] */
+  test("catalogId present emits one insert under the catalog source, coerced to a string", () => {
+    console.info(`[${SUITE}:extid:setup] catalogId=9876543210 (numeric, must coerce to string)`);
     const op: LibraryOp = {
       ...opMeta,
       type: "media.upsert",
-      payload: {
-        details: baseDetails({
-          tmdbId: 42,
-          externalIds: { imdb: "tt0001", tvdb: "9999" },
-        }),
-      },
+      payload: { details: baseDetails({ catalogId: 9876543210 }) },
     };
     const out = buildOpStatements(op, fixedIds("ext"));
-    const inserts = (out.core ?? []).filter((s) =>
-      s.sql.includes("INSERT OR IGNORE INTO media_external_ids")
-    );
-    const sources = inserts.map((s) => s.params[3]);
-    const ids = inserts.map((s) => s.params[0]);
-    console.info(`[${SUITE}:extid:exec] inserts.length=${inserts.length} sources=${JSON.stringify(sources)} ids=${JSON.stringify(ids)}`);
+    const inserts = (out.core ?? []).filter((s) => s.sql.includes("INSERT OR IGNORE INTO media_external_ids"));
+    console.info(`[${SUITE}:extid:exec] inserts=${JSON.stringify(inserts.map((s) => s.params.slice(0, 5)))}`);
 
     try {
-      // 1 tmdb + 2 externalIds entries = 3 inserts
-      expect(inserts).toHaveLength(3);
-      expect(sources).toEqual(["tmdb", "imdb", "tvdb"]);
-      // Generated UUIDs in stable order
-      expect(ids).toEqual(["ext-1", "ext-2", "ext-3"]);
-    } catch (err) {
-      dumpEdgeCaseSnapshot("extid-multi-insert-wrong", {
-        edgeCaseInput: { tmdbId: 42, externalIds: { imdb: "tt0001", tvdb: "9999" } },
-        opType: op.type,
-        parsedOutput: out,
-        expectedParam: { position: "params[3] per insert (sources)", expected: ["tmdb", "imdb", "tvdb"], actual: sources },
-      });
-      throw err;
-    }
-  });
-
-  test("externalIds with null/undefined value is skipped", () => {
-    console.info(`[${SUITE}:extid:skip-null] externalIds={imdb:null,tvdb:undefined,anidb:'12345'} — only anidb should survive`);
-    const op: LibraryOp = {
-      ...opMeta,
-      type: "media.upsert",
-      payload: {
-        details: baseDetails({
-          tmdbId: null,
-          // Forces the null/undefined skip branch even though the type doesn't normally allow it.
-          externalIds: { imdb: null, tvdb: undefined, anidb: "12345" } as unknown as Record<
-            string,
-            string | number
-          >,
-        }),
-      },
-    };
-    const out = buildOpStatements(op, fixedIds());
-    const inserts = (out.core ?? []).filter((s) =>
-      s.sql.includes("INSERT OR IGNORE INTO media_external_ids")
-    );
-
-    try {
-      // Only anidb survives
       expect(inserts).toHaveLength(1);
-      expect(inserts[0]!.params[3]).toBe("anidb");
-      expect(inserts[0]!.params[4]).toBe("12345");
+      expect(inserts[0]!.params.slice(0, 5)).toEqual(["ext-1", "media-edge", "movie", "catalog", "9876543210"]);
     } catch (err) {
-      dumpEdgeCaseSnapshot("extid-null-not-skipped", {
-        edgeCaseInput: { imdb: null, tvdb: undefined, anidb: "12345" },
+      dumpEdgeCaseSnapshot("extid-catalog-insert-wrong", {
+        edgeCaseInput: { catalogId: 9876543210 },
         opType: op.type,
         parsedOutput: out,
-        errorOrWarningTrail: [`inserts.length=${inserts.length} expected=1`],
-      });
-      throw err;
-    }
-  });
-
-  test("tmdbId is coerced to string even when numeric", () => {
-    console.info(`[${SUITE}:extid:tmdb-coerce] tmdbId=9876543210 (numeric, must coerce to string)`);
-    const op: LibraryOp = {
-      ...opMeta,
-      type: "media.upsert",
-      payload: { details: baseDetails({ tmdbId: 9876543210 }) },
-    };
-    const out = buildOpStatements(op, fixedIds());
-    const tmdbInsert = (out.core ?? []).find(
-      (s) =>
-        s.sql.includes("INSERT OR IGNORE INTO media_external_ids") &&
-        s.params[3] === "tmdb"
-    );
-    console.info(`[${SUITE}:extid:tmdb-coerce] tmdbInsert.params[4]=${JSON.stringify(tmdbInsert?.params[4])} type=${typeof tmdbInsert?.params[4]}`);
-
-    try {
-      expect(tmdbInsert).toBeDefined();
-      expect(tmdbInsert!.params[4]).toBe("9876543210");
-      expect(typeof tmdbInsert!.params[4]).toBe("string");
-    } catch (err) {
-      dumpEdgeCaseSnapshot("tmdbId-coercion-wrong", {
-        edgeCaseInput: { tmdbId: 9876543210 },
-        opType: op.type,
-        parsedOutput: out,
-        expectedClampOrCoercion: "tmdbId numeric → string",
-        expectedParam: { position: "params[4]", expected: "9876543210 (string)", actual: tmdbInsert?.params[4] },
+        expectedParam: { position: "params[0..4]", expected: "ext-1, media-edge, movie, catalog, 9876543210", actual: inserts[0]?.params },
       });
       throw err;
     }

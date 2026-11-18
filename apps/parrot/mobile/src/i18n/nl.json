@@ -13,8 +13,7 @@
     "login": {
       "sameAsBadger": "Gebruik hetzelfde e-mailadres en wachtwoord als voor Badger.",
       "codeTotp": "Code uit je authenticator-app",
-      "codeEmail": "Code die we je hebben gemaild",
-      "usePassword": "Inloggen met je wachtwoord"
+      "codeEmail": "Code die we je hebben gemaild"
     },
     "key": {
       "title": "Voer je bibliotheeksleutel in",

@@ -2,7 +2,7 @@
 
 @req ACCT-PROF-03[badger-kodi] the followed profile's `titleLanguage` (its `profile_settings_v1` row, `p:<pid>:` for
                    a non-main profile) picks the shown title: "original" shows the original set of the title's
-                   `title_variants_v1:<media id>` row, with its pictures only once copied (a TMDB path keeps the
+                   `title_variants_v1:<media id>` row, with its pictures only once copied (a catalog path keeps the
                    row's picture); "app", unset, a missing or unreadable row show the library row as stored
 
 Each test prints phase markers prefixed with its id.
@@ -56,9 +56,9 @@ class TitleLanguage(unittest.TestCase):
             conn.execute("INSERT INTO media_items VALUES (?,'movie',?,'t',1,0,NULL,NULL,?,?)", (mid, title, poster, backdrop))
         rows = [
             ("title_variants_v1:m1", variants({"language": "fr", "title": "La Haine", "posterPath": "vault/poster-fr.jpg",
-                                               "backdropPath": "/tmdbBackdrop.jpg"})),
+                                               "backdropPath": "/catalogBackdrop.jpg"})),
             ("title_variants_v1:m2", variants({"language": "fr", "title": "Le Fabuleux Destin d'Amelie Poulain",
-                                               "posterPath": "/tmdbPoster.jpg", "backdropPath": None})),
+                                               "posterPath": "/catalogPoster.jpg", "backdropPath": None})),
             # Non-Latin original: the pass keeps no original set, the account-language row is shown either way.
             ("title_variants_v1:m3", variants(None)),
             ("title_variants_v1:m4", "{not json"),
@@ -98,7 +98,7 @@ class TitleLanguage(unittest.TestCase):
     def test_original_option_shows_the_original_set_once_copied(self):
         self.set_main(settings("original"))
         s, by_id = self.shown("")
-        # Copied original poster replaces the row's; the TMDB backdrop is not copied yet, the row's stays.
+        # Copied original poster replaces the row's; the catalog backdrop is not copied yet, the row's stays.
         self.assertEqual(by_id["m1"], ("La Haine", "vault/poster-fr.jpg", "vault/backdrop-en.jpg"))
         self.assertEqual(by_id["m2"], ("Le Fabuleux Destin d'Amelie Poulain", "vault/amelie-en.jpg", "vault/amelie-bd-en.jpg"))
         # No original set (non-Latin original) and an unreadable row keep the row.
@@ -133,7 +133,7 @@ class TitleLanguage(unittest.TestCase):
         self.assertIsNone(blank_poster["original"]["posterPath"])
 
     def test_an_original_set_in_non_latin_letters_is_never_shown(self):
-        # @bugfix @regression-proof Chris 2026-11-18: Bardock (TMDB 39323) showed its Japanese title under
+        # @bugfix @regression-proof Chris 2026-11-18: Bardock (catalog id 39323) showed its Japanese title under
         # "Original version"; whichever app wrote a non-Latin original set, the row's own set shows.
         row = {"title": "Dragon Ball Z - Le Père de Son Gokû", "poster_path": "asset:fr::k", "backdrop_path": "asset:b::k"}
         japanese = library.parse_title_variants(json.dumps({

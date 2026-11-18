@@ -29,7 +29,7 @@ export type PairingUser = { id: string; email: string; [key: string]: unknown };
 
 export type PairingCreated = {
   requestId: string;
-  /** Shown as typed, e.g. "ABCD-EFGH". */
+  /** The 8 plain characters, e.g. "ABCDEFGH", shown as two groups of 4, never with a dash (ACCT-PAIR-01). */
   shortCode: string;
   qrPayload: string;
   expiresAt: string;

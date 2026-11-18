@@ -382,7 +382,7 @@ type DummyIngestJobStatus = "queued" | "running" | "done" | "error";
 type DummyIngestJobRecord = {
   id: string;
   userId: string;
-  tmdbId: number;
+  catalogId: number;
   mediaType: "movie" | "tv";
   status: DummyIngestJobStatus;
   progress: number;
@@ -1165,14 +1165,14 @@ export class BadgerModule {
     if (!parsed.ok) {
       return { response: error(request.requestId, "invalid_payload", parsed.error) };
     }
-    const { userId, tmdbId, mediaType } = parsed.data;
+    const { userId, catalogId, mediaType } = parsed.data;
     const jobId = parsed.data.jobId ?? crypto.randomUUID();
     const now = nowIso();
     const existing = this.dummyIngestJobs.get(jobId);
     const next: DummyIngestJobRecord = existing ?? {
       id: jobId,
       userId,
-      tmdbId,
+      catalogId,
       mediaType,
       status: "queued",
       progress: 0,
@@ -1215,11 +1215,11 @@ export class BadgerModule {
         response: error(request.requestId, "invalid_payload", "userId is required", false, { field: "userId" }),
       };
     }
-    const tmdbId = parsed.data.tmdbId ?? existing?.tmdbId ?? Number.NaN;
-    if (!Number.isFinite(tmdbId) || tmdbId <= 0) {
+    const catalogId = parsed.data.catalogId ?? existing?.catalogId ?? Number.NaN;
+    if (!Number.isFinite(catalogId) || catalogId <= 0) {
       return {
-        response: error(request.requestId, "invalid_payload", "tmdbId must be a positive number", false, {
-          field: "tmdbId",
+        response: error(request.requestId, "invalid_payload", "catalogId must be a positive number", false, {
+          field: "catalogId",
         }),
       };
     }
@@ -1245,7 +1245,7 @@ export class BadgerModule {
     const next: DummyIngestJobRecord = {
       id: jobId,
       userId,
-      tmdbId,
+      catalogId,
       mediaType,
       status,
       progress,

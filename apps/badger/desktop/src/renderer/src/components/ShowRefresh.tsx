@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/auth";
 import { useLibraryActions, useLibraryData } from "@/lib/libraryContext";
-import { getTmdbDetails, keepLocalizedTexts } from "@/lib/metadata";
+import { getTitleDetails, keepLocalizedTexts } from "@/lib/metadata";
 import type { IngestJobRecord } from "@/lib/runtimeIngestJobs";
 import {
   SHOW_REFRESH_STATE_KEY,
@@ -21,7 +21,7 @@ import { rendererLogger } from "@/logger";
 
 const log = rendererLogger.child({ scope: "show-refresh" });
 
-/** Lets the library settle and the first screen render before the first pass asks TMDB. */
+/** Lets the library settle and the first screen render before the first pass asks the catalog. */
 export const SHOW_REFRESH_START_DELAY_MS = 60_000;
 /** A pass runs every hour while the app stays open, so a show is checked on its air day and never drifts a day; each show still waits its day (see `showRefreshDueReason`). */
 export const SHOW_REFRESH_INTERVAL_MS = 60 * 60 * 1000;
@@ -37,7 +37,7 @@ const loadState = () => parseShowRefreshState(window.localStorage.getItem(SHOW_R
  * LIB-SHOW-01: keeps the episode lists of shows that are still airing current.
  * One pass a minute after the library loads, then one an hour; each pass
  * refreshes only the shows that are due (see `runShowRefreshPass`).
- * LIB-SHOW-02: after each pass, offers the episodes TMDB stopped listing for
+ * LIB-SHOW-02: after each pass, offers the episodes the catalog stopped listing for
  * removal, one show at a time (`ShowDelistingDialog`).
  * LIB-SHOW-04: then, one episode at a time, suggests a move for each one the
  * user has a file for (`ShowEpisodeMoveDialog`).
@@ -46,7 +46,7 @@ export default function ShowRefresh() {
   const { user, token } = useAuth();
   const { i18n, t } = useTranslation();
   const { loading, writeBlockedReason, media } = useLibraryData();
-  const { refreshShowEpisodes, removeEpisodesNotOnTmdb, moveEpisodeToSlot, fetchMediaDetails } = useLibraryActions();
+  const { refreshShowEpisodes, removeEpisodesNotInCatalog, moveEpisodeToSlot, fetchMediaDetails } = useLibraryActions();
   // Offers left from an earlier session show as soon as the library is ready, before the first pass.
   const [delistings, setDelistings] = useState<ShowDelisting[]>(() => pendingShowDelistings(loadState()));
   const [removing, setRemoving] = useState(false);
@@ -73,14 +73,14 @@ export default function ShowRefresh() {
       if (runningRef.current) return;
       runningRef.current = true;
       void runShowRefreshPass(mediaRef.current, {
-        fetchDetails: async (tmdbId) => {
+        fetchDetails: async (catalogId) => {
           const { token: currentToken, accountLanguage: language } = inputsRef.current;
           if (!currentToken) throw new Error("AUTH_REQUIRED");
           // Episode names are in the account's language (UX-I18N-07, ACCT-PROF-03), like the stored ones.
-          const details = await getTmdbDetails(currentToken, "tv", tmdbId, language);
+          const details = await getTitleDetails(currentToken, "tv", catalogId, language);
           // The refresh already holds the show's texts in this language: keep them (LIB-LANG-02), no extra lookup.
           const episodeKeys = (details.episodes ?? []).map((episode) => `${episode.seasonNumber}:${episode.episodeNumber}`);
-          void keepLocalizedTexts("tv", tmdbId, language, details, episodeKeys).catch(() => undefined);
+          void keepLocalizedTexts("tv", catalogId, language, details, episodeKeys).catch(() => undefined);
           return details;
         },
         refreshShowEpisodes: (mediaId, item) => inputsRef.current.refreshShowEpisodes(mediaId, item),
@@ -206,7 +206,7 @@ export default function ShowRefresh() {
       onKeep={() => saveDecision("kept", removalIds)}
       onRemove={() => {
         setRemoving(true);
-        removeEpisodesNotOnTmdb(offer.mediaId, removalIds)
+        removeEpisodesNotInCatalog(offer.mediaId, removalIds)
           .then((result) => {
             // eslint-disable-next-line no-console -- intentional [show-refresh] diagnostic (keep-diagnostic-logs)
             console.info("[show-refresh] delisted episodes removed", { mediaId: offer.mediaId, ...result });

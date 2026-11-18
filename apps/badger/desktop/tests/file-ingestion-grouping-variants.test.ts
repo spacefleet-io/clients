@@ -10,23 +10,23 @@ const summarize = (groupCandidates: unknown[]) => ({ count: groupCandidates.leng
 // Candidate factories
 // ---------------------------------------------------------------------------
 
-const makeMovie = (id: string, tmdbId: number, title: string) => ({
+const makeMovie = (id: string, catalogId: number, title: string) => ({
   id,
   status: "ready" as const,
-  match: { id: tmdbId, type: "movie" as const, title },
+  match: { id: catalogId, type: "movie" as const, title },
   parsed: {},
 });
 
 const makeTvEp = (
   id: string,
-  tmdbId: number,
+  catalogId: number,
   showTitle: string,
   season: number,
   episode: number,
 ) => ({
   id,
   status: "ready" as const,
-  match: { id: tmdbId, type: "tv" as const, title: showTitle },
+  match: { id: catalogId, type: "tv" as const, title: showTitle },
   parsed: { season, episode },
 });
 
@@ -221,12 +221,12 @@ describe("fileIngestionGroups — drag-drop projection variants", () => {
   });
 
   // Case 10 — ambiguous sidecar: one subtitle file, two movie candidates with
-  // different TMDB ids (different films). Today's grouping is purely by match.id
+  // different the catalog ids (different films). Today's grouping is purely by match.id
   // so the subtitle can only belong to one group (whichever id was assigned to it).
   // There is no filename-similarity disambiguation at this layer.
   // @known-gap: when a subtitle's filename is equidistant from two media
   // candidates the grouping layer should flag ambiguity rather than silently
-  // placing it by TMDB id match alone.
+  // placing it by catalog id match alone.
   it("1 sidecar matching multiple candidates (ambiguous filename) → today assigns to exactly 1 group by match id", () => {
     console.info("[file-ingestion-grouping-variants:case10] Orchard + Inception + orchard.fr.srt(903549) → expect srt lands in Orchard group only");
     // Subtitle is matched to Orchard (903549), not Inception (27205)
@@ -238,7 +238,7 @@ describe("fileIngestionGroups — drag-drop projection variants", () => {
     const groups = buildFileIngestionMergedGroups(candidates, summarize);
 
     // @known-gap: no ambiguity is surfaced — the subtitle lands quietly in the
-    // Orchard group. If the matched TMDB id were wrong (e.g. probe mis-identified
+    // Orchard group. If the matched catalog id were wrong (e.g. probe mis-identified
     // the file), there is no user-facing warning.
     const orchardGroup = groups.find((g) => g.match.id === 903549);
     const inceptionGroup = groups.find((g) => g.match.id === 27205);

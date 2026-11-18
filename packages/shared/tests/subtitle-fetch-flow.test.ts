@@ -122,7 +122,7 @@ describe("createSubtitleFetchFlow", () => {
   it("@req PLAY-SUBGET-18 never fetches a subtitle a second time", async () => {
     let stored = 0;
     const { flow, states } = flowWith({
-      existingTracks: [{ language: "fr", label: "French", source: "opensubtitles" }],
+      existingTracks: [{ language: "fr", label: "French", source: "fetched" }],
       store: async () => {
         stored += 1;
       },

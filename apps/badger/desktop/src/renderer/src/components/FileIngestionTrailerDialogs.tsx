@@ -2,12 +2,12 @@ import { Check, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@space/ui";
 import { useAppPlaybackMark } from "@space/ui/app-playback-mark";
 
-import type { TmdbTrailer } from "@/api";
+import type { Trailer } from "@/api";
 import { keepTrailerDialogFocus, useCloseTrailerOnPlayerEscape } from "@/lib/trailers";
 
 type TrailerEntry = {
   status: "idle" | "loading" | "ready" | "empty" | "error";
-  trailers: TmdbTrailer[];
+  trailers: Trailer[];
 };
 
 type FileIngestionTrailerDialogsProps = {

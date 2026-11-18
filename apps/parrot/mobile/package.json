@@ -27,6 +27,7 @@
     "@space/mobile-audio-playback": "workspace:*",
     "@space/mobile-media-proxy": "workspace:*",
     "@space/mobile-media-volume": "workspace:*",
+    "@space/mobile-self-update": "workspace:*",
     "@space/mobile-shell": "workspace:*",
     "@space/pairing-crypto": "workspace:*",
     "@space/parrot-core": "workspace:*",

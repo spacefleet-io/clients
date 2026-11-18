@@ -74,8 +74,7 @@ const buildForSnapshot = (label: string, op: LibraryOp): ReturnType<typeof build
 const fullDetails: MediaDetails = {
   id: "media-1",
   type: "movie",
-  tmdbId: 42,
-  externalIds: { imdb: "tt0001", tvdb: "9999" },
+  catalogId: 42,
   title: "Title",
   originalTitle: "OT",
   originalLanguage: "en",
@@ -96,7 +95,7 @@ const fullDetails: MediaDetails = {
     {
       id: "role-a",
       personId: "p-a",
-      tmdbId: 100,
+      catalogId: 100,
       name: "Actor A",
       role: "lead",
       profilePath: "/a.png",
@@ -104,7 +103,7 @@ const fullDetails: MediaDetails = {
     {
       id: "role-b",
       personId: "p-b",
-      tmdbId: null,
+      catalogId: null,
       name: "Actor B",
       role: "supporting",
       profilePath: null,
@@ -459,34 +458,8 @@ describe("buildOpStatements — golden fixtures", () => {
                 "uuid-001",
                 "media-1",
                 "movie",
-                "tmdb",
+                "catalog",
                 "42",
-                "media-1",
-                "2024-01-02T00:00:00.000Z",
-              ],
-              "sql": "INSERT OR IGNORE INTO media_external_ids (id, media_id, media_type, source, external_id)
-               SELECT ?, ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM media_items WHERE id = ? AND updated_at = ?);",
-            },
-            {
-              "params": [
-                "uuid-002",
-                "media-1",
-                "movie",
-                "imdb",
-                "tt0001",
-                "media-1",
-                "2024-01-02T00:00:00.000Z",
-              ],
-              "sql": "INSERT OR IGNORE INTO media_external_ids (id, media_id, media_type, source, external_id)
-               SELECT ?, ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM media_items WHERE id = ? AND updated_at = ?);",
-            },
-            {
-              "params": [
-                "uuid-003",
-                "media-1",
-                "movie",
-                "tvdb",
-                "9999",
                 "media-1",
                 "2024-01-02T00:00:00.000Z",
               ],
@@ -503,7 +476,7 @@ describe("buildOpStatements — golden fixtures", () => {
             },
             {
               "params": [
-                "uuid-004",
+                "uuid-002",
                 "media-1",
                 28,
                 "media-1",
@@ -514,7 +487,7 @@ describe("buildOpStatements — golden fixtures", () => {
             },
             {
               "params": [
-                "uuid-005",
+                "uuid-003",
                 "media-1",
                 18,
                 "media-1",
@@ -541,9 +514,9 @@ describe("buildOpStatements — golden fixtures", () => {
             },
             {
               "params": [
-                "uuid-006",
+                "uuid-004",
                 "p-a",
-                "tmdb",
+                "catalog",
                 "100",
               ],
               "sql": "INSERT OR IGNORE INTO people_external_ids (id, person_id, source, external_id) VALUES (?, ?, ?, ?);",
@@ -584,7 +557,7 @@ describe("buildOpStatements — golden fixtures", () => {
             },
             {
               "params": [
-                "uuid-007",
+                "uuid-005",
                 "media-1",
                 "youtube",
                 "yt-1",
@@ -683,7 +656,7 @@ describe("buildOpStatements — golden fixtures", () => {
             },
             {
               "params": [
-                "uuid-008",
+                "uuid-006",
                 "media-1",
                 "file-1",
                 "1080p",
@@ -694,7 +667,7 @@ describe("buildOpStatements — golden fixtures", () => {
             },
             {
               "params": [
-                "uuid-009",
+                "uuid-007",
                 "media-1",
                 "file-1",
                 "720p",
@@ -786,7 +759,7 @@ describe("buildOpStatements — golden fixtures", () => {
             },
             {
               "params": [
-                "uuid-010",
+                "uuid-008",
                 "fmt-1",
                 "c1",
                 0,
@@ -797,7 +770,7 @@ describe("buildOpStatements — golden fixtures", () => {
             },
             {
               "params": [
-                "uuid-011",
+                "uuid-009",
                 "fmt-1",
                 "c2",
                 1,
@@ -846,7 +819,7 @@ describe("buildOpStatements — golden fixtures", () => {
             },
             {
               "params": [
-                "uuid-012",
+                "uuid-010",
                 "audio-1",
                 "ac1",
                 0,
@@ -899,8 +872,7 @@ describe("buildOpStatements — golden fixtures", () => {
       payload: {
         details: {
           ...fullDetails,
-          tmdbId: null,
-          externalIds: {},
+          catalogId: null,
           genres: [],
           cast: [],
           trailers: [],

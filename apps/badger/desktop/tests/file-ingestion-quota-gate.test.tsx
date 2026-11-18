@@ -2,8 +2,8 @@
 /**
  * Spec INGS-QUOTA-01, INGS-QUOTA-02 in the real import window: "Add to library" checks the
  * import against the account's space BEFORE anything is created or submitted. Drives the
- * real FileIngestionDialog drop path (scanFiles → probeMedia → TMDB match) and watches
- * whether the add went ahead through `getTmdbDetailsForLibrary`, its first step.
+ * real FileIngestionDialog drop path (scanFiles → probeMedia → the catalog match) and watches
+ * whether the add went ahead through `getTitleDetailsForLibrary`, its first step.
  */
 import React from "react";
 import { act } from "react";
@@ -80,7 +80,7 @@ vi.mock("../src/renderer/src/lib/libraryContext", () => ({
   useLibraryActions: () => ({
     getMediaDetails: () => null,
     getSharedSetting: () => null,
-    addMediaFromTmdb: vi.fn(),
+    addMediaFromCatalog: vi.fn(),
     addSubtitleTrackWithObject: vi.fn(),
   }),
 }));
@@ -104,13 +104,13 @@ vi.mock("../src/renderer/src/components/FileIngestionQuotaDialog", async (import
 });
 
 /** The first step of an add that went ahead. Rejecting stops it right there, harmlessly. */
-const getTmdbDetailsForLibrary = vi.fn();
+const getTitleDetailsForLibrary = vi.fn();
 vi.mock("../src/renderer/src/lib/metadata", () => ({
-  getTmdbDetails: vi.fn(),
-  getTmdbDetailsForLibrary: (...args: unknown[]) => getTmdbDetailsForLibrary(...args),
-  getTmdbTrailersForLanguages: vi.fn().mockResolvedValue([]),
+  getTitleDetails: vi.fn(),
+  getTitleDetailsForLibrary: (...args: unknown[]) => getTitleDetailsForLibrary(...args),
+  getTitleTrailersForLanguages: vi.fn().mockResolvedValue([]),
   localizeSearchResultForLibrary: vi.fn(async (_token: unknown, result: unknown) => result),
-  searchTmdb: vi.fn(async (_token: unknown, type: string, query: string) => ({
+  searchTitles: vi.fn(async (_token: unknown, type: string, query: string) => ({
     results: [{ type, id: 1000 + query.length * 7 + query.charCodeAt(0), title: query, originalTitle: query, overview: "", year: 2020 }],
   })),
 }));
@@ -181,7 +181,7 @@ const dump = (label: string) => {
     console.error(`=== ${P}:${label} ===`);
     console.error(`getAccountStorage calls=${JSON.stringify(getAccountStorage.mock.calls)}`);
     console.error(`updateSubscription calls=${JSON.stringify(updateSubscription.mock.calls)}`);
-    console.error(`getTmdbDetailsForLibrary calls=${JSON.stringify(getTmdbDetailsForLibrary.mock.calls.map((call) => call.slice(1)))}`);
+    console.error(`getTitleDetailsForLibrary calls=${JSON.stringify(getTitleDetailsForLibrary.mock.calls.map((call) => call.slice(1)))}`);
     console.error(`add button=${addButton() ? (addButton()!.disabled ? "disabled" : "enabled") : "missing"}`);
     console.error(`quota dialog mode=${quotaDialog()?.getAttribute("data-mode") ?? "(none)"}`);
     console.error(`dialog text:\n${container?.textContent ?? "(no container)"}`);
@@ -248,10 +248,10 @@ const dropAndWaitForAdd = async (paths: string[]) => {
   console.info(`${P}:ready add=enabled`);
 };
 
-/** TMDB ids of the movies whose add went ahead (getTmdbDetailsForLibrary's 3rd argument). */
-const addedIds = () => getTmdbDetailsForLibrary.mock.calls.map((call) => call[2]);
-/** The id the mocked TMDB search gives a title. */
-const tmdbIdOf = (title: string) => 1000 + title.length * 7 + title.charCodeAt(0);
+/** the catalog ids of the movies whose add went ahead (getTitleDetailsForLibrary's 3rd argument). */
+const addedIds = () => getTitleDetailsForLibrary.mock.calls.map((call) => call[2]);
+/** The id the mocked the catalog search gives a title. */
+const catalogIdOf = (title: string) => 1000 + title.length * 7 + title.charCodeAt(0);
 
 beforeEach(() => {
   window.localStorage.clear();
@@ -266,8 +266,8 @@ beforeEach(() => {
     .mockReset()
     .mockResolvedValue({ provider: "standin", checkoutAllowed: false, checkoutBlockedReason: "billing_provider_standin", subscription: null });
   setUser.mockReset();
-  getTmdbDetailsForLibrary.mockReset();
-  getTmdbDetailsForLibrary.mockRejectedValue(new Error("stop-after-gate"));
+  getTitleDetailsForLibrary.mockReset();
+  getTitleDetailsForLibrary.mockRejectedValue(new Error("stop-after-gate"));
   probeMedia = vi.fn(async (path: string) => {
     console.info(`${P}:probeMedia(${path})`);
     return probe;
@@ -300,9 +300,9 @@ describe("FileIngestionDialog — storage check on Add", () => {
     fileSize = 2 * GIB;
     await dropAndWaitForAdd([LANTERN]);
     await click(addButton(), "add");
-    if (quotaDialog() || getTmdbDetailsForLibrary.mock.calls.length !== 1) dump("fits");
+    if (quotaDialog() || getTitleDetailsForLibrary.mock.calls.length !== 1) dump("fits");
     expect(quotaDialog()).toBeNull();
-    expect(getTmdbDetailsForLibrary).toHaveBeenCalledTimes(1);
+    expect(getTitleDetailsForLibrary).toHaveBeenCalledTimes(1);
   });
 
   it("@req INGS-QUOTA-01 one movie too big: the window opens instead of the import, and Cancel adds nothing", async () => {
@@ -311,22 +311,22 @@ describe("FileIngestionDialog — storage check on Add", () => {
     await dropAndWaitForAdd([LANTERN]);
     await click(addButton(), "add");
     // The gate holds from the click itself: nothing added, Add greyed out, before the window has even loaded.
-    if (getTmdbDetailsForLibrary.mock.calls.length > 0 || !addButton()?.disabled) dump("single-click");
-    expect(getTmdbDetailsForLibrary).not.toHaveBeenCalled();
+    if (getTitleDetailsForLibrary.mock.calls.length > 0 || !addButton()?.disabled) dump("single-click");
+    expect(getTitleDetailsForLibrary).not.toHaveBeenCalled();
     expect(addButton()?.disabled).toBe(true);
     await waitForQuotaWindow("single");
     try {
       expect(quotaDialog()?.getAttribute("data-mode")).toBe("single");
-      expect(getTmdbDetailsForLibrary).not.toHaveBeenCalled();
+      expect(getTitleDetailsForLibrary).not.toHaveBeenCalled();
       expect(addButton()?.disabled).toBe(true);
     } catch (err) {
       dump("single-gate");
       throw err;
     }
     await click(byTestId("import-quota-cancel"), "cancel");
-    if (quotaDialog() || getTmdbDetailsForLibrary.mock.calls.length > 0) dump("single-cancel");
+    if (quotaDialog() || getTitleDetailsForLibrary.mock.calls.length > 0) dump("single-cancel");
     expect(quotaDialog()).toBeNull();
-    expect(getTmdbDetailsForLibrary).not.toHaveBeenCalled();
+    expect(getTitleDetailsForLibrary).not.toHaveBeenCalled();
     expect(addButton()?.disabled).toBe(false);
   });
 
@@ -363,9 +363,9 @@ describe("FileIngestionDialog — storage check on Add", () => {
     await click(byTestId("import-quota-import-selected"), "import selected");
     await flush();
     console.info(`${P}:batch added=${JSON.stringify(addedIds())}`);
-    if (getTmdbDetailsForLibrary.mock.calls.length !== 1) dump("batch-after");
+    if (getTitleDetailsForLibrary.mock.calls.length !== 1) dump("batch-after");
     expect(quotaDialog()).toBeNull();
-    expect(addedIds()).toEqual([tmdbIdOf("Quiet Orchard")]);
+    expect(addedIds()).toEqual([catalogIdOf("Quiet Orchard")]);
   });
 
   it("@req INGS-QUOTA-01 upgrading from the window carries the whole import on by itself", async () => {
@@ -376,7 +376,7 @@ describe("FileIngestionDialog — storage check on Add", () => {
     await click(addButton(), "add");
     await waitForQuotaWindow("upgrade");
     await click(byTestId("import-quota-upgrade"), "upgrade");
-    await vi.waitFor(() => expect(getTmdbDetailsForLibrary).toHaveBeenCalled(), { timeout: 5_000 }).catch((err) => {
+    await vi.waitFor(() => expect(getTitleDetailsForLibrary).toHaveBeenCalled(), { timeout: 5_000 }).catch((err) => {
       dump("upgrade");
       throw err;
     });
@@ -385,7 +385,7 @@ describe("FileIngestionDialog — storage check on Add", () => {
     // No window again: the fresh storage figures were taken, and the add runs over both movies from the first one
     // (each stops at its rejected metadata call, which no longer ends the whole import).
     expect(quotaDialog()).toBeNull();
-    await vi.waitFor(() => expect(addedIds()).toEqual([tmdbIdOf("Lantern Harbor"), tmdbIdOf("Quiet Orchard")]));
+    await vi.waitFor(() => expect(addedIds()).toEqual([catalogIdOf("Lantern Harbor"), catalogIdOf("Quiet Orchard")]));
   });
 
   it("@req INGS-QUOTA-02 fits but leaves the account over 90% full: carry on with the current plan", async () => {
@@ -393,21 +393,21 @@ describe("FileIngestionDialog — storage check on Add", () => {
     fileSize = 8 * GIB;
     await dropAndWaitForAdd([LANTERN]);
     await click(addButton(), "add");
-    if (getTmdbDetailsForLibrary.mock.calls.length > 0 || !addButton()?.disabled) dump("high-usage-click");
-    expect(getTmdbDetailsForLibrary).not.toHaveBeenCalled();
+    if (getTitleDetailsForLibrary.mock.calls.length > 0 || !addButton()?.disabled) dump("high-usage-click");
+    expect(getTitleDetailsForLibrary).not.toHaveBeenCalled();
     expect(addButton()?.disabled).toBe(true);
     await waitForQuotaWindow("high-usage");
     try {
       expect(quotaDialog()?.getAttribute("data-mode")).toBe("high-usage");
-      expect(getTmdbDetailsForLibrary).not.toHaveBeenCalled();
+      expect(getTitleDetailsForLibrary).not.toHaveBeenCalled();
     } catch (err) {
       dump("high-usage-gate");
       throw err;
     }
     await click(byTestId("import-quota-continue"), "continue on current plan");
-    if (getTmdbDetailsForLibrary.mock.calls.length !== 1) dump("high-usage-continue");
+    if (getTitleDetailsForLibrary.mock.calls.length !== 1) dump("high-usage-continue");
     expect(quotaDialog()).toBeNull();
-    expect(getTmdbDetailsForLibrary).toHaveBeenCalledTimes(1);
+    expect(getTitleDetailsForLibrary).toHaveBeenCalledTimes(1);
     expect(updateSubscription).not.toHaveBeenCalled();
   });
 });

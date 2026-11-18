@@ -77,8 +77,7 @@
       }
     },
     "pairing": {
-      "title": "Mit einem anderen Gerät anmelden",
-      "usePassword": "Mit E-Mail und Passwort anmelden"
+      "title": "Mit einem anderen Gerät anmelden"
     },
     "code": {
       "recheckHint": "Dein Konto hat kein Passwort, deshalb fragen wir stattdessen nach einem Code: aus deiner Authenticator-App, wenn sie aktiv ist, sonst einem Code per E-Mail.",
@@ -762,7 +761,7 @@
       "tryAnother": "Anderen Code versuchen"
     },
     "errors": {
-      "invalid_code": "Das sieht nicht nach einem Kopplungscode aus. Er besteht aus 8 Buchstaben und Zahlen, zum Beispiel ABCD-EFGH.",
+      "invalid_code": "Das sieht nicht nach einem Kopplungscode aus. Er besteht aus 8 Buchstaben und Zahlen, zum Beispiel ABCD EFGH.",
       "not_found": "Wir haben diesen Code nicht gefunden. Möglicherweise ist er abgelaufen (Codes gelten 5 Minuten) oder wurde schon verwendet. Frag das andere Gerät nach einem neuen Code.",
       "expired": "Dieser Code ist abgelaufen. Frag das andere Gerät nach einem neuen Code und versuch es nochmal.",
       "already_used": "Dieser Code wurde schon verwendet. Falls du ihn nicht selbst genehmigt hast, sieh in deiner Geräteliste nach.",
@@ -792,9 +791,26 @@
     }
   },
   "phonePairing": {
+    "signIn": {
+      "subtitle": "Scanne das mit Badger oder Parrot auf einem angemeldeten Gerät.",
+      "orTypeCode": "oder gib den Code ein",
+      "waiting": "Warte auf das andere Gerät…",
+      "newCodeIn": "Neuer Code in {{time}}",
+      "help": "Wie funktioniert das?",
+      "step1": {
+        "badger": "Öffne **Badger oder Parrot** auf einem angemeldeten Computer oder Handy, oder **Badger** auf einem angemeldeten Fernseher.",
+        "parrot": "Öffne **Badger oder Parrot** auf einem angemeldeten Computer oder Handy."
+      },
+      "step2": "Geh zu **Einstellungen › Gerät koppeln**.",
+      "step3": "Scanne den QR-Code oder gib den 8‑stelligen Code ein.",
+      "deviceName": "Dieses Handy erscheint als **„{{name}}“**.",
+      "renews_one": "Der Code ändert sich jede Minute von selbst.",
+      "renews_other": "Der Code ändert sich alle {{count}} Minuten von selbst.",
+      "gotIt": "Verstanden"
+    },
     "step1": {
       "badger": "1. Öffne Badger oder Parrot auf einem angemeldeten Computer oder einem anderen angemeldeten Handy, oder Badger auf einem angemeldeten Fernseher.",
-      "parrot": "1. Öffne Badger oder Parrot auf deinem Computer oder auf einem anderen angemeldeten Handy."
+      "parrot": "1. Öffne Badger oder Parrot auf einem angemeldeten Computer oder einem anderen angemeldeten Handy."
     },
     "step2": "2. Geh zu Einstellungen und dann zu Gerät koppeln.",
     "step3": "3. Scanne diesen Code oder gib den Code unten ein.",
@@ -850,7 +866,6 @@
       "title": "Gerät koppeln",
       "subtitle": "Gib den Code ein, der auf dem Bildschirm des anderen Geräts angezeigt wird.",
       "codeLabel": "Code auf dem anderen Gerät",
-      "codePlaceholder": "ABCD-EFGH",
       "continue": "Weiter",
       "cancel": "Abbrechen",
       "back": "Zurück",
@@ -1175,7 +1190,6 @@
     },
     "signIn": {
       "title": "Anmelden",
-      "pairTitle": "Bestätige dieses Handy in einer anderen App",
       "orPassword": "Oder melde dich mit deiner E-Mail und deinem Passwort an",
       "signedInAs": "Angemeldet als {{email}}",
       "useAnother": "Anderes Konto verwenden",

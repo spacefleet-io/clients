@@ -109,8 +109,6 @@ def _media_item(media, art, is_folder):
     tag.setMediaType("tvshow" if is_folder else "movie")
     if media.get("year") and str(media["year"]).isdigit():
         tag.setYear(int(media["year"]))
-    if media.get("tmdb_id"):
-        tag.setUniqueIDs({"tmdb": str(media["tmdb_id"])}, "tmdb")
     if not is_folder:
         _progress_tags(tag, media.get("progress_pct"))
         li.setProperty("IsPlayable", "true")

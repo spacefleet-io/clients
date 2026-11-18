@@ -11,12 +11,17 @@ import { join, resolve } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 const require = createRequire(import.meta.url);
-const { PLAY_SERVICES_LIBRARIES, fossAutolinkExclusions, withFossStubs } = require("../foss.cjs") as {
+const { PLAY_SERVICES_LIBRARIES, fossAutolinkExclusions, withFossStubs, selfUpdateAutolink, withSelfUpdate } = require("../foss.cjs") as {
   PLAY_SERVICES_LIBRARIES: readonly string[];
   fossAutolinkExclusions: (appDir: string, enabled?: boolean) => Record<string, unknown>;
   withFossStubs: (
     resolveRequest: (context: unknown, moduleName: string, platform: string | null) => { type: string; filePath?: string },
     stubs?: Record<string, string>,
+    enabled?: boolean,
+  ) => (context: unknown, moduleName: string, platform: string | null) => { type: string; filePath?: string };
+  selfUpdateAutolink: (enabled?: boolean) => Record<string, { root: string; platforms?: Record<string, null> }>;
+  withSelfUpdate: (
+    resolveRequest: (context: unknown, moduleName: string, platform: string | null) => { type: string; filePath?: string },
     enabled?: boolean,
   ) => (context: unknown, moduleName: string, platform: string | null) => { type: string; filePath?: string };
 };
@@ -105,5 +110,57 @@ describe("@req PLAT-MOBILE-06 Google-free Android build switch", () => {
     expect(guard).toBeGreaterThan(0);
     expect(gradle.slice(guard, castDependency)).not.toMatch(/\n\s*\}\s*\n/);
     expect(gradle).toMatch(/if \(!fossBuild && [^\n]*\) \{\s*apply plugin: ["']com\.google\.gms\.google-services["']/);
+  });
+});
+
+// REL-UPD-06: the self-updater (its code and REQUEST_INSTALL_PACKAGES) is in every foss build (SF_FOSS=1), one APK for
+// our repository and f-droid.org alike; the Play build leaves it out.
+describe("@req REL-UPD-06 self-update build switch", () => {
+  const selfUpdate = resolve(repo, "packages/mobile-self-update");
+  const resolveRequest = (_context: unknown, moduleName: string) => ({ type: "sourceFile", filePath: `/resolved/${moduleName}` });
+
+  it("is on in every foss build and off in the Play build", () => {
+    const flags = (extra: Record<string, string>) => {
+      const saved = process.env.SF_FOSS;
+      delete process.env.SF_FOSS;
+      Object.assign(process.env, extra);
+      delete require.cache[require.resolve("../foss.cjs")];
+      const { selfUpdateBuild } = require("../foss.cjs") as { selfUpdateBuild: boolean };
+      if (saved === undefined) delete process.env.SF_FOSS;
+      else process.env.SF_FOSS = saved;
+      delete require.cache[require.resolve("../foss.cjs")];
+      return selfUpdateBuild;
+    };
+    expect(flags({})).toBe(false);
+    expect(flags({ SF_FOSS: "1" })).toBe(true);
+  });
+
+  it("links the native module only in the self-update build", () => {
+    expect(selfUpdateAutolink(true)).toEqual({ "@space/mobile-self-update": { root: selfUpdate } });
+    expect(selfUpdateAutolink(false)).toEqual({ "@space/mobile-self-update": { root: selfUpdate, platforms: { android: null, ios: null } } });
+  });
+
+  it("swaps the package for its do-nothing stand-in everywhere else", () => {
+    expect(withSelfUpdate(resolveRequest, true)).toBe(resolveRequest);
+    const resolver = withSelfUpdate(resolveRequest, false);
+    expect(resolver(null, "@space/mobile-self-update", "android").filePath).toBe(join(selfUpdate, "src/index.off.ts"));
+    expect(resolver(null, "react-native", "android").filePath).toBe("/resolved/react-native");
+  });
+
+  it("gives the stand-in every name the real package exports, and both apps the switch", () => {
+    const names = (file: string) => [...readFileSync(join(selfUpdate, file), "utf8").matchAll(/export (?:const|function) (\w+)|export \{([^}]+)\}/g)]
+      .flatMap((match) => (match[1] ? [match[1]] : match[2].split(",").map((part) => part.trim().split(/\s+as\s+/).pop()!)))
+      .filter(Boolean)
+      .sort();
+    expect(names("src/index.off.ts")).toEqual(names("src/index.ts"));
+    for (const app of [badger, parrot]) {
+      expect(readFileSync(join(app, "metro.config.js"), "utf8")).toMatch(/withSelfUpdate\(/);
+      expect(readFileSync(join(app, "react-native.config.js"), "utf8")).toMatch(/\.\.\.selfUpdateAutolink\(\)/);
+    }
+    const manifest = readFileSync(join(selfUpdate, "android/src/main/AndroidManifest.xml"), "utf8");
+    expect(manifest).toMatch(/android\.permission\.REQUEST_INSTALL_PACKAGES/);
+    for (const app of [badger, parrot]) {
+      expect(readFileSync(join(app, "android/app/src/main/AndroidManifest.xml"), "utf8")).not.toMatch(/REQUEST_INSTALL_PACKAGES/);
+    }
   });
 });

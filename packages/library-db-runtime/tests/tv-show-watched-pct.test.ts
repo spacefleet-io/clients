@@ -6,7 +6,7 @@
  *
  * @req LIB-PROG-01
  * A show's watched percentage is the summed watched part of its regular episodes over every episode the show has aired:
- * specials (season 0) and episodes that have not aired yet never count, whatever TMDB's episode count says, and the
+ * specials (season 0) and episodes that have not aired yet never count, whatever the catalog's episode count says, and the
  * episodes in the vault never set the total while the metadata has one.
  */
 import { mkdtempSync, rmSync } from "node:fs";
@@ -32,11 +32,11 @@ afterEach(() => {
 
 type SeedEpisode = { seasonNumber: number; episodeNumber: number; airDate: string | null };
 
-const seedShow = (db: LibraryDb, tmdbId: number, episodes: SeedEpisode[], totalEpisodes: number | null) =>
-  db.addMediaFromTmdb({
-    id: tmdbId,
+const seedShow = (db: LibraryDb, catalogId: number, episodes: SeedEpisode[], totalEpisodes: number | null) =>
+  db.addMediaFromCatalog({
+    id: catalogId,
     type: "tv",
-    title: `Show ${tmdbId}`,
+    title: `Show ${catalogId}`,
     originalTitle: null,
     originalLanguage: "en",
     overview: null,
@@ -50,9 +50,9 @@ const seedShow = (db: LibraryDb, tmdbId: number, episodes: SeedEpisode[], totalE
     seasons: [],
     episodes: episodes.map((episode) => ({ ...episode, name: `S${episode.seasonNumber}E${episode.episodeNumber}`, overview: null, stillPath: null })),
     totalEpisodes,
-  } as unknown as Parameters<LibraryDb["addMediaFromTmdb"]>[0]);
+  } as unknown as Parameters<LibraryDb["addMediaFromCatalog"]>[0]);
 
-// 3 specials, 10 aired regular episodes, 2 announced for next year: TMDB's number_of_episodes says 12.
+// 3 specials, 10 aired regular episodes, 2 announced for next year: the catalog's number_of_episodes says 12.
 const RUN: SeedEpisode[] = [
   ...[1, 2, 3].map((episodeNumber) => ({ seasonNumber: 0, episodeNumber, airDate: "2019-12-01" })),
   ...Array.from({ length: 10 }, (_, i) => ({ seasonNumber: 1, episodeNumber: i + 1, airDate: `2020-01-${String(i + 1).padStart(2, "0")}` })),
@@ -63,7 +63,7 @@ const episodeId = (db: LibraryDb, mediaId: string, seasonNumber: number, episode
   String(db.getMediaDetails(mediaId)?.episodes.find((e) => e.seasonNumber === seasonNumber && e.episodeNumber === episodeNumber)?.id);
 
 describe("LIB-PROG-01 — a show's watched % counts every aired episode", () => {
-  it("@bugfix @regression-proof 10 aired, 2 watched → 20% (not out of TMDB's 12 with unaired, nor 15 listed with specials)", async () => {
+  it("@bugfix @regression-proof 10 aired, 2 watched → 20% (not out of the catalog's 12 with unaired, nor 15 listed with specials)", async () => {
     const db = await LibraryDb.openLocal("token", "key");
     db.setSyncEnabled(false);
     try {
@@ -84,7 +84,7 @@ describe("LIB-PROG-01 — a show's watched % counts every aired episode", () => 
     }
   }, 60_000);
 
-  it("uses TMDB's episode count when the episode list has no air dates", async () => {
+  it("uses the catalog's episode count when the episode list has no air dates", async () => {
     const db = await LibraryDb.openLocal("token", "key");
     db.setSyncEnabled(false);
     try {

@@ -825,15 +825,15 @@ export const PlayerControls = (
    * The subtitles button and the remote's subtitles key open the menu straight away, with nothing searched: Off, every
    * subtitle the title already has, then "Get more subtitles…", the only row that searches online (PLAY-SUBGET-24).
    */
-  const openSubtitles = useCallback((from: "button" | "remote") => {
+  const openSubtitleMenu = useCallback((from: "button" | "remote") => {
     console.info("player.controls.subtitles_button", JSON.stringify({ from, tracks: subtitleTracks.length }));
     if (from === "remote") sheetAskedAt.current = { kind: "subtitles", at: Date.now() };
     setSheet("subtitles");
   }, [subtitleTracks.length]);
   const openSheet = useCallback((kind: "subtitles") => {
     console.info("tv.player.controls.open_sheet", kind);
-    openSubtitles("remote");
-  }, [openSubtitles]);
+    openSubtitleMenu("remote");
+  }, [openSubtitleMenu]);
 
   const cycleSheet = useCallback((direction: -1 | 1) => {
     setSheet((current) => {
@@ -1155,7 +1155,7 @@ export const PlayerControls = (
                 <ChromeGlyphIcon kind="cast" scale={uiScale} />
               </ChromeIconButton>
             )}
-            <ChromeIconButton ref={subtitlesRef} theme={theme} testID="player-subtitles-button" label={labels.subtitles} onPress={() => openSubtitles("button")} {...chromeFocus}>
+            <ChromeIconButton ref={subtitlesRef} theme={theme} testID="player-subtitles-button" label={labels.subtitles} onPress={() => openSubtitleMenu("button")} {...chromeFocus}>
               <ChromeGlyphIcon kind="subtitles" scale={uiScale} />
             </ChromeIconButton>
             <ChromeIconButton ref={audioRef} theme={theme} testID="player-audio-button" label={labels.audio} onPress={() => setSheet("audio")} {...chromeFocus}>

@@ -16,6 +16,6 @@ export function useLocalizedOverview(media: OverviewTitle): string | null {
   return useSharedLocalizedOverview(
     media,
     uiLanguage,
-    token ? (type, tmdbId, language) => getLocalizedOverview(token, type, tmdbId, language) : null
+    token ? (type, catalogId, language) => getLocalizedOverview(token, type, catalogId, language) : null
   );
 }

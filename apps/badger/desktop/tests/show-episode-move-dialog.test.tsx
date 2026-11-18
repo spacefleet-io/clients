@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 /**
- * LIB-SHOW-04 (Chris 2026-11-04): when TMDB stops listing an episode the user
+ * LIB-SHOW-04 (Chris 2026-11-04): when the catalog stops listing an episode the user
  * has a file for, the desktop suggests a change and says in plain words what a
  * "Yes" does before anything moves. One likely place: Yes / No. No likely
  * place, or a merged part: keep it as it is or pick its episode by hand. It
@@ -122,7 +122,7 @@ describe("ShowEpisodeMoveDialog", () => {
     }
   });
 
-  it("@req LIB-SHOW-04[badger-desktop] says TMDB merged the parts and offers keep-or-pick-by-hand for each", () => {
+  it("@req LIB-SHOW-04[badger-desktop] says the catalog merged the parts and offers keep-or-pick-by-hand for each", () => {
     const { onMove, onKeep } = render({ episode: part1, otherParts: [part2], choices: [merged] });
     const description = el("show-episode-move-description")?.textContent ?? "";
     console.info(P, "merged description", description);

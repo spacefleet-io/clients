@@ -1,12 +1,12 @@
 // @vitest-environment jsdom
 //
 // Reproduces the per-candidate metadata-match pipeline for three drag-drop
-// shapes that fail at e2e.  The hypothesis: searchTmdb silently drops
+// shapes that fail at e2e.  The hypothesis: searchTitles silently drops
 // candidates when its mock returns empty results for a query the fixture
 // doesn't recognise (default branch → { results: [] } → status "error").
 //
 // Approach: render FileIngestionDialog with open=true, pass synthetic paths,
-// mock window.sf.scanFiles to return file stubs, mock searchTmdb to branch
+// mock window.sf.scanFiles to return file stubs, mock searchTitles to branch
 // by query keyword, then wait for the async identification loop to settle
 // and assert on the rendered group titles in the left panel.
 //
@@ -20,7 +20,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 // vi.mock calls are hoisted above this import. Importing the dialog per test transformed its whole module graph
 // inside the first test: on a loaded CI runner that alone overran the 15 s timeout (run 34609), and the timed-out
-// test kept rendering into the next one and skewed its searchTmdb counts.
+// test kept rendering into the next one and skewed its searchTitles counts.
 import FileIngestionDialog from "../src/renderer/src/components/FileIngestionDialog";
 
 (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -55,8 +55,8 @@ const dumpFileIngestionMatchSnapshot = (
     orchardVisible?: boolean;
     noMatchErrorCount?: number;
     s1Marker?: boolean;
-    searchTmdbCallCount?: number;
-    searchTmdbCalls?: unknown[];
+    searchTitlesCallCount?: number;
+    searchTitlesCalls?: unknown[];
     movieCallsCount?: number;
     tvCallsCount?: number;
     expected?: unknown;
@@ -77,9 +77,9 @@ const dumpFileIngestionMatchSnapshot = (
     if (ctx.orchardVisible !== undefined) console.error(`orchardVisible: ${ctx.orchardVisible}`);
     if (ctx.noMatchErrorCount !== undefined) console.error(`noMatchErrorCount: ${ctx.noMatchErrorCount}`);
     if (ctx.s1Marker !== undefined) console.error(`s1Marker: ${ctx.s1Marker}`);
-    if (ctx.searchTmdbCallCount !== undefined) console.error(`searchTmdbCallCount: ${ctx.searchTmdbCallCount}`);
-    if (ctx.searchTmdbCalls !== undefined) {
-      console.error(`searchTmdbCalls:\n${JSON.stringify(ctx.searchTmdbCalls, jsonReplacer, 2)}`);
+    if (ctx.searchTitlesCallCount !== undefined) console.error(`searchTitlesCallCount: ${ctx.searchTitlesCallCount}`);
+    if (ctx.searchTitlesCalls !== undefined) {
+      console.error(`searchTitlesCalls:\n${JSON.stringify(ctx.searchTitlesCalls, jsonReplacer, 2)}`);
     }
     if (ctx.movieCallsCount !== undefined) console.error(`movieCallsCount: ${ctx.movieCallsCount}`);
     if (ctx.tvCallsCount !== undefined) console.error(`tvCallsCount: ${ctx.tvCallsCount}`);
@@ -103,9 +103,9 @@ const dumpFileIngestionMatchSnapshot = (
 };
 
 // ---------------------------------------------------------------------------
-// searchTmdb mock — hoisted so vi.mock can reference it
+// searchTitles mock — hoisted so vi.mock can reference it
 // ---------------------------------------------------------------------------
-const mockSearchTmdb = vi.hoisted(() =>
+const mockSearchTitles = vi.hoisted(() =>
   vi.fn(async (_token: string, type: string, query: string) => {
     const q = (query ?? "").toLowerCase();
     if (q.includes("saltmarsh")) {
@@ -247,7 +247,7 @@ vi.mock("../src/renderer/src/lib/libraryContext", () => ({
   useLibraryActions: () => ({
     getMediaDetails: () => null,
     getSharedSetting: () => null,
-    addMediaFromTmdb: vi.fn(),
+    addMediaFromCatalog: vi.fn(),
     addSubtitleTrackWithObject: vi.fn(),
   }),
 }));
@@ -257,14 +257,14 @@ vi.mock("../src/renderer/src/components/MediaImage", () => ({
 }));
 
 vi.mock("../src/renderer/src/lib/metadata", () => ({
-  getTmdbDetails: vi.fn(),
-  getTmdbDetailsForLibrary: vi.fn(),
-  getTmdbTrailersForLanguages: vi.fn().mockResolvedValue([]),
-  searchTmdb: mockSearchTmdb,
+  getTitleDetails: vi.fn(),
+  getTitleDetailsForLibrary: vi.fn(),
+  getTitleTrailersForLanguages: vi.fn().mockResolvedValue([]),
+  searchTitles: mockSearchTitles,
   // Mock the localization helper as an identity pass-through. The test fixtures
   // already mark hits as English (originalLanguage="en"), so production code
   // would early-return the input; mocking it keeps the test framework-agnostic
-  // and avoids hitting TMDB.
+  // and avoids hitting the catalog.
   localizeSearchResultForLibrary: vi.fn(async (_token: unknown, hit: unknown) => hit),
 }));
 
@@ -292,7 +292,7 @@ const makeScannedFile = (name: string, kind: "video" | "subtitle" = "video") => 
 });
 
 /** Settle all pending microtasks several times — the pipeline awaits
- *  searchTmdb once per candidate, so we need multiple flush rounds. */
+ *  searchTitles once per candidate, so we need multiple flush rounds. */
 const flushAsync = async (rounds = 20) => {
   for (let i = 0; i < rounds; i++) {
     await act(async () => {
@@ -356,20 +356,20 @@ describe("FileIngestionDialog — per-candidate auto-match pipeline", () => {
       await Promise.resolve();
     });
 
-    // Wait for the async identification loop to complete (one searchTmdb call
+    // Wait for the async identification loop to complete (one searchTitles call
     // per candidate, each awaited sequentially inside processPaths).
     console.info(`[${SUITE}:render] flushing async pipeline (40 rounds × 10ms)`);
     await flushAsync(40);
-    console.info(`[${SUITE}:render] post-flush mockSearchTmdb.calls=${mockSearchTmdb.mock.calls.length}`);
+    console.info(`[${SUITE}:render] post-flush mockSearchTitles.calls=${mockSearchTitles.mock.calls.length}`);
 
     return container;
   };
 
   // -------------------------------------------------------------------------
   // Shape 1 — Multi-show: Saltmarsh S01E01 + Lodgers S01E01
-  // Expected: 2 separate ready candidates with distinct matched tmdbIds (100, 200)
+  // Expected: 2 separate ready candidates with distinct matched catalogIds (100, 200)
   // -------------------------------------------------------------------------
-  it("multi-show drop: Saltmarsh + Lodgers → 2 matched groups with distinct tmdbIds", async () => {
+  it("multi-show drop: Saltmarsh + Lodgers → 2 matched groups with distinct catalogIds", async () => {
     const label = "multi-show";
     const fileNames = ["Saltmarsh.S01E01.mkv", "Lodgers.S01E01.mkv"];
     console.info(`[${SUITE}:${label}] rendering with files: ${JSON.stringify(fileNames)}`);
@@ -388,12 +388,12 @@ describe("FileIngestionDialog — per-candidate auto-match pipeline", () => {
     console.log("[multi-show] Lodgers visible:", lodgersVisible);
     console.log("[multi-show] noMatch error count:", noMatchError);
     console.info(
-      `[${SUITE}:${label}] post-render summary: saltmarshVisible=${saltmarshVisible} lodgersVisible=${lodgersVisible} noMatchError=${noMatchError} searchTmdb.calls=${mockSearchTmdb.mock.calls.length}`
+      `[${SUITE}:${label}] post-render summary: saltmarshVisible=${saltmarshVisible} lodgersVisible=${lodgersVisible} noMatchError=${noMatchError} searchTitles.calls=${mockSearchTitles.mock.calls.length}`
     );
 
     // @known-gap: if either show is missing, the silent-drop bug is active
-    expect.soft(saltmarshVisible, "Saltmarsh candidate (tmdbId=100) should be matched and visible").toBe(true);
-    expect.soft(lodgersVisible, "Lodgers candidate (tmdbId=200) should be matched and visible").toBe(true);
+    expect.soft(saltmarshVisible, "Saltmarsh candidate (catalogId=100) should be matched and visible").toBe(true);
+    expect.soft(lodgersVisible, "Lodgers candidate (catalogId=200) should be matched and visible").toBe(true);
     expect.soft(noMatchError, "no candidates should fall through to error state").toBe(0);
 
     // Hard assertion: at least one group was matched (confirms pipeline runs at all)
@@ -410,8 +410,8 @@ describe("FileIngestionDialog — per-candidate auto-match pipeline", () => {
         saltmarshVisible,
         lodgersVisible,
         noMatchErrorCount: noMatchError,
-        searchTmdbCallCount: mockSearchTmdb.mock.calls.length,
-        searchTmdbCalls: mockSearchTmdb.mock.calls.map((c) => ({ type: c[1], query: c[2] })),
+        searchTitlesCallCount: mockSearchTitles.mock.calls.length,
+        searchTitlesCalls: mockSearchTitles.mock.calls.map((c) => ({ type: c[1], query: c[2] })),
         expected: { saltmarshVisible: true, lodgersVisible: true, noMatchErrorCount: 0 },
         actual: { saltmarshVisible, lodgersVisible, noMatchErrorCount: noMatchError },
         error: err,
@@ -440,7 +440,7 @@ describe("FileIngestionDialog — per-candidate auto-match pipeline", () => {
     // mock that key is returned verbatim, so look for "S1E01" / "S2E01" or the key
     const s1Marker = text.includes("S1E01") || text.includes("ingestion.ui.seasonEpisode");
     const noMatchError = (text.match(/ingestion\.errors\.noMatch/g) ?? []).length;
-    const saltmarshSearchCalls = mockSearchTmdb.mock.calls.filter((c) =>
+    const saltmarshSearchCalls = mockSearchTitles.mock.calls.filter((c) =>
       c[2]?.toLowerCase().includes("saltmarsh")
     ).length;
 
@@ -448,15 +448,15 @@ describe("FileIngestionDialog — per-candidate auto-match pipeline", () => {
     console.log("[multi-season] season marker present:", s1Marker);
     console.log("[multi-season] noMatch error count:", noMatchError);
     console.info(
-      `[${SUITE}:${label}] post-render summary: saltmarshVisible=${saltmarshVisible} s1Marker=${s1Marker} noMatchError=${noMatchError} saltmarshSearchCalls=${saltmarshSearchCalls} totalSearchTmdbCalls=${mockSearchTmdb.mock.calls.length}`
+      `[${SUITE}:${label}] post-render summary: saltmarshVisible=${saltmarshVisible} s1Marker=${s1Marker} noMatchError=${noMatchError} saltmarshSearchCalls=${saltmarshSearchCalls} totalSearchTitlesCalls=${mockSearchTitles.mock.calls.length}`
     );
 
-    // searchTmdb is called TWICE (once per candidate) — both should return
+    // searchTitles is called TWICE (once per candidate) — both should return
     // the Saltmarsh result.  The grouping layer merges them into one group.
     expect.soft(saltmarshVisible, "Saltmarsh group should be visible after both seasons match").toBe(true);
     expect.soft(
       saltmarshSearchCalls,
-      "searchTmdb should be called twice for Saltmarsh (once per candidate)"
+      "searchTitles should be called twice for Saltmarsh (once per candidate)"
     ).toBe(2);
     expect.soft(noMatchError, "no candidates should fall through to error state").toBe(0);
 
@@ -473,8 +473,8 @@ describe("FileIngestionDialog — per-candidate auto-match pipeline", () => {
         saltmarshVisible,
         s1Marker,
         noMatchErrorCount: noMatchError,
-        searchTmdbCallCount: mockSearchTmdb.mock.calls.length,
-        searchTmdbCalls: mockSearchTmdb.mock.calls.map((c) => ({ type: c[1], query: c[2] })),
+        searchTitlesCallCount: mockSearchTitles.mock.calls.length,
+        searchTitlesCalls: mockSearchTitles.mock.calls.map((c) => ({ type: c[1], query: c[2] })),
         expected: { saltmarshVisible: true, saltmarshSearchCalls: 2, noMatchErrorCount: 0 },
         actual: { saltmarshVisible, saltmarshSearchCalls, noMatchErrorCount: noMatchError },
         error: err,
@@ -486,7 +486,7 @@ describe("FileIngestionDialog — per-candidate auto-match pipeline", () => {
 
   // -------------------------------------------------------------------------
   // Shape 3 — Movie + TV combo: Orchard (movie) + Saltmarsh S01E01 (TV)
-  // Expected: 1 movie group (Orchard, tmdbId=300) + 1 TV group (Saltmarsh, tmdbId=100)
+  // Expected: 1 movie group (Orchard, catalogId=300) + 1 TV group (Saltmarsh, catalogId=100)
   // -------------------------------------------------------------------------
   it("movie+TV combo drop: Orchard + Saltmarsh S01E01 → distinct movie and TV groups, no type cross-bleed", async () => {
     const label = "movie-tv-combo";
@@ -502,23 +502,23 @@ describe("FileIngestionDialog — per-candidate auto-match pipeline", () => {
     const saltmarshVisible = text.includes("Saltmarsh");
     const noMatchError = (text.match(/ingestion\.errors\.noMatch/g) ?? []).length;
 
-    // Verify type discrimination: searchTmdb should be called with type="movie"
+    // Verify type discrimination: searchTitles should be called with type="movie"
     // for Orchard and type="tv" for Saltmarsh.
-    const movieCalls = mockSearchTmdb.mock.calls.filter((c) => c[1] === "movie");
-    const tvCalls = mockSearchTmdb.mock.calls.filter((c) => c[1] === "tv");
+    const movieCalls = mockSearchTitles.mock.calls.filter((c) => c[1] === "movie");
+    const tvCalls = mockSearchTitles.mock.calls.filter((c) => c[1] === "tv");
 
     console.log("[movie+tv] Orchard visible:", orchardVisible);
     console.log("[movie+tv] Saltmarsh visible:", saltmarshVisible);
     console.log("[movie+tv] noMatch error count:", noMatchError);
-    console.log("[movie+tv] searchTmdb movie calls:", movieCalls.length, "tv calls:", tvCalls.length);
+    console.log("[movie+tv] searchTitles movie calls:", movieCalls.length, "tv calls:", tvCalls.length);
     console.info(
-      `[${SUITE}:${label}] post-render summary: orchardVisible=${orchardVisible} saltmarshVisible=${saltmarshVisible} noMatchError=${noMatchError} movieCalls=${movieCalls.length} tvCalls=${tvCalls.length} totalSearchTmdbCalls=${mockSearchTmdb.mock.calls.length}`
+      `[${SUITE}:${label}] post-render summary: orchardVisible=${orchardVisible} saltmarshVisible=${saltmarshVisible} noMatchError=${noMatchError} movieCalls=${movieCalls.length} tvCalls=${tvCalls.length} totalSearchTitlesCalls=${mockSearchTitles.mock.calls.length}`
     );
 
     // @known-gap: if Orchard is absent, the movie type-detection or the "orchard"
     // query branch failed to match — silent drop confirmed.
-    expect.soft(orchardVisible, "Orchard (movie, tmdbId=300) should be matched and visible").toBe(true);
-    expect.soft(saltmarshVisible, "Saltmarsh (tv, tmdbId=100) should be matched and visible").toBe(true);
+    expect.soft(orchardVisible, "Orchard (movie, catalogId=300) should be matched and visible").toBe(true);
+    expect.soft(saltmarshVisible, "Saltmarsh (tv, catalogId=100) should be matched and visible").toBe(true);
     expect.soft(noMatchError, "no candidates should fall through to error state").toBe(0);
 
     // Type cross-bleed check: Orchard should have been searched as "movie",
@@ -547,8 +547,8 @@ describe("FileIngestionDialog — per-candidate auto-match pipeline", () => {
         orchardVisible,
         saltmarshVisible,
         noMatchErrorCount: noMatchError,
-        searchTmdbCallCount: mockSearchTmdb.mock.calls.length,
-        searchTmdbCalls: mockSearchTmdb.mock.calls.map((c) => ({ type: c[1], query: c[2] })),
+        searchTitlesCallCount: mockSearchTitles.mock.calls.length,
+        searchTitlesCalls: mockSearchTitles.mock.calls.map((c) => ({ type: c[1], query: c[2] })),
         movieCallsCount: movieCalls.length,
         tvCallsCount: tvCalls.length,
         expected: { orchardVisible: true, saltmarshVisible: true, noMatchErrorCount: 0 },

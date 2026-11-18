@@ -105,8 +105,7 @@ const dumpReadinessSnapshot = (
 const mediaDetails = (id: string): MediaDetails => ({
   id,
   type: "movie",
-  tmdbId: null,
-  externalIds: {},
+  catalogId: null,
   title: `Movie ${id}`,
   originalTitle: null,
   originalLanguage: "en",

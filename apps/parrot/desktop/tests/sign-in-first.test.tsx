@@ -75,7 +75,7 @@ describe("Parrot desktop: sign-in first, then setup", () => {
     start: vi.fn(async () => ({
       ok: true as const,
       requestId: "req-1",
-      shortCode: "ABCD-EFGH",
+      shortCode: "ABCDEFGH",
       qrPayload: "https://spacefleet.io/pair/parrot?code=ABCDEFGH",
       qrSvg: "<svg xmlns='http://www.w3.org/2000/svg'></svg>",
       expiresAt: new Date(Date.now() + 150_000).toISOString(),
@@ -154,7 +154,7 @@ describe("Parrot desktop: sign-in first, then setup", () => {
     await act(async () => host.querySelector<HTMLButtonElement>('[data-testid="phone-sign-in-card"]')?.click());
     await act(async () => undefined);
     expect(host.querySelector('[data-testid="pair-with-phone"]')).not.toBeNull();
-    expect(host.querySelector('[data-testid="pair-short-code"]')?.textContent).toBe("ABCD-EFGH");
+    expect(host.querySelector('[data-testid="pair-short-code"]')?.textContent).toBe("ABCDEFGH");
     expect(pairing.start).toHaveBeenCalledTimes(1);
     const emailLink = [...host.querySelectorAll("button")].find((b) => b.textContent === "Sign in with email and password instead");
     await act(async () => emailLink?.click());

@@ -188,7 +188,7 @@ describe("selectLibraryItems", () => {
     expect(select({ filters: { ...EMPTY_LIBRARY_FILTERS, downloadedOnly: true }, downloadedMediaIds: new Set(["m3"]) })).toEqual(["m3"]);
   });
 
-  it("lists only genres present in the tab, in TMDB order", async () => {
+  it("lists only genres present in the tab, in the catalog order", async () => {
     const { state } = await base();
     expect(state.availableGenreIds(MEDIA, "movie")).toEqual([18, 10749, 878]);
     expect(state.availableGenreIds(MEDIA, "tv")).toEqual([18, 9648]);

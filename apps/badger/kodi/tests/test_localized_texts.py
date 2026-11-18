@@ -91,8 +91,8 @@ def ep(media_id, season, episode, title, overview):
             "episode_number": episode, "title": title, "overview": overview, "still_path": None, "air_date": None}
 
 
-MOVIE = {"id": "m1", "type": "movie", "title": "Le Film", "year": "2001", "overview": "Stored German synopsis.", "tmdb_id": "550"}
-SHOW = {"id": "s1", "type": "tv", "title": "The Show", "year": "2020", "overview": "Stored show synopsis.", "tmdb_id": "1399"}
+MOVIE = {"id": "m1", "type": "movie", "title": "Le Film", "year": "2001", "overview": "Stored German synopsis.", "catalog_id": "550"}
+SHOW = {"id": "s1", "type": "tv", "title": "The Show", "year": "2020", "overview": "Stored show synopsis.", "catalog_id": "1399"}
 
 
 class Base(unittest.TestCase):
@@ -121,7 +121,7 @@ class RowFormat(unittest.TestCase):
 
     def test_keys_match_typescript(self):
         for case in self.vectors["keys"]:
-            self.assertEqual(lt.key(case["type"], case["tmdbId"], case["language"]), case["key"])
+            self.assertEqual(lt.key(case["type"], case["catalogId"], case["language"]), case["key"])
 
     def test_serialize_is_byte_identical_to_typescript(self):
         for case in self.vectors["serialize"]:
@@ -211,7 +211,7 @@ class Refresh(Base):
         self.assertEqual((meta.calls, lib.ops, stats["stopped"]), ([], [], "ticket_floor"))
 
     def test_no_ticket_and_lookup_budget_stop_the_run(self):
-        lib = Lib([MOVIE, dict(MOVIE, id="m2", tmdb_id="551")])
+        lib = Lib([MOVIE, dict(MOVIE, id="m2", catalog_id="551")])
         stats = self.refresh(Ctx(lib, Metadata(error=NoTicketError("empty"))), "fr")
         self.assertEqual((stats["stopped"], lib.ops), ("no_ticket", []))
         meta = Metadata()
@@ -219,7 +219,7 @@ class Refresh(Base):
         self.assertEqual((len(meta.calls), stats["stopped"]), (1, "budget"))
 
     def test_a_429_pauses_lookups_for_the_retry_after(self):
-        lib = Lib([MOVIE, dict(MOVIE, id="m2", tmdb_id="551")])
+        lib = Lib([MOVIE, dict(MOVIE, id="m2", catalog_id="551")])
         meta = Metadata(error=MetadataUnavailableError(429, 120, "rate_limited"))
         stats = self.refresh(Ctx(lib, meta), "fr")
         self.assertEqual((len(meta.calls), stats["stopped"], lib.ops), (1, "paused", []))
@@ -251,7 +251,7 @@ class Refresh(Base):
         self.assertEqual(lt.Localizer(lib, "fr").media(SHOW)["overview"], "Gardé.")
 
     def test_titles_without_a_provider_id_are_never_asked(self):
-        lib = Lib([dict(MOVIE, tmdb_id=None)])
+        lib = Lib([dict(MOVIE, catalog_id=None)])
         meta = Metadata()
         self.refresh(Ctx(lib, meta), "fr")
         self.assertEqual(meta.calls, [])

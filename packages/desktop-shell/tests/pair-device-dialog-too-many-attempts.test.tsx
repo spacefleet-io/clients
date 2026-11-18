@@ -81,7 +81,8 @@ describe("PairDeviceDialog on a 429", () => {
       await submitCode("ABCD-EFGH");
       const shown = container.querySelector('[data-testid="pair-approve-error"]')?.textContent;
       console.info(TEST, "phase: refused", { language, shown });
-      expect(actions.lookup).toHaveBeenCalledWith("ABCD-EFGH");
+      // The field keeps the plain 8 characters of a dashed code (ACCT-PAIR-01).
+      expect(actions.lookup).toHaveBeenCalledWith("ABCDEFGH");
       expect(shown).toBe(expected);
     }
   });

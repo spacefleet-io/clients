@@ -52,9 +52,9 @@ const RUNTIME_MIRROR_DEBOUNCE_MS = 250;
 const WRITE_METHODS = new Set([
   "setSyncEnabled",
   "clearPendingSync",
-  "addMediaFromTmdb",
+  "addMediaFromCatalog",
   "refreshShowEpisodes",
-  "removeEpisodesNotOnTmdb",
+  "removeEpisodesNotInCatalog",
   "moveEpisodeToSlot",
   "updateMediaMetadata",
   "applyArtworkCopies",

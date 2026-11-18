@@ -77,8 +77,7 @@
       }
     },
     "pairing": {
-      "title": "Inloggen met een ander apparaat",
-      "usePassword": "Inloggen met e-mail en wachtwoord"
+      "title": "Inloggen met een ander apparaat"
     },
     "code": {
       "recheckHint": "Je account heeft geen wachtwoord, dus we vragen een code: uit je authenticator-app als die aan staat, anders een code die we je mailen.",
@@ -762,7 +761,7 @@
       "tryAnother": "Probeer een andere code"
     },
     "errors": {
-      "invalid_code": "Dat lijkt niet op een koppelcode. Een code bestaat uit 8 letters en cijfers, zoals ABCD-EFGH.",
+      "invalid_code": "Dat lijkt niet op een koppelcode. Een code bestaat uit 8 letters en cijfers, zoals ABCD EFGH.",
       "not_found": "We konden die code niet vinden. Misschien is hij verlopen (codes werken 5 minuten) of is hij al gebruikt. Vraag het andere apparaat om een nieuwe code.",
       "expired": "Die code is verlopen. Vraag het andere apparaat om een nieuwe code en probeer het opnieuw.",
       "already_used": "Die code is al gebruikt. Heb je hem niet zelf goedgekeurd? Controleer dan je apparatenlijst.",
@@ -792,9 +791,26 @@
     }
   },
   "phonePairing": {
+    "signIn": {
+      "subtitle": "Scan dit met Badger of Parrot op een apparaat dat is ingelogd.",
+      "orTypeCode": "of typ de code",
+      "waiting": "Wachten op het andere apparaat…",
+      "newCodeIn": "Nieuwe code over {{time}}",
+      "help": "Hoe werkt dit?",
+      "step1": {
+        "badger": "Open **Badger of Parrot** op een ingelogde computer of telefoon, of **Badger** op een ingelogde tv.",
+        "parrot": "Open **Badger of Parrot** op een ingelogde computer of telefoon."
+      },
+      "step2": "Ga naar **Instellingen › Apparaat koppelen**.",
+      "step3": "Scan de QR-code of typ de code van 8 tekens.",
+      "deviceName": "Deze telefoon verschijnt als **“{{name}}”**.",
+      "renews_one": "De code verandert elke minuut vanzelf.",
+      "renews_other": "De code verandert elke {{count}} minuten vanzelf.",
+      "gotIt": "Begrepen"
+    },
     "step1": {
       "badger": "1. Open Badger of Parrot op een computer of een andere telefoon die is ingelogd, of Badger op een ingelogde tv.",
-      "parrot": "1. Open Badger of Parrot op je computer of op een andere telefoon die is ingelogd."
+      "parrot": "1. Open Badger of Parrot op een computer of een andere telefoon die is ingelogd."
     },
     "step2": "2. Ga naar Instellingen en dan Apparaat koppelen.",
     "step3": "3. Scan deze code, of typ de code hieronder.",
@@ -850,7 +866,6 @@
       "title": "Apparaat koppelen",
       "subtitle": "Typ de code in die op het scherm van het andere apparaat staat.",
       "codeLabel": "Code op het andere apparaat",
-      "codePlaceholder": "ABCD-EFGH",
       "continue": "Doorgaan",
       "cancel": "Annuleren",
       "back": "Terug",
@@ -1175,7 +1190,6 @@
     },
     "signIn": {
       "title": "Inloggen",
-      "pairTitle": "Keur deze telefoon goed vanuit een andere app",
       "orPassword": "Of log in met je e-mailadres en wachtwoord",
       "signedInAs": "Ingelogd als {{email}}",
       "useAnother": "Ander account gebruiken",

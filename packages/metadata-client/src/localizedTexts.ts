@@ -3,7 +3,7 @@
 // synced `setting.set` row (`@space/shared/localizedTexts`); every later page, on every device, reads that row. The
 // row is asked again only when the library holds an episode it has never heard of (new episodes). Portable: no React,
 // no DOM, no node:*.
-import type { TmdbMediaType } from "@space/shared/api";
+import type { TitleType } from "@space/shared/api";
 import {
   localizedTextKey,
   parseLocalizedText,
@@ -27,7 +27,7 @@ export type DetailsTextItem = {
 };
 
 /** How the app asks the metadata service for one details answer. May reject (offline, no ticket, …). */
-export type AskDetails = (type: TmdbMediaType, tmdbId: number, language: string) => Promise<{ item: DetailsTextItem }>;
+export type AskDetails = (type: TitleType, catalogId: number, language: string) => Promise<{ item: DetailsTextItem }>;
 
 export interface DetailsTexts {
   /**
@@ -35,14 +35,14 @@ export interface DetailsTexts {
    * library's episodes), else one lookup, written back as the row. One request per (title, language) at a time.
    * Rejects only when the lookup fails and no row is kept.
    */
-  texts(type: TmdbMediaType, tmdbId: number, language: string, episodeKeys?: readonly string[]): Promise<LocalizedTextRecord>;
+  texts(type: TitleType, catalogId: number, language: string, episodeKeys?: readonly string[]): Promise<LocalizedTextRecord>;
   /** Keeps an answer a refresh or an import already fetched, with no lookup. */
-  put(type: TmdbMediaType, tmdbId: number, language: string, item: DetailsTextItem, episodeKeys?: readonly string[]): Promise<void>;
+  put(type: TitleType, catalogId: number, language: string, item: DetailsTextItem, episodeKeys?: readonly string[]): Promise<void>;
   /**
    * The title's original language as the kept answer in `language` names it. With no row naming it (none kept yet,
    * or a row kept before it was), asks that answer once per title and language this session and keeps it.
    */
-  originalLanguage(type: TmdbMediaType, tmdbId: number, language: string): Promise<string | null>;
+  originalLanguage(type: TitleType, catalogId: number, language: string): Promise<string | null>;
 }
 
 export type DetailsTextsDeps = {
@@ -137,8 +137,8 @@ export function createDetailsTexts(deps: DetailsTextsDeps): DetailsTexts {
     return library;
   };
 
-  const resolve = async (type: TmdbMediaType, tmdbId: number, language: string, episodeKeys: readonly string[] | undefined) => {
-    const key = localizedTextKey(type, tmdbId, language);
+  const resolve = async (type: TitleType, catalogId: number, language: string, episodeKeys: readonly string[] | undefined) => {
+    const key = localizedTextKey(type, catalogId, language);
     const library = openLibrary();
     const stored = await readRow(library, key);
     if (stored && covers(stored, episodeKeys)) {
@@ -159,7 +159,7 @@ export function createDetailsTexts(deps: DetailsTextsDeps): DetailsTexts {
     }
     let answer: { item: DetailsTextItem };
     try {
-      answer = await deps.details(type, tmdbId, language);
+      answer = await deps.details(type, catalogId, language);
     } catch (error) {
       // An out-of-date row still beats no text; it is asked again next session.
       if (stored) return stored;
@@ -171,12 +171,12 @@ export function createDetailsTexts(deps: DetailsTextsDeps): DetailsTexts {
     return record;
   };
 
-  const texts: DetailsTexts["texts"] = (type, tmdbId, language, episodeKeys) => {
-    const key = localizedTextKey(type, tmdbId, language);
+  const texts: DetailsTexts["texts"] = (type, catalogId, language, episodeKeys) => {
+    const key = localizedTextKey(type, catalogId, language);
     const inFlight = pending.get(key);
     // A synopsis read in flight may hold an out-of-date row: the episodes then ask once it settles.
-    if (inFlight) return inFlight.then((record) => (covers(record, episodeKeys) ? record : texts(type, tmdbId, language, episodeKeys)));
-    const task = resolve(type, tmdbId, language, episodeKeys).finally(() => pending.delete(key));
+    if (inFlight) return inFlight.then((record) => (covers(record, episodeKeys) ? record : texts(type, catalogId, language, episodeKeys)));
+    const task = resolve(type, catalogId, language, episodeKeys).finally(() => pending.delete(key));
     pending.set(key, task);
     return task;
   };
@@ -184,8 +184,8 @@ export function createDetailsTexts(deps: DetailsTextsDeps): DetailsTexts {
   const sameTexts = (a: LocalizedTextRecord, b: LocalizedTextRecord) =>
     serializeLocalizedText({ ...a, fetchedAt: "" }) === serializeLocalizedText({ ...b, fetchedAt: "" });
 
-  const put: DetailsTexts["put"] = async (type, tmdbId, language, item, episodeKeys) => {
-    const key = localizedTextKey(type, tmdbId, language);
+  const put: DetailsTexts["put"] = async (type, catalogId, language, item, episodeKeys) => {
+    const key = localizedTextKey(type, catalogId, language);
     const library = openLibrary();
     const record = recordOf(item, episodeKeys, now());
     const stored = await readRow(library, key);
@@ -197,8 +197,8 @@ export function createDetailsTexts(deps: DetailsTextsDeps): DetailsTexts {
     await keep(library, key, record);
   };
 
-  const originalLanguage: DetailsTexts["originalLanguage"] = async (type, tmdbId, language) => {
-    const key = localizedTextKey(type, tmdbId, language);
+  const originalLanguage: DetailsTexts["originalLanguage"] = async (type, catalogId, language) => {
+    const key = localizedTextKey(type, catalogId, language);
     const library = openLibrary();
     const stored = await readRow(library, key);
     if (stored?.originalLanguage) {
@@ -209,9 +209,9 @@ export function createDetailsTexts(deps: DetailsTextsDeps): DetailsTexts {
     if (asked) return asked;
     const task = (async () => {
       // No row yet: the texts lookup the detail page makes anyway (deduplicated with it), kept as that language's texts.
-      if (!stored) return (await texts(type, tmdbId, language)).originalLanguage ?? null;
+      if (!stored) return (await texts(type, catalogId, language)).originalLanguage ?? null;
       // A row kept before the original language was: asked once, its absent episodes still listed as absent.
-      const answer = await deps.details(type, tmdbId, language);
+      const answer = await deps.details(type, catalogId, language);
       const record = recordOf(answer.item, stored.absent, now());
       answeredAt.set(record, clock());
       await keep(library, key, record);

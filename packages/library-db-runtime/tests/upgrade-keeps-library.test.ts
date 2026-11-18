@@ -88,7 +88,7 @@ const fileState = () => ({
 const firstRun = async () => {
   const db = await LibraryDb.openLocal("token", "key");
   db.setSyncEnabled(false);
-  const mediaId = await db.addMediaFromTmdb({
+  const mediaId = await db.addMediaFromCatalog({
     id: 45745,
     type: "movie",
     title: "Sintel",

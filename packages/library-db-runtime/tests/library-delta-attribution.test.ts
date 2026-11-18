@@ -46,12 +46,12 @@ const openDb = async () => {
   return db;
 };
 
-type TmdbItem = Parameters<LibraryDb["addMediaFromTmdb"]>[0];
+type TitleItem = Parameters<LibraryDb["addMediaFromCatalog"]>[0];
 
-type CastMember = { tmdbId: number; name: string; role: string; profilePath: string | null; order: number };
+type CastMember = { personId: number; name: string; role: string; profilePath: string | null; order: number };
 
 const addMovie = (db: LibraryDb, id: number, title: string, cast: CastMember[] = []) =>
-  db.addMediaFromTmdb({
+  db.addMediaFromCatalog({
     id,
     type: "movie",
     title,
@@ -68,8 +68,8 @@ const addMovie = (db: LibraryDb, id: number, title: string, cast: CastMember[] =
     seasons: [],
     episodes: [],
     totalEpisodes: 0,
-    // The minimal movie the other library-db-runtime suites use; the rest of TmdbDetails is optional at runtime.
-  } as unknown as TmdbItem);
+    // The minimal movie the other library-db-runtime suites use; the rest of TitleDetails is optional at runtime.
+  } as unknown as TitleItem);
 
 /** Drain whatever the setup writes noted, so each test measures only its own write. */
 const drain = (db: LibraryDb, label: string) => {
@@ -83,7 +83,7 @@ describe("LibraryDb change attribution (#671 R3)", () => {
     const db = await openDb();
     drain(db, "fresh open");
     const mediaId = await addMovie(db, 9701, "Attributed Movie");
-    const taken = drain(db, "addMediaFromTmdb");
+    const taken = drain(db, "addMediaFromCatalog");
     expect(taken.mediaIds).toContain(mediaId);
     expect(taken.all).toBe(false);
   });
@@ -248,7 +248,7 @@ describe("delta equals full snapshot (#671 R3 review)", () => {
 
   it("renaming a person shared by two media reports both, so the other title's cast is not stale", async () => {
     const db = await openDb();
-    const person = { tmdbId: 4242, name: "Old Name", role: "Lead", profilePath: null, order: 0 };
+    const person = { personId: 4242, name: "Old Name", role: "Lead", profilePath: null, order: 0 };
     const a = await addMovie(db, 9803, "Shared cast A", [person]);
     const b = await addMovie(db, 9804, "Shared cast B", [person]);
 
