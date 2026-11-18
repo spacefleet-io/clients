@@ -1,0 +1,1 @@
+Welcome to the first test of Parrot for Android. Sign in, play your music, make playlists and download albums to listen offline. Tell us what you think in Settings > Send feedback.

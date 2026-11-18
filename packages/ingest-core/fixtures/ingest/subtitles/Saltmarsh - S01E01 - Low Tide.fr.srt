@@ -1,0 +1,11 @@
+1
+00:00:01,000 --> 00:00:03,500
+Bonjour, c'est un sous-titre de test
+
+2
+00:00:04,000 --> 00:00:06,500
+Deuxieme ligne de sous-titre
+
+3
+00:00:07,000 --> 00:00:09,500
+Troisieme ligne francaise

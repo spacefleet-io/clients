@@ -1,0 +1,23 @@
+{
+  "name": "@space/media-deps",
+  "private": true,
+  "license": "GPL-3.0-only",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build:bundle": "bun ./scripts/build.ts",
+    "verify": "bun ./scripts/verify.ts",
+    "publish:bundle": "bun ./scripts/publish.ts",
+    "fetch": "bun ../../scripts/fetch-deps.ts",
+    "forks": "bun ./scripts/forks.ts",
+    "source:archive": "bun ./scripts/source-archive.ts",
+    "release:check": "bun ./scripts/check-source-archive.ts",
+    "test": "bunx vitest run"
+  },
+  "devDependencies": {
+    "vitest": "^5.1.0"
+  }
+}

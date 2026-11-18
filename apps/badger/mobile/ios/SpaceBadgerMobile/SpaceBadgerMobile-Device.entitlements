@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- ACCT-PAIR-06: the pairing QR is https://spacefleet.io/pair/<app>?code=...; the site's
+		 /.well-known/apple-app-site-association gives each app only its own /pair/<app> path.
+		 Only referenced for sdk=iphoneos* (device builds). -->
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:spacefleet.io</string>
+	</array>
+</dict>
+</plist>

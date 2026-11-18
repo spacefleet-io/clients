@@ -1,0 +1,121 @@
+{
+  "keyStepWords": {
+    "collection": "bibliothèque",
+    "collectionKey": "clé de bibliothèque"
+  },
+  "parrot": {
+    "nav": {
+      "back": "Retour",
+      "library": "Bibliothèque",
+      "settings": "Réglages",
+      "nowPlaying": "En cours de lecture"
+    },
+    "login": {
+      "sameAsBadger": "Utilisez le même e-mail et le même mot de passe que pour Badger.",
+      "codeTotp": "Code de votre app d'authentification",
+      "codeEmail": "Code reçu par e-mail",
+      "usePassword": "Se connecter avec votre mot de passe"
+    },
+    "key": {
+      "title": "Saisissez votre clé de bibliothèque",
+      "showTitle": "Votre clé de bibliothèque",
+      "body": "Saisissez les 12 mots que vous avez enregistrés en créant votre bibliothèque.",
+      "field": "Clé de bibliothèque",
+      "continue": "Continuer",
+      "saved": "Votre clé de bibliothèque est enregistrée sur ce téléphone.",
+      "errors": {
+        "unavailable": "Impossible de vérifier la clé pour le moment. Vérifiez votre connexion et réessayez."
+      }
+    },
+    "library": {
+      "opening": "Ouverture de votre bibliothèque…",
+      "openFailed": "Impossible d'ouvrir votre bibliothèque ({{error}}).",
+      "tryAgain": "Réessayer",
+      "noAlbums": "Aucun album pour l'instant.",
+      "songs_one": "{{count}} titre",
+      "songs_other": "{{count}} titres",
+      "albums_one": "{{count}} album",
+      "albums_other": "{{count}} albums",
+      "artists_one": "{{count}} artiste",
+      "artists_other": "{{count}} artistes",
+      "noArtists": "Aucun artiste pour l'instant.",
+      "noSongs": "Aucun titre pour l'instant.",
+      "view": {
+        "albums": "Albums",
+        "artists": "Artistes",
+        "songs": "Titres"
+      },
+      "sort": {
+        "byArtist": "Par artiste",
+        "byName": "Par nom",
+        "byTitle": "Par titre"
+      },
+      "search": "Rechercher dans votre bibliothèque",
+      "closeSearch": "Fermer la recherche"
+    },
+    "album": {
+      "noPlayableFile": "Cet album n'a pas encore de fichier lisible.",
+      "playFailed": "Impossible de lire ce titre ({{error}}).",
+      "noSongs": "Aucun titre.",
+      "play": "Lire {{title}}"
+    },
+    "player": {
+      "nothing": "Rien n'est en lecture.",
+      "unknownSong": "Titre inconnu",
+      "position": "Position",
+      "previous": "Précédent",
+      "next": "Suivant",
+      "open": "Ouvrir le lecteur",
+      "playing": "En lecture",
+      "error": "Erreur de lecture : {{error}}",
+      "playingFromAlbum": "Lecture depuis l'album",
+      "close": "Fermer",
+      "goToAlbum": "Aller à l'album",
+      "goToArtist": "Aller à l'artiste",
+      "more": "Plus",
+      "output": "Écouter sur un autre appareil"
+    },
+    "settings": {
+      "signedInAs": "Connecté en tant que",
+      "signOut": "Se déconnecter",
+      "language": "Langue",
+      "signOutKey": {
+        "title": "Avez-vous enregistré votre clé de bibliothèque ?",
+        "body": "Se déconnecter retire votre clé de bibliothèque de ce téléphone. Pour vous reconnecter, il faudra la saisir : la connexion par QR code ne marche que si un autre de vos appareils a encore la clé. Sans elle, impossible d'ouvrir votre bibliothèque.",
+        "cancel": "Annuler",
+        "confirm": "Je l'ai enregistrée, me déconnecter"
+      },
+      "pairDeviceDescription": "Autoriser un navigateur sur le lecteur web Parrot, un ordinateur ou une télé avec le code qu'il affiche.",
+      "library": "Bibliothèque",
+      "refresh": "Recharger la bibliothèque",
+      "openSource": "Logiciels libres",
+      "openSourceBody": "Parrot lit les morceaux Apple Lossless (ALAC) avec une adaptation du décodeur ALAC d’Apple, © 2011 Apple Inc., sous licence Apache 2.0."
+    },
+    "setup": {
+      "notificationsBody": "Parrot peut vous prévenir quand la musique ajoutée depuis votre ordinateur est prête à être écoutée ici."
+    },
+    "playlists": {
+      "likedEmpty": "Aucun titre liké pour l'instant"
+    },
+    "kept": {
+      "keep": "Garder sur ce téléphone",
+      "remove": "Retirer de ce téléphone",
+      "line": "Gardé sur ce téléphone · {{size}}",
+      "chooseBody": "Ces morceaux sont stockés dans plusieurs formats. Choisissez celui à garder sur ce téléphone.",
+      "downloadingSong": "Téléchargement…",
+      "failed": "Impossible de garder cet élément sur votre téléphone. Réessayez."
+    },
+    "empty": {
+      "eyebrow": "Votre bibliothèque",
+      "title": "Ajoutez votre premier album",
+      "subtitle": "Ajoutez de la musique avec Parrot sur votre ordinateur. Elle apparaît ici toute seule.",
+      "getDesktop": "Obtenir Parrot pour ordinateur",
+      "step1Title": "Choisissez vos morceaux sur votre ordinateur",
+      "step1Body": "Dans Parrot sur votre ordinateur, choisissez des fichiers audio ou un dossier entier. Rien n’en sort sans votre accord.",
+      "step2Title": "Parrot trouve les détails",
+      "step2Body": "Pochettes, photos d'artistes et paroles arrivent toutes seules.",
+      "step3Title": "Écoutez partout",
+      "step3Body": "Ce téléphone et vos ordinateurs lisent la même bibliothèque, chiffrée avec votre clé."
+    }
+  }
+}

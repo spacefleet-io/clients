@@ -1,0 +1,23 @@
+{
+  "name": "@space/ffmpeg",
+  "license": "GPL-3.0-only",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./resourcePolicy": "./src/resourcePolicy.ts",
+    "./hostCpu": "./src/hostCpu.ts",
+    "./playbackGate": "./src/playbackGate.ts"
+  },
+  "scripts": {
+    "test": "bunx vitest run"
+  },
+  "dependencies": {
+    "@space/desktop-platform": "workspace:*"
+  },
+  "devDependencies": {
+    "@space/media-deps": "workspace:*",
+    "vitest": "^5.1.0"
+  }
+}

@@ -1,0 +1,27 @@
+Parrot ist der Musik-Player für deine eigene Musik. Lade deine Alben vom Computer hoch und hör sie überall, auf dem Handy und am Computer.
+
+DEINE GANZE MUSIK, ÜBERALL
+• Lade deine Musik mit der Parrot-App für den Computer hoch (Windows, Mac, Linux): MP3, FLAC, AAC, ALAC, OGG, Opus und WAV.
+• Cover und Songinfos werden automatisch ergänzt.
+• Stöbere in deinen Alben, Künstlern, Songs und Playlists und durchsuche deine ganze Bibliothek.
+• Deine Bibliothek, Playlists und Lieblingssongs sind auf allen Geräten gleich.
+
+HÖR, WIE DU WILLST
+• Erstelle Playlists und markiere Lieblingssongs, auf dem Handy oder am Computer.
+• Sing mit: Songtexte laufen Zeile für Zeile mit, wenn verfügbar.
+• Bestimme, was als Nächstes läuft, mit Zufallswiedergabe und Wiederholen.
+• Steuere deine Musik über den Sperrbildschirm und die Benachrichtigungen.
+
+OFFLINE HÖREN
+• Lade Songs, Alben oder Playlists aufs Handy und hör sie ohne Internet.
+• Songs, die du zu einer heruntergeladenen Playlist hinzufügst, werden mit heruntergeladen.
+
+NUR DEINE MUSIK
+• Keine Werbung.
+• Deine Bibliothek und die Musik, die du hinzufügst, werden auf deinem Gerät verschlüsselt, bevor sie unsere Server erreichen.
+• Für Cover und Songtexte fragt Parrot unseren Suchdienst mit einem anonymen Einmal-Ticket statt mit deinem Konto: Wir können nicht erkennen, wer fragt. Der Dienst sieht, wonach gesucht wird, und deine Internetadresse, die wir nicht speichern.
+• Parrot liefert keine Musik: Du hörst die Musik, die du selbst hinzufügst.
+
+KOSTENLOS STARTEN
+• Erstelle ein kostenloses SpaceFleet-Konto, mit 20 GB Speicher inklusive.
+• Dasselbe Konto funktioniert auch mit Badger, unserer App für deine Filme und Serien.

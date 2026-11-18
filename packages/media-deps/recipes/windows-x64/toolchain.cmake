@@ -1,0 +1,20 @@
+# CMake toolchain for the mingw-w64 UCRT cross build (tools are symlinked to the plain
+# x86_64-w64-mingw32- prefix by the Dockerfile). Everything installs into /opt/win.
+set(CMAKE_SYSTEM_NAME Windows)
+set(CMAKE_SYSTEM_PROCESSOR x86_64)
+set(CMAKE_C_COMPILER x86_64-w64-mingw32-gcc)
+set(CMAKE_CXX_COMPILER x86_64-w64-mingw32-g++)
+set(CMAKE_RC_COMPILER x86_64-w64-mingw32-windres)
+set(CMAKE_AR x86_64-w64-mingw32-ar)
+set(CMAKE_RANLIB x86_64-w64-mingw32-ranlib)
+set(CMAKE_FIND_ROOT_PATH /opt/win /usr/x86_64-w64-mingw32ucrt)
+set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
+set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
+set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
+set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
+set(PKG_CONFIG_EXECUTABLE x86_64-w64-mingw32-pkg-config)
+set(CMAKE_C_FLAGS_INIT "-I/opt/win/include")
+set(CMAKE_CXX_FLAGS_INIT "-I/opt/win/include")
+# No libgcc/libstdc++ DLLs next to the executables.
+set(CMAKE_EXE_LINKER_FLAGS_INIT "-static-libgcc -static-libstdc++")
+set(CMAKE_SHARED_LINKER_FLAGS_INIT "-static-libgcc -static-libstdc++")

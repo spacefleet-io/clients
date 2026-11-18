@@ -1,0 +1,96 @@
+{
+  "description": "Pairing contract v1 test vector (X25519 + HKDF-SHA256 + AES-256-GCM). Generated with node:crypto, independent of the TS package.",
+  "requestId": "7d2c1b0e-4f5a-4c3d-9e8f-0a1b2c3d4e5f",
+  "devicePrivateKey": "pUbja/BSfJ07FhVLgkZe3WIUTArB/FoYUGoiRLpEmsQ=",
+  "devicePublicKey": "HJ/Yj0VgbZMqgMcYJK4VHRXXPnfeOOjgAIUuYU+ucBk=",
+  "ephemeralPrivateKey": "yKxPHlprnTBw4sGUiKC1PfcWJqnU6DwFsvehGW5NO1g=",
+  "ephemeralPublicKey": "y9vDqa/m+KtrYKurZvk49pKx4rGaQ3OAmKLOZKmZk14=",
+  "libraryKey": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=",
+  "iv": "ABEiM0RVZneImaq7",
+  "sharedSecretHex": "531b4bb799dfaa3d8c1665a65386955c931d5bc7c236568cac3a49f282322a51",
+  "derivedKeyHex": "2cfbeb7e57d44d8fc8f737321e9bb74bb4b8d4db1b482a4f3ae53099144a37d3",
+  "aad": "sf-pair-v1|7d2c1b0e-4f5a-4c3d-9e8f-0a1b2c3d4e5f",
+  "sealed": {
+    "v": 1,
+    "epk": "y9vDqa/m+KtrYKurZvk49pKx4rGaQ3OAmKLOZKmZk14=",
+    "iv": "ABEiM0RVZneImaq7",
+    "ct": "COY+46wekDkQ72hwus1H4pdQTdl1herzzJqoiMi1E+xIJMGWQcsFsVb9/kIwf82P"
+  },
+  "shortCodes": [
+    {
+      "input": "abcd-efgh",
+      "normalized": "ABCDEFGH",
+      "formatted": "ABCD-EFGH"
+    },
+    {
+      "input": "  ab cd efgh ",
+      "normalized": "ABCDEFGH",
+      "formatted": "ABCD-EFGH"
+    },
+    {
+      "input": "o1lI-0000",
+      "normalized": "01110000",
+      "formatted": "0111-0000"
+    },
+    {
+      "input": "ABCDEFG",
+      "normalized": null
+    },
+    {
+      "input": "ABCDEFGU",
+      "normalized": null
+    }
+  ],
+  "qrPayloads": [
+    {
+      "payload": "https://spacefleet.io/pair/parrot?code=ABCD-EFGH",
+      "code": "ABCDEFGH",
+      "app": "parrot"
+    },
+    {
+      "payload": "https://spacefleet.io/pair/badger?code=abcdefgh&x=1",
+      "code": "ABCDEFGH",
+      "app": "badger"
+    },
+    {
+      "payload": "http://localhost:5173/pair/badger?code=ABCD-EFGH",
+      "code": "ABCDEFGH",
+      "app": "badger"
+    },
+    {
+      "payload": "https://spacefleet.io/en/pair/parrot?code=ABCD-EFGH",
+      "code": "ABCDEFGH",
+      "app": "parrot"
+    },
+    {
+      "payload": "ABCD-EFGH",
+      "code": "ABCDEFGH",
+      "app": null
+    },
+    {
+      "payload": "https://spacefleet.io/pair/zebra?code=ABCD-EFGH",
+      "code": null,
+      "app": null
+    },
+    {
+      "payload": "https://example.com/pair?code=ABCDEFGH",
+      "code": null,
+      "app": null
+    },
+    {
+      "payload": "https://spacefleet.io/pair/parrot",
+      "code": null,
+      "app": null
+    },
+    {
+      "payload": "spacebadger://pair?code=ABCDEFGH",
+      "code": "ABCDEFGH",
+      "app": null
+    },
+    {
+      "payload": "ftp://spacefleet.io/pair/parrot?code=ABCDEFGH",
+      "code": null,
+      "app": null
+    }
+  ]
+}

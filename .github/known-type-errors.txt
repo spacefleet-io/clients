@@ -1,0 +1,34 @@
+# Files whose type errors CI ignores (.github/scripts/typecheck.ts): each one also fails the type check in
+# SpaceFleet's upstream repository, where this code is developed, so the error is not caused by the public
+# export. One line per file: <file><TAB><what fails>; fails upstream too
+# Every other file must type-check. A listed file that has no type error any more fails CI; the line goes.
+apps/badger/jellyfin/sidecar/src/server.ts	passes a Buffer | null where the Response body type is expected; fails upstream too
+apps/badger/mobile/tests/library-open-migrates-every-db.test.ts	a media fixture misses fields the media type now requires; fails upstream too
+apps/badger/mobile/tests/login-too-many-attempts.test.ts	compares two types that do not overlap; fails upstream too
+apps/badger/mobile/tests/onboarding-key-saved-warning.test.ts	compares an element type with the string "Button"; fails upstream too
+apps/badger/mobile/tests/player-next-episode-start-quality.test.ts	the playback state fixture has no closeReason; fails upstream too
+apps/badger/mobile/tests/player-screen-playback.test.ts	the playback state fixture has no closeReason; fails upstream too
+apps/badger/mobile/tests/subtitle-fetch-phone.test.ts	passes undefined where an AbortSignal is required; fails upstream too
+apps/parrot/mobile/src/lib/lookup.ts	reads EXPO_PUBLIC_METADATA_URL, which the app's typed environment does not declare; fails upstream too
+apps/parrot/mobile/tests/login-too-many-attempts.test.tsx	compares types that do not overlap; fails upstream too
+apps/runtime/tests/runtime-app-scope-isolation.test.ts	the ingest engine stub has no schedulerStats; fails upstream too
+packages/desktop-mpv-playback/tests/late-subtitle-sidecars.test.ts	indexes mock call tuples typed as empty; fails upstream too
+packages/media-crypto/tests/roundtrip.test.ts	imports vitest, which the package does not depend on; fails upstream too
+packages/mobile-media-proxy/tests/PlaybackBridge.test.ts	the storage tunnel fixture does not match the playback source type; fails upstream too
+packages/mobile-mpv-playback/tests/trackIdReads.test.ts	imports bun:test, whose types the package does not load; fails upstream too
+packages/mobile-mpv-playback/tests/tvAudioOutput.test.ts	indexes a mock call tuple typed as empty; fails upstream too
+packages/mobile-shell/tests/mobile-credits-panel.test.tsx	react-test-renderer has no type declarations in the package; fails upstream too
+packages/mobile-shell/tests/mobile-language-pickers.test.tsx	react-test-renderer has no type declarations in the package, so its rows are implicitly any; fails upstream too
+packages/mobile-shell/tests/mobile-open-source-notice.test.tsx	react-test-renderer has no type declarations in the package; fails upstream too
+packages/mobile-shell/tests/mobile-password-reset-too-many-attempts.test.tsx	react-test-renderer has no type declarations in the package, so its nodes are implicitly any; fails upstream too
+packages/mobile-shell/tests/mobile-render-boundary-item.test.tsx	react-test-renderer has no type declarations in the package; fails upstream too
+packages/mobile-shell/tests/mobile-render-boundary-popup.test.tsx	react-test-renderer has no type declarations in the package; fails upstream too
+packages/mobile-shell/tests/mobile-render-boundary-reports.test.tsx	react-test-renderer has no type declarations in the package; fails upstream too
+packages/mobile-shell/tests/mobile-render-boundary-window.test.tsx	react-test-renderer has no type declarations in the package; fails upstream too
+packages/mobile-shell/tests/mobile-render-boundary.test.tsx	sets a boundary state without its required fields; fails upstream too
+packages/mobile-shell/tests/mobile-sky-layer.test.tsx	react-test-renderer has no type declarations in the package; fails upstream too
+packages/mpv/tests/sf-pill-click-routing.test.ts	reads properties of a value narrowed to never; fails upstream too
+packages/parrot-ingest/tests/edit-clear.test.ts	imports @space/shared/api, which the package does not depend on, and calls a helper with too many arguments; fails upstream too
+packages/parrot-ingest/tests/importer.test.ts	calls a helper with more arguments than it takes; fails upstream too
+packages/shared/tests/billing-checkout.test.ts	billing fixtures miss fields the billing state now requires; fails upstream too
+packages/ui/tests/render-boundary.test.tsx	renders Parrot's Home without the onAddMusic and onAddFolder props it now requires; fails upstream too

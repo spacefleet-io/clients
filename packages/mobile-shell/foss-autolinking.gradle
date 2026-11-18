@@ -1,0 +1,12 @@
+// Applied by Badger's and Parrot's android/settings.gradle before autolinking. The Google-free build (SF_FOSS=1,
+// foss.cjs) autolinks fewer libraries, but React Native caches the autolinking config and only refreshes it when
+// package.json or react-native.config.js change. A build whose SF_FOSS differs from the cached one drops the cache, so
+// a Play build never links the Google-free set and the other way round.
+def autolinkingDir = new File(settings.rootDir, "build/generated/autolinking")
+def distribution = System.getenv("SF_FOSS") == "1" ? "foss" : "play"
+def marker = new File(autolinkingDir, "distribution.txt")
+if (!marker.isFile() || marker.text != distribution) {
+    new File(autolinkingDir, "autolinking.json").delete()
+    autolinkingDir.mkdirs()
+    marker.text = distribution
+}

@@ -1,0 +1,22 @@
+{
+  "sliceId": "runtime-core",
+  "version": "0.1.0",
+  "runtimeApiVersion": "1",
+  "moduleId": "core",
+  "entrypoint": "lib/index.js",
+  "platform": "dev-any",
+  "artifacts": [
+    {
+      "path": "lib/index.js",
+      "sha256": "dev-placeholder-runtime-core"
+    },
+    {
+      "path": "tools/ffmpeg",
+      "sha256": "dev-placeholder-ffmpeg"
+    },
+    {
+      "path": "tools/ffprobe",
+      "sha256": "dev-placeholder-ffprobe"
+    }
+  ]
+}

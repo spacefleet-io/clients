@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Unit tests for plugin code that does not need a Jellyfin host. The tested sources are linked in, so the run needs no
+    Jellyfin packages. Run `dotnet test` in this folder (for example in the mcr.microsoft.com/dotnet/sdk:10.0 image).
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="../Jellyfin.Plugin.SpaceBadger/Sidecar/VerifiedBinary.cs" Link="Sidecar/VerifiedBinary.cs" />
+    <!-- INTG-META-01: the library writer with the sidecar client it fetches artwork through. `Plugin` and
+         `TrackPreferences` need the Jellyfin host, so TestDoubles/PluginStub.cs stands in for them. -->
+    <Compile Include="../Jellyfin.Plugin.SpaceBadger/Sync/LibraryWriter.cs" Link="Sync/LibraryWriter.cs" />
+    <Compile Include="../Jellyfin.Plugin.SpaceBadger/Sidecar/SidecarClient.cs" Link="Sidecar/SidecarClient.cs" />
+    <Compile Include="../Jellyfin.Plugin.SpaceBadger/Sidecar/SidecarModels.cs" Link="Sidecar/SidecarModels.cs" />
+    <Compile Include="../Jellyfin.Plugin.SpaceBadger/Playback/StrmRef.cs" Link="Playback/StrmRef.cs" />
+    <!-- ACCT-STREAM-01..04: the stream-place decisions, with the sidecar and the Jellyfin sessions faked. -->
+    <Compile Include="../Jellyfin.Plugin.SpaceBadger/Playback/StreamLimitGuard.cs" Link="Playback/StreamLimitGuard.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.12.0" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="4.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.15" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,18 @@
+/* The fleet's UI fonts (Inter for text, Space Grotesk for titles; variable woff2, SIL OFL), shipped inside the app so
+   first paint never waits on a third-party fetch. `badger-dark.css` names the families; import this file next to it.
+   Badger desktop still carries its own copy of the same two files (tests/fleet-fonts.test.ts keeps them identical). */
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("../assets/fonts/InterVariable.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Space Grotesk";
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: swap;
+  src: url("../assets/fonts/SpaceGroteskVariable.woff2") format("woff2");
+}

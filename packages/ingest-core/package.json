@@ -1,0 +1,33 @@
+{
+  "name": "@space/ingest-core",
+  "license": "GPL-3.0-only",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "scripts": {
+    "test": "bunx vitest run"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./labQueueShared": "./src/labQueueShared.ts",
+    "./quality": "./src/quality.ts",
+    "./mediaProcessor": "./src/mediaProcessor.ts",
+    "./parseMediaFilename": "./src/parseMediaFilename.ts",
+    "./subtitleLanguageDetection": "./src/subtitleLanguageDetection.ts",
+    "./subtitleOcr": "./src/subtitleOcr/index.ts"
+  },
+  "dependencies": {
+    "@space/content-core": "workspace:*",
+    "@space/desktop-platform": "workspace:*",
+    "@space/ffmpeg": "workspace:*",
+    "@space/logger": "workspace:*",
+    "@space/shared": "workspace:*",
+    "franc": "^6.2.0",
+    "pngjs": "^7.0.0",
+    "tesseract.js": "^7.0.0"
+  },
+  "devDependencies": {
+    "@space/media-deps": "workspace:*",
+    "vitest": "^5.1.0"
+  }
+}

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<addon id="plugin.video.spacebadger" name="Badger" version="0.1.0" provider-name="Badger">
+  <requires>
+    <import addon="xbmc.python" version="3.0.0"/>
+    <import addon="inputstream.adaptive" version="20.0.0"/>
+  </requires>
+  <extension point="xbmc.python.pluginsource" library="default.py">
+    <provides>video</provides>
+  </extension>
+  <extension point="xbmc.service" library="service.py" start="login"/>
+  <extension point="kodi.context.item">
+    <menu id="kodi.core.main">
+      <item library="context_delete.py">
+        <label>30060</label>
+        <visible>[String.Contains(ListItem.FileNameAndPath,plugin.video.spacebadger) | String.Contains(ListItem.Path,plugin.video.spacebadger)] + !ListItem.IsParentFolder + !String.EndsWith(ListItem.Path,/library/movies/) + !String.EndsWith(ListItem.Path,/library/tvshows/) + !String.EndsWith(ListItem.Path,/spacebadger/library/)</visible>
+      </item>
+    </menu>
+  </extension>
+  <extension point="xbmc.addon.metadata">
+    <summary lang="en_GB">Your encrypted Badger library in Kodi</summary>
+    <description lang="en_GB">Browse and play your end-to-end encrypted Badger library in Kodi. Streams every stored quality with audio and subtitle tracks, remembers where you stopped and syncs it back.</description>
+    <disclaimer lang="en_GB">Your library key is stored in a private file in this addon's data folder; anyone with access to the device can read it.</disclaimer>
+    <platform>all</platform>
+    <license>GPL-3.0-only</license>
+    <website>https://spacebadger.io</website>
+    <news>0.1.0: first working version (v0).</news>
+    <assets>
+      <icon>resources/icon.png</icon>
+    </assets>
+  </extension>
+</addon>

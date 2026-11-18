@@ -1,0 +1,34 @@
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath("com.android.tools.build:gradle:9.2.1")
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.2.0")
+    }
+}
+
+plugins {
+    id("com.facebook.react.rootproject")
+}
+
+ext {
+    ndkVersion = "27.1.12297006"
+}
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+subprojects { project ->
+    project.plugins.withId("com.android.library") {
+        project.android.ndkVersion = rootProject.ext.ndkVersion
+    }
+    project.plugins.withId("com.android.application") {
+        project.android.ndkVersion = rootProject.ext.ndkVersion
+    }
+}

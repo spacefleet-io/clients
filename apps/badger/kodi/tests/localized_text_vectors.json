@@ -1,0 +1,182 @@
+{
+  "keys": [
+    {
+      "type": "tv",
+      "tmdbId": 1399,
+      "language": "fr",
+      "key": "localized_text_v1:tv:1399:fr"
+    },
+    {
+      "type": "movie",
+      "tmdbId": 27205,
+      "language": "en",
+      "key": "localized_text_v1:movie:27205:en"
+    }
+  ],
+  "serialize": [
+    {
+      "record": {
+        "overview": "Un été à Paris — « quotes », \"double\", tab\tand\nnewline 🎬",
+        "episodes": [
+          {
+            "seasonNumber": 1,
+            "episodeNumber": 1,
+            "name": "L'hiver vient",
+            "overview": "Première partie."
+          },
+          {
+            "seasonNumber": 1,
+            "episodeNumber": 2,
+            "name": null,
+            "overview": null
+          },
+          {
+            "seasonNumber": 0,
+            "episodeNumber": 3,
+            "name": "Spécial",
+            "overview": null
+          }
+        ],
+        "absent": [
+          "2:1",
+          "2:2"
+        ],
+        "fetchedAt": "2026-11-16T10:00:00.000Z"
+      },
+      "value": "{\"v\":1,\"overview\":\"Un été à Paris — « quotes », \\\"double\\\", tab\\tand\\nnewline 🎬\",\"episodes\":[[1,1,\"L'hiver vient\",\"Première partie.\"],[1,2,null,null],[0,3,\"Spécial\",null]],\"absent\":[\"2:1\",\"2:2\"],\"fetchedAt\":\"2026-11-16T10:00:00.000Z\"}"
+    },
+    {
+      "record": {
+        "overview": null,
+        "episodes": [],
+        "absent": [],
+        "fetchedAt": "2026-11-16T10:00:00.000Z"
+      },
+      "value": "{\"v\":1,\"overview\":null,\"episodes\":[],\"absent\":[],\"fetchedAt\":\"2026-11-16T10:00:00.000Z\"}"
+    },
+    {
+      "record": {
+        "overview": "Control \u0001 char and   separator",
+        "episodes": [],
+        "absent": [],
+        "fetchedAt": ""
+      },
+      "value": "{\"v\":1,\"overview\":\"Control \\u0001 char and   separator\",\"episodes\":[],\"absent\":[],\"fetchedAt\":\"\"}"
+    }
+  ],
+  "parse": [
+    {
+      "value": "",
+      "record": null
+    },
+    {
+      "value": "{",
+      "record": null
+    },
+    {
+      "value": "null",
+      "record": null
+    },
+    {
+      "value": "5",
+      "record": null
+    },
+    {
+      "value": "[]",
+      "record": null
+    },
+    {
+      "value": "\"text\"",
+      "record": null
+    },
+    {
+      "value": "{\"v\":2,\"overview\":\"x\",\"episodes\":[],\"absent\":[],\"fetchedAt\":\"t\"}",
+      "record": null
+    },
+    {
+      "value": "{\"v\":1,\"overview\":\"x\",\"episodes\":{},\"absent\":[],\"fetchedAt\":\"t\"}",
+      "record": null
+    },
+    {
+      "value": "{\"v\":1,\"overview\":\"x\"}",
+      "record": null
+    },
+    {
+      "value": "{\"v\":1,\"overview\":\"  \",\"episodes\":[[1,1,\"  \",\"ok\"],[\"1\",2,\"a\",\"b\"],[true,3,\"c\",\"d\"],[1,4],\"x\",[2,5,7,null]],\"absent\":[\"1:9\",3,null],\"fetchedAt\":5}",
+      "record": {
+        "overview": null,
+        "episodes": [
+          {
+            "seasonNumber": 1,
+            "episodeNumber": 1,
+            "name": null,
+            "overview": "ok"
+          },
+          {
+            "seasonNumber": 1,
+            "episodeNumber": 4,
+            "name": null,
+            "overview": null
+          },
+          {
+            "seasonNumber": 2,
+            "episodeNumber": 5,
+            "name": null,
+            "overview": null
+          }
+        ],
+        "absent": [
+          "1:9"
+        ],
+        "fetchedAt": ""
+      }
+    },
+    {
+      "value": "{\"v\":1,\"overview\":\"Résumé\",\"episodes\":[[1,1,\"Nom\",\"Synopsis\"]]}",
+      "record": {
+        "overview": "Résumé",
+        "episodes": [
+          {
+            "seasonNumber": 1,
+            "episodeNumber": 1,
+            "name": "Nom",
+            "overview": "Synopsis"
+          }
+        ],
+        "absent": [],
+        "fetchedAt": ""
+      }
+    },
+    {
+      "value": "{\"v\":1,\"overview\":\"Un été à Paris — « quotes », \\\"double\\\", tab\\tand\\nnewline 🎬\",\"episodes\":[[1,1,\"L'hiver vient\",\"Première partie.\"],[1,2,null,null],[0,3,\"Spécial\",null]],\"absent\":[\"2:1\",\"2:2\"],\"fetchedAt\":\"2026-11-16T10:00:00.000Z\"}",
+      "record": {
+        "overview": "Un été à Paris — « quotes », \"double\", tab\tand\nnewline 🎬",
+        "episodes": [
+          {
+            "seasonNumber": 1,
+            "episodeNumber": 1,
+            "name": "L'hiver vient",
+            "overview": "Première partie."
+          },
+          {
+            "seasonNumber": 1,
+            "episodeNumber": 2,
+            "name": null,
+            "overview": null
+          },
+          {
+            "seasonNumber": 0,
+            "episodeNumber": 3,
+            "name": "Spécial",
+            "overview": null
+          }
+        ],
+        "absent": [
+          "2:1",
+          "2:2"
+        ],
+        "fetchedAt": "2026-11-16T10:00:00.000Z"
+      }
+    }
+  ]
+}

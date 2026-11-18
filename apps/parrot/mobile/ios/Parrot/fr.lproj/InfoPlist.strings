@@ -1,0 +1,4 @@
+/* Messages des demandes d'autorisation affichés par iOS (clés d'Info.plist). */
+"NSCameraUsageDescription" = "Parrot utilise l'appareil photo pour scanner le code d'un nouvel appareil que vous voulez ajouter à votre compte.";
+"NSFaceIDUsageDescription" = "Parrot demande Face ID avant de partager votre bibliothèque musicale avec un autre appareil.";
+"NSPhotoLibraryUsageDescription" = "Parrot ouvre vos photos pour que vous choisissiez la pochette d'un album ou d'une playlist.";

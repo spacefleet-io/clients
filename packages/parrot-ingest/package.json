@@ -1,0 +1,28 @@
+{
+  "name": "@space/parrot-ingest",
+  "license": "GPL-3.0-only",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./audio-formats": "./src/audioFormats.ts"
+  },
+  "scripts": {
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@space/library-db-definition": "workspace:*",
+    "@space/library-db-runtime": "workspace:*",
+    "@space/media-crypto": "workspace:*",
+    "@space/parrot-core": "workspace:*",
+    "@space/parrot-library-db-definition": "workspace:*",
+    "@space/shared": "workspace:*",
+    "jpeg-js": "^0.4.4",
+    "music-metadata": "^12.5.0",
+    "pngjs": "^7.0.0"
+  },
+  "devDependencies": {
+    "@space/shared": "workspace:*"
+  }
+}

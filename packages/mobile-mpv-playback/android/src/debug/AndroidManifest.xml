@@ -1,0 +1,17 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <application>
+    <!-- Debug-only: starts the probe's broadcast receiver at process start so a query
+         answers "idle" before any player exists. -->
+    <provider
+      android:name="com.spacefleet.mpvplayback.mpv.MpvProbeProvider"
+      android:authorities="${applicationId}.mpvprobe"
+      android:exported="false" />
+    <!-- Debug/profile-only: the media format test set runner (REL-DEPS-11), started over adb by
+         packages/media-deps/scripts/run-media-test-set-android.ts. -->
+    <activity
+      android:name="com.spacefleet.mpvplayback.mpv.MediaTestSetActivity"
+      android:exported="true"
+      android:screenOrientation="sensorLandscape"
+      android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen" />
+  </application>
+</manifest>

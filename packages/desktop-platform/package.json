@@ -1,0 +1,25 @@
+{
+  "name": "@space/desktop-platform",
+  "license": "GPL-3.0-only",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./secret-file": "./src/secretFile.ts",
+    "./host-capacity": "./src/hostCapacity.ts"
+  },
+  "scripts": {
+    "test": "bunx vitest run",
+    "conformance": "bun src/conformance-cli.ts"
+  },
+  "dependencies": {
+    "@space/desktop-platform-contract": "workspace:*",
+    "@space/desktop-platform-linux": "workspace:*",
+    "@space/desktop-platform-macos": "workspace:*",
+    "@space/desktop-platform-windows": "workspace:*"
+  },
+  "devDependencies": {
+    "vitest": "^5.1.0"
+  }
+}

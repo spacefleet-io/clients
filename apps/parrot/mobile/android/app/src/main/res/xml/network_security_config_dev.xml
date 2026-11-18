@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Dev-stack test builds (PARROT_DEV_CLEARTEXT=1): the dev stack is plain http on the LAN or the emulator's host. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>

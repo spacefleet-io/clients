@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Badger</title>
+    <meta
+      name="description"
+      content="Desktop client UX development harness (web). Encrypted library, ingestion lab, and playback UX."
+    />
+    <meta name="color-scheme" content="dark light" />
+    <link rel="icon" type="image/png" href="./icon.png" />
+    <link rel="apple-touch-icon" href="./icon.png" />
+    <script>
+      (() => {
+        try {
+          const raw = localStorage.getItem("sf-client-ui");
+          let mode = null;
+          if (raw) { try { mode = JSON.parse(raw).mode; } catch {} }
+          const theme =
+            mode === "dark" || mode === "light"
+              ? mode
+              : window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches
+                ? "light"
+                : "dark";
+          document.documentElement.dataset.theme = theme;
+          if (theme === "dark") {
+            document.documentElement.classList.add("dark");
+          }
+        } catch {}
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

@@ -1,0 +1,14 @@
+{
+  "sliceId": "runtime-badger",
+  "version": "0.1.0",
+  "runtimeApiVersion": "1",
+  "moduleId": "badger",
+  "entrypoint": "lib/index.js",
+  "platform": "dev-any",
+  "artifacts": [
+    {
+      "path": "lib/index.js",
+      "sha256": "dev-placeholder-runtime-badger"
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "name": "@space/runtime-client",
+  "license": "GPL-3.0-only",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "scripts": {
+    "test": "bunx vitest run"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./session": "./src/session.ts",
+    "./command": "./src/command.ts",
+    "./events": "./src/events.ts",
+    "./errors": "./src/errors.ts",
+    "./ownerSecretFile": "./src/ownerSecretFile.ts",
+    "./ownerSecretIpc": "./src/ownerSecretIpc.ts",
+    "./jobs": "./src/jobs.ts",
+    "./jobsV2": "./src/jobsV2.ts"
+  },
+  "dependencies": {
+    "@space/runtime-contracts": "workspace:*",
+    "@space/runtime-jobs": "workspace:*",
+    "@space/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "vitest": "^5.1.0",
+    "zod": "^4.6.7"
+  }
+}

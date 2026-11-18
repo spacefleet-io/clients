@@ -1,0 +1,87 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "agentGuidance": false,
+  "globalEnv": [
+    "SF_PHSI_DEBUG",
+    "SF_LIBRARY_SYNC_DEBUG"
+  ],
+  "tasks": {
+    "build": {
+      "dependsOn": [
+        "^build"
+      ],
+      "outputs": [
+        "dist/**",
+        ".next/**",
+        "!.next/cache/**"
+      ]
+    },
+    "lint": {
+      "dependsOn": [
+        "^lint"
+      ]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true,
+      "passThroughEnv": [
+        "SF_LANE",
+        "SF_LOCAL_METADATA",
+        "SF_USER_DATA_PATH",
+        "SF_DEVTOOLS_PORT",
+        "SF_DEV_SERVER_URL",
+        "SF_API_BASE_URL",
+        "SF_DEV_API_BASE_URL",
+        "SF_RUNTIME_BASE_URL",
+        "SF_RUNTIME_SPAWN_MODE",
+        "SPACEFLEET_RUNTIME_DATA_DIR",
+        "SF_DUMMY_STORAGE_DIR",
+        "SF_DEV_TICKET_KEY",
+        "SF_METADATA_TICKETS",
+        "SF_LOG_LEVEL",
+        "SF_LOG_PRETTY",
+        "SF_BUGSINK_DSN_BADGER_DESKTOP",
+        "SF_BUGSINK_DSN_PARROT_DESKTOP",
+        "VITE_METADATA_URL",
+        "VITE_METADATA_TICKETS",
+        "VITE_API_BASE_URL",
+        "VITE_SF_DEV_TICKET_KEY",
+        "EXPO_PUBLIC_METADATA_URL",
+        "PARROT_API_BASE_URL",
+        "PARROT_METADATA_TICKETS",
+        "PARROT_WEB_PORT",
+        "WEB_API_PROXY_TARGET",
+        "LOG_LEVEL",
+        "LOG_PRETTY",
+        "XDG_CONFIG_HOME",
+        "APPDATA"
+      ]
+    },
+    "db:push": {
+      "cache": false
+    },
+    "test": {
+      "outputs": []
+    },
+    "start": {
+      "cache": false,
+      "persistent": true
+    },
+    "package": {
+      "dependsOn": [
+        "build"
+      ],
+      "outputs": [
+        "out/**",
+        "dist/**"
+      ]
+    },
+    "build:host": {
+      "cache": true,
+      "outputs": [
+        "dist/**",
+        "bin/**"
+      ]
+    }
+  }
+}

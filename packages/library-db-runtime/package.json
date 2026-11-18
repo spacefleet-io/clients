@@ -1,0 +1,33 @@
+{
+  "name": "@space/library-db-runtime",
+  "license": "GPL-3.0-only",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "scripts": {
+    "test": "bun test --isolate",
+    "bench:library": "bun run bench/run.ts"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./libraryDb": "./src/libraryDb.ts",
+    "./libraryAccount": "./src/libraryAccount.ts",
+    "./api": "./src/api.ts",
+    "./snapshotTransport": "./src/snapshotTransport.ts",
+    "./walCheckpointer": "./src/walCheckpointer.ts",
+    "./bunSqlite": "./src/bunSqlite.ts",
+    "./crypto": "./src/crypto.ts",
+    "./castRefetch": "./src/castRefetch.ts",
+    "./crewBackfill": "./src/crewBackfill.ts"
+  },
+  "dependencies": {
+    "@space/library-db-definition": "workspace:*",
+    "@space/logger": "workspace:*",
+    "@space/sdk": "workspace:*",
+    "@space/shared": "workspace:*",
+    "drizzle-orm": "^0.45.3"
+  },
+  "devDependencies": {
+    "vitest": "^5.1.0"
+  }
+}

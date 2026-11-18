@@ -1,0 +1,49 @@
+{
+  "name": "@space/error-report",
+  "private": true,
+  "license": "GPL-3.0-only",
+  "type": "module",
+  "sideEffects": [
+    "./src/electronPreload.ts"
+  ],
+  "scripts": {
+    "test": "bunx vitest run"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./electron-main": "./src/electronMain.ts",
+    "./electron-renderer": "./src/electronRenderer.ts",
+    "./electron-preload": "./src/electronPreload.ts",
+    "./react-native": "./src/reactNative.ts",
+    "./consent-file": "./src/consentFile.ts",
+    "./caught": "./src/caught.ts",
+    "./scrub": "./src/scrub.ts",
+    "./error-log": "./src/errorLog.ts",
+    "./build-config": "./src/buildConfig.ts",
+    "./desktop": "./src/desktop.ts",
+    "./desktop-main": "./src/desktopMain.ts",
+    "./desktop-renderer": "./src/desktopRenderer.ts",
+    "./react": "./src/react.ts",
+    "./desktop-feedback": "./src/desktopFeedback.ts",
+    "./metro": "./metro.cjs"
+  },
+  "peerDependencies": {
+    "@sentry/react-native": "^8.35.0",
+    "react": "^19.3.1"
+  },
+  "peerDependenciesMeta": {
+    "@sentry/react-native": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@sentry/node": "^11.12.0",
+    "@sentry/react-native": "^8.35.0",
+    "@sentry/electron": "^8.4.0",
+    "vitest": "^5.1.0",
+    "react": "^19.3.1"
+  }
+}

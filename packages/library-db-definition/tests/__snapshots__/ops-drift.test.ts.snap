@@ -1,0 +1,4402 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`buildOpStatements drift guard > 50-op deterministic fixture produces stable per-group statement batches 1`] = `
+[
+  {
+    "groups": {
+      "core": [
+        {
+          "params": [
+            "m-00",
+            "movie",
+            "Title m-00",
+            null,
+            "en",
+            null,
+            "2024",
+            7,
+            null,
+            null,
+            "2024-01-01T00:00:00.000Z",
+            "2024-01-01T00:00:00.000Z",
+            1,
+            0,
+            null,
+            null,
+          ],
+          "sql": "INSERT INTO media_items (
+      id, type, title, original_title, original_language, overview, year, rating, poster_path, backdrop_path,
+      added_at, updated_at, has_files, progress_pct, last_watched_at, total_episodes
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET
+      type = excluded.type,
+      title = excluded.title,
+      original_title = excluded.original_title,
+      original_language = excluded.original_language,
+      overview = excluded.overview,
+      year = excluded.year,
+      rating = excluded.rating,
+      poster_path = excluded.poster_path,
+      backdrop_path = excluded.backdrop_path,
+      added_at = excluded.added_at,
+      updated_at = excluded.updated_at,
+      has_files = excluded.has_files,
+      total_episodes = excluded.total_episodes
+    WHERE excluded.updated_at >= media_items.updated_at;",
+        },
+        {
+          "params": [
+            "m-00",
+            "m-00",
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "DELETE FROM media_external_ids WHERE media_id = ? AND EXISTS (SELECT 1 FROM media_items WHERE id = ? AND updated_at = ?);",
+        },
+        {
+          "params": [
+            "gen-0001",
+            "m-00",
+            "movie",
+            "tmdb",
+            "1000",
+            "m-00",
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "INSERT OR IGNORE INTO media_external_ids (id, media_id, media_type, source, external_id)
+       SELECT ?, ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM media_items WHERE id = ? AND updated_at = ?);",
+        },
+        {
+          "params": [
+            "gen-0002",
+            "m-00",
+            "movie",
+            "imdb",
+            "ttm-00",
+            "m-00",
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "INSERT OR IGNORE INTO media_external_ids (id, media_id, media_type, source, external_id)
+       SELECT ?, ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM media_items WHERE id = ? AND updated_at = ?);",
+        },
+        {
+          "params": [
+            "m-00",
+            "m-00",
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "DELETE FROM media_genres WHERE media_id = ? AND EXISTS (SELECT 1 FROM media_items WHERE id = ? AND updated_at = ?);",
+        },
+        {
+          "params": [
+            "gen-0003",
+            "m-00",
+            28,
+            "m-00",
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "INSERT OR IGNORE INTO media_genres (id, media_id, genre_id)
+       SELECT ?, ?, ? WHERE EXISTS (SELECT 1 FROM media_items WHERE id = ? AND updated_at = ?);",
+        },
+        {
+          "params": [
+            "gen-0004",
+            "m-00",
+            18,
+            "m-00",
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "INSERT OR IGNORE INTO media_genres (id, media_id, genre_id)
+       SELECT ?, ?, ? WHERE EXISTS (SELECT 1 FROM media_items WHERE id = ? AND updated_at = ?);",
+        },
+      ],
+      "metadata": [
+        {
+          "params": [
+            "m-00",
+          ],
+          "sql": "DELETE FROM media_roles WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "person-m-00-a",
+            "Actor A",
+            null,
+          ],
+          "sql": "INSERT OR REPLACE INTO people (id, name, profile_path) VALUES (?, ?, ?);",
+        },
+        {
+          "params": [
+            "role-m-00-a",
+            "m-00",
+            "person-m-00-a",
+            "Lead",
+            0,
+          ],
+          "sql": "INSERT OR REPLACE INTO media_roles (id, media_id, person_id, role, order_index) VALUES (?, ?, ?, ?, ?);",
+        },
+        {
+          "params": [
+            "m-00",
+          ],
+          "sql": "DELETE FROM media_trailers WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-00",
+          ],
+          "sql": "DELETE FROM media_seasons WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-00",
+          ],
+          "sql": "DELETE FROM media_episodes WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-00",
+          ],
+          "sql": "DELETE FROM media_file_desired_formats WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-00",
+          ],
+          "sql": "DELETE FROM media_files WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "ed-m-00-x-x",
+            "m-00",
+            null,
+            null,
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "INSERT OR IGNORE INTO media_editions (id, media_id, season, episode, name, name_user_set, duration_seconds, created_at) VALUES (?, ?, ?, ?, '', 0, NULL, ?);",
+        },
+        {
+          "params": [
+            "file-m-00-1",
+            "m-00",
+            "m-00.mkv",
+            null,
+            null,
+            "2024-01-01T00:00:00.000Z",
+            "local",
+            "ed-m-00-x-x",
+            null,
+            null,
+          ],
+          "sql": "INSERT OR REPLACE INTO media_files (id, media_id, filename, season, episode, added_at, status, edition_id, content_sha256, original_size_bytes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
+        },
+        {
+          "params": [
+            "gen-0005",
+            "m-00",
+            "file-m-00-1",
+            "1080p",
+            "h264",
+            5000,
+          ],
+          "sql": "INSERT OR IGNORE INTO media_file_desired_formats (id, media_id, file_id, quality, codec, bitrate_kbps) VALUES (?, ?, ?, ?, ?, ?);",
+        },
+        {
+          "params": [
+            "m-00",
+          ],
+          "sql": "DELETE FROM media_skip_markers WHERE media_id = ?;",
+        },
+      ],
+      "playback": [
+        {
+          "params": [
+            "m-00",
+          ],
+          "sql": "DELETE FROM media_format_chunks WHERE format_id IN (SELECT id FROM media_formats WHERE media_id = ?);",
+        },
+        {
+          "params": [
+            "m-00",
+          ],
+          "sql": "DELETE FROM media_chapters WHERE format_id IN (SELECT id FROM media_formats WHERE media_id = ?);",
+        },
+        {
+          "params": [
+            "m-00",
+          ],
+          "sql": "DELETE FROM media_audio_chunks WHERE track_id IN (SELECT id FROM media_audio_tracks WHERE media_id = ?);",
+        },
+        {
+          "params": [
+            "m-00",
+          ],
+          "sql": "DELETE FROM media_audio_tracks WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-00",
+          ],
+          "sql": "DELETE FROM media_subtitles WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "fmt-m-00-1",
+            "m-00",
+            "file-m-00-1",
+            "1080p",
+            "h264",
+            null,
+            5000,
+            null,
+            null,
+            7200,
+            1500000000,
+            1500,
+            1,
+            "m-00",
+            "fmt-m-00-1",
+            "file-m-00-1",
+            "1080p",
+            "fmt-m-00-1",
+          ],
+          "sql": "INSERT OR REPLACE INTO media_formats (
+        id, media_id, file_id, quality, codec, codec_string, bitrate_kbps, init_key, init_size, duration_seconds, total_size, size_mb, is_source,
+        preview_sheets
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, (SELECT preview_sheets FROM media_formats WHERE media_id = ? AND (id = ? OR (file_id = ? AND quality = ?)) ORDER BY id = ? DESC LIMIT 1));",
+        },
+        {
+          "params": [
+            "gen-0006",
+            "fmt-m-00-1",
+            "c1",
+            0,
+            100,
+            0,
+          ],
+          "sql": "INSERT OR REPLACE INTO media_format_chunks (id, format_id, chunk_key, order_index, size_bytes, start_seconds) VALUES (?, ?, ?, ?, ?, ?);",
+        },
+        {
+          "params": [
+            "m-00",
+            "fmt-m-00-1",
+          ],
+          "sql": "DELETE FROM media_formats WHERE media_id = ? AND id NOT IN (?);",
+        },
+        {
+          "params": [
+            "aud-m-00-1",
+            "m-00",
+            "file-m-00-1",
+            null,
+            "en",
+            "English",
+            1,
+            "muxed",
+            "aac",
+            null,
+            null,
+            null,
+            7200,
+            100000000,
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "INSERT OR REPLACE INTO media_audio_tracks (
+        id, media_id, file_id, episode_id, language, label, is_default, source, codec, codec_string, init_key, init_size, duration_seconds, total_size, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
+        },
+        {
+          "params": [
+            "gen-0007",
+            "aud-m-00-1",
+            "a1",
+            0,
+            50,
+            0,
+          ],
+          "sql": "INSERT OR REPLACE INTO media_audio_chunks (id, track_id, chunk_key, order_index, size_bytes, start_seconds) VALUES (?, ?, ?, ?, ?, ?);",
+        },
+      ],
+      "templates": [
+        {
+          "params": [
+            "m-00",
+          ],
+          "sql": "DELETE FROM media_skip_analysis WHERE media_id = ?;",
+        },
+      ],
+    },
+    "opId": "op-upsert-0",
+    "opType": "media.upsert",
+  },
+  {
+    "groups": {
+      "core": [
+        {
+          "params": [
+            "m-01",
+            "movie",
+            "Title m-01",
+            null,
+            "en",
+            null,
+            "2024",
+            7,
+            null,
+            null,
+            "2024-01-01T00:00:00.000Z",
+            "2024-01-01T00:00:00.000Z",
+            1,
+            0,
+            null,
+            null,
+          ],
+          "sql": "INSERT INTO media_items (
+      id, type, title, original_title, original_language, overview, year, rating, poster_path, backdrop_path,
+      added_at, updated_at, has_files, progress_pct, last_watched_at, total_episodes
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET
+      type = excluded.type,
+      title = excluded.title,
+      original_title = excluded.original_title,
+      original_language = excluded.original_language,
+      overview = excluded.overview,
+      year = excluded.year,
+      rating = excluded.rating,
+      poster_path = excluded.poster_path,
+      backdrop_path = excluded.backdrop_path,
+      added_at = excluded.added_at,
+      updated_at = excluded.updated_at,
+      has_files = excluded.has_files,
+      total_episodes = excluded.total_episodes
+    WHERE excluded.updated_at >= media_items.updated_at;",
+        },
+        {
+          "params": [
+            "m-01",
+            "m-01",
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "DELETE FROM media_external_ids WHERE media_id = ? AND EXISTS (SELECT 1 FROM media_items WHERE id = ? AND updated_at = ?);",
+        },
+        {
+          "params": [
+            "gen-0008",
+            "m-01",
+            "movie",
+            "tmdb",
+            "1001",
+            "m-01",
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "INSERT OR IGNORE INTO media_external_ids (id, media_id, media_type, source, external_id)
+       SELECT ?, ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM media_items WHERE id = ? AND updated_at = ?);",
+        },
+        {
+          "params": [
+            "gen-0009",
+            "m-01",
+            "movie",
+            "imdb",
+            "ttm-01",
+            "m-01",
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "INSERT OR IGNORE INTO media_external_ids (id, media_id, media_type, source, external_id)
+       SELECT ?, ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM media_items WHERE id = ? AND updated_at = ?);",
+        },
+        {
+          "params": [
+            "m-01",
+            "m-01",
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "DELETE FROM media_genres WHERE media_id = ? AND EXISTS (SELECT 1 FROM media_items WHERE id = ? AND updated_at = ?);",
+        },
+        {
+          "params": [
+            "gen-0010",
+            "m-01",
+            28,
+            "m-01",
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "INSERT OR IGNORE INTO media_genres (id, media_id, genre_id)
+       SELECT ?, ?, ? WHERE EXISTS (SELECT 1 FROM media_items WHERE id = ? AND updated_at = ?);",
+        },
+        {
+          "params": [
+            "gen-0011",
+            "m-01",
+            18,
+            "m-01",
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "INSERT OR IGNORE INTO media_genres (id, media_id, genre_id)
+       SELECT ?, ?, ? WHERE EXISTS (SELECT 1 FROM media_items WHERE id = ? AND updated_at = ?);",
+        },
+      ],
+      "metadata": [
+        {
+          "params": [
+            "m-01",
+          ],
+          "sql": "DELETE FROM media_roles WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "person-m-01-a",
+            "Actor A",
+            null,
+          ],
+          "sql": "INSERT OR REPLACE INTO people (id, name, profile_path) VALUES (?, ?, ?);",
+        },
+        {
+          "params": [
+            "role-m-01-a",
+            "m-01",
+            "person-m-01-a",
+            "Lead",
+            0,
+          ],
+          "sql": "INSERT OR REPLACE INTO media_roles (id, media_id, person_id, role, order_index) VALUES (?, ?, ?, ?, ?);",
+        },
+        {
+          "params": [
+            "m-01",
+          ],
+          "sql": "DELETE FROM media_trailers WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-01",
+          ],
+          "sql": "DELETE FROM media_seasons WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-01",
+          ],
+          "sql": "DELETE FROM media_episodes WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-01",
+          ],
+          "sql": "DELETE FROM media_file_desired_formats WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-01",
+          ],
+          "sql": "DELETE FROM media_files WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "ed-m-01-x-x",
+            "m-01",
+            null,
+            null,
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "INSERT OR IGNORE INTO media_editions (id, media_id, season, episode, name, name_user_set, duration_seconds, created_at) VALUES (?, ?, ?, ?, '', 0, NULL, ?);",
+        },
+        {
+          "params": [
+            "file-m-01-1",
+            "m-01",
+            "m-01.mkv",
+            null,
+            null,
+            "2024-01-01T00:00:00.000Z",
+            "local",
+            "ed-m-01-x-x",
+            null,
+            null,
+          ],
+          "sql": "INSERT OR REPLACE INTO media_files (id, media_id, filename, season, episode, added_at, status, edition_id, content_sha256, original_size_bytes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
+        },
+        {
+          "params": [
+            "gen-0012",
+            "m-01",
+            "file-m-01-1",
+            "1080p",
+            "h264",
+            5000,
+          ],
+          "sql": "INSERT OR IGNORE INTO media_file_desired_formats (id, media_id, file_id, quality, codec, bitrate_kbps) VALUES (?, ?, ?, ?, ?, ?);",
+        },
+        {
+          "params": [
+            "m-01",
+          ],
+          "sql": "DELETE FROM media_skip_markers WHERE media_id = ?;",
+        },
+      ],
+      "playback": [
+        {
+          "params": [
+            "m-01",
+          ],
+          "sql": "DELETE FROM media_format_chunks WHERE format_id IN (SELECT id FROM media_formats WHERE media_id = ?);",
+        },
+        {
+          "params": [
+            "m-01",
+          ],
+          "sql": "DELETE FROM media_chapters WHERE format_id IN (SELECT id FROM media_formats WHERE media_id = ?);",
+        },
+        {
+          "params": [
+            "m-01",
+          ],
+          "sql": "DELETE FROM media_audio_chunks WHERE track_id IN (SELECT id FROM media_audio_tracks WHERE media_id = ?);",
+        },
+        {
+          "params": [
+            "m-01",
+          ],
+          "sql": "DELETE FROM media_audio_tracks WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-01",
+          ],
+          "sql": "DELETE FROM media_subtitles WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "fmt-m-01-1",
+            "m-01",
+            "file-m-01-1",
+            "1080p",
+            "h264",
+            null,
+            5000,
+            null,
+            null,
+            7200,
+            1500000000,
+            1500,
+            1,
+            "m-01",
+            "fmt-m-01-1",
+            "file-m-01-1",
+            "1080p",
+            "fmt-m-01-1",
+          ],
+          "sql": "INSERT OR REPLACE INTO media_formats (
+        id, media_id, file_id, quality, codec, codec_string, bitrate_kbps, init_key, init_size, duration_seconds, total_size, size_mb, is_source,
+        preview_sheets
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, (SELECT preview_sheets FROM media_formats WHERE media_id = ? AND (id = ? OR (file_id = ? AND quality = ?)) ORDER BY id = ? DESC LIMIT 1));",
+        },
+        {
+          "params": [
+            "gen-0013",
+            "fmt-m-01-1",
+            "c1",
+            0,
+            100,
+            0,
+          ],
+          "sql": "INSERT OR REPLACE INTO media_format_chunks (id, format_id, chunk_key, order_index, size_bytes, start_seconds) VALUES (?, ?, ?, ?, ?, ?);",
+        },
+        {
+          "params": [
+            "m-01",
+            "fmt-m-01-1",
+          ],
+          "sql": "DELETE FROM media_formats WHERE media_id = ? AND id NOT IN (?);",
+        },
+        {
+          "params": [
+            "aud-m-01-1",
+            "m-01",
+            "file-m-01-1",
+            null,
+            "en",
+            "English",
+            1,
+            "muxed",
+            "aac",
+            null,
+            null,
+            null,
+            7200,
+            100000000,
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "INSERT OR REPLACE INTO media_audio_tracks (
+        id, media_id, file_id, episode_id, language, label, is_default, source, codec, codec_string, init_key, init_size, duration_seconds, total_size, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
+        },
+        {
+          "params": [
+            "gen-0014",
+            "aud-m-01-1",
+            "a1",
+            0,
+            50,
+            0,
+          ],
+          "sql": "INSERT OR REPLACE INTO media_audio_chunks (id, track_id, chunk_key, order_index, size_bytes, start_seconds) VALUES (?, ?, ?, ?, ?, ?);",
+        },
+      ],
+      "templates": [
+        {
+          "params": [
+            "m-01",
+          ],
+          "sql": "DELETE FROM media_skip_analysis WHERE media_id = ?;",
+        },
+      ],
+    },
+    "opId": "op-upsert-1",
+    "opType": "media.upsert",
+  },
+  {
+    "groups": {
+      "core": [
+        {
+          "params": [
+            "m-02",
+            "movie",
+            "Title m-02",
+            null,
+            "en",
+            null,
+            "2024",
+            7,
+            null,
+            null,
+            "2024-01-01T00:00:00.000Z",
+            "2024-01-01T00:00:00.000Z",
+            1,
+            0,
+            null,
+            null,
+          ],
+          "sql": "INSERT INTO media_items (
+      id, type, title, original_title, original_language, overview, year, rating, poster_path, backdrop_path,
+      added_at, updated_at, has_files, progress_pct, last_watched_at, total_episodes
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET
+      type = excluded.type,
+      title = excluded.title,
+      original_title = excluded.original_title,
+      original_language = excluded.original_language,
+      overview = excluded.overview,
+      year = excluded.year,
+      rating = excluded.rating,
+      poster_path = excluded.poster_path,
+      backdrop_path = excluded.backdrop_path,
+      added_at = excluded.added_at,
+      updated_at = excluded.updated_at,
+      has_files = excluded.has_files,
+      total_episodes = excluded.total_episodes
+    WHERE excluded.updated_at >= media_items.updated_at;",
+        },
+        {
+          "params": [
+            "m-02",
+            "m-02",
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "DELETE FROM media_external_ids WHERE media_id = ? AND EXISTS (SELECT 1 FROM media_items WHERE id = ? AND updated_at = ?);",
+        },
+        {
+          "params": [
+            "gen-0015",
+            "m-02",
+            "movie",
+            "tmdb",
+            "1002",
+            "m-02",
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "INSERT OR IGNORE INTO media_external_ids (id, media_id, media_type, source, external_id)
+       SELECT ?, ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM media_items WHERE id = ? AND updated_at = ?);",
+        },
+        {
+          "params": [
+            "gen-0016",
+            "m-02",
+            "movie",
+            "imdb",
+            "ttm-02",
+            "m-02",
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "INSERT OR IGNORE INTO media_external_ids (id, media_id, media_type, source, external_id)
+       SELECT ?, ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM media_items WHERE id = ? AND updated_at = ?);",
+        },
+        {
+          "params": [
+            "m-02",
+            "m-02",
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "DELETE FROM media_genres WHERE media_id = ? AND EXISTS (SELECT 1 FROM media_items WHERE id = ? AND updated_at = ?);",
+        },
+        {
+          "params": [
+            "gen-0017",
+            "m-02",
+            28,
+            "m-02",
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "INSERT OR IGNORE INTO media_genres (id, media_id, genre_id)
+       SELECT ?, ?, ? WHERE EXISTS (SELECT 1 FROM media_items WHERE id = ? AND updated_at = ?);",
+        },
+        {
+          "params": [
+            "gen-0018",
+            "m-02",
+            18,
+            "m-02",
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "INSERT OR IGNORE INTO media_genres (id, media_id, genre_id)
+       SELECT ?, ?, ? WHERE EXISTS (SELECT 1 FROM media_items WHERE id = ? AND updated_at = ?);",
+        },
+      ],
+      "metadata": [
+        {
+          "params": [
+            "m-02",
+          ],
+          "sql": "DELETE FROM media_roles WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "person-m-02-a",
+            "Actor A",
+            null,
+          ],
+          "sql": "INSERT OR REPLACE INTO people (id, name, profile_path) VALUES (?, ?, ?);",
+        },
+        {
+          "params": [
+            "role-m-02-a",
+            "m-02",
+            "person-m-02-a",
+            "Lead",
+            0,
+          ],
+          "sql": "INSERT OR REPLACE INTO media_roles (id, media_id, person_id, role, order_index) VALUES (?, ?, ?, ?, ?);",
+        },
+        {
+          "params": [
+            "m-02",
+          ],
+          "sql": "DELETE FROM media_trailers WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-02",
+          ],
+          "sql": "DELETE FROM media_seasons WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-02",
+          ],
+          "sql": "DELETE FROM media_episodes WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-02",
+          ],
+          "sql": "DELETE FROM media_file_desired_formats WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-02",
+          ],
+          "sql": "DELETE FROM media_files WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "ed-m-02-x-x",
+            "m-02",
+            null,
+            null,
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "INSERT OR IGNORE INTO media_editions (id, media_id, season, episode, name, name_user_set, duration_seconds, created_at) VALUES (?, ?, ?, ?, '', 0, NULL, ?);",
+        },
+        {
+          "params": [
+            "file-m-02-1",
+            "m-02",
+            "m-02.mkv",
+            null,
+            null,
+            "2024-01-01T00:00:00.000Z",
+            "local",
+            "ed-m-02-x-x",
+            null,
+            null,
+          ],
+          "sql": "INSERT OR REPLACE INTO media_files (id, media_id, filename, season, episode, added_at, status, edition_id, content_sha256, original_size_bytes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
+        },
+        {
+          "params": [
+            "gen-0019",
+            "m-02",
+            "file-m-02-1",
+            "1080p",
+            "h264",
+            5000,
+          ],
+          "sql": "INSERT OR IGNORE INTO media_file_desired_formats (id, media_id, file_id, quality, codec, bitrate_kbps) VALUES (?, ?, ?, ?, ?, ?);",
+        },
+        {
+          "params": [
+            "m-02",
+          ],
+          "sql": "DELETE FROM media_skip_markers WHERE media_id = ?;",
+        },
+      ],
+      "playback": [
+        {
+          "params": [
+            "m-02",
+          ],
+          "sql": "DELETE FROM media_format_chunks WHERE format_id IN (SELECT id FROM media_formats WHERE media_id = ?);",
+        },
+        {
+          "params": [
+            "m-02",
+          ],
+          "sql": "DELETE FROM media_chapters WHERE format_id IN (SELECT id FROM media_formats WHERE media_id = ?);",
+        },
+        {
+          "params": [
+            "m-02",
+          ],
+          "sql": "DELETE FROM media_audio_chunks WHERE track_id IN (SELECT id FROM media_audio_tracks WHERE media_id = ?);",
+        },
+        {
+          "params": [
+            "m-02",
+          ],
+          "sql": "DELETE FROM media_audio_tracks WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-02",
+          ],
+          "sql": "DELETE FROM media_subtitles WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "fmt-m-02-1",
+            "m-02",
+            "file-m-02-1",
+            "1080p",
+            "h264",
+            null,
+            5000,
+            null,
+            null,
+            7200,
+            1500000000,
+            1500,
+            1,
+            "m-02",
+            "fmt-m-02-1",
+            "file-m-02-1",
+            "1080p",
+            "fmt-m-02-1",
+          ],
+          "sql": "INSERT OR REPLACE INTO media_formats (
+        id, media_id, file_id, quality, codec, codec_string, bitrate_kbps, init_key, init_size, duration_seconds, total_size, size_mb, is_source,
+        preview_sheets
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, (SELECT preview_sheets FROM media_formats WHERE media_id = ? AND (id = ? OR (file_id = ? AND quality = ?)) ORDER BY id = ? DESC LIMIT 1));",
+        },
+        {
+          "params": [
+            "gen-0020",
+            "fmt-m-02-1",
+            "c1",
+            0,
+            100,
+            0,
+          ],
+          "sql": "INSERT OR REPLACE INTO media_format_chunks (id, format_id, chunk_key, order_index, size_bytes, start_seconds) VALUES (?, ?, ?, ?, ?, ?);",
+        },
+        {
+          "params": [
+            "m-02",
+            "fmt-m-02-1",
+          ],
+          "sql": "DELETE FROM media_formats WHERE media_id = ? AND id NOT IN (?);",
+        },
+        {
+          "params": [
+            "aud-m-02-1",
+            "m-02",
+            "file-m-02-1",
+            null,
+            "en",
+            "English",
+            1,
+            "muxed",
+            "aac",
+            null,
+            null,
+            null,
+            7200,
+            100000000,
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "INSERT OR REPLACE INTO media_audio_tracks (
+        id, media_id, file_id, episode_id, language, label, is_default, source, codec, codec_string, init_key, init_size, duration_seconds, total_size, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
+        },
+        {
+          "params": [
+            "gen-0021",
+            "aud-m-02-1",
+            "a1",
+            0,
+            50,
+            0,
+          ],
+          "sql": "INSERT OR REPLACE INTO media_audio_chunks (id, track_id, chunk_key, order_index, size_bytes, start_seconds) VALUES (?, ?, ?, ?, ?, ?);",
+        },
+      ],
+      "templates": [
+        {
+          "params": [
+            "m-02",
+          ],
+          "sql": "DELETE FROM media_skip_analysis WHERE media_id = ?;",
+        },
+      ],
+    },
+    "opId": "op-upsert-2",
+    "opType": "media.upsert",
+  },
+  {
+    "groups": {
+      "core": [
+        {
+          "params": [
+            "m-03",
+            "movie",
+            "Title m-03",
+            null,
+            "en",
+            null,
+            "2024",
+            7,
+            null,
+            null,
+            "2024-01-01T00:00:00.000Z",
+            "2024-01-01T00:00:00.000Z",
+            1,
+            0,
+            null,
+            null,
+          ],
+          "sql": "INSERT INTO media_items (
+      id, type, title, original_title, original_language, overview, year, rating, poster_path, backdrop_path,
+      added_at, updated_at, has_files, progress_pct, last_watched_at, total_episodes
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET
+      type = excluded.type,
+      title = excluded.title,
+      original_title = excluded.original_title,
+      original_language = excluded.original_language,
+      overview = excluded.overview,
+      year = excluded.year,
+      rating = excluded.rating,
+      poster_path = excluded.poster_path,
+      backdrop_path = excluded.backdrop_path,
+      added_at = excluded.added_at,
+      updated_at = excluded.updated_at,
+      has_files = excluded.has_files,
+      total_episodes = excluded.total_episodes
+    WHERE excluded.updated_at >= media_items.updated_at;",
+        },
+        {
+          "params": [
+            "m-03",
+            "m-03",
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "DELETE FROM media_external_ids WHERE media_id = ? AND EXISTS (SELECT 1 FROM media_items WHERE id = ? AND updated_at = ?);",
+        },
+        {
+          "params": [
+            "gen-0022",
+            "m-03",
+            "movie",
+            "tmdb",
+            "1003",
+            "m-03",
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "INSERT OR IGNORE INTO media_external_ids (id, media_id, media_type, source, external_id)
+       SELECT ?, ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM media_items WHERE id = ? AND updated_at = ?);",
+        },
+        {
+          "params": [
+            "gen-0023",
+            "m-03",
+            "movie",
+            "imdb",
+            "ttm-03",
+            "m-03",
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "INSERT OR IGNORE INTO media_external_ids (id, media_id, media_type, source, external_id)
+       SELECT ?, ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM media_items WHERE id = ? AND updated_at = ?);",
+        },
+        {
+          "params": [
+            "m-03",
+            "m-03",
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "DELETE FROM media_genres WHERE media_id = ? AND EXISTS (SELECT 1 FROM media_items WHERE id = ? AND updated_at = ?);",
+        },
+        {
+          "params": [
+            "gen-0024",
+            "m-03",
+            28,
+            "m-03",
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "INSERT OR IGNORE INTO media_genres (id, media_id, genre_id)
+       SELECT ?, ?, ? WHERE EXISTS (SELECT 1 FROM media_items WHERE id = ? AND updated_at = ?);",
+        },
+        {
+          "params": [
+            "gen-0025",
+            "m-03",
+            18,
+            "m-03",
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "INSERT OR IGNORE INTO media_genres (id, media_id, genre_id)
+       SELECT ?, ?, ? WHERE EXISTS (SELECT 1 FROM media_items WHERE id = ? AND updated_at = ?);",
+        },
+      ],
+      "metadata": [
+        {
+          "params": [
+            "m-03",
+          ],
+          "sql": "DELETE FROM media_roles WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "person-m-03-a",
+            "Actor A",
+            null,
+          ],
+          "sql": "INSERT OR REPLACE INTO people (id, name, profile_path) VALUES (?, ?, ?);",
+        },
+        {
+          "params": [
+            "role-m-03-a",
+            "m-03",
+            "person-m-03-a",
+            "Lead",
+            0,
+          ],
+          "sql": "INSERT OR REPLACE INTO media_roles (id, media_id, person_id, role, order_index) VALUES (?, ?, ?, ?, ?);",
+        },
+        {
+          "params": [
+            "m-03",
+          ],
+          "sql": "DELETE FROM media_trailers WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-03",
+          ],
+          "sql": "DELETE FROM media_seasons WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-03",
+          ],
+          "sql": "DELETE FROM media_episodes WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-03",
+          ],
+          "sql": "DELETE FROM media_file_desired_formats WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-03",
+          ],
+          "sql": "DELETE FROM media_files WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "ed-m-03-x-x",
+            "m-03",
+            null,
+            null,
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "INSERT OR IGNORE INTO media_editions (id, media_id, season, episode, name, name_user_set, duration_seconds, created_at) VALUES (?, ?, ?, ?, '', 0, NULL, ?);",
+        },
+        {
+          "params": [
+            "file-m-03-1",
+            "m-03",
+            "m-03.mkv",
+            null,
+            null,
+            "2024-01-01T00:00:00.000Z",
+            "local",
+            "ed-m-03-x-x",
+            null,
+            null,
+          ],
+          "sql": "INSERT OR REPLACE INTO media_files (id, media_id, filename, season, episode, added_at, status, edition_id, content_sha256, original_size_bytes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
+        },
+        {
+          "params": [
+            "gen-0026",
+            "m-03",
+            "file-m-03-1",
+            "1080p",
+            "h264",
+            5000,
+          ],
+          "sql": "INSERT OR IGNORE INTO media_file_desired_formats (id, media_id, file_id, quality, codec, bitrate_kbps) VALUES (?, ?, ?, ?, ?, ?);",
+        },
+        {
+          "params": [
+            "m-03",
+          ],
+          "sql": "DELETE FROM media_skip_markers WHERE media_id = ?;",
+        },
+      ],
+      "playback": [
+        {
+          "params": [
+            "m-03",
+          ],
+          "sql": "DELETE FROM media_format_chunks WHERE format_id IN (SELECT id FROM media_formats WHERE media_id = ?);",
+        },
+        {
+          "params": [
+            "m-03",
+          ],
+          "sql": "DELETE FROM media_chapters WHERE format_id IN (SELECT id FROM media_formats WHERE media_id = ?);",
+        },
+        {
+          "params": [
+            "m-03",
+          ],
+          "sql": "DELETE FROM media_audio_chunks WHERE track_id IN (SELECT id FROM media_audio_tracks WHERE media_id = ?);",
+        },
+        {
+          "params": [
+            "m-03",
+          ],
+          "sql": "DELETE FROM media_audio_tracks WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-03",
+          ],
+          "sql": "DELETE FROM media_subtitles WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "fmt-m-03-1",
+            "m-03",
+            "file-m-03-1",
+            "1080p",
+            "h264",
+            null,
+            5000,
+            null,
+            null,
+            7200,
+            1500000000,
+            1500,
+            1,
+            "m-03",
+            "fmt-m-03-1",
+            "file-m-03-1",
+            "1080p",
+            "fmt-m-03-1",
+          ],
+          "sql": "INSERT OR REPLACE INTO media_formats (
+        id, media_id, file_id, quality, codec, codec_string, bitrate_kbps, init_key, init_size, duration_seconds, total_size, size_mb, is_source,
+        preview_sheets
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, (SELECT preview_sheets FROM media_formats WHERE media_id = ? AND (id = ? OR (file_id = ? AND quality = ?)) ORDER BY id = ? DESC LIMIT 1));",
+        },
+        {
+          "params": [
+            "gen-0027",
+            "fmt-m-03-1",
+            "c1",
+            0,
+            100,
+            0,
+          ],
+          "sql": "INSERT OR REPLACE INTO media_format_chunks (id, format_id, chunk_key, order_index, size_bytes, start_seconds) VALUES (?, ?, ?, ?, ?, ?);",
+        },
+        {
+          "params": [
+            "m-03",
+            "fmt-m-03-1",
+          ],
+          "sql": "DELETE FROM media_formats WHERE media_id = ? AND id NOT IN (?);",
+        },
+        {
+          "params": [
+            "aud-m-03-1",
+            "m-03",
+            "file-m-03-1",
+            null,
+            "en",
+            "English",
+            1,
+            "muxed",
+            "aac",
+            null,
+            null,
+            null,
+            7200,
+            100000000,
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "INSERT OR REPLACE INTO media_audio_tracks (
+        id, media_id, file_id, episode_id, language, label, is_default, source, codec, codec_string, init_key, init_size, duration_seconds, total_size, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
+        },
+        {
+          "params": [
+            "gen-0028",
+            "aud-m-03-1",
+            "a1",
+            0,
+            50,
+            0,
+          ],
+          "sql": "INSERT OR REPLACE INTO media_audio_chunks (id, track_id, chunk_key, order_index, size_bytes, start_seconds) VALUES (?, ?, ?, ?, ?, ?);",
+        },
+      ],
+      "templates": [
+        {
+          "params": [
+            "m-03",
+          ],
+          "sql": "DELETE FROM media_skip_analysis WHERE media_id = ?;",
+        },
+      ],
+    },
+    "opId": "op-upsert-3",
+    "opType": "media.upsert",
+  },
+  {
+    "groups": {
+      "core": [
+        {
+          "params": [
+            "m-04",
+            "movie",
+            "Title m-04",
+            null,
+            "en",
+            null,
+            "2024",
+            7,
+            null,
+            null,
+            "2024-01-01T00:00:00.000Z",
+            "2024-01-01T00:00:00.000Z",
+            1,
+            0,
+            null,
+            null,
+          ],
+          "sql": "INSERT INTO media_items (
+      id, type, title, original_title, original_language, overview, year, rating, poster_path, backdrop_path,
+      added_at, updated_at, has_files, progress_pct, last_watched_at, total_episodes
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET
+      type = excluded.type,
+      title = excluded.title,
+      original_title = excluded.original_title,
+      original_language = excluded.original_language,
+      overview = excluded.overview,
+      year = excluded.year,
+      rating = excluded.rating,
+      poster_path = excluded.poster_path,
+      backdrop_path = excluded.backdrop_path,
+      added_at = excluded.added_at,
+      updated_at = excluded.updated_at,
+      has_files = excluded.has_files,
+      total_episodes = excluded.total_episodes
+    WHERE excluded.updated_at >= media_items.updated_at;",
+        },
+        {
+          "params": [
+            "m-04",
+            "m-04",
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "DELETE FROM media_external_ids WHERE media_id = ? AND EXISTS (SELECT 1 FROM media_items WHERE id = ? AND updated_at = ?);",
+        },
+        {
+          "params": [
+            "gen-0029",
+            "m-04",
+            "movie",
+            "tmdb",
+            "1004",
+            "m-04",
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "INSERT OR IGNORE INTO media_external_ids (id, media_id, media_type, source, external_id)
+       SELECT ?, ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM media_items WHERE id = ? AND updated_at = ?);",
+        },
+        {
+          "params": [
+            "gen-0030",
+            "m-04",
+            "movie",
+            "imdb",
+            "ttm-04",
+            "m-04",
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "INSERT OR IGNORE INTO media_external_ids (id, media_id, media_type, source, external_id)
+       SELECT ?, ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM media_items WHERE id = ? AND updated_at = ?);",
+        },
+        {
+          "params": [
+            "m-04",
+            "m-04",
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "DELETE FROM media_genres WHERE media_id = ? AND EXISTS (SELECT 1 FROM media_items WHERE id = ? AND updated_at = ?);",
+        },
+        {
+          "params": [
+            "gen-0031",
+            "m-04",
+            28,
+            "m-04",
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "INSERT OR IGNORE INTO media_genres (id, media_id, genre_id)
+       SELECT ?, ?, ? WHERE EXISTS (SELECT 1 FROM media_items WHERE id = ? AND updated_at = ?);",
+        },
+        {
+          "params": [
+            "gen-0032",
+            "m-04",
+            18,
+            "m-04",
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "INSERT OR IGNORE INTO media_genres (id, media_id, genre_id)
+       SELECT ?, ?, ? WHERE EXISTS (SELECT 1 FROM media_items WHERE id = ? AND updated_at = ?);",
+        },
+      ],
+      "metadata": [
+        {
+          "params": [
+            "m-04",
+          ],
+          "sql": "DELETE FROM media_roles WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "person-m-04-a",
+            "Actor A",
+            null,
+          ],
+          "sql": "INSERT OR REPLACE INTO people (id, name, profile_path) VALUES (?, ?, ?);",
+        },
+        {
+          "params": [
+            "role-m-04-a",
+            "m-04",
+            "person-m-04-a",
+            "Lead",
+            0,
+          ],
+          "sql": "INSERT OR REPLACE INTO media_roles (id, media_id, person_id, role, order_index) VALUES (?, ?, ?, ?, ?);",
+        },
+        {
+          "params": [
+            "m-04",
+          ],
+          "sql": "DELETE FROM media_trailers WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-04",
+          ],
+          "sql": "DELETE FROM media_seasons WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-04",
+          ],
+          "sql": "DELETE FROM media_episodes WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-04",
+          ],
+          "sql": "DELETE FROM media_file_desired_formats WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-04",
+          ],
+          "sql": "DELETE FROM media_files WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "ed-m-04-x-x",
+            "m-04",
+            null,
+            null,
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "INSERT OR IGNORE INTO media_editions (id, media_id, season, episode, name, name_user_set, duration_seconds, created_at) VALUES (?, ?, ?, ?, '', 0, NULL, ?);",
+        },
+        {
+          "params": [
+            "file-m-04-1",
+            "m-04",
+            "m-04.mkv",
+            null,
+            null,
+            "2024-01-01T00:00:00.000Z",
+            "local",
+            "ed-m-04-x-x",
+            null,
+            null,
+          ],
+          "sql": "INSERT OR REPLACE INTO media_files (id, media_id, filename, season, episode, added_at, status, edition_id, content_sha256, original_size_bytes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
+        },
+        {
+          "params": [
+            "gen-0033",
+            "m-04",
+            "file-m-04-1",
+            "1080p",
+            "h264",
+            5000,
+          ],
+          "sql": "INSERT OR IGNORE INTO media_file_desired_formats (id, media_id, file_id, quality, codec, bitrate_kbps) VALUES (?, ?, ?, ?, ?, ?);",
+        },
+        {
+          "params": [
+            "m-04",
+          ],
+          "sql": "DELETE FROM media_skip_markers WHERE media_id = ?;",
+        },
+      ],
+      "playback": [
+        {
+          "params": [
+            "m-04",
+          ],
+          "sql": "DELETE FROM media_format_chunks WHERE format_id IN (SELECT id FROM media_formats WHERE media_id = ?);",
+        },
+        {
+          "params": [
+            "m-04",
+          ],
+          "sql": "DELETE FROM media_chapters WHERE format_id IN (SELECT id FROM media_formats WHERE media_id = ?);",
+        },
+        {
+          "params": [
+            "m-04",
+          ],
+          "sql": "DELETE FROM media_audio_chunks WHERE track_id IN (SELECT id FROM media_audio_tracks WHERE media_id = ?);",
+        },
+        {
+          "params": [
+            "m-04",
+          ],
+          "sql": "DELETE FROM media_audio_tracks WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-04",
+          ],
+          "sql": "DELETE FROM media_subtitles WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "fmt-m-04-1",
+            "m-04",
+            "file-m-04-1",
+            "1080p",
+            "h264",
+            null,
+            5000,
+            null,
+            null,
+            7200,
+            1500000000,
+            1500,
+            1,
+            "m-04",
+            "fmt-m-04-1",
+            "file-m-04-1",
+            "1080p",
+            "fmt-m-04-1",
+          ],
+          "sql": "INSERT OR REPLACE INTO media_formats (
+        id, media_id, file_id, quality, codec, codec_string, bitrate_kbps, init_key, init_size, duration_seconds, total_size, size_mb, is_source,
+        preview_sheets
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, (SELECT preview_sheets FROM media_formats WHERE media_id = ? AND (id = ? OR (file_id = ? AND quality = ?)) ORDER BY id = ? DESC LIMIT 1));",
+        },
+        {
+          "params": [
+            "gen-0034",
+            "fmt-m-04-1",
+            "c1",
+            0,
+            100,
+            0,
+          ],
+          "sql": "INSERT OR REPLACE INTO media_format_chunks (id, format_id, chunk_key, order_index, size_bytes, start_seconds) VALUES (?, ?, ?, ?, ?, ?);",
+        },
+        {
+          "params": [
+            "m-04",
+            "fmt-m-04-1",
+          ],
+          "sql": "DELETE FROM media_formats WHERE media_id = ? AND id NOT IN (?);",
+        },
+        {
+          "params": [
+            "aud-m-04-1",
+            "m-04",
+            "file-m-04-1",
+            null,
+            "en",
+            "English",
+            1,
+            "muxed",
+            "aac",
+            null,
+            null,
+            null,
+            7200,
+            100000000,
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "INSERT OR REPLACE INTO media_audio_tracks (
+        id, media_id, file_id, episode_id, language, label, is_default, source, codec, codec_string, init_key, init_size, duration_seconds, total_size, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
+        },
+        {
+          "params": [
+            "gen-0035",
+            "aud-m-04-1",
+            "a1",
+            0,
+            50,
+            0,
+          ],
+          "sql": "INSERT OR REPLACE INTO media_audio_chunks (id, track_id, chunk_key, order_index, size_bytes, start_seconds) VALUES (?, ?, ?, ?, ?, ?);",
+        },
+      ],
+      "templates": [
+        {
+          "params": [
+            "m-04",
+          ],
+          "sql": "DELETE FROM media_skip_analysis WHERE media_id = ?;",
+        },
+      ],
+    },
+    "opId": "op-upsert-4",
+    "opType": "media.upsert",
+  },
+  {
+    "groups": {
+      "core": [
+        {
+          "params": [
+            "m-05",
+            "movie",
+            "Title m-05",
+            null,
+            "en",
+            null,
+            "2024",
+            7,
+            null,
+            null,
+            "2024-01-01T00:00:00.000Z",
+            "2024-01-01T00:00:00.000Z",
+            1,
+            0,
+            null,
+            null,
+          ],
+          "sql": "INSERT INTO media_items (
+      id, type, title, original_title, original_language, overview, year, rating, poster_path, backdrop_path,
+      added_at, updated_at, has_files, progress_pct, last_watched_at, total_episodes
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET
+      type = excluded.type,
+      title = excluded.title,
+      original_title = excluded.original_title,
+      original_language = excluded.original_language,
+      overview = excluded.overview,
+      year = excluded.year,
+      rating = excluded.rating,
+      poster_path = excluded.poster_path,
+      backdrop_path = excluded.backdrop_path,
+      added_at = excluded.added_at,
+      updated_at = excluded.updated_at,
+      has_files = excluded.has_files,
+      total_episodes = excluded.total_episodes
+    WHERE excluded.updated_at >= media_items.updated_at;",
+        },
+        {
+          "params": [
+            "m-05",
+            "m-05",
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "DELETE FROM media_external_ids WHERE media_id = ? AND EXISTS (SELECT 1 FROM media_items WHERE id = ? AND updated_at = ?);",
+        },
+        {
+          "params": [
+            "gen-0036",
+            "m-05",
+            "movie",
+            "tmdb",
+            "1005",
+            "m-05",
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "INSERT OR IGNORE INTO media_external_ids (id, media_id, media_type, source, external_id)
+       SELECT ?, ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM media_items WHERE id = ? AND updated_at = ?);",
+        },
+        {
+          "params": [
+            "gen-0037",
+            "m-05",
+            "movie",
+            "imdb",
+            "ttm-05",
+            "m-05",
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "INSERT OR IGNORE INTO media_external_ids (id, media_id, media_type, source, external_id)
+       SELECT ?, ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM media_items WHERE id = ? AND updated_at = ?);",
+        },
+        {
+          "params": [
+            "m-05",
+            "m-05",
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "DELETE FROM media_genres WHERE media_id = ? AND EXISTS (SELECT 1 FROM media_items WHERE id = ? AND updated_at = ?);",
+        },
+        {
+          "params": [
+            "gen-0038",
+            "m-05",
+            28,
+            "m-05",
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "INSERT OR IGNORE INTO media_genres (id, media_id, genre_id)
+       SELECT ?, ?, ? WHERE EXISTS (SELECT 1 FROM media_items WHERE id = ? AND updated_at = ?);",
+        },
+        {
+          "params": [
+            "gen-0039",
+            "m-05",
+            18,
+            "m-05",
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "INSERT OR IGNORE INTO media_genres (id, media_id, genre_id)
+       SELECT ?, ?, ? WHERE EXISTS (SELECT 1 FROM media_items WHERE id = ? AND updated_at = ?);",
+        },
+      ],
+      "metadata": [
+        {
+          "params": [
+            "m-05",
+          ],
+          "sql": "DELETE FROM media_roles WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "person-m-05-a",
+            "Actor A",
+            null,
+          ],
+          "sql": "INSERT OR REPLACE INTO people (id, name, profile_path) VALUES (?, ?, ?);",
+        },
+        {
+          "params": [
+            "role-m-05-a",
+            "m-05",
+            "person-m-05-a",
+            "Lead",
+            0,
+          ],
+          "sql": "INSERT OR REPLACE INTO media_roles (id, media_id, person_id, role, order_index) VALUES (?, ?, ?, ?, ?);",
+        },
+        {
+          "params": [
+            "m-05",
+          ],
+          "sql": "DELETE FROM media_trailers WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-05",
+          ],
+          "sql": "DELETE FROM media_seasons WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-05",
+          ],
+          "sql": "DELETE FROM media_episodes WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-05",
+          ],
+          "sql": "DELETE FROM media_file_desired_formats WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-05",
+          ],
+          "sql": "DELETE FROM media_files WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "ed-m-05-x-x",
+            "m-05",
+            null,
+            null,
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "INSERT OR IGNORE INTO media_editions (id, media_id, season, episode, name, name_user_set, duration_seconds, created_at) VALUES (?, ?, ?, ?, '', 0, NULL, ?);",
+        },
+        {
+          "params": [
+            "file-m-05-1",
+            "m-05",
+            "m-05.mkv",
+            null,
+            null,
+            "2024-01-01T00:00:00.000Z",
+            "local",
+            "ed-m-05-x-x",
+            null,
+            null,
+          ],
+          "sql": "INSERT OR REPLACE INTO media_files (id, media_id, filename, season, episode, added_at, status, edition_id, content_sha256, original_size_bytes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
+        },
+        {
+          "params": [
+            "gen-0040",
+            "m-05",
+            "file-m-05-1",
+            "1080p",
+            "h264",
+            5000,
+          ],
+          "sql": "INSERT OR IGNORE INTO media_file_desired_formats (id, media_id, file_id, quality, codec, bitrate_kbps) VALUES (?, ?, ?, ?, ?, ?);",
+        },
+        {
+          "params": [
+            "m-05",
+          ],
+          "sql": "DELETE FROM media_skip_markers WHERE media_id = ?;",
+        },
+      ],
+      "playback": [
+        {
+          "params": [
+            "m-05",
+          ],
+          "sql": "DELETE FROM media_format_chunks WHERE format_id IN (SELECT id FROM media_formats WHERE media_id = ?);",
+        },
+        {
+          "params": [
+            "m-05",
+          ],
+          "sql": "DELETE FROM media_chapters WHERE format_id IN (SELECT id FROM media_formats WHERE media_id = ?);",
+        },
+        {
+          "params": [
+            "m-05",
+          ],
+          "sql": "DELETE FROM media_audio_chunks WHERE track_id IN (SELECT id FROM media_audio_tracks WHERE media_id = ?);",
+        },
+        {
+          "params": [
+            "m-05",
+          ],
+          "sql": "DELETE FROM media_audio_tracks WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-05",
+          ],
+          "sql": "DELETE FROM media_subtitles WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "fmt-m-05-1",
+            "m-05",
+            "file-m-05-1",
+            "1080p",
+            "h264",
+            null,
+            5000,
+            null,
+            null,
+            7200,
+            1500000000,
+            1500,
+            1,
+            "m-05",
+            "fmt-m-05-1",
+            "file-m-05-1",
+            "1080p",
+            "fmt-m-05-1",
+          ],
+          "sql": "INSERT OR REPLACE INTO media_formats (
+        id, media_id, file_id, quality, codec, codec_string, bitrate_kbps, init_key, init_size, duration_seconds, total_size, size_mb, is_source,
+        preview_sheets
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, (SELECT preview_sheets FROM media_formats WHERE media_id = ? AND (id = ? OR (file_id = ? AND quality = ?)) ORDER BY id = ? DESC LIMIT 1));",
+        },
+        {
+          "params": [
+            "gen-0041",
+            "fmt-m-05-1",
+            "c1",
+            0,
+            100,
+            0,
+          ],
+          "sql": "INSERT OR REPLACE INTO media_format_chunks (id, format_id, chunk_key, order_index, size_bytes, start_seconds) VALUES (?, ?, ?, ?, ?, ?);",
+        },
+        {
+          "params": [
+            "m-05",
+            "fmt-m-05-1",
+          ],
+          "sql": "DELETE FROM media_formats WHERE media_id = ? AND id NOT IN (?);",
+        },
+        {
+          "params": [
+            "aud-m-05-1",
+            "m-05",
+            "file-m-05-1",
+            null,
+            "en",
+            "English",
+            1,
+            "muxed",
+            "aac",
+            null,
+            null,
+            null,
+            7200,
+            100000000,
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "INSERT OR REPLACE INTO media_audio_tracks (
+        id, media_id, file_id, episode_id, language, label, is_default, source, codec, codec_string, init_key, init_size, duration_seconds, total_size, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
+        },
+        {
+          "params": [
+            "gen-0042",
+            "aud-m-05-1",
+            "a1",
+            0,
+            50,
+            0,
+          ],
+          "sql": "INSERT OR REPLACE INTO media_audio_chunks (id, track_id, chunk_key, order_index, size_bytes, start_seconds) VALUES (?, ?, ?, ?, ?, ?);",
+        },
+      ],
+      "templates": [
+        {
+          "params": [
+            "m-05",
+          ],
+          "sql": "DELETE FROM media_skip_analysis WHERE media_id = ?;",
+        },
+      ],
+    },
+    "opId": "op-upsert-5",
+    "opType": "media.upsert",
+  },
+  {
+    "groups": {
+      "core": [
+        {
+          "params": [
+            "m-06",
+            "movie",
+            "Title m-06",
+            null,
+            "en",
+            null,
+            "2024",
+            7,
+            null,
+            null,
+            "2024-01-01T00:00:00.000Z",
+            "2024-01-01T00:00:00.000Z",
+            1,
+            0,
+            null,
+            null,
+          ],
+          "sql": "INSERT INTO media_items (
+      id, type, title, original_title, original_language, overview, year, rating, poster_path, backdrop_path,
+      added_at, updated_at, has_files, progress_pct, last_watched_at, total_episodes
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET
+      type = excluded.type,
+      title = excluded.title,
+      original_title = excluded.original_title,
+      original_language = excluded.original_language,
+      overview = excluded.overview,
+      year = excluded.year,
+      rating = excluded.rating,
+      poster_path = excluded.poster_path,
+      backdrop_path = excluded.backdrop_path,
+      added_at = excluded.added_at,
+      updated_at = excluded.updated_at,
+      has_files = excluded.has_files,
+      total_episodes = excluded.total_episodes
+    WHERE excluded.updated_at >= media_items.updated_at;",
+        },
+        {
+          "params": [
+            "m-06",
+            "m-06",
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "DELETE FROM media_external_ids WHERE media_id = ? AND EXISTS (SELECT 1 FROM media_items WHERE id = ? AND updated_at = ?);",
+        },
+        {
+          "params": [
+            "gen-0043",
+            "m-06",
+            "movie",
+            "tmdb",
+            "1006",
+            "m-06",
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "INSERT OR IGNORE INTO media_external_ids (id, media_id, media_type, source, external_id)
+       SELECT ?, ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM media_items WHERE id = ? AND updated_at = ?);",
+        },
+        {
+          "params": [
+            "gen-0044",
+            "m-06",
+            "movie",
+            "imdb",
+            "ttm-06",
+            "m-06",
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "INSERT OR IGNORE INTO media_external_ids (id, media_id, media_type, source, external_id)
+       SELECT ?, ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM media_items WHERE id = ? AND updated_at = ?);",
+        },
+        {
+          "params": [
+            "m-06",
+            "m-06",
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "DELETE FROM media_genres WHERE media_id = ? AND EXISTS (SELECT 1 FROM media_items WHERE id = ? AND updated_at = ?);",
+        },
+        {
+          "params": [
+            "gen-0045",
+            "m-06",
+            28,
+            "m-06",
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "INSERT OR IGNORE INTO media_genres (id, media_id, genre_id)
+       SELECT ?, ?, ? WHERE EXISTS (SELECT 1 FROM media_items WHERE id = ? AND updated_at = ?);",
+        },
+        {
+          "params": [
+            "gen-0046",
+            "m-06",
+            18,
+            "m-06",
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "INSERT OR IGNORE INTO media_genres (id, media_id, genre_id)
+       SELECT ?, ?, ? WHERE EXISTS (SELECT 1 FROM media_items WHERE id = ? AND updated_at = ?);",
+        },
+      ],
+      "metadata": [
+        {
+          "params": [
+            "m-06",
+          ],
+          "sql": "DELETE FROM media_roles WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "person-m-06-a",
+            "Actor A",
+            null,
+          ],
+          "sql": "INSERT OR REPLACE INTO people (id, name, profile_path) VALUES (?, ?, ?);",
+        },
+        {
+          "params": [
+            "role-m-06-a",
+            "m-06",
+            "person-m-06-a",
+            "Lead",
+            0,
+          ],
+          "sql": "INSERT OR REPLACE INTO media_roles (id, media_id, person_id, role, order_index) VALUES (?, ?, ?, ?, ?);",
+        },
+        {
+          "params": [
+            "m-06",
+          ],
+          "sql": "DELETE FROM media_trailers WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-06",
+          ],
+          "sql": "DELETE FROM media_seasons WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-06",
+          ],
+          "sql": "DELETE FROM media_episodes WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-06",
+          ],
+          "sql": "DELETE FROM media_file_desired_formats WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-06",
+          ],
+          "sql": "DELETE FROM media_files WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "ed-m-06-x-x",
+            "m-06",
+            null,
+            null,
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "INSERT OR IGNORE INTO media_editions (id, media_id, season, episode, name, name_user_set, duration_seconds, created_at) VALUES (?, ?, ?, ?, '', 0, NULL, ?);",
+        },
+        {
+          "params": [
+            "file-m-06-1",
+            "m-06",
+            "m-06.mkv",
+            null,
+            null,
+            "2024-01-01T00:00:00.000Z",
+            "local",
+            "ed-m-06-x-x",
+            null,
+            null,
+          ],
+          "sql": "INSERT OR REPLACE INTO media_files (id, media_id, filename, season, episode, added_at, status, edition_id, content_sha256, original_size_bytes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
+        },
+        {
+          "params": [
+            "gen-0047",
+            "m-06",
+            "file-m-06-1",
+            "1080p",
+            "h264",
+            5000,
+          ],
+          "sql": "INSERT OR IGNORE INTO media_file_desired_formats (id, media_id, file_id, quality, codec, bitrate_kbps) VALUES (?, ?, ?, ?, ?, ?);",
+        },
+        {
+          "params": [
+            "m-06",
+          ],
+          "sql": "DELETE FROM media_skip_markers WHERE media_id = ?;",
+        },
+      ],
+      "playback": [
+        {
+          "params": [
+            "m-06",
+          ],
+          "sql": "DELETE FROM media_format_chunks WHERE format_id IN (SELECT id FROM media_formats WHERE media_id = ?);",
+        },
+        {
+          "params": [
+            "m-06",
+          ],
+          "sql": "DELETE FROM media_chapters WHERE format_id IN (SELECT id FROM media_formats WHERE media_id = ?);",
+        },
+        {
+          "params": [
+            "m-06",
+          ],
+          "sql": "DELETE FROM media_audio_chunks WHERE track_id IN (SELECT id FROM media_audio_tracks WHERE media_id = ?);",
+        },
+        {
+          "params": [
+            "m-06",
+          ],
+          "sql": "DELETE FROM media_audio_tracks WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-06",
+          ],
+          "sql": "DELETE FROM media_subtitles WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "fmt-m-06-1",
+            "m-06",
+            "file-m-06-1",
+            "1080p",
+            "h264",
+            null,
+            5000,
+            null,
+            null,
+            7200,
+            1500000000,
+            1500,
+            1,
+            "m-06",
+            "fmt-m-06-1",
+            "file-m-06-1",
+            "1080p",
+            "fmt-m-06-1",
+          ],
+          "sql": "INSERT OR REPLACE INTO media_formats (
+        id, media_id, file_id, quality, codec, codec_string, bitrate_kbps, init_key, init_size, duration_seconds, total_size, size_mb, is_source,
+        preview_sheets
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, (SELECT preview_sheets FROM media_formats WHERE media_id = ? AND (id = ? OR (file_id = ? AND quality = ?)) ORDER BY id = ? DESC LIMIT 1));",
+        },
+        {
+          "params": [
+            "gen-0048",
+            "fmt-m-06-1",
+            "c1",
+            0,
+            100,
+            0,
+          ],
+          "sql": "INSERT OR REPLACE INTO media_format_chunks (id, format_id, chunk_key, order_index, size_bytes, start_seconds) VALUES (?, ?, ?, ?, ?, ?);",
+        },
+        {
+          "params": [
+            "m-06",
+            "fmt-m-06-1",
+          ],
+          "sql": "DELETE FROM media_formats WHERE media_id = ? AND id NOT IN (?);",
+        },
+        {
+          "params": [
+            "aud-m-06-1",
+            "m-06",
+            "file-m-06-1",
+            null,
+            "en",
+            "English",
+            1,
+            "muxed",
+            "aac",
+            null,
+            null,
+            null,
+            7200,
+            100000000,
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "INSERT OR REPLACE INTO media_audio_tracks (
+        id, media_id, file_id, episode_id, language, label, is_default, source, codec, codec_string, init_key, init_size, duration_seconds, total_size, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
+        },
+        {
+          "params": [
+            "gen-0049",
+            "aud-m-06-1",
+            "a1",
+            0,
+            50,
+            0,
+          ],
+          "sql": "INSERT OR REPLACE INTO media_audio_chunks (id, track_id, chunk_key, order_index, size_bytes, start_seconds) VALUES (?, ?, ?, ?, ?, ?);",
+        },
+      ],
+      "templates": [
+        {
+          "params": [
+            "m-06",
+          ],
+          "sql": "DELETE FROM media_skip_analysis WHERE media_id = ?;",
+        },
+      ],
+    },
+    "opId": "op-upsert-6",
+    "opType": "media.upsert",
+  },
+  {
+    "groups": {
+      "core": [
+        {
+          "params": [
+            "m-07",
+            "movie",
+            "Title m-07",
+            null,
+            "en",
+            null,
+            "2024",
+            7,
+            null,
+            null,
+            "2024-01-01T00:00:00.000Z",
+            "2024-01-01T00:00:00.000Z",
+            1,
+            0,
+            null,
+            null,
+          ],
+          "sql": "INSERT INTO media_items (
+      id, type, title, original_title, original_language, overview, year, rating, poster_path, backdrop_path,
+      added_at, updated_at, has_files, progress_pct, last_watched_at, total_episodes
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET
+      type = excluded.type,
+      title = excluded.title,
+      original_title = excluded.original_title,
+      original_language = excluded.original_language,
+      overview = excluded.overview,
+      year = excluded.year,
+      rating = excluded.rating,
+      poster_path = excluded.poster_path,
+      backdrop_path = excluded.backdrop_path,
+      added_at = excluded.added_at,
+      updated_at = excluded.updated_at,
+      has_files = excluded.has_files,
+      total_episodes = excluded.total_episodes
+    WHERE excluded.updated_at >= media_items.updated_at;",
+        },
+        {
+          "params": [
+            "m-07",
+            "m-07",
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "DELETE FROM media_external_ids WHERE media_id = ? AND EXISTS (SELECT 1 FROM media_items WHERE id = ? AND updated_at = ?);",
+        },
+        {
+          "params": [
+            "gen-0050",
+            "m-07",
+            "movie",
+            "tmdb",
+            "1007",
+            "m-07",
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "INSERT OR IGNORE INTO media_external_ids (id, media_id, media_type, source, external_id)
+       SELECT ?, ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM media_items WHERE id = ? AND updated_at = ?);",
+        },
+        {
+          "params": [
+            "gen-0051",
+            "m-07",
+            "movie",
+            "imdb",
+            "ttm-07",
+            "m-07",
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "INSERT OR IGNORE INTO media_external_ids (id, media_id, media_type, source, external_id)
+       SELECT ?, ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM media_items WHERE id = ? AND updated_at = ?);",
+        },
+        {
+          "params": [
+            "m-07",
+            "m-07",
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "DELETE FROM media_genres WHERE media_id = ? AND EXISTS (SELECT 1 FROM media_items WHERE id = ? AND updated_at = ?);",
+        },
+        {
+          "params": [
+            "gen-0052",
+            "m-07",
+            28,
+            "m-07",
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "INSERT OR IGNORE INTO media_genres (id, media_id, genre_id)
+       SELECT ?, ?, ? WHERE EXISTS (SELECT 1 FROM media_items WHERE id = ? AND updated_at = ?);",
+        },
+        {
+          "params": [
+            "gen-0053",
+            "m-07",
+            18,
+            "m-07",
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "INSERT OR IGNORE INTO media_genres (id, media_id, genre_id)
+       SELECT ?, ?, ? WHERE EXISTS (SELECT 1 FROM media_items WHERE id = ? AND updated_at = ?);",
+        },
+      ],
+      "metadata": [
+        {
+          "params": [
+            "m-07",
+          ],
+          "sql": "DELETE FROM media_roles WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "person-m-07-a",
+            "Actor A",
+            null,
+          ],
+          "sql": "INSERT OR REPLACE INTO people (id, name, profile_path) VALUES (?, ?, ?);",
+        },
+        {
+          "params": [
+            "role-m-07-a",
+            "m-07",
+            "person-m-07-a",
+            "Lead",
+            0,
+          ],
+          "sql": "INSERT OR REPLACE INTO media_roles (id, media_id, person_id, role, order_index) VALUES (?, ?, ?, ?, ?);",
+        },
+        {
+          "params": [
+            "m-07",
+          ],
+          "sql": "DELETE FROM media_trailers WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-07",
+          ],
+          "sql": "DELETE FROM media_seasons WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-07",
+          ],
+          "sql": "DELETE FROM media_episodes WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-07",
+          ],
+          "sql": "DELETE FROM media_file_desired_formats WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-07",
+          ],
+          "sql": "DELETE FROM media_files WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "ed-m-07-x-x",
+            "m-07",
+            null,
+            null,
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "INSERT OR IGNORE INTO media_editions (id, media_id, season, episode, name, name_user_set, duration_seconds, created_at) VALUES (?, ?, ?, ?, '', 0, NULL, ?);",
+        },
+        {
+          "params": [
+            "file-m-07-1",
+            "m-07",
+            "m-07.mkv",
+            null,
+            null,
+            "2024-01-01T00:00:00.000Z",
+            "local",
+            "ed-m-07-x-x",
+            null,
+            null,
+          ],
+          "sql": "INSERT OR REPLACE INTO media_files (id, media_id, filename, season, episode, added_at, status, edition_id, content_sha256, original_size_bytes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
+        },
+        {
+          "params": [
+            "gen-0054",
+            "m-07",
+            "file-m-07-1",
+            "1080p",
+            "h264",
+            5000,
+          ],
+          "sql": "INSERT OR IGNORE INTO media_file_desired_formats (id, media_id, file_id, quality, codec, bitrate_kbps) VALUES (?, ?, ?, ?, ?, ?);",
+        },
+        {
+          "params": [
+            "m-07",
+          ],
+          "sql": "DELETE FROM media_skip_markers WHERE media_id = ?;",
+        },
+      ],
+      "playback": [
+        {
+          "params": [
+            "m-07",
+          ],
+          "sql": "DELETE FROM media_format_chunks WHERE format_id IN (SELECT id FROM media_formats WHERE media_id = ?);",
+        },
+        {
+          "params": [
+            "m-07",
+          ],
+          "sql": "DELETE FROM media_chapters WHERE format_id IN (SELECT id FROM media_formats WHERE media_id = ?);",
+        },
+        {
+          "params": [
+            "m-07",
+          ],
+          "sql": "DELETE FROM media_audio_chunks WHERE track_id IN (SELECT id FROM media_audio_tracks WHERE media_id = ?);",
+        },
+        {
+          "params": [
+            "m-07",
+          ],
+          "sql": "DELETE FROM media_audio_tracks WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-07",
+          ],
+          "sql": "DELETE FROM media_subtitles WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "fmt-m-07-1",
+            "m-07",
+            "file-m-07-1",
+            "1080p",
+            "h264",
+            null,
+            5000,
+            null,
+            null,
+            7200,
+            1500000000,
+            1500,
+            1,
+            "m-07",
+            "fmt-m-07-1",
+            "file-m-07-1",
+            "1080p",
+            "fmt-m-07-1",
+          ],
+          "sql": "INSERT OR REPLACE INTO media_formats (
+        id, media_id, file_id, quality, codec, codec_string, bitrate_kbps, init_key, init_size, duration_seconds, total_size, size_mb, is_source,
+        preview_sheets
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, (SELECT preview_sheets FROM media_formats WHERE media_id = ? AND (id = ? OR (file_id = ? AND quality = ?)) ORDER BY id = ? DESC LIMIT 1));",
+        },
+        {
+          "params": [
+            "gen-0055",
+            "fmt-m-07-1",
+            "c1",
+            0,
+            100,
+            0,
+          ],
+          "sql": "INSERT OR REPLACE INTO media_format_chunks (id, format_id, chunk_key, order_index, size_bytes, start_seconds) VALUES (?, ?, ?, ?, ?, ?);",
+        },
+        {
+          "params": [
+            "m-07",
+            "fmt-m-07-1",
+          ],
+          "sql": "DELETE FROM media_formats WHERE media_id = ? AND id NOT IN (?);",
+        },
+        {
+          "params": [
+            "aud-m-07-1",
+            "m-07",
+            "file-m-07-1",
+            null,
+            "en",
+            "English",
+            1,
+            "muxed",
+            "aac",
+            null,
+            null,
+            null,
+            7200,
+            100000000,
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "INSERT OR REPLACE INTO media_audio_tracks (
+        id, media_id, file_id, episode_id, language, label, is_default, source, codec, codec_string, init_key, init_size, duration_seconds, total_size, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
+        },
+        {
+          "params": [
+            "gen-0056",
+            "aud-m-07-1",
+            "a1",
+            0,
+            50,
+            0,
+          ],
+          "sql": "INSERT OR REPLACE INTO media_audio_chunks (id, track_id, chunk_key, order_index, size_bytes, start_seconds) VALUES (?, ?, ?, ?, ?, ?);",
+        },
+      ],
+      "templates": [
+        {
+          "params": [
+            "m-07",
+          ],
+          "sql": "DELETE FROM media_skip_analysis WHERE media_id = ?;",
+        },
+      ],
+    },
+    "opId": "op-upsert-7",
+    "opType": "media.upsert",
+  },
+  {
+    "groups": {
+      "core": [
+        {
+          "params": [
+            "m-08",
+            "movie",
+            "Title m-08",
+            null,
+            "en",
+            null,
+            "2024",
+            7,
+            null,
+            null,
+            "2024-01-01T00:00:00.000Z",
+            "2024-01-01T00:00:00.000Z",
+            1,
+            0,
+            null,
+            null,
+          ],
+          "sql": "INSERT INTO media_items (
+      id, type, title, original_title, original_language, overview, year, rating, poster_path, backdrop_path,
+      added_at, updated_at, has_files, progress_pct, last_watched_at, total_episodes
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET
+      type = excluded.type,
+      title = excluded.title,
+      original_title = excluded.original_title,
+      original_language = excluded.original_language,
+      overview = excluded.overview,
+      year = excluded.year,
+      rating = excluded.rating,
+      poster_path = excluded.poster_path,
+      backdrop_path = excluded.backdrop_path,
+      added_at = excluded.added_at,
+      updated_at = excluded.updated_at,
+      has_files = excluded.has_files,
+      total_episodes = excluded.total_episodes
+    WHERE excluded.updated_at >= media_items.updated_at;",
+        },
+        {
+          "params": [
+            "m-08",
+            "m-08",
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "DELETE FROM media_external_ids WHERE media_id = ? AND EXISTS (SELECT 1 FROM media_items WHERE id = ? AND updated_at = ?);",
+        },
+        {
+          "params": [
+            "gen-0057",
+            "m-08",
+            "movie",
+            "tmdb",
+            "1008",
+            "m-08",
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "INSERT OR IGNORE INTO media_external_ids (id, media_id, media_type, source, external_id)
+       SELECT ?, ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM media_items WHERE id = ? AND updated_at = ?);",
+        },
+        {
+          "params": [
+            "gen-0058",
+            "m-08",
+            "movie",
+            "imdb",
+            "ttm-08",
+            "m-08",
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "INSERT OR IGNORE INTO media_external_ids (id, media_id, media_type, source, external_id)
+       SELECT ?, ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM media_items WHERE id = ? AND updated_at = ?);",
+        },
+        {
+          "params": [
+            "m-08",
+            "m-08",
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "DELETE FROM media_genres WHERE media_id = ? AND EXISTS (SELECT 1 FROM media_items WHERE id = ? AND updated_at = ?);",
+        },
+        {
+          "params": [
+            "gen-0059",
+            "m-08",
+            28,
+            "m-08",
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "INSERT OR IGNORE INTO media_genres (id, media_id, genre_id)
+       SELECT ?, ?, ? WHERE EXISTS (SELECT 1 FROM media_items WHERE id = ? AND updated_at = ?);",
+        },
+        {
+          "params": [
+            "gen-0060",
+            "m-08",
+            18,
+            "m-08",
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "INSERT OR IGNORE INTO media_genres (id, media_id, genre_id)
+       SELECT ?, ?, ? WHERE EXISTS (SELECT 1 FROM media_items WHERE id = ? AND updated_at = ?);",
+        },
+      ],
+      "metadata": [
+        {
+          "params": [
+            "m-08",
+          ],
+          "sql": "DELETE FROM media_roles WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "person-m-08-a",
+            "Actor A",
+            null,
+          ],
+          "sql": "INSERT OR REPLACE INTO people (id, name, profile_path) VALUES (?, ?, ?);",
+        },
+        {
+          "params": [
+            "role-m-08-a",
+            "m-08",
+            "person-m-08-a",
+            "Lead",
+            0,
+          ],
+          "sql": "INSERT OR REPLACE INTO media_roles (id, media_id, person_id, role, order_index) VALUES (?, ?, ?, ?, ?);",
+        },
+        {
+          "params": [
+            "m-08",
+          ],
+          "sql": "DELETE FROM media_trailers WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-08",
+          ],
+          "sql": "DELETE FROM media_seasons WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-08",
+          ],
+          "sql": "DELETE FROM media_episodes WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-08",
+          ],
+          "sql": "DELETE FROM media_file_desired_formats WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-08",
+          ],
+          "sql": "DELETE FROM media_files WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "ed-m-08-x-x",
+            "m-08",
+            null,
+            null,
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "INSERT OR IGNORE INTO media_editions (id, media_id, season, episode, name, name_user_set, duration_seconds, created_at) VALUES (?, ?, ?, ?, '', 0, NULL, ?);",
+        },
+        {
+          "params": [
+            "file-m-08-1",
+            "m-08",
+            "m-08.mkv",
+            null,
+            null,
+            "2024-01-01T00:00:00.000Z",
+            "local",
+            "ed-m-08-x-x",
+            null,
+            null,
+          ],
+          "sql": "INSERT OR REPLACE INTO media_files (id, media_id, filename, season, episode, added_at, status, edition_id, content_sha256, original_size_bytes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
+        },
+        {
+          "params": [
+            "gen-0061",
+            "m-08",
+            "file-m-08-1",
+            "1080p",
+            "h264",
+            5000,
+          ],
+          "sql": "INSERT OR IGNORE INTO media_file_desired_formats (id, media_id, file_id, quality, codec, bitrate_kbps) VALUES (?, ?, ?, ?, ?, ?);",
+        },
+        {
+          "params": [
+            "m-08",
+          ],
+          "sql": "DELETE FROM media_skip_markers WHERE media_id = ?;",
+        },
+      ],
+      "playback": [
+        {
+          "params": [
+            "m-08",
+          ],
+          "sql": "DELETE FROM media_format_chunks WHERE format_id IN (SELECT id FROM media_formats WHERE media_id = ?);",
+        },
+        {
+          "params": [
+            "m-08",
+          ],
+          "sql": "DELETE FROM media_chapters WHERE format_id IN (SELECT id FROM media_formats WHERE media_id = ?);",
+        },
+        {
+          "params": [
+            "m-08",
+          ],
+          "sql": "DELETE FROM media_audio_chunks WHERE track_id IN (SELECT id FROM media_audio_tracks WHERE media_id = ?);",
+        },
+        {
+          "params": [
+            "m-08",
+          ],
+          "sql": "DELETE FROM media_audio_tracks WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-08",
+          ],
+          "sql": "DELETE FROM media_subtitles WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "fmt-m-08-1",
+            "m-08",
+            "file-m-08-1",
+            "1080p",
+            "h264",
+            null,
+            5000,
+            null,
+            null,
+            7200,
+            1500000000,
+            1500,
+            1,
+            "m-08",
+            "fmt-m-08-1",
+            "file-m-08-1",
+            "1080p",
+            "fmt-m-08-1",
+          ],
+          "sql": "INSERT OR REPLACE INTO media_formats (
+        id, media_id, file_id, quality, codec, codec_string, bitrate_kbps, init_key, init_size, duration_seconds, total_size, size_mb, is_source,
+        preview_sheets
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, (SELECT preview_sheets FROM media_formats WHERE media_id = ? AND (id = ? OR (file_id = ? AND quality = ?)) ORDER BY id = ? DESC LIMIT 1));",
+        },
+        {
+          "params": [
+            "gen-0062",
+            "fmt-m-08-1",
+            "c1",
+            0,
+            100,
+            0,
+          ],
+          "sql": "INSERT OR REPLACE INTO media_format_chunks (id, format_id, chunk_key, order_index, size_bytes, start_seconds) VALUES (?, ?, ?, ?, ?, ?);",
+        },
+        {
+          "params": [
+            "m-08",
+            "fmt-m-08-1",
+          ],
+          "sql": "DELETE FROM media_formats WHERE media_id = ? AND id NOT IN (?);",
+        },
+        {
+          "params": [
+            "aud-m-08-1",
+            "m-08",
+            "file-m-08-1",
+            null,
+            "en",
+            "English",
+            1,
+            "muxed",
+            "aac",
+            null,
+            null,
+            null,
+            7200,
+            100000000,
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "INSERT OR REPLACE INTO media_audio_tracks (
+        id, media_id, file_id, episode_id, language, label, is_default, source, codec, codec_string, init_key, init_size, duration_seconds, total_size, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
+        },
+        {
+          "params": [
+            "gen-0063",
+            "aud-m-08-1",
+            "a1",
+            0,
+            50,
+            0,
+          ],
+          "sql": "INSERT OR REPLACE INTO media_audio_chunks (id, track_id, chunk_key, order_index, size_bytes, start_seconds) VALUES (?, ?, ?, ?, ?, ?);",
+        },
+      ],
+      "templates": [
+        {
+          "params": [
+            "m-08",
+          ],
+          "sql": "DELETE FROM media_skip_analysis WHERE media_id = ?;",
+        },
+      ],
+    },
+    "opId": "op-upsert-8",
+    "opType": "media.upsert",
+  },
+  {
+    "groups": {
+      "core": [
+        {
+          "params": [
+            "m-09",
+            "movie",
+            "Title m-09",
+            null,
+            "en",
+            null,
+            "2024",
+            7,
+            null,
+            null,
+            "2024-01-01T00:00:00.000Z",
+            "2024-01-01T00:00:00.000Z",
+            1,
+            0,
+            null,
+            null,
+          ],
+          "sql": "INSERT INTO media_items (
+      id, type, title, original_title, original_language, overview, year, rating, poster_path, backdrop_path,
+      added_at, updated_at, has_files, progress_pct, last_watched_at, total_episodes
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET
+      type = excluded.type,
+      title = excluded.title,
+      original_title = excluded.original_title,
+      original_language = excluded.original_language,
+      overview = excluded.overview,
+      year = excluded.year,
+      rating = excluded.rating,
+      poster_path = excluded.poster_path,
+      backdrop_path = excluded.backdrop_path,
+      added_at = excluded.added_at,
+      updated_at = excluded.updated_at,
+      has_files = excluded.has_files,
+      total_episodes = excluded.total_episodes
+    WHERE excluded.updated_at >= media_items.updated_at;",
+        },
+        {
+          "params": [
+            "m-09",
+            "m-09",
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "DELETE FROM media_external_ids WHERE media_id = ? AND EXISTS (SELECT 1 FROM media_items WHERE id = ? AND updated_at = ?);",
+        },
+        {
+          "params": [
+            "gen-0064",
+            "m-09",
+            "movie",
+            "tmdb",
+            "1009",
+            "m-09",
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "INSERT OR IGNORE INTO media_external_ids (id, media_id, media_type, source, external_id)
+       SELECT ?, ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM media_items WHERE id = ? AND updated_at = ?);",
+        },
+        {
+          "params": [
+            "gen-0065",
+            "m-09",
+            "movie",
+            "imdb",
+            "ttm-09",
+            "m-09",
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "INSERT OR IGNORE INTO media_external_ids (id, media_id, media_type, source, external_id)
+       SELECT ?, ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM media_items WHERE id = ? AND updated_at = ?);",
+        },
+        {
+          "params": [
+            "m-09",
+            "m-09",
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "DELETE FROM media_genres WHERE media_id = ? AND EXISTS (SELECT 1 FROM media_items WHERE id = ? AND updated_at = ?);",
+        },
+        {
+          "params": [
+            "gen-0066",
+            "m-09",
+            28,
+            "m-09",
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "INSERT OR IGNORE INTO media_genres (id, media_id, genre_id)
+       SELECT ?, ?, ? WHERE EXISTS (SELECT 1 FROM media_items WHERE id = ? AND updated_at = ?);",
+        },
+        {
+          "params": [
+            "gen-0067",
+            "m-09",
+            18,
+            "m-09",
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "INSERT OR IGNORE INTO media_genres (id, media_id, genre_id)
+       SELECT ?, ?, ? WHERE EXISTS (SELECT 1 FROM media_items WHERE id = ? AND updated_at = ?);",
+        },
+      ],
+      "metadata": [
+        {
+          "params": [
+            "m-09",
+          ],
+          "sql": "DELETE FROM media_roles WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "person-m-09-a",
+            "Actor A",
+            null,
+          ],
+          "sql": "INSERT OR REPLACE INTO people (id, name, profile_path) VALUES (?, ?, ?);",
+        },
+        {
+          "params": [
+            "role-m-09-a",
+            "m-09",
+            "person-m-09-a",
+            "Lead",
+            0,
+          ],
+          "sql": "INSERT OR REPLACE INTO media_roles (id, media_id, person_id, role, order_index) VALUES (?, ?, ?, ?, ?);",
+        },
+        {
+          "params": [
+            "m-09",
+          ],
+          "sql": "DELETE FROM media_trailers WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-09",
+          ],
+          "sql": "DELETE FROM media_seasons WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-09",
+          ],
+          "sql": "DELETE FROM media_episodes WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-09",
+          ],
+          "sql": "DELETE FROM media_file_desired_formats WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-09",
+          ],
+          "sql": "DELETE FROM media_files WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "ed-m-09-x-x",
+            "m-09",
+            null,
+            null,
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "INSERT OR IGNORE INTO media_editions (id, media_id, season, episode, name, name_user_set, duration_seconds, created_at) VALUES (?, ?, ?, ?, '', 0, NULL, ?);",
+        },
+        {
+          "params": [
+            "file-m-09-1",
+            "m-09",
+            "m-09.mkv",
+            null,
+            null,
+            "2024-01-01T00:00:00.000Z",
+            "local",
+            "ed-m-09-x-x",
+            null,
+            null,
+          ],
+          "sql": "INSERT OR REPLACE INTO media_files (id, media_id, filename, season, episode, added_at, status, edition_id, content_sha256, original_size_bytes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
+        },
+        {
+          "params": [
+            "gen-0068",
+            "m-09",
+            "file-m-09-1",
+            "1080p",
+            "h264",
+            5000,
+          ],
+          "sql": "INSERT OR IGNORE INTO media_file_desired_formats (id, media_id, file_id, quality, codec, bitrate_kbps) VALUES (?, ?, ?, ?, ?, ?);",
+        },
+        {
+          "params": [
+            "m-09",
+          ],
+          "sql": "DELETE FROM media_skip_markers WHERE media_id = ?;",
+        },
+      ],
+      "playback": [
+        {
+          "params": [
+            "m-09",
+          ],
+          "sql": "DELETE FROM media_format_chunks WHERE format_id IN (SELECT id FROM media_formats WHERE media_id = ?);",
+        },
+        {
+          "params": [
+            "m-09",
+          ],
+          "sql": "DELETE FROM media_chapters WHERE format_id IN (SELECT id FROM media_formats WHERE media_id = ?);",
+        },
+        {
+          "params": [
+            "m-09",
+          ],
+          "sql": "DELETE FROM media_audio_chunks WHERE track_id IN (SELECT id FROM media_audio_tracks WHERE media_id = ?);",
+        },
+        {
+          "params": [
+            "m-09",
+          ],
+          "sql": "DELETE FROM media_audio_tracks WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-09",
+          ],
+          "sql": "DELETE FROM media_subtitles WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "fmt-m-09-1",
+            "m-09",
+            "file-m-09-1",
+            "1080p",
+            "h264",
+            null,
+            5000,
+            null,
+            null,
+            7200,
+            1500000000,
+            1500,
+            1,
+            "m-09",
+            "fmt-m-09-1",
+            "file-m-09-1",
+            "1080p",
+            "fmt-m-09-1",
+          ],
+          "sql": "INSERT OR REPLACE INTO media_formats (
+        id, media_id, file_id, quality, codec, codec_string, bitrate_kbps, init_key, init_size, duration_seconds, total_size, size_mb, is_source,
+        preview_sheets
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, (SELECT preview_sheets FROM media_formats WHERE media_id = ? AND (id = ? OR (file_id = ? AND quality = ?)) ORDER BY id = ? DESC LIMIT 1));",
+        },
+        {
+          "params": [
+            "gen-0069",
+            "fmt-m-09-1",
+            "c1",
+            0,
+            100,
+            0,
+          ],
+          "sql": "INSERT OR REPLACE INTO media_format_chunks (id, format_id, chunk_key, order_index, size_bytes, start_seconds) VALUES (?, ?, ?, ?, ?, ?);",
+        },
+        {
+          "params": [
+            "m-09",
+            "fmt-m-09-1",
+          ],
+          "sql": "DELETE FROM media_formats WHERE media_id = ? AND id NOT IN (?);",
+        },
+        {
+          "params": [
+            "aud-m-09-1",
+            "m-09",
+            "file-m-09-1",
+            null,
+            "en",
+            "English",
+            1,
+            "muxed",
+            "aac",
+            null,
+            null,
+            null,
+            7200,
+            100000000,
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "INSERT OR REPLACE INTO media_audio_tracks (
+        id, media_id, file_id, episode_id, language, label, is_default, source, codec, codec_string, init_key, init_size, duration_seconds, total_size, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
+        },
+        {
+          "params": [
+            "gen-0070",
+            "aud-m-09-1",
+            "a1",
+            0,
+            50,
+            0,
+          ],
+          "sql": "INSERT OR REPLACE INTO media_audio_chunks (id, track_id, chunk_key, order_index, size_bytes, start_seconds) VALUES (?, ?, ?, ?, ?, ?);",
+        },
+      ],
+      "templates": [
+        {
+          "params": [
+            "m-09",
+          ],
+          "sql": "DELETE FROM media_skip_analysis WHERE media_id = ?;",
+        },
+      ],
+    },
+    "opId": "op-upsert-9",
+    "opType": "media.upsert",
+  },
+  {
+    "groups": {
+      "core": [
+        {
+          "params": [
+            10,
+            "2024-01-01T00:00:00.000Z",
+            "m-00",
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "UPDATE media_items SET progress_pct = ?, last_watched_at = ?
+     WHERE id = ? AND (last_watched_at IS NULL OR last_watched_at <= ?);",
+        },
+      ],
+    },
+    "opId": "op-progress-0",
+    "opType": "media.progress",
+  },
+  {
+    "groups": {
+      "core": [
+        {
+          "params": [
+            20,
+            "2024-01-01T00:00:00.000Z",
+            "m-01",
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "UPDATE media_items SET progress_pct = ?, last_watched_at = ?
+     WHERE id = ? AND (last_watched_at IS NULL OR last_watched_at <= ?);",
+        },
+      ],
+    },
+    "opId": "op-progress-1",
+    "opType": "media.progress",
+  },
+  {
+    "groups": {
+      "core": [
+        {
+          "params": [
+            30,
+            "2024-01-01T00:00:00.000Z",
+            "m-02",
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "UPDATE media_items SET progress_pct = ?, last_watched_at = ?
+     WHERE id = ? AND (last_watched_at IS NULL OR last_watched_at <= ?);",
+        },
+      ],
+    },
+    "opId": "op-progress-2",
+    "opType": "media.progress",
+  },
+  {
+    "groups": {
+      "core": [
+        {
+          "params": [
+            40,
+            "2024-01-01T00:00:00.000Z",
+            "m-03",
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "UPDATE media_items SET progress_pct = ?, last_watched_at = ?
+     WHERE id = ? AND (last_watched_at IS NULL OR last_watched_at <= ?);",
+        },
+      ],
+    },
+    "opId": "op-progress-3",
+    "opType": "media.progress",
+  },
+  {
+    "groups": {
+      "core": [
+        {
+          "params": [
+            50,
+            "2024-01-01T00:00:00.000Z",
+            "m-04",
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "UPDATE media_items SET progress_pct = ?, last_watched_at = ?
+     WHERE id = ? AND (last_watched_at IS NULL OR last_watched_at <= ?);",
+        },
+      ],
+    },
+    "opId": "op-progress-4",
+    "opType": "media.progress",
+  },
+  {
+    "groups": {
+      "core": [
+        {
+          "params": [
+            "key-0",
+            "value-0",
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "INSERT INTO app_settings (key, value, updated_at) VALUES (?, ?, ?)
+     ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
+     WHERE excluded.updated_at >= app_settings.updated_at;",
+        },
+      ],
+    },
+    "opId": "op-set-0",
+    "opType": "setting.set",
+  },
+  {
+    "groups": {
+      "core": [
+        {
+          "params": [
+            "key-1",
+            "value-1",
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "INSERT INTO app_settings (key, value, updated_at) VALUES (?, ?, ?)
+     ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
+     WHERE excluded.updated_at >= app_settings.updated_at;",
+        },
+      ],
+    },
+    "opId": "op-set-1",
+    "opType": "setting.set",
+  },
+  {
+    "groups": {
+      "core": [
+        {
+          "params": [
+            "key-2",
+            "value-2",
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "INSERT INTO app_settings (key, value, updated_at) VALUES (?, ?, ?)
+     ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
+     WHERE excluded.updated_at >= app_settings.updated_at;",
+        },
+      ],
+    },
+    "opId": "op-set-2",
+    "opType": "setting.set",
+  },
+  {
+    "groups": {
+      "core": [
+        {
+          "params": [
+            "key-3",
+            "value-3",
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "INSERT INTO app_settings (key, value, updated_at) VALUES (?, ?, ?)
+     ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
+     WHERE excluded.updated_at >= app_settings.updated_at;",
+        },
+      ],
+    },
+    "opId": "op-set-3",
+    "opType": "setting.set",
+  },
+  {
+    "groups": {
+      "core": [
+        {
+          "params": [
+            "key-4",
+            "value-4",
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "INSERT INTO app_settings (key, value, updated_at) VALUES (?, ?, ?)
+     ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
+     WHERE excluded.updated_at >= app_settings.updated_at;",
+        },
+      ],
+    },
+    "opId": "op-set-4",
+    "opType": "setting.set",
+  },
+  {
+    "groups": {
+      "core": [
+        {
+          "params": [
+            "pl-0",
+            "Playlist 0",
+            "pl-0",
+            0,
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "INSERT OR REPLACE INTO playlists (id, name, slug, is_system, created_at) VALUES (?, ?, ?, ?, ?);",
+        },
+      ],
+    },
+    "opId": "op-pl-create-0",
+    "opType": "playlist.create",
+  },
+  {
+    "groups": {
+      "core": [
+        {
+          "params": [
+            "pl-1",
+            "Playlist 1",
+            "pl-1",
+            0,
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "INSERT OR REPLACE INTO playlists (id, name, slug, is_system, created_at) VALUES (?, ?, ?, ?, ?);",
+        },
+      ],
+    },
+    "opId": "op-pl-create-1",
+    "opType": "playlist.create",
+  },
+  {
+    "groups": {
+      "core": [
+        {
+          "params": [
+            "pl-2",
+            "Playlist 2",
+            "pl-2",
+            0,
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "INSERT OR REPLACE INTO playlists (id, name, slug, is_system, created_at) VALUES (?, ?, ?, ?, ?);",
+        },
+      ],
+    },
+    "opId": "op-pl-create-2",
+    "opType": "playlist.create",
+  },
+  {
+    "groups": {
+      "core": [
+        {
+          "params": [
+            "pli-0",
+            "pl-0",
+            "m-00",
+            "2024-01-01T00:00:00.000Z",
+            "pl-0",
+            "m-00",
+          ],
+          "sql": "INSERT OR IGNORE INTO playlist_items (id, playlist_id, media_id, added_at)
+     SELECT ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM playlists WHERE id = ?) AND EXISTS (SELECT 1 FROM media_items WHERE id = ?);",
+        },
+      ],
+    },
+    "opId": "op-pl-item-add",
+    "opType": "playlist.item.add",
+  },
+  {
+    "groups": {
+      "core": [
+        {
+          "params": [
+            "pl-0",
+            "m-00",
+          ],
+          "sql": "DELETE FROM playlist_items WHERE playlist_id = ? AND media_id = ?;",
+        },
+      ],
+    },
+    "opId": "op-pl-item-rm",
+    "opType": "playlist.item.remove",
+  },
+  {
+    "groups": {
+      "ingest": [
+        {
+          "params": [
+            "job-0",
+            "m-00",
+            "file-m-00-1",
+            "peer-1",
+            null,
+            "transcode",
+            "processing",
+            50,
+            null,
+            null,
+            null,
+            "2024-01-01T00:00:00.000Z",
+            "2024-01-01T00:00:00.000Z",
+            null,
+          ],
+          "sql": "INSERT INTO ingest_jobs (
+      id, media_id, file_id, worker_peer_id, owner_client_id, kind, status, progress_pct,
+      error_code, error_message, meta_json, created_at, updated_at, completed_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET
+      media_id = excluded.media_id,
+      file_id = excluded.file_id,
+      worker_peer_id = excluded.worker_peer_id,
+      owner_client_id = excluded.owner_client_id,
+      kind = excluded.kind,
+      status = excluded.status,
+      progress_pct = excluded.progress_pct,
+      error_code = excluded.error_code,
+      error_message = excluded.error_message,
+      meta_json = excluded.meta_json,
+      updated_at = excluded.updated_at,
+      completed_at = excluded.completed_at;",
+        },
+      ],
+    },
+    "opId": "op-ij-up-0",
+    "opType": "ingest.job.upsert",
+  },
+  {
+    "groups": {
+      "ingest": [
+        {
+          "params": [
+            "job-1",
+            "m-01",
+            "file-m-01-1",
+            "peer-1",
+            null,
+            "transcode",
+            "processing",
+            50,
+            null,
+            null,
+            null,
+            "2024-01-01T00:00:00.000Z",
+            "2024-01-01T00:00:00.000Z",
+            null,
+          ],
+          "sql": "INSERT INTO ingest_jobs (
+      id, media_id, file_id, worker_peer_id, owner_client_id, kind, status, progress_pct,
+      error_code, error_message, meta_json, created_at, updated_at, completed_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET
+      media_id = excluded.media_id,
+      file_id = excluded.file_id,
+      worker_peer_id = excluded.worker_peer_id,
+      owner_client_id = excluded.owner_client_id,
+      kind = excluded.kind,
+      status = excluded.status,
+      progress_pct = excluded.progress_pct,
+      error_code = excluded.error_code,
+      error_message = excluded.error_message,
+      meta_json = excluded.meta_json,
+      updated_at = excluded.updated_at,
+      completed_at = excluded.completed_at;",
+        },
+      ],
+    },
+    "opId": "op-ij-up-1",
+    "opType": "ingest.job.upsert",
+  },
+  {
+    "groups": {
+      "ingest": [
+        {
+          "params": [
+            "job-2",
+            "m-02",
+            "file-m-02-1",
+            "peer-1",
+            null,
+            "transcode",
+            "processing",
+            50,
+            null,
+            null,
+            null,
+            "2024-01-01T00:00:00.000Z",
+            "2024-01-01T00:00:00.000Z",
+            null,
+          ],
+          "sql": "INSERT INTO ingest_jobs (
+      id, media_id, file_id, worker_peer_id, owner_client_id, kind, status, progress_pct,
+      error_code, error_message, meta_json, created_at, updated_at, completed_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET
+      media_id = excluded.media_id,
+      file_id = excluded.file_id,
+      worker_peer_id = excluded.worker_peer_id,
+      owner_client_id = excluded.owner_client_id,
+      kind = excluded.kind,
+      status = excluded.status,
+      progress_pct = excluded.progress_pct,
+      error_code = excluded.error_code,
+      error_message = excluded.error_message,
+      meta_json = excluded.meta_json,
+      updated_at = excluded.updated_at,
+      completed_at = excluded.completed_at;",
+        },
+      ],
+    },
+    "opId": "op-ij-up-2",
+    "opType": "ingest.job.upsert",
+  },
+  {
+    "groups": {
+      "ingest": [
+        {
+          "params": [
+            "job-3",
+            "m-03",
+            "file-m-03-1",
+            "peer-1",
+            null,
+            "transcode",
+            "processing",
+            50,
+            null,
+            null,
+            null,
+            "2024-01-01T00:00:00.000Z",
+            "2024-01-01T00:00:00.000Z",
+            null,
+          ],
+          "sql": "INSERT INTO ingest_jobs (
+      id, media_id, file_id, worker_peer_id, owner_client_id, kind, status, progress_pct,
+      error_code, error_message, meta_json, created_at, updated_at, completed_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET
+      media_id = excluded.media_id,
+      file_id = excluded.file_id,
+      worker_peer_id = excluded.worker_peer_id,
+      owner_client_id = excluded.owner_client_id,
+      kind = excluded.kind,
+      status = excluded.status,
+      progress_pct = excluded.progress_pct,
+      error_code = excluded.error_code,
+      error_message = excluded.error_message,
+      meta_json = excluded.meta_json,
+      updated_at = excluded.updated_at,
+      completed_at = excluded.completed_at;",
+        },
+      ],
+    },
+    "opId": "op-ij-up-3",
+    "opType": "ingest.job.upsert",
+  },
+  {
+    "groups": {
+      "ingest": [
+        {
+          "params": [
+            "job-4",
+            "m-04",
+            "file-m-04-1",
+            "peer-1",
+            null,
+            "transcode",
+            "processing",
+            50,
+            null,
+            null,
+            null,
+            "2024-01-01T00:00:00.000Z",
+            "2024-01-01T00:00:00.000Z",
+            null,
+          ],
+          "sql": "INSERT INTO ingest_jobs (
+      id, media_id, file_id, worker_peer_id, owner_client_id, kind, status, progress_pct,
+      error_code, error_message, meta_json, created_at, updated_at, completed_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET
+      media_id = excluded.media_id,
+      file_id = excluded.file_id,
+      worker_peer_id = excluded.worker_peer_id,
+      owner_client_id = excluded.owner_client_id,
+      kind = excluded.kind,
+      status = excluded.status,
+      progress_pct = excluded.progress_pct,
+      error_code = excluded.error_code,
+      error_message = excluded.error_message,
+      meta_json = excluded.meta_json,
+      updated_at = excluded.updated_at,
+      completed_at = excluded.completed_at;",
+        },
+      ],
+    },
+    "opId": "op-ij-up-4",
+    "opType": "ingest.job.upsert",
+  },
+  {
+    "groups": {
+      "ingest": [
+        {
+          "params": [
+            "evt-0",
+            "job-0",
+            "info",
+            "event 0",
+            null,
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "INSERT OR IGNORE INTO ingest_job_events (id, job_id, level, message, meta_json, created_at)
+     VALUES (?, ?, ?, ?, ?, ?);",
+        },
+      ],
+    },
+    "opId": "op-ij-ev-0",
+    "opType": "ingest.job.event.add",
+  },
+  {
+    "groups": {
+      "ingest": [
+        {
+          "params": [
+            "evt-1",
+            "job-1",
+            "info",
+            "event 1",
+            null,
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "INSERT OR IGNORE INTO ingest_job_events (id, job_id, level, message, meta_json, created_at)
+     VALUES (?, ?, ?, ?, ?, ?);",
+        },
+      ],
+    },
+    "opId": "op-ij-ev-1",
+    "opType": "ingest.job.event.add",
+  },
+  {
+    "groups": {
+      "ingest": [
+        {
+          "params": [
+            "evt-2",
+            "job-2",
+            "info",
+            "event 2",
+            null,
+            "2024-01-01T00:00:00.000Z",
+          ],
+          "sql": "INSERT OR IGNORE INTO ingest_job_events (id, job_id, level, message, meta_json, created_at)
+     VALUES (?, ?, ?, ?, ?, ?);",
+        },
+      ],
+    },
+    "opId": "op-ij-ev-2",
+    "opType": "ingest.job.event.add",
+  },
+  {
+    "groups": {
+      "ingest": [
+        {
+          "params": [
+            "job-0",
+          ],
+          "sql": "DELETE FROM ingest_job_events WHERE job_id = ?;",
+        },
+        {
+          "params": [
+            "job-0",
+          ],
+          "sql": "DELETE FROM ingest_jobs WHERE id = ?;",
+        },
+      ],
+    },
+    "opId": "op-ij-del-0",
+    "opType": "ingest.job.delete",
+  },
+  {
+    "groups": {
+      "ingest": [
+        {
+          "params": [
+            "job-1",
+          ],
+          "sql": "DELETE FROM ingest_job_events WHERE job_id = ?;",
+        },
+        {
+          "params": [
+            "job-1",
+          ],
+          "sql": "DELETE FROM ingest_jobs WHERE id = ?;",
+        },
+      ],
+    },
+    "opId": "op-ij-del-1",
+    "opType": "ingest.job.delete",
+  },
+  {
+    "groups": {
+      "ingest": [
+        {
+          "params": [
+            "m-00",
+            "completed",
+            "failed",
+            "cancelled",
+          ],
+          "sql": "DELETE FROM ingest_job_events
+     WHERE job_id IN (
+       SELECT id FROM ingest_jobs WHERE media_id = ? AND status IN (?, ?, ?)
+     );",
+        },
+        {
+          "params": [
+            "m-00",
+            "completed",
+            "failed",
+            "cancelled",
+          ],
+          "sql": "DELETE FROM ingest_jobs WHERE media_id = ? AND status IN (?, ?, ?);",
+        },
+      ],
+    },
+    "opId": "op-ij-hc-0",
+    "opType": "ingest.job.history.clear",
+  },
+  {
+    "groups": {
+      "ingest": [
+        {
+          "params": [
+            "m-01",
+            "completed",
+            "failed",
+            "cancelled",
+          ],
+          "sql": "DELETE FROM ingest_job_events
+     WHERE job_id IN (
+       SELECT id FROM ingest_jobs WHERE media_id = ? AND status IN (?, ?, ?)
+     );",
+        },
+        {
+          "params": [
+            "m-01",
+            "completed",
+            "failed",
+            "cancelled",
+          ],
+          "sql": "DELETE FROM ingest_jobs WHERE media_id = ? AND status IN (?, ?, ?);",
+        },
+      ],
+    },
+    "opId": "op-ij-hc-1",
+    "opType": "ingest.job.history.clear",
+  },
+  {
+    "groups": {
+      "core": [
+        {
+          "params": [
+            "m-05",
+          ],
+          "sql": "DELETE FROM media_external_ids WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-05",
+          ],
+          "sql": "DELETE FROM media_genres WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-05",
+          ],
+          "sql": "DELETE FROM playlist_items WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-05",
+          ],
+          "sql": "DELETE FROM media_items WHERE id = ?;",
+        },
+      ],
+      "ingest": [
+        {
+          "params": [
+            "m-05",
+          ],
+          "sql": "DELETE FROM ingest_job_events WHERE job_id IN (SELECT id FROM ingest_jobs WHERE media_id = ?);",
+        },
+        {
+          "params": [
+            "m-05",
+          ],
+          "sql": "DELETE FROM ingest_jobs WHERE media_id = ?;",
+        },
+      ],
+      "metadata": [
+        {
+          "params": [
+            "m-05",
+          ],
+          "sql": "DELETE FROM media_roles WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-05",
+          ],
+          "sql": "DELETE FROM media_crew WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-05",
+          ],
+          "sql": "DELETE FROM media_trailers WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-05",
+          ],
+          "sql": "DELETE FROM media_seasons WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-05",
+          ],
+          "sql": "DELETE FROM media_episodes WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-05",
+          ],
+          "sql": "DELETE FROM media_skip_markers WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-05",
+          ],
+          "sql": "DELETE FROM media_file_desired_formats WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-05",
+          ],
+          "sql": "DELETE FROM media_files WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-05",
+          ],
+          "sql": "DELETE FROM media_editions WHERE media_id = ?;",
+        },
+      ],
+      "playback": [
+        {
+          "params": [
+            "m-05",
+          ],
+          "sql": "DELETE FROM media_format_chunks WHERE format_id IN (SELECT id FROM media_formats WHERE media_id = ?);",
+        },
+        {
+          "params": [
+            "m-05",
+          ],
+          "sql": "DELETE FROM media_chapters WHERE format_id IN (SELECT id FROM media_formats WHERE media_id = ?);",
+        },
+        {
+          "params": [
+            "m-05",
+          ],
+          "sql": "DELETE FROM media_formats WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-05",
+          ],
+          "sql": "DELETE FROM media_audio_chunks WHERE track_id IN (SELECT id FROM media_audio_tracks WHERE media_id = ?);",
+        },
+        {
+          "params": [
+            "m-05",
+          ],
+          "sql": "DELETE FROM media_audio_tracks WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-05",
+          ],
+          "sql": "DELETE FROM media_subtitles WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-05",
+          ],
+          "sql": "DELETE FROM media_local_downloads WHERE media_id = ?;",
+        },
+      ],
+      "templates": [
+        {
+          "params": [
+            "m-05",
+          ],
+          "sql": "DELETE FROM media_skip_analysis WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-05",
+          ],
+          "sql": "DELETE FROM subtitle_ocr_attempts WHERE media_id = ?;",
+        },
+      ],
+    },
+    "opId": "op-md-0",
+    "opType": "media.delete",
+  },
+  {
+    "groups": {
+      "core": [
+        {
+          "params": [
+            "m-06",
+          ],
+          "sql": "DELETE FROM media_external_ids WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-06",
+          ],
+          "sql": "DELETE FROM media_genres WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-06",
+          ],
+          "sql": "DELETE FROM playlist_items WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-06",
+          ],
+          "sql": "DELETE FROM media_items WHERE id = ?;",
+        },
+      ],
+      "ingest": [
+        {
+          "params": [
+            "m-06",
+          ],
+          "sql": "DELETE FROM ingest_job_events WHERE job_id IN (SELECT id FROM ingest_jobs WHERE media_id = ?);",
+        },
+        {
+          "params": [
+            "m-06",
+          ],
+          "sql": "DELETE FROM ingest_jobs WHERE media_id = ?;",
+        },
+      ],
+      "metadata": [
+        {
+          "params": [
+            "m-06",
+          ],
+          "sql": "DELETE FROM media_roles WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-06",
+          ],
+          "sql": "DELETE FROM media_crew WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-06",
+          ],
+          "sql": "DELETE FROM media_trailers WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-06",
+          ],
+          "sql": "DELETE FROM media_seasons WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-06",
+          ],
+          "sql": "DELETE FROM media_episodes WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-06",
+          ],
+          "sql": "DELETE FROM media_skip_markers WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-06",
+          ],
+          "sql": "DELETE FROM media_file_desired_formats WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-06",
+          ],
+          "sql": "DELETE FROM media_files WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-06",
+          ],
+          "sql": "DELETE FROM media_editions WHERE media_id = ?;",
+        },
+      ],
+      "playback": [
+        {
+          "params": [
+            "m-06",
+          ],
+          "sql": "DELETE FROM media_format_chunks WHERE format_id IN (SELECT id FROM media_formats WHERE media_id = ?);",
+        },
+        {
+          "params": [
+            "m-06",
+          ],
+          "sql": "DELETE FROM media_chapters WHERE format_id IN (SELECT id FROM media_formats WHERE media_id = ?);",
+        },
+        {
+          "params": [
+            "m-06",
+          ],
+          "sql": "DELETE FROM media_formats WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-06",
+          ],
+          "sql": "DELETE FROM media_audio_chunks WHERE track_id IN (SELECT id FROM media_audio_tracks WHERE media_id = ?);",
+        },
+        {
+          "params": [
+            "m-06",
+          ],
+          "sql": "DELETE FROM media_audio_tracks WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-06",
+          ],
+          "sql": "DELETE FROM media_subtitles WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-06",
+          ],
+          "sql": "DELETE FROM media_local_downloads WHERE media_id = ?;",
+        },
+      ],
+      "templates": [
+        {
+          "params": [
+            "m-06",
+          ],
+          "sql": "DELETE FROM media_skip_analysis WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-06",
+          ],
+          "sql": "DELETE FROM subtitle_ocr_attempts WHERE media_id = ?;",
+        },
+      ],
+    },
+    "opId": "op-md-1",
+    "opType": "media.delete",
+  },
+  {
+    "groups": {
+      "core": [
+        {
+          "params": [
+            "m-07",
+          ],
+          "sql": "DELETE FROM media_external_ids WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-07",
+          ],
+          "sql": "DELETE FROM media_genres WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-07",
+          ],
+          "sql": "DELETE FROM playlist_items WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-07",
+          ],
+          "sql": "DELETE FROM media_items WHERE id = ?;",
+        },
+      ],
+      "ingest": [
+        {
+          "params": [
+            "m-07",
+          ],
+          "sql": "DELETE FROM ingest_job_events WHERE job_id IN (SELECT id FROM ingest_jobs WHERE media_id = ?);",
+        },
+        {
+          "params": [
+            "m-07",
+          ],
+          "sql": "DELETE FROM ingest_jobs WHERE media_id = ?;",
+        },
+      ],
+      "metadata": [
+        {
+          "params": [
+            "m-07",
+          ],
+          "sql": "DELETE FROM media_roles WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-07",
+          ],
+          "sql": "DELETE FROM media_crew WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-07",
+          ],
+          "sql": "DELETE FROM media_trailers WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-07",
+          ],
+          "sql": "DELETE FROM media_seasons WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-07",
+          ],
+          "sql": "DELETE FROM media_episodes WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-07",
+          ],
+          "sql": "DELETE FROM media_skip_markers WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-07",
+          ],
+          "sql": "DELETE FROM media_file_desired_formats WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-07",
+          ],
+          "sql": "DELETE FROM media_files WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-07",
+          ],
+          "sql": "DELETE FROM media_editions WHERE media_id = ?;",
+        },
+      ],
+      "playback": [
+        {
+          "params": [
+            "m-07",
+          ],
+          "sql": "DELETE FROM media_format_chunks WHERE format_id IN (SELECT id FROM media_formats WHERE media_id = ?);",
+        },
+        {
+          "params": [
+            "m-07",
+          ],
+          "sql": "DELETE FROM media_chapters WHERE format_id IN (SELECT id FROM media_formats WHERE media_id = ?);",
+        },
+        {
+          "params": [
+            "m-07",
+          ],
+          "sql": "DELETE FROM media_formats WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-07",
+          ],
+          "sql": "DELETE FROM media_audio_chunks WHERE track_id IN (SELECT id FROM media_audio_tracks WHERE media_id = ?);",
+        },
+        {
+          "params": [
+            "m-07",
+          ],
+          "sql": "DELETE FROM media_audio_tracks WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-07",
+          ],
+          "sql": "DELETE FROM media_subtitles WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-07",
+          ],
+          "sql": "DELETE FROM media_local_downloads WHERE media_id = ?;",
+        },
+      ],
+      "templates": [
+        {
+          "params": [
+            "m-07",
+          ],
+          "sql": "DELETE FROM media_skip_analysis WHERE media_id = ?;",
+        },
+        {
+          "params": [
+            "m-07",
+          ],
+          "sql": "DELETE FROM subtitle_ocr_attempts WHERE media_id = ?;",
+        },
+      ],
+    },
+    "opId": "op-md-2",
+    "opType": "media.delete",
+  },
+  {
+    "groups": {
+      "core": [
+        {
+          "params": [
+            "pl-0",
+          ],
+          "sql": "DELETE FROM playlists WHERE id = ? AND is_system = 0;",
+        },
+      ],
+    },
+    "opId": "op-pl-del-0",
+    "opType": "playlist.delete",
+  },
+]
+`;

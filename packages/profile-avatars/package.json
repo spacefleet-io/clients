@@ -1,0 +1,22 @@
+{
+  "name": "@space/profile-avatars",
+  "license": "GPL-3.0-only",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "scripts": {
+    "typecheck": "bunx tsc --noEmit -p tsconfig.json",
+    "test": "bunx vitest run"
+  },
+  "exports": {
+    "./web": "./src/web.ts",
+    "./native": "./src/native.ts"
+  },
+  "dependencies": {
+    "@space/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3",
+    "vitest": "^5.1.0"
+  }
+}

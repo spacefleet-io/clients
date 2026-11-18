@@ -1,0 +1,132 @@
+diff --git a/Libraries/Vibration/Vibration.js b/Libraries/Vibration/Vibration.js
+index b6ac39b..d3f931d 100644
+--- a/Libraries/Vibration/Vibration.js
++++ b/Libraries/Vibration/Vibration.js
+@@ -11,7 +11,7 @@
+ // import NativeVibration from './NativeVibration';
+ 
+ const Platform = require('../Utilities/Platform').default;
+-const NativeVibration: $FlowFixMe = require('./NativeVibration');
++const NativeVibration: $FlowFixMe = require('./NativeVibration').default;
+ 
+ let _vibrating: boolean = false;
+ let _id: number = 0; // _id is necessary to prevent race condition.
+diff --git a/ReactAndroid/src/main/java/com/facebook/react/modules/network/NetworkEventUtil.kt b/ReactAndroid/src/main/java/com/facebook/react/modules/network/NetworkEventUtil.kt
+index 3edd478..66e036a 100644
+--- a/ReactAndroid/src/main/java/com/facebook/react/modules/network/NetworkEventUtil.kt
++++ b/ReactAndroid/src/main/java/com/facebook/react/modules/network/NetworkEventUtil.kt
+@@ -30,6 +30,12 @@ import okio.Buffer
+ internal object NetworkEventUtil {
+   private const val MAX_BODY_PREVIEW_SIZE = 512 * 1024 // 512KB
+ 
++  // SpaceBadger patch: cap inspector body capture at 1 MB. Without this guard,
++  // large response bodies (e.g. library tunnel download.data frames carrying
++  // 100+ MB chunks) trigger Base64.encodeToString on the whole body, which
++  // doubles size to ~213 MB and OOMs the Dalvik heap before any UI renders.
++  private const val INSPECTOR_BODY_CAP_BYTES = 1_048_576
++
+   @JvmStatic
+   fun onCreateRequest(
+       devToolsRequestId: String,
+@@ -79,7 +85,10 @@ internal object NetworkEventUtil {
+   ) {
+     if (data != null) {
+       InspectorNetworkReporter.reportDataReceived(devToolsRequestId, data)
+-      InspectorNetworkReporter.maybeStoreResponseBodyIncremental(devToolsRequestId, data)
++      // SpaceBadger patch: guard incremental body storage with INSPECTOR_BODY_CAP_BYTES.
++      if (data.length <= INSPECTOR_BODY_CAP_BYTES) {
++        InspectorNetworkReporter.maybeStoreResponseBodyIncremental(devToolsRequestId, data)
++      }
+     }
+     reactContext?.emitDeviceEvent(
+         "didReceiveNetworkIncrementalData",
+@@ -117,11 +126,13 @@ internal object NetworkEventUtil {
+       data: String?,
+       responseType: String,
+   ) {
+-    InspectorNetworkReporter.maybeStoreResponseBody(
+-        devToolsRequestId,
+-        data.orEmpty(),
+-        responseType == "base64",
+-    )
++    if ((data?.length ?: 0) <= INSPECTOR_BODY_CAP_BYTES) {
++      InspectorNetworkReporter.maybeStoreResponseBody(
++          devToolsRequestId,
++          data.orEmpty(),
++          responseType == "base64",
++      )
++    }
+     reactContext?.emitDeviceEvent(
+         "didReceiveNetworkData",
+         buildReadableArray {
+@@ -139,11 +150,13 @@ internal object NetworkEventUtil {
+       data: WritableMap,
+       rawData: ByteArray,
+   ) {
+-    InspectorNetworkReporter.maybeStoreResponseBody(
+-        devToolsRequestId,
+-        Base64.encodeToString(rawData, Base64.NO_WRAP),
+-        true,
+-    )
++    if (rawData.size <= INSPECTOR_BODY_CAP_BYTES) {
++      InspectorNetworkReporter.maybeStoreResponseBody(
++          devToolsRequestId,
++          Base64.encodeToString(rawData, Base64.NO_WRAP),
++          true,
++      )
++    }
+     reactContext?.emitDeviceEvent(
+         "didReceiveNetworkData",
+         Arguments.createArray().apply {
+diff --git a/scripts/codegen/generate-artifacts-executor/generateRCTThirdPartyComponents.js b/scripts/codegen/generate-artifacts-executor/generateRCTThirdPartyComponents.js
+index 8485767..dfe4627 100644
+--- a/scripts/codegen/generate-artifacts-executor/generateRCTThirdPartyComponents.js
++++ b/scripts/codegen/generate-artifacts-executor/generateRCTThirdPartyComponents.js
+@@ -139,7 +139,7 @@ function generateRCTThirdPartyComponents(
+     .flatMap(library => {
+       const components = componentsInLibraries[library];
+       return components.map(({componentName, className}) => {
+-        return `\t\t@"${componentName}": NSClassFromString(@"${className}"), // ${library}`;
++        return `\t\t@"${componentName}": @"${className}", // ${library}`;
+       });
+     })
+     .join('\n');
+diff --git a/scripts/codegen/templates/RCTModuleProvidersMM.template b/scripts/codegen/templates/RCTModuleProvidersMM.template
+index b1fb2c7..16d7908 100644
+--- a/scripts/codegen/templates/RCTModuleProvidersMM.template
++++ b/scripts/codegen/templates/RCTModuleProvidersMM.template
+@@ -29,7 +29,8 @@
+       NSString * moduleProviderName = moduleMapping[key];
+       Class klass = NSClassFromString(moduleProviderName);
+       if (!klass) {
+-        RCTLogError(@"Module provider %@ cannot be found in the runtime", moduleProviderName);
++        // A target that does not link the library (the Apple TV app drops phone-only ones): not an error.
++        RCTLogInfo(@"Module provider %@ cannot be found in the runtime", moduleProviderName);
+         continue;
+       }
+ 
+diff --git a/scripts/codegen/templates/RCTThirdPartyComponentsProviderMM.template b/scripts/codegen/templates/RCTThirdPartyComponentsProviderMM.template
+index 4ce5107..38868bc 100644
+--- a/scripts/codegen/templates/RCTThirdPartyComponentsProviderMM.template
++++ b/scripts/codegen/templates/RCTThirdPartyComponentsProviderMM.template
+@@ -19,9 +19,19 @@
+   static dispatch_once_t nativeComponentsToken;
+ 
+   dispatch_once(&nativeComponentsToken, ^{
+-    thirdPartyComponents = @{
++    // Component name -> class name. A target that does not link a library (the Apple TV app drops phone-only ones)
++    // has no class for it: skip it instead of inserting nil, which throws.
++    NSDictionary<NSString *, NSString *> *mapping = @{
+ {thirdPartyComponentsMapping}
+     };
++    NSMutableDictionary<NSString *, Class<RCTComponentViewProtocol>> *found = [NSMutableDictionary new];
++    for (NSString *componentName in mapping) {
++      Class klass = NSClassFromString(mapping[componentName]);
++      if (klass) {
++        found[componentName] = klass;
++      }
++    }
++    thirdPartyComponents = found;
+   });
+ 
+   return thirdPartyComponents;

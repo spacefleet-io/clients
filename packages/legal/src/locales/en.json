@@ -1,0 +1,411 @@
+{
+  "nav": {
+    "label": "Legal",
+    "legal-notice": "Legal notice",
+    "privacy": "Privacy policy",
+    "terms": "Terms of service and sale",
+    "account-deletion": "Delete your account",
+    "security": "Security policy",
+    "security-acknowledgments": "Security acknowledgments"
+  },
+  "updated": "Last updated: 18 November 2026. If the language versions of this page differ, the French version prevails.",
+  "credits": {
+    "about": "About",
+    "heading": "Credits and third-party data",
+    "intro": "The SpaceFleet apps show information from the services below. Thanks to them and to their contributors.",
+    "openSource": { "notice": "{app} is open source, under the GPL-3.0 licence.", "link": "View the source code", "flags": "Language flags: Noto Emoji artwork by Google, under the Apache License 2.0.", "fonts": "Fonts: Inter and Space Grotesk, under the SIL Open Font License 1.1." },
+    "unavailable": "The data credits show here once the app has been online."
+  },
+  "consent": {
+    "heading": "Before you pay",
+    "terms": "I accept the [Terms of service and sale](page:terms).",
+    "startNow": "I ask for my subscription to start right away, before the 14-day withdrawal period ends. The 14-day money-back guarantee still applies: within 14 days of this payment, I can get a full refund, even if I have used the service.",
+    "required": "Tick both boxes to choose a paid plan.",
+    "signup": "By creating an account, you accept the [Terms of service and sale](page:terms) and confirm you have read the [Privacy policy](page:privacy).",
+    "newsBox": "Send me SpaceFleet news: new features and announcements, a few times a year. I can turn it off at any time. SpaceFleet counts the opens and clicks of its News emails.",
+    "news": "News",
+    "newsHint": "New features and SpaceFleet news, a few times a year. SpaceFleet counts the opens and clicks of its News emails."
+  },
+  "pages": {
+    "legal-notice": {
+      "title": "Legal notice",
+      "intro": "This notice identifies who publishes the spacefleet.io website and the SpaceFleet apps (including SpaceBadger and SpaceParrot), as required by article 1-1 of the French law no. 2004-575 of 21 June 2004 for confidence in the digital economy (LCEN).",
+      "sections": [
+        {
+          "heading": "Publisher",
+          "blocks": [
+            {
+              "items": [
+                "Chris-Alexandre Pena, EI (entrepreneur individuel), trading as SpaceFleet",
+                "[[postal:Address: {{publisherPostalAddress}}]]",
+                "SIREN: 822 965 737",
+                "EU VAT number: FR67822965737",
+                "Email: contact@spacefleet.io",
+                "Website: https://spacefleet.io"
+              ]
+            }
+          ]
+        },
+        {
+          "heading": "Director of publication",
+          "blocks": ["Chris-Alexandre Pena."]
+        },
+        {
+          "heading": "Hosting",
+          "blocks": [
+            "The website, the SpaceFleet servers and the encrypted data they store are hosted by:",
+            {
+              "items": [
+                "Hetzner Online GmbH, Industriestr. 25, 91710 Gunzenhausen, Germany",
+                "Phone: +49 9831 505-0",
+                "Website: https://www.hetzner.com"
+              ]
+            },
+            "The servers are located in Hetzner data centres in Falkenstein (Germany) and Helsinki (Finland). Traffic to spacefleet.io passes through the network of Cloudflare, Inc., 101 Townsend St, San Francisco, CA 94107, USA, which also provides the domain name and its DNS."
+          ]
+        },
+        {
+          "heading": "Intellectual property",
+          "blocks": [
+            "The names SpaceFleet, SpaceBadger and SpaceParrot, the logos, texts and visuals of this website belong to the publisher or are used with permission. They may not be reproduced without prior written consent. Content you store with SpaceFleet stays yours."
+          ]
+        },
+        {
+          "heading": "Contact",
+          "blocks": [
+            "For any question about this website, including a report of unlawful content, write to contact@spacefleet.io.",
+            "See also the [privacy policy](page:privacy) and the [terms of service and sale](page:terms)."
+          ]
+        }
+      ]
+    },
+    "privacy": {
+      "title": "Privacy policy",
+      "intro": "This policy explains what personal data SpaceFleet processes when you use the spacefleet.io website and the SpaceFleet apps (including SpaceBadger and SpaceParrot), why, for how long, and how to exercise your rights under the EU General Data Protection Regulation (GDPR) and the French Data Protection Act.",
+      "sections": [
+        {
+          "heading": "Who is responsible",
+          "blocks": [
+            "The data controller is Chris-Alexandre Pena, EI, trading as SpaceFleet (SIREN 822 965 737[[postal:, {{publisherPostalAddress}}]]). Contact for any privacy question: privacy@spacefleet.io."
+          ]
+        },
+        {
+          "heading": "End-to-end encryption, and what it does not hide",
+          "blocks": [
+            "Each account has one encryption key, created on your device. It stays on hardware you own (your phones and computers, and a Kodi box or Jellyfin server you paired). It is never sent to our servers in readable form: the only time it crosses them is when you pair a new device, sealed so that only that device can open it.",
+            "Your media files, their artwork and your library are encrypted on your device before they are uploaded. Our servers store and move this data but cannot read it, and we cannot decrypt it. There is no key recovery: if you lose your key and have no backup of it, nobody, including us, can recover your data.",
+            "End-to-end encryption does not make you invisible to us. Our servers can see:",
+            {
+              "items": [
+                "your account email address and account details (plan, subscription status, settings);",
+                "how much data you store, the size of the encrypted pieces, and when uploads happen;",
+                "the devices signed in to your account (device name and type, app, last activity);",
+                "the titles your apps look up to fetch posters, details and intro/credits markers (see below);",
+                "technical connection data such as your IP address in our server logs (see below);",
+                "if you receive the News, whether and when you open each News email and which of its links you click (see below);",
+                "the plan you choose and the price you were shown, and, when you sign up or pay on our website, the campaign or site your visit came from (see below);",
+                "if you turned error reports on, the reports your apps send when something goes wrong (see below)."
+              ]
+            }
+          ]
+        },
+        {
+          "heading": "What we collect and why",
+          "blocks": [
+            {
+              "items": [
+                "Account: email address, password (stored only as a hash), display name, interface language, plan and subscription status, paid-until date, two-step sign-in settings, creation date and date of last activity. Purpose: create and run your account. Legal basis: performance of the contract (GDPR art. 6(1)(b)).",
+                "Devices and sessions: device name and type, which app, the app's version and where it was installed from (for example Google Play, F-Droid or Flatpak), the app's or browser's user agent, sign-in date and last-seen time, and for phones a push notification token. Purpose: let you see and sign out your devices, tell your devices that your library changed, and warn you when a new device is added to your account. Legal basis: contract. We also count, each day, how many devices use each app version, and how many times each app version is downloaded from our servers; these counts name no one and no device. Purpose: know which versions are in use. Legal basis: our legitimate interest in maintaining the apps (art. 6(1)(f)).",
+                "Stored data: your encrypted files, artwork and library. We see their amount, sizes and upload times, not their content. Purpose: store and deliver them to your devices. Legal basis: contract.",
+                "Title lookups: to show posters and details, and intro and credits markers, SpaceBadger sends the title looked up straight to our metadata service; to show covers and lyrics, SpaceParrot does the same with the song, album or artist looked up. Each lookup carries a single-use ticket made with blind signatures (Privacy Pass, RFC 9578) and nothing that identifies your account, so the metadata service does not know who asked; it sees the IP address of the connection, which it does not keep. Our main server never receives your lookups: to prevent abuse it only keeps a daily count of the tickets each account obtains, not the titles. To find these details, the title is sent from our own server, never with your IP address or any information about you. You can check it yourself: packages/privacy-pass and packages/metadata-client in our public source code. Legal basis: contract.",
+                { "id": "trailers", "text": "Trailers: when you choose to play a trailer, SpaceBadger plays it inside the app, in YouTube's embedded player. Nothing is sent to YouTube before you play a trailer. When you do, YouTube (Google Ireland Limited) receives your IP address, data about your device and your app or browser (such as its user agent, language and screen size) and which trailer you watch; it may set cookies and similar trackers, and may show ads before or during the trailer. YouTube uses this data under its own privacy policy: https://policies.google.com/privacy. Our servers receive nothing from YouTube. In the desktop app's settings you can choose an Invidious instance instead, which then receives the same data in YouTube's place. Purpose: let you watch a title's trailer. Legal basis: your consent (art. 6(1)(a)), given each time you choose to play a trailer; if you play none, nothing is sent to YouTube." },
+                "Payment (once paid plans open; until then choosing a plan charges nothing): payment goes through Stancer's payment page. We never see your card number. We keep a reference to your card (brand, last four digits, expiry date), which we use to charge each renewal, your subscription and your payment records (amount, currency, period, payment date). Stancer receives the amount, a description of the plan and your account identifier; it does not receive your email address from us. Legal basis: contract, and our legal accounting obligations (art. 6(1)(c)).",
+                "Referrals: your referral code, and which account referred you or which accounts you referred, and when. Purpose: grant referral rewards. Legal basis: contract.",
+                "Emails: we send you the messages needed to run your account: verification and sign-in codes, password resets, security messages, the warnings sent before an account is deleted automatically and, once paid plans open, payment messages, invoices and credit notes. Legal basis: contract.",
+                "Waitlist and newsletter (spacefleet.io before launch): email address, name (by default the part of the email before the @), language, whether you confirmed your email and when, whether you asked to join the beta, and whether you are a founder. When you subscribe to a paid plan, we check whether your email is on the waitlist to apply the founder discount. Once you have an account, you receive SpaceFleet news only if you choose to, with the unticked box at sign-up or the switch in your account settings. Legal basis: your consent (art. 6(1)(a)), which you can withdraw at any time with the unsubscribe link in each email, in your account settings or by writing to us.",
+                { "id": "news-tracking", "text": "Opens and clicks of the News: each News email contains a tiny invisible image and links that pass through our server. When your mail app loads that image, or when you click one of the links, we record, for you and that email, when it was first opened and how many times, and which links you clicked, when and how many times. These records name only the email and the link; they never say anything about your library or about what you watch or listen to. Some mail apps load images by themselves, so an email can count as opened without being read; blocking images in your mail app stops opens from being counted. Purpose: know which News are read and which subjects interest subscribers. Legal basis: your consent (art. 6(1)(a)), given with the News box or switch, which says that opens and clicks are counted; unsubscribing withdraws it and stops the counting." },
+                { "id": "business-records", "text": "Business records: when you create your account, choose or change a plan, or start, complete, abandon or fail a payment, we record that event with the plan, the billing period, the price you were shown and the version of our price list it came from, any discount, whether you are a founder, and which SpaceFleet app and version you used. When you create your account or pay on our website, we also record where your visit came from, if the page you arrived on said so: the campaign named in the link you followed (its utm_ parameters; links from the News to our site carry the name of that News) and the name of the site that sent you, never the full address of its page. Purpose: understand which prices, offers, seasons and channels bring and keep subscribers, so we can run and price SpaceFleet. These records never say anything about your library or about what you watch or listen to, only we read them, and no outside analytics service receives them. Legal basis: our legitimate interest in running and pricing our business (art. 6(1)(f)); you can object by writing to us." },
+                "Technical logs: when you visit our websites or your apps contact our servers, the servers record technical data (IP address, date and time, requested address, browser or app user agent, response status). Purpose: security, abuse prevention and troubleshooting. Legal basis: our legitimate interest in keeping the service secure (art. 6(1)(f)).",
+                { "id": "error-reports", "text": "Error reports (off until you turn them on, in the app's settings or during its setup steps): when SpaceBadger runs into an error, it can send a report to an error-tracking server (Bugsink) that we run ourselves. A report contains the type of error and its message with personal details removed, the stack trace (where in the app's code the error happened), the app version, and the name and version of the operating system. It never contains a file name, a title, a file path or your account details. Purpose: find and fix bugs. Legal basis: your consent (art. 6(1)(a)), which you can withdraw at any time by turning error reports off in the app's settings." }
+              ]
+            }
+          ]
+        },
+        {
+          "heading": "What we do not do",
+          "blocks": [
+            "SpaceFleet is paid for by subscriptions only. We show no ads, we sell or rent no data, we build no recommendations or profiles, and our websites and apps contain no analytics, advertising or crash-reporting tools from third parties. The one exception is a trailer you choose to play: it plays in YouTube's player, which may show YouTube's ads and set YouTube's trackers (see above). Error reports, if you turn them on, go only to our own server. The only tracking in our emails is the counting of opens and clicks of the News emails described above, done by our own server; account emails contain none."
+          ]
+        },
+        {
+          "heading": "Cookies and browser storage",
+          "blocks": [
+            "Our websites set no cookies. They keep in your browser's local storage only your language choice and, on the account website, your sign-in session. Both are strictly necessary for the site to work, so they need no consent. Inside the SpaceBadger apps, YouTube's player may store cookies and similar data on your device when you play a trailer (see above); nothing from YouTube is loaded before that. To know where a visit came from (see Business records above), the website keeps the campaign and the referring site only in the memory of the open page, writes nothing to your device, forgets them when you close or reload the page, and sends them to us only when you create your account or pay."
+          ]
+        },
+        {
+          "heading": "Who receives your data",
+          "blocks": [
+            "Your data is handled by the publisher and by these service providers, each only for the purpose listed:",
+            {
+              "items": [
+                "Hetzner Online GmbH (Germany): hosting of our servers and of the encrypted data, in data centres in Falkenstein (Germany) and Helsinki (Finland).",
+                "Cloudflare, Inc. (USA): domain name and DNS for spacefleet.io; its network carries the error reports your apps send to reports.spacefleet.io and the redirects from spacebadger.io and spaceparrot.io to spacefleet.io, and for those requests it handles the IP address and request data. The website and the apps' other connections reach our servers directly.",
+                "Stancer (Iliad 78 SAS, Paris, France): card payment processing and storage of your card, once paid plans open.",
+                "Amazon Web Services (Amazon SES), from its Paris region (France): delivery of account emails and of the newsletter. It receives the recipient's email address and the content of each email.",
+                "Google (Firebase Cloud Messaging) and Apple (Apple Push Notification service): delivery of notifications to phone apps. They receive the device's notification token, your account identifier and the notification itself: a short signal that your library changed, or a security alert giving the name and type of a newly added device. Never the contents of your library.",
+                "Google Ireland Limited (YouTube): plays the trailers you choose to play, in its embedded player inside the app. Only when you play a trailer, it receives the data described above under Trailers, which it processes under its own privacy policy (https://policies.google.com/privacy). An Invidious instance you choose in the desktop app's settings receives the same data in its place."
+              ]
+            },
+            "Server logs and error reports are collected on a server operated by the publisher, hosted by Hetzner in Falkenstein (Germany). Error reports reach it through Cloudflare's network at reports.spacefleet.io and are not passed on to anyone else. We disclose data to public authorities only when the law requires it."
+          ]
+        },
+        {
+          "heading": "Transfers outside the European Union",
+          "blocks": [
+            "Your account data and encrypted files are stored in the European Union. Some providers listed above (Cloudflare, Amazon Web Services, Google, Apple) are part of US groups and may process data in the United States; those transfers are covered by the European Commission's standard contractual clauses or by its adequacy decision for certified US companies. You can ask us for a copy of these safeguards."
+          ]
+        },
+        {
+          "heading": "How long we keep it",
+          "blocks": [
+            {
+              "items": [
+                "Account data and stored files: as long as the account exists. They are deleted when you delete your account (see [Delete your account](page:account-deletion)), 60 days after a renewal goes unpaid, or when a free account has not been used for 60 days. Warning emails are sent 7 days and 1 day before any automatic deletion.",
+                "Database copies taken before each server update: deleted once they are more than 30 days old, except the most recent copy, which is kept until the next update replaces it. Stored files are not copied to backups.",
+                "Invoices and payment records: 10 years after the end of the financial year, as required by French accounting law (Code de commerce, art. L123-22). They are kept after the account is deleted.",
+                "Server logs: 30 days.",
+                "Waitlist and newsletter data: until you unsubscribe or ask us to delete it. On the day SpaceFleet opens to the public, everyone on the waitlist gets one last email; one month later, a waitlist entry whose email has not become a SpaceFleet account is deleted. For a founder, only the email address and the founder status are kept after that, for as long as the founder discount can apply, unless you ask us to delete them. Once you have an account, the account periods above apply.",
+                "Opens and clicks of the News: as long as you stay subscribed. They are erased when you unsubscribe, turn News off in your account settings or delete your account.",
+                "Business records: as long as SpaceFleet exists, so that figures can be compared over the years. When you delete your account, they are unlinked from it; the payment records we must keep stay as described above.",
+                "Error reports: 90 days after they arrive, then deleted."
+              ]
+            }
+          ]
+        },
+        {
+          "heading": "Your rights",
+          "blocks": [
+            "You have the right to access your data, to have it corrected or erased, to restrict or object to its processing, to receive it in a portable format, and to withdraw your consent at any time. Under French law you can also give instructions about what happens to your data after your death.",
+            "You can download your files and delete your account yourself from the apps. For anything else, write to privacy@spacefleet.io from the email address of your account. We answer within one month.",
+            "If you think your rights are not respected, you can lodge a complaint with the French data protection authority: CNIL, 3 place de Fontenoy, TSA 80715, 75334 Paris Cedex 07, France, https://www.cnil.fr."
+          ]
+        },
+        {
+          "heading": "Security",
+          "blocks": [
+            "Besides end-to-end encryption, passwords are stored only as hashes, a second sign-in step (email code or authenticator app) is available, and administrative access to our servers is limited to a private network."
+          ]
+        },
+        {
+          "heading": "Age",
+          "blocks": [
+            "A SpaceFleet account holder must be 18 or over, or the age of majority where they live if that is higher. A minor may use SpaceFleet only under the supervision of the adult who holds the account. We do not ask your age at sign-up."
+          ]
+        },
+        {
+          "heading": "Changes to this policy",
+          "blocks": [
+            "We will update this policy when what we process changes, and tell account holders by email about any important change. The date at the top shows the latest version."
+          ]
+        }
+      ]
+    },
+    "terms": {
+      "title": "Terms of service and sale",
+      "intro": "These terms govern the use of a SpaceFleet account and of the SpaceFleet apps (including SpaceBadger and SpaceParrot), and the sale of SpaceFleet subscriptions. They are concluded between you and Chris-Alexandre Pena, EI, trading as SpaceFleet (see the [legal notice](page:legal-notice)). By creating an account you accept them.",
+      "sections": [
+        {
+          "heading": "1. The service",
+          "blocks": [
+            "SpaceFleet gives you an account with storage space that you use from the SpaceFleet apps to keep, sync and play your own media. One account and one plan cover every SpaceFleet app.",
+            "Your files, their artwork and your library are encrypted on your devices before upload with a key that only your devices hold. We cannot read your data and cannot recover your key: if you lose your key and every device holding it, your data is lost for good. Keep the backup of your key that the apps offer you."
+          ]
+        },
+        {
+          "heading": "2. Your account",
+          "blocks": [
+            "You must be 18 or over, or the age of majority where you live if that is higher, to create an account; a minor may use SpaceFleet only under the supervision of the adult who holds the account. You must give a valid email address that you confirm with the code we send. You are responsible for keeping your password, your second sign-in step and your encryption key safe, and for what happens on your account. Tell us at once at contact@spacefleet.io if you think someone else uses it."
+          ]
+        },
+        {
+          "heading": "3. Plans and prices",
+          "blocks": [
+            "The plans are Free (20 GB), Starter (100 GB), Standard (400 GB) and Scale (1000 GB); Scale can add extra blocks of 500 GB. The Free plan has no end date.",
+            "Paid plans are bought for one month or one year. Prices are shown in euros, all taxes included and the same in every country, on the plan screen and on the payment page before you confirm. After every payment we email you an invoice, and after every refund a credit note; you can also download all of them from your account page on the website.",
+            "Payment is made by card through Stancer, from the website or the desktop app. The phone and TV apps do not take payment. Paid plans are not open yet: until they are, choosing a plan charges nothing."
+          ]
+        },
+        {
+          "heading": "4. Renewal and cancellation",
+          "blocks": [
+            "A paid plan renews automatically at the end of each period, for the same period, unless you turn renewal off. You can turn it off at any time from your account on the website or in the desktop app; the plan then stays active until the end of the period already paid, and the account moves to the Free plan.",
+            "A yearly plan cannot be ended or put back to the Free plan before its year is over, except under the 14-day guarantee below. During the year you can move to a higher plan at once: you pay the difference for the months left, and the year still ends on its original renewal date. A move to a lower plan can be booked at any time but takes effect only at the yearly renewal: you keep the higher plan until then, with no refund. If on renewal day you still store more than the booked plan allows, the move is cancelled and the plan stays as it is, but the renewal payment is taken only 14 days later, so you can still free up space and move down; we warn you by email and in the apps 14, 7, 3 and 1 days before the renewal. A switch from yearly to monthly billing is booked the same way; a switch from monthly to yearly takes effect at the next monthly payment. You cannot move to a smaller plan while you store more than it allows, nor to Free or Starter while you store any video above 1080p.",
+            "For a yearly plan, we tell you by email, no earlier than three months and no later than one month before the renewal date, that the plan will renew and that you can stop the renewal, as required by article L215-1 of the French Consumer Code."
+          ]
+        },
+        {
+          "heading": "5. Right of withdrawal and 14-day money-back guarantee",
+          "blocks": [
+            "Paid plans, monthly or yearly, come with a 14-day money-back guarantee, which covers your legal right of withdrawal (article L221-18 of the French Consumer Code). It applies to these payments: the first subscription, each move to a higher plan and each yearly renewal. Within 14 days of that payment, you can ask for it back without giving a reason and get a full refund, even if you have already used the service. Two payments are not covered: the first payment after a move to a smaller plan, and a yearly renewal whose payment was already put off by 14 days because a booked move down did not fit. Monthly renewals are not covered.",
+            "When you subscribe, you expressly ask for the service to start at once, before the withdrawal period ends (article L221-25 of the French Consumer Code), by ticking the box provided for this before paying, together with the box accepting these terms. This request does not reduce the guarantee: a withdrawal within the 14 days is refunded in full, with nothing kept for the days already used. We keep the version of these terms you accepted and the date you accepted it.",
+            "To withdraw, send us a clear statement of your decision at contact@spacefleet.io[[postal: or by post to {{publisherPostalAddress}}]], for example with the model form below. If you delete your account, we refund you at once with the same means of payment. If you go back to the Free plan, we refund you with the same means of payment as soon as your library fits the Free plan, and at the latest 14 days after your request: until then the account keeps playing but takes no new uploads, and you must bring it down to 20 GB and remove every video above 1080p; whatever still does not fit on the 14th day is deleted, your most recently uploaded files first. If you move down to another paid plan, you first free up enough space for it within the 14 days, and the refund is then taken off your next payments.",
+            "Model withdrawal form (complete and return this form only if you wish to withdraw from the contract):",
+            {
+              "items": [
+                "To: Chris-Alexandre Pena, EI (SpaceFleet), [[postal:{{publisherPostalAddress}}, ]]contact@spacefleet.io",
+                "I/We (*) hereby give notice that I/We (*) withdraw from my/our (*) contract for the provision of the following service (*): SpaceFleet subscription",
+                "Ordered on (*):",
+                "Name of consumer(s):",
+                "Address of consumer(s):",
+                "Email address of the SpaceFleet account:",
+                "Signature of consumer(s) (only if this form is notified on paper):",
+                "Date:",
+                "(*) Delete as appropriate."
+              ]
+            }
+          ]
+        },
+        {
+          "heading": "6. Unpaid subscription",
+          "blocks": [
+            "If a renewal is not paid because your card is refused, the account keeps working and we try the same card again 1, 3 and 7 days after the renewal date, emailing you each time with a link to enter a new card. If it is still not paid after that, the account becomes unpaid: playback and uploads are blocked, but you can still download your files. 60 days after the end of the last paid period, the account and all its data are deleted for good. We email you 7 days and 1 day before. A Free account that nobody uses for 60 days is deleted the same way, after the same warnings."
+          ]
+        },
+        {
+          "heading": "7. Deleting your account",
+          "blocks": [
+            "You can delete your account at any time. Deletion starts at once, cannot be undone, and ends any paid subscription without further charge. See [Delete your account](page:account-deletion)."
+          ]
+        },
+        {
+          "heading": "8. Your content",
+          "blocks": [
+            "You keep all rights to the content you store. You may store only content that you have the right to keep and use, and you may not use SpaceFleet for anything unlawful. Because your content is encrypted, we do not see or moderate it; you are responsible for it.",
+            "If we receive a court order or a valid notice of manifestly unlawful content concerning your account, or if you seriously breach these terms, we may suspend or close the account after telling you, unless the law forbids it."
+          ]
+        },
+        {
+          "heading": "9. Availability and liability",
+          "blocks": [
+            "We do our best to keep SpaceFleet available and your data safe. Stored files are kept on redundant disks but are not copied to separate backups, so keep your original files. We may interrupt the service for maintenance, if possible after notice.",
+            "You benefit from the legal guarantee of conformity for digital services (articles L224-25-1 and following of the French Consumer Code). Beyond that, our liability is limited to direct damage caused by our fault; nothing in these terms limits the rights the law gives you as a consumer."
+          ]
+        },
+        {
+          "heading": "10. Changes to these terms",
+          "blocks": [
+            "We may change these terms. We email account holders at least 30 days before a change takes effect. If you do not agree, you can turn off renewal or delete your account before that date."
+          ]
+        },
+        {
+          "heading": "11. Applicable law and disputes",
+          "blocks": [
+            "These terms are governed by French law. If you live in another EU country, you also keep the protection of the mandatory rules of your country.",
+            "In case of a problem, write to contact@spacefleet.io first. If we cannot agree, you can refer the dispute free of charge to our consumer mediator (articles L611-1 and following of the French Consumer Code), within one year of your written complaint to us: CM2C (Centre de la Médiation de la Consommation de Conciliateurs de Justice), 49 rue de Ponthieu, 75008 Paris, France, https://www.cm2c.net, where you can file your claim online. You can also go to the competent court."
+          ]
+        }
+      ]
+    },
+    "account-deletion": {
+      "title": "Delete your SpaceFleet account",
+      "intro": "One SpaceFleet account is used by every SpaceFleet app, including SpaceBadger and SpaceParrot. Deleting it deletes it for all of them. This page explains how, what is deleted and when.",
+      "sections": [
+        {
+          "heading": "Before you start",
+          "blocks": [
+            "Deletion cannot be undone and we cannot recover anything afterwards. Download the files you want to keep to your computer first."
+          ]
+        },
+        {
+          "heading": "Delete from an app",
+          "blocks": [
+            {
+              "items": [
+                "SpaceBadger on phone or tablet (Android, iOS): {{accountDeletionPath.mobile}}.",
+                "SpaceBadger on computer (Windows, macOS, Linux): {{accountDeletionPath.desktop}}.",
+                "On the website (account area, open from the public launch): sign in, then {{accountDeletionPath.web}}."
+              ]
+            },
+            "You confirm with your password, by typing DELETE, and with a verification code (from your authenticator app, or sent to you by email)."
+          ]
+        },
+        {
+          "heading": "If you cannot sign in",
+          "blocks": [
+            "Write to privacy@spacefleet.io from the email address of the account, with the subject \"Delete my account\". We reply to that address to confirm the request, then delete the account within 7 days. The same address works to delete your waitlist or newsletter registration."
+          ]
+        },
+        {
+          "heading": "What is deleted, and when",
+          "blocks": [
+            {
+              "items": [
+                "At once: deletion starts as soon as you confirm. There is no grace period and it cannot be cancelled. Any paid subscription is cancelled with no further charge, and every device is signed out. The phone app also deletes its downloads and the encryption key it held.",
+                "Then: your encrypted files, artwork and library are erased from every storage server. Once every server has confirmed, your account record is removed: email address, password, settings, devices, notification tokens and lookup counts.",
+                "Later: the database copies taken before server updates, which may still contain your account record, are deleted once they are more than 30 days old; the most recent copy is kept until the next server update replaces it."
+              ]
+            }
+          ]
+        },
+        {
+          "heading": "What is kept",
+          "blocks": [
+            {
+              "items": [
+                "Invoices and payment records (amounts, dates, Stancer payment reference): 10 years after the end of the financial year, as required by French accounting law.",
+                "Server logs (IP address, time, requested address): 30 days."
+              ]
+            },
+            "More details are in the [privacy policy](page:privacy)."
+          ]
+        }
+      ]
+    },
+    "security": {
+      "title": "Security policy",
+      "intro": "If you find a security problem in SpaceFleet, please tell us privately at security@spacefleet.io before telling anyone else, so we can fix it before it can be used against our users.",
+      "sections": [
+        {
+          "heading": "What to report",
+          "blocks": [
+            "Anything that could let someone read, change or delete data that is not theirs, take over an account, get around a limit or a payment, or stop the service for others. This covers the spacefleet.io website, the API at api.spacefleet.io, the storage servers and the SpaceFleet apps (including SpaceBadger and SpaceParrot).",
+            {
+              "items": [
+                "Say what you found, where, and the steps to reproduce it.",
+                "Use only your own account and data, and stop as soon as you have shown the problem: do not read, keep or change other people's data, and do not degrade the service.",
+                "Keep the problem private until we have fixed it or agreed a date with you."
+              ]
+            }
+          ]
+        },
+        {
+          "heading": "What happens next",
+          "blocks": [
+            "Every report gets a first reply within 3 working days. We then tell you what we found and when the fix is out.",
+            "We will not take legal action against anyone who reports in good faith and follows this policy."
+          ]
+        },
+        {
+          "heading": "Credit, and no bug bounty",
+          "blocks": [
+            "SpaceFleet pays no bug bounty. If your report leads to a fix, we thank you by name on the [security acknowledgments](page:security-acknowledgments) page if you want it, and without your name, or not at all, if you prefer.",
+            "The machine-readable version of this contact is at https://spacefleet.io/.well-known/security.txt."
+          ]
+        }
+      ]
+    },
+    "security-acknowledgments": {
+      "title": "Security acknowledgments",
+      "intro": "We thank the people below, who reported a security problem that led to a fix and agreed to be named. How to report one is in our [security policy](page:security).",
+      "sections": [
+        {
+          "heading": "Reporters",
+          "blocks": [
+            "No one yet."
+          ]
+        }
+      ]
+    }
+  }
+}

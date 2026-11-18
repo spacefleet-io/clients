@@ -1,0 +1,48 @@
+diff --git a/out/targets/nsis/NsisTarget.js b/out/targets/nsis/NsisTarget.js
+index 92cac56e79f94f01525dd9ae007d8e866075de1b..d378080cd83a3f01bd1536503fede7ea6e7d1581 100644
+--- a/out/targets/nsis/NsisTarget.js
++++ b/out/targets/nsis/NsisTarget.js
+@@ -460,17 +460,24 @@ class NsisTarget extends core_1.Target {
+         const isWin = process.platform === "win32";
+         defines.BUILD_UNINSTALLER = null;
+         defines.UNINSTALLER_OUT_FILE = isWin ? uninstallerPath : path.win32.join("Z:", uninstallerPath);
++        // SpaceBadger patch: the uninstaller-generator pass writes (and then RUNS) its own exe. Upstream gives both passes the same
++        // OutFile, so the final makensis pass overwrote the installer exe that had just been executed; on Windows under load the exiting
++        // image was still held (EACCES/EPERM, which ensureNotBusy does not treat as busy) and makensis failed with "Can't open output file".
++        // The generator lives in the temp dir, not in outDir: if Windows still refuses to delete it, it can never be mistaken for an artifact.
++        const generatorPath = await packager.getTempFile(".uninstaller-builder.exe");
++        commands = { ...commands, OutFile: `"${generatorPath}"` };
++        try {
+         await this.executeMakensis(defines, commands, sharedHeader + (await this.computeFinalScript(script, false, archs)));
+         // http://forums.winamp.com/showthread.php?p=3078545
+         // TODO: remove workaround when wine is fully upgraded to 11
+         if ((0, macosVersion_1.isMacOsCatalina)()) {
+             try {
+-                await nsisUtil_1.UninstallerReader.exec(installerPath, uninstallerPath);
++                await nsisUtil_1.UninstallerReader.exec(generatorPath, uninstallerPath);
+             }
+             catch (error) {
+                 builder_util_1.log.warn(`packager.vm is used: ${error.message}`);
+                 const vm = await packager.vm.value;
+-                await vm.exec(installerPath, []);
++                await vm.exec(generatorPath, []);
+                 // Parallels VM can exit after command execution, but NSIS continue to be running
+                 let i = 0;
+                 while (!(await (0, builder_util_1.exists)(uninstallerPath)) && i++ < 100) {
+@@ -481,7 +488,15 @@ class NsisTarget extends core_1.Target {
+         }
+         else {
+             const wineVm = new WineVm_1.WineVmManager((_a = packager.config.toolsets) === null || _a === void 0 ? void 0 : _a.wine);
+-            await wineVm.exec(installerPath, [], { env: { __COMPAT_LAYER: "RunAsInvoker" } });
++            await wineVm.exec(generatorPath, [], { env: { __COMPAT_LAYER: "RunAsInvoker" } });
++        }
++        }
++        finally {
++            await (0, fs_extra_1.unlink)(generatorPath).catch(error => {
++                if (error.code !== "ENOENT") {
++                    builder_util_1.log.warn({ file: generatorPath, message: error.message }, "could not delete the NSIS uninstaller generator (left in the temp dir)");
++                }
++            });
+         }
+         await packager.signIf(uninstallerPath);
+         delete defines.BUILD_UNINSTALLER;

@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // The tests import the .mjs packaging scripts and the apps' electron-builder configs; allowJs lets tsc infer
+    // their types (checkJs stays off), as in apps/badger/desktop.
+    "allowJs": true,
+    "types": ["bun-types"]
+  },
+  "include": ["**/*.ts"]
+}

@@ -1,0 +1,9 @@
+dist/
+__pycache__/
+*.pyc
+# vendored pycryptodomex (packaging only, INTG-KODI-01); the repo-wide **/vendor/ rule would hide it
+!plugin.video.spacebadger/resources/lib/vendor/
+!plugin.video.spacebadger/resources/lib/vendor/**
+# the re-include above would also pick up Python bytecode caches; keep them out
+__pycache__/
+*.pyc

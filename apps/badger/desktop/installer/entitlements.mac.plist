@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- REL-MAC-02: hardened-runtime exceptions for Developer ID signed builds (scripts/mac-signing-lib.mjs).
+     JIT for V8 (Electron) and JavaScriptCore (the bun-compiled runtime); library validation off so
+     the app loads the deps bundle's dylibs and native .node modules. -->
+<plist version="1.0">
+<dict>
+  <key>com.apple.security.cs.allow-jit</key>
+  <true/>
+  <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+  <true/>
+  <key>com.apple.security.cs.disable-library-validation</key>
+  <true/>
+</dict>
+</plist>

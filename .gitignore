@@ -1,0 +1,15 @@
+node_modules/
+dist/
+out/
+build/
+.turbo/
+.DS_Store
+.env
+.env.*
+*.db
+*.sqlite
+**/vendor/
+**/.package-stage/
+**/.tmp/
+**/.vitest/
+**/test-results/

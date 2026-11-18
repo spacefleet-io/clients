@@ -1,0 +1,43 @@
+{
+  "license": "BSD-2-Clause AND Unlicense (public domain parts); see LICENSE.rst and AUTHORS.rst here",
+  "note": "Unmodified upstream extension modules, packaging only (INTG-KODI-01). Regenerate with tools/vendor_wheels.py.",
+  "package": "pycryptodomex",
+  "platforms": {
+    "linux-aarch64": {
+      "files": 105,
+      "source": "https://pypi.org/project/pycryptodomex/3.24.2/#files",
+      "tree_sha256": "a80d6af50bbf5bdbb91f18d33c2557cc96c3eef271ebd2d2d10e9e449f17d487",
+      "wheel": "pycryptodomex-3.24.2-cp37-abi3-manylinux2014_aarch64.manylinux_2_17_aarch64.whl",
+      "wheel_sha256": "97dc6ea02ec1ed55dca0fbc98758ac23d0ca8ce9d7ea32d538c2851e23b8b27f"
+    },
+    "linux-armv7l": {
+      "files": 105,
+      "source": "https://www.piwheels.org/simple/pycryptodomex/pycryptodomex-3.24.2-cp37-abi3-linux_armv7l.whl",
+      "tree_sha256": "dc90b440d3187b1095b37e650fbf1417a1aca8e3550d1778cc78b7e370c41a1a",
+      "wheel": "pycryptodomex-3.24.2-cp37-abi3-linux_armv7l.whl",
+      "wheel_sha256": "7b4b144cdeaa5c27bcd05e0171df191227789f036dbbfc1e55a55aa633dabe44"
+    },
+    "linux-x86_64": {
+      "files": 107,
+      "source": "https://pypi.org/project/pycryptodomex/3.24.2/#files",
+      "tree_sha256": "9dce41e134607fc7cfc6b2b857871c5a957c66a5ad148a5f61c2abb49f43ede7",
+      "wheel": "pycryptodomex-3.24.2-cp37-abi3-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+      "wheel_sha256": "e340408a601003f235b50117cd16f87b2a5b4760765aafe93340eeaadeb0414d"
+    },
+    "macos-universal": {
+      "files": 105,
+      "source": "https://pypi.org/project/pycryptodomex/3.24.2/#files",
+      "tree_sha256": "9bdb6b400615c3df37f5c1cd18a5e38d7ae7ceb4ddc1ae97e0ef35a1441ca004",
+      "wheel": "pycryptodomex-3.24.2-cp37-abi3-macosx_10_9_universal2.whl",
+      "wheel_sha256": "18a41772bae7b876d84c768bdec6afb95c3d16da50200956ddcc5fccd2d84549"
+    },
+    "windows-amd64": {
+      "files": 107,
+      "source": "https://pypi.org/project/pycryptodomex/3.24.2/#files",
+      "tree_sha256": "b46cd23ab6b8286cf6d35fe7b43725dc999e31a50c4c9c1d9612cf7aad1ad574",
+      "wheel": "pycryptodomex-3.24.2-cp37-abi3-win_amd64.whl",
+      "wheel_sha256": "6e912e3a21061bf8f4ce89223cb46f5e98a6b32420d08d770605891a2be266c6"
+    }
+  },
+  "version": "3.24.2"
+}

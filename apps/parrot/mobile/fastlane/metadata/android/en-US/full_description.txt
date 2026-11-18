@@ -1,0 +1,27 @@
+Parrot is the music player for the music you own. Add your songs and albums from your computer, then stream them to your phone and your computer, wherever you are.
+
+YOUR MUSIC LIBRARY, EVERYWHERE
+• Upload your music with the Parrot app for your computer (Windows, Mac, Linux): MP3, FLAC, AAC, ALAC, OGG, Opus and WAV.
+• Album covers and song details are filled in for you.
+• Browse your albums, artists, songs and playlists, and search your whole library.
+• Your library, playlists and liked songs are the same on every device.
+
+LISTEN YOUR WAY
+• Create playlists and like songs, on your phone or your computer.
+• Sing along with lyrics, synced line by line when available.
+• Queue up what plays next, shuffle and repeat.
+• Control your music from the lock screen and notifications.
+
+LISTEN OFFLINE
+• Download songs, albums or playlists to your phone and listen without internet.
+• Songs you add to a downloaded playlist download too.
+
+JUST YOUR MUSIC
+• No ads.
+• Your library and the music you add are encrypted on your device before they reach our servers.
+• To show covers and lyrics, Parrot asks our lookup service with a single-use anonymous ticket instead of your account: we can't tell who asked. The service sees what is looked up and your internet address, which we don't keep.
+• Parrot doesn't supply music: you listen to the music you add yourself.
+
+FREE TO START
+• Create a free SpaceFleet account, with 20 GB of storage included.
+• The same account works with Badger, our app for your movies and TV shows.

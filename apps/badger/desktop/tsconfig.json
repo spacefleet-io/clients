@@ -1,0 +1,19 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2024", "DOM", "DOM.Iterable"],
+    // The tests import the .mjs build scripts; allowJs lets tsc infer their types (checkJs stays off).
+    "allowJs": true,
+    "jsx": "react-jsx",
+    "types": ["node"],
+    "paths": {
+      "@/*": ["./src/renderer/src/*"],
+      "@space/runtime-client": ["../../../packages/runtime-client/src/index.ts"],
+      "@space/runtime-client/*": ["../../../packages/runtime-client/src/*"],
+      // Resolved by the vitest alias in vitest.config.ts; desktop declares no dependency on it.
+      "@space/media-deps": ["../../../packages/media-deps/src/index.ts"]
+    }
+  },
+  // ingest-core's ambient `pngjs` declaration: desktop typechecks its sources through the shared packages.
+  "include": ["src", "tests", "e2e", "e2e-perf", "e2e-update", "*.ts", "../../../packages/ingest-core/src/pngjs.d.ts"]
+}

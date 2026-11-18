@@ -1,0 +1,1231 @@
+{
+  "brand": {
+    "mascotAlt": "Badger mascot"
+  },
+  "authApiHost": {
+    "button": "API host",
+    "title": "Connection hosts",
+    "subtitle": "Set custom API and runtime hosts. These values are stored locally and kept after logout.",
+    "apiLabel": "API",
+    "label": "Custom host",
+    "placeholder": "api.spacefleet.io",
+    "hint": "You can enter a host or full URL. Example: api.spacefleet.io or https://api.spacefleet.io",
+    "defaultBadge": "Default",
+    "customBadge": "Custom",
+    "useDefault": "Use default",
+    "save": "Save",
+    "saving": "Saving...",
+    "error": "Could not save API host. Check the value and try again."
+  },
+  "login": {
+    "title": "Sign in",
+    "withAccount": "Sign in with your SpaceFleet account",
+    "emailLabel": "Email",
+    "passwordLabel": "Password",
+    "twoFactorLabel": "Verification code",
+    "twoFactorPlaceholder": "123456",
+    "button": "Sign in",
+    "signingIn": "Signing in...",
+    "resend": "Resend code",
+    "resending": "Resending...",
+    "infoEmail": "We sent a verification code to your email.",
+    "infoTotp": "Enter the code from your authenticator app.",
+    "resendSuccess": "A new verification code was sent.",
+    "resendError": "Could not resend the code.",
+    "reset": {
+      "button": "Forgot password?",
+      "title": "Reset your password",
+      "subtitle": "We will email you a verification code to set a new password.",
+      "emailLabel": "Account email",
+      "codeLabel": "Verification code",
+      "codePlaceholder": "123456",
+      "passwordLabel": "New password",
+      "passwordConfirmLabel": "Confirm new password",
+      "request": "Send code",
+      "requesting": "Sending...",
+      "submit": "Update password",
+      "submitting": "Updating...",
+      "cancel": "Cancel",
+      "resend": "Resend code",
+      "resending": "Resending...",
+      "noticeSent": "If the email exists, we sent a verification code.",
+      "noticeResent": "We sent another verification code.",
+      "noticeComplete": "Password updated. Please sign in again.",
+      "errorMismatch": "Passwords do not match.",
+      "errorInvalidCode": "Verification code is invalid or expired.",
+      "errorFailed": "Could not reset the password right now.",
+      "errorResend": "Could not resend the code."
+    },
+    "qr": {
+      "or": "or",
+      "title": "Sign in with another device",
+      "body": "Show a code to approve in Badger or Parrot on a signed-in computer, phone or TV."
+    },
+    "provider": {
+      "signInWith": "Sign in with {{provider}}",
+      "or": "or",
+      "continueInBrowser": "Finish signing in in your browser. You'll come back here once you're done.",
+      "errorStart": "Could not start the sign-in. Please try again.",
+      "errors": {
+        "no_account": "No SpaceFleet account uses this email address. Create one in Badger or Parrot on a computer, then sign in here.",
+        "email_unverified": "This account's email address is not confirmed. Confirm it with the provider, or sign in with your email and password.",
+        "email_domain_disallowed": "Accounts with this email address cannot be created.",
+        "account_deletion_pending": "This account is scheduled for deletion.",
+        "provider_failed": "The sign-in did not go through. Please try again.",
+        "cancelled": "The sign-in was cancelled.",
+        "invalid_code": "This sign-in has expired or was started elsewhere. Please try again."
+      }
+    },
+    "pairing": {
+      "title": "Sign in with another device",
+      "usePassword": "Sign in with email and password"
+    },
+    "code": {
+      "recheckHint": "Your account has no password, so we ask a code instead: from your authenticator app if it's on, otherwise one we email you.",
+      "recheckSent": "Type the code: from your authenticator app if it's on, otherwise the one we just emailed you."
+    }
+  },
+  "player": {
+    "deviceTooWeak": {
+      "message": "This phone isn't powerful enough to play this video smoothly.",
+      "messageTv": "This TV box isn't powerful enough to play this video smoothly.",
+      "pinnedHint": "Turn off \"Force this quality\" or pick a lower quality in Settings.",
+      "keepWatching": "Keep watching"
+    },
+    "trafficCap": {
+      "message": "Too much traffic on the server holding this title: quality is limited to {{quality}} until traffic eases.",
+      "keepWatching": "Keep watching"
+    },
+    "loading": "Preparing playback...",
+    "loadingSlow": "Still loading… this is taking longer than usual.",
+    "controls": {
+      "closePlayer": "Close player",
+      "videoSurface": "Video surface",
+      "chapters": "Chapters",
+      "previousEpisode": "Previous episode",
+      "nextEpisode": "Next episode",
+      "subtitles": "Subtitles",
+      "audio": "Audio",
+      "quality": "Quality",
+      "volume": "Volume",
+      "brightness": "Brightness",
+      "seekBackToast": "-10s",
+      "seekForwardToast": "+10s",
+      "seekBy": "{{amount}}s",
+      "play": "Play",
+      "pause": "Pause",
+      "seekBar": "Seek bar",
+      "qualityAuto": "Auto",
+      "subtitlesOff": "Off",
+      "subtitleLoadFailed": "Subtitles couldn't load",
+      "trackFallback": "Track {{n}}",
+      "cast": "Cast"
+    },
+    "error": {
+      "title": "Playback problem",
+      "retry": "Retry",
+      "close": "Close",
+      "unavailable": "Playback is not available.",
+      "openFailed": "The video could not be opened.",
+      "startTimeout": "The video took too long to start.",
+      "loadingTimeout": "The video is taking too long to load.",
+      "stoppedUnexpectedly": "Playback stopped unexpectedly.",
+      "missingLibraryKey": "Missing media library encryption key.",
+      "titleMissing": "This title is no longer in your media library.",
+      "noPlayableFile": "No playable file found.",
+      "notAvailable": "Playback not available for this title.",
+      "gatewayUnavailable": "Storage gateway unavailable.",
+      "playbackStopped": "Playback was stopped because the server holding this title is saturated. Press Retry once traffic has eased.",
+      "freePlaybackRefused": "Playback can't start right now: the server holding this title is saturated and free accounts cannot start new playback. Try again in a few minutes.",
+      "startFailed": "Could not start playback.",
+      "loadFailed": "Could not load this title."
+    },
+    "resume": {
+      "resumeAt": "Resume at {{time}}",
+      "startOver": "Start over"
+    },
+    "skip": {
+      "intro": "Skip intro",
+      "credits": "Skip credits",
+      "nextEpisode": "Next episode",
+      "nextEpisodeStartsIn": "Next episode will start in",
+      "withCountdown": "{{label}} {{seconds}}s"
+    },
+    "nextCard": {
+      "startsIn": "Next episode in {{seconds}}s",
+      "upNext": "Up next",
+      "playNow": "Play now",
+      "playNowLabel": "Play next episode now",
+      "cancel": "Cancel"
+    }
+  },
+  "details": {
+    "type": {
+      "tv": "TV series",
+      "movie": "Movie"
+    },
+    "runtime": {
+      "seasons_one": "{{count}} season",
+      "seasons_other": "{{count}} seasons"
+    },
+    "watchedPercent": "{{percent}}% watched",
+    "play": "Play",
+    "playEpisode": "Play {{code}}",
+    "resumeEpisode": "Resume {{code}}",
+    "addToPlaylist": "Add to playlist",
+    "playlistPicker": {
+      "title": "Add To Playlist"
+    },
+    "tabs": {
+      "episodes": "Episodes",
+      "details": "Details"
+    },
+    "synopsis": "Synopsis",
+    "cast": "Cast",
+    "crew": {
+      "title": "Crew",
+      "director": "Director",
+      "writing": "Writing"
+    },
+    "seasonShort": "S{{number}}",
+    "episodesEmpty": "No episodes available for this season.",
+    "episode": {
+      "title": "E{{number}} · {{name}}",
+      "label": "Episode {{number}}, {{name}}",
+      "labelWatched": "Episode {{number}}, {{name}}, watched",
+      "labelProgress": "Episode {{number}}, {{name}}, {{percent}}% watched"
+    },
+    "trailer": {
+      "watch": "Watch trailer",
+      "pickerTitle": "Select Trailer",
+      "fallbackName": "Trailer",
+      "errors": {
+        "load": "Could not load trailer.",
+        "player": "Trailer player failed on this device."
+      },
+      "button": "Trailer"
+    },
+    "genres": {
+      "movie": {
+        "28": "Action",
+        "12": "Adventure",
+        "16": "Animation",
+        "35": "Comedy",
+        "80": "Crime",
+        "99": "Documentary",
+        "18": "Drama",
+        "10751": "Family",
+        "14": "Fantasy",
+        "36": "History",
+        "27": "Horror",
+        "10402": "Music",
+        "9648": "Mystery",
+        "10749": "Romance",
+        "878": "Sci-Fi",
+        "53": "Thriller",
+        "10752": "War",
+        "37": "Western"
+      },
+      "tv": {
+        "10759": "Action",
+        "16": "Animation",
+        "35": "Comedy",
+        "80": "Crime",
+        "99": "Documentary",
+        "18": "Drama",
+        "10751": "Family",
+        "10762": "Kids",
+        "9648": "Mystery",
+        "10763": "News",
+        "10764": "Reality",
+        "10765": "Sci-Fi",
+        "10766": "Soap",
+        "10767": "Talk",
+        "10768": "War",
+        "37": "Western"
+      }
+    },
+    "playAgain": "Play again",
+    "resume": "Resume",
+    "back": "Back",
+    "actions": {
+      "download": "Download",
+      "playlist": "Playlist"
+    }
+  },
+  "downloads": {
+    "title": "Downloads",
+    "back": "Back",
+    "percent": "{{percent}}%",
+    "summary_one": "{{count}} item · {{size}} on this device",
+    "summary_other": "{{count}} items · {{size}} on this device",
+    "wifiBanner": "Downloads resume automatically on Wi-Fi.",
+    "trafficSlowed": "Downloads are slower because we're in a high-traffic period.",
+    "trafficHeld": "Downloads are on hold while traffic is very high. They resume on their own as soon as it drops.",
+    "empty": {
+      "title": "No downloads yet",
+      "subtitle": "Open a movie or episode and tap Download to watch it offline."
+    },
+    "actions": {
+      "keep": "Keep",
+      "remove": "Remove",
+      "delete": "Delete",
+      "close": "Close"
+    },
+    "row": {
+      "retry": "Retry download",
+      "cancel": "Cancel download",
+      "delete": "Delete download"
+    },
+    "status": {
+      "queued": "Queued",
+      "waitingWifi": "Waiting for Wi-Fi",
+      "waitingNetwork": "Waiting for network",
+      "completed": "{{size}} · {{quality}}",
+      "downloading": "{{percent}}% · {{done}} of {{total}}"
+    },
+    "pill": {
+      "idle": "Download",
+      "partial": "Download remaining ({{completed}}/{{total}} saved)",
+      "queued": "Download queued, tap to cancel",
+      "waitingWifi": "Waiting for Wi-Fi, tap to cancel",
+      "waitingNetwork": "Waiting for network, tap to cancel",
+      "downloading": "Downloading {{percent}} percent, tap to cancel",
+      "downloaded": "Downloaded, tap to remove",
+      "errorRetry": "{{message}}. Tap to retry"
+    },
+    "picker": {
+      "open": "Download seasons",
+      "title": "Download seasons",
+      "selectAll": "Select all",
+      "unselectAll": "Unselect all",
+      "download": "Download",
+      "save": "Save changes",
+      "season": "Season {{number}}",
+      "specials": "Specials",
+      "episodes_one": "{{count}} episode",
+      "episodes_other": "{{count}} episodes",
+      "partial": "{{completed}} of {{total}} episodes saved",
+      "downloading": "Downloading {{percent}}%",
+      "downloaded": "Saved on this device"
+    },
+    "episodeA11y": "{{label}}, episode {{episode}}",
+    "confirmRemove": {
+      "title": "Remove download?",
+      "message": "Downloaded files will be removed from this device."
+    },
+    "confirmCancel": {
+      "title": "Cancel download?"
+    },
+    "confirmDelete": {
+      "title": "Delete download?",
+      "message": "{{label}} will be removed from this device."
+    },
+    "deleteAll": {
+      "label": "Delete all downloads",
+      "title": "Delete all downloads?",
+      "message": "{{size}} will be freed.",
+      "confirm": "Delete all"
+    },
+    "errors": {
+      "failedTitle": "Download failed",
+      "failed": "Download failed",
+      "failedWithReason": "Download failed ({{reason}})",
+      "insufficientSpace": "Not enough free storage",
+      "auth": "Session expired. Retry to sign in again",
+      "network": "Network error. Retry when you are back online",
+      "detailsMissing": "Could not read this title from the media library. Try again in a moment.",
+      "nativeUnavailable": "Downloads are not available on this device."
+    },
+    "notification": {
+      "channelDescription": "Progress of downloads for offline viewing",
+      "activeItems": "Downloading {{number}} items",
+      "completed": "Download complete"
+    },
+    "refused": {
+      "insufficientSpace": {
+        "title": "Not enough storage",
+        "message": "Not enough storage: this download needs {{required}} (including a safety margin) but only {{free}} is free."
+      },
+      "noNetwork": {
+        "title": "No connection",
+        "message": "No connection. Connect to the internet to start a download."
+      }
+    },
+    "quality": {
+      "title": "Download quality",
+      "hint": "Pick the quality to save on this phone.",
+      "fallback_one": "{{count}} episode doesn't have {{chosen}}: it gets {{quality}}",
+      "fallback_other": "{{count}} episodes don't have {{chosen}}: they get {{quality}}"
+    },
+    "nothing": {
+      "title": "Nothing to download",
+      "already-local": "Already downloaded or in the queue.",
+      "no-quality-available": "No downloadable quality is available for this title yet.",
+      "no-file": "This title has no playable file."
+    },
+    "waitingWifiAlert": {
+      "title": "Waiting for Wi-Fi",
+      "message": "The download will start as soon as you are on Wi-Fi."
+    }
+  },
+  "cast": {
+    "back": "Back",
+    "pickerTitle": "Play on",
+    "thisPhone": "This phone",
+    "thisPhoneHint": "Play in the app",
+    "searching": "Looking for Cast devices on your Wi-Fi...",
+    "noDevices": "No Cast device found. The phone and the device must be on the same Wi-Fi.",
+    "deviceHint": "Google Cast",
+    "airplay": "AirPlay",
+    "airplayChoose": "Choose an AirPlay device with the button",
+    "airplayActive": "Play on {{name}}",
+    "screenTitle": "Casting",
+    "castingTo": "Casting to {{name}}",
+    "preparing": "Preparing the stream...",
+    "connecting": "Connecting to {{name}}...",
+    "keepWifi": "Keep this phone on the same Wi-Fi until the end: it sends the film to the device.",
+    "play": "Play",
+    "pause": "Pause",
+    "back10": "Back 10 seconds",
+    "forward10": "Forward 10 seconds",
+    "stop": "Stop casting",
+    "seekBar": "Position",
+    "ended": "Finished",
+    "refusedTitle": "Can't cast this title",
+    "refused": {
+      "video-unsupported": "This device can't play this video. It plays on the Badger TV app instead.",
+      "image-subtitles": "The chosen subtitles are images (PGS or VobSub), which a cast device can't show. Pick other subtitles, or watch it on the Badger TV app.",
+      "no-playable-audio": "This device can't play any sound track of this title. It plays on the Badger TV app instead.",
+      "no-video": "This title has no video to cast."
+    },
+    "error": {
+      "noWifi": "Connect the phone to Wi-Fi to cast.",
+      "serverFailed": "The phone could not start sending the stream.",
+      "sessionFailed": "Could not connect to the device.",
+      "loadFailed": "The device did not accept the stream.",
+      "lost": "The device stopped playing.",
+      "airplayNoRoute": "Choose an AirPlay device first.",
+      "airplayRouteLost": "AirPlay was disconnected.",
+      "airplayNotExternal": "AirPlay did not take over the playback."
+    },
+    "switchingTrack": "Switching track…",
+    "trackN": "Track {{n}}",
+    "subtitlesOff": "Off",
+    "audio": "Audio",
+    "subtitles": "Subtitles",
+    "imageSubtitle": "Picture subtitles can't be cast",
+    "volume": "TV volume",
+    "mute": "Mute the TV",
+    "unmute": "Unmute the TV",
+    "gestureHint": "Double-tap left or right to skip 10 s. Slide up or down to change the TV volume.",
+    "seekBackToast": "−10 s",
+    "seekForwardToast": "+10 s"
+  },
+  "nav": {
+    "home": "Home",
+    "library": "Library",
+    "playlists": "Playlists",
+    "settings": "Settings",
+    "loading": "Loading...",
+    "loadingLibrary": "Loading media library...",
+    "updateRequired": "Update Required",
+    "unavailable": "Badger is unavailable: {{issue}}. Please update your app.",
+    "screenLoadFailed": "Could not load screen",
+    "tryAgain": "Try again"
+  },
+  "tvShell": {
+    "navLabel": "Main navigation",
+    "offline": {
+      "network": "Offline",
+      "syncError": "Media library sync failed",
+      "retry": "Retry"
+    },
+    "home": {
+      "resume": "Resume",
+      "startOver": "Start over",
+      "details": "Details",
+      "percentWatched": "{{percent}}% watched",
+      "resumeAt": "Resume {{time}}"
+    },
+    "errorReports": {
+      "title": "Help us fix problems?",
+      "body": "Reports are anonymous and help us a lot to fix bugs 🙂",
+      "send": "Send reports",
+      "decline": "Don't send",
+      "footer": "You can change this any time in Settings."
+    },
+    "details": {
+      "deleteFailed": "Could not delete this title.",
+      "delete": "Delete",
+      "deleteConfirmTitle": "Delete {{title}}?",
+      "deleteConfirmBody": "It is removed from your media library on every device. This cannot be undone.",
+      "deleteConfirm": "Delete for good",
+      "cancel": "Cancel",
+      "more": "More",
+      "trailer": "Trailer",
+      "trailerFailed": "Could not open the trailer.",
+      "trailerOnYouTube": "Watch on YouTube",
+      "trailerQrHint": "Scan with your phone to watch the trailer on YouTube.",
+      "playlist": "Playlist",
+      "playlistTitle": "Add to a playlist",
+      "playlistEmpty": "No playlists yet.",
+      "resume": "Resume",
+      "tabs": {
+        "tracks": "Qualities & tracks",
+        "cast": "Cast & crew",
+        "episodes": "Episodes",
+        "versions": "Versions",
+        "similar": "More like this"
+      },
+      "qualities": "Qualities",
+      "audio": "Audio",
+      "subtitles": "Subtitles",
+      "originalQuality": "{{quality}} (original)",
+      "none": "None",
+      "noMedia": "No video uploaded yet.",
+      "watchedLeft_one": "{{percent}}% watched · {{count}} min left",
+      "watchedLeft_other": "{{percent}}% watched · {{count}} min left",
+      "watched": "✓ Watched",
+      "runtimeMinutes": "{{minutes}} min",
+      "runtimeHours": "{{hours}} h {{minutes}} min",
+      "episodeCode": "S{{season}} · E{{episode}}",
+      "episodeHeading": "S{{season}} · E{{episode}} · {{name}}",
+      "episodeInfo": "Details of episode {{number}}, {{name}}",
+      "aired": "aired {{date}}",
+      "close": "Close",
+      "seasonEpisodes_one": "{{count}} episode",
+      "seasonEpisodes_other": "{{count}} episodes",
+      "seasonAvailable": "Available",
+      "seasonMissing": "Missing files",
+      "backToLibrary": "Back to Library",
+      "backToPlaylists": "Back to Playlists",
+      "backToHome": "Back to Home",
+      "backToSearch": "Back to Search"
+    },
+    "settings": {
+      "qualityAuto": "Auto, up to {{quality}}: steps down when the connection can't keep up.",
+      "qualityForced": "Forced: always {{quality}}.",
+      "forceDescription": "Don't adapt to network conditions.",
+      "about": "About",
+      "groupsLabel": "Settings groups",
+      "qualityAndLanguages": "Quality and languages",
+      "qualityValueAuto": "Auto, up to {{quality}}",
+      "subtitleForProfile": "For this profile"
+    },
+    "dialog": {
+      "close": "Close"
+    },
+    "devices": {
+      "thisDevice": "{{name}} (this TV)",
+      "confirmSelfTitle": "Sign out of this TV?",
+      "confirmSelfBody": "This TV stops showing your media library until someone signs in on it again."
+    },
+    "nav": {
+      "search": "Search"
+    },
+    "empty": {
+      "eyebrow": "YOUR LIBRARY",
+      "title": "Add your first title",
+      "subtitle": "Add films and series with Badger on your computer. They show up on this TV by themselves.",
+      "checkAgain": "Check again",
+      "getDesktop": "Get Badger for computer",
+      "downloadQr": "QR code of the Badger download page",
+      "step1Title": "Add media on your computer",
+      "step1Body": "Pick films or a whole folder in Badger for computer.",
+      "step2Title": "Badger finds the details",
+      "step2Body": "Posters, cast and summaries arrive by themselves, in your language.",
+      "step3Title": "Watch on this TV",
+      "step3Body": "Your media library shows up here, encrypted with your key."
+    }
+  },
+  "settings": {
+    "account": {
+      "signedInAs": "Signed in as",
+      "unknown": "Unknown",
+      "plan": "Account & plan",
+      "planDescription": "Your plan and storage",
+      "signOut": "Sign out",
+      "deletionScheduled": "Deletion booked for {{date}}",
+      "pairDevice": {
+        "title": "Pair a device",
+        "description": "Add a computer or TV"
+      }
+    },
+    "playback": {
+      "title": "Playback",
+      "autoplay": {
+        "title": "Autoplay next episode",
+        "description": "Continue TV episodes automatically."
+      },
+      "intro": {
+        "title": "Skip intros automatically",
+        "description": "Skip the intro when it is known. The Skip button always shows."
+      },
+      "credits": {
+        "title": "Skip credits automatically",
+        "description": "Skip the end credits when they are known."
+      },
+      "quality": {
+        "title": "Default playback quality",
+        "descriptionForced": "Forced: always {{quality}}, whatever the network or this phone.",
+        "descriptionAuto": "Auto, up to {{quality}}: playback starts here, never goes above it, steps down when your connection or phone can't keep up and comes back when they can."
+      },
+      "force": {
+        "title": "Force this quality",
+        "description": "Don't adapt to network conditions or this phone. Off (recommended): the player can step down if your connection can't sustain the chosen quality."
+      },
+      "audioLanguage": {
+        "title": "Default audio language",
+        "description": "Used when this movie or show has no audio choice of its own and the file has that language. Otherwise the file's own default audio plays.",
+        "original": "Original"
+      }
+    },
+    "downloads": {
+      "title": "Downloads",
+      "wifiOnly": {
+        "title": "Download on Wi-Fi only",
+        "description": "Never use mobile data for downloads."
+      },
+      "manage": {
+        "title": "Manage downloads",
+        "description": "See what is stored on this device"
+      }
+    },
+    "language": {
+      "title": "Language",
+      "appLanguage": "App language",
+      "accountWide": "Changes the language of your account on all your devices, and of the emails we send you."
+    },
+    "privacy": {
+      "title": "Privacy",
+      "errorReports": {
+        "title": "Send error reports",
+        "description": "Reports are anonymous and help us a lot to fix bugs 🙂",
+        "link": "What's in a report?"
+      }
+    },
+    "advanced": {
+      "title": "Advanced",
+      "server": "Server",
+      "apiHost": "API host",
+      "apiHostPlaceholder": "https://your-server.com",
+      "saveHostLabel": "Save API host",
+      "saveHost": "Save host",
+      "hostSaved": "Saved",
+      "libraryKey": "Media library key",
+      "resetKey": {
+        "title": "Reset encryption key",
+        "description": "Rotate the key that protects your media library."
+      },
+      "animatedBackground": {
+        "title": "Animated background",
+        "description": "Shooting stars cross the starry sky behind the app every few seconds. Automatic turns them off on phones with little memory.",
+        "auto": "Automatic",
+        "on": "On",
+        "off": "Off",
+        "automatic": {
+          "animated": "Automatic: shooting stars are on for this phone.",
+          "static": "Automatic: this phone has little memory, so the sky stays still."
+        }
+      }
+    }
+  },
+  "account": {
+    "password": {
+      "title": "Change password",
+      "currentPassword": "Current password",
+      "newPassword": "New password",
+      "change": "Change password",
+      "changing": "Changing...",
+      "success": "Password changed.",
+      "codeLabel": "Verification code",
+      "errors": {
+        "required": "Both fields are required.",
+        "tooShort": "New password must be at least 8 characters.",
+        "incorrect": "Current password is incorrect.",
+        "twoFactorRequired": "Enter your verification code to confirm the password change.",
+        "twoFactorInvalid": "That verification code is invalid. Try again.",
+        "failed": "Failed to change password."
+      },
+      "set": {
+        "title": "Set a password",
+        "button": "Set password",
+        "setting": "Setting..."
+      }
+    },
+    "devices": {
+      "title": "Your devices",
+      "loading": "Loading...",
+      "empty": "No signed-in devices found.",
+      "summary_one": "{{count}} device signed in",
+      "summary_other": "{{count}} devices signed in",
+      "manage": "See all devices",
+      "thisDevice": "{{name}} (this phone)",
+      "lastSeen": "Last seen: {{date}}",
+      "lastSeenUnknown": "Last seen: unknown",
+      "revoke": "Sign out",
+      "refresh": "Refresh",
+      "footnote": "Signing a device out stops its access to your media library. The key itself can't be taken back.",
+      "confirmTitle": "Sign out {{name}}?",
+      "confirmExplanation": "This stops its access to your media library right away. The key itself can't be taken back: if the device already has a copy of it, it still has that copy.",
+      "cancel": "Cancel",
+      "errors": {
+        "load": "We couldn't load your devices. Check your connection and try again.",
+        "revoke": "We couldn't sign that device out. Try again."
+      }
+    },
+    "access": {
+      "unpaidBanner": "Your subscription ended. Playback and uploads are stopped. Your files are deleted on {{date}}.",
+      "unpaidBannerNoDate": "Your subscription ended. Playback and uploads are stopped. Your files will be deleted after a limited time.",
+      "playbackBlocked": "Playback is stopped because your subscription ended. Your files are deleted on {{date}}.",
+      "playbackBlockedNoDate": "Playback is stopped because your subscription ended. Your files will be deleted after a limited time."
+    },
+    "signOutKey": {
+      "title": "Have you saved your media library key?",
+      "body": "Signing out removes your media library key from this device. To sign back in you will have to type it, because signing in with a QR code only works while another of your devices still has the key. Without the key, your media library can't be opened.",
+      "cancel": "Cancel",
+      "confirm": "I saved it, sign out"
+    }
+  },
+  "deleteAccount": {
+    "back": "Back",
+    "title": "Delete account",
+    "warning": "This permanently deletes your account, your media library and all your files. This cannot be undone.",
+    "warningBooked": "Your account, your media library and all your files will be deleted on {{date}}. Until then you can undo this with \"Keep my account\".",
+    "keepFiles": "Want to keep your files? Download them with the desktop app before deleting. After deletion, your files can't be recovered.",
+    "passwordLabel": "Your password",
+    "confirmLabel": "Type DELETE to confirm",
+    "codeLabel": "Verification code",
+    "delete": "Delete account",
+    "deleting": "Deleting…",
+    "modeTitle": "You paid for a full year. When should we delete your account?",
+    "modeEndOfPeriod": "At the end of your paid year, on {{date}}. Your account keeps working until then and will not renew. You can cancel this at any time before that date.",
+    "modeNow": "Now. You lose access straight away and the rest of the year is not refunded.",
+    "scheduled": "Your account will be deleted on {{date}}. It keeps working until then and will not renew.",
+    "cancelScheduled": "Keep my account",
+    "cancelScheduledFailed": "Could not cancel the deletion. Please try again.",
+    "errors": {
+      "invalidPassword": "That password is incorrect.",
+      "twoFactorRequired": "Enter your verification code to continue.",
+      "twoFactorInvalid": "That verification code is invalid. Try again.",
+      "confirmRequired": "Type DELETE to confirm.",
+      "failed": "Delete failed. Please try again."
+    }
+  },
+  "pairing": {
+    "title": "Pair a device",
+    "subtitle": "Add a browser, computer or TV to your account.",
+    "cardHint": "Add a computer or TV by scanning the code it shows.",
+    "warning": "Only scan codes shown on a screen in front of you. Someone who sends you a code can get access to your whole media library.",
+    "back": "Back",
+    "approvalQuestion": "{{app}} on {{name}} ({{type}}) wants to sign in to your account.",
+    "approvalKeyQuestion": "{{app}} on {{name}} ({{type}}) is signed in to your account and wants your media library key.",
+    "deviceType": {
+      "unknown": "Device",
+      "mobile": "Phone",
+      "desktop": "Computer",
+      "tv": "TV",
+      "kodi": "Kodi",
+      "jellyfin": "Jellyfin server",
+      "web": "Web browser"
+    },
+    "scan": {
+      "cameraStarting": "Starting the camera...",
+      "cameraDenied": "The camera isn't allowed. Allow camera access for this app in your phone's settings, or type the code instead.",
+      "pointCamera": "Point the camera at the code on the other device's screen.",
+      "codeLabel": "Code shown on the other device",
+      "codeAccessibility": "Pairing code",
+      "continue": "Continue",
+      "typeInstead": "Type the code instead",
+      "scanInstead": "Scan the code instead"
+    },
+    "looking": "Looking up the code...",
+    "confirm": {
+      "asked": "{{type}} named \"{{name}}\" asked to join your account.",
+      "unlockNotice": "You'll be asked to unlock your phone. Approving signs it in and gives it your media library key.",
+      "approve": "Approve",
+      "deny": "Deny"
+    },
+    "approving": "Waiting for you to unlock your phone...",
+    "done": {
+      "added": "{{name}} was added.",
+      "notAdded": "{{name}} was not added.",
+      "addedDetail": "The {{type}} is signing in now. You can sign it out any time from your device list.",
+      "notAddedDetail": "Its code can't be used any more.",
+      "done": "Done"
+    },
+    "failed": {
+      "notAddedYet": "Not added yet",
+      "didntWork": "That didn't work",
+      "tryAgain": "Try again",
+      "tryAnother": "Try another code"
+    },
+    "errors": {
+      "invalid_code": "That doesn't look like a pairing code. It has 8 letters and numbers, like ABCD-EFGH.",
+      "not_found": "We couldn't find that code. It may have expired (codes last 5 minutes), or it was already used. Ask the other device for a new code.",
+      "expired": "That code has expired. Ask the other device for a new code and try again.",
+      "already_used": "That code was already used. If you didn't approve it yourself, check your device list.",
+      "no_library_key": "This phone doesn't have your media library key, so it can't add another device. Open your media library on this phone first.",
+      "no_device_lock": "This phone has no screen lock. Set a PIN, pattern, fingerprint or face unlock in your phone's settings first. We ask for it before sharing your media library with another device.",
+      "unlock_cancelled": "Nothing was shared. Unlock your phone to approve the new device.",
+      "unlock_failed": "We couldn't unlock your phone, so nothing was shared. Try again.",
+      "wrong_password": "That password is not right, so nothing was shared. Try again.",
+      "signed_out": "You've been signed out. Sign in again and retry.",
+      "network": "We couldn't reach the server. Check your connection and try again.",
+      "bad_request": "That device sent something we can't use. Ask it for a new code.",
+      "unknown": "Something went wrong and the device was not added. Try again.",
+      "code_required": "Type the code to confirm it's you.",
+      "code_invalid": "That code is wrong or expired, so nothing was shared. Try again."
+    },
+    "unlock": {
+      "title": "Unlock to add a device",
+      "subtitle": "Confirm it's you before your media library is shared with another device.",
+      "cancel": "Cancel"
+    },
+    "newDevice": {
+      "message": "New device added: {{name}} ({{type}})",
+      "accessibility": "New device added. Open your devices.",
+      "hint": "Tap to see your devices. Not you? Sign it out there.",
+      "close": "Dismiss notice",
+      "tvHint": "Press OK to see your devices. Not you? Sign it out there."
+    }
+  },
+  "phonePairing": {
+    "step1": {
+      "badger": "1. Open Badger or Parrot on a computer or another phone that is signed in, or Badger on a signed-in TV.",
+      "parrot": "1. Open Badger or Parrot on your computer or on another phone that is signed in."
+    },
+    "step2": "2. Go to Settings, then Pair a device.",
+    "step3": "3. Scan this code, or type the code below.",
+    "codeLabel": "Or type this code",
+    "expiresIn": "This code expires in {{time}}. A new one appears by itself.",
+    "deviceName": "This phone shows up as \"{{name}}\".",
+    "qrAccessibility": "QR code to pair this phone",
+    "starting": "Getting a pairing code...",
+    "completing": "Approved. Signing in...",
+    "keyLink": "Get the key from another device",
+    "keyCard": "Use any Badger or Parrot app you're signed in to, on any device or profile of this account.",
+    "keyTitle": "Get your media library key from another device that is signed in to this account.",
+    "typeKey": "Type the key instead",
+    "completingKey": "Approved. Opening your media library...",
+    "tryAgain": "Get a new code",
+    "denied": "The other app declined this phone. Get a new code to try again.",
+    "errors": {
+      "unreachable": "We couldn't reach SpaceFleet. Check this phone's connection and get a new code.",
+      "failed": "Something went wrong while pairing. Get a new code to try again.",
+      "key_unreadable": "The approval reached this phone but its key could not be read. Get a new code and approve it again.",
+      "key_mismatch": "The key that was sent does not match this account. Nothing was kept. Get a new code to try again."
+    }
+  },
+  "tvPairing": {
+    "signIn": {
+      "title": "Sign in to Badger",
+      "subtitle": "On your phone or computer, open Badger → Settings → Pair a device, then scan the code or type it in.",
+      "codeLabel": "Or type this code",
+      "qrAccessibility": "QR code to pair this TV",
+      "starting": "Getting a pairing code...",
+      "completing": "Approved. Signing in...",
+      "usePassword": "Use email and password instead",
+      "useCode": "Use a pairing code instead",
+      "tryAgain": "Get a new code",
+      "denied": {
+        "title": "Pairing was declined",
+        "detail": "The other device declined this TV. Get a new code to try again."
+      },
+      "errors": {
+        "title": "This TV could not be paired",
+        "unreachable": "We couldn't reach Badger. Check this TV's connection and get a new code.",
+        "failed": "Something went wrong while pairing. Get a new code to try again.",
+        "key_unreadable": "The approval reached this TV but its media library key could not be read. Get a new code and approve it again.",
+        "key_mismatch": "The media library key that was sent does not open this account's media library. Nothing was saved on this TV. Get a new code and approve it again from an app that has your media library."
+      },
+      "scanWithPhone": "Scan with your phone",
+      "codeRenews": "A new code appears by itself in {{time}}",
+      "deviceName": "This TV shows up as “{{name}}”"
+    },
+    "approve": {
+      "settingsRow": "Pair a device",
+      "settingsHint": "Approve another device by typing the code it shows.",
+      "title": "Pair a device",
+      "subtitle": "Type the code shown on the other device's screen.",
+      "codeLabel": "Code shown on the other device",
+      "codePlaceholder": "ABCD-EFGH",
+      "continue": "Continue",
+      "cancel": "Cancel",
+      "back": "Back",
+      "warning": "Only approve a code shown on a screen in front of you. Someone who sends you a code can get access to your whole media library.",
+      "passwordNotice": "You'll be asked for your account password. Approving signs the device in and gives it your media library key.",
+      "approving": "Checking your password and sending the key...",
+      "addedDetail": "It is signing in now. You can sign it out any time from your device list.",
+      "password": {
+        "title": "Enter your account password",
+        "detail": "Confirm it's you before your media library is shared with another device.",
+        "label": "Account password"
+      },
+      "codeNotice": "You'll be asked for a code to confirm it's you. Approving signs the device in and gives it your media library key.",
+      "approvingCode": "Checking and sending the key...",
+      "code": {
+        "title": "Enter the code",
+        "detailEmail": "We emailed you a code. Type it to confirm it's you before your media library is shared with another device.",
+        "detailTotp": "Type the code from your authenticator app to confirm it's you before your media library is shared with another device.",
+        "label": "Code"
+      }
+    }
+  },
+  "subscription": {
+    "title": "Account & plan",
+    "back": "Back",
+    "retry": "Retry",
+    "loadError": "Couldn't load your account. Check your connection and try again.",
+    "plan": {
+      "group": "Plan",
+      "plan": "Plan",
+      "status": "Status",
+      "endedOn": "Ended on",
+      "renewsOn": "Renews on",
+      "wipeWarning": "Files are deleted on {{date}}.",
+      "storageAddons": "Storage add-ons",
+      "adminUnlimited": "Admin: unlimited storage"
+    },
+    "planName": {
+      "free": "Free",
+      "tier1": "Starter",
+      "tier2": "Standard",
+      "tier3": "Scale"
+    },
+    "status": {
+      "active": "Active",
+      "expired": "Expired",
+      "free": "Free plan"
+    },
+    "storage": {
+      "group": "Storage",
+      "used": "Used",
+      "usedOf": "{{used}} of {{limit}}",
+      "gettingFull": "Storage is getting full.",
+      "full": "Storage is full. Uploads are blocked until you free up space.",
+      "reserved": "{{size}} reserved for uploads in progress"
+    }
+  },
+  "errorReports": {
+    "title": "Send error reports?",
+    "description": "Reports are anonymous and help us a lot to fix bugs 🙂",
+    "send": "Send error reports",
+    "decline": "Do not send"
+  },
+  "onboarding": {
+    "loading": "Loading media library setup...",
+    "enterTitle": "Enter your media library key",
+    "showTitle": "Your media library key",
+    "subtitle": "This key encrypts your private media library data. Keep it safe.",
+    "generate": "Generate a new key",
+    "validate": "Validate key",
+    "signOut": "Sign out",
+    "errors": {
+      "checkStatus": "Could not check media library status.",
+      "generate": "Could not generate a new key.",
+      "initialize": "Could not initialize your media library.",
+      "noLibrary": "No media library was found for this account.",
+      "unavailable": "Your media library can't be reached right now. Please try again in a moment.",
+      "validate": "Could not validate your key."
+    }
+  },
+  "resetKey": {
+    "title": "Rotate media library key",
+    "subtitle": "Generate a new key and re-encrypt your media library.",
+    "newKey": "New key",
+    "generateAnother": "Generate another key",
+    "password": "Account password",
+    "code": "Two-factor code (optional)",
+    "confirmLabel": "I have saved the new key.",
+    "confirm": "Confirm",
+    "confirmed": "Confirmed",
+    "rotate": "Rotate key",
+    "rotating": "Rotating...",
+    "success": "Key rotated. Reloading media library...",
+    "errors": {
+      "confirmRequired": "Confirm that you saved the new key.",
+      "passwordRequired": "Password required.",
+      "notReady": "Media library is not ready.",
+      "rotate": "Unable to rotate key. Check your password/code."
+    }
+  },
+  "libraryFormat": {
+    "title": "Update required",
+    "body": "This media library was created by a newer version of Badger. Update the app to open it.",
+    "update": "Update Now"
+  },
+  "home": {
+    "empty": {
+      "title": "No media yet",
+      "subtitle": "Add media from the desktop app, then pull down here to refresh."
+    },
+    "sections": {
+      "continueWatching": "Continue watching",
+      "recentlyAdded": "Recently added",
+      "movies": "Movies",
+      "shows": "TV Shows",
+      "favorites": "Favorites"
+    },
+    "seeAll": "See all",
+    "hero": {
+      "minutesLeft_one": "{{count}} min left",
+      "minutesLeft_other": "{{count}} min left",
+      "resume": "Resume"
+    },
+    "emptyLibrary": {
+      "eyebrow": "Your library",
+      "title": "Add your first title",
+      "subtitle": "Add films and series with Badger on your computer. They show up here by themselves.",
+      "getDesktop": "Get Badger for computer",
+      "step1Title": "Pick them on your computer",
+      "step1Body": "In Badger on your computer, choose films or a whole folder. Nothing leaves it until you say so.",
+      "step2Title": "Badger finds the details",
+      "step2Body": "Posters, cast and summaries arrive by themselves, in your language.",
+      "step3Title": "Watch anywhere",
+      "step3Body": "This phone, your TV and your computers show the same media library, encrypted with your key."
+    }
+  },
+  "library": {
+    "scopes": {
+      "movies": "Movies",
+      "tv": "TV shows"
+    },
+    "search": {
+      "placeholder": "Search titles",
+      "label": "Search titles",
+      "clear": "Clear search"
+    },
+    "sheet": {
+      "open": "Sort and filter",
+      "openActive_one": "Sort and filter, {{count}} filter active",
+      "openActive_other": "Sort and filter, {{count}} filters active",
+      "title": "Sort & filter",
+      "reset": "Reset filters",
+      "sortBy": "Sort by",
+      "order": "Order",
+      "genres": "Genres",
+      "allGenres": "All genres",
+      "actors": "Actors",
+      "allActors": "All actors",
+      "actorSearch": "Search actors",
+      "actorsLoading": "Loading actors...",
+      "actorsNone": "No actors found",
+      "downloadedOnly": "Downloaded only",
+      "downloadedOnlyHint": "Only titles saved on this phone."
+    },
+    "sort": {
+      "name": "Name",
+      "added": "Date added",
+      "release": "Release year",
+      "asc": "Ascending",
+      "desc": "Descending"
+    },
+    "row": {
+      "runtimeMinutes": "{{minutes}} min",
+      "runtimeHours": "{{hours}} h {{minutes}} min"
+    },
+    "empty": {
+      "noMatches": "No matches",
+      "noMatchesHint": "Try a different search or clear the filter.",
+      "noMovies": "No movies yet",
+      "noShows": "No shows yet",
+      "addHint": "Add media from the desktop app, then pull down to refresh."
+    },
+    "poster": {
+      "watched": "{{percent}}% watched",
+      "downloaded": "downloaded"
+    }
+  },
+  "playlists": {
+    "newPlaceholder": "New playlist name",
+    "create": "Create playlist",
+    "rowLabel": "{{name}} playlist",
+    "system": {
+      "favorites": "Favorites",
+      "watchlist": "Watchlist"
+    },
+    "empty": {
+      "title": "No playlists yet",
+      "subtitle": "Create a playlist above to group your favorite titles."
+    },
+    "detail": {
+      "back": "Back",
+      "emptyTitle": "Nothing here yet",
+      "emptySubtitle": "Add titles to this playlist from their details page."
+    }
+  },
+  "offline": {
+    "pending_zero": "No changes queued",
+    "pending_one": "{{count}} change will sync when reconnected",
+    "pending_other": "{{count}} changes will sync when reconnected",
+    "indicator": {
+      "network": {
+        "text": "Offline",
+        "label": "Offline — saved content"
+      },
+      "syncError": {
+        "text": "Not synced",
+        "label": "Media library not synced — saved content"
+      },
+      "retry": "Tap to retry."
+    },
+    "notice": {
+      "network": {
+        "title": "You're offline",
+        "hint": "Your saved media library and downloads stay available."
+      },
+      "syncError": {
+        "title": "Media library sync failed",
+        "hint": "Your saved media library stays on screen."
+      },
+      "close": "Dismiss notice"
+    }
+  },
+  "shell": {
+    "language": "Language"
+  },
+  "languageNames": {
+    "en": "English",
+    "fr": "French",
+    "nl": "Dutch",
+    "de": "German",
+    "es": "Spanish"
+  },
+  "errors": {
+    "library": {
+      "unreachable": "Could not reach the API at {{url}}. If you're using localhost, use your computer's LAN IP instead.",
+      "quotaExceeded": "Storage quota exceeded. Free up space to continue syncing.",
+      "loadFailedDetail": "Could not load your media library database. ({{detail}})",
+      "loadFailed": "Could not load your media library database.",
+      "contractBlocked": "Badger is currently unavailable: {{issue}}. Please update your app.",
+      "missingKey": "Missing encryption key.",
+      "decryptFailed": "Could not decrypt your media library. Please re-enter your encryption key.",
+      "formatTooNew": "This media library was created by a newer version of Badger.",
+      "syncUnavailable": "Your media library can't be reached right now. Please try again in a moment."
+    }
+  },
+  "playOnTv": {
+    "button": "Play on TV",
+    "pickerTitle": "Play on TV",
+    "searching": "Looking for your TVs…",
+    "empty": "No Badger TV app open. Open Badger on your TV, signed in to this account, to play there.",
+    "retry": "Try again",
+    "unnamedTv": "TV",
+    "errors": {
+      "offline": "Couldn't reach the server. Check your connection, then try again.",
+      "server": "The server couldn't list your TVs (error {{status}}). Try again in a moment.",
+      "noKey": "This phone can't reach your TVs yet: your media library isn't open on it. Open your media library, then try again.",
+      "signedOut": "You're signed out. Sign in again, then try again."
+    },
+    "remote": {
+      "connecting": "Connecting to {{name}}…",
+      "waiting": "Waiting for {{name}}…",
+      "loading": "Starting on {{name}}…",
+      "playing": "Playing on {{name}}",
+      "paused": "Paused on {{name}}",
+      "ended": "Playback stopped on {{name}}",
+      "failed": "{{name}} couldn't play this title.",
+      "notFound": "{{name}} doesn't have this title yet. Wait a moment for it to update, then try again.",
+      "unreachable": "{{name}} isn't answering. Make sure Badger is open on it.",
+      "play": "Play",
+      "pause": "Pause",
+      "back": "Back 10 seconds",
+      "forward": "Forward 10 seconds",
+      "audio": "Audio",
+      "subtitles": "Subtitles",
+      "subtitlesOff": "Off",
+      "trackFallback": "Track {{n}}",
+      "stop": "Stop",
+      "close": "Close",
+      "retry": "Try again",
+      "position": "{{position}} of {{duration}}"
+    }
+  },
+  "feedback": {
+    "settingsGroup": "Support",
+    "entry": "Send feedback",
+    "entryDescription": "Ideas, what you like, what bothers you",
+    "title": "Send feedback",
+    "intro": "Tell us what you think of the app. Your message reaches the SpaceFleet team with your account, the app's version and your kind of device, never a title or a file name.",
+    "placeholder": "Your message",
+    "attachLog": "Attach the app's error log",
+    "attachLogHint": "Helps us find a problem. It contains no titles or file names.",
+    "send": "Send",
+    "sending": "Sending...",
+    "sent": "Thank you! Your message has been sent.",
+    "back": "Back",
+    "errors": {
+      "empty": "Write a message first.",
+      "rate_limited": "You've sent many messages in the last hour. Please try again later.",
+      "invalid": "This message could not be sent. Shorten it and try again.",
+      "offline": "No connection. Check your network and try again.",
+      "failed": "Your message could not be sent. Please try again."
+    }
+  },
+  "setup": {
+    "stepOf": "Step {{step}} of {{total}}",
+    "back": "Back",
+    "next": "Next",
+    "finish": "Finish",
+    "language": {
+      "title": "Choose your language",
+      "body": "You can change it any time in Settings."
+    },
+    "signIn": {
+      "title": "Sign in",
+      "pairTitle": "Approve this phone from another app",
+      "orPassword": "Or sign in with your email and password",
+      "signedInAs": "Signed in as {{email}}",
+      "useAnother": "Use another account",
+      "sessionRejected": "You were signed out because your session is no longer valid. Sign in again to continue."
+    },
+    "notifications": {
+      "title": "Turn on notifications?",
+      "allow": "Yes, notify me",
+      "allowDetail": "Your phone asks for permission next.",
+      "decline": "Not now",
+      "declineDetail": "You can turn them on later in your phone's settings.",
+      "badgerBody": "Badger can tell you when a film or episode is ready, for example \"The Office season 9 is ready\"."
+    }
+  },
+  "keyStepWords": {
+    "collection": "media library",
+    "collectionKey": "media library key"
+  },
+  "libraryKeyStep": {
+    "continue": "Continue",
+    "lostKeyLink": "Lost your key? Erase this $t(keyStepWords.collection) and start over",
+    "lostKeyNote": "Without the key, nobody can open this $t(keyStepWords.collection), not even us.",
+    "wrongKey": "That key doesn’t open your $t(keyStepWords.collection). Check the 12 words and try again."
+  },
+  "libraryKeyWords": {
+    "copy": "Copy the words",
+    "copied": "Copied",
+    "checksum": "These words don't form a valid key. Check each word against the ones you saved.",
+    "word": "Word {{position}}",
+    "wordUnknown": "Word {{position}} is not one of the key words",
+    "gridLabel": "Your $t(keyStepWords.collectionKey), 12 words"
+  },
+  "eraseLibrary": {
+    "title": "Erase this $t(keyStepWords.collection)?",
+    "warning": "This erases the entire $t(keyStepWords.collection) of this account, for every profile: all music, movies and shows, and all their details (metadata, playlists, history, settings), in Badger and Parrot. Nobody can undo this, not even us. Your account and plan stay.",
+    "otherDeviceLine": "Still signed in somewhere? Any Badger or Parrot app works, on any computer, phone or TV, even on another profile of this account. Get your key from there.",
+    "otherDeviceLink": "Get the key from another device",
+    "confirmLabel": "Type {{word}} to confirm",
+    "passwordLabel": "Account password",
+    "codeLabel": "Verification code",
+    "codeSent": "We sent a verification code. Check your email or authenticator.",
+    "cancel": "Cancel",
+    "submit": "Erase everything and start over",
+    "working": "Erasing...",
+    "errorInvalidPassword": "Incorrect password.",
+    "errorTwoFactorInvalid": "Verification code is invalid.",
+    "errorGeneric": "Could not reset the $t(keyStepWords.collection) right now. Please try again."
+  },
+  "appUpdate": {
+    "title": "Update {{app}} to keep using it",
+    "body": "This version of {{app}} is too old to connect. Install the new version from where you got {{app}}, then open it again."
+  }
+}

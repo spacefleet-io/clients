@@ -1,0 +1,4 @@
+/* Permission prompts shown by iOS (Info.plist keys). */
+"NSCameraUsageDescription" = "Parrot uses the camera to scan the code on a new device you want to add to your account.";
+"NSFaceIDUsageDescription" = "Parrot asks for Face ID before it shares your music library with another device.";
+"NSPhotoLibraryUsageDescription" = "Parrot opens your photos so you can pick a cover for an album or a playlist.";

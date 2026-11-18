@@ -1,0 +1,33 @@
+apply plugin: "com.android.library"
+apply plugin: "org.jetbrains.kotlin.android"
+
+android {
+    namespace "com.spacefleet.mediasession"
+    compileSdk 36
+    buildToolsVersion "36.0.0"
+
+    defaultConfig {
+        minSdk 26
+        targetSdk 36
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = "17"
+    }
+}
+
+dependencies {
+    implementation("com.facebook.react:react-android")
+    // Media3 (stable line, same version as @space/mobile-audio-playback): the MediaSessionService gives the notification,
+    // lock-screen card and headset buttons for a player that lives elsewhere (mpv, a TV), mirrored by a SimpleBasePlayer
+    // (PLAY-OSMEDIA-01).
+    implementation("androidx.media3:media3-common:1.11.1")
+    implementation("androidx.media3:media3-session:1.11.1")
+    // JVM unit tests of the pure-Kotlin parts (src/test): `./gradlew :space_mobile-media-session:testDebugUnitTest`.
+    testImplementation("junit:junit:4.13.2")
+}

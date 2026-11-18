@@ -1,0 +1,2089 @@
+{
+  "common": {
+    "expand": "Geavanceerde instellingen tonen",
+    "collapse": "Geavanceerde instellingen verbergen",
+    "loading": "Laden…",
+    "close": "Sluiten"
+  },
+  "nav": {
+    "dashboard": "Home",
+    "library": "Bibliotheek",
+    "playlists": "Afspeellijsten",
+    "lab": "Bestandsbeheer",
+    "subscription": "Abonnement",
+    "settings": "Instellingen",
+    "search": "Zoeken",
+    "addMedia": "Media toevoegen",
+    "signOut": "Uitloggen",
+    "signOutKeyCheck": {
+      "title": "Heb je je mediatheeksleutel bewaard?",
+      "body": "Als je uitlogt, verdwijnt je mediatheeksleutel van deze computer. Om weer in te loggen moet je hem intypen, want inloggen met een QR-code werkt alleen zolang een ander apparaat van je de sleutel nog heeft. Zonder de sleutel kan je mediatheek niet worden geopend.",
+      "cancel": "Annuleren",
+      "showKey": "Mijn sleutel tonen",
+      "confirm": "Bewaard, uitloggen"
+    },
+    "signIn": "Inloggen",
+    "app": "App",
+    "appNav": "App-navigatie",
+    "openMenu": "Menu openen",
+    "jobs": {
+      "title": "Taken",
+      "subtitle": "Actieve en recente taken",
+      "filterAll": "Alle",
+      "filterActive": "Actief",
+      "filterQueued": "In wachtrij",
+      "filterCompleted": "Voltooid",
+      "filterFailed": "Mislukt",
+      "downloadsHeld": "Downloads staan in de wacht zolang het erg druk is. Ze gaan vanzelf verder zodra het rustiger wordt.",
+      "downloadsSlowed": "Downloads zijn trager omdat het nu erg druk is.",
+      "crewBackfill": "Regisseurs en schrijvers worden aan je titels toegevoegd ({{handled}} van {{total}})"
+    },
+    "notifications": {
+      "title": "Meldingen",
+      "subtitle": "{{count}} recente items",
+      "empty": "Nog geen meldingen.",
+      "open": "Openen",
+      "filterAll": "Alle",
+      "filterError": "Fout",
+      "filterWarning": "Waarschuwing",
+      "filterInfo": "Info",
+      "filterSuccess": "Gelukt",
+      "clearAll": "Alles wissen",
+      "dismiss": "Sluiten"
+    },
+    "account": "Account"
+  },
+  "authApiHost": {
+    "button": "API-host",
+    "title": "Verbindingshosts",
+    "subtitle": "Stel eigen API- en runtime-hosts in. Deze waarden worden lokaal opgeslagen en blijven bewaard na het uitloggen.",
+    "apiLabel": "API",
+    "label": "Eigen host",
+    "placeholder": "api.spacefleet.io",
+    "hint": "Je kunt een host of een volledige URL invullen. Voorbeeld: api.spacefleet.io of https://api.spacefleet.io",
+    "defaultBadge": "Standaard",
+    "customBadge": "Aangepast",
+    "useDefault": "Standaard gebruiken",
+    "save": "Opslaan",
+    "saving": "Opslaan...",
+    "error": "Kan de API-host niet opslaan. Controleer de waarde en probeer het opnieuw."
+  },
+  "login": {
+    "title": "Inloggen",
+    "subtitle": "Je eigen bioscoop in een baan om de aarde",
+    "emailLabel": "E-mail",
+    "passwordLabel": "Wachtwoord",
+    "twoFactorLabel": "Verificatiecode",
+    "twoFactorPlaceholder": "123456",
+    "button": "Inloggen",
+    "signingIn": "Inloggen...",
+    "resend": "Code opnieuw sturen",
+    "resending": "Opnieuw sturen...",
+    "verifyEmail": "E-mail bevestigen",
+    "createAccount": "Account aanmaken",
+    "noAccountPrompt": "Nog geen account?",
+    "infoEmail": "We hebben een verificatiecode naar je e-mail gestuurd.",
+    "infoTotp": "Vul de code uit je authenticator-app in.",
+    "resendSuccess": "Er is een nieuwe verificatiecode verstuurd.",
+    "resendError": "Kan de code niet opnieuw sturen.",
+    "provider": {
+      "signInWith": "Inloggen met {{provider}}",
+      "signUpWith": "Registreren met {{provider}}",
+      "or": "of",
+      "continueInBrowser": "Rond het inloggen af in je browser. Badger komt daarna terug.",
+      "errorStart": "Inloggen kon niet starten. Probeer het opnieuw.",
+      "errors": {
+        "no_account": "Er is nog geen SpaceFleet-account met dit e-mailadres.",
+        "email_unverified": "Het e-mailadres van dit account is niet bevestigd. Bevestig het bij de aanbieder, of log in met je e-mailadres en wachtwoord.",
+        "email_domain_disallowed": "Met dit e-mailadres kan geen account worden aangemaakt.",
+        "account_deletion_pending": "Dit account wordt binnenkort verwijderd.",
+        "provider_failed": "Inloggen is niet gelukt. Probeer het opnieuw.",
+        "cancelled": "Inloggen is geannuleerd.",
+        "invalid_code": "Deze inlogpoging is verlopen of ergens anders gestart. Probeer het opnieuw."
+      }
+    }
+  },
+  "signup": {
+    "title": "Account aanmaken",
+    "subtitle": "Je moet je e-mail bevestigen voordat je kunt inloggen.",
+    "emailLabel": "E-mail",
+    "passwordLabel": "Wachtwoord",
+    "confirmLabel": "Herhaal wachtwoord",
+    "button": "Account aanmaken",
+    "creating": "Aanmaken...",
+    "backToSignIn": "Terug naar inloggen",
+    "haveAccountPrompt": "Heb je al een account?",
+    "signIn": "Inloggen",
+    "privacy": "Privacy",
+    "errors": {
+      "passwordLength": "Je wachtwoord moet minstens 8 tekens hebben.",
+      "passwordMismatch": "De wachtwoorden komen niet overeen.",
+      "emailExists": "Dit e-mailadres is al geregistreerd.",
+      "emailDomainDisallowed": "Dit e-maildomein is niet toegestaan. Gebruik een andere e-mailprovider.",
+      "generic": "Registreren mislukt. Probeer het opnieuw."
+    }
+  },
+  "verifyEmail": {
+    "title": "Bevestig je e-mail",
+    "subtitle": "We hebben een verificatiecode naar je e-mail gestuurd. Vul hem hier in om je registratie af te ronden.",
+    "verifying": "Bevestigen...",
+    "emailLabel": "E-mail",
+    "codeLabel": "Verificatiecode",
+    "codePlaceholder": "123456",
+    "submit": "E-mail bevestigen",
+    "resend": "Verificatiecode opnieuw sturen",
+    "sending": "Versturen...",
+    "backToSignIn": "Terug naar inloggen",
+    "createAccount": "Account aanmaken",
+    "sent": "Verificatiecode verstuurd. Kijk in je inbox.",
+    "errors": {
+      "invalidCode": "Ongeldige verificatiecode. Probeer het opnieuw.",
+      "emailRequired": "Vul je e-mailadres in om de verificatiecode opnieuw te sturen.",
+      "emailNotFound": "Geen account gevonden voor dit e-mailadres.",
+      "sendFailed": "Kan de verificatiecode niet versturen.",
+      "generic": "Kan je e-mail niet bevestigen."
+    }
+  },
+  "addMedia": {
+    "title": "Toevoegen aan mediatheek",
+    "subtitle": "Zoek een titel en voeg hem toe aan je mediatheek.",
+    "backToLibrary": "Terug naar mediatheek",
+    "searchTitle": "{{type}} zoeken",
+    "searchSubtitle": "Typ minstens 2 tekens en druk op Enter of klik op Zoeken.",
+    "searchPlaceholder": "Titels zoeken...",
+    "search": "Zoeken",
+    "searching": "Zoeken...",
+    "noResults": "Nog geen resultaten.",
+    "startTyping": "Begin te typen om te zoeken.",
+    "added": "\"{{title}}\" is toegevoegd aan je mediatheek.",
+    "inLibrary": "Toegevoegd aan mediatheek",
+    "add": "Toevoegen",
+    "addToLibrary": "Toevoegen aan mediatheek",
+    "trailer": "Trailer",
+    "trailerLoading": "Trailers laden...",
+    "adding": "Toevoegen...",
+    "loadingMore": "Meer resultaten laden…",
+    "unknown": "--",
+    "type": {
+      "movies": "Films",
+      "tv": "Series"
+    },
+    "upload": {
+      "title": "Bestanden uploaden",
+      "subtitle": "Voeg nu bestanden toe om deze titel afspeelbaar te maken. Je kunt later ook bestanden toevoegen via de mediapagina.",
+      "loading": "Deze titel wordt aan je mediatheek toegevoegd...",
+      "progress": "{{percent}}% voltooid",
+      "stages": {
+        "default": "Bezig...",
+        "checking_dummy": "Testinhoud controleren",
+        "fetching_metadata": "Metadata ophalen",
+        "uploading_assets": "Artwork uploaden",
+        "writing_library": "Opslaan in mediatheek"
+      },
+      "continue": "Doorgaan",
+      "later": "Ik voeg later bestanden toe",
+      "dummy": "Toevoegen met testinhoud",
+      "cancel": "Annuleren"
+    },
+    "errors": {
+      "tmdbNotConfigured": "Zoeken is nu niet beschikbaar. Probeer het later opnieuw.",
+      "searchFailed": "Zoeken mislukt. Probeer het opnieuw.",
+      "addFailed": "Kan deze media niet toevoegen. Probeer het opnieuw.",
+      "libraryLoading": "De mediatheek wordt nog geladen. Probeer het zo opnieuw.",
+      "libraryUnavailable": "De mediatheek is niet beschikbaar. Controleer je mediatheeksleutel en de synchronisatiestatus.",
+      "libraryNotReady": "De mediatheek is nog niet klaar. Probeer het zo opnieuw.",
+      "libraryMissing": "De database van de mediatheek ontbreekt. Maak opnieuw verbinding en synchroniseer opnieuw.",
+      "librarySaveFailed": "Kan de wijziging in de mediatheek niet opslaan. Probeer het opnieuw.",
+      "dummyMissing": "De testinhoud staat nog niet in de bucket. Voer het uploadscript voor testinhoud uit en probeer het opnieuw.",
+      "dummyUploadFailed": "Kan de testinhoud niet valideren. Probeer het opnieuw."
+    },
+    "openingImport": "Media-import openen..."
+  },
+  "library": {
+    "showDelisting": {
+      "title": "Afleveringen niet meer in de catalogus",
+      "description": "De catalogus vermeldt deze afleveringen van {{show}} niet meer. Wil je ze uit je mediatheek verwijderen?",
+      "filesNote": "Afleveringen met een bestand worden nooit voorgesteld om te verwijderen.",
+      "remove": "Uit mediatheek verwijderen",
+      "keep": "Behouden",
+      "removing": "Verwijderen…",
+      "removeFailed": "Kan de afleveringen niet verwijderen. Probeer het later opnieuw.",
+      "moveTitle": "De catalogus heeft een aflevering van je gewijzigd",
+      "moveSuggested": "{{show}} {{episode}} staat nu vermeld als {{target}}. Je bestand daarheen verplaatsen?",
+      "moveMerged": "De catalogus heeft {{parts}} van {{show}} samengevoegd tot één aflevering, {{target}}. Eén aflevering kan geen twee helften bevatten, dus {{episode}} blijft zoals hij is, tenzij je zelf de aflevering kiest.",
+      "moveNone": "De catalogus vermeldt {{show}} {{episode}} niet meer en geen enkele aflevering in de nieuwe lijst komt ermee overeen. Laat hem zoals hij is, of kies zelf de aflevering.",
+      "moveCarries": "Bij verplaatsen gaan de bestanden, kijkstatus, hervatpositie en spoorkeuzes van de aflevering mee, op elk apparaat. Je bestand wordt nooit verwijderd.",
+      "moveYes": "Ja, verplaatsen",
+      "moveNo": "Nee",
+      "keepAsIs": "Laten zoals het is",
+      "pickLabel": "De aflevering in de lijst van de serie",
+      "pickPlaceholder": "Kies een aflevering…",
+      "pickNone": "Geen aflevering zonder bestand om te kiezen",
+      "movePicked": "Daarheen verplaatsen",
+      "moving": "Verplaatsen…",
+      "moveFailed": "Kan de aflevering niet verplaatsen. Probeer het later opnieuw.",
+      "special": "Special {{number}}"
+    },
+    "title": "Bibliotheek",
+    "subtitle": "Je persoonlijke catalogus van films en series. Voeg titels toe, bewerk gegevens en upload bestanden om te kijken.",
+    "addMedia": "Nieuwe media aan mediatheek toevoegen",
+    "errorTitle": "Mediatheek niet beschikbaar",
+    "retrySync": "Opnieuw synchroniseren",
+    "manageKey": "Mediatheeksleutel beheren",
+    "browseTitle": "Bladeren",
+    "browseSubtitle": "Media zonder geüploade bestanden wordt grijs weergegeven, maar je kunt de metadata nog steeds bekijken.",
+    "searchPlaceholder": "Titels zoeken...",
+    "sort": {
+      "title": "Sorteren op",
+      "by": "Veld",
+      "direction": "Volgorde",
+      "added": "Datum toegevoegd",
+      "name": "Naam",
+      "release": "Jaar van uitgave",
+      "asc": "Oplopend",
+      "desc": "Aflopend",
+      "button": "Sorteren",
+      "done": "Klaar"
+    },
+    "view": {
+      "title": "Weergave",
+      "posters": "Posters",
+      "compact": "Compacte lijst",
+      "details": "Lijst met details",
+      "next": "Overschakelen naar {{view}}"
+    },
+    "row": {
+      "seasons_one": "{{count}} seizoen",
+      "seasons_other": "{{count}} seizoenen",
+      "seasons_many": "{{count}} seizoenen",
+      "runtimeMinutes": "{{minutes}} min",
+      "runtimeHours": "{{hours}} u {{minutes}} min",
+      "play": "{{title}} afspelen",
+      "noOverview": "Geen samenvatting beschikbaar."
+    },
+    "filters": {
+      "clear": "Filters wissen",
+      "genres": {
+        "title": "Genres",
+        "placeholder": "Kies genres om de resultaten te verfijnen.",
+        "search": "Genres zoeken...",
+        "empty": "Geen genres gevonden voor deze zoekopdracht."
+      },
+      "actors": {
+        "title": "Acteurs",
+        "placeholder": "Kies acteurs om de resultaten te verfijnen.",
+        "search": "Acteurs zoeken...",
+        "empty": "Geen acteurs gevonden voor deze zoekopdracht."
+      },
+      "title": "Filteren",
+      "clearShort": "Wissen",
+      "reset": "Resetten",
+      "apply": "Toepassen",
+      "qualities": {
+        "title": "Kwaliteit",
+        "placeholder": "Elke kwaliteit",
+        "search": "Kwaliteit zoeken",
+        "empty": "Geen kwaliteit gevonden"
+      },
+      "directors": {
+        "title": "Regie",
+        "placeholder": "Elke regisseur",
+        "search": "Regisseur zoeken",
+        "empty": "Geen regisseur gevonden"
+      },
+      "audioLanguages": {
+        "title": "Audiotaal",
+        "placeholder": "Elke audiotaal",
+        "search": "Taal zoeken",
+        "empty": "Geen taal gevonden"
+      },
+      "subtitleLanguages": {
+        "title": "Ondertiteltaal",
+        "placeholder": "Elke ondertiteltaal",
+        "search": "Taal zoeken",
+        "empty": "Geen taal gevonden"
+      },
+      "watchStates": {
+        "title": "Kijkstatus",
+        "placeholder": "Elke status",
+        "search": "Status zoeken",
+        "empty": "Geen status gevonden"
+      },
+      "quality": {
+        "sd": "SD (480p of lager)"
+      },
+      "watchState": {
+        "unwatched": "Niet bekeken",
+        "in-progress": "Bezig",
+        "watched": "Bekeken"
+      },
+      "undefinedLanguage": "Onbekende taal"
+    },
+    "tabs": {
+      "movies": "Films",
+      "tv": "Tv-series",
+      "seasons": "Seizoenen",
+      "details": "Details",
+      "subtitles": "Ondertiteling",
+      "tracks": "Sporen",
+      "processing": "Verwerking",
+      "processes": "Processen",
+      "jobs": "Taken",
+      "about": "Over",
+      "versionsTracks": "Versies en sporen",
+      "label": "Details"
+    },
+    "jobs": {
+      "emptyTitle": "Alles bijgewerkt",
+      "emptySubtitle": "Geen actieve of recente taken voor deze media."
+    },
+    "processing": {
+      "preparing": "Voorbereiden...",
+      "uploading": "Uploaden...",
+      "queued": "In de wachtrij...",
+      "finishing": "Klaar om af te spelen · Afronden",
+      "uploadSpeed": "{{speed}} MiB/s"
+    },
+    "processingStatus": {
+      "sharedJobsTitle": "Gedeelde verwerkingstaken",
+      "queued": "In de wachtrij",
+      "processing": "Bezig met verwerken",
+      "uploading": "Bezig met uploaden",
+      "finalizing": "Afronden",
+      "completed": "Voltooid",
+      "failed": "Mislukt",
+      "cancelled": "Geannuleerd",
+      "remoteActionFailed": "Kan het externe commando niet verzenden."
+    },
+    "labels": {
+      "audio": "Audio",
+      "subtitles": "Ondertiteling",
+      "episodeShort": "{{count}} afl."
+    },
+    "availableQualities": "Beschikbare kwaliteiten",
+    "qualities": {
+      "deleteChipAria": "De {{quality}}-versie verwijderen",
+      "deleteTitle": "De {{quality}}-versie verwijderen?",
+      "deleteDescription": "Dit maakt {{size}} vrij en kan niet ongedaan worden gemaakt.",
+      "deleteUnknownSize": "Dit kan niet ongedaan worden gemaakt.",
+      "deleteConfirm": "Verwijderen",
+      "deleteCancel": "Annuleren",
+      "deleteFailedToast": "Kan de {{quality}}-versie niet verwijderen: {{reason}}",
+      "deletedToast": "De {{quality}}-versie is verwijderd.",
+      "addChipAria": "Nog een kwaliteit toevoegen",
+      "addModalTitle": "Kwaliteit toevoegen",
+      "addModalDescription": "Kies een of meer kwaliteiten om vanuit de bestaande bron te transcoderen. Nieuwe taken verschijnen in de zijbalk Taken.",
+      "addModalEmpty": "Er kunnen geen extra kwaliteiten worden toegevoegd: elke preset op of onder de huidige bron is al aanwezig.",
+      "addModalSource": "Bron: {{quality}}",
+      "addModalSize": "~{{size}}",
+      "addModalSizeUnknown": "Grootte onbekend",
+      "addModalConfirm": "{{count}} transcodering(en) in wachtrij zetten",
+      "addModalCancel": "Annuleren",
+      "addModalSubmittedToast": "{{count}} transcodering(en) in de wachtrij gezet: volg ze in Taken.",
+      "addModalFailedToast": "Kan de nieuwe kwaliteiten niet in de wachtrij zetten: {{reason}}",
+      "errors": {
+        "source-protected": "Je kunt de bronkwaliteit niet verwijderen.",
+        "quality-exists": "Die kwaliteit staat al in dit bestand.",
+        "cannot-transcode-up": "Kan niet transcoderen naar een hogere resolutie dan die is opgeslagen.",
+        "media-not-found": "Dat mediabestand bestaat niet meer."
+      }
+    },
+    "hideMissing": {
+      "title": "Ontbrekende bestanden verbergen",
+      "compact": "Ontbrekend verbergen",
+      "subtitle": "Alleen afspeelbare items tonen."
+    },
+    "loading": "Mediatheek laden...",
+    "syncing": "Mediatheek synchroniseren...",
+    "offline": {
+      "indicator": "Offline",
+      "indicatorLabel": "Offline: opgeslagen inhoud",
+      "indicatorRetryLabel": "Offline: je gedownloade titels worden getoond. Opnieuw verbinden",
+      "syncIndicator": "Niet gesynchroniseerd",
+      "syncIndicatorRetryLabel": "Niet gesynchroniseerd: de gegevens op deze computer worden gebruikt. Opnieuw synchroniseren",
+      "toastTitle": "Je bent offline",
+      "toastBody": "Je gedownloade titels en je opgeslagen mediatheek blijven beschikbaar.",
+      "syncToastTitle": "Synchronisatie gepauzeerd",
+      "syncToastBody": "De gegevens op deze computer worden gebruikt tot de synchronisatie terug is.",
+      "reconnecting": "Opnieuw verbinden…",
+      "scope": {
+        "movie": "{{title}} — hele film",
+        "show": "{{title}} — hele serie",
+        "season": "{{title}} — seizoen {{season}}",
+        "episode": "{{title}} — S{{season}}E{{episode}}{{episodeTitle, mustache}}",
+        "missingEpisodes": "{{count}} ontbrekende aflevering(en)"
+      },
+      "modal": {
+        "confirmTitle": "Offline opslaan",
+        "confirmDescription": "Download deze bestanden naar je apparaat om offline af te spelen.",
+        "quality": "Kwaliteit",
+        "qualityPrompt": "Welke kwaliteit wil je downloaden?",
+        "qualityFallback_one": "{{count}} aflevering heeft geen {{chosen}}: die krijgt {{quality}}",
+        "qualityFallback_other": "{{count}} afleveringen hebben geen {{chosen}}: die krijgen {{quality}}",
+        "size": "Totale grootte",
+        "includesAudioSubs": "Alle audiosporen en ondertitels zijn inbegrepen.",
+        "expectedFilename": "Opgeslagen als",
+        "expectedFilenamePlusN": "en nog {{count}} bestand(en)",
+        "estimating": "Grootte en schijfruimte berekenen...",
+        "estimateFailedToast": "Kan de download niet inschatten: {{reason}}",
+        "skippedSubsWarning": "MP4 kan deze ondertitelsporen niet insluiten; ze worden overgeslagen: {{tracks}}",
+        "skippedItems": "{{count}} item(s) worden overgeslagen (geen geschikte kwaliteit of geen bestand).",
+        "diskWarning": "Niet genoeg vrije schijfruimte.",
+        "diskWarningDetail": "{{required}} nodig, maar slechts {{free}} vrij.",
+        "confirm": "Download starten",
+        "cancel": "Annuleren",
+        "submittedToast": "{{count}} offline download(s) in de wachtrij gezet: volg ze in Taken.",
+        "submitFailedToast": "Kan de download niet starten: {{reason}}",
+        "errors": {
+          "insufficient_disk_space": "Niet genoeg vrije schijfruimte ({{required}} nodig, {{free}} vrij).",
+          "library_db_not_open": "De mediatheek is niet geopend. Open hem opnieuw en probeer het nog eens.",
+          "not_authenticated": "Log in en probeer het opnieuw."
+        }
+      },
+      "button": {
+        "save": "Offline opslaan",
+        "complete": "Download voltooien ({{local}}/{{total}})",
+        "delete": "Lokaal verwijderen",
+        "deleteConfirmTitle": "Lokaal verwijderen?",
+        "deleteConfirmDescription": "Hiermee worden de opgeslagen bestanden van dit apparaat verwijderd. Streamen blijft werken.",
+        "deleteConfirm": "Verwijderen",
+        "deleteCancel": "Annuleren",
+        "deletedToast": "{{count}} offline bestand(en) verwijderd.",
+        "deleteFailedToast": "Kan de offline bestanden niet verwijderen: {{reason}}"
+      },
+      "badge": {
+        "savedOffline": "Offline opgeslagen",
+        "partialOffline": "Gedeeltelijk",
+        "headerLocalShowSummary": "{{local}} / {{total}} afleveringen offline opgeslagen"
+      },
+      "tooltipSeasonHover": "Dit seizoen offline opslaan",
+      "toast": {
+        "fileMissingFellBackToStream": "Het opgeslagen bestand is verplaatst of verwijderd: er wordt nu gestreamd. Download het opnieuw via het venster als je het offline wilt hebben.",
+        "fileMissingDroppedFromOffline": "Ontbrekend offline bestand verwijderd uit je lokale mediatheek."
+      }
+    },
+    "emptyTitle": "Je mediatheek is leeg",
+    "emptySubtitle": "Voeg eerst films en series toe. Upload bestanden meteen of later vanaf de pagina van elk item.",
+    "emptyAddMovies": "Je eerste film toevoegen",
+    "emptyAddTv": "Je eerste serie toevoegen",
+    "addFirstMovie": "Je eerste film toevoegen",
+    "addFirstShow": "Je eerste serie toevoegen",
+    "noMovies": "Geen films gevonden.",
+    "noShows": "Geen series gevonden.",
+    "sections": {
+      "movies": "Films",
+      "tv": "Series",
+      "count": "{{count}} items"
+    },
+    "media": {
+      "movie": "Film",
+      "tv": "Serie",
+      "originalTitleLabel": "Originele titel:"
+    },
+    "overview": "Samenvatting",
+    "noOverview": "Nog geen samenvatting beschikbaar.",
+    "playable": "Afspeelbaar",
+    "missing": "Bestand ontbreekt",
+    "progress": "Voortgang {{value}}%",
+    "watched": "Bekeken",
+    "play": "Afspelen",
+    "playDisabled": "Upload eerst een bestand",
+    "favorites": {
+      "add": "Toevoegen aan favorieten",
+      "remove": "Uit favorieten verwijderen"
+    },
+    "watchlist": {
+      "add": "Toevoegen aan kijklijst",
+      "remove": "Uit kijklijst verwijderen"
+    },
+    "playlists": {
+      "add": "Toevoegen aan afspeellijst",
+      "remove": "Verwijderen",
+      "manage": "Afspeellijsten beheren",
+      "empty": "Nog geen afspeellijsten.",
+      "system": "Systeemafspeellijst",
+      "added": "Toegevoegd",
+      "cta": "Afspeellijsten beheren"
+    },
+    "trailer": "Trailer",
+    "trailerRefreshing": "Trailers vernieuwen...",
+    "noTrailer": "Geen trailer beschikbaar.",
+    "edit": {
+      "edit": "Metadata bewerken",
+      "save": "Wijzigingen opslaan",
+      "saving": "Opslaan...",
+      "cancel": "Annuleren",
+      "restore": "Metadata herstellen",
+      "restoreTitle": "Originele metadata herstellen?",
+      "restoreDescription": "Hiermee worden je wijzigingen vervangen door de originele metadata.",
+      "restoreDescriptionCast": "Hiermee worden je wijzigingen vervangen door de originele metadata. Zelf toegevoegde castleden worden verwijderd, tenzij je ze behoudt.",
+      "restoreFull": "Alle metadata herstellen",
+      "restoreKeepCast": "Metadata herstellen, eigen cast behouden",
+      "saveError": "Kan de metadata niet opslaan. Probeer het opnieuw.",
+      "restoreError": "Kan de metadata niet herstellen. Probeer het opnieuw.",
+      "metadataTitle": "Metadata bewerken",
+      "genres": {
+        "search": "Genres zoeken...",
+        "empty": "Kies genres die deze titel beschrijven.",
+        "noResults": "Geen genres gevonden voor deze zoekopdracht."
+      },
+      "dropImage": "Sleep een afbeelding hierheen of plak een URL.",
+      "imageUrl": "Afbeeldings-URL plakken",
+      "clearImage": "Afbeelding wissen",
+      "castMember": "Castlid",
+      "addCast": "Castlid toevoegen",
+      "removeCast": "Verwijderen",
+      "seasonLabel": "Seizoen {{season}}",
+      "seasonEditEpisodes": "Afleveringen bewerken",
+      "episodeLabel": "Aflevering {{number}}",
+      "fields": {
+        "title": "Titel",
+        "originalTitle": "Originele titel",
+        "originalLanguage": "Originele taal",
+        "year": "Jaar van uitgave",
+        "rating": "Beoordeling",
+        "genres": "Genres",
+        "overview": "Samenvatting",
+        "poster": "Poster",
+        "backdrop": "Achtergrond",
+        "profile": "Profielfoto",
+        "name": "Naam",
+        "role": "Rol",
+        "airDate": "Uitzenddatum",
+        "still": "Still"
+      }
+    },
+    "cast": "Cast",
+    "noCast": "Geen castinformatie beschikbaar.",
+    "castUnknownRole": "Rol niet beschikbaar",
+    "castShowAll": "Hele cast tonen ({{count}})",
+    "castShowLess": "Minder tonen",
+    "crew": {
+      "title": "Crew",
+      "director": "Regie",
+      "writing": "Scenario"
+    },
+    "seasons": {
+      "title": "Seizoenen",
+      "empty": "Nog geen seizoenen geladen.",
+      "episodeCount": "{{count}} afleveringen",
+      "available": "Beschikbaar",
+      "missing": "Bestanden ontbreken",
+      "specials": "Specials"
+    },
+    "episodes": {
+      "title": "Afleveringen · Seizoen {{season}}",
+      "empty": "Geen afleveringen beschikbaar.",
+      "label": "Aflevering {{number}} · {{title}}",
+      "breadcrumb": "Seizoen {{season}}"
+    },
+    "subtitles": {
+      "title": "Ondertiteling",
+      "clearDefault": "Geen standaardondertiteling",
+      "emptyMovie": "Nog geen ondertitels toegevoegd.",
+      "default": "Standaard",
+      "setDefault": "Als standaard instellen",
+      "remove": "Verwijderen",
+      "addTitle": "Ondertitels toevoegen",
+      "addSubtitleHint": "Upload een .srt-bestand en kies de taal.",
+      "fileLabel": "SRT-bestand",
+      "languageLabel": "Taal",
+      "labelLabel": "Label",
+      "labelPlaceholder": "Optioneel label",
+      "addButton": "Ondertitel toevoegen",
+      "undefined": "Niet opgegeven"
+    },
+    "audioDialog": {
+      "title": "Audiosporen",
+      "subtitle": "Seizoen {{season}} · Aflevering {{episode}}",
+      "subtitleFallback": "Kies het standaard audiospoor.",
+      "empty": "Nog geen audiosporen gevonden.",
+      "setDefault": "Als standaard instellen"
+    },
+    "subtitlesDialog": {
+      "title": "Ondertiteling van aflevering",
+      "subtitle": "Seizoen {{season}} · Aflevering {{episode}}",
+      "subtitleFallback": "Beheer de ondertitels van deze aflevering.",
+      "empty": "Nog geen ondertitels toegevoegd."
+    },
+    "tracks": {
+      "deleteAudioConfirm": "Audiospoor \"{{label}}\" verwijderen? Hiermee verdwijnt mogelijk de enige bron voor die nasynchronisatie of dat commentaar.",
+      "noLanguageOption": "Onbekend: eigen label gebruiken",
+      "descriptorPlaceholder": "bijv. SDH, VFF, commentaar van de regisseur",
+      "customLabelPlaceholder": "Eigen label",
+      "setAsDefault": "Als standaard instellen",
+      "fetchSubtitles": "Ondertitels ophalen",
+      "addSubtitle": "Ondertitelbestand uploaden",
+      "noDefaultSubtitle": "Standaard zonder ondertitels afspelen",
+      "audioIngestHint": "Audiosporen komen uit het bronbestand.",
+      "deleteAudio": "Audiospoor verwijderen"
+    },
+    "trailerLanguage": {
+      "en": "Engels",
+      "fr": "Frans",
+      "other": "Overig"
+    },
+    "close": "Sluiten",
+    "delete": "Uit mediatheek verwijderen",
+    "deleting": "Verwijderen...",
+    "deleteTitle": "Uit mediatheek verwijderen?",
+    "deleteConfirm": "\"{{title}}\" uit je mediatheek verwijderen? Hiermee worden ook geüploade bestanden verwijderd, indien aanwezig.",
+    "deleteCancel": "Annuleren",
+    "detail": {
+      "back": "Bibliotheek",
+      "playsThisVersion": "Afspelen start met deze versie",
+      "more": "Meer acties"
+    }
+  },
+  "playlists": {
+    "title": "Afspeellijsten",
+    "subtitle": "Groepeer titels in afspeellijsten waar je altijd naar terug kunt.",
+    "manageTitle": "Je afspeellijsten",
+    "manageSubtitle": "Favorieten is er altijd. Al het andere beheer je zelf.",
+    "newPlaceholder": "Naam nieuwe afspeellijst",
+    "create": "Aanmaken",
+    "empty": "Nog geen afspeellijsten.",
+    "systemFavorites": "Favorieten",
+    "systemWatchlist": "Kijklijst",
+    "system": "Systeemafspeellijst",
+    "delete": "Verwijderen",
+    "selectTitle": "Kies een afspeellijst",
+    "selectSubtitle": "Kies een afspeellijst om de items te bekijken.",
+    "selectPrompt": "Kies een afspeellijst om de items te zien.",
+    "itemsCount": "{{count}} items",
+    "noItems": "Nog geen items.",
+    "missing": "Bestand ontbreekt",
+    "remove": "Verwijderen"
+  },
+  "settings": {
+    "subtitle": "Alles voor deze app en je account.",
+    "ui": {
+      "title": "Gebruikersinterface",
+      "subtitle": "Taal- en weergavevoorkeuren voor dit apparaat.",
+      "language": "Taal van de interface",
+      "editHomeLayout": "Indeling van het startscherm bewerken",
+      "save": "Interface-instellingen opslaan",
+      "saving": "Opslaan…",
+      "saved": "Interface-instellingen opgeslagen."
+    },
+    "playback": {
+      "title": "Afspelen",
+      "subtitle": "Standaardinstellingen voor video's kijken op dit apparaat.",
+      "quality": "Standaard afspeelkwaliteit",
+      "forceQuality": {
+        "title": "Deze kwaliteit afdwingen",
+        "subtitle": "Niet aanpassen aan de netwerkomstandigheden. Uit (aanbevolen): de speler kan een stap omlaag gaan als je verbinding de gekozen kwaliteit niet aankan."
+      },
+      "autoplay": {
+        "title": "Volgende aflevering automatisch afspelen",
+        "subtitle": "Ga automatisch verder met de afleveringen van een serie."
+      },
+      "intro": {
+        "title": "Intro's automatisch overslaan",
+        "subtitle": "Sla de intro automatisch over als de tijdstippen bekend zijn. De knop om handmatig over te slaan is altijd zichtbaar."
+      },
+      "credits": {
+        "title": "Aftiteling automatisch overslaan",
+        "subtitle": "Sla de aftiteling automatisch over als de tijdstippen bekend zijn. De knop om handmatig over te slaan is altijd zichtbaar."
+      },
+      "skipMode": "Overslaan",
+      "skipModeAuto": "Automatisch",
+      "skipModeManual": "Handmatig, met knop",
+      "save": "Afspeelinstellingen opslaan",
+      "saving": "Opslaan…",
+      "saved": "Afspeelinstellingen opgeslagen.",
+      "qualityHint": "De kwaliteit waar de speler naar streeft; bij een trage verbinding kan die lager uitvallen.",
+      "audioLanguage": {
+        "title": "Standaard audiotaal",
+        "description": "Gebruikt als deze film of serie geen eigen audiokeuze heeft en het bestand die taal bevat. Anders speelt de standaardaudio van het bestand.",
+        "original": "Origineel"
+      }
+    },
+    "offlineExportFormat": {
+      "label": "Formaat voor offline export",
+      "help": "Container die wordt gebruikt als je media op je apparaat opslaat. MKV is verliesvrij voor elk type ondertiteling. MP4 werkt op meer apparaten, maar kan geen PGS- of ASS-ondertiteling bevatten; die sporen worden dan overgeslagen.",
+      "mkv": "MKV (aanbevolen)",
+      "mp4": "MP4",
+      "mp4Warning": "MP4 kan geen PGS- of ASS-ondertiteling bevatten. SRT- en VTT-ondertiteling wordt omgezet naar mov_text en blijft behouden."
+    },
+    "advanced": {
+      "title": "Geavanceerde instellingen",
+      "subtitle": "Technische opties voor bestandsbeheer, codecs, metadatatools en providers.",
+      "save": "Geavanceerde instellingen opslaan",
+      "saving": "Opslaan…",
+      "saved": "Geavanceerde instellingen opgeslagen.",
+      "fileManagement": {
+        "title": "Bestandsbeheer inschakelen",
+        "subtitle": "Toon het onderdeel Bestandsbeheer voor geavanceerde uploads en formaten."
+      },
+      "watchDirectories": {
+        "title": "Gevolgde mappen inschakelen",
+        "subtitle": "Hiermee kun je lokale mappen laten volgen in de desktop-apps."
+      },
+      "metadataTools": {
+        "title": "Metadatatools inschakelen",
+        "subtitle": "Toon de acties Metadata bewerken/herstellen in de mediadetails."
+      },
+      "trailer": {
+        "title": "Invidious gebruiken voor trailers",
+        "subtitle": "Standaard YouTube gebruiken, of overschakelen naar een Invidious-instantie.",
+        "instanceLabel": "URL van de Invidious-instantie",
+        "instancePlaceholder": "https://invidious.example.com",
+        "instanceRequired": "De URL van de Invidious-instantie is verplicht.",
+        "testButton": "Statuscontrole uitvoeren",
+        "testing": "Testen...",
+        "healthOk": "Statuscontrole van Invidious geslaagd.",
+        "healthFail": "Statuscontrole van Invidious mislukt.",
+        "healthy": "In orde",
+        "needsAttention": "Aandacht nodig",
+        "notTested": "Niet getest"
+      },
+      "gpu": {
+        "title": "GPU-mogelijkheden",
+        "subtitle": "Controleer de hardwareversnelling van FFmpeg op deze computer.",
+        "testing": "Testen...",
+        "runQuickTest": "Snelle test uitvoeren",
+        "loading": "Laden...",
+        "diagnostics": "Diagnose",
+        "ffmpegBinary": "FFmpeg-programma",
+        "unknown": "Onbekend",
+        "gpuDetected": "GPU gedetecteerd",
+        "checking": "Controleren...",
+        "notDetected": "Niet gedetecteerd",
+        "ffmpegEncoders": "FFmpeg-encoders",
+        "cpuOnly": "Alleen CPU",
+        "preferredPath": "Voorkeursmethode",
+        "lastTest": "Laatste test",
+        "ok": "OK",
+        "failed": "Mislukt",
+        "notRun": "Niet uitgevoerd",
+        "testLog": "FFmpeg-testlog (laatste regels)",
+        "encoderOutput": "Uitvoer van FFmpeg-encoders (voorbeeld)",
+        "hwaccelOutput": "Uitvoer van FFmpeg-hwaccel (voorbeeld)",
+        "noOutput": "Geen uitvoer vastgelegd."
+      }
+    },
+    "video": {
+      "title": "Videoverwerking",
+      "subtitle": "Standaardinstellingen voor het voorbereiden van je video's na het uploaden.",
+      "codecSelection": "Codeckeuze voor transcodeeruitvoer",
+      "codecSelectionHint": "Als dit aanstaat, kies je per kwaliteit tussen H.264 en HEVC. Dit geldt voor Bestandsbeheer en de standaarduitvoer.",
+      "maxParallelTranscodes": {
+        "title": "Gelijktijdige transcoderingen",
+        "subtitle": "Beperkt hoeveel zware transcoderingen tegelijk kunnen draaien. Uploads worden apart ingepland.",
+        "options": {
+          "1": "1 transcodering",
+          "2": "2 transcoderingen",
+          "3": "3 transcoderingen"
+        }
+      },
+      "maxParallelExtractions": {
+        "title": "Gelijktijdige extracties",
+        "subtitle": "Beperkt hoeveel bronnen tegelijk worden geanalyseerd en uitgepakt. Transcoderingen en uploads worden apart ingepland.",
+        "options": {
+          "1": "1 extractie",
+          "2": "2 extracties",
+          "3": "3 extracties"
+        }
+      },
+      "save": "Video-instellingen opslaan",
+      "saving": "Opslaan…",
+      "saved": "Video-instellingen opgeslagen.",
+      "watchFolders": {
+        "title": "Gevolgde mappen (alleen desktop)",
+        "subtitle": "Browsers kunnen nog geen lokale mappen volgen, maar dit staat klaar voor de desktop-apps.",
+        "empty": "Nog geen mappen ingesteld.",
+        "add": "Gevolgde map toevoegen",
+        "addAction": "Map toevoegen",
+        "edit": "Gevolgde map bewerken",
+        "save": "Map opslaan",
+        "cancel": "Annuleren",
+        "placeholder": "/Volumes/Media",
+        "path": "Pad",
+        "library": "Mediatheek",
+        "movies": "Films",
+        "tv": "Series"
+      },
+      "outputsTitle": "Transcodeeruitvoer",
+      "outputsSubtitle": "Kies welke videokwaliteiten je wilt bewaren.",
+      "outputsEnabled": "Ingeschakeld",
+      "outputsDisabled": "Uitgeschakeld",
+      "outputsNone": "Geen uitvoer gekozen",
+      "codecH264": "H.264",
+      "codecHevc": "HEVC",
+      "codecAutoHint": "Codecs worden automatisch gekozen: H.264 voor 1080p en lager, HEVC voor 4K. Zet hierboven de codeckeuze aan om dit aan te passen.",
+      "fallbackCopy": {
+        "title": "Deze computer maakt kopieën",
+        "subtitle": "Aan: elke upload vanaf deze computer krijgt een kleinere kopie in 360p, die wordt gebruikt als de verbinding of het apparaat het origineel niet kan afspelen, plus de extra kwaliteiten die je account vraagt. Uit: deze computer bewaart alleen het origineel. Deze instelling geldt alleen voor deze computer.",
+        "on": "Aan",
+        "off": "Uit"
+      },
+      "uploadsDuringPlayback": {
+        "title": "Terwijl je een video kijkt",
+        "subtitle": "Kies wat uploads en videoverwerking doen terwijl er een video speelt op deze computer. Deze instelling geldt alleen voor deze computer.",
+        "options": {
+          "full": "Volle snelheid",
+          "throttle": "Vertragen",
+          "pause": "Pauzeren"
+        },
+        "hint": {
+          "full": "Uploads en videoverwerking gaan zo snel mogelijk door. Op een minder krachtige computer kan de video haperen.",
+          "throttle": "Beide gaan door, maar belasten de computer minder: videoverwerking gebruikt één processorkern en uploads versturen minder tegelijk.",
+          "pause": "Uploads en videoverwerking wachten terwijl er een video speelt en gaan verder waar ze gebleven waren zodra die afgelopen is."
+        }
+      }
+    },
+    "trailerLanguages": {
+      "title": "Talen van trailers",
+      "subtitle": "De trailer in de oorspronkelijke taal blijft altijd behouden. Je kunt maximaal twee extra talen toevoegen.",
+      "originalLabel": "Oorspronkelijke taal",
+      "searchPlaceholder": "Zoek een taal…",
+      "add": "Taal toevoegen",
+      "loading": "Talen laden…",
+      "loadError": "De lijst met talen kon niet worden geladen.",
+      "noResults": "Geen talen gevonden voor je zoekopdracht.",
+      "remove": "{{language}} verwijderen",
+      "maxHint": "Kies maximaal 2 extra talen.",
+      "updated": "Taalvoorkeuren voor trailers bijgewerkt.",
+      "options": {
+        "en": "Engels",
+        "fr": "Frans",
+        "es": "Spaans",
+        "de": "Duits"
+      }
+    },
+    "recovery": {
+      "title": "Toegang tot de mediatheek",
+      "subtitle": "Beheer je mediatheeksleutel of wis alle gegevens van je mediatheek.",
+      "show": {
+        "title": "Mediatheeksleutel tonen",
+        "subtitle": "Toon je huidige sleutel nadat je je identiteit hebt bevestigd.",
+        "button": "Sleutel tonen",
+        "dialogTitle": "Je mediatheeksleutel tonen",
+        "keyLabel": "Mediatheeksleutel",
+        "passwordLabel": "Accountwachtwoord",
+        "codeLabel": "Verificatiecode",
+        "codeHintEmail": "Vul de code in die we naar je e-mail hebben gestuurd.",
+        "codeHintTotp": "Vul de code uit je authenticator-app in.",
+        "cancel": "Annuleren",
+        "codeSent": "We hebben een verificatiecode gestuurd. Kijk in je e-mail of je authenticator-app.",
+        "errorInvalidPassword": "Onjuist wachtwoord.",
+        "errorTwoFactorInvalid": "De verificatiecode is ongeldig.",
+        "submit": "Sleutel tonen",
+        "working": "Verifiëren...",
+        "errorGeneric": "Je sessie kon niet worden geverifieerd. Probeer het opnieuw.",
+        "errorMissing": "Er staat geen mediatheeksleutel op dit apparaat."
+      },
+      "rotate": {
+        "title": "Mediatheeksleutel vervangen",
+        "subtitle": "Maak een nieuwe sleutel en vergrendel de gegevens van je mediatheek opnieuw.",
+        "button": "Nieuwe sleutel maken",
+        "dialogTitle": "Je mediatheeksleutel vervangen",
+        "keyLabel": "Nieuwe mediatheeksleutel",
+        "keyHint": "Bewaar deze sleutel op een veilige plek voordat je verdergaat.",
+        "copyButton": "Sleutel kopiëren",
+        "copySuccess": "Mediatheeksleutel gekopieerd.",
+        "copyFail": "Sleutel kon niet worden gekopieerd.",
+        "confirmLabel": "Ik begrijp dat andere sessies hierdoor worden beëindigd",
+        "passwordLabel": "Accountwachtwoord",
+        "codeLabel": "Verificatiecode",
+        "codeHintEmail": "Vul de code in die we naar je e-mail hebben gestuurd.",
+        "codeHintTotp": "Vul de code uit je authenticator-app in.",
+        "cancel": "Annuleren",
+        "codeSent": "We hebben een verificatiecode gestuurd. Kijk in je e-mail of je authenticator-app.",
+        "errorInvalidPassword": "Onjuist wachtwoord.",
+        "errorTwoFactorInvalid": "De verificatiecode is ongeldig.",
+        "submit": "Sleutel vervangen",
+        "working": "Vervangen...",
+        "errorGeneric": "De sleutel kon niet worden vervangen. Probeer het opnieuw."
+      },
+      "reset": {
+        "title": "Gegevens van de mediatheek wissen",
+        "subtitle": "Verwijder alle gegevens van je mediatheek en beëindig alle sessies.",
+        "button": "Mediatheek wissen en resetten",
+        "dialogTitle": "Gegevens van de mediatheek wissen",
+        "warning": "Hiermee worden alle privégegevens van je mediatheek in de cloud verwijderd en wordt elke sessie beëindigd. Dit kan niet ongedaan worden gemaakt.",
+        "confirmLabel": "Ik begrijp dat de gegevens van mijn mediatheek definitief worden verwijderd",
+        "passwordLabel": "Accountwachtwoord",
+        "codeLabel": "Verificatiecode",
+        "codeHintEmail": "Vul de code in die we naar je e-mail hebben gestuurd.",
+        "codeHintTotp": "Vul de code uit je authenticator-app in.",
+        "cancel": "Annuleren",
+        "codeSent": "We hebben een verificatiecode gestuurd. Kijk in je e-mail of je authenticator-app.",
+        "errorInvalidPassword": "Onjuist wachtwoord.",
+        "errorTwoFactorInvalid": "De verificatiecode is ongeldig.",
+        "submit": "Alles vernietigen",
+        "working": "Resetten...",
+        "resend": "Code opnieuw sturen",
+        "resending": "Opnieuw sturen...",
+        "codeResent": "We hebben nog een verificatiecode gestuurd.",
+        "errorGeneric": "De mediatheek kon niet worden gereset. Probeer het opnieuw."
+      },
+      "copyToastTitle": "Gekopieerd",
+      "errorToastTitle": "Fout"
+    },
+    "nav": {
+      "aria": "Onderdelen van de instellingen",
+      "searchPlaceholder": "Instellingen zoeken",
+      "noResults": "Geen onderdelen gevonden",
+      "group": {
+        "player": "Speler",
+        "library": "Mediatheek",
+        "account": "Account",
+        "system": "Systeem"
+      },
+      "general": "Algemeen",
+      "playback": "Afspelen",
+      "trailers": "Trailers",
+      "downloads": "Downloads",
+      "transcoding": "Transcoderen",
+      "metadata": "Metadata",
+      "performance": "Prestaties",
+      "account": "Account en abonnement",
+      "profiles": "Profielen",
+      "security": "Beveiliging en herstel",
+      "devices": "Ingelogde apparaten",
+      "connectedTools": "Gekoppelde tools",
+      "system": "Systeem",
+      "about": "Over en updates"
+    },
+    "sectionDesc": {
+      "general": "Taal en startscherm.",
+      "playback": "Standaardkwaliteit en wat er gebeurt tijdens het afspelen.",
+      "trailers": "Waar trailers vandaan komen en in welke talen ze worden opgehaald.",
+      "downloads": "Hoe offline kopieën op je apparaat worden opgeslagen.",
+      "transcoding": "In welke kwaliteiten en codecs je mediatheek wordt verwerkt.",
+      "metadata": "Waar de gegevens over titels en artwork vandaan komen.",
+      "performance": "Hardwareversnelling en het uitbesteden van verwerking.",
+      "account": "Je abonnement, opslag en uitnodigingen.",
+      "profiles": "Voeg profielen van dit account toe, wijzig hun naam of verwijder ze.",
+      "security": "Wachtwoord, tweestapsverificatie, versleutelingssleutel en account verwijderen.",
+      "devices": "Bekijk welke apparaten bij je account zijn ingelogd en log ze uit.",
+      "connectedTools": "Tools die je toegang tot je mediatheek hebt gegeven, en wat elk ervan mag.",
+      "system": "Achtergronddienst en foutrapporten.",
+      "about": "Je versie en updates, daarna wie de film- en seriegegevens levert die de app toont."
+    },
+    "system": {
+      "runtime": {
+        "title": "Achtergronddienst",
+        "subtitle": "De lokale dienst die je mediatheek verwerkt.",
+        "restart": "Dienst herstarten",
+        "restarting": "Herstarten…",
+        "status": {
+          "ready": "Klaar",
+          "restarting": "Wordt herstart",
+          "lost": "Gestopt",
+          "unknown": "Onbekend"
+        }
+      },
+      "errorReports": {
+        "title": "Foutmeldingen versturen",
+        "subtitle": "Rapporten zijn anoniem en helpen ons enorm om bugs op te lossen 🙂",
+        "link": "Wat staat er in een rapport?"
+      }
+    },
+    "dangerZone": {
+      "title": "Gevarenzone",
+      "subtitle": "Onomkeerbare acties. Wees voorzichtig."
+    }
+  },
+  "firstSetup": {
+    "language": {
+      "title": "Kies je taal"
+    },
+    "title": "Eerste installatie",
+    "stepOf": "Stap {{current}} van {{total}}",
+    "computer": "Deze computer: {{cpu}}, {{cores}} cores, {{ram}} GB geheugen,",
+    "cpuUnknown": "onbekende processor",
+    "encoderNone": "en geen hardware-video-encoder.",
+    "encoderFound": "en een hardware-video-encoder ({{encoder}}).",
+    "recommendedBadge": "Aanbevolen",
+    "back": "Terug",
+    "next": "Volgende",
+    "finish": "Voltooien",
+    "saving": "Opslaan…",
+    "saveError": "Je keuzes konden niet worden opgeslagen. Probeer het opnieuw.",
+    "settingsLater": "Je kunt dit later wijzigen in Instellingen → Transcoderen. Het geldt alleen voor deze computer.",
+    "settingsLaterErrorReports": "Je kunt dit altijd wijzigen in Instellingen → Systeem. Het geldt alleen voor deze computer.",
+    "steps": {
+      "transcode": {
+        "title": "Van elke video een kleinere 360p-kopie maken?",
+        "explain": {
+          "what": "Van elke video die je uploadt kan één extra, kleinere kopie in 360p-kwaliteit worden gemaakt.",
+          "when": "Die wordt gebruikt als je verbinding, of de computer waarop je kijkt, het origineel niet kan afspelen.",
+          "cost": "Het maken ervan kost wat rekenkracht van deze computer.",
+          "later": "Je kunt later andere kwaliteiten, zoals 720p of 1080p, toevoegen in Instellingen."
+        },
+        "recommend": {
+          "on": "We raden aan de 360p-kopie aan te zetten voor deze computer:",
+          "off": "We raden aan de 360p-kopie uit te zetten voor deze computer:"
+        },
+        "reason": {
+          "hw-encoder": "de video-encoder maakt de 360p-kopie zonder hem te vertragen.",
+          "strong-cpu": "hij is krachtig genoeg om de 360p-kopie te maken terwijl je kijkt.",
+          "weak": "het maken van de 360p-kopie zou deze computer vertragen terwijl je kijkt."
+        },
+        "options": {
+          "on": {
+            "label": "360p-kopie maken",
+            "description": "Elke upload krijgt ook één kleine 360p-kopie, klaar voor een zwakke verbinding."
+          },
+          "off": {
+            "label": "Niet maken",
+            "description": "Uploads krijgen alleen de kwaliteiten die je in Instellingen kiest en belasten deze computer minder."
+          }
+        }
+      },
+      "uploads": {
+        "title": "Terwijl je een video kijkt",
+        "explain": {
+          "what": "Een video uploaden en klaarmaken, dus de kopieën ervan maken, kost allebei rekenkracht van deze computer.",
+          "stutter": "Op een bescheiden computer kan de video gaan haperen als dat gebeurt terwijl je kijkt.",
+          "choose": "Kies wat uploads en videoverwerking doen terwijl er een video speelt."
+        },
+        "recommend": {
+          "full": "We raden volle snelheid aan:",
+          "throttle": "We raden aan te vertragen terwijl je kijkt:",
+          "pause": "We raden aan te pauzeren terwijl je kijkt:"
+        },
+        "reason": {
+          "strong": "deze computer is krachtig genoeg om beide tegelijk te doen.",
+          "modest": "hij kan beide, maar op volle snelheid kan de video gaan haperen.",
+          "weak": "hij heeft weinig kracht over, dus werken terwijl je kijkt zou de video laten haperen."
+        },
+        "options": {
+          "full": {
+            "label": "Volle snelheid",
+            "description": "Uploads en videoverwerking gaan op volle snelheid door. Op een zwakke computer kan de video haperen."
+          },
+          "throttle": {
+            "label": "Vertragen",
+            "description": "Beide gaan door, maar belasten de computer minder: videoverwerking gebruikt één processorkern en uploads versturen minder tegelijk."
+          },
+          "pause": {
+            "label": "Pauzeren",
+            "description": "Uploads en videoverwerking wachten terwijl er een video speelt en gaan daarna verder waar ze gebleven waren."
+          }
+        }
+      },
+      "errorReports": {
+        "title": "Foutrapporten naar SpaceFleet sturen?",
+        "explain": {
+          "line": "Rapporten zijn anoniem en helpen ons enorm om bugs op te lossen 🙂"
+        },
+        "options": {
+          "on": {
+            "label": "Ja, foutrapporten sturen"
+          },
+          "off": {
+            "label": "Nee, niet sturen"
+          }
+        }
+      }
+    }
+  },
+  "language": {
+    "label": "Taal",
+    "options": {
+      "en": "Engels",
+      "fr": "Frans"
+    }
+  },
+  "mediaLanguages": {
+    "options": {
+      "und": "Onbepaald",
+      "en": "Engels",
+      "fr": "Frans",
+      "es": "Spaans",
+      "de": "Duits",
+      "it": "Italiaans",
+      "pt": "Portugees",
+      "ja": "Japans"
+    }
+  },
+  "onboarding": {
+    "key": {
+      "title": "Je mediatheeksleutel",
+      "enterTitle": "Voer je mediatheeksleutel in",
+      "enterSubtitle": "Typ de 12 woorden die je hebt bewaard toen je je mediatheek aanmaakte.",
+      "loading": "Sleutel laden…",
+      "errorLoad": "Kan je mediatheeksleutel niet laden.",
+      "errorDecrypt": "Je opgeslagen sleutel kan de mediatheek niet ontgrendelen. Voer de juiste sleutel in.",
+      "errorNoRemote": "Dit account heeft nog geen mediatheek op de server. Maak in plaats daarvan een nieuwe sleutel.",
+      "errorValidate": "Kan de sleutel nu niet controleren. Probeer het opnieuw.",
+      "errorCreate": "Kan de eerste mediatheek niet aanmaken. Probeer het opnieuw.",
+      "errorCreateAuth": "Je sessie is verlopen. Log opnieuw in.",
+      "errorCreateConflict": "Er bestaat al een mediatheek voor dit account. Voer in plaats daarvan je bestaande sleutel in.",
+      "reasonMissing": "Dit apparaat heeft nog geen sleutel. Voer je bestaande sleutel in om door te gaan."
+    },
+    "recovery": {
+      "button": "Herstel",
+      "title": "Mediatheek herstellen uit lokale gegevens",
+      "subtitle": "We versleutelen je lokale mediatheek opnieuw en synchroniseren hem met de cloud. Hiermee worden andere sessies beëindigd.",
+      "keyLabel": "Nieuwe mediatheeksleutel",
+      "keyHint": "Bewaar deze sleutel veilig voordat je doorgaat.",
+      "copy": "Sleutel kopiëren",
+      "copied": "Gekopieerd",
+      "confirmLabel": "Ik begrijp dat dit de mediatheek op de server overschrijft",
+      "passwordLabel": "Accountwachtwoord",
+      "codeLabel": "Verificatiecode",
+      "codeHintEmail": "Vul de code in die we naar je e-mail hebben gestuurd.",
+      "codeHintTotp": "Vul de code uit je authenticator-app in.",
+      "cancel": "Annuleren",
+      "submit": "Mediatheek herstellen",
+      "working": "Herstellen...",
+      "codeSent": "We hebben een verificatiecode verstuurd. Kijk in je e-mail of authenticator-app.",
+      "errorInvalidPassword": "Onjuist wachtwoord.",
+      "errorTwoFactorInvalid": "De verificatiecode is ongeldig.",
+      "errorNoLocal": "Geen lokale mediatheekgegevens beschikbaar om te herstellen.",
+      "errorGeneric": "Kan de mediatheek nu niet herstellen. Probeer het opnieuw."
+    }
+  },
+  "saturation": {
+    "refused": {
+      "title": "Te veel verkeer op dit moment",
+      "body": "Onze servers zijn erg druk, dus we kunnen nu geen nieuwe weergave starten. Probeer het later opnieuw. Betaalde abonnementen houden voorrang als het druk is."
+    },
+    "stopped": {
+      "title": "Afspelen gestopt: veel verkeer",
+      "body": "Het afspelen is gestopt vanwege veel verkeer. Probeer het later opnieuw. Betaalde abonnementen houden voorrang als het druk is."
+    },
+    "upgrade": "Abonnement upgraden",
+    "close": "Sluiten"
+  },
+  "player": {
+    "title": "Speler",
+    "back": "Terug",
+    "loading": "Speler laden...",
+    "nowPlaying": "Nu aan het afspelen",
+    "quality": "Kwaliteit",
+    "audio": "Audio",
+    "subtitles": "Ondertiteling",
+    "subtitlesOff": "Uit",
+    "menuSelectSubtitle": "Kies ondertiteling:",
+    "menuSelectSecondarySubtitle": "Kies tweede ondertiteling:",
+    "menuSelectAudioTrack": "Kies een audiospoor:",
+    "menuSelectVideoTrack": "Kies een videospoor:",
+    "menuNoSubtitles": "Geen ondertiteling beschikbaar.",
+    "menuNoAudioTracks": "Geen audiosporen beschikbaar.",
+    "menuNoVideoTracks": "Geen videosporen beschikbaar.",
+    "audioRetry": "Opnieuw proberen met geluid",
+    "audioRetrying": "Geluid wordt opnieuw geprobeerd",
+    "audioStallExplanation": "Het audioapparaat reageert niet. Controleer je koptelefoon of geluidsuitvoer. Afspelen zonder geluid.",
+    "audioNoOutputExplanation": "Er kon geen geluidsuitvoer worden geopend. Controleer je koptelefoon, speakers of geluidsuitvoer. Afspelen zonder geluid.",
+    "audioOutputLabel": "Geluidsuitvoer:",
+    "previewsPreparing": "Voorbeelden worden voorbereid",
+    "controls": "Afspeeltips",
+    "tipPlay": "Gebruik de afspeelknop om te starten.",
+    "tipPause": "Pauzeer wanneer je wilt en ga later verder.",
+    "episode": "Seizoen {{season}}, aflevering {{episode}}",
+    "noFile": "Nog geen afspeelbaar bestand.",
+    "buffering": "Stream voorbereiden... {{progress}}%",
+    "volume": "Volume",
+    "mute": "Dempen",
+    "unmute": "Dempen opheffen",
+    "bufferingShort": "Bufferen...",
+    "autoQuality": "Auto",
+    "chapters": "Hoofdstukken",
+    "noChapters": "Nog geen hoofdstukken.",
+    "subtitleOffset": "Vertraging ondertiteling",
+    "resumeTitle": "Verder kijken?",
+    "resumeSubtitle": "Ga verder vanaf {{time}} of begin opnieuw.",
+    "resumeSubtitleEpisode": "Kijk {{episode}} verder vanaf {{time}} of begin opnieuw.",
+    "editionChooserTitle": "Welke editie?",
+    "editionChooserDescription": "Kies de editie die je wilt afspelen.",
+    "editionResumeFrom": "Verder vanaf {{time}}",
+    "editionUnnamed": "Origineel",
+    "launching": "Speler starten...",
+    "networkSlowSwitching": "{{quality}} proberen voor een snellere start...",
+    "networkSlowToast": "Overschakelen naar {{quality}} voor een snellere start.",
+    "abrToastTitle": "Afspelen",
+    "capToast480p": "Te veel verkeer op dit moment: afspelen in maximaal 480p.",
+    "capToast1080p": "Veel verkeer: je abonnement speelt nu af in maximaal 1080p.",
+    "abrDownshift": "Overschakelen naar {{quality}} — bandbreedte is {{mbps}} Mbps.",
+    "abrUpshift": "Netwerk hersteld — terug naar {{quality}}.",
+    "abrDecodeFallback": "Deze computer speelt deze versie niet soepel af — overschakelen naar een lichtere versie ({{quality}}).",
+    "deviceTooWeak": {
+      "message": "Deze computer is niet krachtig genoeg om deze video soepel af te spelen.",
+      "pinnedHint": "Zet \"Deze kwaliteit afdwingen\" uit in Instellingen, of kies een lagere kwaliteit.",
+      "keepWatching": "Verder kijken"
+    },
+    "abrInsufficient": "Je netwerk kan {{current}} ({{mbps}} Mbps) niet bijhouden. Aanbevolen: {{recommended}}.",
+    "abrLaunchFailed": "Kan het afspelen niet starten — probeer het opnieuw.",
+    "launchSlow": "Nog aan het starten — even geduld…",
+    "resume": "Verder kijken",
+    "restart": "Opnieuw beginnen",
+    "errors": {
+      "missing": "We konden deze titel niet vinden.",
+      "storage": "De opslag voor afspelen is nog niet klaar.",
+      "highTrafficStopped": "Het afspelen is gestopt vanwege veel verkeer. Probeer het later opnieuw.",
+      "highTrafficRefused": "Te veel verkeer op dit moment. Probeer het later opnieuw.",
+      "playback": "We konden het afspelen niet starten. Probeer het opnieuw.",
+      "noDisplay": "De video kan in deze sessie niet worden afgespeeld: die draait alleen op Wayland en de videospeler heeft X11 nodig. Zet XWayland (X11-compatibiliteit) aan of log in met een X11-sessie en probeer het opnieuw.",
+      "sourceUnreachable": "Deze titel is niet offline opgeslagen en de server is niet bereikbaar. Maak verbinding met internet of download hem om offline te kijken."
+    },
+    "preparingPlayback": "Afspelen voorbereiden"
+  },
+  "dashboard": {
+    "title": "Home",
+    "subtitle": "Recent toegevoegd, verder kijken en tips die je nog niet hebt gezien.",
+    "loading": "Laden...",
+    "sectionEmpty": "Nog niets in dit onderdeel. Voeg media toe of pas je afspeellijsten aan.",
+    "hero": {
+      "resume": "Hervatten op {{time}}",
+      "resumeShort": "Hervatten",
+      "details": "Details",
+      "minutesLeft": "nog {{count}} min",
+      "seeAll": "Alles bekijken"
+    },
+    "empty": {
+      "eyebrow": "Je bibliotheek",
+      "title": "Voeg je eerste titel toe",
+      "subtitle": "Films en series van je computer · Badger zoekt de posters en details",
+      "addMedia": "Media toevoegen",
+      "addFolder": "Map toevoegen",
+      "step1Title": "Kies je bestanden",
+      "step1Body": "Kies films of een hele map. Niets verlaat deze computer zonder jouw akkoord.",
+      "step2Title": "Badger zoekt de details",
+      "step2Body": "Posters, cast en samenvattingen komen vanzelf, in jouw taal.",
+      "step3Title": "Kijk overal",
+      "step3Body": "Je telefoon, tv en andere computers tonen dezelfde mediatheek, versleuteld met jouw sleutel."
+    },
+    "sections": {
+      "movies": "Films",
+      "tv": "Series",
+      "continue": "Verder kijken",
+      "recent": "Recent toegevoegd",
+      "unwatched": "Nog niet gezien",
+      "rewatch": "Opnieuw kijken",
+      "favorites": "Favorieten",
+      "watchlist": "Kijklijst",
+      "genre": "Genre",
+      "playlist": "Afspeellijst"
+    },
+    "edit": {
+      "edit": "Home bewerken",
+      "save": "Indeling opslaan",
+      "saving": "Opslaan...",
+      "cancel": "Annuleren",
+      "addSection": "Onderdeel toevoegen",
+      "addSectionSubtitle": "Kies een type onderdeel of voeg afspeellijsten toe. Je kunt hetzelfde onderdeel meer dan eens toevoegen.",
+      "addSectionHint": "Voeg een onderdeel toe",
+      "search": "Onderdelen zoeken...",
+      "systemSections": "Standaardonderdelen",
+      "genreMovies": "Filmgenres",
+      "genreTv": "Seriegenres",
+      "pickSection": "Voeg een onderdeel toe",
+      "pickSectionSubtitle": "Kies een onderdeel om hier in te voegen.",
+      "playlists": "Eigen afspeellijsten",
+      "emptyTitle": "Nog geen onderdelen",
+      "emptySubtitle": "Voeg een paar onderdelen toe om je startscherm op te bouwen."
+    },
+    "styles": {
+      "default": "Standaard",
+      "ember": "Gloed",
+      "mist": "Nevel",
+      "forest": "Bos",
+      "bloom": "Bloesem",
+      "dusk": "Schemer"
+    },
+    "errors": {
+      "title": "Mediatheek niet beschikbaar",
+      "cta": "Mediatheek openen"
+    },
+    "continue": {
+      "title": "Verder kijken",
+      "subtitle": "Je voortgang wordt lokaal opgeslagen en tussen sessies gesynchroniseerd.",
+      "empty": "Nog niets bezig.",
+      "markWatched": "Klik om als gezien te markeren (demo)",
+      "progress": "{{value}}%"
+    },
+    "recent": {
+      "title": "Recent toegevoegd",
+      "subtitle": "Nieuw toegevoegde items uit je mediatheek.",
+      "empty": "Nog niets toegevoegd."
+    },
+    "unwatched": {
+      "title": "Nog niet gezien",
+      "subtitle": "Willekeurige keuzes uit je mediatheek.",
+      "empty": "Nog geen ongeziene tips."
+    },
+    "watchlist": {
+      "title": "Kijklijst",
+      "subtitle": "Alles wat je voor later hebt bewaard.",
+      "empty": "Je kijklijst is leeg."
+    },
+    "favorites": {
+      "title": "Favorieten",
+      "subtitle": "Je films en series met een ster.",
+      "empty": "Nog geen favorieten."
+    }
+  },
+  "lab": {
+    "title": "Bestandsbeheer",
+    "subtitle": "Beheer geavanceerde uploads en bestandsformaten",
+    "tabs": {
+      "queue": "Wachtrij",
+      "storage": "Opslag"
+    },
+    "drop": {
+      "title": "Sleep videobestanden hierheen",
+      "subtitle": "We herkennen het bestand en maken het klaar om te streamen.",
+      "cta": "Bestanden kiezen"
+    },
+    "libraryPrompt": {
+      "title": "Voeg eerst media toe aan je mediatheek",
+      "subtitle": "Voeg eerst titels toe aan je mediatheek en koppel hier daarna bestanden.",
+      "cta": "Naar mediatheek"
+    },
+    "active": "Actief ({{count}})",
+    "completed": "Voltooid ({{count}})",
+    "completedMeta": "Voltooid {{time}} · {{duration}}",
+    "clearAll": "Alles wissen",
+    "clearSuccessful": "Geslaagde items wissen",
+    "empty": {
+      "title": "Wachtrij is leeg",
+      "subtitle": "Sleep hierboven bestanden om te beginnen met verwerken"
+    },
+    "storage": {
+      "title": "Gebruikte opslag",
+      "inspect": "Opslag vergelijken",
+      "inspectTitle": "Opslagvergelijking",
+      "inspectPending": "Verwijzingen in de mediatheek vergelijken met objecten in de bucket...",
+      "inspectMissing": "Ontbrekende objecten waarnaar wordt verwezen",
+      "inspectExtra": "Niet-gekoppelde objecten in de bucket",
+      "inspectMessage": "{{missing}} ontbrekend · {{extra}} extra",
+      "inspectFailed": "De opslag kon niet worden vergeleken.",
+      "cleanup": "Verweesde bestanden opruimen",
+      "cleaning": "Opruimen...",
+      "tabs": {
+        "movies": "Films",
+        "tv": "Series"
+      },
+      "empty": "Nog geen bestanden geüpload",
+      "fileCount": "{{count}} bestand",
+      "episodeFileCount": "{{count}} afleveringsbestanden",
+      "episodeShort": "{{count}} afl.",
+      "apply": "Wijzigingen toepassen",
+      "delete": "Bestand verwijderen",
+      "applyTitle": "Formaatwijzigingen toepassen?",
+      "applyDescription": "Niet-aangevinkte formaten worden verwijderd en nieuwe formaten worden in de wachtrij gezet voor verwerking.",
+      "applyConfirm": "Wijzigingen toepassen",
+      "deleteTitle": "Bestand verwijderen?",
+      "deleteDescription": "{{label}} en alle transcodes verwijderen? Hiermee worden ook de audio- en ondertitelsporen gewist.",
+      "deleteConfirm": "Bestand verwijderen",
+      "cancel": "Annuleren",
+      "queued": "Transcode-updates voor {{label}} in de wachtrij gezet.",
+      "cleanupMessage": "{{removed}} verweesde bestanden verwijderd. {{missing}} ontbrekende verwijzingen gewist.",
+      "cleanupFailed": "Opruimen mislukt. Probeer het opnieuw."
+    },
+    "status": {
+      "waiting": "Wachten",
+      "waitingInLine": "Wachten · #{{position}} in de wachtrij",
+      "identifying": "Herkennen",
+      "needsMatch": "Koppeling nodig",
+      "ready": "Klaar",
+      "transcoding": "Transcoderen",
+      "uploading": "Uploaden",
+      "done": "Gereed",
+      "failed": "Mislukt"
+    },
+    "queue": {
+      "remove": "Uit wachtrij verwijderen",
+      "cancel": "Annuleren",
+      "cancelAll": "Alles annuleren",
+      "removeFromHistory": "Uit de geschiedenis verwijderen",
+      "removeAllFromHistory": "Alles uit de geschiedenis verwijderen",
+      "start": "Starten",
+      "matchTitle": "Koppelen aan mediatheek",
+      "episodePrompt": "Aflevering bevestigen",
+      "change": "Wijzigen",
+      "selectEpisode": "Kies een seizoen en aflevering voordat je uploadt.",
+      "searchPlaceholder": "Zoek in je mediatheek...",
+      "typeMovie": "Film",
+      "typeTv": "Serie",
+      "season": "Seizoen",
+      "seasonLabel": "Seizoen {{number}}",
+      "episode": "Aflevering",
+      "episodeLabel": "Aflevering {{number}}",
+      "outputFormats": "Uitvoerformaten",
+      "estimate": "Ca. {{size}}",
+      "audioTracks": "Audiosporen",
+      "subtitleTracks": "Ondertiteling",
+      "tracksOnly": "Alleen sporen",
+      "noVideoOutputs": "Geen video-uitvoer.",
+      "jobCount": "{{count}} taak",
+      "sourceIngest": "Bron inlezen",
+      "transcode": "Transcoderen",
+      "tracks": "Sporen",
+      "job": "Taak",
+      "uploadSpeed": "{{speed}} MiB/s",
+      "splitSource": "Bron opsplitsen",
+      "chapters": "Hoofdstukken",
+      "ffmpegLogs": "FFmpeg-logs",
+      "offlineDownloading": "Offline downloaden",
+      "offlineSavedOffline": "Offline opgeslagen",
+      "help": {
+        "sourceIngest": "We splitsen het originele bestand op in streamklare blokken, zodat het afspelen snel start.",
+        "transcode": "We maken extra kwaliteitsversies, zodat het afspelen soepel blijft op tragere verbindingen.",
+        "tracks": "We maken audio- en ondertitelsporen klaar, zodat kijkers van taal en ondertiteling kunnen wisselen.",
+        "job": "Deze stap maakt mediabestanden klaar voor afspelen en synchronisatie.",
+        "offlineDownloading": "We halen elk blok op, ontsleutelen het en voegen alle sporen samen tot één bestand dat je offline kunt afspelen."
+      }
+    },
+    "transcodePlan": "Transcodeplan",
+    "audio": "Audio",
+    "subtitles": "Ondertiteling",
+    "estimatedStorage": "Geschatte extra opslag",
+    "source": "Bron",
+    "unknown": "Onbekend",
+    "manualMatch": "Handmatig koppelen",
+    "closeMatch": "Bijna-overeenkomst",
+    "searchPlaceholder": "Zoek in je mediatheek...",
+    "noMatches": "Geen overeenkomsten gevonden.",
+    "season": "Seizoen",
+    "episode": "Aflevering",
+    "selectSeason": "Kies een seizoen",
+    "selectEpisode": "Kies een aflevering",
+    "applyMatch": "Koppeling toepassen",
+    "matchHint": "Kies de juiste media voordat je koppelt.",
+    "detectedEpisode": "Herkende aflevering: S{{season}}E{{episode}}",
+    "errors": {
+      "selectFormat": "Kies minstens één uitvoerformaat.",
+      "selectEpisode": "Kies een seizoen en aflevering.",
+      "authRequired": "Log opnieuw in om verder te gaan met uploaden.",
+      "cancelled": "Geannuleerd door gebruiker.",
+      "audioRequiredMissing": "Audioverwerking mislukt en er is geen afspeelbaar audiospoor gemaakt.",
+      "subtitleRequiredMissing": "Ondertitelverwerking mislukt en er is geen afspeelbaar ondertitelspoor gemaakt.",
+      "storageQuotaBlocked": "Je opslag is vol. Maak ruimte vrij of upgrade je abonnement om verder te gaan.",
+      "uploadQuotaExceeded": "Uploaden mislukt omdat je opslag vol is. Upgrade je abonnement om verder te gaan.",
+      "uploadQuotaUnavailable": "Uploaden kon niet starten omdat je opslaglimiet tijdelijk niet beschikbaar is.",
+      "upgradePlan": "Abonnement upgraden",
+      "linkFailed": "Het bestand kon niet aan een item in de mediatheek worden gekoppeld.",
+      "formatFailed": "De transcodeformaten konden niet worden opgeslagen.",
+      "tracksFailed": "De audio- of ondertitelsporen konden niet worden opgeslagen.",
+      "processingFailed": "Verwerking mislukt. Probeer het opnieuw."
+    }
+  },
+  "app": {
+    "loadingAccount": "Je account laden...",
+    "loading": "Laden...",
+    "dropOverlay": {
+      "dropTitle": "Zet bestanden hier neer om ze aan de mediatheek toe te voegen",
+      "dropSubtitle": "Video's, ondertitels of mappen",
+      "identifying": "Bestanden herkennen...",
+      "pleaseWait": "Een ogenblik...",
+      "onlyMedia": "Alleen video's, ondertitels en mappen kunnen worden toegevoegd"
+    }
+  },
+  "debug": {
+    "title": "Debugdatabase",
+    "subtitle": "Live momentopname van de lokale database van de mediatheek.",
+    "empty": "Geen database geladen.",
+    "refresh": "Vernieuwen",
+    "collapse": "Inklappen",
+    "expand": "Uitklappen"
+  },
+  "brand": {
+    "app": "Badger",
+    "mascotAlt": "Badger-mascotte"
+  },
+  "account": {
+    "title": "Account",
+    "subtitle": "Abonnement, facturering, verwijzingen en beveiliging.",
+    "loadErrorTitle": "Account kon niet worden geladen",
+    "loadError": "De accountgegevens konden niet worden geladen.",
+    "common": {
+      "copy": "Kopiëren",
+      "cancel": "Annuleren",
+      "startOver": "Opnieuw beginnen"
+    },
+    "devices": {
+      "title": "Ingelogde apparaten",
+      "subtitle": "Elk apparaat dat je mediatheek kan openen. Als je een apparaat uitlogt, heeft het geen toegang meer tot je mediatheek.",
+      "summary_one": "{{count}} apparaat ingelogd",
+      "summary_many": "{{count}} apparaten ingelogd",
+      "summary_other": "{{count}} apparaten ingelogd",
+      "summaryThisDevice": "Deze computer: {{name}}",
+      "viewAll": "Apparaten bekijken",
+      "loading": "Apparaten laden...",
+      "loadError": "Je apparaten konden niet worden geladen.",
+      "retry": "Opnieuw proberen",
+      "empty": "Er zijn geen apparaten ingelogd.",
+      "thisDevice": "Deze computer",
+      "lastSeen": "Laatst gezien {{when}}",
+      "neverSeen": "Nog niet gezien",
+      "signOut": "Uitloggen",
+      "signingOut": "Uitloggen...",
+      "signOutError": "Dat apparaat kon niet worden uitgelogd. Probeer het opnieuw.",
+      "signOutHint": "Logt {{name}} uit. Het apparaat heeft meteen geen toegang meer tot je mediatheek.",
+      "unnamed": "Naamloos apparaat",
+      "newDevice": "Nieuw apparaat toegevoegd: {{name}} ({{type}})",
+      "newDeviceOpen": "Apparaten bekijken",
+      "type": {
+        "desktop": "Computer",
+        "mobile": "Telefoon",
+        "tv": "Tv",
+        "kodi": "Kodi",
+        "jellyfin": "Jellyfin-server",
+        "web": "Webbrowser",
+        "other": "Apparaat"
+      }
+    },
+    "errors": {
+      "invalidCredentials": "Je huidige wachtwoord is onjuist.",
+      "invalidCode": "Ongeldige verificatiecode. Probeer het opnieuw.",
+      "setupExpired": "Deze instelling is verlopen. Maak een nieuwe QR-code aan.",
+      "generic": "Er ging iets mis. Probeer het opnieuw."
+    },
+    "plans": {
+      "free": {
+        "title": "Gratis"
+      },
+      "tier1": {
+        "title": "Starter"
+      },
+      "tier2": {
+        "title": "Standard"
+      },
+      "tier3": {
+        "title": "Scale"
+      }
+    },
+    "subscription": {
+      "title": "Abonnement",
+      "subtitle": "Beheer je opslagabonnement.",
+      "paymentsNotOpen": "Betalen kan binnenkort. Elk abonnement dat je kiest is meteen actief en tot dan gratis, zonder kaart. We mailen je zodra betalen mogelijk is; je betaalde periode begint op de dag dat je betaalt.",
+      "prelaunchConfirm": {
+        "title": "Gratis tot betalen mogelijk is",
+        "free": "Betalen kan nog niet op SpaceFleet, dus je {{plan}}-abonnement is voorlopig gratis, met alles erbij.",
+        "emailMonth": "Zodra betalen mogelijk is, sturen we je een e-mail. Je hebt dan 14 dagen om te betalen, en je eerste betaalde maand begint op de dag dat je betaalt, niet eerder.",
+        "emailYear": "Zodra betalen mogelijk is, sturen we je een e-mail. Je hebt dan 14 dagen om te betalen, en je eerste betaalde jaar begint op de dag dat je betaalt, niet eerder.",
+        "founder": "Founders houden hun korting.",
+        "unpaid": "Als je niet betaalt, stoppen afspelen en uploaden. Je kunt je bestanden nog 60 dagen downloaden.",
+        "confirm": "Start mijn gratis {{plan}}-abonnement",
+        "cancel": "Kies een ander abonnement"
+      },
+      "prelaunchNote": {
+        "free": "Betalen kan nog niet: je {{plan}}-abonnement is voorlopig gratis, met alles erbij.",
+        "emailMonth": "Zodra betalen mogelijk is, mailen we je. Je hebt dan 14 dagen om te betalen, en je eerste betaalde maand begint op de dag dat je betaalt.",
+        "emailYear": "Zodra betalen mogelijk is, mailen we je. Je hebt dan 14 dagen om te betalen, en je eerste betaalde jaar begint op de dag dat je betaalt.",
+        "unpaid": "Als je niet betaalt, stoppen afspelen en uploaden; je kunt je bestanden nog 60 dagen downloaden."
+      },
+      "freeUntilMonth": "Gratis tot {{date}}. Betaal nu om je {{plan}}-abonnement te houden; je eerste betaalde maand begint op de dag dat je betaalt.",
+      "freeUntilYear": "Gratis tot {{date}}. Betaal nu om je {{plan}}-abonnement te houden; je eerste betaalde jaar begint op de dag dat je betaalt.",
+      "loading": "Abonnement laden...",
+      "updated": "Abonnement bijgewerkt.",
+      "billingPeriod": "Factuurperiode",
+      "annualBilling": "Jaarlijks betalen (bespaar {{amount}} / jaar)",
+      "monthlyBilling": "Maandelijks betalen",
+      "toggleAnnual": "Jaarlijks betalen in- of uitschakelen",
+      "annual": "Jaarlijks",
+      "monthly": "Maandelijks",
+      "currentPlan": "Huidig abonnement",
+      "confirmPlanChange": "Abonnementswijziging bevestigen",
+      "switch": "Overstappen",
+      "renew": "Abonnement verlengen",
+      "payNow": "Nu betalen",
+      "perMonth": "/ maand",
+      "billedYearly": "Jaarlijks gefactureerd ({{amount}} / jaar)",
+      "billedMonthly": "Maandelijks gefactureerd",
+      "savePerYear": "Bespaar {{amount}} / jaar",
+      "founderPrice": "Founderprijs, −{{percent}}% voor altijd",
+      "extraStorage": "Extra opslag",
+      "extraStorageAnnual": "+{{size}} voor {{amount}} / jaar",
+      "extraStorageMonthly": "+{{size}} voor {{amount}} / maand",
+      "total": "Totaal",
+      "updating": "Bijwerken...",
+      "used": "{{used}} / {{limit}} gebruikt",
+      "usedUnlimited": "{{used}} gebruikt",
+      "adminUnlimited": "Admin: onbeperkte opslag",
+      "paidUntil": "Betaald tot {{date}}",
+      "unpaidNotice": "Je abonnement is beëindigd. Je kunt je bestanden nog downloaden tot {{date}}; daarna worden ze verwijderd.",
+      "unpaidNoticeNoDate": "Je abonnement is beëindigd. Je kunt je bestanden nog een beperkte tijd downloaden; daarna worden ze verwijderd.",
+      "paymentWaiting": "Rond de betaling af op de pagina die in je browser is geopend. Dit scherm werkt zichzelf bij zodra de betaling is verwerkt.",
+      "paymentReopen": "Betaalpagina opnieuw openen",
+      "paymentCheckNow": "Nu controleren",
+      "paymentStop": "Stoppen met wachten",
+      "paymentSuccess": "Betaling ontvangen. Je abonnement is nu actief.",
+      "paymentRefused": "Je kaart is geweigerd. Er is niets afgeschreven; probeer een andere kaart.",
+      "paymentCancelled": "Betaling geannuleerd. Er is niets afgeschreven.",
+      "paymentPending": "Je betaling is nog niet bevestigd. Je abonnement wordt bijgewerkt zodra ze bevestigd is; kom over een minuutje terug naar dit scherm om het te controleren.",
+      "paymentStopped": "Gestopt met wachten. Als je de betaling afrondt, wordt je abonnement bijgewerkt zodra ze bevestigd is.",
+      "paymentsUnavailable": "Betalingen zijn tijdelijk niet beschikbaar. Probeer het over een paar minuten opnieuw.",
+      "endsOn": "Je abonnement eindigt op {{date}}; daarna gaat je account over naar het gratis abonnement.",
+      "booked": "Ingepland: je abonnement wijzigt op {{date}}, bij je volgende betaling.",
+      "bookingCancelled": "De ingeplande abonnementswijziging is geannuleerd. Je houdt je huidige abonnement.",
+      "unchanged": "Dat is al je abonnement.",
+      "tooLarge": "Je mediatheek past niet in dat abonnement. Verwijder eerst {{excess}} en probeer het dan opnieuw.",
+      "scheduledChange": "Je abonnement wijzigt naar {{plan}} op {{date}}, bij je volgende betaling.",
+      "scheduledTooLarge": "Je mediatheek is {{excess}} te groot voor dat abonnement. Verwijder {{excess}} vóór {{date}}, anders wordt de wijziging geannuleerd.",
+      "keepCurrentPlan": "Mijn huidige abonnement houden",
+      "renewalHold": "Je verlenging staat in de wacht: je mediatheek past niet in het abonnement dat je hebt ingepland. Verwijder bestanden en stap over naar een kleiner abonnement, anders wordt je huidige abonnement op {{date}} afgeschreven.",
+      "renewalPending": "De betaling voor je verlenging wordt verwerkt. Probeer het over een paar minuten opnieuw.",
+      "checkoutInProgress": "Een betaling die je bent gestart, wordt nog verwerkt op de betaalpagina. Rond ze daar af, of wacht een paar minuten en probeer het opnieuw.",
+      "billingUnknown": "Je abonnement kan nu niet worden gewijzigd: de app kon de betaaldienst niet bereiken. Probeer het later opnieuw."
+    },
+    "storage": {
+      "recompute": "Opnieuw berekenen",
+      "recomputeRunning": "Controleren…",
+      "lastVerified": "Laatst gecontroleerd: {{relative}}",
+      "reclaimableHint": "{{bytes}} vrij te maken",
+      "confirmTitle": "{{count}} verweesde blokken gevonden die ~{{bytes}} innemen. Vrijmaken?",
+      "confirmAccept": "Vrijmaken",
+      "confirmCancel": "Annuleren",
+      "resultReclaimed": "{{bytes}} vrijgemaakt",
+      "resultAlreadyInSync": "Al gesynchroniseerd.",
+      "resultFailed": "Opnieuw berekenen mislukt. Probeer het later opnieuw.",
+      "relativeJustNow": "zojuist",
+      "relativeSeconds": "{{value}} s geleden",
+      "relativeMinutes": "{{value}} min geleden",
+      "relativeHours": "{{value}} u geleden",
+      "relativeDays": "{{value}} d geleden"
+    },
+    "sponsorships": {
+      "title": "Verwijzingen",
+      "subtitle": "Nodig vrienden uit met je verwijzingscode. De voordelen worden later bepaald.",
+      "loading": "Verwijzingen laden...",
+      "yourCode": "Je verwijzingscode",
+      "empty": "Nog geen verwijzingen.",
+      "summary_one": "{{count}} verwijzing, {{validated}} bevestigd",
+      "summary_many": "{{count}} verwijzingen, {{validated}} bevestigd",
+      "summary_other": "{{count}} verwijzingen, {{validated}} bevestigd",
+      "viewAll": "Verwijzingen bekijken",
+      "eligibleAt": "In aanmerking vanaf {{date}}",
+      "validated": "Bevestigd",
+      "pending": "In behandeling ({{days}} d)"
+    },
+    "billing": {
+      "title": "Facturering",
+      "subtitle": "Facturen verschijnen hier zodra facturering is gekoppeld.",
+      "empty": "Nog geen facturen."
+    },
+    "security": {
+      "title": "Wachtwoord wijzigen",
+      "subtitle": "Als je je wachtwoord wijzigt, worden alle actieve sessies afgemeld.",
+      "currentPassword": "Huidig wachtwoord",
+      "newPassword": "Nieuw wachtwoord",
+      "repeatNewPassword": "Herhaal nieuw wachtwoord",
+      "updating": "Bijwerken...",
+      "change": "Wachtwoord wijzigen",
+      "changed": "Wachtwoord gewijzigd. Je bent uitgelogd.",
+      "setTitle": "Wachtwoord instellen",
+      "setSubtitle": "Je account heeft geen wachtwoord. Je kunt ook een wachtwoord toevoegen: een code bevestigt dat jij het bent, en alle sessies worden uitgelogd.",
+      "set": "Wachtwoord instellen",
+      "setDone": "Wachtwoord ingesteld. Je bent uitgelogd.",
+      "noPasswordHint": "Je account heeft geen wachtwoord, dus een code bevestigt dat jij het bent: de code uit je authenticator-app als die aanstaat, anders een code die we je mailen als je verdergaat.",
+      "errors": {
+        "passwordLength": "Je nieuwe wachtwoord moet minstens 8 tekens bevatten.",
+        "passwordMismatch": "De nieuwe wachtwoorden komen niet overeen.",
+        "twoFactorRequired": "Vul je verificatiecode in om de wachtwoordwijziging te bevestigen.",
+        "twoFactorInvalid": "Die verificatiecode is ongeldig. Probeer het opnieuw."
+      }
+    },
+    "twoFactor": {
+      "title": "Tweestapsverificatie",
+      "setup": "2FA instellen",
+      "activate": "2FA activeren",
+      "chooseMethod": "Kies een methode",
+      "chooseMethodSubtitle": "Codes per e-mail of een authenticator-app.",
+      "methodEmail": "Verificatiecodes per e-mail",
+      "methodTotp": "Authenticator-app (TOTP)",
+      "resendCode": "Code opnieuw sturen",
+      "sendCode": "Code sturen",
+      "emailHint": "We sturen een 6-cijferige code naar je e-mailadres.",
+      "verificationCode": "Verificatiecode",
+      "codePlaceholder": "123456",
+      "enabling": "Inschakelen...",
+      "enable": "2FA inschakelen",
+      "regenerateQr": "Nieuwe QR-code maken",
+      "generateQr": "QR-code maken",
+      "setupExpires": "De instelling verloopt na 10 minuten.",
+      "qrCode": "QR-code",
+      "qrAlt": "TOTP-QR-code",
+      "manualSetup": "Handmatig instellen",
+      "manualSetupHint": "Lukt scannen niet? Kopieer dan de geheime sleutel naar je app.",
+      "disable": "2FA uitschakelen",
+      "disabling": "Uitschakelen...",
+      "disableHint": "Bevestig met je wachtwoord en je huidige verificatiecode.",
+      "passwordLabel": "Je wachtwoord",
+      "currentCode": "Huidige verificatiecode",
+      "status": {
+        "enabledNeedsSetup": "Ingeschakeld (moet nog worden ingesteld)",
+        "enabledTotp": "Ingeschakeld (authenticator-app)",
+        "enabledEmail": "Ingeschakeld (codes per e-mail)",
+        "disabled": "Uitgeschakeld"
+      },
+      "messages": {
+        "codeSent": "We hebben een verificatiecode naar je e-mailadres gestuurd.",
+        "totpReady": "Scan de QR-code of kopieer de geheime sleutel naar je authenticator-app.",
+        "copySuccess": "Gekopieerd naar het klembord.",
+        "copyFail": "Kopiëren mislukt. Selecteer en kopieer het handmatig."
+      },
+      "errors": {
+        "invalidPassword": "Dat wachtwoord klopt niet.",
+        "twoFactorRequired": "Vul je huidige verificatiecode in om door te gaan.",
+        "twoFactorInvalid": "Die verificatiecode is ongeldig. Probeer het opnieuw."
+      }
+    },
+    "deletion": {
+      "subtitle": "Verwijder je account en alles wat erin is opgeslagen definitief. Dit kan niet ongedaan worden gemaakt.",
+      "delete": "Account verwijderen",
+      "deleting": "Verwijderen...",
+      "failed": "Verwijderen mislukt. Probeer het opnieuw.",
+      "confirmTitle": "Account definitief verwijderen?",
+      "confirmDescription": "Hiermee verwijder je je account, je mediatheek en al je bestanden definitief. Dit kan niet ongedaan worden gemaakt.",
+      "downloadFirst": "Download je mediatheek eerst naar deze computer: open een titel en kies “Offline opslaan”. Zodra je account is verwijderd, kunnen je bestanden niet meer worden teruggehaald.",
+      "downloadWarning": "Download je mediatheek eerst naar deze computer. Na het verwijderen kunnen je bestanden niet meer worden teruggehaald.",
+      "passwordLabel": "Je wachtwoord",
+      "confirmLabel": "Typ DELETE om te bevestigen",
+      "confirmPlaceholder": "DELETE",
+      "twoFactorLabel": "Verificatiecode",
+      "twoFactorPlaceholder": "123456",
+      "twoFactorPrompt": "Vul de verificatiecode uit je authenticator-app of e-mail in.",
+      "cancel": "Annuleren",
+      "errors": {
+        "invalidPassword": "Dat wachtwoord is onjuist.",
+        "twoFactorRequired": "Vul je verificatiecode in om door te gaan.",
+        "twoFactorInvalid": "Die verificatiecode is ongeldig. Probeer het opnieuw.",
+        "confirmRequired": "Typ DELETE om te bevestigen."
+      },
+      "bookedTitle": "Je account verwijderen aan het einde van je betaalde jaar?",
+      "bookedDescription": "Je account, je mediatheek en al je bestanden worden verwijderd op {{date}}. Tot die tijd kun je dit ongedaan maken met \"Mijn account houden\".",
+      "modeTitle": "Je hebt voor een heel jaar betaald. Wanneer moeten we je account verwijderen?",
+      "modeEndOfPeriod": "Aan het einde van je betaalde jaar, op {{date}}. Je account blijft tot dan werken en wordt niet verlengd. Je kunt dit op elk moment vóór die datum annuleren.",
+      "modeNow": "Nu. Je verliest meteen de toegang en de rest van het jaar wordt niet terugbetaald.",
+      "scheduled": "Je account wordt verwijderd op {{date}}. Het blijft tot dan werken en wordt niet verlengd.",
+      "cancelScheduled": "Mijn account houden",
+      "cancelScheduledFailed": "Het verwijderen kon niet worden geannuleerd. Probeer het opnieuw."
+    },
+    "access": {
+      "unpaidBanner": "Je abonnement is beëindigd. Je kunt je bestanden nog downloaden tot {{date}}; daarna worden ze verwijderd.",
+      "unpaidBannerNoDate": "Je abonnement is beëindigd. Je kunt je bestanden nog een beperkte tijd downloaden; daarna worden ze verwijderd.",
+      "unpaidBannerHint": "Gebruik “Offline opslaan” bij een titel om hem naar deze computer te downloaden.",
+      "playbackBlocked": "Afspelen is gepauzeerd omdat je abonnement is beëindigd. Je kunt je bestanden nog downloaden tot {{date}}.",
+      "playbackBlockedNoDate": "Afspelen is gepauzeerd omdat je abonnement is beëindigd. Je kunt je bestanden nog een beperkte tijd downloaden.",
+      "uploadBlocked": "Uploaden is gepauzeerd omdat je abonnement is beëindigd. Je kunt je bestanden nog downloaden tot {{date}}; daarna worden ze verwijderd.",
+      "uploadBlockedNoDate": "Uploaden is gepauzeerd omdat je abonnement is beëindigd. Je kunt je bestanden nog een beperkte tijd downloaden; daarna worden ze verwijderd."
+    },
+    "overQuota": {
+      "graceBanner": "Je mediatheek is {{excess}} groter dan de opslag van je abonnement. Tot {{date}} werkt alles; daarna worden afspelen en uploaden gepauzeerd.",
+      "frozenBanner": "Je mediatheek is {{excess}} groter dan de opslag van je abonnement, dus afspelen en uploaden zijn gepauzeerd. Op {{date}} worden de nieuwste titels verwijderd tot alles past.",
+      "deletingBanner": "Je mediatheek is groter dan de opslag van je abonnement en de nieuwste titels worden verwijderd tot alles past.",
+      "removedBanner_one": "{{count}} titel is verwijderd omdat je opslag vol was.",
+      "removedBanner_other": "{{count}} titels zijn verwijderd omdat je opslag vol was.",
+      "upgrade": "Abonnement upgraden",
+      "seeTitles": "Titels bekijken",
+      "dismiss": "Sluiten",
+      "dialogTitle": "Mediatheek groter dan opslag",
+      "options": "Stap over naar een abonnement waarin je mediatheek past, of verwijder titels uit je mediatheek tot alles past. Je kunt een titel eerst downloaden om een kopie te houden.",
+      "loading": "Titels in je mediatheek zoeken…",
+      "atRiskTitle": "Wordt op {{date}} verwijderd, tenzij de mediatheek past",
+      "atRiskTitleNoDate": "Wordt verwijderd, tenzij de mediatheek past",
+      "atRiskHint": "Nieuwste eerst. Met “Downloaden” houd je een kopie op deze computer.",
+      "download": "Downloaden",
+      "unknownTitle": "Titel staat niet meer in je mediatheek",
+      "episodeLabel": "{{title}} — S{{season}}E{{episode}}",
+      "remainingOver": "Zelfs daarna is de mediatheek nog {{excess}} groter dan je opslag.",
+      "removedTitle": "Verwijderd omdat de opslag vol was",
+      "removedOn": "Verwijderd op {{date}}",
+      "playbackBlocked": "Afspelen is gepauzeerd omdat je mediatheek groter is dan de opslag van je abonnement. Upgrade of verwijder titels vóór {{date}}, anders worden de nieuwste titels verwijderd."
+    }
+  },
+  "toolAccess": {
+    "unavailable": "Gekoppelde tools beheer je in de desktop-app.",
+    "empty": "Er zijn geen tools gekoppeld. Als een tool je mediatheek wil gebruiken, wordt het je eerst hier gevraagd.",
+    "summary_one": "{{count}} tool gekoppeld",
+    "summary_many": "{{count}} tools gekoppeld",
+    "summary_other": "{{count}} tools gekoppeld",
+    "summaryHint": "Deze tools hebben via de achtergronddienst toegang tot je mediatheek tot je ze intrekt.",
+    "viewAll": "Tools bekijken",
+    "mode": {
+      "read": "Alleen lezen",
+      "write": "Lezen en wijzigen"
+    },
+    "list": {
+      "title": "Gekoppelde tools",
+      "subtitle": "Tools die je toestemming hebt gegeven om je mediatheek te gebruiken. Trek je een tool in, dan stopt de toegang meteen.",
+      "grantedAt": "Goedgekeurd {{when}}",
+      "lastUsed": "Laatst gebruikt {{when}}",
+      "neverUsed": "Nog niet gebruikt",
+      "never": "nooit",
+      "revoke": "Intrekken",
+      "revoking": "Intrekken...",
+      "revokeHint": "Beëindigt meteen de toegang van {{name}} tot je mediatheek.",
+      "revokeError": "Kon deze tool niet intrekken. Probeer het opnieuw."
+    },
+    "prompt": {
+      "title": "\"{{name}}\" toegang geven tot je mediatheek?",
+      "description": {
+        "read": "Deze tool wil je mediatheek bekijken: titels, details, afspeellijsten, voortgang en wat er op deze computer is gedownload. Hij kan niets wijzigen.",
+        "write": "Deze tool wil je mediatheek bekijken en deels wijzigen: kijkvoortgang, titeldetails (naam, beschrijving, jaar, beoordeling) en je afspeellijsten. Hij kan geen titels verwijderen en niet aan instellingen of sleutels komen."
+      },
+      "selfDeclared": "De naam komt van de tool zelf en is niet gecontroleerd. Keur alleen een tool goed die je net zelf hebt gestart.",
+      "reason": "Opgegeven reden: {{reason}}",
+      "codeHint": "Keur alleen goed als de tool dezelfde code toont:",
+      "deny": "Weigeren",
+      "approveRead": "Alleen lezen toestaan",
+      "approve": {
+        "read": "Alleen lezen toestaan",
+        "write": "Lezen en wijzigen toestaan"
+      }
+    }
+  },
+  "libraryFormat": {
+    "tooNew": {
+      "title": "Update vereist",
+      "body": "Deze mediatheek is gemaakt met een nieuwere versie van Badger Desktop. Werk de app bij om hem te openen.",
+      "updateNow": "Nu bijwerken",
+      "updating": "Bijwerken…"
+    }
+  },
+  "updater": {
+    "check": "Zoeken naar updates",
+    "available": {
+      "title": "Update beschikbaar",
+      "body": "Badger Desktop {{version}} is klaar om te installeren.",
+      "bodyCurrent": "Er is een nieuwe versie van Badger Desktop klaar om te installeren.",
+      "download": "Update downloaden",
+      "downloading": "Downloaden… {{percent}}%",
+      "restart": "Nu herstarten",
+      "later": "Later",
+      "failed": "De update kon niet worden gedownload. Probeer het later opnieuw."
+    },
+    "ready": {
+      "title": "Update klaar",
+      "body": "Badger Desktop {{version}} is gedownload. De update wordt geïnstalleerd zodra je Badger afsluit, of herstart nu.",
+      "bodyCurrent": "Een nieuwe versie van Badger Desktop is gedownload. De update wordt geïnstalleerd zodra je Badger afsluit, of herstart nu."
+    }
+  },
+  "fileIngestion": {
+    "skipData": {
+      "fetching": "Intro's en aftiteling overslaan: ophalen…",
+      "cached": "Intro's en aftiteling overslaan: ✓ al opgeslagen",
+      "all": "Intro's en aftiteling overslaan: ✓ beschikbaar",
+      "partial": "Intro's en aftiteling overslaan: {{covered}}/{{total}} afleveringen beschikbaar",
+      "unavailable": "Intro's en aftiteling overslaan: niet beschikbaar"
+    }
+  },
+  "ingestion": {
+    "quota": {
+      "titleDoesNotFit": "Niet genoeg ruimte voor deze import",
+      "titleHighUsage": "Deze import vult je ruimte bijna helemaal",
+      "bodyDoesNotFit": "Deze import heeft ongeveer {{needed}} nodig en je account heeft nog {{left}} over.",
+      "bodyHighUsage": "Na deze import heb je nog ongeveer {{left}} over: je ruimte is dan voor {{percent}}% vol.",
+      "offerFits": "{{plan}} heeft er ruimte voor, voor {{price}}.",
+      "offerNext": "{{plan}} geeft je meer ruimte, voor {{price}}.",
+      "noPlanFits": "Zelfs het grootste abonnement past deze import niet. Kies minder video's.",
+      "largestPlan": "Je hebt al het grootste abonnement.",
+      "chooseLabel": "Of kies nu welke video's je wilt importeren:",
+      "selectionTotal": "Geselecteerd: {{selected}} · Ruimte over: {{left}}",
+      "importSelected_one": "{{count}} video importeren",
+      "importSelected_other": "{{count}} video's importeren",
+      "cancel": "Import annuleren",
+      "continueCurrentPlan": "Doorgaan met mijn huidige abonnement",
+      "upgrade": "Upgraden naar {{plan}}",
+      "upgrading": "Upgraden…",
+      "upgradeFailed": "De upgrade is niet gelukt. Er is niets gewijzigd — probeer het zo meteen opnieuw.",
+      "priceMonthly": "{{price}} per maand",
+      "priceAnnual": "{{total}} per jaar ({{price}} per maand), jaarlijks gefactureerd",
+      "uploadRefused": "Sommige uploads zijn gestopt omdat je opslagruimte vol is. Er is niets verloren: je bestanden staan nog op deze computer.",
+      "uploadRefusedUpgraded": "Je abonnement heeft nu meer ruimte. Probeer de gestopte uploads opnieuw."
+    },
+    "errors": {
+      "desktopOnly": "Bestanden importeren kan alleen in de desktop-app.",
+      "ffprobeMissing": "FFprobe ontbreekt in deze build.",
+      "probeFailed": "Analyse mislukt",
+      "noExistingMatch": "Geen overeenkomende media gevonden in je mediatheek",
+      "noMatch": "Geen overeenkomst gevonden",
+      "searchFailed": "Zoeken mislukt",
+      "searchTimedOut": "Titels zoeken duurde te lang",
+      "metadataUnavailable": "Titels zoeken is nu niet beschikbaar",
+      "scanFailed": "We konden de geselecteerde bestanden niet lezen.",
+      "signInSearchTmdb": "Log in om te zoeken."
+    },
+    "toasts": {
+      "queuedTitle": "Import gestart",
+      "queuedSingle": "Toegevoegd aan de verwerkingswachtrij.",
+      "queuedMany": "{{count}} titels toegevoegd aan de verwerkingswachtrij.",
+      "openLibrary": "Mediatheek openen",
+      "viewTv": "Series bekijken",
+      "viewMovies": "Films bekijken",
+      "pickExistingTitle": "Kies een titel die al in je mediatheek of in deze importbatch staat.",
+      "signInAddDummy": "Log in om dummymedia toe te voegen.",
+      "missingLibraryKey": "Mediatheeksleutel ontbreekt. Rond eerst de onboarding af.",
+      "dummyUnavailable": "Dummy-import is niet beschikbaar.",
+      "dummyAdded": "Toegevoegd met dummydata.",
+      "dummyStartFailed": "Dummy-import starten mislukt.",
+      "audioSampleFailed": "Kon geen audiovoorbeeld maken.",
+      "setTrackLanguages": "Stel voor elk spoor een taal in, of kies 'Negeren en sporen ongedefinieerd laten'.",
+      "removedDuplicates": "{{count}} dubbel bestand verwijderd.",
+      "addMetadataFailedSingle": "1 titel kon niet worden toegevoegd: de metadataservice antwoordde niet. Hij staat er nog, probeer het zo opnieuw.",
+      "addMetadataFailedMany": "{{count}} titels konden niet worden toegevoegd: de metadataservice antwoordde niet. Ze staan er nog, probeer het zo opnieuw.",
+      "mediaNotInLibrary": "\"{{title}}\" staat nog niet in je mediatheek. Voeg eerst een videobestand toe.",
+      "subtitleUploadsUnavailable": "Ondertitels uploaden is in deze sessie niet beschikbaar.",
+      "pickEpisodeForSubtitles": "Kies een specifieke aflevering voor de ondertitelbestanden in \"{{title}}\".",
+      "subtitleUploadFailed": "Ondertitel \"{{name}}\" uploaden mislukt.",
+      "skippedDuplicateSingle": "1 video overgeslagen die al in dezelfde kwaliteit in je mediatheek staat.",
+      "skippedDuplicateMany": "{{count}} video's overgeslagen die al in dezelfde kwaliteit in je mediatheek staan.",
+      "subtitleTrackAddedSingle": "Ondertitelspoor toegevoegd.",
+      "subtitleTrackAddedMany": "{{count}} ondertitelsporen toegevoegd.",
+      "queueFailed": "Taken in de wachtrij zetten mislukt. Probeer het opnieuw."
+    },
+    "samples": {
+      "noSubtitleSample": "Geen ondertitelvoorbeeld beschikbaar.",
+      "subtitleSampleFailed": "Kon geen ondertitelvoorbeeld maken."
+    },
+    "ui": {
+      "title": "Media importeren",
+      "dropMore": "Loslaten om meer toe te voegen",
+      "emptyTitle": "Mediabestanden importeren",
+      "emptySubtitle": "Sleep video- of ondertitelbestanden of mappen hierheen om ze te herkennen en aan je mediatheek toe te voegen.",
+      "browseFiles": "Bestanden kiezen",
+      "browseFolders": "Mappen kiezen",
+      "needsDecision": "Keuze nodig",
+      "needsInput": "Invoer nodig",
+      "readyToImport": "Klaar om te importeren",
+      "unmatched": "Niet herkend",
+      "searchingHeading": "Zoeken",
+      "searchingTitle": "Details zoeken…",
+      "searchingHint": "Dit bestand wordt opgezocht. Dat duurt meestal een paar seconden.",
+      "subtitle": "Ondertitel",
+      "subtitles": "Ondertiteling",
+      "video": "Video",
+      "finish": "Voltooien",
+      "next": "Volgende",
+      "subtitleSampleTitle": "Ondertitelvoorbeeld",
+      "preparingSample": "Voorbeeld voorbereiden...",
+      "subtitleSampleAlt": "Ondertitelvoorbeeld",
+      "resolveVideoTitle": "Videotoevoegingen afhandelen",
+      "noVideoDecisions": "Geen openstaande videokeuzes.",
+      "dummyTitle": "Toevoegen met dummydata",
+      "movie": "Film",
+      "tv": "Tv",
+      "searchTmdbPlaceholder": "Films en series zoeken...",
+      "search": "Zoeken",
+      "searchDummyHint": "Zoek een titel om dummydata toe te voegen.",
+      "trailer": "Trailer",
+      "chooseTrailer": "Kies een trailer",
+      "loadingTrailers": "Trailers laden...",
+      "noTrailers": "Geen trailers beschikbaar.",
+      "removeFile": "Bestand verwijderen",
+      "removeGroup": "Groep verwijderen",
+      "removeEpisodeGroup": "Afleveringsgroep verwijderen",
+      "scanning": "Scannen...",
+      "queued": "In wachtrij",
+      "addMore": "Meer toevoegen",
+      "tvShow": "Serie",
+      "addingLabel": "Toevoegen:",
+      "seasonEpisode": "Seizoen {{season}}, aflevering {{episode}}",
+      "noMatchHint": "We konden dit bestand niet automatisch herkennen. Zoek hieronder handmatig.",
+      "metadataUnavailableHint": "Dit bestand is niet opgezocht: de app kon titels zoeken niet bereiken. Probeer het later opnieuw.",
+      "searchFailedHint": "Titels zoeken is mislukt. Probeer het opnieuw of zoek hieronder handmatig.",
+      "searchTimedOutHint": "Titels zoeken antwoordde niet op tijd. Probeer het later opnieuw of zoek hieronder handmatig.",
+      "subtitleDetails": "Ondertiteldetails",
+      "language": "Taal",
+      "trackName": "Spoornaam",
+      "subtitleNamePlaceholder": "Naam ondertitel",
+      "episodesLower": "afleveringen",
+      "episode": "aflevering",
+      "episodes": "Afleveringen",
+      "unknownSeason": "Onbekend seizoen",
+      "seasonLabel": "Seizoen {{season}}",
+      "unlabeledEpisode": "Aflevering zonder label",
+      "tracks": "Sporen",
+      "readingMetadata": "Bestandsgegevens lezen...",
+      "audio": "Audio",
+      "noAudioTracksDetected": "Geen audiosporen gevonden.",
+      "noSubtitlesDetected": "Geen ondertitels gevonden.",
+      "importDetails": "Importdetails",
+      "subtitleOnlyImportHint": "Alleen ondertitels importeren. Dit bestand wordt gekoppeld aan de ondertitelsporen van de gekozen media/aflevering.",
+      "inputQualities": "Bronkwaliteiten",
+      "preferredCodecs": "Voorkeurscodecs",
+      "unknown": "Onbekend",
+      "videoSources": "Videobronnen",
+      "autoOutputs": "Automatische uitvoer",
+      "noneAlreadyAvailable": "Geen (al beschikbaar)",
+      "audioTracks": "Audiosporen",
+      "fileDetails": "Bestandsdetails",
+      "subtitleFileDetected": "Ondertitelbestand gevonden. Koppel het aan een bestaand item in je mediatheek en controleer daarna taal en naam.",
+      "quality": "Kwaliteit",
+      "resolution": "Resolutie",
+      "videoCodec": "Videocodec",
+      "chapters": "Hoofdstukken",
+      "matchWithExistingLibraryMedia": "Koppelen aan bestaande media in je mediatheek",
+      "wrongMatchSearchManually": "Verkeerd herkend? Zoek handmatig",
+      "movies": "Films",
+      "tvShows": "Series",
+      "searchLibraryMoviesPlaceholder": "Films in mediatheek zoeken...",
+      "searchLibraryTvPlaceholder": "Series in mediatheek zoeken...",
+      "searchTmdbMoviesPlaceholder": "Films zoeken...",
+      "searchTmdbTvPlaceholder": "Series zoeken...",
+      "clear": "Wissen",
+      "select": "Selecteren",
+      "loadingMore": "Meer laden...",
+      "moreResults": "Meer resultaten",
+      "selectFileToReview": "Selecteer een bestand om de details te bekijken",
+      "readyToImportCount": "{{count}} klaar om te importeren",
+      "sameQualityOverlapIgnoredSingle": "{{count}} video in dezelfde kwaliteit genegeerd",
+      "sameQualityOverlapIgnoredMany": "{{count}} video's in dezelfde kwaliteit genegeerd",
+      "addWithDummyData": "Toevoegen met dummydata",
+      "resolveVideoChoices": "Videokeuzes maken ({{count}})",
+      "cancel": "Annuleren",
+      "yourInputNeeded": "Je invoer is nodig ({{count}})",
+      "adding": "Toevoegen...",
+      "addToLibrary": "Toevoegen aan mediatheek",
+      "storageBlocked": "Je opslag is vol. Upgrade je abonnement om meer media toe te voegen.",
+      "storageWarning": "Je gebruikt meer dan 90% van je opslag. Overweeg je abonnement te upgraden.",
+      "resolveBeforeAddingTitle": "Eerst afhandelen",
+      "blockerMatchOrRemove": "Koppel of verwijder {{count}} niet-herkende bestand(en).",
+      "blockerWaitSearch": "Wacht tot het zoeken naar details voor {{count}} bestand(en) klaar is.",
+      "blockerResolveVideo": "Maak {{count}} keuze(s) over videokwaliteit.",
+      "blockerWaitMetadata": "Wacht tot {{count}} bestand(en) klaar zijn met de metadatascan.",
+      "blockerClickInput": "Klik op \"Je invoer is nodig\" en beantwoord {{count}} item(s).",
+      "blockerSkipDataLoading": "Overslaggegevens ophalen voor {{count}} aflevering(en) — even geduld.",
+      "yourInputNeededProgress": "Je invoer is nodig ({{current}}/{{total}})",
+      "setLanguageAndNameAudioTracks": "Taal en naam instellen voor audiosporen",
+      "setLanguageAndNameSubtitleTracks": "Taal en naam instellen voor ondertitelsporen",
+      "mediaItem": "media-item",
+      "mediaItems": "media-items",
+      "track": "spoor",
+      "mediaItemsTracksCounts": "{{mediaCount}} {{mediaLabel}} · {{trackCount}} {{trackLabel}}",
+      "shuffleSample": "Ander voorbeeld",
+      "stopSample": "Voorbeeld stoppen",
+      "playSample": "Voorbeeld afspelen",
+      "showSample": "Voorbeeld tonen",
+      "saveCustomName": "Eigen naam opslaan",
+      "editCustomName": "Eigen naam bewerken",
+      "customName": "Eigen naam",
+      "useLanguageLabel": "Taalnaam gebruiken",
+      "ignoreAndKeepTracksUndefined": "Negeren en sporen ongedefinieerd laten",
+      "noInputNeeded": "Geen invoer nodig.",
+      "close": "Sluiten",
+      "back": "Terug",
+      "addQualityQuestion": "{{quality}}-kwaliteit toevoegen?",
+      "estimatedExtraStorage": "Geschatte extra opslag:",
+      "alreadyAvailable": "Al beschikbaar",
+      "skipQuality": "Kwaliteit overslaan",
+      "addQuality": "Kwaliteit toevoegen",
+      "videoDecision": "videokeuze",
+      "videoDecisions": "videokeuzes",
+      "videoDecisionsPending": "{{count}} {{decisionLabel}} open",
+      "needsInputToContinue": "Invoer nodig om verder te gaan",
+      "undefined": "Ongedefinieerd",
+      "unknownMedia": "Onbekende media",
+      "file": "bestand",
+      "files": "bestanden"
+    }
+  },
+  "pairApprove": {
+    "rowTitle": "Nog een apparaat toevoegen",
+    "rowDescription": "Log in op een tv, telefoon of computer door de code in te typen die erop staat.",
+    "open": "Apparaat koppelen"
+  },
+  "libraryKeyWords": {
+    "checksum": "Deze woorden vormen geen geldige sleutel. Vergelijk elk woord met de woorden die je hebt bewaard.",
+    "unknownMark": "geen sleutelwoord",
+    "pairedNoWords": "Deze computer heeft de sleutel van een ander apparaat gekregen en heeft dus de 12 woorden niet. Die staan op het apparaat waar de sleutel is gemaakt, of in de kopie die je hebt bewaard."
+  }
+}

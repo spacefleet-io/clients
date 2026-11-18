@@ -1,0 +1,30 @@
+{
+  "subtitleFetch": {
+    "title": "Chercher des sous-titres",
+    "getMore": "Chercher d'autres sous-titres…",
+    "looking": "Recherche de sous-titres…",
+    "pick": "Choisissez une langue",
+    "already": "Déjà dans votre médiathèque",
+    "none": "Aucun sous-titre trouvé pour celui-ci.",
+    "unavailable": "Un problème est survenu en récupérant ces sous-titres. Nous y travaillons, cela devrait revenir bientôt.",
+    "offline": "Nécessite une connexion internet",
+    "fromDownload": "Indisponible pendant la lecture d'un téléchargement",
+    "getting": "Récupération des sous-titres {language}",
+    "downloading": "Téléchargement",
+    "saving": "Enregistrement dans votre médiathèque",
+    "added": "{name} ajouté",
+    "failed": "Impossible d'ajouter {name}. Réessayez.",
+    "back": "Retour",
+    "done": "Terminé",
+    "hearingImpaired": "Malentendants",
+    "foreignPartsOnly": "Passages étrangers uniquement",
+    "directorsCut": "Director's cut",
+    "extended": "Version longue",
+    "unrated": "Non censurée",
+    "tryAnother": "Essayer une autre version",
+    "lookingAnother": "Recherche d'une autre version…",
+    "replaced": "{name} remplacé par une autre version",
+    "noneLeft": "Plus d'autre version de {name}",
+    "replaceFailed": "Impossible de remplacer {name}. Réessayez."
+  }
+}

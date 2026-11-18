@@ -1,0 +1,121 @@
+{
+  "keyStepWords": {
+    "collection": "library",
+    "collectionKey": "library key"
+  },
+  "parrot": {
+    "nav": {
+      "back": "Back",
+      "library": "Library",
+      "settings": "Settings",
+      "nowPlaying": "Now playing"
+    },
+    "login": {
+      "sameAsBadger": "Use the same email and password as Badger.",
+      "codeTotp": "Code from your authenticator app",
+      "codeEmail": "Code we emailed you",
+      "usePassword": "Sign in with your password"
+    },
+    "key": {
+      "title": "Enter your library key",
+      "showTitle": "Your library key",
+      "body": "Type the 12 words you saved when you created your library.",
+      "field": "Library key",
+      "continue": "Continue",
+      "saved": "Your library key is saved on this phone.",
+      "errors": {
+        "unavailable": "Can't check the key right now. Check your connection and try again."
+      }
+    },
+    "library": {
+      "opening": "Opening your library…",
+      "openFailed": "Couldn't open your library ({{error}}).",
+      "tryAgain": "Try again",
+      "noAlbums": "No albums yet.",
+      "songs_one": "{{count}} song",
+      "songs_other": "{{count}} songs",
+      "albums_one": "{{count}} album",
+      "albums_other": "{{count}} albums",
+      "artists_one": "{{count}} artist",
+      "artists_other": "{{count}} artists",
+      "noArtists": "No artists yet.",
+      "noSongs": "No songs yet.",
+      "view": {
+        "albums": "Albums",
+        "artists": "Artists",
+        "songs": "Songs"
+      },
+      "sort": {
+        "byArtist": "By artist",
+        "byName": "By name",
+        "byTitle": "By title"
+      },
+      "search": "Search your library",
+      "closeSearch": "Close search"
+    },
+    "album": {
+      "noPlayableFile": "This album has no playable file yet.",
+      "playFailed": "Couldn't play this song ({{error}}).",
+      "noSongs": "No songs.",
+      "play": "Play {{title}}"
+    },
+    "player": {
+      "nothing": "Nothing is playing.",
+      "unknownSong": "Unknown song",
+      "position": "Position",
+      "previous": "Previous",
+      "next": "Next",
+      "open": "Open player",
+      "playing": "Playing",
+      "error": "Playback error: {{error}}",
+      "playingFromAlbum": "Playing from album",
+      "close": "Close",
+      "goToAlbum": "Go to album",
+      "goToArtist": "Go to artist",
+      "more": "More",
+      "output": "Play on another device"
+    },
+    "settings": {
+      "signedInAs": "Signed in as",
+      "signOut": "Sign out",
+      "language": "Language",
+      "signOutKey": {
+        "title": "Have you saved your library key?",
+        "body": "Signing out removes your library key from this phone. To sign back in you will have to type it, because signing in with a QR code only works while another of your devices still has the key. Without the key, your library can't be opened.",
+        "cancel": "Cancel",
+        "confirm": "I saved it, sign out"
+      },
+      "pairDeviceDescription": "Approve a browser on the Parrot web player, a computer or a TV with the code it shows.",
+      "library": "Library",
+      "refresh": "Load the library again",
+      "openSource": "Open-source software",
+      "openSourceBody": "Parrot plays Apple Lossless (ALAC) songs with a port of Apple's ALAC decoder, © 2011 Apple Inc., under the Apache License 2.0."
+    },
+    "setup": {
+      "notificationsBody": "Parrot can tell you when the music you add from your computer is ready to play here."
+    },
+    "playlists": {
+      "likedEmpty": "No liked songs yet"
+    },
+    "kept": {
+      "keep": "Keep on this phone",
+      "remove": "Remove from this phone",
+      "line": "Kept on this phone · {{size}}",
+      "chooseBody": "These songs are stored in more than one format. Pick the one to keep on this phone.",
+      "downloadingSong": "Downloading…",
+      "failed": "Couldn't keep this on your phone. Try again."
+    },
+    "empty": {
+      "eyebrow": "Your library",
+      "title": "Add your first album",
+      "subtitle": "Add music with Parrot on your computer. It shows up here by itself.",
+      "getDesktop": "Get Parrot for computer",
+      "step1Title": "Pick songs on your computer",
+      "step1Body": "In Parrot on your computer, choose song files or a whole folder. Nothing leaves it until you say so.",
+      "step2Title": "Parrot finds the details",
+      "step2Body": "Covers, artist pictures and lyrics arrive by themselves.",
+      "step3Title": "Listen anywhere",
+      "step3Body": "This phone and your computers play the same library, encrypted with your key."
+    }
+  }
+}

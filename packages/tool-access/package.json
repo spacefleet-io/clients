@@ -1,0 +1,21 @@
+{
+  "name": "@space/tool-access",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "scripts": {
+    "test": "bunx vitest run"
+  },
+  "exports": {
+    "./contracts": "./src/contracts.ts",
+    "./client": "./src/client.ts"
+  },
+  "dependencies": {
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@space/runtime-contracts": "workspace:*",
+    "vitest": "^5.1.0"
+  }
+}

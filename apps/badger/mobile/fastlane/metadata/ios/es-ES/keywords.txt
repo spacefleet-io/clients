@@ -1,0 +1,1 @@
+películas,series,reproductor,vídeo,mkv,mp4,sin conexión,streaming,subtítulos,biblioteca

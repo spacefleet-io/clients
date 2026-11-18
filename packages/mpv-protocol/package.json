@@ -1,0 +1,32 @@
+{
+  "name": "@space/mpv-protocol",
+  "license": "GPL-3.0-only",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "scripts": {
+    "test": "bunx vitest run"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./properties": "./src/properties.ts",
+    "./envelopes": "./src/envelopes.ts",
+    "./commands": "./src/commands.ts",
+    "./trackList": "./src/trackList.ts",
+    "./chapterList": "./src/chapterList.ts",
+    "./responseError": "./src/responseError.ts",
+    "./polling": "./src/polling.ts",
+    "./luaConstants": "./src/luaConstants.ts",
+    "./bridge": "./src/bridge.ts",
+    "./client": "./src/client.ts",
+    "./lifecycle": "./src/lifecycle.ts",
+    "./renderPath": "./src/renderPath.ts",
+    "./tests/client-contract": "./tests/client-contract.ts"
+  },
+  "dependencies": {
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "vitest": "^5.1.0"
+  }
+}

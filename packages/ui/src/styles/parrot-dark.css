@@ -1,0 +1,13 @@
+/* Parrot's dark palette (UX-THEME-01): Badger's space palette with Parrot's green accent (#40dd8f, 10.4:1 on the
+   background). Import it right after `./badger-dark.css`, which it builds on; only the accent colours differ. */
+@layer base {
+  :root,
+  :root[data-theme="space"][data-mode="dark"],
+  .dark {
+    --primary: 150 70% 56%;
+    --primary-foreground: 231 29% 10%;
+    --accent: 150 70% 56%;
+    --accent-foreground: 231 29% 10%;
+    --ring: 150 70% 56%;
+  }
+}

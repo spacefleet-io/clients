@@ -1,0 +1,79 @@
+apply plugin: "com.android.library"
+apply plugin: "org.jetbrains.kotlin.android"
+
+def buildToolsVersionValue = "36.0.0"
+def minSdkVersionValue = 26
+def compileSdkVersionValue = 36
+def targetSdkVersionValue = 36
+
+android {
+    namespace "com.spacefleet.mpvplayback"
+    compileSdk compileSdkVersionValue
+    buildToolsVersion buildToolsVersionValue
+
+    defaultConfig {
+        minSdk minSdkVersionValue
+        targetSdk targetSdkVersionValue
+        // libplayer.so calls back into MPVLib by name (eventProperty, event, logMessage): keep it under R8.
+        consumerProguardFiles "consumer-rules.pro"
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = "17"
+    }
+
+    // `profile` = release-optimised build that keeps the debug player probe, so
+    // the phone e2e harness measures real (non-dev) performance.
+    buildTypes {
+        profile {
+            initWith release
+            matchingFallbacks = ["release"]
+        }
+    }
+    sourceSets {
+        // libmpv + ffmpeg + libplayer.so (the JNI bridge behind is.xyz.mpv.MPVLib) + libc++_shared.so: OUR LGPL,
+        // playback-only build from packages/media-deps (REL-DEPS-11), fetched as the published bundle into
+        // <repo>/vendor/deps/android-<arch>/lib/<abi>/ by `bun scripts/fetch-deps.ts --target android-<arch>`, one
+        // per ABI the app builds (PLAT-TV-05). The Kotlin half (src/main/java/is/xyz/mpv/MPVLib.kt) is
+        // source in this module. The bundle's libc++_shared.so (NDK r27b, the NDK React Native builds with) wins over
+        // the copy in react-android: a module's own jniLibs take precedence over its dependencies'.
+        main {
+            jniLibs.srcDirs = mpvBundleLibDirs()
+        }
+        profile {
+            java.srcDirs += "src/debug/java"
+            manifest.srcFile "src/debug/AndroidManifest.xml"
+        }
+    }
+}
+
+// The fetched bundle directories, one per ABI in `reactNativeArchitectures` (the app's abiFilters; all four Android
+// ABIs by default, PLAT-TV-05). A missing one fails the build: the APK would install on that ABI without libmpv.
+def mpvBundleLibDirs() {
+    def vendor = new File(projectDir, "../../../vendor/deps").canonicalFile
+    def targets = ["arm64-v8a": "android-arm64", "armeabi-v7a": "android-arm", "x86_64": "android-x64", "x86": "android-ia32"]
+    def abis = (findProperty("reactNativeArchitectures") ?: targets.keySet().join(",")).toString().split(",")*.trim()
+    return abis.collect { abi ->
+        def target = targets[abi]
+        if (target == null) throw new GradleException("no libmpv bundle target for ABI ${abi} (known: ${targets.keySet().join(", ")})")
+        def dir = new File(vendor, "${target}/lib")
+        if (!new File(dir, abi).isDirectory()) {
+            throw new GradleException("libmpv bundle missing: ${dir}/${abi} — run `bun scripts/fetch-deps.ts --target ${target}` at the repo root")
+        }
+        dir
+    }
+}
+
+dependencies {
+    implementation("com.facebook.react:react-android")
+    // The loopback decrypt proxy the player plays from (PlaybackBridge, MediaProxyHooks, the offline store), autolinked
+    // into the app as a direct dependency of it (@space/mobile-media-proxy).
+    implementation project(":space_mobile-media-proxy")
+    // JVM unit tests of the pure-Kotlin player logic (src/test): `./gradlew :space_mobile-mpv-playback:testDebugUnitTest`.
+    testImplementation("junit:junit:4.13.2")
+}

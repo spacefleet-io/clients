@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<settings version="1">
+  <section id="plugin.video.spacebadger">
+    <category id="account" label="30000">
+      <group id="pair" label="30100">
+        <setting id="act_pair" type="action" label="30100" help="30101">
+          <level>0</level>
+          <data>RunPlugin(plugin://plugin.video.spacebadger/?action=pair)</data>
+          <control type="button" format="action"><close>true</close></control>
+        </setting>
+        <setting id="act_profile" type="action" label="30150" help="30151">
+          <level>0</level>
+          <data>RunPlugin(plugin://plugin.video.spacebadger/?action=profile)</data>
+          <control type="button" format="action"><close>true</close></control>
+        </setting>
+        <setting id="key_warning" type="action" label="30007">
+          <level>0</level>
+          <data>RunPlugin(plugin://plugin.video.spacebadger/?action=keywarning)</data>
+          <control type="button" format="action"><close>false</close></control>
+        </setting>
+        <setting id="act_signout" type="action" label="30012">
+          <level>0</level>
+          <data>RunPlugin(plugin://plugin.video.spacebadger/?action=signout)</data>
+          <control type="button" format="action"><close>true</close></control>
+        </setting>
+      </group>
+    </category>
+    <category id="advanced" label="30120">
+      <group id="signin" label="30001">
+        <!-- The account-server setting exists on a dev run only (SB_DEV_TICKET_KEY=1, ACCT-AUTH-09). Kodi cannot test an
+             environment variable here, so the service mirrors the switch into the hidden `dev_mode` setting at start
+             (core.sync_dev_mode_setting); the code ignores `api_url` outside a dev run whatever `dev_mode` holds. -->
+        <setting id="dev_mode" type="boolean" label="30002">
+          <level>4</level>
+          <default>false</default>
+          <visible>false</visible>
+          <control type="toggle"/>
+        </setting>
+        <setting id="api_url" type="string" label="30002">
+          <level>0</level>
+          <default>https://api.spacefleet.io</default>
+          <dependencies>
+            <dependency type="visible" setting="dev_mode">true</dependency>
+          </dependencies>
+          <control type="edit" format="string"><heading>30002</heading></control>
+        </setting>
+        <setting id="metadata_url" type="string" label="30140" help="30141">
+          <level>0</level>
+          <default></default>
+          <constraints><allowempty>true</allowempty></constraints>
+          <control type="edit" format="string"><heading>30140</heading></control>
+        </setting>
+        <setting id="email" type="string" label="30003">
+          <level>0</level>
+          <constraints><allowempty>true</allowempty></constraints>
+          <control type="edit" format="string"><heading>30003</heading></control>
+        </setting>
+        <setting id="password" type="string" label="30004">
+          <level>0</level>
+          <constraints><allowempty>true</allowempty></constraints>
+          <control type="edit" format="string"><hidden>true</hidden><heading>30004</heading></control>
+        </setting>
+        <setting id="library_key" type="string" label="30005" help="30006">
+          <level>0</level>
+          <constraints><allowempty>true</allowempty></constraints>
+          <control type="edit" format="string"><hidden>true</hidden><heading>30005</heading></control>
+        </setting>
+        <setting id="act_signin" type="action" label="30011">
+          <level>0</level>
+          <data>RunPlugin(plugin://plugin.video.spacebadger/?action=signin)</data>
+          <control type="button" format="action"><close>true</close></control>
+        </setting>
+      </group>
+    </category>
+    <category id="library" label="30020">
+      <group id="sync" label="30021">
+        <setting id="sync_interval_minutes" type="integer" label="30022">
+          <level>0</level>
+          <default>30</default>
+          <constraints><minimum>5</minimum><step>5</step><maximum>1440</maximum></constraints>
+          <control type="slider" format="integer"><popup>false</popup></control>
+        </setting>
+        <setting id="auto_export" type="boolean" label="30023">
+          <level>0</level>
+          <default>true</default>
+          <control type="toggle"/>
+        </setting>
+        <setting id="act_sync" type="action" label="30024">
+          <level>0</level>
+          <data>RunPlugin(plugin://plugin.video.spacebadger/?action=sync)</data>
+          <control type="button" format="action"><close>true</close></control>
+        </setting>
+        <setting id="act_export" type="action" label="30025">
+          <level>0</level>
+          <data>RunPlugin(plugin://plugin.video.spacebadger/?action=export)</data>
+          <control type="button" format="action"><close>true</close></control>
+        </setting>
+      </group>
+    </category>
+  </section>
+</settings>

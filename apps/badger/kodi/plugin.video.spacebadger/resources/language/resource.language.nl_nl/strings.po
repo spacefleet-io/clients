@@ -1,0 +1,26 @@
+# Kodi Media Center language file
+# Addon Name: Badger
+msgid ""
+msgstr ""
+"Project-Id-Version: plugin.video.spacebadger\n"
+"Language: nl_NL\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+
+# Strings not listed here fall back to resource.language.en_gb.
+# ACCT-DEV-03: the saved-key question at sign-out
+msgctxt "#30160"
+msgid "Have you saved your media library key?"
+msgstr "Heb je je mediatheeksleutel bewaard?"
+
+msgctxt "#30161"
+msgid "Signing out removes your media library key, the cached library and the exported folder from this device. To sign back in you will have to type the key, because signing in with a QR code only works while another of your devices still has it. Without the key, your media library can't be opened."
+msgstr "Als je uitlogt, verdwijnen je mediatheeksleutel, de bibliotheek in de cache en de geëxporteerde map van dit apparaat. Om weer in te loggen moet je de sleutel intypen, want inloggen met een QR-code werkt alleen zolang een ander apparaat van je hem nog heeft. Zonder de sleutel gaat je mediatheek niet open."
+
+msgctxt "#30162"
+msgid "Cancel"
+msgstr "Annuleren"
+
+msgctxt "#30163"
+msgid "I saved it, sign out"
+msgstr "Bewaard, uitloggen"

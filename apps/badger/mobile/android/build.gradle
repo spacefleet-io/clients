@@ -1,0 +1,41 @@
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath("com.android.tools.build:gradle:9.2.1")
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.2.0")
+        // Firebase google-services plugin — reads android/app/google-services.json
+        // and wires the FCM SDK at build time. Bump the version when Firebase
+        // ships breaking changes; current line targets the v8+ GMSCore SDKs
+        // that @react-native-firebase/messaging requires.
+        classpath("com.google.gms:google-services:4.6.0")
+    }
+}
+
+plugins {
+    id("com.facebook.react.rootproject")
+}
+
+ext {
+    ndkVersion = "27.1.12297006"
+    // react-native-google-cast defaults to a floating "+": pin the Cast SDK so a build is reproducible (UX-TV-03).
+    castFrameworkVersion = "22.3.1"
+}
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+subprojects { project ->
+    project.plugins.withId("com.android.library") {
+        project.android.ndkVersion = rootProject.ext.ndkVersion
+    }
+    project.plugins.withId("com.android.application") {
+        project.android.ndkVersion = rootProject.ext.ndkVersion
+    }
+}

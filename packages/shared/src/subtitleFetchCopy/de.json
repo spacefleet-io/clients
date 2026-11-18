@@ -1,0 +1,30 @@
+{
+  "subtitleFetch": {
+    "title": "Untertitel holen",
+    "getMore": "Weitere Untertitel suchen…",
+    "looking": "Untertitel werden gesucht…",
+    "pick": "Sprache wählen",
+    "already": "Bereits in deiner Mediathek",
+    "none": "Keine Untertitel gefunden.",
+    "unavailable": "Beim Holen dieser Untertitel ist etwas schiefgelaufen. Wir arbeiten daran, es sollte bald wieder gehen.",
+    "offline": "Benötigt eine Internetverbindung",
+    "fromDownload": "Nicht verfügbar, während ein Download läuft",
+    "getting": "Untertitel ({language}) werden geholt",
+    "downloading": "Wird heruntergeladen",
+    "saving": "Wird in deiner Mediathek gespeichert",
+    "added": "{name} hinzugefügt",
+    "failed": "{name} konnte nicht hinzugefügt werden. Versuche es erneut.",
+    "back": "Zurück",
+    "done": "Fertig",
+    "hearingImpaired": "Hörgeschädigte",
+    "foreignPartsOnly": "Nur fremdsprachige Teile",
+    "directorsCut": "Director's Cut",
+    "extended": "Extended",
+    "unrated": "Unrated",
+    "tryAnother": "Andere Version versuchen",
+    "lookingAnother": "Andere Version wird gesucht…",
+    "replaced": "{name} durch eine andere Version ersetzt",
+    "noneLeft": "Keine weitere Version von {name}",
+    "replaceFailed": "{name} konnte nicht ersetzt werden. Versuch es noch einmal."
+  }
+}

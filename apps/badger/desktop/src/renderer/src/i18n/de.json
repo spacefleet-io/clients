@@ -1,0 +1,2089 @@
+{
+  "common": {
+    "expand": "Erweiterte Einstellungen anzeigen",
+    "collapse": "Erweiterte Einstellungen ausblenden",
+    "loading": "Wird geladen…",
+    "close": "Schließen"
+  },
+  "nav": {
+    "dashboard": "Start",
+    "library": "Bibliothek",
+    "playlists": "Playlists",
+    "lab": "Dateiverwaltung",
+    "subscription": "Abo",
+    "settings": "Einstellungen",
+    "search": "Suchen",
+    "addMedia": "Medien hinzufügen",
+    "signOut": "Abmelden",
+    "signOutKeyCheck": {
+      "title": "Hast du deinen Mediathek-Schlüssel gespeichert?",
+      "body": "Beim Abmelden wird dein Mediathek-Schlüssel von diesem Computer entfernt. Um dich wieder anzumelden, musst du ihn eintippen, denn die Anmeldung per QR-Code klappt nur, solange eines deiner anderen Geräte den Schlüssel noch hat. Ohne den Schlüssel lässt sich deine Mediathek nicht öffnen.",
+      "cancel": "Abbrechen",
+      "showKey": "Schlüssel anzeigen",
+      "confirm": "Gespeichert, abmelden"
+    },
+    "signIn": "Anmelden",
+    "app": "App",
+    "appNav": "App-Navigation",
+    "openMenu": "Menü öffnen",
+    "jobs": {
+      "title": "Aufträge",
+      "subtitle": "Aktive und letzte Aufträge",
+      "filterAll": "Alle",
+      "filterActive": "Aktiv",
+      "filterQueued": "In Warteschlange",
+      "filterCompleted": "Abgeschlossen",
+      "filterFailed": "Fehlgeschlagen",
+      "downloadsHeld": "Downloads sind pausiert, solange sehr viel los ist. Sie gehen von selbst weiter, sobald es ruhiger wird.",
+      "downloadsSlowed": "Downloads sind langsamer, weil gerade sehr viel los ist.",
+      "crewBackfill": "Regie und Drehbuch werden zu deinen Titeln ergänzt ({{handled}} von {{total}})"
+    },
+    "notifications": {
+      "title": "Benachrichtigungen",
+      "subtitle": "{{count}} neue Einträge",
+      "empty": "Noch keine Benachrichtigungen.",
+      "open": "Öffnen",
+      "filterAll": "Alle",
+      "filterError": "Fehler",
+      "filterWarning": "Warnung",
+      "filterInfo": "Info",
+      "filterSuccess": "Erfolg",
+      "clearAll": "Alle löschen",
+      "dismiss": "Schließen"
+    },
+    "account": "Konto"
+  },
+  "authApiHost": {
+    "button": "API-Host",
+    "title": "Verbindungs-Hosts",
+    "subtitle": "Lege eigene API- und Laufzeit-Hosts fest. Diese Werte werden lokal gespeichert und bleiben nach dem Abmelden erhalten.",
+    "apiLabel": "API",
+    "label": "Eigener Host",
+    "placeholder": "api.spacefleet.io",
+    "hint": "Du kannst einen Host oder eine vollständige URL eingeben. Beispiel: api.spacefleet.io oder https://api.spacefleet.io",
+    "defaultBadge": "Standard",
+    "customBadge": "Eigener",
+    "useDefault": "Standard verwenden",
+    "save": "Speichern",
+    "saving": "Wird gespeichert...",
+    "error": "API-Host konnte nicht gespeichert werden. Prüfe den Wert und versuch es noch einmal."
+  },
+  "login": {
+    "title": "Anmelden",
+    "subtitle": "Dein persönliches Kino im Orbit",
+    "emailLabel": "E-Mail",
+    "passwordLabel": "Passwort",
+    "twoFactorLabel": "Bestätigungscode",
+    "twoFactorPlaceholder": "123456",
+    "button": "Anmelden",
+    "signingIn": "Anmeldung läuft...",
+    "resend": "Code erneut senden",
+    "resending": "Wird erneut gesendet...",
+    "verifyEmail": "E-Mail bestätigen",
+    "createAccount": "Konto erstellen",
+    "noAccountPrompt": "Noch kein Konto?",
+    "infoEmail": "Wir haben dir einen Bestätigungscode per E-Mail geschickt.",
+    "infoTotp": "Gib den Code aus deiner Authenticator-App ein.",
+    "resendSuccess": "Ein neuer Bestätigungscode wurde gesendet.",
+    "resendError": "Der Code konnte nicht erneut gesendet werden.",
+    "provider": {
+      "signInWith": "Mit {{provider}} anmelden",
+      "signUpWith": "Mit {{provider}} registrieren",
+      "or": "oder",
+      "continueInBrowser": "Schließe die Anmeldung in deinem Browser ab. Danach kommt Badger wieder nach vorne.",
+      "errorStart": "Die Anmeldung konnte nicht gestartet werden. Bitte versuch es noch einmal.",
+      "errors": {
+        "no_account": "Noch kein SpaceFleet-Konto nutzt diese E-Mail-Adresse.",
+        "email_unverified": "Die E-Mail-Adresse dieses Kontos ist nicht bestätigt. Bestätige sie beim Anbieter oder melde dich mit E-Mail und Passwort an.",
+        "email_domain_disallowed": "Mit dieser E-Mail-Adresse kann kein Konto erstellt werden.",
+        "account_deletion_pending": "Die Löschung dieses Kontos ist geplant.",
+        "provider_failed": "Die Anmeldung hat nicht geklappt. Bitte versuch es noch einmal.",
+        "cancelled": "Die Anmeldung wurde abgebrochen.",
+        "invalid_code": "Diese Anmeldung ist abgelaufen oder wurde woanders gestartet. Bitte versuch es noch einmal."
+      }
+    }
+  },
+  "signup": {
+    "title": "Konto erstellen",
+    "subtitle": "Du musst deine E-Mail-Adresse bestätigen, bevor du dich anmelden kannst.",
+    "emailLabel": "E-Mail",
+    "passwordLabel": "Passwort",
+    "confirmLabel": "Passwort wiederholen",
+    "button": "Konto erstellen",
+    "creating": "Wird erstellt...",
+    "backToSignIn": "Zurück zur Anmeldung",
+    "haveAccountPrompt": "Du hast schon ein Konto?",
+    "signIn": "Anmelden",
+    "privacy": "Datenschutz",
+    "errors": {
+      "passwordLength": "Das Passwort muss mindestens 8 Zeichen lang sein.",
+      "passwordMismatch": "Die Passwörter stimmen nicht überein.",
+      "emailExists": "Diese E-Mail-Adresse ist bereits registriert.",
+      "emailDomainDisallowed": "Diese E-Mail-Domain ist nicht erlaubt. Bitte nutze einen anderen E-Mail-Anbieter.",
+      "generic": "Registrierung fehlgeschlagen. Versuch es noch einmal."
+    }
+  },
+  "verifyEmail": {
+    "title": "Bestätige deine E-Mail-Adresse",
+    "subtitle": "Wir haben dir einen Bestätigungscode per E-Mail geschickt. Gib ihn hier ein, um die Registrierung abzuschließen.",
+    "verifying": "Wird bestätigt...",
+    "emailLabel": "E-Mail",
+    "codeLabel": "Bestätigungscode",
+    "codePlaceholder": "123456",
+    "submit": "E-Mail bestätigen",
+    "resend": "Bestätigungscode erneut senden",
+    "sending": "Wird gesendet...",
+    "backToSignIn": "Zurück zur Anmeldung",
+    "createAccount": "Konto erstellen",
+    "sent": "Bestätigungscode gesendet. Schau in deinen Posteingang.",
+    "errors": {
+      "invalidCode": "Ungültiger Bestätigungscode. Versuch es noch einmal.",
+      "emailRequired": "Gib deine E-Mail-Adresse ein, um den Bestätigungscode erneut zu senden.",
+      "emailNotFound": "Für diese E-Mail-Adresse wurde kein Konto gefunden.",
+      "sendFailed": "Der Bestätigungscode konnte nicht gesendet werden.",
+      "generic": "Deine E-Mail-Adresse konnte nicht bestätigt werden."
+    }
+  },
+  "addMedia": {
+    "title": "Zur Mediathek hinzufügen",
+    "subtitle": "Such nach einem Titel und füg ihn deiner Mediathek hinzu.",
+    "backToLibrary": "Zurück zur Mediathek",
+    "searchTitle": "{{type}} suchen",
+    "searchSubtitle": "Gib mindestens 2 Zeichen ein und drück Enter oder klick auf Suchen.",
+    "searchPlaceholder": "Titel suchen...",
+    "search": "Suchen",
+    "searching": "Suche läuft...",
+    "noResults": "Noch keine Ergebnisse.",
+    "startTyping": "Tippe, um zu suchen.",
+    "added": "\"{{title}}\" wurde deiner Mediathek hinzugefügt.",
+    "inLibrary": "In der Mediathek",
+    "add": "Hinzufügen",
+    "addToLibrary": "Zur Mediathek hinzufügen",
+    "trailer": "Trailer",
+    "trailerLoading": "Trailer werden geladen...",
+    "adding": "Wird hinzugefügt...",
+    "loadingMore": "Weitere Ergebnisse werden geladen…",
+    "unknown": "--",
+    "type": {
+      "movies": "Filme",
+      "tv": "Serien"
+    },
+    "upload": {
+      "title": "Dateien hochladen",
+      "subtitle": "Füg jetzt Dateien hinzu, damit dieser Titel abspielbar ist. Du kannst Dateien auch später auf der Medienseite hinzufügen.",
+      "loading": "Dieser Titel wird deiner Mediathek hinzugefügt...",
+      "progress": "{{percent}} % erledigt",
+      "stages": {
+        "default": "Wird bearbeitet...",
+        "checking_dummy": "Testinhalte werden geprüft",
+        "fetching_metadata": "Metadaten werden abgerufen",
+        "uploading_assets": "Artwork wird hochgeladen",
+        "writing_library": "Wird in der Mediathek gespeichert"
+      },
+      "continue": "Weiter",
+      "later": "Dateien später hinzufügen",
+      "dummy": "Mit Testinhalten hinzufügen",
+      "cancel": "Abbrechen"
+    },
+    "errors": {
+      "tmdbNotConfigured": "Die Suche ist gerade nicht verfügbar. Versuche es später erneut.",
+      "searchFailed": "Suche fehlgeschlagen. Bitte versuch es noch einmal.",
+      "addFailed": "Dieses Medium konnte nicht hinzugefügt werden. Bitte versuch es noch einmal.",
+      "libraryLoading": "Die Mediathek wird noch geladen. Versuch es gleich noch einmal.",
+      "libraryUnavailable": "Die Mediathek ist nicht verfügbar. Prüfe deinen Mediathek-Schlüssel und den Synchronisierungsstatus.",
+      "libraryNotReady": "Die Mediathek ist noch nicht bereit. Versuch es gleich noch einmal.",
+      "libraryMissing": "Die Datenbank der Mediathek fehlt. Verbinde dich neu und synchronisiere erneut.",
+      "librarySaveFailed": "Die Änderung an der Mediathek konnte nicht gespeichert werden. Bitte versuch es noch einmal.",
+      "dummyMissing": "Die Testinhalte sind noch nicht im Bucket. Führ das Upload-Skript für Testinhalte aus und versuch es erneut.",
+      "dummyUploadFailed": "Die Testinhalte konnten nicht geprüft werden. Bitte versuch es noch einmal."
+    },
+    "openingImport": "Medienimport wird geöffnet..."
+  },
+  "library": {
+    "showDelisting": {
+      "title": "Folgen nicht mehr im Katalog",
+      "description": "Der Katalog führt diese Folgen von {{show}} nicht mehr. Möchtest du sie aus deiner Mediathek entfernen?",
+      "filesNote": "Folgen mit einer Datei werden nie zum Entfernen angeboten.",
+      "remove": "Aus Mediathek entfernen",
+      "keep": "Behalten",
+      "removing": "Wird entfernt…",
+      "removeFailed": "Die Folgen konnten nicht entfernt werden. Versuch es später erneut.",
+      "moveTitle": "Der Katalog hat eine deiner Folgen geändert",
+      "moveSuggested": "{{show}} {{episode}} wird jetzt als {{target}} geführt. Deine Datei dorthin verschieben?",
+      "moveMerged": "Der Katalog hat {{parts}} von {{show}} zu einer Folge zusammengefasst: {{target}}. Eine Folge kann nicht zwei Hälften enthalten, daher bleibt {{episode}} unverändert, es sei denn, du wählst die Folge selbst aus.",
+      "moveNone": "Der Katalog führt {{show}} {{episode}} nicht mehr und keine Folge in der neuen Liste passt dazu. Lass sie unverändert oder wähle die Folge selbst aus.",
+      "moveCarries": "Beim Verschieben werden Dateien, Gesehen-Status, Fortsetzungspunkt und Spurauswahl der Folge auf allen Geräten mitgenommen. Deine Datei wird nie gelöscht.",
+      "moveYes": "Ja, verschieben",
+      "moveNo": "Nein",
+      "keepAsIs": "Unverändert lassen",
+      "pickLabel": "Ihre Folge in der Liste der Serie",
+      "pickPlaceholder": "Folge auswählen…",
+      "pickNone": "Keine Folge ohne Datei zur Auswahl",
+      "movePicked": "Dorthin verschieben",
+      "moving": "Wird verschoben…",
+      "moveFailed": "Die Folge konnte nicht verschoben werden. Versuch es später erneut.",
+      "special": "Special {{number}}"
+    },
+    "title": "Bibliothek",
+    "subtitle": "Dein persönlicher Katalog mit Filmen und Serien. Füge Titel hinzu, bearbeite Details und lade Dateien zum Ansehen hoch.",
+    "addMedia": "Neue Medien zur Mediathek hinzufügen",
+    "errorTitle": "Mediathek nicht verfügbar",
+    "retrySync": "Erneut synchronisieren",
+    "manageKey": "Mediathek-Schlüssel verwalten",
+    "browseTitle": "Durchsuchen",
+    "browseSubtitle": "Medien ohne hochgeladene Dateien sind ausgegraut, ihre Metadaten kannst du aber trotzdem ansehen.",
+    "searchPlaceholder": "Titel suchen...",
+    "sort": {
+      "title": "Sortieren nach",
+      "by": "Feld",
+      "direction": "Reihenfolge",
+      "added": "Hinzugefügt am",
+      "name": "Name",
+      "release": "Erscheinungsjahr",
+      "asc": "Aufsteigend",
+      "desc": "Absteigend",
+      "button": "Sortieren",
+      "done": "Fertig"
+    },
+    "view": {
+      "title": "Ansicht",
+      "posters": "Poster",
+      "compact": "Kompakte Liste",
+      "details": "Detailliste",
+      "next": "Wechseln zu {{view}}"
+    },
+    "row": {
+      "seasons_one": "{{count}} Staffel",
+      "seasons_other": "{{count}} Staffeln",
+      "seasons_many": "{{count}} Staffeln",
+      "runtimeMinutes": "{{minutes}} Min.",
+      "runtimeHours": "{{hours}} Std. {{minutes}} Min.",
+      "play": "{{title}} abspielen",
+      "noOverview": "Keine Handlung verfügbar."
+    },
+    "filters": {
+      "clear": "Filter zurücksetzen",
+      "genres": {
+        "title": "Genres",
+        "placeholder": "Wähle Genres, um die Ergebnisse einzugrenzen.",
+        "search": "Genres suchen...",
+        "empty": "Keine Genres passen zu dieser Suche."
+      },
+      "actors": {
+        "title": "Darsteller",
+        "placeholder": "Wähle Darsteller, um die Ergebnisse einzugrenzen.",
+        "search": "Darsteller suchen...",
+        "empty": "Keine Darsteller passen zu dieser Suche."
+      },
+      "title": "Filtern",
+      "clearShort": "Löschen",
+      "reset": "Zurücksetzen",
+      "apply": "Anwenden",
+      "qualities": {
+        "title": "Qualität",
+        "placeholder": "Jede Qualität",
+        "search": "Qualität suchen",
+        "empty": "Keine Qualität gefunden"
+      },
+      "directors": {
+        "title": "Regie",
+        "placeholder": "Jede Regie",
+        "search": "Regie suchen",
+        "empty": "Keine Regie gefunden"
+      },
+      "audioLanguages": {
+        "title": "Audiosprache",
+        "placeholder": "Jede Audiosprache",
+        "search": "Sprache suchen",
+        "empty": "Keine Sprache gefunden"
+      },
+      "subtitleLanguages": {
+        "title": "Untertitelsprache",
+        "placeholder": "Jede Untertitelsprache",
+        "search": "Sprache suchen",
+        "empty": "Keine Sprache gefunden"
+      },
+      "watchStates": {
+        "title": "Wiedergabestatus",
+        "placeholder": "Jeder Status",
+        "search": "Status suchen",
+        "empty": "Kein Status gefunden"
+      },
+      "quality": {
+        "sd": "SD (480p oder weniger)"
+      },
+      "watchState": {
+        "unwatched": "Nicht angesehen",
+        "in-progress": "Angefangen",
+        "watched": "Angesehen"
+      },
+      "undefinedLanguage": "Unbekannte Sprache"
+    },
+    "tabs": {
+      "movies": "Filme",
+      "tv": "TV-Serien",
+      "seasons": "Staffeln",
+      "details": "Details",
+      "subtitles": "Untertitel",
+      "tracks": "Spuren",
+      "processing": "Verarbeitung",
+      "processes": "Prozesse",
+      "jobs": "Aufträge",
+      "about": "Über",
+      "versionsTracks": "Versionen und Spuren",
+      "label": "Details"
+    },
+    "jobs": {
+      "emptyTitle": "Alles erledigt",
+      "emptySubtitle": "Keine aktiven oder kürzlichen Aufträge für dieses Medium."
+    },
+    "processing": {
+      "preparing": "Wird vorbereitet...",
+      "uploading": "Wird hochgeladen...",
+      "queued": "In der Warteschlange...",
+      "finishing": "Bereit zum Abspielen · Wird abgeschlossen",
+      "uploadSpeed": "{{speed}} MiB/s"
+    },
+    "processingStatus": {
+      "sharedJobsTitle": "Geteilte Verarbeitungsaufträge",
+      "queued": "In Warteschlange",
+      "processing": "Wird verarbeitet",
+      "uploading": "Wird hochgeladen",
+      "finalizing": "Wird abgeschlossen",
+      "completed": "Abgeschlossen",
+      "failed": "Fehlgeschlagen",
+      "cancelled": "Abgebrochen",
+      "remoteActionFailed": "Der Fernbefehl konnte nicht gesendet werden."
+    },
+    "labels": {
+      "audio": "Audio",
+      "subtitles": "Untertitel",
+      "episodeShort": "{{count}} Folgen"
+    },
+    "availableQualities": "Verfügbare Qualitäten",
+    "qualities": {
+      "deleteChipAria": "{{quality}}-Version löschen",
+      "deleteTitle": "{{quality}}-Version löschen?",
+      "deleteDescription": "Dadurch werden {{size}} frei. Das kann nicht rückgängig gemacht werden.",
+      "deleteUnknownSize": "Das kann nicht rückgängig gemacht werden.",
+      "deleteConfirm": "Löschen",
+      "deleteCancel": "Abbrechen",
+      "deleteFailedToast": "Die {{quality}}-Version konnte nicht gelöscht werden: {{reason}}",
+      "deletedToast": "{{quality}}-Version entfernt.",
+      "addChipAria": "Weitere Qualität hinzufügen",
+      "addModalTitle": "Qualität hinzufügen",
+      "addModalDescription": "Wähle eine oder mehrere Qualitäten, die aus der vorhandenen Quelle transkodiert werden sollen. Neue Aufträge erscheinen in der Seitenleiste „Aufträge“.",
+      "addModalEmpty": "Es können keine weiteren Qualitäten hinzugefügt werden – jede Voreinstellung bis zur aktuellen Quelle ist bereits vorhanden.",
+      "addModalSource": "Quelle: {{quality}}",
+      "addModalSize": "~{{size}}",
+      "addModalSizeUnknown": "Größe unbekannt",
+      "addModalConfirm": "{{count}} Transkodierung(en) einreihen",
+      "addModalCancel": "Abbrechen",
+      "addModalSubmittedToast": "{{count}} Transkodierung(en) eingereiht – verfolge sie unter „Aufträge“.",
+      "addModalFailedToast": "Die neuen Qualitäten konnten nicht eingereiht werden: {{reason}}",
+      "errors": {
+        "source-protected": "Die Quellqualität kannst du nicht löschen.",
+        "quality-exists": "Diese Qualität ist für diese Datei bereits vorhanden.",
+        "cannot-transcode-up": "Transkodieren in eine höhere Auflösung als die gespeicherte ist nicht möglich.",
+        "media-not-found": "Diese Mediendatei existiert nicht mehr."
+      }
+    },
+    "hideMissing": {
+      "title": "Fehlende Dateien ausblenden",
+      "compact": "Fehlende ausblenden",
+      "subtitle": "Nur abspielbare Einträge anzeigen."
+    },
+    "loading": "Mediathek wird geladen...",
+    "syncing": "Mediathek wird synchronisiert...",
+    "offline": {
+      "indicator": "Offline",
+      "indicatorLabel": "Offline – gespeicherte Inhalte",
+      "indicatorRetryLabel": "Offline – deine heruntergeladenen Titel werden angezeigt. Erneut verbinden",
+      "syncIndicator": "Nicht synchronisiert",
+      "syncIndicatorRetryLabel": "Nicht synchronisiert – die Daten auf diesem Computer werden verwendet. Erneut synchronisieren",
+      "toastTitle": "Du bist offline",
+      "toastBody": "Deine heruntergeladenen Titel und deine gespeicherte Mediathek bleiben verfügbar.",
+      "syncToastTitle": "Synchronisierung pausiert",
+      "syncToastBody": "Bis die Synchronisierung zurück ist, werden die Daten auf diesem Computer verwendet.",
+      "reconnecting": "Verbindung wird wiederhergestellt…",
+      "scope": {
+        "movie": "{{title}} — ganzer Film",
+        "show": "{{title}} — ganze Serie",
+        "season": "{{title}} — Staffel {{season}}",
+        "episode": "{{title}} — S{{season}}E{{episode}}{{episodeTitle, mustache}}",
+        "missingEpisodes": "{{count}} fehlende Folge(n)"
+      },
+      "modal": {
+        "confirmTitle": "Offline speichern",
+        "confirmDescription": "Lade diese Dateien für die Offline-Wiedergabe auf dein Gerät herunter.",
+        "quality": "Qualität",
+        "qualityPrompt": "Welche Qualität möchtest du herunterladen?",
+        "qualityFallback_one": "{{count}} Folge hat kein {{chosen}}: Sie bekommt {{quality}}",
+        "qualityFallback_other": "{{count}} Folgen haben kein {{chosen}}: Sie bekommen {{quality}}",
+        "size": "Gesamtgröße",
+        "includesAudioSubs": "Alle Tonspuren und Untertitel sind enthalten.",
+        "expectedFilename": "Gespeichert als",
+        "expectedFilenamePlusN": "und {{count}} weitere Datei(en)",
+        "estimating": "Größe und Speicherplatz werden berechnet...",
+        "estimateFailedToast": "Der Download konnte nicht abgeschätzt werden: {{reason}}",
+        "skippedSubsWarning": "MP4 kann diese Untertitelspuren nicht einbetten – sie werden übersprungen: {{tracks}}",
+        "skippedItems": "{{count}} Eintrag/Einträge werden übersprungen (keine passende Qualität oder keine Datei).",
+        "diskWarning": "Nicht genug freier Speicherplatz.",
+        "diskWarningDetail": "{{required}} benötigt, nur {{free}} frei.",
+        "confirm": "Download starten",
+        "cancel": "Abbrechen",
+        "submittedToast": "{{count}} Offline-Download(s) eingereiht – verfolge sie unter „Aufträge“.",
+        "submitFailedToast": "Der Download konnte nicht gestartet werden: {{reason}}",
+        "errors": {
+          "insufficient_disk_space": "Nicht genug freier Speicherplatz ({{required}} benötigt, {{free}} frei).",
+          "library_db_not_open": "Die Mediathek ist nicht geöffnet. Öffne sie erneut und versuch es nochmal.",
+          "not_authenticated": "Melde dich an und versuch es erneut."
+        }
+      },
+      "button": {
+        "save": "Offline speichern",
+        "complete": "Download abschließen ({{local}}/{{total}})",
+        "delete": "Lokal löschen",
+        "deleteConfirmTitle": "Lokal löschen?",
+        "deleteConfirmDescription": "Dadurch werden die gespeicherten Dateien von diesem Gerät entfernt. Streamen funktioniert weiterhin.",
+        "deleteConfirm": "Löschen",
+        "deleteCancel": "Abbrechen",
+        "deletedToast": "{{count}} Offline-Datei(en) entfernt.",
+        "deleteFailedToast": "Die Offline-Dateien konnten nicht gelöscht werden: {{reason}}"
+      },
+      "badge": {
+        "savedOffline": "Offline gespeichert",
+        "partialOffline": "Teilweise",
+        "headerLocalShowSummary": "{{local}} / {{total}} Folgen offline gespeichert"
+      },
+      "tooltipSeasonHover": "Diese Staffel offline speichern",
+      "toast": {
+        "fileMissingFellBackToStream": "Die gespeicherte Datei wurde verschoben oder gelöscht – stattdessen wird gestreamt. Lade sie über das Fenster erneut herunter, wenn du sie offline haben willst.",
+        "fileMissingDroppedFromOffline": "Fehlende Offline-Datei aus deiner lokalen Mediathek entfernt."
+      }
+    },
+    "emptyTitle": "Deine Mediathek ist leer",
+    "emptySubtitle": "Füge zuerst Filme und Serien hinzu. Lade Dateien sofort hoch oder später auf der Seite des jeweiligen Titels.",
+    "emptyAddMovies": "Ersten Film hinzufügen",
+    "emptyAddTv": "Erste Serie hinzufügen",
+    "addFirstMovie": "Ersten Film hinzufügen",
+    "addFirstShow": "Erste Serie hinzufügen",
+    "noMovies": "Keine Filme gefunden.",
+    "noShows": "Keine Serien gefunden.",
+    "sections": {
+      "movies": "Filme",
+      "tv": "Serien",
+      "count": "{{count}} Einträge"
+    },
+    "media": {
+      "movie": "Film",
+      "tv": "Serie",
+      "originalTitleLabel": "Originaltitel:"
+    },
+    "overview": "Handlung",
+    "noOverview": "Noch keine Handlung verfügbar.",
+    "playable": "Abspielbar",
+    "missing": "Datei fehlt",
+    "progress": "Fortschritt {{value}} %",
+    "watched": "Gesehen",
+    "play": "Abspielen",
+    "playDisabled": "Lade zuerst eine Datei hoch",
+    "favorites": {
+      "add": "Zu Favoriten hinzufügen",
+      "remove": "Aus Favoriten entfernen"
+    },
+    "watchlist": {
+      "add": "Zur Merkliste hinzufügen",
+      "remove": "Von Merkliste entfernen"
+    },
+    "playlists": {
+      "add": "Zur Playlist hinzufügen",
+      "remove": "Entfernen",
+      "manage": "Playlists verwalten",
+      "empty": "Noch keine Playlists.",
+      "system": "System-Playlist",
+      "added": "Hinzugefügt",
+      "cta": "Playlists verwalten"
+    },
+    "trailer": "Trailer",
+    "trailerRefreshing": "Trailer werden aktualisiert...",
+    "noTrailer": "Kein Trailer verfügbar.",
+    "edit": {
+      "edit": "Metadaten bearbeiten",
+      "save": "Änderungen speichern",
+      "saving": "Wird gespeichert...",
+      "cancel": "Abbrechen",
+      "restore": "Metadaten wiederherstellen",
+      "restoreTitle": "Originale Metadaten wiederherstellen?",
+      "restoreDescription": "Deine Änderungen werden durch die originalen Metadaten ersetzt.",
+      "restoreDescriptionCast": "Deine Änderungen werden durch die originalen Metadaten ersetzt. Eigene Besetzungsmitglieder werden entfernt, außer du behältst sie.",
+      "restoreFull": "Alle Metadaten wiederherstellen",
+      "restoreKeepCast": "Metadaten wiederherstellen, eigene Besetzung behalten",
+      "saveError": "Die Metadaten konnten nicht gespeichert werden. Bitte versuch es erneut.",
+      "restoreError": "Die Metadaten konnten nicht wiederhergestellt werden. Bitte versuch es erneut.",
+      "metadataTitle": "Metadaten bearbeiten",
+      "genres": {
+        "search": "Genres suchen...",
+        "empty": "Wähle Genres, die diesen Titel beschreiben.",
+        "noResults": "Keine Genres passen zu dieser Suche."
+      },
+      "dropImage": "Bild hierher ziehen oder URL einfügen.",
+      "imageUrl": "Bild-URL einfügen",
+      "clearImage": "Bild entfernen",
+      "castMember": "Besetzungsmitglied",
+      "addCast": "Besetzungsmitglied hinzufügen",
+      "removeCast": "Entfernen",
+      "seasonLabel": "Staffel {{season}}",
+      "seasonEditEpisodes": "Folgen bearbeiten",
+      "episodeLabel": "Folge {{number}}",
+      "fields": {
+        "title": "Titel",
+        "originalTitle": "Originaltitel",
+        "originalLanguage": "Originalsprache",
+        "year": "Erscheinungsjahr",
+        "rating": "Bewertung",
+        "genres": "Genres",
+        "overview": "Handlung",
+        "poster": "Poster",
+        "backdrop": "Hintergrundbild",
+        "profile": "Profilbild",
+        "name": "Name",
+        "role": "Rolle",
+        "airDate": "Ausstrahlungsdatum",
+        "still": "Standbild"
+      }
+    },
+    "cast": "Besetzung",
+    "noCast": "Keine Infos zur Besetzung verfügbar.",
+    "castUnknownRole": "Rolle nicht verfügbar",
+    "castShowAll": "Gesamte Besetzung anzeigen ({{count}})",
+    "castShowLess": "Weniger anzeigen",
+    "crew": {
+      "title": "Stab",
+      "director": "Regie",
+      "writing": "Drehbuch"
+    },
+    "seasons": {
+      "title": "Staffeln",
+      "empty": "Noch keine Staffeln geladen.",
+      "episodeCount": "{{count}} Folgen",
+      "available": "Verfügbar",
+      "missing": "Dateien fehlen",
+      "specials": "Specials"
+    },
+    "episodes": {
+      "title": "Folgen · Staffel {{season}}",
+      "empty": "Keine Folgen verfügbar.",
+      "label": "Folge {{number}} · {{title}}",
+      "breadcrumb": "Staffel {{season}}"
+    },
+    "subtitles": {
+      "title": "Untertitel",
+      "clearDefault": "Keine Standarduntertitel",
+      "emptyMovie": "Noch keine Untertitel hinzugefügt.",
+      "default": "Standard",
+      "setDefault": "Als Standard festlegen",
+      "remove": "Entfernen",
+      "addTitle": "Untertitel hinzufügen",
+      "addSubtitleHint": "Lade eine .srt-Datei hoch und wähle ihre Sprache.",
+      "fileLabel": "SRT-Datei",
+      "languageLabel": "Sprache",
+      "labelLabel": "Bezeichnung",
+      "labelPlaceholder": "Optionale Bezeichnung",
+      "addButton": "Untertitel hinzufügen",
+      "undefined": "Nicht festgelegt"
+    },
+    "audioDialog": {
+      "title": "Tonspuren",
+      "subtitle": "Staffel {{season}} · Folge {{episode}}",
+      "subtitleFallback": "Wähle die Standardtonspur.",
+      "empty": "Noch keine Tonspuren gefunden.",
+      "setDefault": "Als Standard festlegen"
+    },
+    "subtitlesDialog": {
+      "title": "Untertitel der Folge",
+      "subtitle": "Staffel {{season}} · Folge {{episode}}",
+      "subtitleFallback": "Verwalte die Untertitel dieser Folge.",
+      "empty": "Noch keine Untertitel hinzugefügt."
+    },
+    "tracks": {
+      "deleteAudioConfirm": "Tonspur „{{label}}“ löschen? Damit verschwindet eventuell die einzige Quelle für diese Synchronfassung oder diesen Kommentar.",
+      "noLanguageOption": "Unbekannt – eigene Bezeichnung verwenden",
+      "descriptorPlaceholder": "z. B. SDH, VFF, Regiekommentar",
+      "customLabelPlaceholder": "Eigene Bezeichnung",
+      "setAsDefault": "Als Standard festlegen",
+      "fetchSubtitles": "Untertitel holen",
+      "addSubtitle": "Untertiteldatei hochladen",
+      "noDefaultSubtitle": "Standardmäßig ohne Untertitel abspielen",
+      "audioIngestHint": "Tonspuren stammen aus der Quelldatei.",
+      "deleteAudio": "Tonspur löschen"
+    },
+    "trailerLanguage": {
+      "en": "Englisch",
+      "fr": "Französisch",
+      "other": "Andere"
+    },
+    "close": "Schließen",
+    "delete": "Aus Mediathek löschen",
+    "deleting": "Wird gelöscht...",
+    "deleteTitle": "Aus Mediathek entfernen?",
+    "deleteConfirm": "„{{title}}“ aus deiner Mediathek entfernen? Dabei werden auch hochgeladene Dateien entfernt, falls vorhanden.",
+    "deleteCancel": "Abbrechen",
+    "detail": {
+      "back": "Mediathek",
+      "playsThisVersion": "Die Wiedergabe startet mit dieser Version",
+      "more": "Weitere Aktionen"
+    }
+  },
+  "playlists": {
+    "title": "Playlists",
+    "subtitle": "Fasse Titel in Playlists zusammen, zu denen du jederzeit zurückkehren kannst.",
+    "manageTitle": "Deine Playlists",
+    "manageSubtitle": "Favoriten gibt es immer. Alles andere verwaltest du selbst.",
+    "newPlaceholder": "Name der neuen Playlist",
+    "create": "Erstellen",
+    "empty": "Noch keine Playlists.",
+    "systemFavorites": "Favoriten",
+    "systemWatchlist": "Merkliste",
+    "system": "System-Playlist",
+    "delete": "Löschen",
+    "selectTitle": "Playlist auswählen",
+    "selectSubtitle": "Wähle eine Playlist, um ihre Einträge zu sehen.",
+    "selectPrompt": "Wähle eine Playlist, um ihre Einträge zu sehen.",
+    "itemsCount": "{{count}} Einträge",
+    "noItems": "Noch keine Einträge.",
+    "missing": "Datei fehlt",
+    "remove": "Entfernen"
+  },
+  "settings": {
+    "subtitle": "Alles für diese App und dein Konto.",
+    "ui": {
+      "title": "Benutzeroberfläche",
+      "subtitle": "Sprache und Darstellung auf diesem Gerät.",
+      "language": "Sprache der Oberfläche",
+      "editHomeLayout": "Startbildschirm anpassen",
+      "save": "Oberflächeneinstellungen speichern",
+      "saving": "Wird gespeichert …",
+      "saved": "Oberflächeneinstellungen gespeichert."
+    },
+    "playback": {
+      "title": "Wiedergabe",
+      "subtitle": "Standardwerte für das Ansehen von Videos auf diesem Gerät.",
+      "quality": "Standard-Wiedergabequalität",
+      "forceQuality": {
+        "title": "Diese Qualität erzwingen",
+        "subtitle": "Nicht an die Netzwerkbedingungen anpassen. Aus (empfohlen): Der Player kann die Qualität senken, wenn deine Verbindung die gewählte Qualität nicht halten kann."
+      },
+      "autoplay": {
+        "title": "Nächste Folge automatisch abspielen",
+        "subtitle": "Folgen einer Serie automatisch fortsetzen."
+      },
+      "intro": {
+        "title": "Intros automatisch überspringen",
+        "subtitle": "Das Intro automatisch überspringen, wenn Zeitmarken verfügbar sind. Die Schaltfläche zum manuellen Überspringen wird immer angezeigt."
+      },
+      "credits": {
+        "title": "Abspann automatisch überspringen",
+        "subtitle": "Den Abspann automatisch überspringen, wenn Zeitmarken verfügbar sind. Die Schaltfläche zum manuellen Überspringen wird immer angezeigt."
+      },
+      "skipMode": "Überspringen",
+      "skipModeAuto": "Automatisch",
+      "skipModeManual": "Manuell per Schaltfläche",
+      "save": "Wiedergabeeinstellungen speichern",
+      "saving": "Wird gespeichert …",
+      "saved": "Wiedergabeeinstellungen gespeichert.",
+      "qualityHint": "Die Qualität, die der Player anstrebt; bei langsamen Verbindungen kann sie niedriger ausfallen.",
+      "audioLanguage": {
+        "title": "Standard-Audiosprache",
+        "description": "Wird verwendet, wenn dieser Film oder diese Serie keine eigene Audiowahl hat und die Datei diese Sprache enthält. Sonst wird die Standard-Audiospur der Datei abgespielt.",
+        "original": "Original"
+      }
+    },
+    "offlineExportFormat": {
+      "label": "Format für Offline-Export",
+      "help": "Container, der beim Speichern von Medien auf deinem Gerät verwendet wird. MKV ist für alle Untertitelarten verlustfrei. MP4 läuft auf mehr Geräten, kann aber keine PGS-/ASS-Untertitel einbetten – solche Spuren werden dann ausgelassen.",
+      "mkv": "MKV (empfohlen)",
+      "mp4": "MP4",
+      "mp4Warning": "MP4 kann keine PGS- oder ASS-Untertitel einbetten. SRT-/VTT-Untertitel werden in mov_text umgewandelt und bleiben erhalten."
+    },
+    "advanced": {
+      "title": "Erweiterte Einstellungen",
+      "subtitle": "Technische Optionen für Dateiverwaltung, Codecs, Metadaten-Tools und Anbieter.",
+      "save": "Erweiterte Einstellungen speichern",
+      "saving": "Wird gespeichert …",
+      "saved": "Erweiterte Einstellungen gespeichert.",
+      "fileManagement": {
+        "title": "Dateiverwaltung aktivieren",
+        "subtitle": "Den Bereich Dateiverwaltung für erweiterte Uploads und Formate anzeigen."
+      },
+      "watchDirectories": {
+        "title": "Überwachte Ordner aktivieren",
+        "subtitle": "Ermöglicht das Einrichten überwachter lokaler Ordner in den Desktop-Apps."
+      },
+      "metadataTools": {
+        "title": "Metadaten-Tools aktivieren",
+        "subtitle": "Die Aktionen Metadaten bearbeiten/wiederherstellen in den Mediendetails anzeigen."
+      },
+      "trailer": {
+        "title": "Invidious für Trailer verwenden",
+        "subtitle": "Standardmäßig YouTube verwenden oder zu einer Invidious-Instanz wechseln.",
+        "instanceLabel": "URL der Invidious-Instanz",
+        "instancePlaceholder": "https://invidious.example.com",
+        "instanceRequired": "Die URL der Invidious-Instanz ist erforderlich.",
+        "testButton": "Statusprüfung starten",
+        "testing": "Wird getestet ...",
+        "healthOk": "Invidious-Statusprüfung erfolgreich.",
+        "healthFail": "Invidious-Statusprüfung fehlgeschlagen.",
+        "healthy": "In Ordnung",
+        "needsAttention": "Prüfung nötig",
+        "notTested": "Nicht getestet"
+      },
+      "gpu": {
+        "title": "GPU-Fähigkeiten",
+        "subtitle": "Die FFmpeg-Hardwarebeschleunigung auf diesem Rechner prüfen.",
+        "testing": "Wird getestet ...",
+        "runQuickTest": "Schnelltest starten",
+        "loading": "Wird geladen ...",
+        "diagnostics": "Diagnose",
+        "ffmpegBinary": "FFmpeg-Programm",
+        "unknown": "Unbekannt",
+        "gpuDetected": "GPU erkannt",
+        "checking": "Wird geprüft ...",
+        "notDetected": "Nicht erkannt",
+        "ffmpegEncoders": "FFmpeg-Encoder",
+        "cpuOnly": "Nur CPU",
+        "preferredPath": "Bevorzugter Weg",
+        "lastTest": "Letzter Test",
+        "ok": "OK",
+        "failed": "Fehlgeschlagen",
+        "notRun": "Nicht ausgeführt",
+        "testLog": "FFmpeg-Testprotokoll (Ende)",
+        "encoderOutput": "FFmpeg-Encoder-Ausgabe (Auszug)",
+        "hwaccelOutput": "FFmpeg-hwaccel-Ausgabe (Auszug)",
+        "noOutput": "Keine Ausgabe erfasst."
+      }
+    },
+    "video": {
+      "title": "Videoverarbeitung",
+      "subtitle": "Standardwerte für die Aufbereitung deiner Videos nach dem Upload.",
+      "codecSelection": "Codec-Auswahl für Transkodierungen",
+      "codecSelectionHint": "Wenn aktiviert, kannst du pro Qualität zwischen H.264 und HEVC wählen. Das betrifft die Dateiverwaltung und die Standardausgaben.",
+      "maxParallelTranscodes": {
+        "title": "Parallele Transkodierungen",
+        "subtitle": "Begrenzt, wie viele rechenintensive Transkodierungen gleichzeitig laufen können. Uploads werden separat geplant.",
+        "options": {
+          "1": "1 Transkodierung",
+          "2": "2 Transkodierungen",
+          "3": "3 Transkodierungen"
+        }
+      },
+      "maxParallelExtractions": {
+        "title": "Parallele Extraktionen",
+        "subtitle": "Begrenzt, wie viele Quellen gleichzeitig analysiert und extrahiert werden. Transkodierungen und Uploads werden separat geplant.",
+        "options": {
+          "1": "1 Extraktion",
+          "2": "2 Extraktionen",
+          "3": "3 Extraktionen"
+        }
+      },
+      "save": "Videoeinstellungen speichern",
+      "saving": "Wird gespeichert …",
+      "saved": "Videoeinstellungen gespeichert.",
+      "watchFolders": {
+        "title": "Überwachte Ordner (nur Desktop)",
+        "subtitle": "Browser können lokale Ordner noch nicht überwachen, aber für die Desktop-Apps ist alles vorbereitet.",
+        "empty": "Noch keine Ordner eingerichtet.",
+        "add": "Überwachten Ordner hinzufügen",
+        "addAction": "Ordner hinzufügen",
+        "edit": "Überwachten Ordner bearbeiten",
+        "save": "Ordner speichern",
+        "cancel": "Abbrechen",
+        "placeholder": "/Volumes/Media",
+        "path": "Pfad",
+        "library": "Mediathek",
+        "movies": "Filme",
+        "tv": "Serien"
+      },
+      "outputsTitle": "Transkodierte Fassungen",
+      "outputsSubtitle": "Wähle die Videoqualitäten, die du behalten möchtest.",
+      "outputsEnabled": "Aktiviert",
+      "outputsDisabled": "Deaktiviert",
+      "outputsNone": "Keine Fassungen ausgewählt",
+      "codecH264": "H.264",
+      "codecHevc": "HEVC",
+      "codecAutoHint": "Codecs werden automatisch gewählt – H.264 für 1080p und darunter, HEVC für 4K. Aktiviere oben die Codec-Auswahl, um das anzupassen.",
+      "fallbackCopy": {
+        "title": "Dieser Computer erstellt Kopien",
+        "subtitle": "Wenn an, bekommt jeder Upload von diesem Computer eine kleinere 360p-Kopie, die verwendet wird, wenn die Verbindung oder das Gerät das Original nicht abspielen kann, dazu die zusätzlichen Qualitäten, die dein Konto verlangt. Wenn aus, speichert dieser Computer nur das Original. Diese Einstellung gilt nur für diesen Computer.",
+        "on": "An",
+        "off": "Aus"
+      },
+      "uploadsDuringPlayback": {
+        "title": "Während du ein Video schaust",
+        "subtitle": "Lege fest, was Uploads und Videoverarbeitung tun, während auf diesem Computer ein Video läuft. Diese Einstellung gilt nur für diesen Computer.",
+        "options": {
+          "full": "Volle Geschwindigkeit",
+          "throttle": "Verlangsamen",
+          "pause": "Pausieren"
+        },
+        "hint": {
+          "full": "Uploads und Videoverarbeitung laufen so schnell wie möglich weiter. Auf einem schwächeren Computer kann das Video ruckeln.",
+          "throttle": "Beides läuft weiter, belastet den Computer aber weniger: Die Videoverarbeitung nutzt einen Prozessorkern und Uploads senden weniger auf einmal.",
+          "pause": "Uploads und Videoverarbeitung warten, solange ein Video läuft, und machen danach dort weiter, wo sie aufgehört haben."
+        }
+      }
+    },
+    "trailerLanguages": {
+      "title": "Trailer-Sprachen",
+      "subtitle": "Der Trailer in Originalsprache wird immer behalten. Du kannst bis zu zwei weitere Sprachen hinzufügen.",
+      "originalLabel": "Originalsprache",
+      "searchPlaceholder": "Sprache suchen …",
+      "add": "Sprache hinzufügen",
+      "loading": "Sprachen werden geladen …",
+      "loadError": "Die Sprachliste konnte nicht geladen werden.",
+      "noResults": "Keine Sprache passt zu deiner Suche.",
+      "remove": "{{language}} entfernen",
+      "maxHint": "Wähle bis zu 2 weitere Sprachen.",
+      "updated": "Trailer-Spracheinstellungen aktualisiert.",
+      "options": {
+        "en": "Englisch",
+        "fr": "Französisch",
+        "es": "Spanisch",
+        "de": "Deutsch"
+      }
+    },
+    "recovery": {
+      "title": "Zugriff auf die Mediathek",
+      "subtitle": "Verwalte deinen Mediathek-Schlüssel oder lösche alle Daten deiner Mediathek.",
+      "show": {
+        "title": "Mediathek-Schlüssel anzeigen",
+        "subtitle": "Zeige deinen aktuellen Schlüssel an, nachdem du deine Identität bestätigt hast.",
+        "button": "Schlüssel anzeigen",
+        "dialogTitle": "Deinen Mediathek-Schlüssel anzeigen",
+        "keyLabel": "Mediathek-Schlüssel",
+        "passwordLabel": "Kontopasswort",
+        "codeLabel": "Bestätigungscode",
+        "codeHintEmail": "Gib den Code ein, den wir dir per E-Mail geschickt haben.",
+        "codeHintTotp": "Gib den Code aus deiner Authentifizierungs-App ein.",
+        "cancel": "Abbrechen",
+        "codeSent": "Wir haben dir einen Bestätigungscode geschickt. Sieh in deinen E-Mails oder deiner Authentifizierungs-App nach.",
+        "errorInvalidPassword": "Falsches Passwort.",
+        "errorTwoFactorInvalid": "Der Bestätigungscode ist ungültig.",
+        "submit": "Schlüssel anzeigen",
+        "working": "Wird überprüft ...",
+        "errorGeneric": "Deine Sitzung konnte nicht überprüft werden. Versuch es noch mal.",
+        "errorMissing": "Auf diesem Gerät ist kein Mediathek-Schlüssel gespeichert."
+      },
+      "rotate": {
+        "title": "Mediathek-Schlüssel ersetzen",
+        "subtitle": "Erstelle einen neuen Schlüssel und sperre die Daten deiner Mediathek neu.",
+        "button": "Neuen Schlüssel erstellen",
+        "dialogTitle": "Deinen Mediathek-Schlüssel ersetzen",
+        "keyLabel": "Neuer Mediathek-Schlüssel",
+        "keyHint": "Bewahre diesen Schlüssel sicher auf, bevor du fortfährst.",
+        "copyButton": "Schlüssel kopieren",
+        "copySuccess": "Mediathek-Schlüssel kopiert.",
+        "copyFail": "Schlüssel konnte nicht kopiert werden.",
+        "confirmLabel": "Mir ist klar, dass dadurch andere Sitzungen beendet werden",
+        "passwordLabel": "Kontopasswort",
+        "codeLabel": "Bestätigungscode",
+        "codeHintEmail": "Gib den Code ein, den wir dir per E-Mail geschickt haben.",
+        "codeHintTotp": "Gib den Code aus deiner Authentifizierungs-App ein.",
+        "cancel": "Abbrechen",
+        "codeSent": "Wir haben dir einen Bestätigungscode geschickt. Sieh in deinen E-Mails oder deiner Authentifizierungs-App nach.",
+        "errorInvalidPassword": "Falsches Passwort.",
+        "errorTwoFactorInvalid": "Der Bestätigungscode ist ungültig.",
+        "submit": "Schlüssel ersetzen",
+        "working": "Wird ersetzt ...",
+        "errorGeneric": "Der Schlüssel konnte nicht ersetzt werden. Versuch es noch mal."
+      },
+      "reset": {
+        "title": "Mediathek-Daten löschen",
+        "subtitle": "Alle Daten der Mediathek löschen und alle Sitzungen beenden.",
+        "button": "Mediathek löschen und zurücksetzen",
+        "dialogTitle": "Mediathek-Daten löschen",
+        "warning": "Dadurch werden alle privaten Mediathek-Daten in der Cloud gelöscht und alle Sitzungen beendet. Das kann nicht rückgängig gemacht werden.",
+        "confirmLabel": "Mir ist klar, dass meine Mediathek-Daten endgültig gelöscht werden",
+        "passwordLabel": "Kontopasswort",
+        "codeLabel": "Bestätigungscode",
+        "codeHintEmail": "Gib den Code ein, den wir dir per E-Mail geschickt haben.",
+        "codeHintTotp": "Gib den Code aus deiner Authentifizierungs-App ein.",
+        "cancel": "Abbrechen",
+        "codeSent": "Wir haben dir einen Bestätigungscode geschickt. Sieh in deinen E-Mails oder deiner Authentifizierungs-App nach.",
+        "errorInvalidPassword": "Falsches Passwort.",
+        "errorTwoFactorInvalid": "Der Bestätigungscode ist ungültig.",
+        "submit": "Alles vernichten",
+        "working": "Wird zurückgesetzt ...",
+        "resend": "Code erneut senden",
+        "resending": "Wird erneut gesendet ...",
+        "codeResent": "Wir haben dir einen weiteren Bestätigungscode geschickt.",
+        "errorGeneric": "Die Mediathek konnte nicht zurückgesetzt werden. Versuch es noch mal."
+      },
+      "copyToastTitle": "Kopiert",
+      "errorToastTitle": "Fehler"
+    },
+    "nav": {
+      "aria": "Bereiche der Einstellungen",
+      "searchPlaceholder": "Einstellungen durchsuchen",
+      "noResults": "Keine passenden Bereiche",
+      "group": {
+        "player": "Player",
+        "library": "Mediathek",
+        "account": "Konto",
+        "system": "System"
+      },
+      "general": "Allgemein",
+      "playback": "Wiedergabe",
+      "trailers": "Trailer",
+      "downloads": "Downloads",
+      "transcoding": "Transkodierung",
+      "metadata": "Metadaten",
+      "performance": "Leistung",
+      "account": "Konto & Tarif",
+      "profiles": "Profile",
+      "security": "Sicherheit & Wiederherstellung",
+      "devices": "Angemeldete Geräte",
+      "connectedTools": "Verbundene Tools",
+      "system": "System",
+      "about": "Info & Updates"
+    },
+    "sectionDesc": {
+      "general": "Sprache und Startbildschirm.",
+      "playback": "Standardqualität und was während der Wiedergabe passiert.",
+      "trailers": "Woher Trailer kommen und in welchen Sprachen sie geladen werden.",
+      "downloads": "Wie Offline-Kopien auf deinem Gerät gespeichert werden.",
+      "transcoding": "In welche Qualitäten und Codecs deine Mediathek umgewandelt wird.",
+      "metadata": "Woher die Daten zu Titeln und Artwork kommen.",
+      "performance": "Hardwarebeschleunigung und Auslagerung der Verarbeitung.",
+      "account": "Dein Tarif, Speicher und Empfehlungen.",
+      "profiles": "Füge Profile dieses Kontos hinzu, benenne sie um oder lösche sie.",
+      "security": "Passwort, Zwei-Faktor, Verschlüsselungsschlüssel und Kontolöschung.",
+      "devices": "Sieh dir die bei deinem Konto angemeldeten Geräte an und melde sie ab.",
+      "connectedTools": "Tools, denen du Zugriff auf deine Mediathek erlaubt hast, und was sie jeweils dürfen.",
+      "system": "Hintergrunddienst und Fehlerberichte.",
+      "about": "Deine Version und Updates, dann wer die Film- und Seriendaten liefert, die die App zeigt."
+    },
+    "system": {
+      "runtime": {
+        "title": "Hintergrunddienst",
+        "subtitle": "Der lokale Dienst, der deine Mediathek verarbeitet.",
+        "restart": "Dienst neu starten",
+        "restarting": "Wird neu gestartet …",
+        "status": {
+          "ready": "Bereit",
+          "restarting": "Startet neu",
+          "lost": "Gestoppt",
+          "unknown": "Unbekannt"
+        }
+      },
+      "errorReports": {
+        "title": "Fehlerberichte senden",
+        "subtitle": "Berichte sind anonym und helfen uns sehr, Fehler zu beheben 🙂",
+        "link": "Was steht in einem Bericht?"
+      }
+    },
+    "dangerZone": {
+      "title": "Gefahrenbereich",
+      "subtitle": "Unumkehrbare Aktionen. Bitte mit Vorsicht."
+    }
+  },
+  "firstSetup": {
+    "language": {
+      "title": "Wähle deine Sprache"
+    },
+    "title": "Ersteinrichtung",
+    "stepOf": "Schritt {{current}} von {{total}}",
+    "computer": "Dieser Computer: {{cpu}}, {{cores}} Kerne, {{ram}} GB Arbeitsspeicher,",
+    "cpuUnknown": "unbekannter Prozessor",
+    "encoderNone": "und kein Hardware-Video-Encoder.",
+    "encoderFound": "und ein Hardware-Video-Encoder ({{encoder}}).",
+    "recommendedBadge": "Empfohlen",
+    "back": "Zurück",
+    "next": "Weiter",
+    "finish": "Fertig",
+    "saving": "Wird gespeichert…",
+    "saveError": "Deine Auswahl konnte nicht gespeichert werden. Bitte versuch es noch einmal.",
+    "settingsLater": "Du kannst das später unter Einstellungen → Transkodierung ändern. Es gilt nur für diesen Computer.",
+    "settingsLaterErrorReports": "Du kannst das jederzeit unter Einstellungen → System ändern. Es gilt nur für diesen Computer.",
+    "steps": {
+      "transcode": {
+        "title": "Von jedem Video eine kleinere 360p-Kopie erstellen?",
+        "explain": {
+          "what": "Von jedem Video, das du hochlädst, kann eine zusätzliche, kleinere Kopie in 360p-Qualität erstellt werden.",
+          "when": "Sie wird genutzt, wenn deine Verbindung oder der Computer, auf dem du schaust, das Original nicht abspielen kann.",
+          "cost": "Das Erstellen kostet etwas Rechenleistung dieses Computers.",
+          "later": "Weitere Qualitäten wie 720p oder 1080p kannst du später in den Einstellungen hinzufügen."
+        },
+        "recommend": {
+          "on": "Wir empfehlen, die 360p-Kopie für diesen Computer einzuschalten:",
+          "off": "Wir empfehlen, die 360p-Kopie für diesen Computer auszuschalten:"
+        },
+        "reason": {
+          "hw-encoder": "sein Video-Encoder erstellt die 360p-Kopie, ohne ihn auszubremsen.",
+          "strong-cpu": "er ist leistungsstark genug, um die 360p-Kopie zu erstellen, während du schaust.",
+          "weak": "das Erstellen der 360p-Kopie würde diesen Computer beim Schauen ausbremsen."
+        },
+        "options": {
+          "on": {
+            "label": "360p-Kopie erstellen",
+            "description": "Jeder Upload bekommt zusätzlich eine kleine 360p-Kopie, bereit für eine schwache Verbindung."
+          },
+          "off": {
+            "label": "Nicht erstellen",
+            "description": "Uploads bekommen nur die Qualitäten, die du in den Einstellungen wählst, und belasten diesen Computer weniger."
+          }
+        }
+      },
+      "uploads": {
+        "title": "Während du ein Video schaust",
+        "explain": {
+          "what": "Ein Video hochzuladen und vorzubereiten, also seine Kopien zu erstellen, kostet beides Rechenleistung dieses Computers.",
+          "stutter": "Auf einem schwächeren Computer kann das Video ruckeln, wenn das passiert, während du schaust.",
+          "choose": "Wähle, was Uploads und Videoverarbeitung tun, während ein Video läuft."
+        },
+        "recommend": {
+          "full": "Wir empfehlen volle Geschwindigkeit:",
+          "throttle": "Wir empfehlen, beim Schauen zu drosseln:",
+          "pause": "Wir empfehlen, beim Schauen zu pausieren:"
+        },
+        "reason": {
+          "strong": "dieser Computer ist leistungsstark genug für beides gleichzeitig.",
+          "modest": "er schafft beides, aber mit voller Geschwindigkeit könnte das Video ruckeln.",
+          "weak": "er hat wenig Leistung übrig, daher würde das Video beim gleichzeitigen Arbeiten ruckeln."
+        },
+        "options": {
+          "full": {
+            "label": "Volle Geschwindigkeit",
+            "description": "Uploads und Videoverarbeitung laufen mit voller Geschwindigkeit weiter. Auf einem schwachen Computer kann das Video ruckeln."
+          },
+          "throttle": {
+            "label": "Drosseln",
+            "description": "Beides läuft weiter, belastet den Computer aber weniger: Die Videoverarbeitung nutzt einen Prozessorkern und Uploads senden weniger auf einmal."
+          },
+          "pause": {
+            "label": "Pausieren",
+            "description": "Uploads und Videoverarbeitung warten, während ein Video läuft, und machen danach dort weiter, wo sie aufgehört haben."
+          }
+        }
+      },
+      "errorReports": {
+        "title": "Fehlerberichte an SpaceFleet senden?",
+        "explain": {
+          "line": "Berichte sind anonym und helfen uns sehr, Fehler zu beheben 🙂"
+        },
+        "options": {
+          "on": {
+            "label": "Ja, Fehlerberichte senden"
+          },
+          "off": {
+            "label": "Nein, nicht senden"
+          }
+        }
+      }
+    }
+  },
+  "language": {
+    "label": "Sprache",
+    "options": {
+      "en": "Englisch",
+      "fr": "Französisch"
+    }
+  },
+  "mediaLanguages": {
+    "options": {
+      "und": "Unbestimmt",
+      "en": "Englisch",
+      "fr": "Französisch",
+      "es": "Spanisch",
+      "de": "Deutsch",
+      "it": "Italienisch",
+      "pt": "Portugiesisch",
+      "ja": "Japanisch"
+    }
+  },
+  "onboarding": {
+    "key": {
+      "title": "Dein Mediathek-Schlüssel",
+      "enterTitle": "Mediathek-Schlüssel eingeben",
+      "enterSubtitle": "Gib die 12 Wörter ein, die du beim Erstellen deiner Mediathek gespeichert hast.",
+      "loading": "Schlüssel wird geladen…",
+      "errorLoad": "Dein Mediathek-Schlüssel konnte nicht geladen werden.",
+      "errorDecrypt": "Dein gespeicherter Schlüssel konnte die Mediathek nicht entsperren. Bitte gib den richtigen Schlüssel ein.",
+      "errorNoRemote": "Dieses Konto hat noch keine Mediathek auf dem Server. Erstelle stattdessen einen neuen Schlüssel.",
+      "errorValidate": "Der Schlüssel kann gerade nicht geprüft werden. Bitte versuch es erneut.",
+      "errorCreate": "Die erste Mediathek konnte nicht erstellt werden. Bitte versuch es erneut.",
+      "errorCreateAuth": "Deine Sitzung ist abgelaufen. Bitte melde dich erneut an.",
+      "errorCreateConflict": "Für dieses Konto gibt es bereits eine Mediathek. Gib stattdessen deinen vorhandenen Schlüssel ein.",
+      "reasonMissing": "Dieses Gerät hat noch keinen Schlüssel. Gib deinen vorhandenen Schlüssel ein, um fortzufahren."
+    },
+    "recovery": {
+      "button": "Wiederherstellung",
+      "title": "Mediathek aus lokalen Daten wiederherstellen",
+      "subtitle": "Wir verschlüsseln deine lokale Mediathek neu und synchronisieren sie mit der Cloud. Dadurch werden andere Sitzungen beendet.",
+      "keyLabel": "Neuer Mediathek-Schlüssel",
+      "keyHint": "Bewahre diesen Schlüssel sicher auf, bevor du fortfährst.",
+      "copy": "Schlüssel kopieren",
+      "copied": "Kopiert",
+      "confirmLabel": "Mir ist klar, dass dadurch die Mediathek auf dem Server überschrieben wird",
+      "passwordLabel": "Kontopasswort",
+      "codeLabel": "Bestätigungscode",
+      "codeHintEmail": "Gib den Code ein, den wir dir per E-Mail geschickt haben.",
+      "codeHintTotp": "Gib den Code aus deiner Authentifizierungs-App ein.",
+      "cancel": "Abbrechen",
+      "submit": "Mediathek wiederherstellen",
+      "working": "Wird wiederhergestellt...",
+      "codeSent": "Wir haben einen Bestätigungscode gesendet. Sieh in deinen E-Mails oder deiner Authentifizierungs-App nach.",
+      "errorInvalidPassword": "Falsches Passwort.",
+      "errorTwoFactorInvalid": "Der Bestätigungscode ist ungültig.",
+      "errorNoLocal": "Keine lokalen Mediathek-Daten zur Wiederherstellung verfügbar.",
+      "errorGeneric": "Die Mediathek kann gerade nicht wiederhergestellt werden. Bitte versuch es erneut."
+    }
+  },
+  "saturation": {
+    "refused": {
+      "title": "Gerade zu viel Verkehr",
+      "body": "Unsere Server sind stark ausgelastet, daher können wir gerade keine neue Wiedergabe starten. Bitte versuch es später noch einmal. Bezahlte Tarife behalten in Spitzenzeiten Vorrang."
+    },
+    "stopped": {
+      "title": "Wiedergabe gestoppt: hoher Verkehr",
+      "body": "Die Wiedergabe wurde wegen hohen Verkehrs gestoppt. Bitte versuch es später noch einmal. Bezahlte Tarife behalten in Spitzenzeiten Vorrang."
+    },
+    "upgrade": "Tarif upgraden",
+    "close": "Schließen"
+  },
+  "player": {
+    "title": "Player",
+    "back": "Zurück",
+    "loading": "Player wird geladen...",
+    "nowPlaying": "Läuft gerade",
+    "quality": "Qualität",
+    "audio": "Audio",
+    "subtitles": "Untertitel",
+    "subtitlesOff": "Aus",
+    "menuSelectSubtitle": "Untertitel auswählen:",
+    "menuSelectSecondarySubtitle": "Zweite Untertitel auswählen:",
+    "menuSelectAudioTrack": "Audiospur auswählen:",
+    "menuSelectVideoTrack": "Videospur auswählen:",
+    "menuNoSubtitles": "Keine Untertitel verfügbar.",
+    "menuNoAudioTracks": "Keine Audiospuren verfügbar.",
+    "menuNoVideoTracks": "Keine Videospuren verfügbar.",
+    "audioRetry": "Mit Ton erneut versuchen",
+    "audioRetrying": "Neuer Versuch mit Ton",
+    "audioStallExplanation": "Das Audiogerät reagiert nicht. Prüfe deine Kopfhörer oder deine Audioausgabe. Wiedergabe ohne Ton.",
+    "audioNoOutputExplanation": "Es konnte keine Audioausgabe geöffnet werden. Prüfe deine Kopfhörer, Lautsprecher oder Audioausgabe. Wiedergabe ohne Ton.",
+    "audioOutputLabel": "Audioausgabe:",
+    "previewsPreparing": "Vorschaubilder werden vorbereitet",
+    "controls": "Wiedergabetipps",
+    "tipPlay": "Starte mit der Wiedergabetaste.",
+    "tipPause": "Pausiere jederzeit und mach später weiter.",
+    "episode": "Staffel {{season}}, Folge {{episode}}",
+    "noFile": "Noch keine abspielbare Datei.",
+    "buffering": "Stream wird vorbereitet... {{progress}} %",
+    "volume": "Lautstärke",
+    "mute": "Stumm",
+    "unmute": "Ton an",
+    "bufferingShort": "Puffern...",
+    "autoQuality": "Auto",
+    "chapters": "Kapitel",
+    "noChapters": "Noch keine Kapitel.",
+    "subtitleOffset": "Untertitelversatz",
+    "resumeTitle": "Wiedergabe fortsetzen?",
+    "resumeSubtitle": "Ab {{time}} fortsetzen oder von vorn beginnen.",
+    "resumeSubtitleEpisode": "{{episode}} ab {{time}} fortsetzen oder von vorn beginnen.",
+    "editionChooserTitle": "Welche Edition?",
+    "editionChooserDescription": "Wähle die Edition, die abgespielt werden soll.",
+    "editionResumeFrom": "Ab {{time}} fortsetzen",
+    "editionUnnamed": "Original",
+    "launching": "Player wird gestartet...",
+    "networkSlowSwitching": "{{quality}} wird für einen schnelleren Start versucht...",
+    "networkSlowToast": "Wechsel zu {{quality}} für einen schnelleren Start.",
+    "abrToastTitle": "Wiedergabe",
+    "capToast480p": "Gerade zu viel Verkehr: Wiedergabe mit bis zu 480p.",
+    "capToast1080p": "Hoher Verkehr: Dein Tarif spielt gerade mit bis zu 1080p ab.",
+    "abrDownshift": "Wechsel zu {{quality}} — Bandbreite beträgt {{mbps}} Mbit/s.",
+    "abrUpshift": "Netzwerk wieder stabil — zurück zu {{quality}}.",
+    "abrDecodeFallback": "Dieser Computer spielt diese Version nicht flüssig ab — Wechsel zu einer leichteren Version ({{quality}}).",
+    "deviceTooWeak": {
+      "message": "Dieser Computer ist nicht leistungsstark genug, um dieses Video flüssig abzuspielen.",
+      "pinnedHint": "Schalte „Diese Qualität erzwingen“ in den Einstellungen aus oder wähle eine niedrigere Qualität.",
+      "keepWatching": "Weiterschauen"
+    },
+    "abrInsufficient": "Dein Netzwerk schafft {{current}} ({{mbps}} Mbit/s) nicht dauerhaft. Empfohlen: {{recommended}}.",
+    "abrLaunchFailed": "Wiedergabe konnte nicht gestartet werden — bitte versuch es noch einmal.",
+    "launchSlow": "Startet noch — bitte warten…",
+    "resume": "Fortsetzen",
+    "restart": "Von vorn",
+    "errors": {
+      "missing": "Wir konnten diesen Titel nicht finden.",
+      "storage": "Der Speicher für die Wiedergabe ist noch nicht bereit.",
+      "highTrafficStopped": "Die Wiedergabe wurde wegen hohen Verkehrs gestoppt. Bitte versuch es später noch einmal.",
+      "highTrafficRefused": "Gerade zu viel Verkehr. Bitte versuch es später noch einmal.",
+      "playback": "Wir konnten die Wiedergabe nicht starten. Bitte versuch es noch einmal.",
+      "noDisplay": "Das Video kann in dieser Sitzung nicht abgespielt werden: diese Sitzung nutzt nur Wayland, und der Videoplayer braucht X11. Aktiviere XWayland (X11-Kompatibilität) oder melde dich in einer X11-Sitzung an und versuch es dann noch einmal.",
+      "sourceUnreachable": "Dieser Titel ist nicht offline gespeichert und der Server ist nicht erreichbar. Verbinde dich mit dem Internet oder lade ihn zum Offline-Ansehen herunter."
+    },
+    "preparingPlayback": "Wiedergabe wird vorbereitet"
+  },
+  "dashboard": {
+    "title": "Start",
+    "subtitle": "Kürzlich hinzugefügt, Weiterschauen und Tipps, die du noch nicht gesehen hast.",
+    "loading": "Wird geladen ...",
+    "sectionEmpty": "Hier passt noch nichts. Füge Medien hinzu oder passe deine Playlists an.",
+    "hero": {
+      "resume": "Fortsetzen bei {{time}}",
+      "resumeShort": "Fortsetzen",
+      "details": "Details",
+      "minutesLeft": "noch {{count}} Min.",
+      "seeAll": "Alle anzeigen"
+    },
+    "empty": {
+      "eyebrow": "Deine Bibliothek",
+      "title": "Füge deinen ersten Titel hinzu",
+      "subtitle": "Filme und Serien von deinem Computer · Badger findet Poster und Details",
+      "addMedia": "Medien hinzufügen",
+      "addFolder": "Ordner hinzufügen",
+      "step1Title": "Wähle deine Dateien",
+      "step1Body": "Wähle Filme oder einen ganzen Ordner. Nichts verlässt diesen Computer ohne deine Zustimmung.",
+      "step2Title": "Badger findet die Details",
+      "step2Body": "Poster, Besetzung und Inhaltsangaben kommen von selbst, in deiner Sprache.",
+      "step3Title": "Überall schauen",
+      "step3Body": "Dein Handy, Fernseher und deine anderen Computer zeigen dieselbe Mediathek, verschlüsselt mit deinem Schlüssel."
+    },
+    "sections": {
+      "movies": "Filme",
+      "tv": "Serien",
+      "continue": "Weiterschauen",
+      "recent": "Kürzlich hinzugefügt",
+      "unwatched": "Noch nicht gesehen",
+      "rewatch": "Nochmal schauen",
+      "favorites": "Favoriten",
+      "watchlist": "Merkliste",
+      "genre": "Genre",
+      "playlist": "Playlist"
+    },
+    "edit": {
+      "edit": "Start bearbeiten",
+      "save": "Layout speichern",
+      "saving": "Wird gespeichert ...",
+      "cancel": "Abbrechen",
+      "addSection": "Bereich hinzufügen",
+      "addSectionSubtitle": "Wähle eine Bereichsart oder füge Playlists hinzu. Du kannst denselben Bereich mehrmals hinzufügen.",
+      "addSectionHint": "Einen Bereich hinzufügen",
+      "search": "Bereiche suchen ...",
+      "systemSections": "Standardbereiche",
+      "genreMovies": "Filmgenres",
+      "genreTv": "Serien-Genres",
+      "pickSection": "Einen Bereich hinzufügen",
+      "pickSectionSubtitle": "Wähle einen Bereich, der hier eingefügt wird.",
+      "playlists": "Eigene Playlists",
+      "emptyTitle": "Noch keine Bereiche",
+      "emptySubtitle": "Füge ein paar Bereiche hinzu, um deine Startseite zu gestalten."
+    },
+    "styles": {
+      "default": "Standard",
+      "ember": "Glut",
+      "mist": "Nebel",
+      "forest": "Wald",
+      "bloom": "Blüte",
+      "dusk": "Dämmerung"
+    },
+    "errors": {
+      "title": "Mediathek nicht verfügbar",
+      "cta": "Mediathek öffnen"
+    },
+    "continue": {
+      "title": "Weiterschauen",
+      "subtitle": "Dein Fortschritt wird lokal gespeichert und zwischen Sitzungen synchronisiert.",
+      "empty": "Noch nichts angefangen.",
+      "markWatched": "Klicken, um als gesehen zu markieren (Demo)",
+      "progress": "{{value}}%"
+    },
+    "recent": {
+      "title": "Kürzlich hinzugefügt",
+      "subtitle": "Neu hinzugefügte Einträge aus deiner Mediathek.",
+      "empty": "Noch nichts hinzugefügt."
+    },
+    "unwatched": {
+      "title": "Noch nicht gesehen",
+      "subtitle": "Zufällige Auswahl aus deiner Mediathek.",
+      "empty": "Noch keine ungesehenen Tipps."
+    },
+    "watchlist": {
+      "title": "Merkliste",
+      "subtitle": "Alles, was du dir für später gemerkt hast.",
+      "empty": "Deine Merkliste ist leer."
+    },
+    "favorites": {
+      "title": "Favoriten",
+      "subtitle": "Deine mit Stern markierten Filme und Serien.",
+      "empty": "Noch keine Favoriten."
+    }
+  },
+  "lab": {
+    "title": "Dateiverwaltung",
+    "subtitle": "Erweiterte Uploads und Dateiformate verwalten",
+    "tabs": {
+      "queue": "Warteschlange",
+      "storage": "Speicher"
+    },
+    "drop": {
+      "title": "Videodateien hier ablegen",
+      "subtitle": "Wir erkennen die Datei und bereiten sie fürs Streaming vor.",
+      "cta": "Dateien auswählen"
+    },
+    "libraryPrompt": {
+      "title": "Füge zuerst Medien zu deiner Mediathek hinzu",
+      "subtitle": "Füge zuerst Titel zu deiner Mediathek hinzu und verknüpfe hier dann Dateien.",
+      "cta": "Zur Mediathek"
+    },
+    "active": "Aktiv ({{count}})",
+    "completed": "Abgeschlossen ({{count}})",
+    "completedMeta": "Abgeschlossen {{time}} · {{duration}}",
+    "clearAll": "Alle entfernen",
+    "clearSuccessful": "Erfolgreiche entfernen",
+    "empty": {
+      "title": "Warteschlange ist leer",
+      "subtitle": "Lege oben Dateien ab, um die Verarbeitung zu starten"
+    },
+    "storage": {
+      "title": "Belegter Speicher",
+      "inspect": "Speicher abgleichen",
+      "inspectTitle": "Speicherabgleich",
+      "inspectPending": "Verweise der Mediathek werden mit Bucket-Objekten abgeglichen...",
+      "inspectMissing": "Fehlende referenzierte Objekte",
+      "inspectExtra": "Nicht verknüpfte Bucket-Objekte",
+      "inspectMessage": "{{missing}} fehlend · {{extra}} überzählig",
+      "inspectFailed": "Speicher konnte nicht abgeglichen werden.",
+      "cleanup": "Verwaiste Dateien bereinigen",
+      "cleaning": "Wird bereinigt...",
+      "tabs": {
+        "movies": "Filme",
+        "tv": "Serien"
+      },
+      "empty": "Noch keine Dateien hochgeladen",
+      "fileCount": "{{count}} Datei",
+      "episodeFileCount": "{{count}} Folgendateien",
+      "episodeShort": "{{count}} Folgen",
+      "apply": "Änderungen übernehmen",
+      "delete": "Datei löschen",
+      "applyTitle": "Formatänderungen übernehmen?",
+      "applyDescription": "Nicht ausgewählte Formate werden gelöscht und neue Formate zur Verarbeitung eingereiht.",
+      "applyConfirm": "Änderungen übernehmen",
+      "deleteTitle": "Datei löschen?",
+      "deleteDescription": "{{label}} und alle Transcodes entfernen? Dabei werden auch Audio- und Untertitelspuren gelöscht.",
+      "deleteConfirm": "Datei löschen",
+      "cancel": "Abbrechen",
+      "queued": "Transcode-Aktualisierungen für {{label}} eingereiht.",
+      "cleanupMessage": "{{removed}} verwaiste Dateien entfernt. {{missing}} fehlende Verweise bereinigt.",
+      "cleanupFailed": "Bereinigung fehlgeschlagen. Bitte versuch es erneut."
+    },
+    "status": {
+      "waiting": "Wartet",
+      "waitingInLine": "Wartet · Nr. {{position}} in der Warteschlange",
+      "identifying": "Wird erkannt",
+      "needsMatch": "Zuordnung nötig",
+      "ready": "Bereit",
+      "transcoding": "Wird transkodiert",
+      "uploading": "Wird hochgeladen",
+      "done": "Fertig",
+      "failed": "Fehlgeschlagen"
+    },
+    "queue": {
+      "remove": "Aus Warteschlange entfernen",
+      "cancel": "Abbrechen",
+      "cancelAll": "Alle abbrechen",
+      "removeFromHistory": "Aus dem Verlauf entfernen",
+      "removeAllFromHistory": "Alle aus dem Verlauf entfernen",
+      "start": "Starten",
+      "matchTitle": "Mediathek zuordnen",
+      "episodePrompt": "Folge bestätigen",
+      "change": "Ändern",
+      "selectEpisode": "Wähle vor dem Hochladen eine Staffel und eine Folge.",
+      "searchPlaceholder": "Mediathek durchsuchen...",
+      "typeMovie": "Film",
+      "typeTv": "Serie",
+      "season": "Staffel",
+      "seasonLabel": "Staffel {{number}}",
+      "episode": "Folge",
+      "episodeLabel": "Folge {{number}}",
+      "outputFormats": "Ausgabeformate",
+      "estimate": "Ca. {{size}}",
+      "audioTracks": "Audiospuren",
+      "subtitleTracks": "Untertitel",
+      "tracksOnly": "Nur Spuren",
+      "noVideoOutputs": "Keine Videoausgaben.",
+      "jobCount": "{{count}} Auftrag",
+      "sourceIngest": "Quelle einlesen",
+      "transcode": "Transkodieren",
+      "tracks": "Spuren",
+      "job": "Auftrag",
+      "uploadSpeed": "{{speed}} MiB/s",
+      "splitSource": "Quelle aufteilen",
+      "chapters": "Kapitel",
+      "ffmpegLogs": "FFmpeg-Logs",
+      "offlineDownloading": "Wird offline gespeichert",
+      "offlineSavedOffline": "Offline gespeichert",
+      "help": {
+        "sourceIngest": "Wir teilen die Originaldatei in streamingfertige Blöcke auf, damit die Wiedergabe schnell startet.",
+        "transcode": "Wir erstellen zusätzliche Qualitätsstufen, damit die Wiedergabe auch bei langsameren Verbindungen flüssig bleibt.",
+        "tracks": "Wir bereiten Audio- und Untertitelspuren vor, damit Zuschauer Sprache und Untertitel wechseln können.",
+        "job": "Dieser Schritt bereitet Mediendateien für Wiedergabe und Synchronisierung vor.",
+        "offlineDownloading": "Wir laden jeden Block, entschlüsseln ihn und führen alle Spuren zu einer einzigen Datei zusammen, die du offline abspielen kannst."
+      }
+    },
+    "transcodePlan": "Transcode-Plan",
+    "audio": "Audio",
+    "subtitles": "Untertitel",
+    "estimatedStorage": "Geschätzter zusätzlicher Speicher",
+    "source": "Quelle",
+    "unknown": "Unbekannt",
+    "manualMatch": "Manuelle Zuordnung",
+    "closeMatch": "Ähnlicher Treffer",
+    "searchPlaceholder": "Mediathek durchsuchen...",
+    "noMatches": "Keine Treffer gefunden.",
+    "season": "Staffel",
+    "episode": "Folge",
+    "selectSeason": "Staffel wählen",
+    "selectEpisode": "Folge wählen",
+    "applyMatch": "Zuordnung übernehmen",
+    "matchHint": "Wähle vor dem Zuordnen die richtigen Medien aus.",
+    "detectedEpisode": "Erkannte Folge: S{{season}}E{{episode}}",
+    "errors": {
+      "selectFormat": "Wähle mindestens ein Ausgabeformat.",
+      "selectEpisode": "Wähle eine Staffel und eine Folge.",
+      "authRequired": "Melde dich erneut an, um die Uploads fortzusetzen.",
+      "cancelled": "Vom Nutzer abgebrochen.",
+      "audioRequiredMissing": "Die Audioverarbeitung ist fehlgeschlagen, und es wurde keine abspielbare Audiospur erstellt.",
+      "subtitleRequiredMissing": "Die Untertitelverarbeitung ist fehlgeschlagen, und es wurde keine abspielbare Untertitelspur erstellt.",
+      "storageQuotaBlocked": "Der Speicher ist voll. Gib Platz frei oder upgrade deinen Tarif, um fortzufahren.",
+      "uploadQuotaExceeded": "Upload fehlgeschlagen, weil dein Speicherkontingent voll ist. Upgrade deinen Tarif, um fortzufahren.",
+      "uploadQuotaUnavailable": "Der Upload konnte nicht starten, weil das Speicherkontingent vorübergehend nicht verfügbar ist.",
+      "upgradePlan": "Tarif upgraden",
+      "linkFailed": "Die Datei konnte keinem Eintrag der Mediathek zugeordnet werden.",
+      "formatFailed": "Die Transcode-Formate konnten nicht gespeichert werden.",
+      "tracksFailed": "Audio- oder Untertitelspuren konnten nicht gespeichert werden.",
+      "processingFailed": "Verarbeitung fehlgeschlagen. Bitte versuch es erneut."
+    }
+  },
+  "app": {
+    "loadingAccount": "Dein Konto wird geladen ...",
+    "loading": "Wird geladen ...",
+    "dropOverlay": {
+      "dropTitle": "Dateien hier ablegen, um sie zur Mediathek hinzuzufügen",
+      "dropSubtitle": "Videos, Untertitel oder Ordner",
+      "identifying": "Dateien werden erkannt ...",
+      "pleaseWait": "Einen Moment ...",
+      "onlyMedia": "Nur Videos, Untertitel und Ordner können hinzugefügt werden"
+    }
+  },
+  "debug": {
+    "title": "Debug-Datenbank",
+    "subtitle": "Live-Momentaufnahme der lokalen Mediathek-Datenbank.",
+    "empty": "Keine Datenbank geladen.",
+    "refresh": "Aktualisieren",
+    "collapse": "Einklappen",
+    "expand": "Ausklappen"
+  },
+  "brand": {
+    "app": "Badger",
+    "mascotAlt": "Badger-Maskottchen"
+  },
+  "account": {
+    "title": "Konto",
+    "subtitle": "Abo, Abrechnung, Empfehlungen und Sicherheit.",
+    "loadErrorTitle": "Konto konnte nicht geladen werden",
+    "loadError": "Die Kontodaten konnten nicht geladen werden.",
+    "common": {
+      "copy": "Kopieren",
+      "cancel": "Abbrechen",
+      "startOver": "Neu beginnen"
+    },
+    "devices": {
+      "title": "Angemeldete Geräte",
+      "subtitle": "Alle Geräte, die deine Mediathek öffnen können. Wenn du ein Gerät abmeldest, hat es keinen Zugriff mehr auf deine Mediathek.",
+      "summary_one": "{{count}} Gerät angemeldet",
+      "summary_many": "{{count}} Geräte angemeldet",
+      "summary_other": "{{count}} Geräte angemeldet",
+      "summaryThisDevice": "Dieser Computer: {{name}}",
+      "viewAll": "Geräte anzeigen",
+      "loading": "Geräte werden geladen...",
+      "loadError": "Deine Geräte konnten nicht geladen werden.",
+      "retry": "Erneut versuchen",
+      "empty": "Keine Geräte angemeldet.",
+      "thisDevice": "Dieser Computer",
+      "lastSeen": "Zuletzt gesehen {{when}}",
+      "neverSeen": "Noch nicht gesehen",
+      "signOut": "Abmelden",
+      "signingOut": "Wird abgemeldet...",
+      "signOutError": "Das Gerät konnte nicht abgemeldet werden. Versuch es erneut.",
+      "signOutHint": "Meldet {{name}} ab. Das Gerät verliert sofort den Zugriff auf deine Mediathek.",
+      "unnamed": "Unbenanntes Gerät",
+      "newDevice": "Neues Gerät hinzugefügt: {{name}} ({{type}})",
+      "newDeviceOpen": "Geräte ansehen",
+      "type": {
+        "desktop": "Computer",
+        "mobile": "Handy",
+        "tv": "Fernseher",
+        "kodi": "Kodi",
+        "jellyfin": "Jellyfin-Server",
+        "web": "Webbrowser",
+        "other": "Gerät"
+      }
+    },
+    "errors": {
+      "invalidCredentials": "Das aktuelle Passwort ist falsch.",
+      "invalidCode": "Ungültiger Bestätigungscode. Bitte versuch es erneut.",
+      "setupExpired": "Diese Einrichtung ist abgelaufen. Bitte erstelle einen neuen QR-Code.",
+      "generic": "Etwas ist schiefgelaufen. Bitte versuch es erneut."
+    },
+    "plans": {
+      "free": {
+        "title": "Kostenlos"
+      },
+      "tier1": {
+        "title": "Starter"
+      },
+      "tier2": {
+        "title": "Standard"
+      },
+      "tier3": {
+        "title": "Scale"
+      }
+    },
+    "subscription": {
+      "title": "Abo",
+      "subtitle": "Verwalte deinen Speichertarif.",
+      "paymentsNotOpen": "Zahlungen sind bald möglich. Jeder Tarif, den du wählst, ist sofort aktiv und bis dahin kostenlos, ohne Karte. Wir schreiben dir, sobald Zahlungen möglich sind; dein bezahlter Zeitraum beginnt an dem Tag, an dem du bezahlst.",
+      "prelaunchConfirm": {
+        "title": "Kostenlos, bis Zahlungen möglich sind",
+        "free": "Auf SpaceFleet sind noch keine Zahlungen möglich, deshalb ist dein Tarif {{plan}} vorerst kostenlos, mit allem inklusive.",
+        "emailMonth": "Sobald Zahlungen möglich sind, schicken wir dir eine E-Mail. Du hast dann 14 Tage Zeit zum Bezahlen, und dein erster bezahlter Monat beginnt an dem Tag, an dem du bezahlst, nicht früher.",
+        "emailYear": "Sobald Zahlungen möglich sind, schicken wir dir eine E-Mail. Du hast dann 14 Tage Zeit zum Bezahlen, und dein erstes bezahltes Jahr beginnt an dem Tag, an dem du bezahlst, nicht früher.",
+        "founder": "Founder behalten ihren Rabatt.",
+        "unpaid": "Wenn du nicht bezahlst, werden Wiedergabe und Uploads gestoppt. Du kannst deine Dateien noch 60 Tage lang herunterladen.",
+        "confirm": "Meinen kostenlosen Tarif {{plan}} starten",
+        "cancel": "Anderen Tarif wählen"
+      },
+      "prelaunchNote": {
+        "free": "Zahlungen sind noch nicht möglich: Dein Tarif {{plan}} ist vorerst kostenlos, mit allem inklusive.",
+        "emailMonth": "Sobald Zahlungen möglich sind, schreiben wir dir. Du hast dann 14 Tage Zeit zum Bezahlen, und dein erster bezahlter Monat beginnt an dem Tag, an dem du bezahlst.",
+        "emailYear": "Sobald Zahlungen möglich sind, schreiben wir dir. Du hast dann 14 Tage Zeit zum Bezahlen, und dein erstes bezahltes Jahr beginnt an dem Tag, an dem du bezahlst.",
+        "unpaid": "Wenn du nicht bezahlst, werden Wiedergabe und Uploads gestoppt; du kannst deine Dateien noch 60 Tage lang herunterladen."
+      },
+      "freeUntilMonth": "Kostenlos bis {{date}}. Bezahle jetzt, um deinen Tarif {{plan}} zu behalten; dein erster bezahlter Monat beginnt an dem Tag, an dem du bezahlst.",
+      "freeUntilYear": "Kostenlos bis {{date}}. Bezahle jetzt, um deinen Tarif {{plan}} zu behalten; dein erstes bezahltes Jahr beginnt an dem Tag, an dem du bezahlst.",
+      "loading": "Abo wird geladen...",
+      "updated": "Tarif aktualisiert.",
+      "billingPeriod": "Abrechnungszeitraum",
+      "annualBilling": "Jährliche Abrechnung ({{amount}} / Jahr sparen)",
+      "monthlyBilling": "Monatliche Abrechnung",
+      "toggleAnnual": "Jährliche Abrechnung umschalten",
+      "annual": "Jährlich",
+      "monthly": "Monatlich",
+      "currentPlan": "Aktueller Tarif",
+      "confirmPlanChange": "Tarifwechsel bestätigen",
+      "switch": "Wechseln",
+      "renew": "Abo verlängern",
+      "payNow": "Jetzt bezahlen",
+      "perMonth": "/ Monat",
+      "billedYearly": "Jährliche Abrechnung ({{amount}} / Jahr)",
+      "billedMonthly": "Monatliche Abrechnung",
+      "savePerYear": "{{amount}} / Jahr sparen",
+      "founderPrice": "Founder-Preis, −{{percent}} % lebenslang",
+      "extraStorage": "Zusätzlicher Speicher",
+      "extraStorageAnnual": "+{{size}} für {{amount}} / Jahr",
+      "extraStorageMonthly": "+{{size}} für {{amount}} / Monat",
+      "total": "Gesamt",
+      "updating": "Wird aktualisiert...",
+      "used": "{{used}} / {{limit}} belegt",
+      "usedUnlimited": "{{used}} belegt",
+      "adminUnlimited": "Admin: unbegrenzter Speicher",
+      "paidUntil": "Bezahlt bis {{date}}",
+      "unpaidNotice": "Dein Abo ist abgelaufen. Du kannst deine Dateien noch bis {{date}} herunterladen; danach werden sie gelöscht.",
+      "unpaidNoticeNoDate": "Dein Abo ist abgelaufen. Du kannst deine Dateien noch für begrenzte Zeit herunterladen; danach werden sie gelöscht.",
+      "paymentWaiting": "Schließ die Zahlung auf der Seite ab, die sich in deinem Browser geöffnet hat. Diese Ansicht aktualisiert sich von selbst, sobald die Zahlung abgewickelt ist.",
+      "paymentReopen": "Zahlungsseite erneut öffnen",
+      "paymentCheckNow": "Jetzt prüfen",
+      "paymentStop": "Nicht mehr warten",
+      "paymentSuccess": "Zahlung erhalten. Dein Tarif ist jetzt aktiv.",
+      "paymentRefused": "Deine Karte wurde abgelehnt. Es wurde nichts abgebucht; versuch es mit einer anderen Karte.",
+      "paymentCancelled": "Zahlung abgebrochen. Es wurde nichts abgebucht.",
+      "paymentPending": "Deine Zahlung ist noch nicht bestätigt. Dein Tarif wird aktualisiert, sobald sie bestätigt ist; schau in einer Minute wieder hier vorbei.",
+      "paymentStopped": "Warten beendet. Wenn du die Zahlung abschließt, wird dein Tarif aktualisiert, sobald sie bestätigt ist.",
+      "paymentsUnavailable": "Zahlungen sind vorübergehend nicht möglich. Bitte versuch es in ein paar Minuten erneut.",
+      "endsOn": "Dein Abo endet am {{date}}; danach wechselt dein Konto in den kostenlosen Tarif.",
+      "booked": "Vorgemerkt: Dein Tarif wechselt am {{date}}, bei deiner nächsten Zahlung.",
+      "bookingCancelled": "Der vorgemerkte Tarifwechsel wurde storniert. Du behältst deinen aktuellen Tarif.",
+      "unchanged": "Das ist bereits dein Tarif.",
+      "tooLarge": "Deine Mediathek passt nicht in diesen Tarif. Entferne zuerst {{excess}} und versuch es dann erneut.",
+      "scheduledChange": "Dein Tarif wechselt am {{date}} zu {{plan}}, bei deiner nächsten Zahlung.",
+      "scheduledTooLarge": "Deine Mediathek ist {{excess}} zu groß für diesen Tarif. Entferne {{excess}} vor dem {{date}}, sonst wird der Wechsel storniert.",
+      "keepCurrentPlan": "Aktuellen Tarif behalten",
+      "renewalHold": "Deine Verlängerung ist angehalten: Deine Mediathek passt nicht in den vorgemerkten Tarif. Entferne Dateien und wechsle in den kleineren Tarif, sonst wird am {{date}} dein aktueller Tarif abgerechnet.",
+      "renewalPending": "Die Zahlung für deine Verlängerung wird verarbeitet. Versuch es in ein paar Minuten erneut.",
+      "checkoutInProgress": "Eine von dir gestartete Zahlung wird auf der Zahlungsseite noch verarbeitet. Schließ sie dort ab oder warte ein paar Minuten und versuch es erneut.",
+      "billingUnknown": "Tarifwechsel sind gerade nicht möglich: Die App konnte den Abrechnungsdienst nicht erreichen. Versuch es später erneut."
+    },
+    "storage": {
+      "recompute": "Neu berechnen",
+      "recomputeRunning": "Wird geprüft…",
+      "lastVerified": "Zuletzt geprüft: {{relative}}",
+      "reclaimableHint": "{{bytes}} freigebbar",
+      "confirmTitle": "{{count}} verwaiste Blöcke mit ~{{bytes}} gefunden. Freigeben?",
+      "confirmAccept": "Freigeben",
+      "confirmCancel": "Abbrechen",
+      "resultReclaimed": "{{bytes}} freigegeben",
+      "resultAlreadyInSync": "Bereits synchron.",
+      "resultFailed": "Neuberechnung fehlgeschlagen. Versuch es später erneut.",
+      "relativeJustNow": "gerade eben",
+      "relativeSeconds": "vor {{value}} s",
+      "relativeMinutes": "vor {{value}} min",
+      "relativeHours": "vor {{value}} h",
+      "relativeDays": "vor {{value}} T"
+    },
+    "sponsorships": {
+      "title": "Empfehlungen",
+      "subtitle": "Lade Freunde mit deinem Empfehlungscode ein. Die Vorteile werden später festgelegt.",
+      "loading": "Empfehlungen werden geladen...",
+      "yourCode": "Dein Empfehlungscode",
+      "empty": "Noch keine Empfehlungen.",
+      "summary_one": "{{count}} Empfehlung, {{validated}} bestätigt",
+      "summary_many": "{{count}} Empfehlungen, {{validated}} bestätigt",
+      "summary_other": "{{count}} Empfehlungen, {{validated}} bestätigt",
+      "viewAll": "Empfehlungen anzeigen",
+      "eligibleAt": "Berechtigt ab {{date}}",
+      "validated": "Bestätigt",
+      "pending": "Ausstehend ({{days}} T)"
+    },
+    "billing": {
+      "title": "Abrechnung",
+      "subtitle": "Rechnungen erscheinen hier, sobald die Abrechnung verbunden ist.",
+      "empty": "Noch keine Rechnungen."
+    },
+    "security": {
+      "title": "Passwort ändern",
+      "subtitle": "Wenn du dein Passwort änderst, werden alle aktiven Sitzungen beendet.",
+      "currentPassword": "Aktuelles Passwort",
+      "newPassword": "Neues Passwort",
+      "repeatNewPassword": "Neues Passwort wiederholen",
+      "updating": "Wird aktualisiert...",
+      "change": "Passwort ändern",
+      "changed": "Passwort geändert. Du wurdest abgemeldet.",
+      "setTitle": "Passwort festlegen",
+      "setSubtitle": "Dein Konto hat kein Passwort. Du kannst auch ein Passwort hinzufügen: Ein Code bestätigt, dass du es bist, und alle Sitzungen werden abgemeldet.",
+      "set": "Passwort festlegen",
+      "setDone": "Passwort festgelegt. Du wurdest abgemeldet.",
+      "noPasswordHint": "Dein Konto hat kein Passwort, deshalb bestätigt ein Code, dass du es bist: der Code aus deiner Authenticator-App, wenn sie aktiv ist, sonst einer, den wir dir beim Fortfahren per E-Mail schicken.",
+      "errors": {
+        "passwordLength": "Das neue Passwort muss mindestens 8 Zeichen lang sein.",
+        "passwordMismatch": "Die neuen Passwörter stimmen nicht überein.",
+        "twoFactorRequired": "Gib deinen Bestätigungscode ein, um die Passwortänderung zu bestätigen.",
+        "twoFactorInvalid": "Dieser Bestätigungscode ist ungültig. Versuch es erneut."
+      }
+    },
+    "twoFactor": {
+      "title": "Zwei-Faktor-Authentifizierung",
+      "setup": "2FA einrichten",
+      "activate": "2FA aktivieren",
+      "chooseMethod": "Methode wählen",
+      "chooseMethodSubtitle": "Codes per E-Mail oder eine Authentifizierungs-App.",
+      "methodEmail": "Bestätigungscodes per E-Mail",
+      "methodTotp": "Authentifizierungs-App (TOTP)",
+      "resendCode": "Code erneut senden",
+      "sendCode": "Code senden",
+      "emailHint": "Wir schicken dir einen 6-stelligen Code per E-Mail.",
+      "verificationCode": "Bestätigungscode",
+      "codePlaceholder": "123456",
+      "enabling": "Wird aktiviert...",
+      "enable": "2FA aktivieren",
+      "regenerateQr": "QR-Code neu erstellen",
+      "generateQr": "QR-Code erstellen",
+      "setupExpires": "Die Einrichtung läuft nach 10 Minuten ab.",
+      "qrCode": "QR-Code",
+      "qrAlt": "TOTP-QR-Code",
+      "manualSetup": "Manuelle Einrichtung",
+      "manualSetupHint": "Wenn Scannen nicht klappt, kopiere den geheimen Schlüssel in deine App.",
+      "disable": "2FA deaktivieren",
+      "disabling": "Wird deaktiviert...",
+      "disableHint": "Bestätige mit deinem Passwort und deinem aktuellen Bestätigungscode.",
+      "passwordLabel": "Dein Passwort",
+      "currentCode": "Aktueller Bestätigungscode",
+      "status": {
+        "enabledNeedsSetup": "Aktiviert (Einrichtung nötig)",
+        "enabledTotp": "Aktiviert (Authentifizierungs-App)",
+        "enabledEmail": "Aktiviert (E-Mail-Codes)",
+        "disabled": "Deaktiviert"
+      },
+      "messages": {
+        "codeSent": "Wir haben dir einen Bestätigungscode per E-Mail geschickt.",
+        "totpReady": "Scanne den QR-Code oder kopiere den geheimen Schlüssel in deine Authentifizierungs-App.",
+        "copySuccess": "In die Zwischenablage kopiert.",
+        "copyFail": "Kopieren fehlgeschlagen. Bitte markiere den Text und kopiere ihn manuell."
+      },
+      "errors": {
+        "invalidPassword": "Das Passwort ist falsch.",
+        "twoFactorRequired": "Gib deinen aktuellen Bestätigungscode ein, um fortzufahren.",
+        "twoFactorInvalid": "Dieser Bestätigungscode ist ungültig. Versuche es erneut."
+      }
+    },
+    "deletion": {
+      "subtitle": "Lösche dein Konto und alles, was darin gespeichert ist, endgültig. Das kann nicht rückgängig gemacht werden.",
+      "delete": "Konto löschen",
+      "deleting": "Wird gelöscht...",
+      "failed": "Löschen fehlgeschlagen. Bitte versuch es erneut.",
+      "confirmTitle": "Konto endgültig löschen?",
+      "confirmDescription": "Damit werden dein Konto, deine Mediathek und alle deine Dateien endgültig gelöscht. Das kann nicht rückgängig gemacht werden.",
+      "downloadFirst": "Lade deine Mediathek zuerst auf diesen Computer herunter: Öffne einen Titel und wähle „Offline speichern“. Sobald dein Konto gelöscht ist, lassen sich deine Dateien nicht wiederherstellen.",
+      "downloadWarning": "Lade deine Mediathek zuerst auf diesen Computer herunter. Nach dem Löschen lassen sich deine Dateien nicht wiederherstellen.",
+      "passwordLabel": "Dein Passwort",
+      "confirmLabel": "Gib DELETE zur Bestätigung ein",
+      "confirmPlaceholder": "DELETE",
+      "twoFactorLabel": "Bestätigungscode",
+      "twoFactorPlaceholder": "123456",
+      "twoFactorPrompt": "Gib den Bestätigungscode aus deiner Authentifizierungs-App oder E-Mail ein.",
+      "cancel": "Abbrechen",
+      "errors": {
+        "invalidPassword": "Das Passwort ist falsch.",
+        "twoFactorRequired": "Gib deinen Bestätigungscode ein, um fortzufahren.",
+        "twoFactorInvalid": "Dieser Bestätigungscode ist ungültig. Versuch es erneut.",
+        "confirmRequired": "Gib DELETE zur Bestätigung ein."
+      },
+      "bookedTitle": "Dein Konto am Ende deines bezahlten Jahres löschen?",
+      "bookedDescription": "Dein Konto, deine Mediathek und alle deine Dateien werden am {{date}} gelöscht. Bis dahin kannst du das mit „Mein Konto behalten“ rückgängig machen.",
+      "modeTitle": "Du hast für ein ganzes Jahr bezahlt. Wann sollen wir dein Konto löschen?",
+      "modeEndOfPeriod": "Am Ende deines bezahlten Jahres, am {{date}}. Dein Konto funktioniert bis dahin weiter und wird nicht verlängert. Du kannst das jederzeit vor diesem Datum abbrechen.",
+      "modeNow": "Jetzt. Du verlierst sofort den Zugang, und der Rest des Jahres wird nicht erstattet.",
+      "scheduled": "Dein Konto wird am {{date}} gelöscht. Es funktioniert bis dahin weiter und wird nicht verlängert.",
+      "cancelScheduled": "Mein Konto behalten",
+      "cancelScheduledFailed": "Die Löschung konnte nicht abgebrochen werden. Bitte versuche es erneut."
+    },
+    "access": {
+      "unpaidBanner": "Dein Abo ist abgelaufen. Du kannst deine Dateien noch bis {{date}} herunterladen; danach werden sie gelöscht.",
+      "unpaidBannerNoDate": "Dein Abo ist abgelaufen. Du kannst deine Dateien noch für begrenzte Zeit herunterladen; danach werden sie gelöscht.",
+      "unpaidBannerHint": "Nutze „Offline speichern“ bei einem Titel, um ihn auf diesen Computer herunterzuladen.",
+      "playbackBlocked": "Die Wiedergabe ist pausiert, weil dein Abo abgelaufen ist. Du kannst deine Dateien noch bis {{date}} herunterladen.",
+      "playbackBlockedNoDate": "Die Wiedergabe ist pausiert, weil dein Abo abgelaufen ist. Du kannst deine Dateien noch für begrenzte Zeit herunterladen.",
+      "uploadBlocked": "Uploads sind pausiert, weil dein Abo abgelaufen ist. Du kannst deine Dateien noch bis {{date}} herunterladen; danach werden sie gelöscht.",
+      "uploadBlockedNoDate": "Uploads sind pausiert, weil dein Abo abgelaufen ist. Du kannst deine Dateien noch für begrenzte Zeit herunterladen; danach werden sie gelöscht."
+    },
+    "overQuota": {
+      "graceBanner": "Deine Mediathek überschreitet den Speicher deines Tarifs um {{excess}}. Bis {{date}} funktioniert alles; danach werden Wiedergabe und Uploads pausiert.",
+      "frozenBanner": "Deine Mediathek überschreitet den Speicher deines Tarifs um {{excess}}, daher sind Wiedergabe und Uploads pausiert. Am {{date}} werden die neuesten Titel gelöscht, bis sie wieder hineinpasst.",
+      "deletingBanner": "Deine Mediathek überschreitet den Speicher deines Tarifs, und die neuesten Titel werden gelöscht, bis sie wieder hineinpasst.",
+      "removedBanner_one": "{{count}} Titel wurde entfernt, weil dein Speicher überschritten war.",
+      "removedBanner_other": "{{count}} Titel wurden entfernt, weil dein Speicher überschritten war.",
+      "upgrade": "Tarif upgraden",
+      "seeTitles": "Titel anzeigen",
+      "dismiss": "Schließen",
+      "dialogTitle": "Mediathek über dem Speicherlimit",
+      "options": "Wechsle in einen Tarif, in den deine Mediathek passt, oder lösche Titel aus deiner Mediathek, bis sie passt. Du kannst einen Titel vorher herunterladen, um eine Kopie zu behalten.",
+      "loading": "Titel in deiner Mediathek werden gesucht…",
+      "atRiskTitle": "Wird am {{date}} gelöscht, falls die Mediathek nicht passt",
+      "atRiskTitleNoDate": "Wird gelöscht, falls die Mediathek nicht passt",
+      "atRiskHint": "Neueste zuerst. Mit „Herunterladen“ behältst du eine Kopie auf diesem Computer.",
+      "download": "Herunterladen",
+      "unknownTitle": "Titel nicht mehr in deiner Mediathek",
+      "episodeLabel": "{{title}} — S{{season}}E{{episode}}",
+      "remainingOver": "Selbst danach überschreitet die Mediathek deinen Speicher noch um {{excess}}.",
+      "removedTitle": "Wegen Speicherüberschreitung entfernt",
+      "removedOn": "Entfernt am {{date}}",
+      "playbackBlocked": "Die Wiedergabe ist pausiert, weil deine Mediathek den Speicher deines Tarifs überschreitet. Upgrade oder lösche Titel vor dem {{date}}, sonst werden die neuesten Titel gelöscht."
+    }
+  },
+  "toolAccess": {
+    "unavailable": "Verbundene Tools verwaltest du in der Desktop-App.",
+    "empty": "Keine Tools verbunden. Wenn ein Tool deine Mediathek nutzen will, wirst du zuerst hier gefragt.",
+    "summary_one": "{{count}} Tool verbunden",
+    "summary_many": "{{count}} Tools verbunden",
+    "summary_other": "{{count}} Tools verbunden",
+    "summaryHint": "Diese Tools können über den Hintergrunddienst auf deine Mediathek zugreifen, bis du sie widerrufst.",
+    "viewAll": "Tools ansehen",
+    "mode": {
+      "read": "Nur lesen",
+      "write": "Lesen und ändern"
+    },
+    "list": {
+      "title": "Verbundene Tools",
+      "subtitle": "Tools, denen du den Zugriff auf deine Mediathek erlaubt hast. Wenn du ein Tool widerrufst, endet sein Zugriff sofort.",
+      "grantedAt": "Erlaubt {{when}}",
+      "lastUsed": "Zuletzt genutzt {{when}}",
+      "neverUsed": "Noch nicht genutzt",
+      "never": "nie",
+      "revoke": "Widerrufen",
+      "revoking": "Wird widerrufen...",
+      "revokeHint": "Beendet den Zugriff von {{name}} auf deine Mediathek sofort.",
+      "revokeError": "Das Tool konnte nicht widerrufen werden. Versuch es nochmal."
+    },
+    "prompt": {
+      "title": "„{{name}}“ Zugriff auf deine Mediathek erlauben?",
+      "description": {
+        "read": "Dieses Tool möchte deine Mediathek sehen: Titel, Details, Playlists, Fortschritt und was auf diesem Computer heruntergeladen ist. Es kann nichts ändern.",
+        "write": "Dieses Tool möchte deine Mediathek sehen und Teile davon ändern: Wiedergabefortschritt, Titeldetails (Name, Beschreibung, Jahr, Bewertung) und deine Playlists. Es kann keine Titel löschen und keine Einstellungen oder Schlüssel anfassen."
+      },
+      "selfDeclared": "Der Name stammt vom Tool selbst und ist nicht überprüft. Erlaube nur ein Tool, das du gerade selbst gestartet hast.",
+      "reason": "Angegebener Grund: {{reason}}",
+      "codeHint": "Erlaube nur, wenn das Tool genau diesen Code anzeigt:",
+      "deny": "Ablehnen",
+      "approveRead": "Nur Lesen erlauben",
+      "approve": {
+        "read": "Nur Lesen erlauben",
+        "write": "Lesen und Ändern erlauben"
+      }
+    }
+  },
+  "libraryFormat": {
+    "tooNew": {
+      "title": "Update erforderlich",
+      "body": "Diese Mediathek wurde mit einer neueren Version von Badger Desktop erstellt. Aktualisiere die App, um sie zu öffnen.",
+      "updateNow": "Jetzt aktualisieren",
+      "updating": "Wird aktualisiert …"
+    }
+  },
+  "updater": {
+    "check": "Nach Updates suchen",
+    "available": {
+      "title": "Update verfügbar",
+      "body": "Badger Desktop {{version}} ist bereit zur Installation.",
+      "bodyCurrent": "Eine neue Version von Badger Desktop ist bereit zur Installation.",
+      "download": "Update herunterladen",
+      "downloading": "Wird heruntergeladen… {{percent}} %",
+      "restart": "Jetzt neu starten",
+      "later": "Später",
+      "failed": "Das Update konnte nicht heruntergeladen werden. Versuch es später nochmal."
+    },
+    "ready": {
+      "title": "Update bereit",
+      "body": "Badger Desktop {{version}} wurde heruntergeladen. Es wird beim nächsten Beenden von Badger installiert, oder starte jetzt neu.",
+      "bodyCurrent": "Eine neue Version von Badger Desktop wurde heruntergeladen. Sie wird beim nächsten Beenden von Badger installiert, oder starte jetzt neu."
+    }
+  },
+  "fileIngestion": {
+    "skipData": {
+      "fetching": "Intro & Abspann überspringen: wird abgerufen …",
+      "cached": "Intro & Abspann überspringen: ✓ bereits gespeichert",
+      "all": "Intro & Abspann überspringen: ✓ verfügbar",
+      "partial": "Intro & Abspann überspringen: {{covered}}/{{total}} Folgen verfügbar",
+      "unavailable": "Intro & Abspann überspringen: nicht verfügbar"
+    }
+  },
+  "ingestion": {
+    "quota": {
+      "titleDoesNotFit": "Nicht genug Platz für diesen Import",
+      "titleHighUsage": "Dieser Import füllt deinen Speicher fast ganz",
+      "bodyDoesNotFit": "Dieser Import braucht etwa {{needed}}, und in deinem Konto sind noch {{left}} frei.",
+      "bodyHighUsage": "Nach diesem Import hast du noch etwa {{left}} frei: Dein Speicher ist dann zu {{percent}} % voll.",
+      "offerFits": "{{plan}} bietet genug Platz dafür, für {{price}}.",
+      "offerNext": "{{plan}} gibt dir mehr Platz, für {{price}}.",
+      "noPlanFits": "Selbst der größte Tarif reicht für diesen Import nicht. Wähle weniger Videos aus.",
+      "largestPlan": "Du hast schon den größten Tarif.",
+      "chooseLabel": "Oder wähle jetzt die Videos für den Import aus:",
+      "selectionTotal": "Ausgewählt: {{selected}} · Frei: {{left}}",
+      "importSelected_one": "{{count}} Video importieren",
+      "importSelected_other": "{{count}} Videos importieren",
+      "cancel": "Import abbrechen",
+      "continueCurrentPlan": "Mit meinem aktuellen Tarif weitermachen",
+      "upgrade": "Auf {{plan}} upgraden",
+      "upgrading": "Upgrade läuft…",
+      "upgradeFailed": "Das Upgrade hat nicht geklappt. Es wurde nichts geändert – versuch es gleich nochmal.",
+      "priceMonthly": "{{price}} im Monat",
+      "priceAnnual": "{{total}} im Jahr ({{price}} im Monat), jährlich abgerechnet",
+      "uploadRefused": "Einige Uploads wurden gestoppt, weil dein Speicher voll ist. Nichts ist verloren: Deine Dateien sind noch auf diesem Computer.",
+      "uploadRefusedUpgraded": "Dein Tarif hat jetzt mehr Platz. Starte die gestoppten Uploads erneut."
+    },
+    "errors": {
+      "desktopOnly": "Dateien importieren geht nur in der Desktop-App.",
+      "ffprobeMissing": "FFprobe fehlt in diesem Build.",
+      "probeFailed": "Analyse fehlgeschlagen",
+      "noExistingMatch": "Keine passenden Medien in der Mediathek gefunden",
+      "noMatch": "Kein Treffer gefunden",
+      "searchFailed": "Suche fehlgeschlagen",
+      "searchTimedOut": "Die Titelsuche hat zu lange gedauert",
+      "metadataUnavailable": "Die Titelsuche ist gerade nicht verfügbar",
+      "scanFailed": "Wir konnten die ausgewählten Dateien nicht lesen.",
+      "signInSearchTmdb": "Melde dich an, um zu suchen."
+    },
+    "toasts": {
+      "queuedTitle": "Import gestartet",
+      "queuedSingle": "Zur Verarbeitungswarteschlange hinzugefügt.",
+      "queuedMany": "{{count}} Titel zur Verarbeitungswarteschlange hinzugefügt.",
+      "openLibrary": "Mediathek öffnen",
+      "viewTv": "Serien ansehen",
+      "viewMovies": "Filme ansehen",
+      "pickExistingTitle": "Wähle einen Titel, der schon in deiner Mediathek oder in diesem Import ist.",
+      "signInAddDummy": "Melde dich an, um Dummy-Medien hinzuzufügen.",
+      "missingLibraryKey": "Mediathek-Schlüssel fehlt. Schließ zuerst die Einrichtung ab.",
+      "dummyUnavailable": "Dummy-Import ist nicht verfügbar.",
+      "dummyAdded": "Mit Dummy-Daten hinzugefügt.",
+      "dummyStartFailed": "Dummy-Import konnte nicht gestartet werden.",
+      "audioSampleFailed": "Audiobeispiel konnte nicht erstellt werden.",
+      "setTrackLanguages": "Lege für jede Spur eine Sprache fest oder wähle „Ignorieren und Spuren undefiniert lassen“.",
+      "removedDuplicates": "{{count}} doppelte Datei entfernt.",
+      "addMetadataFailedSingle": "1 Titel konnte nicht hinzugefügt werden: Der Metadatendienst hat nicht geantwortet. Er ist noch hier, versuch es gleich nochmal.",
+      "addMetadataFailedMany": "{{count}} Titel konnten nicht hinzugefügt werden: Der Metadatendienst hat nicht geantwortet. Sie sind noch hier, versuch es gleich nochmal.",
+      "mediaNotInLibrary": "„{{title}}“ ist noch nicht in deiner Mediathek. Füge zuerst eine Videodatei hinzu.",
+      "subtitleUploadsUnavailable": "Untertitel-Uploads sind in dieser Sitzung nicht verfügbar.",
+      "pickEpisodeForSubtitles": "Wähle eine bestimmte Folge für die Untertiteldatei(en) in „{{title}}“.",
+      "subtitleUploadFailed": "Untertitel „{{name}}“ konnte nicht hochgeladen werden.",
+      "skippedDuplicateSingle": "1 Video übersprungen, das schon in gleicher Qualität in deiner Mediathek ist.",
+      "skippedDuplicateMany": "{{count}} Videos übersprungen, die schon in gleicher Qualität in deiner Mediathek sind.",
+      "subtitleTrackAddedSingle": "Untertitelspur hinzugefügt.",
+      "subtitleTrackAddedMany": "{{count}} Untertitelspuren hinzugefügt.",
+      "queueFailed": "Aufträge konnten nicht eingereiht werden. Versuch es nochmal."
+    },
+    "samples": {
+      "noSubtitleSample": "Kein Untertitelbeispiel verfügbar.",
+      "subtitleSampleFailed": "Untertitelbeispiel konnte nicht erstellt werden."
+    },
+    "ui": {
+      "title": "Medien importieren",
+      "dropMore": "Loslassen, um mehr hinzuzufügen",
+      "emptyTitle": "Mediendateien importieren",
+      "emptySubtitle": "Zieh Video- oder Untertiteldateien oder Ordner hierher, um sie zu erkennen und zu deiner Mediathek hinzuzufügen.",
+      "browseFiles": "Dateien wählen",
+      "browseFolders": "Ordner wählen",
+      "needsDecision": "Entscheidung nötig",
+      "needsInput": "Eingabe nötig",
+      "readyToImport": "Bereit zum Import",
+      "unmatched": "Nicht zugeordnet",
+      "searchingHeading": "Suche läuft",
+      "searchingTitle": "Details werden gesucht…",
+      "searchingHint": "Diese Datei wird nachgeschlagen. Das dauert meist nur ein paar Sekunden.",
+      "subtitle": "Untertitel",
+      "subtitles": "Untertitel",
+      "video": "Video",
+      "finish": "Fertig",
+      "next": "Weiter",
+      "subtitleSampleTitle": "Untertitelbeispiel",
+      "preparingSample": "Beispiel wird vorbereitet...",
+      "subtitleSampleAlt": "Untertitelbeispiel",
+      "resolveVideoTitle": "Video-Ergänzungen klären",
+      "noVideoDecisions": "Keine offenen Videoentscheidungen.",
+      "dummyTitle": "Mit Dummy-Daten hinzufügen",
+      "movie": "Film",
+      "tv": "Serie",
+      "searchTmdbPlaceholder": "Filme und Serien suchen...",
+      "search": "Suchen",
+      "searchDummyHint": "Such nach einem Titel, um Dummy-Daten hinzuzufügen.",
+      "trailer": "Trailer",
+      "chooseTrailer": "Trailer auswählen",
+      "loadingTrailers": "Trailer werden geladen...",
+      "noTrailers": "Keine Trailer verfügbar.",
+      "removeFile": "Datei entfernen",
+      "removeGroup": "Gruppe entfernen",
+      "removeEpisodeGroup": "Folgengruppe entfernen",
+      "scanning": "Wird gescannt...",
+      "queued": "In der Warteschlange",
+      "addMore": "Mehr hinzufügen",
+      "tvShow": "Serie",
+      "addingLabel": "Hinzufügen:",
+      "seasonEpisode": "Staffel {{season}}, Folge {{episode}}",
+      "noMatchHint": "Wir konnten diese Datei nicht automatisch erkennen. Nutze unten die manuelle Suche.",
+      "metadataUnavailableHint": "Diese Datei wurde nicht nachgeschlagen: Die App konnte die Titelsuche nicht erreichen. Versuch es später nochmal.",
+      "searchFailedHint": "Die Titelsuche ist fehlgeschlagen. Versuch es nochmal oder nutze unten die manuelle Suche.",
+      "searchTimedOutHint": "Die Titelsuche hat nicht rechtzeitig geantwortet. Versuch es später nochmal oder nutze unten die manuelle Suche.",
+      "subtitleDetails": "Untertiteldetails",
+      "language": "Sprache",
+      "trackName": "Spurname",
+      "subtitleNamePlaceholder": "Untertitelname",
+      "episodesLower": "Folgen",
+      "episode": "Folge",
+      "episodes": "Folgen",
+      "unknownSeason": "Unbekannte Staffel",
+      "seasonLabel": "Staffel {{season}}",
+      "unlabeledEpisode": "Folge ohne Bezeichnung",
+      "tracks": "Spuren",
+      "readingMetadata": "Dateimetadaten werden gelesen...",
+      "audio": "Audio",
+      "noAudioTracksDetected": "Keine Audiospuren erkannt.",
+      "noSubtitlesDetected": "Keine Untertitel erkannt.",
+      "importDetails": "Importdetails",
+      "subtitleOnlyImportHint": "Nur Untertitel importieren. Diese Datei wird den Untertitelspuren des gewählten Mediums bzw. der gewählten Folge zugeordnet.",
+      "inputQualities": "Quellqualitäten",
+      "preferredCodecs": "Bevorzugte Codecs",
+      "unknown": "Unbekannt",
+      "videoSources": "Videoquellen",
+      "autoOutputs": "Automatische Ausgaben",
+      "noneAlreadyAvailable": "Keine (schon vorhanden)",
+      "audioTracks": "Audiospuren",
+      "fileDetails": "Dateidetails",
+      "subtitleFileDetected": "Untertiteldatei erkannt. Ordne sie einem vorhandenen Eintrag in deiner Mediathek zu und prüf dann Sprache und Namen.",
+      "quality": "Qualität",
+      "resolution": "Auflösung",
+      "videoCodec": "Videocodec",
+      "chapters": "Kapitel",
+      "matchWithExistingLibraryMedia": "Vorhandenen Medien in der Mediathek zuordnen",
+      "wrongMatchSearchManually": "Falsch erkannt? Manuell suchen",
+      "movies": "Filme",
+      "tvShows": "Serien",
+      "searchLibraryMoviesPlaceholder": "Filme in der Mediathek suchen...",
+      "searchLibraryTvPlaceholder": "Serien in der Mediathek suchen...",
+      "searchTmdbMoviesPlaceholder": "Filme suchen...",
+      "searchTmdbTvPlaceholder": "Serien suchen...",
+      "clear": "Leeren",
+      "select": "Auswählen",
+      "loadingMore": "Mehr wird geladen...",
+      "moreResults": "Mehr Ergebnisse",
+      "selectFileToReview": "Wähle eine Datei aus, um die Details zu sehen",
+      "readyToImportCount": "{{count}} bereit zum Import",
+      "sameQualityOverlapIgnoredSingle": "{{count}} Video in gleicher Qualität ignoriert",
+      "sameQualityOverlapIgnoredMany": "{{count}} Videos in gleicher Qualität ignoriert",
+      "addWithDummyData": "Mit Dummy-Daten hinzufügen",
+      "resolveVideoChoices": "Videoentscheidungen treffen ({{count}})",
+      "cancel": "Abbrechen",
+      "yourInputNeeded": "Deine Eingabe ist nötig ({{count}})",
+      "adding": "Wird hinzugefügt...",
+      "addToLibrary": "Zur Mediathek hinzufügen",
+      "storageBlocked": "Dein Speicher ist voll. Upgrade deinen Tarif, um mehr Medien hinzuzufügen.",
+      "storageWarning": "Du nutzt über 90 % deines Speichers. Überleg dir ein Tarif-Upgrade.",
+      "resolveBeforeAddingTitle": "Vor dem Hinzufügen klären",
+      "blockerMatchOrRemove": "Ordne {{count}} nicht zugeordnete Datei(en) zu oder entferne sie.",
+      "blockerWaitSearch": "Warte, bis die Suche für {{count}} Datei(en) fertig ist.",
+      "blockerResolveVideo": "Triff {{count}} Entscheidung(en) zur Videoqualität.",
+      "blockerWaitMetadata": "Warte, bis der Metadaten-Scan für {{count}} Datei(en) fertig ist.",
+      "blockerClickInput": "Klick auf „Deine Eingabe ist nötig“ und beantworte {{count}} Punkt(e).",
+      "blockerSkipDataLoading": "Überspring-Daten für {{count}} Folge(n) werden geladen – einen Moment.",
+      "yourInputNeededProgress": "Deine Eingabe ist nötig ({{current}}/{{total}})",
+      "setLanguageAndNameAudioTracks": "Sprache und Namen für Audiospuren festlegen",
+      "setLanguageAndNameSubtitleTracks": "Sprache und Namen für Untertitelspuren festlegen",
+      "mediaItem": "Medium",
+      "mediaItems": "Medien",
+      "track": "Spur",
+      "mediaItemsTracksCounts": "{{mediaCount}} {{mediaLabel}} · {{trackCount}} {{trackLabel}}",
+      "shuffleSample": "Anderes Beispiel",
+      "stopSample": "Beispiel stoppen",
+      "playSample": "Beispiel abspielen",
+      "showSample": "Beispiel anzeigen",
+      "saveCustomName": "Eigenen Namen speichern",
+      "editCustomName": "Eigenen Namen bearbeiten",
+      "customName": "Eigener Name",
+      "useLanguageLabel": "Sprachbezeichnung verwenden",
+      "ignoreAndKeepTracksUndefined": "Ignorieren und Spuren undefiniert lassen",
+      "noInputNeeded": "Keine Eingabe nötig.",
+      "close": "Schließen",
+      "back": "Zurück",
+      "addQualityQuestion": "Qualität {{quality}} hinzufügen?",
+      "estimatedExtraStorage": "Geschätzter zusätzlicher Speicher:",
+      "alreadyAvailable": "Schon vorhanden",
+      "skipQuality": "Qualität überspringen",
+      "addQuality": "Qualität hinzufügen",
+      "videoDecision": "Videoentscheidung",
+      "videoDecisions": "Videoentscheidungen",
+      "videoDecisionsPending": "{{count}} {{decisionLabel}} offen",
+      "needsInputToContinue": "Eingabe nötig, um fortzufahren",
+      "undefined": "Undefiniert",
+      "unknownMedia": "Unbekanntes Medium",
+      "file": "Datei",
+      "files": "Dateien"
+    }
+  },
+  "pairApprove": {
+    "rowTitle": "Weiteres Gerät hinzufügen",
+    "rowDescription": "Melde einen Fernseher, ein Handy oder einen Computer an, indem du den angezeigten Code eintippst.",
+    "open": "Gerät koppeln"
+  },
+  "libraryKeyWords": {
+    "checksum": "Diese Wörter ergeben keinen gültigen Schlüssel. Vergleiche jedes Wort mit den Wörtern, die du gespeichert hast.",
+    "unknownMark": "kein Schlüsselwort",
+    "pairedNoWords": "Dieser Computer hat den Schlüssel von einem anderen Gerät erhalten und hat deshalb seine 12 Wörter nicht. Sie sind auf dem Gerät, auf dem der Schlüssel erstellt wurde, oder in deiner gespeicherten Kopie."
+  }
+}

@@ -1,0 +1,411 @@
+{
+  "nav": {
+    "label": "Rechtliches",
+    "legal-notice": "Impressum",
+    "privacy": "Datenschutzerklärung",
+    "terms": "Allgemeine Nutzungs- und Verkaufsbedingungen",
+    "account-deletion": "Dein Konto löschen",
+    "security": "Sicherheitsrichtlinie",
+    "security-acknowledgments": "Danksagungen Sicherheit"
+  },
+  "updated": "Zuletzt aktualisiert: 18. November 2026. Weichen die Sprachfassungen dieser Seite voneinander ab, ist die französische Fassung maßgeblich.",
+  "credits": {
+    "about": "Über",
+    "heading": "Danksagungen und Daten Dritter",
+    "intro": "Die SpaceFleet-Apps zeigen Informationen der folgenden Dienste. Danke an sie und an alle, die dazu beitragen.",
+    "openSource": { "notice": "{app} ist Open Source, unter der Lizenz GPL-3.0.", "link": "Quellcode ansehen", "flags": "Sprachflaggen: Noto-Emoji-Grafiken von Google, unter der Apache-Lizenz 2.0.", "fonts": "Schriftarten: Inter und Space Grotesk, unter der SIL Open Font License 1.1." },
+    "unavailable": "Die Datennachweise erscheinen hier, sobald die App einmal online war."
+  },
+  "consent": {
+    "heading": "Bevor du bezahlst",
+    "terms": "Ich akzeptiere die [Allgemeinen Nutzungs- und Verkaufsbedingungen](page:terms).",
+    "startNow": "Ich verlange, dass mein Abo sofort beginnt, vor Ablauf der 14-tägigen Widerrufsfrist. Die 14-tägige Geld-zurück-Garantie gilt weiterhin: Innerhalb von 14 Tagen nach dieser Zahlung erhalte ich auf Wunsch den vollen Betrag zurück, auch wenn ich den Dienst bereits genutzt habe.",
+    "required": "Setze beide Häkchen, um einen kostenpflichtigen Tarif zu wählen.",
+    "signup": "Mit dem Erstellen eines Kontos akzeptierst du die [Allgemeinen Nutzungs- und Verkaufsbedingungen](page:terms) und bestätigst, die [Datenschutzerklärung](page:privacy) gelesen zu haben.",
+    "newsBox": "Schick mir Neuigkeiten von SpaceFleet: neue Funktionen und Ankündigungen, ein paar Mal im Jahr. Ich kann das jederzeit abbestellen. SpaceFleet zählt das Öffnen seiner Neuigkeiten-E-Mails und die Klicks darin.",
+    "news": "Neuigkeiten",
+    "newsHint": "Neue Funktionen und Neues von SpaceFleet, ein paar Mal im Jahr. SpaceFleet zählt das Öffnen seiner Neuigkeiten-E-Mails und die Klicks darin."
+  },
+  "pages": {
+    "legal-notice": {
+      "title": "Impressum",
+      "intro": "Dieses Impressum nennt den Herausgeber der Website spacefleet.io und der SpaceFleet-Apps (darunter SpaceBadger und SpaceParrot), wie es Artikel 1-1 des französischen Gesetzes Nr. 2004-575 vom 21. Juni 2004 über das Vertrauen in die digitale Wirtschaft (LCEN) verlangt.",
+      "sections": [
+        {
+          "heading": "Herausgeber",
+          "blocks": [
+            {
+              "items": [
+                "Chris-Alexandre Pena, EI (entrepreneur individuel), französisches Einzelunternehmen, tätig unter dem Handelsnamen SpaceFleet",
+                "[[postal:Anschrift: {{publisherPostalAddress}}]]",
+                "SIREN: 822 965 737",
+                "Umsatzsteuer-Identifikationsnummer: FR67822965737",
+                "E-Mail: contact@spacefleet.io",
+                "Website: https://spacefleet.io"
+              ]
+            }
+          ]
+        },
+        {
+          "heading": "Verantwortlich für den Inhalt",
+          "blocks": ["Chris-Alexandre Pena."]
+        },
+        {
+          "heading": "Hosting",
+          "blocks": [
+            "Die Website, die SpaceFleet-Server und die verschlüsselten Daten, die sie speichern, werden gehostet von:",
+            {
+              "items": [
+                "Hetzner Online GmbH, Industriestr. 25, 91710 Gunzenhausen, Deutschland",
+                "Telefon: +49 9831 505-0",
+                "Website: https://www.hetzner.com"
+              ]
+            },
+            "Die Server stehen in den Rechenzentren von Hetzner in Falkenstein (Deutschland) und Helsinki (Finnland). Der Datenverkehr zu spacefleet.io läuft über das Netz von Cloudflare, Inc., 101 Townsend St, San Francisco, CA 94107, USA, das auch den Domainnamen und dessen DNS bereitstellt."
+          ]
+        },
+        {
+          "heading": "Geistiges Eigentum",
+          "blocks": [
+            "Die Namen SpaceFleet, SpaceBadger und SpaceParrot sowie die Logos, Texte und Bilder dieser Website gehören dem Herausgeber oder werden mit Erlaubnis verwendet. Sie dürfen ohne vorherige schriftliche Zustimmung nicht vervielfältigt werden. Die Inhalte, die du mit SpaceFleet speicherst, bleiben deine."
+          ]
+        },
+        {
+          "heading": "Kontakt",
+          "blocks": [
+            "Für alle Fragen zu dieser Website, auch für die Meldung rechtswidriger Inhalte, schreib an contact@spacefleet.io.",
+            "Siehe auch die [Datenschutzerklärung](page:privacy) und die [Allgemeinen Nutzungs- und Verkaufsbedingungen](page:terms)."
+          ]
+        }
+      ]
+    },
+    "privacy": {
+      "title": "Datenschutzerklärung",
+      "intro": "Diese Erklärung beschreibt, welche personenbezogenen Daten SpaceFleet verarbeitet, wenn du die Website spacefleet.io und die SpaceFleet-Apps (darunter SpaceBadger und SpaceParrot) nutzt, warum, wie lange, und wie du deine Rechte nach der Datenschutz-Grundverordnung (DSGVO) und dem französischen Datenschutzgesetz (loi Informatique et Libertés) ausübst.",
+      "sections": [
+        {
+          "heading": "Verantwortlicher",
+          "blocks": [
+            "Verantwortlicher ist Chris-Alexandre Pena, EI, tätig unter dem Namen SpaceFleet (SIREN 822 965 737[[postal:, {{publisherPostalAddress}}]]). Kontakt für alle Fragen zu deinen Daten: privacy@spacefleet.io."
+          ]
+        },
+        {
+          "heading": "Ende-zu-Ende-Verschlüsselung, und was sie nicht verbirgt",
+          "blocks": [
+            "Jedes Konto hat einen eigenen Verschlüsselungsschlüssel, der auf deinem Gerät erzeugt wird. Er bleibt auf Hardware, die dir gehört (deine Telefone und Computer sowie eine Kodi-Box oder ein Jellyfin-Server, die du gekoppelt hast). Er wird nie lesbar an unsere Server gesendet: Er durchläuft sie nur, wenn du ein neues Gerät koppelst, und ist dabei so versiegelt, dass nur dieses Gerät ihn öffnen kann.",
+            "Deine Mediendateien, ihre Bilder und deine Mediathek werden auf deinem Gerät verschlüsselt, bevor sie hochgeladen werden. Unsere Server speichern und übertragen diese Daten, können sie aber nicht lesen, und wir können sie nicht entschlüsseln. Es gibt keine Schlüsselwiederherstellung: Wenn du deinen Schlüssel verlierst und keine Sicherung davon hast, kann niemand, auch wir nicht, deine Daten wiederherstellen.",
+            "Ende-zu-Ende-Verschlüsselung macht dich für uns nicht unsichtbar. Unsere Server sehen:",
+            {
+              "items": [
+                "die E-Mail-Adresse und die Angaben deines Kontos (Tarif, Status des Abos, Einstellungen);",
+                "wie viele Daten du speicherst, die Größe der verschlüsselten Teile und wann hochgeladen wird;",
+                "die mit deinem Konto verbundenen Geräte (Name und Typ des Geräts, App, letzte Aktivität);",
+                "die Titel, die deine Apps nachschlagen, um Poster, Informationen und Markierungen für Intro und Abspann zu holen (siehe unten);",
+                "technische Verbindungsdaten wie deine IP-Adresse in den Protokollen unserer Server (siehe unten);",
+                "wenn du die Neuigkeiten erhältst, ob und wann du jede Neuigkeiten-E-Mail öffnest und welche ihrer Links du anklickst (siehe unten);",
+                "das Abo, das du wählst, und der Preis, der dir angezeigt wurde, und, wenn du dich auf unserer Website registrierst oder bezahlst, die Kampagne oder Website, von der dein Besuch kam (siehe unten);",
+                "wenn du Fehlerberichte eingeschaltet hast, die Berichte, die deine Apps senden, wenn etwas schiefgeht (siehe unten)."
+              ]
+            }
+          ]
+        },
+        {
+          "heading": "Was wir erheben und warum",
+          "blocks": [
+            {
+              "items": [
+                "Konto: E-Mail-Adresse, Passwort (nur als Hash gespeichert), Anzeigename, Sprache der Oberfläche, Tarif und Status des Abos, Enddatum des bezahlten Zeitraums, Einstellungen der Anmeldung in zwei Schritten, Erstellungsdatum und Datum der letzten Aktivität. Zweck: dein Konto anlegen und betreiben. Rechtsgrundlage: Vertragserfüllung (Art. 6 Abs. 1 lit. b DSGVO).",
+                "Geräte und Sitzungen: Name und Typ des Geräts, die betreffende App, die Version der App und woher sie installiert wurde (zum Beispiel Google Play, F-Droid oder Flatpak), der User-Agent der App oder des Browsers, Datum der Anmeldung und der letzten Aktivität sowie bei Telefonen ein Push-Token. Zweck: dir deine Geräte anzeigen und sie abmelden lassen, deinen Geräten mitteilen, dass sich deine Mediathek geändert hat, und dich warnen, wenn deinem Konto ein neues Gerät hinzugefügt wird. Rechtsgrundlage: Vertrag. Außerdem zählen wir jeden Tag, wie viele Geräte jede App-Version nutzen und wie oft jede App-Version von unseren Servern heruntergeladen wird; diese Zahlen nennen weder eine Person noch ein Gerät. Zweck: wissen, welche Versionen genutzt werden. Rechtsgrundlage: unser berechtigtes Interesse an der Pflege der Apps (Art. 6 Abs. 1 lit. f DSGVO).",
+                "Gespeicherte Daten: deine verschlüsselten Dateien, Bilder und deine Mediathek. Wir sehen ihre Menge, ihre Größe und den Zeitpunkt des Hochladens, nicht ihren Inhalt. Zweck: sie speichern und an deine Geräte übertragen. Rechtsgrundlage: Vertrag.",
+                "Nachschlagen von Titeln: Um Poster und Informationen sowie Markierungen für Intro und Abspann anzuzeigen, sendet SpaceBadger den gesuchten Titel direkt an unseren Metadatendienst; um Cover und Songtexte anzuzeigen, macht SpaceParrot dasselbe mit dem gesuchten Song, Album oder Künstler. Jede Anfrage trägt ein Ticket zur einmaligen Verwendung, das mit blinden Signaturen erstellt wird (Privacy Pass, RFC 9578), und nichts, was dein Konto erkennbar macht; der Metadatendienst weiß daher nicht, wer fragt. Er sieht die IP-Adresse der Verbindung, die er nicht speichert. Unser Hauptserver erhält deine Anfragen nie: Um Missbrauch zu verhindern, führt er nur einen täglichen Zähler der Tickets, die jedes Konto erhält, nicht der Titel. Um diese Informationen zu finden, wird der Titel von unserem eigenen Server gesendet, nie mit deiner IP-Adresse oder irgendeiner Information über dich. Du kannst es selbst prüfen: packages/privacy-pass und packages/metadata-client in unserem öffentlichen Quellcode. Rechtsgrundlage: Vertrag.",
+                { "id": "trailers", "text": "Trailer: Wenn du einen Trailer abspielst, spielt SpaceBadger ihn in der App ab, im eingebetteten Player von YouTube. Bevor du einen Trailer abspielst, wird nichts an YouTube gesendet. Sobald du es tust, erhält YouTube (Google Ireland Limited) deine IP-Adresse, Daten über dein Gerät und deine App oder deinen Browser (etwa User-Agent, Sprache und Bildschirmgröße) und welchen Trailer du ansiehst; YouTube kann Cookies und ähnliche Tracker setzen und vor oder während des Trailers Werbung zeigen. YouTube nutzt diese Daten nach seiner eigenen Datenschutzerklärung: https://policies.google.com/privacy. Unsere Server erhalten nichts von YouTube. In den Einstellungen der App für den Computer kannst du stattdessen eine Invidious-Instanz wählen, die dann dieselben Daten an Stelle von YouTube erhält. Zweck: dir den Trailer eines Titels zu zeigen. Rechtsgrundlage: deine Einwilligung (Art. 6 Abs. 1 lit. a DSGVO), die du jedes Mal gibst, wenn du einen Trailer abspielst; spielst du keinen ab, wird nichts an YouTube gesendet." },
+                "Zahlung (sobald die kostenpflichtigen Tarife starten; bis dahin kostet die Wahl eines Tarifs nichts): Die Zahlung läuft über die Zahlungsseite von Stancer. Wir sehen nie deine Kartennummer. Wir speichern eine Referenz deiner Karte (Marke, letzte vier Ziffern, Ablaufdatum), mit der wir jede Verlängerung abbuchen, dein Abo und deine Zahlungsdaten (Betrag, Währung, Zeitraum, Zahlungsdatum). Stancer erhält den Betrag, eine Beschreibung des Tarifs und die Kennung deines Kontos; deine E-Mail-Adresse erhält es nicht von uns. Rechtsgrundlage: Vertrag sowie unsere gesetzlichen Buchführungspflichten (Art. 6 Abs. 1 lit. c DSGVO).",
+                "Empfehlungen: dein Empfehlungscode, das Konto, das dich empfohlen hat, oder die Konten, die du empfohlen hast, und an welchem Datum. Zweck: die Empfehlungsvorteile gewähren. Rechtsgrundlage: Vertrag.",
+                "E-Mails: Wir senden dir die Nachrichten, die für den Betrieb deines Kontos nötig sind: Bestätigungs- und Anmeldecodes, Zurücksetzen des Passworts, Sicherheitsnachrichten, Warnungen vor einer automatischen Löschung des Kontos und, sobald die kostenpflichtigen Tarife starten, Zahlungsnachrichten, Rechnungen und Gutschriften. Rechtsgrundlage: Vertrag.",
+                "Warteliste und Newsletter (spacefleet.io vor dem Start): E-Mail-Adresse, Name (standardmäßig der Teil der Adresse vor dem @), Sprache, Bestätigung der Adresse und deren Datum, Wunsch zur Teilnahme an der Beta und Gründerstatus. Wenn du einen kostenpflichtigen Tarif abschließt, prüfen wir, ob deine Adresse auf der Warteliste steht, um den Gründerrabatt anzuwenden. Sobald dein Konto angelegt ist, erhältst du Neuigkeiten von SpaceFleet nur, wenn du das möchtest, über das nicht angekreuzte Kästchen bei der Registrierung oder den Schalter in den Einstellungen deines Kontos. Rechtsgrundlage: deine Einwilligung (Art. 6 Abs. 1 lit. a DSGVO), die du jederzeit über den Abmeldelink in jeder E-Mail, in den Einstellungen deines Kontos oder durch eine Nachricht an uns widerrufen kannst.",
+                { "id": "news-tracking", "text": "Öffnungen und Klicks der Neuigkeiten: Jede Neuigkeiten-E-Mail enthält ein winziges unsichtbares Bild und Links, die über unseren Server laufen. Wenn deine Mail-App dieses Bild lädt oder du einen der Links anklickst, speichern wir für dich und diese E-Mail, wann sie zum ersten Mal geöffnet wurde und wie oft, und welche Links du angeklickt hast, wann und wie oft. Diese Einträge nennen nur die E-Mail und den Link; sie sagen nie etwas über deine Bibliothek oder darüber, was du ansiehst oder anhörst. Manche Mail-Apps laden Bilder von selbst, daher kann eine E-Mail als geöffnet zählen, ohne gelesen worden zu sein; blockierst du Bilder in deiner Mail-App, werden Öffnungen nicht gezählt. Zweck: wissen, welche Neuigkeiten gelesen werden und welche Themen die Abonnenten interessieren. Rechtsgrundlage: deine Einwilligung (Art. 6 Abs. 1 lit. a DSGVO), gegeben mit dem Kästchen oder Schalter „Neuigkeiten“, der sagt, dass Öffnungen und Klicks gezählt werden; mit der Abmeldung widerrufst du sie und das Zählen endet." },
+                { "id": "business-records", "text": "Geschäftsdaten: wenn du dein Konto erstellst, ein Abo wählst oder änderst oder eine Zahlung beginnst, abschließt, abbrichst oder sie fehlschlägt, erfassen wir dieses Ereignis mit dem Abo, dem Abrechnungszeitraum, dem dir angezeigten Preis und der Version unserer Preisliste, aus der er stammt, einem etwaigen Rabatt, ob du Gründer bist, und welche SpaceFleet-App in welcher Version du benutzt hast. Wenn du dein Konto auf unserer Website erstellst oder dort bezahlst, erfassen wir auch, woher dein Besuch kam, sofern die Seite, auf der du angekommen bist, es angab: die Kampagne aus dem Link, dem du gefolgt bist (seine utm_-Parameter; Links aus den Neuigkeiten zu unserer Website tragen den Namen dieser Neuigkeiten), und den Namen der Website, die dich geschickt hat, nie die vollständige Adresse ihrer Seite. Zweck: verstehen, welche Preise, Angebote, Jahreszeiten und Kanäle Abonnenten bringen und halten, um SpaceFleet zu führen und seine Preise festzulegen. Diese Daten sagen nie etwas über deine Bibliothek oder darüber, was du ansiehst oder anhörst, nur wir lesen sie, und kein externer Analysedienst erhält sie. Rechtsgrundlage: unser berechtigtes Interesse, unser Geschäft zu führen und unsere Preise festzulegen (Art. 6 Abs. 1 lit. f DSGVO); du kannst widersprechen, indem du uns schreibst." },
+                "Technische Protokolle: Wenn du unsere Websites besuchst oder deine Apps unsere Server kontaktieren, zeichnen diese technische Daten auf (IP-Adresse, Datum und Uhrzeit, angefragte Adresse, User-Agent des Browsers oder der App, Antwortcode). Zweck: Sicherheit, Verhinderung von Missbrauch und Fehlersuche. Rechtsgrundlage: unser berechtigtes Interesse an einem sicheren Dienst (Art. 6 Abs. 1 lit. f DSGVO).",
+                { "id": "error-reports", "text": "Fehlerberichte (ausgeschaltet, solange du sie nicht einschaltest, in den Einstellungen der App oder bei ihrer Einrichtung): Wenn SpaceBadger auf einen Fehler stößt, kann es einen Bericht an einen Server zur Fehlerverfolgung (Bugsink) senden, den wir selbst betreiben. Ein Bericht enthält die Art des Fehlers und seine Meldung, bereinigt um persönliche Angaben, den Stacktrace (die Stelle im Code der App, an der der Fehler aufgetreten ist), die Version der App sowie Name und Version des Betriebssystems. Er enthält nie einen Dateinamen, einen Titel, einen Dateipfad oder deine Kontodaten. Zweck: Fehler finden und beheben. Rechtsgrundlage: deine Einwilligung (Art. 6 Abs. 1 lit. a DSGVO), die du jederzeit widerrufen kannst, indem du die Fehlerberichte in den Einstellungen der App ausschaltest." }
+              ]
+            }
+          ]
+        },
+        {
+          "heading": "Was wir nicht tun",
+          "blocks": [
+            "SpaceFleet finanziert sich ausschließlich über Abos. Wir zeigen keine Werbung, verkaufen oder vermieten keine Daten, erstellen keine Empfehlungen oder Profile, und unsere Websites und Apps enthalten keine Werkzeuge Dritter zur Reichweitenmessung, für Werbung oder für Absturzberichte. Die einzige Ausnahme ist ein Trailer, den du abspielst: Er läuft im Player von YouTube, der Werbung von YouTube zeigen und Tracker von YouTube setzen kann (siehe oben). Fehlerberichte gehen, wenn du sie einschaltest, nur an unseren eigenen Server. Das einzige Tracking in unseren E-Mails ist das oben beschriebene Zählen der Öffnungen und Klicks der Neuigkeiten-E-Mails, auf unserem eigenen Server; E-Mails zu deinem Konto enthalten keines."
+          ]
+        },
+        {
+          "heading": "Cookies und Browserspeicher",
+          "blocks": [
+            "Unsere Websites setzen keine Cookies. Sie speichern im lokalen Speicher deines Browsers nur deine Sprachwahl und, auf der Website zur Kontoverwaltung, deine Anmeldesitzung. Beides ist für den Betrieb der Website unbedingt erforderlich und bedarf daher keiner Einwilligung. In den SpaceBadger-Apps kann der Player von YouTube Cookies und ähnliche Daten auf deinem Gerät speichern, wenn du einen Trailer abspielst (siehe oben); vorher wird nichts von YouTube geladen. Um zu wissen, woher ein Besuch kam (siehe Geschäftsdaten oben), behält die Website die Kampagne und die verweisende Website nur im Speicher der geöffneten Seite: auf deinem Gerät wird nichts gespeichert, es wird vergessen, wenn du die Seite schließt oder neu lädst, und es wird uns nur gesendet, wenn du dein Konto erstellst oder bezahlst."
+          ]
+        },
+        {
+          "heading": "Empfänger deiner Daten",
+          "blocks": [
+            "Deine Daten werden vom Herausgeber und von diesen Dienstleistern verarbeitet, jeweils nur für den angegebenen Zweck:",
+            {
+              "items": [
+                "Hetzner Online GmbH (Deutschland): Hosting unserer Server und der verschlüsselten Daten, in Rechenzentren in Falkenstein (Deutschland) und Helsinki (Finnland).",
+                "Cloudflare, Inc. (USA): Domainname und DNS von spacefleet.io; sein Netz leitet die Fehlerberichte weiter, die deine Apps an reports.spacefleet.io senden, sowie die Weiterleitungen von spacebadger.io und spaceparrot.io zu spacefleet.io, und verarbeitet für diese Anfragen die IP-Adresse und die Anfragedaten. Die Website und die übrigen Verbindungen der Apps erreichen unsere Server direkt.",
+                "Stancer (Iliad 78 SAS, Paris, Frankreich): Abwicklung der Kartenzahlungen und Speicherung deiner Karte, sobald die kostenpflichtigen Tarife starten.",
+                "Amazon Web Services (Amazon SES), aus seiner Region Paris (Frankreich): Versand der Konto-E-Mails und des Newsletters. Es erhält die E-Mail-Adresse des Empfängers und den Inhalt jeder E-Mail.",
+                "Google (Firebase Cloud Messaging) und Apple (Apple Push Notification service): Zustellung von Benachrichtigungen an die mobilen Apps. Sie erhalten das Push-Token des Geräts, die Kennung deines Kontos und die Benachrichtigung selbst: ein kurzes Signal, dass sich deine Mediathek geändert hat, oder einen Sicherheitshinweis mit Name und Typ eines neu hinzugefügten Geräts. Nie den Inhalt deiner Mediathek.",
+                "Google Ireland Limited (YouTube): spielt die Trailer ab, die du abspielst, in seinem eingebetteten Player in der App. Nur wenn du einen Trailer abspielst, erhält es die oben unter „Trailer“ beschriebenen Daten und verarbeitet sie nach seiner eigenen Datenschutzerklärung (https://policies.google.com/privacy). Eine Invidious-Instanz, die du in den Einstellungen der App für den Computer wählst, erhält an seiner Stelle dieselben Daten."
+              ]
+            },
+            "Die Serverprotokolle und die Fehlerberichte werden auf einem Server gesammelt, der vom Herausgeber betrieben und von Hetzner in Falkenstein (Deutschland) gehostet wird. Die Fehlerberichte gelangen über das Netz von Cloudflare unter der Adresse reports.spacefleet.io dorthin und werden an niemanden sonst weitergegeben. Wir geben Daten an Behörden nur weiter, wenn das Gesetz es verlangt."
+          ]
+        },
+        {
+          "heading": "Übermittlungen außerhalb der Europäischen Union",
+          "blocks": [
+            "Die Daten deines Kontos und deine verschlüsselten Dateien werden in der Europäischen Union gespeichert. Einige der oben genannten Dienstleister (Cloudflare, Amazon Web Services, Google, Apple) gehören zu US-amerikanischen Konzernen und können Daten in den USA verarbeiten; diese Übermittlungen sind durch die Standardvertragsklauseln der Europäischen Kommission oder durch ihren Angemessenheitsbeschluss für zertifizierte US-Unternehmen abgesichert. Du kannst bei uns eine Kopie dieser Garantien anfordern."
+          ]
+        },
+        {
+          "heading": "Speicherdauer",
+          "blocks": [
+            {
+              "items": [
+                "Kontodaten und gespeicherte Dateien: solange das Konto besteht. Sie werden gelöscht, wenn du dein Konto löschst (siehe [Dein Konto löschen](page:account-deletion)), 60 Tage nach einer unbezahlt gebliebenen Verlängerung oder wenn ein kostenloses Konto 60 Tage lang nicht genutzt wurde. Warn-E-Mails werden 7 Tage und 1 Tag vor jeder automatischen Löschung gesendet.",
+                "Kopien der Datenbank, die vor jeder Aktualisierung der Server erstellt werden: gelöscht, sobald sie älter als 30 Tage sind, außer der neuesten Kopie, die aufbewahrt wird, bis die nächste Aktualisierung sie ersetzt. Die gespeicherten Dateien werden nicht in Sicherungen kopiert.",
+                "Rechnungen und Zahlungsdaten: 10 Jahre nach dem Ende des Geschäftsjahres, wie es das französische Buchführungsrecht verlangt (Artikel L123-22 des französischen Code de commerce). Sie werden nach der Löschung des Kontos aufbewahrt.",
+                "Serverprotokolle: 30 Tage.",
+                "Daten der Warteliste und des Newsletters: bis du dich abmeldest oder ihre Löschung verlangst. Am Tag, an dem SpaceFleet für die Öffentlichkeit startet, erhalten alle Personen auf der Warteliste eine letzte E-Mail; einen Monat später wird jede Eintragung gelöscht, deren Adresse nicht zu einem SpaceFleet-Konto geworden ist. Von Gründern werden danach nur die E-Mail-Adresse und der Gründerstatus aufbewahrt, solange der Gründerrabatt gelten kann, es sei denn, du verlangst die Löschung. Sobald du ein Konto hast, gelten die oben genannten Speicherfristen des Kontos.",
+                "Öffnungen und Klicks der Neuigkeiten: solange du angemeldet bleibst. Sie werden gelöscht, wenn du dich abmeldest, die Neuigkeiten in den Einstellungen deines Kontos ausschaltest oder dein Konto löschst.",
+                "Geschäftsdaten: solange SpaceFleet besteht, damit Zahlen über die Jahre verglichen werden können. Wenn du dein Konto löschst, werden sie davon getrennt; die Zahlungsdaten, die wir aufbewahren müssen, bleiben wie oben beschrieben.",
+                "Fehlerberichte: 90 Tage nach ihrem Eingang, dann gelöscht."
+              ]
+            }
+          ]
+        },
+        {
+          "heading": "Deine Rechte",
+          "blocks": [
+            "Du hast das Recht auf Auskunft über deine Daten, auf Berichtigung, auf Löschung, auf Einschränkung der Verarbeitung und auf Widerspruch gegen sie, das Recht auf Datenübertragbarkeit sowie das Recht, deine Einwilligung jederzeit zu widerrufen. Das französische Recht erlaubt dir außerdem, Verfügungen darüber zu treffen, was nach deinem Tod mit deinen Daten geschieht.",
+            "Du kannst deine Dateien selbst herunterladen und dein Konto selbst in den Apps löschen. Für alle anderen Anliegen schreib von der E-Mail-Adresse deines Kontos an privacy@spacefleet.io. Wir antworten innerhalb eines Monats.",
+            "Wenn du der Meinung bist, dass deine Rechte nicht gewahrt werden, kannst du eine Beschwerde bei der französischen Datenschutzaufsichtsbehörde CNIL einreichen: 3 place de Fontenoy, TSA 80715, 75334 Paris Cedex 07, France, https://www.cnil.fr."
+          ]
+        },
+        {
+          "heading": "Sicherheit",
+          "blocks": [
+            "Zusätzlich zur Ende-zu-Ende-Verschlüsselung werden Passwörter nur als Hash gespeichert, ein zweiter Anmeldeschritt (Code per E-Mail oder Authenticator-App) steht zur Verfügung, und der Administrationszugang zu unseren Servern ist auf ein privates Netz beschränkt."
+          ]
+        },
+        {
+          "heading": "Alter",
+          "blocks": [
+            "Inhaber eines SpaceFleet-Kontos müssen mindestens 18 Jahre alt sein oder das Volljährigkeitsalter ihres Wohnsitzlandes erreicht haben, wenn dieses höher ist. Minderjährige dürfen SpaceFleet nur unter Aufsicht der erwachsenen Person nutzen, die das Konto innehat. Wir fragen bei der Registrierung nicht nach deinem Alter."
+          ]
+        },
+        {
+          "heading": "Änderungen dieser Erklärung",
+          "blocks": [
+            "Wir aktualisieren diese Erklärung, wenn sich unsere Verarbeitungen ändern, und informieren Kontoinhaber per E-Mail über jede wesentliche Änderung. Das Datum oben auf der Seite zeigt die neueste Fassung an."
+          ]
+        }
+      ]
+    },
+    "terms": {
+      "title": "Allgemeine Nutzungs- und Verkaufsbedingungen",
+      "intro": "Diese Bedingungen regeln die Nutzung eines SpaceFleet-Kontos und der SpaceFleet-Apps (darunter SpaceBadger und SpaceParrot) sowie den Verkauf von SpaceFleet-Abos. Sie werden zwischen dir und Chris-Alexandre Pena, EI, tätig unter dem Namen SpaceFleet (siehe [Impressum](page:legal-notice)), geschlossen. Mit dem Anlegen eines Kontos akzeptierst du sie.",
+      "sections": [
+        {
+          "heading": "1. Der Dienst",
+          "blocks": [
+            "SpaceFleet stellt dir ein Konto mit Speicherplatz bereit, das du über die SpaceFleet-Apps nutzt, um deine eigenen Medien aufzubewahren, zu synchronisieren und abzuspielen. Ein Konto und ein Tarif gelten für alle SpaceFleet-Apps.",
+            "Deine Dateien, ihre Bilder und deine Mediathek werden vor dem Senden auf deinen Geräten verschlüsselt, mit einem Schlüssel, den nur deine Geräte besitzen. Wir können deine Daten nicht lesen und deinen Schlüssel nicht wiederherstellen: Wenn du deinen Schlüssel und alle Geräte verlierst, die ihn besitzen, sind deine Daten endgültig verloren. Bewahre die Sicherung deines Schlüssels auf, die dir die Apps anbieten."
+          ]
+        },
+        {
+          "heading": "2. Dein Konto",
+          "blocks": [
+            "Du musst mindestens 18 Jahre alt sein oder das Volljährigkeitsalter deines Wohnsitzlandes erreicht haben, wenn dieses höher ist, um ein Konto anzulegen; Minderjährige dürfen SpaceFleet nur unter Aufsicht der erwachsenen Person nutzen, die das Konto innehat. Du musst eine gültige E-Mail-Adresse angeben, die du mit dem Code bestätigst, den wir dir senden. Du bist für die Sicherheit deines Passworts, deines zweiten Anmeldeschritts und deines Verschlüsselungsschlüssels verantwortlich sowie für alles, was in deinem Konto geschieht. Benachrichtige uns sofort unter contact@spacefleet.io, wenn du glaubst, dass eine andere Person es nutzt."
+          ]
+        },
+        {
+          "heading": "3. Tarife und Preise",
+          "blocks": [
+            "Die Tarife sind Kostenlos (20 GB), Starter (100 GB), Standard (400 GB) und Scale (1000 GB); Scale kann zusätzliche Blöcke von 500 GB erhalten. Der Tarif Kostenlos hat kein Enddatum.",
+            "Kostenpflichtige Tarife werden für einen Monat oder ein Jahr gekauft. Die Preise sind in Euro angegeben, inklusive aller Steuern und in allen Ländern gleich, auf dem Tarifbildschirm und auf der Zahlungsseite vor deiner Bestätigung. Nach jeder Zahlung senden wir dir eine Rechnung per E-Mail und nach jeder Erstattung eine Gutschrift; du kannst sie auch alle in deinem Kontobereich auf der Website herunterladen.",
+            "Die Zahlung erfolgt per Karte über Stancer, auf der Website oder in der App für den Computer. Die Apps für Telefon und Fernseher nehmen keine Zahlungen an. Die kostenpflichtigen Tarife sind noch nicht gestartet: Bis dahin kostet die Wahl eines Tarifs nichts."
+          ]
+        },
+        {
+          "heading": "4. Verlängerung und Kündigung",
+          "blocks": [
+            "Ein kostenpflichtiger Tarif verlängert sich am Ende jedes Zeitraums automatisch um dieselbe Dauer, sofern du die Verlängerung nicht ausschaltest. Du kannst sie jederzeit in deinem Konto auf der Website oder in der App für den Computer ausschalten; der Tarif bleibt dann bis zum Ende des bereits bezahlten Zeitraums aktiv, danach wechselt das Konto in den Tarif Kostenlos.",
+            "Ein Jahrestarif kann vor dem Ende seines Jahres weder beendet noch auf den Tarif Kostenlos zurückgesetzt werden, außer im Rahmen der 14-Tage-Garantie unten. Im Laufe des Jahres kannst du sofort in einen höheren Tarif wechseln: Du zahlst die Differenz für die verbleibenden Monate, und das Jahr endet weiterhin an seinem ursprünglichen Verlängerungsdatum. Ein Wechsel in einen niedrigeren Tarif kann jederzeit beantragt werden, wird aber erst bei der jährlichen Verlängerung wirksam: Bis dahin behältst du den höheren Tarif, ohne Erstattung. Wenn du am Tag der Verlängerung noch mehr speicherst, als der gewünschte Tarif erlaubt, wird der Wechsel storniert und der Tarif bleibt unverändert, die Zahlung der Verlängerung wird aber erst 14 Tage später abgebucht, damit du Zeit hast, Platz freizugeben und in den niedrigeren Tarif zu wechseln; wir benachrichtigen dich per E-Mail und in den Apps 14, 7, 3 und 1 Tage vor der Verlängerung. Den Wechsel von jährlicher zu monatlicher Abrechnung beantragst du auf dieselbe Weise; der Wechsel von monatlicher zu jährlicher Abrechnung wird mit der nächsten Monatszahlung wirksam. Du kannst nicht in einen kleineren Tarif wechseln, solange du mehr speicherst, als er erlaubt, und nicht in die Tarife Kostenlos oder Starter, solange du ein Video mit einer höheren Auflösung als 1080p speicherst.",
+            "Bei einem Jahrestarif teilen wir dir frühestens drei Monate und spätestens einen Monat vor dem Verlängerungsdatum per E-Mail mit, dass der Tarif verlängert wird und dass du die Verlängerung beenden kannst, wie es Artikel L215-1 des französischen Code de la consommation (Verbrauchergesetzbuch) verlangt."
+          ]
+        },
+        {
+          "heading": "5. Widerrufsrecht und 14-tägige Geld-zurück-Garantie",
+          "blocks": [
+            "Kostenpflichtige Tarife, monatlich oder jährlich, haben eine 14-tägige Geld-zurück-Garantie, die dein gesetzliches Widerrufsrecht abdeckt (Artikel L221-18 des französischen Code de la consommation). Sie gilt für folgende Zahlungen: das erste Abo, jeden Wechsel in einen höheren Tarif und jede jährliche Verlängerung. Innerhalb von 14 Tagen nach dieser Zahlung kannst du ohne Angabe von Gründen die Erstattung verlangen und erhältst den vollen Betrag zurück, auch wenn du den Dienst bereits genutzt hast. Zwei Zahlungen sind nicht abgedeckt: die erste Zahlung nach einem Wechsel in einen kleineren Tarif und eine jährliche Verlängerung, deren Zahlung bereits um 14 Tage verschoben wurde, weil der gewünschte Wechsel in einen niedrigeren Tarif nicht möglich war. Monatliche Verlängerungen sind nicht abgedeckt.",
+            "Beim Abschluss eines Abos verlangst du ausdrücklich, dass der Dienst sofort beginnt, vor Ablauf der Widerrufsfrist (Artikel L221-25 des französischen Code de la consommation), indem du vor der Zahlung das dafür vorgesehene Kästchen ankreuzt, zusammen mit dem Kästchen, mit dem du diese Bedingungen akzeptierst. Dieses Verlangen schmälert die Garantie nicht: Ein Widerruf innerhalb der 14 Tage wird vollständig erstattet, ohne Abzug für die bereits genutzten Tage. Wir speichern die Version dieser Bedingungen, die du akzeptiert hast, und das Datum der Annahme.",
+            "Um den Vertrag zu widerrufen, sende uns eine eindeutige Erklärung deines Entschlusses an contact@spacefleet.io[[postal: oder per Post an {{publisherPostalAddress}}]], zum Beispiel mit dem Muster-Widerrufsformular unten. Wenn du dein Konto löschst, erstatten wir dir den Betrag sofort über dasselbe Zahlungsmittel. Wenn du in den Tarif Kostenlos zurückkehrst, erstatten wir dir den Betrag über dasselbe Zahlungsmittel, sobald deine Mediathek in den Tarif Kostenlos passt, spätestens aber 14 Tage nach deinem Antrag: Bis dahin kannst du mit dem Konto weiterhin abspielen, aber nichts mehr hochladen, und du musst deine Mediathek auf 20 GB verkleinern und jedes Video mit einer höheren Auflösung als 1080p löschen; was am 14. Tag noch darüber hinausgeht, wird gelöscht, beginnend mit den zuletzt hochgeladenen Dateien. Wenn du in einen anderen kostenpflichtigen Tarif wechselst, musst du zuerst innerhalb dieser 14 Tage genug Platz freigeben; die Erstattung wird dann mit deinen nächsten Zahlungen verrechnet.",
+            "Muster-Widerrufsformular (Wenn Sie den Vertrag widerrufen wollen, dann füllen Sie bitte dieses Formular aus und senden Sie es zurück.):",
+            {
+              "items": [
+                "An Chris-Alexandre Pena, EI (SpaceFleet), [[postal:{{publisherPostalAddress}}, ]]contact@spacefleet.io",
+                "Hiermit widerrufe(n) ich/wir (*) den von mir/uns (*) abgeschlossenen Vertrag über die Erbringung der folgenden Dienstleistung (*): SpaceFleet-Abo",
+                "Bestellt am (*):",
+                "Name des/der Verbraucher(s):",
+                "Anschrift des/der Verbraucher(s):",
+                "E-Mail-Adresse des SpaceFleet-Kontos:",
+                "Unterschrift des/der Verbraucher(s) (nur bei Mitteilung auf Papier):",
+                "Datum:",
+                "(*) Unzutreffendes streichen."
+              ]
+            }
+          ]
+        },
+        {
+          "heading": "6. Unbezahltes Abo",
+          "blocks": [
+            "Wenn eine Verlängerung nicht bezahlt wird, weil deine Karte abgelehnt wird, funktioniert das Konto weiter, und wir belasten dieselbe Karte erneut 1, 3 und 7 Tage nach dem Verlängerungsdatum und senden dir jedes Mal eine E-Mail mit einem Link, um eine neue Karte zu hinterlegen. Ist die Zahlung dann immer noch nicht erfolgt, wird das Konto unbezahlt: Abspielen und Hochladen werden gesperrt, du kannst deine Dateien aber weiterhin herunterladen. 60 Tage nach dem Ende des letzten bezahlten Zeitraums werden das Konto und alle seine Daten endgültig gelöscht. Wir schreiben dir 7 Tage und 1 Tag vorher. Ein kostenloses Konto, das 60 Tage lang nicht genutzt wurde, wird auf dieselbe Weise gelöscht, nach denselben Warnungen."
+          ]
+        },
+        {
+          "heading": "7. Löschung des Kontos",
+          "blocks": [
+            "Du kannst dein Konto jederzeit löschen. Die Löschung beginnt sofort, ist unumkehrbar und beendet jedes kostenpflichtige Abo ohne weitere Abbuchung. Siehe [Dein Konto löschen](page:account-deletion)."
+          ]
+        },
+        {
+          "heading": "8. Deine Inhalte",
+          "blocks": [
+            "Du behältst alle Rechte an den Inhalten, die du speicherst. Du darfst nur Inhalte speichern, die du aufbewahren und nutzen darfst, und du darfst SpaceFleet nicht für rechtswidrige Zwecke nutzen. Da deine Inhalte verschlüsselt sind, sehen und moderieren wir sie nicht; du bist für sie verantwortlich.",
+            "Wenn wir eine gerichtliche Entscheidung oder eine gültige Meldung offensichtlich rechtswidriger Inhalte zu deinem Konto erhalten oder wenn du schwerwiegend gegen diese Bedingungen verstößt, können wir das Konto sperren oder schließen, nachdem wir dich darüber informiert haben, sofern das Gesetz dies nicht verbietet."
+          ]
+        },
+        {
+          "heading": "9. Verfügbarkeit und Haftung",
+          "blocks": [
+            "Wir tun unser Bestes, damit SpaceFleet verfügbar bleibt und deine Daten sicher sind. Gespeicherte Dateien liegen auf redundanten Festplatten, werden aber nicht in separate Sicherungen kopiert: Bewahre deine Originaldateien auf. Wir können den Dienst für Wartungsarbeiten unterbrechen, nach Möglichkeit nachdem wir dich vorgewarnt haben.",
+            "Du genießt die gesetzliche Gewährleistung der Vertragsmäßigkeit digitaler Dienstleistungen (Artikel L224-25-1 ff. des französischen Code de la consommation). Darüber hinaus ist unsere Haftung auf unmittelbare Schäden beschränkt, die durch unser Verschulden verursacht wurden; nichts in diesen Bedingungen schränkt die Rechte ein, die dir das Gesetz als Verbraucher gewährt."
+          ]
+        },
+        {
+          "heading": "10. Änderung der Bedingungen",
+          "blocks": [
+            "Wir können diese Bedingungen ändern. Wir informieren Kontoinhaber darüber per E-Mail mindestens 30 Tage, bevor eine Änderung in Kraft tritt. Wenn du nicht einverstanden bist, kannst du vor diesem Datum die Verlängerung ausschalten oder dein Konto löschen."
+          ]
+        },
+        {
+          "heading": "11. Anwendbares Recht und Streitigkeiten",
+          "blocks": [
+            "Diese Bedingungen unterliegen französischem Recht. Wenn du in einem anderen Land der Europäischen Union wohnst, behältst du auch den Schutz der zwingenden Vorschriften deines Landes.",
+            "Wende dich bei einem Problem zuerst an contact@spacefleet.io. Kommt keine Einigung zustande, kannst du die Streitigkeit kostenlos unserer Verbraucherschlichtungsstelle vorlegen (Artikel L611-1 ff. des französischen Code de la consommation), innerhalb eines Jahres nach deiner schriftlichen Beschwerde bei uns: CM2C (Centre de la Médiation de la Consommation de Conciliateurs de Justice), 49 rue de Ponthieu, 75008 Paris, France, https://www.cm2c.net, wo du deinen Antrag online einreichen kannst. Du kannst dich auch an das zuständige Gericht wenden."
+          ]
+        }
+      ]
+    },
+    "account-deletion": {
+      "title": "Dein SpaceFleet-Konto löschen",
+      "intro": "Ein SpaceFleet-Konto gilt für alle SpaceFleet-Apps, darunter SpaceBadger und SpaceParrot. Wenn du es löschst, ist es für alle gelöscht. Diese Seite erklärt, wie das geht, was gelöscht wird und wann.",
+      "sections": [
+        {
+          "heading": "Bevor du beginnst",
+          "blocks": [
+            "Die Löschung ist unumkehrbar, und wir können danach nichts wiederherstellen. Lade zuerst die Dateien, die du behalten möchtest, auf deinen Computer herunter."
+          ]
+        },
+        {
+          "heading": "In einer App löschen",
+          "blocks": [
+            {
+              "items": [
+                "SpaceBadger auf Telefon oder Tablet (Android, iOS): {{accountDeletionPath.mobile}}.",
+                "SpaceBadger auf dem Computer (Windows, macOS, Linux): {{accountDeletionPath.desktop}}.",
+                "Auf der Website (Kontobereich, verfügbar ab dem öffentlichen Start): Melde dich an und wähle {{accountDeletionPath.web}}."
+              ]
+            },
+            "Du bestätigst mit deinem Passwort, durch Eingabe von DELETE und mit einem Bestätigungscode (aus deiner Authenticator-App oder per E-Mail gesendet)."
+          ]
+        },
+        {
+          "heading": "Wenn du dich nicht anmelden kannst",
+          "blocks": [
+            "Schreib von der E-Mail-Adresse des Kontos an privacy@spacefleet.io, mit dem Betreff „Mein Konto löschen“. Wir antworten an diese Adresse, um den Antrag zu bestätigen, und löschen das Konto dann innerhalb von 7 Tagen. Über dieselbe Adresse kannst du auch deine Eintragung auf der Warteliste oder für den Newsletter löschen lassen."
+          ]
+        },
+        {
+          "heading": "Was gelöscht wird, und wann",
+          "blocks": [
+            {
+              "items": [
+                "Sofort: Die Löschung beginnt, sobald du bestätigst. Es gibt keine Karenzzeit, und sie kann nicht abgebrochen werden. Jedes kostenpflichtige Abo wird ohne weitere Abbuchung beendet, und alle Geräte werden abgemeldet. Die mobile App löscht auch ihre Downloads und den Verschlüsselungsschlüssel, den sie gespeichert hatte.",
+                "Danach: Deine verschlüsselten Dateien, Bilder und deine Mediathek werden von jedem Speicherserver gelöscht. Sobald jeder Server dies bestätigt hat, wird dein Kontodatensatz gelöscht: E-Mail-Adresse, Passwort, Einstellungen, Geräte, Push-Tokens und Abfragezähler.",
+                "Später: Die vor Aktualisierungen der Server erstellten Kopien der Datenbank, die deinen Kontodatensatz noch enthalten können, werden gelöscht, sobald sie älter als 30 Tage sind; die neueste Kopie wird aufbewahrt, bis die nächste Aktualisierung sie ersetzt."
+              ]
+            }
+          ]
+        },
+        {
+          "heading": "Was aufbewahrt wird",
+          "blocks": [
+            {
+              "items": [
+                "Rechnungen und Zahlungsdaten (Beträge, Daten, Referenz der Zahlung bei Stancer): 10 Jahre nach dem Ende des Geschäftsjahres, wie es das französische Buchführungsrecht verlangt.",
+                "Serverprotokolle (IP-Adresse, Uhrzeit, angefragte Adresse): 30 Tage."
+              ]
+            },
+            "Mehr Details in der [Datenschutzerklärung](page:privacy)."
+          ]
+        }
+      ]
+    },
+    "security": {
+      "title": "Sicherheitsrichtlinie",
+      "intro": "Wenn du ein Sicherheitsproblem in SpaceFleet findest, melde es uns bitte vertraulich an security@spacefleet.io, bevor du mit irgendjemandem darüber sprichst, damit wir es beheben können, bevor es gegen unsere Nutzer eingesetzt wird.",
+      "sections": [
+        {
+          "heading": "Was du melden solltest",
+          "blocks": [
+            "Alles, womit jemand Daten lesen, ändern oder löschen könnte, die nicht die eigenen sind, die Kontrolle über ein Konto übernehmen, ein Limit oder eine Zahlung umgehen oder andere an der Nutzung des Dienstes hindern könnte. Das umfasst die Website spacefleet.io, die API unter api.spacefleet.io, die Speicherserver und die SpaceFleet-Apps (darunter SpaceBadger und SpaceParrot).",
+            {
+              "items": [
+                "Beschreibe, was du gefunden hast, wo, und die Schritte, um es nachzuvollziehen.",
+                "Nutze nur dein eigenes Konto und deine eigenen Daten und hör auf, sobald das Problem nachgewiesen ist: Lies, behalte und ändere keine Daten anderer, und beeinträchtige den Dienst nicht.",
+                "Halte das Problem vertraulich, bis wir es behoben oder mit dir ein Datum vereinbart haben."
+              ]
+            }
+          ]
+        },
+        {
+          "heading": "Was danach passiert",
+          "blocks": [
+            "Jede Meldung erhält innerhalb von 3 Werktagen eine erste Antwort. Danach sagen wir dir, was wir gefunden haben und wann die Korrektur veröffentlicht wird.",
+            "Wir ergreifen keine rechtlichen Schritte gegen Personen, die in gutem Glauben melden und diese Richtlinie einhalten."
+          ]
+        },
+        {
+          "heading": "Danksagungen, und kein Bug-Bounty",
+          "blocks": [
+            "SpaceFleet zahlt keine Prämien für gefundene Fehler (Bug-Bounty). Wenn deine Meldung zu einer Korrektur führt, danken wir dir namentlich auf der Seite [Danksagungen Sicherheit](page:security-acknowledgments), wenn du das möchtest, und ohne deinen Namen oder gar nicht, wenn dir das lieber ist.",
+            "Die maschinenlesbare Version dieses Kontakts findest du unter https://spacefleet.io/.well-known/security.txt."
+          ]
+        }
+      ]
+    },
+    "security-acknowledgments": {
+      "title": "Danksagungen Sicherheit",
+      "intro": "Wir danken den unten genannten Personen, die ein Sicherheitsproblem gemeldet haben, das zu einer Korrektur geführt hat, und die einverstanden sind, genannt zu werden. Wie du ein Problem meldest, steht in unserer [Sicherheitsrichtlinie](page:security).",
+      "sections": [
+        {
+          "heading": "Personen, die ein Problem gemeldet haben",
+          "blocks": [
+            "Bisher niemand."
+          ]
+        }
+      ]
+    }
+  }
+}

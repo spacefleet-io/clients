@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Parrot launcher icon (UX-THEME-04): the astronaut parrot centred on the fleet's icon background, the same picture as the
+     Play store icon and every other Parrot app icon. Drawn by scripts/app-icons/generate.py: never edit the PNGs or the colour by hand.
+-->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@color/ic_launcher_background" />
+    <foreground android:drawable="@drawable/ic_launcher_foreground" />
+</adaptive-icon>

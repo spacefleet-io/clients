@@ -1,0 +1,6 @@
+/* Download notifications (DownloadEngine.swift). Mirrors downloads.errors.* of packages/mobile-shell/src/i18n/en.json. */
+"download.notification.complete" = "Download complete";
+"download.notification.error.insufficientSpace" = "Not enough free storage";
+"download.notification.error.auth" = "Session expired. Retry to sign in again";
+"download.notification.error.network" = "Network error. Retry when you are back online";
+"download.notification.error.failed" = "Download failed";

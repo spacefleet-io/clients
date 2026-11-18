@@ -1,0 +1,6 @@
+/* Notifications de téléchargement (DownloadEngine.swift). Reprend downloads.errors.* de packages/mobile-shell/src/i18n/fr.json. */
+"download.notification.complete" = "Téléchargement terminé";
+"download.notification.error.insufficientSpace" = "Espace de stockage insuffisant";
+"download.notification.error.auth" = "Session expirée. Réessayez pour vous reconnecter";
+"download.notification.error.network" = "Erreur réseau. Réessayez une fois reconnecté";
+"download.notification.error.failed" = "Échec du téléchargement";

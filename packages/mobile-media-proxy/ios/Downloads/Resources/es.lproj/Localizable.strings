@@ -1,0 +1,6 @@
+/* Notificaciones de descarga (DownloadEngine.swift). Sigue downloads.errors.* de packages/mobile-shell/src/i18n/es.json. */
+"download.notification.complete" = "Descarga completada";
+"download.notification.error.insufficientSpace" = "No hay suficiente espacio de almacenamiento";
+"download.notification.error.auth" = "La sesión caducó. Vuelve a intentarlo para iniciar sesión";
+"download.notification.error.network" = "Error de red. Vuelve a intentarlo cuando tengas conexión";
+"download.notification.error.failed" = "La descarga falló";

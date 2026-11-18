@@ -1,0 +1,30 @@
+{
+  "name": "@space/badger-jellyfin-sidecar",
+  "license": "GPL-3.0-only",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "bun run src/main.ts",
+    "build:integration": "bun run build:integration:linux-x64 && bun run build:integration:linux-arm64 && bun run build:integration:windows-x64",
+    "build:integration:linux-x64": "bun build --compile --target=bun-linux-x64 src/main.ts --outfile dist/badger-integration-linux-x64",
+    "build:integration:linux-arm64": "bun build --compile --target=bun-linux-arm64 src/main.ts --outfile dist/badger-integration-linux-arm64",
+    "build:integration:windows-x64": "bun build --compile --target=bun-windows-x64 src/main.ts --outfile dist/badger-integration-windows-x64.exe",
+    "test": "bunx vitest run"
+  },
+  "dependencies": {
+    "@space/library-db-definition": "workspace:*",
+    "@space/library-db-runtime": "workspace:*",
+    "@space/logger": "workspace:*",
+    "@space/metadata-client": "workspace:*",
+    "@space/pairing-crypto": "workspace:*",
+    "@space/shared": "workspace:*",
+    "@space/stream-slots": "workspace:*"
+  },
+  "devDependencies": {
+    "@space/privacy-pass": "workspace:*",
+    "@types/jsdom": "^30.0.0",
+    "jsdom": "^31.0.1",
+    "vitest": "^5.1.0"
+  }
+}

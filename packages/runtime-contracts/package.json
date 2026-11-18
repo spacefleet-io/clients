@@ -1,0 +1,26 @@
+{
+  "name": "@space/runtime-contracts",
+  "license": "GPL-3.0-only",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "scripts": {
+    "test": "bunx vitest run"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./envelope": "./src/envelope.ts",
+    "./lifecycle": "./src/lifecycle.ts",
+    "./helpers": "./src/helpers.ts",
+    "./badger": "./src/badger/index.ts",
+    "./badger/*": "./src/badger/*.ts",
+    "./runtime": "./src/runtime/index.ts",
+    "./runtime/*": "./src/runtime/*.ts"
+  },
+  "dependencies": {
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "vitest": "^5.1.0"
+  }
+}

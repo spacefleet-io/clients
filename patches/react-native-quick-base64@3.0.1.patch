@@ -1,0 +1,16 @@
+diff --git a/react-native-quick-base64.podspec b/react-native-quick-base64.podspec
+index eb43697e6ca032492101345069c3e3a5f512c7a9..4029a75f57852dfd3ad23a89c87cf8021a3ce9c1 100644
+--- a/react-native-quick-base64.podspec
++++ b/react-native-quick-base64.podspec
+@@ -10,7 +10,10 @@ Pod::Spec.new do |s|
+   s.license      = package["license"]
+   s.authors      = package["author"]
+ 
+-  s.platforms    = { :ios => min_ios_version_supported }
++  # SpaceFleet patch: react-native-quick-crypto needs this module, and the Apple TV app (react-native-tvos) runs
++  # quick-crypto too. Without a tvOS platform, autolinking leaves the pod out of the tvOS target and the TV app
++  # stops at launch on "TurboModuleRegistry.getEnforcing(...): 'QuickBase64' could not be found".
++  s.platforms    = { :ios => min_ios_version_supported, :tvos => min_supported_versions[:tvos] }
+   s.source       = { :git => "https://github.com/craftzdog/react-native-quick-base64.git", :tag => "#{s.version}" }
+ 
+   s.source_files = "ios/**/*.{h,m,mm}", "cpp/**/*.{hpp,cpp,c,h}", "ios/generated/*.{h,cpp,mm}"

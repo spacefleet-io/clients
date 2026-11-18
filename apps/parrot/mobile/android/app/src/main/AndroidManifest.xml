@@ -1,0 +1,56 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- The shared tab bar (PAR-LOOK-01) gives a short tap on each tab press, as in Badger. -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- Media notification (PAR-PLAY-03). Media-session notifications show without the Android 13 prompt. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Settings → Pair a device scans a new device's QR code (ACCT-PAIR-01). Typing the short code works without a camera,
+         so the camera stays optional and phones without one still install the app. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
+
+    <application
+      android:name=".MainApplication"
+      android:label="@string/app_name"
+      android:icon="@mipmap/ic_launcher"
+      android:roundIcon="@mipmap/ic_launcher_round"
+      android:allowBackup="false"
+      android:theme="@style/AppTheme"
+      android:networkSecurityConfig="${networkSecurityConfig}"
+      android:supportsRtl="true">
+      <!-- Error reports are opt-in (REL-LOG-06): the Sentry SDK must never start itself, natively or otherwise. JS starts it
+           only after the user says yes, and then only its JavaScript half (enableNative=false). -->
+      <meta-data android:name="io.sentry.auto-init" android:value="false" />
+      <activity
+        android:name=".MainActivity"
+        android:label="@string/app_name"
+        android:configChanges="keyboard|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode"
+        android:launchMode="singleTask"
+        android:screenOrientation="portrait"
+        android:windowSoftInputMode="adjustResize"
+        android:exported="true">
+        <intent-filter>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent-filter>
+        <!-- parrot://auth/provider: the browser back from Google, Apple or Microsoft (ACCT-SIGNIN-05). -->
+        <intent-filter>
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.DEFAULT" />
+            <category android:name="android.intent.category.BROWSABLE" />
+            <data android:scheme="parrot" android:host="auth" />
+        </intent-filter>
+        <!-- ACCT-PAIR-06: a Parrot device's pairing QR, https://spacefleet.io/pair/parrot?code=ABCD-EFGH, opens the
+             approve screen. Only Parrot's path: Badger claims /pair/badger. The website's
+             /.well-known/assetlinks.json verifies it, so the link opens Parrot without asking. -->
+        <intent-filter android:autoVerify="true">
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.DEFAULT" />
+            <category android:name="android.intent.category.BROWSABLE" />
+            <data android:scheme="https" android:host="spacefleet.io" android:pathPrefix="/pair/parrot" />
+        </intent-filter>
+      </activity>
+    </application>
+</manifest>

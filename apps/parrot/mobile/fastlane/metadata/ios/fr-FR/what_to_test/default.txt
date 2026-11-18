@@ -1,0 +1,1 @@
+Bienvenue dans le test de Parrot pour iPhone. Connectez-vous, écoutez votre musique, créez vos playlists et téléchargez des albums pour les écouter hors connexion. Donnez-nous votre avis avec « Envoyer un commentaire bêta » dans l'app TestFlight.

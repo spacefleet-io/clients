@@ -1,0 +1,154 @@
+{
+  "version": 1,
+  "notes": [
+    "All fixture videos are treated as 1080p-class inputs (width=1920).",
+    "Undefined audio/subtitle track languages below are resolved from product decisions for deterministic ingestion tests."
+  ],
+  "files": [
+    {
+      "path": "video/Orchard (2017).mkv",
+      "kind": "video",
+      "expected": {
+        "video": [{ "codec": "h264", "width": 1920, "height": 800 }],
+        "audio": [{ "codec": "aac", "channels": 2, "language": "und" }],
+        "subtitles": [],
+        "chapters": 0
+      },
+      "expectedUserInput": {
+        "audioTrackOverrides": [{ "index": 0, "language": "en", "label": "English" }],
+        "subtitleTrackOverrides": []
+      }
+    },
+    {
+      "path": "video/Cartographer (2001).mkv",
+      "kind": "video",
+      "expected": {
+        "video": [{ "codec": "h264", "width": 1920, "height": 796 }],
+        "audio": [{ "codec": "aac", "channels": 6, "language": "und" }],
+        "subtitles": [],
+        "chapters": 0
+      },
+      "expectedUserInput": {
+        "audioTrackOverrides": [{ "index": 0, "language": "en", "label": "English" }],
+        "subtitleTrackOverrides": []
+      }
+    },
+    {
+      "path": "video/Le Phare de l'Étang (2001) [FR-EN].mkv",
+      "kind": "video",
+      "expected": {
+        "video": [{ "codec": "hevc", "width": 1920, "height": 800 }],
+        "audio": [
+          { "codec": "aac", "channels": 6, "language": "fr", "labelContains": "VF" },
+          { "codec": "aac", "channels": 6, "language": "en", "labelContains": "VO" }
+        ],
+        "subtitles": [
+          { "codec": "subrip", "language": "fr", "labelContains": "Forced" },
+          { "codec": "subrip", "language": "fr" },
+          { "codec": "subrip", "language": "en" }
+        ],
+        "chapters": 1
+      },
+      "expectedUserInput": {
+        "audioTrackOverrides": [],
+        "subtitleTrackOverrides": []
+      }
+    },
+    {
+      "path": "video/Saltmarsh - S01E01 - Low Tide.mkv",
+      "kind": "video",
+      "expected": {
+        "video": [{ "codec": "hevc", "width": 1920, "height": 1080, "language": "en" }],
+        "audio": [{ "codec": "ac3", "channels": 6, "language": "en" }],
+        "subtitles": [
+          { "codec": "subrip", "language": "en" },
+          { "codec": "subrip", "language": "en" },
+          { "codec": "subrip", "language": "en" },
+          { "codec": "subrip", "language": "fr" },
+          { "codec": "subrip", "language": "fr", "labelContains": "Forced" }
+        ],
+        "chapters": 1
+      },
+      "expectedUserInput": {
+        "audioTrackOverrides": [],
+        "subtitleTrackOverrides": []
+      }
+    },
+    {
+      "path": "video/Saltmarsh - S01E02 - Spring Tide.mkv",
+      "kind": "video",
+      "expected": {
+        "video": [{ "codec": "hevc", "width": 1920, "height": 1080, "language": "en" }],
+        "audio": [{ "codec": "ac3", "channels": 6, "language": "en" }],
+        "subtitles": [
+          { "codec": "subrip", "language": "en" },
+          { "codec": "subrip", "language": "en" },
+          { "codec": "subrip", "language": "en" },
+          { "codec": "subrip", "language": "fr" },
+          { "codec": "subrip", "language": "fr", "labelContains": "Forced" }
+        ],
+        "chapters": 1
+      },
+      "expectedUserInput": {
+        "audioTrackOverrides": [],
+        "subtitleTrackOverrides": []
+      }
+    },
+    {
+      "path": "video/test-no-audio.mkv",
+      "kind": "video",
+      "expected": {
+        "video": [{ "codec": "h264", "width": 320, "height": 240 }],
+        "audio": [],
+        "subtitles": [],
+        "chapters": 0
+      },
+      "expectedUserInput": {
+        "audioTrackOverrides": [],
+        "subtitleTrackOverrides": []
+      }
+    },
+    {
+      "path": "video/test-multi-audio.mkv",
+      "kind": "video",
+      "expected": {
+        "video": [{ "codec": "h264", "width": 320, "height": 240 }],
+        "audio": [
+          { "codec": "aac", "channels": 2, "language": "en" },
+          { "codec": "aac", "channels": 2, "language": "fr" },
+          { "codec": "aac", "channels": 1, "language": "en" }
+        ],
+        "subtitles": [],
+        "chapters": 0
+      },
+      "expectedUserInput": {
+        "audioTrackOverrides": [],
+        "subtitleTrackOverrides": []
+      }
+    },
+    {
+      "path": "video/test-subtitle-undefined-lang.mkv",
+      "kind": "video",
+      "expected": {
+        "video": [{ "codec": "h264", "width": 320, "height": 240 }],
+        "audio": [{ "codec": "aac", "channels": 2, "language": "und" }],
+        "subtitles": [{ "codec": "subrip", "language": "und" }],
+        "chapters": 0
+      },
+      "expectedUserInput": {
+        "audioTrackOverrides": [{ "index": 0, "language": "en", "label": "English" }],
+        "subtitleTrackOverrides": [{ "index": 0, "language": "en", "label": "English" }]
+      }
+    },
+    {
+      "path": "subtitles/Orchard (2017).fr.srt",
+      "kind": "subtitle",
+      "expected": {
+        "subtitles": [{ "codec": "subrip", "language": "und" }]
+      },
+      "expectedUserInput": {
+        "subtitleTrackOverrides": [{ "index": 0, "language": "fr", "label": "French" }]
+      }
+    }
+  ]
+}

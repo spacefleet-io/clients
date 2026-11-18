@@ -1,0 +1,5 @@
+/* Name unter dem App-Symbol und die Berechtigungsabfragen von iOS (Info.plist-Schlüssel). */
+"CFBundleDisplayName" = "Badger";
+"NSCameraUsageDescription" = "Badger nutzt die Kamera, um den Code eines neuen Geräts zu scannen, das du deinem Konto hinzufügen möchtest.";
+"NSFaceIDUsageDescription" = "Badger fragt nach Face ID, bevor deine Mediathek mit einem anderen Gerät geteilt wird.";
+"NSLocalNetworkUsageDescription" = "Badger sucht in deinem WLAN nach Chromecast- und Google-TV-Geräten und schickt deinen Film an das Gerät, das du auswählst.";

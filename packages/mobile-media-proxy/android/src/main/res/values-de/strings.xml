@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="media_proxy_downloads_channel_name">Downloads</string>
+    <string name="media_proxy_downloads_channel_description">Fortschritt der Downloads für die Offline-Wiedergabe</string>
+    <string name="media_proxy_downloads_title_default">Downloads</string>
+    <string name="media_proxy_downloads_title_multiple">%1$d Downloads laufen</string>
+    <string name="media_proxy_downloads_waiting_wifi">Warten auf WLAN</string>
+    <string name="media_proxy_downloads_waiting_network">Warten auf Netzwerk</string>
+    <string name="media_proxy_downloads_percent">%1$d%%</string>
+</resources>

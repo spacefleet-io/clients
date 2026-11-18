@@ -1,0 +1,30 @@
+{
+  "subtitleFetch": {
+    "title": "Buscar subtítulos",
+    "getMore": "Buscar más subtítulos…",
+    "looking": "Buscando subtítulos…",
+    "pick": "Elige un idioma",
+    "already": "Ya está en tu mediateca",
+    "none": "No se encontraron subtítulos para este título.",
+    "unavailable": "Algo salió mal al obtener estos subtítulos. Ya estamos trabajando en ello y debería volver a funcionar pronto.",
+    "offline": "Necesita conexión a internet",
+    "fromDownload": "No disponible mientras se reproduce una descarga",
+    "getting": "Obteniendo subtítulos en {language}",
+    "downloading": "Descargando",
+    "saving": "Guardando en tu mediateca",
+    "added": "{name} añadido",
+    "failed": "No se pudo añadir {name}. Vuelve a intentarlo.",
+    "back": "Atrás",
+    "done": "Listo",
+    "hearingImpaired": "Para personas con discapacidad auditiva",
+    "foreignPartsOnly": "Solo partes en otro idioma",
+    "directorsCut": "Versión del director",
+    "extended": "Versión extendida",
+    "unrated": "Sin clasificar",
+    "tryAnother": "Probar otra versión",
+    "lookingAnother": "Buscando otra versión…",
+    "replaced": "{name} sustituido por otra versión",
+    "noneLeft": "No quedan más versiones de {name}",
+    "replaceFailed": "No se pudo sustituir {name}. Inténtalo de nuevo."
+  }
+}

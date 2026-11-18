@@ -1,0 +1,41 @@
+# <test file><TAB><what fails>; fails upstream too
+# A file that no longer exists fails CI; the line goes once the test passes upstream again.
+# A line naming a workspace directory (ending in "/") skips that workspace's whole test run, for a suite
+# Test files CI skips (.github/scripts/ci-test.ts): each one also fails in SpaceFleet's upstream repository,
+# where this code is developed, so the failure is not caused by the public export. One line per file:
+# whose failing cases change from run to run.
+apps/badger/desktop/tests/continue-hero.test.ts	reads the home screen source for continueWatchingTitles(playableMedia), which the screen no longer calls; fails upstream too
+apps/badger/desktop/tests/file-ingestion-dialog.test.tsx	its @space/ui mock has no ImportReviewPicker export, which the import window now renders; fails upstream too
+apps/badger/desktop/tests/file-ingestion-match-pipeline.test.ts	its @space/ui mock has no ImportReviewPicker export, which the import window now renders; fails upstream too
+apps/badger/desktop/tests/file-ingestion-quota-gate.test.tsx	its @space/ui mock has no ImportReviewPicker export, which the import window now renders; fails upstream too
+apps/badger/desktop/tests/file-ingestion-skip-markers-all-episodes.test.tsx	its @space/ui mock has no ImportReviewPicker export, which the import window now renders; fails upstream too
+apps/badger/desktop/tests/media-language-display.test.ts	a language label case expects false and gets true; fails upstream too
+apps/badger/desktop/tests/media-playback-controller-click-no-sync-launch-render.test.tsx	its @/api mock has no listProfiles export; fails upstream too
+apps/badger/desktop/tests/media-playback-controller-no-mount-storm.test.tsx	its @/api mock has no listProfiles export; fails upstream too
+apps/badger/desktop/tests/media-playback-controller-resume-behavior.test.tsx	its @/api mock has no listProfiles export; fails upstream too
+apps/badger/desktop/tests/media-playback-controller.integration.test.tsx	its @/api mock has no listProfiles export; fails upstream too
+apps/badger/desktop/tests/packaging.test.ts	expects the dev script to name the debugging port "9222", which the lane-aware dev script no longer hard-codes; fails upstream too
+apps/badger/desktop/tests/runtime-jobs-ipc-skip-markers.test.ts	expects the job's quality list ["720p"] and gets []; fails upstream too
+apps/badger/desktop/tests/sign-out-forgets-library-key.test.tsx	expects sign-out to keep only the API address in local storage, and the first-open tour now keeps its two seen flags too; fails upstream too
+apps/badger/mobile/	its test script runs jest on __tests__/ only, and the one suite there, App.test.tsx, fails to load (TypeError: Cannot read properties of undefined (reading 'create')); fails upstream too
+apps/parrot/mobile/tests/kept-phone.test.ts	times out and hands one song to the engine twice; fails upstream too
+apps/parrot/mobile/tests/settings-order.test.tsx	its @space/mobile-shell/components mock has no MobileOpenSourceNotice export; fails upstream too
+apps/runtime/tests/ffmpeg-parent-death.test.ts	the ffmpeg child outlives its SIGKILLed parent by more than 3 s on this runner; fails upstream too
+apps/runtime/tests/resumable-upload-ledger.test.ts	the child finishes before the test can kill it mid-upload; fails upstream too
+apps/runtime/tests/runtime-auth-sweep.test.ts	one non-public route does not answer 401 after logout or with a junk token; fails upstream too
+packages/desktop-platform-linux/tests/conformance.test.ts	the helper child does not die with its parent within 10 s; fails upstream too
+packages/desktop-platform-linux/tests/processes.test.ts	waits for an orphaned child that does not exit; fails upstream too
+packages/desktop-platform/tests/selector.test.ts	expects the unsupported-OS error to point at the setup guide in the old wording; fails upstream too
+packages/desktop-shell/tests/desktop-top-nav-frame.test.tsx	expects the centred nav class left-1/2, which the grid layout replaced; fails upstream too
+packages/ffmpeg/tests/playback-gate-ffmpeg.test.ts	the one-core throttle measures 0.8 core where the test needs more than 0.845; fails upstream too
+packages/ingest-core/tests/aac-channel-layout.integration.test.ts	the shipped media-deps ffmpeg (8.1.3, fl1-9b8110a5df24) has no lavfi sine filter, so the fixtures cannot be made; fails upstream too
+packages/library-db-definition/tests/multi-group-migrations.test.ts	two multi-database migration cases assert true and get false; fails upstream too
+packages/library-db-runtime/	each full run fails a different set of 5 to 12 cases (library sync, persistence, preview sheets) that pass when their file runs alone; fails upstream too
+packages/mobile-mpv-playback/tests/trackIdReads.test.ts	imports bun:test but runs under vitest; fails upstream too
+packages/mobile-shell/tests/mobile-api-host-modal.test.tsx	loads untransformed React Native source (SyntaxError: Unexpected token 'typeof'); fails upstream too
+packages/mpv-protocol/tests/luaConstants.test.ts	expects eight Lua channels and finds nine; fails upstream too
+packages/parrot-core/tests/songs-query.test.ts	the song rows now carry the four ReplayGain columns the expected row does not list; fails upstream too
+packages/parrot-ingest/tests/covers.test.ts	shrinking a print-size JPEG cover can pass its 5 s limit on a busy runner; fails upstream too
+packages/parrot-ingest/tests/importer.test.ts	the large-cover cases can pass their 5 s limit on a busy runner, and the one-failing-file case fails intermittently; fails upstream too
+packages/parrot-ingest/tests/lyricsIntoFile.test.ts	writing lyrics into aac, ogg, opus and wav files can pass the 5 s limit on a busy runner; fails upstream too
+packages/sdk/tests/sdk.test.ts	regenerating the SDK from apps/api/openapi.json no longer gives the committed sdk.gen.ts; fails upstream too

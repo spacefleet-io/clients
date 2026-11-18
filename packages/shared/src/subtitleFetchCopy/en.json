@@ -1,0 +1,30 @@
+{
+  "subtitleFetch": {
+    "title": "Get subtitles",
+    "getMore": "Get more subtitles…",
+    "looking": "Looking for subtitles…",
+    "pick": "Pick a language",
+    "already": "Already in your media library",
+    "none": "No subtitles found for this one.",
+    "unavailable": "Something went wrong getting these subtitles. We're working on it and it should be back soon.",
+    "offline": "Needs an internet connection",
+    "fromDownload": "Not available while a download plays",
+    "getting": "Getting {language} subtitles",
+    "downloading": "Downloading",
+    "saving": "Saving to your media library",
+    "added": "{name} added",
+    "failed": "Couldn't add {name}. Try again.",
+    "back": "Back",
+    "done": "Done",
+    "hearingImpaired": "Hearing impaired",
+    "foreignPartsOnly": "Foreign parts only",
+    "directorsCut": "Director's cut",
+    "extended": "Extended",
+    "unrated": "Unrated",
+    "tryAnother": "Try another version",
+    "lookingAnother": "Looking for another version…",
+    "replaced": "{name} replaced with another version",
+    "noneLeft": "No other version of {name} left",
+    "replaceFailed": "Couldn't replace {name}. Try again."
+  }
+}

@@ -1,0 +1,1233 @@
+{
+  "brand": {
+    "mascotAlt": "Mascota de Badger"
+  },
+  "authApiHost": {
+    "button": "Host de la API",
+    "title": "Hosts de conexión",
+    "subtitle": "Configura hosts personalizados para la API y el entorno de ejecución. Estos valores se guardan en el dispositivo y se conservan al cerrar sesión.",
+    "apiLabel": "API",
+    "label": "Host personalizado",
+    "placeholder": "api.spacefleet.io",
+    "hint": "Puedes introducir un host o una URL completa. Ejemplo: api.spacefleet.io o https://api.spacefleet.io",
+    "defaultBadge": "Predeterminado",
+    "customBadge": "Personalizado",
+    "useDefault": "Usar el predeterminado",
+    "save": "Guardar",
+    "saving": "Guardando...",
+    "error": "No se pudo guardar el host de la API. Revisa el valor y vuelve a intentarlo."
+  },
+  "login": {
+    "title": "Iniciar sesión",
+    "withAccount": "Inicia sesión con tu cuenta de SpaceFleet",
+    "emailLabel": "Correo electrónico",
+    "passwordLabel": "Contraseña",
+    "twoFactorLabel": "Código de verificación",
+    "twoFactorPlaceholder": "123456",
+    "button": "Iniciar sesión",
+    "signingIn": "Iniciando sesión...",
+    "resend": "Reenviar código",
+    "resending": "Reenviando...",
+    "infoEmail": "Te hemos enviado un código de verificación por correo electrónico.",
+    "infoTotp": "Introduce el código de tu aplicación de autenticación.",
+    "resendSuccess": "Se ha enviado un nuevo código de verificación.",
+    "resendError": "No se pudo reenviar el código.",
+    "reset": {
+      "button": "¿Olvidaste tu contraseña?",
+      "title": "Restablece tu contraseña",
+      "subtitle": "Te enviaremos por correo un código de verificación para crear una contraseña nueva.",
+      "emailLabel": "Correo de la cuenta",
+      "codeLabel": "Código de verificación",
+      "codePlaceholder": "123456",
+      "passwordLabel": "Nueva contraseña",
+      "passwordConfirmLabel": "Confirma la nueva contraseña",
+      "request": "Enviar código",
+      "requesting": "Enviando...",
+      "submit": "Actualizar contraseña",
+      "submitting": "Actualizando...",
+      "cancel": "Cancelar",
+      "resend": "Reenviar código",
+      "resending": "Reenviando...",
+      "noticeSent": "Si el correo existe, te hemos enviado un código de verificación.",
+      "noticeResent": "Te hemos enviado otro código de verificación.",
+      "noticeComplete": "Contraseña actualizada. Vuelve a iniciar sesión.",
+      "errorMismatch": "Las contraseñas no coinciden.",
+      "errorInvalidCode": "El código de verificación no es válido o ha caducado.",
+      "errorFailed": "No se pudo restablecer la contraseña en este momento.",
+      "errorResend": "No se pudo reenviar el código."
+    },
+    "qr": {
+      "or": "o",
+      "title": "Iniciar sesión con otro dispositivo",
+      "body": "Muestra un código para aprobarlo en Badger o Parrot en un ordenador, teléfono o TV con sesión iniciada."
+    },
+    "provider": {
+      "signInWith": "Iniciar sesión con {{provider}}",
+      "or": "o",
+      "continueInBrowser": "Termina de iniciar sesión en tu navegador. Después volverás aquí.",
+      "errorStart": "No se pudo iniciar el inicio de sesión. Vuelve a intentarlo.",
+      "errors": {
+        "no_account": "Ninguna cuenta de SpaceFleet usa este correo. Crea una en Badger o Parrot desde un ordenador y luego inicia sesión aquí.",
+        "email_unverified": "El correo de esta cuenta no está confirmado. Confírmalo con el proveedor o inicia sesión con tu correo y contraseña.",
+        "email_domain_disallowed": "No se pueden crear cuentas con este correo.",
+        "account_deletion_pending": "La eliminación de esta cuenta está programada.",
+        "provider_failed": "No se pudo iniciar sesión. Vuelve a intentarlo.",
+        "cancelled": "Se canceló el inicio de sesión.",
+        "invalid_code": "Este inicio de sesión ha caducado o se inició en otro lugar. Vuelve a intentarlo."
+      }
+    },
+    "pairing": {
+      "title": "Iniciar sesión con otro dispositivo",
+      "usePassword": "Iniciar sesión con correo y contraseña"
+    },
+    "code": {
+      "recheckHint": "Tu cuenta no tiene contraseña, así que pedimos un código: el de tu app de autenticación si está activada, si no, uno que te enviamos por correo.",
+      "recheckSent": "Escribe el código: el de tu app de autenticación si está activada; si no, el que te acabamos de enviar por correo."
+    }
+  },
+  "player": {
+    "deviceTooWeak": {
+      "message": "Este teléfono no es lo bastante potente para reproducir este vídeo con fluidez.",
+      "messageTv": "Este TV box no es lo bastante potente para reproducir este vídeo con fluidez.",
+      "pinnedHint": "Desactiva \"Forzar esta calidad\" o elige una calidad más baja en Ajustes.",
+      "keepWatching": "Seguir viendo"
+    },
+    "trafficCap": {
+      "message": "Hay demasiado tráfico en el servidor que aloja este título: la calidad está limitada a {{quality}} hasta que baje el tráfico.",
+      "keepWatching": "Seguir viendo"
+    },
+    "loading": "Preparando la reproducción...",
+    "loadingSlow": "Sigue cargando… está tardando más de lo habitual.",
+    "controls": {
+      "closePlayer": "Cerrar el reproductor",
+      "videoSurface": "Superficie de vídeo",
+      "chapters": "Capítulos",
+      "previousEpisode": "Episodio anterior",
+      "nextEpisode": "Siguiente episodio",
+      "subtitles": "Subtítulos",
+      "audio": "Audio",
+      "quality": "Calidad",
+      "volume": "Volumen",
+      "brightness": "Brillo",
+      "seekBackToast": "-10s",
+      "seekForwardToast": "+10s",
+      "seekBy": "{{amount}}s",
+      "play": "Reproducir",
+      "pause": "Pausa",
+      "seekBar": "Barra de progreso",
+      "qualityAuto": "Automática",
+      "subtitlesOff": "Desactivados",
+      "subtitleLoadFailed": "No se pudieron cargar los subtítulos",
+      "trackFallback": "Pista {{n}}",
+      "cast": "Enviar"
+    },
+    "error": {
+      "title": "Problema de reproducción",
+      "retry": "Reintentar",
+      "close": "Cerrar",
+      "unavailable": "La reproducción no está disponible.",
+      "openFailed": "No se pudo abrir el vídeo.",
+      "startTimeout": "El vídeo ha tardado demasiado en empezar.",
+      "loadingTimeout": "El vídeo está tardando demasiado en cargar.",
+      "stoppedUnexpectedly": "La reproducción se detuvo de forma inesperada.",
+      "missingLibraryKey": "Falta la clave de cifrado de la mediateca.",
+      "titleMissing": "Este título ya no está en tu mediateca.",
+      "noPlayableFile": "No se encontró ningún archivo reproducible.",
+      "notAvailable": "La reproducción no está disponible para este título.",
+      "gatewayUnavailable": "La pasarela de almacenamiento no está disponible.",
+      "playbackStopped": "La reproducción se detuvo porque el servidor que aloja este título está saturado. Pulsa Reintentar cuando baje el tráfico.",
+      "freePlaybackRefused": "La reproducción no puede empezar ahora: el servidor que aloja este título está saturado y las cuentas gratuitas no pueden iniciar nuevas reproducciones. Vuelve a intentarlo en unos minutos.",
+      "startFailed": "No se pudo iniciar la reproducción.",
+      "loadFailed": "No se pudo cargar este título."
+    },
+    "resume": {
+      "resumeAt": "Reanudar en {{time}}",
+      "startOver": "Empezar desde el principio"
+    },
+    "skip": {
+      "intro": "Saltar intro",
+      "credits": "Saltar créditos",
+      "nextEpisode": "Siguiente episodio",
+      "nextEpisodeStartsIn": "El siguiente episodio empezará en",
+      "withCountdown": "{{label}} {{seconds}}s"
+    },
+    "nextCard": {
+      "startsIn": "Siguiente episodio en {{seconds}}s",
+      "upNext": "A continuación",
+      "playNow": "Reproducir ahora",
+      "playNowLabel": "Reproducir ahora el siguiente episodio",
+      "cancel": "Cancelar"
+    }
+  },
+  "details": {
+    "type": {
+      "tv": "Serie",
+      "movie": "Película"
+    },
+    "runtime": {
+      "seasons_one": "{{count}} temporada",
+      "seasons_other": "{{count}} temporadas"
+    },
+    "watchedPercent": "{{percent}} % visto",
+    "play": "Reproducir",
+    "playEpisode": "Reproducir {{code}}",
+    "resumeEpisode": "Reanudar {{code}}",
+    "addToPlaylist": "Añadir a una lista",
+    "playlistPicker": {
+      "title": "Añadir a una lista"
+    },
+    "tabs": {
+      "episodes": "Episodios",
+      "details": "Detalles"
+    },
+    "synopsis": "Sinopsis",
+    "cast": "Reparto",
+    "crew": {
+      "title": "Equipo",
+      "director": "Dirección",
+      "writing": "Guion"
+    },
+    "seasonShort": "T{{number}}",
+    "episodesEmpty": "No hay episodios disponibles en esta temporada.",
+    "episode": {
+      "title": "E{{number}} · {{name}}",
+      "label": "Episodio {{number}}, {{name}}",
+      "labelWatched": "Episodio {{number}}, {{name}}, visto",
+      "labelProgress": "Episodio {{number}}, {{name}}, {{percent}} % visto"
+    },
+    "trailer": {
+      "watch": "Ver tráiler",
+      "pickerTitle": "Elegir tráiler",
+      "fallbackName": "Tráiler",
+      "errors": {
+        "load": "No se pudo cargar el tráiler.",
+        "player": "El reproductor de tráileres ha fallado en este dispositivo."
+      },
+      "button": "Tráiler"
+    },
+    "genres": {
+      "movie": {
+        "28": "Acción",
+        "12": "Aventura",
+        "16": "Animación",
+        "35": "Comedia",
+        "80": "Crimen",
+        "99": "Documental",
+        "18": "Drama",
+        "10751": "Familia",
+        "14": "Fantasía",
+        "36": "Historia",
+        "27": "Terror",
+        "10402": "Música",
+        "9648": "Misterio",
+        "10749": "Romance",
+        "878": "Ciencia ficción",
+        "53": "Suspense",
+        "10752": "Bélica",
+        "37": "Wéstern"
+      },
+      "tv": {
+        "10759": "Acción",
+        "16": "Animación",
+        "35": "Comedia",
+        "80": "Crimen",
+        "99": "Documental",
+        "18": "Drama",
+        "10751": "Familia",
+        "10762": "Infantil",
+        "9648": "Misterio",
+        "10763": "Noticias",
+        "10764": "Reality",
+        "10765": "Ciencia ficción",
+        "10766": "Telenovela",
+        "10767": "Entrevistas",
+        "10768": "Bélica",
+        "37": "Wéstern"
+      }
+    },
+    "playAgain": "Volver a ver",
+    "resume": "Reanudar",
+    "back": "Atrás",
+    "actions": {
+      "download": "Descargar",
+      "playlist": "Lista"
+    }
+  },
+  "downloads": {
+    "title": "Descargas",
+    "back": "Atrás",
+    "percent": "{{percent}} %",
+    "summary_one": "{{count}} elemento · {{size}} en este dispositivo",
+    "summary_other": "{{count}} elementos · {{size}} en este dispositivo",
+    "wifiBanner": "Las descargas se reanudan automáticamente con Wi-Fi.",
+    "trafficSlowed": "Las descargas van más lentas porque estamos en un periodo de mucho tráfico.",
+    "trafficHeld": "Las descargas están en pausa mientras el tráfico sea muy alto. Se reanudarán solas en cuanto baje.",
+    "empty": {
+      "title": "Aún no hay descargas",
+      "subtitle": "Abre una película o un episodio y toca Descargar para verlo sin conexión."
+    },
+    "actions": {
+      "keep": "Conservar",
+      "remove": "Quitar",
+      "delete": "Eliminar",
+      "close": "Cerrar"
+    },
+    "row": {
+      "retry": "Reintentar la descarga",
+      "cancel": "Cancelar la descarga",
+      "delete": "Eliminar la descarga"
+    },
+    "status": {
+      "queued": "En cola",
+      "waitingWifi": "Esperando Wi-Fi",
+      "waitingNetwork": "Esperando conexión",
+      "completed": "{{size}} · {{quality}}",
+      "downloading": "{{percent}} % · {{done}} de {{total}}"
+    },
+    "pill": {
+      "idle": "Descargar",
+      "partial": "Descargar lo que falta ({{completed}}/{{total}} guardados)",
+      "queued": "Descarga en cola, toca para cancelar",
+      "waitingWifi": "Esperando Wi-Fi, toca para cancelar",
+      "waitingNetwork": "Esperando conexión, toca para cancelar",
+      "downloading": "Descargando, {{percent}} por ciento, toca para cancelar",
+      "downloaded": "Descargado, toca para quitar",
+      "errorRetry": "{{message}}. Toca para reintentar"
+    },
+    "picker": {
+      "open": "Descargar temporadas",
+      "title": "Descargar temporadas",
+      "selectAll": "Seleccionar todo",
+      "unselectAll": "Deseleccionar todo",
+      "download": "Descargar",
+      "save": "Guardar cambios",
+      "season": "Temporada {{number}}",
+      "specials": "Especiales",
+      "episodes_one": "{{count}} episodio",
+      "episodes_other": "{{count}} episodios",
+      "partial": "{{completed}} de {{total}} episodios guardados",
+      "downloading": "Descargando {{percent}} %",
+      "downloaded": "Guardado en este dispositivo"
+    },
+    "episodeA11y": "{{label}}, episodio {{episode}}",
+    "confirmRemove": {
+      "title": "¿Quitar la descarga?",
+      "message": "Los archivos descargados se eliminarán de este dispositivo."
+    },
+    "confirmCancel": {
+      "title": "¿Cancelar la descarga?"
+    },
+    "confirmDelete": {
+      "title": "¿Eliminar la descarga?",
+      "message": "{{label}} se eliminará de este dispositivo."
+    },
+    "deleteAll": {
+      "label": "Eliminar todas las descargas",
+      "title": "¿Eliminar todas las descargas?",
+      "message": "Se liberarán {{size}}.",
+      "confirm": "Eliminar todo"
+    },
+    "errors": {
+      "failedTitle": "Error en la descarga",
+      "failed": "Error en la descarga",
+      "failedWithReason": "Error en la descarga ({{reason}})",
+      "insufficientSpace": "No hay suficiente espacio libre",
+      "auth": "La sesión ha caducado. Reintenta para volver a iniciar sesión",
+      "network": "Error de red. Reintenta cuando vuelvas a tener conexión",
+      "detailsMissing": "No se pudo leer este título en la mediateca. Vuelve a intentarlo en un momento.",
+      "nativeUnavailable": "Las descargas no están disponibles en este dispositivo."
+    },
+    "notification": {
+      "channelDescription": "Progreso de las descargas para ver sin conexión",
+      "activeItems": "Descargando {{number}} elementos",
+      "completed": "Descarga completada"
+    },
+    "refused": {
+      "insufficientSpace": {
+        "title": "No hay suficiente espacio",
+        "message": "No hay suficiente espacio: esta descarga necesita {{required}} (incluido un margen de seguridad), pero solo hay {{free}} libres."
+      },
+      "noNetwork": {
+        "title": "Sin conexión",
+        "message": "Sin conexión. Conéctate a internet para iniciar una descarga."
+      }
+    },
+    "quality": {
+      "title": "Calidad de descarga",
+      "hint": "Elige la calidad que se guardará en este teléfono.",
+      "fallback_one": "{{count}} episodio no está disponible en {{chosen}}: se descargará en {{quality}}",
+      "fallback_other": "{{count}} episodios no están disponibles en {{chosen}}: se descargarán en {{quality}}"
+    },
+    "nothing": {
+      "title": "No hay nada que descargar",
+      "already-local": "Ya está descargado o en la cola.",
+      "no-quality-available": "Este título aún no tiene ninguna calidad descargable.",
+      "no-file": "Este título no tiene ningún archivo reproducible."
+    },
+    "waitingWifiAlert": {
+      "title": "Esperando Wi-Fi",
+      "message": "La descarga empezará en cuanto estés conectado a una red Wi-Fi."
+    }
+  },
+  "cast": {
+    "back": "Atrás",
+    "pickerTitle": "Reproducir en",
+    "thisPhone": "Este teléfono",
+    "thisPhoneHint": "Reproducir en la aplicación",
+    "searching": "Buscando dispositivos Cast en tu Wi-Fi...",
+    "noDevices": "No se encontró ningún dispositivo Cast. El teléfono y el dispositivo deben estar en la misma Wi-Fi.",
+    "deviceHint": "Google Cast",
+    "airplay": "AirPlay",
+    "airplayChoose": "Elige un dispositivo AirPlay con el botón",
+    "airplayActive": "Reproducir en {{name}}",
+    "screenTitle": "Enviando",
+    "castingTo": "Enviando a {{name}}",
+    "preparing": "Preparando la transmisión...",
+    "connecting": "Conectando con {{name}}...",
+    "keepWifi": "Mantén este teléfono en la misma Wi-Fi hasta el final: es el que envía la película al dispositivo.",
+    "play": "Reproducir",
+    "pause": "Pausa",
+    "back10": "Retroceder 10 segundos",
+    "forward10": "Avanzar 10 segundos",
+    "stop": "Dejar de enviar",
+    "seekBar": "Posición",
+    "ended": "Finalizado",
+    "refusedTitle": "No se puede enviar este título",
+    "refused": {
+      "video-unsupported": "Este dispositivo no puede reproducir este vídeo. Sí se reproduce en la aplicación Badger para TV.",
+      "image-subtitles": "Los subtítulos elegidos son imágenes (PGS o VobSub), que un dispositivo Cast no puede mostrar. Elige otros subtítulos o míralo en la aplicación Badger para TV.",
+      "no-playable-audio": "Este dispositivo no puede reproducir ninguna pista de sonido de este título. Sí se reproduce en la aplicación Badger para TV.",
+      "no-video": "Este título no tiene vídeo que enviar."
+    },
+    "error": {
+      "noWifi": "Conecta el teléfono a una red Wi-Fi para enviar.",
+      "serverFailed": "El teléfono no pudo empezar a enviar la transmisión.",
+      "sessionFailed": "No se pudo conectar con el dispositivo.",
+      "loadFailed": "El dispositivo no aceptó la transmisión.",
+      "lost": "El dispositivo dejó de reproducir.",
+      "airplayNoRoute": "Primero elige un dispositivo AirPlay.",
+      "airplayRouteLost": "AirPlay se ha desconectado.",
+      "airplayNotExternal": "AirPlay no se hizo cargo de la reproducción."
+    },
+    "switchingTrack": "Cambiando de pista…",
+    "trackN": "Pista {{n}}",
+    "subtitlesOff": "Desactivados",
+    "audio": "Audio",
+    "subtitles": "Subtítulos",
+    "imageSubtitle": "Los subtítulos en imagen no se pueden enviar",
+    "volume": "Volumen de la TV",
+    "mute": "Silenciar la TV",
+    "unmute": "Activar el sonido de la TV",
+    "gestureHint": "Toca dos veces a la izquierda o a la derecha para saltar 10 s. Desliza hacia arriba o hacia abajo para cambiar el volumen de la TV.",
+    "seekBackToast": "−10 s",
+    "seekForwardToast": "+10 s"
+  },
+  "nav": {
+    "home": "Inicio",
+    "library": "Biblioteca",
+    "playlists": "Listas",
+    "settings": "Ajustes",
+    "loading": "Cargando...",
+    "loadingLibrary": "Cargando la mediateca...",
+    "updateRequired": "Actualización necesaria",
+    "unavailable": "Badger no está disponible: {{issue}}. Actualiza la aplicación.",
+    "screenLoadFailed": "No se pudo cargar la pantalla",
+    "tryAgain": "Vuelve a intentarlo"
+  },
+  "tvShell": {
+    "navLabel": "Navegación principal",
+    "offline": {
+      "network": "Sin conexión",
+      "syncError": "Error al sincronizar la mediateca",
+      "retry": "Reintentar"
+    },
+    "home": {
+      "resume": "Reanudar",
+      "startOver": "Empezar desde el principio",
+      "details": "Detalles",
+      "percentWatched": "{{percent}} % visto",
+      "resumeAt": "Reanudar {{time}}"
+    },
+    "errorReports": {
+      "title": "¿Nos ayudas a corregir errores?",
+      "body": "Los informes son anónimos y nos ayudan mucho a corregir errores 🙂",
+      "send": "Enviar informes",
+      "decline": "No enviar",
+      "footer": "Puedes cambiarlo cuando quieras en Ajustes."
+    },
+    "details": {
+      "deleteFailed": "No se pudo eliminar este título.",
+      "delete": "Eliminar",
+      "deleteConfirmTitle": "¿Eliminar {{title}}?",
+      "deleteConfirmBody": "Se eliminará de tu mediateca en todos tus dispositivos. No se puede deshacer.",
+      "deleteConfirm": "Eliminar definitivamente",
+      "cancel": "Cancelar",
+      "more": "Más",
+      "trailer": "Tráiler",
+      "trailerFailed": "No se pudo abrir el tráiler.",
+      "trailerOnYouTube": "Ver en YouTube",
+      "trailerQrHint": "Escanea con tu teléfono para ver el tráiler en YouTube.",
+      "playlist": "Lista",
+      "playlistTitle": "Añadir a una lista",
+      "playlistEmpty": "Aún no hay listas.",
+      "resume": "Reanudar",
+      "tabs": {
+        "tracks": "Calidades y pistas",
+        "cast": "Reparto y equipo",
+        "episodes": "Episodios",
+        "versions": "Versiones",
+        "similar": "Títulos similares"
+      },
+      "qualities": "Calidades",
+      "audio": "Audio",
+      "subtitles": "Subtítulos",
+      "originalQuality": "{{quality}} (original)",
+      "none": "Ninguno",
+      "noMedia": "Aún no se ha subido ningún vídeo.",
+      "watchedLeft_one": "{{percent}} % visto · queda {{count}} min",
+      "watchedLeft_other": "{{percent}} % visto · quedan {{count}} min",
+      "watched": "✓ Visto",
+      "runtimeMinutes": "{{minutes}} min",
+      "runtimeHours": "{{hours}} h {{minutes}} min",
+      "episodeCode": "T{{season}} · E{{episode}}",
+      "episodeHeading": "T{{season}} · E{{episode}} · {{name}}",
+      "episodeInfo": "Detalles del episodio {{number}}, {{name}}",
+      "aired": "emitido el {{date}}",
+      "close": "Cerrar",
+      "seasonEpisodes_one": "{{count}} episodio",
+      "seasonEpisodes_other": "{{count}} episodios",
+      "seasonAvailable": "Disponible",
+      "seasonMissing": "Faltan archivos",
+      "backToLibrary": "Volver a la biblioteca",
+      "backToPlaylists": "Volver a las listas",
+      "backToHome": "Volver al inicio",
+      "backToSearch": "Volver a la búsqueda"
+    },
+    "settings": {
+      "qualityAuto": "Automática, hasta {{quality}}: baja cuando la conexión no da para más.",
+      "qualityForced": "Forzada: siempre {{quality}}.",
+      "forceDescription": "No adaptarse a las condiciones de la red.",
+      "about": "Acerca de",
+      "groupsLabel": "Grupos de ajustes",
+      "qualityAndLanguages": "Calidad e idiomas",
+      "qualityValueAuto": "Automática, hasta {{quality}}",
+      "subtitleForProfile": "Para este perfil"
+    },
+    "dialog": {
+      "close": "Cerrar"
+    },
+    "devices": {
+      "thisDevice": "{{name}} (esta TV)",
+      "confirmSelfTitle": "¿Cerrar sesión en esta TV?",
+      "confirmSelfBody": "Esta TV dejará de mostrar tu mediateca hasta que alguien vuelva a iniciar sesión en ella."
+    },
+    "nav": {
+      "search": "Buscar"
+    },
+    "empty": {
+      "eyebrow": "TU BIBLIOTECA",
+      "title": "Añade tu primer título",
+      "subtitle": "Añade películas y series con Badger en tu computadora. Aparecerán solas en esta TV.",
+      "checkAgain": "Volver a comprobar",
+      "getDesktop": "Descargar Badger para computadora",
+      "downloadQr": "Código QR de la página de descarga de Badger",
+      "step1Title": "Añade contenido en tu computadora",
+      "step1Body": "Elige películas o una carpeta entera en Badger para computadora.",
+      "step2Title": "Badger encuentra los detalles",
+      "step2Body": "Los pósteres, el reparto y las sinopsis llegan solos, en tu idioma.",
+      "step3Title": "Mira en esta TV",
+      "step3Body": "Tu mediateca aparece aquí, cifrada con tu clave."
+    }
+  },
+  "settings": {
+    "account": {
+      "signedInAs": "Sesión iniciada como",
+      "unknown": "Desconocido",
+      "plan": "Cuenta y plan",
+      "planDescription": "Tu plan y tu almacenamiento",
+      "signOut": "Cerrar sesión",
+      "deletionScheduled": "Eliminación programada para el {{date}}",
+      "pairDevice": {
+        "title": "Vincular un dispositivo",
+        "description": "Añade una computadora o una TV"
+      }
+    },
+    "playback": {
+      "title": "Reproducción",
+      "autoplay": {
+        "title": "Reproducir automáticamente el siguiente episodio",
+        "description": "Continúa con los episodios de las series automáticamente."
+      },
+      "intro": {
+        "title": "Saltar las intros automáticamente",
+        "description": "Salta la intro cuando se conoce. El botón Saltar siempre aparece."
+      },
+      "credits": {
+        "title": "Saltar los créditos automáticamente",
+        "description": "Salta los créditos finales cuando se conocen."
+      },
+      "quality": {
+        "title": "Calidad de reproducción predeterminada",
+        "descriptionForced": "Forzada: siempre {{quality}}, sea cual sea la red o este teléfono.",
+        "descriptionAuto": "Automática, hasta {{quality}}: la reproducción empieza en esta calidad, nunca la supera, baja cuando tu conexión o tu teléfono no dan para más y vuelve a subir cuando pueden."
+      },
+      "force": {
+        "title": "Forzar esta calidad",
+        "description": "No adaptarse a las condiciones de la red ni a este teléfono. Desactivado (recomendado): el reproductor puede bajar la calidad si tu conexión no puede mantener la elegida."
+      },
+      "audioLanguage": {
+        "title": "Idioma de audio predeterminado",
+        "description": "Se usa cuando la película o la serie no tiene su propia elección de audio y el archivo incluye ese idioma. Si no, se reproduce el audio predeterminado del archivo.",
+        "original": "Original"
+      }
+    },
+    "downloads": {
+      "title": "Descargas",
+      "wifiOnly": {
+        "title": "Descargar solo con Wi-Fi",
+        "description": "No usar nunca los datos móviles para las descargas."
+      },
+      "manage": {
+        "title": "Gestionar descargas",
+        "description": "Consulta lo que hay guardado en este dispositivo"
+      }
+    },
+    "language": {
+      "title": "Idioma",
+      "appLanguage": "Idioma de la aplicación",
+      "accountWide": "Cambia el idioma de tu cuenta en todos tus dispositivos y el de los correos que te enviamos."
+    },
+    "privacy": {
+      "title": "Privacidad",
+      "errorReports": {
+        "title": "Enviar informes de errores",
+        "description": "Los informes son anónimos y nos ayudan mucho a corregir errores 🙂",
+        "link": "¿Qué contiene un informe?"
+      }
+    },
+    "advanced": {
+      "title": "Avanzado",
+      "server": "Servidor",
+      "apiHost": "Host de la API",
+      "apiHostPlaceholder": "https://tu-servidor.com",
+      "saveHostLabel": "Guardar el host de la API",
+      "saveHost": "Guardar host",
+      "hostSaved": "Guardado",
+      "libraryKey": "Clave de la mediateca",
+      "resetKey": {
+        "title": "Restablecer la clave de cifrado",
+        "description": "Cambia la clave que protege tu mediateca."
+      },
+      "animatedBackground": {
+        "title": "Fondo animado",
+        "description": "Cada pocos segundos, estrellas fugaces cruzan el cielo estrellado detrás de la aplicación. El modo automático las desactiva en los teléfonos con poca memoria.",
+        "auto": "Automático",
+        "on": "Activado",
+        "off": "Desactivado",
+        "automatic": {
+          "animated": "Automático: las estrellas fugaces están activadas en este teléfono.",
+          "static": "Automático: este teléfono tiene poca memoria, así que el cielo se queda quieto."
+        }
+      }
+    }
+  },
+  "account": {
+    "password": {
+      "title": "Cambiar la contraseña",
+      "currentPassword": "Contraseña actual",
+      "newPassword": "Nueva contraseña",
+      "change": "Cambiar la contraseña",
+      "changing": "Cambiando...",
+      "success": "Contraseña cambiada.",
+      "codeLabel": "Código de verificación",
+      "errors": {
+        "required": "Los dos campos son obligatorios.",
+        "tooShort": "La nueva contraseña debe tener al menos 8 caracteres.",
+        "incorrect": "La contraseña actual no es correcta.",
+        "twoFactorRequired": "Introduce tu código de verificación para confirmar el cambio de contraseña.",
+        "twoFactorInvalid": "Ese código de verificación no es válido. Vuelve a intentarlo.",
+        "failed": "No se pudo cambiar la contraseña."
+      },
+      "set": {
+        "title": "Crear una contraseña",
+        "button": "Guardar la contraseña",
+        "setting": "Guardando..."
+      }
+    },
+    "devices": {
+      "title": "Tus dispositivos",
+      "loading": "Cargando...",
+      "empty": "No se encontró ningún dispositivo con la sesión iniciada.",
+      "summary_one": "{{count}} dispositivo con la sesión iniciada",
+      "summary_other": "{{count}} dispositivos con la sesión iniciada",
+      "manage": "Ver todos los dispositivos",
+      "thisDevice": "{{name}} (este teléfono)",
+      "lastSeen": "Última actividad: {{date}}",
+      "lastSeenUnknown": "Última actividad: desconocida",
+      "revoke": "Cerrar sesión",
+      "refresh": "Actualizar",
+      "footnote": "Cerrar la sesión de un dispositivo le quita el acceso a tu mediateca. La clave en sí no se puede recuperar.",
+      "confirmTitle": "¿Cerrar la sesión de {{name}}?",
+      "confirmExplanation": "Esto le quita el acceso a tu mediateca de inmediato. La clave en sí no se puede recuperar: si el dispositivo ya tiene una copia, la conserva.",
+      "cancel": "Cancelar",
+      "errors": {
+        "load": "No pudimos cargar tus dispositivos. Revisa tu conexión y vuelve a intentarlo.",
+        "revoke": "No pudimos cerrar la sesión de ese dispositivo. Vuelve a intentarlo."
+      }
+    },
+    "access": {
+      "unpaidBanner": "Tu suscripción ha terminado. La reproducción y las subidas están detenidas. Tus archivos se eliminarán el {{date}}.",
+      "unpaidBannerNoDate": "Tu suscripción ha terminado. La reproducción y las subidas están detenidas. Tus archivos se eliminarán pasado un tiempo limitado.",
+      "playbackBlocked": "La reproducción está detenida porque tu suscripción ha terminado. Tus archivos se eliminarán el {{date}}.",
+      "playbackBlockedNoDate": "La reproducción está detenida porque tu suscripción ha terminado. Tus archivos se eliminarán pasado un tiempo limitado."
+    },
+    "signOutKey": {
+      "title": "¿Has guardado la clave de tu mediateca?",
+      "body": "Al cerrar sesión, la clave de tu mediateca se borra de este dispositivo. Para volver a iniciar sesión tendrás que escribirla, porque iniciar sesión con un código QR solo funciona mientras otro de tus dispositivos todavía tenga la clave. Sin la clave, no se puede abrir tu mediateca.",
+      "cancel": "Cancelar",
+      "confirm": "La he guardado, cerrar sesión"
+    }
+  },
+  "deleteAccount": {
+    "back": "Atrás",
+    "title": "Eliminar la cuenta",
+    "warning": "Esto elimina para siempre tu cuenta, tu mediateca y todos tus archivos. No se puede deshacer.",
+    "warningBooked": "Tu cuenta, tu mediateca y todos tus archivos se eliminarán el {{date}}. Hasta entonces puedes deshacerlo con \"Conservar mi cuenta\".",
+    "keepFiles": "¿Quieres conservar tus archivos? Descárgalos con la aplicación de escritorio antes de eliminar la cuenta. Después, tus archivos no se podrán recuperar.",
+    "passwordLabel": "Tu contraseña",
+    "confirmLabel": "Escribe DELETE para confirmar",
+    "codeLabel": "Código de verificación",
+    "delete": "Eliminar la cuenta",
+    "deleting": "Eliminando…",
+    "modeTitle": "Pagaste un año completo. ¿Cuándo eliminamos tu cuenta?",
+    "modeEndOfPeriod": "Al final de tu año pagado, el {{date}}. Tu cuenta sigue funcionando hasta entonces y no se renovará. Puedes anularlo en cualquier momento antes de esa fecha.",
+    "modeNow": "Ahora. Pierdes el acceso de inmediato y no se reembolsa el resto del año.",
+    "scheduled": "Tu cuenta se eliminará el {{date}}. Sigue funcionando hasta entonces y no se renovará.",
+    "cancelScheduled": "Conservar mi cuenta",
+    "cancelScheduledFailed": "No se pudo anular la eliminación. Vuelve a intentarlo.",
+    "errors": {
+      "invalidPassword": "Esa contraseña no es correcta.",
+      "twoFactorRequired": "Introduce tu código de verificación para continuar.",
+      "twoFactorInvalid": "Ese código de verificación no es válido. Vuelve a intentarlo.",
+      "confirmRequired": "Escribe DELETE para confirmar.",
+      "failed": "No se pudo eliminar. Vuelve a intentarlo."
+    }
+  },
+  "pairing": {
+    "title": "Vincular un dispositivo",
+    "subtitle": "Añade un navegador, una computadora o una TV a tu cuenta.",
+    "cardHint": "Añade una computadora o una TV escaneando el código que muestra.",
+    "warning": "Escanea solo códigos que aparezcan en una pantalla que tengas delante. Quien te envíe un código puede conseguir acceso a toda tu mediateca.",
+    "back": "Atrás",
+    "approvalQuestion": "{{app}} en {{name}} ({{type}}) quiere iniciar sesión en tu cuenta.",
+    "approvalKeyQuestion": "{{app}} en {{name}} ({{type}}) ha iniciado sesión en tu cuenta y pide la clave de tu mediateca.",
+    "deviceType": {
+      "unknown": "Dispositivo",
+      "mobile": "Teléfono",
+      "desktop": "Computadora",
+      "tv": "TV",
+      "kodi": "Kodi",
+      "jellyfin": "Servidor Jellyfin",
+      "web": "Navegador web"
+    },
+    "scan": {
+      "cameraStarting": "Iniciando la cámara...",
+      "cameraDenied": "La cámara no tiene permiso. Permite el acceso a la cámara para esta aplicación en los ajustes del teléfono, o escribe el código.",
+      "pointCamera": "Apunta la cámara al código que aparece en la pantalla del otro dispositivo.",
+      "codeLabel": "Código que aparece en el otro dispositivo",
+      "codeAccessibility": "Código de vinculación",
+      "continue": "Continuar",
+      "typeInstead": "Escribir el código",
+      "scanInstead": "Escanear el código"
+    },
+    "looking": "Buscando el código...",
+    "confirm": {
+      "asked": "Un dispositivo ({{type}}) llamado \"{{name}}\" ha pedido unirse a tu cuenta.",
+      "unlockNotice": "Se te pedirá que desbloquees el teléfono. Al aprobarlo, el dispositivo inicia sesión y recibe la clave de tu mediateca.",
+      "approve": "Aprobar",
+      "deny": "Rechazar"
+    },
+    "approving": "Esperando a que desbloquees el teléfono...",
+    "done": {
+      "added": "Se ha añadido {{name}}.",
+      "notAdded": "No se ha añadido {{name}}.",
+      "addedDetail": "El dispositivo ({{type}}) está iniciando sesión. Puedes cerrar su sesión cuando quieras desde tu lista de dispositivos.",
+      "notAddedDetail": "Su código ya no se puede usar.",
+      "done": "Listo"
+    },
+    "failed": {
+      "notAddedYet": "Aún no se ha añadido",
+      "didntWork": "No ha funcionado",
+      "tryAgain": "Vuelve a intentarlo",
+      "tryAnother": "Probar otro código"
+    },
+    "errors": {
+      "invalid_code": "Eso no parece un código de vinculación. Tiene 8 letras y números, como ABCD-EFGH.",
+      "not_found": "No encontramos ese código. Puede que haya caducado (los códigos duran 5 minutos) o que ya se haya usado. Pide un código nuevo en el otro dispositivo.",
+      "expired": "Ese código ha caducado. Pide un código nuevo en el otro dispositivo y vuelve a intentarlo.",
+      "already_used": "Ese código ya se ha usado. Si no lo aprobaste tú, revisa tu lista de dispositivos.",
+      "no_library_key": "Este teléfono no tiene la clave de tu mediateca, así que no puede añadir otro dispositivo. Abre primero tu mediateca en este teléfono.",
+      "no_device_lock": "Este teléfono no tiene bloqueo de pantalla. Configura primero un PIN, un patrón, la huella o el desbloqueo facial en los ajustes del teléfono. Te lo pedimos antes de compartir tu mediateca con otro dispositivo.",
+      "unlock_cancelled": "No se ha compartido nada. Desbloquea el teléfono para aprobar el nuevo dispositivo.",
+      "unlock_failed": "No pudimos desbloquear tu teléfono, así que no se ha compartido nada. Vuelve a intentarlo.",
+      "wrong_password": "Esa contraseña no es correcta, así que no se ha compartido nada. Vuelve a intentarlo.",
+      "signed_out": "Se ha cerrado tu sesión. Vuelve a iniciar sesión e inténtalo de nuevo.",
+      "network": "No pudimos conectar con el servidor. Revisa tu conexión y vuelve a intentarlo.",
+      "bad_request": "Ese dispositivo ha enviado algo que no podemos usar. Pídele un código nuevo.",
+      "unknown": "Algo ha fallado y el dispositivo no se ha añadido. Vuelve a intentarlo.",
+      "code_required": "Escribe el código para confirmar que eres tú.",
+      "code_invalid": "Ese código es incorrecto o ha caducado, así que no se ha compartido nada. Inténtalo de nuevo."
+    },
+    "unlock": {
+      "title": "Desbloquea para añadir un dispositivo",
+      "subtitle": "Confirma que eres tú antes de compartir tu mediateca con otro dispositivo.",
+      "cancel": "Cancelar"
+    },
+    "newDevice": {
+      "message": "Nuevo dispositivo añadido: {{name}} ({{type}})",
+      "accessibility": "Nuevo dispositivo añadido. Abre tus dispositivos.",
+      "hint": "Toca para ver tus dispositivos. ¿No has sido tú? Cierra su sesión desde ahí.",
+      "close": "Cerrar aviso",
+      "tvHint": "Pulsa OK para ver tus dispositivos. ¿No has sido tú? Cierra su sesión desde ahí."
+    }
+  },
+  "phonePairing": {
+    "step1": {
+      "badger": "1. Abre Badger o Parrot en una computadora o en otro teléfono con la sesión iniciada, o Badger en una TV con la sesión iniciada.",
+      "parrot": "1. Abre Badger o Parrot en tu computadora o en otro teléfono con la sesión iniciada."
+    },
+    "step2": "2. Ve a Ajustes y luego a Vincular un dispositivo.",
+    "step3": "3. Escanea este código o escribe el código de abajo.",
+    "codeLabel": "O escribe este código",
+    "expiresIn": "Este código caduca en {{time}}. Aparecerá uno nuevo automáticamente.",
+    "deviceName": "Este teléfono aparece como \"{{name}}\".",
+    "qrAccessibility": "Código QR para vincular este teléfono",
+    "starting": "Obteniendo un código de vinculación...",
+    "completing": "Aprobado. Iniciando sesión...",
+    "keyLink": "Recibir la clave desde otro dispositivo",
+    "keyCard": "Usa cualquier app de Badger o Parrot en la que hayas iniciado sesión, en cualquier dispositivo o perfil de esta cuenta.",
+    "keyTitle": "Recibe la clave de tu mediateca desde otro dispositivo con sesión iniciada en esta cuenta.",
+    "typeKey": "Escribir la clave",
+    "completingKey": "Aprobado. Abriendo tu mediateca...",
+    "tryAgain": "Obtener un código nuevo",
+    "denied": "La otra aplicación ha rechazado este teléfono. Obtén un código nuevo para volver a intentarlo.",
+    "errors": {
+      "unreachable": "No pudimos conectar con SpaceFleet. Revisa la conexión de este teléfono y obtén un código nuevo.",
+      "failed": "Algo ha fallado durante la vinculación. Obtén un código nuevo para volver a intentarlo.",
+      "key_unreadable": "La aprobación llegó a este teléfono, pero no se pudo leer su clave. Obtén un código nuevo y vuelve a aprobarlo.",
+      "key_mismatch": "La clave enviada no corresponde a esta cuenta. No se ha guardado nada. Obtén un código nuevo para volver a intentarlo."
+    }
+  },
+  "tvPairing": {
+    "signIn": {
+      "title": "Inicia sesión en Badger",
+      "subtitle": "En tu teléfono o computadora, abre Badger → Ajustes → Vincular un dispositivo y escanea el código o escríbelo.",
+      "codeLabel": "O escribe este código",
+      "qrAccessibility": "Código QR para vincular esta TV",
+      "starting": "Obteniendo un código de vinculación...",
+      "completing": "Aprobado. Iniciando sesión...",
+      "usePassword": "Usar correo y contraseña",
+      "useCode": "Usar un código de vinculación",
+      "tryAgain": "Obtener un código nuevo",
+      "denied": {
+        "title": "Se ha rechazado la vinculación",
+        "detail": "El otro dispositivo ha rechazado esta TV. Obtén un código nuevo para volver a intentarlo."
+      },
+      "errors": {
+        "title": "No se pudo vincular esta TV",
+        "unreachable": "No pudimos conectar con Badger. Revisa la conexión de esta TV y obtén un código nuevo.",
+        "failed": "Algo ha fallado durante la vinculación. Obtén un código nuevo para volver a intentarlo.",
+        "key_unreadable": "La aprobación llegó a esta TV, pero no se pudo leer la clave de la mediateca. Obtén un código nuevo y vuelve a aprobarlo.",
+        "key_mismatch": "La clave de la mediateca enviada no abre la mediateca de esta cuenta. No se ha guardado nada en esta TV. Obtén un código nuevo y vuelve a aprobarlo desde una aplicación que tenga tu mediateca."
+      },
+      "scanWithPhone": "Escanea con tu teléfono",
+      "codeRenews": "Aparecerá un código nuevo automáticamente en {{time}}",
+      "deviceName": "Esta TV aparece como “{{name}}”"
+    },
+    "approve": {
+      "settingsRow": "Vincular un dispositivo",
+      "settingsHint": "Aprueba otro dispositivo escribiendo el código que muestra.",
+      "title": "Vincular un dispositivo",
+      "subtitle": "Escribe el código que aparece en la pantalla del otro dispositivo.",
+      "codeLabel": "Código que aparece en el otro dispositivo",
+      "codePlaceholder": "ABCD-EFGH",
+      "continue": "Continuar",
+      "cancel": "Cancelar",
+      "back": "Atrás",
+      "warning": "Aprueba solo códigos que aparezcan en una pantalla que tengas delante. Quien te envíe un código puede conseguir acceso a toda tu mediateca.",
+      "passwordNotice": "Se te pedirá la contraseña de tu cuenta. Al aprobarlo, el dispositivo inicia sesión y recibe la clave de tu mediateca.",
+      "approving": "Comprobando tu contraseña y enviando la clave...",
+      "addedDetail": "Está iniciando sesión. Puedes cerrar su sesión cuando quieras desde tu lista de dispositivos.",
+      "password": {
+        "title": "Introduce la contraseña de tu cuenta",
+        "detail": "Confirma que eres tú antes de compartir tu mediateca con otro dispositivo.",
+        "label": "Contraseña de la cuenta"
+      },
+      "codeNotice": "Se te pedirá un código para confirmar que eres tú. Al aprobar, el dispositivo inicia sesión y recibe la clave de tu mediateca.",
+      "approvingCode": "Comprobando y enviando la clave...",
+      "code": {
+        "title": "Escribe el código",
+        "detailEmail": "Te hemos enviado un código por correo. Escríbelo para confirmar que eres tú antes de compartir tu mediateca con otro dispositivo.",
+        "detailTotp": "Escribe el código de tu app de autenticación para confirmar que eres tú antes de compartir tu mediateca con otro dispositivo.",
+        "label": "Código"
+      }
+    }
+  },
+  "subscription": {
+    "title": "Cuenta y plan",
+    "back": "Atrás",
+    "retry": "Reintentar",
+    "loadError": "No se pudo cargar tu cuenta. Revisa tu conexión y vuelve a intentarlo.",
+    "plan": {
+      "group": "Plan",
+      "plan": "Plan",
+      "status": "Estado",
+      "endedOn": "Finalizó el",
+      "renewsOn": "Se renueva el",
+      "wipeWarning": "Los archivos se eliminarán el {{date}}.",
+      "storageAddons": "Ampliaciones de almacenamiento",
+      "adminUnlimited": "Admin: almacenamiento ilimitado"
+    },
+    "planName": {
+      "free": "Gratis",
+      "tier1": "Starter",
+      "tier2": "Standard",
+      "tier3": "Scale"
+    },
+    "status": {
+      "active": "Activo",
+      "expired": "Caducado",
+      "free": "Plan gratuito"
+    },
+    "storage": {
+      "group": "Almacenamiento",
+      "used": "Usado",
+      "usedOf": "{{used}} de {{limit}}",
+      "gettingFull": "El almacenamiento se está llenando.",
+      "full": "El almacenamiento está lleno. Las subidas están bloqueadas hasta que liberes espacio.",
+      "reserved": "{{size}} reservados para subidas en curso"
+    }
+  },
+  "errorReports": {
+    "title": "¿Enviar informes de errores?",
+    "description": "Los informes son anónimos y nos ayudan mucho a corregir errores 🙂",
+    "send": "Enviar informes de errores",
+    "decline": "No enviar"
+  },
+  "onboarding": {
+    "loading": "Cargando la configuración de la mediateca...",
+    "enterTitle": "Introduce tu clave de la mediateca",
+    "showTitle": "Tu clave de la mediateca",
+    "subtitle": "Esta clave cifra los datos privados de tu mediateca. Guárdala en un lugar seguro.",
+    "generate": "Generar una clave nueva",
+    "validate": "Validar la clave",
+    "signOut": "Cerrar sesión",
+    "errors": {
+      "checkStatus": "No se pudo comprobar el estado de la mediateca.",
+      "generate": "No se pudo generar una clave nueva.",
+      "initialize": "No se pudo inicializar tu mediateca.",
+      "noLibrary": "No se encontró ninguna mediateca para esta cuenta.",
+      "unavailable": "No se puede acceder a tu mediateca en este momento. Vuelve a intentarlo en un momento.",
+      "validate": "No se pudo validar tu clave."
+    }
+  },
+  "resetKey": {
+    "title": "Cambiar la clave de la mediateca",
+    "subtitle": "Genera una clave nueva y vuelve a cifrar tu mediateca.",
+    "newKey": "Nueva clave",
+    "generateAnother": "Generar otra clave",
+    "password": "Contraseña de la cuenta",
+    "code": "Código de doble factor (opcional)",
+    "confirmLabel": "He guardado la nueva clave.",
+    "confirm": "Confirmar",
+    "confirmed": "Confirmado",
+    "rotate": "Cambiar la clave",
+    "rotating": "Cambiando...",
+    "success": "Clave cambiada. Recargando la mediateca...",
+    "errors": {
+      "confirmRequired": "Confirma que has guardado la nueva clave.",
+      "passwordRequired": "La contraseña es obligatoria.",
+      "notReady": "La mediateca no está lista.",
+      "rotate": "No se pudo cambiar la clave. Revisa tu contraseña o tu código."
+    }
+  },
+  "libraryFormat": {
+    "title": "Actualización necesaria",
+    "body": "Esta mediateca se creó con una versión más reciente de Badger. Actualiza la aplicación para abrirla.",
+    "update": "Actualizar ahora"
+  },
+  "home": {
+    "empty": {
+      "title": "Aún no hay contenido",
+      "subtitle": "Añade contenido desde la aplicación de escritorio y luego desliza hacia abajo aquí para actualizar."
+    },
+    "sections": {
+      "continueWatching": "Seguir viendo",
+      "recentlyAdded": "Añadidos recientemente",
+      "movies": "Películas",
+      "shows": "Series",
+      "favorites": "Favoritos"
+    },
+    "seeAll": "Ver todo",
+    "hero": {
+      "minutesLeft_one": "Queda {{count}} min",
+      "minutesLeft_other": "Quedan {{count}} min",
+      "resume": "Reanudar"
+    },
+    "emptyLibrary": {
+      "eyebrow": "Tu biblioteca",
+      "title": "Añade tu primer título",
+      "subtitle": "Añade películas y series con Badger en tu computadora. Aparecerán aquí solas.",
+      "getDesktop": "Descargar Badger para computadora",
+      "step1Title": "Elígelas en tu computadora",
+      "step1Body": "En Badger, en tu computadora, elige películas o una carpeta entera. Nada sale de ella hasta que tú lo digas.",
+      "step2Title": "Badger encuentra los detalles",
+      "step2Body": "Los pósteres, el reparto y las sinopsis llegan solos, en tu idioma.",
+      "step3Title": "Mira donde quieras",
+      "step3Body": "Este teléfono, tu tele y tus ordenadores muestran la misma mediateca, cifrada con tu clave."
+    }
+  },
+  "library": {
+    "scopes": {
+      "movies": "Películas",
+      "tv": "Series"
+    },
+    "search": {
+      "placeholder": "Buscar títulos",
+      "label": "Buscar títulos",
+      "clear": "Borrar la búsqueda"
+    },
+    "sheet": {
+      "open": "Ordenar y filtrar",
+      "openActive_one": "Ordenar y filtrar, {{count}} filtro activo",
+      "openActive_many": "Ordenar y filtrar, {{count}} filtros activos",
+      "openActive_other": "Ordenar y filtrar, {{count}} filtros activos",
+      "title": "Ordenar y filtrar",
+      "reset": "Restablecer filtros",
+      "sortBy": "Ordenar por",
+      "order": "Orden",
+      "genres": "Géneros",
+      "allGenres": "Todos los géneros",
+      "actors": "Actores",
+      "allActors": "Todos los actores",
+      "actorSearch": "Buscar actores",
+      "actorsLoading": "Cargando actores...",
+      "actorsNone": "No se encontró ningún actor",
+      "downloadedOnly": "Solo descargados",
+      "downloadedOnlyHint": "Solo los títulos guardados en este teléfono."
+    },
+    "sort": {
+      "name": "Nombre",
+      "added": "Fecha de adición",
+      "release": "Año de estreno",
+      "asc": "Ascendente",
+      "desc": "Descendente"
+    },
+    "row": {
+      "runtimeMinutes": "{{minutes}} min",
+      "runtimeHours": "{{hours}} h {{minutes}} min"
+    },
+    "empty": {
+      "noMatches": "Sin resultados",
+      "noMatchesHint": "Prueba otra búsqueda o quita el filtro.",
+      "noMovies": "Aún no hay películas",
+      "noShows": "Aún no hay series",
+      "addHint": "Añade contenido desde la aplicación de escritorio y luego desliza hacia abajo para actualizar."
+    },
+    "poster": {
+      "watched": "{{percent}} % visto",
+      "downloaded": "descargado"
+    }
+  },
+  "playlists": {
+    "newPlaceholder": "Nombre de la nueva lista",
+    "create": "Crear lista",
+    "rowLabel": "Lista {{name}}",
+    "system": {
+      "favorites": "Favoritos",
+      "watchlist": "Para ver"
+    },
+    "empty": {
+      "title": "Aún no hay listas",
+      "subtitle": "Crea una lista arriba para agrupar tus títulos favoritos."
+    },
+    "detail": {
+      "back": "Atrás",
+      "emptyTitle": "Aún no hay nada aquí",
+      "emptySubtitle": "Añade títulos a esta lista desde su página de detalles."
+    }
+  },
+  "offline": {
+    "pending_zero": "No hay cambios pendientes",
+    "pending_one": "{{count}} cambio se sincronizará al recuperar la conexión",
+    "pending_many": "{{count}} cambios se sincronizarán al recuperar la conexión",
+    "pending_other": "{{count}} cambios se sincronizarán al recuperar la conexión",
+    "indicator": {
+      "network": {
+        "text": "Sin conexión",
+        "label": "Sin conexión — contenido guardado"
+      },
+      "syncError": {
+        "text": "Sin sincronizar",
+        "label": "Mediateca sin sincronizar — contenido guardado"
+      },
+      "retry": "Toca para reintentar."
+    },
+    "notice": {
+      "network": {
+        "title": "Estás sin conexión",
+        "hint": "Tu mediateca guardada y tus descargas siguen disponibles."
+      },
+      "syncError": {
+        "title": "Error al sincronizar la mediateca",
+        "hint": "Tu mediateca guardada sigue en pantalla."
+      },
+      "close": "Cerrar aviso"
+    }
+  },
+  "shell": {
+    "language": "Idioma"
+  },
+  "languageNames": {
+    "en": "inglés",
+    "fr": "francés",
+    "nl": "neerlandés",
+    "de": "alemán",
+    "es": "español"
+  },
+  "errors": {
+    "library": {
+      "unreachable": "No se pudo conectar con la API en {{url}}. Si usas localhost, usa en su lugar la IP de tu computadora en la red local.",
+      "quotaExceeded": "Se ha superado la cuota de almacenamiento. Libera espacio para seguir sincronizando.",
+      "loadFailedDetail": "No se pudo cargar la base de datos de tu mediateca. ({{detail}})",
+      "loadFailed": "No se pudo cargar la base de datos de tu mediateca.",
+      "contractBlocked": "Badger no está disponible en este momento: {{issue}}. Actualiza la aplicación.",
+      "missingKey": "Falta la clave de cifrado.",
+      "decryptFailed": "No se pudo descifrar tu mediateca. Vuelve a introducir tu clave de cifrado.",
+      "formatTooNew": "Esta mediateca se creó con una versión más reciente de Badger.",
+      "syncUnavailable": "No se puede acceder a tu mediateca en este momento. Vuelve a intentarlo en un momento."
+    }
+  },
+  "playOnTv": {
+    "button": "Reproducir en la TV",
+    "pickerTitle": "Reproducir en la TV",
+    "searching": "Buscando tus TV…",
+    "empty": "No hay ninguna aplicación Badger para TV abierta. Abre Badger en tu TV, con la sesión iniciada en esta cuenta, para reproducir allí.",
+    "retry": "Vuelve a intentarlo",
+    "unnamedTv": "TV",
+    "errors": {
+      "offline": "No se pudo conectar con el servidor. Revisa tu conexión y vuelve a intentarlo.",
+      "server": "El servidor no pudo mostrar tus TV (error {{status}}). Vuelve a intentarlo en un momento.",
+      "noKey": "Este teléfono aún no puede conectar con tus TV: tu mediateca no está abierta en él. Abre tu mediateca y vuelve a intentarlo.",
+      "signedOut": "Se ha cerrado tu sesión. Vuelve a iniciar sesión e inténtalo de nuevo."
+    },
+    "remote": {
+      "connecting": "Conectando con {{name}}…",
+      "waiting": "Esperando a {{name}}…",
+      "loading": "Iniciando en {{name}}…",
+      "playing": "Reproduciendo en {{name}}",
+      "paused": "En pausa en {{name}}",
+      "ended": "Reproducción detenida en {{name}}",
+      "failed": "{{name}} no pudo reproducir este título.",
+      "notFound": "{{name}} aún no tiene este título. Espera un momento a que se actualice y vuelve a intentarlo.",
+      "unreachable": "{{name}} no responde. Asegúrate de que Badger esté abierto en esa TV.",
+      "play": "Reproducir",
+      "pause": "Pausa",
+      "back": "Retroceder 10 segundos",
+      "forward": "Avanzar 10 segundos",
+      "audio": "Audio",
+      "subtitles": "Subtítulos",
+      "subtitlesOff": "Desactivados",
+      "trackFallback": "Pista {{n}}",
+      "stop": "Detener",
+      "close": "Cerrar",
+      "retry": "Vuelve a intentarlo",
+      "position": "{{position}} de {{duration}}"
+    }
+  },
+  "feedback": {
+    "settingsGroup": "Asistencia",
+    "entry": "Enviar comentarios",
+    "entryDescription": "Ideas, lo que te gusta, lo que te molesta",
+    "title": "Enviar comentarios",
+    "intro": "Cuéntanos qué te parece la aplicación. Tu mensaje llega al equipo de SpaceFleet con tu cuenta, la versión de la aplicación y tu tipo de dispositivo, nunca con un título ni un nombre de archivo.",
+    "placeholder": "Tu mensaje",
+    "attachLog": "Adjuntar el registro de errores de la aplicación",
+    "attachLogHint": "Nos ayuda a encontrar un problema. No contiene títulos ni nombres de archivo.",
+    "send": "Enviar",
+    "sending": "Enviando...",
+    "sent": "¡Gracias! Tu mensaje se ha enviado.",
+    "back": "Atrás",
+    "errors": {
+      "empty": "Primero escribe un mensaje.",
+      "rate_limited": "Has enviado muchos mensajes en la última hora. Vuelve a intentarlo más tarde.",
+      "invalid": "No se pudo enviar este mensaje. Acórtalo y vuelve a intentarlo.",
+      "offline": "Sin conexión. Revisa tu red y vuelve a intentarlo.",
+      "failed": "No se pudo enviar tu mensaje. Vuelve a intentarlo."
+    }
+  },
+  "setup": {
+    "stepOf": "Paso {{step}} de {{total}}",
+    "back": "Atrás",
+    "next": "Siguiente",
+    "finish": "Terminar",
+    "language": {
+      "title": "Elige tu idioma",
+      "body": "Puedes cambiarlo cuando quieras en Ajustes."
+    },
+    "signIn": {
+      "title": "Iniciar sesión",
+      "pairTitle": "Aprueba este teléfono desde otra aplicación",
+      "orPassword": "O inicia sesión con tu correo y tu contraseña",
+      "signedInAs": "Sesión iniciada como {{email}}",
+      "useAnother": "Usar otra cuenta",
+      "sessionRejected": "Se ha cerrado tu sesión porque ya no es válida. Vuelve a iniciar sesión para continuar."
+    },
+    "notifications": {
+      "title": "¿Activar las notificaciones?",
+      "allow": "Sí, avísame",
+      "allowDetail": "A continuación, tu teléfono te pedirá permiso.",
+      "decline": "Ahora no",
+      "declineDetail": "Puedes activarlas más tarde en los ajustes del teléfono.",
+      "badgerBody": "Badger puede avisarte cuando una película o un episodio esté listo, por ejemplo: \"La temporada 9 de The Office está lista\"."
+    }
+  },
+  "keyStepWords": {
+    "collection": "mediateca",
+    "collectionKey": "clave de la mediateca"
+  },
+  "libraryKeyStep": {
+    "continue": "Continuar",
+    "lostKeyLink": "¿Has perdido tu clave? Borra esta $t(keyStepWords.collection) y empieza de cero",
+    "lostKeyNote": "Sin la clave, nadie puede abrir esta $t(keyStepWords.collection), ni siquiera nosotros.",
+    "wrongKey": "Esta clave no abre tu $t(keyStepWords.collection). Revisa las 12 palabras e inténtalo de nuevo."
+  },
+  "libraryKeyWords": {
+    "copy": "Copiar las palabras",
+    "copied": "Copiado",
+    "checksum": "Estas palabras no forman una clave válida. Compara cada palabra con las que guardaste.",
+    "word": "Palabra {{position}}",
+    "wordUnknown": "La palabra {{position}} no es una de las palabras de la clave",
+    "gridLabel": "Tu $t(keyStepWords.collectionKey), 12 palabras"
+  },
+  "eraseLibrary": {
+    "title": "¿Borrar esta $t(keyStepWords.collection)?",
+    "warning": "Esto borra toda la $t(keyStepWords.collection) de esta cuenta, para todos los perfiles: toda la música, las películas y las series, y todos sus detalles (metadatos, listas de reproducción, historial, ajustes), en Badger y Parrot. Nadie puede deshacerlo, ni siquiera nosotros. Tu cuenta y tu plan se mantienen.",
+    "otherDeviceLine": "¿Sigues con la sesión iniciada en algún sitio? Sirve cualquier app de Badger o Parrot, en cualquier ordenador, móvil o TV, incluso en otro perfil de esta cuenta. Obtén tu clave desde allí.",
+    "otherDeviceLink": "Obtener la clave desde otro dispositivo",
+    "confirmLabel": "Escribe {{word}} para confirmar",
+    "passwordLabel": "Contraseña de la cuenta",
+    "codeLabel": "Código de verificación",
+    "codeSent": "Te enviamos un código de verificación. Revisa tu correo o tu app de autenticación.",
+    "cancel": "Cancelar",
+    "submit": "Borrarlo todo y empezar de cero",
+    "working": "Borrando...",
+    "errorInvalidPassword": "Contraseña incorrecta.",
+    "errorTwoFactorInvalid": "El código de verificación no es válido.",
+    "errorGeneric": "No se pudo restablecer la $t(keyStepWords.collection) en este momento. Vuelve a intentarlo."
+  },
+  "appUpdate": {
+    "title": "Actualiza {{app}} para seguir usándolo",
+    "body": "Esta versión de {{app}} es demasiado antigua para conectarse. Instala la nueva versión desde donde obtuviste {{app}} y vuelve a abrir la app."
+  }
+}

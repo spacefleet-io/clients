@@ -1,0 +1,202 @@
+@import "tailwindcss";
+/* Palette and base text, shared with the web player. */
+@import "@space/ui/styles/badger-dark.css";
+@config "../../../tailwind.config.cjs";
+
+/* UI fonts ship with the app (variable woff2, SIL OFL): first paint must never
+   wait on a third-party fetch (run 7950 movie-playback stalled on Google Fonts). */
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("./assets/fonts/InterVariable.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Space Grotesk";
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: swap;
+  src: url("./assets/fonts/SpaceGroteskVariable.woff2") format("woff2");
+}
+
+@layer base {
+  @keyframes float {
+    0%, 100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-10px);
+    }
+  }
+
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+
+  a {
+    cursor: pointer;
+  }
+
+  button {
+    cursor: pointer;
+  }
+
+  button:disabled {
+    cursor: not-allowed;
+  }
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Issue #25 P1 residual: the window runs with backgroundThrottling: false, so
+   a hidden window keeps ticking CSS animations (job spinner, dashboard
+   chevrons): ~3-4 % renderer CPU in compositor + style recalc on a no-GPU host.
+   lib/appWindowVisibility.ts sets this mark while main reports the window hidden.
+   Closing Radix elements ([data-state=closed]) keep their short exit animation:
+   Presence unmounts them on animationend, so a paused exit would leave e.g. the
+   loading modal's overlay mounted until the window is shown again. */
+:root[data-app-window-hidden] :not([data-state="closed"]),
+:root[data-app-window-hidden] :not([data-state="closed"])::before,
+:root[data-app-window-hidden] :not([data-state="closed"])::after {
+  animation-play-state: paused !important;
+}
+
+@layer components {
+  .space-panel {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid hsl(var(--border) / 0.4);
+    background: hsl(var(--card) / 0.92);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+  }
+
+  .space-panel > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .space-tile {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid hsl(var(--border) / 0.4);
+    background: hsl(var(--card) / 0.88);
+    transition: border-color 0.3s ease, background 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  }
+
+  .space-tile > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .space-tile:hover {
+    border-color: hsl(var(--primary) / 0.5);
+    background: hsl(var(--card) / 0.8);
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
+    transform: translateY(-2px);
+  }
+
+  .dashboard-section {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .dashboard-section[data-style="1"] {
+    background: linear-gradient(
+      140deg,
+      hsl(var(--section-style-1) / 0.15),
+      hsl(var(--card) / 0.8) 40%
+    );
+    border-color: hsl(var(--section-style-1) / 0.3);
+  }
+
+  .dashboard-section[data-style="2"] {
+    background: linear-gradient(
+      140deg,
+      hsl(var(--section-style-2) / 0.12),
+      hsl(var(--card) / 0.8) 40%
+    );
+    border-color: hsl(var(--section-style-2) / 0.3);
+  }
+
+  .dashboard-section[data-style="3"] {
+    background: linear-gradient(
+      140deg,
+      hsl(var(--section-style-3) / 0.12),
+      hsl(var(--card) / 0.8) 40%
+    );
+    border-color: hsl(var(--section-style-3) / 0.3);
+  }
+
+  .dashboard-section[data-style="4"] {
+    background: linear-gradient(
+      140deg,
+      hsl(var(--section-style-4) / 0.12),
+      hsl(var(--card) / 0.8) 40%
+    );
+    border-color: hsl(var(--section-style-4) / 0.3);
+  }
+
+  .dashboard-section[data-style="5"] {
+    background: linear-gradient(
+      140deg,
+      hsl(var(--section-style-5) / 0.12),
+      hsl(var(--card) / 0.8) 40%
+    );
+    border-color: hsl(var(--section-style-5) / 0.3);
+  }
+
+  .dashboard-style-dot {
+    display: inline-flex;
+    height: 0.75rem;
+    width: 0.75rem;
+    border-radius: 9999px;
+    border: 1px solid hsl(var(--border));
+    background-color: hsl(var(--card));
+  }
+
+  .dashboard-style-dot[data-style="1"] {
+    background-color: hsl(var(--section-style-1));
+  }
+
+  .dashboard-style-dot[data-style="2"] {
+    background-color: hsl(var(--section-style-2));
+  }
+
+  .dashboard-style-dot[data-style="3"] {
+    background-color: hsl(var(--section-style-3));
+  }
+
+  .dashboard-style-dot[data-style="4"] {
+    background-color: hsl(var(--section-style-4));
+  }
+
+  .dashboard-style-dot[data-style="5"] {
+    background-color: hsl(var(--section-style-5));
+  }
+
+  /*
+   * Library grid cards: skip style/layout/paint of cards that are off screen.
+   * Opening a dialog invalidates style on the whole document; with 100+ cards
+   * that recalc dominated the interaction. Live A/B on a 4-core, 200%-quota
+   * Linux test machine (e2e-perf, issue #25), 4 details-dialog opens: without this rule
+   * 680-750 ms of main-thread work and a 120-127 ms longest task; with it
+   * 410-540 ms and 77-80 ms. Library scroll: 34-39 frames over 50 ms vs 0-25.
+   * The intrinsic size is the measured card (210x354) so the scroll height is
+   * stable; `auto` remembers the real size once a card has been rendered.
+   * `content-visibility: auto` implies paint containment, so a card with its
+   * playlist menu open opts out (see Library.tsx) to keep the menu unclipped.
+   */
+  .library-card-cv {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 210px auto 354px;
+  }
+}

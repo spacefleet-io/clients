@@ -1,0 +1,1 @@
+lecteur musique,mp3,flac,hors connexion,playlist,paroles,titres,albums,bibliothèque,streaming

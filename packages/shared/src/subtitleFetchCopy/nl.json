@@ -1,0 +1,30 @@
+{
+  "subtitleFetch": {
+    "title": "Ondertitels ophalen",
+    "getMore": "Meer ondertitels zoeken…",
+    "looking": "Ondertitels zoeken…",
+    "pick": "Kies een taal",
+    "already": "Al in je mediatheek",
+    "none": "Geen ondertitels gevonden.",
+    "unavailable": "Er ging iets mis bij het ophalen van deze ondertitels. We werken eraan en het zou snel weer moeten werken.",
+    "offline": "Internetverbinding nodig",
+    "fromDownload": "Niet beschikbaar tijdens het afspelen van een download",
+    "getting": "Ondertitels in het {language} ophalen",
+    "downloading": "Downloaden",
+    "saving": "Opslaan in je mediatheek",
+    "added": "{name} toegevoegd",
+    "failed": "{name} kon niet worden toegevoegd. Probeer het opnieuw.",
+    "back": "Terug",
+    "done": "Klaar",
+    "hearingImpaired": "Slechthorenden",
+    "foreignPartsOnly": "Alleen anderstalige delen",
+    "directorsCut": "Director's cut",
+    "extended": "Extended",
+    "unrated": "Unrated",
+    "tryAnother": "Andere versie proberen",
+    "lookingAnother": "Andere versie zoeken…",
+    "replaced": "{name} vervangen door een andere versie",
+    "noneLeft": "Geen andere versie van {name} meer",
+    "replaceFailed": "Kan {name} niet vervangen. Probeer het opnieuw."
+  }
+}

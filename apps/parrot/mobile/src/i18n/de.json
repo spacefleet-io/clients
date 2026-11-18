@@ -1,0 +1,121 @@
+{
+  "keyStepWords": {
+    "collection": "Bibliothek",
+    "collectionKey": "Bibliotheksschlüssel"
+  },
+  "parrot": {
+    "nav": {
+      "back": "Zurück",
+      "library": "Bibliothek",
+      "settings": "Einstellungen",
+      "nowPlaying": "Läuft gerade"
+    },
+    "login": {
+      "sameAsBadger": "Verwende dieselbe E-Mail und dasselbe Passwort wie bei Badger.",
+      "codeTotp": "Code aus deiner Authenticator-App",
+      "codeEmail": "Code, den wir dir per E-Mail geschickt haben",
+      "usePassword": "Mit deinem Passwort anmelden"
+    },
+    "key": {
+      "title": "Gib deinen Bibliotheksschlüssel ein",
+      "showTitle": "Dein Bibliotheksschlüssel",
+      "body": "Gib die 12 Wörter ein, die du beim Erstellen deiner Bibliothek gespeichert hast.",
+      "field": "Bibliotheksschlüssel",
+      "continue": "Weiter",
+      "saved": "Dein Bibliotheksschlüssel ist auf diesem Handy gespeichert.",
+      "errors": {
+        "unavailable": "Der Schlüssel kann gerade nicht geprüft werden. Prüfe deine Verbindung und versuch es noch einmal."
+      }
+    },
+    "library": {
+      "opening": "Deine Bibliothek wird geöffnet…",
+      "openFailed": "Deine Bibliothek konnte nicht geöffnet werden ({{error}}).",
+      "tryAgain": "Noch einmal versuchen",
+      "noAlbums": "Noch keine Alben.",
+      "songs_one": "{{count}} Titel",
+      "songs_other": "{{count}} Titel",
+      "albums_one": "{{count}} Album",
+      "albums_other": "{{count}} Alben",
+      "artists_one": "{{count}} Künstler",
+      "artists_other": "{{count}} Künstler",
+      "noArtists": "Noch keine Künstler.",
+      "noSongs": "Noch keine Titel.",
+      "view": {
+        "albums": "Alben",
+        "artists": "Künstler",
+        "songs": "Titel"
+      },
+      "sort": {
+        "byArtist": "Nach Künstler",
+        "byName": "Nach Name",
+        "byTitle": "Nach Titel"
+      },
+      "search": "Deine Bibliothek durchsuchen",
+      "closeSearch": "Suche schließen"
+    },
+    "album": {
+      "noPlayableFile": "Dieses Album hat noch keine abspielbare Datei.",
+      "playFailed": "Dieser Titel konnte nicht abgespielt werden ({{error}}).",
+      "noSongs": "Keine Titel.",
+      "play": "{{title}} abspielen"
+    },
+    "player": {
+      "nothing": "Gerade läuft nichts.",
+      "unknownSong": "Unbekannter Titel",
+      "position": "Position",
+      "previous": "Vorheriger Titel",
+      "next": "Nächster Titel",
+      "open": "Player öffnen",
+      "playing": "Läuft",
+      "error": "Wiedergabefehler: {{error}}",
+      "playingFromAlbum": "Wiedergabe aus Album",
+      "close": "Schließen",
+      "goToAlbum": "Zum Album",
+      "goToArtist": "Zum Künstler",
+      "more": "Mehr",
+      "output": "Auf einem anderen Gerät abspielen"
+    },
+    "settings": {
+      "signedInAs": "Angemeldet als",
+      "signOut": "Abmelden",
+      "language": "Sprache",
+      "signOutKey": {
+        "title": "Hast du deinen Bibliotheksschlüssel gespeichert?",
+        "body": "Beim Abmelden wird dein Bibliotheksschlüssel von diesem Handy entfernt. Um dich wieder anzumelden, musst du ihn eintippen, denn die Anmeldung per QR-Code klappt nur, solange eines deiner anderen Geräte den Schlüssel noch hat. Ohne den Schlüssel lässt sich deine Bibliothek nicht öffnen.",
+        "cancel": "Abbrechen",
+        "confirm": "Gespeichert, abmelden"
+      },
+      "pairDeviceDescription": "Einen Browser im Parrot-Webplayer, einen Computer oder einen Fernseher mit dem angezeigten Code freigeben.",
+      "library": "Bibliothek",
+      "refresh": "Bibliothek neu laden",
+      "openSource": "Open-Source-Software",
+      "openSourceBody": "Parrot spielt Apple-Lossless-Titel (ALAC) mit einer Portierung von Apples ALAC-Decoder ab, © 2011 Apple Inc., unter der Apache-Lizenz 2.0."
+    },
+    "setup": {
+      "notificationsBody": "Parrot kann dir Bescheid geben, wenn die Musik, die du auf deinem Computer hinzufügst, hier abspielbereit ist."
+    },
+    "playlists": {
+      "likedEmpty": "Noch keine Lieblingssongs"
+    },
+    "kept": {
+      "keep": "Auf diesem Telefon behalten",
+      "remove": "Von diesem Telefon entfernen",
+      "line": "Auf diesem Telefon · {{size}}",
+      "chooseBody": "Diese Titel sind in mehr als einem Format gespeichert. Wähle, welches auf diesem Telefon bleiben soll.",
+      "downloadingSong": "Wird geladen…",
+      "failed": "Konnte das nicht auf deinem Telefon behalten. Versuche es erneut."
+    },
+    "empty": {
+      "eyebrow": "Deine Bibliothek",
+      "title": "Füge dein erstes Album hinzu",
+      "subtitle": "Füge Musik mit Parrot auf deinem Computer hinzu. Sie erscheint hier von selbst.",
+      "getDesktop": "Parrot für den Computer holen",
+      "step1Title": "Wähle Songs auf deinem Computer",
+      "step1Body": "Wähle in Parrot auf deinem Computer Musikdateien oder einen ganzen Ordner. Nichts verlässt ihn ohne deine Zustimmung.",
+      "step2Title": "Parrot findet die Details",
+      "step2Body": "Cover, Künstlerbilder und Songtexte kommen von selbst.",
+      "step3Title": "Überall hören",
+      "step3Body": "Dieses Handy und deine Computer spielen dieselbe Bibliothek ab, verschlüsselt mit deinem Schlüssel."
+    }
+  }
+}

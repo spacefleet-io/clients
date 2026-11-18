@@ -1,0 +1,34 @@
+/* Badger's dark palette and base text (UX-THEME-01): the softer space palette with Badger's orange accent. The desktop
+   renderer and the web player both import it, so every Badger screen in a browser engine shares one look. Values are
+   HSL triplets read through `hsl(var(--x))` by the Tailwind colours (`./theme.css` for Tailwind v4 apps, the
+   desktop's `tailwind.config.cjs`). Import it right after `@import "tailwindcss"`: the `@apply` rules need the colours.
+   The fonts fall back to the system's when the app ships no Inter / Space Grotesk files. The colours themselves live in
+   `./space-palette.css`, which the website imports on its own. */
+@import "./space-palette.css";
+
+@layer base {
+  :root,
+  :root[data-theme="space"][data-mode="dark"],
+  .dark {
+    --radius: 0.85rem;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  /* The page background too, so a page shorter than the window shows no browser canvas below it. */
+  html {
+    @apply bg-background;
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+
+  h1, h2, h3, .font-display {
+    font-family: "Space Grotesk", system-ui, sans-serif;
+    letter-spacing: -0.02em;
+  }
+}

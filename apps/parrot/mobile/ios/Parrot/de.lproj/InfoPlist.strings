@@ -1,0 +1,4 @@
+/* Die Berechtigungsabfragen von iOS (Info.plist-Schlüssel). */
+"NSCameraUsageDescription" = "Parrot nutzt die Kamera, um den Code eines neuen Geräts zu scannen, das du deinem Konto hinzufügen möchtest.";
+"NSFaceIDUsageDescription" = "Parrot fragt nach Face ID, bevor deine Musikbibliothek mit einem anderen Gerät geteilt wird.";
+"NSPhotoLibraryUsageDescription" = "Parrot öffnet deine Fotos, damit du ein Cover für ein Album oder eine Playlist auswählen kannst.";

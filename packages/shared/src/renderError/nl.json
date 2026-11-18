@@ -1,0 +1,11 @@
+{
+  "renderBoundary": {
+    "message": "Er ging iets mis",
+    "detail": "Er is een fout opgetreden in dit deel van de app.",
+    "windowDetail": "{{app}} moet dit scherm opnieuw starten.",
+    "retry": "Opnieuw proberen",
+    "popupClosed": "Dit venster liep tegen een fout aan en is gesloten.",
+    "dismiss": "OK",
+    "itemFailed": "Dit item kan niet worden weergegeven."
+  }
+}

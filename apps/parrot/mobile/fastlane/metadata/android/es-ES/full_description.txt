@@ -1,0 +1,27 @@
+Parrot es el reproductor de música para tu propia música. Sube tus álbumes desde el ordenador y escúchalos en streaming en tu móvil y en tu ordenador, estés donde estés.
+
+TODA TU MÚSICA, EN TODAS PARTES
+• Sube tu música con la app de Parrot para ordenador (Windows, Mac, Linux): MP3, FLAC, AAC, ALAC, OGG, Opus y WAV.
+• Las portadas y los datos de cada canción se completan solos.
+• Explora tus álbumes, artistas, canciones y listas, y busca en toda tu biblioteca.
+• Tu biblioteca, tus listas y tus canciones favoritas son las mismas en todos tus dispositivos.
+
+ESCUCHA A TU MANERA
+• Crea listas y marca tus canciones favoritas, en el móvil o en el ordenador.
+• Canta con las letras, sincronizadas línea a línea cuando están disponibles.
+• Elige qué suena después, con modo aleatorio y repetición.
+• Controla la música desde la pantalla de bloqueo y las notificaciones.
+
+ESCUCHA SIN CONEXIÓN
+• Descarga canciones, álbumes o listas en tu móvil y escúchalos sin internet.
+• Las canciones que añades a una lista descargada también se descargan.
+
+SOLO TU MÚSICA
+• Sin anuncios.
+• Tu biblioteca y la música que añades se cifran en tu dispositivo antes de llegar a nuestros servidores.
+• Para mostrar portadas y letras, Parrot consulta nuestro servicio de búsqueda con un ticket anónimo de un solo uso en lugar de tu cuenta: no podemos saber quién pregunta. El servicio ve lo que se busca y tu dirección de internet, que no guardamos.
+• Parrot no ofrece música: escuchas la música que añades tú.
+
+EMPIEZA GRATIS
+• Crea una cuenta gratuita de SpaceFleet, con 20 GB de almacenamiento incluidos.
+• La misma cuenta funciona con Badger, nuestra app para tus películas y series.

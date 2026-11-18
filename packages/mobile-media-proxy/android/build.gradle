@@ -1,0 +1,50 @@
+apply plugin: "com.android.library"
+apply plugin: "org.jetbrains.kotlin.android"
+
+def buildToolsVersionValue = "36.0.0"
+def minSdkVersionValue = 26
+def compileSdkVersionValue = 36
+def targetSdkVersionValue = 36
+
+// The loopback decrypt proxy (PlaybackHttpServer, StorageTunnelClient, MediaCrypto, the offline store): pure Kotlin,
+// no libmpv. Badger's mpv player (packages/mobile-mpv-playback) and Parrot's ExoPlayer both play through it.
+android {
+    namespace "com.spacefleet.mediaproxy"
+    compileSdk compileSdkVersionValue
+    buildToolsVersion buildToolsVersionValue
+
+    defaultConfig {
+        minSdk minSdkVersionValue
+        targetSdk targetSdkVersionValue
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = "17"
+    }
+
+    // JVM unit tests run against android.jar stubs: android.util.Log (logged throughout the proxy) answers 0 instead of throwing.
+    testOptions {
+        unitTests.returnDefaultValues = true
+    }
+
+    // The apps' `profile` build type (a release build the phone e2e harness measures) must resolve in this module too.
+    buildTypes {
+        profile {
+            initWith release
+            matchingFallbacks = ["release"]
+        }
+    }
+}
+
+dependencies {
+    implementation("com.facebook.react:react-android")
+    // JVM unit tests of the pure-Kotlin proxy code (src/test): `./gradlew :space_mobile-media-proxy:testDebugUnitTest`.
+    testImplementation("junit:junit:4.13.2")
+    // android.jar's org.json is a stub on the JVM; ChunkedFile.fromJson is tested against the real one.
+    testImplementation("org.json:json:20180813")
+}

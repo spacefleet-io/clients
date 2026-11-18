@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Simulator builds are ad-hoc signed; without an explicit keychain access
+		 group every SecItem call fails with errSecMissingEntitlement (-34018).
+		 Only referenced for sdk=iphonesimulator*. -->
+	<key>keychain-access-groups</key>
+	<array>
+		<string>$(AppIdentifierPrefix)com.spacebadger.mobile</string>
+	</array>
+</dict>
+</plist>

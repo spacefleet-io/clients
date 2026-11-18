@@ -1,0 +1,15 @@
+diff --git a/scripts/sentry_utils.rb b/scripts/sentry_utils.rb
+--- a/scripts/sentry_utils.rb
++++ b/scripts/sentry_utils.rb
+@@ -3,6 +3,11 @@
+   env_rn_path = ENV['REACT_NATIVE_NODE_MODULES_DIR']
+   if env_rn_path != nil
+     rn_path = env_rn_path
++    # Reanimated, Worklets and SVG read this variable as a node_modules folder, and the app Podfile sets it that way;
++    # accept that form too, so one value serves every podspec.
++    if !File.exist?(File.join(rn_path, 'package.json')) && File.exist?(File.join(rn_path, 'react-native', 'package.json'))
++      rn_path = File.join(rn_path, 'react-native')
++    end
+   end
+ 
+   rn_package_json_path = File.join(rn_path, 'package.json')

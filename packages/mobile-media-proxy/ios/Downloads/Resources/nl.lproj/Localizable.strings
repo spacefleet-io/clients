@@ -1,0 +1,6 @@
+/* Downloadmeldingen (DownloadEngine.swift). Volgt downloads.errors.* van packages/mobile-shell/src/i18n/nl.json. */
+"download.notification.complete" = "Download voltooid";
+"download.notification.error.insufficientSpace" = "Niet genoeg opslagruimte";
+"download.notification.error.auth" = "Sessie verlopen. Probeer het opnieuw om in te loggen";
+"download.notification.error.network" = "Netwerkfout. Probeer het opnieuw zodra je weer online bent";
+"download.notification.error.failed" = "Download mislukt";

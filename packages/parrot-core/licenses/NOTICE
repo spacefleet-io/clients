@@ -1,0 +1,11 @@
+Parrot (SpaceFleet)
+
+This product includes software ported from the Apple Lossless Audio Codec (ALAC)
+reference decoder (https://github.com/macosforge/alac):
+
+  Copyright (c) 2011 Apple Inc. All rights reserved.
+  Licensed under the Apache License, Version 2.0 (see apple-alac-LICENSE.txt).
+
+The port (packages/parrot-core/src/alac.ts and the Android decoder in
+packages/mobile-audio-playback) translates Apple's C/C++ code to TypeScript and
+Kotlin; the MP4 reading and the WAV output are Parrot's own.

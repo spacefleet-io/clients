@@ -1,0 +1,1231 @@
+{
+  "brand": {
+    "mascotAlt": "Badger-mascotte"
+  },
+  "authApiHost": {
+    "button": "API-host",
+    "title": "Verbindingshosts",
+    "subtitle": "Stel eigen API- en runtime-hosts in. Deze waarden worden lokaal bewaard en blijven staan na het uitloggen.",
+    "apiLabel": "API",
+    "label": "Eigen host",
+    "placeholder": "api.spacefleet.io",
+    "hint": "Je kunt een host of een volledige URL invullen. Bijvoorbeeld: api.spacefleet.io of https://api.spacefleet.io",
+    "defaultBadge": "Standaard",
+    "customBadge": "Eigen",
+    "useDefault": "Standaard gebruiken",
+    "save": "Opslaan",
+    "saving": "Opslaan...",
+    "error": "De API-host kon niet worden opgeslagen. Controleer de waarde en probeer het opnieuw."
+  },
+  "login": {
+    "title": "Inloggen",
+    "withAccount": "Log in met je SpaceFleet-account",
+    "emailLabel": "E-mail",
+    "passwordLabel": "Wachtwoord",
+    "twoFactorLabel": "Verificatiecode",
+    "twoFactorPlaceholder": "123456",
+    "button": "Inloggen",
+    "signingIn": "Inloggen...",
+    "resend": "Code opnieuw sturen",
+    "resending": "Opnieuw sturen...",
+    "infoEmail": "We hebben een verificatiecode naar je e-mailadres gestuurd.",
+    "infoTotp": "Vul de code uit je authenticator-app in.",
+    "resendSuccess": "We hebben een nieuwe verificatiecode gestuurd.",
+    "resendError": "De code kon niet opnieuw worden gestuurd.",
+    "reset": {
+      "button": "Wachtwoord vergeten?",
+      "title": "Wachtwoord opnieuw instellen",
+      "subtitle": "We mailen je een verificatiecode om een nieuw wachtwoord in te stellen.",
+      "emailLabel": "E-mailadres van je account",
+      "codeLabel": "Verificatiecode",
+      "codePlaceholder": "123456",
+      "passwordLabel": "Nieuw wachtwoord",
+      "passwordConfirmLabel": "Nieuw wachtwoord bevestigen",
+      "request": "Code sturen",
+      "requesting": "Versturen...",
+      "submit": "Wachtwoord bijwerken",
+      "submitting": "Bijwerken...",
+      "cancel": "Annuleren",
+      "resend": "Code opnieuw sturen",
+      "resending": "Opnieuw sturen...",
+      "noticeSent": "Als dit e-mailadres bij ons bekend is, hebben we een verificatiecode gestuurd.",
+      "noticeResent": "We hebben nog een verificatiecode gestuurd.",
+      "noticeComplete": "Wachtwoord bijgewerkt. Log opnieuw in.",
+      "errorMismatch": "De wachtwoorden komen niet overeen.",
+      "errorInvalidCode": "De verificatiecode is ongeldig of verlopen.",
+      "errorFailed": "Het wachtwoord kan nu niet opnieuw worden ingesteld.",
+      "errorResend": "De code kon niet opnieuw worden gestuurd."
+    },
+    "qr": {
+      "or": "of",
+      "title": "Inloggen met een ander apparaat",
+      "body": "Toon een code om goed te keuren in Badger of Parrot op een ingelogde computer, telefoon of tv."
+    },
+    "provider": {
+      "signInWith": "Inloggen met {{provider}}",
+      "or": "of",
+      "continueInBrowser": "Rond het inloggen af in je browser. Daarna kom je hier terug.",
+      "errorStart": "Inloggen kon niet starten. Probeer het opnieuw.",
+      "errors": {
+        "no_account": "Er is geen SpaceFleet-account met dit e-mailadres. Maak er een aan in Badger of Parrot op een computer en log dan hier in.",
+        "email_unverified": "Het e-mailadres van dit account is niet bevestigd. Bevestig het bij de aanbieder, of log in met je e-mailadres en wachtwoord.",
+        "email_domain_disallowed": "Met dit e-mailadres kan geen account worden aangemaakt.",
+        "account_deletion_pending": "Dit account wordt binnenkort verwijderd.",
+        "provider_failed": "Inloggen is niet gelukt. Probeer het opnieuw.",
+        "cancelled": "Inloggen is geannuleerd.",
+        "invalid_code": "Deze inlogpoging is verlopen of ergens anders gestart. Probeer het opnieuw."
+      }
+    },
+    "pairing": {
+      "title": "Inloggen met een ander apparaat",
+      "usePassword": "Inloggen met e-mail en wachtwoord"
+    },
+    "code": {
+      "recheckHint": "Je account heeft geen wachtwoord, dus we vragen een code: uit je authenticator-app als die aan staat, anders een code die we je mailen.",
+      "recheckSent": "Typ de code: uit je authenticator-app als die aan staat, anders de code die we je net mailden."
+    }
+  },
+  "player": {
+    "deviceTooWeak": {
+      "message": "Deze telefoon is niet krachtig genoeg om deze video soepel af te spelen.",
+      "messageTv": "Dit tv-kastje is niet krachtig genoeg om deze video soepel af te spelen.",
+      "pinnedHint": "Zet \"Deze kwaliteit afdwingen\" uit of kies in Instellingen een lagere kwaliteit.",
+      "keepWatching": "Blijf kijken"
+    },
+    "trafficCap": {
+      "message": "Er is te veel verkeer op de server waar deze titel staat: de kwaliteit is beperkt tot {{quality}} totdat het rustiger wordt.",
+      "keepWatching": "Blijf kijken"
+    },
+    "loading": "Afspelen voorbereiden...",
+    "loadingSlow": "Nog steeds aan het laden… dit duurt langer dan normaal.",
+    "controls": {
+      "closePlayer": "Speler sluiten",
+      "videoSurface": "Videovlak",
+      "chapters": "Hoofdstukken",
+      "previousEpisode": "Vorige aflevering",
+      "nextEpisode": "Volgende aflevering",
+      "subtitles": "Ondertiteling",
+      "audio": "Audio",
+      "quality": "Kwaliteit",
+      "volume": "Volume",
+      "brightness": "Helderheid",
+      "seekBackToast": "-10s",
+      "seekForwardToast": "+10s",
+      "seekBy": "{{amount}}s",
+      "play": "Afspelen",
+      "pause": "Pauzeren",
+      "seekBar": "Voortgangsbalk",
+      "qualityAuto": "Automatisch",
+      "subtitlesOff": "Uit",
+      "subtitleLoadFailed": "Ondertiteling kon niet worden geladen",
+      "trackFallback": "Spoor {{n}}",
+      "cast": "Casten"
+    },
+    "error": {
+      "title": "Probleem bij het afspelen",
+      "retry": "Opnieuw proberen",
+      "close": "Sluiten",
+      "unavailable": "Afspelen is niet beschikbaar.",
+      "openFailed": "De video kon niet worden geopend.",
+      "startTimeout": "De video deed er te lang over om te starten.",
+      "loadingTimeout": "Het laden van de video duurt te lang.",
+      "stoppedUnexpectedly": "Het afspelen is onverwacht gestopt.",
+      "missingLibraryKey": "De versleutelingssleutel van de mediatheek ontbreekt.",
+      "titleMissing": "Deze titel staat niet meer in je mediatheek.",
+      "noPlayableFile": "Geen afspeelbaar bestand gevonden.",
+      "notAvailable": "Afspelen is niet beschikbaar voor deze titel.",
+      "gatewayUnavailable": "De opslaggateway is niet beschikbaar.",
+      "playbackStopped": "Het afspelen is gestopt omdat de server waar deze titel staat overbelast is. Tik op Opnieuw proberen zodra het rustiger is.",
+      "freePlaybackRefused": "Afspelen kan nu niet starten: de server waar deze titel staat is overbelast en gratis accounts kunnen geen nieuwe video starten. Probeer het over een paar minuten opnieuw.",
+      "startFailed": "Het afspelen kon niet starten.",
+      "loadFailed": "Deze titel kon niet worden geladen."
+    },
+    "resume": {
+      "resumeAt": "Verder vanaf {{time}}",
+      "startOver": "Opnieuw beginnen"
+    },
+    "skip": {
+      "intro": "Intro overslaan",
+      "credits": "Aftiteling overslaan",
+      "nextEpisode": "Volgende aflevering",
+      "nextEpisodeStartsIn": "De volgende aflevering start over",
+      "withCountdown": "{{label}} {{seconds}}s"
+    },
+    "nextCard": {
+      "startsIn": "Volgende aflevering over {{seconds}}s",
+      "upNext": "Hierna",
+      "playNow": "Nu afspelen",
+      "playNowLabel": "Volgende aflevering nu afspelen",
+      "cancel": "Annuleren"
+    }
+  },
+  "details": {
+    "type": {
+      "tv": "Tv-serie",
+      "movie": "Film"
+    },
+    "runtime": {
+      "seasons_one": "{{count}} seizoen",
+      "seasons_other": "{{count}} seizoenen"
+    },
+    "watchedPercent": "{{percent}}% bekeken",
+    "play": "Afspelen",
+    "playEpisode": "{{code}} afspelen",
+    "resumeEpisode": "{{code}} hervatten",
+    "addToPlaylist": "Aan afspeellijst toevoegen",
+    "playlistPicker": {
+      "title": "Aan afspeellijst toevoegen"
+    },
+    "tabs": {
+      "episodes": "Afleveringen",
+      "details": "Details"
+    },
+    "synopsis": "Samenvatting",
+    "cast": "Cast",
+    "crew": {
+      "title": "Crew",
+      "director": "Regie",
+      "writing": "Scenario"
+    },
+    "seasonShort": "S{{number}}",
+    "episodesEmpty": "Er zijn geen afleveringen beschikbaar voor dit seizoen.",
+    "episode": {
+      "title": "E{{number}} · {{name}}",
+      "label": "Aflevering {{number}}, {{name}}",
+      "labelWatched": "Aflevering {{number}}, {{name}}, bekeken",
+      "labelProgress": "Aflevering {{number}}, {{name}}, {{percent}}% bekeken"
+    },
+    "trailer": {
+      "watch": "Trailer bekijken",
+      "pickerTitle": "Kies een trailer",
+      "fallbackName": "Trailer",
+      "errors": {
+        "load": "De trailer kon niet worden geladen.",
+        "player": "De trailerspeler werkt niet op dit apparaat."
+      },
+      "button": "Trailer"
+    },
+    "genres": {
+      "movie": {
+        "28": "Actie",
+        "12": "Avontuur",
+        "16": "Animatie",
+        "35": "Komedie",
+        "80": "Misdaad",
+        "99": "Documentaire",
+        "18": "Drama",
+        "10751": "Familie",
+        "14": "Fantasy",
+        "36": "Geschiedenis",
+        "27": "Horror",
+        "10402": "Muziek",
+        "9648": "Mysterie",
+        "10749": "Romantiek",
+        "878": "Sciencefiction",
+        "53": "Thriller",
+        "10752": "Oorlog",
+        "37": "Western"
+      },
+      "tv": {
+        "10759": "Actie",
+        "16": "Animatie",
+        "35": "Komedie",
+        "80": "Misdaad",
+        "99": "Documentaire",
+        "18": "Drama",
+        "10751": "Familie",
+        "10762": "Kinderen",
+        "9648": "Mysterie",
+        "10763": "Nieuws",
+        "10764": "Reality",
+        "10765": "Sciencefiction",
+        "10766": "Soap",
+        "10767": "Talkshow",
+        "10768": "Oorlog",
+        "37": "Western"
+      }
+    },
+    "playAgain": "Opnieuw afspelen",
+    "resume": "Hervatten",
+    "back": "Terug",
+    "actions": {
+      "download": "Downloaden",
+      "playlist": "Afspeellijst"
+    }
+  },
+  "downloads": {
+    "title": "Downloads",
+    "back": "Terug",
+    "percent": "{{percent}}%",
+    "summary_one": "{{count}} item · {{size}} op dit apparaat",
+    "summary_other": "{{count}} items · {{size}} op dit apparaat",
+    "wifiBanner": "Downloads gaan automatisch verder zodra je verbonden bent met wifi.",
+    "trafficSlowed": "Downloads gaan langzamer omdat het nu erg druk is.",
+    "trafficHeld": "Downloads staan stil zolang het erg druk is. Ze gaan vanzelf verder zodra het rustiger wordt.",
+    "empty": {
+      "title": "Nog geen downloads",
+      "subtitle": "Open een film of aflevering en tik op Downloaden om offline te kijken."
+    },
+    "actions": {
+      "keep": "Bewaren",
+      "remove": "Verwijderen",
+      "delete": "Verwijderen",
+      "close": "Sluiten"
+    },
+    "row": {
+      "retry": "Download opnieuw proberen",
+      "cancel": "Download annuleren",
+      "delete": "Download verwijderen"
+    },
+    "status": {
+      "queued": "In de wachtrij",
+      "waitingWifi": "Wacht op wifi",
+      "waitingNetwork": "Wacht op netwerk",
+      "completed": "{{size}} · {{quality}}",
+      "downloading": "{{percent}}% · {{done}} van {{total}}"
+    },
+    "pill": {
+      "idle": "Downloaden",
+      "partial": "Rest downloaden ({{completed}}/{{total}} opgeslagen)",
+      "queued": "Download staat in de wachtrij, tik om te annuleren",
+      "waitingWifi": "Wacht op wifi, tik om te annuleren",
+      "waitingNetwork": "Wacht op netwerk, tik om te annuleren",
+      "downloading": "{{percent}} procent gedownload, tik om te annuleren",
+      "downloaded": "Gedownload, tik om te verwijderen",
+      "errorRetry": "{{message}}. Tik om opnieuw te proberen"
+    },
+    "picker": {
+      "open": "Seizoenen downloaden",
+      "title": "Seizoenen downloaden",
+      "selectAll": "Alles selecteren",
+      "unselectAll": "Niets selecteren",
+      "download": "Downloaden",
+      "save": "Wijzigingen opslaan",
+      "season": "Seizoen {{number}}",
+      "specials": "Specials",
+      "episodes_one": "{{count}} aflevering",
+      "episodes_other": "{{count}} afleveringen",
+      "partial": "{{completed}} van {{total}} afleveringen opgeslagen",
+      "downloading": "Downloaden: {{percent}}%",
+      "downloaded": "Opgeslagen op dit apparaat"
+    },
+    "episodeA11y": "{{label}}, aflevering {{episode}}",
+    "confirmRemove": {
+      "title": "Download verwijderen?",
+      "message": "De gedownloade bestanden worden van dit apparaat verwijderd."
+    },
+    "confirmCancel": {
+      "title": "Download annuleren?"
+    },
+    "confirmDelete": {
+      "title": "Download verwijderen?",
+      "message": "{{label}} wordt van dit apparaat verwijderd."
+    },
+    "deleteAll": {
+      "label": "Alle downloads verwijderen",
+      "title": "Alle downloads verwijderen?",
+      "message": "Dit maakt {{size}} vrij.",
+      "confirm": "Alles verwijderen"
+    },
+    "errors": {
+      "failedTitle": "Download mislukt",
+      "failed": "Download mislukt",
+      "failedWithReason": "Download mislukt ({{reason}})",
+      "insufficientSpace": "Niet genoeg opslagruimte",
+      "auth": "Sessie verlopen. Probeer het opnieuw om in te loggen",
+      "network": "Netwerkfout. Probeer het opnieuw zodra je weer online bent",
+      "detailsMissing": "Deze titel kon niet uit de mediatheek worden gelezen. Probeer het zo meteen opnieuw.",
+      "nativeUnavailable": "Downloads zijn niet beschikbaar op dit apparaat."
+    },
+    "notification": {
+      "channelDescription": "Voortgang van downloads voor offline kijken",
+      "activeItems": "{{number}} items worden gedownload",
+      "completed": "Download voltooid"
+    },
+    "refused": {
+      "insufficientSpace": {
+        "title": "Niet genoeg opslagruimte",
+        "message": "Niet genoeg opslagruimte: deze download heeft {{required}} nodig (inclusief een veiligheidsmarge), maar er is nog maar {{free}} vrij."
+      },
+      "noNetwork": {
+        "title": "Geen verbinding",
+        "message": "Geen verbinding. Maak verbinding met internet om een download te starten."
+      }
+    },
+    "quality": {
+      "title": "Downloadkwaliteit",
+      "hint": "Kies de kwaliteit om op deze telefoon op te slaan.",
+      "fallback_one": "{{count}} aflevering heeft geen {{chosen}}: die krijgt {{quality}}",
+      "fallback_other": "{{count}} afleveringen hebben geen {{chosen}}: die krijgen {{quality}}"
+    },
+    "nothing": {
+      "title": "Niets om te downloaden",
+      "already-local": "Al gedownload of in de wachtrij.",
+      "no-quality-available": "Voor deze titel is nog geen kwaliteit beschikbaar om te downloaden.",
+      "no-file": "Deze titel heeft geen afspeelbaar bestand."
+    },
+    "waitingWifiAlert": {
+      "title": "Wacht op wifi",
+      "message": "De download start zodra je verbonden bent met wifi."
+    }
+  },
+  "cast": {
+    "back": "Terug",
+    "pickerTitle": "Afspelen op",
+    "thisPhone": "Deze telefoon",
+    "thisPhoneHint": "Afspelen in de app",
+    "searching": "Cast-apparaten zoeken op je wifi...",
+    "noDevices": "Geen Cast-apparaat gevonden. De telefoon en het apparaat moeten op hetzelfde wifinetwerk zitten.",
+    "deviceHint": "Google Cast",
+    "airplay": "AirPlay",
+    "airplayChoose": "Kies een AirPlay-apparaat met de knop",
+    "airplayActive": "Afspelen op {{name}}",
+    "screenTitle": "Casten",
+    "castingTo": "Casten naar {{name}}",
+    "preparing": "Stream voorbereiden...",
+    "connecting": "Verbinden met {{name}}...",
+    "keepWifi": "Houd deze telefoon tot het einde op hetzelfde wifinetwerk: hij stuurt de film naar het apparaat.",
+    "play": "Afspelen",
+    "pause": "Pauzeren",
+    "back10": "10 seconden terug",
+    "forward10": "10 seconden vooruit",
+    "stop": "Casten stoppen",
+    "seekBar": "Positie",
+    "ended": "Afgelopen",
+    "refusedTitle": "Deze titel kan niet worden gecast",
+    "refused": {
+      "video-unsupported": "Dit apparaat kan deze video niet afspelen. Hij speelt wel af in de Badger-tv-app.",
+      "image-subtitles": "De gekozen ondertitels zijn afbeeldingen (PGS of VobSub), die een cast-apparaat niet kan tonen. Kies andere ondertitels of kijk in de Badger-tv-app.",
+      "no-playable-audio": "Dit apparaat kan geen enkel geluidsspoor van deze titel afspelen. Hij speelt wel af in de Badger-tv-app.",
+      "no-video": "Deze titel heeft geen video om te casten."
+    },
+    "error": {
+      "noWifi": "Verbind de telefoon met wifi om te casten.",
+      "serverFailed": "De telefoon kon het versturen van de stream niet starten.",
+      "sessionFailed": "Kon geen verbinding maken met het apparaat.",
+      "loadFailed": "Het apparaat heeft de stream niet aangenomen.",
+      "lost": "Het apparaat is gestopt met afspelen.",
+      "airplayNoRoute": "Kies eerst een AirPlay-apparaat.",
+      "airplayRouteLost": "AirPlay is verbroken.",
+      "airplayNotExternal": "AirPlay heeft het afspelen niet overgenomen."
+    },
+    "switchingTrack": "Spoor wisselen…",
+    "trackN": "Spoor {{n}}",
+    "subtitlesOff": "Uit",
+    "audio": "Audio",
+    "subtitles": "Ondertitels",
+    "imageSubtitle": "Beeldondertitels kunnen niet worden gecast",
+    "volume": "Tv-volume",
+    "mute": "Tv dempen",
+    "unmute": "Tv-geluid aan",
+    "gestureHint": "Tik twee keer links of rechts om 10 s terug of vooruit te gaan. Veeg omhoog of omlaag voor het tv-volume.",
+    "seekBackToast": "−10 s",
+    "seekForwardToast": "+10 s"
+  },
+  "nav": {
+    "home": "Home",
+    "library": "Bibliotheek",
+    "playlists": "Afspeellijsten",
+    "settings": "Instellingen",
+    "loading": "Laden...",
+    "loadingLibrary": "Mediatheek laden...",
+    "updateRequired": "Update vereist",
+    "unavailable": "Badger is niet beschikbaar: {{issue}}. Werk je app bij.",
+    "screenLoadFailed": "Het scherm kon niet worden geladen",
+    "tryAgain": "Opnieuw proberen"
+  },
+  "tvShell": {
+    "navLabel": "Hoofdnavigatie",
+    "offline": {
+      "network": "Offline",
+      "syncError": "Synchroniseren van de mediatheek mislukt",
+      "retry": "Opnieuw"
+    },
+    "home": {
+      "resume": "Hervatten",
+      "startOver": "Opnieuw beginnen",
+      "details": "Details",
+      "percentWatched": "{{percent}}% bekeken",
+      "resumeAt": "Hervatten {{time}}"
+    },
+    "errorReports": {
+      "title": "Help je ons problemen op te lossen?",
+      "body": "Rapporten zijn anoniem en helpen ons enorm om bugs op te lossen 🙂",
+      "send": "Rapporten versturen",
+      "decline": "Niet versturen",
+      "footer": "Je kunt dit altijd wijzigen in Instellingen."
+    },
+    "details": {
+      "deleteFailed": "Deze titel kon niet worden verwijderd.",
+      "delete": "Verwijderen",
+      "deleteConfirmTitle": "{{title}} verwijderen?",
+      "deleteConfirmBody": "De titel wordt op al je apparaten uit je mediatheek verwijderd. Dit kan niet ongedaan worden gemaakt.",
+      "deleteConfirm": "Definitief verwijderen",
+      "cancel": "Annuleren",
+      "more": "Meer",
+      "trailer": "Trailer",
+      "trailerFailed": "De trailer kon niet worden geopend.",
+      "trailerOnYouTube": "Bekijk op YouTube",
+      "trailerQrHint": "Scan met je telefoon om de trailer op YouTube te bekijken.",
+      "playlist": "Afspeellijst",
+      "playlistTitle": "Aan een afspeellijst toevoegen",
+      "playlistEmpty": "Nog geen afspeellijsten.",
+      "resume": "Hervatten",
+      "tabs": {
+        "tracks": "Kwaliteiten en sporen",
+        "cast": "Cast en crew",
+        "episodes": "Afleveringen",
+        "versions": "Versies",
+        "similar": "Vergelijkbare titels"
+      },
+      "qualities": "Kwaliteiten",
+      "audio": "Audio",
+      "subtitles": "Ondertitels",
+      "originalQuality": "{{quality}} (origineel)",
+      "none": "Geen",
+      "noMedia": "Nog geen video geüpload.",
+      "watchedLeft_one": "{{percent}}% bekeken · nog {{count}} min",
+      "watchedLeft_other": "{{percent}}% bekeken · nog {{count}} min",
+      "watched": "✓ Bekeken",
+      "runtimeMinutes": "{{minutes}} min",
+      "runtimeHours": "{{hours}} u {{minutes}} min",
+      "episodeCode": "S{{season}} · A{{episode}}",
+      "episodeHeading": "S{{season}} · A{{episode}} · {{name}}",
+      "episodeInfo": "Details van aflevering {{number}}, {{name}}",
+      "aired": "uitgezonden op {{date}}",
+      "close": "Sluiten",
+      "seasonEpisodes_one": "{{count}} aflevering",
+      "seasonEpisodes_other": "{{count}} afleveringen",
+      "seasonAvailable": "Beschikbaar",
+      "seasonMissing": "Bestanden ontbreken",
+      "backToLibrary": "Terug naar Bibliotheek",
+      "backToPlaylists": "Terug naar Afspeellijsten",
+      "backToHome": "Terug naar Start",
+      "backToSearch": "Terug naar Zoeken"
+    },
+    "settings": {
+      "qualityAuto": "Automatisch, tot {{quality}}: schakelt terug als de verbinding het niet bijhoudt.",
+      "qualityForced": "Afgedwongen: altijd {{quality}}.",
+      "forceDescription": "Niet aanpassen aan de netwerkomstandigheden.",
+      "about": "Over",
+      "groupsLabel": "Groepen instellingen",
+      "qualityAndLanguages": "Kwaliteit en talen",
+      "qualityValueAuto": "Automatisch, tot {{quality}}",
+      "subtitleForProfile": "Voor dit profiel"
+    },
+    "dialog": {
+      "close": "Sluiten"
+    },
+    "devices": {
+      "thisDevice": "{{name}} (deze tv)",
+      "confirmSelfTitle": "Uitloggen op deze tv?",
+      "confirmSelfBody": "Deze tv toont je mediatheek pas weer als iemand er opnieuw inlogt."
+    },
+    "nav": {
+      "search": "Zoeken"
+    },
+    "empty": {
+      "eyebrow": "JE BIBLIOTHEEK",
+      "title": "Voeg je eerste titel toe",
+      "subtitle": "Voeg films en series toe met Badger op je computer. Ze verschijnen vanzelf op deze tv.",
+      "checkAgain": "Opnieuw controleren",
+      "getDesktop": "Badger voor computer downloaden",
+      "downloadQr": "QR-code van de Badger-downloadpagina",
+      "step1Title": "Voeg media toe op je computer",
+      "step1Body": "Kies films of een hele map in Badger voor computer.",
+      "step2Title": "Badger zoekt de details",
+      "step2Body": "Posters, cast en samenvattingen komen vanzelf, in jouw taal.",
+      "step3Title": "Kijk op deze tv",
+      "step3Body": "Je mediatheek verschijnt hier, versleuteld met jouw sleutel."
+    }
+  },
+  "settings": {
+    "account": {
+      "signedInAs": "Ingelogd als",
+      "unknown": "Onbekend",
+      "plan": "Account en abonnement",
+      "planDescription": "Je abonnement en opslag",
+      "signOut": "Uitloggen",
+      "deletionScheduled": "Verwijdering gepland op {{date}}",
+      "pairDevice": {
+        "title": "Apparaat koppelen",
+        "description": "Voeg een computer of tv toe"
+      }
+    },
+    "playback": {
+      "title": "Afspelen",
+      "autoplay": {
+        "title": "Volgende aflevering automatisch afspelen",
+        "description": "Ga automatisch door met de volgende aflevering."
+      },
+      "intro": {
+        "title": "Intro's automatisch overslaan",
+        "description": "Sla de intro over als die bekend is. De knop Overslaan blijft altijd zichtbaar."
+      },
+      "credits": {
+        "title": "Aftiteling automatisch overslaan",
+        "description": "Sla de aftiteling over als die bekend is."
+      },
+      "quality": {
+        "title": "Standaard afspeelkwaliteit",
+        "descriptionForced": "Afgedwongen: altijd {{quality}}, wat het netwerk of deze telefoon ook aankan.",
+        "descriptionAuto": "Automatisch, tot {{quality}}: het afspelen begint hierop, gaat nooit hoger, schakelt terug als je verbinding of telefoon het niet bijhoudt en gaat weer omhoog als het kan."
+      },
+      "force": {
+        "title": "Deze kwaliteit afdwingen",
+        "description": "Niet aanpassen aan het netwerk of deze telefoon. Uit (aanbevolen): de speler kan terugschakelen als je verbinding de gekozen kwaliteit niet aankan."
+      },
+      "audioLanguage": {
+        "title": "Standaard audiotaal",
+        "description": "Gebruikt als deze film of serie geen eigen audiokeuze heeft en het bestand die taal bevat. Anders speelt de standaardaudio van het bestand.",
+        "original": "Origineel"
+      }
+    },
+    "downloads": {
+      "title": "Downloads",
+      "wifiOnly": {
+        "title": "Alleen downloaden via wifi",
+        "description": "Gebruik nooit mobiele data voor downloads."
+      },
+      "manage": {
+        "title": "Downloads beheren",
+        "description": "Bekijk wat er op dit apparaat is opgeslagen"
+      }
+    },
+    "language": {
+      "title": "Taal",
+      "appLanguage": "Taal van de app",
+      "accountWide": "Verandert de taal van je account op al je apparaten en van de e-mails die we je sturen."
+    },
+    "privacy": {
+      "title": "Privacy",
+      "errorReports": {
+        "title": "Foutmeldingen versturen",
+        "description": "Rapporten zijn anoniem en helpen ons enorm om bugs op te lossen 🙂",
+        "link": "Wat staat er in een rapport?"
+      }
+    },
+    "advanced": {
+      "title": "Geavanceerd",
+      "server": "Server",
+      "apiHost": "API-host",
+      "apiHostPlaceholder": "https://your-server.com",
+      "saveHostLabel": "API-host opslaan",
+      "saveHost": "Host opslaan",
+      "hostSaved": "Opgeslagen",
+      "libraryKey": "Mediatheeksleutel",
+      "resetKey": {
+        "title": "Versleutelingssleutel vernieuwen",
+        "description": "Vernieuw de sleutel die je mediatheek beschermt."
+      },
+      "animatedBackground": {
+        "title": "Geanimeerde achtergrond",
+        "description": "Om de paar seconden schieten er vallende sterren langs de sterrenhemel achter de app. Met Automatisch gaan ze uit op telefoons met weinig geheugen.",
+        "auto": "Automatisch",
+        "on": "Aan",
+        "off": "Uit",
+        "automatic": {
+          "animated": "Automatisch: de vallende sterren staan aan op deze telefoon.",
+          "static": "Automatisch: deze telefoon heeft weinig geheugen, dus de sterrenhemel blijft stilstaan."
+        }
+      }
+    }
+  },
+  "account": {
+    "password": {
+      "title": "Wachtwoord wijzigen",
+      "currentPassword": "Huidig wachtwoord",
+      "newPassword": "Nieuw wachtwoord",
+      "change": "Wachtwoord wijzigen",
+      "changing": "Wijzigen...",
+      "success": "Wachtwoord gewijzigd.",
+      "codeLabel": "Verificatiecode",
+      "errors": {
+        "required": "Vul beide velden in.",
+        "tooShort": "Je nieuwe wachtwoord moet minstens 8 tekens lang zijn.",
+        "incorrect": "Je huidige wachtwoord klopt niet.",
+        "twoFactorRequired": "Vul je verificatiecode in om de wachtwoordwijziging te bevestigen.",
+        "twoFactorInvalid": "Die verificatiecode is ongeldig. Probeer het opnieuw.",
+        "failed": "Het wachtwoord kon niet worden gewijzigd."
+      },
+      "set": {
+        "title": "Een wachtwoord instellen",
+        "button": "Wachtwoord instellen",
+        "setting": "Instellen..."
+      }
+    },
+    "devices": {
+      "title": "Jouw apparaten",
+      "loading": "Laden...",
+      "empty": "Geen ingelogde apparaten gevonden.",
+      "summary_one": "{{count}} apparaat ingelogd",
+      "summary_other": "{{count}} apparaten ingelogd",
+      "manage": "Alle apparaten bekijken",
+      "thisDevice": "{{name}} (deze telefoon)",
+      "lastSeen": "Laatst gezien: {{date}}",
+      "lastSeenUnknown": "Laatst gezien: onbekend",
+      "revoke": "Uitloggen",
+      "refresh": "Vernieuwen",
+      "footnote": "Als je een apparaat uitlogt, heeft het geen toegang meer tot je mediatheek. De sleutel zelf kun je niet terugnemen.",
+      "confirmTitle": "{{name}} uitloggen?",
+      "confirmExplanation": "Dit apparaat heeft meteen geen toegang meer tot je mediatheek. De sleutel zelf kun je niet terugnemen: als het apparaat al een kopie heeft, houdt het die kopie.",
+      "cancel": "Annuleren",
+      "errors": {
+        "load": "We konden je apparaten niet laden. Controleer je verbinding en probeer het opnieuw.",
+        "revoke": "We konden dat apparaat niet uitloggen. Probeer het opnieuw."
+      }
+    },
+    "access": {
+      "unpaidBanner": "Je abonnement is beëindigd. Afspelen en uploaden zijn gestopt. Je bestanden worden verwijderd op {{date}}.",
+      "unpaidBannerNoDate": "Je abonnement is beëindigd. Afspelen en uploaden zijn gestopt. Je bestanden worden na een beperkte tijd verwijderd.",
+      "playbackBlocked": "Afspelen is gestopt omdat je abonnement is beëindigd. Je bestanden worden verwijderd op {{date}}.",
+      "playbackBlockedNoDate": "Afspelen is gestopt omdat je abonnement is beëindigd. Je bestanden worden na een beperkte tijd verwijderd."
+    },
+    "signOutKey": {
+      "title": "Heb je je mediatheeksleutel bewaard?",
+      "body": "Als je uitlogt, verdwijnt je mediatheeksleutel van dit apparaat. Om weer in te loggen moet je hem intypen, want inloggen met een QR-code werkt alleen zolang een ander apparaat van je de sleutel nog heeft. Zonder de sleutel gaat je mediatheek niet open.",
+      "cancel": "Annuleren",
+      "confirm": "Bewaard, uitloggen"
+    }
+  },
+  "deleteAccount": {
+    "back": "Terug",
+    "title": "Account verwijderen",
+    "warning": "Hiermee verwijder je je account, je mediatheek en al je bestanden definitief. Dit kan niet ongedaan worden gemaakt.",
+    "warningBooked": "Je account, je mediatheek en al je bestanden worden verwijderd op {{date}}. Tot dan kun je dit ongedaan maken met 'Mijn account behouden'.",
+    "keepFiles": "Wil je je bestanden bewaren? Download ze dan met de desktop-app voordat je je account verwijdert. Na het verwijderen kunnen je bestanden niet meer worden hersteld.",
+    "passwordLabel": "Je wachtwoord",
+    "confirmLabel": "Typ DELETE om te bevestigen",
+    "codeLabel": "Verificatiecode",
+    "delete": "Account verwijderen",
+    "deleting": "Verwijderen…",
+    "modeTitle": "Je hebt voor een heel jaar betaald. Wanneer moeten we je account verwijderen?",
+    "modeEndOfPeriod": "Aan het einde van je betaalde jaar, op {{date}}. Je account blijft tot dan werken en wordt niet verlengd. Je kunt dit vóór die datum altijd annuleren.",
+    "modeNow": "Nu. Je verliest meteen de toegang en de rest van het jaar wordt niet terugbetaald.",
+    "scheduled": "Je account wordt verwijderd op {{date}}. Het blijft tot dan werken en wordt niet verlengd.",
+    "cancelScheduled": "Mijn account behouden",
+    "cancelScheduledFailed": "De verwijdering kon niet worden geannuleerd. Probeer het opnieuw.",
+    "errors": {
+      "invalidPassword": "Dat wachtwoord klopt niet.",
+      "twoFactorRequired": "Vul je verificatiecode in om door te gaan.",
+      "twoFactorInvalid": "Die verificatiecode is ongeldig. Probeer het opnieuw.",
+      "confirmRequired": "Typ DELETE om te bevestigen.",
+      "failed": "Verwijderen mislukt. Probeer het opnieuw."
+    }
+  },
+  "pairing": {
+    "title": "Apparaat koppelen",
+    "subtitle": "Voeg een browser, computer of tv toe aan je account.",
+    "cardHint": "Voeg een computer of tv toe door de code te scannen die erop staat.",
+    "warning": "Scan alleen codes die op een scherm vlak voor je staan. Wie je een code stuurt, kan toegang krijgen tot je hele mediatheek.",
+    "back": "Terug",
+    "approvalQuestion": "{{app}} op {{name}} ({{type}}) wil inloggen op je account.",
+    "approvalKeyQuestion": "{{app}} op {{name}} ({{type}}) is ingelogd op je account en vraagt om je mediatheeksleutel.",
+    "deviceType": {
+      "unknown": "Apparaat",
+      "mobile": "Telefoon",
+      "desktop": "Computer",
+      "tv": "Tv",
+      "kodi": "Kodi",
+      "jellyfin": "Jellyfin-server",
+      "web": "Webbrowser"
+    },
+    "scan": {
+      "cameraStarting": "Camera starten...",
+      "cameraDenied": "De camera mag niet worden gebruikt. Geef deze app toegang tot de camera in de instellingen van je telefoon, of typ de code in.",
+      "pointCamera": "Richt de camera op de code op het scherm van het andere apparaat.",
+      "codeLabel": "Code op het andere apparaat",
+      "codeAccessibility": "Koppelcode",
+      "continue": "Doorgaan",
+      "typeInstead": "Typ de code in",
+      "scanInstead": "Scan de code"
+    },
+    "looking": "Code opzoeken...",
+    "confirm": {
+      "asked": "{{type}} met de naam \"{{name}}\" wil zich bij je account voegen.",
+      "unlockNotice": "Je moet je telefoon ontgrendelen. Als je goedkeurt, wordt het apparaat ingelogd en krijgt het je mediatheeksleutel.",
+      "approve": "Goedkeuren",
+      "deny": "Weigeren"
+    },
+    "approving": "Wachten tot je je telefoon ontgrendelt...",
+    "done": {
+      "added": "{{name}} is toegevoegd.",
+      "notAdded": "{{name}} is niet toegevoegd.",
+      "addedDetail": "{{type}} logt nu in. Je kunt het op elk moment uitloggen via je apparatenlijst.",
+      "notAddedDetail": "De code ervan kan niet meer worden gebruikt.",
+      "done": "Klaar"
+    },
+    "failed": {
+      "notAddedYet": "Nog niet toegevoegd",
+      "didntWork": "Dat is niet gelukt",
+      "tryAgain": "Opnieuw proberen",
+      "tryAnother": "Probeer een andere code"
+    },
+    "errors": {
+      "invalid_code": "Dat lijkt niet op een koppelcode. Een code bestaat uit 8 letters en cijfers, zoals ABCD-EFGH.",
+      "not_found": "We konden die code niet vinden. Misschien is hij verlopen (codes werken 5 minuten) of is hij al gebruikt. Vraag het andere apparaat om een nieuwe code.",
+      "expired": "Die code is verlopen. Vraag het andere apparaat om een nieuwe code en probeer het opnieuw.",
+      "already_used": "Die code is al gebruikt. Heb je hem niet zelf goedgekeurd? Controleer dan je apparatenlijst.",
+      "no_library_key": "Deze telefoon heeft je mediatheeksleutel niet en kan dus geen ander apparaat toevoegen. Open eerst je mediatheek op deze telefoon.",
+      "no_device_lock": "Deze telefoon heeft geen schermvergrendeling. Stel eerst een pincode, patroon, vingerafdruk of gezichtsontgrendeling in via de instellingen van je telefoon. Daar vragen we om voordat we je mediatheek met een ander apparaat delen.",
+      "unlock_cancelled": "Er is niets gedeeld. Ontgrendel je telefoon om het nieuwe apparaat goed te keuren.",
+      "unlock_failed": "We konden je telefoon niet ontgrendelen, dus er is niets gedeeld. Probeer het opnieuw.",
+      "wrong_password": "Dat wachtwoord klopt niet, dus er is niets gedeeld. Probeer het opnieuw.",
+      "signed_out": "Je bent uitgelogd. Log opnieuw in en probeer het nog eens.",
+      "network": "We konden de server niet bereiken. Controleer je verbinding en probeer het opnieuw.",
+      "bad_request": "Dat apparaat stuurde iets wat we niet kunnen gebruiken. Vraag het om een nieuwe code.",
+      "unknown": "Er ging iets mis en het apparaat is niet toegevoegd. Probeer het opnieuw.",
+      "code_required": "Typ de code om te bevestigen dat jij het bent.",
+      "code_invalid": "Die code klopt niet of is verlopen, dus er is niets gedeeld. Probeer het opnieuw."
+    },
+    "unlock": {
+      "title": "Ontgrendel om een apparaat toe te voegen",
+      "subtitle": "Bevestig dat jij het bent voordat je mediatheek met een ander apparaat wordt gedeeld.",
+      "cancel": "Annuleren"
+    },
+    "newDevice": {
+      "message": "Nieuw apparaat toegevoegd: {{name}} ({{type}})",
+      "accessibility": "Nieuw apparaat toegevoegd. Open je apparaten.",
+      "hint": "Tik om je apparaten te bekijken. Ben jij het niet? Log het daar uit.",
+      "close": "Melding sluiten",
+      "tvHint": "Druk op OK om je apparaten te bekijken. Ben jij het niet? Log het daar uit."
+    }
+  },
+  "phonePairing": {
+    "step1": {
+      "badger": "1. Open Badger of Parrot op een computer of een andere telefoon die is ingelogd, of Badger op een ingelogde tv.",
+      "parrot": "1. Open Badger of Parrot op je computer of op een andere telefoon die is ingelogd."
+    },
+    "step2": "2. Ga naar Instellingen en dan Apparaat koppelen.",
+    "step3": "3. Scan deze code, of typ de code hieronder.",
+    "codeLabel": "Of typ deze code",
+    "expiresIn": "Deze code verloopt over {{time}}. Er verschijnt vanzelf een nieuwe.",
+    "deviceName": "Deze telefoon verschijnt als \"{{name}}\".",
+    "qrAccessibility": "QR-code om deze telefoon te koppelen",
+    "starting": "Koppelcode ophalen...",
+    "completing": "Goedgekeurd. Inloggen...",
+    "keyLink": "Sleutel van een ander apparaat halen",
+    "keyCard": "Gebruik elke Badger- of Parrot-app waarin je bent ingelogd, op elk apparaat of profiel van dit account.",
+    "keyTitle": "Haal je mediatheeksleutel op van een ander apparaat dat op dit account is ingelogd.",
+    "typeKey": "Sleutel toch intypen",
+    "completingKey": "Goedgekeurd. Je mediatheek wordt geopend...",
+    "tryAgain": "Nieuwe code ophalen",
+    "denied": "De andere app heeft deze telefoon geweigerd. Haal een nieuwe code op om het opnieuw te proberen.",
+    "errors": {
+      "unreachable": "We kunnen SpaceFleet niet bereiken. Controleer de verbinding van deze telefoon en haal een nieuwe code op.",
+      "failed": "Er ging iets mis bij het koppelen. Haal een nieuwe code op om het opnieuw te proberen.",
+      "key_unreadable": "De goedkeuring kwam aan op deze telefoon, maar de sleutel kon niet worden gelezen. Haal een nieuwe code op en keur hem opnieuw goed.",
+      "key_mismatch": "De verstuurde sleutel past niet bij dit account. Er is niets bewaard. Haal een nieuwe code op om het opnieuw te proberen."
+    }
+  },
+  "tvPairing": {
+    "signIn": {
+      "title": "Inloggen bij Badger",
+      "subtitle": "Open op je telefoon of computer Badger → Instellingen → Apparaat koppelen en scan dan de code of typ hem in.",
+      "codeLabel": "Of typ deze code in",
+      "qrAccessibility": "QR-code om deze tv te koppelen",
+      "starting": "Koppelcode ophalen...",
+      "completing": "Goedgekeurd. Inloggen...",
+      "usePassword": "Liever e-mail en wachtwoord gebruiken",
+      "useCode": "Liever een koppelcode gebruiken",
+      "tryAgain": "Nieuwe code ophalen",
+      "denied": {
+        "title": "Koppelen is geweigerd",
+        "detail": "Het andere apparaat heeft deze tv geweigerd. Haal een nieuwe code op om het opnieuw te proberen."
+      },
+      "errors": {
+        "title": "Deze tv kon niet worden gekoppeld",
+        "unreachable": "We konden Badger niet bereiken. Controleer de verbinding van deze tv en haal een nieuwe code op.",
+        "failed": "Er ging iets mis bij het koppelen. Haal een nieuwe code op om het opnieuw te proberen.",
+        "key_unreadable": "De goedkeuring is bij deze tv aangekomen, maar de mediatheeksleutel kon niet worden gelezen. Haal een nieuwe code op en keur hem opnieuw goed.",
+        "key_mismatch": "De verstuurde mediatheeksleutel opent de mediatheek van dit account niet. Er is niets opgeslagen op deze tv. Haal een nieuwe code op en keur hem opnieuw goed via een app die je mediatheek heeft."
+      },
+      "scanWithPhone": "Scan met je telefoon",
+      "codeRenews": "Er verschijnt vanzelf een nieuwe code over {{time}}",
+      "deviceName": "Deze tv verschijnt als “{{name}}”"
+    },
+    "approve": {
+      "settingsRow": "Apparaat koppelen",
+      "settingsHint": "Keur een ander apparaat goed door de code in te typen die het toont.",
+      "title": "Apparaat koppelen",
+      "subtitle": "Typ de code in die op het scherm van het andere apparaat staat.",
+      "codeLabel": "Code op het andere apparaat",
+      "codePlaceholder": "ABCD-EFGH",
+      "continue": "Doorgaan",
+      "cancel": "Annuleren",
+      "back": "Terug",
+      "warning": "Keur alleen een code goed die op een scherm vlak voor je staat. Wie je een code stuurt, kan toegang krijgen tot je hele mediatheek.",
+      "passwordNotice": "Je wordt om het wachtwoord van je account gevraagd. Als je goedkeurt, wordt het apparaat ingelogd en krijgt het je mediatheeksleutel.",
+      "approving": "Je wachtwoord controleren en de sleutel versturen...",
+      "addedDetail": "Het logt nu in. Je kunt het op elk moment uitloggen via je apparatenlijst.",
+      "password": {
+        "title": "Vul het wachtwoord van je account in",
+        "detail": "Bevestig dat jij het bent voordat je mediatheek met een ander apparaat wordt gedeeld.",
+        "label": "Accountwachtwoord"
+      },
+      "codeNotice": "Je krijgt de vraag om een code om te bevestigen dat jij het bent. Goedkeuren logt het apparaat in en geeft het je mediatheeksleutel.",
+      "approvingCode": "Controleren en de sleutel versturen...",
+      "code": {
+        "title": "Voer de code in",
+        "detailEmail": "We hebben je een code gemaild. Typ die om te bevestigen dat jij het bent voordat je mediatheek met een ander apparaat wordt gedeeld.",
+        "detailTotp": "Typ de code uit je authenticator-app om te bevestigen dat jij het bent voordat je mediatheek met een ander apparaat wordt gedeeld.",
+        "label": "Code"
+      }
+    }
+  },
+  "subscription": {
+    "title": "Account en abonnement",
+    "back": "Terug",
+    "retry": "Opnieuw proberen",
+    "loadError": "Je account kon niet worden geladen. Controleer je verbinding en probeer het opnieuw.",
+    "plan": {
+      "group": "Abonnement",
+      "plan": "Abonnement",
+      "status": "Status",
+      "endedOn": "Geëindigd op",
+      "renewsOn": "Wordt verlengd op",
+      "wipeWarning": "Je bestanden worden verwijderd op {{date}}.",
+      "storageAddons": "Extra opslag",
+      "adminUnlimited": "Admin: onbeperkte opslag"
+    },
+    "planName": {
+      "free": "Gratis",
+      "tier1": "Starter",
+      "tier2": "Standard",
+      "tier3": "Scale"
+    },
+    "status": {
+      "active": "Actief",
+      "expired": "Verlopen",
+      "free": "Gratis abonnement"
+    },
+    "storage": {
+      "group": "Opslag",
+      "used": "Gebruikt",
+      "usedOf": "{{used}} van {{limit}}",
+      "gettingFull": "Je opslag raakt vol.",
+      "full": "Je opslag is vol. Uploaden is geblokkeerd totdat je ruimte vrijmaakt.",
+      "reserved": "{{size}} gereserveerd voor lopende uploads"
+    }
+  },
+  "errorReports": {
+    "title": "Foutmeldingen versturen?",
+    "description": "Rapporten zijn anoniem en helpen ons enorm om bugs op te lossen 🙂",
+    "send": "Foutmeldingen versturen",
+    "decline": "Niet versturen"
+  },
+  "onboarding": {
+    "loading": "Instellingen van je mediatheek laden...",
+    "enterTitle": "Voer je mediatheeksleutel in",
+    "showTitle": "Je mediatheeksleutel",
+    "subtitle": "Deze sleutel versleutelt de privégegevens in je mediatheek. Bewaar hem goed.",
+    "generate": "Nieuwe sleutel aanmaken",
+    "validate": "Sleutel controleren",
+    "signOut": "Uitloggen",
+    "errors": {
+      "checkStatus": "De status van de mediatheek kon niet worden gecontroleerd.",
+      "generate": "Er kon geen nieuwe sleutel worden aangemaakt.",
+      "initialize": "Je mediatheek kon niet worden ingesteld.",
+      "noLibrary": "Er is geen mediatheek gevonden voor dit account.",
+      "unavailable": "Je mediatheek is nu niet bereikbaar. Probeer het zo meteen opnieuw.",
+      "validate": "Je sleutel kon niet worden gecontroleerd."
+    }
+  },
+  "resetKey": {
+    "title": "Mediatheeksleutel vernieuwen",
+    "subtitle": "Maak een nieuwe sleutel aan en versleutel je mediatheek opnieuw.",
+    "newKey": "Nieuwe sleutel",
+    "generateAnother": "Nog een sleutel aanmaken",
+    "password": "Accountwachtwoord",
+    "code": "Tweestapsverificatiecode (optioneel)",
+    "confirmLabel": "Ik heb de nieuwe sleutel bewaard.",
+    "confirm": "Bevestigen",
+    "confirmed": "Bevestigd",
+    "rotate": "Sleutel vernieuwen",
+    "rotating": "Vernieuwen...",
+    "success": "Sleutel vernieuwd. Mediatheek opnieuw laden...",
+    "errors": {
+      "confirmRequired": "Bevestig dat je de nieuwe sleutel hebt bewaard.",
+      "passwordRequired": "Wachtwoord is verplicht.",
+      "notReady": "De mediatheek is nog niet klaar.",
+      "rotate": "De sleutel kon niet worden vernieuwd. Controleer je wachtwoord en code."
+    }
+  },
+  "libraryFormat": {
+    "title": "Update vereist",
+    "body": "Deze mediatheek is gemaakt met een nieuwere versie van Badger. Werk de app bij om hem te openen.",
+    "update": "Nu bijwerken"
+  },
+  "home": {
+    "empty": {
+      "title": "Nog geen media",
+      "subtitle": "Voeg media toe via de desktop-app en trek hier naar beneden om te vernieuwen."
+    },
+    "sections": {
+      "continueWatching": "Verder kijken",
+      "recentlyAdded": "Recent toegevoegd",
+      "movies": "Films",
+      "shows": "Series",
+      "favorites": "Favorieten"
+    },
+    "seeAll": "Alles bekijken",
+    "hero": {
+      "minutesLeft_one": "Nog {{count}} min",
+      "minutesLeft_other": "Nog {{count}} min",
+      "resume": "Hervatten"
+    },
+    "emptyLibrary": {
+      "eyebrow": "Jouw bibliotheek",
+      "title": "Voeg je eerste titel toe",
+      "subtitle": "Voeg films en series toe met Badger op je computer. Ze verschijnen hier vanzelf.",
+      "getDesktop": "Badger voor computer downloaden",
+      "step1Title": "Kies ze op je computer",
+      "step1Body": "Kies in Badger op je computer films of een hele map. Niets verlaat hem zonder jouw akkoord.",
+      "step2Title": "Badger zoekt de details",
+      "step2Body": "Posters, cast en samenvattingen komen vanzelf, in jouw taal.",
+      "step3Title": "Kijk overal",
+      "step3Body": "Deze telefoon, je tv en je computers tonen dezelfde mediatheek, versleuteld met jouw sleutel."
+    }
+  },
+  "library": {
+    "scopes": {
+      "movies": "Films",
+      "tv": "Series"
+    },
+    "search": {
+      "placeholder": "Zoek titels",
+      "label": "Zoek titels",
+      "clear": "Zoekopdracht wissen"
+    },
+    "sheet": {
+      "open": "Sorteren en filteren",
+      "openActive_one": "Sorteren en filteren, {{count}} filter actief",
+      "openActive_other": "Sorteren en filteren, {{count}} filters actief",
+      "title": "Sorteren en filteren",
+      "reset": "Filters wissen",
+      "sortBy": "Sorteren op",
+      "order": "Volgorde",
+      "genres": "Genres",
+      "allGenres": "Alle genres",
+      "actors": "Acteurs",
+      "allActors": "Alle acteurs",
+      "actorSearch": "Zoek acteurs",
+      "actorsLoading": "Acteurs laden...",
+      "actorsNone": "Geen acteurs gevonden",
+      "downloadedOnly": "Alleen gedownload",
+      "downloadedOnlyHint": "Alleen titels die op deze telefoon staan."
+    },
+    "sort": {
+      "name": "Naam",
+      "added": "Datum toegevoegd",
+      "release": "Jaar van uitgave",
+      "asc": "Oplopend",
+      "desc": "Aflopend"
+    },
+    "row": {
+      "runtimeMinutes": "{{minutes}} min",
+      "runtimeHours": "{{hours}} u {{minutes}} min"
+    },
+    "empty": {
+      "noMatches": "Geen resultaten",
+      "noMatchesHint": "Probeer een andere zoekopdracht of wis het filter.",
+      "noMovies": "Nog geen films",
+      "noShows": "Nog geen series",
+      "addHint": "Voeg media toe via de desktop-app en trek naar beneden om te vernieuwen."
+    },
+    "poster": {
+      "watched": "{{percent}}% bekeken",
+      "downloaded": "gedownload"
+    }
+  },
+  "playlists": {
+    "newPlaceholder": "Naam van nieuwe afspeellijst",
+    "create": "Afspeellijst maken",
+    "rowLabel": "Afspeellijst {{name}}",
+    "system": {
+      "favorites": "Favorieten",
+      "watchlist": "Kijklijst"
+    },
+    "empty": {
+      "title": "Nog geen afspeellijsten",
+      "subtitle": "Maak hierboven een afspeellijst om je favoriete titels te groeperen."
+    },
+    "detail": {
+      "back": "Terug",
+      "emptyTitle": "Hier staat nog niets",
+      "emptySubtitle": "Voeg titels aan deze afspeellijst toe via hun detailpagina."
+    }
+  },
+  "offline": {
+    "pending_zero": "Geen wijzigingen in de wachtrij",
+    "pending_one": "{{count}} wijziging wordt gesynchroniseerd zodra je weer online bent",
+    "pending_other": "{{count}} wijzigingen worden gesynchroniseerd zodra je weer online bent",
+    "indicator": {
+      "network": {
+        "text": "Offline",
+        "label": "Offline — opgeslagen inhoud"
+      },
+      "syncError": {
+        "text": "Niet gesynchroniseerd",
+        "label": "Mediatheek niet gesynchroniseerd — opgeslagen inhoud"
+      },
+      "retry": "Tik om opnieuw te proberen."
+    },
+    "notice": {
+      "network": {
+        "title": "Je bent offline",
+        "hint": "Je opgeslagen mediatheek en downloads blijven beschikbaar."
+      },
+      "syncError": {
+        "title": "Synchroniseren van de mediatheek mislukt",
+        "hint": "Je opgeslagen mediatheek blijft zichtbaar."
+      },
+      "close": "Melding sluiten"
+    }
+  },
+  "shell": {
+    "language": "Taal"
+  },
+  "languageNames": {
+    "en": "Engels",
+    "fr": "Frans",
+    "nl": "Nederlands",
+    "de": "Duits",
+    "es": "Spaans"
+  },
+  "errors": {
+    "library": {
+      "unreachable": "De API op {{url}} is niet bereikbaar. Gebruik je localhost? Gebruik dan het lokale IP-adres van je computer.",
+      "quotaExceeded": "Je opslaglimiet is bereikt. Maak ruimte vrij om te blijven synchroniseren.",
+      "loadFailedDetail": "De database van je mediatheek kon niet worden geladen. ({{detail}})",
+      "loadFailed": "De database van je mediatheek kon niet worden geladen.",
+      "contractBlocked": "Badger is momenteel niet beschikbaar: {{issue}}. Werk je app bij.",
+      "missingKey": "De versleutelingssleutel ontbreekt.",
+      "decryptFailed": "Je mediatheek kon niet worden ontsleuteld. Vul je versleutelingssleutel opnieuw in.",
+      "formatTooNew": "Deze mediatheek is gemaakt met een nieuwere versie van Badger.",
+      "syncUnavailable": "Je mediatheek is nu niet bereikbaar. Probeer het zo meteen opnieuw."
+    }
+  },
+  "playOnTv": {
+    "button": "Afspelen op tv",
+    "pickerTitle": "Afspelen op tv",
+    "searching": "Je tv's zoeken…",
+    "empty": "Geen Badger TV-app open. Open Badger op je tv, aangemeld bij dit account, om daar af te spelen.",
+    "retry": "Opnieuw proberen",
+    "unnamedTv": "Tv",
+    "errors": {
+      "offline": "Kan de server niet bereiken. Controleer je verbinding en probeer het opnieuw.",
+      "server": "De server kon je tv's niet ophalen (fout {{status}}). Probeer het zo opnieuw.",
+      "noKey": "Deze telefoon kan je tv's nog niet bereiken: je mediatheek is er niet geopend. Open je mediatheek en probeer het opnieuw.",
+      "signedOut": "Je bent afgemeld. Meld je opnieuw aan en probeer het opnieuw."
+    },
+    "remote": {
+      "connecting": "Verbinden met {{name}}…",
+      "waiting": "Wachten op {{name}}…",
+      "loading": "Starten op {{name}}…",
+      "playing": "Speelt af op {{name}}",
+      "paused": "Gepauzeerd op {{name}}",
+      "ended": "Afspelen gestopt op {{name}}",
+      "failed": "{{name}} kon deze titel niet afspelen.",
+      "notFound": "{{name}} heeft deze titel nog niet. Wacht even tot hij bijgewerkt is en probeer het opnieuw.",
+      "unreachable": "{{name}} reageert niet. Controleer of Badger erop openstaat.",
+      "play": "Afspelen",
+      "pause": "Pauzeren",
+      "back": "10 seconden terug",
+      "forward": "10 seconden vooruit",
+      "audio": "Audio",
+      "subtitles": "Ondertiteling",
+      "subtitlesOff": "Uit",
+      "trackFallback": "Spoor {{n}}",
+      "stop": "Stoppen",
+      "close": "Sluiten",
+      "retry": "Opnieuw proberen",
+      "position": "{{position}} van {{duration}}"
+    }
+  },
+  "feedback": {
+    "settingsGroup": "Ondersteuning",
+    "entry": "Feedback sturen",
+    "entryDescription": "Ideeën, wat je goed vindt, wat je stoort",
+    "title": "Feedback sturen",
+    "intro": "Vertel ons wat je van de app vindt. Je bericht bereikt het SpaceFleet-team met je account, de versie van de app en het soort apparaat, nooit een titel of bestandsnaam.",
+    "placeholder": "Je bericht",
+    "attachLog": "Foutenlogboek van de app bijvoegen",
+    "attachLogHint": "Helpt ons een probleem te vinden. Het bevat geen titels of bestandsnamen.",
+    "send": "Versturen",
+    "sending": "Bezig met versturen...",
+    "sent": "Bedankt! Je bericht is verstuurd.",
+    "back": "Terug",
+    "errors": {
+      "empty": "Schrijf eerst een bericht.",
+      "rate_limited": "Je hebt het afgelopen uur veel berichten gestuurd. Probeer het later opnieuw.",
+      "invalid": "Dit bericht kon niet worden verstuurd. Maak het korter en probeer het opnieuw.",
+      "offline": "Geen verbinding. Controleer je netwerk en probeer het opnieuw.",
+      "failed": "Je bericht kon niet worden verstuurd. Probeer het opnieuw."
+    }
+  },
+  "setup": {
+    "stepOf": "Stap {{step}} van {{total}}",
+    "back": "Terug",
+    "next": "Volgende",
+    "finish": "Klaar",
+    "language": {
+      "title": "Kies je taal",
+      "body": "Je kunt dit altijd wijzigen in Instellingen."
+    },
+    "signIn": {
+      "title": "Inloggen",
+      "pairTitle": "Keur deze telefoon goed vanuit een andere app",
+      "orPassword": "Of log in met je e-mailadres en wachtwoord",
+      "signedInAs": "Ingelogd als {{email}}",
+      "useAnother": "Ander account gebruiken",
+      "sessionRejected": "Je bent uitgelogd omdat je sessie niet meer geldig is. Log opnieuw in om verder te gaan."
+    },
+    "notifications": {
+      "title": "Meldingen aanzetten?",
+      "allow": "Ja, stuur me meldingen",
+      "allowDetail": "Je telefoon vraagt hierna om toestemming.",
+      "decline": "Nu niet",
+      "declineDetail": "Je kunt ze later aanzetten in de instellingen van je telefoon.",
+      "badgerBody": "Badger kan je laten weten wanneer een film of aflevering klaar is, bijvoorbeeld \"The Office seizoen 9 is klaar\"."
+    }
+  },
+  "keyStepWords": {
+    "collection": "mediatheek",
+    "collectionKey": "mediatheeksleutel"
+  },
+  "libraryKeyStep": {
+    "continue": "Doorgaan",
+    "lostKeyLink": "Sleutel kwijt? Wis deze $t(keyStepWords.collection) en begin opnieuw",
+    "lostKeyNote": "Zonder de sleutel kan niemand deze $t(keyStepWords.collection) openen, ook wij niet.",
+    "wrongKey": "Die sleutel opent je $t(keyStepWords.collection) niet. Controleer de 12 woorden en probeer het opnieuw."
+  },
+  "libraryKeyWords": {
+    "copy": "Woorden kopiëren",
+    "copied": "Gekopieerd",
+    "checksum": "Deze woorden vormen geen geldige sleutel. Vergelijk elk woord met de woorden die je hebt bewaard.",
+    "word": "Woord {{position}}",
+    "wordUnknown": "Woord {{position}} is geen van de sleutelwoorden",
+    "gridLabel": "Je $t(keyStepWords.collectionKey), 12 woorden"
+  },
+  "eraseLibrary": {
+    "title": "Deze $t(keyStepWords.collection) wissen?",
+    "warning": "Dit wist de volledige $t(keyStepWords.collection) van dit account, voor elk profiel: alle muziek, films en series, en al hun gegevens (metadata, afspeellijsten, geschiedenis, instellingen), in Badger en Parrot. Niemand kan dit ongedaan maken, ook wij niet. Je account en abonnement blijven bestaan.",
+    "otherDeviceLine": "Nog ergens ingelogd? Elke Badger- of Parrot-app werkt, op elke computer, telefoon of tv, ook op een ander profiel van dit account. Haal je sleutel daar vandaan.",
+    "otherDeviceLink": "De sleutel van een ander apparaat halen",
+    "confirmLabel": "Typ {{word}} om te bevestigen",
+    "passwordLabel": "Accountwachtwoord",
+    "codeLabel": "Verificatiecode",
+    "codeSent": "We hebben een verificatiecode verstuurd. Kijk in je e-mail of authenticator-app.",
+    "cancel": "Annuleren",
+    "submit": "Alles wissen en opnieuw beginnen",
+    "working": "Wissen...",
+    "errorInvalidPassword": "Onjuist wachtwoord.",
+    "errorTwoFactorInvalid": "De verificatiecode is ongeldig.",
+    "errorGeneric": "Kan de $t(keyStepWords.collection) nu niet resetten. Probeer het opnieuw."
+  },
+  "appUpdate": {
+    "title": "Werk {{app}} bij om verder te gaan",
+    "body": "Deze versie van {{app}} is te oud om verbinding te maken. Installeer de nieuwe versie vanaf waar je {{app}} hebt gekregen en open de app daarna opnieuw."
+  }
+}

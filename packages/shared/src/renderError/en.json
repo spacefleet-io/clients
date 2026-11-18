@@ -1,0 +1,11 @@
+{
+  "renderBoundary": {
+    "message": "Something went wrong",
+    "detail": "This part of the app hit an error.",
+    "windowDetail": "{{app}} needs to restart this screen.",
+    "retry": "Try again",
+    "popupClosed": "This window hit an error and was closed.",
+    "dismiss": "OK",
+    "itemFailed": "This item can't be shown."
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "name": "@space/privacy-pass",
+  "license": "GPL-3.0-only",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "scripts": {
+    "test": "bunx --bun vitest run",
+    "typecheck": "bunx tsc --noEmit -p tsconfig.json"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./bigint": "./src/bigint.ts",
+    "./bytes": "./src/bytes.ts",
+    "./pinnedKey": "./src/pinnedKey.ts",
+    "./rsabssa": "./src/rsabssa.ts",
+    "./token": "./src/token.ts"
+  },
+  "dependencies": {
+    "@noble/hashes": "^2.4.0"
+  },
+  "devDependencies": {
+    "bun-types": "1.4.4",
+    "vitest": "^5.1.0"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "renderBoundary": {
+    "message": "Un problème est survenu",
+    "detail": "Cette partie de l'application a rencontré une erreur.",
+    "windowDetail": "{{app}} doit redémarrer cet écran.",
+    "retry": "Réessayer",
+    "popupClosed": "Cette fenêtre a rencontré une erreur et a été fermée.",
+    "dismiss": "OK",
+    "itemFailed": "Cet élément ne peut pas être affiché."
+  }
+}

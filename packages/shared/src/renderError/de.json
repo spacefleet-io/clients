@@ -1,0 +1,11 @@
+{
+  "renderBoundary": {
+    "message": "Etwas ist schiefgelaufen",
+    "detail": "In diesem Teil der App ist ein Fehler aufgetreten.",
+    "windowDetail": "{{app}} muss diesen Bildschirm neu starten.",
+    "retry": "Erneut versuchen",
+    "popupClosed": "Dieses Fenster hatte einen Fehler und wurde geschlossen.",
+    "dismiss": "OK",
+    "itemFailed": "Dieses Element kann nicht angezeigt werden."
+  }
+}

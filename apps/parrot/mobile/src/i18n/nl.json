@@ -1,0 +1,121 @@
+{
+  "keyStepWords": {
+    "collection": "bibliotheek",
+    "collectionKey": "bibliotheeksleutel"
+  },
+  "parrot": {
+    "nav": {
+      "back": "Terug",
+      "library": "Bibliotheek",
+      "settings": "Instellingen",
+      "nowPlaying": "Speelt nu"
+    },
+    "login": {
+      "sameAsBadger": "Gebruik hetzelfde e-mailadres en wachtwoord als voor Badger.",
+      "codeTotp": "Code uit je authenticator-app",
+      "codeEmail": "Code die we je hebben gemaild",
+      "usePassword": "Inloggen met je wachtwoord"
+    },
+    "key": {
+      "title": "Voer je bibliotheeksleutel in",
+      "showTitle": "Je bibliotheeksleutel",
+      "body": "Typ de 12 woorden die je hebt bewaard toen je je bibliotheek maakte.",
+      "field": "Bibliotheeksleutel",
+      "continue": "Doorgaan",
+      "saved": "Je bibliotheeksleutel is op deze telefoon bewaard.",
+      "errors": {
+        "unavailable": "De sleutel kan nu niet worden gecontroleerd. Controleer je verbinding en probeer het opnieuw."
+      }
+    },
+    "library": {
+      "opening": "Je bibliotheek wordt geopend…",
+      "openFailed": "Je bibliotheek kon niet worden geopend ({{error}}).",
+      "tryAgain": "Opnieuw proberen",
+      "noAlbums": "Nog geen albums.",
+      "songs_one": "{{count}} nummer",
+      "songs_other": "{{count}} nummers",
+      "albums_one": "{{count}} album",
+      "albums_other": "{{count}} albums",
+      "artists_one": "{{count}} artiest",
+      "artists_other": "{{count}} artiesten",
+      "noArtists": "Nog geen artiesten.",
+      "noSongs": "Nog geen nummers.",
+      "view": {
+        "albums": "Albums",
+        "artists": "Artiesten",
+        "songs": "Nummers"
+      },
+      "sort": {
+        "byArtist": "Op artiest",
+        "byName": "Op naam",
+        "byTitle": "Op titel"
+      },
+      "search": "Zoeken in je bibliotheek",
+      "closeSearch": "Zoeken sluiten"
+    },
+    "album": {
+      "noPlayableFile": "Dit album heeft nog geen afspeelbaar bestand.",
+      "playFailed": "Dit nummer kon niet worden afgespeeld ({{error}}).",
+      "noSongs": "Geen nummers.",
+      "play": "{{title}} afspelen"
+    },
+    "player": {
+      "nothing": "Er speelt niets.",
+      "unknownSong": "Onbekend nummer",
+      "position": "Positie",
+      "previous": "Vorige",
+      "next": "Volgende",
+      "open": "Speler openen",
+      "playing": "Speelt",
+      "error": "Afspeelfout: {{error}}",
+      "playingFromAlbum": "Speelt af van album",
+      "close": "Sluiten",
+      "goToAlbum": "Naar album",
+      "goToArtist": "Naar artiest",
+      "more": "Meer",
+      "output": "Afspelen op een ander apparaat"
+    },
+    "settings": {
+      "signedInAs": "Ingelogd als",
+      "signOut": "Uitloggen",
+      "language": "Taal",
+      "signOutKey": {
+        "title": "Heb je je bibliotheeksleutel bewaard?",
+        "body": "Als je uitlogt, verdwijnt je bibliotheeksleutel van deze telefoon. Om weer in te loggen moet je hem intypen, want inloggen met een QR-code werkt alleen zolang een ander apparaat van je de sleutel nog heeft. Zonder de sleutel gaat je bibliotheek niet open.",
+        "cancel": "Annuleren",
+        "confirm": "Bewaard, uitloggen"
+      },
+      "pairDeviceDescription": "Keur een browser in de Parrot-webspeler, een computer of een tv goed met de code die erop staat.",
+      "library": "Bibliotheek",
+      "refresh": "Bibliotheek opnieuw laden",
+      "openSource": "Opensourcesoftware",
+      "openSourceBody": "Parrot speelt Apple Lossless-nummers (ALAC) af met een bewerking van Apples ALAC-decoder, © 2011 Apple Inc., onder de Apache-licentie 2.0."
+    },
+    "setup": {
+      "notificationsBody": "Parrot kan je laten weten wanneer de muziek die je vanaf je computer toevoegt hier klaar is om af te spelen."
+    },
+    "playlists": {
+      "likedEmpty": "Nog geen favoriete nummers"
+    },
+    "kept": {
+      "keep": "Bewaren op deze telefoon",
+      "remove": "Verwijderen van deze telefoon",
+      "line": "Bewaard op deze telefoon · {{size}}",
+      "chooseBody": "Deze nummers zijn in meer dan één formaat opgeslagen. Kies welke je op deze telefoon bewaart.",
+      "downloadingSong": "Downloaden…",
+      "failed": "Kon dit niet op je telefoon bewaren. Probeer het opnieuw."
+    },
+    "empty": {
+      "eyebrow": "Je bibliotheek",
+      "title": "Voeg je eerste album toe",
+      "subtitle": "Voeg muziek toe met Parrot op je computer. Die verschijnt hier vanzelf.",
+      "getDesktop": "Parrot voor computer downloaden",
+      "step1Title": "Kies nummers op je computer",
+      "step1Body": "Kies in Parrot op je computer muziekbestanden of een hele map. Niets verlaat hem zonder jouw akkoord.",
+      "step2Title": "Parrot zoekt de details",
+      "step2Body": "Hoezen, artiestfoto's en songteksten komen vanzelf.",
+      "step3Title": "Luister overal",
+      "step3Body": "Deze telefoon en je computers spelen dezelfde bibliotheek af, versleuteld met jouw sleutel."
+    }
+  }
+}

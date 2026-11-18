@@ -1,0 +1,161 @@
+# Kodi Media Center language file
+# Addon Name: Badger
+msgid ""
+msgstr ""
+"Project-Id-Version: plugin.video.spacebadger\n"
+"Language: en_GB\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+
+msgctxt "#30000"
+msgid "Account"
+msgstr ""
+
+msgctxt "#30001"
+msgid "Sign in"
+msgstr ""
+
+msgctxt "#30002"
+msgid "Server URL"
+msgstr ""
+
+msgctxt "#30003"
+msgid "Email"
+msgstr ""
+
+msgctxt "#30004"
+msgid "Password (cleared after sign-in)"
+msgstr ""
+
+msgctxt "#30005"
+msgid "Library key (cleared after saving)"
+msgstr ""
+
+msgctxt "#30006"
+msgid "Paste the library key from your Badger app. It is stored in a private file in this addon's data folder."
+msgstr ""
+
+msgctxt "#30007"
+msgid "Warning: the library key is stored in a private file on this device"
+msgstr ""
+
+msgctxt "#30010"
+msgid "Actions"
+msgstr ""
+
+msgctxt "#30011"
+msgid "Sign in and sync now"
+msgstr ""
+
+msgctxt "#30012"
+msgid "Sign out and remove local data"
+msgstr ""
+
+msgctxt "#30020"
+msgid "Library"
+msgstr ""
+
+msgctxt "#30021"
+msgid "Sync"
+msgstr ""
+
+msgctxt "#30022"
+msgid "Sync interval (minutes)"
+msgstr ""
+
+msgctxt "#30023"
+msgid "Keep the Kodi library export up to date after each sync"
+msgstr ""
+
+msgctxt "#30024"
+msgid "Sync now"
+msgstr ""
+
+msgctxt "#30025"
+msgid "Export to Kodi library now"
+msgstr ""
+
+msgctxt "#30060"
+msgid "Delete from Badger..."
+msgstr ""
+
+msgctxt "#30100"
+msgid "Pair with your phone"
+msgstr ""
+
+msgctxt "#30101"
+msgid "Open Badger on your phone, go to Settings, then Pair a device, and scan this code."
+msgstr ""
+
+msgctxt "#30107"
+msgid "Only scan codes shown on a screen in front of you. Whoever gets a code can reach your whole library."
+msgstr ""
+
+msgctxt "#30108"
+msgid "Get a new code"
+msgstr ""
+
+msgctxt "#30109"
+msgid "Use email and password"
+msgstr ""
+
+msgctxt "#30110"
+msgid "Cancel"
+msgstr ""
+
+msgctxt "#30111"
+msgid "This code expired. Choose 'Get a new code'."
+msgstr ""
+
+msgctxt "#30112"
+msgid "Code expires in %s"
+msgstr ""
+
+msgctxt "#30120"
+msgid "Advanced"
+msgstr ""
+
+msgctxt "#30130"
+msgid "Skip intro"
+msgstr ""
+
+msgctxt "#30131"
+msgid "Skip credits"
+msgstr ""
+
+msgctxt "#30140"
+msgid "Metadata service URL (leave empty for the default)"
+msgstr ""
+
+msgctxt "#30141"
+msgid "Where pictures are looked up, anonymously with a ticket and never through the API. Empty: https://metadata.spacefleet.io, or http://localhost:3002 when the server URL is local."
+msgstr ""
+
+msgctxt "#30150"
+msgid "Change profile"
+msgstr ""
+
+msgctxt "#30151"
+msgid "Which Badger profile this Kodi follows: its resume points, watched marks and audio and subtitle choices. Your library stays."
+msgstr ""
+
+msgctxt "#30152"
+msgid "Who uses this Kodi?"
+msgstr ""
+
+# ACCT-DEV-03: the saved-key question at sign-out
+msgctxt "#30160"
+msgid "Have you saved your media library key?"
+msgstr ""
+
+msgctxt "#30161"
+msgid "Signing out removes your media library key, the cached library and the exported folder from this device. To sign back in you will have to type the key, because signing in with a QR code only works while another of your devices still has it. Without the key, your media library can't be opened."
+msgstr ""
+
+msgctxt "#30162"
+msgid "Cancel"
+msgstr ""
+
+msgctxt "#30163"
+msgid "I saved it, sign out"
+msgstr ""

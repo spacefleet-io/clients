@@ -1,0 +1,35 @@
+/* The SpaceFleet dark palette (UX-THEME-01, WEB-LOOK-04): the colours alone, no fonts or base rules. Every surface that
+   wants the apps' look reads these: `./badger-dark.css` (Badger desktop, the web players) builds on it, and the website
+   imports it directly so its pages sit on the same navy as the apps. Values are HSL triplets read
+   through `hsl(var(--x))` by the Tailwind colours (`./theme.css`, or each app's own `@theme`). */
+@layer base {
+  :root,
+  :root[data-theme="space"][data-mode="dark"],
+  .dark {
+    color-scheme: dark;
+    --background: 231 29% 10%;
+    --foreground: 228 42% 90%;
+    --card: 232 22% 18%;
+    --card-foreground: 228 42% 90%;
+    --popover: 232 22% 18%;
+    --popover-foreground: 228 42% 90%;
+    --primary: 33 100% 67%;
+    --primary-foreground: 231 29% 10%;
+    --secondary: 231 17% 24%;
+    --secondary-foreground: 228 42% 90%;
+    --muted: 231 17% 24%;
+    --muted-foreground: 228 20% 76%;
+    --accent: 33 100% 67%;
+    --accent-foreground: 231 29% 10%;
+    --destructive: 358 75% 59%;
+    --destructive-foreground: 228 42% 90%;
+    --border: 231 14% 31%;
+    --input: 231 14% 31%;
+    --ring: 33 100% 67%;
+    --section-style-1: 33 100% 67%;
+    --section-style-2: 212 96% 78%;
+    --section-style-3: 155 60% 65%;
+    --section-style-4: 330 75% 75%;
+    --section-style-5: 260 70% 75%;
+  }
+}

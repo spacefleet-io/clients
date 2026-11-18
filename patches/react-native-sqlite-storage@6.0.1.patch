@@ -1,0 +1,50 @@
+diff --git a/platforms/android/build.gradle b/platforms/android/build.gradle
+index ff79b10c94a1d7ee2fadaaaceee7d4eefb55313e..d96904a975823bc178282aaf6a0e8a7f58d23286 100644
+--- a/platforms/android/build.gradle
++++ b/platforms/android/build.gradle
+@@ -1,14 +1,3 @@
+-buildscript {
+-    repositories {
+-        google()
+-        jcenter()
+-    }
+-
+-    dependencies {
+-        classpath 'com.android.tools.build:gradle:3.1.4'
+-    }
+-}
+-
+ apply plugin: 'com.android.library'
+ 
+ def safeExtGet(prop, fallback) {
+diff --git a/platforms/ios/SQLite.m b/platforms/ios/SQLite.m
+index 0cf0da4debed17c7b6df1e0b0477a5062522b045..e3b5302b95e5ba7ef438957673bfe255f1adad5d 100644
+--- a/platforms/ios/SQLite.m
++++ b/platforms/ios/SQLite.m
+@@ -85,7 +85,13 @@ RCT_EXPORT_MODULE();
+     [appDBPaths retain];
+ #endif
+     
++#if TARGET_OS_TV
++    // tvOS apps may only write to Caches (Documents is read-only on Apple TV hardware): SpaceBadger's "Documents"
++    // databases live there, matching the app's own tvOS data folder.
++    NSString *docs = [NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES) objectAtIndex: 0];
++#else
+     NSString *docs = [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) objectAtIndex: 0];
++#endif
+     RCTLog(@"Detected docs path: %@", docs);
+     [appDBPaths setObject: docs forKey:@"docs"];
+     
+diff --git a/react-native-sqlite-storage.podspec b/react-native-sqlite-storage.podspec
+index f9eadb1e5d689be93862176ab335e47d5b4aa886..af4fc1e3de594777a452b48578571b519d902b63 100644
+--- a/react-native-sqlite-storage.podspec
++++ b/react-native-sqlite-storage.podspec
+@@ -13,6 +13,8 @@ Pod::Spec.new do |s|
+ 
+   s.ios.deployment_target = '8.0'
+   s.osx.deployment_target = '10.10'
++  # SpaceBadger's Apple TV app keeps its library database here too; SQLite is part of the tvOS SDK.
++  s.tvos.deployment_target = '15.1'
+ 
+   s.preserve_paths = 'README.md', 'LICENSE', 'package.json', 'sqlite.js'
+   s.source_files   = "platforms/ios/*.{h,m}"

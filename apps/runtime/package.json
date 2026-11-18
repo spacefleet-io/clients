@@ -1,0 +1,40 @@
+{
+  "name": "@space/runtime",
+  "license": "GPL-3.0-only",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun --hot src/index.ts",
+    "dev:node": "bunx tsx watch src/index.ts",
+    "build": "bun build --target bun --outfile dist/index.js src/index.ts",
+    "start": "bun src/index.ts",
+    "start:node": "bunx tsx src/index.ts",
+    "start:dist": "bun dist/index.js",
+    "test": "bunx vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@space/ingest-core": "workspace:*",
+    "@space/metadata-client": "workspace:*",
+    "@space/runtime-jobs": "workspace:*",
+    "@space/runtime-jobs-db": "workspace:*",
+    "@space/ffmpeg": "workspace:*",
+    "@space/shared": "workspace:*",
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1",
+    "hono": "^4.13.18",
+    "pngjs": "^7.0.0",
+    "@space/content-core": "workspace:*",
+    "@space/library-db-definition": "workspace:*",
+    "@space/library-db-runtime": "workspace:*",
+    "@space/media-crypto": "workspace:*",
+    "@space/runtime-contracts": "workspace:*",
+    "@space/desktop-platform": "workspace:*",
+    "@space/tool-access": "workspace:*"
+  },
+  "devDependencies": {
+    "bun-types": "1.4.4",
+    "typescript": "^6.0.3",
+    "vitest": "^5.1.0"
+  }
+}

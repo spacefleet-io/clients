@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Release network policy: no cleartext, except the app's own on-device playback proxy (PlaybackHttpServer on
+  127.0.0.1), which the JS side fetches over plain http for seek-bar preview sheets (MPV-PREV-01). With a network
+  security config present, Android ignores android:usesCleartextTraffic, so this file is the release rule.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">127.0.0.1</domain>
+        <domain includeSubdomains="false">localhost</domain>
+    </domain-config>
+</network-security-config>

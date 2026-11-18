@@ -1,0 +1,32 @@
+diff --git a/RNKeychain.podspec b/RNKeychain.podspec
+index 03affae02973425c16dc9b603748a6114c5e6885..abb5efe0cba9f93fb20b0008ab2c4511010cc8ea 100644
+--- a/RNKeychain.podspec
++++ b/RNKeychain.podspec
+@@ -17,7 +17,11 @@ Pod::Spec.new do |s|
+   s.source         = { :git => "https://github.com/oblador/react-native-keychain.git", :tag => "v#{s.version}" }
+   s.source_files   = 'ios/RNKeychainManager/**/*.{h,m,mm,cpp}'
+   s.preserve_paths = "**/*.js"
+-  s.frameworks     = 'Security', 'LocalAuthentication'
++  # SpaceFleet patch: tvOS has no LocalAuthentication framework, so only link it where it exists.
++  s.frameworks     = 'Security'
++  s.ios.frameworks = 'LocalAuthentication'
++  s.osx.frameworks = 'LocalAuthentication'
++  s.visionos.frameworks = 'LocalAuthentication' if s.respond_to?(:visionos)
+ 
+   install_modules_dependencies(s)
+ end
+diff --git a/ios/RNKeychainManager/RNKeychainManager.mm b/ios/RNKeychainManager/RNKeychainManager.mm
+index 85c3174f091f9e6b793d413b65c94c192451f1c8..c67c1a82686f055127f41f3947e7aa574eb139f9 100644
+--- a/ios/RNKeychainManager/RNKeychainManager.mm
++++ b/ios/RNKeychainManager/RNKeychainManager.mm
+@@ -7,7 +7,10 @@
+ //
+ 
+ #import <Security/Security.h>
++// SpaceFleet patch: tvOS has no LocalAuthentication; every LA use below is already behind this guard.
++#if TARGET_OS_IOS || TARGET_OS_VISION
+ #import <LocalAuthentication/LocalAuthentication.h>
++#endif
+ #import "RNKeychainManager.h"
+ #import <React/RCTConvert.h>
+ 

@@ -1,0 +1,163 @@
+# Runtime Service (`apps/runtime`)
+
+Local desktop runtime daemon skeleton for Space Fleet modular desktop architecture.
+
+## Current scope (V1 skeleton)
+- Session endpoints:
+  - `POST /runtime/session/login` (needs the `X-Runtime-Owner` owner secret)
+  - `POST /runtime/session/refresh`
+  - `POST /runtime/session/logout`
+- Runtime endpoints:
+  - `GET /runtime/health`
+  - `GET /runtime/modules`
+  - `GET /runtime/jobs`
+  - `GET /runtime/jobs/:jobId`
+  - `POST /runtime/jobs/:jobId/cancel`
+  - `POST /runtime/jobs/:jobId/retry`
+- Module endpoints:
+  - `POST /modules/:app/commands`
+  - `GET /modules/:app/state`
+- Event stream:
+  - `GET /runtime/events` (WebSocket upgrade)
+
+## Slice-aware module install state
+- Runtime discovers installed app slices from `RUNTIME_SLICES_DIR/modules/*/manifest.json`.
+- The desktop installers ship the runtime as a standalone binary (`bun build --compile --target=bun-<os>-<arch> --define 'process.env.NODE_ENV="production"' src/index.ts`, cross-compilable; Windows adds `--windows-hide-console`). The `--define` is required: `bun build --compile` inlines a direct `process.env.NODE_ENV` read as `"development"` at build time, so the spawn env cannot make the binary production (flags: `runtimeCompileArgs` in `apps/badger/desktop/scripts/package-targets.mjs`). Keep it compile-safe: import dependencies by package name (no `createRequire` into another package's `node_modules`), and set `RUNTIME_SLICES_DIR` for the packaged binary, which has no source tree next to it.
+- Default dev slice root is `apps/runtime/slices`.
+- `/runtime/modules` now includes per-module slice metadata:
+  - `compatibility` (`compatible`, `incompatible_api`, `invalid_manifest`, `missing_slice`)
+  - `sliceId`, `sliceVersion`
+  - `loadError` when a slice is present but not loadable.
+
+## Security defaults
+- Loopback-only intent (bind to `127.0.0.1` by default).
+- Bearer token required for protected routes and WS upgrade.
+- Per-token idempotency cache for command requests: a 30 s retry window capped at the newest 128 responses across all tokens (#25).
+
+## Shared runtime jobs surface
+- Shared job model package: `@space/runtime-jobs` (`packages/runtime-jobs`).
+- Runtime now exposes a runtime-global canonical jobs store that app modules sync into:
+  - Badger ingest jobs are mirrored into shared runtime jobs
+- Runtime-core module-sync plumbing is now split by concern:
+  - `src/core/jobs/normalizers.ts` extracts successful command/event payload shapes
+  - `src/core/jobs/syncers.ts` owns Badger sync policy and canonical upserts
+  - `src/core/jobs/adapters.ts` is now primarily a thin module-command/module-event dispatcher
+- Runtime-core scheduler foundations now live in:
+  - `src/core/jobs/scheduler.ts`
+  - `src/core/jobs/engine.ts`
+- Current scheduler scope:
+  - machine-safe default lane budgets
+  - host-aware default concurrency:
+    - weak hosts now default to lower total active-job and IO/network budgets
+    - stronger hosts can expose a higher CPU lane cap, but only if the app/user setting asks for it
+  - resource-claim-aware dispatch planning
+  - canonical store-backed dispatch batch selection
+  - delayed queued jobs stay blocked until their retry window is due
+  - Badger upload jobs now run in the `network` lane, separately from CPU-bound transcodes
+  - Badger CPU concurrency is user-configurable from desktop advanced settings (`maxParallelTranscodes`, default `1`, clamped to `1..3`)
+    - runtime now also clamps that user setting against host capacity instead of trusting the raw preference blindly
+  - Badger queue ordering is now explicit instead of generic numeric priority:
+    - earlier submission order wins across unrelated media
+    - within the same TV show, canonical episode order beats later/earlier submission time
+    - unresolved core-ingest episodes beat derived quality transcodes
+    - running work is never preempted; other lanes can still advance alongside it
+- Current engine scope:
+  - handler registration by canonical job kind
+  - canonical queued -> running -> succeeded|failed|cancelled transitions
+  - cooperative cancellation via abort signals
+  - retryable handler failures can requeue into `retry_scheduled` with bounded backoff metadata
+  - interrupted `running` jobs now recover by per-kind policy instead of one global rule:
+    - engine-owned jobs like Badger ingest are requeued to canonical `queued`
+  - shared runtime job lifecycle publication through runtime-core event helpers
+  - first real module-executor seam for Badger `ready` ingest jobs via shared engine dispatch
+  - queued Badger cancellations from `runtime.jobs.cancel` now settle directly in the canonical engine instead of calling `badger.ingest.apply cancel_job`
+  - global `runtime.jobs.retry` for Badger now requeues into the canonical engine instead of calling `badger.ingest.apply start_job` directly
+  - `badger.ingest.open/apply` now return lightweight acknowledgement metadata instead of queue job arrays
+  - canonical sync for those Badger commands now comes from the returned `ingest.jobs_updated` event path rather than from command-body `jobs` payloads
+  - module command routes now kick the shared background worker after canonical job sync
+  - runtime bootstrap now recovers persisted interrupted jobs only after the persisted canonical store is loaded, then kicks the worker immediately so restart recovery does not wait for a second mutation
+- Current worker scope:
+  - runtime-core background worker loop now lives in:
+    - `src/core/jobs/worker.ts`
+  - immediate drains are kicked by route/module mutations
+  - async module job/task events now also re-drive the worker after canonical job sync
+  - before each drain, the worker now reconciles active Badger ingest jobs from `badger.ingest.list_jobs` as a safety net if an async module completion event is missed
+  - periodic interval safety-net drains eligible queued jobs without UI polling
+  - drains are coalesced to avoid overlapping engine passes
+- Current replay scope:
+  - runtime websocket events are now retained on disk at:
+    - `<SPACEFLEET_RUNTIME_DATA_DIR>/runtime_events.json`
+  - reconnecting clients can request replay with `lastEventId`
+  - canonical `runtime.jobs` replay is no longer limited to incidental in-memory process state
+- Still pending:
+  - broader executor breadth and deeper runtime-core cleanup beyond the original engine milestone
+- Job listing/filtering routes:
+  - `GET /runtime/jobs?app=badger&status=running,failed&kind=badger.ingest.media_file&includeCompleted=true&limit=100`
+  - `GET /runtime/jobs/:jobId`
+- Job mutation routes:
+  - `POST /runtime/jobs/:jobId/cancel`
+  - `POST /runtime/jobs/:jobId/retry`
+- Event transport:
+  - canonical job updates are published only on shared websocket channel:
+    - `runtime.jobs`
+  - per-app websocket job mirrors have been removed so execution state now has one push lane.
+- Shared client helpers live in `@space/runtime-client/jobs`:
+  - `listRuntimeJobs(...)`
+  - `getRuntimeJob(...)`
+  - `cancelRuntimeJob(...)`
+  - `retryRuntimeJob(...)`
+  - `createRuntimeJobsStream(...)`
+
+## Shared content-core slice
+- Shared content package: `@space/content-core` (`packages/content-core`).
+- shared encrypted upload primitive now also lives in `@space/content-core`:
+  - `packages/content-core/src/upload.ts`
+  - including the shared resumable upload-ledger contract used by higher-level callers
+- Shared runtime content transport bridge now lives in:
+  - `apps/runtime/src/core/content/storageBridge.ts`
+- it now also exposes adapter-shaped helpers for shared content-core callers:
+  - upload callback construction for `ingestAdapter` / `previewAdapter`
+  - download callback construction for shared read paths
+  - high-level media-ingest upload transport construction for `packages/ingest-core/mediaProcessor`
+- First runtime-owned local-file ingest adapter now lives in:
+  - `apps/runtime/src/core/content/ingestAdapter.ts`
+- Shared preview derivation/runtime media helpers now live in:
+  - `apps/runtime/src/core/content/previewAdapter.ts`
+  - `apps/runtime/src/core/content/ffmpegRuntime.ts`
+- Current scope of that adapter:
+  - runtime reads real local bytes from disk,
+  - shared `content-core` selects `chunked` vs `packed_small_file`,
+  - shared `content-core` now also owns the app-agnostic encrypted object upload primitive,
+  - runtime content ingest/preview adapters now reuse that shared upload primitive instead of re-implementing encrypt+upload shaping inline,
+  - runtime encrypts one content object,
+  - runtime uploads one encrypted object through the provided upload bridge,
+  - runtime returns a shared `ContentIngestResult` shape,
+  - shared preview derivation now produces encrypted derived refs for:
+    - image thumbnails
+    - video poster frames.
+- Shared runtime content reads also now include:
+  - `apps/runtime/src/core/content/readAdapter.ts`
+- Badger runtime modules use the runtime-core storage tunnel bridge for:
+  - object upload
+  - object download
+  - tunnel session creation
+  - tunnel frame transport
+- `packages/ingest-core/mediaProcessor` no longer owns raw tunnel session/frame upload protocol:
+  - it now depends only on the shared high-level `uploadStorageObject(...)` contract
+  - the storage-tunnel upload lifecycle remains owned by shared transport code instead of Badger media orchestration
+- `packages/ingest-core/mediaProcessor` is now further split by concern:
+  - temp-job persistence lives in `packages/ingest-core/src/mediaJobState.ts`
+  - upload/finalization orchestration lives in `packages/ingest-core/src/mediaFinalize.ts`
+  - `mediaProcessor` now composes those seams instead of directly owning transport, state, and finalization in one file
+- Shared ffmpeg/ffprobe are now treated as runtime-core artifacts, not Badger-only artifacts:
+  - `apps/runtime/slices/core/manifest.json`
+  - env overrides remain:
+    - `SF_FFMPEG_PATH`
+    - `SF_FFPROBE_PATH`
+- Current Slice C limits:
+  - previews are still single-object encrypted derivatives, not a broader preview pipeline,
+  - full chunk-set content ingest is still pending.
+
+## Dev
+- `bun run --cwd apps/runtime dev`
+- `bun run --cwd apps/runtime test`

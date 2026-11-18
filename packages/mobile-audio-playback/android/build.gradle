@@ -1,0 +1,37 @@
+apply plugin: "com.android.library"
+apply plugin: "org.jetbrains.kotlin.android"
+
+android {
+    namespace "com.spacefleet.audioplayback"
+    compileSdk 36
+    buildToolsVersion "36.0.0"
+
+    defaultConfig {
+        minSdk 26
+        targetSdk 36
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = "17"
+    }
+
+    // The ALAC tests run Media3's MP4 extractor on the JVM; it reads android.os.Build, so the SDK stubs return defaults.
+    testOptions {
+        unitTests.returnDefaultValues = true
+    }
+}
+
+dependencies {
+    implementation("com.facebook.react:react-android")
+    // Media3 (stable line): ExoPlayer plays the loopback proxy's decrypted byte ranges; the MediaSessionService gives the
+    // notification, lock-screen and headset controls and keeps playback alive in the background (PAR-PLAY-03).
+    implementation("androidx.media3:media3-exoplayer:1.11.1")
+    implementation("androidx.media3:media3-session:1.11.1")
+    // JVM unit tests of the pure-Kotlin queue order (src/test): `./gradlew :space_mobile-audio-playback:testDebugUnitTest`.
+    testImplementation("junit:junit:4.13.2")
+}

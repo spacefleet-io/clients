@@ -1,0 +1,39 @@
+{
+  "name": "@space/library-db-definition",
+  "license": "GPL-3.0-only",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "scripts": {
+    "test": "bunx vitest run"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./schema": "./src/schema.ts",
+    "./migrations": "./src/migrations.ts",
+    "./migrationRunner": "./src/migrationRunner.ts",
+    "./manifest": "./src/manifest.ts",
+    "./crewDdl": "./src/crewDdl.ts",
+    "./editionDdl": "./src/editionDdl.ts",
+    "./originalSize": "./src/originalSize.ts",
+    "./ops": "./src/ops.ts",
+    "./mediaDetails": "./src/mediaDetails.ts",
+    "./artworkHeal": "./src/artworkHeal.ts",
+    "./artworkCopy": "./src/artworkCopy.ts",
+    "./opCompaction": "./src/opCompaction.ts",
+    "./opClass": "./src/opClass.ts",
+    "./storageFormat": "./src/storageFormat.ts",
+    "./payloadCompression": "./src/payloadCompression.ts",
+    "./snapshotPublish": "./src/snapshotPublish.ts",
+    "./sqliteImage": "./src/sqliteImage.ts",
+    "./compatibility": "./src/compatibility.ts",
+    "./systemPlaylists": "./src/systemPlaylists.ts"
+  },
+  "dependencies": {
+    "@space/shared": "workspace:*",
+    "drizzle-orm": "^0.45.3"
+  },
+  "devDependencies": {
+    "vitest": "^5.1.0"
+  }
+}

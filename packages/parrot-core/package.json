@@ -1,0 +1,24 @@
+{
+  "name": "@space/parrot-core",
+  "license": "GPL-3.0-only",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./art": "./src/art.ts",
+    "./gapless": "./src/gapless.ts",
+    "./limiter": "./src/limiter.ts",
+    "./shell-strings": "./src/shellStrings.ts",
+    "./mascot.webp": "./assets/mascot.webp"
+  },
+  "scripts": {
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@noble/hashes": "^2.4.0",
+    "@space/parrot-library-db-definition": "workspace:*",
+    "@space/playback-abr": "workspace:*",
+    "@space/shared": "workspace:*"
+  }
+}

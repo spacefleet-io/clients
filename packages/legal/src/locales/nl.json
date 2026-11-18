@@ -1,0 +1,411 @@
+{
+  "nav": {
+    "label": "Juridische informatie",
+    "legal-notice": "Wettelijke vermeldingen",
+    "privacy": "Privacybeleid",
+    "terms": "Algemene gebruiks- en verkoopvoorwaarden",
+    "account-deletion": "Je account verwijderen",
+    "security": "Beveiligingsbeleid",
+    "security-acknowledgments": "Dankbetuigingen beveiliging"
+  },
+  "updated": "Laatst bijgewerkt: 18 november 2026. Als de taalversies van deze pagina van elkaar verschillen, heeft de Franse versie voorrang.",
+  "credits": {
+    "about": "Over",
+    "heading": "Vermeldingen en gegevens van derden",
+    "intro": "De SpaceFleet-apps tonen informatie van de onderstaande diensten. Dank aan hen en aan hun bijdragers.",
+    "openSource": { "notice": "{app} is open source, onder de GPL-3.0-licentie.", "link": "Bekijk de broncode", "flags": "Taalvlaggen: Noto Emoji-afbeeldingen van Google, onder de Apache-licentie 2.0.", "fonts": "Lettertypen: Inter en Space Grotesk, onder de SIL Open Font License 1.1." },
+    "unavailable": "De vermeldingen van de gegevens verschijnen hier zodra de app online is geweest."
+  },
+  "consent": {
+    "heading": "Voordat je betaalt",
+    "terms": "Ik aanvaard de [Algemene gebruiks- en verkoopvoorwaarden](page:terms).",
+    "startNow": "Ik vraag dat mijn abonnement meteen begint, vóór het einde van de herroepingstermijn van 14 dagen. De niet-goed-geld-terug-garantie van 14 dagen blijft gelden: binnen 14 dagen na deze betaling krijg ik mijn geld volledig terug als ik daarom vraag, ook als ik de dienst al heb gebruikt.",
+    "required": "Vink beide vakjes aan om een betaald abonnement te kiezen.",
+    "signup": "Door een account aan te maken, aanvaard je de [Algemene gebruiks- en verkoopvoorwaarden](page:terms) en bevestig je dat je het [Privacybeleid](page:privacy) hebt gelezen.",
+    "newsBox": "Stuur me nieuws van SpaceFleet: nieuwe functies en aankondigingen, een paar keer per jaar. Ik kan het op elk moment uitzetten. SpaceFleet telt hoe vaak zijn nieuwsmails worden geopend en aangeklikt.",
+    "news": "Nieuws",
+    "newsHint": "Nieuwe functies en nieuws van SpaceFleet, een paar keer per jaar. SpaceFleet telt hoe vaak zijn nieuwsmails worden geopend en aangeklikt."
+  },
+  "pages": {
+    "legal-notice": {
+      "title": "Wettelijke vermeldingen",
+      "intro": "Deze vermeldingen geven aan wie de website spacefleet.io en de SpaceFleet-apps (waaronder SpaceBadger en SpaceParrot) uitgeeft, zoals vereist door artikel 1-1 van de Franse wet nr. 2004-575 van 21 juni 2004 voor het vertrouwen in de digitale economie (LCEN).",
+      "sections": [
+        {
+          "heading": "Uitgever",
+          "blocks": [
+            {
+              "items": [
+                "Chris-Alexandre Pena, EI (entrepreneur individuel), Franse eenmanszaak, handelend onder de naam SpaceFleet",
+                "[[postal:Adres: {{publisherPostalAddress}}]]",
+                "SIREN: 822 965 737",
+                "Btw-identificatienummer: FR67822965737",
+                "E-mail: contact@spacefleet.io",
+                "Website: https://spacefleet.io"
+              ]
+            }
+          ]
+        },
+        {
+          "heading": "Verantwoordelijke voor de publicatie",
+          "blocks": ["Chris-Alexandre Pena."]
+        },
+        {
+          "heading": "Hosting",
+          "blocks": [
+            "De website, de SpaceFleet-servers en de versleutelde gegevens die ze opslaan, worden gehost door:",
+            {
+              "items": [
+                "Hetzner Online GmbH, Industriestr. 25, 91710 Gunzenhausen, Duitsland",
+                "Telefoon: +49 9831 505-0",
+                "Website: https://www.hetzner.com"
+              ]
+            },
+            "De servers staan in de datacenters van Hetzner in Falkenstein (Duitsland) en Helsinki (Finland). Verkeer naar spacefleet.io loopt via het netwerk van Cloudflare, Inc., 101 Townsend St, San Francisco, CA 94107, Verenigde Staten, dat ook de domeinnaam en de DNS ervan levert."
+          ]
+        },
+        {
+          "heading": "Intellectuele eigendom",
+          "blocks": [
+            "De namen SpaceFleet, SpaceBadger en SpaceParrot en de logo's, teksten en beelden van deze website zijn eigendom van de uitgever of worden met toestemming gebruikt. Ze mogen niet worden verveelvoudigd zonder voorafgaande schriftelijke toestemming. De inhoud die je met SpaceFleet opslaat, blijft van jou."
+          ]
+        },
+        {
+          "heading": "Contact",
+          "blocks": [
+            "Voor elke vraag over deze website, ook om onrechtmatige inhoud te melden, schrijf je naar contact@spacefleet.io.",
+            "Zie ook het [privacybeleid](page:privacy) en de [algemene gebruiks- en verkoopvoorwaarden](page:terms)."
+          ]
+        }
+      ]
+    },
+    "privacy": {
+      "title": "Privacybeleid",
+      "intro": "Dit beleid legt uit welke persoonsgegevens SpaceFleet verwerkt wanneer je de website spacefleet.io en de SpaceFleet-apps (waaronder SpaceBadger en SpaceParrot) gebruikt, waarom, hoe lang, en hoe je je rechten uitoefent op grond van de Algemene Verordening Gegevensbescherming (AVG) en de Franse wet Informatique et Libertés.",
+      "sections": [
+        {
+          "heading": "Verwerkingsverantwoordelijke",
+          "blocks": [
+            "De verwerkingsverantwoordelijke is Chris-Alexandre Pena, EI, handelend onder de naam SpaceFleet (SIREN 822 965 737[[postal:, {{publisherPostalAddress}}]]). Contact voor elke vraag over je gegevens: privacy@spacefleet.io."
+          ]
+        },
+        {
+          "heading": "End-to-end-versleuteling, en wat die niet verbergt",
+          "blocks": [
+            "Elk account heeft één eigen versleutelingssleutel, die op je apparaat wordt aangemaakt. Die blijft op apparatuur die van jou is (je telefoons en computers, en een Kodi-box of Jellyfin-server die je hebt gekoppeld). Hij wordt nooit leesbaar naar onze servers gestuurd: hij gaat er alleen doorheen wanneer je een nieuw apparaat koppelt, verzegeld zodat alleen dat apparaat hem kan openen.",
+            "Je mediabestanden, de afbeeldingen ervan en je bibliotheek worden op je apparaat versleuteld voordat ze worden geüpload. Onze servers slaan deze gegevens op en verzenden ze, maar kunnen ze niet lezen, en wij kunnen ze niet ontsleutelen. Er bestaat geen sleutelherstel: als je je sleutel kwijtraakt zonder er een back-up van te hebben, kan niemand, ook wij niet, je gegevens terughalen.",
+            "End-to-end-versleuteling maakt je niet onzichtbaar voor ons. Onze servers zien:",
+            {
+              "items": [
+                "het e-mailadres en de gegevens van je account (abonnement, status van het abonnement, instellingen);",
+                "hoeveel gegevens je opslaat, de grootte van de versleutelde stukken en wanneer er wordt geüpload;",
+                "de apparaten die met je account verbonden zijn (naam en type van het apparaat, app, laatste activiteit);",
+                "de titels die je apps opzoeken om posters, informatie en markeringen voor intro's en aftitelingen op te halen (zie hieronder);",
+                "technische verbindingsgegevens, zoals je IP-adres, in de logbestanden van onze servers (zie hieronder);",
+                "als je het nieuws ontvangt, of en wanneer je elke nieuwsmail opent en op welke links erin je klikt (zie hieronder);",
+                "het abonnement dat je kiest en de prijs die je te zien kreeg, en, wanneer je je aanmeldt of betaalt op onze website, de campagne of website waar je bezoek vandaan kwam (zie hieronder);",
+                "als je foutrapporten hebt ingeschakeld, de rapporten die je apps sturen wanneer er iets misgaat (zie hieronder)."
+              ]
+            }
+          ]
+        },
+        {
+          "heading": "Wat we verzamelen en waarom",
+          "blocks": [
+            {
+              "items": [
+                "Account: e-mailadres, wachtwoord (alleen als hash bewaard), weergavenaam, taal van de interface, abonnement en status ervan, einddatum van de betaalde periode, instellingen voor inloggen in twee stappen, aanmaakdatum en datum van laatste activiteit. Doel: je account aanmaken en laten werken. Rechtsgrond: uitvoering van de overeenkomst (art. 6, lid 1, onder b AVG).",
+                "Apparaten en sessies: naam en type van het apparaat, de betreffende app, de versie van de app en waar die vandaan is geïnstalleerd (bijvoorbeeld Google Play, F-Droid of Flatpak), de user agent van de app of de browser, datum van inloggen en laatste activiteit, en voor telefoons een pushmeldingstoken. Doel: je laten zien welke apparaten verbonden zijn en ze laten afmelden, je apparaten laten weten dat je bibliotheek is gewijzigd, en je waarschuwen wanneer er een nieuw apparaat aan je account wordt toegevoegd. Rechtsgrond: overeenkomst. We tellen ook elke dag hoeveel apparaten elke app-versie gebruiken en hoe vaak elke app-versie van onze servers wordt gedownload; deze tellingen noemen niemand en geen apparaat. Doel: weten welke versies in gebruik zijn. Rechtsgrond: ons gerechtvaardigd belang bij het onderhouden van de apps (art. 6, lid 1, onder f AVG).",
+                "Opgeslagen gegevens: je versleutelde bestanden, afbeeldingen en bibliotheek. We zien de hoeveelheid, de grootte en het tijdstip van uploaden, niet de inhoud. Doel: ze opslaan en naar je apparaten sturen. Rechtsgrond: overeenkomst.",
+                "Opzoeken van titels: om posters en informatie en markeringen voor intro's en aftitelingen te tonen, stuurt SpaceBadger de opgezochte titel rechtstreeks naar onze metadatadienst; om hoezen en songteksten te tonen, doet SpaceParrot hetzelfde met het opgezochte nummer, album of de opgezochte artiest. Elke zoekopdracht draagt een ticket voor eenmalig gebruik dat met blinde handtekeningen is gemaakt (Privacy Pass, RFC 9578), en niets waaraan je account te herkennen is, dus de metadatadienst weet niet wie het vraagt; hij ziet het IP-adres van de verbinding, dat hij niet bewaart. Onze hoofdserver ontvangt je zoekopdrachten nooit: om misbruik te voorkomen houdt hij alleen een dagelijkse teller bij van de tickets die elk account krijgt, niet de titels. Om die informatie te vinden, wordt de titel vanaf onze eigen server verstuurd, nooit met je IP-adres of enige informatie over jou. Je kunt het zelf controleren: packages/privacy-pass en packages/metadata-client in onze openbare broncode. Rechtsgrond: overeenkomst.",
+                { "id": "trailers", "text": "Trailers: wanneer je een trailer afspeelt, speelt SpaceBadger die in de app af, in de ingesloten speler van YouTube. Voordat je een trailer afspeelt, wordt er niets naar YouTube gestuurd. Zodra je dat doet, ontvangt YouTube (Google Ireland Limited) je IP-adres, gegevens over je apparaat en je app of browser (zoals de user agent, taal en schermgrootte) en welke trailer je bekijkt; YouTube kan cookies en vergelijkbare trackers plaatsen en voor of tijdens de trailer advertenties tonen. YouTube gebruikt deze gegevens volgens zijn eigen privacybeleid: https://policies.google.com/privacy. Onze servers ontvangen niets van YouTube. In de instellingen van de app voor de computer kun je in plaats daarvan een Invidious-instantie kiezen, die dan dezelfde gegevens ontvangt in plaats van YouTube. Doel: je de trailer van een titel laten bekijken. Rechtsgrond: je toestemming (art. 6, lid 1, onder a AVG), die je geeft telkens wanneer je een trailer afspeelt; speel je er geen af, dan wordt er niets naar YouTube gestuurd." },
+                "Betaling (zodra de betaalde abonnementen opengaan; tot dan kost het kiezen van een abonnement niets): de betaling verloopt via de betaalpagina van Stancer. We zien nooit je kaartnummer. We bewaren een verwijzing naar je kaart (merk, laatste vier cijfers, vervaldatum), die we gebruiken om elke verlenging te innen, je abonnement en je betalingsgegevens (bedrag, valuta, periode, betaaldatum). Stancer ontvangt het bedrag, een omschrijving van het abonnement en de identificatiecode van je account; het ontvangt je e-mailadres niet van ons. Rechtsgrond: overeenkomst, en onze wettelijke boekhoudkundige verplichtingen (art. 6, lid 1, onder c AVG).",
+                "Doorverwijzing: je doorverwijzingscode, het account dat jou heeft doorverwezen of de accounts die jij hebt doorverwezen, en op welke datum. Doel: de voordelen van doorverwijzing toekennen. Rechtsgrond: overeenkomst.",
+                "E-mails: we sturen je de berichten die nodig zijn om je account te laten werken: verificatie- en inlogcodes, wachtwoordherstel, beveiligingsberichten, waarschuwingen die worden verstuurd voordat een account automatisch wordt verwijderd en, zodra de betaalde abonnementen opengaan, betalingsberichten, facturen en creditnota's. Rechtsgrond: overeenkomst.",
+                "Wachtlijst en nieuwsbrief (spacefleet.io vóór de lancering): e-mailadres, naam (standaard het deel van het adres vóór de @), taal, bevestiging van het adres en de datum daarvan, of je aan de bèta wilt deelnemen, en de status van oprichter. Wanneer je een betaald abonnement afsluit, controleren we of je adres op de wachtlijst staat om de oprichterskorting toe te passen. Zodra je account is aangemaakt, ontvang je nieuws van SpaceFleet alleen als je daarvoor kiest, met het niet-aangevinkte vakje bij het aanmelden of met de schakelaar in de instellingen van je account. Rechtsgrond: je toestemming (art. 6, lid 1, onder a AVG), die je op elk moment kunt intrekken via de afmeldlink in elke e-mail, in de instellingen van je account of door ons te schrijven.",
+                { "id": "news-tracking", "text": "Openen en klikken van het nieuws: elke nieuwsmail bevat een piepklein onzichtbaar beeldje en links die via onze server lopen. Wanneer je e-mailapp dat beeldje laadt, of wanneer je op een van de links klikt, leggen we voor jou en die e-mail vast wanneer hij voor het eerst werd geopend en hoe vaak, en op welke links je klikte, wanneer en hoe vaak. Die gegevens noemen alleen de e-mail en de link; ze zeggen nooit iets over je bibliotheek of over wat je kijkt of luistert. Sommige e-mailapps laden afbeeldingen vanzelf, dus een e-mail kan als geopend tellen zonder dat hij gelezen is; als je afbeeldingen blokkeert in je e-mailapp, wordt het openen niet geteld. Doel: weten welk nieuws gelezen wordt en welke onderwerpen abonnees interesseren. Rechtsgrond: je toestemming (art. 6, lid 1, onder a AVG), gegeven met het vakje of de schakelaar Nieuws, die vermeldt dat openen en klikken worden geteld; door je af te melden trek je die in en stopt het tellen." },
+                { "id": "business-records", "text": "Bedrijfsgegevens: wanneer je je account aanmaakt, een abonnement kiest of wijzigt, of een betaling start, voltooit, afbreekt of ziet mislukken, leggen we die gebeurtenis vast met het abonnement, de factuurperiode, de prijs die je te zien kreeg en de versie van onze prijslijst waaruit die kwam, een eventuele korting, of je een founder bent, en welke SpaceFleet-app en welke versie je gebruikte. Wanneer je je account aanmaakt of betaalt op onze website, leggen we ook vast waar je bezoek vandaan kwam, als de pagina waarop je binnenkwam dat aangaf: de campagne die in de gevolgde link genoemd wordt (de utm_-parameters ervan; links uit het nieuws naar onze website dragen de naam van dat nieuws) en de naam van de website die je stuurde, nooit het volledige adres van de pagina. Doel: begrijpen welke prijzen, aanbiedingen, seizoenen en kanalen abonnees opleveren en behouden, om SpaceFleet te runnen en te prijzen. Deze gegevens zeggen nooit iets over je bibliotheek of over wat je kijkt of luistert, alleen wij lezen ze, en geen externe analysedienst ontvangt ze. Rechtsgrond: ons gerechtvaardigd belang bij het runnen en prijzen van ons bedrijf (art. 6, lid 1, onder f AVG); je kunt bezwaar maken door ons te schrijven." },
+                "Technische logbestanden: wanneer je onze websites bezoekt of je apps contact opnemen met onze servers, registreren die technische gegevens (IP-adres, datum en tijd, opgevraagd adres, user agent van de browser of de app, antwoordcode). Doel: beveiliging, voorkomen van misbruik en opsporen van storingen. Rechtsgrond: ons gerechtvaardigd belang bij een veilige dienst (art. 6, lid 1, onder f AVG).",
+                { "id": "error-reports", "text": "Foutrapporten (uitgeschakeld zolang je ze niet inschakelt, in de instellingen van de app of tijdens het instellen ervan): wanneer SpaceBadger op een fout stuit, kan het een rapport sturen naar een server voor het bijhouden van fouten (Bugsink) die we zelf beheren. Een rapport bevat het type fout en de foutmelding, ontdaan van persoonlijke gegevens, de stacktrace (de plek in de code van de app waar de fout optrad), de versie van de app, en de naam en versie van het besturingssysteem. Het bevat nooit een bestandsnaam, een titel, een bestandspad of je accountgegevens. Doel: bugs vinden en verhelpen. Rechtsgrond: je toestemming (art. 6, lid 1, onder a AVG), die je op elk moment kunt intrekken door de foutrapporten uit te schakelen in de instellingen van de app." }
+              ]
+            }
+          ]
+        },
+        {
+          "heading": "Wat we niet doen",
+          "blocks": [
+            "SpaceFleet wordt uitsluitend betaald met abonnementen. We tonen geen advertenties, verkopen of verhuren geen gegevens, maken geen aanbevelingen of profielen, en onze websites en apps bevatten geen tools van derden voor bezoekersstatistieken, advertenties of crashrapporten. De enige uitzondering is een trailer die je afspeelt: die loopt in de speler van YouTube, die advertenties van YouTube kan tonen en trackers van YouTube kan plaatsen (zie hierboven). Foutrapporten gaan, als je ze inschakelt, alleen naar onze eigen server. De enige tracking in onze e-mails is het tellen van het openen en klikken van de nieuwsmails, zoals hierboven beschreven, door onze eigen server; e-mails over je account bevatten er geen."
+          ]
+        },
+        {
+          "heading": "Cookies en browseropslag",
+          "blocks": [
+            "Onze websites plaatsen geen cookies. Ze bewaren in de lokale opslag van je browser alleen je taalkeuze en, op de website voor accountbeheer, je inlogsessie. Beide zijn strikt noodzakelijk om de website te laten werken en vereisen dus geen toestemming. In de SpaceBadger-apps kan de speler van YouTube cookies en vergelijkbare gegevens op je apparaat opslaan wanneer je een trailer afspeelt (zie hierboven); daarvoor wordt niets van YouTube geladen. Om te weten waar een bezoek vandaan kwam (zie Bedrijfsgegevens hierboven), bewaart de website de campagne en de verwijzende website alleen in het geheugen van de geopende pagina: er wordt niets op je apparaat opgeslagen, het wordt vergeten wanneer je de pagina sluit of herlaadt, en het wordt ons alleen gestuurd wanneer je je account aanmaakt of betaalt."
+          ]
+        },
+        {
+          "heading": "Ontvangers van je gegevens",
+          "blocks": [
+            "Je gegevens worden verwerkt door de uitgever en door deze dienstverleners, elk alleen voor het aangegeven doel:",
+            {
+              "items": [
+                "Hetzner Online GmbH (Duitsland): hosting van onze servers en van de versleutelde gegevens, in datacenters in Falkenstein (Duitsland) en Helsinki (Finland).",
+                "Cloudflare, Inc. (Verenigde Staten): domeinnaam en DNS van spacefleet.io; zijn netwerk leidt de foutrapporten door die je apps naar reports.spacefleet.io sturen en de doorverwijzingen van spacebadger.io en spaceparrot.io naar spacefleet.io, en verwerkt voor die verzoeken het IP-adres en de verzoekgegevens. De website en de overige verbindingen van de apps bereiken onze servers rechtstreeks.",
+                "Stancer (Iliad 78 SAS, Parijs, Frankrijk): verwerking van kaartbetalingen en bewaring van je kaart, zodra de betaalde abonnementen opengaan.",
+                "Amazon Web Services (Amazon SES), vanuit zijn regio Parijs (Frankrijk): verzending van de e-mails van het account en van de nieuwsbrief. Het ontvangt het e-mailadres van de ontvanger en de inhoud van elke e-mail.",
+                "Google (Firebase Cloud Messaging) en Apple (Apple Push Notification service): bezorging van meldingen aan de mobiele apps. Zij ontvangen het meldingstoken van het apparaat, de identificatiecode van je account en de melding zelf: een kort signaal dat je bibliotheek is gewijzigd, of een beveiligingswaarschuwing met de naam en het type van een nieuw toegevoegd apparaat. Nooit de inhoud van je bibliotheek.",
+                "Google Ireland Limited (YouTube): speelt de trailers af die je kiest, in zijn ingesloten speler in de app. Alleen wanneer je een trailer afspeelt, ontvangt het de hierboven onder Trailers beschreven gegevens, die het verwerkt volgens zijn eigen privacybeleid (https://policies.google.com/privacy). Een Invidious-instantie die je kiest in de instellingen van de app voor de computer ontvangt in zijn plaats dezelfde gegevens."
+              ]
+            },
+            "De serverlogbestanden en de foutrapporten worden verzameld op een server die wordt beheerd door de uitgever en wordt gehost door Hetzner in Falkenstein (Duitsland). De foutrapporten komen daar binnen via het netwerk van Cloudflare, op het adres reports.spacefleet.io, en worden aan niemand anders doorgegeven. We verstrekken alleen gegevens aan overheidsinstanties wanneer de wet dat vereist."
+          ]
+        },
+        {
+          "heading": "Doorgiften buiten de Europese Unie",
+          "blocks": [
+            "De gegevens van je account en je versleutelde bestanden worden opgeslagen in de Europese Unie. Sommige hierboven genoemde dienstverleners (Cloudflare, Amazon Web Services, Google, Apple) behoren tot Amerikaanse concerns en kunnen gegevens in de Verenigde Staten verwerken; deze doorgiften vallen onder de standaardcontractbepalingen van de Europese Commissie of onder haar adequaatheidsbesluit voor gecertificeerde Amerikaanse bedrijven. Je kunt ons om een kopie van deze waarborgen vragen."
+          ]
+        },
+        {
+          "heading": "Bewaartermijnen",
+          "blocks": [
+            {
+              "items": [
+                "Accountgegevens en opgeslagen bestanden: zolang het account bestaat. Ze worden verwijderd wanneer je je account verwijdert (zie [Je account verwijderen](page:account-deletion)), 60 dagen na een verlenging die onbetaald is gebleven, of wanneer een gratis account 60 dagen niet is gebruikt. Er worden waarschuwingsmails verstuurd 7 dagen en 1 dag vóór elke automatische verwijdering.",
+                "Kopieën van de database die vóór elke update van de servers worden gemaakt: verwijderd zodra ze ouder zijn dan 30 dagen, behalve de meest recente kopie, die wordt bewaard tot de volgende update haar vervangt. De opgeslagen bestanden worden niet in back-ups gekopieerd.",
+                "Facturen en betalingsgegevens: 10 jaar na het einde van het boekjaar, zoals het Franse boekhoudrecht vereist (artikel L123-22 van de Franse Code de commerce). Ze worden bewaard na de verwijdering van het account.",
+                "Serverlogbestanden: 30 dagen.",
+                "Gegevens van de wachtlijst en de nieuwsbrief: tot je je afmeldt of om verwijdering vraagt. Op de dag dat SpaceFleet voor het publiek opengaat, ontvangt iedereen op de wachtlijst een laatste e-mail; een maand later wordt elke inschrijving verwijderd waarvan het adres geen SpaceFleet-account is geworden. Van een oprichter worden daarna alleen het e-mailadres en de status van oprichter bewaard, zolang de oprichterskorting kan gelden, tenzij je om verwijdering vraagt. Zodra je een account hebt, gelden de hierboven vermelde bewaartermijnen van het account.",
+                "Openen en klikken van het nieuws: zolang je ingeschreven blijft. Ze worden gewist wanneer je je afmeldt, Nieuws uitzet in de instellingen van je account of je account verwijdert.",
+                "Bedrijfsgegevens: zolang SpaceFleet bestaat, zodat cijfers over de jaren heen vergeleken kunnen worden. Wanneer je je account verwijdert, worden ze ervan losgekoppeld; de betalingsgegevens die we moeten bewaren, blijven zoals hierboven beschreven.",
+                "Foutrapporten: 90 dagen na ontvangst, daarna verwijderd."
+              ]
+            }
+          ]
+        },
+        {
+          "heading": "Je rechten",
+          "blocks": [
+            "Je hebt het recht op inzage in je gegevens, op rectificatie, op wissing, op beperking van en bezwaar tegen de verwerking, het recht op overdraagbaarheid en het recht om je toestemming op elk moment in te trekken. Het Franse recht laat je ook richtlijnen vastleggen over wat er na je overlijden met je gegevens gebeurt.",
+            "Je kunt je bestanden zelf downloaden en je account zelf verwijderen vanuit de apps. Voor elk ander verzoek schrijf je naar privacy@spacefleet.io vanaf het e-mailadres van je account. We antwoorden binnen een maand.",
+            "Als je vindt dat je rechten niet worden gerespecteerd, kun je een klacht indienen bij de Franse toezichthouder voor gegevensbescherming, de CNIL: 3 place de Fontenoy, TSA 80715, 75334 Paris Cedex 07, France, https://www.cnil.fr."
+          ]
+        },
+        {
+          "heading": "Beveiliging",
+          "blocks": [
+            "Naast de end-to-end-versleuteling worden wachtwoorden alleen als hash bewaard, is er een tweede inlogstap beschikbaar (code per e-mail of authenticator-app), en is beheerderstoegang tot onze servers beperkt tot een privénetwerk."
+          ]
+        },
+        {
+          "heading": "Leeftijd",
+          "blocks": [
+            "De houder van een SpaceFleet-account moet ten minste 18 jaar oud zijn, of de meerderjarigheidsleeftijd in zijn of haar woonland hebben bereikt als die hoger is. Een minderjarige mag SpaceFleet alleen gebruiken onder toezicht van de volwassene die het account houdt. We vragen bij het aanmelden niet naar je leeftijd."
+          ]
+        },
+        {
+          "heading": "Wijzigingen van dit beleid",
+          "blocks": [
+            "We werken dit beleid bij wanneer onze verwerkingen veranderen en informeren accounthouders per e-mail over elke belangrijke wijziging. De datum bovenaan de pagina geeft de laatste versie aan."
+          ]
+        }
+      ]
+    },
+    "terms": {
+      "title": "Algemene gebruiks- en verkoopvoorwaarden",
+      "intro": "Deze voorwaarden regelen het gebruik van een SpaceFleet-account en van de SpaceFleet-apps (waaronder SpaceBadger en SpaceParrot), en de verkoop van SpaceFleet-abonnementen. Ze worden gesloten tussen jou en Chris-Alexandre Pena, EI, handelend onder de naam SpaceFleet (zie de [wettelijke vermeldingen](page:legal-notice)). Door een account aan te maken, aanvaard je ze.",
+      "sections": [
+        {
+          "heading": "1. De dienst",
+          "blocks": [
+            "SpaceFleet geeft je een account met opslagruimte, dat je vanuit de SpaceFleet-apps gebruikt om je eigen media te bewaren, te synchroniseren en af te spelen. Eén account en één abonnement dekken alle SpaceFleet-apps.",
+            "Je bestanden, de afbeeldingen ervan en je bibliotheek worden op je apparaten versleuteld voordat ze worden verstuurd, met een sleutel die alleen je apparaten hebben. Wij kunnen je gegevens niet lezen en je sleutel niet terughalen: als je je sleutel en alle apparaten die hem hebben kwijtraakt, zijn je gegevens definitief verloren. Bewaar de back-up van je sleutel die de apps je aanbieden."
+          ]
+        },
+        {
+          "heading": "2. Je account",
+          "blocks": [
+            "Je moet ten minste 18 jaar oud zijn, of de meerderjarigheidsleeftijd in je woonland hebben bereikt als die hoger is, om een account aan te maken; een minderjarige mag SpaceFleet alleen gebruiken onder toezicht van de volwassene die het account houdt. Je moet een geldig e-mailadres opgeven, dat je bevestigt met de code die we sturen. Je bent verantwoordelijk voor de beveiliging van je wachtwoord, je tweede inlogstap en je versleutelingssleutel, en voor wat er op je account gebeurt. Laat het ons onmiddellijk weten via contact@spacefleet.io als je denkt dat iemand anders het gebruikt."
+          ]
+        },
+        {
+          "heading": "3. Abonnementen en prijzen",
+          "blocks": [
+            "De abonnementen zijn Gratis (20 GB), Starter (100 GB), Standard (400 GB) en Scale (1000 GB); Scale kan extra blokken van 500 GB krijgen. Het abonnement Gratis heeft geen einddatum.",
+            "Betaalde abonnementen worden gekocht voor een maand of een jaar. De prijzen worden vermeld in euro, inclusief alle belastingen en gelijk in alle landen, op het scherm met de abonnementen en op de betaalpagina vóór je bevestiging. Na elke betaling sturen we je een factuur per e-mail, en na elke terugbetaling een creditnota; je kunt ze ook allemaal downloaden vanuit je accountomgeving op de website.",
+            "Betalen gebeurt met een kaart via Stancer, vanaf de website of de app voor de computer. De apps voor telefoon en televisie nemen geen betalingen aan. De betaalde abonnementen zijn nog niet open: tot dan kost het kiezen van een abonnement niets."
+          ]
+        },
+        {
+          "heading": "4. Verlenging en opzegging",
+          "blocks": [
+            "Een betaald abonnement wordt aan het einde van elke periode automatisch verlengd voor dezelfde duur, tenzij je de verlenging uitschakelt. Je kunt dat op elk moment doen vanuit je account op de website of in de app voor de computer; het abonnement blijft dan actief tot het einde van de al betaalde periode, waarna het account overgaat op het abonnement Gratis.",
+            "Een jaarabonnement kan vóór het einde van zijn jaar niet worden stopgezet of teruggezet naar het abonnement Gratis, behalve in het kader van de garantie van 14 dagen hieronder. In de loop van het jaar kun je direct overstappen op een hoger abonnement: je betaalt het verschil voor de resterende maanden, en het jaar eindigt nog steeds op de oorspronkelijke verlengingsdatum. Overstappen op een lager abonnement kan op elk moment worden aangevraagd, maar gaat pas in bij de jaarlijkse verlenging: tot dan behoud je het hogere abonnement, zonder terugbetaling. Als je op de dag van de verlenging nog meer opslaat dan het gevraagde abonnement toestaat, wordt de wijziging geannuleerd en blijft het abonnement ongewijzigd, maar wordt de betaling van de verlenging pas 14 dagen later geïnd, zodat je tijd hebt om ruimte vrij te maken en over te stappen op het lagere abonnement; we waarschuwen je per e-mail en in de apps 14, 7, 3 en 1 dagen vóór de verlenging. Overstappen van jaarlijkse naar maandelijkse facturering vraag je op dezelfde manier aan; overstappen van maandelijkse naar jaarlijkse facturering gaat in bij de volgende maandbetaling. Je kunt niet overstappen op een kleiner abonnement zolang je meer opslaat dan het toestaat, en ook niet op de abonnementen Gratis of Starter zolang je een video met een hogere resolutie dan 1080p opslaat.",
+            "Bij een jaarabonnement laten we je per e-mail, niet eerder dan drie maanden en niet later dan een maand vóór de verlengingsdatum, weten dat het abonnement wordt verlengd en dat je de verlenging kunt stopzetten, zoals artikel L215-1 van de Franse Code de la consommation vereist."
+          ]
+        },
+        {
+          "heading": "5. Herroepingsrecht en niet-goed-geld-terug-garantie van 14 dagen",
+          "blocks": [
+            "Betaalde abonnementen, maandelijks of jaarlijks, hebben een niet-goed-geld-terug-garantie van 14 dagen, die je wettelijk herroepingsrecht dekt (artikel L221-18 van de Franse Code de la consommation). Ze geldt voor de volgende betalingen: de eerste inschrijving, elke overstap naar een hoger abonnement en elke jaarlijkse verlenging. Binnen 14 dagen na die betaling kun je zonder opgave van redenen om terugbetaling vragen en krijg je het volledige bedrag terug, ook als je de dienst al hebt gebruikt. Twee betalingen vallen er niet onder: de eerste betaling na een overstap naar een kleiner abonnement, en een jaarlijkse verlenging waarvan de betaling al 14 dagen is uitgesteld omdat de gevraagde overstap naar een lager abonnement niet mogelijk was. Maandelijkse verlengingen vallen er niet onder.",
+            "Bij het afsluiten van een abonnement vraag je uitdrukkelijk dat de dienst meteen begint, vóór het einde van de herroepingstermijn (artikel L221-25 van de Franse Code de la consommation), door vóór de betaling het daarvoor bestemde vakje aan te vinken, samen met het vakje waarmee je deze voorwaarden aanvaardt. Dit verzoek beperkt de garantie niet: een herroeping binnen de 14 dagen wordt volledig terugbetaald, zonder dat er iets wordt ingehouden voor de dagen die je al hebt gebruikt. We bewaren de versie van deze voorwaarden die je hebt aanvaard en de datum waarop je ze hebt aanvaard.",
+            "Om de overeenkomst te herroepen, stuur je ons een ondubbelzinnige verklaring van je besluit naar contact@spacefleet.io[[postal: of per post naar {{publisherPostalAddress}}]], bijvoorbeeld met het modelformulier hieronder. Als je je account verwijdert, betalen we je direct terug via hetzelfde betaalmiddel. Als je terugkeert naar het abonnement Gratis, betalen we je terug via hetzelfde betaalmiddel zodra je bibliotheek in het abonnement Gratis past, en uiterlijk 14 dagen na je verzoek: tot dan kun je met het account nog steeds afspelen maar niet meer uploaden, en moet je je bibliotheek terugbrengen tot 20 GB en elke video met een hogere resolutie dan 1080p verwijderen; wat op de 14e dag nog te veel is, wordt verwijderd, te beginnen met de meest recent geüploade bestanden. Als je overstapt op een ander betaald abonnement, moet je eerst binnen die termijn van 14 dagen genoeg ruimte vrijmaken; de terugbetaling wordt dan verrekend met je volgende betalingen.",
+            "Modelformulier voor herroeping (dit formulier alleen invullen en terugzenden als je de overeenkomst wilt herroepen):",
+            {
+              "items": [
+                "Aan Chris-Alexandre Pena, EI (SpaceFleet), [[postal:{{publisherPostalAddress}}, ]]contact@spacefleet.io",
+                "Ik/Wij (*) deel/delen (*) u hierbij mede dat ik/wij (*) onze overeenkomst betreffende de levering van de volgende dienst (*) herroep/herroepen (*): SpaceFleet-abonnement",
+                "Besteld op (*):",
+                "Naam/Namen consument(en):",
+                "Adres consument(en):",
+                "E-mailadres van het SpaceFleet-account:",
+                "Handtekening van consument(en) (alleen wanneer dit formulier op papier wordt ingediend):",
+                "Datum:",
+                "(*) Doorhalen wat niet van toepassing is."
+              ]
+            }
+          ]
+        },
+        {
+          "heading": "6. Onbetaald abonnement",
+          "blocks": [
+            "Als een verlenging niet wordt betaald omdat je kaart wordt geweigerd, blijft het account werken en bieden we dezelfde kaart opnieuw aan 1, 3 en 7 dagen na de verlengingsdatum, waarbij we je elke keer een e-mail sturen met een link om een nieuwe kaart te registreren. Als de betaling dan nog steeds niet is gelukt, wordt het account onbetaald: afspelen en uploaden worden geblokkeerd, maar je kunt je bestanden nog steeds downloaden. 60 dagen na het einde van de laatste betaalde periode worden het account en al zijn gegevens definitief verwijderd. We schrijven je 7 dagen en 1 dag van tevoren. Een gratis account dat 60 dagen niet is gebruikt, wordt op dezelfde manier verwijderd, na dezelfde waarschuwingen."
+          ]
+        },
+        {
+          "heading": "7. Verwijdering van het account",
+          "blocks": [
+            "Je kunt je account op elk moment verwijderen. De verwijdering begint direct, is onomkeerbaar en beëindigt elk betaald abonnement zonder verdere afschrijving. Zie [Je account verwijderen](page:account-deletion)."
+          ]
+        },
+        {
+          "heading": "8. Je inhoud",
+          "blocks": [
+            "Je behoudt alle rechten op de inhoud die je opslaat. Je mag alleen inhoud opslaan die je mag bewaren en gebruiken, en je mag SpaceFleet niet voor onrechtmatige doeleinden gebruiken. Omdat je inhoud versleuteld is, zien we die niet en modereren we die niet; jij bent er verantwoordelijk voor.",
+            "Als we een rechterlijke beslissing of een geldige melding van kennelijk onrechtmatige inhoud over je account ontvangen, of als je deze voorwaarden ernstig schendt, kunnen we het account opschorten of sluiten nadat we je daarover hebben geïnformeerd, tenzij de wet dat verbiedt."
+          ]
+        },
+        {
+          "heading": "9. Beschikbaarheid en aansprakelijkheid",
+          "blocks": [
+            "We doen ons best om SpaceFleet beschikbaar en je gegevens veilig te houden. Opgeslagen bestanden staan op redundante schijven, maar worden niet in aparte back-ups gekopieerd: bewaar je originele bestanden. We kunnen de dienst onderbreken voor onderhoud, zo mogelijk nadat we je hebben gewaarschuwd.",
+            "Je geniet de wettelijke conformiteitsgarantie voor digitale diensten (artikelen L224-25-1 en volgende van de Franse Code de la consommation). Daarnaast is onze aansprakelijkheid beperkt tot directe schade die door onze fout is veroorzaakt; niets in deze voorwaarden beperkt de rechten die de wet je als consument geeft."
+          ]
+        },
+        {
+          "heading": "10. Wijziging van de voorwaarden",
+          "blocks": [
+            "We kunnen deze voorwaarden wijzigen. We informeren accounthouders daarover per e-mail ten minste 30 dagen voordat een wijziging ingaat. Als je het er niet mee eens bent, kun je vóór die datum de verlenging uitschakelen of je account verwijderen."
+          ]
+        },
+        {
+          "heading": "11. Toepasselijk recht en geschillen",
+          "blocks": [
+            "Op deze voorwaarden is het Franse recht van toepassing. Als je in een ander land van de Europese Unie woont, behoud je ook de bescherming van de dwingende regels van je eigen land.",
+            "Neem bij een probleem eerst contact op via contact@spacefleet.io. Komen we niet tot een akkoord, dan kun je het geschil kosteloos voorleggen aan onze consumentenbemiddelaar (artikelen L611-1 en volgende van de Franse Code de la consommation), binnen een jaar na je schriftelijke klacht bij ons: CM2C (Centre de la Médiation de la Consommation de Conciliateurs de Justice), 49 rue de Ponthieu, 75008 Paris, France, https://www.cm2c.net, waar je je verzoek online kunt indienen. Je kunt je ook tot de bevoegde rechter wenden."
+          ]
+        }
+      ]
+    },
+    "account-deletion": {
+      "title": "Je SpaceFleet-account verwijderen",
+      "intro": "Eén SpaceFleet-account geldt voor alle SpaceFleet-apps, waaronder SpaceBadger en SpaceParrot. Als je het verwijdert, verdwijnt het voor allemaal. Deze pagina legt uit hoe, wat er wordt verwijderd en wanneer.",
+      "sections": [
+        {
+          "heading": "Voordat je begint",
+          "blocks": [
+            "De verwijdering is onomkeerbaar en we kunnen daarna niets meer terughalen. Download eerst naar je computer de bestanden die je wilt houden."
+          ]
+        },
+        {
+          "heading": "Verwijderen vanuit een app",
+          "blocks": [
+            {
+              "items": [
+                "SpaceBadger op telefoon of tablet (Android, iOS): {{accountDeletionPath.mobile}}.",
+                "SpaceBadger op de computer (Windows, macOS, Linux): {{accountDeletionPath.desktop}}.",
+                "Op de website (accountomgeving, open vanaf de publieke lancering): log in en ga naar {{accountDeletionPath.web}}."
+              ]
+            },
+            "Je bevestigt met je wachtwoord, door DELETE te typen, en met een verificatiecode (uit je authenticator-app, of per e-mail verstuurd)."
+          ]
+        },
+        {
+          "heading": "Als je niet kunt inloggen",
+          "blocks": [
+            "Schrijf naar privacy@spacefleet.io vanaf het e-mailadres van het account, met als onderwerp „Mijn account verwijderen”. We antwoorden op dat adres om het verzoek te bevestigen en verwijderen het account daarna binnen 7 dagen. Via hetzelfde adres kun je ook je inschrijving op de wachtlijst of voor de nieuwsbrief laten verwijderen."
+          ]
+        },
+        {
+          "heading": "Wat er wordt verwijderd, en wanneer",
+          "blocks": [
+            {
+              "items": [
+                "Direct: de verwijdering begint zodra je bevestigt. Er is geen bedenktijd en ze kan niet worden geannuleerd. Elk betaald abonnement wordt opgezegd zonder verdere afschrijving, en alle apparaten worden afgemeld. De mobiele app verwijdert ook zijn downloads en de versleutelingssleutel die hij bewaarde.",
+                "Daarna: je versleutelde bestanden, afbeeldingen en bibliotheek worden van elke opslagserver gewist. Zodra elke server dat heeft bevestigd, wordt je accountrecord verwijderd: e-mailadres, wachtwoord, instellingen, apparaten, meldingstokens en zoektellers.",
+                "Later: de kopieën van de database die vóór updates van de servers zijn gemaakt en die je accountrecord nog kunnen bevatten, worden verwijderd zodra ze ouder zijn dan 30 dagen; de meest recente kopie wordt bewaard tot de volgende update haar vervangt."
+              ]
+            }
+          ]
+        },
+        {
+          "heading": "Wat wordt bewaard",
+          "blocks": [
+            {
+              "items": [
+                "Facturen en betalingsgegevens (bedragen, datums, referentie van de betaling bij Stancer): 10 jaar na het einde van het boekjaar, zoals het Franse boekhoudrecht vereist.",
+                "Serverlogbestanden (IP-adres, tijdstip, opgevraagd adres): 30 dagen."
+              ]
+            },
+            "Meer details in het [privacybeleid](page:privacy)."
+          ]
+        }
+      ]
+    },
+    "security": {
+      "title": "Beveiligingsbeleid",
+      "intro": "Als je een beveiligingsprobleem in SpaceFleet vindt, meld het ons dan vertrouwelijk via security@spacefleet.io voordat je er met iemand anders over praat, zodat we het kunnen verhelpen voordat het tegen onze gebruikers wordt ingezet.",
+      "sections": [
+        {
+          "heading": "Wat je meldt",
+          "blocks": [
+            "Alles waarmee iemand gegevens die niet van hem of haar zijn zou kunnen lezen, wijzigen of verwijderen, de controle over een account zou kunnen overnemen, een limiet of een betaling zou kunnen omzeilen, of anderen zou kunnen verhinderen de dienst te gebruiken. Dat geldt voor de website spacefleet.io, de API op api.spacefleet.io, de opslagservers en de SpaceFleet-apps (waaronder SpaceBadger en SpaceParrot).",
+            {
+              "items": [
+                "Vertel wat je hebt gevonden, waar, en de stappen om het te reproduceren.",
+                "Gebruik alleen je eigen account en je eigen gegevens, en stop zodra het probleem is aangetoond: lees, bewaar en wijzig geen gegevens van anderen, en verstoor de dienst niet.",
+                "Houd het probleem vertrouwelijk totdat we het hebben verholpen of samen met jou een datum hebben afgesproken."
+              ]
+            }
+          ]
+        },
+        {
+          "heading": "Wat er daarna gebeurt",
+          "blocks": [
+            "Op elke melding krijg je binnen 3 werkdagen een eerste antwoord. Daarna vertellen we je wat we hebben gevonden en wanneer de oplossing wordt gepubliceerd.",
+            "We ondernemen geen juridische stappen tegen iemand die te goeder trouw een melding doet en zich aan dit beleid houdt."
+          ]
+        },
+        {
+          "heading": "Dankbetuigingen, en geen bugbounty",
+          "blocks": [
+            "SpaceFleet keert geen beloning voor gevonden bugs (bugbounty) uit. Als je melding tot een oplossing leidt, bedanken we je bij naam op de pagina met [dankbetuigingen beveiliging](page:security-acknowledgments) als je dat wilt, en zonder je naam, of helemaal niet, als je dat liever hebt.",
+            "De machineleesbare versie van dit contact staat op https://spacefleet.io/.well-known/security.txt."
+          ]
+        }
+      ]
+    },
+    "security-acknowledgments": {
+      "title": "Dankbetuigingen beveiliging",
+      "intro": "We bedanken de mensen hieronder, die een beveiligingsprobleem hebben gemeld dat tot een oplossing heeft geleid en die ermee hebben ingestemd genoemd te worden. Hoe je een probleem meldt, staat in ons [beveiligingsbeleid](page:security).",
+      "sections": [
+        {
+          "heading": "Mensen die een probleem hebben gemeld",
+          "blocks": [
+            "Nog niemand."
+          ]
+        }
+      ]
+    }
+  }
+}

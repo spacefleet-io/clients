@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<window>
+  <defaultcontrol always="true">100</defaultcontrol>
+  <controls>
+    <control type="group">
+      <right>80</right><bottom>140</bottom><width>420</width><height>84</height>
+      <control type="button" id="100">
+        <left>0</left><top>0</top><width>420</width><height>84</height>
+        <label></label>
+        <font>font30</font><align>center</align><aligny>center</aligny>
+        <textcolor>FFFFFFFF</textcolor><focusedcolor>FF101010</focusedcolor>
+        <texturenofocus colordiffuse="E61B1F2A">white.png</texturenofocus>
+        <texturefocus colordiffuse="FFFFFFFF">white.png</texturefocus>
+      </control>
+    </control>
+  </controls>
+</window>

@@ -1,0 +1,121 @@
+apply plugin: "com.android.application"
+apply plugin: "org.jetbrains.kotlin.android"
+apply plugin: "com.facebook.react"
+// The Google-free build (SF_FOSS=1, PLAT-MOBILE-06): the F-Droid build and the APK published for phones without Google
+// Play services. Autolinking leaves out the QR scanner's ML Kit (packages/mobile-shell/foss.cjs); here the switch lets
+// an unsigned release build through, for F-Droid to sign.
+def fossBuild = System.getenv("SF_FOSS") == "1"
+// Metro reads the switch too; as a task input it rebuilds the JS bundle when a checkout changes between the two builds.
+tasks.matching { it.name ==~ /createBundle.*JsAndAssets/ }.configureEach { inputs.property("sfFoss", fossBuild) }
+
+ext {
+    REACT_NATIVE_NODE_MODULES_DIR = file("$rootDir/../node_modules/react-native").canonicalPath
+}
+
+react {
+    root = file("../../")
+    reactNativeDir = file("$rootDir/../node_modules/react-native")
+    codegenDir = file("$rootDir/../node_modules/@react-native/codegen")
+    cliFile = file("$rootDir/../node_modules/react-native/cli.js")
+    // bun's isolated node_modules layout hides `hermes-compiler` from the plugin's default lookup, so resolve it from
+    // react-native's real location. Only bundled variants (release) run hermesc.
+    hermesCommand = providers.exec {
+        commandLine("node", "--print",
+            "require('path').join(require('path').dirname(require.resolve('hermes-compiler/package.json', { paths: [require('path').dirname(require.resolve('react-native/package.json'))] })), 'hermesc', '%OS-BIN%', 'hermesc')")
+        workingDir(rootDir)
+    }.standardOutput.asText.get().trim()
+    autolinkLibrariesWithApp()
+}
+
+// Play upload key (Play App Signing: Google holds the app signing key, we sign uploads with this one). Read from a
+// gradle property or the environment, never committed; the release workflow and the local backup
+// (~/.local/share/spacefleet-keys/parrot-upload.*) use the same names. Debug builds keep the debug key; a release
+// build without the upload key fails (see the taskGraph check below) instead of shipping debug-signed.
+def releaseSetting = { String name -> (findProperty(name) ?: System.getenv(name))?.toString()?.trim() ?: null }
+def uploadStoreFile = releaseSetting("PARROT_UPLOAD_STORE_FILE")
+def uploadStorePassword = releaseSetting("PARROT_UPLOAD_STORE_PASSWORD")
+def uploadKeyAlias = releaseSetting("PARROT_UPLOAD_KEY_ALIAS") ?: "parrot-upload"
+def uploadKeyPassword = releaseSetting("PARROT_UPLOAD_KEY_PASSWORD") ?: uploadStorePassword
+def uploadKeyMissing = [
+    uploadStoreFile == null ? "PARROT_UPLOAD_STORE_FILE" : (file(uploadStoreFile).isFile() ? null : "PARROT_UPLOAD_STORE_FILE (no file at ${uploadStoreFile})"),
+    uploadStorePassword == null ? "PARROT_UPLOAD_STORE_PASSWORD" : null,
+].findAll { it != null }
+
+// Store version (`parrot-android-v*`): the release workflow passes -PparrotVersionCode (monotonic, from the run
+// number) and -PparrotVersionName (from the tag). Local builds keep 1 / "0.1.0".
+def parrotVersionCode = (releaseSetting("parrotVersionCode") ?: "1")
+if (!(parrotVersionCode ==~ /[1-9][0-9]{0,9}/) || parrotVersionCode.toLong() > 2100000000L) {
+    throw new GradleException("parrotVersionCode must be an integer from 1 to 2100000000, got '${parrotVersionCode}'")
+}
+def parrotVersionName = releaseSetting("parrotVersionName") ?: "0.1.0"
+
+android {
+    ndkVersion rootProject.ext.ndkVersion
+    buildToolsVersion "37.0.0"
+    compileSdk 37
+
+    namespace "io.spacefleet.parrot"
+    defaultConfig {
+        applicationId "io.spacefleet.parrot"
+        // `-PsfApplicationIdSuffix=.e2e`: a test build installed next to the real app, never over it (REL-TEST-10).
+        applicationIdSuffix((findProperty("sfApplicationIdSuffix") ?: "").toString())
+        minSdkVersion 26
+        targetSdkVersion 36
+        versionCode parrotVersionCode.toInteger()
+        versionName parrotVersionName
+        // Release policy (res/xml/network_security_config.xml): cleartext only to the on-device media proxy.
+        manifestPlaceholders = [networkSecurityConfig: "@xml/network_security_config"]
+        ndk {
+            // The ABI list lives in gradle.properties only (Play and Google-free builds share it).
+            abiFilters(*findProperty("reactNativeArchitectures").toString().split(","))
+        }
+    }
+    signingConfigs {
+        debug {
+            storeFile file('debug.keystore')
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+        }
+        if (uploadKeyMissing.isEmpty()) {
+            release {
+                storeFile file(uploadStoreFile)
+                storePassword uploadStorePassword
+                keyAlias uploadKeyAlias
+                keyPassword uploadKeyPassword
+            }
+        }
+    }
+    buildTypes {
+        debug {
+            signingConfig signingConfigs.debug
+            manifestPlaceholders = [networkSecurityConfig: "@xml/network_security_config_dev"]
+        }
+        release {
+            // The Play upload key; null when it is not configured, and then any release task fails below.
+            signingConfig uploadKeyMissing.isEmpty() ? signingConfigs.release : null
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
+            // A build pointed at a plain-http dev stack (PARROT_DEV_CLEARTEXT=1, with PARROT_API_BASE_URL) allows
+            // cleartext everywhere; the Play build never sets it.
+            manifestPlaceholders = [networkSecurityConfig: System.getenv("PARROT_DEV_CLEARTEXT") == "1"
+                ? "@xml/network_security_config_dev" : "@xml/network_security_config"]
+        }
+    }
+}
+
+gradle.taskGraph.whenReady { graph ->
+    def releaseTasks = graph.allTasks.findAll { it.project == project && it.name ==~ /(assemble|bundle|package|sign|install)Release.*/ }
+    // A release artifact is only ever signed with the Play upload key: no silent debug-signed fallback. The Google-free
+    // build is signed with it when it is set, and is otherwise left unsigned for F-Droid to sign.
+    if (!fossBuild && !uploadKeyMissing.isEmpty() && !releaseTasks.isEmpty()) {
+        throw new GradleException("Release build needs the Play upload key; missing: ${uploadKeyMissing.join(', ')}. " +
+            "Set them as gradle properties or env (see ~/.local/share/spacefleet-keys/parrot-upload.README.md), " +
+            "or build the debug variant instead.")
+    }
+}
+
+dependencies {
+    implementation("com.facebook.react:react-android")
+    implementation("com.facebook.react:hermes-android")
+}

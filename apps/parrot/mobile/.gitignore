@@ -1,0 +1,16 @@
+# Build-time reporting address (REL-LOG-06), written by scripts/write-error-report-config.ts: never committed.
+src/generated/
+
+# iOS (README-ios.md): CocoaPods, Xcode user state and build output.
+ios/Pods/
+ios/build/
+ios/build-device/
+**/.xcode.env.local
+xcuserdata
+*.xcuserstate
+DerivedData
+*.ipa
+*.dSYM.zip
+*.jsbundle
+/vendor/bundle/
+**/fastlane/report.xml

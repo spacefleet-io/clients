@@ -1,0 +1,26 @@
+pluginManagement {
+    // The gradle plugin react-native itself depends on (its sibling in bun's store), never another version left in
+    // node_modules/.bun by an older install.
+    def reactNative = new File(rootDir, "../node_modules/react-native").canonicalFile
+    def pluginDir = new File(reactNative.parentFile, "@react-native/gradle-plugin").canonicalFile
+    if (!pluginDir.isDirectory()) {
+        throw new GradleException("react-native gradle plugin not found next to ${reactNative}")
+    }
+    includeBuild(pluginDir.path)
+}
+plugins { id("com.facebook.react.settings") }
+apply from: new File(rootDir, "../../../../packages/mobile-shell/foss-autolinking.gradle")
+extensions.configure(com.facebook.react.ReactSettingsExtension){ ex -> ex.autolinkLibrariesFromCommand() }
+rootProject.name = 'SpaceBadgerMobile'
+include ':app'
+
+gradle.beforeProject { project ->
+    project.ext.buildToolsVersion = "36.0.0"
+    project.ext.minSdkVersion = 26
+    project.ext.compileSdkVersion = 36
+    project.ext.targetSdkVersion = 36
+    project.ext.ndkVersion = "27.1.12297006"
+    project.ext.kotlinVersion = "2.2.0"
+    project.ext.REACT_NATIVE_NODE_MODULES_DIR =
+        new File(settings.rootDir, "../node_modules/react-native").canonicalPath
+}

@@ -1,0 +1,37 @@
+{
+  "name": "@space/metadata-client",
+  "license": "GPL-3.0-only",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "scripts": {
+    "test": "bunx --bun vitest run",
+    "typecheck": "bunx tsc --noEmit -p tsconfig.json"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./react": "./src/react.ts",
+    "./fileStorage": "./src/fileStorage.ts",
+    "./artworkCache": "./src/artworkCache.ts",
+    "./credits": "./src/credits.ts",
+    "./credits-react": "./src/creditsReact.ts"
+  },
+  "dependencies": {
+    "@space/privacy-pass": "workspace:*",
+    "@space/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/react": "^19.3.0",
+    "bun-types": "1.4.4",
+    "react": "^19.3.1",
+    "vitest": "^5.1.0"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
+  }
+}

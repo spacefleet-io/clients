@@ -1,0 +1,85 @@
+# Resolve react_native_pods.rb with node to allow for hoisting
+require Pod::Executable.execute_command('node', ['-p',
+  'require.resolve(
+    "react-native/scripts/react_native_pods.rb",
+    {paths: [process.argv[1]]},
+  )', __dir__]).strip
+
+# react-native resolves to react-native-tvos (root package.json overrides); its real folder is named
+# react-native-tvos, so podspecs that look for <node_modules>/react-native next to the resolved file (Gesture
+# Handler) need the app's own node_modules, where the react-native link lives.
+ENV['REACT_NATIVE_NODE_MODULES_DIR'] ||= File.expand_path('../node_modules', __dir__)
+
+platform :ios, min_ios_version_supported
+prepare_react_native_project!
+
+# MpvPlayback vendors libmpv + FFmpeg + MoltenVK (media-deps `ios-arm64` + `ios-arm64-simulator`, joined into its
+# ios/vendor/media-deps/ios so device and simulator builds each get their slice). Fetches the bundles of this
+# checkout's recipe; SB_MEDIA_DEPS_IOS_LOCAL=1 / SB_MEDIA_DEPS_IOS_SIMULATOR_LOCAL=1 (or a dir) take a local
+# packages/media-deps/out/<target> build instead.
+system('bun', File.expand_path('../../../../packages/mobile-mpv-playback/scripts/fetch-ios-deps.ts', __dir__), exception: true)
+# The Apple TV app (target SpaceBadgerTV) plays through the same MpvPlayback pod with its tvOS slices.
+system('bun', File.expand_path('../../../../packages/mobile-mpv-playback/scripts/fetch-ios-deps.ts', __dir__), '--target', 'tvos-arm64', exception: true)
+
+# react-native-firebase 26 pulls firebase-ios-sdk through Swift Package Manager by default; its products are static
+# libraries, which `pod install` refuses next to these static pods. The phone takes Firebase from the CocoaPods pods
+# below (pod 'Firebase/Messaging') instead.
+$RNFirebaseDisableSPM = true
+
+linkage = ENV['USE_FRAMEWORKS']
+if linkage != nil
+  Pod::UI.puts "Configuring Pod with #{linkage}ally linked Frameworks".green
+  use_frameworks! :linkage => linkage.to_sym
+end
+
+target 'SpaceBadgerMobile' do
+  config = use_native_modules!
+
+  use_react_native!(
+    :path => config[:reactNativePath],
+    # An absolute path to your application root.
+    :app_path => "#{Pod::Config.instance.installation_root}/.."
+  )
+
+  # Firebase Messaging — drives both APNs (iOS native) and the JS-side
+  # @react-native-firebase/messaging bridge. Autolinking picks up
+  # @react-native-firebase/app, but we still need static framework linkage
+  # for Firebase per the official RN Firebase install notes.
+  pod 'Firebase/Messaging'
+  # FirebaseCoreInternal (Swift) imports these as modules; static libraries need module maps.
+  pod 'GoogleUtilities', :modular_headers => true
+  pod 'FirebaseCore', :modular_headers => true
+  pod 'FirebaseCoreExtension', :modular_headers => true
+  pod 'FirebaseInstallations', :modular_headers => true
+  pod 'GoogleDataTransport', :modular_headers => true
+  pod 'nanopb', :modular_headers => true
+
+  post_install do |installer|
+    react_native_post_install(
+      installer,
+      config[:reactNativePath],
+      :mac_catalyst_enabled => false,
+      # :ccache_enabled => true
+    )
+  end
+end
+
+# Apple TV (PLAT-TV-01): the same JS app and native sources on react-native-tvos. SB_APPLE_TV=1 makes
+# react-native.config.js drop the modules tvOS has no use or SDK for (camera, web views, push, background
+# file transfers). No Firebase: a TV gets no push.
+# Both targets share one codegen output, which the "[CP-User] Generate Specs" build phase regenerates from
+# build/generated/autolinking/autolinking.json. use_native_modules! rewrites that file, so the phone's (full)
+# module list is put back after the TV's: the phone keeps every component, and the TV skips the classes it
+# does not link (patched RCTThirdPartyComponentsProvider template).
+autolinking_json = File.join(__dir__, 'build/generated/autolinking/autolinking.json')
+target 'SpaceBadgerTV' do
+  platform :tvos, min_supported_versions[:tvos]
+  phone_autolinking = File.read(autolinking_json)
+  config = use_native_modules!(['env', 'SB_APPLE_TV=1'] + $default_command)
+  File.write(autolinking_json, phone_autolinking)
+
+  use_react_native!(
+    :path => config[:reactNativePath],
+    :app_path => "#{Pod::Config.instance.installation_root}/.."
+  )
+end

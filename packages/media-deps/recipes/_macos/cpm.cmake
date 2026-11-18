@@ -1,0 +1,28 @@
+# Offline stand-in for CPM.cmake, installed where MoltenVK's cmake/recipes/CPM.cmake looks for the CPM script
+# (`$CPM_SOURCE_CACHE/cpm/CPM_<version>.cmake`), so MoltenVK never downloads anything.
+# CPMAddPackage(NAME <name> ... OPTIONS "VAR VALUE"...) and CPMAddPackage("gh:Owner/<name>#rev") resolve <name> to
+# the pinned fork tree the recipe fetched, passed as -DSF_SOURCE_<name>=<dir>. An unmapped package is an error.
+function(CPMAddPackage)
+  set(name "")
+  set(options "")
+  if(ARGC EQUAL 1)
+    string(REGEX REPLACE "^gh:[^/]+/([^#@]+).*$" "\\1" name "${ARGV0}")
+  else()
+    cmake_parse_arguments(CPM "SYSTEM;EXCLUDE_FROM_ALL" "NAME;GITHUB_REPOSITORY;GIT_TAG;VERSION" "OPTIONS" ${ARGN})
+    set(name "${CPM_NAME}")
+    set(options ${CPM_OPTIONS})
+  endif()
+  set(source "${SF_SOURCE_${name}}")
+  if(NOT source OR NOT EXISTS "${source}/CMakeLists.txt")
+    message(FATAL_ERROR "cpm.cmake: no pinned source for '${name}' (pass -DSF_SOURCE_${name}=<dir>)")
+  endif()
+  foreach(option IN LISTS options)
+    string(REGEX MATCH "^[^ ]+" key "${option}")
+    string(REGEX REPLACE "^[^ ]+ +" "" value "${option}")
+    set(${key} "${value}" CACHE INTERNAL "" FORCE)
+  endforeach()
+  message(STATUS "cpm.cmake: ${name} <- ${source}")
+  add_subdirectory("${source}" "${CMAKE_BINARY_DIR}/_deps/${name}" EXCLUDE_FROM_ALL SYSTEM)
+  set(${name}_SOURCE_DIR "${source}" PARENT_SCOPE)
+  set(${name}_ADDED YES PARENT_SCOPE)
+endfunction()

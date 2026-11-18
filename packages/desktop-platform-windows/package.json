@@ -1,0 +1,19 @@
+{
+  "name": "@space/desktop-platform-windows",
+  "license": "GPL-3.0-only",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "bunx vitest run"
+  },
+  "dependencies": {
+    "@space/desktop-platform-contract": "workspace:*"
+  },
+  "devDependencies": {
+    "vitest": "^5.1.0"
+  }
+}

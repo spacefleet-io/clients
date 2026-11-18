@@ -1,0 +1,16 @@
+diff --git a/RNFSManager.m b/RNFSManager.m
+--- a/RNFSManager.m
++++ b/RNFSManager.m
+@@ -294,8 +294,10 @@
+ }
+ 
++// `NSInteger` by value: the bridge cannot convert a JS number to `NSInteger *`, so every `read()` call failed on iOS and
++// tvOS ("Objective C type NSInteger is unsupported").
+ RCT_EXPORT_METHOD(read:(NSString *)filepath
+-                  length: (NSInteger *)length
+-                  position: (NSInteger *)position
++                  length: (NSInteger)length
++                  position: (NSInteger)position
+                   resolver:(RCTPromiseResolveBlock)resolve
+                   rejecter:(RCTPromiseRejectBlock)reject)
+ {

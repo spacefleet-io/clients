@@ -1,0 +1,6 @@
+/* Download-Benachrichtigungen (DownloadEngine.swift). Übernimmt downloads.errors.* aus packages/mobile-shell/src/i18n/de.json. */
+"download.notification.complete" = "Download abgeschlossen";
+"download.notification.error.insufficientSpace" = "Nicht genug freier Speicher";
+"download.notification.error.auth" = "Sitzung abgelaufen. Wiederhole den Vorgang, um dich erneut anzumelden";
+"download.notification.error.network" = "Netzwerkfehler. Wiederhole den Vorgang, sobald du wieder online bist";
+"download.notification.error.failed" = "Download fehlgeschlagen";

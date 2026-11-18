@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Badger</title>
+</head>
+<body>
+<div id="SpaceBadgerConfigPage" data-role="page" class="page type-interior pluginConfigurationPage" data-require="emby-input,emby-button,emby-select,emby-checkbox">
+    <div data-role="content">
+        <div class="content-primary">
+            <h1>Badger</h1>
+
+            <div class="infoBanner" style="margin-bottom:1.5em;">
+                <strong>Your library key is stored on this server.</strong>
+                It is kept in a private file (<code id="sbKeyPath">…/spacebadger/library.key</code>, owner-read only where the operating system supports it).
+                Anyone with access to this server can read it. Only install this plugin on a server you trust.
+                <a is="emby-linkbutton" class="button-link" href="https://spacebadger.io/docs/privacy/key-storage" target="_blank" rel="noopener">How key storage works</a>
+            </div>
+
+            <div id="sbSignedOut" class="infoBanner" style="display:none;margin-bottom:1.5em;border-left:4px solid #cc3333;">
+                <strong>Signed out of Badger.</strong>
+                <span id="sbSignedOutWhy"></span>
+                The Badger libraries were removed from this server. Pair again below to bring them back.
+            </div>
+            <div id="sbUnpaid" class="infoBanner" style="display:none;margin-bottom:1.5em;border-left:4px solid #e0a000;">
+                <strong>Your Badger subscription is not paid.</strong>
+                Playback is paused for everyone on this server<span id="sbUnpaidWipe"></span>. Renew in the Badger app and playback resumes by itself.
+            </div>
+
+            <h2>Status</h2>
+            <div id="sbStatus" class="fieldDescription">Loading…</div>
+            <div style="margin:1em 0;">
+                <button is="emby-button" type="button" class="raised" id="sbSyncNow"><span>Sync now</span></button>
+                <button is="emby-button" type="button" class="raised" id="sbSignOut"><span>Sign out and remove key</span></button>
+            </div>
+            <!-- ACCT-DEV-03: asked before Sign out while this server holds the library key; text from SIGN_OUT_KEY_TEXT below. -->
+            <div id="sbSignOutConfirm" role="alertdialog" aria-modal="true" aria-labelledby="sbSignOutConfirmTitle" aria-describedby="sbSignOutConfirmBody" style="display:none;margin:1em 0;padding:1em;border-left:4px solid #cc3333;" class="infoBanner">
+                <strong id="sbSignOutConfirmTitle"></strong>
+                <p id="sbSignOutConfirmBody"></p>
+                <button is="emby-button" type="button" class="raised" id="sbSignOutCancel"><span></span></button>
+                <button is="emby-button" type="button" class="raised" id="sbSignOutConfirmYes"><span></span></button>
+            </div>
+
+            <h2>1. Pair with your phone</h2>
+            <div id="sbPaired" class="fieldDescription" style="display:none;"></div>
+            <div id="sbPairIdle">
+                <div class="fieldDescription">Open the Badger app on your phone, choose <em>Add a device</em>, then scan the code or type the short code. You approve on your phone; this server never asks for your email or password.</div>
+                <button is="emby-button" type="button" class="raised button-submit block" id="sbPairStart"><span>Pair with your phone</span></button>
+            </div>
+            <div id="sbPairActive" style="display:none;">
+                <div id="sbPairQr" style="width:240px;height:240px;background:#fff;padding:8px;border-radius:6px;margin:1em 0;"></div>
+                <div>Short code: <strong id="sbPairCode" style="font-size:2em;letter-spacing:0.1em;"></strong></div>
+                <div id="sbPairCountdown" class="fieldDescription"></div>
+                <div id="sbPairMessage" class="fieldDescription"></div>
+                <button is="emby-button" type="button" class="raised" id="sbPairNew"><span>Get a new code</span></button>
+                <button is="emby-button" type="button" class="raised" id="sbPairCancel"><span>Cancel</span></button>
+            </div>
+            <div id="sbPairProfile" style="display:none;">
+                <div class="fieldDescription">Your Badger account has several profiles. Pick the one this server follows: its resume positions, watched marks and audio/subtitle choices are the ones Jellyfin shows. Nothing syncs until you pick.</div>
+                <div class="selectContainer">
+                    <select is="emby-select" id="sbPairProfileSelect" label="Badger profile"></select>
+                </div>
+                <button is="emby-button" type="button" class="raised button-submit block" id="sbPairProfileUse"><span>Use this profile</span></button>
+                <button is="emby-button" type="button" class="raised" id="sbPairProfileCancel"><span>Cancel pairing</span></button>
+            </div>
+
+            <h2 style="margin-top:2em;">2. Settings</h2>
+            <form id="sbConfigForm">
+                <div class="selectContainer">
+                    <select is="emby-select" id="sbOwner" label="Jellyfin user whose watch progress syncs with Badger"></select>
+                    <div class="fieldDescription">Resume positions, watched flags and deletes made by this user are written back to Badger, to the profile below.</div>
+                </div>
+                <div id="sbProfileBox" style="display:none;">
+                    <div id="sbProfileNeeded" class="fieldDescription" style="display:none;font-weight:bold;"></div>
+                    <div class="selectContainer">
+                        <select is="emby-select" id="sbProfile" label="Badger profile this server follows"></select>
+                        <div class="fieldDescription">Changing it keeps the synced movies and shows; only resume positions, watched marks and audio/subtitle choices are synced again from the new profile.</div>
+                    </div>
+                    <button is="emby-button" type="button" class="raised" id="sbProfileChange"><span>Change profile</span></button>
+                </div>
+                <div class="inputContainer">
+                    <input is="emby-input" type="text" id="sbMoviesName" label="Movies library name" />
+                </div>
+                <div class="inputContainer">
+                    <input is="emby-input" type="text" id="sbShowsName" label="Shows library name" />
+                </div>
+                <label class="checkboxContainer">
+                    <input is="emby-checkbox" type="checkbox" id="sbEnabled" />
+                    <span>Enable Badger sync</span>
+                </label>
+                <div class="fieldDescription" style="margin-top:1em;">
+                    Deleting a Badger item in Jellyfin permanently removes it from Badger everywhere.
+                </div>
+                <button is="emby-button" type="submit" class="raised button-submit block"><span>Save settings</span></button>
+            </form>
+
+            <details id="sbAdvanced" style="margin-top:2em;">
+                <summary><strong>Advanced</strong>: sign in with email and type the key by hand</summary>
+                <div class="fieldDescription" style="margin:1em 0;">Use this only if you cannot pair with your phone.</div>
+                <h3>Sign in</h3>
+                <form id="sbLoginForm">
+                    <div class="inputContainer">
+                        <input is="emby-input" type="email" id="sbEmail" label="Badger email" autocomplete="off" />
+                    </div>
+                    <div class="inputContainer">
+                        <input is="emby-input" type="password" id="sbPassword" label="Password" autocomplete="off" />
+                        <div class="fieldDescription">Sent once to the local service on this server. The password is never stored; only a revocable device session is.</div>
+                    </div>
+                    <div class="inputContainer">
+                        <input is="emby-input" type="text" id="sbTwoFactor" label="Two-factor code (if enabled)" autocomplete="off" />
+                    </div>
+                    <!-- Dev mode only (HEADLESS_DEV_TICKET_KEY=1, ACCT-AUTH-09): any other run talks to the production API. -->
+                    <div class="inputContainer" id="sbApiUrlField" style="display:none">
+                        <input is="emby-input" type="text" id="sbApiUrl" label="Badger server URL (dev mode)" />
+                    </div>
+                    <button is="emby-button" type="submit" class="raised button-submit block"><span>Sign in</span></button>
+                </form>
+
+                <h3 style="margin-top:2em;">Library key</h3>
+                <form id="sbKeyForm">
+                    <div class="inputContainer">
+                        <input is="emby-input" type="password" id="sbKey" label="Library key (base64)" autocomplete="off" />
+                        <div class="fieldDescription">Paste your library key. It is checked against your library before it is used.</div>
+                    </div>
+                    <button is="emby-button" type="submit" class="raised button-submit block"><span>Save key</span></button>
+                </form>
+            </details>
+        </div>
+    </div>
+
+    <script type="text/javascript">
+        (function () {
+            var pluginId = '5d6b2f6e-3a5c-4b8e-9d71-0c7a1f4e9b21';
+            var page = document.querySelector('#SpaceBadgerConfigPage');
+
+            function el(id) { return page.querySelector('#' + id); }
+
+            function call(method, path, body) {
+                var options = { type: method, url: ApiClient.getUrl('SpaceBadger/' + path) };
+                if (body !== undefined) {
+                    options.data = JSON.stringify(body);
+                    options.contentType = 'application/json';
+                }
+                return ApiClient.ajax(options);
+            }
+
+            function toast(message) { Dashboard.alert(message); }
+
+            function wipeDate(iso) {
+                var date = new Date(iso);
+                return isNaN(date.getTime()) ? iso : date.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+            }
+
+            function describe(status) {
+                var lines = [];
+                var service = status.service;
+                lines.push('Service: ' + (status.serviceRunning ? 'running' : 'not running') + (status.serviceError ? ' (' + status.serviceError + ')' : ''));
+                if (status.downloadStatus) {
+                    lines.push('Download: ' + status.downloadStatus);
+                }
+                if (service) {
+                    var who = service.signedIn ? ', signed in as ' + service.email : ', not signed in';
+                    lines.push('State: ' + (service.state === 'signed_out' ? 'signed out' : service.state) + who);
+                    lines.push('Subscription: ' + service.accessState + (service.wipeAt ? ' (media removed on ' + wipeDate(service.wipeAt) + ')' : ''));
+                    lines.push('Library: version ' + service.libraryVersion + ', ' + service.mediaCount + ' titles');
+                    if (service.profileNeeded === 'deleted') {
+                        lines.push('Profile: ' + (service.profile ? service.profile.name + ' was' : 'the followed profile was') + ' deleted in Badger. Nothing syncs until you pick a profile below.');
+                    } else if (service.profileNeeded === 'choose') {
+                        lines.push('Profile: not picked yet, nothing syncs until you pick one below');
+                    } else if (service.profile) {
+                        lines.push('Profile: ' + service.profile.name);
+                    } else if (service.state === 'needs_profile') {
+                        lines.push('Profile: not picked yet, nothing syncs until you pick one');
+                    }
+                    if (service.keyRejected) {
+                        lines.push('The stored library key does not match your library. Pair again.');
+                    }
+                }
+                lines.push('Key file: ' + (status.keyFilePresent ? 'present' : 'missing'));
+                lines.push('Owner: ' + (status.owner || 'none'));
+                lines.push('Last sync: ' + (status.lastSyncAt || 'never') + (status.lastSyncError ? ' (error: ' + status.lastSyncError + ')' : '') + ', ' + status.lastChangedFiles + ' files changed');
+                return lines.join('\n');
+            }
+
+            var pairingExpiresAt = null;
+            var qrLoading = null;
+
+            function loadQrLibrary() {
+                if (window.qrcode) { return Promise.resolve(); }
+                if (!qrLoading) {
+                    qrLoading = new Promise(function (resolve, reject) {
+                        var tag = document.createElement('script');
+                        tag.src = ApiClient.getUrl('web/ConfigurationPage', { name: 'spacebadger-qrcode.js' });
+                        tag.onload = resolve;
+                        tag.onerror = function () { qrLoading = null; reject(new Error('qr library')); };
+                        document.head.appendChild(tag);
+                    });
+                }
+                return qrLoading;
+            }
+
+            function drawQr(payload) {
+                loadQrLibrary().then(function () {
+                    var qr = window.qrcode(0, 'M');
+                    qr.addData(payload);
+                    qr.make();
+                    el('sbPairQr').innerHTML = qr.createSvgTag({ scalable: true, margin: 0 });
+                }).catch(function () {
+                    el('sbPairQr').textContent = 'The QR code could not be drawn. Type the short code instead.';
+                });
+            }
+
+            function renderCountdown() {
+                if (!pairingExpiresAt) { return; }
+                var left = Math.max(0, Math.round((pairingExpiresAt - Date.now()) / 1000));
+                var text = left > 0 ? 'This code works for ' + Math.floor(left / 60) + ':' + ('0' + (left % 60)).slice(-2) + ' more.' : 'This code has expired.';
+                el('sbPairCountdown').textContent = text;
+            }
+
+            /** Fills a profile select (only when the list changed, so a pick in progress survives the 2 s refresh). */
+            function fillProfiles(select, profiles, chosenId) {
+                var list = profiles || [];
+                var ids = list.map(function (profile) { return profile.id; }).join(',');
+                if (select.getAttribute('data-ids') === ids) { return; }
+                select.setAttribute('data-ids', ids);
+                select.innerHTML = '';
+                list.forEach(function (profile) {
+                    var option = document.createElement('option');
+                    option.value = profile.id;
+                    option.textContent = profile.name;
+                    select.appendChild(option);
+                });
+                if (chosenId) { select.value = chosenId; }
+            }
+
+            // INTG-PROF-01: while paused the picker offers a fresh list (GET SpaceBadger/Profiles, fetched once when the page
+            // opens paused or the pause starts), never the status's last list, so a deleted profile is not offered and a new one shows.
+            var pausedFor = null;
+            var pausedProfiles = null;
+
+            function loadPausedProfiles(reason) {
+                call('GET', 'Profiles').then(function (response) { return response.json ? response.json() : response; }).then(function (result) {
+                    if (pausedFor !== reason) { return; }
+                    pausedProfiles = (result && result.profiles) || [];
+                    fillProfiles(el('sbProfile'), pausedProfiles, null);
+                }).catch(function () {
+                    if (pausedFor === reason) { el('sbProfileNeeded').textContent += ' (The profile list could not be loaded; reopen this page to try again.)'; }
+                });
+            }
+
+            function renderProfileSettings(service) {
+                // INTG-PROF-01: an already paired server with no profile to follow (deleted elsewhere, or several and none picked) asks here.
+                var needed = Boolean(service && service.profileNeeded);
+                var show = needed || Boolean(service && service.profile && service.state !== 'needs_profile' && service.profiles && service.profiles.length > 1);
+                el('sbProfileBox').style.display = show ? '' : 'none';
+                el('sbProfileNeeded').style.display = needed ? '' : 'none';
+                if (needed && pausedFor !== service.profileNeeded) {
+                    pausedFor = service.profileNeeded;
+                    pausedProfiles = null;
+                    el('sbProfileNeeded').textContent = service.profileNeeded === 'deleted'
+                        ? 'The Badger profile this server followed was deleted. Pick the profile it follows now: resume positions, watched marks and audio/subtitle choices stay paused until you do. The synced movies and shows stay.'
+                        : 'Your Badger account has several profiles. Pick the one this server follows: nothing syncs until you do.';
+                    fillProfiles(el('sbProfile'), [], null);
+                    loadPausedProfiles(pausedFor);
+                } else if (!needed) {
+                    pausedFor = null;
+                    pausedProfiles = null;
+                }
+                if (needed) {
+                    if (pausedProfiles) { fillProfiles(el('sbProfile'), pausedProfiles, null); }
+                } else if (show) {
+                    fillProfiles(el('sbProfile'), service.profiles, service.profile.id);
+                }
+            }
+
+            function chooseProfile(profileId, done) {
+                Dashboard.showLoadingMsg();
+                call('POST', 'Profile', { profileId: profileId }).then(function () {
+                    Dashboard.hideLoadingMsg();
+                    toast(done);
+                    refreshStatus();
+                }).catch(function () {
+                    Dashboard.hideLoadingMsg();
+                    toast('The profile could not be picked. Check the Jellyfin log for the Badger service.');
+                    refreshStatus();
+                });
+            }
+
+            function renderPairing(service) {
+                var pairing = service && service.pairing;
+                // INTG-PROF-01: an account with several profiles waits here until the owner picks one.
+                var needsPick = Boolean(service && service.state === 'needs_profile' && !service.profileNeeded);
+                el('sbPairProfile').style.display = needsPick ? '' : 'none';
+                if (needsPick) { fillProfiles(el('sbPairProfileSelect'), service.profiles, null); }
+                var paired = service && service.signedIn && service.state !== 'signed_out';
+                el('sbPaired').style.display = paired ? '' : 'none';
+                if (paired) {
+                    el('sbPaired').textContent = 'This server is paired with ' + service.email + '. To pair it with another account, use "Sign out and remove key" first.';
+                    el('sbPairIdle').style.display = 'none';
+                    el('sbPairActive').style.display = 'none';
+                    pairingExpiresAt = null;
+                    return;
+                }
+                var active = !needsPick && pairing && (pairing.state === 'pending' || pairing.state === 'expired' || pairing.state === 'denied' || pairing.state === 'failed');
+                el('sbPairIdle').style.display = active || needsPick ? 'none' : '';
+                el('sbPairActive').style.display = active ? '' : 'none';
+                if (!active) { pairingExpiresAt = null; return; }
+                var drawn = el('sbPairQr').getAttribute('data-code');
+                if (pairing.state === 'pending' && drawn !== pairing.qrPayload) {
+                    el('sbPairQr').setAttribute('data-code', pairing.qrPayload);
+                    drawQr(pairing.qrPayload);
+                }
+                el('sbPairQr').style.opacity = pairing.state === 'pending' ? '1' : '0.25';
+                el('sbPairCode').textContent = pairing.shortCode;
+                pairingExpiresAt = Date.parse(pairing.expiresAt);
+                var messages = {
+                    pending: 'Waiting for you to approve on your phone.',
+                    expired: 'The code expired. Get a new one.',
+                    denied: 'The pairing was declined on the phone. Get a new code to try again.',
+                    failed: 'Pairing failed' + (pairing.error ? ': ' + pairing.error : '') + '. Get a new code to try again.'
+                };
+                el('sbPairMessage').textContent = messages[pairing.state];
+                renderCountdown();
+            }
+
+            function renderBanners(status) {
+                var service = status.service;
+                var signedOut = service && service.state === 'signed_out';
+                el('sbSignedOut').style.display = signedOut ? '' : 'none';
+                if (signedOut) {
+                    var reasons = { api_401: 'Badger no longer accepts this server (the device was removed from your account).', user_signout: 'You signed out.' };
+                    el('sbSignedOutWhy').textContent = reasons[service.signedOutReason] || ('Reason: ' + service.signedOutReason + '.');
+                }
+                var unpaid = service && service.accessState === 'unpaid';
+                el('sbUnpaid').style.display = unpaid ? '' : 'none';
+                el('sbUnpaidWipe').textContent = unpaid && service.wipeAt ? ' (your media on this server is removed on ' + wipeDate(service.wipeAt) + ' if it stays unpaid)' : '';
+            }
+
+            // From the last Status: true/false, or null while unknown (never loaded, or the call failed).
+            var lastKeyFilePresent = null;
+
+            function refreshStatus() {
+                return call('GET', 'Status').then(function (response) { return response.json ? response.json() : response; }).then(function (status) {
+                    lastKeyFilePresent = !!status.keyFilePresent;
+                    el('sbStatus').style.whiteSpace = 'pre-line';
+                    el('sbStatus').textContent = describe(status);
+                    el('sbKeyPath').textContent = status.keyFilePath;
+                    el('sbApiUrlField').style.display = status.serverPicker ? '' : 'none';
+                    renderBanners(status);
+                    renderPairing(status.service);
+                    renderProfileSettings(status.service);
+                }).catch(function () {
+                    lastKeyFilePresent = null;
+                    el('sbStatus').textContent = 'Status unavailable.';
+                });
+            }
+
+            function startPairing() {
+                el('sbPairQr').removeAttribute('data-code');
+                call('POST', 'Pair/Start', {}).then(refreshStatus).catch(function () {
+                    toast('Pairing could not start. Check the Jellyfin log for the Badger service.');
+                });
+            }
+
+            el('sbPairStart').addEventListener('click', startPairing);
+            el('sbPairNew').addEventListener('click', startPairing);
+            el('sbPairCancel').addEventListener('click', function () {
+                call('POST', 'Pair/Cancel').then(refreshStatus);
+            });
+            el('sbPairProfileCancel').addEventListener('click', function () {
+                call('POST', 'Pair/Cancel').then(refreshStatus);
+            });
+            el('sbPairProfileUse').addEventListener('click', function () {
+                chooseProfile(el('sbPairProfileSelect').value, 'Profile picked. Badger starts syncing.');
+            });
+            el('sbProfileChange').addEventListener('click', function () {
+                chooseProfile(el('sbProfile').value, 'Profile changed. Resume positions, watched marks and track choices sync again from it.');
+            });
+
+            function loadConfig() {
+                Dashboard.showLoadingMsg();
+                return Promise.all([ApiClient.getPluginConfiguration(pluginId), ApiClient.getUsers()]).then(function (results) {
+                    var config = results[0];
+                    var owner = el('sbOwner');
+                    owner.innerHTML = '<option value="">First administrator</option>' + results[1].map(function (user) {
+                        return '<option value="' + user.Id + '">' + user.Name + '</option>';
+                    }).join('');
+                    owner.value = (config.OwnerUserId && config.OwnerUserId !== '00000000-0000-0000-0000-000000000000') ? config.OwnerUserId : '';
+                    el('sbMoviesName').value = config.MoviesLibraryName;
+                    el('sbShowsName').value = config.ShowsLibraryName;
+                    el('sbEnabled').checked = config.Enabled;
+                    el('sbApiUrl').value = config.ApiUrl;
+                    Dashboard.hideLoadingMsg();
+                });
+            }
+
+            el('sbConfigForm').addEventListener('submit', function (event) {
+                event.preventDefault();
+                Dashboard.showLoadingMsg();
+                ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+                    config.OwnerUserId = el('sbOwner').value || '00000000-0000-0000-0000-000000000000';
+                    config.MoviesLibraryName = el('sbMoviesName').value;
+                    config.ShowsLibraryName = el('sbShowsName').value;
+                    config.Enabled = el('sbEnabled').checked;
+                    return ApiClient.updatePluginConfiguration(pluginId, config);
+                }).then(function (result) {
+                    Dashboard.processPluginConfigurationUpdateResult(result);
+                    refreshStatus();
+                });
+            });
+
+            el('sbLoginForm').addEventListener('submit', function (event) {
+                event.preventDefault();
+                Dashboard.showLoadingMsg();
+                call('POST', 'Login', {
+                    email: el('sbEmail').value,
+                    password: el('sbPassword').value,
+                    twoFactorCode: el('sbTwoFactor').value || null,
+                    apiUrl: el('sbApiUrlField').style.display === 'none' ? null : (el('sbApiUrl').value || null)
+                }).then(function () {
+                    el('sbPassword').value = '';
+                    Dashboard.hideLoadingMsg();
+                    toast('Signed in to Badger.');
+                    refreshStatus();
+                }).catch(function () {
+                    Dashboard.hideLoadingMsg();
+                    toast('Badger sign-in failed. Check the email, password, two-factor code and server URL.');
+                });
+            });
+
+            el('sbKeyForm').addEventListener('submit', function (event) {
+                event.preventDefault();
+                Dashboard.showLoadingMsg();
+                call('POST', 'Key', { key: el('sbKey').value }).then(function () {
+                    el('sbKey').value = '';
+                    Dashboard.hideLoadingMsg();
+                    toast('Library key saved.');
+                    refreshStatus();
+                }).catch(function () {
+                    Dashboard.hideLoadingMsg();
+                    toast('That is not a valid library key (32 bytes, base64).');
+                });
+            });
+
+            el('sbSyncNow').addEventListener('click', function () {
+                Dashboard.showLoadingMsg();
+                call('POST', 'Sync').then(function () {
+                    Dashboard.hideLoadingMsg();
+                    refreshStatus();
+                }).catch(function () {
+                    Dashboard.hideLoadingMsg();
+                    toast('Sync failed. See the Jellyfin log.');
+                });
+            });
+
+            // ACCT-DEV-03: the saved-key question, in the language jellyfin-web set on <html lang> (the user's culture).
+            var SIGN_OUT_KEY_TEXT = {
+                en: {
+                    title: 'Have you saved your media library key?',
+                    body: 'Signing out removes your media library key and the Badger libraries from this server. To sign back in you will have to type the key, because pairing with a QR code only works while another of your devices still has it. Without the key, your media library can\'t be opened.',
+                    cancel: 'Cancel',
+                    confirm: 'I saved it, sign out'
+                },
+                fr: {
+                    title: 'Avez-vous enregistré votre clé de médiathèque ?',
+                    body: 'Se déconnecter retire de ce serveur votre clé de médiathèque et les bibliothèques Badger. Pour vous reconnecter, il faudra saisir la clé : l\'association par QR code ne marche que si un autre de vos appareils l\'a encore. Sans elle, impossible d\'ouvrir votre médiathèque.',
+                    cancel: 'Annuler',
+                    confirm: 'Je l\'ai enregistrée, me déconnecter'
+                },
+                nl: {
+                    title: 'Heb je je mediatheeksleutel bewaard?',
+                    body: 'Als je uitlogt, verdwijnen je mediatheeksleutel en de Badger-bibliotheken van deze server. Om weer in te loggen moet je de sleutel intypen, want koppelen met een QR-code werkt alleen zolang een ander apparaat van je hem nog heeft. Zonder de sleutel gaat je mediatheek niet open.',
+                    cancel: 'Annuleren',
+                    confirm: 'Bewaard, uitloggen'
+                },
+                de: {
+                    title: 'Hast du deinen Mediathek-Schlüssel gespeichert?',
+                    body: 'Beim Abmelden werden dein Mediathek-Schlüssel und die Badger-Mediatheken von diesem Server entfernt. Um dich wieder anzumelden, musst du den Schlüssel eintippen, denn das Koppeln per QR-Code klappt nur, solange eines deiner anderen Geräte ihn noch hat. Ohne den Schlüssel lässt sich deine Mediathek nicht öffnen.',
+                    cancel: 'Abbrechen',
+                    confirm: 'Gespeichert, abmelden'
+                },
+                es: {
+                    title: '¿Guardaste la clave de tu mediateca?',
+                    body: 'Al cerrar sesión se eliminan de este servidor la clave de tu mediateca y las bibliotecas de Badger. Para volver a iniciar sesión tendrás que escribir la clave, porque la vinculación con un código QR solo funciona mientras otro de tus dispositivos todavía la tenga. Sin la clave, tu mediateca no se puede abrir.',
+                    cancel: 'Cancelar',
+                    confirm: 'Ya la guardé, cerrar sesión'
+                }
+            };
+
+            function signOutKeyText() {
+                var lang = (document.documentElement.getAttribute('lang') || 'en').slice(0, 2).toLowerCase();
+                return SIGN_OUT_KEY_TEXT[lang] || SIGN_OUT_KEY_TEXT.en;
+            }
+
+            function signOutNow() {
+                console.info('[Badger] sign-out: calling SignOut');
+                el('sbSignOutConfirm').style.display = 'none';
+                return call('POST', 'SignOut').then(refreshStatus);
+            }
+
+            function closeSignOutQuestion(reason) {
+                console.info('[Badger] sign-out: saved-key question closed (' + reason + '), nothing changed');
+                el('sbSignOutConfirm').style.display = 'none';
+                el('sbSignOut').focus();
+            }
+
+            el('sbSignOut').addEventListener('click', function () {
+                // Ask unless the last status said for sure that no key file is held; an unknown status asks too.
+                console.info('[Badger] sign-out: clicked, keyFilePresent=' + lastKeyFilePresent);
+                if (lastKeyFilePresent === false) {
+                    signOutNow();
+                    return;
+                }
+                var text = signOutKeyText();
+                el('sbSignOutConfirmTitle').textContent = text.title;
+                el('sbSignOutConfirmBody').textContent = text.body;
+                el('sbSignOutCancel').querySelector('span').textContent = text.cancel;
+                el('sbSignOutConfirmYes').querySelector('span').textContent = text.confirm;
+                el('sbSignOutConfirm').style.display = '';
+                el('sbSignOutCancel').focus();
+            });
+            el('sbSignOutCancel').addEventListener('click', function () { closeSignOutQuestion('cancel'); });
+            el('sbSignOutConfirmYes').addEventListener('click', signOutNow);
+            el('sbSignOutConfirm').addEventListener('keydown', function (event) {
+                if (event.key === 'Escape') {
+                    closeSignOutQuestion('escape');
+                }
+            });
+
+            var timers = [];
+            page.addEventListener('pageshow', function () {
+                loadConfig().then(refreshStatus);
+                timers.push(setInterval(refreshStatus, 2000));
+                timers.push(setInterval(renderCountdown, 1000));
+            });
+            page.addEventListener('pagehide', function () {
+                timers.forEach(clearInterval);
+                timers = [];
+            });
+        })();
+    </script>
+</div>
+</body>
+</html>
