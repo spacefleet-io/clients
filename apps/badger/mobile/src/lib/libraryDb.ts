@@ -2628,10 +2628,9 @@ export class LibraryDb {
    * while it still holds the path the copy was made from, so an edit or a sync that landed meanwhile wins.
    */
   async applyArtworkCopies(mediaId: string, copies: ArtworkCopy[]): Promise<ArtworkApplyResult> {
-    if (this.closed) return { applied: 0, skipped: copies.length, unapplied: copies };
+    if (this.closed) return { applied: 0, skipped: copies.length };
     const metadataDb = await this.getMetadataDb();
     let applied = 0;
-    const unapplied: ArtworkCopy[] = [];
     for (const copy of copies) {
       const swap = (() => {
         switch (copy.target) {
@@ -2647,13 +2646,12 @@ export class LibraryDb {
             return { db: metadataDb, sql: "UPDATE people SET profile_path = ? WHERE id = ? AND profile_path = ?;", params: [copy.value, copy.id, copy.path] };
         }
       })();
-      const [result] = swap ? await swap.db.executeSql(swap.sql, swap.params) : [];
+      if (!swap) continue;
+      const [result] = await swap.db.executeSql(swap.sql, swap.params);
       if ((result?.rowsAffected ?? 0) > 0) applied += 1;
-      else unapplied.push(copy);
     }
-    const outcome: ArtworkApplyResult = { applied, skipped: unapplied.length, unapplied };
-    // Counts only: the copies carry storage keys.
-    console.info("library.artwork.applied", JSON.stringify({ mediaId, applied, skipped: unapplied.length }));
+    const outcome: ArtworkApplyResult = { applied, skipped: copies.length - applied };
+    console.info("library.artwork.applied", JSON.stringify({ mediaId, ...outcome }));
     if (applied === 0) return outcome;
     await this.coreDb.executeSql("UPDATE media_items SET updated_at = ? WHERE id = ?;", [nowIso(), mediaId]);
     await this.queueMediaUpsert(mediaId);
