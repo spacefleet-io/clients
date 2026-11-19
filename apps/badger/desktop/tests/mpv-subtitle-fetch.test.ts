@@ -1,7 +1,14 @@
 // @req PLAY-SUBGET-02[badger-desktop]
 // @req PLAY-SUBGET-24[badger-desktop]
+// @req PLAY-SUBGET-23[badger-desktop]
 import { describe, expect, it, vi } from "vitest";
-import type { SubtitleFetchCandidate, SubtitleFetchEntry, SubtitleFetchTarget } from "@space/shared/subtitleFetch";
+import {
+  UnreadableSubtitleFileError,
+  type SubtitleFetchCandidate,
+  type SubtitleFetchEntry,
+  type SubtitleFetchTarget,
+  type SubtitleTitleMatch,
+} from "@space/shared/subtitleFetch";
 import type { SubtitleFetchView } from "@space/mpv-protocol";
 import {
   createMpvSubtitleFetch,
@@ -64,6 +71,15 @@ describe("parseSubtitleFetchMessage", () => {
     expect(parseSubtitleFetchMessage({ type: "script_message", name: "sf-subtitle-fetch", args: ["pick"] })).toBeNull();
     expect(parseSubtitleFetchMessage({ type: "script_message", name: "sf-select-pick", args: ["open"] })).toBeNull();
     expect(parseSubtitleFetchMessage(null)).toBeNull();
+  });
+
+  it("reads title <text> and add-file", () => {
+    expect(parseSubtitleFetchMessage({ type: "script_message", name: "sf-subtitle-fetch", args: ["title", "Alien"] })).toEqual({
+      action: "title",
+      text: "Alien",
+    });
+    expect(parseSubtitleFetchMessage({ type: "script_message", name: "sf-subtitle-fetch", args: ["title"] })).toEqual({ action: "title", text: "" });
+    expect(parseSubtitleFetchMessage({ type: "script_message", name: "sf-subtitle-fetch", args: ["add-file"] })).toEqual({ action: "add-file" });
   });
 });
 
@@ -275,5 +291,102 @@ describe("createMpvSubtitleFetch: Try another version", () => {
     await flush();
     expect(views).toEqual([]);
     expect(deps.onCancelled).not.toHaveBeenCalled();
+  });
+});
+
+// @req PLAY-SUBGET-24[badger-desktop]
+describe("createMpvSubtitleFetch: no catalog id, the title step first", () => {
+  const alien: SubtitleTitleMatch = { catalogId: 348, title: "Alien", year: "1979" };
+  const byTitle = (find: (query: string) => Promise<SubtitleTitleMatch[]>, overrides: Partial<MpvSubtitleFetchDeps> = {}) =>
+    setup({
+      target: null,
+      findTitle: { query: "Alien", find: vi.fn(find) },
+      // Only the picked match's catalog id goes to the search, never the file name (PLAY-SUBGET-14).
+      targetFor: (match) => ({ ...target, request: { type: "movie", id: match.catalogId } }),
+      ...overrides,
+    });
+
+  it("asks for the title prefilled with the one the app shows, lists the matches, then searches the picked one by catalog id", async () => {
+    const { deps, views, flow } = byTitle(async () => [alien]);
+    flow.handle({ action: "open" });
+    await flush();
+    expect(views).toEqual([{ title: { prompt: "Which film or show is this?", field: "Title", query: "Alien" } }]);
+    expect(deps.search).not.toHaveBeenCalled();
+
+    flow.handle({ action: "title", text: " Alien " });
+    await flush();
+    expect(deps.findTitle!.find).toHaveBeenCalledWith("Alien");
+    expect(panels(views)).toEqual(["Looking for “Alien”…"]);
+    const titles = lastList(views);
+    expect(titles.items).toEqual([{ key: "title:348", label: "Alien (1979)" }]);
+
+    flow.handle({ action: "pick", key: "title:348" });
+    await flush();
+    expect(deps.search).toHaveBeenCalledWith({ type: "movie", id: 348 });
+    expect(lastList(views).prompt).toBe("Pick a language");
+  });
+
+  it("nothing found for the typed title asks again, saying so", async () => {
+    const { views, flow } = byTitle(async () => []);
+    flow.handle({ action: "open" });
+    flow.handle({ action: "title", text: "Alien" });
+    await flush();
+    expect(views[views.length - 1]).toEqual({
+      title: { prompt: "Nothing found for “Alien”. Check the title and try again.", field: "Title", query: "Alien" },
+    });
+  });
+
+  it("no subtitle for the picked title offers Search another title, which asks for the title again", async () => {
+    const { views, flow } = byTitle(async () => [alien], { search: vi.fn(async () => ({ reachable: true, subtitles: [] })) });
+    flow.handle({ action: "open" });
+    flow.handle({ action: "title", text: "Alien" });
+    await flush();
+    flow.handle({ action: "pick", key: "title:348" });
+    await flush();
+    const other = lastList(views);
+    expect(other).toEqual({ prompt: "No subtitles found for this one.", items: [{ key: "other-title", label: "Search another title" }] });
+    flow.handle({ action: "pick", key: "other-title" });
+    await flush();
+    expect(views[views.length - 1]).toEqual({ title: { prompt: "Which film or show is this?", field: "Title", query: "Alien" } });
+  });
+});
+
+// @req PLAY-SUBGET-23[badger-desktop]
+describe("createMpvSubtitleFetch: Add a subtitle file…", () => {
+  const file = { name: "Home video.srt", content: "1\n00:00:01,000 --> 00:00:02,000\nBonjour\n" };
+
+  it("stores the picked file, says it's added, closes and reports it so the player switches it on", async () => {
+    const stored = { language: "fr", label: "French", format: "srt", source: "added-file" } as const;
+    const store = vi.fn(async () => stored);
+    const { deps, views, flow } = setup({ addFile: { pick: async () => file, store }, onFileAdded: vi.fn() });
+    flow.handle({ action: "add-file" });
+    await flush();
+    expect(store).toHaveBeenCalledWith(file);
+    expect(panels(views)).toEqual(["Adding the subtitle file…", "French added"]);
+    expect(views[0]).toEqual({ panel: "Adding the subtitle file…", dismissable: false });
+    expect(views[views.length - 1]).toEqual({ close: true });
+    expect(deps.onFileAdded).toHaveBeenCalledWith(expect.objectContaining({ source: "added-file", label: "French" }));
+    expect(deps.search).not.toHaveBeenCalled();
+  });
+
+  it("an unreadable file says so and adds nothing", async () => {
+    const { deps, views, flow } = setup({
+      addFile: { pick: async () => ({ name: "notes.txt", content: "hello" }), store: async () => Promise.reject(new UnreadableSubtitleFileError("notes.txt")) },
+      onFileAdded: vi.fn(),
+    });
+    flow.handle({ action: "add-file" });
+    await flush();
+    expect(panels(views)).toEqual(["Adding the subtitle file…", "This file isn't a subtitle we can read"]);
+    expect(deps.onFileAdded).not.toHaveBeenCalled();
+  });
+
+  it("cancelling the file picker shows nothing and resumes", async () => {
+    const store = vi.fn();
+    const { deps, views, flow } = setup({ addFile: { pick: async () => null, store }, onFileAdded: vi.fn() });
+    flow.handle({ action: "add-file" });
+    await flush();
+    expect(views).toEqual([]);
+    expect(store).not.toHaveBeenCalled();
+    expect(deps.onCancelled).toHaveBeenCalledTimes(1);
   });
 });

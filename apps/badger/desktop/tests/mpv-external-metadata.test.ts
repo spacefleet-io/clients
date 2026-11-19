@@ -374,7 +374,7 @@ describe("mpv external metadata helpers", () => {
     console.info("[mpv-external-metadata:labels] labels command:", JSON.stringify(labels ?? null));
     try {
       expect(labels).toBeDefined();
-      expect(JSON.parse(labels!.command[2] as string)).toEqual({ subtitlesOff: "Aucun", getMoreSubtitles: "", tryAnotherVersion: "" });
+      expect(JSON.parse(labels!.command[2] as string)).toEqual({ subtitlesOff: "Aucun", getMoreSubtitles: "", tryAnotherVersion: "", addSubtitleFile: "" });
     } catch (err) {
       dumpMetadataSnapshot("labels-subtitles-off", { commands });
       throw err;
@@ -401,7 +401,12 @@ describe("mpv external metadata helpers", () => {
       })
     );
     const labels = commands.find((entry) => entry.command[1] === "sf-labels-json");
-    expect(JSON.parse(labels!.command[2] as string)).toEqual({ subtitlesOff: "Off", getMoreSubtitles: "Get more subtitles…", tryAnotherVersion: "" });
+    expect(JSON.parse(labels!.command[2] as string)).toEqual({
+      subtitlesOff: "Off",
+      getMoreSubtitles: "Get more subtitles…",
+      tryAnotherVersion: "",
+      addSubtitleFile: "",
+    });
   });
 
   // @req PLAY-SUBGET-07[badger-desktop]
@@ -430,6 +435,36 @@ describe("mpv external metadata helpers", () => {
       subtitlesOff: "Off",
       getMoreSubtitles: "Get more subtitles…",
       tryAnotherVersion: "Try another version",
+      addSubtitleFile: "",
+    });
+  });
+
+  // @req PLAY-SUBGET-23[badger-desktop]
+  it("sends the Add a subtitle file… label, the subtitle menu's last row (PLAY-SUBGET-23)", () => {
+    const commands = buildExternalMetadataCommands(
+      buildExternalPlaybackMetadataPayload({
+        subtitlesOffLabel: "Off",
+        getMoreSubtitlesLabel: "Get more subtitles…",
+        addSubtitleFileLabel: "Add a subtitle file…",
+        subtitles: [],
+        chapters: [],
+        audioOptions: [],
+        skipMarkers: [],
+        title: "",
+        meta: "",
+        previousEpisode: null,
+        nextEpisode: null,
+        autoplayNextEpisode: false,
+        autoSkipIntro: false,
+        autoSkipCredits: false,
+      })
+    );
+    const labels = commands.find((entry) => entry.command[1] === "sf-labels-json");
+    expect(JSON.parse(labels!.command[2] as string)).toEqual({
+      subtitlesOff: "Off",
+      getMoreSubtitles: "Get more subtitles…",
+      tryAnotherVersion: "",
+      addSubtitleFile: "Add a subtitle file…",
     });
   });
 
@@ -467,8 +502,8 @@ describe("mpv external metadata helpers", () => {
       })
     );
     const labels = JSON.parse(commands.find((entry) => entry.command[1] === "sf-labels-json")!.command[2] as string);
-    expect(labels.selectAudioTrack).toBe("Choisir une piste audio :");
-    expect(labels.selectSubtitle).toBe("Choisir des sous-titres :");
+    expect(labels.selectAudioTrack).toBe("Choisir une piste audio\u202f:");
+    expect(labels.selectSubtitle).toBe("Choisir des sous-titres\u202f:");
     expect(labels.subtitlesOff).toBe("Aucun");
   });
 

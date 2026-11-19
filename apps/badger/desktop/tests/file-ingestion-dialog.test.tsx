@@ -264,8 +264,8 @@ describe("FileIngestionDialog", () => {
     async () => {
       const unavailable = searchFailureText(new NoTicketError());
       console.info(`[file-ingestion-dialog:no-ticket] NoTicketError -> ${JSON.stringify(unavailable)}; MetadataRequestError(500) -> ${JSON.stringify(searchFailureText(new MetadataRequestError(500)))}`);
-      expect(unavailable).toEqual({ error: "ingestion.errors.metadataUnavailable", hint: "ingestion.ui.metadataUnavailableHint" });
-      expect(searchFailureText(new MetadataRequestError(500))).toEqual({ error: "ingestion.errors.searchFailed", hint: "ingestion.ui.searchFailedHint" });
+      expect(unavailable).toEqual({ error: "ingestion.errors.metadataUnavailable", hint: "ingestion.ui.metadataNotLookedUpHint", retryOnTickets: true });
+      expect(searchFailureText(new MetadataRequestError(500))).toEqual({ error: "ingestion.errors.searchFailed", hint: "ingestion.ui.searchFailedHint", retryOnTickets: false });
 
       await renderDialog();
       console.info(`[file-ingestion-dialog:no-ticket] seeding one movie whose search failed for want of a ticket`);
@@ -299,7 +299,7 @@ describe("FileIngestionDialog", () => {
         dumpDialogSnapshot("no-ticket", container);
       }
       expect(text).toContain("ingestion.errors.metadataUnavailable");
-      expect(text).toContain("ingestion.ui.metadataUnavailableHint");
+      expect(text).toContain("ingestion.ui.metadataNotLookedUpHint");
       expect(text).not.toContain("ingestion.errors.noMatch");
     },
     15000

@@ -73,6 +73,9 @@ vi.mock("@/lib/profileStore", async () => {
 import { profileStore } from "@/lib/profileStore";
 
 import TopNav from "../src/renderer/src/components/TopNav";
+// TopNav lazy-loads the narrow-window menu on its first open. Loaded here, its `import()` resolves from the module
+// cache: the first open no longer waits on transforming the module, which a loaded CI runner took over 1 s to do.
+import "../src/renderer/src/components/TopNavMobileMenu";
 
 let container: HTMLDivElement;
 let root: Root;

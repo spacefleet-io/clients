@@ -12,6 +12,7 @@ import {
   updateProfile as apiUpdateProfile,
 } from "@space/shared/api";
 import { createProfileStore, type ProfilesSnapshot } from "@space/shared/profileStore";
+import { bindProfileSetup } from "@space/mobile-shell/profile-setup";
 import { viewingScopeFor } from "@space/shared/profileViewing";
 import { reconcileResumeHints } from "../resume";
 import { setViewingScope } from "./activeViewingScope";
@@ -30,6 +31,9 @@ export const profileStore = createProfileStore({
   reconcileResumeHints,
   log: (event, data) => console.info(event, JSON.stringify(data)),
 });
+
+// "Your profile" and "New in this update" (UX-SETUP-10, UX-UPDATE-01) save through this store, phone and TV.
+bindProfileSetup({ store: profileStore, log: (event, data) => console.info(event, JSON.stringify(data)) });
 
 export const useProfiles = (): ProfilesSnapshot =>
   useSyncExternalStore(profileStore.subscribe, profileStore.getSnapshot, profileStore.getSnapshot);

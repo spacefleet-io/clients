@@ -96,6 +96,8 @@ export type AudioPayload = z.infer<typeof audioPayloadSchema>;
  *   absent or "" hides the row.
  *   reads `payload.tryAnotherVersion`, the "Try another version" row after it (PLAY-SUBGET-07),
  *   sent non-empty only while the selected subtitle is a fetched one; "" hides the row.
+ *   reads `payload.addSubtitleFile`, the menu's last row "Add a subtitle file…" (PLAY-SUBGET-23);
+ *   absent or "" hides the row.
  *   reads the track menus' prompts and empty-state lines (`selectSubtitle`,
  *   `selectSecondarySubtitle`, `selectAudioTrack`, `selectVideoTrack`,
  *   `noSubtitles`, `noAudioTracks`, `noVideoTracks`; i18n `player.menu*`);
@@ -107,6 +109,7 @@ export const labelsPayloadSchema = z.object({
   subtitlesOff: z.string(),
   getMoreSubtitles: z.string().optional(),
   tryAnotherVersion: z.string().optional(),
+  addSubtitleFile: z.string().optional(),
   selectSubtitle: z.string().optional(),
   selectSecondarySubtitle: z.string().optional(),
   selectAudioTrack: z.string().optional(),
@@ -214,11 +217,14 @@ export const audioStallPayloadSchema = z.discriminatedUnion("state", [
 export type AudioStallPayload = z.infer<typeof audioStallPayloadSchema>;
 
 /**
- * sf-subtitle-fetch-json — what the "Get more subtitles…" flow shows in mpv (PLAY-SUBGET-02).
+ * sf-subtitle-fetch-json — what the "Get more subtitles…" / "Add a subtitle file…" flows show in mpv
+ * (PLAY-SUBGET-02, -23, -24).
  *
  * Lua side (sf-select.lua: apply_subtitle_fetch_json):
  *   `panel` draws a centred message box (`dismissable`: Escape sends `cancel`);
  *   `list` opens mpv's select menu (a pick sends `pick <key>`, closing sends `cancel`);
+ *   `title` opens mpv's text field (`input.get`) prefilled with `query`, for a media without a catalog id
+ *   (PLAY-SUBGET-24): Enter sends `title <text>`, closing sends `cancel`;
  *   `close` removes whatever is shown.
  */
 export const subtitleFetchViewSchema = z.union([
@@ -226,6 +232,7 @@ export const subtitleFetchViewSchema = z.union([
   z.object({
     list: z.object({ prompt: z.string(), items: z.array(z.object({ key: z.string(), label: z.string() })) }),
   }),
+  z.object({ title: z.object({ prompt: z.string(), field: z.string(), query: z.string() }) }),
   z.object({ close: z.literal(true) }),
 ]);
 

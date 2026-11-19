@@ -72,7 +72,7 @@ vi.mock("../src/tv/lib/tvRuntime", () => ({ IS_TV: false }));
 // The sign-in sends the device's name (ACCT-DEV-01); its native lookups are not under test here.
 vi.mock("../src/lib/phonePairing", () => ({ currentPhoneDeviceName: () => "Badger (phone)" }));
 vi.mock("../src/tv/lib/pairingRuntime", () => ({ tvDeviceName: () => "TV" }));
-vi.mock("../src/setup/BadgerSetupFlow", () => ({ SetupStepBar: () => null }));
+vi.mock("../src/setup/BadgerSetupFlow", () => ({ SignInSetupBack: () => null }));
 
 import { ApiError } from "@space/shared/api";
 import { LoginScreen } from "../src/screens/LoginScreen";

@@ -14,6 +14,7 @@ import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { SignedOutReason } from "@space/shared/keptLibraryKey";
+import { DESKTOP_TOUR_STORAGE_KEYS } from "@space/desktop-shell/tour";
 import { AuthProvider, useAuth, type AuthContextValue } from "../src/renderer/src/auth";
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
@@ -93,6 +94,9 @@ describe("desktop sign-out and the library key (ACCT-DEV-01)", () => {
     return reset.resetClientStorage.mock.calls[0]?.[0];
   };
 
+  // The API host, and the once-per-computer tour marks (UX-TOUR-02).
+  const KEPT_ON_SIGN_OUT = ["sf-api-base-url", ...DESKTOP_TOUR_STORAGE_KEYS];
+
   beforeEach(() => {
     localStorage.clear();
     localStorage.setItem("sf_client_token", "tok-1");
@@ -110,12 +114,12 @@ describe("desktop sign-out and the library key (ACCT-DEV-01)", () => {
 
   it("the user's own Sign out forgets the key, so signing in again asks for it", async () => {
     const options = await signOutWith("signOut");
-    expect(options).toMatchObject({ preserveLibraryKey: false, preserveLocalStorageKeys: ["sf-api-base-url"] });
+    expect(options).toMatchObject({ preserveLibraryKey: false, preserveLocalStorageKeys: KEPT_ON_SIGN_OUT });
     expect(api.logout).toHaveBeenCalledWith("tok-1");
   });
 
   it("a session the server refused keeps the key, so signing in again opens the library", async () => {
     const options = await signOutWith("sessionRejected");
-    expect(options).toMatchObject({ preserveLibraryKey: true, preserveLocalStorageKeys: ["sf-api-base-url"] });
+    expect(options).toMatchObject({ preserveLibraryKey: true, preserveLocalStorageKeys: KEPT_ON_SIGN_OUT });
   });
 });

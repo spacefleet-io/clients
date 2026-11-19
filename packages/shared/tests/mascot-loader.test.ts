@@ -4,6 +4,7 @@ import {
   MASCOT_LOADER_SAMPLES,
   MASCOT_LOADERS,
   mascotLoaderKeyframes,
+  mascotLoaderPhase,
   type MascotLoaderApp,
 } from "../src/mascotLoader";
 
@@ -59,5 +60,22 @@ describe("loading-screen mascot motion", () => {
       expect(track).toHaveLength(MASCOT_LOADER_SAMPLES + 1);
       expect(track.at(-1)!.y).toBeCloseTo(track[0]!.y, 6);
     }
+  });
+
+  it.each(APPS)("%s takes up the loop where the clock stands, so a loader mounted mid-loop does not snap back", (app) => {
+    const spec = MASCOT_LOADERS[app];
+    expect(mascotLoaderPhase(app, 0)).toBe(0);
+    expect(mascotLoaderPhase(app, 400)).toBeCloseTo(0.25, 9);
+    expect(mascotLoaderPhase(app, 3 * spec.durationMs + 800)).toBeCloseTo(0.5, 9);
+    // Two loaders, one mounted 0.3 loop later: once both run, they show the same pose at every instant.
+    const first = mascotLoaderKeyframes(app, 0.1);
+    const second = mascotLoaderKeyframes(app, 0.4);
+    first.forEach((track, layer) => {
+      expect(track[0]).toEqual(spec.pose(0.1)[layer]);
+      expect(track.at(-1)).toEqual(track[0]);
+      const later = MASCOT_LOADER_SAMPLES * 0.3;
+      expect(second[layer]![0]!.y).toBeCloseTo(track[later]!.y, 6);
+      expect(second[layer]![0]!.rotate).toBeCloseTo(track[later]!.rotate, 6);
+    });
   });
 });

@@ -64,7 +64,10 @@
     "./profiles-screen": "./src/profiles/MobileProfilesScreen.tsx",
     "./bottom-sheet": "./src/components/mobile-bottom-sheet.tsx",
     "./bottom-sheet-motion": "./src/components/mobile-bottom-sheet-motion.ts",
-    "./profile-avatar": "./src/profiles/ProfileAvatarImage.tsx"
+    "./profile-avatar": "./src/profiles/ProfileAvatarImage.tsx",
+    "./profile-setup": "./src/profiles/profileSetup.ts",
+    "./profile-setup-step": "./src/profiles/ProfileSetupStep.tsx",
+    "./whats-new": "./src/profiles/WhatsNewModal.tsx"
   },
   "dependencies": {
     "@space/legal": "workspace:*",

@@ -6,6 +6,7 @@
 import { Buffer } from "buffer";
 import crypto from "react-native-quick-crypto";
 import { buildArtworkAssetRef, newArtworkObjectKey } from "@space/library-db-definition/artworkCopy";
+import { deleteStorageObjects } from "@space/shared/api";
 import { scopeLogger } from "@space/mobile-shell/logger";
 import { startArtworkCopy, type ArtworkCopyLibrary } from "./artworkCopy";
 import { artworkCacheEpoch, rememberDecryptedArtwork } from "./assets";
@@ -52,6 +53,8 @@ export const startLibraryArtworkCopy = (options: {
     fetchImage: fetchArtworkImage,
     storeEncrypted: (bytes, contentType) => storeEncryptedArtwork(options.token, options.keyBase64, bytes, contentType),
     ticketsHeld,
+    // STOR-PLACE-10: a copy the library did not take (the title was deleted meanwhile) is deleted again at once.
+    discard: (keys) => deleteStorageObjects(options.token, keys),
     onApplied: options.onApplied,
     log: (event, detail) => log.info(event, detail),
   });

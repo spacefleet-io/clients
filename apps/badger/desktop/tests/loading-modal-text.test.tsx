@@ -12,13 +12,13 @@ import { LoadingModalProvider, useLoadingModal } from "@/components/LoadingModal
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
 vi.mock("react-i18next", () => ({
-  useTranslation: () => ({ t: (key: string) => (key === "app.loading" ? "Loading..." : key) }),
+  useTranslation: () => ({ t: (key: string) => (key === "app.loading" ? "Loading…" : key) }),
 }));
 
 function Opener({ subtitle }: { subtitle?: string }) {
   const { showLoading } = useLoadingModal();
   useEffect(() => {
-    showLoading({ title: "Loading library...", subtitle });
+    showLoading({ title: "Loading library…", subtitle });
   }, [showLoading, subtitle]);
   return null;
 }
@@ -62,7 +62,7 @@ describe("loading window text", () => {
     );
     const text = visibleText();
     console.info("[loading-modal-text] visible text with subtitle:", JSON.stringify(text));
-    expect(count(text, "Loading library...")).toBe(1);
+    expect(count(text, "Loading library…")).toBe(1);
     expect(count(text, "Preparing files")).toBe(1);
   });
 
@@ -76,7 +76,7 @@ describe("loading window text", () => {
     );
     const text = visibleText();
     console.info("[loading-modal-text] visible text without subtitle:", JSON.stringify(text));
-    expect(count(text, "Loading library...")).toBe(1);
-    expect(count(text, "Loading...")).toBe(1);
+    expect(count(text, "Loading library…")).toBe(1);
+    expect(count(text, "Loading…")).toBe(1);
   });
 });

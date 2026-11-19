@@ -332,6 +332,7 @@ describe("app screens behind their guards", () => {
           language="en"
           albums={[album] as never}
           artists={[brokenArtist] as never}
+          content="ready"
           tracks={[track] as never}
           history={emptyHistory()}
           playingTrack={undefined}

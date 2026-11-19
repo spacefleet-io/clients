@@ -2,14 +2,19 @@ import type { MediaDetails } from "@space/shared/libraryTypes";
 import {
   replaceFetchedSubtitle,
   storeFetchedSubtitle,
+  storeSubtitleFile,
+  subtitleFetchNeedsTitle,
   subtitleFetchTarget,
+  subtitleTitleMatches,
   type FetchedSubtitleTrack as LibraryFetchedSubtitleTrack,
   type StoreFetchedSubtitleDeps,
+  type StoredSubtitleFile,
   type SubtitleFetchEntry,
 } from "@space/shared/subtitleFetch";
 import type { SubtitleFetchFlowInput, TryAnotherSubtitleVersionInput } from "@space/shared/subtitleFetchFlow";
 import { subtitlePickPatch, type TrackPrefsPatch } from "@space/shared/trackPrefs";
 import type { MetadataClient } from "@space/metadata-client";
+import { detectSubtitleFileLanguage } from "@space/ingest-core/subtitleLanguageDetection";
 
 /**
  * A subtitle "Get subtitles" (PLAY-SUBGET-02) or "Try another version" (PLAY-SUBGET-07) just added, so the player can
@@ -49,20 +54,17 @@ export type SubtitleReplacePhoneActions = SubtitleFetchPhoneActions & {
 };
 
 /**
- * How the phone stores a fetched subtitle (PLAY-SUBGET-01, -03, -19): downloaded through the metadata service, sealed
- * on the phone and stored in the vault on the media's silo, added as a track, remembered as the film's or show's
- * subtitle. Same steps as the computer app's `subtitleFetchStoreDeps`; only the sealing differs (no main process).
+ * How the phone stores a subtitle it got, fetched or added from a file (PLAY-SUBGET-19, -23): sealed on the phone and
+ * stored in the vault on the media's silo, added as a track, remembered as the film's or show's subtitle.
  */
-export const subtitleFetchPhoneDeps = (params: {
+const subtitleStorePhoneDeps = (params: {
   media: MediaDetails;
   episodeId: string | null;
-  client: Pick<MetadataClient, "subtitleFile">;
   actions: SubtitleFetchPhoneActions;
   onTrackAdded?: (track: FetchedSubtitleTrack) => void;
-}): StoreFetchedSubtitleDeps => {
-  const { media, episodeId, client, actions, onTrackAdded } = params;
+}): Pick<StoreFetchedSubtitleDeps, "upload" | "addTrack" | "rememberChoice"> => {
+  const { media, episodeId, actions, onTrackAdded } = params;
   return {
-    download: (fileId) => client.subtitleFile(fileId),
     upload: (content, format) => actions.uploadSubtitleContent(media.id, episodeId, content, format),
     addTrack: async (track) => {
       const id = await actions.addSubtitleTrack({ mediaId: media.id, episodeId, ...track });
@@ -76,29 +78,85 @@ export const subtitleFetchPhoneDeps = (params: {
 };
 
 /**
+ * How the phone stores a fetched subtitle (PLAY-SUBGET-01, -03, -19): downloaded through the metadata service, then
+ * stored like any subtitle it gets (`subtitleStorePhoneDeps`). Same steps as the computer app's
+ * `subtitleFetchStoreDeps`; only the sealing differs (no main process).
+ */
+export const subtitleFetchPhoneDeps = (params: {
+  media: MediaDetails;
+  episodeId: string | null;
+  client: Pick<MetadataClient, "subtitleFile">;
+  actions: SubtitleFetchPhoneActions;
+  onTrackAdded?: (track: FetchedSubtitleTrack) => void;
+}): StoreFetchedSubtitleDeps => ({
+  download: (fileId) => params.client.subtitleFile(fileId),
+  ...subtitleStorePhoneDeps(params),
+});
+
+/**
  * The inputs of the shared "Get subtitles" flow (`useSubtitleFetchFlow`) for a film (`episodeId` null) or one episode:
  * the search by catalog id through the metadata service (PLAY-SUBGET-03, -14), the file name to rank against, the
- * subtitles it already has, and the phone's storage. Null when the title has no catalog id (nothing to search by).
+ * subtitles it already has, and the phone's storage. A title without a catalog id starts with the title step
+ * (PLAY-SUBGET-24): the metadata service's title search, then the subtitle search by the picked match's ID, for this
+ * search only. Null when there is nothing to search by.
  */
 export const subtitleFetchPhoneInput = (params: {
   media: MediaDetails;
   episodeId: string | null;
   uiLanguage: string;
-  client: Pick<MetadataClient, "subtitles" | "subtitleFile">;
+  client: Pick<MetadataClient, "subtitles" | "subtitleFile" | "search">;
   actions: SubtitleFetchPhoneActions;
   onTrackAdded?: (track: FetchedSubtitleTrack) => void;
 }): SubtitleFetchFlowInput | null => {
-  const target = subtitleFetchTarget(params.media, params.episodeId);
-  if (!target) return null;
+  const { media, episodeId, client } = params;
+  const target = subtitleFetchTarget(media, episodeId);
+  const titleSearch = target ? null : subtitleFetchNeedsTitle(media, episodeId);
+  // The file name and the existing tracks don't depend on the ID: without one, read them for any.
+  const shape = target ?? (titleSearch ? subtitleFetchTarget(media, episodeId, 0) : null);
+  if (!shape) return null;
   const deps = subtitleFetchPhoneDeps(params);
   return {
     uiLanguage: params.uiLanguage,
-    libraryFileName: target.libraryFileName,
-    existingTracks: target.existingTracks,
-    search: () => params.client.subtitles(target.request),
+    libraryFileName: shape.libraryFileName,
+    existingTracks: shape.existingTracks,
+    search: (match) => {
+      const request = match ? subtitleFetchTarget(media, episodeId, match.catalogId)?.request : target?.request;
+      if (!request) return Promise.reject(new Error("subtitle_fetch.no_target"));
+      return client.subtitles(request);
+    },
+    ...(titleSearch
+      ? {
+          findTitle: {
+            query: titleSearch.query,
+            find: async (query: string) => subtitleTitleMatches((await client.search(titleSearch.type, query)).results),
+          },
+        }
+      : {}),
     store: (entry: SubtitleFetchEntry, report, signal) => storeFetchedSubtitle(entry, report, deps, signal),
   };
 };
+
+/**
+ * "Add a subtitle file…" on the phone (PLAY-SUBGET-23): the picked file stored like a fetched subtitle, named after
+ * the file (the phone has no language detection, so the file name applies), source "added-file". Throws
+ * `UnreadableSubtitleFileError` before storing anything when it isn't a readable .srt, .ass, .ssa or .vtt.
+ */
+export const storeSubtitleFilePhone = (
+  file: { name: string; content: string },
+  params: {
+    media: MediaDetails;
+    episodeId: string | null;
+    uiLanguage: string;
+    actions: SubtitleFetchPhoneActions;
+    onTrackAdded?: (track: FetchedSubtitleTrack) => void;
+  },
+): Promise<StoredSubtitleFile> =>
+  storeSubtitleFile(file, {
+    ...subtitleStorePhoneDeps(params),
+    uiLanguage: params.uiLanguage,
+    takenLabels: params.media.subtitleTracks.filter((track) => (track.episodeId ?? null) === params.episodeId).map((track) => track.label),
+    detectLanguage: async (text) => (await detectSubtitleFileLanguage(text))?.language ?? null,
+  });
 
 /**
  * The inputs of the shared "Try another version" (`tryAnotherSubtitleVersion`, PLAY-SUBGET-07) for one fetched track of

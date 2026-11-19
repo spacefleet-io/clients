@@ -255,6 +255,9 @@ const dropAndAdd = async (paths: string[], mocks: SkipMocks) => {
   });
   try {
     await vi.waitFor(() => expect(mocks.submitSources).toHaveBeenCalled(), { timeout: 10_000 });
+    // The add goes on after the submit (it waits up to 2.2 s for the titles to show in the library): wait for its
+    // button to leave "Adding", or its last state update lands after the test file's DOM is gone.
+    await vi.waitFor(() => expect(addButton()).not.toBeNull(), { timeout: 10_000 });
   } catch (err) {
     dump("submit", { fetched: fetched() });
     throw err;

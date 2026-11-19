@@ -104,8 +104,9 @@ export type SubtitleTryAnotherRow = {
 
 /**
  * The subtitle menu: the translated "Off" row first (selecting index -1 removes the subtitles), then one row per track,
- * then "Get more subtitles…" when the owner passes it (PLAY-SUBGET-02), then "Try another version" when the subtitle
- * on is a fetched one (PLAY-SUBGET-07).
+ * then "Get more subtitles…" when the owner passes it (PLAY-SUBGET-02, -24), then "Add a subtitle file…" when the owner
+ * passes it (PLAY-SUBGET-23, phone only), then "Try another version" when the subtitle on is a fetched one
+ * (PLAY-SUBGET-07).
  * `unplayable` tracks stay listed but disabled (PLAY-TRACK-05: picture tracks without an OCR twin under direct rendering).
  */
 export const buildSubtitleRows = (
@@ -117,6 +118,7 @@ export const buildSubtitleRows = (
   unplayable: (track: SubtitleTrack) => boolean,
   getMore?: SubtitleGetMoreRow | null,
   tryAnother?: SubtitleTryAnotherRow | null,
+  addFile?: SubtitleGetMoreRow | null,
 ): TrackRow[] => {
   const active = activeIdx >= 0 ? tracks[activeIdx] : undefined;
   return [
@@ -132,6 +134,19 @@ export const buildSubtitleRows = (
             selected: false,
             disabled: getMore.unavailableReason !== null,
             onPress: getMore.onPress,
+          },
+        ]
+      : []),
+    ...(addFile
+      ? [
+          {
+            key: "__add_file__",
+            testID: "player-subtitle-option-add-file",
+            title: addFile.title,
+            subtitle: addFile.unavailableReason ?? undefined,
+            selected: false,
+            disabled: addFile.unavailableReason !== null,
+            onPress: addFile.onPress,
           },
         ]
       : []),

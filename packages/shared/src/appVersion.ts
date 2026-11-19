@@ -41,9 +41,11 @@ export const parseClientHeader = (value: string | null | undefined): ClientIdent
 
 /**
  * OPS-BIZ-10: how the app was installed, sent as the version's `+<source>` build metadata (`0.3.1+play`). Android
- * reports the installer family, the Linux desktop how it is packaged; nothing finer leaves the device.
+ * reports the installer family, the Linux desktop how it is packaged, the Windows and macOS desktop the system its
+ * installer is for (WEB-ADMIN-39: so the admin accounts page tells Linux, Windows and macOS apart); nothing finer leaves
+ * the device.
  */
-export const INSTALL_SOURCES = ["play", "fdroid", "obtainium", "sideload", "flatpak", "appimage", "system"] as const;
+export const INSTALL_SOURCES = ["play", "fdroid", "obtainium", "sideload", "flatpak", "appimage", "system", "windows", "macos"] as const;
 
 export type InstallSource = (typeof INSTALL_SOURCES)[number];
 

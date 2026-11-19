@@ -57,8 +57,10 @@ const DialogContent = React.forwardRef<
     closeLabel?: string;
     /** Extra backdrop classes, e.g. a z-index above a page's own fixed header (pair it with the same z on `className`). */
     overlayClassName?: string;
+    /** Leaves out the corner close button, for a dialog that draws its own next to its content (UX-WAIT-02). */
+    hideCloseButton?: boolean;
   }
->(({ className, children, closeLabel, overlayClassName, ...props }, ref) => {
+>(({ className, children, closeLabel, overlayClassName, hideCloseButton, ...props }, ref) => {
   const label = useCloseLabel(closeLabel);
   const popup = React.useContext(PopupCloseContext);
   return (
@@ -75,10 +77,12 @@ const DialogContent = React.forwardRef<
           {...props}
         >
           {children}
-          <DialogClose className="absolute right-4 top-4 rounded-md p-1 text-muted-foreground transition hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-            <X className="h-4 w-4" />
-            <span className="sr-only">{label}</span>
-          </DialogClose>
+          {hideCloseButton ? null : (
+            <DialogClose className="absolute right-4 top-4 rounded-md p-1 text-muted-foreground transition hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+              <X className="h-4 w-4" />
+              <span className="sr-only">{label}</span>
+            </DialogClose>
+          )}
         </DialogPrimitive.Content>
       </DialogPortal>
     </RenderBoundary>

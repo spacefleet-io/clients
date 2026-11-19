@@ -76,8 +76,10 @@ export const LUA_CHANNEL_REGISTRATIONS: ReadonlyArray<{
  *
  * SUBTITLE_FETCH (sf-select.lua, PLAY-SUBGET-02): the "Get more subtitles…"
  * flow drawn over the paused video. Args: `["open"]` (the subtitle menu's row
- * was picked), `["pick", key]` (a language of the list was picked) or
- * `["cancel"]` (Escape on the list or a panel). The renderer answers on
+ * was picked), `["pick", key]` (a row of the list was picked), `["title", text]`
+ * (the title field was submitted, PLAY-SUBGET-24), `["add-file"]` (the menu's
+ * "Add a subtitle file…" row, PLAY-SUBGET-23) or `["cancel"]` (Escape on the
+ * list, the field or a panel). The renderer answers on
  * `sf-subtitle-fetch-json`.
  */
 export const LUA_OUTBOUND_CHANNELS = {

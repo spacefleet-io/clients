@@ -46,7 +46,13 @@ import { localPlaybackMediaState } from "../lib/playback/osMediaSession";
 import { useOsMediaSession } from "../lib/playback/useOsMediaSession";
 import { useMediaImage } from "../lib/useMediaImage";
 import { formatNowPlaying } from "@space/shared/nowPlaying";
-import { isFetchedSubtitleSource, subtitleFetchCopy, subtitleFetchTarget, type FetchedSubtitleTrack as LibraryFetchedSubtitleTrack } from "@space/shared/subtitleFetch";
+import {
+  isFetchedSubtitleSource,
+  subtitleFetchCopy,
+  subtitleFetchNeedsTitle,
+  subtitleFetchTarget,
+  type FetchedSubtitleTrack as LibraryFetchedSubtitleTrack,
+} from "@space/shared/subtitleFetch";
 import { useNetworkOnline } from "../lib/networkListener";
 import type { FetchedSubtitleTrack } from "../lib/subtitleFetchStore";
 import {
@@ -57,6 +63,7 @@ import {
 } from "../lib/playback/fetchedSubtitles";
 import { PlayerSubtitleFetch } from "./player/PlayerSubtitleFetch";
 import { PlayerSubtitleVersion } from "./player/PlayerSubtitleVersion";
+import { PlayerSubtitleFile } from "./player/PlayerSubtitleFile";
 import { attachRemotePlayer, publishRemoteState, remoteStateWanted, type RemotePlayer } from "../lib/playOnTv/playerLink";
 import type { RemoteStart } from "../lib/playOnTv/protocol";
 import { applyRemoteCommand, buildTvState } from "../tv/lib/remotePlayerAdapter";
@@ -726,9 +733,10 @@ const PlayerScreenInner = ({
     void MpvControl.setPaused(false).catch(() => undefined);
   }, []);
 
-  // --- "Get more subtitles…" (PLAY-SUBGET-02, phone and TV) ---------------------------------------------------------
-  // The subtitle menu's last row when the title can be searched (a catalog id), and the only one that searches online: the
-  // subtitles button (and the TV remote's captions key) always opens the menu first (PLAY-SUBGET-24). Picking it pauses and shows the search over
+  // --- "Get more subtitles…" (PLAY-SUBGET-02, -24, phone and TV) ----------------------------------------------------
+  // The subtitle menu's row after the tracks, also with no track at all, and the only one that searches online: the
+  // subtitles button (and the TV remote's captions key) always opens the menu first (PLAY-SUBGET-24). A title without a
+  // catalog id is searched by title first (`subtitleFetchNeedsTitle`). Picking it pauses and shows the search over
   // the video; closing resumes, with the stored subtitle added to this playback's menu and switched on like a pick in the
   // menu (the controls' handle, so the pick is remembered, PLAY-SUBGET-19). Unavailable offline (PLAY-SUBGET-12) and while
   // a download on disk plays: the offline proxy can't load a subtitle stored in the vault after the download.
@@ -740,15 +748,17 @@ const PlayerScreenInner = ({
     [session.metadata?.subtitleTracks, addedSubtitles],
   );
   const playsFromDownload = session.offline;
-  const canGetMoreSubtitles = session.details !== null && subtitleFetchTarget(session.details, session.episode?.id ?? null) !== null;
+  const canSearchSubtitlesById = session.details !== null && subtitleFetchTarget(session.details, session.episode?.id ?? null) !== null;
+  const canGetMoreSubtitles =
+    canSearchSubtitlesById || (session.details !== null && subtitleFetchNeedsTitle(session.details, session.episode?.id ?? null) !== null);
   const openSubtitleFetch = useCallback(() => {
     console.info("subtitle_fetch.player.pause", JSON.stringify({ mediaId, episodeId: sessionRef.current.episode?.id ?? null }));
     void MpvControl.setPaused(true).catch(() => undefined);
     setSubtitleFetchOpen(true);
   }, [mediaId]);
-  const closeSubtitleFetch = useCallback((added: FetchedSubtitleTrack | null) => {
-    setSubtitleFetchOpen(false);
-    console.info("subtitle_fetch.player.close", JSON.stringify({ addedId: added?.id ?? null }));
+  // A stored subtitle (fetched or added from a file) goes into this playback's menu and is switched on like a pick in
+  // the menu; null resumes as it was.
+  const switchOnAddedSubtitle = useCallback((added: FetchedSubtitleTrack | null) => {
     if (!added) {
       void MpvControl.setPaused(false).catch(() => undefined);
       return;
@@ -756,8 +766,14 @@ const PlayerScreenInner = ({
     setAddedSubtitles((prev) => ({ ...prev, fetched: [...prev.fetched, fetchedSubtitleToPlayerTrack(added)] }));
     setSwitchOnSubtitleId(added.id);
   }, []);
-  // Once the menu lists the new subtitle (the controls re-rendered with it), pick it, then resume. A replaced subtitle
-  // sits in the row that is already on: `reload` loads it again (PLAY-SUBGET-07).
+  const closeSubtitleFetch = useCallback(
+    (added: FetchedSubtitleTrack | null) => {
+      setSubtitleFetchOpen(false);
+      console.info("subtitle_fetch.player.close", JSON.stringify({ addedId: added?.id ?? null }));
+      switchOnAddedSubtitle(added);
+    },
+    [switchOnAddedSubtitle],
+  );
   useEffect(() => {
     if (!switchOnSubtitleId) return;
     const idx = menuSubtitleTracks.findIndex((track) => track.id === switchOnSubtitleId);
@@ -780,6 +796,29 @@ const PlayerScreenInner = ({
     if (!canGetMoreSubtitles) return null;
     return { title: subtitleFetchCopy(getCurrentLanguage()).getMore, unavailableReason: subtitleUnavailableReason, onPress: openSubtitleFetch };
   }, [canGetMoreSubtitles, subtitleUnavailableReason, openSubtitleFetch]);
+
+  // --- "Add a subtitle file…" (PLAY-SUBGET-23, phone only) ----------------------------------------------------------
+  // After "Get more subtitles…": pauses, opens the system's file picker and stores the file in the vault like a
+  // fetched subtitle, then switches it on at once and resumes. Storing needs the vault, so it is unavailable offline
+  // and while a download plays, with the same reason as "Get more" (PLAY-SUBGET-12). Never on TV.
+  const [subtitleFileOpen, setSubtitleFileOpen] = useState(false);
+  const openSubtitleFile = useCallback(() => {
+    console.info("subtitle_file.player.pause", JSON.stringify({ mediaId, episodeId: sessionRef.current.episode?.id ?? null }));
+    void MpvControl.setPaused(true).catch(() => undefined);
+    setSubtitleFileOpen(true);
+  }, [mediaId]);
+  const closeSubtitleFile = useCallback(
+    (added: FetchedSubtitleTrack | null) => {
+      setSubtitleFileOpen(false);
+      console.info("subtitle_file.player.close", JSON.stringify({ addedId: added?.id ?? null }));
+      switchOnAddedSubtitle(added);
+    },
+    [switchOnAddedSubtitle],
+  );
+  const addSubtitleFile = useMemo(() => {
+    if (IS_TV || session.details === null) return null;
+    return { title: subtitleFetchCopy(getCurrentLanguage()).addFile, unavailableReason: subtitleUnavailableReason, onPress: openSubtitleFile };
+  }, [session.details, subtitleUnavailableReason, openSubtitleFile]);
 
   // --- "Try another version" (PLAY-SUBGET-07, phone and TV) ---------------------------------------------------------
   // In the subtitle menu after "Get more subtitles…" while the subtitle on is a fetched one. Picking it pauses and shows
@@ -813,14 +852,14 @@ const PlayerScreenInner = ({
     [versionTrack],
   );
   const tryAnotherSubtitle = useMemo(() => {
-    if (!canGetMoreSubtitles) return null;
+    if (!canSearchSubtitlesById) return null;
     return {
       title: subtitleFetchCopy(getCurrentLanguage()).tryAnother,
       isFetched: (track: SubtitleTrack) => isFetchedSubtitleSource(track.source),
       unavailableReason: subtitleUnavailableReason,
       onPress: openSubtitleVersion,
     };
-  }, [canGetMoreSubtitles, subtitleUnavailableReason, openSubtitleVersion]);
+  }, [canSearchSubtitlesById, subtitleUnavailableReason, openSubtitleVersion]);
   const castTo = useCallback(
     (target: CastTarget) => {
       console.info("playback.cast.handover", JSON.stringify({ mediaId, episodeId: sessionRef.current.episode?.id ?? episodeId }));
@@ -1302,7 +1341,7 @@ const PlayerScreenInner = ({
     return (
       <View style={styles.playerWrap} testID="player-root">
         <PlayerLoadingBackdrop backdropPath={backdropPath} posterPath={posterPath}>
-          <PlayerSpinner />
+          <PlayerSpinner launching />
         </PlayerLoadingBackdrop>
       </View>
     );
@@ -1322,7 +1361,7 @@ const PlayerScreenInner = ({
               }}
             />
           ) : (
-            <PlayerSpinner />
+            <PlayerSpinner launching />
           )}
         </PlayerLoadingBackdrop>
       </View>
@@ -1376,6 +1415,7 @@ const PlayerScreenInner = ({
         onSubtitlePick={onSubtitlePick}
         getMoreSubtitles={getMoreSubtitles}
         tryAnotherSubtitle={tryAnotherSubtitle}
+        addSubtitleFile={addSubtitleFile}
         snapshot={snapshot}
         qualityMode={quality?.mode ?? "auto"}
         activeVideoId={quality?.currentId ?? null}
@@ -1391,7 +1431,7 @@ const PlayerScreenInner = ({
         uiScale={controlsScale}
         onBackPress={handleBackPress}
       />
-      {shouldShowSpinner(snapshot) && !failure ? <PlayerSpinner slow={slowLoading} /> : null}
+      {shouldShowSpinner(snapshot) && !failure ? <PlayerSpinner slow={slowLoading} launching={!firstFrameShown} /> : null}
       {tooWeak ? <DeviceTooWeakNotice pinned={tooWeak.pinned} onKeepWatching={keepWatchingTooWeak} /> : null}
       {capNotice ? <TrafficCapNotice quality={capNotice} onKeepWatching={() => setCapNotice(null)} /> : null}
       {pill && !nextCard && !pillDismissed && !(IS_TV && sheetOpen) ? <SkipPill action={pill} onPress={() => performPill(pill)} /> : null}
@@ -1415,6 +1455,9 @@ const PlayerScreenInner = ({
           track={versionTrack}
           onClose={closeSubtitleVersion}
         />
+      ) : null}
+      {subtitleFileOpen ? (
+        <PlayerSubtitleFile mediaId={mediaId} episodeId={session.episode?.id ?? null} onClose={closeSubtitleFile} />
       ) : null}
     </View>
   );

@@ -166,6 +166,11 @@ export type PlayerControlsProps = {
    * it closes the menu, then calls `onPress` with that track; the owner pauses, replaces it and resumes.
    */
   tryAnotherSubtitle?: SubtitleTryAnotherRow | null;
+  /**
+   * "Add a subtitle file…" right after "Get more subtitles…" (PLAY-SUBGET-23), shown only when provided (the phone, never
+   * the TV). Picking it closes the menu, then calls `onPress`; the owner opens the file picker and stores the file.
+   */
+  addSubtitleFile?: SubtitleGetMoreRow | null;
 };
 
 /** What the owner's remote handler can do to the controls (TV). */
@@ -344,6 +349,7 @@ export const PlayerControls = (
     seekPreview,
     getMoreSubtitles,
     tryAnotherSubtitle,
+    addSubtitleFile,
     uiScale = 1,
   }: PlayerControlsProps,
 ) => {
@@ -1102,6 +1108,15 @@ export const PlayerControls = (
           onPress: (track) => {
             setSheet("none");
             tryAnotherSubtitle.onPress(track);
+          },
+        }
+      : null,
+    addSubtitleFile
+      ? {
+          ...addSubtitleFile,
+          onPress: () => {
+            setSheet("none");
+            addSubtitleFile.onPress();
           },
         }
       : null,

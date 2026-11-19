@@ -18,8 +18,7 @@ OFFLINE HÖREN
 
 NUR DEINE MUSIK
 • Keine Werbung.
-• Deine Bibliothek und die Musik, die du hinzufügst, werden auf deinem Gerät verschlüsselt, bevor sie unsere Server erreichen.
-• Für Cover und Songtexte fragt Parrot unseren Suchdienst mit einem anonymen Einmal-Ticket statt mit deinem Konto: Wir können nicht erkennen, wer fragt. Der Dienst sieht, wonach gesucht wird, und deine Internetadresse, die wir nicht speichern.
+• Nur du kannst deine Bibliothek sehen. Nicht einmal wir.
 • Parrot liefert keine Musik: Du hörst die Musik, die du selbst hinzufügst.
 
 KOSTENLOS STARTEN

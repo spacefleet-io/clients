@@ -1,7 +1,7 @@
 import React, { createContext, startTransition, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useRuntimeInstanceId } from "@space/desktop-shell/services/runtime-status";
 import { checkKeptLibraryKey } from "@space/desktop-shell/library-kept-key";
-import { ApiError, getLibraryMeta, getMe, getMetadataDetails, TitleDetails } from "@/api";
+import { ApiError, deleteStorageObjects, getLibraryMeta, getMe, getMetadataDetails, TitleDetails } from "@/api";
 import { useAuth } from "@/auth";
 import { clearLibraryKey, getStoredLibraryKey, isLibraryKeyAcknowledged } from "@/lib/onboarding";
 import {
@@ -2048,6 +2048,7 @@ export const LibraryProvider = ({
         return uploadEncryptedAssetFromMetadata(token, key, kind, path);
       },
       ticketsLeft: () => getDesktopMetadata().reserve.count(),
+      discard: (keys) => deleteStorageObjects(token, keys),
       onApplied: async () => {
         refreshAfterCopy.request();
       },

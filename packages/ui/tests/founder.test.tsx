@@ -100,7 +100,7 @@ describe("founder banner and badge", () => {
     await show(<Screen source={source} language="fr" />);
     const text = host.textContent ?? "";
     log(T, "rendered", { text });
-    expect(q("founder-banner")?.querySelector("strong")?.textContent).toBe("Ticket fondateur reconnu.");
+    expect(q("founder-banner")?.querySelector("strong")?.textContent).toBe("Remise fondateur reconnue.");
     expect(q("founder-badge")?.textContent).toContain("depuis la liste d'attente");
     expect(text).not.toMatch(/formule|300|7 jours/i);
   });

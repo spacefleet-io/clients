@@ -274,7 +274,7 @@ export const OnboardingKeyScreen = () => {
       mode={show ? "show" : "enter"}
       title={show ? t("onboarding.showTitle") : t("onboarding.enterTitle")}
       body={show ? keyWarningText.stepLine : t("onboarding.subtitle")}
-      header={<SetupStepBar step="libraryKey" onBack={() => void signOut()} />}
+      header={<SetupStepBar />}
       onBack={() => void signOut()}
       words={newWords}
       onRegenerate={() => void handleRegenerate()}

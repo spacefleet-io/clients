@@ -25,6 +25,8 @@ local M = {
   commands = {},
   property_sets = {},
   menus = {},
+  inputs = {},
+  input_terminated = 0,
   overlays = {},
   log_lines = {},
 }
@@ -298,11 +300,19 @@ local utils = {
 local options = { read_options = function() end }
 
 -- mp.input: select() records the menu so a scenario can read its items and
--- submit a row, the way the console's select list does.
+-- submit a row, the way the console's select list does; get() records the text
+-- field the same way (submit(text) / closed()).
 local input = {
   select = function(opts)
     M.menus[#M.menus + 1] = opts
     M.log("input.select: " .. tostring(opts.prompt) .. " items=" .. table.concat(opts.items or {}, " | "))
+  end,
+  get = function(opts)
+    M.inputs[#M.inputs + 1] = opts
+    M.log("input.get: " .. tostring(opts.prompt) .. " default=" .. tostring(opts.default_text))
+  end,
+  terminate = function()
+    M.input_terminated = M.input_terminated + 1
   end,
 }
 

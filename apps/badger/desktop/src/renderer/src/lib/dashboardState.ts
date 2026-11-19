@@ -1,6 +1,4 @@
-// UX-HOME-03: Home has no hero of its own while titles import; the empty library shows only when nothing is
-// playable and nothing is importing.
-export type DashboardHeroState = "empty" | null;
+import { libraryContent, type LibraryContent } from "@space/shared/libraryContent";
 
 type DashboardMediaLike = { id: string };
 type DashboardFilterableMedia = DashboardMediaLike & {
@@ -20,37 +18,26 @@ type DashboardActiveJobLike = {
   includeChapters?: boolean;
 };
 
-export const shouldHoldEmptyCardDuringRefresh = ({
+/**
+ * @bugfix library-empty-before-load @regression-proof
+ *
+ * What Home and the library page show (UX-WAIT-04): the titles, the loading screen, or the empty library. A title is
+ * listed when it is playable or importing (UX-HOME-03: Home has no hero of its own while titles import).
+ *
+ * The pages list a deferred copy of the library (`useDeferredValue`), which can still be the empty list of before the
+ * load in the render where the provider's `loading` turns false; judging that copy read "not listed yet" as "empty"
+ * and drew the empty library before the titles. The load counts as settled only once the provider has stopped loading
+ * AND the listed copy has caught up with the provider's list (`listed`).
+ */
+export const pageLibraryContent = ({
   loading,
-  playableCount,
-  importingCount,
+  listed,
+  itemCount,
 }: {
   loading: boolean;
-  playableCount: number;
-  importingCount: number;
-}) => {
-  if (loading) return false;
-  if (playableCount > 0) return false;
-  if (importingCount > 0) return false;
-  return true;
-};
-
-export const getDashboardHeroState = ({
-  loading,
-  holdEmptyCardDuringRefresh,
-  playableCount,
-  importingCount,
-}: {
-  loading: boolean;
-  holdEmptyCardDuringRefresh: boolean;
-  playableCount: number;
-  importingCount: number;
-}): DashboardHeroState => {
-  if (playableCount > 0) return null;
-  if (importingCount > 0) return null;
-  if (!loading || holdEmptyCardDuringRefresh) return "empty";
-  return null;
-};
+  listed: boolean;
+  itemCount: number;
+}): LibraryContent => libraryContent({ itemCount, settled: !loading && listed });
 
 export const selectDashboardProcessingMedia = <T extends DashboardMediaLike>(
   media: T[],

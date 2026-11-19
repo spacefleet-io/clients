@@ -861,7 +861,7 @@ const clientIdentity = (() => {
 })();
 
 contextBridge.exposeInMainWorld("sf", {
-  version: "0.1.10",
+  version: "0.1.18",
   clientIdentity,
   // STOR-UNIT-01: the storage unit base main worked out (1000 or 1024), set by the renderer before its first render.
   storageUnitBase: readStorageUnitBase(ipcRenderer),
@@ -870,6 +870,9 @@ contextBridge.exposeInMainWorld("sf", {
   // Test seam: harnesses export SF_FIRST_TOUR=off so the first-open tour and the player tip (UX-TOUR-01..03) never
   // cover a UI test.
   firstTourOff: process.env.SF_FIRST_TOUR === "off",
+  // Test seam: harnesses export SF_PROFILE_SETUP=off so "Your profile" and "New in this update" (UX-SETUP-10,
+  // UX-UPDATE-01) never cover a UI test; e2e/profile-setup unsets it.
+  profileSetupOff: process.env.SF_PROFILE_SETUP === "off",
   getPlaybackBaseUrl: () => ipcRenderer.invoke("sf-playback-base-url"),
   setPlaybackToken: (token: string | null) => ipcRenderer.invoke("sf-playback-set-token", token),
   setAuthToken: (token: string | null) => ipcRenderer.invoke("sf-auth-set-token", token),
@@ -1002,6 +1005,7 @@ contextBridge.exposeInMainWorld("sf", {
     ipcRenderer.invoke("sf-upload-subtitle", payload),
   uploadSubtitleContent: (payload: { token: string; content: string; format: string; placementId?: string | null }) =>
     ipcRenderer.invoke("sf-upload-subtitle-content", payload),
+  pickSubtitleFile: () => ipcRenderer.invoke("sf-pick-subtitle-file"),
   sendExternalMpvCommand: (command: MpvCommand): Promise<MpvResponse> =>
     ipcRenderer.invoke("sf-mpv-external-command", command),
   sendExternalMpvRequest: (command: MpvCommand): Promise<MpvResponse> =>

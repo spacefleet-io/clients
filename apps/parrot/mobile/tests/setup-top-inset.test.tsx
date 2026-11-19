@@ -37,6 +37,7 @@ vi.mock("../src/screens/PairingPanel", () => ({ KeyPairingPanel: () => null }));
 vi.mock("../src/lib/library", () => ({ claimAccountKey: async () => "kept" }));
 vi.mock("../src/lib/accountLanguage", () => ({ pickSignedInLanguage: async () => undefined, reconcileAfterSignIn: async () => undefined }));
 vi.mock("../src/lib/errorReports", () => ({ getErrorReportsSetting: () => ({ errorReports: false }), setErrorReports: async () => undefined }));
+vi.mock("../src/setup/ProfileSetupQuestion", () => ({ ProfileSetupPhoneStep: () => null }));
 
 import { SafeAreaView } from "react-native-safe-area-context";
 import { PhoneSetupFlow } from "@space/mobile-shell/setup-flow";

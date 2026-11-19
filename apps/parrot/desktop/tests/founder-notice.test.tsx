@@ -88,7 +88,7 @@ describe("Parrot desktop founder notice", () => {
     const T = "seen-mark-failed";
     const bridge = fakeBridge(FOUNDER, false);
     await show(<ParrotScreen bridge={bridge} userId="u-parrot-2" language="fr" />);
-    expect(q("founder-banner")?.querySelector("strong")?.textContent).toBe("Ticket fondateur reconnu.");
+    expect(q("founder-banner")?.querySelector("strong")?.textContent).toBe("Remise fondateur reconnue.");
     await act(async () => q("founder-banner-dismiss")!.click());
     await flush();
     log(T, "dismissed", { seen: bridge.markFounderNoticeSeen.mock.calls.length });

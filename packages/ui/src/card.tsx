@@ -20,15 +20,13 @@ const CardHeader = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDiv
 );
 CardHeader.displayName = "CardHeader";
 
-const CardTitle = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLHeadingElement>>(
-  ({ className, ...props }, ref) => (
-    <h3
-      ref={ref}
-      className={cn("text-lg font-semibold leading-none tracking-tight", className)}
-      {...props}
-    />
-  )
-);
+/** `as`: the heading level, `h3` by default; a card that is the whole screen (a setup step) can be its `h1`. */
+const CardTitle = React.forwardRef<
+  HTMLHeadingElement,
+  React.HTMLAttributes<HTMLHeadingElement> & { as?: "h1" | "h2" | "h3" }
+>(({ className, as: Heading = "h3", ...props }, ref) => (
+  <Heading ref={ref} className={cn("text-lg font-semibold leading-none tracking-tight", className)} {...props} />
+));
 CardTitle.displayName = "CardTitle";
 
 const CardDescription = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLParagraphElement>>(

@@ -51,13 +51,17 @@ const memoryStore = (slots: ArtworkSlot[]) => {
       slots.filter((slot) => values.get(`${slot.target}:${slot.id}`) === slot.path),
     applyArtworkCopies: (_mediaId: string, copies: ArtworkCopy[]) => {
       let applied = 0;
+      const unapplied: ArtworkCopy[] = [];
       for (const copy of copies) {
         const key = `${copy.target}:${copy.id}`;
-        if (values.get(key) !== copy.path) continue;
+        if (values.get(key) !== copy.path) {
+          unapplied.push(copy);
+          continue;
+        }
         values.set(key, copy.value);
         applied++;
       }
-      return { applied, skipped: copies.length - applied };
+      return { applied, skipped: unapplied.length, unapplied };
     },
   };
   return { store, values };

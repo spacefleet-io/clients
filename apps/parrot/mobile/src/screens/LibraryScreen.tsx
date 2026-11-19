@@ -7,11 +7,11 @@ import React, { useEffect, useState } from "react";
 import { ActivityIndicator, FlatList, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { ArrowUpDown, Search, X } from "lucide-react-native";
 import { UNAVAILABLE_LOOK } from "@space/mobile-shell/theme";
-import { SkyCover, useSkyScroll } from "@space/mobile-shell/components";
+import { MobileLibraryLoading, SkyCover, useSkyScroll } from "@space/mobile-shell/components";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useTranslation } from "@space/mobile-shell/i18n";
-import { MobileMascotLoader } from "@space/mobile-shell/mascot-loader";
+import { libraryContent } from "@space/shared/libraryContent";
 import { guardRenderItem } from "@space/mobile-shell/render-boundary";
 import { filterParrotAlbums, filterParrotArtists, filterParrotTracks, parrotArtistPictureThumbKey, parrotCoverThumbKey } from "@space/parrot-core";
 import { useSession } from "../state/session";
@@ -94,15 +94,6 @@ export const LibraryScreen = ({ active, viewRequest }: LibraryScreenProps) => {
     </View>
   ) : null;
 
-  if (library.status === "loading" || library.status === "idle") {
-    return (
-      <Centered>
-        <MobileMascotLoader app="parrot" source={PARROT_MASCOT} size={120} />
-        <Body muted>{t("parrot.library.opening")}</Body>
-      </Centered>
-    );
-  }
-  if (library.status === "missing" || albums.data?.length === 0) return <EmptyLibrary />;
   if (library.status === "error") {
     return (
       <Centered>
@@ -111,6 +102,14 @@ export const LibraryScreen = ({ active, viewRequest }: LibraryScreenProps) => {
       </Centered>
     );
   }
+  if (library.status === "missing") return <EmptyLibrary />;
+  // The empty library only once the albums of the library open now are read (UX-WAIT-04).
+  const content = libraryContent({
+    itemCount: library.status === "ready" ? (albums.data?.length ?? 0) : 0,
+    settled: library.status === "ready" && albums.answered,
+  });
+  if (content === "loading") return <MobileLibraryLoading app="parrot" source={PARROT_MASCOT} label={t("parrot.library.loading")} />;
+  if (content === "empty") return <EmptyLibrary />;
 
   const chips = (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll} contentContainerStyle={styles.chipRow}>

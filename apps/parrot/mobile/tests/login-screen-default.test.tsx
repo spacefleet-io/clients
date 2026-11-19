@@ -1,7 +1,7 @@
 /**
  * @test-id PARROT-MOBILE-LOGIN-DEFAULT-001
  * @level unit
- * @req ACCT-SIGNIN-04[parrot] @req UX-PHONE-10[parrot]
+ * @req ACCT-SIGNIN-04[parrot] @req UX-PHONE-10[parrot] @req UX-SETUP-08[parrot]
  * @why Chris 2026-11-12: every client but the TV defaults to "the login/password screen with the option to use the qr
  *   code to log in with an already logged in device, not the other way around". The real LoginScreen is rendered
  *   (shell components and native modules stubbed as host elements): it opens on the email form with the shared
@@ -49,7 +49,7 @@ vi.mock("@space/mobile-shell/i18n", () => ({
   MOBILE_UI_LANGUAGES: [{ code: "en", nativeName: "English" }],
   useTranslation: () => ({ t: (k: string) => k }),
 }));
-vi.mock("@space/mobile-shell/setup-step", () => ({ MobileSetupHeader: "MobileSetupHeader" }));
+vi.mock("@space/mobile-shell/setup-step", () => ({ MobileSetupBackFooter: "MobileSetupBackFooter" }));
 vi.mock("@space/mobile-shell/logger", () => ({ scopeLogger: () => ({ info: () => undefined, warn: () => undefined, error: () => undefined }) }));
 vi.mock("@space/mobile-shell/pairing-device", () => ({ currentPhoneDeviceName: (app: string) => `${app} (test)` }));
 vi.mock("@space/shared/api", () => ({ ApiError: class extends Error {}, login: vi.fn() }));
@@ -106,5 +106,27 @@ describe("Parrot phone sign-in: the form first, the QR card second", () => {
     });
     expect(panels(tree)).toHaveLength(0);
     expect(host(tree, "login-qr-card")).toHaveLength(1);
+  });
+
+  // Main 2026-11-19 (Chris 2026-11-18: "drop the top left one when there's already one at the bottom"): during the
+  // setup the sign-in's Back is the setup's Back pill at the bottom of the screen, never a top "‹ Back" (UX-SETUP-08).
+  it("during the setup, Back is the bottom pill (the page's footer), with no top header", async () => {
+    const onBack = vi.fn();
+    let tree!: ReactTestRenderer;
+    await act(async () => {
+      tree = create(createElement(LoginScreen, { onBack }));
+    });
+    const page = tree.root.find((n) => String(n.type) === "MobileStartupPage");
+    const footer = page.props.footer as { type: unknown; props: { onBack: () => void } };
+    say("setup sign-in", { footer: String(footer?.type), headers: tree.root.findAll((n) => String(n.type) === "MobileSetupHeader").length });
+    expect(String(footer.type)).toBe("MobileSetupBackFooter");
+    expect(tree.root.findAll((n) => String(n.type) === "MobileSetupHeader")).toHaveLength(0);
+    footer.props.onBack();
+    expect(onBack).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      tree.update(createElement(LoginScreen));
+    });
+    expect(tree.root.find((n) => String(n.type) === "MobileStartupPage").props.footer, "outside the setup: no Back").toBeUndefined();
   });
 });

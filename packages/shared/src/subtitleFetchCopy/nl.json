@@ -25,6 +25,16 @@
     "lookingAnother": "Andere versie zoeken…",
     "replaced": "{name} vervangen door een andere versie",
     "noneLeft": "Geen andere versie van {name} meer",
-    "replaceFailed": "Kan {name} niet vervangen. Probeer het opnieuw."
+    "replaceFailed": "Kan {name} niet vervangen. Probeer het opnieuw.",
+    "titlePrompt": "Welke film of serie is dit?",
+    "titleField": "Titel",
+    "titleSearch": "Zoeken",
+    "findingTitle": "Zoeken naar ‘{title}’…",
+    "noTitle": "Niets gevonden voor ‘{title}’. Controleer de titel en probeer het opnieuw.",
+    "otherTitle": "Een andere titel zoeken",
+    "addFile": "Ondertitelbestand toevoegen…",
+    "addingFile": "Ondertitelbestand wordt toegevoegd…",
+    "unreadableFile": "Dit bestand is geen ondertitel die we kunnen lezen",
+    "fileFailed": "Kan dit ondertitelbestand niet toevoegen. Probeer het opnieuw."
   }
 }

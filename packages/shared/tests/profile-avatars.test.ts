@@ -14,6 +14,7 @@ import {
   isProfileAvatarId,
   nextProfileAvatarId,
   profileAvatarIdOf,
+  randomUnusedProfileAvatarId,
 } from "../src/profileAvatars";
 import { PROFILE_AVATAR_COLORS } from "../src/profiles";
 import { profilesTexts, profilesTranslator } from "../src/profileTexts";
@@ -59,6 +60,21 @@ describe("profile avatar pack", () => {
     expect(nextProfileAvatarId(["badger", "parrot"])).toBe("fox");
     expect(nextProfileAvatarId(["parrot"])).toBe("badger");
     expect(nextProfileAvatarId(PROFILE_AVATAR_IDS)).toBe("badger");
+  });
+
+  it("@req ACCT-PROF-05 a profile made without a choice gets a random avatar nobody uses, any one when all are taken", () => {
+    // The 20 unused avatars when badger and parrot are taken run fox … earth; index 10 of them is the dino.
+    expect(randomUnusedProfileAvatarId(["badger", "parrot"], () => 0)).toBe("fox");
+    expect(randomUnusedProfileAvatarId(["badger", "parrot"], () => 0.5)).toBe("dino");
+    expect(randomUnusedProfileAvatarId(["badger", "parrot"], () => 0.999999)).toBe("earth");
+    expect(randomUnusedProfileAvatarId([], () => 0.5)).toBe("bunny");
+    // A random source that reaches 1 still lands on the last avatar.
+    expect(randomUnusedProfileAvatarId([], () => 1)).toBe("earth");
+    expect(randomUnusedProfileAvatarId(PROFILE_AVATAR_IDS, () => 0.2)).toBe("dog");
+    const drawn = new Set(Array.from({ length: 200 }, () => randomUnusedProfileAvatarId(["badger", "fox"])));
+    console.info(`[profile-avatars] 200 draws with badger and fox used: ${[...drawn].join(",")}`);
+    expect(drawn.has("badger") || drawn.has("fox")).toBe(false);
+    expect(drawn.size).toBeGreaterThan(5);
   });
 
   it("@req ACCT-PROF-05 every avatar has a name in each of the 5 languages, and the chooser its title", () => {

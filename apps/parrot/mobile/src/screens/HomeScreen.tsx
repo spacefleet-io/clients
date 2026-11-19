@@ -9,8 +9,8 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Pause, Play, Shuffle } from "lucide-react-native";
 import { AudioPlayback, showsPause } from "@space/mobile-audio-playback";
 import { useTranslation } from "@space/mobile-shell/i18n";
-import { MobileMascotLoader } from "@space/mobile-shell/mascot-loader";
-import { SkyCover, useSkyScroll } from "@space/mobile-shell/components";
+import { MobileLibraryLoading, SkyCover, useSkyScroll } from "@space/mobile-shell/components";
+import { libraryContent } from "@space/shared/libraryContent";
 import { guardRenderItem } from "@space/mobile-shell/render-boundary";
 import { formatDuration, homeAlbumDetail, homeAlbumStart, homeJumpButton, homeView, parrotArtistPictureThumbKey, parrotCoverThumbKey } from "@space/parrot-core";
 import { useSession } from "../state/session";
@@ -50,21 +50,19 @@ export const HomeScreen = ({ onSeeAll }: { onSeeAll: (view: HomeSeeAll) => void 
   const skyScroll = useSkyScroll();
 
   if (library.status === "missing") return <EmptyLibrary />;
-  if (library.status !== "ready" || (data.loading && !data.data)) {
+  if (library.status === "error") {
     return (
       <View style={styles.fill}>
-        {library.status === "error" ? (
-          <LibraryTabHint error={library.error} onOpenLibrary={() => onSeeAll("albums")} />
-        ) : (
-          <View style={styles.loading}>
-            <MobileMascotLoader app="parrot" source={PARROT_MASCOT} size={120} />
-          </View>
-        )}
+        <LibraryTabHint error={library.error} onOpenLibrary={() => onSeeAll("albums")} />
       </View>
     );
   }
-  const { albums, artists, songs } = data.data ?? { albums: [], artists: [], songs: [] };
-  if (albums.length === 0) return <EmptyLibrary />;
+  // The empty library only once the albums of the library open now are read (UX-WAIT-04): the render where the library
+  // turns ready still holds the answer of the run before (none), so `answered` decides, not `loading`.
+  const { albums, artists, songs } = (library.status === "ready" ? data.data : null) ?? { albums: [], artists: [], songs: [] };
+  const content = libraryContent({ itemCount: albums.length, settled: library.status === "ready" && data.answered });
+  if (content === "loading") return <MobileLibraryLoading app="parrot" source={PARROT_MASCOT} label={t("parrot.library.loading")} />;
+  if (content === "empty") return <EmptyLibrary />;
   const view = homeView(history, albums, artists, songs);
   const playAlbum = (albumId: string, shuffle: boolean) => {
     const entry = view.jump?.album.id === albumId ? view.jump.entry : null;
@@ -220,7 +218,6 @@ const LibraryTabHint = ({ error, onOpenLibrary }: { error: string | null; onOpen
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  loading: { alignItems: "center", marginTop: spacing.xl },
   scroll: { paddingTop: spacing.md, paddingBottom: spacing.xl },
   jump: {
     marginHorizontal: spacing.lg,

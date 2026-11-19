@@ -14,8 +14,16 @@ export type NavigatorScreen =
   | "onboarding"
   | "profiles"
   | "onboarding-reports"
+  /**
+   * "Your profile" on its own (UX-SETUP-10), right after a profile with the setup pending is picked outside the phone's
+   * first setup (the TV numbers it while its setup runs), or opened from the update window's "Choose my avatar"
+   * (UX-UPDATE-01).
+   */
+  | "profile-setup"
   /** "How should titles appear?" on its own, right after a profile that never answered is picked (ACCT-PROF-03). */
   | "title-language"
+  /** The app with a "New in this update" window over it (UX-UPDATE-01), for an older profile. */
+  | "whats-new"
   | "main";
 
 /** "Who's watching?" state (`profileStore`): `choose` = must be answered, `loading` = first profile list not known yet. */
@@ -52,6 +60,12 @@ export const resolveNavigatorScreen = (input: {
   tvLanguagePending?: boolean;
   /** The profile picked must answer "How should titles appear?" (ACCT-PROF-03, `useTitleLanguageQuestion`). */
   titleLanguageQuestion?: boolean;
+  /** The profile picked has "Your profile" pending (UX-SETUP-10, `useProfileSetupQuestion`). */
+  profileSetupQuestion?: boolean;
+  /** "Choose my avatar" opened the feature's setup from its window (UX-UPDATE-01, `useUpdateFeatures().settingUp`). */
+  updateSetUp?: boolean;
+  /** The profile picked has a "New in this update" window to see (UX-UPDATE-01, `useUpdateFeatures().current`). */
+  updateWindow?: boolean;
 }): NavigatorScreen => {
   if (input.updateRequired) return "contract-error";
   if (input.authLoading) return "loading";
@@ -77,12 +91,15 @@ export const resolveNavigatorScreen = (input: {
   // Badger phone: the title language, notifications and error reports, once the key is in and the library open
   // (UX-SETUP-03); the title language there is a numbered step of its own.
   if (setupOpen) return "setup";
-  // ACCT-PROF-03: outside the phone's first setup (a profile created later, the TV), its own screen without a step
-  // count, right after the profile is picked.
+  // UX-SETUP-10, ACCT-PROF-03: outside the phone's first setup (a profile created later, the TV), each on its own screen
+  // right after the profile is picked: "Your profile" first, then the title question.
+  if (input.profileSetupQuestion || input.updateSetUp) return "profile-setup";
   if (input.titleLanguageQuestion) return "title-language";
   // Last gate before the app: after the key step and once the library is ready, so the question never races the
   // key check (needsKey and core readiness are not known yet right after sign-in). Never in a build that cannot send
   // reports (REL-LOG-06: a build with no reporting address, issue #2570).
   if (!input.errorReportsAnswered && errorReportsOffered()) return "onboarding-reports";
+  // UX-UPDATE-01: an older profile's windows, one after another, over the app once every question is behind it.
+  if (input.updateWindow) return "whats-new";
   return "main";
 };

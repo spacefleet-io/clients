@@ -1,7 +1,14 @@
 import * as React from "react";
 import { Check } from "lucide-react";
 import type { SubtitleCredit } from "@space/shared/api";
-import { fillSubtitleFetchCopy, type SubtitleFetchCopy, type SubtitleFetchEntry, type SubtitleFetchExistingTrack } from "@space/shared/subtitleFetch";
+import {
+  fillSubtitleFetchCopy,
+  subtitleTitleMatchLabel,
+  type SubtitleFetchCopy,
+  type SubtitleFetchEntry,
+  type SubtitleFetchExistingTrack,
+  type SubtitleTitleMatch,
+} from "@space/shared/subtitleFetch";
 import {
   subtitleFetchEntryPickable,
   subtitleFetchProgressLine,
@@ -11,6 +18,7 @@ import {
 } from "@space/shared/subtitleFetchFlow";
 
 import { Button } from "../button";
+import { Input } from "../input";
 import { Spinner } from "../spinner";
 import { cn } from "../utils";
 import type { PlayerChromeMenuItem } from "./PlayerChrome";
@@ -35,8 +43,16 @@ export type SubtitleFetchFlowProps = {
   existingTracks: readonly SubtitleFetchExistingTrack[];
   /** The device has no connection: nothing is searched (PLAY-SUBGET-12). */
   offline?: boolean;
-  /** Every subtitle of this movie or episode, through the metadata service (PLAY-SUBGET-03). Rejects when unavailable. */
-  search: () => Promise<SubtitleFetchSearchResult>;
+  /**
+   * Every subtitle of this movie or episode, through the metadata service (PLAY-SUBGET-03). Rejects when unavailable.
+   * `match` is the film or show the user picked on the title step (`findTitle`).
+   */
+  search: (match?: SubtitleTitleMatch) => Promise<SubtitleFetchSearchResult>;
+  /**
+   * The media has no catalog id (PLAY-SUBGET-24, `subtitleFetchNeedsTitle`): the flow starts on the title step, looking
+   * up `query` with `find` (the metadata service's anonymous title lookup); the user picks the film or show.
+   */
+  findTitle?: { query: string; find: (query: string) => Promise<SubtitleTitleMatch[]> };
   /** Downloads `entry.best`, encrypts and stores it as `entry.trackName`, and remembers it (PLAY-SUBGET-19). */
   store: (entry: SubtitleFetchEntry, report: (stage: SubtitleFetchStage) => void, signal: AbortSignal) => Promise<void>;
   /** The subtitle was stored and the "added" message shown. */
@@ -50,8 +66,11 @@ export type SubtitleFetchFlowProps = {
 
 /** The steps live in `useSubtitleFetchFlow` (`@space/shared/subtitleFetchFlow`), shared with the phone's sheet. */
 export function SubtitleFetchFlow({ className, onClose, autoCloseAfterAddedMs, ...options }: SubtitleFetchFlowProps) {
-  const { view: state, copy, pick, done, credit } = useSubtitleFetchFlow({ ...options, onClose, autoCloseAfterAddedMs });
+  const { view: state, copy, pick, findTitle, pickTitle, done, credit } = useSubtitleFetchFlow({ ...options, onClose, autoCloseAfterAddedMs });
   const offline = state.step === "offline";
+  // The title last looked up, so "Search another title" after a pick that found nothing starts from it.
+  const lastQuery = React.useRef(options.findTitle?.query ?? "");
+  if (state.step === "title") lastQuery.current = state.query;
 
   const back = (
     <Button variant="outline" onClick={onClose} data-testid="subtitle-fetch-back">
@@ -76,13 +95,22 @@ export function SubtitleFetchFlow({ className, onClose, autoCloseAfterAddedMs, .
         <span>{copy.looking}</span>
       </div>
     );
+  } else if (state.step === "title") {
+    body = <SubtitleTitleStep key={state.query} copy={copy} query={state.query} matches={state.matches} onFind={findTitle} onPick={pickTitle} back={back} />;
   } else if (state.step === "none" || state.step === "unavailable") {
     body = (
       <>
         <p className="text-sm" data-testid={`subtitle-fetch-${state.step}`}>
           {state.step === "none" ? copy.none : copy.unavailable}
         </p>
-        <div className="flex justify-end">{back}</div>
+        <div className="flex justify-end gap-2">
+          {state.step === "none" && options.findTitle ? (
+            <Button variant="outline" onClick={() => findTitle(lastQuery.current)} data-testid="subtitle-fetch-other-title">
+              {copy.otherTitle}
+            </Button>
+          ) : null}
+          {back}
+        </div>
       </>
     );
   } else if (state.step === "list" || state.step === "failed") {
@@ -172,23 +200,91 @@ export function SubtitleFetchCredit({ credit }: { credit: SubtitleCredit }) {
   );
 }
 
+/**
+ * The title step (PLAY-SUBGET-24): the title the app shows, in a field the user can change, then the films or shows
+ * the metadata service found for it; picking one searches its subtitles. Only the typed title leaves the device.
+ */
+function SubtitleTitleStep({
+  copy,
+  query,
+  matches,
+  onFind,
+  onPick,
+  back,
+}: {
+  copy: SubtitleFetchCopy;
+  query: string;
+  matches: SubtitleTitleMatch[] | null;
+  onFind: (query: string) => void;
+  onPick: (match: SubtitleTitleMatch) => void;
+  back: React.ReactNode;
+}) {
+  const [typed, setTyped] = React.useState(query);
+  return (
+    <div className="flex flex-col gap-3" data-testid="subtitle-fetch-title">
+      <p className="text-sm text-muted-foreground">{copy.titlePrompt}</p>
+      <form
+        className="flex gap-2"
+        onSubmit={(event) => {
+          event.preventDefault();
+          onFind(typed);
+        }}
+      >
+        <Input aria-label={copy.titleField} placeholder={copy.titleField} value={typed} onChange={(event) => setTyped(event.target.value)} data-testid="subtitle-fetch-title-field" />
+        <Button type="submit" disabled={matches === null || !typed.trim()} data-testid="subtitle-fetch-title-search">
+          {copy.titleSearch}
+        </Button>
+      </form>
+      {matches === null ? (
+        <div className="flex items-center gap-3 py-4" data-testid="subtitle-fetch-title-finding">
+          <Spinner size="lg" aria-label={fillSubtitleFetchCopy(copy.findingTitle, { title: query })} />
+          <span>{fillSubtitleFetchCopy(copy.findingTitle, { title: query })}</span>
+        </div>
+      ) : matches.length === 0 ? (
+        <p className="text-sm" data-testid="subtitle-fetch-title-none">
+          {fillSubtitleFetchCopy(copy.noTitle, { title: query })}
+        </p>
+      ) : (
+        <ul className="flex max-h-[40vh] flex-col gap-1 overflow-y-auto" data-testid="subtitle-fetch-title-matches">
+          {matches.map((match) => (
+            <li key={match.catalogId}>
+              <button
+                type="button"
+                onClick={() => onPick(match)}
+                data-testid="subtitle-fetch-title-match"
+                data-catalog-id={match.catalogId}
+                className="flex w-full rounded-md px-3 py-2 text-left font-medium hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                {subtitleTitleMatchLabel(match)}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      <div className="flex justify-end">{back}</div>
+    </div>
+  );
+}
+
 /** The ids of the subtitle menu's command rows. */
 export const PLAYER_SUBTITLE_GET_MORE = "get-more";
 export const PLAYER_SUBTITLE_TRY_ANOTHER = "try-another";
+export const PLAYER_SUBTITLE_ADD_FILE = "add-file";
 
 /**
- * The subtitle menu's last rows (PLAY-SUBGET-02, -07): "Try another version" when the subtitle on is a fetched one,
- * then "Get more subtitles…", unavailable offline with the reason under it.
+ * The subtitle menu's last rows (PLAY-SUBGET-02, -07, -23): "Try another version" when the subtitle on is a fetched
+ * one, then "Get more subtitles…", then "Add a subtitle file…"; unavailable offline with the reason under them.
  */
 export const playerSubtitleMenuActions = (
   copy: SubtitleFetchCopy,
-  { canGet, online, selectedFetched }: { canGet: boolean; online: boolean; selectedFetched: boolean }
+  { canGet, canAddFile, online, selectedFetched }: { canGet: boolean; canAddFile: boolean; online: boolean; selectedFetched: boolean }
 ): PlayerChromeMenuItem[] => {
-  if (!canGet) return [];
   const offline = online ? undefined : copy.offline;
   return [
-    ...(selectedFetched ? [{ id: PLAYER_SUBTITLE_TRY_ANOTHER, label: copy.tryAnother, selected: false, action: true, disabled: !online, detail: offline }] : []),
-    { id: PLAYER_SUBTITLE_GET_MORE, label: copy.getMore, selected: false, action: true, disabled: !online, detail: offline },
+    ...(canGet && selectedFetched ? [{ id: PLAYER_SUBTITLE_TRY_ANOTHER, label: copy.tryAnother, selected: false, action: true, disabled: !online, detail: offline }] : []),
+    ...(canGet ? [{ id: PLAYER_SUBTITLE_GET_MORE, label: copy.getMore, selected: false, action: true, disabled: !online, detail: offline }] : []),
+    // Storing the file needs the vault, so it waits for a connection like Get more (PLAY-SUBGET-12, -23).
+    ...(canAddFile ? [{ id: PLAYER_SUBTITLE_ADD_FILE, label: copy.addFile, selected: false, action: true, disabled: !online, detail: offline }] : []),
   ];
 };
 

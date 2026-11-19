@@ -6,12 +6,15 @@
  * @req PAR-NAV-04[parrot]
  * @req UX-WAIT-02[parrot]
  * @req PAR-EMPTY-01[parrot]
+ * @req UX-WAIT-04[parrot]
  * @why The phone opens on Home (PAR-NAV-02) and its Home is the desktop's (PAR-HOME-01): "Jump back in" on the album
  *   last played on this phone with "artist · year · N songs", Resume and Shuffle and the wave; "Recently played"
  *   newest first; "Your artists" most played first; each "See all" opening the library's album or artist list; and,
  *   before anything is played, "Start listening" with Play over the library's albums. An empty or missing library shows
  *   the shared empty-library screen (PAR-EMPTY-01). Screens are called as functions against a mocked React Native,
  *   with translation keys standing for the texts. Home has no page title: the tab bar names the page (PAR-NAV-04).
+ *   Chris, 2026-11-18: the empty library showed before the library had loaded; it waits for the album list of the
+ *   open library, and until then Home shows the app's loading screen, "Loading library…" (UX-WAIT-04).
  */
 import React from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -22,6 +25,8 @@ const state = vi.hoisted(() => ({
   history: { version: 1, albums: [], artistPlays: {} } as ListeningHistory,
   played: [] as unknown[],
   libraryStatus: "ready" as string,
+  /** Whether the query answered for the library version open now (the real hook's `answered`). */
+  answered: true,
   /** The native player's state Home polls; null = nothing queued. */
   player: null as null | Record<string, unknown>,
   toggles: [] as string[],
@@ -51,7 +56,7 @@ vi.mock("lucide-react-native", () =>
 );
 vi.mock("@react-navigation/native", () => ({ useNavigation: () => ({ navigate: () => undefined }), useIsFocused: () => true }));
 vi.mock("react-native-safe-area-context", () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) }));
-vi.mock("@space/mobile-shell/components", () => ({ SkyCover: "SkyCover", useSkyScroll: () => ({}), MobileTabPager: "MobileTabPager", MobileFounderNoticeHost: "MobileFounderNoticeHost" }));
+vi.mock("@space/mobile-shell/components", () => ({ SkyCover: "SkyCover", useSkyScroll: () => ({}), MobileTabPager: "MobileTabPager", MobileFounderNoticeHost: "MobileFounderNoticeHost", MobileLibraryLoading: "MobileLibraryLoading" }));
 vi.mock("../src/screens/EmptyLibrary", () => ({ EmptyLibrary: "EmptyLibrary" }));
 vi.mock("@space/mobile-shell/render-boundary", () => ({ guardRenderItem: (_name: string, render: unknown) => render }));
 vi.mock("@space/mobile-shell/i18n", () => ({
@@ -70,9 +75,8 @@ vi.mock("../src/screens/PlaylistsView", () => ({ PlaylistsView: "PlaylistsView" 
 vi.mock("../src/screens/SettingsScreen", () => ({ SettingsScreen: "SettingsScreen" }));
 vi.mock("../src/screens/NowPlayingBar", () => ({ NowPlayingBar: "NowPlayingBar" }));
 vi.mock("../src/state/session", () => ({ useSession: () => ({ library: { status: state.libraryStatus, error: null, version: 1 } }) }));
-vi.mock("@space/mobile-shell/mascot-loader", () => ({ MobileMascotLoader: "MobileMascotLoader" }));
 vi.mock("../src/brand", () => ({ PARROT_MASCOT: 9 }));
-vi.mock("../src/state/useQuery", () => ({ useQuery: () => ({ data: state.data, error: null, loading: false }) }));
+vi.mock("../src/state/useQuery", () => ({ useQuery: () => ({ data: state.data, error: null, loading: !state.answered, answered: state.answered }) }));
 vi.mock("../src/state/usePlay", () => ({
   usePlay: () => ({ play: async (...args: unknown[]) => void state.played.push(args), starting: null, error: null }),
 }));
@@ -253,16 +257,29 @@ describe("the phone's Home", () => {
     expect(missing.type).toBe("EmptyLibrary");
   });
 
-  it("@req UX-WAIT-02 while the library opens: the nodding parrot at the top, with no title over it and no spinner", () => {
+  it("@req UX-WAIT-04 while the library opens: the app's loading screen with \"Loading library…\", no spinner, no title", () => {
     state.libraryStatus = "loading";
     const home = HomeScreen({ onSeeAll: () => undefined }) as unknown as Element;
     state.libraryStatus = "ready";
-    const mascot = all(home, (el) => el.type === "MobileMascotLoader");
-    log("loading", { mascot: mascot.map((el) => el.props), spinners: all(home, (el) => el.type === "ActivityIndicator").length });
-    expect(mascot).toHaveLength(1);
-    expect(mascot[0]!.props).toMatchObject({ app: "parrot", source: 9, size: 120 });
+    log("loading", { type: home.type, props: home.props, spinners: all(home, (el) => el.type === "ActivityIndicator").length });
+    expect(home.type).toBe("MobileLibraryLoading");
+    expect(home.props).toMatchObject({ app: "parrot", source: 9, label: "parrot.library.loading" });
     expect(all(home, (el) => el.type === "ActivityIndicator")).toHaveLength(0);
     expect(all(home, (el) => el.props?.accessibilityRole === "header")).toHaveLength(0);
-    expect([home.props.children].flat().filter(Boolean).map((child) => (child as Element).type)).toEqual(["View"]);
+  });
+
+  it("@req UX-WAIT-04 opened but its albums not read yet: the loading screen, never the empty library", () => {
+    state.answered = false;
+    state.data = null;
+    const unread = HomeScreen({ onSeeAll: () => undefined }) as unknown as Element;
+    // The answer of the library version before (a new version just opened): not a verdict on this one either.
+    state.data = { albums: [], artists: [], songs: [] };
+    const stale = HomeScreen({ onSeeAll: () => undefined }) as unknown as Element;
+    state.answered = true;
+    const read = HomeScreen({ onSeeAll: () => undefined }) as unknown as Element;
+    log("unanswered", { unread: unread.type, stale: stale.type, read: read.type });
+    expect(unread.type).toBe("MobileLibraryLoading");
+    expect(stale.type).toBe("MobileLibraryLoading");
+    expect(read.type).toBe("EmptyLibrary");
   });
 });

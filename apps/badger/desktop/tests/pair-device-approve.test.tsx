@@ -225,9 +225,11 @@ describe("PairDeviceDialog", () => {
   });
 
   it("@req ACCT-PAIR-02 rejects a malformed code locally and an unknown or used one from the API", async () => {
+    // ACCT-PAIR-01: the code field keeps only a canonical code, so a short one never reaches the API: Continue stays off.
     await enterCode("hello");
     expect(deps.lookup).not.toHaveBeenCalled();
-    expect(text()).toContain(en["errors.invalid_code"]);
+    expect(button(en["code.submit"])?.disabled).toBe(true);
+    expect(byTestId("pair-approve-confirm-step")).toBeNull();
 
     await enterCode("ZZZZ-ZZZZ");
     expect(text()).toContain(en["errors.not_found"]);

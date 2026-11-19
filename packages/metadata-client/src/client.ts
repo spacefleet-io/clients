@@ -24,17 +24,21 @@ import type {
   TitleType,
   Trailer,
 } from "@space/shared/api";
+import type { TicketShortage } from "./reserve";
 import { parseRetryAfterSeconds, type FetchLike, type FetchResponse } from "./types";
 
 /**
  * The reserve holds no ticket and no refill is running that could bring one (or the one running ended without
  * tickets). The client never starts a refill (META-ANON-02): callers show "unavailable" and look up again when the
- * reserve reports new tickets (`TicketReserve.onTickets`).
+ * reserve reports new tickets (`TicketReserve.onTickets`). `shortage` says why the last refill failed when the reserve
+ * knows (META-ANON-15): `rate_limited` with `retryAfterSeconds` is the account's hourly ticket ceiling (META-PUB-02).
  */
 export class NoTicketError extends Error {
-  constructor() {
-    super("no anonymous ticket available");
+  readonly shortage: TicketShortage | null;
+  constructor(shortage: TicketShortage | null = null) {
+    super(shortage ? `no anonymous ticket available (last refill: ${shortage.status})` : "no anonymous ticket available");
     this.name = "NoTicketError";
+    this.shortage = shortage;
   }
 }
 
@@ -91,6 +95,8 @@ export interface TicketSource {
   takeWhenReady?(): Promise<string | null>;
   /** Puts a ticket that was not spent back (META-ANON-05). Optional: without it such a ticket is simply lost. Must not reject. */
   put?(ticket: string): Promise<void>;
+  /** Why the last refill failed (META-ANON-15), carried by the `NoTicketError` of an empty reserve. Optional. */
+  shortage?(): TicketShortage | null;
 }
 
 export interface MetadataClientConfig {
@@ -228,7 +234,7 @@ export function createMetadataClient(config: MetadataClientConfig): MetadataClie
       // The ticket is already gone from the store when it resolves: a crash from here on can never reuse it. An empty
       // reserve right after sign-in waits for the running refill's first batch rather than failing the lookup.
       const ticket = config.tickets === false ? null : await (config.reserve.takeWhenReady?.() ?? config.reserve.take());
-      if (ticket === null && config.tickets !== false) throw new NoTicketError();
+      if (ticket === null && config.tickets !== false) throw new NoTicketError(config.reserve.shortage?.() ?? null);
       const response = await config.fetch(`${config.metadataUrl()}/lookup`, {
         method: "POST",
         headers: {

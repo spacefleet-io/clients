@@ -18,8 +18,7 @@ OFFLINE LUISTEREN
 
 ALLEEN JOUW MUZIEK
 • Geen reclame.
-• Je bibliotheek en de muziek die je toevoegt worden op je apparaat versleuteld voordat ze onze servers bereiken.
-• Voor hoezen en songteksten vraagt Parrot onze zoekdienst om informatie met een anoniem ticket voor eenmalig gebruik in plaats van je account: wij kunnen niet zien wie het vraagt. De dienst ziet wat er wordt opgezocht en je internetadres, dat we niet bewaren.
+• Alleen jij kunt je bibliotheek zien. Wij ook niet.
 • Parrot levert geen muziek: je luistert naar de muziek die je zelf toevoegt.
 
 GRATIS BEGINNEN

@@ -170,4 +170,46 @@ describe("SubtitleFetchFlow", () => {
     expect(screen.getByTestId("subtitle-fetch-failed").textContent).toContain("Couldn't add Spanish");
     expect(screen.getAllByTestId("subtitle-fetch-entry")).toHaveLength(1);
   });
+
+  // @req PLAY-SUBGET-24[badger-desktop,badger-web-player]
+  it("without a catalog id starts by naming the film: looks the title up, lists the matches, picking one searches it", async () => {
+    const found = Promise.withResolvers<{ catalogId: number; title: string; year: string | null }[]>();
+    const find = vi.fn((query: string) => (query === "Sandglass" ? found.promise : Promise.resolve([{ catalogId: 7, title: "Sandglass II", year: "2024" }])));
+    const search = vi.fn(async (_match?: { catalogId: number; title: string; year: string | null }) => ({ reachable: true, subtitles: [candidate("es")] }));
+    renderFlow({ findTitle: { query: "Sandglass", find }, search });
+    expect(screen.getByTestId("subtitle-fetch-title-finding").textContent).toContain("Sandglass");
+    expect((screen.getByTestId("subtitle-fetch-title-field") as HTMLInputElement).value).toBe("Sandglass");
+    await act(async () => found.resolve([{ catalogId: 42, title: "Sandglass", year: "2021" }]));
+    expect(screen.getAllByTestId("subtitle-fetch-title-match").map((row) => row.textContent)).toEqual(["Sandglass (2021)"]);
+    expect(search).not.toHaveBeenCalled();
+
+    fireEvent.change(screen.getByTestId("subtitle-fetch-title-field"), { target: { value: "Sandglass II" } });
+    await act(async () => fireEvent.click(screen.getByTestId("subtitle-fetch-title-search")));
+    expect(find).toHaveBeenLastCalledWith("Sandglass II");
+    const [match] = await screen.findAllByTestId("subtitle-fetch-title-match");
+    expect(match!.textContent).toBe("Sandglass II (2024)");
+
+    await act(async () => fireEvent.click(match!));
+    expect(search).toHaveBeenCalledWith({ catalogId: 7, title: "Sandglass II", year: "2024" });
+    expect((await screen.findAllByTestId("subtitle-fetch-entry")).map((entry) => entry.textContent)).toEqual(["Spanish"]);
+  });
+
+  // @req PLAY-SUBGET-24[badger-desktop,badger-web-player]
+  it("says nothing was found for the title and keeps the field to try another", async () => {
+    renderFlow({ findTitle: { query: "Nowhere", find: async () => [] } });
+    expect((await screen.findByTestId("subtitle-fetch-title-none")).textContent).toContain("Nowhere");
+    expect(screen.getByTestId("subtitle-fetch-title-field")).toBeTruthy();
+  });
+
+  // @req PLAY-SUBGET-24[badger-desktop,badger-web-player]
+  it("offers another title when the picked one has no subtitles", async () => {
+    const find = vi.fn(async () => [{ catalogId: 42, title: "Sandglass", year: "2021" }]);
+    renderFlow({ findTitle: { query: "Sandglass", find } });
+    const match = await screen.findByTestId("subtitle-fetch-title-match");
+    await act(async () => fireEvent.click(match));
+    await screen.findByTestId("subtitle-fetch-none");
+    await act(async () => fireEvent.click(screen.getByTestId("subtitle-fetch-other-title")));
+    expect(find).toHaveBeenCalledTimes(2);
+    expect(await screen.findByTestId("subtitle-fetch-title-match")).toBeTruthy();
+  });
 });

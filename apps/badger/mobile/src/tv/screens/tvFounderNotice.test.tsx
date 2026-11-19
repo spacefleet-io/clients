@@ -173,7 +173,7 @@ describe("the TV's founder notice (TV-FOUNDER-NOTICE-001)", () => {
     state.language = "fr";
     const tree = await render();
     log("fr", textOf(banner(tree)[0]));
-    expect(textOf(banner(tree)[0])).toBe("🎫 Ticket fondateur reconnu.|Vos −30 % à vie s'appliquent à votre offre.|J'ai compris");
+    expect(textOf(banner(tree)[0])).toBe("🎫 Remise fondateur reconnue.|Vos −30 % à vie s'appliquent à votre offre.|J'ai compris");
   });
 
   it("shows nothing when the notice was already seen, or for a non-founder", async () => {

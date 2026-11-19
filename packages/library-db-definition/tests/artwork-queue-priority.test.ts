@@ -29,12 +29,16 @@ const memoryStore = (titles: Record<string, number>): ArtworkCopyStore & { value
         .map(([id, path]): ArtworkSlot => ({ target: "episodeStill", id, path })),
     applyArtworkCopies: (_mediaId, copies: ArtworkCopy[]) => {
       let applied = 0;
+      const unapplied: ArtworkCopy[] = [];
       for (const copy of copies) {
-        if (values.get(copy.id) !== copy.path) continue;
+        if (values.get(copy.id) !== copy.path) {
+          unapplied.push(copy);
+          continue;
+        }
         values.set(copy.id, copy.value ?? "");
         applied += 1;
       }
-      return { applied, skipped: copies.length - applied };
+      return { applied, skipped: unapplied.length, unapplied };
     },
   };
 };

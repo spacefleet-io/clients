@@ -117,10 +117,10 @@ describe("MobileFounderNotice", () => {
     const [toast] = toastIn(renderer!);
     log("toast props:", JSON.stringify({ ...toast.props, onOpen: undefined, onClose: undefined }));
     expect(toast.props.testID).toBe("founder-notice");
-    expect(toast.props.title).toBe("🎫 Ticket fondateur reconnu.");
+    expect(toast.props.title).toBe("🎫 Remise fondateur reconnue.");
     expect(toast.props.hint).toBe("Vos −30 % à vie s'appliquent à votre offre.");
     expect(toast.props.closeLabel).toBe("J'ai compris");
-    expect(toast.props.accessibilityLabel).toBe("🎫 Ticket fondateur reconnu. Vos −30 % à vie s'appliquent à votre offre.");
+    expect(toast.props.accessibilityLabel).toBe("🎫 Remise fondateur reconnue. Vos −30 % à vie s'appliquent à votre offre.");
     toast.props.onOpen();
     toast.props.onClose();
     expect(onOpen).toHaveBeenCalledTimes(1);

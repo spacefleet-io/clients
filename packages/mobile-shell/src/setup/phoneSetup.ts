@@ -1,7 +1,8 @@
 /**
  * The phone setup walkthrough, the same on both phone apps (UX-SETUP-08, UX-SETUP-02, UX-SETUP-03, UX-SETUP-06 phone,
  * UX-SETUP-07): the language first (step 0, before the sign-in), the sign-in (not counted), then the setup steps
- * numbered from 1: the library key only after a regular sign-in, "How should titles appear?" (Badger only, while the
+ * numbered from 1: the library key only after a regular sign-in, "Your profile" (while the profile picked never set
+ * up its name and avatar, UX-SETUP-10: `askProfileSetupInSetup`), "How should titles appear?" (Badger only, while the
  * profile picked never answered it, ACCT-PROF-03: `askTitleLanguageInSetup`), notifications, send error reports (only
  * in a build that can send them, REL-LOG-06: `errorReportsOffered`). One question per screen with Back and Next; the
  * numbered ones say "step N of M".
@@ -12,7 +13,7 @@
 import { setupStepNumber, setupStepsToShow, type SetupStepSpec } from "@space/shared/setupFlow";
 import { errorReportsOffered } from "../errorReportsOffered";
 
-export type PhoneSetupStep = "language" | "signIn" | "libraryKey" | "titleLanguage" | "notifications" | "errorReports";
+export type PhoneSetupStep = "language" | "signIn" | "libraryKey" | "profileSetup" | "titleLanguage" | "notifications" | "errorReports";
 
 /** What is saved on this phone after every answer, so a setup left partway reopens at the step left (UX-SETUP-07). */
 export type PhoneSetupProgress = {
@@ -29,6 +30,11 @@ export type PhoneSetupProgress = {
    * the steps after it do not renumber once the profile has its answer. Optional: older saved progress has none.
    */
   titleLanguageAnswered?: boolean;
+  /**
+   * "Your profile" was answered in this setup (UX-SETUP-10): the step keeps its place in the count once the profile
+   * is set up, like `titleLanguageAnswered`. Optional: older saved progress has none.
+   */
+  profileSetupAnswered?: boolean;
 };
 
 export const INITIAL_PHONE_SETUP: PhoneSetupProgress = {
@@ -50,6 +56,8 @@ const BEFORE_STEPS: readonly PhoneSetupStep[] = ["language", "signIn"];
  */
 const PHONE_SETUP_STEPS: ReadonlyArray<SetupStepSpec<PhoneSetupStep>> = [
   { step: "libraryKey", scope: "device" },
+  // Kept on the server per profile (UX-SETUP-10): skipped once the profile picked set up its name and avatar.
+  { step: "profileSetup", scope: "account" },
   // Kept in the profile's settings (ACCT-PROF-03): skipped once the profile picked has an answer, from any client.
   { step: "titleLanguage", scope: "account" },
   { step: "notifications", scope: "device" },
@@ -68,7 +76,19 @@ export const askTitleLanguageInSetup = (asked: () => boolean): void => {
   titleLanguageAsked = asked;
 };
 
-type CountedProgress = Pick<PhoneSetupProgress, "pairedKey" | "titleLanguageAnswered">;
+/** Never asked unless the app asks it; the app's check runs on every count. */
+let profileSetupAsked: () => boolean = () => false;
+
+/**
+ * Both phone apps ask "Your profile" right after the key and "Who's watching?" (UX-SETUP-10), before the title
+ * question, while `asked()` holds (no profile picked yet, or the one picked still has the setup pending), or once
+ * answered in this setup (`profileSetupAnswered`).
+ */
+export const askProfileSetupInSetup = (asked: () => boolean): void => {
+  profileSetupAsked = asked;
+};
+
+type CountedProgress = Pick<PhoneSetupProgress, "pairedKey" | "titleLanguageAnswered" | "profileSetupAnswered">;
 
 /**
  * The numbered steps of this phone's setup, in order; the key only after a regular sign-in, the title language only
@@ -80,7 +100,10 @@ export const phoneSetupNumberedSteps = (progress: CountedProgress): PhoneSetupSt
     PHONE_SETUP_STEPS.filter(
       (spec) => !(progress.pairedKey && spec.step === "libraryKey") && !(spec.step === "errorReports" && !errorReportsOffered()),
     ),
-    progress.titleLanguageAnswered || titleLanguageAsked() ? [] : ["titleLanguage"],
+    [
+      ...(progress.profileSetupAnswered || profileSetupAsked() ? [] : (["profileSetup"] as const)),
+      ...(progress.titleLanguageAnswered || titleLanguageAsked() ? [] : (["titleLanguage"] as const)),
+    ],
   );
 
 /** Every screen of this phone's setup, in order: the language, the sign-in, then the numbered steps. */
@@ -100,7 +123,8 @@ export type PhoneSetupAccount = { hasKey: boolean; signedIn: boolean };
 export const resolvePhoneSetupStep = (progress: PhoneSetupProgress, account: PhoneSetupAccount): PhoneSetupStep => {
   const steps = phoneSetupSteps(progress);
   const at = steps.indexOf(progress.step);
-  // The title question answered meanwhile (another client, or a profile that is never asked): the step after it.
+  // A question answered meanwhile (another client, or a profile that is never asked): the step after it.
+  if (at < 0 && progress.step === "profileSetup") return resolvePhoneSetupStep({ ...progress, step: "titleLanguage" }, account);
   if (at < 0 && progress.step === "titleLanguage") return resolvePhoneSetupStep({ ...progress, step: "notifications" }, account);
   if (at < 0) return "language";
   const signInAt = steps.indexOf("signIn");
@@ -167,7 +191,7 @@ type KeyValueStorage = {
   setItem: (key: string, value: string) => Promise<void>;
 };
 
-const STEPS: readonly PhoneSetupStep[] = ["language", "signIn", "libraryKey", "titleLanguage", "notifications", "errorReports"];
+const STEPS: readonly PhoneSetupStep[] = ["language", "signIn", "libraryKey", "profileSetup", "titleLanguage", "notifications", "errorReports"];
 
 /** Reads anything unreadable as "never started". */
 export const parsePhoneSetupProgress = (raw: string | null): PhoneSetupProgress => {
@@ -182,6 +206,7 @@ export const parsePhoneSetupProgress = (raw: string | null): PhoneSetupProgress 
       notifications: typeof value.notifications === "boolean" ? value.notifications : null,
       languageReconciled: value.languageReconciled === true,
       ...(value.titleLanguageAnswered === true ? { titleLanguageAnswered: true } : {}),
+      ...(value.profileSetupAnswered === true ? { profileSetupAnswered: true } : {}),
     };
   } catch {
     return INITIAL_PHONE_SETUP;

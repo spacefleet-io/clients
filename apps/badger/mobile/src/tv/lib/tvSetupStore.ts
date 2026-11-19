@@ -8,8 +8,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createPhoneSetupStore, INITIAL_PHONE_SETUP, type PhoneSetupProgress } from "@space/mobile-shell/setup";
 import { createLivePhoneSetup } from "@space/mobile-shell/setup-live";
 import { scopeLogger } from "@space/mobile-shell/logger";
-import { loadAppSettings } from "../../lib/appSettings";
-import { tvSetupForSession } from "./tvSetup";
+import { loadAppSettings, useAppSettings } from "../../lib/appSettings";
+import { tvProfileSetupPosition, tvSetupForSession, type TvSetupProgress } from "./tvSetup";
 
 const log = scopeLogger("tv.setup");
 
@@ -48,4 +48,23 @@ export const useTvSetup = (enabled: boolean, session: { signedIn: boolean; loadi
     void saveTvSetup(next);
   }, [enabled, progress, signedIn, loading]);
   return progress;
+};
+
+/**
+ * "Your profile" on this TV (UX-SETUP-10): "Step N of M" while the first setup is open ("Send error reports?" not
+ * answered yet), undefined (shown alone, no count) at any other time.
+ */
+export const useTvProfileSetupPosition = (): { current: number; total: number } | undefined => {
+  const progress: TvSetupProgress | null = useTvSetupProgress(true);
+  const [{ errorReportsDecided }] = useAppSettings();
+  if (!progress) return undefined;
+  return tvProfileSetupPosition(progress, !errorReportsDecided);
+};
+
+/** Keeps "Your profile" counted for the rest of this setup once its Next saved (UX-SETUP-10). */
+export const markTvProfileSetupAnswered = async (): Promise<void> => {
+  const progress = getTvSetup() ?? (await loadTvSetup());
+  if (progress.profileSetupAnswered) return;
+  log.info("profile_setup.answered", {});
+  await saveTvSetup({ ...progress, profileSetupAnswered: true });
 };

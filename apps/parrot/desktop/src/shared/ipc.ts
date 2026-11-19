@@ -10,6 +10,7 @@ import type { SignInProvider } from "@space/shared/api";
 import type { ResendVerificationFailure, SignUpFailure, VerifyEmailFailure } from "@space/shared/signUp";
 import type { ProfileAvatarId } from "@space/shared/profileAvatars";
 import type { CreditsProduct, SourceCredits } from "@space/metadata-client/credits";
+import type { ProfileFeatures } from "@space/shared/appFeatures";
 import type { ParrotImportEdit, ParrotImportScan, ParrotLibraryAlbum, ParrotLibraryArtist, ParrotLibraryTrack } from "@space/parrot-ingest";
 import type { KeepCopyChoice, KeptKind, KeptStatus, ParrotEditTarget, ParrotLyrics, ParrotManageTarget, ParrotPlaylist, ParrotPlaylistEdit } from "@space/parrot-core";
 import type { ParrotPhotoCredit } from "@space/parrot-library-db-definition";
@@ -38,11 +39,16 @@ export type ParrotLanguage = "en" | "fr" | "nl" | "de" | "es";
 export const PARROT_LANGUAGES: readonly ParrotLanguage[] = ["en", "fr", "nl", "de", "es"];
 
 /**
- * UX-SETUP-06, on a computer: the five setup screens, in order. Sign-in is not one of them: it is its own screen
- * before setup (Chris 2026-11-09).
+ * UX-SETUP-06, on a computer: the setup screens, in order. Sign-in is not one of them: it is its own screen before
+ * setup (Chris 2026-11-09). "Your profile" (UX-SETUP-10) shows only while the main profile still owes it; otherwise
+ * setup skips it and does not count it.
  */
-export const PARROT_SETUP_STEPS = ["language", "libraryKey", "folders", "startAtLogin", "errorReports"] as const;
+export const PARROT_SETUP_STEPS = ["language", "libraryKey", "profile", "folders", "startAtLogin", "errorReports"] as const;
 export type ParrotSetupStep = (typeof PARROT_SETUP_STEPS)[number];
+
+/** The screens of this setup run: "Your profile" only while it is counted (the main profile owes it, or answered it here). */
+export const parrotSetupSteps = (withProfile: boolean): readonly ParrotSetupStep[] =>
+  withProfile ? PARROT_SETUP_STEPS : PARROT_SETUP_STEPS.filter((step) => step !== "profile");
 
 /** Setup answers, saved on every Next so a quit resumes at the same screen with the same answers (UX-SETUP-07). */
 export type ParrotSetupState = {
@@ -296,6 +302,8 @@ export type ParrotBridge = {
   markFounderNoticeSeen(): Promise<boolean>;
   /** SF_FIRST_TOUR=off: test harnesses silence the first-open tour and the player tip (PAR-TOUR-01..03). */
   readonly firstTourOff: boolean;
+  /** SF_PROFILE_SETUP=off: test harnesses silence "Your profile" and "New in this update" (UX-SETUP-10, UX-UPDATE-01). */
+  readonly profileSetupOff?: boolean;
   /**
    * ACCT-PAIR-01/05: "Sign in with your phone". Main runs the shared new-device client (keypair, poll secret, token and
    * library key stay in main); an approved poll signs in, checks the key and returns only the check.
@@ -468,9 +476,9 @@ export type ParrotBridge = {
   onKept(listener: (status: KeptStatus) => void): () => void;
   /** The account's profiles (`GET/POST /profiles`, `PATCH/DELETE /profiles/{id}`), asked by main with the token. */
   listProfiles(): Promise<ParrotProfilesResult<ProfilesResponse>>;
-  createProfile(body: { name: string; avatarId?: ProfileAvatarId }): Promise<ParrotProfilesResult<ParrotProfileAnswer>>;
+  createProfile(body: { name: string; avatarId?: ProfileAvatarId; features?: ProfileFeatures }): Promise<ParrotProfilesResult<ParrotProfileAnswer>>;
   /** New name and/or avatar (ACCT-PROF-05). */
-  updateProfile(id: string, body: { name?: string; avatarId?: ProfileAvatarId }): Promise<ParrotProfilesResult<ParrotProfileAnswer>>;
+  updateProfile(id: string, body: { name?: string; avatarId?: ProfileAvatarId; features?: ProfileFeatures }): Promise<ParrotProfilesResult<ParrotProfileAnswer>>;
   deleteProfile(id: string): Promise<ParrotProfilesResult<ProfilesResponse>>;
 };
 

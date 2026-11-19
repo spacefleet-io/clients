@@ -1,9 +1,10 @@
 // Parrot's first setup on a phone (UX-SETUP-08, UX-SETUP-06), the same flow as Badger's phone: the language (step 0,
 // from a menu that scrolls), the sign-in (LoginScreen, not counted), then the library key only after a regular sign-in,
-// notifications with the phone's permission prompt, and error reports, off unless chosen. Every screen has Back and
-// Next and the numbered ones say "step N of M" (UX-SETUP-02); every answer is saved, so a setup left partway reopens at
-// the step left (UX-SETUP-07). The walkthrough and its screens are the shared mobile-shell ones (`PhoneSetupFlow`);
-// only Parrot's answers and its key screen are here.
+// "Your profile" (UX-SETUP-10, "Who's listening?" first when no profile is kept), notifications with the phone's
+// permission prompt, and error reports, off unless chosen. Every screen has Back and Next and the numbered ones say
+// "step N of M" (UX-SETUP-02); every answer is saved, so a setup left partway reopens at the step left (UX-SETUP-07).
+// The walkthrough and its screens are the shared mobile-shell ones (`PhoneSetupFlow`); only Parrot's answers, its key
+// screen and its profile step are here.
 import React, { useCallback } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { phoneSetupPosition, type PhoneSetupProgress } from "@space/mobile-shell/setup";
@@ -12,6 +13,7 @@ import { pickSignedInLanguage, reconcileAfterSignIn } from "../lib/accountLangua
 import { useSession } from "../state/session";
 import { getErrorReportsSetting, setErrorReports } from "../lib/errorReports";
 import { ParrotLibraryKeyStep } from "../screens/LibraryKeyScreen";
+import { ProfileSetupPhoneStep } from "./ProfileSetupQuestion";
 
 // The shared library key step (UX-KEY-01), numbered as a setup step; Back signs out (the step before is the sign-in).
 const LibraryKeyStep = ({ progress, advance, onLanguage }: PhoneSetupStepProps) => {
@@ -43,7 +45,7 @@ export const SetupFlow = ({ progress, save }: { progress: PhoneSetupProgress; sa
         onLanguage={(code) => pickSignedInLanguage(token, code)}
         notificationsBodyKey="parrot.setup.notificationsBody"
         errorReports={PARROT_ERROR_REPORTS}
-        screens={{ libraryKey: LibraryKeyStep }}
+        screens={{ libraryKey: LibraryKeyStep, profileSetup: ProfileSetupPhoneStep }}
       />
     </SafeAreaView>
   );

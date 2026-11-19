@@ -82,8 +82,20 @@ export const avatarIdForColour = (colour: number): ProfileAvatarId => COLOUR_AVA
 export const profileAvatarIdOf = (profile: { avatarId?: string | null; avatar: number }): ProfileAvatarId =>
   isProfileAvatarId(profile.avatarId) ? profile.avatarId : avatarIdForColour(profile.avatar);
 
-/** A new profile's avatar: the first one in pack order no profile of the account uses yet (the first when all are). */
+/** An add form's preselected avatar: the first one in pack order no profile of the account uses yet (the first when all are). */
 export const nextProfileAvatarId = (used: Iterable<ProfileAvatarId>): ProfileAvatarId => {
   const taken = new Set(used);
   return PROFILE_AVATAR_IDS.find((id) => !taken.has(id)) ?? PROFILE_AVATAR_IDS[0];
+};
+
+/**
+ * The avatar the API gives a profile created without one, the account's first profile included (ACCT-PROF-05): a
+ * random one no profile of the account uses yet, else a random one of the whole pack. `random` returns [0, 1) like
+ * `Math.random`, which it defaults to; tests pass their own.
+ */
+export const randomUnusedProfileAvatarId = (used: Iterable<ProfileAvatarId>, random: () => number = Math.random): ProfileAvatarId => {
+  const taken = new Set(used);
+  const free = PROFILE_AVATAR_IDS.filter((id) => !taken.has(id));
+  const pool: readonly ProfileAvatarId[] = free.length > 0 ? free : PROFILE_AVATAR_IDS;
+  return pool[Math.min(pool.length - 1, Math.floor(random() * pool.length))];
 };

@@ -53,6 +53,11 @@ export type DesktopArtworkCopyDeps = {
   ticketsLeft: () => Promise<number>;
   /** Called after a run that changed the library (refreshes the snapshot). */
   onApplied?: (result: ArtworkCopyResult) => void | Promise<void>;
+  /**
+   * Deletes stored pictures (`/storage/delete`). STOR-PLACE-10: a copy the library did not take (the title was deleted
+   * while it uploaded) is deleted again at once instead of counting against the user's storage.
+   */
+  discard?: (keys: string[]) => Promise<unknown>;
   /** The wait after a "slow down" (tests pass a fake clock); real timers otherwise. */
   sleep?: (ms: number) => Promise<void>;
 };
@@ -70,6 +75,7 @@ export const runDesktopArtworkCopy = async (
     // A background title stops between pictures for one the user just matched, refreshed or opened.
     ...(control ? { shouldYield: control.shouldYield } : {}),
     ...(deps.sleep ? { sleep: deps.sleep } : {}),
+    ...(deps.discard ? { discard: deps.discard } : {}),
   });
   log.info(result, result.yielded ? "artwork copy yielded" : "artwork copy");
   if (result.applied > 0) await deps.onApplied?.(result);

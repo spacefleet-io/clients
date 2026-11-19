@@ -16,6 +16,8 @@ const anim = vi.hoisted(() => ({
   springs: [] as { toValue: number; damping: number; stiffness: number; mass: number; useNativeDriver: boolean }[],
   set: [] as number[],
   width: 360,
+  // The tabs' measured spans (x and width from the bar's left edge): as if their onLayout already ran; none = not yet.
+  spans: {} as Record<string, { x: number; width: number }>,
 }));
 
 const log = (step: string, detail: unknown) => console.info(`[MOBILE-SHELL-TAB-BAR-001] ${step}`, JSON.stringify(detail));
@@ -25,7 +27,7 @@ vi.mock("react", async () => {
   const useRef = <T,>(initial: T) => ({ current: initial });
   const useEffect = (fn: () => void | (() => void)) => void fn();
   // The bar's measured width: as if onLayout already ran.
-  const useState = <T,>(initial: T) => [typeof initial === "number" ? anim.width : initial, () => undefined];
+  const useState = <T,>(initial: T) => [typeof initial === "number" ? anim.width : typeof initial === "object" ? anim.spans : initial, () => undefined];
   return { ...actual, default: { ...actual, useRef, useEffect, useState }, useRef, useEffect, useState };
 });
 vi.mock("react-native", () => {
@@ -117,6 +119,37 @@ describe("MobileTabBar on React Native Animated", () => {
       { toValue: 0.9, ...MOBILE_TAB_BAR_SPRINGS.press, useNativeDriver: true },
       { toValue: 1, ...MOBILE_TAB_BAR_SPRINGS.press, useNativeDriver: true },
     ]);
+  });
+
+  // Parrot's French phone cut "BIBLIOTHÈQUE" to "BIBLIOTHÈQ…" (op9, 2026-11-19), German "EINSTELLUNGEN" too. In both
+  // looks a tab is as wide as its label plus an equal share of the room left, so a long label takes room from a short
+  // one; the label keeps the phone's text size (UX-A11Y-05: no shrink-to-fit), and the dot centres on the measured tab.
+  // @req UX-PHONE-11[badger-mobile,parrot]
+  it("a tab is as wide as its label, never shrinks its text, and the dot centres on the measured tab", () => {
+    for (const look of ["classic", "badger"] as const) {
+      const tree = MobileTabBar({ tabs, activeTab: "library", onTabChange: () => undefined, look }) as unknown as Element;
+      const buttons = all(tree, (el) => typeof el.type === "function" && el.type !== Icon);
+      const rendered = (buttons[0].type as (props: unknown) => Element)(buttons[0].props);
+      const tabStyle = Object.assign({}, ...(rendered.props.style as object[]).flat());
+      const label = all(rendered, (el) => el.type === "Text")[0];
+      log("tab fit", { look, tabStyle, label: label.props, onLayout: typeof rendered.props.onLayout });
+      expect(tabStyle).toMatchObject({ flexGrow: 1, flexShrink: 1, flexBasis: "auto" });
+      expect(tabStyle).not.toHaveProperty("flex");
+      expect(typeof rendered.props.onLayout).toBe("function");
+      expect(label.props.numberOfLines).toBe(1);
+      expect(label.props).not.toHaveProperty("adjustsFontSizeToFit");
+      expect(label.props).not.toHaveProperty("minimumFontScale");
+    }
+    anim.set.length = 0;
+    anim.spans = { library: { x: 12, width: 100 }, settings: { x: 112, width: 236 } };
+    try {
+      MobileTabBar({ tabs, activeTab: "settings", onTabChange: () => undefined });
+    } finally {
+      anim.spans = {};
+    }
+    // The measured settings tab: 112 + 236 / 2 = 230, minus half the 6 dp dot.
+    log("dot on measured tab", anim.set);
+    expect(anim.set).toEqual([227]);
   });
 
   // @req UX-PHONE-06

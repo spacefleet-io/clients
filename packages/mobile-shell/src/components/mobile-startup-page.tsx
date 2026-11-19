@@ -20,10 +20,12 @@ type MobileStartupPageProps = {
   backgroundSource?: ImageSourcePropType;
   waterfallPosters?: string[];
   controls?: React.ReactNode;
+  /** Pinned under the scrolling form, above the keyboard: the sign-in's setup Back (`MobileSetupBackFooter`, UX-SETUP-08). */
+  footer?: React.ReactNode;
   children: React.ReactNode;
 };
 
-export const MobileStartupPage = ({ backgroundSource, waterfallPosters, controls, children }: MobileStartupPageProps) => {
+export const MobileStartupPage = ({ backgroundSource, waterfallPosters, controls, footer, children }: MobileStartupPageProps) => {
   const theme = useMobileShellTheme();
   const insets = useSafeAreaInsets();
   const [input] = useState(createUserInputSignal);
@@ -53,6 +55,7 @@ export const MobileStartupPage = ({ backgroundSource, waterfallPosters, controls
           <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" {...formScroll}>
             <SkyCover style={styles.formShell}>{children}</SkyCover>
           </ScrollView>
+          {footer}
         </KeyboardAvoidingForm>
       </SafeAreaView>
     </SkyCoversProvider>

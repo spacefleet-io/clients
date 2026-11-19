@@ -63,11 +63,14 @@ vi.mock("@space/ui", () => ({
     <div {...props}>{children}</div>
   ),
   DialogTitle: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
+  DialogClose: ({ children }: { children?: React.ReactNode }) => <button>{children}</button>,
+  useCloseLabel: () => "Close",
   toast: vi.fn(),
 }));
 
 vi.mock("lucide-react", () => ({
   Loader2: () => <div data-testid="loader" />,
+  X: () => <span />,
 }));
 
 vi.mock("@/lib/usePlaybackEngine", () => ({

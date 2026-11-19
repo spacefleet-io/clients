@@ -13,10 +13,15 @@ assert(select_path and scenario, "usage: sf_select_fetch_scenario.lua <sf-select
 local result = { scenario = scenario }
 local FRENCH = { id = 1, type = "sub", external = true, title = "French", lang = "fr", selected = true }
 
-local function boot(tracks, sid, label, version)
+local function boot(tracks, sid, label, version, add_file, off)
   M.load(select_path, { ["track-list"] = tracks, sid = sid, ["secondary-sid"] = false })
-  if label then
-    M.script_message("sf-labels-json", M.json.encode({ subtitlesOff = "Off", getMoreSubtitles = label, tryAnotherVersion = version }))
+  if label or add_file then
+    M.script_message("sf-labels-json", M.json.encode({
+      subtitlesOff = off or "Off",
+      getMoreSubtitles = label,
+      tryAnotherVersion = version,
+      addSubtitleFile = add_file,
+    }))
   end
 end
 
@@ -76,11 +81,63 @@ elseif scenario == "no-tracks" then
   if menu then menu.submit(#menu.items) end
   result.fetch = sent("sf-subtitle-fetch")
 elseif scenario == "no-tracks-no-label" then
+  -- Chris 2026-11-18: nothing to search (no catalog id) and no track; the button still opens the menu, Off alone.
   boot({}, false, nil)
   M.props["vo-configured"] = true
   local menu = open_menu()
   result.items = menu and menu.items or nil
   result.warned = #M.osd_messages
+  if menu then menu.submit(1) end
+  result.fetch = sent("sf-subtitle-fetch")
+  result.picks = sent("sf-track-picked")
+elseif scenario == "no-tracks-both-rows" then
+  -- PLAY-SUBGET-24/-23 (Chris 2026-11-18): no track, the menu offers Off, Get more, then Add a subtitle file.
+  boot({}, false, "Get more subtitles…", nil, "Add a subtitle file…")
+  M.props["vo-configured"] = true
+  local menu = open_menu()
+  result.items = menu and menu.items or nil
+  result.warned = #M.osd_messages
+  result.fetch_on_open = sent("sf-subtitle-fetch")
+elseif scenario == "no-tracks-both-rows-fr" then
+  boot({}, false, "Chercher d'autres sous-titres…", nil, "Ajouter un fichier de sous-titres…", "Désactivés")
+  M.props["vo-configured"] = true
+  local menu = open_menu()
+  result.items = menu and menu.items or nil
+elseif scenario == "add-file-row" then
+  -- PLAY-SUBGET-23: the last row asks the app for the file picker and changes no track.
+  boot({ FRENCH }, 1, "Get more subtitles…", "Try another version", "Add a subtitle file…")
+  local menu = open_menu()
+  result.items = menu.items
+  menu.submit(#menu.items)
+  result.fetch = sent("sf-subtitle-fetch")
+  result.picks = sent("sf-track-picked")
+  result.sid = M.props.sid
+elseif scenario == "add-file-alone" then
+  -- No catalog id and no title search possible: Add a subtitle file still shows, Get more does not.
+  boot({}, false, nil, nil, "Add a subtitle file…")
+  M.props["vo-configured"] = true
+  local menu = open_menu()
+  result.items = menu and menu.items or nil
+  if menu then menu.submit(#menu.items) end
+  result.fetch = sent("sf-subtitle-fetch")
+elseif scenario == "title-field" then
+  -- PLAY-SUBGET-24: no catalog id, the app asks which film or show this is; Enter sends the typed title.
+  boot({}, false, "Get more subtitles…")
+  view({ title = { prompt = "Which film or show is this?", field = "Title", query = "Alien" } })
+  local field = M.inputs[#M.inputs]
+  result.prompt = field.prompt
+  result.default_text = field.default_text
+  result.cursor = field.cursor_position
+  field.submit("Aliens")
+  field.closed()
+  result.fetch = sent("sf-subtitle-fetch")
+  result.terminated = M.input_terminated
+elseif scenario == "title-cancel" then
+  boot({}, false, "Get more subtitles…")
+  view({ panel = "Looking for this title…", dismissable = true })
+  view({ title = { prompt = "Which film or show is this?", field = "Title", query = "Alien" } })
+  result.after = panel()
+  M.inputs[#M.inputs].closed()
   result.fetch = sent("sf-subtitle-fetch")
 elseif scenario == "version-row" then
   boot({ FRENCH }, 1, "Get more subtitles…", "Try another version")

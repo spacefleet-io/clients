@@ -425,8 +425,8 @@ export const artworkStorageKey = (value: string | null | undefined): string | nu
 /**
  * STOR-PLACE-08: every storage piece a title in the library uses, for the leftover clean-up (STOR-PLACE-06): what
  * `collectMediaStorageKeys` lists (video and audio pieces, seek-bar previews, subtitles) plus its artwork (poster,
- * backdrop, season posters, episode stills, cast and crew photos). Deduplicated. A delete keeps using
- * `collectMediaStorageKeys`: a person's photo is shared by every title they appear in.
+ * backdrop, season posters, episode stills, cast and crew photos). Deduplicated. A delete uses
+ * `collectMediaDeleteKeys`: a person's photo is shared by every title they appear in.
  */
 export const collectMediaKeysInUse = (
   details: Pick<MediaDetails, "formats" | "audioTracks" | "subtitleTracks" | "posterPath" | "backdropPath"> &
@@ -444,4 +444,22 @@ export const collectMediaKeysInUse = (
   for (const season of details.seasons ?? []) addArtwork(season.posterPath);
   for (const episode of details.episodes ?? []) addArtwork(episode.stillPath);
   return [...keys];
+};
+
+/**
+ * STOR-PLACE-10: the storage pieces a title delete removes: everything `collectMediaKeysInUse` lists, its own artwork
+ * included, except the photo of a person another title of the library still lists in its cast or crew
+ * (`personInOtherTitle`), since every title of that person shows the same stored photo (META-ART-01).
+ */
+export const collectMediaDeleteKeys = (
+  details: Pick<MediaDetails, "formats" | "audioTracks" | "subtitleTracks" | "posterPath" | "backdropPath"> &
+    Partial<Pick<MediaDetails, "cast" | "crew" | "seasons" | "episodes">>,
+  personInOtherTitle: (personId: string) => boolean
+): string[] => {
+  const kept = new Set<string>();
+  for (const member of [...(details.cast ?? []), ...(details.crew ?? [])]) {
+    const key = artworkStorageKey(member.profilePath);
+    if (key && personInOtherTitle(member.personId)) kept.add(key);
+  }
+  return collectMediaKeysInUse(details).filter((key) => !kept.has(key));
 };

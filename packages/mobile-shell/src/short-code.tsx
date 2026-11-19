@@ -117,6 +117,8 @@ export const ShortCodeInput = forwardRef<TextInputInstance, InputProps>(function
         // No suggestions bar on Android keyboards, which would otherwise keep the letters in a word.
         keyboardType={Platform.OS === "android" ? "visible-password" : "default"}
         caretHidden
+        // The tiles draw the code: the field's own text, caret and selection stay invisible.
+        selectionColor="transparent"
         focusable
         style={styles.overlay}
       />
@@ -130,6 +132,7 @@ const styles = StyleSheet.create({
   char: { borderRadius: 12, alignItems: "center", justifyContent: "center" },
   charText: { fontFamily: MONO, fontWeight: "700" },
   field: { alignSelf: "center" },
-  // Covers the boxes so a tap or long press anywhere on them focuses the field or opens Paste; draws nothing.
-  overlay: { ...StyleSheet.absoluteFill, color: "transparent", backgroundColor: "transparent", fontSize: 1 },
+  // Covers the boxes so a tap or long press anywhere on them focuses the field or opens Paste; draws nothing (transparent
+  // text and selection, no caret).
+  overlay: { ...StyleSheet.absoluteFill, color: "transparent", backgroundColor: "transparent" },
 });

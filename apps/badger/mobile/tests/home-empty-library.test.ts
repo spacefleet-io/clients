@@ -7,10 +7,10 @@
  *   opens the downloads page in the app's language, and the three steps. Rendered with react-test-renderer against
  *   host-element stand-ins; the library store and navigation are stubbed, the shared screen is the real one.
  */
-// @req UX-EMPTY-01[badger-mobile] @req UX-PHONE-03[badger-mobile]
+// @req UX-EMPTY-01[badger-mobile] @req UX-PHONE-03[badger-mobile] @req UX-WAIT-04[badger-mobile]
 import React from "react";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const ctl = vi.hoisted(() => {
   // Metro turns `require("../assets/mascot.webp")` into an image reference; plain node would parse the bytes as JS.
@@ -18,7 +18,7 @@ const ctl = vi.hoisted(() => {
   extensions[".webp"] = (m: { exports: unknown }) => {
     m.exports = 1;
   };
-  return { opened: [] as string[] };
+  return { opened: [] as string[], settled: true, media: [] as unknown[] };
 });
 
 vi.mock("react-native", () => ({
@@ -43,18 +43,22 @@ vi.mock("@react-navigation/native", () => ({ useNavigation: () => ({ navigate: (
 vi.mock("@space/mobile-shell/components", async () => {
   // The real shared screen, so the test sees its texts and testIDs; the barrel would pull in every shell component.
   const shared = await import("../../../../packages/mobile-shell/src/components/mobile-empty-library");
-  return { MobileEmptyLibrary: shared.MobileEmptyLibrary, MobileEmptyLibraryAction: shared.MobileEmptyLibraryAction, useSkyScroll: () => ({}) };
+  return {
+    MobileEmptyLibrary: shared.MobileEmptyLibrary,
+    MobileEmptyLibraryAction: shared.MobileEmptyLibraryAction,
+    MobileLibraryLoading: "MobileLibraryLoading",
+    useSkyScroll: () => ({}),
+  };
 });
 vi.mock("@space/mobile-shell/i18n", () => ({ useTranslation: () => ({ t: (key: string) => key }), getCurrentLanguage: () => "fr" }));
 vi.mock("../src/store/library", () => ({
-  useLibraryData: () => ({ media: [] }),
-  useLibraryStatus: () => ({ loading: false, error: null, refresh: async () => undefined }),
+  useLibraryData: () => ({ media: ctl.media }),
+  // `loading: false` as the store reports it before its load starts and while a saved copy waits for the sync.
+  useLibraryStatus: () => ({ loading: false, settled: ctl.settled, error: null, refresh: async () => undefined }),
   useLibraryActions: () => ({ getMediaDetails: async () => null }),
 }));
 vi.mock("../src/lib/resume", () => ({ getLastPlayedEpisodeId: async () => null }));
 vi.mock("../src/components/PosterRail", () => ({ PosterRail: "PosterRail" }));
-vi.mock("../src/components/Panel", () => ({ Panel: "Panel" }));
-vi.mock("../src/components/Skeleton", () => ({ PosterRailSkeleton: "PosterRailSkeleton" }));
 vi.mock("../src/components/ContinueHero", () => ({ ContinueHero: "ContinueHero" }));
 vi.mock("../src/lib/homeRails", () => ({ homeRailEntries: () => [], selectHomeRails: () => [] }));
 vi.mock("../src/lib/phoneHome", () => ({ phoneHomeLayout: () => ({ hero: null, rails: [] }), seeAllTarget: () => ({ tab: "library", scope: "movies" }) }));
@@ -73,6 +77,11 @@ import { HomeScreen } from "../src/screens/HomeScreen";
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
 describe("the phone's empty Home", () => {
+  beforeEach(() => {
+    ctl.settled = true;
+    ctl.media = [];
+  });
+
   it("@req UX-EMPTY-01 @req UX-PHONE-03 shows the computer's empty library with one button to the downloads page", async () => {
     let renderer!: ReactTestRenderer;
     await act(async () => {
@@ -93,5 +102,37 @@ describe("the phone's empty Home", () => {
     await act(async () => actions[0]!.props.onPress());
     console.info("[MOBILE-HOME-EMPTY-LIBRARY-001] opened", JSON.stringify(ctl.opened));
     expect(ctl.opened).toEqual(["https://spacebadger.io/fr/downloads"]);
+  });
+
+  // Chris 2026-11-18: "The badger app shows the empty library 'upload your first media on desktop' before the library
+  // loads." The store reports `loading: false` before its load starts and while a saved copy waits for the sync.
+  it("@req UX-WAIT-04 shows the opening screen with Loading library, never the empty library, until the load says what it holds", async () => {
+    ctl.settled = false;
+    let renderer!: ReactTestRenderer;
+    await act(async () => {
+      renderer = create(React.createElement(HomeScreen));
+    });
+    const root = renderer.root;
+    const loading = root.findAll((node) => (node.type as unknown) === "MobileLibraryLoading");
+    const empty = root.findAll((node) => node.props.testID === "empty-library" && typeof node.type === "string");
+    console.info("[UX-WAIT-04:phone-home] unsettled", JSON.stringify({ loading: loading.map((node) => node.props.label), empty: empty.length }));
+    expect(empty).toHaveLength(0);
+    expect(loading).toHaveLength(1);
+    expect(loading[0]!.props).toMatchObject({ app: "badger", label: "nav.loadingLibrary" });
+  });
+
+  it("@req UX-WAIT-04 shows a saved library at once while the load still runs", async () => {
+    ctl.settled = false;
+    ctl.media = [{ id: "m1" }];
+    let renderer!: ReactTestRenderer;
+    await act(async () => {
+      renderer = create(React.createElement(HomeScreen));
+    });
+    const root = renderer.root;
+    const loading = root.findAll((node) => (node.type as unknown) === "MobileLibraryLoading");
+    const empty = root.findAll((node) => node.props.testID === "empty-library" && typeof node.type === "string");
+    console.info("[UX-WAIT-04:phone-home] saved", JSON.stringify({ loading: loading.length, empty: empty.length }));
+    expect(loading).toHaveLength(0);
+    expect(empty).toHaveLength(0);
   });
 });

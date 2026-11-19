@@ -14,7 +14,7 @@
     "customBadge": "Eigen",
     "useDefault": "Standaard gebruiken",
     "save": "Opslaan",
-    "saving": "Opslaan...",
+    "saving": "Opslaan…",
     "error": "De API-host kon niet worden opgeslagen. Controleer de waarde en probeer het opnieuw."
   },
   "login": {
@@ -25,9 +25,9 @@
     "twoFactorLabel": "Verificatiecode",
     "twoFactorPlaceholder": "123456",
     "button": "Inloggen",
-    "signingIn": "Inloggen...",
+    "signingIn": "Inloggen…",
     "resend": "Code opnieuw sturen",
-    "resending": "Opnieuw sturen...",
+    "resending": "Opnieuw sturen…",
     "infoEmail": "We hebben een verificatiecode naar je e-mailadres gestuurd.",
     "infoTotp": "Vul de code uit je authenticator-app in.",
     "resendSuccess": "We hebben een nieuwe verificatiecode gestuurd.",
@@ -42,12 +42,12 @@
       "passwordLabel": "Nieuw wachtwoord",
       "passwordConfirmLabel": "Nieuw wachtwoord bevestigen",
       "request": "Code sturen",
-      "requesting": "Versturen...",
+      "requesting": "Versturen…",
       "submit": "Wachtwoord bijwerken",
-      "submitting": "Bijwerken...",
+      "submitting": "Bijwerken…",
       "cancel": "Annuleren",
       "resend": "Code opnieuw sturen",
-      "resending": "Opnieuw sturen...",
+      "resending": "Opnieuw sturen…",
       "noticeSent": "Als dit e-mailadres bij ons bekend is, hebben we een verificatiecode gestuurd.",
       "noticeResent": "We hebben nog een verificatiecode gestuurd.",
       "noticeComplete": "Wachtwoord bijgewerkt. Log opnieuw in.",
@@ -95,7 +95,7 @@
       "message": "Er is te veel verkeer op de server waar deze titel staat: de kwaliteit is beperkt tot {{quality}} totdat het rustiger wordt.",
       "keepWatching": "Blijf kijken"
     },
-    "loading": "Afspelen voorbereiden...",
+    "loading": "Afspelen voorbereiden…",
     "loadingSlow": "Nog steeds aan het laden… dit duurt langer dan normaal.",
     "controls": {
       "closePlayer": "Speler sluiten",
@@ -373,7 +373,7 @@
     "pickerTitle": "Afspelen op",
     "thisPhone": "Deze telefoon",
     "thisPhoneHint": "Afspelen in de app",
-    "searching": "Cast-apparaten zoeken op je wifi...",
+    "searching": "Cast-apparaten zoeken op je wifi…",
     "noDevices": "Geen Cast-apparaat gevonden. De telefoon en het apparaat moeten op hetzelfde wifinetwerk zitten.",
     "deviceHint": "Google Cast",
     "airplay": "AirPlay",
@@ -381,8 +381,8 @@
     "airplayActive": "Afspelen op {{name}}",
     "screenTitle": "Casten",
     "castingTo": "Casten naar {{name}}",
-    "preparing": "Stream voorbereiden...",
-    "connecting": "Verbinden met {{name}}...",
+    "preparing": "Stream voorbereiden…",
+    "connecting": "Verbinden met {{name}}…",
     "keepWifi": "Houd deze telefoon tot het einde op hetzelfde wifinetwerk: hij stuurt de film naar het apparaat.",
     "play": "Afspelen",
     "pause": "Pauzeren",
@@ -426,8 +426,8 @@
     "library": "Bibliotheek",
     "playlists": "Afspeellijsten",
     "settings": "Instellingen",
-    "loading": "Laden...",
-    "loadingLibrary": "Mediatheek laden...",
+    "loading": "Laden…",
+    "loadingLibrary": "Bibliotheek wordt geladen…",
     "updateRequired": "Update vereist",
     "unavailable": "Badger is niet beschikbaar: {{issue}}. Werk je app bij.",
     "screenLoadFailed": "Het scherm kon niet worden geladen",
@@ -636,7 +636,7 @@
       "currentPassword": "Huidig wachtwoord",
       "newPassword": "Nieuw wachtwoord",
       "change": "Wachtwoord wijzigen",
-      "changing": "Wijzigen...",
+      "changing": "Wijzigen…",
       "success": "Wachtwoord gewijzigd.",
       "codeLabel": "Verificatiecode",
       "errors": {
@@ -650,12 +650,12 @@
       "set": {
         "title": "Een wachtwoord instellen",
         "button": "Wachtwoord instellen",
-        "setting": "Instellen..."
+        "setting": "Instellen…"
       }
     },
     "devices": {
       "title": "Jouw apparaten",
-      "loading": "Laden...",
+      "loading": "Laden…",
       "empty": "Geen ingelogde apparaten gevonden.",
       "summary_one": "{{count}} apparaat ingelogd",
       "summary_other": "{{count}} apparaten ingelogd",
@@ -730,7 +730,7 @@
       "web": "Webbrowser"
     },
     "scan": {
-      "cameraStarting": "Camera starten...",
+      "cameraStarting": "Camera starten…",
       "cameraDenied": "De camera mag niet worden gebruikt. Geef deze app toegang tot de camera in de instellingen van je telefoon, of typ de code in.",
       "pointCamera": "Richt de camera op de code op het scherm van het andere apparaat.",
       "codeLabel": "Code op het andere apparaat",
@@ -739,14 +739,14 @@
       "typeInstead": "Typ de code in",
       "scanInstead": "Scan de code"
     },
-    "looking": "Code opzoeken...",
+    "looking": "Code opzoeken…",
     "confirm": {
       "asked": "{{type}} met de naam \"{{name}}\" wil zich bij je account voegen.",
       "unlockNotice": "Je moet je telefoon ontgrendelen. Als je goedkeurt, wordt het apparaat ingelogd en krijgt het je mediatheeksleutel.",
       "approve": "Goedkeuren",
       "deny": "Weigeren"
     },
-    "approving": "Wachten tot je je telefoon ontgrendelt...",
+    "approving": "Wachten tot je je telefoon ontgrendelt…",
     "done": {
       "added": "{{name}} is toegevoegd.",
       "notAdded": "{{name}} is niet toegevoegd.",
@@ -818,13 +818,13 @@
     "expiresIn": "Deze code verloopt over {{time}}. Er verschijnt vanzelf een nieuwe.",
     "deviceName": "Deze telefoon verschijnt als \"{{name}}\".",
     "qrAccessibility": "QR-code om deze telefoon te koppelen",
-    "starting": "Koppelcode ophalen...",
-    "completing": "Goedgekeurd. Inloggen...",
+    "starting": "Koppelcode ophalen…",
+    "completing": "Goedgekeurd. Inloggen…",
     "keyLink": "Sleutel van een ander apparaat halen",
     "keyCard": "Gebruik elke Badger- of Parrot-app waarin je bent ingelogd, op elk apparaat of profiel van dit account.",
     "keyTitle": "Haal je mediatheeksleutel op van een ander apparaat dat op dit account is ingelogd.",
     "typeKey": "Sleutel toch intypen",
-    "completingKey": "Goedgekeurd. Je mediatheek wordt geopend...",
+    "completingKey": "Goedgekeurd. Je mediatheek wordt geopend…",
     "tryAgain": "Nieuwe code ophalen",
     "denied": "De andere app heeft deze telefoon geweigerd. Haal een nieuwe code op om het opnieuw te proberen.",
     "errors": {
@@ -840,8 +840,8 @@
       "subtitle": "Open op je telefoon of computer Badger → Instellingen → Apparaat koppelen en scan dan de code of typ hem in.",
       "codeLabel": "Of typ deze code in",
       "qrAccessibility": "QR-code om deze tv te koppelen",
-      "starting": "Koppelcode ophalen...",
-      "completing": "Goedgekeurd. Inloggen...",
+      "starting": "Koppelcode ophalen…",
+      "completing": "Goedgekeurd. Inloggen…",
       "usePassword": "Liever e-mail en wachtwoord gebruiken",
       "useCode": "Liever een koppelcode gebruiken",
       "tryAgain": "Nieuwe code ophalen",
@@ -871,7 +871,7 @@
       "back": "Terug",
       "warning": "Keur alleen een code goed die op een scherm vlak voor je staat. Wie je een code stuurt, kan toegang krijgen tot je hele mediatheek.",
       "passwordNotice": "Je wordt om het wachtwoord van je account gevraagd. Als je goedkeurt, wordt het apparaat ingelogd en krijgt het je mediatheeksleutel.",
-      "approving": "Je wachtwoord controleren en de sleutel versturen...",
+      "approving": "Je wachtwoord controleren en de sleutel versturen…",
       "addedDetail": "Het logt nu in. Je kunt het op elk moment uitloggen via je apparatenlijst.",
       "password": {
         "title": "Vul het wachtwoord van je account in",
@@ -879,7 +879,7 @@
         "label": "Accountwachtwoord"
       },
       "codeNotice": "Je krijgt de vraag om een code om te bevestigen dat jij het bent. Goedkeuren logt het apparaat in en geeft het je mediatheeksleutel.",
-      "approvingCode": "Controleren en de sleutel versturen...",
+      "approvingCode": "Controleren en de sleutel versturen…",
       "code": {
         "title": "Voer de code in",
         "detailEmail": "We hebben je een code gemaild. Typ die om te bevestigen dat jij het bent voordat je mediatheek met een ander apparaat wordt gedeeld.",
@@ -930,7 +930,7 @@
     "decline": "Niet versturen"
   },
   "onboarding": {
-    "loading": "Instellingen van je mediatheek laden...",
+    "loading": "Instellingen van je mediatheek laden…",
     "enterTitle": "Voer je mediatheeksleutel in",
     "showTitle": "Je mediatheeksleutel",
     "subtitle": "Deze sleutel versleutelt de privégegevens in je mediatheek. Bewaar hem goed.",
@@ -957,8 +957,8 @@
     "confirm": "Bevestigen",
     "confirmed": "Bevestigd",
     "rotate": "Sleutel vernieuwen",
-    "rotating": "Vernieuwen...",
-    "success": "Sleutel vernieuwd. Mediatheek opnieuw laden...",
+    "rotating": "Vernieuwen…",
+    "success": "Sleutel vernieuwd. Mediatheek opnieuw laden…",
     "errors": {
       "confirmRequired": "Bevestig dat je de nieuwe sleutel hebt bewaard.",
       "passwordRequired": "Wachtwoord is verplicht.",
@@ -1025,7 +1025,7 @@
       "actors": "Acteurs",
       "allActors": "Alle acteurs",
       "actorSearch": "Zoek acteurs",
-      "actorsLoading": "Acteurs laden...",
+      "actorsLoading": "Acteurs laden…",
       "actorsNone": "Geen acteurs gevonden",
       "downloadedOnly": "Alleen gedownload",
       "downloadedOnlyHint": "Alleen titels die op deze telefoon staan."
@@ -1168,7 +1168,7 @@
     "attachLog": "Foutenlogboek van de app bijvoegen",
     "attachLogHint": "Helpt ons een probleem te vinden. Het bevat geen titels of bestandsnamen.",
     "send": "Versturen",
-    "sending": "Bezig met versturen...",
+    "sending": "Bezig met versturen…",
     "sent": "Bedankt! Je bericht is verstuurd.",
     "back": "Terug",
     "errors": {
@@ -1233,7 +1233,7 @@
     "codeSent": "We hebben een verificatiecode verstuurd. Kijk in je e-mail of authenticator-app.",
     "cancel": "Annuleren",
     "submit": "Alles wissen en opnieuw beginnen",
-    "working": "Wissen...",
+    "working": "Wissen…",
     "errorInvalidPassword": "Onjuist wachtwoord.",
     "errorTwoFactorInvalid": "De verificatiecode is ongeldig.",
     "errorGeneric": "Kan de $t(keyStepWords.collection) nu niet resetten. Probeer het opnieuw."

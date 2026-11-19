@@ -1,8 +1,13 @@
 import { ipcMain, dialog } from "electron";
 import { readdirSync, statSync } from "node:fs";
+import { readFile, stat } from "node:fs/promises";
 import { join, extname, basename, dirname } from "node:path";
 import { mainUiStrings } from "./uiStrings";
 import { SUBTITLE_EXTENSIONS, VIDEO_EXTENSIONS } from "../shared/importableMedia";
+import { SUBTITLE_FILE_EXTENSIONS } from "@space/shared/subtitleFetch";
+
+// Far above any real .srt/.ass/.vtt; a bigger file is read as empty, i.e. "not a subtitle we can read".
+const MAX_ADDED_SUBTITLE_BYTES = 20 * 1024 * 1024;
 
 type ScannedFile = {
   path: string;
@@ -106,5 +111,21 @@ export const registerFileSystemIpc = (ipc: typeof ipcMain) => {
     const [firstPath] = result.filePaths;
     if (firstPath) lastDialogDirectory = dirname(firstPath);
     return result.filePaths;
+  });
+
+  // "Add a subtitle file…" in the mpv player (PLAY-SUBGET-23): one .srt/.ass/.ssa/.vtt, its text and name; null when
+  // cancelled. No parent window: the app's window hides while mpv plays, so the dialog opens as its own top-level
+  // window, focused above the player.
+  ipc.handle("sf-pick-subtitle-file", async () => {
+    const result = await dialog.showOpenDialog({
+      ...(lastDialogDirectory ? { defaultPath: lastDialogDirectory } : {}),
+      properties: ["openFile"],
+      filters: [{ name: mainUiStrings().filterSubtitles, extensions: [...SUBTITLE_FILE_EXTENSIONS] }],
+    });
+    const [path] = result.filePaths;
+    if (result.canceled || !path) return null;
+    lastDialogDirectory = dirname(path);
+    const content = (await stat(path)).size > MAX_ADDED_SUBTITLE_BYTES ? "" : await readFile(path, "utf8");
+    return { name: basename(path), content };
   });
 };

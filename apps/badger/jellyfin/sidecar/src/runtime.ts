@@ -1017,12 +1017,15 @@ export class IntegrationRuntime {
         const result = await copyMediaArtwork({
           store: {
             listArtworkToCopy: (id) => db.listArtworkToCopy(id),
-            applyArtworkCopies: (id, copies) => (current() ? db.applyArtworkCopies(id, copies) : { applied: 0, skipped: copies.length }),
+            applyArtworkCopies: (id, copies) =>
+              current() ? db.applyArtworkCopies(id, copies) : { applied: 0, skipped: copies.length, unapplied: copies },
           },
           mediaId,
           upload,
           canSpend: async () => current() && (await this.tickets.count()) > ARTWORK_COPY_TICKET_FLOOR,
           shouldYield: control.shouldYield,
+          // STOR-PLACE-10: a copy the library did not take (the title was deleted meanwhile) is deleted again at once.
+          discard: (keys) => db.removeUploadedChunks(keys),
         });
         // Counts and the title id only, never a path or a key.
         this.log("artwork copy done", { ...result });

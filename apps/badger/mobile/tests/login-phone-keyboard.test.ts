@@ -72,7 +72,7 @@ vi.mock("../src/lib/uiLanguage", () => ({ chooseUiLanguage: vi.fn(), ensureI18n:
 vi.mock("../src/tv/lib/tvRuntime", () => ({ IS_TV: false }));
 vi.mock("../src/lib/phonePairing", () => ({ currentPhoneDeviceName: () => "Badger (phone)" }));
 vi.mock("../src/tv/lib/pairingRuntime", () => ({ tvDeviceName: () => "TV" }));
-vi.mock("../src/setup/BadgerSetupFlow", () => ({ SetupStepBar: () => null }));
+vi.mock("../src/setup/BadgerSetupFlow", () => ({ SignInSetupBack: () => null }));
 
 import { LoginScreen } from "../src/screens/LoginScreen";
 

@@ -14,6 +14,7 @@ const stubMotion = (reduced: boolean) => {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 
 // @req UX-WAIT-02
@@ -40,6 +41,23 @@ describe("the loading-screen mascot (web and desktop)", () => {
     const cancel = animate.mock.results[0]!.value.cancel;
     unmount();
     expect(cancel).toHaveBeenCalled();
+  });
+
+  it("starts each loader where the shared loop stands, so a loading screen handing over to the next does not snap the mascot back", () => {
+    const animate = stubMotion(false);
+    // 400 ms into a 1.6 s loop: a quarter of the way through.
+    vi.spyOn(Date, "now").mockReturnValue(1_600 * 1_000 + 400);
+    const { container } = render(<MascotLoader app="badger" src="badger.webp" size={320} />);
+    const pose = MASCOT_LOADERS.badger.pose(0.25)[0]!;
+    const expected = `translate(${pose.x}px, ${pose.y}px) rotate(${pose.rotate}deg) scale(${pose.scaleX}, ${pose.scaleY})`;
+    const [keyframes] = animate.mock.calls[0] as unknown as [Keyframe[]];
+    expect(keyframes[0]!.transform).toBe(expected);
+    expect(keyframes.at(-1)!.transform).toBe(expected);
+    // The first painted frame, before the animation takes over, already shows that pose.
+    const layer = container.querySelector<HTMLElement>('[data-testid="mascot-loader-badger"] > div')!;
+    const painted = document.createElement("div");
+    painted.style.transform = expected;
+    expect(layer.style.transform).toBe(painted.style.transform);
   });
 
   it("stands still when the system asks for reduced motion", () => {

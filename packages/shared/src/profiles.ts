@@ -8,6 +8,7 @@
  * one of the built-in pack (`avatarId`, ACCT-PROF-05, `./profileAvatars`).
  */
 
+import type { ProfileFeatures } from "./appFeatures";
 import type { ProfileAvatarId } from "./profileAvatars";
 
 /** Profile limits of ACCT-PROF-01: a free account holds one profile, a paid one, on any plan, up to five. */
@@ -33,7 +34,8 @@ export const PROFILE_NAME_MAX = 40;
 
 /**
  * One profile as the API returns it. `isMain` = the oldest profile of the account. `avatarId` = the profile's
- * picture (ACCT-PROF-05); `avatar` = the palette colour matching it, for apps released before the pack.
+ * picture (ACCT-PROF-05); `avatar` = the palette colour matching it, for apps released before the pack. `features` =
+ * which app features this profile has set up or put off (`{}` when none; UX-SETUP-10, UX-UPDATE-01, `./appFeatures`).
  */
 export type ApiProfile = {
   id: string;
@@ -42,6 +44,7 @@ export type ApiProfile = {
   avatarId: ProfileAvatarId;
   createdAt: string;
   isMain: boolean;
+  features: ProfileFeatures;
 };
 
 /** `GET /profiles` and `DELETE /profiles/:id` body. */
@@ -57,7 +60,7 @@ export const PROFILE_ERRORS = {
   limit: "profile_limit",
   /** 409: deleting the only profile left (ACCT-PROF-02). */
   last: "last_profile",
-  /** 400: name is not 1 to 40 code points after trimming, avatar outside 0..7, or an avatarId not in the pack. */
+  /** 400: name is not 1 to 40 code points after trimming, avatar outside 0..7, an avatarId not in the pack, or a feature id or state not in `./appFeatures`. */
   invalid: "invalid_profile",
   /** 404: no such profile on this account. */
   notFound: "profile_not_found",

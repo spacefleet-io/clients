@@ -52,7 +52,7 @@ vi.mock("@space/mobile-shell/i18n", () => ({
   MOBILE_UI_LANGUAGES: [{ code: "en", nativeName: "English", flag: "" }],
   useTranslation: () => ({ t: h.i18n!.t.bind(h.i18n) }),
 }));
-vi.mock("@space/mobile-shell/setup-step", () => ({ MobileSetupHeader: "MobileSetupHeader" }));
+vi.mock("@space/mobile-shell/setup-step", () => ({ MobileSetupBackFooter: "MobileSetupBackFooter" }));
 vi.mock("@space/mobile-shell/logger", () => ({ scopeLogger: () => ({ info: () => undefined, warn: () => undefined, error: () => undefined }) }));
 vi.mock("@space/mobile-shell/pairing-device", () => ({ currentPhoneDeviceName: (app: string) => `${app} (test)` }));
 vi.mock("@space/shared/api", async () => ({

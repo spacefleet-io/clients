@@ -228,7 +228,7 @@ export const titleLanguageTexts: Record<TitleLanguageTextLanguage, TitleLanguage
     },
   },
   fr: {
-    question: "Comment afficher les titres ?",
+    question: "Comment afficher les titres ?",
     intro: "Pour ce profil uniquement. Vous pourrez le changer plus tard dans les Réglages.",
     settingTitle: "Titres et affiches",
     settingDescription: "La langue des titres, affiches et images de fond pour ce profil.",
@@ -240,7 +240,7 @@ export const titleLanguageTexts: Record<TitleLanguageTextLanguage, TitleLanguage
     original: {
       label: "Version originale",
       description:
-        "Titres, affiches et images de fond dans la langue d'origine du film ou de la série ; les résumés restent dans la langue de l'app. Les originaux dans un autre alphabet, comme le japonais, restent dans la langue de l'app.",
+        "Titres, affiches et images de fond dans la langue d'origine du film ou de la série ; les résumés restent dans la langue de l'app. Les originaux dans un autre alphabet, comme le japonais, restent dans la langue de l'app.",
       examples: ["Jaws", "The Green Mile"],
     },
   },

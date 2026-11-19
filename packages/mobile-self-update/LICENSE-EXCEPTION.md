@@ -10,8 +10,10 @@ The permission covers only code whose copyright is held by the SpaceBadger
 authors (the "Covered Code"). It does not cover:
 
 - third-party components, which keep their own licences (for example FFmpeg,
-  libmpv and libplacebo under the LGPL, built without their GPL-only parts;
-  libass under ISC; MoltenVK under Apache-2.0; mpv-android under MIT; React
+  libmpv and libplacebo: the mobile builds use them under the LGPL, built
+  without their GPL-only parts; the desktop builds enable GPL parts such as
+  x264 and x265, so there they are under the GPL-2.0-or-later; libass under
+  ISC; MoltenVK under Apache-2.0; mpv-android under MIT; React
   Native and the npm and CocoaPods dependencies); you must follow each
   component's own licence terms;
 - code contributed by anyone else, unless its copyright holder has granted this

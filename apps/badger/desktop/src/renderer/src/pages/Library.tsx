@@ -25,12 +25,12 @@ import { useLabJobsData } from "@/lib/labJobs";
 import { buildGhostLibraryItems, pruneDeletedMediaIds, useStableStageLabel } from "@/lib/libraryGhosts";
 import { isLibraryVersionPending } from "@/lib/runtimeIngestJobs";
 import { formatUploadSpeedLabel } from "@/lib/uploadSpeed";
+import { pageLibraryContent } from "@/lib/dashboardState";
 import { Button, RenderBoundary } from "@space/ui";
 import { BadgerLibraryControls, BadgerLibraryRow, libraryFacetSections, BadgerPosterCard, BadgerPosterGrid, BadgerSearchField, BadgerSegmented } from "@space/ui/badger";
 import { notifyWarning } from "@/lib/notify";
 import { useLoadingModal } from "@/components/LoadingModalProvider";
-import { MascotLoader } from "@space/ui/mascot-loader";
-import mascotUrl from "@space/ui/badger/mascot.webp";
+import { LibraryLoading } from "@/components/LoadingScreen";
 import { crewGroups } from "@space/shared/libraryCrew";
 import {
   countLibraryFacetSelection,
@@ -863,14 +863,20 @@ export default function Library() {
       renderListSection(items, sentinelRef, hasMore, view)
     );
 
-  const empty = deferredMedia.length === 0 && ghostItems.length === 0;
+  // UX-WAIT-04: the page is empty only once the load says so; `deferredMedia === dedupedMedia` waits for the listed
+  // copy to catch up with the provider's list, so a library still being listed never bounces to the empty Home.
+  const libraryState = pageLibraryContent({
+    loading,
+    listed: deferredMedia === dedupedMedia,
+    itemCount: deferredMedia.length + ghostItems.length,
+  });
+  const empty = libraryState === "empty";
 
   useEffect(() => {
-    if (loading) return;
     if (error) return;
     if (!empty) return;
     navigate("/home", { replace: true });
-  }, [empty, error, loading, navigate]);
+  }, [empty, error, navigate]);
 
   const movieEmptyState = (
     <div className="rounded-2xl border border-dashed border-[#30363d] bg-[#0f141b]/80 p-4 text-white">
@@ -1013,12 +1019,9 @@ export default function Library() {
           }
         />
 
-            {loading ? (
-              // UX-WAIT-02: the hovering badger above the unchanged loading text while the library opens.
-              <div className="flex w-fit flex-col items-center gap-4">
-                <MascotLoader app="badger" src={mascotUrl} size={120} />
-                <div className="text-sm text-[#8b949e]">{t("library.loading")}</div>
-              </div>
+            {libraryState === "loading" ? (
+              // UX-WAIT-04: the hovering badger above "Loading library…", in the middle of the window below the top bar.
+              <LibraryLoading label={t("library.loading")} />
             ) : empty && tab === "movie" ? (
               movieEmptyState
             ) : empty && tab === "tv" ? (

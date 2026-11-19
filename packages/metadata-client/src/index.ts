@@ -1,8 +1,8 @@
 // Client entry of @space/metadata-client. Portable: no node:* import and no DOM-only API in its graph (a test
 // enforces it), so it runs in the Electron renderer, React Native / Hermes, Bun and Node.
 
-export { createTicketReserve, RESERVE_STORAGE_KEY } from "./reserve";
-export type { RefillResult, RefillStatus, TicketAuth, TicketReserve, TicketReserveConfig, TicketReserveOptions } from "./reserve";
+export { createTicketReserve, RATE_LIMITED_MAX_SPREAD_MS, RATE_LIMITED_MIN_RETRY_MS, RESERVE_STORAGE_KEY } from "./reserve";
+export type { RefillResult, RefillStatus, TicketAuth, TicketReserve, TicketReserveConfig, TicketReserveOptions, TicketShortage } from "./reserve";
 export { describeRefill, refillLogLine } from "./refillLog";
 export type { RefillLogEntry } from "./refillLog";
 export {

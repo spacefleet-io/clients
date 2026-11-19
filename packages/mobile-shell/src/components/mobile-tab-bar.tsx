@@ -2,7 +2,7 @@
 // labels and a glowing dot that slides to the active tab. React Native's own Animated (native driver), not
 // react-native-reanimated, so apps that do not ship reanimated (Parrot) can use it, as `MobileAuthBrand` does.
 import React, { useEffect, useRef, useState } from "react";
-import { Animated, Platform, Pressable, StyleSheet, Text, Vibration, View, type ViewStyle } from "react-native";
+import { Animated, Platform, Pressable, StyleSheet, Text, Vibration, View, type LayoutChangeEvent, type ViewStyle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useMobileShellTheme } from "../theme";
 import { tabIndicatorCenter } from "./mobile-tab-bar-geometry";
@@ -62,6 +62,7 @@ const TabButton = ({
   fontFamily,
   look,
   onPress,
+  onLayout,
 }: {
   tab: MobileTabDefinition;
   isActive: boolean;
@@ -70,11 +71,12 @@ const TabButton = ({
   fontFamily: string;
   look: MobileTabBarLook;
   onPress: () => void;
+  onLayout: (event: LayoutChangeEvent) => void;
 }) => {
   const scale = useRef(new Animated.Value(1)).current;
 
   return (
-    <Animated.View style={[styles.tabButton, { transform: [{ scale }] }]}>
+    <Animated.View style={[styles.tabButton, { transform: [{ scale }] }]} onLayout={onLayout}>
       <Pressable
         onPressIn={() => {
           if (!isDisabled) spring(scale, 0.9, MOBILE_TAB_BAR_SPRINGS.press).start();
@@ -105,6 +107,9 @@ export const MobileTabBar = ({ tabs, activeTab, onTabChange, disabledTabs = [], 
   const insets = useSafeAreaInsets();
   const indicatorX = useRef(new Animated.Value(0)).current;
   const [barWidth, setBarWidth] = useState(0);
+  // Where each tab landed (its x from the bar's left edge and its width): the tabs are as wide as their labels, so the
+  // dot centres on the measured tab, and on the equal-share guess until it is measured (UX-PHONE-11).
+  const [tabSpans, setTabSpans] = useState<Record<string, { x: number; width: number }>>({});
   const placedRef = useRef(false);
 
   const tabCount = tabs.length;
@@ -112,7 +117,9 @@ export const MobileTabBar = ({ tabs, activeTab, onTabChange, disabledTabs = [], 
   useEffect(() => {
     const tabIndex = tabs.findIndex((tab) => tab.id === activeTab);
     if (tabIndex < 0 || barWidth <= 0) return undefined;
-    const target = tabIndicatorCenter({ width: barWidth, padding: BAR_PADDING_X, count: tabCount, index: tabIndex }) - DOT_SIZE[look] / 2;
+    const span = tabSpans[activeTab];
+    const center = span ? span.x + span.width / 2 : tabIndicatorCenter({ width: barWidth, padding: BAR_PADDING_X, count: tabCount, index: tabIndex });
+    const target = center - DOT_SIZE[look] / 2;
     // First placement snaps; later tab changes slide.
     if (!placedRef.current) {
       placedRef.current = true;
@@ -122,7 +129,7 @@ export const MobileTabBar = ({ tabs, activeTab, onTabChange, disabledTabs = [], 
     const slide = spring(indicatorX, target, MOBILE_TAB_BAR_SPRINGS.indicator);
     slide.start();
     return () => slide.stop();
-  }, [activeTab, barWidth, indicatorX, look, tabCount, tabs]);
+  }, [activeTab, barWidth, indicatorX, look, tabCount, tabSpans, tabs]);
 
   return (
     <SkyCover
@@ -168,6 +175,10 @@ export const MobileTabBar = ({ tabs, activeTab, onTabChange, disabledTabs = [], 
             fontFamily={theme.font.family.sans}
             look={look}
             onPress={() => onTabChange(tab.id)}
+            onLayout={(event) => {
+              const { x, width } = event.nativeEvent.layout;
+              setTabSpans((spans) => (spans[tab.id]?.x === x && spans[tab.id]?.width === width ? spans : { ...spans, [tab.id]: { x, width } }));
+            }}
           />
         );
       })}
@@ -193,8 +204,13 @@ const styles = StyleSheet.create({
     paddingTop: BAR_PADDING_TOP,
     paddingHorizontal: BAR_PADDING_X,
   },
+  // Each tab is as wide as its label plus an equal share of the room left, so a long label (FR "BIBLIOTHÈQUE",
+  // DE "EINSTELLUNGEN") takes room from a short one (FR "ACCUEIL", DE "START") instead of ending in "…" at the
+  // phone's text size (UX-PHONE-11); the label never shrinks below it (UX-A11Y-05).
   tabButton: {
-    flex: 1,
+    flexGrow: 1,
+    flexShrink: 1,
+    flexBasis: "auto",
     alignItems: "center",
     // Icons hug the top padding (extra bar height goes below the labels), so the gap the dot is centred in is exactly BAR_PADDING_TOP.
     justifyContent: "flex-start",

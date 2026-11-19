@@ -120,7 +120,7 @@ import { systemPlaylistForSlug } from "@space/library-db-definition/systemPlayli
 import { runMigrations } from "@space/library-db-definition/migrationRunner";
 import { backfillOriginalSizeFromSourceFormats } from "@space/library-db-definition/originalSize";
 import { compactLibraryOps } from "@space/library-db-definition/opCompaction";
-import { artworkStorageKey, collectMediaStorageKeys } from "@space/library-db-definition/mediaDetails";
+import { artworkStorageKey, collectMediaDeleteKeys, collectMediaStorageKeys } from "@space/library-db-definition/mediaDetails";
 import {
   buildOpStatements,
   OP_STREAM_VERSION,
@@ -4093,9 +4093,13 @@ export class LibraryDb {
    */
   applyArtworkCopies(mediaId: string, copies: ArtworkCopy[]): Promise<ArtworkApplyResult> {
     let applied = 0;
+    const unapplied: ArtworkCopy[] = [];
     const touchedPeople = new Set<string>();
     for (const copy of copies) {
-      if (!isCatalogImagePath(copy.path) && !artworkStorageKey(copy.path)) continue;
+      if (!isCatalogImagePath(copy.path) && !artworkStorageKey(copy.path)) {
+        unapplied.push(copy);
+        continue;
+      }
       // Drizzle's `.run()` reports no row count on every driver, so each swap checks the current value first.
       let swapped = false;
       switch (copy.target) {
@@ -4134,9 +4138,11 @@ export class LibraryDb {
         }
       }
       if (swapped) applied += 1;
+      else unapplied.push(copy);
     }
-    const result: ArtworkApplyResult = { applied, skipped: copies.length - applied };
-    logger.info({ mediaId, ...result }, "applyArtworkCopies");
+    const result: ArtworkApplyResult = { applied, skipped: unapplied.length, unapplied };
+    // Counts only: the copies carry storage keys.
+    logger.info({ mediaId, applied, skipped: unapplied.length }, "applyArtworkCopies");
     if (applied === 0) return Promise.resolve(result);
     // A person's photo shows in every title they play in: those titles changed too.
     for (const personId of touchedPeople) this.noteMediaOfPerson(personId);
@@ -6595,6 +6601,25 @@ export class LibraryDb {
     return formatTotal + audioTotal;
   }
 
+  /** A person another title than `mediaId` lists in its cast or crew: their stored photo is that title's too. */
+  private personInOtherTitle(personId: string, mediaId: string): boolean {
+    const inOtherRole = this.metadata
+      .select({ id: mediaRoles.id })
+      .from(mediaRoles)
+      .where(and(eq(mediaRoles.personId, personId), ne(mediaRoles.mediaId, mediaId)))
+      .limit(1)
+      .all();
+    if (inOtherRole.length > 0) return true;
+    return (
+      this.metadata
+        .select({ id: mediaCrew.id })
+        .from(mediaCrew)
+        .where(and(eq(mediaCrew.personId, personId), ne(mediaCrew.mediaId, mediaId)))
+        .limit(1)
+        .all().length > 0
+    );
+  }
+
   getMediaObjectKeys(mediaId: string) {
     const keys: string[] = [];
     const mediaRow = this.core
@@ -6615,21 +6640,7 @@ export class LibraryDb {
       .where(eq(mediaRoles.mediaId, mediaId))
       .all();
     castRows.forEach((row) => {
-      if (!row.profilePath) return;
-      const personId = String(row.personId);
-      const inOtherRole = this.metadata
-        .select({ id: mediaRoles.id })
-        .from(mediaRoles)
-        .where(and(eq(mediaRoles.personId, personId), ne(mediaRoles.mediaId, mediaId)))
-        .limit(1)
-        .all();
-      const inOtherCrew = this.metadata
-        .select({ id: mediaCrew.id })
-        .from(mediaCrew)
-        .where(and(eq(mediaCrew.personId, personId), ne(mediaCrew.mediaId, mediaId)))
-        .limit(1)
-        .all();
-      if (inOtherRole.length === 0 && inOtherCrew.length === 0) keys.push(String(row.profilePath));
+      if (row.profilePath && !this.personInOtherTitle(String(row.personId), mediaId)) keys.push(String(row.profilePath));
     });
 
     const seasonRows = this.metadata
@@ -8534,7 +8545,9 @@ export class LibraryDb {
    * failure), so callers don't have to retry.
    */
   async deleteMedia(mediaId: string): Promise<{ deletedKeys: number; reclaimedBytes: number }> {
-    const keys = this.collectMediaStorageKeys(mediaId);
+    // STOR-PLACE-10: the title's own artwork goes with it; a photo another title still shows stays.
+    const details = this.getMediaDetails(mediaId);
+    const keys = details ? collectMediaDeleteKeys(details, (personId) => this.personInOtherTitle(personId, mediaId)) : [];
     let deletedKeys = 0;
     let reclaimedBytes = 0;
     if (keys.length > 0 && this.token) {

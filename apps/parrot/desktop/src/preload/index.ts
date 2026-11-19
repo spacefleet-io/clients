@@ -40,6 +40,7 @@ const bridge: ParrotBridge = {
     },
   },
   firstTourOff: process.env.SF_FIRST_TOUR === "off",
+  profileSetupOff: process.env.SF_PROFILE_SETUP === "off",
   pairing: {
     start: (options) => ipcRenderer.invoke(PARROT_IPC.pairingStart, options),
     poll: (requestId) => ipcRenderer.invoke(PARROT_IPC.pairingPoll, requestId),

@@ -128,11 +128,26 @@ const PARROT: MascotLoaderSpec = {
 export const MASCOT_LOADERS: Record<MascotLoaderApp, MascotLoaderSpec> = { badger: BADGER, parrot: PARROT };
 
 /**
- * `MASCOT_LOADER_SAMPLES + 1` evenly spaced poses per layer, the last equal to the first, for renderers that
- * interpolate between keyframes. Result: `[layer][sample]`.
+ * Where the loop stands at `nowMs`, 0..1, on one clock shared by every loader: the epoch. A loading screen that
+ * hands over to the next during launch (app shell, then profiles, then library) mounts a fresh loader; started at
+ * the loop's beginning, the mascot snapped back mid-motion at each handover. Starting at this phase instead, the
+ * new loader takes the motion up where the old one was.
  */
-export const mascotLoaderKeyframes = (app: MascotLoaderApp): MascotLoaderPose[][] => {
+export const mascotLoaderPhase = (app: MascotLoaderApp, nowMs: number = Date.now()): number => {
+  const { durationMs } = MASCOT_LOADERS[app];
+  return (((nowMs % durationMs) + durationMs) % durationMs) / durationMs;
+};
+
+/**
+ * `MASCOT_LOADER_SAMPLES + 1` evenly spaced poses per layer, the last equal to the first, for renderers that
+ * interpolate between keyframes. Result: `[layer][sample]`. The samples start at `phase` (see `mascotLoaderPhase`)
+ * and wrap round, so a plain 0..1 loop over them runs in step with every other loader on screen.
+ */
+export const mascotLoaderKeyframes = (app: MascotLoaderApp, phase = 0): MascotLoaderPose[][] => {
   const spec = MASCOT_LOADERS[app];
-  const samples = Array.from({ length: MASCOT_LOADER_SAMPLES + 1 }, (_, i) => spec.pose((i % MASCOT_LOADER_SAMPLES) / MASCOT_LOADER_SAMPLES));
+  const samples = Array.from({ length: MASCOT_LOADER_SAMPLES + 1 }, (_, i) => {
+    const t = (i % MASCOT_LOADER_SAMPLES) / MASCOT_LOADER_SAMPLES + phase;
+    return spec.pose(t >= 1 ? t - 1 : t);
+  });
   return spec.layers.map((_, layer) => samples.map((poses) => poses[layer]!));
 };

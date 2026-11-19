@@ -114,7 +114,7 @@ const styles = StyleSheet.create({
     borderColor: "transparent",
   },
   disabled: {
-    opacity: 0.6,
+    opacity: 0.5,
   },
   row: {
     flexDirection: "row",

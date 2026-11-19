@@ -11,6 +11,10 @@
  * PLAY-SUBGET-07: "Try another version" follows it while the app's label says
  * the subtitle that is on was fetched; picking it sends `version`.
  *
+ * PLAY-SUBGET-23: "Add a subtitle file…" is the menu's last row while the app
+ * sends its label; picking it sends `add-file`. PLAY-SUBGET-24: a media with no
+ * catalog id gets a title field (`title` view) whose Enter sends `title <text>`.
+ *
  * Runs the REAL sf-select.lua under tests/lua/mp_mock.lua. Skips loudly when no
  * Lua interpreter is on PATH (the CI image has none; run locally).
  */
@@ -40,6 +44,9 @@ type Result = {
   after?: string;
   escape?: string;
   bound?: boolean;
+  default_text?: string;
+  cursor?: number;
+  terminated?: number;
 };
 
 // The mock's JSON encoder writes an empty Lua table as {}.
@@ -80,11 +87,60 @@ describe.skipIf(!lua)("sf-select.lua: Get more subtitles… (PLAY-SUBGET-02)", (
     expect(r.warned).toBe(0);
   });
 
-  it("with no subtitle track and nothing to search, it says there are none", () => {
+  // Chris 2026-11-18: the subtitles button always opens the menu, even for a title that cannot be searched.
+  it("with no subtitle track and nothing to search, the menu still opens with Off alone, no warning, no search", () => {
     const r = runScenario("no-tracks-no-label");
-    expect(r.items).toBeUndefined();
+    console.info(`${TAG} no-tracks-no-label ${JSON.stringify(r)}`);
+    expect(r.items).toEqual(["● Off"]);
+    expect(r.warned).toBe(0);
     expect(list(r.fetch)).toEqual([]);
-    expect(r.warned).toBe(1);
+    expect(list(r.picks)).toEqual([["sid", "no"]]);
+  });
+
+  // @req PLAY-SUBGET-24[badger-desktop] @req PLAY-SUBGET-23[badger-desktop]
+  it("with no subtitle track the menu offers Off, Get more subtitles…, then Add a subtitle file…, searching nothing", () => {
+    const r = runScenario("no-tracks-both-rows");
+    console.info(`${TAG} no-tracks-both-rows ${JSON.stringify(r)}`);
+    expect(r.items).toEqual(["● Off", "+ Get more subtitles…", "+ Add a subtitle file…"]);
+    expect(r.warned).toBe(0);
+    expect(list(r.fetch_on_open)).toEqual([]);
+    const fr = runScenario("no-tracks-both-rows-fr");
+    expect(fr.items).toEqual(["● Désactivés", "+ Chercher d'autres sous-titres…", "+ Ajouter un fichier de sous-titres…"]);
+  });
+
+  // @req PLAY-SUBGET-23[badger-desktop]
+  it("Add a subtitle file… is the last row, after Try another version; picking it sends add-file and changes no track", () => {
+    const r = runScenario("add-file-row");
+    console.info(`${TAG} add-file-row ${JSON.stringify(r)}`);
+    expect(r.items).toEqual(["○ Off", "● French", "+ Get more subtitles…", "+ Try another version", "+ Add a subtitle file…"]);
+    expect(r.fetch).toEqual([["add-file"]]);
+    expect(list(r.picks)).toEqual([]);
+    expect(r.sid).toBe(1);
+  });
+
+  // @req PLAY-SUBGET-23[badger-desktop]
+  it("Add a subtitle file… shows without Get more subtitles…", () => {
+    const r = runScenario("add-file-alone");
+    expect(r.items).toEqual(["● Off", "+ Add a subtitle file…"]);
+    expect(r.fetch).toEqual([["add-file"]]);
+  });
+
+  // @req PLAY-SUBGET-24[badger-desktop]
+  it("the title view is mpv's text field prefilled with the title; Enter sends title <text> once and closes the field", () => {
+    const r = runScenario("title-field");
+    console.info(`${TAG} title-field ${JSON.stringify(r)}`);
+    expect(r.prompt).toBe("Which film or show is this? Title:");
+    expect(r.default_text).toBe("Alien");
+    expect(r.cursor).toBe(6);
+    expect(r.fetch).toEqual([["title", "Aliens"]]);
+    expect(r.terminated).toBe(1);
+  });
+
+  // @req PLAY-SUBGET-24[badger-desktop]
+  it("the title field replaces the panel; leaving it without Enter cancels", () => {
+    const r = runScenario("title-cancel");
+    expect(r.after).toBe("");
+    expect(r.fetch).toEqual([["cancel"]]);
   });
 
   // @req PLAY-SUBGET-07[badger-desktop]

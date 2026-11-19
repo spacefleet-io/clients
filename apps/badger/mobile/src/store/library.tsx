@@ -83,6 +83,12 @@ type LibraryStatusValue = {
   error: string | null;
   loadStatus: LoadStatus;
   contractIssue: string | null;
+  /**
+   * UX-WAIT-04: true once this load has said what the library holds — the sync with the server ended (or there was
+   * nothing to sync with: offline, signed out, a blocking screen). Until then an empty `media` is "not known yet", never
+   * "empty": screens gate the empty library on `libraryContent({ itemCount, settled })` from `@space/shared`.
+   */
+  settled: boolean;
   needsKey: boolean;
   /**
    * Non-null when the library is at a format version newer than this build
@@ -362,39 +368,45 @@ export const LibraryProvider = ({ children }: { children: React.ReactNode }) => 
     playback: Array<() => void>;
   }>({ core: [], metadata: [], playback: [] });
   const datasetUnsubscribeRef = useRef<(() => void) | null>(null);
-  const listRefreshRef = useRef({ running: false, again: false });
+  const listRefreshRef = useRef<{ running: Promise<void> | null; again: boolean }>({ running: null, again: false });
+  // UX-WAIT-04: bumped by `reload`, so a load that started before it can never mark the new one's content as known.
+  const settleEpochRef = useRef(0);
+  const [settled, setSettled] = useState(false);
 
   // Coalesced re-list for onDataChanged bursts; drops the result when the db
-  // is no longer the active one (reload/logout closed it).
-  const refreshListsFrom = useCallback(async (source: LibraryDb) => {
+  // is no longer the active one (reload/logout closed it). Resolves once the
+  // lists on screen are the db's latest (a call during a run waits for the rerun).
+  const refreshListsFrom = useCallback((source: LibraryDb): Promise<void> => {
     const state = listRefreshRef.current;
     if (state.running) {
       state.again = true;
-      return;
+      return state.running;
     }
-    state.running = true;
-    try {
-      do {
-        state.again = false;
-        const [nextMedia, nextPlaylists, nextVariants] = await Promise.all([
-          source.listMedia(),
-          source.listPlaylists(),
-          source.readTitleVariants(),
-        ]);
-        if (activeDbRef.current !== source) return;
-        setMedia(nextMedia);
-        setPlaylists(nextPlaylists);
-        setTitleVariants(nextVariants);
-        console.warn(
-          "library.data.refreshed",
-          JSON.stringify({ mediaCount: nextMedia.length, playlistCount: nextPlaylists.length })
-        );
-      } while (state.again);
-    } catch (error) {
-      console.warn("library.data.refresh_failed", JSON.stringify({ error: describeError(error) }));
-    } finally {
-      state.running = false;
-    }
+    state.running = (async () => {
+      try {
+        do {
+          state.again = false;
+          const [nextMedia, nextPlaylists, nextVariants] = await Promise.all([
+            source.listMedia(),
+            source.listPlaylists(),
+            source.readTitleVariants(),
+          ]);
+          if (activeDbRef.current !== source) return;
+          setMedia(nextMedia);
+          setPlaylists(nextPlaylists);
+          setTitleVariants(nextVariants);
+          console.warn(
+            "library.data.refreshed",
+            JSON.stringify({ mediaCount: nextMedia.length, playlistCount: nextPlaylists.length })
+          );
+        } while (state.again);
+      } catch (error) {
+        console.warn("library.data.refresh_failed", JSON.stringify({ error: describeError(error) }));
+      } finally {
+        state.running = null;
+      }
+    })();
+    return state.running;
   }, []);
 
   // A profile switch (UX-PROF-01) changes the progress, playlists and favorites every list shows (ACCT-SQUAD-02).
@@ -411,6 +423,9 @@ export const LibraryProvider = ({ children }: { children: React.ReactNode }) => 
   const reload = useCallback(() => {
     setReloadNonce((prev) => prev + 1);
     hasLoadedOnce.current = false;
+    settleEpochRef.current += 1;
+    setSettled(false);
+    console.warn("library.content.unsettled", JSON.stringify({ where: "reload" }));
     activeDbRef.current = null;
     setDb((prev) => {
       prev?.close().catch((error: unknown) => {
@@ -446,6 +461,8 @@ export const LibraryProvider = ({ children }: { children: React.ReactNode }) => 
     await LibraryDb.clearLocalCache().catch((error: unknown) => {
       console.warn("library.kept_key.cache_clear_failed", JSON.stringify({ error: describeError(error) }));
     });
+    settleEpochRef.current += 1;
+    setSettled(false);
     setNeedsKey(true);
     // A key that no longer opens the library says so; an erased account just shows the key step's new key.
     setError(verdict === "mismatch" ? { key: "errors.library.decryptFailed" } : null);
@@ -471,6 +488,16 @@ export const LibraryProvider = ({ children }: { children: React.ReactNode }) => 
     }
 
     const generation = ++loadGenerationRef.current;
+    const settleEpoch = settleEpochRef.current;
+    // UX-WAIT-04: the library's content is known from here on (see `settled`). A reload since this load began wins.
+    const settle = (where: string) => {
+      if (settleEpochRef.current !== settleEpoch) return;
+      console.warn("library.content.settled", JSON.stringify({ where }));
+      setSettled(true);
+    };
+    // False while the background sync started below still has to say what the library holds, when nobody is signed
+    // in (the next account's library is not known yet), or at the key step (the library is not opened yet).
+    let settleOnExit = true;
     loadInFlight.current = (async () => {
       let coreReady = false;
       let openedDb: LibraryDb | null = null;
@@ -490,6 +517,8 @@ export const LibraryProvider = ({ children }: { children: React.ReactNode }) => 
           setLoading(false);
           setLoadStatus({ kind: "ready" });
           setDatasetStatus({ core: false, metadata: false, playback: false });
+          settleOnExit = false;
+          setSettled(false);
           console.warn("library.load.skip", JSON.stringify({ reason: "no_token_or_user_or_admin" }));
           return;
         }
@@ -546,6 +575,8 @@ export const LibraryProvider = ({ children }: { children: React.ReactNode }) => 
         if (!keyAck) {
           setLoadStatus({ kind: "loading", phase: "contract" });
           if (await contractBlocks()) return;
+          settleOnExit = false;
+          setSettled(false);
           setNeedsKey(true);
           setError(null);
           setLoading(false);
@@ -559,6 +590,8 @@ export const LibraryProvider = ({ children }: { children: React.ReactNode }) => 
         if (!key) {
           setLoadStatus({ kind: "loading", phase: "contract" });
           if (await contractBlocks()) return;
+          settleOnExit = false;
+          setSettled(false);
           setNeedsKey(true);
           setError({ key: "errors.library.missingKey" });
           setLoading(false);
@@ -775,18 +808,22 @@ export const LibraryProvider = ({ children }: { children: React.ReactNode }) => 
             const isCurrent = () =>
               loadGenerationRef.current === generation &&
               activeDbRef.current === capturedDb;
+            settleOnExit = false;
             void (async () => {
               try {
                 const changed = await capturedDb.syncFromRemoteIfNewer(meta);
                 if (!isCurrent()) return;
                 if (changed) {
                   // Lists are refreshed by the onDataChanged subscription
-                  // above, which fires as soon as the ops are applied.
+                  // above, which fires as soon as the ops are applied; waiting
+                  // for it keeps a saved empty copy from showing as empty.
+                  await refreshListsFrom(capturedDb);
                   console.warn(
                     "library.load.sync.done",
                     JSON.stringify({ version: meta.version })
                   );
                 }
+                settle(changed ? "sync_changed" : "sync_unchanged");
                 await capturedDb.flushPending();
               } catch (syncErr) {
                 if (!isCurrent()) return;
@@ -794,6 +831,7 @@ export const LibraryProvider = ({ children }: { children: React.ReactNode }) => 
                   "library.load.sync.failed",
                   JSON.stringify({ error: describeError(syncErr) })
                 );
+                settle("sync_failed");
                 if (isDecryptError(syncErr)) {
                   await clearLibraryKey().catch(() => undefined);
                   if (!isCurrent()) return;
@@ -918,6 +956,9 @@ export const LibraryProvider = ({ children }: { children: React.ReactNode }) => 
         }
       } finally {
         setLoading(false);
+        // Every other way out of a load says what the library holds: the lists are read, or a screen
+        // (key, update, blocked, signed out) replaces Home. The background sync settles on its own.
+        if (settleOnExit) settle("load_done");
         if (!hasLoadedOnce.current) {
           hasLoadedOnce.current = true;
         }
@@ -930,7 +971,7 @@ export const LibraryProvider = ({ children }: { children: React.ReactNode }) => 
     })();
 
     await loadInFlight.current;
-  }, [authLoading, forgetKeptKey, logout, token, userId]);
+  }, [authLoading, forgetKeptKey, logout, refreshListsFrom, token, userId]);
 
   useEffect(() => {
     if (authLoading || !token || !userId) return;
@@ -940,6 +981,9 @@ export const LibraryProvider = ({ children }: { children: React.ReactNode }) => 
     );
     void load();
     return () => {
+      // Another account, a sign-out or a reload: what this load knew about the library no longer holds (UX-WAIT-04).
+      settleEpochRef.current += 1;
+      setSettled(false);
       activeDbRef.current = null;
       setDb((prev) => {
         prev?.close().catch((error: unknown) => {
@@ -1662,6 +1706,7 @@ export const LibraryProvider = ({ children }: { children: React.ReactNode }) => 
       error: error ? t(error.key, error.params) : null,
       loadStatus: localizeLoadStatus(loadStatus, t),
       contractIssue,
+      settled,
       needsKey,
       // Derived from `loadStatus` — the single source of truth — so the field
       // can never drift out of sync with the navigator's screen decision.
@@ -1678,6 +1723,7 @@ export const LibraryProvider = ({ children }: { children: React.ReactNode }) => 
       loadStatus,
       t,
       contractIssue,
+      settled,
       needsKey,
       datasetStatus,
       awaitDatasetReady,

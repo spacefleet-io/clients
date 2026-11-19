@@ -27,7 +27,7 @@
       }
     },
     "library": {
-      "opening": "Je bibliotheek wordt geopend…",
+      "loading": "Bibliotheek wordt geladen…",
       "openFailed": "Je bibliotheek kon niet worden geopend ({{error}}).",
       "tryAgain": "Opnieuw proberen",
       "noAlbums": "Nog geen albums.",

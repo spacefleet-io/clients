@@ -5,5 +5,6 @@
     "lib": ["ES2024", "DOM", "DOM.Iterable"],
     "jsx": "react-jsx"
   },
-  "include": ["src", "tests", "*.ts"]
+  // profile-setup.tsx draws the shared avatars, whose entry imports .webp files: the apps' bundler types give those.
+  "include": ["src", "tests", "*.ts", "../profile-avatars/src/env.d.ts"]
 }

@@ -18,8 +18,7 @@ ESCUCHA SIN CONEXIÓN
 
 SOLO TU MÚSICA
 • Sin anuncios.
-• Tu biblioteca y la música que añades se cifran en tu dispositivo antes de llegar a nuestros servidores.
-• Para mostrar portadas y letras, Parrot consulta nuestro servicio de búsqueda con un ticket anónimo de un solo uso en lugar de tu cuenta: no podemos saber quién pregunta. El servicio ve lo que se busca y tu dirección de internet, que no guardamos.
+• Solo tú puedes ver tu biblioteca. Ni siquiera nosotros.
 • Parrot no ofrece música: escuchas la música que añades tú.
 
 EMPIEZA GRATIS

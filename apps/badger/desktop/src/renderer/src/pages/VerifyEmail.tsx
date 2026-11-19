@@ -97,6 +97,7 @@ export default function VerifyEmailPage() {
           mascotSrc={mascotSrc}
           mascotAlt={t("brand.mascotAlt")}
           mascotGlowClassName="drop-shadow-[0_0_30px_rgba(255,170,84,0.3)]"
+          mascotPlacement="above"
           contentClassName="space-y-4 pb-8 pt-4"
         >
             {status === "verifying" ? (

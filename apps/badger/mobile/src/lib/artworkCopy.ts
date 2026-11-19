@@ -37,6 +37,8 @@ export type ArtworkCopyDeps = {
   /** Encrypts with the library key, stores under a random name, answers the `asset:<type>::<key>` reference. */
   storeEncrypted: (bytes: Uint8Array, contentType: string) => Promise<string>;
   ticketsHeld: () => Promise<number>;
+  /** Deletes stored pictures (`/storage/delete`): a copy the library did not take (STOR-PLACE-10). */
+  discard?: (keys: string[]) => Promise<unknown>;
   /** A title's artwork was swapped in: the lists re-read the library. */
   onApplied?: (mediaId: string) => void;
   log: (event: string, detail: Record<string, unknown>) => void;
@@ -86,7 +88,14 @@ export const startArtworkCopy = (deps: ArtworkCopyDeps): ArtworkCopyRun => {
     run: async (mediaId, control) => {
       // At the floor already: the title waits for the next pass instead of opening its details for nothing.
       if (stopped || !(await canSpend())) return;
-      const result = await copyMediaArtwork({ store: deps.library, mediaId, upload, canSpend, shouldYield: control.shouldYield });
+      const result = await copyMediaArtwork({
+        store: deps.library,
+        mediaId,
+        upload,
+        canSpend,
+        shouldYield: control.shouldYield,
+        ...(deps.discard ? { discard: deps.discard } : {}),
+      });
       deps.log("artwork.copy", { ...result });
       if (result.failed > 0) coolDown(mediaId);
       if (result.applied > 0 && !stopped) deps.onApplied?.(mediaId);

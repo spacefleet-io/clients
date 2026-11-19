@@ -1,7 +1,8 @@
 import type { MediaDetails } from "@space/shared/libraryTypes";
 import { findMediaPlacementId } from "@space/shared/mediaPlacement";
-import type { StoreFetchedSubtitleDeps } from "@space/shared/subtitleFetch";
+import { storeSubtitleFile, type StoredSubtitleFile, type StoreFetchedSubtitleDeps } from "@space/shared/subtitleFetch";
 import { subtitlePickPatch, type TrackPrefsPatch } from "@space/shared/trackPrefs";
+import { detectSubtitleFileLanguage } from "@space/ingest-core/subtitleLanguageDetection";
 import { metadataClient } from "@/lib/metadataTickets";
 import type { AddSubtitleTrack } from "@/lib/playbackTypes";
 
@@ -36,3 +37,21 @@ export const subtitleFetchStoreDeps = (params: {
     },
   };
 };
+
+/**
+ * "Add a subtitle file…" in the player (PLAY-SUBGET-23): the picked file stored like a fetched subtitle, source
+ * "added-file", named by the ingest's language detection (franc) in the app's language, else by the file name.
+ * Rejects with `UnreadableSubtitleFileError` before storing anything.
+ */
+export const storeDesktopSubtitleFile = (
+  file: { name: string; content: string },
+  params: Parameters<typeof subtitleFetchStoreDeps>[0] & { uiLanguage: string }
+): Promise<StoredSubtitleFile> =>
+  storeSubtitleFile(file, {
+    ...subtitleFetchStoreDeps(params),
+    uiLanguage: params.uiLanguage,
+    takenLabels: params.media.subtitleTracks
+      .filter((track) => (track.episodeId ?? null) === params.episodeId)
+      .map((track) => track.label),
+    detectLanguage: async (text) => (await detectSubtitleFileLanguage(text))?.language ?? null,
+  });

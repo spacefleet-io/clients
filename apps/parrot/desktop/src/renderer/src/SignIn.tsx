@@ -93,6 +93,7 @@ export default function SignIn({ t, state, onState }: Props) {
           title={mode === "signUp" ? t("signUp.title") : mode === "verify" ? t("verify.title") : t("signIn.title")}
           mascotSrc={mascotUrl}
           mascotGlowClassName="drop-shadow-[0_0_30px_rgba(64,221,143,0.3)]"
+          mascotPlacement="above"
           maxWidthClassName="max-w-xl"
         >
           {mode === "pair" ? (

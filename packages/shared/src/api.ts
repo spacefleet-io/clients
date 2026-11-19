@@ -10,6 +10,7 @@ import type { BillingStatus, PaidPlanId, PaymentOutcome, SubscriptionChangeOutco
 import type { CheckoutReturnApp } from "./checkoutReturn";
 import type { ApiProfile, ProfilesResponse } from "./profiles";
 import type { ProfileAvatarId } from "./profileAvatars";
+import type { ProfileFeatures } from "./appFeatures";
 import type { AccountLanguage } from "./i18n";
 import { REQUEST_TIMEOUT_ERROR, SIGN_IN_TIMEOUT_MS } from "./signInError";
 import { FOUNDER_NOTICE_SEEN_PATH, FOUNDER_STATUS_PATH, type FounderStatusResponse } from "./founder";
@@ -255,13 +256,13 @@ export const listProfiles = (token: string): Promise<ProfilesResponse> => unwrap
 /** Refused with 409 `profile_limit` at the plan's limit, 400 `invalid_profile` for a bad name or avatar. */
 export const createProfile = (
   token: string,
-  body: { name: string; avatarId?: ProfileAvatarId }
+  body: { name: string; avatarId?: ProfileAvatarId; features?: ProfileFeatures }
 ): Promise<ProfilesResponse & { profile: ApiProfile }> => unwrap(sdk.createProfile({ ...scoped(token), body }));
 
 export const updateProfile = (
   token: string,
   id: string,
-  body: { name?: string; avatarId?: ProfileAvatarId }
+  body: { name?: string; avatarId?: ProfileAvatarId; features?: ProfileFeatures }
 ): Promise<ProfilesResponse & { profile: ApiProfile }> => unwrap(sdk.updateProfile({ ...scoped(token), path: { id }, body }));
 
 /** Refused with 409 `last_profile` for the only profile left (ACCT-PROF-02); returns the remaining profiles. */

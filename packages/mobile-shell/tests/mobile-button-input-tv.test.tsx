@@ -128,4 +128,19 @@ describe("shared button and field on TV — @req UX-TV-17[badger-tv]", () => {
     expect(plain.props.hasTVPreferredFocus).toBeUndefined();
     expect(phone.props.hasTVPreferredFocus).toBeUndefined();
   });
+
+  // The grey-out rule (AuditTvs 2026-11-18): a disabled control is its idle colour at 50% opacity, as the setup pills,
+  // the tab bar and the TV's own buttons; MobileButton had 0.6.
+  it("greys a disabled button at half opacity, on phone and TV", () => {
+    for (const isTV of [false, true]) {
+      stubs.platform.isTV = isTV;
+      stubs.state.focused = false;
+      const idle = flat(renderButton().props.style);
+      const off = flat((MobileButtonFace({ label: "Validate key", onPress: () => undefined, disabled: true }) as Element).props.style);
+      console.log("[button-tv] disabled opacity", isTV ? "tv" : "phone", idle.opacity, off.opacity);
+      expect(idle.opacity).toBeUndefined();
+      expect(off.opacity).toBe(0.5);
+    }
+    stubs.platform.isTV = false;
+  });
 });

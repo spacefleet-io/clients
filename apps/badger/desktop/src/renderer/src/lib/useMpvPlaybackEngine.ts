@@ -28,7 +28,7 @@ import { useExternalMpvCommands } from "@/lib/useExternalMpvCommands";
 import { formatPlayerTrackLabel } from "@/lib/playerTrackLabel";
 import { formatNowPlayingParts } from "@space/shared/nowPlaying";
 import { isOcrTwin } from "@space/shared/subtitleTwins";
-import { isFetchedSubtitleSource } from "@space/shared/subtitleFetch";
+import { isRemovableSubtitleSource } from "@space/shared/subtitleFetch";
 import { useMpvSubtitleFetch } from "@/lib/useMpvSubtitleFetch";
 import { getDecryptedAssetUrl, isAssetKey } from "@/lib/assets";
 import { getStoredLibraryKey } from "@/lib/onboarding";
@@ -822,7 +822,7 @@ export const useMpvPlaybackEngine = ({
     () => media.subtitleTracks.find((track) => track.id === selectedSubtitleId) ?? null,
     [media.subtitleTracks, selectedSubtitleId]
   );
-  const { getMoreSubtitlesLabel, tryAnotherVersionLabel } = useMpvSubtitleFetch({
+  const { getMoreSubtitlesLabel, tryAnotherVersionLabel, addSubtitleFileLabel } = useMpvSubtitleFetch({
     open,
     isExternalPlayer: () => mpvFlagsRef.current.externalPlayer,
     media,
@@ -838,6 +838,11 @@ export const useMpvPlaybackEngine = ({
     subtitlesOffLabel: t("player.subtitlesOff"),
     onAdded: (entry, addedEpisodeId) => {
       fetchedSubtitleRef.current = { episodeId: addedEpisodeId, language: entry.language, label: entry.trackName };
+      setFetchedSubtitleTick((tick) => tick + 1);
+    },
+    // PLAY-SUBGET-23: the added file is switched on the same way once the media lists it.
+    onFileAdded: (stored, addedEpisodeId) => {
+      fetchedSubtitleRef.current = { episodeId: addedEpisodeId, language: stored.language, label: stored.label };
       setFetchedSubtitleTick((tick) => tick + 1);
     },
     onReplaced: async (replaced, replacedEpisodeId) => {
@@ -864,9 +869,11 @@ export const useMpvPlaybackEngine = ({
   // Read by the launch payload without being one of its deps: switching subtitles must not rebuild loadStream (whose
   // identity change reloads the stream); a change mid-playback is re-sent by useMpvSubtitleFetch.
   const tryAnotherVersionLabelRef = useRef(tryAnotherVersionLabel);
+  const addSubtitleFileLabelRef = useRef(addSubtitleFileLabel);
   useEffect(() => {
     tryAnotherVersionLabelRef.current = tryAnotherVersionLabel;
-  }, [tryAnotherVersionLabel]);
+    addSubtitleFileLabelRef.current = addSubtitleFileLabel;
+  }, [tryAnotherVersionLabel, addSubtitleFileLabel]);
 
   // The rungs the HLS master lists, in its order (createHlsSession drops a
   // format without a chunk map): the vid ↔ format mapping ranks ties here.
@@ -1150,6 +1157,7 @@ export const useMpvPlaybackEngine = ({
       subtitlesOffLabel: t("player.subtitlesOff"),
       getMoreSubtitlesLabel,
       tryAnotherVersionLabel: tryAnotherVersionLabelRef.current,
+      addSubtitleFileLabel: addSubtitleFileLabelRef.current,
       menuPrompts: oscMenuPrompts(t),
       skipMarkers: currentSkipMarkers,
       title: nowPlaying.title,
@@ -4581,8 +4589,8 @@ export const useMpvPlaybackEngine = ({
     setSubtitlesOffPicked(false);
     setSelectedSubtitleId(trackId);
   }, []);
-  // PLAY-SUBGET-02: the subtitle just stored from the mpv menu is the pick once the media lists it; the apply effect
-  // then sub-adds it with mpv's "select" flag while playback resumes.
+  // PLAY-SUBGET-02, -23: the subtitle just stored from the mpv menu (fetched or added from a file) is the pick once the
+  // media lists it; the apply effect then sub-adds it with mpv's "select" flag while playback resumes.
   useEffect(() => {
     const fetched = fetchedSubtitleRef.current;
     if (!fetched) return;
@@ -4591,7 +4599,7 @@ export const useMpvPlaybackEngine = ({
         (item.episodeId ?? null) === fetched.episodeId &&
         item.language === fetched.language &&
         item.label === fetched.label &&
-        isFetchedSubtitleSource(item.source) &&
+        isRemovableSubtitleSource(item.source) &&
         item.id !== fetched.replacedId
     );
     if (!track) return;

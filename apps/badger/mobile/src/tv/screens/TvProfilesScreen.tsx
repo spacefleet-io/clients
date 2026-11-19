@@ -1,112 +1,29 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, BackHandler, ScrollView, StyleSheet, Text, TextInput, type TextInputInstance, View } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
-import { Check, Plus } from "lucide-react-native";
+import { Plus } from "lucide-react-native";
 import { useTranslation } from "@space/mobile-shell/i18n";
 import { ProfileAvatarImage, profileAvatarRadius } from "@space/mobile-shell/profile-avatar";
-import { PROFILE_AVATAR_IDS, type ProfileAvatarId } from "@space/shared/profileAvatars";
 import { PROFILE_NAME_MAX } from "@space/shared/profiles";
 import { profileStore } from "../../lib/profiles/profileStore";
 import { useProfilesFlow } from "@space/mobile-shell/profiles-flow";
 import { useLibraryActions } from "../../store/library";
 import { theme } from "../../theme/theme";
 import { PairingButton } from "../components/PairingButton";
+import { TV_AVATAR_GRID_LAYOUT, TvAvatarGrid } from "../components/TvAvatarGrid";
 import { TvFocusable } from "../components/TvFocusable";
 import { TV_SAFE_MARGIN_X, TV_SAFE_MARGIN_Y } from "../lib/layout";
 import { TV_RADIUS } from "../lib/tvLook";
 import { useTvScale, useTvStyles } from "../lib/tvScale";
-import type { TvViewInstance } from "../lib/tvViewInstance";
 
 const tvLog = (event: string, data: Record<string, unknown>) => console.info(`tv.profiles.${event}`, JSON.stringify(data));
 
 /** Design sizes (scaled with the TV, UX-TV-13): about 240 px avatars on a 1080p TV, as the mockup's tiles. */
 export const TV_TILE_AVATAR = 120;
-const TV_CHOOSER_CELL = 64;
 const TV_PREVIEW_AVATAR = 88;
 const TV_MANAGE_AVATAR = 56;
-/** The chooser on the TV: the 22 avatars in two rows of 11, walked with the arrows. */
-export const TV_AVATAR_COLUMNS = 11;
-
-/** How long after the keyboard's "done" a focus landing elsewhere is UIKit's update, not the user's move. */
-const KEYBOARD_SETTLE_MS = 1000;
-
-/**
- * The TV's avatar chooser (ACCT-PROF-05): the same 22 in pack order, every cell a remote focus target. The chosen one
- * keeps the accent ring and tick; the focused one gets the white ring the profile tiles use.
- *
- * `focusChosen` counts the name submits: each one sends the focus to the chosen avatar. On tvOS the keyboard closing
- * runs UIKit's own focus update, which lands on the first avatar (name field focused by the screen) or back on the name
- * field (name field reached with the remote): a focus on another cell within KEYBOARD_SETTLE_MS of the request takes it
- * back once, and if no avatar holds the focus when that time is up the chosen one asks for it again (seen on the Apple
- * TV simulator 2026-11-18, as TV-SHELL-FOCUS-002 on Home).
- */
-const TvAvatarGrid = ({ value, onChange, focusChosen }: { value: ProfileAvatarId; onChange: (id: ProfileAvatarId) => void; focusChosen: number }) => {
-  const { t } = useTranslation();
-  const scale = useTvScale();
-  const styles = useTvStyles(baseStyles);
-  const [focused, setFocused] = useState<ProfileAvatarId | null>(null);
-  const focusedRef = useRef<ProfileAvatarId | null>(null);
-  const chosenRef = useRef<TvViewInstance>(null);
-  const requestedAt = useRef<number | null>(null);
-  useEffect(() => {
-    if (focusChosen === 0) return undefined;
-    requestedAt.current = Date.now();
-    tvLog("avatar.focus", { step: "request", submit: focusChosen });
-    chosenRef.current?.requestTVFocus();
-    const settle = setTimeout(() => {
-      if (focusedRef.current !== null) return;
-      tvLog("avatar.focus", { step: "settle" });
-      chosenRef.current?.requestTVFocus();
-    }, KEYBOARD_SETTLE_MS);
-    return () => clearTimeout(settle);
-  }, [focusChosen]);
-  const setCellFocus = (id: ProfileAvatarId | null) => {
-    focusedRef.current = id;
-    setFocused(id);
-  };
-  const onCellFocus = (id: ProfileAvatarId) => {
-    setCellFocus(id);
-    const at = requestedAt.current;
-    if (at === null) return;
-    requestedAt.current = null;
-    const sinceMs = Date.now() - at;
-    if (id === value || sinceMs > KEYBOARD_SETTLE_MS) return;
-    tvLog("avatar.focus", { step: "retake", landed: id, sinceMs });
-    chosenRef.current?.requestTVFocus();
-  };
-  return (
-    <View testID="avatar-chooser" style={styles.chooserGrid}>
-      {PROFILE_AVATAR_IDS.map((id) => {
-        const selected = id === value;
-        return (
-          <TvFocusable
-            key={id}
-            ref={selected ? chosenRef : undefined}
-            testID={`avatar-option-${id}`}
-            ring="none"
-            hasTVPreferredFocus={focusChosen > 0 && selected}
-            accessibilityRole="radio"
-            accessibilityState={{ selected, checked: selected }}
-            accessibilityLabel={t(`profiles.avatars.${id}`)}
-            onFocus={() => onCellFocus(id)}
-            onBlur={() => {
-              if (focusedRef.current === id) setCellFocus(null);
-            }}
-            onPress={() => onChange(id)}
-            style={[styles.chooserCell, selected && styles.chooserCellSelected, focused === id && styles.focusRing]}
-          >
-            <ProfileAvatarImage avatarId={id} size={(TV_CHOOSER_CELL - 10) * scale} testID={`avatar-option-image-${id}`} />
-            {selected ? (
-              <View style={styles.tick} testID="avatar-option-tick">
-                <Check size={14 * scale} strokeWidth={3.5} color={theme.accentTextHex} />
-              </View>
-            ) : null}
-          </TvFocusable>
-        );
-      })}
-    </View>
-  );
-};
+/** The chooser on the TV: the 22 avatars in two rows of 11, walked with the arrows (`TvAvatarGrid`, compact). */
+export const TV_AVATAR_COLUMNS = TV_AVATAR_GRID_LAYOUT.compact.columns;
 
 /**
  * "Who's watching?" on the TV (UX-PROF-01, UX-PROF-02): asked at every start of the app when the account has more than
@@ -402,34 +319,6 @@ const baseStyles = StyleSheet.create({
     backgroundColor: theme.colors.surfaceRaised,
   },
   chooserLabel: { fontSize: 20, fontWeight: "600", color: theme.colors.textMuted },
-  chooserGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "center",
-    gap: 10,
-    width: TV_AVATAR_COLUMNS * TV_CHOOSER_CELL + (TV_AVATAR_COLUMNS - 1) * 10,
-  },
-  chooserCell: {
-    width: TV_CHOOSER_CELL,
-    height: TV_CHOOSER_CELL,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 3,
-    borderColor: "transparent",
-    borderRadius: profileAvatarRadius(TV_CHOOSER_CELL) + 3,
-  },
-  chooserCellSelected: { borderColor: theme.colors.accent },
-  tick: {
-    position: "absolute",
-    top: -7,
-    right: -7,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: theme.colors.accent,
-  },
   manageList: { maxHeight: 520, alignSelf: "stretch" },
   // Rows fill the safe area (960 − 2 × 48 dp); the padding keeps the focus ring of the last button inside the list.
   manageListContent: { gap: 16, paddingHorizontal: 8 },

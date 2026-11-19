@@ -3,14 +3,13 @@ import { describe, expect, it } from "vitest";
 import {
   buildDashboardActiveJobsByMediaId,
   filterDashboardItems,
-  getDashboardHeroState,
+  pageLibraryContent,
   selectDashboardImportingMedia,
   selectDashboardProcessingMedia,
   selectDashboardVisibleMedia,
   reuseSameIdSet,
   reuseUnchangedActiveJobStates,
   sortDashboardItems,
-  shouldHoldEmptyCardDuringRefresh,
 } from "../src/renderer/src/lib/dashboardState";
 
 // On assertion failure, dump the inputs + computed selector output so the
@@ -30,62 +29,43 @@ const dumpDashboardSnapshot = (
   }
 };
 
+const verdict = (label: string, input: Parameters<typeof pageLibraryContent>[0]) => {
+  const result = pageLibraryContent(input);
+  console.info(`[dashboard-state:${label}] input=${JSON.stringify(input)} verdict=${result}`);
+  return result;
+};
+
 // @req UX-HOME-03[badger-desktop]
-describe("getDashboardHeroState", () => {
-  it("[UX-HOME-03] shows the normal Home (no hero) when nothing is playable but an import is active", () => {
-    const input = { loading: false, holdEmptyCardDuringRefresh: true, playableCount: 0, importingCount: 1 };
-    console.info(`[UX-HOME-03:hero-importing] input=${JSON.stringify(input)}`);
-    const result = getDashboardHeroState(input);
+describe("pageLibraryContent: importing titles", () => {
+  it("[UX-HOME-03] shows the normal Home (no empty library) when nothing is playable but an import is active", () => {
+    // Dashboard counts playable + importing titles as listed.
+    const input = { loading: false, listed: true, itemCount: 0 + 1 };
+    const result = verdict("importing", input);
     try {
-      expect(result).toBeNull();
+      expect(result).toBe("ready");
     } catch (err) {
-      dumpDashboardSnapshot("hero-importing-fail", { input, result });
+      dumpDashboardSnapshot("importing-fail", { input, result });
       throw err;
     }
   });
-
-  it("shows empty when nothing is playable and nothing is importing", () => {
-    expect(
-      getDashboardHeroState({
-        loading: false,
-        holdEmptyCardDuringRefresh: true,
-        playableCount: 0,
-        importingCount: 0,
-      })
-    ).toBe("empty");
-  });
-
-  it("shows no hero once playable media exists", () => {
-    expect(
-      getDashboardHeroState({
-        loading: false,
-        holdEmptyCardDuringRefresh: false,
-        playableCount: 1,
-        importingCount: 1,
-      })
-    ).toBeNull();
-  });
 });
 
-describe("shouldHoldEmptyCardDuringRefresh", () => {
-  it("[@bugfix][@regression-proof] does not keep the empty hero latched while an import is active", () => {
-    expect(
-      shouldHoldEmptyCardDuringRefresh({
-        loading: false,
-        playableCount: 0,
-        importingCount: 1,
-      })
-    ).toBe(false);
+// @req UX-WAIT-04
+describe("pageLibraryContent: empty library only once known empty", () => {
+  it("[@bugfix][@regression-proof] is loading while the provider is still loading", () => {
+    expect(verdict("provider-loading", { loading: true, listed: true, itemCount: 0 })).toBe("loading");
   });
 
-  it("keeps the empty hero only when nothing is playable and nothing is importing", () => {
-    expect(
-      shouldHoldEmptyCardDuringRefresh({
-        loading: false,
-        playableCount: 0,
-        importingCount: 0,
-      })
-    ).toBe(true);
+  it("[@bugfix][@regression-proof] is loading while the listed copy has not caught up with the loaded list", () => {
+    expect(verdict("deferred-lagging", { loading: false, listed: false, itemCount: 0 })).toBe("loading");
+  });
+
+  it("is empty once the load settled and listed nothing", () => {
+    expect(verdict("settled-empty", { loading: false, listed: true, itemCount: 0 })).toBe("empty");
+  });
+
+  it("is ready as soon as titles are listed, even mid-refresh", () => {
+    expect(verdict("refreshing-with-titles", { loading: true, listed: false, itemCount: 3 })).toBe("ready");
   });
 });
 

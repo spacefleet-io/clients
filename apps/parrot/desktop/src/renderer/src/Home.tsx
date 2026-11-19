@@ -5,14 +5,18 @@ import { ParrotAlbumTile } from "@space/ui/parrot/library";
 import { ParrotHome } from "@space/ui/parrot/screens";
 import { EmptyLibrary } from "@space/ui";
 import mascotUrl from "@space/parrot-core/mascot.webp";
+import type { LibraryContent } from "@space/shared/libraryContent";
 import type { ParrotDesktopAlbum, ParrotDesktopArtist, ParrotLanguage } from "../../shared/ipc";
 import { countText, type Translate } from "./i18n";
+import { LibraryLoading } from "./LoadingMascot";
 
 type HomeProps = {
   t: Translate;
   language: ParrotLanguage;
   albums: ParrotDesktopAlbum[];
   artists: ParrotDesktopArtist[];
+  /** What the library holds (UX-WAIT-04): its songs, nothing yet known (the loading screen), or nothing (the empty library). */
+  content: LibraryContent;
   tracks: ParrotLibraryTrack[];
   history: ListeningHistory;
   playingTrack: ParrotLibraryTrack | undefined;
@@ -66,6 +70,7 @@ export default function Home({
   language,
   albums,
   artists,
+  content,
   tracks,
   history,
   playingTrack,
@@ -84,7 +89,8 @@ export default function Home({
   onAddMusic,
   onAddFolder,
 }: HomeProps) {
-  if (tracks.length === 0) return <EmptyMusicLibrary t={t} onAddMusic={onAddMusic} onAddFolder={onAddFolder} />;
+  if (content === "loading") return <LibraryLoading label={t("library.loading")} />;
+  if (content === "empty") return <EmptyMusicLibrary t={t} onAddMusic={onAddMusic} onAddFolder={onAddFolder} />;
   return (
     <ParrotHome
       history={history}

@@ -233,6 +233,6 @@ describe("tryAnotherSubtitleVersion", () => {
     expect(subtitleVersionLine(en, "looking", "Spanish")).toBe("Looking for another version…");
     expect(subtitleVersionLine(en, "replaced", "Spanish")).toBe("Spanish replaced with another version");
     expect(subtitleVersionLine(en, "none-left", "Spanish")).toBe("No other version of Spanish left");
-    expect(subtitleVersionLine(subtitleFetchCopy("fr"), "none-left", "Espagnol")).toBe("Plus d'autre version de Espagnol");
+    expect(subtitleVersionLine(subtitleFetchCopy("fr"), "none-left", "Espagnol")).toBe("Plus d'autre version pour Espagnol");
   });
 });

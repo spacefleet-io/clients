@@ -36,7 +36,7 @@ import { useLoadingModal } from "@/components/LoadingModalProvider";
 import { useAsyncAction } from "@space/desktop-shell/hooks";
 import { useAppPlaybackMark } from "@space/ui/app-playback-mark";
 import { rendererLogger } from "@/logger";
-import { Loader2 } from "lucide-react";
+import { LaunchingLoader } from "@/components/LaunchingLoader";
 import { parseTrackPrefs, trackPrefsKey } from "@space/shared/trackPrefs";
 import { resolvePlaybackStartTracks } from "@/lib/mpvPlaybackSelection";
 import { useBadgerOsMediaSession } from "@/lib/osMediaSession";
@@ -230,7 +230,7 @@ export default function MediaPlaybackController({
       if (!token) return;
       updateLoading(token, {
         title: t("player.launching"),
-        subtitle: launchStatusHint ?? undefined,
+        subtitle: launchStatusHint ?? t("player.preparingPlayback"),
       });
     },
     [launchStatusHint, t, updateLoading]
@@ -337,7 +337,7 @@ export default function MediaPlaybackController({
     setLaunchProgressValue(60);
     syncLoadingProgress(60);
     if (!loadingTokenRef.current) {
-      loadingTokenRef.current = showLoading({ title: t("player.launching"), subtitle: undefined });
+      loadingTokenRef.current = showLoading({ title: t("player.launching"), subtitle: t("player.preparingPlayback") });
     }
     setLaunchProgressValue(70);
     syncLoadingProgress(70);
@@ -407,7 +407,7 @@ export default function MediaPlaybackController({
       setLaunchStatusHint(null);
       if (!datasetStatus.playback) {
         playTraceLog.debug({ requestKey }, "Controller.run:awaitDatasetReady:playback:start");
-        loadingTokenRef.current = showLoading({ title: t("player.launching"), subtitle: undefined });
+        loadingTokenRef.current = showLoading({ title: t("player.launching"), subtitle: t("player.preparingPlayback") });
         setLaunchProgressValue(10);
         let timedOut = false;
         await Promise.race([
@@ -1366,7 +1366,7 @@ export default function MediaPlaybackController({
         setIsLaunching(false);
       }
     }}>
-      <DialogContent className="max-w-sm border-none bg-transparent p-0 shadow-none">
+      <DialogContent className="max-w-sm border-none bg-transparent p-0 shadow-none" hideCloseButton={isLaunching}>
         <DialogHeader className="sr-only">
           <DialogTitle>{showResumeDetails && !isLaunching ? t("player.resumeTitle") : t("player.launching")}</DialogTitle>
           <DialogDescription>
@@ -1377,21 +1377,18 @@ export default function MediaPlaybackController({
               : t("player.launching")}
           </DialogDescription>
         </DialogHeader>
-        <div className="w-full rounded-2xl bg-black/70 p-5 text-sm text-white shadow-xl">
-          <div className="text-base font-semibold">
-            {showResumeDetails && !isLaunching ? t("player.resumeTitle") : t("player.launching")}
-          </div>
-          {showResumeDetails && !isLaunching ? (
-            <div className="mt-1 text-white/70">{resumeSubtitleText}</div>
-          ) : null}
-          {isLaunching ? (
-            <div className="mt-4 flex items-center gap-3 text-white/80">
-              <Loader2 className="h-5 w-5 animate-spin" />
-              <span className="text-sm">
-                {launchStatusHint ?? t("player.preparingPlayback")}
-              </span>
+        {isLaunching ? (
+          <LaunchingLoader title={t("player.launching")}>
+            <div className="text-white/80">{launchStatusHint ?? t("player.preparingPlayback")}</div>
+          </LaunchingLoader>
+        ) : (
+          <div className="w-full rounded-2xl bg-black/70 p-5 text-sm text-white shadow-xl">
+            <div className="text-base font-semibold">
+              {showResumeDetails ? t("player.resumeTitle") : t("player.launching")}
             </div>
-          ) : (
+            {showResumeDetails ? (
+              <div className="mt-1 text-white/70">{resumeSubtitleText}</div>
+            ) : null}
             <div className="mt-4 flex flex-wrap justify-end gap-2">
               <Button
                 type="button"
@@ -1415,8 +1412,8 @@ export default function MediaPlaybackController({
                 {t("player.resume")}
               </Button>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
     </>

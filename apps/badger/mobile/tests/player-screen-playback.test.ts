@@ -65,6 +65,7 @@ vi.mock("../src/lib/metadata/runtime", () => ({
 vi.mock("../src/components/PlayerCastPicker", () => ({ PlayerCastPicker: "PlayerCastPicker" }));
 // "Get subtitles" (PLAY-SUBGET) loads the metadata client and lucide icons (native modules, Flow sources): a stand-in.
 vi.mock("../src/screens/player/PlayerSubtitleFetch", () => ({ PlayerSubtitleFetch: "PlayerSubtitleFetch" }));
+vi.mock("../src/screens/player/PlayerSubtitleFile", () => ({ PlayerSubtitleFile: "PlayerSubtitleFile" }));
 vi.mock("react-native", () => ({
   StyleSheet: { create: <T>(styles: T) => styles, absoluteFill: {} },
   View: "View",
@@ -131,6 +132,8 @@ vi.mock("@space/mobile-mpv-playback", () => ({
     },
   },
 }));
+// The badger of the launching wait (UX-WAIT-02) is its own component, tested in mobile-shell; here it is a stand-in.
+vi.mock("@space/mobile-shell/mascot-loader", () => ({ MobileMascotLoader: "MobileMascotLoader" }));
 vi.mock("@space/mobile-shell/i18n", () => {
   const t = (key: string) => key;
   return { useTranslation: () => ({ t, i18n: { language: metadata.language } }), getCurrentLanguage: () => metadata.language };

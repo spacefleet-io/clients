@@ -1,4 +1,6 @@
 import { defineConfig } from "vitest/config";
+import react, { reactCompilerPreset } from "@vitejs/plugin-react";
+import babel from "@rolldown/plugin-babel";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 
@@ -6,6 +8,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 export default defineConfig({
+  // The React Compiler as in the build (electron.vite.config.ts): a value it memoizes too long only shows with it on.
+  // The app's code only, as the build compiles it: a test's own components stay as written.
+  plugins: [react(), babel({ presets: [reactCompilerPreset()], exclude: [/\/node_modules\//, /\/packages\/shared\//, /\/tests\//] })],
   resolve: {
     alias: [
       { find: /^bun:sqlite$/, replacement: resolve(__dirname, "tests/__mocks__/bun-sqlite.ts") },

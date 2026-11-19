@@ -29,6 +29,14 @@ export const RESERVE_STORAGE_KEY = "space.metadata.tickets.v1";
 
 const HOUR_MS = 3_600_000;
 
+/**
+ * META-ANON-15: the shortest wait before a reserve below its low-water mark asks again after a 429, so a missing or
+ * zero Retry-After can never turn the schedule into a hot loop.
+ */
+export const RATE_LIMITED_MIN_RETRY_MS = 60_000;
+/** META-ANON-15: the most random spread added after a 429's Retry-After, so many apps refused together do not all come back in the same second. */
+export const RATE_LIMITED_MAX_SPREAD_MS = 5 * 60_000;
+
 export interface TicketReserveOptions {
   /** Refill up to this many tickets. Default 600. */
   target?: number;
@@ -130,6 +138,19 @@ export interface RefillResult {
   serverKeyId?: string;
 }
 
+/**
+ * Why the reserve could not be refilled the last time it tried (META-ANON-15): the status of the last refill that ended
+ * on a refusal or a failure, and for a 429 the seconds until the reserve asks again. Read by the client when a lookup
+ * finds the reserve empty, so the screen can say why.
+ */
+export interface TicketShortage {
+  status: Exclude<RefillStatus, "ok" | "skipped" | "stopped">;
+  retryAfterSeconds?: number;
+}
+
+/** Refill outcomes that leave nothing to report: the reserve was filled, had enough, or the run was cut short by stop(). */
+const NOT_A_SHORTAGE: Partial<Record<RefillStatus, true>> = { ok: true, skipped: true, stopped: true };
+
 export interface TicketReserve {
   /** Tickets currently held. */
   count(): Promise<number>;
@@ -165,6 +186,11 @@ export interface TicketReserve {
   start(): Promise<RefillResult>;
   /** Stops the schedule. An already running batch finishes, the loop then ends. */
   stop(): void;
+  /**
+   * Why the last refill came back without filling the reserve (META-ANON-15), or null when it did not fail. For a 429,
+   * `retryAfterSeconds` counts down to the moment the reserve asks again.
+   */
+  shortage(): TicketShortage | null;
 }
 
 const TOKEN_CHARS = Math.ceil((TOKEN_LENGTH * 4) / 3);
@@ -315,6 +341,16 @@ export function createTicketReserve(config: TicketReserveConfig): TicketReserve 
   };
   /** Consecutive transport / server failures of scheduled ticks, drives the exponential backoff. */
   let failures = 0;
+  /** The last refill's refusal or failure (META-ANON-15), with the clock time a 429 lets the reserve ask again. */
+  let lastShortage: { status: TicketShortage["status"]; retryAt?: number } | null = null;
+  const noteShortage = (status: RefillStatus, retryAt?: number) => {
+    lastShortage = NOT_A_SHORTAGE[status] ? null : { status: status as TicketShortage["status"], ...(retryAt === undefined ? {} : { retryAt }) };
+  };
+  const shortage = (): TicketShortage | null => {
+    if (lastShortage === null) return null;
+    if (lastShortage.retryAt === undefined) return { status: lastShortage.status };
+    return { status: lastShortage.status, retryAfterSeconds: Math.max(0, Math.ceil((lastShortage.retryAt - now()) / 1000)) };
+  };
 
   /** App headers minus Authorization / Content-Type, whatever their case: those two are ours alone. */
   const appHeaders = (headers: Record<string, string> | undefined): Record<string, string> =>
@@ -328,6 +364,7 @@ export function createTicketReserve(config: TicketReserveConfig): TicketReserve 
       result.count = held;
       if (extra.retryAfterSeconds !== undefined) result.retryAfterSeconds = extra.retryAfterSeconds;
       if (extra.serverKeyId !== undefined) result.serverKeyId = extra.serverKeyId;
+      noteShortage(status, extra.retryAfterSeconds === undefined ? undefined : now() + extra.retryAfterSeconds * 1000);
       return result;
     };
     if (held >= target || (!force && held >= lowWater)) return finish("skipped");
@@ -453,12 +490,30 @@ export function createTicketReserve(config: TicketReserveConfig): TicketReserve 
         return Math.min(backoffBaseMs * 2 ** Math.min(failures - 1, 30), intervalMs);
       }
       case "rate_limited":
+        // META-ANON-15: below the low-water mark the app is about to run dry (or already has: a fresh sign-in whose
+        // first batch was refused), so it asks again as soon as the server allows, not at the next ~6 h tick.
+        if (result.count < lowWater) return rateLimitedRetryMs(result.retryAfterSeconds);
         failures = 0;
         return Math.max(jittered(), (result.retryAfterSeconds ?? 0) * 1000);
       default:
         failures = 0;
         return jittered();
     }
+  };
+
+  /**
+   * META-ANON-15: the wait after a 429 while below the low-water mark. With a Retry-After: that long (at least
+   * `RATE_LIMITED_MIN_RETRY_MS`) plus a random spread of up to `jitter` of it, at most `RATE_LIMITED_MAX_SPREAD_MS`.
+   * Without one: the failure backoff (5 min, doubling, up to the interval), never a hot loop.
+   */
+  const rateLimitedRetryMs = (retryAfterSeconds: number | undefined): number => {
+    if (retryAfterSeconds === undefined) {
+      failures += 1;
+      return Math.min(backoffBaseMs * 2 ** Math.min(failures - 1, 30), intervalMs);
+    }
+    failures = 0;
+    const wait = Math.max(retryAfterSeconds * 1000, RATE_LIMITED_MIN_RETRY_MS);
+    return wait + Math.round(random() * Math.min(wait * jitter, RATE_LIMITED_MAX_SPREAD_MS));
   };
 
   const clearTimer = () => {
@@ -485,10 +540,13 @@ export function createTicketReserve(config: TicketReserveConfig): TicketReserve 
       return result;
     }
     clearTimer();
+    const delay = nextDelayMs(result);
+    // A 429's shortage counts down to the tick that asks again, which may come later than the server's Retry-After.
+    if (result.status === "rate_limited" && lastShortage?.status === "rate_limited") lastShortage.retryAt = now() + delay;
     timer = timers.setTimeout(() => {
       timer = null;
       void tick(gen);
-    }, nextDelayMs(result));
+    }, delay);
     return result;
   };
 
@@ -507,5 +565,5 @@ export function createTicketReserve(config: TicketReserveConfig): TicketReserve 
     clearTimer();
   };
 
-  return { count, take, put, takeWhenReady, onTickets, refill: (options) => refill(options), start, stop };
+  return { count, take, put, takeWhenReady, onTickets, refill: (options) => refill(options), start, stop, shortage };
 }

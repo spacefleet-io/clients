@@ -139,8 +139,9 @@ describe("REL-CD-29 desktop: the build says its version", () => {
     }));
     log(testId, "cases", cases);
     expect(cases.map((c) => c.identity)).toEqual([
-      { app: "badger", platform: "desktop", version: "0.4.0" },
-      { app: "badger", platform: "desktop", version: "1.2.3-beta.1" },
+      // WEB-ADMIN-39: a Windows build says so (`+windows`), so the admin accounts page can tell the computers apart.
+      { app: "badger", platform: "desktop", version: "0.4.0+windows" },
+      { app: "badger", platform: "desktop", version: "1.2.3-beta.1+windows" },
       null,
       null,
     ]);
@@ -148,7 +149,7 @@ describe("REL-CD-29 desktop: the build says its version", () => {
     setClientIdentity(cases[0].identity);
     const headers = clientIdentityHeaders();
     log(testId, "headers", headers);
-    expect(headers).toEqual({ "x-space-client": "badger/desktop/0.4.0" });
+    expect(headers).toEqual({ "x-space-client": "badger/desktop/0.4.0+windows" });
     setClientIdentity(cases[2].identity);
     expect(clientIdentityHeaders()).toEqual({});
   });

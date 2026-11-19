@@ -218,9 +218,12 @@ const BARE_LIBRARY_EN = SHARED_BARE_LIBRARY.en;
 const BARE_LIBRARY_FR = SHARED_BARE_LIBRARY.fr;
 /**
  * The page itself is called "Library" (UX-NAME-02, Chris 2026-11-09): its tab, the empty page's "Your library" and the TV
- * title page's "Back to Library" name the page, not the collection, so they are the only keys allowed the bare word.
+ * title page's "Back to Library" name the page, not the collection; the library's loading text is Parrot's ("Loading
+ * library…", UX-WAIT-04, Chris 2026-11-19). They are the only keys allowed the bare word.
  */
-const bareLibrary = bareLibraryOutside(new Set(["nav.library", "home.emptyLibrary.eyebrow", "tvShell.empty.eyebrow", "tvShell.details.backToLibrary"]));
+const bareLibrary = bareLibraryOutside(
+  new Set(["nav.library", "nav.loadingLibrary", "home.emptyLibrary.eyebrow", "tvShell.empty.eyebrow", "tvShell.details.backToLibrary"])
+);
 /** Android resource folder suffix per language: the default `values` folder is English. */
 const ANDROID_SUFFIX: Record<string, string> = { en: "", fr: "-fr", nl: "-nl", de: "-de", es: "-es" };
 const NATIVE_LANGUAGES = ["en", "fr", "nl", "de", "es"] as const;

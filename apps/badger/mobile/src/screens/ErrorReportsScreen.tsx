@@ -1,5 +1,5 @@
 import React, { useCallback } from "react";
-import { Image, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { MobileAppBackdrop, MobileErrorReportsLink } from "@space/mobile-shell/components";
 import { Button, SectionHeader } from "../components/ui";
 import { Screen } from "../components/Screen";
@@ -13,11 +13,9 @@ import { TvSetupStepHeader } from "../tv/components/TvSetupStepHeader";
 import { useTvScale } from "../tv/lib/tvScale";
 import { scaleStyleSheet } from "@space/mobile-mpv-playback/uiScale";
 import { useTranslation } from "@space/mobile-shell/i18n";
+import { MobileSetupMascot, TV_SETUP_CARD_TOP, TV_SETUP_MASCOT_SIZE } from "@space/mobile-shell/setup-step";
 
 const log = scopeLogger("onboarding");
-
-/** The SpaceBadger astronaut badger (UX-TV-04: the brand picture of the TV app). */
-const MASCOT = require("../assets/mascot.webp");
 
 /**
  * Setup step asked once, after the library key (REL-LOG-06): send error reports to SpaceFleet or not. Neither answer is
@@ -60,10 +58,11 @@ const PhoneErrorReports = ({ onAnswer }: AnswerProps) => {
 };
 
 /**
- * The TV question as approved in the TV design (UX-TV-04): one square panel over the starry sky, the astronaut badger,
- * the one-line explanation (REL-LOG-06) and the two answers side by side. No "What's in a report?" link here: a TV has
- * no browser to open the privacy policy in, so the link lives on the phone and desktop screens only. The setup's last
- * numbered step: "STEP N OF M" and the step bar on top (UX-SETUP-08).
+ * The TV question as approved in the TV design (UX-TV-04): one square panel over the starry sky, the astronaut badger
+ * over its top border (the setup mascot of every setup step, UX-SETUP-08), the one-line explanation (REL-LOG-06) and
+ * the two answers side by side. No "What's in a report?" link here: a TV has no browser to open the privacy policy in,
+ * so the link lives on the phone and desktop screens only. The setup's last numbered step: "STEP N OF M" and the step
+ * bar on top (UX-SETUP-08).
  */
 const TvErrorReports = ({ onAnswer }: AnswerProps) => {
   const { t } = useTranslation();
@@ -72,11 +71,12 @@ const TvErrorReports = ({ onAnswer }: AnswerProps) => {
   return (
     <View style={styles.tvScreen}>
       <MobileAppBackdrop />
-      <View style={styles.tvPanel}>
+      <MobileSetupMascot size={TV_SETUP_MASCOT_SIZE * scale} testID="error-reports-mascot" />
+      <View style={styles.tvPanel} testID="error-reports-panel">
+        {/* "STEP N OF M" and the bar at the card's top left, above the title (UX-SETUP-08, the approved `tv-step.png`). */}
         <View style={styles.tvStepBar}>
-          <TvSetupStepHeader step="errorReports" />
+          <TvSetupStepHeader step="errorReports" part="steps" scale={scale} />
         </View>
-        <Image source={MASCOT} style={styles.tvMascot} resizeMode="contain" accessible={false} />
         <Text style={styles.tvTitle} accessibilityRole="header">
           {t("tvShell.errorReports.title")}
         </Text>
@@ -86,6 +86,9 @@ const TvErrorReports = ({ onAnswer }: AnswerProps) => {
           <PairingButton compact preferredFocus testID="error-reports-decline" label={t("tvShell.errorReports.decline")} onPress={() => onAnswer(false)} />
         </View>
         <Text style={styles.tvFooter}>{t("tvShell.errorReports.footer")}</Text>
+      </View>
+      <View style={styles.tvCorner}>
+        <TvSetupStepHeader step="errorReports" part="language" />
       </View>
     </View>
   );
@@ -115,7 +118,7 @@ const baseTvStyles = StyleSheet.create({
   tvPanel: {
     width: 560,
     alignItems: "center",
-    paddingTop: 36,
+    paddingTop: TV_SETUP_CARD_TOP,
     paddingBottom: 32,
     paddingHorizontal: 44,
     borderRadius: TV_RADIUS.panel,
@@ -124,8 +127,9 @@ const baseTvStyles = StyleSheet.create({
     borderWidth: 1,
     borderColor: TV_PANEL_BORDER,
   },
-  tvMascot: { width: 84, height: 84 },
-  tvStepBar: { alignSelf: "stretch", marginBottom: 8 },
+  tvStepBar: { alignSelf: "stretch" },
+  // The language button alone at the screen's top right, as on `MobileSetupStep`'s TV screens.
+  tvCorner: { position: "absolute", top: 28, right: 36 },
   tvTitle: {
     marginTop: 18,
     marginBottom: 10,

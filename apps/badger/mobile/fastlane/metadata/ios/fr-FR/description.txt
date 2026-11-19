@@ -1,7 +1,7 @@
 Badger diffuse vos propres films et séries sur votre téléphone, votre TV et votre ordinateur. Ajoutez vos vidéos une fois depuis votre ordinateur, puis regardez-les où que vous soyez.
 
 TOUTES VOS VIDÉOS, PARTOUT
-• Ajoutez films, séries et autres vidéos avec l'application Badger pour ordinateur (Windows, Mac, Linux) : MP4, MKV, AVI, MOV et bien d'autres.
+• Ajoutez films, séries et autres vidéos avec l'application Badger pour ordinateur (Windows, Mac, Linux) : MP4, MKV, AVI, MOV et bien d'autres.
 • Les affiches, le casting et les infos des épisodes s'ajoutent tout seuls.
 • Regardez sur votre iPhone, sur Apple TV et sur votre ordinateur.
 • Reprenez là où vous vous étiez arrêté, sur n'importe quel appareil.
@@ -9,16 +9,17 @@ TOUTES VOS VIDÉOS, PARTOUT
 PENSÉ POUR REGARDER
 • Téléchargez films et épisodes sur votre téléphone pour les regarder hors connexion.
 • Choisissez la langue et les sous-titres, et trouvez des sous-titres pour n'importe quelle vidéo.
-• Passez les génériques : l'épisode suivant démarre tout seul.
+• Passez les génériques : l'épisode suivant démarre tout seul.
 • La qualité d'image s'adapte à votre connexion.
 • Jusqu'à 5 profils avec les offres payantes, chacun avec ses propres reprises de lecture.
 
 RIEN QUE VOS VIDÉOS
-• Votre bibliothèque et les vidéos que vous ajoutez sont chiffrées sur votre appareil avant d'arriver sur nos serveurs.
-• Pour afficher titres et visuels, Badger interroge notre service de recherche avec un ticket anonyme à usage unique au lieu de votre compte : nous ne pouvons pas savoir qui demande. Le service voit ce qui est recherché et votre adresse internet, que nous ne conservons pas.
-• Badger ne fournit ni films ni séries : vous regardez les vidéos que vous ajoutez vous-même.
+• Vous seul voyez votre bibliothèque. Nous non plus, nous n'y avons pas accès.
+• Badger ne fournit ni films ni séries : vous regardez les vidéos que vous ajoutez vous-même.
 • Nous ne vendons jamais vos données.
 
 GRATUIT POUR COMMENCER
 • Créez un compte SpaceFleet gratuit, avec 20 Go de stockage inclus.
 • Le même compte fonctionne avec Parrot, notre application pour votre musique.
+
+Subtitles provided by OpenSubtitles.com (https://opensubtitles.com)

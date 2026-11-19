@@ -29,7 +29,8 @@ export default function LanguageFirstGate({ children }: { children: ReactNode })
     <div data-testid="setup-language">
       <DesktopStartupPage
         nebula="badger"
-        mainClassName="pb-12 pt-32"
+        // A short window (the 600 px minimum) gets less room around the card, so the 5 languages show whole there too.
+        mainClassName="pb-12 pt-32 [@media(max-height:700px)]:pb-4 [@media(max-height:700px)]:pt-20"
         controls={
           <DesktopStartupControls>
             <SetupLanguageMenu onPicked={setLanguage} />

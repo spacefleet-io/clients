@@ -191,7 +191,7 @@ const writeVobSub = (base: string): string => {
  * `window`: windowed size (default 1280x720) when not fullscreen.
  * `source`: play this instead of the encoded fixture (e.g. an endless lavfi stream, which has no duration).
  */
-const launch = async (opts: { fullscreen?: boolean; tracks?: boolean; subFormat?: "srt" | "ass" | "vobsub"; videoSize?: string; window?: string; source?: string } = {}): Promise<Harness> => {
+const launch = async (opts: { fullscreen?: boolean; tracks?: boolean; subFormat?: "srt" | "ass" | "vobsub"; videoSize?: string; window?: string; source?: string; e2e?: boolean } = {}): Promise<Harness> => {
   const fullscreen = opts.fullscreen ?? true;
   const dir = mkdtempSync(join(tmpdir(), "sf-osc-chrome-"));
   const sock = join(dir, "mpv.sock");
@@ -249,6 +249,8 @@ const launch = async (opts: { fullscreen?: boolean; tracks?: boolean; subFormat?
     ...(target!.kind === "bundle" && target!.libDirs.length > 0
       ? { LD_LIBRARY_PATH: [target!.libDirs.join(":"), process.env.LD_LIBRARY_PATH].filter(Boolean).join(":") }
       : {}),
+    // sf-select.lua publishes the open menu's rows on user-data/sf/e2e/select under SF_E2E=1.
+    ...(opts.e2e ? { SF_E2E: "1" } : {}),
   };
   const wrapper = ["xvfb-run", "-a", "-s", "-screen 0 1920x1080x24"];
   console.info(`${TAG} launch bin=${target!.bin} kind=${target!.kind} osc=${oscDir} fullscreen=${fullscreen}`);
@@ -693,6 +695,51 @@ describe.skipIf(!runnable)("desktop player overlay: title, Chapters button, epis
     expect(nav?.hasNext, "next gone until the next payload").toBe(false);
     const after = await waitLayout(h, ipc, "after double previous", (l) => !visible(l, "ep_prev") && !visible(l, "ep_next"));
     expect(visible(after, "ep_next"), "next button hidden while switching").toBeNull();
+  }, 90_000);
+
+  // @req PLAY-SUBGET-24[badger-desktop]
+  // Chris 2026-11-18: a title with no subtitle track and nothing to search (no "Get more subtitles…" label sent,
+  // as for a title without a catalog id): the subtitles button is lit and a click opens the subtitle menu, never
+  // mpv's "No available subtitles." and never nothing.
+  it("no subtitle track, nothing to search: the subtitles button is lit and a click opens the menu", async () => {
+    const h = await launch();
+    const ipc = await connect(h.sock);
+    await ipc(["script-message", "sf-playback-json", playback({ title: "Home video" })]);
+    const layout = await waitLayout(h, ipc, "no subtitles", (l) => Boolean(visible(l, "cy_sub")));
+    const sub = visible(layout, "cy_sub")!;
+    const fsAlpha = visible(layout, "tog_fs")!.alpha?.[0];
+    console.info(`${TAG} zero-track cy_sub enabled=${sub.enabled} off=${sub.off} alpha=${JSON.stringify(sub.alpha)} tog_fs alpha=${fsAlpha}`);
+    expect(sub.enabled, "cy_sub enabled with no subtitle track").toBe(true);
+    expect(sub.off, "cy_sub not drawn off").toBeFalsy();
+    expect(sub.alpha?.[0], "cy_sub drawn as bright as the fullscreen button").toBe(fsAlpha);
+    const logBefore = readFileSync(h.logFile, "utf8").length;
+    await click(ipc, sub);
+    const opened = await waitPickerKeys(h, ipc);
+    const clickLog = readFileSync(h.logFile, "utf8").slice(logBefore);
+    console.info(`${TAG} after zero-track cy_sub click: menu open=${opened}\n${clickLog.split("\n").filter((l) => /select|console|No available/.test(l)).slice(-12).join("\n")}`);
+    expect(opened, "the subtitles button opens the subtitle menu").toBe(true);
+    expect(clickLog, "no 'No available subtitles.' warning").not.toContain("No available subtitles.");
+  }, 90_000);
+
+  // @req PLAY-SUBGET-24[badger-desktop] @req PLAY-SUBGET-23[badger-desktop]
+  // Chris 2026-11-18: with no subtitle track, a click on the subtitles button opens the menu with Off,
+  // "Get more subtitles…" and "Add a subtitle file…" once the app has sent their labels.
+  it("no subtitle track: a click on the subtitles button opens Off, Get more subtitles…, Add a subtitle file…", async () => {
+    const h = await launch({ e2e: true });
+    const ipc = await connect(h.sock);
+    await ipc(["script-message", "sf-labels-json", JSON.stringify({
+      subtitlesOff: "Off",
+      getMoreSubtitles: "Get more subtitles…",
+      addSubtitleFile: "Add a subtitle file…",
+    })]);
+    await ipc(["script-message", "sf-playback-json", playback({ title: "Home video" })]);
+    const layout = await waitLayout(h, ipc, "no subtitles, both rows", (l) => Boolean(visible(l, "cy_sub")));
+    await click(ipc, visible(layout, "cy_sub")!);
+    expect(await waitPickerKeys(h, ipc), "the subtitles button opens the subtitle menu").toBe(true);
+    const menu = (await ipc(["get_property", "user-data/sf/e2e/select"])).data as { items?: string[]; ids?: number[] } | null;
+    console.info(`${TAG} zero-track menu ${JSON.stringify(menu)}`);
+    expect(menu?.items).toEqual(["● Off", "+ Get more subtitles…", "+ Add a subtitle file…"]);
+    expect(menu?.ids).toEqual([0, -1, -3]);
   }, 90_000);
 
   for (const fullscreen of [false, true]) {

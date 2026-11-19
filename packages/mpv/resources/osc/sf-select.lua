@@ -314,12 +314,16 @@ end)
 local subtitles_off_label = "Off"
 -- Label of the subtitle menu's "Get more subtitles…" row (PLAY-SUBGET-02), also
 -- pushed on `sf-labels-json`. Empty (the default) hides the row: the app sends
--- it only when this film or episode can be searched.
+-- it when this film or episode can be searched, by catalog id or by title
+-- (PLAY-SUBGET-24).
 local get_more_subtitles_label = ""
 -- Label of the "Try another version" row after it (PLAY-SUBGET-07), pushed on
 -- `sf-labels-json` non-empty only while the subtitle that is on was fetched; the
 -- row shows only while a subtitle is on.
 local try_another_version_label = ""
+-- Label of the menu's last row, "Add a subtitle file…" (PLAY-SUBGET-23), pushed
+-- on `sf-labels-json` when the app can store a subtitle; empty hides it.
+local add_subtitle_file_label = ""
 
 -- The track menus' prompts and empty-state lines, also pushed on `sf-labels-json`
 -- in the UI language (i18n `player.menu*`); English until the app's payload arrives.
@@ -347,6 +351,9 @@ local function apply_labels_json(payload)
     if type(parsed.tryAnotherVersion) == "string" then
         try_another_version_label = parsed.tryAnotherVersion
     end
+    if type(parsed.addSubtitleFile) == "string" then
+        add_subtitle_file_label = parsed.addSubtitleFile
+    end
     for key in pairs(menu_text) do
         if type(parsed[key]) == "string" and parsed[key] ~= "" then
             menu_text[key] = parsed[key]
@@ -368,6 +375,8 @@ local OFF_ROW = { off = true, id = 0 }
 local FETCH_ROW = { fetch = true, id = -1 }
 -- Marks "Try another version" (PLAY-SUBGET-07), after "Get more subtitles…".
 local VERSION_ROW = { version = true, id = -2 }
+-- Marks "Add a subtitle file…" (PLAY-SUBGET-23), the menu's last row.
+local ADD_FILE_ROW = { add_file = true, id = -3 }
 -- Channel name: LUA_OUTBOUND_CHANNELS.SUBTITLE_FETCH in @space/mpv-protocol.
 local function emit_subtitle_fetch(...)
     mp.commandv("script-message", "sf-subtitle-fetch", ...)
@@ -392,8 +401,11 @@ local function select_track(property, type, prompt, warning)
 
     -- The subtitle menu always opens, with nothing searched: Off, every subtitle
     -- the title already has, then "Get more subtitles…", the only row that
-    -- searches online (PLAY-SUBGET-24). Other menus with nothing to pick warn.
-    if #tracks == 0 and not with_fetch then
+    -- searches online (PLAY-SUBGET-24), and "Add a subtitle file…"
+    -- (PLAY-SUBGET-23). With no track and neither row it still opens, holding
+    -- Off alone, like the phone's menu: the subtitles button never answers with
+    -- nothing (Chris 2026-11-18). Other menus with nothing to pick warn.
+    if #tracks == 0 and not with_off then
         show_warning(warning)
         return
     end
@@ -424,11 +436,16 @@ local function select_track(property, type, prompt, warning)
         rows[#rows + 1] = VERSION_ROW
         items[#items + 1] = "+ " .. try_another_version_label
     end
+    if with_off and add_subtitle_file_label ~= "" then
+        rows[#rows + 1] = ADD_FILE_ROW
+        items[#items + 1] = "+ " .. add_subtitle_file_label
+    end
 
     -- Test-only introspection for the e2e-ultimate OSC checks (issue #25):
     -- the menu's exact entries, their track ids (0 = the Off row, -1 = "Get
-    -- more subtitles…") and the
-    -- cursor's start row. Published only under SF_E2E=1; no behaviour change.
+    -- more subtitles…", -2 = "Try another version", -3 = "Add a subtitle
+    -- file…") and the cursor's start row. Published only under SF_E2E=1; no
+    -- behaviour change.
     local e2e = os.getenv("SF_E2E") == "1"
     if e2e then
         local ids = {}
@@ -457,6 +474,10 @@ local function select_track(property, type, prompt, warning)
             end
             if row == VERSION_ROW then
                 emit_subtitle_fetch("version")
+                return
+            end
+            if row == ADD_FILE_ROW then
+                emit_subtitle_fetch("add-file")
                 return
             end
             local value
@@ -495,9 +516,12 @@ end)
 --   { panel = text, dismissable = bool }  a centred panel ("Looking for subtitles…",
 --                                         "Downloading"); Escape leaves it when dismissable
 --   { list = { prompt, items = { { key, label } } } }  the language list (this menu)
+--   { title = { prompt, field, query } }  the title field (PLAY-SUBGET-24): a media
+--                                         with no catalog id is searched by the film or
+--                                         show the user names
 --   { close = true }                      nothing
--- Answers go back on `sf-subtitle-fetch`: "pick" <key>, or "cancel" when the
--- list or a dismissable panel is left.
+-- Answers go back on `sf-subtitle-fetch`: "pick" <key>, "title" <text>, or
+-- "cancel" when the list, the field or a dismissable panel is left.
 -- MPV-OSC-05: drawn in logical pixels (OSD pixels / display-hidpi-scale), so the
 -- panel keeps one on-screen size whatever the window size; re-laid out on resize.
 local fetch_panel = mp.create_osd_overlay("ass-events")
@@ -615,6 +639,39 @@ local function show_fetch_list(list)
     })
 end
 
+-- The title field (PLAY-SUBGET-24): mpv's console text input, prefilled with the
+-- title the app shows (never the file name, PLAY-SUBGET-14). Enter sends the text
+-- and closes it; Escape cancels like the list.
+local function show_fetch_title(title)
+    hide_fetch_panel()
+    local prompt = tostring(title.prompt or "")
+    local field = tostring(title.field or "")
+    if field ~= "" then
+        prompt = (prompt ~= "" and (prompt .. " ") or "") .. field .. ":"
+    end
+    local query = tostring(title.query or "")
+    local submitted = false
+    publish_fetch_e2e({ title = query, prompt = prompt })
+    input.get({
+        prompt = prompt,
+        default_text = query,
+        cursor_position = #query + 1,
+        submit = function (text)
+            if submitted then return end
+            submitted = true
+            publish_fetch_e2e({ titled = text })
+            emit_subtitle_fetch("title", text)
+            input.terminate()
+        end,
+        closed = function ()
+            if not submitted then
+                publish_fetch_e2e({ closed = true })
+                emit_subtitle_fetch("cancel")
+            end
+        end,
+    })
+end
+
 mp.register_script_message("sf-subtitle-fetch-json", function (payload)
     local ok, view = pcall(utils.parse_json, payload or "")
     if not ok or type(view) ~= "table" then
@@ -624,6 +681,8 @@ mp.register_script_message("sf-subtitle-fetch-json", function (payload)
         show_fetch_panel(view.panel, view.dismissable == true)
     elseif type(view.list) == "table" then
         show_fetch_list(view.list)
+    elseif type(view.title) == "table" then
+        show_fetch_title(view.title)
     elseif view.close then
         hide_fetch_panel()
         publish_fetch_e2e({ closed = true })

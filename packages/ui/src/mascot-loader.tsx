@@ -1,9 +1,10 @@
-import { useEffect, useRef } from "react";
+import { useLayoutEffect, useRef } from "react";
 import {
   MASCOT_LOADER_BOX,
   MASCOT_LOADER_OUTLINE,
   MASCOT_LOADERS,
   mascotLoaderKeyframes,
+  mascotLoaderPhase,
   type MascotLoaderApp,
   type MascotLoaderPose,
 } from "@space/shared/mascotLoader";
@@ -24,16 +25,18 @@ const transformOf = (pose: MascotLoaderPose, k: number) =>
 /**
  * The animated mascot above the loading text of the web and desktop loading screens (UX-WAIT-02). It is decorative:
  * the loading text next to it stays the accessible status. The motion is `@space/shared/mascotLoader`'s, run by the
- * Web Animations API on the compositor; with reduced motion asked for, the mascot stands still.
+ * Web Animations API on the compositor; with reduced motion asked for, the mascot stands still. Every loader starts
+ * where the shared loop stands (`mascotLoaderPhase`), set before the first paint, so the next loading screen of a
+ * launch carries the motion on instead of snapping the mascot back to the loop's start.
  */
 export const MascotLoader = ({ app, src, size = 120, className }: MascotLoaderProps) => {
   const spec = MASCOT_LOADERS[app];
   const k = size / MASCOT_LOADER_BOX;
   const layerRefs = useRef<(HTMLElement | SVGSVGElement | null)[]>([]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
-    const frames = mascotLoaderKeyframes(app);
+    const frames = mascotLoaderKeyframes(app, mascotLoaderPhase(app));
     const animations = layerRefs.current.map((el, layer) =>
       el?.animate?.(
         frames[layer]!.map((pose) => ({ transform: transformOf(pose, k), opacity: pose.opacity })),
@@ -43,7 +46,7 @@ export const MascotLoader = ({ app, src, size = 120, className }: MascotLoaderPr
     return () => animations.forEach((animation) => animation?.cancel());
   }, [app, k, spec.durationMs]);
 
-  const rest = spec.pose(0);
+  const rest = spec.pose(mascotLoaderPhase(app));
   return (
     <div
       aria-hidden="true"

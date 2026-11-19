@@ -25,6 +25,16 @@
     "lookingAnother": "Looking for another version…",
     "replaced": "{name} replaced with another version",
     "noneLeft": "No other version of {name} left",
-    "replaceFailed": "Couldn't replace {name}. Try again."
+    "replaceFailed": "Couldn't replace {name}. Try again.",
+    "titlePrompt": "Which film or show is this?",
+    "titleField": "Title",
+    "titleSearch": "Search",
+    "findingTitle": "Looking for “{title}”…",
+    "noTitle": "Nothing found for “{title}”. Check the title and try again.",
+    "otherTitle": "Search another title",
+    "addFile": "Add a subtitle file…",
+    "addingFile": "Adding the subtitle file…",
+    "unreadableFile": "This file isn't a subtitle we can read",
+    "fileFailed": "Couldn't add this subtitle file. Try again."
   }
 }

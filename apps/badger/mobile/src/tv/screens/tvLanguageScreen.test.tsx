@@ -17,6 +17,7 @@ import React from "react";
 import { act, create, type ReactTestInstance, type ReactTestRenderer } from "react-test-renderer";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { initI18n, MOBILE_UI_LANGUAGES } from "@space/mobile-shell/i18n";
+import { setupMascotOverlap, TV_SETUP_MASCOT_SIZE } from "@space/mobile-shell/setup-step";
 import { TvLanguageScreen } from "./TvLanguageScreen";
 
 const ctl = vi.hoisted(() => {
@@ -159,6 +160,31 @@ describe("Badger TV language step", () => {
     expect(flat(foot).justifyContent).toBe("flex-end");
     expect(foot.findAll((node) => node.props.testID === "setup-next" && (node.type as unknown) === "Pressable")).toHaveLength(1);
     expect(one("setup-next").findAll((node) => (node.type as unknown) === "ChevronRight")).toHaveLength(1);
+  });
+
+  it("@req UX-SETUP-08[badger-tv] all five languages fit the list at once: Español is in view with no scroll", () => {
+    const scroll = one("setup-language-list");
+    const content = Object.assign({}, ...[scroll.props.contentContainerStyle].flat(Infinity).filter(Boolean)) as Record<string, unknown>;
+    const rows = MOBILE_UI_LANGUAGES.map((option) => flat(one(`setup-choice-${option.code}`)));
+    const needed =
+      rows.reduce((sum, row) => sum + Number(row.height ?? row.minHeight), 0) + (rows.length - 1) * Number(content.gap ?? 0) + 2 * Number(content.padding ?? 0);
+    const maxHeight = Number(flat(scroll).maxHeight);
+    console.info("[TV-SETUP-LANGUAGE-001] list fit", { languages: rows.length, needed, maxHeight });
+    expect(MOBILE_UI_LANGUAGES.map((option) => option.code)).toEqual(["en", "fr", "nl", "de", "es"]);
+    expect(maxHeight).toBeGreaterThanOrEqual(needed);
+  });
+
+  it("@req UX-SETUP-08[badger-tv] the setup mascot sits half over the card's top border, the card padded under it", () => {
+    const mascot = one("tv-language-mascot");
+    const card = one("tv-language-card");
+    const order = renderer!.root
+      .findAll((node) => typeof (node.type as unknown) === "string" && typeof node.props.testID === "string")
+      .map((node) => String(node.props.testID));
+    console.info("[TV-SETUP-LANGUAGE-001] mascot", { order: order.slice(0, 3), wrap: flat(mascot), cardTop: flat(card).paddingTop });
+    expect(order.indexOf("tv-language-mascot")).toBe(order.indexOf("tv-language-card") - 1);
+    expect(flat(mascot).height).toBe(TV_SETUP_MASCOT_SIZE);
+    expect(Number(flat(mascot).marginBottom)).toBeCloseTo(-setupMascotOverlap(TV_SETUP_MASCOT_SIZE));
+    expect(Number(flat(card).paddingTop)).toBeGreaterThan(setupMascotOverlap(TV_SETUP_MASCOT_SIZE));
   });
 
   it("@req UX-TV-32[badger-tv] each language is a card of its own; the picked one is outlined in amber with a check", () => {

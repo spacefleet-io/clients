@@ -127,7 +127,8 @@ export const useProfilesFlow = (options: {
         log("edited", { profileId: editing.profileId, avatarId: draftAvatarId });
         setMode({ name: "manage" });
       } else {
-        const created = await profileStore.createProfile(draftName, draftAvatarId);
+        // The user picked the avatar here, so the profile never gets the avatars setup step or update window (UX-SETUP-10).
+        const created = await profileStore.createProfile(draftName, draftAvatarId, { avatars: "set" });
         log("created", { profileId: created.id, avatarId: draftAvatarId, count: profileStore.getSnapshot().profiles.length });
         setMode(startState);
       }

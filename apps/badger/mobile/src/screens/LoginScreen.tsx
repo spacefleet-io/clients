@@ -37,7 +37,7 @@ import { IS_TV } from "../tv/lib/tvRuntime";
 import { TV_PAIRING_DEVICE_TYPE } from "../tv/lib/pairingClient";
 import { tvDeviceName } from "../tv/lib/pairingRuntime";
 import { currentPhoneDeviceName } from "../lib/phonePairing";
-import { SetupStepBar } from "../setup/BadgerSetupFlow";
+import { SignInSetupBack } from "../setup/BadgerSetupFlow";
 import { BADGER_LINK_SCHEME } from "../lib/linkScheme";
 
 const log = scopeLogger("login");
@@ -257,8 +257,7 @@ const AuthScreenInner = ({
   );
 
   return (
-    <MobileStartupPage controls={controls}>
-      <SetupStepBar step="signIn" />
+    <MobileStartupPage controls={controls} footer={<SignInSetupBack />}>
       <MobileAuthBrand iconSource={MASCOT} subtitle={t("login.withAccount").toUpperCase()} size={IS_TV ? undefined : PHONE_MASCOT_SIZE} />
 
       {error ? (

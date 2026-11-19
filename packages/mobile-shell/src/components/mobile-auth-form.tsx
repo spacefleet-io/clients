@@ -134,7 +134,7 @@ export const MobileAuthButton = ({ label, onPress, disabled, icon, bgColor, text
           // TV: the ring is the text colour (the button is already the accent colour), as on the TV's own buttons.
           tv && styles.tvRing,
           tv && focused && { borderColor: theme.colors.text, transform: [{ scale: TV_FOCUS_SCALE }] },
-          disabled && { opacity: 0.6 },
+          disabled && { opacity: 0.5 },
         ]}
         onFocus={tv ? () => setFocused(true) : undefined}
         onBlur={tv ? () => setFocused(false) : undefined}

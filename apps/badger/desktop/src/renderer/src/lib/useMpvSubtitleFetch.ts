@@ -6,7 +6,10 @@ import {
   replaceFetchedSubtitle,
   storeFetchedSubtitle,
   subtitleFetchCopy,
+  subtitleFetchNeedsTitle,
   subtitleFetchTarget,
+  subtitleTitleMatches,
+  type StoredSubtitleFile,
   type SubtitleFetchEntry,
 } from "@space/shared/subtitleFetch";
 import { tryAnotherSubtitleVersion } from "@space/shared/subtitleFetchFlow";
@@ -16,7 +19,7 @@ import { deleteStorageObjects } from "@/api";
 import { metadataClient } from "@/lib/metadataTickets";
 import type { AddSubtitleTrack } from "@/lib/playbackTypes";
 import { createMpvSubtitleFetch, parseSubtitleFetchMessage, type MpvSubtitleFetch } from "@/lib/mpvSubtitleFetch";
-import { subtitleFetchStoreDeps } from "@/lib/subtitleFetchStore";
+import { storeDesktopSubtitleFile, subtitleFetchStoreDeps } from "@/lib/subtitleFetchStore";
 import { useOnline } from "@space/desktop-shell/hooks";
 import { rendererLogger } from "@/logger";
 
@@ -27,11 +30,16 @@ const log = rendererLogger.child({ scope: "mpv-subtitle-fetch" });
  * sf-select.lua's panels and list, stores like the "Get subtitles" dialog, then resumes; `onAdded` switches the new
  * subtitle on. Returns the row's label for the metadata payload ("" hides the row). The subtitles button always opens
  * the menu first; only this row searches (PLAY-SUBGET-24). Offline the row stays, marked "Needs an internet connection",
- * and picking it only shows that line over the video (PLAY-SUBGET-12).
+ * and picking it only shows that line over the video (PLAY-SUBGET-12). A media with no catalog id gets the row too when
+ * a title search can stand in: the flow then starts with mpv's title field (PLAY-SUBGET-24).
  *
  * While a fetched subtitle is on, the menu also offers "Try another version" (PLAY-SUBGET-07): the next-best file of
  * that subtitle's entry replaces it (same name and language, one track), shown through the same panels. The old
  * subtitle's stored file is then deleted unless the library still names it.
+ *
+ * "Add a subtitle file…" (PLAY-SUBGET-23), the menu's last row whenever the host can store: pauses, opens the OS file
+ * picker (.srt/.ass/.ssa/.vtt), stores the file encrypted like a fetched subtitle (source "added-file"), then
+ * `onFileAdded` switches it on and playback resumes. Offline it is marked and only says so, like "Get more".
  */
 export const useMpvSubtitleFetch = (params: {
   open: boolean;
@@ -54,17 +62,23 @@ export const useMpvSubtitleFetch = (params: {
   /** The menu's "Off" label, re-sent with the row's label when going on- or offline mid-playback. */
   subtitlesOffLabel: string;
   onAdded: (entry: SubtitleFetchEntry, episodeId: string | null) => void;
+  /** "Add a subtitle file…" stored `stored`: the player switches it on; playback resumes right after. */
+  onFileAdded: (stored: StoredSubtitleFile, episodeId: string | null) => void;
   /**
    * Another version replaced `track` (deleted from the library by now): the player drops it from mpv and switches
    * the new one (same language and name) on; playback resumes once this settles.
    */
   onReplaced: (track: SubtitleTrack, episodeId: string | null) => Promise<void>;
-}): { getMoreSubtitlesLabel: string; tryAnotherVersionLabel: string } => {
+}): { getMoreSubtitlesLabel: string; tryAnotherVersionLabel: string; addSubtitleFileLabel: string } => {
   const online = useOnline();
   const uiLanguage = i18n.language || "en";
   const target = useMemo(() => subtitleFetchTarget(params.media, params.episodeId), [params.media, params.episodeId]);
-  const latest = useRef({ ...params, online, uiLanguage, target });
-  latest.current = { ...params, online, uiLanguage, target };
+  const needsTitle = useMemo(
+    () => (target ? null : subtitleFetchNeedsTitle(params.media, params.episodeId)),
+    [target, params.media, params.episodeId]
+  );
+  const latest = useRef({ ...params, online, uiLanguage, target, needsTitle });
+  latest.current = { ...params, online, uiLanguage, target, needsTitle };
 
   useEffect(() => {
     if (!params.open) return;
@@ -81,7 +95,7 @@ export const useMpvSubtitleFetch = (params: {
         send({ close: true });
         return;
       }
-      if (message.action === "open" || message.action === "version") {
+      if (message.action === "open" || message.action === "version" || message.action === "add-file") {
         const now = latest.current;
         const { media, episodeId, token, addSubtitleTrack, removeSubtitleTrack, getMediaObjectKeys, setTrackPrefs, selectedSubtitle } = now;
         if (!addSubtitleTrack) return;
@@ -104,18 +118,48 @@ export const useMpvSubtitleFetch = (params: {
         }
         flow?.dispose();
         log.info(
-          { mediaId: media.id, episodeId, action: message.action, searchable: now.target !== null, trackId: replacing?.id },
+          {
+            mediaId: media.id,
+            episodeId,
+            action: message.action,
+            searchable: now.target !== null,
+            byTitle: now.needsTitle !== null,
+            trackId: replacing?.id,
+          },
           "get more subtitles: opened, pausing"
         );
         void now.sendPauseCommand(true);
         const resume = () => void latest.current.sendPauseCommand(false);
         const storeDeps = subtitleFetchStoreDeps({ media, episodeId, token, addSubtitleTrack, setTrackPrefs });
         const target = now.target;
+        const needsTitle = now.needsTitle;
         flow = createMpvSubtitleFetch({
           uiLanguage: now.uiLanguage,
           target: now.target,
           search: (request) => metadataClient.subtitles(request),
           store: (entry, report, signal) => storeFetchedSubtitle(entry, report, storeDeps, signal),
+          // No catalog id: the title the app shows, looked up through the metadata service's title search; only the
+          // picked match's catalog id is then searched (PLAY-SUBGET-14, -24).
+          findTitle: needsTitle
+            ? {
+                query: needsTitle.query,
+                find: async (query) => {
+                  const matches = subtitleTitleMatches((await metadataClient.search(needsTitle.type, query)).results);
+                  log.info({ mediaId: media.id, episodeId, type: needsTitle.type, matches: matches.length }, "get more subtitles: title looked up");
+                  return matches;
+                },
+              }
+            : undefined,
+          targetFor: (match) => subtitleFetchTarget(media, episodeId, match.catalogId),
+          addFile: {
+            pick: async () => (await window.sf?.pickSubtitleFile?.()) ?? null,
+            store: (file) => storeDesktopSubtitleFile(file, { media, episodeId, token, addSubtitleTrack, setTrackPrefs, uiLanguage: now.uiLanguage }),
+          },
+          onFileAdded: (stored) => {
+            log.info({ mediaId: media.id, episodeId, language: stored.language, label: stored.label }, "add a subtitle file: added, resuming");
+            latest.current.onFileAdded(stored, episodeId);
+            resume();
+          },
           tryAnother:
             replacing && removeSubtitleTrack
               ? {
@@ -186,28 +230,31 @@ export const useMpvSubtitleFetch = (params: {
 
   const copy = subtitleFetchCopy(uiLanguage);
   const withOffline = (label: string) => (online ? label : `${label} · ${copy.offline}`);
-  const getMoreSubtitlesLabel = params.addSubtitleTrack && target ? withOffline(copy.getMore) : "";
+  const getMoreSubtitlesLabel = params.addSubtitleTrack && (target || needsTitle) ? withOffline(copy.getMore) : "";
   const tryAnotherVersionLabel =
     getMoreSubtitlesLabel && params.removeSubtitleTrack && isFetchedSubtitleSource(params.selectedSubtitle?.source)
       ? withOffline(copy.tryAnother)
       : "";
+  // PLAY-SUBGET-23: whenever the host can store a subtitle, catalog id or not.
+  const addSubtitleFileLabel = params.addSubtitleTrack ? withOffline(copy.addFile) : "";
 
   // The launch payload carries the labels; a change while playing (going on- or offline, another subtitle switched
   // on) is re-sent on its own.
-  const sentLabels = useRef(`${getMoreSubtitlesLabel}\n${tryAnotherVersionLabel}`);
+  const labelsKey = `${getMoreSubtitlesLabel}\n${tryAnotherVersionLabel}\n${addSubtitleFileLabel}`;
+  const sentLabels = useRef(labelsKey);
   useEffect(() => {
-    const key = `${getMoreSubtitlesLabel}\n${tryAnotherVersionLabel}`;
-    if (!params.open || sentLabels.current === key) return;
-    sentLabels.current = key;
+    if (!params.open || sentLabels.current === labelsKey) return;
+    sentLabels.current = labelsKey;
     if (!latest.current.isExternalPlayer()) return;
     const labels = {
       subtitlesOff: latest.current.subtitlesOffLabel,
       getMoreSubtitles: getMoreSubtitlesLabel,
       tryAnotherVersion: tryAnotherVersionLabel,
+      addSubtitleFile: addSubtitleFileLabel,
     };
-    log.info({ getMoreSubtitles: getMoreSubtitlesLabel, tryAnotherVersion: tryAnotherVersionLabel }, "menu labels re-sent");
+    log.info(labels, "menu labels re-sent");
     void latest.current.sendExternalCommand(buildScriptMessageCommand(LUA_CHANNELS.LABELS_JSON, labels));
-  }, [params.open, getMoreSubtitlesLabel, tryAnotherVersionLabel]);
+  }, [params.open, labelsKey]);
 
-  return { getMoreSubtitlesLabel, tryAnotherVersionLabel };
+  return { getMoreSubtitlesLabel, tryAnotherVersionLabel, addSubtitleFileLabel };
 };

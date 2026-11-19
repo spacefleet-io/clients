@@ -24,22 +24,23 @@ export type EmptyLibraryProps = {
 /**
  * An empty library, the same in Badger (UX-EMPTY-01) and Parrot (PAR-EMPTY-01): the freestanding mascot in a small
  * box, the eyebrow, "Add your first …", the add buttons and three steps. Only the accent (`--primary`) and the copy
- * differ between the apps.
+ * differ between the apps. Narrower than 640 px (a web player on a phone, UX-EMPTY-01) the mascot sits above the text,
+ * the title is smaller and the steps go one per row, so nothing runs past a 390 px screen.
  */
 export function EmptyLibrary({ mascotSrc, mascotAlt, eyebrow, title, subtitle, primary, secondary, steps, kind = "video", testId = "empty-library" }: EmptyLibraryProps) {
   const stepIcons = [MousePointerClick, Sparkles, kind === "music" ? Headphones : MonitorSmartphone];
   return (
     <div className="flex flex-col gap-[22px]" data-testid={testId}>
-      <section className="relative overflow-hidden rounded-[var(--radius)] border border-[hsl(var(--border)/0.55)] bg-[linear-gradient(100deg,hsl(var(--card)/0.96)_0%,hsl(var(--card)/0.82)_45%,hsl(var(--card)/0.55)_100%)] p-6 shadow-[0_24px_60px_rgba(0,0,0,0.35)]">
-        <div className="relative flex items-center gap-7">
-          <div className="grid h-[222px] w-[148px] flex-none place-items-center">
+      <section className="relative overflow-hidden rounded-[var(--radius)] border border-[hsl(var(--border)/0.55)] bg-[linear-gradient(100deg,hsl(var(--card)/0.96)_0%,hsl(var(--card)/0.82)_45%,hsl(var(--card)/0.55)_100%)] p-5 shadow-[0_24px_60px_rgba(0,0,0,0.35)] sm:p-6">
+        <div className="relative flex flex-col items-center gap-4 sm:flex-row sm:gap-7" data-testid={`${testId}-hero`}>
+          <div className="grid h-[160px] w-[148px] flex-none place-items-center sm:h-[222px]">
             <img src={mascotSrc} alt={mascotAlt} className="h-[152px] w-[152px] object-contain drop-shadow-[0_0_22px_hsl(var(--primary)/0.35)]" data-testid={`${testId}-mascot`} />
           </div>
-          <div className="min-w-0">
+          <div className="min-w-0 self-stretch sm:self-auto">
             <div className="text-[11px] font-black uppercase tracking-[0.14em] text-primary">{eyebrow}</div>
-            <h1 className="mt-1.5 text-[40px] font-semibold leading-[1.1] text-foreground">{title}</h1>
+            <h1 className="mt-1.5 text-[30px] font-semibold leading-[1.1] text-foreground sm:text-[40px]">{title}</h1>
             <div className="mt-2 text-[15px] text-muted-foreground">{subtitle}</div>
-            <div className="mt-5 flex gap-2.5">
+            <div className="mt-5 flex flex-wrap gap-2.5">
               <button type="button" className={pillPrimary} onClick={primary.onClick} data-testid={primary.testId ?? `${testId}-add`}>
                 <Plus className="h-4 w-4" aria-hidden />
                 {primary.label}
@@ -54,7 +55,7 @@ export function EmptyLibrary({ mascotSrc, mascotAlt, eyebrow, title, subtitle, p
           </div>
         </div>
       </section>
-      <ol className="grid grid-cols-3 gap-[18px]">
+      <ol className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-[18px]">
         {steps.map((step, index) => {
           const Icon = stepIcons[index]!;
           return (
@@ -62,7 +63,7 @@ export function EmptyLibrary({ mascotSrc, mascotAlt, eyebrow, title, subtitle, p
               <span className="grid h-[38px] w-[38px] flex-none place-items-center rounded-[10px] bg-[hsl(var(--primary)/0.14)] text-primary">
                 <Icon className="h-[19px] w-[19px]" aria-hidden />
               </span>
-              <div>
+              <div className="min-w-0">
                 <div className="text-[15px] font-bold text-foreground">{`${index + 1}. ${step.title}`}</div>
                 <div className="mt-1 text-[13.5px] leading-normal text-muted-foreground">{step.body}</div>
               </div>
