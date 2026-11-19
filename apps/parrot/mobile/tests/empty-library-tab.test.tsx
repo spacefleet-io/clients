@@ -2,7 +2,6 @@
  * @test-id PARROT-MOBILE-EMPTY-TAB-001
  * @level unit
  * @req UX-LIBTAB-01[parrot]
- * @req UX-WAIT-04[parrot]
  * @why Chris, 2026-11-16: "when a user's library is empty we decided that the library page couldn't be opened but on
  *   parrot it currently can, it should be the same behaviour on both apps. also the button should be greyed out so it
  *   doesn't look like a bug". The real MainScreen with the real shared tab bar and pager: while the account has no
@@ -12,8 +11,7 @@
  *   also be greyed out and unaccissible": the Playlists tab follows the Library tab. Chris, 2026-11-18, on a test phone: "I can't
  *   click the library and playlists buttons on the bottom menu, but they are not greyed out at all so it's very
  *   confusing and looks like a bug": greyed out is the idle colour at half opacity (as on desktop and TV), never the
- *   theme's slightly darker dim colour. Chris, 2026-11-18: the empty library shows before the library has loaded:
- *   while the album list of the open library version is not read yet, the tabs stay open (UX-WAIT-04).
+ *   theme's slightly darker dim colour.
  */
 import { createElement } from "react";
 import { act, create, type ReactTestInstance, type ReactTestRenderer } from "react-test-renderer";
@@ -24,8 +22,6 @@ const log = (step: string, detail: unknown) => console.info(`[PARROT-MOBILE-EMPT
 const state = vi.hoisted(() => ({
   library: { status: "ready", version: 1 } as { status: string; version: number },
   albums: [] as unknown[] | null,
-  /** Whether the album list was read for the library version open now (the real hook's `answered`). */
-  answered: true,
   seeAll: null as null | ((view: "albums" | "artists") => void),
 }));
 
@@ -77,9 +73,7 @@ vi.mock("../src/screens/SettingsScreen", () => ({ SettingsScreen: "SettingsScree
 vi.mock("../src/screens/NowPlayingBar", () => ({ NowPlayingBar: "NowPlayingBar" }));
 vi.mock("../src/state/session", () => ({ useSession: () => ({ library: state.library }) }));
 // The albums the library's current version holds (the real hook reruns `listAlbums` on each new version).
-vi.mock("../src/state/useQuery", () => ({
-  useQuery: () => ({ data: state.library.status === "ready" ? state.albums : null, error: null, loading: !state.answered, answered: state.answered }),
-}));
+vi.mock("../src/state/useQuery", () => ({ useQuery: () => ({ data: state.library.status === "ready" ? state.albums : null, error: null, loading: false }) }));
 vi.mock("../src/lib/library", () => ({ listAlbums: async () => state.albums }));
 
 import { MainScreen } from "../src/screens/MainScreen";
@@ -147,18 +141,6 @@ describe("PARROT-MOBILE-EMPTY-TAB-001 the phone's Library tab while the library 
     const tree = await render();
     expect(navTab(tree).seen).toEqual({ disabled: false, a11yDisabled: false, greyed: false });
     expect(navTab(tree, "playlists").seen).toEqual({ disabled: false, a11yDisabled: false, greyed: false });
-  });
-
-  it("@req UX-WAIT-04 opened but its albums not read yet: the tabs stay open (not known empty)", async () => {
-    state.library = { status: "ready", version: 1 };
-    state.albums = [];
-    state.answered = false;
-    const tree = await render();
-    const seen = { library: navTab(tree).seen, playlists: navTab(tree, "playlists").seen };
-    state.answered = true;
-    log("ready, unanswered", seen);
-    expect(seen.library).toEqual({ disabled: false, a11yDisabled: false, greyed: false });
-    expect(seen.playlists).toEqual({ disabled: false, a11yDisabled: false, greyed: false });
   });
 
   it.each(["library", "playlists"] as const)("the first album lands: the %s tab opens, with no restart", async (id) => {

@@ -12,11 +12,6 @@ import { OnboardingKeyScreen } from "../screens/OnboardingKeyScreen";
 import { ErrorReportsScreen } from "../screens/ErrorReportsScreen";
 import { TitleLanguageScreen } from "../setup/TitleLanguageQuestion";
 import { useTitleLanguageQuestion } from "../lib/titleLanguageQuestion";
-import { ProfileSetupScreen } from "../setup/ProfileSetupQuestion";
-import { useBadgerUpdateFeatures, useProfileSetupQuestion } from "../lib/profileSetupQuestion";
-import { WhatsNewModal } from "@space/mobile-shell/whats-new";
-import { TvWhatsNewWindow } from "../tv/screens/TvWhatsNewWindow";
-import type { AppFeatureId } from "@space/shared/appFeatures";
 import { BadgerSetupFlow } from "../setup/BadgerSetupFlow";
 import { usePhoneSetup } from "../setup/phoneSetupStore";
 import { resolvePhoneSetupStep } from "@space/mobile-shell/setup";
@@ -153,8 +148,6 @@ export type RootStackParamList = {
   OnboardingReports: undefined;
   /** "How should titles appear?" on its own, right after a profile that never answered is picked (ACCT-PROF-03). */
   TitleLanguage: undefined;
-  /** "Your profile" on its own (UX-SETUP-10), or opened from the update window's "Choose my avatar" (UX-UPDATE-01). */
-  ProfileSetup: undefined;
   Main: undefined;
   MediaDetails: { mediaId: string };
   /** `remoteStart`: opened by "Play on TV" from the phone (UX-TV-02): start there, no resume prompt, apply those tracks. */
@@ -206,10 +199,6 @@ export const AppNavigator = () => {
   const updateRequired = useAppUpdateRequired();
   // ACCT-PROF-03: a profile created since the question exists that never answered it.
   const titleLanguageQuestion = useTitleLanguageQuestion();
-  // UX-SETUP-10: the profile picked never set up its name and avatar.
-  const profileSetupQuestion = useProfileSetupQuestion();
-  // UX-UPDATE-01: an older profile's "New in this update" windows (the resolver shows them once every gate is passed).
-  const updates = useBadgerUpdateFeatures(!!user && profileGate === "ready");
 
   const screen = resolveNavigatorScreen({
     updateRequired: updateRequired !== null,
@@ -234,9 +223,6 @@ export const AppNavigator = () => {
           },
     tvLanguagePending: IS_TV && tvSetup !== null && tvLanguagePending(tvSetup),
     titleLanguageQuestion,
-    profileSetupQuestion,
-    updateSetUp: updates.settingUp !== null,
-    updateWindow: updates.current !== null,
   });
   // TV: reachable for "Play on TV" from the phone while signed in and the library is open (UX-TV-02).
   usePlayOnTvReceiver(IS_TV && screen === "main");
@@ -345,8 +331,6 @@ export const AppNavigator = () => {
           <Stack.Screen name="OnboardingReports" component={ErrorReportsScreen} />
         ) : screen === "title-language" ? (
           <Stack.Screen name="TitleLanguage" component={TitleLanguageScreen} />
-        ) : screen === "profile-setup" ? (
-          <Stack.Screen name="ProfileSetup">{() => <ProfileSetupScreen onBack={updates.settingUp ? updates.back : undefined} />}</Stack.Screen>
         ) : screen === "profiles" ? (
           <Stack.Screen name="Profiles" component={IS_TV ? TvProfilesScreen : ProfilesScreen} />
         ) : (
@@ -382,35 +366,9 @@ export const AppNavigator = () => {
           </>
         )}
       </Stack.Navigator>
-      {screen === "whats-new" && updates.current && updates.profile ? (
-        <UpdateWindow feature={updates.current} profileName={updates.profile.name} onChoose={updates.setUp} onLater={updates.later} />
-      ) : null}
     </NavigationContainer>
   );
 };
-
-/**
- * "New in this update" (UX-UPDATE-01) over the app, which stays mounted and dimmed underneath: the phone's window
- * (`phone-modal.png`), the TV's own (`TvWhatsNewWindow`, which draws its scrim and keeps the remote in its card).
- */
-const UpdateWindow = ({
-  feature,
-  profileName,
-  onChoose,
-  onLater,
-}: {
-  feature: AppFeatureId;
-  profileName: string;
-  onChoose: (feature: AppFeatureId) => void;
-  onLater: (feature: AppFeatureId) => Promise<void>;
-}) =>
-  IS_TV ? (
-    <View style={StyleSheet.absoluteFill}>
-      <TvWhatsNewWindow feature={feature} profileName={profileName} onChoose={() => onChoose(feature)} onLater={() => void onLater(feature)} />
-    </View>
-  ) : (
-    <WhatsNewModal feature={feature} profileName={profileName} onChoose={() => onChoose(feature)} onLater={() => void onLater(feature)} />
-  );
 
 const styles = StyleSheet.create({
   safeArea: {

@@ -22,8 +22,8 @@ vi.mock("@react-native-async-storage/async-storage", () => ({
 }));
 vi.mock("react-native", () => ({ Platform: { isTV: false, OS: "android" } }));
 
-const NEW = { id: "p-new", name: "Kid", avatar: 1, avatarId: "fox" as const, createdAt: TITLE_LANGUAGE_ASKED_SINCE, isMain: false, features: {} };
-const OLD = { id: "p-old", name: "Main", avatar: 0, avatarId: "raccoon" as const, createdAt: "2026-01-02T00:00:00.000Z", isMain: true, features: {} };
+const NEW = { id: "p-new", name: "Kid", avatar: 1, avatarId: "fox" as const, createdAt: TITLE_LANGUAGE_ASKED_SINCE, isMain: false };
+const OLD = { id: "p-old", name: "Main", avatar: 0, avatarId: "raccoon" as const, createdAt: "2026-01-02T00:00:00.000Z", isMain: true };
 
 describe("who is asked", () => {
   it("only a profile created since the question exists that never answered; unknown until picked and read", () => {

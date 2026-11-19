@@ -14,7 +14,7 @@
     "customBadge": "Eigener",
     "useDefault": "Standard verwenden",
     "save": "Speichern",
-    "saving": "Wird gespeichert…",
+    "saving": "Wird gespeichert...",
     "error": "Der API-Host konnte nicht gespeichert werden. Prüfe den Wert und versuch es nochmal."
   },
   "login": {
@@ -25,9 +25,9 @@
     "twoFactorLabel": "Bestätigungscode",
     "twoFactorPlaceholder": "123456",
     "button": "Anmelden",
-    "signingIn": "Anmeldung läuft…",
+    "signingIn": "Anmeldung läuft...",
     "resend": "Code erneut senden",
-    "resending": "Wird gesendet…",
+    "resending": "Wird gesendet...",
     "infoEmail": "Wir haben dir einen Bestätigungscode per E-Mail geschickt.",
     "infoTotp": "Gib den Code aus deiner Authentifizierungs-App ein.",
     "resendSuccess": "Ein neuer Bestätigungscode wurde gesendet.",
@@ -42,12 +42,12 @@
       "passwordLabel": "Neues Passwort",
       "passwordConfirmLabel": "Neues Passwort bestätigen",
       "request": "Code senden",
-      "requesting": "Wird gesendet…",
+      "requesting": "Wird gesendet...",
       "submit": "Passwort ändern",
-      "submitting": "Wird geändert…",
+      "submitting": "Wird geändert...",
       "cancel": "Abbrechen",
       "resend": "Code erneut senden",
-      "resending": "Wird gesendet…",
+      "resending": "Wird gesendet...",
       "noticeSent": "Falls es diese E-Mail-Adresse gibt, haben wir einen Bestätigungscode gesendet.",
       "noticeResent": "Wir haben dir noch einen Bestätigungscode geschickt.",
       "noticeComplete": "Passwort geändert. Bitte melde dich erneut an.",
@@ -95,7 +95,7 @@
       "message": "Auf dem Server, auf dem dieser Titel liegt, ist gerade viel los: Die Qualität ist auf {{quality}} begrenzt, bis sich der Datenverkehr beruhigt hat.",
       "keepWatching": "Trotzdem weiterschauen"
     },
-    "loading": "Wiedergabe wird vorbereitet…",
+    "loading": "Wiedergabe wird vorbereitet...",
     "loadingSlow": "Wird noch geladen… das dauert länger als üblich.",
     "controls": {
       "closePlayer": "Player schließen",
@@ -373,7 +373,7 @@
     "pickerTitle": "Abspielen auf",
     "thisPhone": "Dieses Handy",
     "thisPhoneHint": "In der App abspielen",
-    "searching": "Suche nach Cast-Geräten in deinem WLAN…",
+    "searching": "Suche nach Cast-Geräten in deinem WLAN...",
     "noDevices": "Kein Cast-Gerät gefunden. Handy und Gerät müssen im selben WLAN sein.",
     "deviceHint": "Google Cast",
     "airplay": "AirPlay",
@@ -381,8 +381,8 @@
     "airplayActive": "Auf {{name}} abspielen",
     "screenTitle": "Casting",
     "castingTo": "Casting an {{name}}",
-    "preparing": "Stream wird vorbereitet…",
-    "connecting": "Verbindung mit {{name}}…",
+    "preparing": "Stream wird vorbereitet...",
+    "connecting": "Verbindung mit {{name}}...",
     "keepWifi": "Lass dieses Handy bis zum Ende im selben WLAN: Es schickt den Film an das Gerät.",
     "play": "Abspielen",
     "pause": "Pause",
@@ -426,8 +426,8 @@
     "library": "Bibliothek",
     "playlists": "Playlists",
     "settings": "Einstellungen",
-    "loading": "Wird geladen…",
-    "loadingLibrary": "Bibliothek wird geladen…",
+    "loading": "Wird geladen...",
+    "loadingLibrary": "Mediathek wird geladen...",
     "updateRequired": "Update erforderlich",
     "unavailable": "Badger ist nicht verfügbar: {{issue}}. Bitte aktualisiere deine App.",
     "screenLoadFailed": "Der Bildschirm konnte nicht geladen werden",
@@ -636,7 +636,7 @@
       "currentPassword": "Aktuelles Passwort",
       "newPassword": "Neues Passwort",
       "change": "Passwort ändern",
-      "changing": "Wird geändert…",
+      "changing": "Wird geändert...",
       "success": "Passwort geändert.",
       "codeLabel": "Bestätigungscode",
       "errors": {
@@ -650,12 +650,12 @@
       "set": {
         "title": "Passwort festlegen",
         "button": "Passwort festlegen",
-        "setting": "Wird festgelegt…"
+        "setting": "Wird festgelegt..."
       }
     },
     "devices": {
       "title": "Deine Geräte",
-      "loading": "Wird geladen…",
+      "loading": "Wird geladen...",
       "empty": "Keine angemeldeten Geräte gefunden.",
       "summary_one": "{{count}} Gerät angemeldet",
       "summary_other": "{{count}} Geräte angemeldet",
@@ -730,7 +730,7 @@
       "web": "Webbrowser"
     },
     "scan": {
-      "cameraStarting": "Kamera wird gestartet…",
+      "cameraStarting": "Kamera wird gestartet...",
       "cameraDenied": "Die Kamera ist nicht erlaubt. Erlaube dieser App in den Einstellungen deines Handys den Kamerazugriff oder gib den Code stattdessen ein.",
       "pointCamera": "Richte die Kamera auf den Code auf dem Bildschirm des anderen Geräts.",
       "codeLabel": "Code auf dem anderen Gerät",
@@ -739,14 +739,14 @@
       "typeInstead": "Code stattdessen eingeben",
       "scanInstead": "Code stattdessen scannen"
     },
-    "looking": "Code wird gesucht…",
+    "looking": "Code wird gesucht...",
     "confirm": {
       "asked": "{{type}} mit dem Namen \"{{name}}\" möchte deinem Konto beitreten.",
       "unlockNotice": "Du wirst aufgefordert, dein Handy zu entsperren. Mit der Genehmigung wird das Gerät angemeldet und erhält deinen Mediathek-Schlüssel.",
       "approve": "Genehmigen",
       "deny": "Ablehnen"
     },
-    "approving": "Warten darauf, dass du dein Handy entsperrst…",
+    "approving": "Warten darauf, dass du dein Handy entsperrst...",
     "done": {
       "added": "{{name}} wurde hinzugefügt.",
       "notAdded": "{{name}} wurde nicht hinzugefügt.",
@@ -818,13 +818,13 @@
     "expiresIn": "Dieser Code läuft in {{time}} ab. Ein neuer erscheint von selbst.",
     "deviceName": "Dieses Handy erscheint als „{{name}}“.",
     "qrAccessibility": "QR-Code zum Koppeln dieses Handys",
-    "starting": "Kopplungscode wird geholt…",
-    "completing": "Bestätigt. Anmeldung läuft…",
+    "starting": "Kopplungscode wird geholt...",
+    "completing": "Bestätigt. Anmeldung läuft...",
     "keyLink": "Schlüssel von einem anderen Gerät holen",
     "keyCard": "Nutze eine beliebige Badger- oder Parrot-App, in der du angemeldet bist, auf jedem Gerät oder Profil dieses Kontos.",
     "keyTitle": "Hol dir deinen Mediathek-Schlüssel von einem anderen Gerät, das mit diesem Konto angemeldet ist.",
     "typeKey": "Schlüssel stattdessen eingeben",
-    "completingKey": "Bestätigt. Deine Mediathek wird geöffnet…",
+    "completingKey": "Bestätigt. Deine Mediathek wird geöffnet...",
     "tryAgain": "Neuen Code holen",
     "denied": "Die andere App hat dieses Handy abgelehnt. Hol einen neuen Code, um es noch einmal zu versuchen.",
     "errors": {
@@ -840,8 +840,8 @@
       "subtitle": "Öffne auf deinem Handy oder Computer Badger → Einstellungen → Gerät koppeln und scanne dann den Code oder gib ihn ein.",
       "codeLabel": "Oder gib diesen Code ein",
       "qrAccessibility": "QR-Code zum Koppeln dieses Fernsehers",
-      "starting": "Kopplungscode wird abgerufen…",
-      "completing": "Genehmigt. Anmeldung läuft…",
+      "starting": "Kopplungscode wird abgerufen...",
+      "completing": "Genehmigt. Anmeldung läuft...",
       "usePassword": "Stattdessen E-Mail und Passwort verwenden",
       "useCode": "Stattdessen einen Kopplungscode verwenden",
       "tryAgain": "Neuen Code holen",
@@ -871,7 +871,7 @@
       "back": "Zurück",
       "warning": "Genehmige nur Codes, die auf einem Bildschirm direkt vor dir angezeigt werden. Wer dir einen Code schickt, kann Zugriff auf deine gesamte Mediathek bekommen.",
       "passwordNotice": "Du wirst nach deinem Kontopasswort gefragt. Mit der Genehmigung wird das Gerät angemeldet und erhält deinen Mediathek-Schlüssel.",
-      "approving": "Dein Passwort wird geprüft und der Schlüssel gesendet…",
+      "approving": "Dein Passwort wird geprüft und der Schlüssel gesendet...",
       "addedDetail": "Es meldet sich gerade an. Du kannst es jederzeit in deiner Geräteliste abmelden.",
       "password": {
         "title": "Gib dein Kontopasswort ein",
@@ -879,7 +879,7 @@
         "label": "Kontopasswort"
       },
       "codeNotice": "Du wirst nach einem Code gefragt, um zu bestätigen, dass du es bist. Die Freigabe meldet das Gerät an und gibt ihm deinen Mediathek-Schlüssel.",
-      "approvingCode": "Wird geprüft und der Schlüssel gesendet…",
+      "approvingCode": "Wird geprüft und der Schlüssel gesendet...",
       "code": {
         "title": "Code eingeben",
         "detailEmail": "Wir haben dir einen Code per E-Mail gesendet. Gib ihn ein, um zu bestätigen, dass du es bist, bevor deine Mediathek mit einem anderen Gerät geteilt wird.",
@@ -930,7 +930,7 @@
     "decline": "Nicht senden"
   },
   "onboarding": {
-    "loading": "Mediathek-Einrichtung wird geladen…",
+    "loading": "Mediathek-Einrichtung wird geladen...",
     "enterTitle": "Gib deinen Mediathek-Schlüssel ein",
     "showTitle": "Dein Mediathek-Schlüssel",
     "subtitle": "Dieser Schlüssel verschlüsselt die privaten Daten deiner Mediathek. Bewahre ihn sicher auf.",
@@ -957,8 +957,8 @@
     "confirm": "Bestätigen",
     "confirmed": "Bestätigt",
     "rotate": "Schlüssel erneuern",
-    "rotating": "Wird erneuert…",
-    "success": "Schlüssel erneuert. Mediathek wird neu geladen…",
+    "rotating": "Wird erneuert...",
+    "success": "Schlüssel erneuert. Mediathek wird neu geladen...",
     "errors": {
       "confirmRequired": "Bestätige, dass du den neuen Schlüssel gespeichert hast.",
       "passwordRequired": "Passwort erforderlich.",
@@ -1025,7 +1025,7 @@
       "actors": "Schauspieler",
       "allActors": "Alle Schauspieler",
       "actorSearch": "Schauspieler suchen",
-      "actorsLoading": "Schauspieler werden geladen…",
+      "actorsLoading": "Schauspieler werden geladen...",
       "actorsNone": "Keine Schauspieler gefunden",
       "downloadedOnly": "Nur heruntergeladen",
       "downloadedOnlyHint": "Nur Titel, die auf diesem Handy gespeichert sind."
@@ -1168,7 +1168,7 @@
     "attachLog": "Fehlerprotokoll der App anhängen",
     "attachLogHint": "Hilft uns, ein Problem zu finden. Es enthält keine Titel oder Dateinamen.",
     "send": "Senden",
-    "sending": "Wird gesendet…",
+    "sending": "Wird gesendet...",
     "sent": "Danke! Deine Nachricht wurde gesendet.",
     "back": "Zurück",
     "errors": {
@@ -1233,7 +1233,7 @@
     "codeSent": "Wir haben einen Bestätigungscode gesendet. Sieh in deinen E-Mails oder deiner Authentifizierungs-App nach.",
     "cancel": "Abbrechen",
     "submit": "Alles löschen und neu beginnen",
-    "working": "Wird gelöscht…",
+    "working": "Wird gelöscht...",
     "errorInvalidPassword": "Falsches Passwort.",
     "errorTwoFactorInvalid": "Der Bestätigungscode ist ungültig.",
     "errorGeneric": "Die $t(keyStepWords.collection) kann gerade nicht zurückgesetzt werden. Bitte versuch es erneut."

@@ -11,7 +11,6 @@ import { Button } from "../button";
 import { GuardedItems } from "../render-boundary";
 import { UNAVAILABLE_CLASS } from "../unavailable";
 import { cn } from "../utils";
-import { easedMask } from "../eased-mask";
 import { pillGhost, pillPrimary } from "../empty-library";
 
 export { BadgerMenuPanel, BadgerMultiSelect, BadgerSortMenu, type BadgerMultiSelectOption } from "./library-menus";
@@ -53,13 +52,6 @@ type ContinueWatchingHeroProps = {
   testId?: string;
 };
 
-/**
- * The glow's left side fades in from nothing over 60% of its width (UX-HOME-04). The glow box sits on the card's right,
- * so on any card wider than it its left edge crossed the card, and `blur()` softens that edge only into a band.
- */
-const HERO_GLOW_MASK = easedMask("to right", 0, 60);
-const heroGlowMaskStyle = { maskImage: HERO_GLOW_MASK, WebkitMaskImage: HERO_GLOW_MASK };
-
 /** The first thing on Home: the title the viewer was last watching, with Resume and Details (UX-HOME-01). */
 export function BadgerContinueHero({ eyebrow, title, meta, progressPct, poster, glowSrc, resumeLabel, detailsLabel, onResume, onDetails, testId = "continue-hero" }: ContinueWatchingHeroProps) {
   return (
@@ -68,14 +60,7 @@ export function BadgerContinueHero({ eyebrow, title, meta, progressPct, poster, 
       data-testid={testId}
     >
       {glowSrc ? (
-        <img
-          src={glowSrc}
-          alt=""
-          aria-hidden
-          className="pointer-events-none absolute -right-20 -top-[120px] h-[560px] w-[760px] object-cover opacity-35 blur-[60px] saturate-[1.3]"
-          style={heroGlowMaskStyle}
-          data-testid={`${testId}-glow`}
-        />
+        <img src={glowSrc} alt="" aria-hidden className="pointer-events-none absolute -right-20 -top-[120px] h-[560px] w-[760px] object-cover opacity-35 blur-[60px] saturate-[1.3]" />
       ) : null}
       <div className="relative flex items-center gap-7">
         <div className="relative aspect-[2/3] w-[150px] flex-none overflow-hidden rounded-lg bg-muted shadow-[0_12px_28px_rgba(0,0,0,0.4)]">{poster}</div>

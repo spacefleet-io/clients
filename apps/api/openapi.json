@@ -2046,23 +2046,6 @@
           "isMain": {
             "type": "boolean",
             "description": "True on the oldest profile of the account, whose viewing data uses the library's unprefixed storage."
-          },
-          "features": {
-            "type": "object",
-            "properties": {
-              "avatars": {
-                "type": "string",
-                "enum": [
-                  "set",
-                  "later"
-                ]
-              }
-            },
-            "additionalProperties": false,
-            "description": "App features this profile has set up (`set`) or put off from the \"New in this update\" window (`later`), by feature id (avatars); a feature not listed is not set up yet.",
-            "example": {
-              "avatars": "set"
-            }
           }
         },
         "required": [
@@ -2071,8 +2054,7 @@
           "avatar",
           "avatarId",
           "createdAt",
-          "isMain",
-          "features"
+          "isMain"
         ]
       },
       "ProfileChange": {
@@ -11655,7 +11637,7 @@
           "Profiles"
         ],
         "summary": "List profiles",
-        "description": "The account's profiles, oldest first; the oldest is the main profile (`isMain`). An account always has at least one: when it has none yet, this creates the main profile, named after the account's display name (else \"Profile 1\" in the account's language), with a random avatar. `features` holds the app features each profile has set up or put off (`{}` when none). `maxProfiles` is the plan's limit, as on `GET /auth/me`. Each profile's viewing data stays in the end-to-end encrypted library.\n\nPersonal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.",
+        "description": "The account's profiles, oldest first; the oldest is the main profile (`isMain`). An account always has at least one: when it has none yet, this creates the main profile, named after the account's display name (else \"Profile 1\" in the account's language), with the first avatar (`badger`). `maxProfiles` is the plan's limit, as on `GET /auth/me`. Each profile's viewing data stays in the end-to-end encrypted library.\n\nPersonal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.",
         "security": [
           {
             "bearerAuth": []
@@ -11724,7 +11706,7 @@
           "Profiles"
         ],
         "summary": "Create a profile",
-        "description": "Adds a profile to the account. Without `avatarId` (or `avatar`), a random avatar no profile uses yet is given (any random one when all are used). `features` sets the new profile's feature states: an add form where the user picked the avatar sends `{\"avatars\": \"set\"}`. Refused once the account holds `maxProfiles` profiles (5 on a paid plan, 1 on free).\n\nPersonal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.",
+        "description": "Adds a profile to the account. Without `avatarId` (or `avatar`), the first avatar of the pack no profile uses yet is given. Refused once the account holds `maxProfiles` profiles (5 on a paid plan, 1 on free).\n\nPersonal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.",
         "security": [
           {
             "bearerAuth": []
@@ -11775,23 +11757,6 @@
                     "type": "number",
                     "description": "Palette index, an integer from 0 to 7; sets the avatar matching that colour. For apps released before the avatar pack: ignored when `avatarId` is sent.",
                     "example": 2
-                  },
-                  "features": {
-                    "type": "object",
-                    "properties": {
-                      "avatars": {
-                        "type": "string",
-                        "enum": [
-                          "set",
-                          "later"
-                        ]
-                      }
-                    },
-                    "additionalProperties": false,
-                    "description": "App features this profile has set up (`set`) or put off from the \"New in this update\" window (`later`), by feature id (avatars); a feature not listed is not set up yet.",
-                    "example": {
-                      "avatars": "set"
-                    }
                   }
                 },
                 "required": [
@@ -11813,7 +11778,7 @@
             }
           },
           "400": {
-            "description": "The name is not 1 to 40 characters after trimming, the avatar is not an integer from 0 to 7, the avatarId is not one of the pack, a feature id or state is unknown, or the body does not match the schema.",
+            "description": "The name is not 1 to 40 characters after trimming, the avatar is not an integer from 0 to 7, the avatarId is not one of the pack, or the body does not match the schema.",
             "content": {
               "application/json": {
                 "schema": {
@@ -11908,8 +11873,8 @@
         "tags": [
           "Profiles"
         ],
-        "summary": "Rename a profile, change its avatar or record its feature states",
-        "description": "Changes the name, the avatar (`avatarId`, or `avatar` from apps released before the pack) and/or the feature states (`features`, merged per feature: a feature not sent keeps its state) of one of the account's profiles; at least one is required.\n\nPersonal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.",
+        "summary": "Rename a profile or change its avatar",
+        "description": "Changes the name and/or the avatar (`avatarId`, or `avatar` from apps released before the pack) of one of the account's profiles; at least one is required.\n\nPersonal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.",
         "security": [
           {
             "bearerAuth": []
@@ -11973,23 +11938,6 @@
                     "type": "number",
                     "description": "Palette index, an integer from 0 to 7; sets the avatar matching that colour. For apps released before the avatar pack: ignored when `avatarId` is sent.",
                     "example": 2
-                  },
-                  "features": {
-                    "type": "object",
-                    "properties": {
-                      "avatars": {
-                        "type": "string",
-                        "enum": [
-                          "set",
-                          "later"
-                        ]
-                      }
-                    },
-                    "additionalProperties": false,
-                    "description": "App features this profile has set up (`set`) or put off from the \"New in this update\" window (`later`), by feature id (avatars); a feature not listed is not set up yet.",
-                    "example": {
-                      "avatars": "set"
-                    }
                   }
                 }
               }
@@ -12008,7 +11956,7 @@
             }
           },
           "400": {
-            "description": "The name is not 1 to 40 characters after trimming, the avatar is not an integer from 0 to 7, the avatarId is not one of the pack, a feature id or state is unknown, or the body does not match the schema.",
+            "description": "The name is not 1 to 40 characters after trimming, the avatar is not an integer from 0 to 7, the avatarId is not one of the pack, or the body does not match the schema.",
             "content": {
               "application/json": {
                 "schema": {

@@ -18,7 +18,7 @@
  * What differs per app (key check, erase call, other-device panel) comes in as props. The erase is account-wide
  * (Badger and Parrot), the same on phone and TV (Main 2026-11-12).
  *
- * On TV (960x540dp) the mascot floats over the card's top border, as on every setup step (UX-SETUP-08).
+ * On TV (960x540dp) the mascot is left out so the 12 words and the card's buttons fit the screen.
  */
 import React, { useState, type ReactNode } from "react";
 import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
@@ -154,6 +154,7 @@ export const MobileLibraryKeyStep = ({
         nextDisabled={!canContinue}
         nextLabel={continueLabel ?? t("libraryKeyStep.continue")}
         nextPreferredFocus={tv && !enter}
+        mascot={!tv}
         busy={busy}
         afterCard={afterCard}
       >
@@ -164,7 +165,7 @@ export const MobileLibraryKeyStep = ({
               <MobileButtonFace label={t("phonePairing.typeKey")} variant="secondary" onPress={() => openOtherDevice(false)} testID="key-type-instead" />
             </View>
           ) : (
-            <View style={[styles.block, tv && styles.blockTv]}>
+            <View style={styles.block}>
               <LibraryKeyWordsInput
                 autoFocus={tv}
                 onChangeText={(text, read) => onKeyChange?.(text, read)}
@@ -182,14 +183,13 @@ export const MobileLibraryKeyStep = ({
                   testID="key-from-another-device"
                   title={t("phonePairing.keyLink")}
                   body={t("phonePairing.keyCard")}
-                  compact={tv}
                   onPress={() => openOtherDevice(true)}
                 />
               ) : null}
             </View>
           )
         ) : (
-          <View style={[styles.block, tv && styles.blockTv]}>
+          <View style={styles.block}>
             <LibraryKeyWordsGrid
               words={words ?? []}
               action={
@@ -236,8 +236,6 @@ export const MobileLibraryKeyStep = ({
 
 const styles = StyleSheet.create({
   block: { gap: 14 },
-  // TV: closer, so the 12 boxes, the other-device card and the buttons fit 540 dp under the mascot (UX-SETUP-08).
-  blockTv: { gap: 10 },
   error: { fontSize: 14, lineHeight: 20 },
   lost: { alignItems: "center", gap: 4, paddingHorizontal: 12 },
   lostLink: { fontSize: 13, textAlign: "center", textDecorationLine: "underline" },

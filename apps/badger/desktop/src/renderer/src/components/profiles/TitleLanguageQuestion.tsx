@@ -12,15 +12,6 @@ import { DEFAULT_TITLE_LANGUAGE, type TitleLanguage, type TitleLanguageTexts } f
 import { TitleLanguageChoice } from "@space/ui/title-language";
 import SetupLanguageMenu from "@/components/SetupLanguageMenu";
 import mascotWebp from "@/assets/mascot.webp";
-import { SETUP_CARD_FIT, SETUP_PAGE_FIT } from "@/components/setupFit";
-
-// UX-SETUP-08: in a window under 700 px high (1200x600) the two options draw closer and each one's examples share a line.
-const SHORT_WINDOW_CHOICE = [
-  "[@media(max-height:700px)]:[&_[role=radiogroup]]:gap-2",
-  "[@media(max-height:700px)]:[&_[role=radio]]:p-3",
-  "[@media(max-height:700px)]:[&_[data-testid$=-examples]]:flex-row",
-  "[@media(max-height:700px)]:[&_[data-testid$=-examples]]:gap-4",
-].join(" ");
 
 type TitleLanguageQuestionProps = {
   /** The step in this computer's first setup, or null when the question shows alone. */
@@ -35,7 +26,7 @@ export default function TitleLanguageQuestion({ step, onAnswer }: TitleLanguageQ
     <div data-testid="title-language-question">
       <DesktopStartupPage
         nebula="badger"
-        mainClassName={SETUP_PAGE_FIT}
+        mainClassName="pb-12 pt-32"
         controls={
           step ? (
             <DesktopStartupControls>
@@ -60,8 +51,8 @@ export default function TitleLanguageQuestion({ step, onAnswer }: TitleLanguageQ
           description={t("titleLanguage.intro")}
           mascotSrc={mascotWebp}
           mascotAlt={t("brand.mascotAlt")}
-          maxWidthClassName={SETUP_CARD_FIT}
-          contentClassName={`space-y-5 [@media(max-height:700px)]:pb-4 ${SHORT_WINDOW_CHOICE}`}
+          maxWidthClassName="max-w-2xl"
+          contentClassName="space-y-5"
           footer={
             <CardFooter className="justify-end gap-3">
               <Button data-testid="title-language-continue" onClick={() => onAnswer(choice)}>

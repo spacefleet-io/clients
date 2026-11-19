@@ -14,12 +14,11 @@ MADE FOR WATCHING
 • Up to 5 profiles on paid plans, each with its own Continue watching.
 
 JUST YOUR VIDEOS
-• Only you can see your library. Not even we can.
+• Your library and the videos you add are encrypted on your device before they reach our servers.
+• To show titles and artwork, Badger asks our lookup service with a single-use anonymous ticket instead of your account: we can't tell who asked. The service sees what is looked up and your internet address, which we don't keep.
 • Badger doesn't supply movies or shows: you watch the videos you add yourself.
 • We never sell your data.
 
 FREE TO START
 • Create a free SpaceFleet account, with 20 GB of storage included.
 • The same account works with Parrot, our app for your music.
-
-Subtitles provided by OpenSubtitles.com (https://opensubtitles.com)

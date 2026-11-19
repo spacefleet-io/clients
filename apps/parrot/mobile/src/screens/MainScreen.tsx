@@ -46,9 +46,8 @@ export const MainScreen = ({ navigation }: NativeStackScreenProps<RootStack, "Ma
   const isFocused = useIsFocused();
   const version = library.status === "ready" ? library.version : -1;
   const albums = useQuery(() => (version < 0 ? Promise.resolve(null) : listAlbums()), [version]);
-  // Empty only once known (UX-WAIT-04): no library on this account, or an opened one whose album list, read for this
-  // version, holds no album. Loading, or the answer of an older version, keeps the tab open.
-  const libraryClosed = library.status === "missing" || (library.status === "ready" && albums.answered && albums.data?.length === 0);
+  // Empty only once known: no library on this account, or an opened one with no album. Loading keeps the tab open.
+  const libraryClosed = library.status === "missing" || (library.status === "ready" && albums.data?.length === 0);
   useEffect(() => {
     if (!libraryClosed) return;
     console.info("[parrot-nav] library empty: back to home");

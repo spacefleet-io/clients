@@ -73,7 +73,6 @@ import { accountLanguageOf } from "@space/shared/accountLanguage";
 import { isAccountLanguage } from "@space/shared/i18n";
 import { mainProfileId as pickMainProfileId } from "@space/shared/profiles";
 import { isProfileAvatarId, type ProfileAvatarId } from "@space/shared/profileAvatars";
-import { isAppFeatureId, isAppFeatureState, type ProfileFeatures } from "@space/shared/appFeatures";
 import { classifySignInError, retryAfterMinutes, signInErrorDetails, type SignInFailure } from "@space/shared/signInError";
 import { classifyResendVerificationError, classifySignUpError, classifyVerifyEmailError } from "@space/shared/signUp";
 import { asksKeySavedBeforeSignOut, type SignedOutReason } from "@space/shared/keptLibraryKey";
@@ -2350,24 +2349,12 @@ const profilesCall = async <T>(name: string, call: (token: string) => Promise<T>
 
 const profileText = (value: unknown): string => (typeof value === "string" ? value : "");
 
-/**
- * A renderer's profile body, checked field by field; the API validates the values (ACCT-PROF-05). `features` carries
- * the add form's and the "Your profile" step's `{avatars: "set"}` and the update window's "later" (UX-SETUP-10,
- * UX-UPDATE-01); unknown ids and states are dropped here.
- */
-const profileBody = (value: unknown): { name?: string; avatarId?: ProfileAvatarId; features?: ProfileFeatures } => {
-  const input =
-    typeof value === "object" && value !== null ? (value as { name?: unknown; avatarId?: unknown; features?: unknown }) : {};
-  const features =
-    typeof input.features === "object" && input.features !== null
-      ? (Object.fromEntries(
-          Object.entries(input.features).filter(([id, state]) => isAppFeatureId(id) && isAppFeatureState(state))
-        ) as ProfileFeatures)
-      : null;
+/** A renderer's profile body, checked field by field; the API validates the values (ACCT-PROF-05). */
+const profileBody = (value: unknown): { name?: string; avatarId?: ProfileAvatarId } => {
+  const input = typeof value === "object" && value !== null ? (value as { name?: unknown; avatarId?: unknown }) : {};
   return {
     ...(typeof input.name === "string" ? { name: input.name } : {}),
     ...(isProfileAvatarId(input.avatarId) ? { avatarId: input.avatarId } : {}),
-    ...(features && Object.keys(features).length > 0 ? { features } : {}),
   };
 };
 

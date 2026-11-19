@@ -105,7 +105,6 @@ const profile = (id: string, minute: number, isMain: boolean): ApiProfile => ({
   avatarId: "fox" as const,
   createdAt: `2026-10-22T09:${String(minute).padStart(2, "0")}:00.000Z`,
   isMain,
-  features: {},
 });
 
 /** The app's profile session over a fake API, wired to the real viewing scope the player reads. */

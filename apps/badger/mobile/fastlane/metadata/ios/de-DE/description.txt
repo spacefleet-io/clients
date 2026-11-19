@@ -14,12 +14,11 @@ GEMACHT ZUM SCHAUEN
 • Bis zu 5 Profile mit einem bezahlten Tarif, jedes mit eigenem Weiterschauen.
 
 NUR DEINE VIDEOS
-• Nur du kannst deine Bibliothek sehen. Nicht einmal wir.
+• Deine Bibliothek und die Videos, die du hinzufügst, werden auf deinem Gerät verschlüsselt, bevor sie unsere Server erreichen.
+• Für Titel und Bilder fragt Badger unseren Suchdienst mit einem anonymen Einmal-Ticket statt mit deinem Konto: Wir können nicht erkennen, wer fragt. Der Dienst sieht, wonach gesucht wird, und deine Internetadresse, die wir nicht speichern.
 • Badger liefert keine Filme oder Serien: Du schaust die Videos, die du selbst hinzufügst.
 • Wir verkaufen nie deine Daten.
 
 KOSTENLOS STARTEN
 • Erstelle ein kostenloses SpaceFleet-Konto, mit 20 GB Speicher inklusive.
 • Dasselbe Konto funktioniert auch mit Parrot, unserer App für deine Musik.
-
-Subtitles provided by OpenSubtitles.com (https://opensubtitles.com)

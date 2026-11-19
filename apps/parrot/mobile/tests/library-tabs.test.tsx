@@ -5,15 +5,13 @@
  * @req PAR-NAV-02[parrot]
  * @req PAR-NAV-04[parrot]
  * @req UX-WAIT-02[parrot]
- * @req UX-WAIT-04[parrot]
  * @why The approved phone design: a bottom tab bar (the fleet's shared one) with Home, Library, Playlists and
  *   Settings over Parrot's sky; the floating mini player sits above the tab bar; the Library has no page title (the tab
  *   bar names it, PAR-NAV-04), its search button sits at the right of the chips (no add-music button: the phone only
  *   plays), and Albums / Artists / Songs chips (playlists have
  *   their own tab) over a line with the sort and the count; and the player's header reads "Playing from album" over
  *   the album's name, with the time left as "−m:ss". Screens are called as functions against a mocked React Native,
- *   with translation keys standing for the texts. Chris, 2026-11-18: the empty library showed before the library had
- *   loaded; the Library tab shows the app's loading screen, "Loading library…", until its album list is read.
+ *   with translation keys standing for the texts.
  */
 import React from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -23,8 +21,6 @@ const state = vi.hoisted(() => ({
   now: null as null | { trackId: string; albumId: string | null; album: string | null; playing: boolean },
   player: null as null | Record<string, unknown>,
   libraryStatus: "ready" as string,
-  /** What every library query answers (the real hook's shape): one album, read for the open library version. */
-  query: { data: [{ id: "al-lo", title: "Low Orbit", artistName: "Nova", year: 2020, kind: "album", trackCount: 9, addedAt: 1 }] as unknown[] | null, error: null, loading: false, answered: true },
 }));
 const log = (step: string, detail: unknown) => console.info(`[PARROT-MOBILE-LIBRARY-TABS-001] ${step}`, JSON.stringify(detail));
 
@@ -69,7 +65,7 @@ vi.mock("lucide-react-native", () =>
 );
 vi.mock("@react-navigation/native", () => ({ useNavigation: () => ({ navigate: () => undefined }), useIsFocused: () => true }));
 vi.mock("react-native-safe-area-context", () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) }));
-vi.mock("@space/mobile-shell/components", () => ({ MobileTabPager: "MobileTabPager", SkyCover: "SkyCover", useSkyScroll: () => ({}), MobileFounderNoticeHost: "MobileFounderNoticeHost", MobileLibraryLoading: "MobileLibraryLoading" }));
+vi.mock("@space/mobile-shell/components", () => ({ MobileTabPager: "MobileTabPager", SkyCover: "SkyCover", useSkyScroll: () => ({}), MobileFounderNoticeHost: "MobileFounderNoticeHost" }));
 vi.mock("../src/screens/EmptyLibrary", () => ({ EmptyLibrary: "EmptyLibrary" }));
 vi.mock("../src/screens/sky", () => ({ ParrotSky: "ParrotSky", PLAYER_TINT: "tint" }));
 vi.mock("../src/screens/HomeScreen", () => ({ HomeScreen: "HomeScreen" }));
@@ -85,8 +81,9 @@ vi.mock("@space/mobile-audio-playback", () => ({
 vi.mock("@space/mobile-media-volume", () => ({ useMediaVolume: () => ({ level: null }), VolumeSlider: "VolumeSlider" }));
 vi.mock("../src/state/usePlayerState", () => ({ useNowPlaying: () => state.now, usePlayerState: () => state.player }));
 vi.mock("../src/state/session", () => ({ useSession: () => ({ library: { status: state.libraryStatus, version: 1 }, reloadLibrary: async () => undefined }) }));
+vi.mock("@space/mobile-shell/mascot-loader", () => ({ MobileMascotLoader: "MobileMascotLoader" }));
 vi.mock("../src/brand", () => ({ PARROT_MASCOT: 9 }));
-vi.mock("../src/state/useQuery", () => ({ useQuery: () => state.query }));
+vi.mock("../src/state/useQuery", () => ({ useQuery: () => ({ data: null, error: null, loading: true }) }));
 vi.mock("../src/state/usePlay", () => ({ usePlay: () => ({ play: async () => undefined, starting: null, error: null }) }));
 vi.mock("../src/lib/library", () => ({ listAlbums: async () => [], listArtists: async () => [], listSongs: async () => [] }));
 // The player's shuffle button goes through the queue builder, which drives the native media proxy.
@@ -102,7 +99,7 @@ import { MAIN_TABS, MainScreen } from "../src/screens/MainScreen";
 import { CountLine, LIBRARY_SORT, LibraryScreen } from "../src/screens/LibraryScreen";
 import { PlayerScreen, remainingLabel } from "../src/screens/PlayerScreen";
 import { nowPlayingTitles } from "../src/lib/nowPlaying";
-import { Chips, IconButton } from "../src/screens/ui";
+import { Body, Centered, Chips, IconButton } from "../src/screens/ui";
 
 type Element = { type: unknown; props: Record<string, unknown> & { children?: unknown } };
 const all = (node: unknown, match: (el: Element) => boolean, out: Element[] = []): Element[] => {
@@ -144,26 +141,18 @@ describe("the phone's tabs", () => {
 });
 
 describe("the Library tab", () => {
-  it("@req UX-WAIT-04 while the library opens: the app's loading screen with \"Loading library…\", no spinner", () => {
+  it("@req UX-WAIT-02 while the library opens: the nodding parrot above the unchanged \"Opening your library…\"", () => {
     state.libraryStatus = "loading";
     const opening = LibraryScreen({ active: true, viewRequest: null }) as unknown as Element;
     state.libraryStatus = "ready";
-    log("opening", { type: opening.type, props: opening.props });
-    expect(opening.type).toBe("MobileLibraryLoading");
-    expect(opening.props).toMatchObject({ app: "parrot", source: 9, label: "parrot.library.loading" });
+    const [mascot, text] = [opening.props.children].flat() as Element[];
+    log("opening", { root: opening.type === Centered, mascot: mascot!.props, text: text!.props });
+    expect(opening.type).toBe(Centered);
+    expect(mascot!.type).toBe("MobileMascotLoader");
+    expect(mascot!.props).toMatchObject({ app: "parrot", source: 9, size: 120 });
+    expect(text!.type).toBe(Body);
+    expect(text!.props).toMatchObject({ muted: true, children: "parrot.library.opening" });
     expect(all(opening, (el) => el.type === "ActivityIndicator")).toHaveLength(0);
-  });
-
-  it("@req UX-WAIT-04 opened but its albums not read yet: the loading screen, never the empty library", () => {
-    const read = state.query;
-    state.query = { ...read, data: [], loading: true, answered: false };
-    const unread = LibraryScreen({ active: true, viewRequest: null }) as unknown as Element;
-    state.query = { ...read, data: [], answered: true };
-    const empty = LibraryScreen({ active: true, viewRequest: null }) as unknown as Element;
-    state.query = read;
-    log("unanswered", { unread: unread.type, empty: empty.type });
-    expect(unread.type).toBe("MobileLibraryLoading");
-    expect(empty.type).toBe("EmptyLibrary");
   });
 
   it("has no page title: Albums / Artists / Songs chips at the top with search at their right, Albums first, and no Kept offline chip", () => {

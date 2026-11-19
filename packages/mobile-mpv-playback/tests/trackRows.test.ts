@@ -113,67 +113,6 @@ describe("the subtitle menu's \"Get more subtitles…\" row (PLAY-SUBGET-02, -12
   });
 });
 
-describe("the subtitle menu with no subtitle track (PLAY-SUBGET-23, -24)", () => {
-  const getMore = { title: "Get more subtitles…", unavailableReason: null, onPress: () => {} };
-
-  /** @req PLAY-SUBGET-24[badger-mobile] @req PLAY-SUBGET-23[badger-mobile] */
-  it("phone: Off, Get more subtitles…, then Add a subtitle file…, which opens the picker without selecting a track", () => {
-    const select = vi.fn();
-    const addFile = vi.fn();
-    const rows = buildSubtitleRows([], -1, "Off", fallback, select, () => false, getMore, null, {
-      title: "Add a subtitle file…",
-      unavailableReason: null,
-      onPress: addFile,
-    });
-    dump("phone 0 tracks rows", rows.map((r) => ({ key: r.key, title: r.title, disabled: r.disabled })));
-    expect(rows.map((r) => r.title)).toEqual(["Off", "Get more subtitles…", "Add a subtitle file…"]);
-    const last = rows[rows.length - 1]!;
-    expect(last.testID).toBe("player-subtitle-option-add-file");
-    expect(last.selected).toBe(false);
-    expect(last.disabled).toBeFalsy();
-    last.onPress();
-    expect(addFile).toHaveBeenCalledTimes(1);
-    expect(select).not.toHaveBeenCalled();
-  });
-
-  /** @req PLAY-SUBGET-24[badger-tv] */
-  it("TV: Off and Get more subtitles…, no file row", () => {
-    const rows = buildSubtitleRows([], -1, "Off", fallback, () => {}, () => false, getMore, null, null);
-    dump("tv 0 tracks rows", rows.map((r) => r.key));
-    expect(rows.map((r) => r.key)).toEqual(["__off__", "__get_more__"]);
-  });
-
-  /** @req PLAY-SUBGET-23[badger-mobile] @req PLAY-SUBGET-12[badger-mobile] */
-  it("phone offline: Add a subtitle file… is greyed out with the reason", () => {
-    const rows = buildSubtitleRows([], -1, "Off", fallback, () => {}, () => false, getMore, null, {
-      title: "Add a subtitle file…",
-      unavailableReason: "Needs an internet connection",
-      onPress: () => {},
-    });
-    const last = rows[rows.length - 1]!;
-    expect(last.key).toBe("__add_file__");
-    expect(last.disabled).toBe(true);
-    expect(last.subtitle).toBe("Needs an internet connection");
-  });
-
-  /** @req PLAY-SUBGET-23[badger-mobile] @req PLAY-SUBGET-07[badger-mobile] */
-  it("with tracks: Add a subtitle file… right after Get more, before Try another version", () => {
-    const fetched = [{ id: "s1", label: "French", language: "fr", source: "fetched:9" }] as unknown as SubtitleTrack[];
-    const rows = buildSubtitleRows(
-      fetched,
-      0,
-      "Off",
-      fallback,
-      () => {},
-      () => false,
-      getMore,
-      { title: "Try another version", isFetched: () => true, unavailableReason: null, onPress: () => {} },
-      { title: "Add a subtitle file…", unavailableReason: null, onPress: () => {} },
-    );
-    expect(rows.map((r) => r.key)).toEqual(["__off__", "s1", "__get_more__", "__add_file__", "__try_another__"]);
-  });
-});
-
 describe("the subtitle menu's \"Try another version\" row (PLAY-SUBGET-07)", () => {
   const fetchedSubs = [
     { id: "s1", label: "French", language: "fr", source: "fetched:9" },

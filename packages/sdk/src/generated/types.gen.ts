@@ -694,12 +694,6 @@ export type Profile = {
      * True on the oldest profile of the account, whose viewing data uses the library's unprefixed storage.
      */
     isMain: boolean;
-    /**
-     * App features this profile has set up (`set`) or put off from the "New in this update" window (`later`), by feature id (avatars); a feature not listed is not set up yet.
-     */
-    features: {
-        avatars?: 'set' | 'later';
-    };
 };
 
 export type ProfileChange = {
@@ -4358,12 +4352,6 @@ export type CreateProfileData = {
          * Palette index, an integer from 0 to 7; sets the avatar matching that colour. For apps released before the avatar pack: ignored when `avatarId` is sent.
          */
         avatar?: number;
-        /**
-         * App features this profile has set up (`set`) or put off from the "New in this update" window (`later`), by feature id (avatars); a feature not listed is not set up yet.
-         */
-        features?: {
-            avatars?: 'set' | 'later';
-        };
     };
     path?: never;
     query?: never;
@@ -4372,7 +4360,7 @@ export type CreateProfileData = {
 
 export type CreateProfileErrors = {
     /**
-     * The name is not 1 to 40 characters after trimming, the avatar is not an integer from 0 to 7, the avatarId is not one of the pack, a feature id or state is unknown, or the body does not match the schema.
+     * The name is not 1 to 40 characters after trimming, the avatar is not an integer from 0 to 7, the avatarId is not one of the pack, or the body does not match the schema.
      */
     400: {
         error: 'invalid_profile' | 'invalid_request';
@@ -4472,12 +4460,6 @@ export type UpdateProfileData = {
          * Palette index, an integer from 0 to 7; sets the avatar matching that colour. For apps released before the avatar pack: ignored when `avatarId` is sent.
          */
         avatar?: number;
-        /**
-         * App features this profile has set up (`set`) or put off from the "New in this update" window (`later`), by feature id (avatars); a feature not listed is not set up yet.
-         */
-        features?: {
-            avatars?: 'set' | 'later';
-        };
     };
     path: {
         /**
@@ -4491,7 +4473,7 @@ export type UpdateProfileData = {
 
 export type UpdateProfileErrors = {
     /**
-     * The name is not 1 to 40 characters after trimming, the avatar is not an integer from 0 to 7, the avatarId is not one of the pack, a feature id or state is unknown, or the body does not match the schema.
+     * The name is not 1 to 40 characters after trimming, the avatar is not an integer from 0 to 7, the avatarId is not one of the pack, or the body does not match the schema.
      */
     400: {
         error: 'invalid_profile' | 'invalid_request';

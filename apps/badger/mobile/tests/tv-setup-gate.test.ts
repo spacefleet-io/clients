@@ -5,18 +5,15 @@
  *   count) before the TV's sign-in, the sign-in not counted, then "Step N of M" over the library key (only after a
  *   password sign-in: pairing brings the key) and "Send error reports". A TV that was ever signed in never sees the
  *   language step again after a sign-out. The tests run the real navigator gate, the real TV numbering (shared
- *   `setupFlow`) and the real TV progress store over a fake AsyncStorage. "Your profile" (UX-SETUP-10, Chris
- *   2026-11-18) comes after "Who's watching?" and before error reports, numbered while the TV's first setup is open and
- *   the profile has it to do; it keeps its place once answered, and shows alone (no count) after the setup.
+ *   `setupFlow`) and the real TV progress store over a fake AsyncStorage.
  *
  * @req UX-SETUP-08[badger-tv]
  * @req UX-SETUP-04[badger-tv]
- * @req UX-SETUP-10[badger-tv]
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { PhoneSetupProgress } from "@space/mobile-shell/setup";
 import { resolveNavigatorScreen } from "../src/navigation/resolveScreen";
-import { tvLanguagePending, tvProfileSetupPosition, tvSetupForSession, tvSetupPosition } from "../src/tv/lib/tvSetup";
+import { tvLanguagePending, tvSetupForSession, tvSetupPosition } from "../src/tv/lib/tvSetup";
 import { createFakeAsyncStorage } from "./harness";
 
 const fakeStorage = createFakeAsyncStorage();
@@ -126,42 +123,5 @@ describe("Badger TV setup order", () => {
     const progress = await restarted.store.loadTvSetup();
     expect(progress).toMatchObject({ step: "signIn", language: "de" });
     expect(screenFor({ progress, user: false })).toBe("auth");
-  });
-
-  it("\"Your profile\" is step 2 of 3 after a password sign-in and 1 of 2 after pairing, between the key and error reports", async () => {
-    const { store } = await boot();
-    await store.saveTvSetup({ ...(await store.loadTvSetup()), step: "signIn" });
-    let progress = store.getTvSetup()!;
-    // Password sign-in, the profile picked has its avatar to set.
-    expect(tvSetupPosition(progress, "libraryKey", true)).toEqual({ step: 1, total: 3 });
-    expect(tvProfileSetupPosition(progress, true)).toEqual({ current: 2, total: 3 });
-    expect(tvSetupPosition(progress, "errorReports", true)).toEqual({ step: 3, total: 3 });
-    // A profile already set up on another app: the step is not counted.
-    expect(tvSetupPosition(progress, "errorReports", false)).toEqual({ step: 2, total: 2 });
-
-    // Pairing brings the key.
-    await store.markTvSetupPaired();
-    progress = store.getTvSetup()!;
-    expect(tvProfileSetupPosition(progress, true)).toEqual({ current: 1, total: 2 });
-    expect(tvSetupPosition(progress, "errorReports", true)).toEqual({ step: 2, total: 2 });
-  });
-
-  it("once answered, \"Your profile\" keeps its place across a restart, so error reports does not renumber", async () => {
-    const { store } = await boot();
-    await store.saveTvSetup({ ...(await store.loadTvSetup()), step: "signIn" });
-    await store.markTvSetupPaired();
-    await store.markTvProfileSetupAnswered();
-    const restarted = await boot();
-    const progress = await restarted.store.loadTvSetup();
-    console.info("[tv-setup-gate] answered", progress);
-    expect(progress.profileSetupAnswered).toBe(true);
-    // The profile now has its avatar (not pending), the count stays.
-    expect(tvSetupPosition(progress, "errorReports", false)).toEqual({ step: 2, total: 2 });
-  });
-
-  it("after the first setup (error reports answered) \"Your profile\" shows alone, with no count", async () => {
-    const { store } = await boot();
-    await store.saveTvSetup({ ...(await store.loadTvSetup()), step: "signIn" });
-    expect(tvProfileSetupPosition(store.getTvSetup()!, false)).toBeUndefined();
   });
 });

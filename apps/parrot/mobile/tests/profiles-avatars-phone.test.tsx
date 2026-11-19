@@ -173,7 +173,7 @@ describe("Parrot phone profile avatars (ACCT-PROF-05)", () => {
     await press(renderer, "avatar-option-robot");
     await press(renderer, "profile-save");
     console.info(TAG, "sent", JSON.stringify(sent));
-    expect(sent.created).toEqual([{ name: "Sam", avatarId: "robot", features: { avatars: "set" } }]);
+    expect(sent.created).toEqual([{ name: "Sam", avatarId: "robot" }]);
     expect(avatarIn(one(renderer, "profile-tile-2")).props.source).toBe(sourceOf("robot"));
   });
 

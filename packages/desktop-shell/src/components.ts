@@ -114,7 +114,6 @@ export { pairWithPhoneStrings, pairWithPhoneText, type PairWithPhoneStringKey } 
 export { DesktopForgotPasswordLink, DesktopPasswordResetDialog } from "./components/desktop-password-reset";
 export { passwordResetStrings, passwordResetText, type PasswordResetStringKey } from "./components/password-reset-strings";
 export {
-  LIBRARY_KEY_STEP_FIT,
   LibraryKeyStep,
   type LibraryKeyStepPairing,
   type LibraryKeyStepProps,

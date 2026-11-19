@@ -35,6 +35,7 @@ vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: mocks.t, i18n: { language: "en" } }),
 }));
 vi.mock("../src/renderer/src/auth", () => ({ useAuth: () => mocks.auth }));
+vi.mock("../src/renderer/src/components/PublicTopNav", () => ({ default: () => null }));
 vi.mock("../src/renderer/src/api", () => ({
   ApiError: class ApiError extends Error {
     status = 0;

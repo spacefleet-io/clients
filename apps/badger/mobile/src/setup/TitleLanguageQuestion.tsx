@@ -5,7 +5,7 @@
 // picked (`TitleLanguageScreen`). The same texts as every other app (`titleLanguage.*`, REL-FAM-02).
 import React, { useState } from "react";
 import type { TFunction } from "i18next";
-import { StyleSheet, View } from "react-native";
+import { Image, StyleSheet, View } from "react-native";
 import { ChevronRight } from "lucide-react-native";
 import { DEFAULT_TITLE_LANGUAGE, TITLE_LANGUAGES, type TitleLanguage } from "@space/shared/titleLanguage";
 import { MobileAppBackdrop } from "@space/mobile-shell/components";
@@ -13,7 +13,7 @@ import { useTranslation } from "@space/mobile-shell/i18n";
 import { scopeLogger } from "@space/mobile-shell/logger";
 import { phoneSetupPosition } from "@space/mobile-shell/setup";
 import type { PhoneSetupStepProps } from "@space/mobile-shell/setup-flow";
-import { MobileChoiceList, MobileSetupChoices, MobileSetupMascot, MobileSetupStep, TV_SETUP_CARD_TOP, TV_SETUP_MASCOT_SIZE } from "@space/mobile-shell/setup-step";
+import { MobileChoiceList, MobileSetupChoices, MobileSetupStep } from "@space/mobile-shell/setup-step";
 import { useActiveTitleLanguageAnswer } from "../lib/profileSettings";
 import { answerTitleLanguage } from "../lib/titleLanguageQuestion";
 import { IS_TV } from "../tv/lib/tvRuntime";
@@ -23,6 +23,9 @@ import { TvBody, TvTitle } from "../tv/ui/TvText";
 import { TvPillButton } from "../tv/ui/TvPillButton";
 
 const log = scopeLogger("title-language");
+
+/** The SpaceBadger astronaut badger (UX-TV-04: the brand picture of the TV app). */
+const MASCOT = require("../assets/mascot.webp");
 
 /** Each option's label, and its description over its two examples. */
 export const titleLanguageChoices = (t: TFunction) =>
@@ -91,13 +94,10 @@ const PhoneTitleLanguageScreen = () => {
   );
 };
 
-/**
- * The most the TV's list may take in design dp: two rows whose detail runs to 5 lines, and the ring's room. The list
- * shrinks to its rows, which grow with their text (UX-SETUP-08: the French "Version originale" takes 4 lines).
- */
-const TV_LIST_HEIGHT = 2 * 110 + 7 + 2 * 5;
+/** Height of the TV's list in design dp: two rows with a two-line detail, and the ring's room. */
+const TV_LIST_HEIGHT = 2 * 64 + 7 + 2 * 5;
 
-/** The TV's question as its language step (UX-TV-32): the badger over the card's top border, rows the remote moves through, Next. */
+/** The TV's question as its language step (UX-TV-32): the badger over one card, rows the remote moves through, Next. */
 const TvTitleLanguageScreen = () => {
   const { t } = useTranslation();
   const scale = useTvScale();
@@ -106,7 +106,7 @@ const TvTitleLanguageScreen = () => {
   return (
     <View style={styles.screen} testID="tv-title-language">
       <MobileAppBackdrop />
-      <MobileSetupMascot size={TV_SETUP_MASCOT_SIZE * scale} />
+      <Image source={MASCOT} style={styles.mascot} resizeMode="contain" accessible={false} />
       <View style={[tvCardStyle, styles.card]}>
         <TvTitle style={styles.title}>{t("titleLanguage.question")}</TvTitle>
         <TvBody muted style={styles.body}>
@@ -125,8 +125,9 @@ const TvTitleLanguageScreen = () => {
 
 /** Sizes in design dp, as the TV's language step (`TvLanguageScreen`), scaled with the TV (UX-TV-13). */
 const baseTvStyles = StyleSheet.create({
-  screen: { flex: 1, alignItems: "center", justifyContent: "center" },
-  card: { width: 520, paddingTop: TV_SETUP_CARD_TOP, paddingHorizontal: 24, paddingBottom: 20 },
+  screen: { flex: 1, alignItems: "center", paddingTop: 34 },
+  mascot: { width: 75, height: 75 },
+  card: { width: 430, marginTop: 10, paddingTop: 22, paddingHorizontal: 24, paddingBottom: 20 },
   title: { fontSize: 24, lineHeight: 30 },
   body: { marginTop: 5, fontSize: 11, lineHeight: 15 },
   list: { marginTop: 10, marginHorizontal: -5 },

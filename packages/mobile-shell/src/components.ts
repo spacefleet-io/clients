@@ -46,7 +46,6 @@ export {
 // Visual surfaces
 export { MobileEmptyState } from "./components/mobile-empty-state";
 export { MobileEmptyLibrary, MobileEmptyLibraryAction, type MobileEmptyLibraryStep } from "./components/mobile-empty-library";
-export { MobileLibraryLoading } from "./components/mobile-library-loading";
 export { MobileSectionHeader } from "./components/mobile-section-header";
 export { MobilePosterCard } from "./components/mobile-poster-card";
 export { MobilePosterRow } from "./components/mobile-poster-row";

@@ -870,7 +870,7 @@ export const getAccountOverQuotaTitles = <ThrowOnError extends boolean = false>(
 /**
  * List profiles
  *
- * The account's profiles, oldest first; the oldest is the main profile (`isMain`). An account always has at least one: when it has none yet, this creates the main profile, named after the account's display name (else "Profile 1" in the account's language), with a random avatar. `features` holds the app features each profile has set up or put off (`{}` when none). `maxProfiles` is the plan's limit, as on `GET /auth/me`. Each profile's viewing data stays in the end-to-end encrypted library.
+ * The account's profiles, oldest first; the oldest is the main profile (`isMain`). An account always has at least one: when it has none yet, this creates the main profile, named after the account's display name (else "Profile 1" in the account's language), with the first avatar (`badger`). `maxProfiles` is the plan's limit, as on `GET /auth/me`. Each profile's viewing data stays in the end-to-end encrypted library.
  *
  * Personal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.
  */
@@ -883,7 +883,7 @@ export const listProfiles = <ThrowOnError extends boolean = false>(options?: Opt
 /**
  * Create a profile
  *
- * Adds a profile to the account. Without `avatarId` (or `avatar`), a random avatar no profile uses yet is given (any random one when all are used). `features` sets the new profile's feature states: an add form where the user picked the avatar sends `{"avatars": "set"}`. Refused once the account holds `maxProfiles` profiles (5 on a paid plan, 1 on free).
+ * Adds a profile to the account. Without `avatarId` (or `avatar`), the first avatar of the pack no profile uses yet is given. Refused once the account holds `maxProfiles` profiles (5 on a paid plan, 1 on free).
  *
  * Personal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.
  */
@@ -911,9 +911,9 @@ export const deleteProfile = <ThrowOnError extends boolean = false>(options: Opt
 });
 
 /**
- * Rename a profile, change its avatar or record its feature states
+ * Rename a profile or change its avatar
  *
- * Changes the name, the avatar (`avatarId`, or `avatar` from apps released before the pack) and/or the feature states (`features`, merged per feature: a feature not sent keeps its state) of one of the account's profiles; at least one is required.
+ * Changes the name and/or the avatar (`avatarId`, or `avatar` from apps released before the pack) of one of the account's profiles; at least one is required.
  *
  * Personal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.
  */

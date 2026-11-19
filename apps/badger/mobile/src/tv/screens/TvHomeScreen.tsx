@@ -2,10 +2,9 @@ import React, { memo, useCallback, useEffect, useMemo } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { MobileLibraryLoading, useSkyScroll } from "@space/mobile-shell/components";
+import { useSkyScroll } from "@space/mobile-shell/components";
 import { useTranslation } from "@space/mobile-shell/i18n";
 import type { MediaRow } from "@space/shared/libraryTypes";
-import { libraryContent } from "@space/shared/libraryContent";
 import { homeRailEntries, selectHomeRails, type HomeRailEntry } from "../../lib/homeRails";
 import { getLastPlayedEpisodeId } from "../../lib/resume";
 import { useFavoriteIds } from "../../lib/useFavoriteIds";
@@ -21,8 +20,6 @@ import { TV_COLOR } from "../ui/tokens";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
-const MASCOT = require("../../assets/mascot.webp");
-
 /**
  * The one row under the Continue watching card (UX-TV-05, Chris 2026-11-12 (chat)): "Recently added", or nothing when
  * the library is empty. The other phone rows (movies, TV shows, favorites) live in Library on TV.
@@ -33,13 +30,12 @@ export const homeRows = (rails: readonly HomeRailEntry[]): HomeRailEntry[] =>
 /**
  * TV Home (UX-TV-05): the Continue watching card (Resume takes the focus), then one "Recently added" row of posters on
  * the sky. Without a title in progress, the first poster takes the focus (UX-TV-01). An empty library shows the
- * freestanding Badger and "Check again" (UX-TV-18), only once it is known to be empty; until then the app's opening
- * screen says "Loading library" (UX-WAIT-04).
+ * freestanding Badger and "Check again" (UX-TV-18).
  */
 export const TvHomeScreen = memo(() => {
   const { t } = useTranslation();
   const { media } = useLibraryData();
-  const { settled, error, loadStatus, reload } = useLibraryStatus();
+  const { loading, error, loadStatus, reload } = useLibraryStatus();
   const { getMediaDetails } = useLibraryActions();
   const navigation = useNavigation<Nav>();
   const favoriteIds = useFavoriteIds();
@@ -83,14 +79,8 @@ export const TvHomeScreen = memo(() => {
     );
   }, [cardWidth, hero, media.length, rails, scale]);
 
-  const content = libraryContent({ itemCount: media.length, settled });
-  if (content === "loading") return <MobileLibraryLoading app="badger" source={MASCOT} label={t("nav.loadingLibrary")} size={180} />;
-  if (content === "empty") {
-    return (
-      <View style={styles.empty}>
-        <TvEmptyLibrary onCheckAgain={reload} />
-      </View>
-    );
+  if (media.length === 0) {
+    return <View style={styles.empty}>{loading ? null : <TvEmptyLibrary onCheckAgain={reload} />}</View>;
   }
 
   return (

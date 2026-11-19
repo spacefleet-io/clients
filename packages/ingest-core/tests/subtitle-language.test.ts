@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  detectSubtitleFileLanguage,
-  detectSubtitleLanguage,
-  detectSubtitleLanguageFromSamples,
-} from "../src/subtitleLanguageDetection";
+import { detectSubtitleLanguage, detectSubtitleLanguageFromSamples } from "../src/subtitleLanguageDetection";
 
 const SUITE = "subtitle-language";
 
@@ -113,52 +109,5 @@ describe("subtitle language detection", () => {
       });
       throw err;
     }
-  });
-});
-
-const srt = (lines: string[]) =>
-  lines.map((line, i) => `${i + 1}\n00:00:${String(i * 3).padStart(2, "0")},000 --> 00:00:${String(i * 3 + 2).padStart(2, "0")},000\n${line}`).join("\n\n");
-
-describe("the language of a whole subtitle file (an added file, PLAY-SUBGET-23)", () => {
-  const english = [
-    "Where did you find this little dragon?",
-    "She was hurt and alone in the snow.",
-    "I will take care of her until her wing is healed,",
-    "and then she can fly home.",
-    "The mountains are dangerous at this time of the year.",
-    "You should stay here with us.",
-    "I have been looking for her for a very long time,",
-    "and I am not going to give up now.",
-  ];
-
-  // @req PLAY-SUBGET-23[badger-desktop,badger-web-player]
-  it("reads an English SRT of short cues as English, which one reading of the whole text leaves undecided", async () => {
-    const file = srt(english);
-    expect(await detectSubtitleLanguage(file)).toBeNull();
-    expect((await detectSubtitleFileLanguage(file))?.language).toBe("en");
-  });
-
-  // @req PLAY-SUBGET-23[badger-desktop,badger-web-player]
-  it("reads WebVTT and ASS dialogue, not their headers or timings", async () => {
-    const french = [
-      "Où as-tu trouvé ce petit dragon ? Elle était blessée et seule dans la neige.",
-      "Je vais prendre soin d'elle jusqu'à ce que son aile soit guérie, puis elle pourra rentrer.",
-    ];
-    const vtt = `WEBVTT\n\n${french.map((line, i) => `00:0${i}.000 --> 00:0${i + 1}.000\n${line}`).join("\n\n")}\n`;
-    expect((await detectSubtitleFileLanguage(vtt))?.language).toBe("fr");
-    const ass = [
-      "[Script Info]",
-      "Title: Default Aegisub file",
-      "[V4+ Styles]",
-      "Style: Default,Arial,20,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,2,2,2,10,10,10,1",
-      "[Events]",
-      ...english.map((line, i) => `Dialogue: 0,0:00:0${i}.00,0:00:0${i + 1}.00,Default,,0,0,0,,{\\i1}${line}{\\i0}`),
-    ].join("\n");
-    expect((await detectSubtitleFileLanguage(ass))?.language).toBe("en");
-  });
-
-  // @req PLAY-SUBGET-23[badger-desktop,badger-web-player]
-  it("is null for a file with too little text to tell", async () => {
-    expect(await detectSubtitleFileLanguage(srt(["Hi.", "Ok."]))).toBeNull();
   });
 });

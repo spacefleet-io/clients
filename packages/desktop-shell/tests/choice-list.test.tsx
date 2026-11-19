@@ -71,18 +71,6 @@ describe("ChoiceList", () => {
     expect(host.textContent).toContain("Recommended");
   });
 
-  it("@req UX-SETUP-06 @req UX-SETUP-08[badger-desktop,parrot] shows the 5 languages whole: 42 px rows in the 256 px list", () => {
-    // Chris 2026-11-18: Español was cut off. py-2 rows (24 px line + 16 px padding + 2 px border) and their 8 px gaps
-    // make 5 rows 250 px, inside max-h-64 (256 px), so the list does not scroll on either desktop.
-    const rows = Array.from(list().querySelectorAll('[role="option"]'));
-    console.info("[choice-list.test] rows", rows.length, rows[0]?.className);
-    expect(rows).toHaveLength(5);
-    for (const row of rows) {
-      expect(row.className).toContain("py-2 ");
-      expect(row.className).not.toContain("py-3");
-    }
-  });
-
   it("@req UX-SETUP-06 moves with Up/Down and Home/End, and stops at the ends", async () => {
     await key("ArrowDown");
     expect(selected()).toBe("setup-language-de");

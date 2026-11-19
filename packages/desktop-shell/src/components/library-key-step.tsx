@@ -89,38 +89,6 @@ export function LibraryKeyStep<A = PairingHandOver>(props: LibraryKeyStepProps<A
   return props.mode === "show" ? <ShowKey {...props} /> : <EnterKey {...props} />;
 }
 
-/**
- * UX-SETUP-08: the key step's tighter spacing, which Badger and Parrot desktop set on the element around its
- * `DesktopStartupCard`, so the step, its large mascot on the card included, fits each app's smallest window with no
- * scrolling (Badger 1200x600, Parrot 800x560). Pass the card `contentClassName="pt-0 pb-5"` with it. It gives a
- * slimmer step bar and header, 32px word boxes (shown or typed), a closer key box and form, and a slimmer
- * other-device card. In a short window the line under the title of the enter screen goes too (the title and the
- * step say what to do); 640px high or less, the word boxes drop to 28px and the other-device card keeps only its
- * title, with a smaller icon.
- */
-export const LIBRARY_KEY_STEP_FIT = [
-  "[&_div:has(>[data-testid=setup-step-bar])]:pb-3",
-  "[&_[data-testid=setup-step-bar]]:space-y-2",
-  "[&_[data-testid=setup-step-bar]]:pb-1",
-  "[@media(max-height:700px)]:[&_h1+p]:hidden",
-  "[@media(max-height:700px)]:[&_h3+p]:hidden",
-  "[&_legend]:mb-1",
-  "[&_[data-testid=library-key-box]]:h-8",
-  "[&_[data-testid=library-key-word]]:h-8",
-  "[@media(max-height:640px)]:[&_[data-testid=library-key-box]]:h-7",
-  "[@media(max-height:640px)]:[&_[data-testid=library-key-word]]:h-7",
-  "[&_div:has(>[data-testid=key-created])]:space-y-3",
-  "[&_[data-testid=key-created]]:p-3",
-  "[&_[data-testid=key-copy]]:h-8",
-  "[&_[data-testid=key-copy]]:w-8",
-  "[&_div:has(>form)]:space-y-2.5",
-  "[&_form]:gap-2.5",
-  "[&_[data-testid=key-from-another-device]]:py-2",
-  "[@media(max-height:640px)]:[&_[data-testid=key-from-another-device]>span:first-child]:h-9",
-  "[@media(max-height:640px)]:[&_[data-testid=key-from-another-device]>span:first-child]:w-9",
-  "[@media(max-height:640px)]:[&_[data-testid=key-from-another-device]>span:nth-child(2)>span:last-child]:hidden",
-].join(" ");
-
 function ErrorBox({ text }: { text: string | null | undefined }) {
   return text ? (
     <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm" role="alert" data-testid="library-key-step-error">

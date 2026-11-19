@@ -76,7 +76,7 @@ vi.mock("../src/store/auth", () => ({ useAuth: () => ({ login: h.login }) }));
 vi.mock("@space/mobile-shell/logger", () => ({ scopeLogger: () => ({ info: () => undefined, warn: () => undefined, error: () => undefined }) }));
 vi.mock("../src/lib/uiLanguage", () => ({ chooseUiLanguage: vi.fn(), ensureI18n: async () => undefined }));
 vi.mock("../src/tv/lib/tvRuntime", () => ({ IS_TV: false }));
-vi.mock("../src/setup/BadgerSetupFlow", () => ({ SignInSetupBack: () => null }));
+vi.mock("../src/setup/BadgerSetupFlow", () => ({ SetupStepBar: () => null }));
 
 import { LoginScreen } from "../src/screens/LoginScreen";
 

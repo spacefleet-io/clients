@@ -22,7 +22,6 @@ export const AuthCardLayout = ({
       mascotSrc={mascotSrc}
       mascotAlt={mascotAlt}
       mascotGlowClassName={mascotGlowClassName}
-      mascotPlacement="above"
     >
       {children}
     </DesktopStartupCard>

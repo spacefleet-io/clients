@@ -18,7 +18,6 @@
     "./services/notifications": "./src/services/notifications.ts",
     "./services/notify": "./src/services/notify.ts",
     "./components": "./src/components.ts",
-    "./profile-setup": "./src/profile-setup.ts",
     "./pages": "./src/pages.ts",
     "./guards": "./src/guards.ts",
     "./hooks": "./src/hooks/index.ts",

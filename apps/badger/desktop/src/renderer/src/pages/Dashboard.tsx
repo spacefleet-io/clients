@@ -30,10 +30,11 @@ import {
   reuseSameIdSet,
   reuseUnchangedActiveJobStates,
   filterDashboardItems,
-  pageLibraryContent,
+  getDashboardHeroState,
   selectDashboardImportingMedia,
   selectDashboardVisibleMedia,
   sortDashboardItems,
+  shouldHoldEmptyCardDuringRefresh,
 } from "@/lib/dashboardState";
 import { useIngestion } from "@/lib/ingestionContext";
 import { useLabJobsData } from "@/lib/labJobs";
@@ -62,7 +63,6 @@ import { getProgressBand, getVisibleProgressPct } from "@space/shared/progressBa
 import { ShellErrorCard } from "@space/desktop-shell/components";
 import { useInlinePlayback } from "@/lib/useInlinePlayback";
 import PlayPosterOverlay from "@/components/PlayPosterOverlay";
-import { LibraryLoading } from "@/components/LoadingScreen";
 
 const MAX_SECTION_ITEMS = 10;
 const DASHBOARD_LAYOUT_KEY = "dashboard_layout_v1";
@@ -529,19 +529,29 @@ export default function Dashboard() {
   const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
   const editActionsRef = useRef<HTMLDivElement | null>(null);
   const [showEditActionsFloating, setShowEditActionsFloating] = useState(false);
+  const [holdEmptyCardDuringRefresh, setHoldEmptyCardDuringRefresh] = useState(false);
   // Shared inline-playback plumbing (hover Play button → launch). Same
   // implementation backs the Media library + Playlists poster grids.
   const { handlePlayMedia, pendingPlayId, playPending, playSpinnerVisible, playbackMount } =
     useInlinePlayback();
 
-  // UX-WAIT-04: the empty library only once the load says empty; until then the hovering badger above "Loading
-  // library...". `deferredMedia === media`: the listed copy has caught up with the provider's list.
-  const libraryState = pageLibraryContent({
+  useEffect(() => {
+    setHoldEmptyCardDuringRefresh(
+      shouldHoldEmptyCardDuringRefresh({
+        loading,
+        playableCount: playableMedia.length,
+        importingCount,
+      })
+    );
+  }, [playableMedia.length, importingCount, loading]);
+
+  const heroState = getDashboardHeroState({
     loading,
-    listed: deferredMedia === media,
-    itemCount: playableMedia.length + importingCount,
+    holdEmptyCardDuringRefresh,
+    playableCount: playableMedia.length,
+    importingCount,
   });
-  const showErrorCard = Boolean(error) && !syncUnavailableWarning && !offlineMode;
+
 
   const setMediaParam = useCallback((id: string | null) => {
     const next = new URLSearchParams(searchParams);
@@ -998,7 +1008,7 @@ export default function Dashboard() {
           ) : null
         ) : null}
 
-        {showErrorCard ? (
+        {error && !syncUnavailableWarning && !offlineMode ? (
           <ShellErrorCard
             title={t("dashboard.errors.title")}
             message={error}
@@ -1010,9 +1020,7 @@ export default function Dashboard() {
           />
         ) : null}
 
-        {libraryState === "loading" && !showErrorCard ? <LibraryLoading label={t("library.loading")} /> : null}
-
-        {libraryState === "empty" ? (
+        {heroState === "empty" ? (
           <EmptyLibrary
             mascotSrc={emptyLibraryBg}
             mascotAlt={t("brand.mascotAlt")}

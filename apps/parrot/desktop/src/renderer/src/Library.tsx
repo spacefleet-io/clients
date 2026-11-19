@@ -10,8 +10,7 @@ import { isParrotAudioFile } from "@space/parrot-ingest/audio-formats";
 import { RenderBoundary } from "@space/ui/render-boundary";
 import { Button, Input, Notifications, toast } from "@space/ui";
 import { BadgerIconButton, badgerTopBarIcons } from "@space/ui/badger";
-import { LibraryLoading } from "./LoadingMascot";
-import { libraryContent } from "@space/shared/libraryContent";
+import { LoadingMascot } from "./LoadingMascot";
 import { ImportJobList, ImportJobs, importErrorPart, useImportJobs } from "./ImportJobs";
 import { MediaDetailTabs } from "@space/ui/badger/media-detail";
 import { keyedNotification, shownNotification } from "./notificationText";
@@ -80,7 +79,7 @@ import type { ParrotLibraryTrack } from "@space/parrot-ingest";
 import type { ParrotImportScan, ParrotImportStatus, ParrotLibrary, ParrotState } from "../../shared/ipc";
 import { applyParrotLibraryPatch } from "../../shared/libraryPatch";
 import { SettingsPage, type ParrotSettingsSection } from "./AccountSettings";
-import { ParrotProfileMenu, ParrotProfileSetupOverlays, useParrotDesktopProfileStore } from "./profiles";
+import { ParrotProfileMenu, useParrotDesktopProfileStore } from "./profiles";
 import { FounderBanner } from "@space/ui/founder";
 import { useParrotFounderStatus } from "./founder";
 import AddMusic from "./AddMusic";
@@ -350,13 +349,10 @@ export default function Library({ t, state, onState }: Props) {
   const tracks = useMemo(() => (library?.tracks ?? []).filter((track) => track.fileId), [library]);
   // PAR-PLAY-03 item 2: songs imported without a ReplayGain tag are measured in the background, once.
   useEffect(() => startLoudnessPass(tracks, setLibrary), [tracks]);
-  // UX-WAIT-04: the empty library is a verdict, never a default. Until the first load answers (`library` still null),
-  // Home and the library page show the loading screen; only an opened library with no song is empty.
-  const content = libraryContent({ itemCount: tracks.length, settled: library !== null });
   // UX-LIBTAB-01: an empty library cannot be opened, nor its playlists. The Library and Playlists tabs are greyed out
   // once the opened library holds no song, and open again as soon as the first song lands (the library reloads on every
   // change); a window left on either (its last song deleted) goes back to Home.
-  const libraryClosed = content === "empty";
+  const libraryClosed = library !== null && tracks.length === 0;
   const onLibraryRoute =
     route.kind === "library" || route.kind === "album" || route.kind === "artist" || route.kind === "playlists" || route.kind === "playlist";
   useEffect(() => {
@@ -670,7 +666,7 @@ export default function Library({ t, state, onState }: Props) {
   const nameLinks: ParrotNameLinks = { onOpenArtist: (id) => open({ kind: "artist", id }), onOpenAlbum: (id) => open({ kind: "album", id }) };
 
   const libraryPage = () => {
-    if (content === "empty") return <EmptyMusicLibrary t={t} onAddMusic={() => setAddOpen(true)} onAddFolder={() => void pickAndScan("folders")} />;
+    if (tracks.length === 0) return <EmptyMusicLibrary t={t} onAddMusic={() => setAddOpen(true)} onAddFolder={() => void pickAndScan("folders")} />;
     const nothing = needle && (view === "albums" ? shownAlbums : view === "artists" ? shownArtists : shownTracks).length === 0;
     return (
       <section>
@@ -787,7 +783,6 @@ export default function Library({ t, state, onState }: Props) {
         />
       );
     }
-    // Not opened yet: the loading screen above stands in for the page (UX-WAIT-04).
     if (!library) return null;
     if (route.kind === "home") {
       return (
@@ -796,7 +791,6 @@ export default function Library({ t, state, onState }: Props) {
           language={language}
           albums={albums}
           artists={artists}
-          content={content}
           tracks={tracks}
           history={history}
           playingTrack={playingTrack}
@@ -1198,7 +1192,11 @@ export default function Library({ t, state, onState }: Props) {
       <main className="min-h-0 flex-1 overflow-y-auto px-10 py-8">
         <FounderBanner language={language} status={founder.status} onDismiss={founder.dismiss} className="mb-6" />
         {loadError && <p className="text-sm text-destructive">{t("library.loadError", { error: loadError })}</p>}
-        {content === "loading" && !loadError && route.kind !== "settings" && <LibraryLoading label={t("library.loading")} />}
+        {!library && !loadError && route.kind !== "settings" && (
+          <div className="flex justify-center py-16">
+            <LoadingMascot />
+          </div>
+        )}
         {/* UX-CRASH-01: a crashing screen blanks only itself; the top bar and player keep working, leaving clears it;
             "Try again" reads the library afresh first. */}
         <RenderBoundary name={`route:${route.kind}`} resetKey={route} onRetry={() => load(true)}>
@@ -1243,13 +1241,6 @@ export default function Library({ t, state, onState }: Props) {
         onOpenAlbum={nameLinks.onOpenAlbum}
       />
       </RenderBoundary>
-      {/* UX-SETUP-10 / UX-UPDATE-01: "Your profile" alone for a profile picked after setup that still owes it, and
-          "New in this update" over the library for a profile from before the update. */}
-      {profileStore ? (
-        <RenderBoundary name="profile-setup" variant="overlay">
-          <ParrotProfileSetupOverlays store={profileStore} language={language} t={t} />
-        </RenderBoundary>
-      ) : null}
       {/* PAR-TOUR-01/02: step 1 once per computer the first time Home shows after setup, steps 2 and 3 on the first
           import; Settings replays it (PAR-TOUR-04). The player needs no tip (PAR-TOUR-03). */}
       <DesktopTourHost

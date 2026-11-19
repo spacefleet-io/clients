@@ -216,7 +216,7 @@ describe("Parrot desktop look", () => {
     });
     await press("profile-save");
     console.info(SUITE, "createProfile calls", JSON.stringify(profiles.createProfile.mock.calls));
-    expect(profiles.createProfile).toHaveBeenCalledWith({ name: "Robin", avatarId: "owl", features: { avatars: "set" } });
+    expect(profiles.createProfile).toHaveBeenCalledWith({ name: "Robin", avatarId: "owl" });
     expect(q("profile-row-p-2")[0].querySelector('[data-testid="profile-avatar"]')?.getAttribute("data-avatar")).toBe("owl");
   });
 

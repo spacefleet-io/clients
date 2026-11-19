@@ -34,8 +34,6 @@ interface Window {
     e2ePerfEnabled?: boolean;
     /** SF_FIRST_TOUR=off: test harnesses silence the first-open tour and the player tip (UX-TOUR-01..03). */
     firstTourOff?: boolean;
-    /** SF_PROFILE_SETUP=off: test harnesses silence "Your profile" and "New in this update" (UX-SETUP-10, UX-UPDATE-01). */
-    profileSetupOff?: boolean;
     getPlaybackBaseUrl?: () => Promise<string | null>;
     getMpvFlags?: () => { smokeTest: boolean; externalPlayer: boolean };
     setMediaKey?: (key: string | null) => Promise<void>;
@@ -111,8 +109,6 @@ interface Window {
       format: string;
       placementId?: string | null;
     }) => Promise<{ key: string; sizeBytes: number; checksum: string }>;
-    /** "Add a subtitle file…" (PLAY-SUBGET-23): the OS file picker; null when cancelled. */
-    pickSubtitleFile?: () => Promise<{ name: string; content: string } | null>;
     sendExternalMpvCommand?: (command: _MpvCommand) => Promise<_MpvResponse>;
     // A raw JSON-IPC passthrough: main forwards the command to mpv unvalidated, and nothing in the renderer calls it
     // (it is a diagnostics channel for e2e/integration tests, which read properties outside the typed MpvProperty set).

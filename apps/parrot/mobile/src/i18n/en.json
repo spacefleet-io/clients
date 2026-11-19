@@ -27,7 +27,7 @@
       }
     },
     "library": {
-      "loading": "Loading library…",
+      "opening": "Opening your library…",
       "openFailed": "Couldn't open your library ({{error}}).",
       "tryAgain": "Try again",
       "noAlbums": "No albums yet.",

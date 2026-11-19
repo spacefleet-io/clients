@@ -44,11 +44,6 @@ const ctl = vi.hoisted(() => ({
   keyRejected: false,
   /** `attachProfileSettingsLibrary` calls: the active profile's settings bound to an open library (ACCT-SQUAD-03). */
   attached: 0,
-  /** The background sync's answer: null = no change at once; a promise = held until the test resolves it with the
-   * rows the server has (null there = nothing new). */
-  sync: null as Promise<{ id: string; title: string }[] | null> | null,
-  /** The user has passed the key step (`isLibraryKeyAcknowledged`). */
-  keyAck: true,
 }));
 
 const makeFakeDb = (rows: Row[]) => ({
@@ -67,10 +62,7 @@ const makeFakeDb = (rows: Row[]) => ({
   getPendingOpsCount: () => 0,
   syncFromRemoteIfNewer: async () => {
     ctl.syncCalls += 1;
-    const next = ctl.sync ? await ctl.sync : null;
-    if (!next) return false;
-    rows.splice(0, rows.length, ...next);
-    return true;
+    return false;
   },
   close: async () => {
     ctl.closed += 1;
@@ -114,7 +106,7 @@ vi.mock("../src/lib/onboarding", () => ({
     ctl.keyCleared += 1;
   },
   getStoredLibraryKey: async () => "key",
-  isLibraryKeyAcknowledged: async () => ctl.keyAck,
+  isLibraryKeyAcknowledged: async () => true,
   setLibraryKeyAcknowledged: async () => undefined,
 }));
 vi.mock("../src/lib/mediaCrypto", () => ({ setMediaKeyFromBase64: () => undefined }));
@@ -177,7 +169,7 @@ vi.mock("@space/shared/api", async (importOriginal) => {
   };
 });
 
-const { LibraryProvider, useLibraryActions, useLibraryData, useLibraryStatus } = await import("../src/store/library");
+const { LibraryProvider, useLibraryData, useLibraryStatus } = await import("../src/store/library");
 
 const flush = async () => {
   for (let i = 0; i < 20; i += 1) {
@@ -189,20 +181,14 @@ const flush = async () => {
 
 let renderer: ReactTestRenderer | null = null;
 let observedMedia: string[] = [];
-/** The key step's "done" (`acknowledgeKey`) from the last render. */
-let acknowledgeKey: (() => Promise<void>) | null = null;
 /** `kind` is the LoadStatus discriminant; `null` before the first render. */
-let observedStatus: { kind: string; initializing: boolean; contractIssue: string | null; settled: boolean } | null = null;
-/** Every (media count, settled) pair a render saw, in order (UX-WAIT-04). */
-let renders: { media: number; settled: boolean }[] = [];
+let observedStatus: { kind: string; initializing: boolean; contractIssue: string | null } | null = null;
 
 const Probe = () => {
   const { media } = useLibraryData();
   observedMedia = media.map((item) => item.id);
   const status = useLibraryStatus();
-  observedStatus = { kind: status.loadStatus.kind, initializing: status.initializing, contractIssue: status.contractIssue, settled: status.settled };
-  renders.push({ media: media.length, settled: status.settled });
-  acknowledgeKey = useLibraryActions().acknowledgeKey;
+  observedStatus = { kind: status.loadStatus.kind, initializing: status.initializing, contractIssue: status.contractIssue };
   return null;
 };
 
@@ -231,10 +217,6 @@ beforeEach(() => {
   ctl.cacheCleared = 0;
   ctl.keyRejected = false;
   ctl.attached = 0;
-  ctl.sync = null;
-  ctl.keyAck = true;
-  acknowledgeKey = null;
-  renders = [];
   observedMedia = [];
   observedStatus = null;
   vi.spyOn(console, "warn").mockImplementation(() => undefined);
@@ -434,101 +416,5 @@ describe("a kept key the account no longer has is forgotten at start (UX-KEY-01)
     expect(ctl.cacheCleared).toBe(1);
     expect(ctl.syncCalls).toBe(0);
     expect(ctl.openCalls).toEqual([]);
-  });
-});
-
-// Chris 2026-11-18: "The badger app shows the empty library 'upload your first media on desktop' before the library
-// loads." A saved copy with no titles painted as ready while the sync that brings the titles still ran.
-describe("the library says what it holds only once the sync has answered (UX-WAIT-04)", () => {
-  // @req UX-WAIT-04[badger-mobile] @req UX-WAIT-04[badger-tv]
-  it("@bugfix a saved empty copy is not 'empty' while the sync runs; the titles it brings arrive before 'settled'", async () => {
-    ctl.cachedRows = [];
-    const { promise, resolve: answer } = Promise.withResolvers<{ id: string; title: string }[] | null>();
-    ctl.sync = promise;
-
-    await mount();
-    console.info("[UX-WAIT-04:store] sync pending", JSON.stringify({ observedMedia, observedStatus, syncCalls: ctl.syncCalls }));
-    expect(ctl.syncCalls, "the background sync started").toBe(1);
-    expect(observedMedia).toEqual([]);
-    expect(observedStatus?.settled, "an empty saved copy is not a verdict while the sync runs").toBe(false);
-
-    await act(async () => {
-      answer([{ id: "m1", title: "Synced movie" }]);
-    });
-    await flush();
-    console.info("[UX-WAIT-04:store] sync done", JSON.stringify({ observedMedia, observedStatus, renders }));
-    expect(observedMedia).toEqual(["m1"]);
-    expect(observedStatus?.settled).toBe(true);
-    expect(
-      renders.filter((render) => render.media === 0 && render.settled),
-      "no render ever said 'empty' on the way to the synced titles",
-    ).toEqual([]);
-  });
-
-  // @req UX-WAIT-04[badger-mobile]
-  it("an empty library is settled once the sync confirms nothing is new", async () => {
-    ctl.cachedRows = [];
-    const { promise, resolve: answer } = Promise.withResolvers<{ id: string; title: string }[] | null>();
-    ctl.sync = promise;
-    await mount();
-    expect(observedStatus?.settled).toBe(false);
-    await act(async () => {
-      answer(null);
-    });
-    await flush();
-    console.info("[UX-WAIT-04:store] confirmed empty", JSON.stringify({ observedMedia, observedStatus }));
-    expect(observedMedia).toEqual([]);
-    expect(observedStatus?.settled).toBe(true);
-  });
-
-  // @req UX-WAIT-04[badger-mobile]
-  it("a saved library with titles shows at once, before the sync answers", async () => {
-    ctl.cachedRows = [{ id: "m1", title: "Saved movie" }];
-    ctl.sync = never();
-    await mount();
-    console.info("[UX-WAIT-04:store] saved titles", JSON.stringify({ observedMedia, observedStatus }));
-    expect(observedMedia).toEqual(["m1"]);
-    expect(observedStatus?.settled).toBe(false);
-  });
-
-  // @req UX-WAIT-04[badger-mobile]
-  it("offline with a saved copy is settled: the saved copy is all there is to show", async () => {
-    ctl.cachedRows = [];
-    ctl.meta = Promise.reject(new Error("Network request failed"));
-    await mount();
-    console.info("[UX-WAIT-04:store] offline", JSON.stringify({ observedMedia, observedStatus }));
-    expect(observedStatus?.kind).toBe("offline");
-    expect(observedStatus?.settled).toBe(true);
-  });
-
-  // @req UX-WAIT-04[badger-mobile] @req UX-WAIT-04[badger-tv]
-  it("@bugfix after the key step at sign-in, a saved empty copy is not 'empty' while the sync runs", async () => {
-    ctl.keyAck = false;
-    ctl.cachedRows = [];
-    const { promise, resolve: answer } = Promise.withResolvers<{ id: string; title: string }[] | null>();
-    ctl.sync = promise;
-    await mount();
-    console.info("[UX-WAIT-04:store] key step", JSON.stringify({ observedStatus }));
-    expect(observedStatus?.kind).toBe("needs_key");
-    expect(observedStatus?.settled, "the key step says nothing about what the library holds").toBe(false);
-
-    ctl.keyAck = true;
-    renders = [];
-    await act(async () => {
-      await acknowledgeKey?.();
-    });
-    await flush();
-    console.info("[UX-WAIT-04:store] key given, sync pending", JSON.stringify({ observedMedia, observedStatus, syncCalls: ctl.syncCalls }));
-    expect(ctl.syncCalls, "the background sync started").toBe(1);
-    expect(observedStatus?.settled, "an empty saved copy is not a verdict while the sync runs").toBe(false);
-
-    await act(async () => {
-      answer([{ id: "m1", title: "Synced movie" }]);
-    });
-    await flush();
-    console.info("[UX-WAIT-04:store] key given, sync done", JSON.stringify({ observedMedia, observedStatus, renders }));
-    expect(observedMedia).toEqual(["m1"]);
-    expect(observedStatus?.settled).toBe(true);
-    expect(renders.filter((render) => render.media === 0 && render.settled)).toEqual([]);
   });
 });

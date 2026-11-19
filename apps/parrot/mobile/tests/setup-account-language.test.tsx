@@ -102,7 +102,6 @@ vi.mock("@space/mobile-shell/setup-step", () => ({ MobileSetupStep: () => null }
 vi.mock("react-native-safe-area-context", () => ({ SafeAreaView: ({ children }: { children?: React.ReactNode }) => <>{children}</> }));
 vi.mock("../src/lib/errorReports", () => ({ getErrorReportsSetting: () => ({ errorReports: false }), setErrorReports: async () => undefined }));
 vi.mock("../src/screens/LibraryKeyScreen", () => ({ ParrotLibraryKeyStep: () => null }));
-vi.mock("../src/setup/ProfileSetupQuestion", () => ({ ProfileSetupPhoneStep: () => null }));
 vi.mock("../src/state/useSignOut", () => ({ useSignOut: () => async () => undefined }));
 
 import { SessionProvider, useSession } from "../src/state/session";

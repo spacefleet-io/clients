@@ -124,7 +124,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#444a5b",
   },
-  dimmed: { opacity: 0.5 },
+  dimmed: { opacity: 0.6 },
   tile: {
     position: "absolute",
     left: 7,
