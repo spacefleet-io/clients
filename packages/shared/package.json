@@ -71,7 +71,6 @@
     "./appScope": "./src/appScope.ts",
     "./appVersion": "./src/appVersion.ts",
     "./installSource": "./src/installSource.ts",
-    "./personalToken": "./src/personalToken.ts",
     "./emailDomainPolicy": "./src/emailDomainPolicy.ts",
     "./format": "./src/format.ts",
     "./frenchTypography": "./src/frenchTypography.ts",

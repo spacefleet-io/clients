@@ -393,7 +393,7 @@
       "compact": "Hide missing",
       "subtitle": "Only show playable items."
     },
-    "loading": "Loading library…",
+    "loading": "Loading media library…",
     "syncing": "Syncing library…",
     "offline": {
       "indicator": "Offline",
