@@ -76,7 +76,7 @@ msgid "Export to Kodi library now"
 msgstr ""
 
 msgctxt "#30060"
-msgid "Delete from Badger…"
+msgid "Delete from Badger..."
 msgstr ""
 
 msgctxt "#30100"

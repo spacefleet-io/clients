@@ -111,8 +111,6 @@ interface Window {
       format: string;
       placementId?: string | null;
     }) => Promise<{ key: string; sizeBytes: number; checksum: string }>;
-    /** "Add a subtitle file…" (PLAY-SUBGET-23): the OS file picker; null when cancelled. */
-    pickSubtitleFile?: () => Promise<{ name: string; content: string } | null>;
     sendExternalMpvCommand?: (command: _MpvCommand) => Promise<_MpvResponse>;
     // A raw JSON-IPC passthrough: main forwards the command to mpv unvalidated, and nothing in the renderer calls it
     // (it is a diagnostics channel for e2e/integration tests, which read properties outside the typed MpvProperty set).

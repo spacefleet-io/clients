@@ -25,7 +25,7 @@ import {
 import type { MobileSignInProviderId } from "@space/mobile-shell/components";
 import { getCurrentLanguage, isMobileUiLanguage, MOBILE_UI_LANGUAGES, useTranslation } from "@space/mobile-shell/i18n";
 import { useMobileShellTheme } from "@space/mobile-shell/theme";
-import { MobileSetupBackFooter } from "@space/mobile-shell/setup-step";
+import { MobileSetupHeader } from "@space/mobile-shell/setup-step";
 import { useMobileProviderSignIn } from "@space/mobile-shell/provider-sign-in";
 import type { ProviderSignInNotice } from "@space/mobile-shell/provider-sign-in";
 import { ApiError, login } from "@space/shared/api";
@@ -228,7 +228,8 @@ export const LoginScreen = ({ onPaired, onBack }: { onPaired?: () => Promise<voi
 
   return (
     <View style={{ flex: 1 }} testID="sign-in">
-      <MobileStartupPage controls={controls} footer={onBack ? <MobileSetupBackFooter onBack={onBack} /> : undefined}>
+      <MobileStartupPage controls={controls}>
+        {onBack ? <MobileSetupHeader step={0} total={0} onBack={onBack} /> : null}
         <MobileAuthBrand iconSource={PARROT_MASCOT} subtitle={t("login.withAccount").toUpperCase()} />
         <SignInNoticeText />
         {info ? <Text style={[styles.notice, { color: theme.colors.accent }]}>{t(info)}</Text> : null}

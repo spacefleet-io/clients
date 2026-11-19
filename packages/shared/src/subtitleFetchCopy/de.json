@@ -25,16 +25,6 @@
     "lookingAnother": "Andere Version wird gesucht…",
     "replaced": "{name} durch eine andere Version ersetzt",
     "noneLeft": "Keine weitere Version von {name}",
-    "replaceFailed": "{name} konnte nicht ersetzt werden. Versuch es noch einmal.",
-    "titlePrompt": "Welcher Film oder welche Serie ist das?",
-    "titleField": "Titel",
-    "titleSearch": "Suchen",
-    "findingTitle": "Suche nach „{title}“…",
-    "noTitle": "Nichts gefunden für „{title}“. Prüf den Titel und versuch es noch einmal.",
-    "otherTitle": "Anderen Titel suchen",
-    "addFile": "Untertiteldatei hinzufügen…",
-    "addingFile": "Untertiteldatei wird hinzugefügt…",
-    "unreadableFile": "Diese Datei ist kein lesbarer Untertitel",
-    "fileFailed": "Diese Untertiteldatei konnte nicht hinzugefügt werden. Versuch es noch einmal."
+    "replaceFailed": "{name} konnte nicht ersetzt werden. Versuch es noch einmal."
   }
 }

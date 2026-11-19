@@ -51,9 +51,7 @@ vi.mock("../src/theme", () => ({
 }));
 
 import {
-  MobileChoiceList,
   MobileChoiceMenu,
-  MobileSetupBackFooter,
   MobileSetupHeader,
   MobileSetupStep,
   setupMascotOverlap,
@@ -82,7 +80,7 @@ const byTestID = (root: ReactTestRenderer, testID: string) => root.root.findAll(
 describe("the setup header's language button", () => {
   it("sits after STEP N OF M at the end of the header row and switches the language", async () => {
     const picked: string[] = [];
-    const root = await mount(<MobileSetupHeader step={1} total={3} onLanguage={(code) => picked.push(code)} />);
+    const root = await mount(<MobileSetupHeader step={1} total={3} onBack={() => undefined} onLanguage={(code) => picked.push(code)} />);
     const [menu] = byTestID(root, "setup-language-menu");
     const [indicator] = byTestID(root, "setup-step-indicator");
     const row = menu.parent!.parent!;
@@ -98,7 +96,7 @@ describe("the setup header's language button", () => {
   });
 
   it("shows none where the screen passes no handler (the sign-in's own corner holds it)", async () => {
-    const root = await mount(<MobileSetupHeader step={0} total={0} />);
+    const root = await mount(<MobileSetupHeader step={0} total={0} onBack={() => undefined} />);
     expect(byTestID(root, "setup-language-menu")).toHaveLength(0);
   });
 
@@ -215,21 +213,12 @@ describe("the phone setup's one Back (UX-SETUP-08)", () => {
     expect(byTestID(first, "setup-footer-back")[0].props.disabled).toBe(true);
   });
 
-  // Main 2026-11-19: the sign-in's top "‹ Back" goes too; its Back is the same pill, alone at the screen's bottom.
-  it("the sign-in's Back is the setup's Back pill alone in a footer, and the header draws no ‹ Back", async () => {
+  it("a screen with no Back pill (the sign-in) keeps the top ‹ Back link", async () => {
     const back = vi.fn();
-    const root = await mount(
-      <View>
-        <MobileSetupHeader step={0} total={0} />
-        <MobileSetupBackFooter onBack={back} />
-      </View>,
-    );
-    const pills = byTestID(root, "setup-footer")[0].findAll((n) => String(n.type) === "Pressable").map((n) => n.props.testID);
-    console.info(LOG, "sign-in footer", JSON.stringify(pills), "top", byTestID(root, "setup-back").length);
-    expect(pills).toEqual(["setup-footer-back"]);
-    expect(flatStyle(byTestID(root, "setup-footer-back")[0].props.style).flex).toBe(1);
-    expect(byTestID(root, "setup-back")).toHaveLength(0);
-    await act(async () => byTestID(root, "setup-footer-back")[0].props.onPress());
+    const root = await mount(<MobileSetupHeader step={0} total={0} onBack={back} />);
+    expect(byTestID(root, "setup-footer-back")).toHaveLength(0);
+    expect(byTestID(root, "setup-back")).toHaveLength(1);
+    await act(async () => byTestID(root, "setup-back")[0].props.onPress());
     expect(back).toHaveBeenCalledTimes(1);
   });
 });
@@ -271,24 +260,6 @@ describe("the phone's language menu in a setup step (UX-SETUP-08)", () => {
     const holders = root.root.findAll((n) => String(n.type) === "View" && typeof n.props.onLayout === "function");
     await act(async () => holders.forEach((n) => n.props.onLayout({ nativeEvent: { layout: { x: 0, y: 0, width: 320, height: maxHeight } } })));
     expect(scrolledToEnd).toEqual([{ animated: true }]);
-  });
-});
-
-// A focus ring drawn round the picked language on the phone (op6, 2026-11-19): React Native's preferred focus also
-// focuses a row on a touch phone, so only the TV asks for it (UX-SETUP-08).
-// @req UX-SETUP-08[badger-mobile,parrot,badger-tv]
-describe("the picked row's focus in a choice list (UX-SETUP-08)", () => {
-  it("asks for the remote's focus on the TV only", async () => {
-    const preferred = async (tv: boolean) => {
-      platform.isTV = tv;
-      const root = await mount(<MobileChoiceList choices={LANGUAGES} selected="fr" onSelect={() => undefined} />);
-      return LANGUAGES.map(({ value }) => byTestID(root, `setup-choice-${value}`)[0].props.hasTVPreferredFocus);
-    };
-    const phone = await preferred(false);
-    const tv = await preferred(true);
-    console.info(LOG, "preferred focus", JSON.stringify({ phone, tv }));
-    expect(phone).toEqual([false, false, false, false, false]);
-    expect(tv).toEqual([false, true, false, false, false]);
   });
 });
 

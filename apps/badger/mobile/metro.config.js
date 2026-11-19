@@ -32,7 +32,6 @@ const sdkRoot = path.resolve(repoRoot, 'packages/sdk');
 const legalRoot = path.resolve(repoRoot, 'packages/legal');
 const streamSlotsRoot = path.resolve(repoRoot, 'packages/stream-slots');
 const profileAvatarsRoot = path.resolve(repoRoot, 'packages/profile-avatars');
-const ingestCoreRoot = path.resolve(repoRoot, 'packages/ingest-core');
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 // Workspace packages whose node_modules should be invisible to Metro.
@@ -40,11 +39,11 @@ const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 // can point to different versions than the app's copies (e.g. react@19.2.4 vs
 // react@19.2.3), causing dual-instance crashes. Blocking these directories
 // forces Metro to resolve everything from the app's node_modules instead.
-const workspaceNodeModulesBlockList = [sharedRoot, libraryDbRoot, libraryDbDefinitionRoot, mobileShellRoot, mobileMpvPlaybackRoot, mobileMediaProxyRoot, mobileMediaVolumeRoot, mobileSelfUpdateRoot, mobileMediaSessionRoot, mediaSessionRoot, playbackAbrRoot, errorReportRoot, metadataClientRoot, privacyPassRoot, sdkRoot, streamSlotsRoot, profileAvatarsRoot, ingestCoreRoot]
+const workspaceNodeModulesBlockList = [sharedRoot, libraryDbRoot, libraryDbDefinitionRoot, mobileShellRoot, mobileMpvPlaybackRoot, mobileMediaProxyRoot, mobileMediaVolumeRoot, mobileSelfUpdateRoot, mobileMediaSessionRoot, mediaSessionRoot, playbackAbrRoot, errorReportRoot, metadataClientRoot, privacyPassRoot, sdkRoot, streamSlotsRoot, profileAvatarsRoot]
   .map((dir) => new RegExp(`${escapeRegex(path.join(dir, 'node_modules'))}(/.*)?$`));
 
 const config = {
-  watchFolders: [repoRoot, sharedRoot, libraryDbRoot, libraryDbDefinitionRoot, mobileShellRoot, mobileMpvPlaybackRoot, mobileMediaProxyRoot, mobileMediaVolumeRoot, mobileMediaSessionRoot, mediaSessionRoot, playbackAbrRoot, pairingCryptoRoot, mediaCryptoRoot, errorReportRoot, metadataClientRoot, privacyPassRoot, sdkRoot, legalRoot, streamSlotsRoot, profileAvatarsRoot, ingestCoreRoot, bunModules],
+  watchFolders: [repoRoot, sharedRoot, libraryDbRoot, libraryDbDefinitionRoot, mobileShellRoot, mobileMpvPlaybackRoot, mobileMediaProxyRoot, mobileMediaVolumeRoot, mobileMediaSessionRoot, mediaSessionRoot, playbackAbrRoot, pairingCryptoRoot, mediaCryptoRoot, errorReportRoot, metadataClientRoot, privacyPassRoot, sdkRoot, legalRoot, streamSlotsRoot, profileAvatarsRoot, bunModules],
   resolver: {
     blockList: [
       // Gradle plugin contains Kotlin build artifacts with missing dirs that crash Metro's watcher
@@ -83,9 +82,6 @@ const config = {
       '@space/stream-slots': streamSlotsRoot,
       // The profile avatar pack's 256 px WebP pictures (ACCT-PROF-05); `webp` is in Metro's default assetExts.
       '@space/profile-avatars': profileAvatarsRoot,
-      // An added subtitle file's language (franc, PLAY-SUBGET-23); only `@space/ingest-core/subtitleLanguageDetection`
-      // is imported, none of the ingest's Node code.
-      '@space/ingest-core': ingestCoreRoot,
     },
     // Shared packages also run on desktop/server and import Node's crypto
     // (e.g. randomUUID in library-db-definition migrations). On device that

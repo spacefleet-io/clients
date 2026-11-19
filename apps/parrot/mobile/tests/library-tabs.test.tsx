@@ -13,7 +13,7 @@
  *   their own tab) over a line with the sort and the count; and the player's header reads "Playing from album" over
  *   the album's name, with the time left as "−m:ss". Screens are called as functions against a mocked React Native,
  *   with translation keys standing for the texts. Chris, 2026-11-18: the empty library showed before the library had
- *   loaded; the Library tab shows the app's loading screen, "Loading library…", until its album list is read.
+ *   loaded; the Library tab shows the app's loading screen, "Loading library...", until its album list is read.
  */
 import React from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -144,7 +144,7 @@ describe("the phone's tabs", () => {
 });
 
 describe("the Library tab", () => {
-  it("@req UX-WAIT-04 while the library opens: the app's loading screen with \"Loading library…\", no spinner", () => {
+  it("@req UX-WAIT-04 while the library opens: the app's loading screen with \"Loading library...\", no spinner", () => {
     state.libraryStatus = "loading";
     const opening = LibraryScreen({ active: true, viewRequest: null }) as unknown as Element;
     state.libraryStatus = "ready";

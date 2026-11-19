@@ -7,7 +7,6 @@ import {
   MASCOT_LOADER_SAMPLES,
   MASCOT_LOADERS,
   mascotLoaderKeyframes,
-  mascotLoaderPhase,
   type MascotLoaderApp,
 } from "@space/shared/mascotLoader";
 
@@ -25,15 +24,12 @@ const INPUT_RANGE = Array.from({ length: MASCOT_LOADER_SAMPLES + 1 }, (_, i) => 
  * The animated mascot above the loading text of the phone and TV loading screens (UX-WAIT-02), the same motion as the
  * web and desktop (`@space/shared/mascotLoader`). React Native's own Animated on the native driver and
  * react-native-svg for the music notes, both already in every app: no new dependency. Decorative, so hidden from
- * screen readers; the loading text stays the status. Stands still when the system asks for reduced motion. The
- * keyframes start where the shared loop stands at mount (`mascotLoaderPhase`), so the next loading screen of a launch
- * carries the motion on instead of snapping the mascot back to the loop's start.
+ * screen readers; the loading text stays the status. Stands still when the system asks for reduced motion.
  */
 export const MobileMascotLoader = ({ app, source, size = 120 }: MobileMascotLoaderProps) => {
   const spec = MASCOT_LOADERS[app];
   const k = size / MASCOT_LOADER_BOX;
   const progress = useRef(new Animated.Value(0)).current;
-  const phase = useMemo(() => mascotLoaderPhase(app), [app]);
 
   useEffect(() => {
     let loop: Animated.CompositeAnimation | null = null;
@@ -53,7 +49,7 @@ export const MobileMascotLoader = ({ app, source, size = 120 }: MobileMascotLoad
 
   const layerStyles = useMemo(
     () =>
-      mascotLoaderKeyframes(app, phase).map((poses) => {
+      mascotLoaderKeyframes(app).map((poses) => {
         const track = (pick: (i: number) => number) =>
           progress.interpolate({ inputRange: INPUT_RANGE, outputRange: poses.map((_, i) => pick(i)) });
         return {
@@ -72,7 +68,7 @@ export const MobileMascotLoader = ({ app, source, size = 120 }: MobileMascotLoad
           ],
         };
       }),
-    [app, k, phase, progress],
+    [app, k, progress],
   );
 
   return (

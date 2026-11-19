@@ -861,7 +861,7 @@ const clientIdentity = (() => {
 })();
 
 contextBridge.exposeInMainWorld("sf", {
-  version: "0.1.18",
+  version: "0.1.11",
   clientIdentity,
   // STOR-UNIT-01: the storage unit base main worked out (1000 or 1024), set by the renderer before its first render.
   storageUnitBase: readStorageUnitBase(ipcRenderer),
@@ -1005,7 +1005,6 @@ contextBridge.exposeInMainWorld("sf", {
     ipcRenderer.invoke("sf-upload-subtitle", payload),
   uploadSubtitleContent: (payload: { token: string; content: string; format: string; placementId?: string | null }) =>
     ipcRenderer.invoke("sf-upload-subtitle-content", payload),
-  pickSubtitleFile: () => ipcRenderer.invoke("sf-pick-subtitle-file"),
   sendExternalMpvCommand: (command: MpvCommand): Promise<MpvResponse> =>
     ipcRenderer.invoke("sf-mpv-external-command", command),
   sendExternalMpvRequest: (command: MpvCommand): Promise<MpvResponse> =>

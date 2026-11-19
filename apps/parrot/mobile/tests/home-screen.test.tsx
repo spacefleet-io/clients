@@ -14,7 +14,7 @@
  *   the shared empty-library screen (PAR-EMPTY-01). Screens are called as functions against a mocked React Native,
  *   with translation keys standing for the texts. Home has no page title: the tab bar names the page (PAR-NAV-04).
  *   Chris, 2026-11-18: the empty library showed before the library had loaded; it waits for the album list of the
- *   open library, and until then Home shows the app's loading screen, "Loading library…" (UX-WAIT-04).
+ *   open library, and until then Home shows the app's loading screen, "Loading library..." (UX-WAIT-04).
  */
 import React from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -257,7 +257,7 @@ describe("the phone's Home", () => {
     expect(missing.type).toBe("EmptyLibrary");
   });
 
-  it("@req UX-WAIT-04 while the library opens: the app's loading screen with \"Loading library…\", no spinner, no title", () => {
+  it("@req UX-WAIT-04 while the library opens: the app's loading screen with \"Loading library...\", no spinner, no title", () => {
     state.libraryStatus = "loading";
     const home = HomeScreen({ onSeeAll: () => undefined }) as unknown as Element;
     state.libraryStatus = "ready";

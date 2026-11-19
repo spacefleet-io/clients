@@ -14,7 +14,7 @@
     "customBadge": "Personnalisé",
     "useDefault": "Utiliser le défaut",
     "save": "Enregistrer",
-    "saving": "Enregistrement…",
+    "saving": "Enregistrement...",
     "error": "Impossible d'enregistrer l'hôte API. Vérifiez la valeur et réessayez."
   },
   "login": {
@@ -25,9 +25,9 @@
     "twoFactorLabel": "Code de vérification",
     "twoFactorPlaceholder": "123456",
     "button": "Se connecter",
-    "signingIn": "Connexion…",
+    "signingIn": "Connexion...",
     "resend": "Renvoyer le code",
-    "resending": "Renvoi…",
+    "resending": "Renvoi...",
     "infoEmail": "Nous avons envoyé un code par email.",
     "infoTotp": "Entrez le code de votre application d'authentification.",
     "resendSuccess": "Un nouveau code a été envoyé.",
@@ -42,12 +42,12 @@
       "passwordLabel": "Nouveau mot de passe",
       "passwordConfirmLabel": "Confirmer le nouveau mot de passe",
       "request": "Envoyer le code",
-      "requesting": "Envoi…",
+      "requesting": "Envoi...",
       "submit": "Mettre à jour",
-      "submitting": "Mise à jour…",
+      "submitting": "Mise à jour...",
       "cancel": "Annuler",
       "resend": "Renvoyer le code",
-      "resending": "Renvoi…",
+      "resending": "Renvoi...",
       "noticeSent": "Si l'email existe, nous avons envoyé un code de vérification.",
       "noticeResent": "Nous avons renvoyé un code de vérification.",
       "noticeComplete": "Mot de passe mis à jour. Veuillez vous reconnecter.",
@@ -95,7 +95,7 @@
       "message": "Trop de trafic sur le serveur qui héberge ce titre : la qualité est limitée à {{quality}} jusqu’à ce que le trafic diminue.",
       "keepWatching": "Continuer à regarder"
     },
-    "loading": "Préparation de la lecture…",
+    "loading": "Préparation de la lecture...",
     "loadingSlow": "Chargement toujours en cours… cela prend plus de temps que d'habitude.",
     "controls": {
       "closePlayer": "Fermer le lecteur",
@@ -373,7 +373,7 @@
     "pickerTitle": "Lire sur",
     "thisPhone": "Ce téléphone",
     "thisPhoneHint": "Lire dans l'application",
-    "searching": "Recherche d'appareils Cast sur votre Wi-Fi…",
+    "searching": "Recherche d'appareils Cast sur votre Wi-Fi...",
     "noDevices": "Aucun appareil Cast trouvé. Le téléphone et l'appareil doivent être sur le même Wi-Fi.",
     "deviceHint": "Google Cast",
     "airplay": "AirPlay",
@@ -381,8 +381,8 @@
     "airplayActive": "Lire sur {{name}}",
     "screenTitle": "Diffusion",
     "castingTo": "Diffusion vers {{name}}",
-    "preparing": "Préparation du flux…",
-    "connecting": "Connexion à {{name}}…",
+    "preparing": "Préparation du flux...",
+    "connecting": "Connexion à {{name}}...",
     "keepWifi": "Gardez ce téléphone sur le même Wi-Fi jusqu'à la fin : c'est lui qui envoie le film à l'appareil.",
     "play": "Lecture",
     "pause": "Pause",
@@ -426,8 +426,8 @@
     "library": "Bibliothèque",
     "playlists": "Playlists",
     "settings": "Paramètres",
-    "loading": "Chargement…",
-    "loadingLibrary": "Chargement de la bibliothèque…",
+    "loading": "Chargement...",
+    "loadingLibrary": "Chargement de la médiathèque...",
     "updateRequired": "Mise à jour requise",
     "unavailable": "Badger est indisponible : {{issue}}. Veuillez mettre à jour votre application.",
     "screenLoadFailed": "Impossible de charger l'écran",
@@ -636,7 +636,7 @@
       "currentPassword": "Mot de passe actuel",
       "newPassword": "Nouveau mot de passe",
       "change": "Changer le mot de passe",
-      "changing": "Modification…",
+      "changing": "Modification...",
       "success": "Mot de passe modifié.",
       "codeLabel": "Code de vérification",
       "errors": {
@@ -650,12 +650,12 @@
       "set": {
         "title": "Choisir un mot de passe",
         "button": "Enregistrer le mot de passe",
-        "setting": "Enregistrement…"
+        "setting": "Enregistrement..."
       }
     },
     "devices": {
       "title": "Vos appareils",
-      "loading": "Chargement…",
+      "loading": "Chargement...",
       "empty": "Aucun appareil connecté trouvé.",
       "summary_one": "{{count}} appareil connecté",
       "summary_other": "{{count}} appareils connectés",
@@ -730,7 +730,7 @@
       "web": "Navigateur web"
     },
     "scan": {
-      "cameraStarting": "Démarrage de la caméra…",
+      "cameraStarting": "Démarrage de la caméra...",
       "cameraDenied": "La caméra n'est pas autorisée. Autorisez l'accès à la caméra pour cette app dans les réglages du téléphone, ou saisissez le code à la place.",
       "pointCamera": "Visez le code affiché sur l'écran de l'autre appareil.",
       "codeLabel": "Code affiché sur l'autre appareil",
@@ -739,14 +739,14 @@
       "typeInstead": "Saisir le code à la place",
       "scanInstead": "Scanner le code à la place"
     },
-    "looking": "Recherche du code…",
+    "looking": "Recherche du code...",
     "confirm": {
       "asked": "{{type}} nommé « {{name}} » demande à rejoindre votre compte.",
       "unlockNotice": "Il vous sera demandé de déverrouiller votre téléphone. Approuver le connecte et lui donne la clé de votre médiathèque.",
       "approve": "Approuver",
       "deny": "Refuser"
     },
-    "approving": "En attente du déverrouillage de votre téléphone…",
+    "approving": "En attente du déverrouillage de votre téléphone...",
     "done": {
       "added": "{{name}} a été ajouté.",
       "notAdded": "{{name}} n'a pas été ajouté.",
@@ -819,13 +819,13 @@
     "expiresIn": "Ce code expire dans {{time}}. Un nouveau s'affiche tout seul.",
     "deviceName": "Ce téléphone apparaît sous le nom « {{name}} ».",
     "qrAccessibility": "QR code pour associer ce téléphone",
-    "starting": "Obtention d'un code d'association…",
-    "completing": "Approuvé. Connexion…",
+    "starting": "Obtention d'un code d'association...",
+    "completing": "Approuvé. Connexion...",
     "keyLink": "Recevoir la clé depuis un autre appareil",
     "keyCard": "Utilisez n'importe quelle app Badger ou Parrot où vous êtes connecté, sur n'importe quel appareil ou profil de ce compte.",
     "keyTitle": "Recevez votre clé de médiathèque depuis un autre appareil connecté à ce compte.",
     "typeKey": "Saisir la clé à la place",
-    "completingKey": "Approuvé. Ouverture de votre médiathèque…",
+    "completingKey": "Approuvé. Ouverture de votre médiathèque...",
     "tryAgain": "Obtenir un nouveau code",
     "denied": "L'autre app a refusé ce téléphone. Obtenez un nouveau code pour réessayer.",
     "errors": {
@@ -841,8 +841,8 @@
       "subtitle": "Sur votre téléphone ou ordinateur, ouvrez Badger → Réglages → Associer un appareil, puis scannez le code ou saisissez-le.",
       "codeLabel": "Ou saisissez ce code",
       "qrAccessibility": "QR code pour associer cette TV",
-      "starting": "Obtention d'un code d'association…",
-      "completing": "Approuvé. Connexion en cours…",
+      "starting": "Obtention d'un code d'association...",
+      "completing": "Approuvé. Connexion en cours...",
       "usePassword": "Utiliser l'e-mail et le mot de passe",
       "useCode": "Utiliser un code d'association",
       "tryAgain": "Obtenir un nouveau code",
@@ -872,7 +872,7 @@
       "back": "Retour",
       "warning": "N'approuvez qu'un code affiché sur un écran devant vous. Quelqu'un qui vous envoie un code peut accéder à toute votre médiathèque.",
       "passwordNotice": "Votre mot de passe de compte vous sera demandé. L'approbation connecte l'appareil et lui donne votre clé de médiathèque.",
-      "approving": "Vérification du mot de passe et envoi de la clé…",
+      "approving": "Vérification du mot de passe et envoi de la clé...",
       "addedDetail": "Il se connecte maintenant. Vous pouvez le déconnecter à tout moment depuis votre liste d'appareils.",
       "password": {
         "title": "Saisissez votre mot de passe de compte",
@@ -880,7 +880,7 @@
         "label": "Mot de passe du compte"
       },
       "codeNotice": "Un code vous sera demandé pour confirmer que c'est bien vous. L'approbation connecte l'appareil et lui donne votre clé de médiathèque.",
-      "approvingCode": "Vérification et envoi de la clé…",
+      "approvingCode": "Vérification et envoi de la clé...",
       "code": {
         "title": "Saisissez le code",
         "detailEmail": "Nous vous avons envoyé un code par e-mail. Saisissez-le pour confirmer que c'est bien vous avant de partager votre médiathèque avec un autre appareil.",
@@ -931,7 +931,7 @@
     "decline": "Ne pas envoyer"
   },
   "onboarding": {
-    "loading": "Préparation de la médiathèque…",
+    "loading": "Préparation de la médiathèque...",
     "enterTitle": "Saisissez votre clé de médiathèque",
     "showTitle": "Votre clé de médiathèque",
     "subtitle": "Cette clé chiffre les données privées de votre médiathèque. Conservez-la précieusement.",
@@ -958,8 +958,8 @@
     "confirm": "Confirmer",
     "confirmed": "Confirmé",
     "rotate": "Renouveler la clé",
-    "rotating": "Renouvellement…",
-    "success": "Clé renouvelée. Rechargement de la médiathèque…",
+    "rotating": "Renouvellement...",
+    "success": "Clé renouvelée. Rechargement de la médiathèque...",
     "errors": {
       "confirmRequired": "Confirmez que vous avez enregistré la nouvelle clé.",
       "passwordRequired": "Mot de passe requis.",
@@ -1027,7 +1027,7 @@
       "actors": "Acteurs",
       "allActors": "Tous les acteurs",
       "actorSearch": "Rechercher des acteurs",
-      "actorsLoading": "Chargement des acteurs…",
+      "actorsLoading": "Chargement des acteurs...",
       "actorsNone": "Aucun acteur trouvé",
       "downloadedOnly": "Téléchargés uniquement",
       "downloadedOnlyHint": "Seulement les titres enregistrés sur ce téléphone."
@@ -1171,7 +1171,7 @@
     "attachLog": "Joindre le journal d'erreurs de l'application",
     "attachLogHint": "Nous aide à trouver un problème. Il ne contient ni titres ni noms de fichiers.",
     "send": "Envoyer",
-    "sending": "Envoi…",
+    "sending": "Envoi...",
     "sent": "Merci ! Votre message a été envoyé.",
     "back": "Retour",
     "errors": {
@@ -1236,7 +1236,7 @@
     "codeSent": "Code envoyé. Vérifiez votre email ou votre application d'authentification.",
     "cancel": "Annuler",
     "submit": "Tout effacer et recommencer",
-    "working": "Effacement…",
+    "working": "Effacement...",
     "errorInvalidPassword": "Mot de passe incorrect.",
     "errorTwoFactorInvalid": "Code de vérification invalide.",
     "errorGeneric": "Impossible de réinitialiser la $t(keyStepWords.collection)."

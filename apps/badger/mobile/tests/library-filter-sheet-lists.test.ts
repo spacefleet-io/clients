@@ -329,6 +329,6 @@ describe("library Sort & filter sheet (UX-LIST-01)", () => {
     await press(byTestID("library-actors"));
     const sheet = byTestID("library-actors-sheet");
     expect(byRole(sheet, "checkbox")).toHaveLength(0);
-    expect(hostNodes(sheet, (node) => String(node.type) === "Text").map((node) => node.props.children)).toContain("Loading actors…");
+    expect(hostNodes(sheet, (node) => String(node.type) === "Text").map((node) => node.props.children)).toContain("Loading actors...");
   });
 });

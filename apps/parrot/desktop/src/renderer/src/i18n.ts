@@ -107,7 +107,7 @@ const en = {
   "empty.step3Title": "Listen anywhere",
   "empty.step3Body": "Your phone and your other computers play the same library, encrypted with your key.",
   "library.loadError": "Could not load your library: {error}",
-  "library.loading": "Loading library…",
+  "library.loading": "Loading library...",
   "signOutKeyCheck.title": "Have you saved your library key?",
   "signOutKeyCheck.body":
     "Signing out removes your library key from this computer. To sign back in you will have to type it, because signing in with a QR code only works while another of your devices still has the key. Without the key, your library can't be opened.",
@@ -392,7 +392,7 @@ const fr: Strings = {
   "empty.step3Title": "Écoutez partout",
   "empty.step3Body": "Votre téléphone et vos autres ordinateurs lisent la même bibliothèque, chiffrée avec votre clé.",
   "library.loadError": "Impossible de charger votre bibliothèque : {error}",
-  "library.loading": "Chargement de la bibliothèque…",
+  "library.loading": "Chargement de la bibliothèque...",
   "signOutKeyCheck.title": "Avez-vous noté votre clé de bibliothèque ?",
   "signOutKeyCheck.body":
     "Vous déconnecter efface votre clé de bibliothèque de cet ordinateur. Pour vous reconnecter, il faudra la saisir : la connexion par QR code ne fonctionne que si un autre de vos appareils a encore la clé. Sans elle, votre bibliothèque ne peut pas être ouverte.",
@@ -674,7 +674,7 @@ const nl: Strings = {
   "empty.step3Title": "Luister overal",
   "empty.step3Body": "Je telefoon en je andere computers spelen dezelfde bibliotheek af, versleuteld met jouw sleutel.",
   "library.loadError": "Je bibliotheek kon niet worden geladen: {error}",
-  "library.loading": "Bibliotheek wordt geladen…",
+  "library.loading": "Bibliotheek wordt geladen...",
   "signOutKeyCheck.title": "Heb je je bibliotheeksleutel bewaard?",
   "signOutKeyCheck.body":
     "Als je uitlogt, wordt je bibliotheeksleutel van deze computer verwijderd. Om weer in te loggen moet je hem dan intypen, want inloggen met een QR-code werkt alleen zolang een ander apparaat van je de sleutel nog heeft. Zonder de sleutel kan je bibliotheek niet worden geopend.",
@@ -956,7 +956,7 @@ const de: Strings = {
   "empty.step3Title": "Überall hören",
   "empty.step3Body": "Dein Handy und deine anderen Computer spielen dieselbe Bibliothek ab, verschlüsselt mit deinem Schlüssel.",
   "library.loadError": "Deine Bibliothek konnte nicht geladen werden: {error}",
-  "library.loading": "Bibliothek wird geladen…",
+  "library.loading": "Bibliothek wird geladen...",
   "signOutKeyCheck.title": "Hast du deinen Bibliotheksschlüssel gesichert?",
   "signOutKeyCheck.body":
     "Beim Abmelden wird dein Bibliotheksschlüssel von diesem Computer entfernt. Um dich wieder anzumelden, musst du ihn eintippen, denn die Anmeldung per QR-Code klappt nur, solange ein anderes deiner Geräte den Schlüssel noch hat. Ohne den Schlüssel lässt sich deine Bibliothek nicht öffnen.",
@@ -1238,7 +1238,7 @@ const es: Strings = {
   "empty.step3Title": "Escucha donde quieras",
   "empty.step3Body": "Tu teléfono y tus otras computadoras reproducen la misma biblioteca, cifrada con tu clave.",
   "library.loadError": "No se pudo cargar tu biblioteca: {error}",
-  "library.loading": "Cargando la biblioteca…",
+  "library.loading": "Cargando la biblioteca...",
   "signOutKeyCheck.title": "¿Guardaste tu clave de biblioteca?",
   "signOutKeyCheck.body":
     "Al cerrar sesión, tu clave de biblioteca se borra de esta computadora. Para volver a iniciar sesión tendrás que escribirla, porque iniciar sesión con un código QR solo funciona mientras otro de tus dispositivos todavía tenga la clave. Sin la clave, tu biblioteca no se puede abrir.",

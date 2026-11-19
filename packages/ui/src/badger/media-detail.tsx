@@ -9,7 +9,6 @@ import { Play } from "lucide-react";
 import type { GenreCategory } from "@space/shared";
 import { localizedGenreName } from "@space/shared/genreNames";
 import { BackButton } from "../button";
-import { easedMask } from "../eased-mask";
 import { cn } from "../utils";
 import { genreIcon } from "./genre-icons";
 
@@ -35,6 +34,13 @@ export const mediaDetailSecondaryClass =
 /** The filled triangle the approved design draws inside the amber Play button. */
 export const mediaDetailPlayIcon = <Play className="h-4 w-4 fill-current" aria-hidden="true" />;
 
+/** An eased (ease-in-out) opacity ramp, so a fade has no visible start or end line. */
+const EASED_ALPHAS = [0, 0.013, 0.049, 0.104, 0.175, 0.259, 0.352, 0.45, 0.55, 0.648, 0.741, 0.825, 0.896, 0.951, 0.987, 1];
+const easedMask = (direction: string, from: number, to: number, reverse = false) =>
+  `linear-gradient(${direction}, ${EASED_ALPHAS.map((alpha, index) => {
+    const at = from + ((to - from) * index) / (EASED_ALPHAS.length - 1);
+    return `rgba(0,0,0,${reverse ? 1 - alpha : alpha}) ${at.toFixed(1)}%`;
+  }).join(", ")})`;
 /**
  * The backdrop's two fades (LIB-DETAIL-03): from nothing at its left edge to full over 70% of its width, and from
  * full down to nothing over its lower 70%. The two masks multiply, so the picture has no edge anywhere.

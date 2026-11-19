@@ -17,11 +17,12 @@ import { MobileLanguageMenu } from "./mobile-language-menu";
 const SEGMENT_OFF = "#ffffff1f";
 
 /**
- * The header of every setup screen: "STEP N OF M", the language button in the top-right corner, and a bar of one
- * segment per step, those reached in the app's colour; a setup step draws each part where `SetupHeaderPart` says (the
- * phone: the count and bar inside the card). It has no Back: every setup screen's one Back is a pill at its bottom,
- * beside Next or, on a sign-in, alone (`MobileSetupBackFooter`, UX-SETUP-08). Step 0 (the language and the sign-in,
- * before the numbered steps, UX-SETUP-08) shows no count. The language button stays in that corner for the whole setup (UX-SETUP-08): `onLanguage` switches
+ * The header of every setup screen: "‹ Back" in the app's colour, "STEP N OF M", the language button in the top-right
+ * corner, and a bar of one segment per step, those reached in the app's colour; a setup step draws each part where
+ * `SetupHeaderPart` says (the phone: the count and bar inside the card). `onBack` only on a screen with no Back
+ * pill at its bottom (the app's own sign-in screens): a screen with that pill never shows the top link too
+ * (UX-SETUP-08, Chris 2026-11-18). Step 0 (the language and the sign-in, before the numbered steps, UX-SETUP-08)
+ * shows Back only. The language button stays in that corner for the whole setup (UX-SETUP-08): `onLanguage` switches
  * the app's language; the sign-in screens leave it out since their own corner already holds one.
  */
 /**
@@ -48,18 +49,15 @@ export const MobileSetupTvHeaderPart = ({ part, scale = 1, children }: { part: "
  */
 const SetupRevealEnd = React.createContext<(() => void) | null>(null);
 
-/**
- * The setup's count, bar and language button. It has no "‹ Back": every phone setup screen's Back is the pill at its
- * bottom (`MobileSetupStep`'s footer, `MobileSetupBackFooter` on the sign-in), the TV's the card's own pill
- * (UX-SETUP-08, Chris 2026-11-18: "drop the top left one when there's already one at the bottom").
- */
 export const MobileSetupHeader = ({
   step,
   total,
+  onBack,
   onLanguage,
 }: {
   step: number;
   total: number;
+  onBack?: () => void;
   onLanguage?: (code: MobileUiLanguage) => void;
 }) => {
   const theme = useMobileShellTheme();
@@ -100,6 +98,13 @@ export const MobileSetupHeader = ({
       </View>
     );
   }
+  const back = onBack ? (
+    <Pressable testID="setup-back" accessibilityRole="button" accessibilityLabel={t("setup.back")} onPress={onBack} hitSlop={12}>
+      <Text style={[styles.backLink, { color: theme.colors.accent }]}>{`‹ ${t("setup.back")}`}</Text>
+    </Pressable>
+  ) : (
+    <View />
+  );
   const count = counted ? (
     <Text testID="setup-step-indicator" style={[styles.eyebrow, { color: theme.colors.textMuted }]}>
       {t("setup.stepOf", { step, total }).toUpperCase()}
@@ -113,10 +118,10 @@ export const MobileSetupHeader = ({
     </View>
   ) : null;
   if (part === "phoneTop") {
-    if (!language) return null;
+    if (!onBack && !language) return null;
     return (
       <View style={styles.headerRow} testID="setup-top">
-        <View />
+        {back}
         {language}
       </View>
     );
@@ -133,7 +138,7 @@ export const MobileSetupHeader = ({
   return (
     <View style={{ gap: 10 }} testID="setup-step-bar">
       <View style={styles.headerRow}>
-        <View />
+        {back}
         <View style={styles.headerEnd}>
           {count}
           {language}
@@ -245,28 +250,6 @@ const SetupPill = ({
         />
       ) : null}
     </Pressable>
-  );
-};
-
-/**
- * The phone sign-in's Back while the setup is open (UX-SETUP-08): the setup steps' Back pill, alone and full width at
- * the bottom of the screen, where every other setup screen has its Back; the sign-in's own Sign in button is its Next.
- */
-export const MobileSetupBackFooter = ({ onBack }: { onBack: () => void }) => {
-  const theme = useMobileShellTheme();
-  const { t } = useTranslation();
-  return (
-    <View testID="setup-footer" style={[styles.footer, { paddingHorizontal: theme.spacing.lg, paddingBottom: theme.spacing.lg }]}>
-      <SetupPill
-        testID="setup-footer-back"
-        accessibilityRole="button"
-        accessibilityLabel={t("setup.back")}
-        onPress={onBack}
-        style={[styles.pill, styles.pillHalf, styles.ghost, { borderColor: theme.colors.border }]}
-      >
-        <Text style={{ color: theme.colors.text, fontSize: theme.font.size.md, fontWeight: "700" }}>{t("setup.back")}</Text>
-      </SetupPill>
-    </View>
   );
 };
 
@@ -391,7 +374,7 @@ const MobileSetupStepTv = ({ step, total, title, body, children, secondary, onBa
   const theme = useMobileShellTheme();
   const { t } = useTranslation();
   const nextOff = !onNext || nextDisabled || busy;
-  const headerNode = header === undefined ? <MobileSetupHeader step={step} total={total} onLanguage={onLanguage} /> : header;
+  const headerNode = header === undefined ? <MobileSetupHeader step={step} total={total} onBack={onBack} onLanguage={onLanguage} /> : header;
   const label = nextLabel ?? (last ? t("setup.finish") : t("setup.next"));
   return (
     <View style={styles.fill}>
@@ -613,9 +596,7 @@ const ChoiceListRow = <T extends string>({
       accessibilityState={{ checked: on }}
       accessibilityLabel={choice.label}
       focusable
-      // TV only: on a phone React Native's preferred focus also makes the row focusable in touch mode and focuses it, so
-      // the picked row of the language menu opened with the focus ring drawn round it (as `MobileButtonFace`).
-      hasTVPreferredFocus={tv && on}
+      hasTVPreferredFocus={on}
       onPress={() => onSelect(choice.value)}
       onFocus={() => setFocused(true)}
       onBlur={() => setFocused(false)}
@@ -721,6 +702,7 @@ const styles = StyleSheet.create({
   headerRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", minHeight: 24 },
   cardSteps: { gap: 10, paddingBottom: 4 },
   headerEnd: { flexDirection: "row", alignItems: "center", gap: 12 },
+  backLink: { fontSize: 15, fontWeight: "700" },
   eyebrow: { fontSize: 11, fontWeight: "900", letterSpacing: 2.2 },
   segments: { flexDirection: "row", gap: 4 },
   segment: { flex: 1, height: 4, borderRadius: 2 },

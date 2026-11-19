@@ -20,12 +20,10 @@ export const LoadingScreen = ({ label }: { label: string }) => (
 
 /**
  * The library's loading screen inside Home and the library page (UX-WAIT-04): the same hovering badger above "Loading
- * library…", shown until the library's load has given its verdict, in place of the empty library. It is pinned to the
- * window below the 4rem top bar, so the badger sits in the middle of that area whatever the page puts above it (the
- * library page's tabs and filters); it lets clicks through to them.
+ * library...", shown until the library's load has given its verdict, in place of the empty library.
  */
 export const LibraryLoading = ({ label }: { label: string }) => (
-  <div className="pointer-events-none fixed inset-x-0 bottom-0 top-16 grid place-items-center" role="status" data-testid="library-loading">
+  <div className="grid min-h-[60vh] place-items-center" role="status" data-testid="library-loading">
     <MascotWithLabel label={label} />
   </div>
 );

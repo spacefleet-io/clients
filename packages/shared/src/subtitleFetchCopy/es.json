@@ -25,16 +25,6 @@
     "lookingAnother": "Buscando otra versión…",
     "replaced": "{name} sustituido por otra versión",
     "noneLeft": "No quedan más versiones de {name}",
-    "replaceFailed": "No se pudo sustituir {name}. Inténtalo de nuevo.",
-    "titlePrompt": "¿Qué película o serie es?",
-    "titleField": "Título",
-    "titleSearch": "Buscar",
-    "findingTitle": "Buscando «{title}»…",
-    "noTitle": "No se encontró nada para «{title}». Revisa el título e inténtalo de nuevo.",
-    "otherTitle": "Buscar otro título",
-    "addFile": "Añadir un archivo de subtítulos…",
-    "addingFile": "Añadiendo el archivo de subtítulos…",
-    "unreadableFile": "Este archivo no es un subtítulo que podamos leer",
-    "fileFailed": "No se pudo añadir este archivo de subtítulos. Inténtalo de nuevo."
+    "replaceFailed": "No se pudo sustituir {name}. Inténtalo de nuevo."
   }
 }

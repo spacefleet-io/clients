@@ -14,7 +14,6 @@ import {
   subtitleFetchCopy,
   subtitleFetchLabels,
   type FetchedSubtitleTrack,
-  type SubtitleTitleMatch,
   type SubtitleFetchCandidate,
   type SubtitleFetchCopy,
   type SubtitleFetchEntry,
@@ -26,11 +25,6 @@ export type SubtitleFetchSearchResult = { reachable: boolean; subtitles: Subtitl
 export type SubtitleFetchStage = "downloading" | "saving";
 
 export type SubtitleFetchFlowState =
-  /**
-   * The media has no catalog id (PLAY-SUBGET-24): the user names the film or show. `matches` is null while the title
-   * lookup runs, [] when nothing was found for `query`; picking a match runs the subtitle search for it.
-   */
-  | { step: "title"; query: string; matches: SubtitleTitleMatch[] | null }
   | { step: "looking" }
   | { step: "list"; entries: SubtitleFetchEntry[] }
   | { step: "none" }
@@ -48,17 +42,8 @@ export type SubtitleFetchFlowInput = {
   libraryFileName?: string | null;
   /** The subtitles the movie or episode already has (PLAY-SUBGET-17, -18). */
   existingTracks: readonly SubtitleFetchExistingTrack[];
-  /**
-   * Every subtitle of this movie or episode, through the metadata service (PLAY-SUBGET-03). Rejects when unavailable.
-   * `match` is the film or show the user picked by title when the media has no catalog id (`findTitle`).
-   */
-  search: (match?: SubtitleTitleMatch) => Promise<SubtitleFetchSearchResult>;
-  /**
-   * Set when the media has no catalog id (`subtitleFetchNeedsTitle`, PLAY-SUBGET-24): the flow starts by looking up
-   * `query` (the title the app shows) with `find`, the metadata service's anonymous title lookup, and the user picks
-   * the film or show (or types another title) before any subtitle search. Rejects when unavailable.
-   */
-  findTitle?: { query: string; find: (query: string) => Promise<SubtitleTitleMatch[]> };
+  /** Every subtitle of this movie or episode, through the metadata service (PLAY-SUBGET-03). Rejects when unavailable. */
+  search: () => Promise<SubtitleFetchSearchResult>;
   /**
    * Downloads `entry.best`, encrypts and stores it as `entry.trackName`, and remembers it (PLAY-SUBGET-19). `signal`
    * aborts when the flow is left mid-way (Back in the player, PLAY-SUBGET-02): nothing more is stored.
@@ -98,11 +83,7 @@ export const subtitleFetchProgressLine = (copy: SubtitleFetchCopy, entry: Subtit
 
 export type SubtitleFetchFlowRunner = {
   /** Looks up every subtitle of the media; each search starts fresh (PLAY-SUBGET-05). */
-  search: (match?: SubtitleTitleMatch) => Promise<void>;
-  /** The media has no catalog id: looks `query` up (`findTitle`) and shows the matches to pick from. */
-  findTitle: (query: string) => Promise<void>;
-  /** Starts with the title lookup when the media needs one, else with the subtitle search. */
-  start: () => Promise<void>;
+  search: () => Promise<void>;
   /** Stores the picked entry; resolves true once it was added. */
   pick: (entry: SubtitleFetchEntry, entries: SubtitleFetchEntry[]) => Promise<boolean>;
   /** Leaves the flow: a running store is aborted and no later step is reported. */
@@ -123,38 +104,16 @@ export const createSubtitleFetchFlow = (
   const set = (state: SubtitleFetchFlowState) => {
     if (!disposed) onState(state);
   };
-  let titleRun = 0;
-  const search = async (match?: SubtitleTitleMatch) => {
-    titleRun += 1;
-    set({ step: "looking" });
-    try {
-      const result = await read().search(match);
-      if (!disposed) onCredit?.(result.credit ?? null);
-      set(subtitleFetchResultState(result, read()));
-    } catch {
-      set({ step: "unavailable" });
-    }
-  };
-  const findTitle = async (query: string) => {
-    const finder = read().findTitle;
-    if (!finder) return search();
-    const run = (titleRun += 1);
-    const trimmed = query.trim();
-    set({ step: "title", query: trimmed, matches: trimmed ? null : [] });
-    if (!trimmed) return;
-    try {
-      const matches = await finder.find(trimmed);
-      if (run === titleRun) set({ step: "title", query: trimmed, matches });
-    } catch {
-      if (run === titleRun) set({ step: "unavailable" });
-    }
-  };
   return {
-    search,
-    findTitle,
-    start: () => {
-      const finder = read().findTitle;
-      return finder ? findTitle(finder.query) : search();
+    search: async () => {
+      set({ step: "looking" });
+      try {
+        const result = await read().search();
+        if (!disposed) onCredit?.(result.credit ?? null);
+        set(subtitleFetchResultState(result, read()));
+      } catch {
+        set({ step: "unavailable" });
+      }
     },
     pick: async (entry, entries) => {
       if (disposed || !subtitleFetchEntryPickable(entry)) return false;
@@ -266,10 +225,6 @@ export type SubtitleFetchFlowHandle = {
   view: SubtitleFetchFlowView;
   copy: SubtitleFetchCopy;
   pick: (entry: SubtitleFetchEntry, entries: SubtitleFetchEntry[]) => void;
-  /** The "title" step: look up another title the user typed. */
-  findTitle: (query: string) => void;
-  /** The "title" step: search subtitles for the film or show the user picked. */
-  pickTitle: (match: SubtitleTitleMatch) => void;
   /** Done on the "added" step: `onAdded`, then `onClose`. */
   done: () => void;
   /** Shown with the pick list, `text` then `name` linked to `url` (PLAY-SUBGET-25); null when the service sent none. */
@@ -293,7 +248,7 @@ export function useSubtitleFetchFlow(options: UseSubtitleFetchFlowOptions): Subt
     if (offline) return;
     const flow = createSubtitleFetchFlow(() => optionsRef.current, setState, setCredit);
     flowRef.current = flow;
-    void flow.start();
+    void flow.search();
     return () => {
       flow.dispose();
       if (flowRef.current === flow) flowRef.current = null;
@@ -314,18 +269,10 @@ export function useSubtitleFetchFlow(options: UseSubtitleFetchFlowOptions): Subt
     void flowRef.current?.pick(entry, entries);
   }, []);
 
-  const findTitle = useCallback((query: string) => {
-    void flowRef.current?.findTitle(query);
-  }, []);
-
-  const pickTitle = useCallback((match: SubtitleTitleMatch) => {
-    void flowRef.current?.search(match);
-  }, []);
-
   const done = useCallback(() => {
     if (addedEntry) optionsRef.current.onAdded?.(addedEntry);
     optionsRef.current.onClose();
   }, [addedEntry]);
 
-  return { view: offline ? { step: "offline" } : state, copy, pick, findTitle, pickTitle, done, credit };
+  return { view: offline ? { step: "offline" } : state, copy, pick, done, credit };
 }
