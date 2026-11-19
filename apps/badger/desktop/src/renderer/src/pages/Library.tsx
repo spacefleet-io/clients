@@ -30,7 +30,8 @@ import { Button, RenderBoundary } from "@space/ui";
 import { BadgerLibraryControls, BadgerLibraryRow, libraryFacetSections, BadgerPosterCard, BadgerPosterGrid, BadgerSearchField, BadgerSegmented } from "@space/ui/badger";
 import { notifyWarning } from "@/lib/notify";
 import { useLoadingModal } from "@/components/LoadingModalProvider";
-import { LibraryLoading } from "@/components/LoadingScreen";
+import { MascotLoader } from "@space/ui/mascot-loader";
+import mascotUrl from "@space/ui/badger/mascot.webp";
 import { crewGroups } from "@space/shared/libraryCrew";
 import {
   countLibraryFacetSelection,
@@ -1020,8 +1021,11 @@ export default function Library() {
         />
 
             {libraryState === "loading" ? (
-              // UX-WAIT-04: the hovering badger above "Loading library…", in the middle of the window below the top bar.
-              <LibraryLoading label={t("library.loading")} />
+              // UX-WAIT-02: the hovering badger above the unchanged loading text while the library opens.
+              <div className="flex w-fit flex-col items-center gap-4">
+                <MascotLoader app="badger" src={mascotUrl} size={120} />
+                <div className="text-sm text-[#8b949e]">{t("library.loading")}</div>
+              </div>
             ) : empty && tab === "movie" ? (
               movieEmptyState
             ) : empty && tab === "tv" ? (

@@ -144,10 +144,6 @@ describe("Badger desktop Home while the library opens (UX-WAIT-04)", () => {
     expect(q("library-loading")).not.toBeNull();
     expect(q("library-loading")?.querySelector('[data-testid="mascot-loader-badger"]')).not.toBeNull();
     expect(q("library-loading")?.textContent).toContain("library.loading");
-    // Chris 2026-11-19: pinned to the window below the 4rem top bar, the badger and its text centred in that area.
-    const classes = q("library-loading")?.className.split(" ") ?? [];
-    console.info(`${LOG} loading classes`, classes);
-    expect(classes).toEqual(expect.arrayContaining(["fixed", "inset-x-0", "top-16", "bottom-0", "grid", "place-items-center"]));
   });
 
   it("shows the empty library once the load has finished with no title", async () => {

@@ -427,7 +427,7 @@
     "playlists": "Afspeellijsten",
     "settings": "Instellingen",
     "loading": "Laden…",
-    "loadingLibrary": "Bibliotheek wordt geladen…",
+    "loadingLibrary": "Mediatheek laden…",
     "updateRequired": "Update vereist",
     "unavailable": "Badger is niet beschikbaar: {{issue}}. Werk je app bij.",
     "screenLoadFailed": "Het scherm kon niet worden geladen",

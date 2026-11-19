@@ -427,7 +427,7 @@
     "playlists": "Playlists",
     "settings": "Paramètres",
     "loading": "Chargement…",
-    "loadingLibrary": "Chargement de la bibliothèque…",
+    "loadingLibrary": "Chargement de la médiathèque…",
     "updateRequired": "Mise à jour requise",
     "unavailable": "Badger est indisponible : {{issue}}. Veuillez mettre à jour votre application.",
     "screenLoadFailed": "Impossible de charger l'écran",

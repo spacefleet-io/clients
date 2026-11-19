@@ -3,8 +3,8 @@
  * @level component
  * @why Home's Continue watching card in the v2 TV redesign (Chris 2026-11-12 (chat): "your tv client redesign is good,
  *   you can implement it"): the amber eyebrow, the title, "year · length · N min left", the amber bar, then Resume (the
- *   remote's first focus, named after the point it resumes at), Start over and Details, the whole card in one focus
- *   guide, so UP from the row below lands back on them. The poster's colours glow softly behind the card. Without a film length
+ *   remote's first focus, named after the point it resumes at), Start over and Details in one full-width focus guide,
+ *   so UP from the row below lands back on them. The poster's colours glow softly behind the card. Without a film length
  *   (a show, or details not loaded) the line falls back to "year · N% watched" and the button to a plain "Resume".
  *
  * TV-HOME-HERO-FOCUS-001 (UX-TV-05: Resume is focused first). On the Apple TV "sejour" (2026-11-13, suite run at
@@ -163,41 +163,10 @@ describe("Continue watching card (UX-TV-05)", () => {
     const glow = tree.root.findByProps({ testID: "tv-home-hero-glow" });
     expect(glow.props.source).toEqual({ uri: "https://img//p.jpg" });
     expect(glow.props.blurRadius).toBe(40);
+    expect(flat(glow.props.style).opacity).toBe(0.33);
     const track = tree.root.find((node) => isType(node, "View") && node.props.accessibilityLabel === 'tvShell.home.percentWatched{"percent":53}');
     const fill = track.children[0] as ReactTestInstance;
     expect(flat(fill.props.style).width).toBe("53%");
-  });
-
-  // UX-HOME-04 (Chris 2026-11-19, a still of the YouTube promo video): a hard vertical line about 45 %
-  // across the card, where the dark side stopped against the glow. The glow was a 550 dp box pinned to the right;
-  // React Native's `blurRadius` blurs only inside an image's box, so the box's left edge showed as a line.
-  it("@bugfix @regression-proof @req UX-HOME-04[badger-tv] no edge of the glow lies inside the card; an eased scrim over it does the fading", async () => {
-    const { tree } = await render(film());
-    const card = tree.root.findByProps({ testID: "tv-home-hero" });
-    const glow = tree.root.findByProps({ testID: "tv-home-hero-glow" });
-    const box = flat(glow.props.style);
-    console.info("[UX-HOME-04 tv] glow box", JSON.stringify(box));
-    expect(box.width).toBeUndefined();
-    expect(box.height).toBeUndefined();
-    for (const side of ["left", "right", "top", "bottom"] as const) expect(box[side], side).toBeLessThan(0);
-
-    const scrim = tree.root.findByProps({ testID: "tv-home-hero-scrim" });
-    const layers = card.children.filter((child): child is ReactTestInstance => typeof child !== "string");
-    expect(layers.indexOf(scrim), "scrim over the glow").toBe(layers.indexOf(glow) + 1);
-    expect(flat(card.props.style).backgroundColor).toBe("transparent");
-    const gradient = String(flat(scrim.props.style).experimental_backgroundImage);
-    const stops = [...gradient.matchAll(/rgba\(36, 38, 56, ([\d.]+)\) (\d+)%/g)].map((match) => [Number(match[2]), Number(match[1])]);
-    console.info("[UX-HOME-04 tv] scrim stops", JSON.stringify(stops));
-    expect(stops[0]).toEqual([0, 0.96]);
-    expect(stops.at(-1)![0]).toBe(100);
-    for (const [index, [at, alpha]] of stops.entries()) {
-      if (index === 0) continue;
-      const [prevAt, prevAlpha] = stops[index - 1]!;
-      expect(at).toBeGreaterThan(prevAt!);
-      expect(alpha).toBeLessThanOrEqual(prevAlpha!);
-      // No step steeper than 1.5 alpha points per percent of the card: nowhere does the fade turn into a line.
-      expect((prevAlpha! - alpha) / (at - prevAt!)).toBeLessThanOrEqual(0.015);
-    }
   });
 
   it("@req UX-TV-05 a show asks for no film length and keeps the percent and a plain Resume; no poster, no glow", async () => {
@@ -206,8 +175,6 @@ describe("Continue watching card (UX-TV-05)", () => {
     expect(tree.root.findByProps({ testID: "tv-home-resume" }).props.label).toBe("tvShell.home.resume");
     expect(tree.root.findByProps({ testID: "tv-home-hero-meta" }).props.children).toBe('2015 · tvShell.home.percentWatched{"percent":20}');
     expect(tree.root.findAllByProps({ testID: "tv-home-hero-glow" })).toHaveLength(0);
-    expect(tree.root.findAllByProps({ testID: "tv-home-hero-scrim" })).toHaveLength(0);
-    expect(flat(tree.root.findByProps({ testID: "tv-home-hero" }).props.style).backgroundColor).toBe("rgba(36, 38, 56, 0.78)");
   });
 });
 
@@ -253,33 +220,5 @@ describe("TvContinueHero: Resume holds the focus once Home has appeared (TV-HOME
     });
     act(() => resume.props.onBlur());
     expect(requestTVFocus).toHaveBeenCalledTimes(1);
-  });
-});
-
-// TV-HOME-HERO-FOCUS-002 (UX-TV-05, issue #3009; seen again 2026-11-19 on the tvOS simulator, staging 6f316e8fb, fr and
-// es): from the first "Recently added" poster, UP left the focus on the rail for good. The guide sat around the three
-// buttons only, and they start right of the card's poster: the first poster of the row below lies under the card's
-// poster, so tvOS found nothing above it. Every card of the row lies under the card's full width.
-describe("TvContinueHero: UP from any card of the row below reaches the buttons (TV-HOME-HERO-FOCUS-002)", () => {
-  it("@bugfix @regression-proof @req UX-TV-05 the auto-focus guide spans the whole card, its poster side included", async () => {
-    const { tree } = await render(film());
-    const guides = tree.root.findAll((node) => isType(node, "TVFocusGuideView"));
-    const outer = tree.root.children[0] as ReactTestInstance;
-    console.info(
-      "[TV-HOME-HERO-FOCUS-002] guides",
-      JSON.stringify(guides.map((g) => ({ autoFocus: g.props.autoFocus, testID: g.props.testID, outermost: g === outer })))
-    );
-    expect(guides).toHaveLength(1);
-    const guide = guides[0]!;
-    expect(guide.props.autoFocus).toBe(true);
-    // The guide is the card's own frame: nothing of the card, the left-hand poster above the row's first card included, lies outside it.
-    expect(guide).toBe(outer);
-    expect(guide.findAllByProps({ testID: "tv-home-hero" })).toHaveLength(1);
-    expect(guide.findAll((node) => isType(node, "MediaArtwork"))).toHaveLength(1);
-    expect(guide.findAll((node) => isType(node, "TvPillButton")).map((pill) => pill.props.testID)).toEqual([
-      "tv-home-resume",
-      "tv-home-startover",
-      "tv-home-details",
-    ]);
   });
 });

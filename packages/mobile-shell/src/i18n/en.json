@@ -427,7 +427,7 @@
     "playlists": "Playlists",
     "settings": "Settings",
     "loading": "Loading…",
-    "loadingLibrary": "Loading library…",
+    "loadingLibrary": "Loading media library…",
     "updateRequired": "Update Required",
     "unavailable": "Badger is unavailable: {{issue}}. Please update your app.",
     "screenLoadFailed": "Could not load screen",
