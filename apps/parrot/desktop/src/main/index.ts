@@ -4,7 +4,6 @@ import { hostname, release } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { randomUUID } from "node:crypto";
-import { setTimeout as sleep } from "node:timers/promises";
 import {
   ApiError,
   approvePairing,
@@ -80,10 +79,9 @@ import { classifySignInError, retryAfterMinutes, signInErrorDetails, type SignIn
 import { classifyResendVerificationError, classifySignUpError, classifyVerifyEmailError } from "@space/shared/signUp";
 import { asksKeySavedBeforeSignOut, type SignedOutReason } from "@space/shared/keptLibraryKey";
 import { fetchLibrarySnapshot, publishLibrarySnapshot, type FetchedLibrarySnapshot } from "@space/library-db-runtime/snapshotTransport";
-import { deleteStorageObjects, downloadStorageObjectViaTunnel, uploadStorageObjectViaTunnel } from "@space/library-db-runtime/api";
+import { deleteStorageObjects, uploadStorageObjectViaTunnel } from "@space/library-db-runtime/api";
 import { decryptBase64ToBytes } from "@space/library-db-runtime/crypto";
 import { checkKeyAgainstAccount, makeAccountKey } from "./libraryKeyCheck";
-import { createParrotExportJobs } from "./exportJobs";
 import { checkKeptLibraryKey } from "@space/desktop-shell/library-kept-key";
 import { serveStorageUnitBase } from "@space/desktop-shell/storage-units";
 import { createPasswordResetActions } from "@space/desktop-shell/password-reset";
@@ -134,7 +132,6 @@ import {
   type ParrotManageTarget,
   type ParrotPlaylistEdit,
   type ParrotTrackPlacement,
-  createParrotChunkReads,
 } from "@space/parrot-core";
 import { createSessionMetadata, metadataTicketsForBuild, NEUTRAL_USER_AGENT, refillLogLine, resolveMetadataUrl } from "@space/metadata-client";
 import { createFileKeyValueStorage } from "@space/metadata-client/fileStorage";
@@ -173,10 +170,9 @@ import {
   PARROT_AUDIO_FORMATS,
   uploadParrotCover,
   publishParrotEdits,
-  clearParrotExportPartials,
-  exportParrotSongs,
-  listParrotExportSongs,
-  parrotExportFreeBytes,
+  listParrotLyricsFilesPending,
+  parrotLyricsFileStillCurrent,
+  writeParrotLyricsIntoFile,
   type ParrotLibraryDb,
 } from "@space/parrot-ingest";
 import {
@@ -409,9 +405,6 @@ const libraryDbs = createLibraryDbs<ParrotLibraryDb>((db) => db.close(), log);
 const setLibrary = (next: { db: ParrotLibraryDb; version: number | null } | null) => {
   library = next;
   libraryDbs.setCurrent(next?.db ?? null);
-  // OFFL-FILE-01: an export waits while no library is open (sign-out) and goes on once one is.
-  if (next) exportJobs.resume();
-  else exportJobs.pause();
 };
 /** Songs kept on this computer (PAR-OFFL-03): sealed under userData/offline, set up once the store is open. */
 const offlineDir = join(userDataDir, "offline");
@@ -419,56 +412,6 @@ let keptFiles: ParrotKeptFiles | null = null;
 let keeping: DesktopKeeping | null = null;
 let sessionChecked: Promise<void> | null = null;
 const importAbort = new AbortController();
-
-/** Reads one sealed chunk for an export: kept on this computer, else downloaded, retried a few times (OFFL-FILE-01). */
-const readSealedForExport = async (objectKey: string, signal: AbortSignal): Promise<Uint8Array> => {
-  const kept = await keptFiles?.readSealed(objectKey);
-  if (kept) return kept;
-  for (let attempt = 1; ; attempt++) {
-    signal.throwIfAborted();
-    try {
-      // `export` downloads stay allowed once the account is unpaid (#145).
-      return await downloadStorageObjectViaTunnel(store.token() ?? "", objectKey, { clientType: CLIENT_TYPE, purpose: "export" }, PARROT_APP_ID);
-    } catch (error) {
-      if (attempt >= 4) throw error;
-      log(`[export] chunk ${objectKey} download failed (try ${attempt}): ${errorText(error)}`);
-      await sleep(1000 * 2 ** attempt, undefined, { signal });
-    }
-  }
-};
-
-/** "Download everything" (OFFL-FILE-01, ACCT-EXPORT-01): the queue, kept in userData. */
-const exportJobs = createParrotExportJobs({
-  file: join(userDataDir, "export-jobs.json"),
-  userId: () => store?.user?.id ?? "",
-  db: () => library?.db ?? null,
-  listSongs: listParrotExportSongs,
-  pickFolder: async () => {
-    if (!mainWindow) return null;
-    const picked = await dialog.showOpenDialog(mainWindow, { properties: ["openDirectory", "createDirectory"] });
-    return picked.canceled ? null : (picked.filePaths[0] ?? null);
-  },
-  freeBytes: parrotExportFreeBytes,
-  run: ({ db, songs, dest, signal, onProgress, onSongDone }) =>
-    libraryDbs.hold(db, async () => {
-      // What an export stopped by a crash left half-written in that folder (OFFL-SAFE-01).
-      await clearParrotExportPartials(dest);
-      return exportParrotSongs({
-        db,
-        songs,
-        dest,
-        libraryKeyBase64: () => store.libraryKey() ?? "",
-        readSealed: readSealedForExport,
-        signal,
-        onProgress,
-        onSongDone,
-        log,
-      });
-    }),
-  emit: (jobs) => mainWindow?.webContents.send(PARROT_IPC.exportJobsEvent, jobs),
-  log,
-});
-
 /** The running scan or upload's own stop, for the Jobs panel's X (UX-JOBS-02); null while none runs. */
 let importRun: AbortController | null = null;
 
@@ -587,9 +530,6 @@ const readingChunkLoader = createParrotChunkLoader({
   log,
 });
 
-/** The stored chunks the loopback server is reading now: a file's replaced chunks are removed only once free (PAR-FMT-01). */
-const chunkReads = createParrotChunkReads();
-
 /**
  * The file a song plays from, picked once when its address is asked for (the song starting, or the gapless player
  * readying it as the one before ends), never again during it (PAR-PLAY-04): the original while the connection keeps up
@@ -675,7 +615,6 @@ const ensurePlayback = (): Promise<ParrotPlaybackServer> => {
     load: chunkLoader,
     loadForReading: readingChunkLoader,
     loadCover: (objectKey) => coverLoader.load(objectKey),
-    reads: chunkReads,
     log,
   }).then(
     (server) => (playback = server),
@@ -1218,6 +1157,7 @@ const stopLookup = () => {
   autoLyricsStop?.abort();
   autoLyricsStop = null;
   lyricsPending.clear();
+  lyricsFilesStop?.abort();
   autoArtistPicturesStop?.abort();
   autoArtistPicturesStop = null;
   retryUnidentifiedStop?.abort();
@@ -1227,6 +1167,8 @@ const stopLookup = () => {
   autoAlbumCoversStop = null;
   autoCopyChangesStop?.abort();
   autoCopyChangesStop = null;
+  lyricsFilesStop = null;
+  lyricsFilesTried.clear();
   metadataStarted = null;
   void metadata.stop().catch((error: unknown) => fail(`[lookup] could not drop the tickets: ${errorText(error)}`));
 };
@@ -1310,6 +1252,7 @@ const autoLyrics = () => {
     autoLyricsStop = null;
     setBackgroundWork("lyrics", null);
     if ((autoLyricsAgain || lyricsPending.hasWanted()) && !stop.signal.aborted) autoLyrics();
+    else if (!stop.signal.aborted) lyricsIntoFiles();
   });
 };
 
@@ -1650,6 +1593,92 @@ const retryUnidentified = () => {
 };
 
 /**
+ * PAR-LYR-01, PAR-META-04: found lyrics go into the song's own stored file too, for files that had none (the
+ * library's lyrics came from the lookup). Each file is read, tagged and stored again as new chunks of the same file;
+ * the change is published through the save chain, then the old chunks are removed (the new ones when the publish
+ * failed or the file changed meanwhile). A file is tried once per app session, so a failure never loops. One pass at
+ * a time; a request during a pass asks for another pass after it. Sign-out stops it.
+ */
+const lyricsFilesTried = new Set<string>();
+let lyricsFilesStop: AbortController | null = null;
+let lyricsFilesAgain = false;
+const lyricsIntoFiles = () => {
+  // An import publishes song after song: rewriting files meanwhile only races it. Its end reloads the library, which
+  // runs the lookup again and so this pass.
+  if (lyricsFilesStop || importStatus.running) {
+    lyricsFilesAgain = !importStatus.running;
+    return;
+  }
+  const token = store.token();
+  const key = store.libraryKey();
+  const user = store.user;
+  if (!token || !key || !user || !library) return;
+  const stop = new AbortController();
+  lyricsFilesStop = stop;
+  lyricsFilesAgain = false;
+  const removeObjects = async (keys: string[], what: string) => {
+    try {
+      await deleteStorageObjects(token, keys, PARROT_APP_ID);
+    } catch (error) {
+      fail(`[lyrics:file] could not remove the ${what} chunks: ${errorText(error)}`);
+    }
+  };
+  const writeOne = async (fileId: string) => {
+    if (!library) return;
+    const opened = library.db;
+    // Held across the download and upload: an import may replace the current library meanwhile.
+    const written = await libraryDbs.hold(opened, () => writeParrotLyricsIntoFile(opened, fileId, {
+      token,
+      userId: user.id,
+      libraryKeyBase64: key,
+      clientType: CLIENT_TYPE,
+      load: chunkLoader,
+      upload: defaultParrotImportTransport.upload,
+      openUploadSession: defaultParrotImportTransport.openUploadSession,
+      now: Date.now(),
+      newId: randomUUID,
+      log,
+      signal: stop.signal,
+    }));
+    if (written.kind === "skipped") {
+      log(`[lyrics:file] ${fileId}: left as it is (${written.reason})`);
+      return;
+    }
+    const build = (db: ParrotLibraryDb) => (parrotLyricsFileStillCurrent(db, fileId, written.oldObjectKeys) ? [written.op] : []);
+    const run = async () => {
+      if (stop.signal.aborted || !library) return false;
+      const ops = build(library.db);
+      if (ops.length === 0) return false;
+      return (await publishLibraryChange("lyrics:file", `file ${fileId}`, library.db, ops, build, token, key)).ok;
+    };
+    const published = await librarySaves.run(run).catch(() => false);
+    if (published && library && parrotLyricsFileStillCurrent(library.db, fileId, written.newObjectKeys)) {
+      log(`[lyrics:file] ${fileId}: lyrics written, ${written.sizeBytes} bytes`);
+      await removeObjects(written.oldObjectKeys, "old");
+    } else {
+      fail(`[lyrics:file] ${fileId}: not published, the new chunks are removed`);
+      await removeObjects(written.newObjectKeys, "new");
+    }
+  };
+  void (async () => {
+    while (!stop.signal.aborted && library) {
+      const fileId = listParrotLyricsFilesPending(library.db).find((id) => !lyricsFilesTried.has(id));
+      if (!fileId) break;
+      lyricsFilesTried.add(fileId);
+      try {
+        await writeOne(fileId);
+      } catch (error) {
+        if (!stop.signal.aborted) fail(`[lyrics:file] ${fileId}: could not write: ${errorText(error)}`);
+      }
+    }
+  })().finally(() => {
+    if (lyricsFilesStop !== stop) return;
+    lyricsFilesStop = null;
+    if (lyricsFilesAgain && !stop.signal.aborted) lyricsIntoFiles();
+  });
+};
+
+/**
  * PAR-LYR-05: asks our lyrics library for the words of a song whose file has none, keeps them in the library (the
  * same save chain as edits), and answers with what the Lyrics tab shows now. The song is pending from the call until
  * its answer is kept (PAR-LYR-06), also while it waits its turn behind other saves (the album card's "Fetch lyrics"
@@ -1679,6 +1708,7 @@ const fetchLyrics = (trackId: unknown): Promise<ParrotFetchLyricsResult> => {
       const published = await publishLibraryChange("lyrics", `song ${trackId}`, opened, [op], () => [op], token, key);
       if (!published.ok) return { ok: false, error: published.error };
     }
+    if (found.kind === "found") setTimeout(lyricsIntoFiles, 0);
     const lyrics = library ? getParrotLyrics(library.db, trackId) : null;
     return { ok: true, outcome: found.kind === "found" || found.kind === "present" ? "found" : "none", lyrics };
   };
@@ -1812,9 +1842,9 @@ const matchImport = (): Promise<ParrotImportMatchResult> => {
 };
 
 /**
- * PAR-META-04: the covers of the albums the confirmed songs were matched to, at the 1200 px size (PAR-META-07), one
- * album at a time. The import stores each on its album; a cover the lookup can't give is left out, and the album then
- * takes the picture built into its files, if any.
+ * PAR-META-04: the covers of the albums the confirmed songs were matched to, at the 1200 px size written into files
+ * (PAR-META-07), one album at a time. The import stores each on its album and embeds it in the light copies; a cover
+ * the lookup can't give is left out, and the album then takes the picture built into its files, if any.
  */
 const importCovers = async (edits: ParrotImportEdit[]): Promise<Map<string, ParrotCoverImage>> => {
   const covers = new Map<string, ParrotCoverImage>();
@@ -2030,15 +2060,12 @@ const confirmImport = (selection: ParrotImportSelection): ParrotImportStatus => 
   void (async () => {
     try {
       const covers = await importCovers([...edits.values()]);
-      // PAR-FMT-01: songs are stored in parts only once the API turns it on for this account (`PARROT_SPLIT_ORIGINALS`).
-      const { splitOriginals = false } = await getLibraryMeta(token, PARROT_APP_ID);
       const result = await importParrotFiles(files, {
         token,
         roots: folders,
         userId: user.id,
         libraryKeyBase64: key,
         clientType: CLIENT_TYPE,
-        splitOriginals,
         readInfo: parrotEditedReader(edits, undefined, covers),
         makeLightCopy: lightCopies.make,
         lightCopyLongSongs,
@@ -2112,13 +2139,14 @@ const confirmImport = (selection: ParrotImportSelection): ParrotImportStatus => 
     } finally {
       if (importRun === run) importRun = null;
     }
-    // The lookups and the measured loudness wait for imports (PAR-LYR-01, PAR-META-15, PAR-PLAY-03): they run now,
-    // whatever the import's outcome.
+    // The lookups, the lyrics-into-file pass and the measured loudness wait for imports (PAR-LYR-01, PAR-META-15,
+    // PAR-PLAY-03): they run now, whatever the import's outcome.
     autoLyrics();
     for (const held of lyricsHolds) held.release();
     autoArtistPictures();
     retryUnidentified();
     autoAlbumCovers();
+    lyricsIntoFiles();
     void loudnessGate.resume().catch((error: unknown) => fail(`[loudness] could not keep the held songs: ${errorText(error)}`));
   })();
   return importStatus;
@@ -2730,11 +2758,6 @@ const registerIpc = () => {
   ipcMain.handle(PARROT_IPC.getImportStatus, () => importStatus);
   ipcMain.handle(PARROT_IPC.getImportJobs, () => accountImportJobs());
   ipcMain.handle(PARROT_IPC.dismissImportJob, (_event, id: unknown) => dismissImportJob(String(id)));
-  ipcMain.handle(PARROT_IPC.previewExport, () => exportJobs.preview());
-  ipcMain.handle(PARROT_IPC.exportMusic, () => exportJobs.start());
-  ipcMain.handle(PARROT_IPC.getExportJobs, () => exportJobs.list());
-  ipcMain.handle(PARROT_IPC.cancelExport, (_event, id: unknown) => exportJobs.cancel(String(id)));
-  ipcMain.handle(PARROT_IPC.dismissExportJob, (_event, id: unknown) => exportJobs.dismiss(String(id)));
   ipcMain.handle(PARROT_IPC.getBackgroundWork, () => [...backgroundWork.values()]);
   ipcMain.handle(PARROT_IPC.getLibrary, (_event, refresh: boolean) => (refresh || !library ? loadLibrary() : libraryResult()));
   ipcMain.handle(PARROT_IPC.wantLyrics, (_event, trackId: unknown) => wantLyrics(trackId));
@@ -2767,7 +2790,6 @@ const registerIpc = () => {
   ipcMain.handle(PARROT_IPC.getStreamState, () => streamSlots.state());
   ipcMain.handle(PARROT_IPC.getAppUpdateRequired, () => getAppUpdateRequired());
   ipcMain.handle(PARROT_IPC.getKept, () => keeping!.status());
-  ipcMain.handle(PARROT_IPC.getKeptSizes, () => keeping!.sizes());
   ipcMain.handle(PARROT_IPC.keepChoices, (_event, kind: unknown, id: unknown) => (isKeptKind(kind) && typeof id === "string" ? keeping!.choices(kind, id) : []));
   ipcMain.handle(PARROT_IPC.keep, (_event, kind: unknown, id: unknown, choice: unknown) => {
     if (!isKeptKind(kind) || typeof id !== "string") return keeping!.status();
@@ -2885,6 +2907,7 @@ const quitGuard = createQuitGuard({
     autoLyricsStop?.abort();
     autoArtistPicturesStop?.abort();
     retryUnidentifiedStop?.abort();
+    lyricsFilesStop?.abort();
     // The app looks gone at once; the music plays in the window (PAR-PLAY-03), so it is muted too.
     for (const window of BrowserWindow.getAllWindows()) {
       window.webContents.setAudioMuted(true);
@@ -2895,7 +2918,6 @@ const quitGuard = createQuitGuard({
     isQuitting = true;
     appTray.destroy();
     importAbort.abort();
-    exportJobs.pause();
     lightCopyAbort.abort();
     lightCopies.close();
     void streamSlots.release();

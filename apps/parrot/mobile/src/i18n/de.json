@@ -110,7 +110,7 @@
       "likedEmpty": "Noch keine Lieblingssongs"
     },
     "kept": {
-      "keep": "Offline speichern",
+      "keep": "Auf diesem Telefon behalten",
       "remove": "Von diesem Telefon entfernen",
       "line": "Auf diesem Telefon · {{size}}",
       "chooseBody": "Diese Titel sind in mehr als einem Format gespeichert. Wähle, welches auf diesem Telefon bleiben soll.",

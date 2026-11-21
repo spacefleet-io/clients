@@ -22,13 +22,6 @@ final class LibrarySync: RCTEventEmitter {
 
   override class func requiresMainQueueSetup() -> Bool { false }
 
-  override init() {
-    super.init()
-    // Vault v4: op page files a previous process left (its JS never unlinked them) go at module start.
-    let cutoff = Date().addingTimeInterval(-2)
-    DispatchQueue.global(qos: .utility).async { LibraryOpsPage.sweep(olderThan: cutoff) }
-  }
-
   override func supportedEvents() -> [String]! { ["librarySyncProgress"] }
 
   override func startObserving() {
@@ -131,33 +124,24 @@ final class LibrarySync: RCTEventEmitter {
     }
   }
 
-  /// One stored library change (base64 envelope) -> its JSON text in the file at `targetPath`, opened on a background
-  /// queue (LIB-SYNC-14), plus `sliceEnds`: where to cut it into slices of about `sliceBytes` that each decode as
-  /// UTF-8. Same contract as Android, where one String of a 56 MB change threw OutOfMemoryError. Rejects with
-  /// `DECRYPT_FAILED` for a wrong key or broken envelope, otherwise with the frame error
+  /// One stored library change (base64 envelope) -> its JSON text, opened on a background queue (LIB-SYNC-14).
+  /// Rejects with `DECRYPT_FAILED` for a wrong key or broken envelope, otherwise with the frame error
   /// (`corrupt_compressed_frame`, `unknown_compression_codec:N`): the messages the JS reader throws.
-  @objc(openOpPayloadToFile:keyBase64:targetPath:sliceBytes:resolve:reject:)
-  func openOpPayloadToFile(
-    _ payloadBase64: String, keyBase64: String, targetPath: String, sliceBytes: Double,
+  @objc(openOpPayload:keyBase64:resolve:reject:)
+  func openOpPayload(
+    _ payloadBase64: String, keyBase64: String,
     resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock
   ) {
     DispatchQueue.global(qos: .userInitiated).async {
       let startedAt = Date()
       do {
-        let slice = try self.nonNegativeInt(sliceBytes)
-        guard slice > 0 else { throw SyncError(code: "INVALID_ARGUMENT") }
         guard let envelope = Data(base64Encoded: payloadBase64) else { throw SyncError(code: "DECRYPT_FAILED") }
         let json = try SnapshotCodec.openPayload(envelope, key: try self.key(from: keyBase64))
-        let url = URL(fileURLWithPath: targetPath)
-        try FileManager.default.createDirectory(
-          at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
-        try json.write(to: url, options: .atomic)
-        let ends = SnapshotCodec.utf8SliceEnds(json, sliceBytes: slice)
-        let ms = Int(Date().timeIntervalSince(startedAt) * 1000)
+        guard let text = String(data: json, encoding: .utf8) else { throw SyncError(code: "INVALID_UTF8") }
         NSLog(
-          "[LibrarySync] op.open.done storedBytes=%d jsonBytes=%d slices=%d ms=%d", envelope.count, json.count,
-          ends.count, ms)
-        resolve(["storedBytes": envelope.count, "jsonBytes": json.count, "sliceEnds": ends, "ms": ms])
+          "[LibrarySync] op.open.done storedBytes=%d jsonBytes=%d ms=%d", envelope.count, json.count,
+          Int(Date().timeIntervalSince(startedAt) * 1000))
+        resolve(text)
       } catch let error as SnapshotCodec.CodecError {
         NSLog("[LibrarySync] op.open.failed %@", error.code)
         reject("OPEN_FAILED", error.code, error)
@@ -165,26 +149,6 @@ final class LibrarySync: RCTEventEmitter {
         NSLog("[LibrarySync] op.open.failed %@", error.localizedDescription)
         reject("OPEN_FAILED", "DECRYPT_FAILED", error)
       }
-    }
-  }
-
-  /// Bytes [start, end) of a UTF-8 file as text: one slice from `openOpPayloadToFile`.
-  @objc(readTextSlice:start:end:resolve:reject:)
-  func readTextSlice(
-    _ path: String, start: Double, end: Double,
-    resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock
-  ) {
-    run("READ_FAILED", resolve, reject) {
-      let from = try self.nonNegativeInt(start)
-      let to = try self.nonNegativeInt(end)
-      guard to >= from else { throw SyncError(code: "INVALID_RANGE") }
-      let handle = try FileHandle(forReadingFrom: URL(fileURLWithPath: path))
-      defer { try? handle.close() }
-      try handle.seek(toOffset: UInt64(from))
-      let bytes = try handle.read(upToCount: to - from) ?? Data()
-      guard bytes.count == to - from else { throw SyncError(code: "SHORT_READ") }
-      guard let text = String(data: bytes, encoding: .utf8) else { throw SyncError(code: "INVALID_UTF8") }
-      return text
     }
   }
 
@@ -362,23 +326,6 @@ enum SnapshotCodec {
       json.append($0)
     }
     return json
-  }
-
-  /// Exclusive ends of slices of about `sliceBytes` of `text`, each at a UTF-8 character start (not a `10xxxxxx`
-  /// continuation byte), the last being the whole length; the same cuts as Android's `Utf8SliceSink`.
-  static func utf8SliceEnds(_ text: Data, sliceBytes: Int) -> [Int] {
-    var ends: [Int] = []
-    var position = sliceBytes
-    while position < text.count {
-      if text[text.startIndex + position] & 0xC0 != 0x80 {
-        ends.append(position)
-        position += sliceBytes
-      } else {
-        position += 1
-      }
-    }
-    if !text.isEmpty { ends.append(text.count) }
-    return ends
   }
 
   /// Writes through `<target>.partial` and renames it over `target`, so a failure never leaves a truncated file.

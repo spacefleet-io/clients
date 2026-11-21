@@ -11,6 +11,7 @@
  *   vi.mock("react-native-fs", async () => ({ default: (await import("./library-db-fixture")).fakeRnfs }));
  *   ... see `tests/library-cold-start-cursor.test.ts` for the full list.
  */
+import { Buffer } from "node:buffer";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -22,8 +23,6 @@ import type * as SharedApi from "@space/shared/api";
 import type { LibraryWriterFormats } from "@space/shared/api";
 import type { LibraryOp } from "@space/shared/libraryOps";
 import { declaredSplitColumns } from "../src/lib/library/libraryCopy";
-import type * as OpsPage from "../src/lib/library/opsPage";
-import type { LibraryOpsPage } from "../src/lib/library/opsPage";
 
 export const DOCS = "/docs";
 
@@ -46,8 +45,6 @@ export type FakeMeta = {
   snapshotVersion: number;
   updatedAt: string | null;
   keyProbe: string | null;
-  /** LIB-FMT-13: 4 once the account is switched to op stream 4. */
-  targetOpStreamVersion?: number | null;
 };
 
 type OpEntry = { opId: string; version: number; op: LibraryOp };
@@ -59,23 +56,21 @@ export const fx = {
   /** Native connection state keyed by db name, like the sqlite plugin's openDBs. */
   nativeOpen: new Map<string, boolean>(),
   meta: null as FakeMeta | null,
-  /** Server op stream. `fetchLibraryOpsPage(since)` returns the entries newer than `since`. */
+  /** Server op stream. `getLibraryOps(since)` returns the entries newer than `since`. */
   serverOps: [] as OpEntry[],
   serverVersion: 0,
   serverSnapshotVersion: 0,
-  /** Make `fetchLibraryOpsPage` answer `tooOld: true` (the cursor predates the server's compaction snapshot). */
+  /** Make `getLibraryOps` answer `tooOld: true` (the cursor predates the server's compaction snapshot). */
   opsTooOld: false,
   opsSince: [] as number[],
   remoteSnapshotFetches: 0,
   putOpCalls: 0,
-  /** `fetchLibraryOpsPage` answers `tooOld: true` once asked from this version on (a later page falls out of the window). */
+  /** `getLibraryOps` answers `tooOld: true` once asked from this version on (a later page falls out of the window). */
   opsTooOldFrom: null as number | null,
-  /** `fetchLibraryOpsPage` returns at most this many entries per call (`hasMore` + `version` of the last one); null = unpaged. */
+  /** `getLibraryOps` returns at most this many entries per call (`hasMore` + `version` of the last one); null = unpaged. */
   opsPageSize: null as number | null,
-  /** `fetchLibraryOpsPage` rejects like a read that broke ("Network request failed") when asked from this version on. */
+  /** `getLibraryOps` rejects like RN's fetch on a read that broke ("Network request failed") when asked from this version on. */
   opsFailFrom: null as number | null,
-  /** The page's `targetOpStreamVersion` (LIB-FMT-13): 4 on a switched account. */
-  opsTargetOpStreamVersion: null as number | null,
   /** Size (bytes) of the encrypted snapshot file `buildChunkIndexFromFile` reports (LIB-SYNC-12). */
   snapshotBytes: 0,
   /** The encrypted bytes of every op `putLibraryOp` received, in call order. */
@@ -83,8 +78,6 @@ export const fx = {
   nextPutVersion: 0,
   /** Make `putLibraryOp` (POST /library/db/ops) reject with an ApiError of this status + payload. */
   putOpError: null as { status: number; payload: Record<string, unknown> } | null,
-  /** `putOpError` spares a write declaring at least this op stream (a switched account accepts 4, LIB-FMT-13). */
-  putOpAcceptsOpStream: null as number | null,
   /** `putLibraryDb` (PUT /library/db, the snapshot publish) calls; rejects with `putDbError` when set. */
   putDbCalls: 0,
   putDbError: null as { status: number; payload: Record<string, unknown> } | null,
@@ -104,8 +97,6 @@ export const fx = {
   batchShouldFail: new Set<string>(),
   /** Snapshot DBs handed out, in order, by `sqliteDbFilesMock().openSnapshotDb` (then an inert handle). */
   snapshots: [] as SqliteHandle[],
-  /** Statements per native call a real-SQLite handle received (`sqlBatch`, or one round of a `transaction`), in order. */
-  sqliteCalls: [] as Array<{ handle: string; statements: number }>,
   /** `media_items.updated_at` per media id as the core DB holds it (what the secondary-apply gate reads). */
   coreMediaClocks: new Map<string, string>(),
   /**
@@ -147,7 +138,6 @@ export const resetFixture = () => {
   fx.nativeOpen.clear();
   fx.meta = null;
   fx.serverOps = [];
-  fx.opsTargetOpStreamVersion = null;
   fx.serverVersion = 0;
   fx.serverSnapshotVersion = 0;
   fx.opsSince = [];
@@ -161,7 +151,6 @@ export const resetFixture = () => {
   fx.postedOps = [];
   fx.nextPutVersion = 0;
   fx.putOpError = null;
-  fx.putOpAcceptsOpStream = null;
   fx.putDbCalls = 0;
   fx.putDbError = null;
   fx.declaredFormats = { op: [], db: [] };
@@ -172,7 +161,6 @@ export const resetFixture = () => {
   fx.statementDelayMs.clear();
   fx.batchShouldFail.clear();
   fx.snapshots = [];
-  fx.sqliteCalls = [];
   sqliteFiles.clear();
   attachedSnapshotFile = null;
   for (const dir of snapshotFiles.splice(0)) rmSync(dir, { recursive: true, force: true });
@@ -229,27 +217,6 @@ export class FakeDb {
     }
   }
 
-  /** Every round of a plugin transaction (statements queued from success callbacks included), recorded as one batch. */
-  async transaction(fn: (tx: FakeTransaction) => void) {
-    const all: Array<[string, unknown[]]> = [];
-    let queued: QueuedStatement[] = [];
-    const tx: FakeTransaction = {
-      executeSql: (sql, params = [], success, error) => {
-        queued.push({ sql, params, success, error });
-      },
-    };
-    fn(tx);
-    while (queued.length) {
-      const round = queued;
-      queued = [];
-      for (const statement of round) {
-        all.push([statement.sql, statement.params]);
-        statement.success?.(tx);
-      }
-    }
-    await this.sqlBatch(all);
-  }
-
   async close() {
     if (this.closed) throw new Error("database not open");
     this.closed = true;
@@ -281,22 +248,6 @@ const toSqlValue = (value: unknown): SQLInputValue => {
   throw new Error(`unsupported SQL parameter: ${typeof value}`);
 };
 
-/** The plugin's transaction surface `SqlBatcher` uses: success gets the transaction, an error callback returning false skips. */
-type FakeTransaction = {
-  executeSql: (
-    sql: string,
-    params?: unknown[],
-    success?: (tx: FakeTransaction) => void,
-    error?: (tx: FakeTransaction, error: unknown) => boolean
-  ) => void;
-};
-type QueuedStatement = {
-  sql: string;
-  params: unknown[];
-  success?: (tx: FakeTransaction) => void;
-  error?: (tx: FakeTransaction, error: unknown) => boolean;
-};
-
 /** One connection over a real in-memory SQLite db, with the plugin's surface and its "database not open" rule. */
 export class SqliteHandle {
   closed = false;
@@ -322,52 +273,14 @@ export class SqliteHandle {
     return [{ rows: { length: 0, item: () => ({}) }, rowsAffected: Number(result.changes) }];
   }
 
-  /** Like the plugin: the whole batch in one transaction, in one native call. */
+  /** Like the plugin: the whole batch in one transaction. */
   async sqlBatch(statements: Array<string | [string, unknown[]]>) {
     this.assertOpen();
-    fx.sqliteCalls.push({ handle: this.name, statements: statements.length });
     this.db.exec("BEGIN");
     try {
       for (const statement of statements) {
         const [sql, params] = typeof statement === "string" ? [statement, []] : statement;
         this.db.prepare(sql).run(...params.map(toSqlValue));
-      }
-      this.db.exec("COMMIT");
-    } catch (error) {
-      this.db.exec("ROLLBACK");
-      throw error;
-    }
-  }
-
-  /**
-   * Like the plugin: BEGIN, then the statements `fn` queued in one native call. Statements queued from a statement's
-   * success callback go in a further native call of the same transaction, before its COMMIT. A failing statement whose
-   * error callback does not return false rolls the whole transaction back and rejects.
-   */
-  async transaction(fn: (tx: FakeTransaction) => void) {
-    this.assertOpen();
-    let queued: QueuedStatement[] = [];
-    const tx: FakeTransaction = {
-      executeSql: (sql, params = [], success, error) => {
-        queued.push({ sql, params, success, error });
-      },
-    };
-    fn(tx);
-    this.db.exec("BEGIN");
-    try {
-      while (queued.length) {
-        const round = queued;
-        queued = [];
-        fx.sqliteCalls.push({ handle: this.name, statements: round.length });
-        for (const statement of round) {
-          try {
-            this.db.prepare(statement.sql).run(...statement.params.map(toSqlValue));
-          } catch (error) {
-            if (statement.error?.(tx, error) === false) continue;
-            throw error;
-          }
-          statement.success?.(tx);
-        }
       }
       this.db.exec("COMMIT");
     } catch (error) {
@@ -554,25 +467,31 @@ export const mediaUpsertOp = (id: string, mediaId: string): LibraryOp =>
     },
   }) as unknown as LibraryOp;
 
-/** One parsed page of GET /library/db/ops?since=N, as the native binary reader hands it over (LIB-FMT-13). */
-export const opsResponse = (since: number): LibraryOpsPage => {
+/** Server response for GET /library/db/ops?since=N, payloads shipped inline (identity "encryption"). */
+export const opsResponse = (since: number) => {
   // Like the server: a cursor older than the compaction snapshot gets no ops, only `tooOld`.
   const tooOld = fx.opsTooOld || (fx.opsTooOldFrom !== null && since >= fx.opsTooOldFrom);
   const newer = tooOld ? [] : fx.serverOps.filter((entry) => entry.version > since);
   const entries = fx.opsPageSize ? newer.slice(0, fx.opsPageSize) : newer;
   const hasMore = entries.length < newer.length;
-  const ops = entries.map((entry) => ({ version: entry.version, jsonBytes: JSON.stringify(entry.op).length, op: entry.op }));
   return {
     version: hasMore ? (entries[entries.length - 1]?.version ?? fx.serverVersion) : fx.serverVersion,
     snapshotVersion: fx.serverSnapshotVersion,
-    tooOld,
+    tooOld: fx.opsTooOld || (fx.opsTooOldFrom !== null && since >= fx.opsTooOldFrom),
     hasMore,
     storageFormatVersion: 1,
     opStreamVersion: 1,
-    targetOpStreamVersion: fx.opsTargetOpStreamVersion,
-    ops,
-    bytes: ops.reduce((sum, entry) => sum + entry.jsonBytes, 0),
-    ms: 0,
+    ops: entries.map((entry) => {
+      const json = JSON.stringify(entry.op);
+      return {
+        opId: entry.opId,
+        version: entry.version,
+        createdAt: "2026-10-15T00:00:00.000Z",
+        size: json.length,
+        objectKey: `library/ops/${entry.opId}`,
+        payloadCiphertext: Buffer.from(json, "utf8").toString("base64"),
+      };
+    }),
   };
 };
 
@@ -593,19 +512,14 @@ export const settle = async (db: object) => {
 
 export const quickCryptoMock = () => ({ default: { randomBytes, randomUUID } });
 
-/** The native op page reader over `fx.serverOps` (meta and db reads go through `sharedApiMock`). */
-export const opsPageMock = (actual: typeof OpsPage) => ({
+export const sharedApiMock = (actual: typeof SharedApi) => ({
   ...actual,
-  fetchLibraryOpsPage: async (_token: string, _keyBase64: string, since: number) => {
+  getLibraryMeta: async () => fx.meta,
+  getLibraryOps: async (_token: string, since: number) => {
     fx.opsSince.push(since);
     if (fx.opsFailFrom !== null && since >= fx.opsFailFrom) throw new TypeError("Network request failed");
     return opsResponse(since);
   },
-});
-
-export const sharedApiMock = (actual: typeof SharedApi) => ({
-  ...actual,
-  getLibraryMeta: async () => fx.meta,
   putLibraryOp: async (
     _token: string,
     _baseVersion: number,
@@ -618,8 +532,7 @@ export const sharedApiMock = (actual: typeof SharedApi) => ({
     fx.putOpCalls += 1;
     fx.postedOps.push(_payload);
     fx.declaredFormats.op.push(formats);
-    const accepted = fx.putOpAcceptsOpStream !== null && (formats?.opStreamVersion ?? 0) >= fx.putOpAcceptsOpStream;
-    if (fx.putOpError && !accepted) throw new actual.ApiError(fx.putOpError.status, fx.putOpError.payload);
+    if (fx.putOpError) throw new actual.ApiError(fx.putOpError.status, fx.putOpError.payload);
     return { version: fx.nextPutVersion, stateHash: null, lastOpId: null };
   },
   putLibraryDb: async (

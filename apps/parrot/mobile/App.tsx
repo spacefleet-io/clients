@@ -193,7 +193,7 @@ const Gates = () => {
     void setupStore.write(next);
   }, [booting, session, setup]);
   // The update screen covers everything once the texts can be read: sign-in, setup, the profile pick and the library.
-  if (updateRequired && i18nReady) return <MobileUpdateRequiredScreen app="parrot" />;
+  if (updateRequired && i18nReady) return <MobileUpdateRequiredScreen />;
   if (booting || !i18nReady || !setup) return <Spinner />;
   const saveSetup = async (next: PhoneSetupProgress) => {
     setSetup(next);

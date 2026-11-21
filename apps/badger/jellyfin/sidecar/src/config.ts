@@ -134,7 +134,7 @@ export const loadIntegrationConfig = (
     imageCacheBytes: positiveInt(env.HEADLESS_IMAGE_CACHE_MB, 256) * MIB,
     prefetchCount,
     prefetchParallel: Math.max(1, Math.min(plan.parallel, prefetchCount)),
-    version: trimmed(env.HEADLESS_VERSION) ?? "0.2.0",
+    version: trimmed(env.HEADLESS_VERSION) ?? "0.1.0",
     deviceName: trimmed(env.HEADLESS_DEVICE_NAME) ?? "Jellyfin server",
     uiLanguage: uiLanguageOf(env.HEADLESS_UI_LANGUAGE),
   };

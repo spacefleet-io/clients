@@ -120,33 +120,13 @@ import { systemPlaylistForSlug } from "@space/library-db-definition/systemPlayli
 import { runMigrations } from "@space/library-db-definition/migrationRunner";
 import { backfillOriginalSizeFromSourceFormats } from "@space/library-db-definition/originalSize";
 import { compactLibraryOps } from "@space/library-db-definition/opCompaction";
-import { PACKED_PLAYBACK_DDL } from "@space/library-db-definition/packedPlayback";
 import { artworkStorageKey, collectMediaDeleteKeys, collectMediaStorageKeys } from "@space/library-db-definition/mediaDetails";
 import {
   buildOpStatements,
-  isV3MediaUpsert,
   OP_STREAM_VERSION,
-  playbackFileKey,
-  READ_OP_STREAM_VERSION,
-  translateV3MediaUpsert,
-  writeOpStreamVersion,
   type LibrarySqlStatement,
   type OpStatementsByGroup,
 } from "@space/library-db-definition/ops";
-import {
-  base64ToBytes,
-  chunkListKeys,
-  chunkListToJson,
-  CHUNK_LIST_OWNER_KIND,
-  ChunkListFormatError,
-  packChunkList,
-  packSeededChunkList,
-  unpackChunkList,
-  type ChunkListKeyMode,
-  type ChunkListOwnerKind,
-  type ChunkRef,
-  type PackedChunkList,
-} from "@space/library-db-definition/chunkLists";
 export { decodeStoredManifest };
 import {
   assertLibraryCompatible,
@@ -167,9 +147,7 @@ import {
   desktopIngestMigrations,
   desktopMetadataMigrations,
   desktopPlaybackMigrations,
-  desktopPlaybackMigrationsPacked,
   desktopTemplatesMigrations,
-  PACKED_PLAYBACK_LAYOUT_VERSION,
 } from "./desktopMigrations";
 import { splitGroupFromLegacy } from "./librarySplitMigration";
 import {
@@ -209,12 +187,7 @@ import {
   type LibraryAccount,
   type LibraryOwner,
 } from "./libraryAccount";
-import type {
-  LibraryOp,
-  MediaFilePlaybackDeleteOp,
-  MediaFilePlaybackSetOp,
-  MediaUpsertV4Op,
-} from "@space/shared/libraryOps";
+import type { LibraryOp } from "@space/shared/libraryOps";
 import {
   mergeTrackPrefs,
   parseTrackPrefs,
@@ -272,129 +245,15 @@ const logger = scopeLogger("library-sync");
  * funnel). `currentLibrarySupport` folds the five desktop per-group migration
  * registries to their highest `user_version`; the storage/op-stream versions
  * are build constants. Computed once — the registries and constants are static
- * for the process lifetime. Playback folds the registry WITH the gated
- * conversion step (LIB-FMT-12): this build opens a converted library even
- * though it runs the step only on a switched account.
+ * for the process lifetime.
  */
 const DESKTOP_LIBRARY_SUPPORT: LibrarySupport = currentLibrarySupport({
   core: desktopCoreMigrations,
   metadata: desktopMetadataMigrations,
-  playback: desktopPlaybackMigrationsPacked,
+  playback: desktopPlaybackMigrations,
   ingest: desktopIngestMigrations,
   templates: desktopTemplatesMigrations,
 });
-
-/** The op-stream version the account is switched to (`/library/db/meta` `targetOpStreamVersion`); 3 when absent. */
-export const metaTargetOpStreamVersion = (meta: unknown): 3 | 4 => {
-  const raw = (meta as { targetOpStreamVersion?: unknown } | null | undefined)?.targetOpStreamVersion;
-  return typeof raw === "number" && raw >= 4 ? 4 : 3;
-};
-
-/** Op types that exist only in op stream 4 (LIB-FMT-11); a `media.upsert` without playback keys is one too. */
-const isVersion4Op = (op: LibraryOp) =>
-  op.type === "media.file.playback.set" ||
-  op.type === "media.file.playback.delete" ||
-  op.type === "media.episode.delete" ||
-  (op.type === "media.upsert" && !isV3MediaUpsert(op));
-
-/** Ops whose statements reach the metadata/playback/templates files (applied after core, LIB-SYNC-08). */
-const isPlaybackBearingOp = (op: LibraryOp) =>
-  op.type === "media.upsert" ||
-  op.type === "media.file.playback.set" ||
-  op.type === "media.file.playback.delete" ||
-  op.type === "media.episode.delete";
-
-/**
- * Largest plaintext op this writer sends after the switch (vault v4 plan §1.1: every op ≤ 1 MiB of ciphertext;
- * the payload codec never grows a JSON payload past its plaintext size by more than the AEAD overhead, so the
- * plaintext cap leaves room for it).
- */
-export const MAX_V4_OP_PLAINTEXT_BYTES = 1024 * 1024 - 4096;
-
-/** A single file's playback that does not fit in one op (LIB-FMT-11): surfaced to the caller, never truncated. */
-export class PlaybackOpTooLargeError extends Error {
-  constructor(readonly mediaId: string, readonly fileId: string | null, readonly bytes: number) {
-    super(`PLAYBACK_OP_TOO_LARGE: ${mediaId}/${fileId ?? "-"} is ${bytes} bytes (max ${MAX_V4_OP_PLAINTEXT_BYTES})`);
-    this.name = "PlaybackOpTooLargeError";
-  }
-}
-
-type ChunkEntryInput = { key: string; sizeBytes?: number | null; startSeconds?: number | null };
-
-const finiteOrNull = (value: unknown) =>
-  value !== null && value !== undefined && Number.isFinite(Number(value)) ? Number(value) : null;
-
-const normalizeChunkEntries = (chunks: ReadonlyArray<ChunkEntryInput> | ReadonlyArray<string>): ChunkRef[] =>
-  typeof chunks[0] === "string"
-    ? (chunks as ReadonlyArray<string>).map((key) => ({ key, sizeBytes: null, startSeconds: null }))
-    : (chunks as ReadonlyArray<ChunkEntryInput>).map((entry) => ({
-        key: String(entry.key ?? ""),
-        sizeBytes: finiteOrNull(entry.sizeBytes),
-        startSeconds: finiteOrNull(entry.startSeconds),
-      }));
-
-const MEDIA_CHUNK_PLACEMENT = /^media\/([^/]+)\//;
-
-/**
- * The packed row an uploader's chunks are stored as (LIB-FMT-11): key mode 2 when the uploader names the seed it
- * derived the keys from (`chunkKeySeed`, base64, 16 bytes) and every derived key equals the uploaded one; otherwise
- * the explicit keys (mode 1 or 0). A seed that does not reproduce the keys is ignored, never trusted.
- */
-export const packUploadedChunks = (chunks: ReadonlyArray<ChunkRef>, chunkKeySeed?: string | null): PackedChunkList => {
-  if (chunkKeySeed && chunks.length > 0) {
-    const placementId = MEDIA_CHUNK_PLACEMENT.exec(chunks[0]!.key)?.[1];
-    if (placementId) {
-      try {
-        const seeded = packSeededChunkList({
-          placementId,
-          seed: base64ToBytes(chunkKeySeed),
-          sizes: chunks.map((chunk) => chunk.sizeBytes),
-          starts: chunks.map((chunk) => chunk.startSeconds),
-        });
-        const keys = chunkListKeys(seeded);
-        if (keys.every((key, index) => key === chunks[index]!.key)) return seeded;
-        logger.warn({ placementId, count: chunks.length }, "chunk key seed does not reproduce the uploaded keys; storing explicit keys");
-      } catch (error) {
-        logger.warn({ error: error instanceof Error ? error.message : String(error) }, "chunk key seed unusable; storing explicit keys");
-      }
-    }
-  }
-  return packChunkList(chunks);
-};
-
-/** A BLOB column as bytes, whatever the driver hands back. */
-const blobBytes = (value: unknown, column: string): Uint8Array => {
-  if (value instanceof Uint8Array) return value;
-  if (value instanceof ArrayBuffer) return new Uint8Array(value);
-  if (Array.isArray(value)) return Uint8Array.from(value as number[]);
-  throw new ChunkListFormatError(`media_chunk_lists.${column} is not a blob`);
-};
-
-type PackedChunkListRow = {
-  owner_id: string;
-  placement_id: string;
-  key_mode: number;
-  key_data: unknown;
-  count: number;
-  sizes: unknown;
-  starts: unknown;
-};
-
-/** A stored `media_chunk_lists` row as the packed list (LIB-OPS-01: a row that does not decode throws). */
-const packedListFromRow = (row: PackedChunkListRow): PackedChunkList => {
-  const keyMode = Number(row.key_mode);
-  if (keyMode !== 0 && keyMode !== 1 && keyMode !== 2) {
-    throw new ChunkListFormatError(`unknown key_mode ${keyMode} for owner ${row.owner_id}`);
-  }
-  return {
-    placementId: String(row.placement_id),
-    keyMode: keyMode as ChunkListKeyMode,
-    keyData: blobBytes(row.key_data, "key_data"),
-    count: Number(row.count),
-    sizes: blobBytes(row.sizes, "sizes"),
-    starts: row.starts === null || row.starts === undefined ? null : blobBytes(row.starts, "starts"),
-  };
-};
 
 const TEMPLATE_FORMAT_PREFIX = "tmpl-format:";
 const TEMPLATE_AUDIO_PREFIX = "tmpl-audio:";
@@ -650,9 +509,6 @@ const PLAYBACK_TABLES: ReadonlyArray<string> = [
   "media_subtitles",
   "media_chapters",
   "media_local_downloads",
-  // Vault v4 (LIB-FMT-11): empty until the account is switched.
-  "media_chunk_lists",
-  "media_file_playback",
 ];
 
 /**
@@ -1289,14 +1145,6 @@ export class LibraryDb {
   private readonly splitFileIdentities = new Map<string, string | null>();
   private version: number;
   private remoteVersion: number;
-  /** LIB-FMT-13: the account's switch, from the last meta read (`targetOpStreamVersion`); 3 until one says 4. */
-  private targetOpStreamVersion: 3 | 4;
-  /** LIB-FMT-11: the playback file holds packed chunk lists (its conversion step ran, user_version >= 2). */
-  private packedPlayback = false;
-  /** Statements of op application, prepared once per group file (vault v4 audit: one page 528 → 349 ms). */
-  private readonly opStatementCache = new WeakMap<SqliteDatabase, Map<string, { run(...params: unknown[]): unknown }>>();
-  /** File keys (`playbackFileKey`) whose playback this device removed, by title; the next v4 upsert sends their deletes. */
-  private readonly removedPlaybackFiles = new Map<string, Set<string>>();
   private pendingSync: PendingSync | null;
   private pendingOps: PendingOp[];
   /** Non-progress ops since the last snapshot (LIB-SYNC-07), persisted across restarts. */
@@ -1374,8 +1222,7 @@ export class LibraryDb {
     pendingSync: PendingSync | null,
     pendingOps: PendingOp[],
     stateHash: string | null,
-    lastOpId: string | null,
-    targetOpStreamVersion: 3 | 4
+    lastOpId: string | null
   ) {
     this.token = token;
     this.keyBase64 = keyBase64;
@@ -1383,7 +1230,6 @@ export class LibraryDb {
     this.orm = createOrm(db);
     this.version = version;
     this.remoteVersion = remoteVersion;
-    this.targetOpStreamVersion = targetOpStreamVersion;
     this.pendingSync = pendingSync;
     this.pendingOps = pendingOps;
     this.syncEnabled = true;
@@ -1426,25 +1272,11 @@ export class LibraryDb {
     pendingSync: PendingSync | null,
     pendingOps: PendingOp[],
     stateHash: string | null,
-    lastOpId: string | null,
-    // LIB-FMT-12: the account's switch as the open's meta read says (3 offline): a switched account converts the
-    // playback group while it opens, before any op is applied.
-    targetOpStreamVersion: 3 | 4
+    lastOpId: string | null
   ): Promise<LibraryDb> {
     await prepareLibraryGroupFiles();
     try {
-      const instance = new LibraryDb(
-        token,
-        keyBase64,
-        db,
-        version,
-        remoteVersion,
-        pendingSync,
-        pendingOps,
-        stateHash,
-        lastOpId,
-        targetOpStreamVersion
-      );
+      const instance = new LibraryDb(token, keyBase64, db, version, remoteVersion, pendingSync, pendingOps, stateHash, lastOpId);
       instance.resendHealedSystemPlaylists();
       return instance;
     } catch (error) {
@@ -1750,74 +1582,13 @@ export class LibraryDb {
       dropFromLegacy: true,
     });
 
-    this.migratePlaybackDb(playbackDb);
+    runMigrations(playbackDb, "playback", desktopPlaybackMigrations);
     registerLibraryGroupDb(playbackDb, playbackDbPath);
 
     this.playbackDb = playbackDb;
     this.playbackOrm = createOrm(playbackDb);
     this.playbackDbPath = this.bindSplitFile(playbackDbPath);
     this.backfillOriginalSizes();
-  }
-
-  /**
-   * The playback group's migrations (LIB-FMT-12). The conversion step (`desktopPlaybackMigrationsPacked`) runs only
-   * when the account is switched (LIB-FMT-13) or the file is already converted (an unswitched open of a converted
-   * file must not read as "too new"). Steps and the `user_version` bump commit in one transaction: a crash leaves
-   * the file either unconverted or converted, never half.
-   */
-  private migratePlaybackDb(playbackDb: SqliteDatabase) {
-    const userVersion = Number(playbackDb.prepare("PRAGMA user_version;").get()?.user_version ?? 0);
-    const convert = this.targetOpStreamVersion >= 4 || userVersion >= PACKED_PLAYBACK_LAYOUT_VERSION;
-    const startedAt = performance.now();
-    const result = playbackDb.transaction(() =>
-      runMigrations(playbackDb, "playback", convert ? desktopPlaybackMigrationsPacked : desktopPlaybackMigrations)
-    )();
-    this.packedPlayback = convert;
-    if (result.applied.includes(PACKED_PLAYBACK_LAYOUT_VERSION)) {
-      logger.info(
-        { from: result.from, to: result.to, ms: Math.round(performance.now() - startedAt) },
-        "library.v4.convert: playback group converted to packed chunk lists (LIB-FMT-12)"
-      );
-    }
-  }
-
-  /**
-   * LIB-FMT-12: adopt the account's switch from a meta read; a switched account converts this device's playback
-   * group in place (never by downloading the library again). Synchronous, so no other library call interleaves.
-   */
-  private adoptTargetOpStreamVersion(meta: unknown) {
-    const target = metaTargetOpStreamVersion(meta);
-    // The switch is one-way (LIB-FMT-13): a meta without the field (an older server copy mid-update) never undoes it.
-    if (target <= this.targetOpStreamVersion) return;
-    this.targetOpStreamVersion = target;
-    if (this.playbackDb && !this.packedPlayback) {
-      this.migratePlaybackDb(this.playbackDb);
-      this.changeUnattributed = true;
-    }
-  }
-
-  /**
-   * The op-stream version this library's writes are in (LIB-FMT-13): 4 only once the account is switched AND this
-   * device's playback group is converted; a version-3 layout writes version 3, whatever the switch.
-   */
-  private writtenOpStreamVersion() {
-    return this.packedPlayback ? writeOpStreamVersion(this.targetOpStreamVersion) : OP_STREAM_VERSION;
-  }
-
-  /** LIB-FMT-13: the op-stream version the account is switched to, as last read (3 until a meta says 4). */
-  getTargetOpStreamVersion(): 3 | 4 {
-    return this.targetOpStreamVersion;
-  }
-
-  /** LIB-FMT-11: whether this device's playback group holds packed chunk lists (uploaders then send a key seed). */
-  isPackedPlaybackLayout(): boolean {
-    return this.packedPlayback;
-  }
-
-  /** Reads meta now and adopts its switch (converting the playback group when it just switched). */
-  async refreshTargetOpStreamVersion(): Promise<3 | 4> {
-    this.adoptTargetOpStreamVersion(await getLibraryMeta(this.token));
-    return this.targetOpStreamVersion;
   }
 
   /**
@@ -2022,8 +1793,6 @@ export class LibraryDb {
     if (selection.source === "unavailable") {
       throw new Error("SYNC_UNAVAILABLE");
     }
-    // LIB-FMT-12: a switched account's library is converted while it opens, before any op is applied.
-    const targetOpStreamVersion = metaTargetOpStreamVersion(selection.meta);
     const openCacheFallback = async (
       cache:
         | { version: number; dbPath?: string; stateHash?: string | null; lastOpId?: string | null }
@@ -2076,8 +1845,7 @@ export class LibraryDb {
         pending,
         pendingOps,
         normalizeStateHash(cache.stateHash ?? null),
-        cache.lastOpId ?? null,
-        targetOpStreamVersion
+        cache.lastOpId ?? null
       );
     };
 
@@ -2156,8 +1924,7 @@ export class LibraryDb {
         pending,
         pendingOps,
         normalizeStateHash(selection.meta?.stateHash),
-        selection.meta?.lastOpId ?? null,
-        targetOpStreamVersion
+        selection.meta?.lastOpId ?? null
       );
       // The remote snapshot is at snapshotVersion, but meta.version may be
       // ahead of that when ops have been uploaded since the last snapshot
@@ -2213,8 +1980,7 @@ export class LibraryDb {
           pending,
           pendingOps,
           normalizeStateHash(selection.cache.stateHash ?? selection.meta?.stateHash),
-          selection.cache.lastOpId ?? selection.meta?.lastOpId ?? null,
-          targetOpStreamVersion
+          selection.cache.lastOpId ?? selection.meta?.lastOpId ?? null
         );
       } catch (error) {
         // A LibraryFormatTooNewError from the constructor's per-group
@@ -2287,9 +2053,7 @@ export class LibraryDb {
         undefined,
         chunks.map((entry) => entry.hash),
         DESKTOP_CHUNK_REFS_SOURCE,
-        // An empty library holds no playback rows: it is as valid in op stream 4 as in 3, so it declares what the
-        // account's writers declare (a switched account refuses a version-3 write, LIB-FMT-13).
-        writeOpStreamVersion(targetOpStreamVersion)
+        OP_STREAM_VERSION
       );
       markBootstrap("putLibraryDb");
       await saveCache({
@@ -2309,8 +2073,7 @@ export class LibraryDb {
         pending,
         pendingOps,
         normalizeStateHash(created.stateHash ?? null),
-        created.lastOpId ?? null,
-        targetOpStreamVersion
+        created.lastOpId ?? null
       );
       markBootstrap("construct");
       logger.info(
@@ -2373,8 +2136,7 @@ export class LibraryDb {
           pending,
           pendingOps,
           normalizeStateHash(selection.meta?.stateHash),
-          selection.meta?.lastOpId ?? null,
-          targetOpStreamVersion
+          selection.meta?.lastOpId ?? null
         );
       }
       throw error;
@@ -2404,15 +2166,14 @@ export class LibraryDb {
         const db = openInMemorySqliteDb();
         ensureLibrarySchema(db);
         await saveCache({ version: 0, dbPath: getCacheDbPath(), updatedAt: nowIso() });
-        // Offline: the switch is unknown (3); a file converted earlier stays converted (migratePlaybackDb).
-        return await LibraryDb.construct(token, keyBase64, db, 0, 0, pending, pendingOps, null, null, 3);
+        return await LibraryDb.construct(token, keyBase64, db, 0, 0, pending, pendingOps, null, null);
       }
       const db = openSqliteDb();
       ensureLibrarySchema(db);
       const dbPath = getCacheDbPath();
       writeFileSync(dbPath, exportDbBytes(db));
       await saveCache({ version: 0, dbPath, updatedAt: nowIso() });
-      return await LibraryDb.construct(token, keyBase64, db, 0, 0, pending, pendingOps, null, null, 3);
+      return await LibraryDb.construct(token, keyBase64, db, 0, 0, pending, pendingOps, null, null);
     }
     const cachePath = cache.dbPath ?? getCacheDbPath();
     if (!existsSync(cachePath)) {
@@ -2424,7 +2185,7 @@ export class LibraryDb {
         ensureLibrarySchema(db);
         writeFileSync(cachePath, exportDbBytes(db));
         await saveCache({ version: 0, dbPath: cachePath, updatedAt: nowIso() });
-        return await LibraryDb.construct(token, keyBase64, db, 0, 0, pending, pendingOps, null, null, 3);
+        return await LibraryDb.construct(token, keyBase64, db, 0, 0, pending, pendingOps, null, null);
       }
       // Post-split: per-group files hold the truth, the legacy file is gone for
       // good. Use an in-memory `this.db` (the constructor's initialize<Group>Db
@@ -2441,8 +2202,7 @@ export class LibraryDb {
         pending,
         pendingOps,
         normalizeStateHash(cache.stateHash ?? null),
-        cache.lastOpId ?? null,
-        3
+        cache.lastOpId ?? null
       );
     }
     const bytes = readFileSync(cachePath);
@@ -2457,8 +2217,7 @@ export class LibraryDb {
       pending,
       pendingOps,
       normalizeStateHash(cache.stateHash ?? null),
-      cache.lastOpId ?? null,
-      3
+      cache.lastOpId ?? null
     );
   }
 
@@ -2477,10 +2236,6 @@ export class LibraryDb {
       ].filter((group) => existsSync(group.path));
       const opened = groups.map((group) => ({ ...group, db: openDatabase(group.path) }));
       try {
-        // A playback file no instance of this build has opened yet (last written before LIB-FMT-11) lacks the
-        // packed tables `PLAYBACK_TABLES` copies. Create them empty, as every open does; no `user_version` bump.
-        const playback = opened.find((group) => group.tables === PLAYBACK_TABLES);
-        if (playback) for (const statement of PACKED_PLAYBACK_DDL) playback.db.exec(statement);
         return buildCombinedSnapshotBytes(null, opened);
       } finally {
         for (const group of opened) group.db.close();
@@ -2680,14 +2435,9 @@ export class LibraryDb {
     }, effectiveDelay);
   }
 
-  private queueOp(op: LibraryOp) {
-    return this.queueOps([op]);
-  }
-
-  private async queueOps(ops: LibraryOp[]) {
-    if (!this.syncEnabled || this.applyingRemoteOps || !ops.length) return;
-    const op = ops[ops.length - 1]!;
-    this.pendingOps.push(...ops);
+  private async queueOp(op: LibraryOp) {
+    if (!this.syncEnabled || this.applyingRemoteOps) return;
+    this.pendingOps.push(op);
     // Coalesce the ops still waiting for upload with the latest-state-wins
     // rule every receiver applies anyway (compactLibraryOps in
     // applyLibraryOps here and on mobile): a later media.upsert /
@@ -2720,10 +2470,6 @@ export class LibraryDb {
     if (!this.syncEnabled || this.applyingRemoteOps) return;
     const details = this.getMediaDetails(mediaId);
     if (!details) return;
-    if (this.targetOpStreamVersion === 4 && this.packedPlayback) {
-      this.queueMediaUpsertV4(details);
-      return;
-    }
     // A write that changed nothing but the row's updatedAt (markMediaPlayable
     // on a playable title, a replace with identical rows) must not upload the
     // full details again — 45-137 KB per op in the ultimate run. Compared
@@ -2750,112 +2496,6 @@ export class LibraryDb {
       createdAt: nowIso(),
       payload: { details },
     });
-  }
-
-  /**
-   * A title's change as op stream 4 (LIB-FMT-11): its details as a `media.upsert` without playback, one
-   * `media.file.playback.set` per file (and the no-file group) whose playback changed since it was last queued, and a
-   * `media.file.playback.delete` per file whose playback is gone. Each part is compared with what was last queued for
-   * it, so adding one format to one file of a show uploads that file's playback only.
-   */
-  private queueMediaUpsertV4(details: MediaDetails) {
-    const mediaId = details.id;
-    const createdAt = nowIso();
-    const translated = translateV3MediaUpsert({ id: mediaId, type: "media.upsert", createdAt, payload: { details } });
-    const ownerIds = translated.playbackSets.flatMap((set) => [
-      ...set.payload.formats.map((format) => format.id),
-      ...set.payload.audioTracks.map((track) => track.id),
-    ]);
-    // The stored rows, not a re-pack of the keys: a seeded list (key mode 2) stays a seed on the wire.
-    const stored = this.loadPackedChunkLists(ownerIds);
-    const ops: LibraryOp[] = [];
-    let unchanged = 0;
-    /** The clock last queued for `key` when `payload` is what was queued then; null when it changed (and is memoed now). */
-    const unchangedSince = (key: string, payload: unknown, updatedAt: string) => {
-      const signature = createHash("sha256").update(JSON.stringify(payload)).digest("base64");
-      const lastQueued = this.lastQueuedUpsertSignature.get(key);
-      if (lastQueued?.signature === signature) {
-        unchanged += 1;
-        return lastQueued.updatedAt;
-      }
-      this.lastQueuedUpsertSignature.set(key, { signature, updatedAt });
-      return null;
-    };
-
-    const core = translated.upsert.payload.details;
-    const { updatedAt: _coreUpdatedAt, ...comparableCore } = core;
-    const lastCoreUpdatedAt = unchangedSince(mediaId, comparableCore, core.updatedAt);
-    if (lastCoreUpdatedAt === null) {
-      ops.push({ id: randomUUID(), type: "media.upsert", createdAt, payload: { details: core } } satisfies MediaUpsertV4Op);
-    } else {
-      // Nothing but the row's updated_at moved: put the clock back to the one last queued (LIB-SYNC-08).
-      this.core.update(mediaItems).set({ updatedAt: lastCoreUpdatedAt }).where(eq(mediaItems.id, mediaId)).run();
-    }
-
-    const playbackClock = this.playbackSqlite.prepare(
-      `INSERT INTO media_file_playback (media_id, file_id, updated_at) VALUES (?, ?, ?)
-       ON CONFLICT(media_id, file_id) DO UPDATE SET updated_at = excluded.updated_at`
-    );
-    const announcedKeys = new Set(
-      (this.playbackSqlite.prepare("SELECT file_id FROM media_file_playback WHERE media_id = ?").all(mediaId) as Array<{
-        file_id: string;
-      }>).map((row) => String(row.file_id))
-    );
-    const currentKeys = new Set<string>();
-    let tooLarge: PlaybackOpTooLargeError | null = null;
-    for (const set of translated.playbackSets) {
-      const fileKey = playbackFileKey(set.payload.fileId);
-      currentKeys.add(fileKey);
-      const payload = {
-        ...set.payload,
-        formats: set.payload.formats.map((format) => {
-          const list = stored.get(format.id);
-          return list ? { ...format, chunkList: chunkListToJson(list) } : format;
-        }),
-        audioTracks: set.payload.audioTracks.map((track) => {
-          const list = stored.get(track.id);
-          return list ? { ...track, chunkList: chunkListToJson(list) } : track;
-        }),
-      };
-      const { updatedAt: _setUpdatedAt, ...comparableSet } = payload;
-      if (unchangedSince(`${mediaId}:playback:${fileKey}`, comparableSet, payload.updatedAt) !== null) continue;
-      const op: MediaFilePlaybackSetOp = { id: randomUUID(), type: "media.file.playback.set", createdAt, payload };
-      const bytes = Buffer.byteLength(JSON.stringify(op), "utf8");
-      if (bytes > MAX_V4_OP_PLAINTEXT_BYTES) {
-        // Never truncated: the rest of the change still goes, this file's set is refused to the caller.
-        this.lastQueuedUpsertSignature.delete(`${mediaId}:playback:${fileKey}`);
-        tooLarge = new PlaybackOpTooLargeError(mediaId, set.payload.fileId, bytes);
-        continue;
-      }
-      // This device's own playback clock, so an older remote set never replaces what it just wrote.
-      playbackClock.run(mediaId, fileKey, payload.updatedAt);
-      ops.push(op);
-    }
-    const removedKeys = new Set([...announcedKeys, ...(this.removedPlaybackFiles.get(mediaId) ?? [])]);
-    this.removedPlaybackFiles.delete(mediaId);
-    for (const fileKey of removedKeys) {
-      if (currentKeys.has(fileKey)) continue;
-      const fileId = fileKey === "" ? null : fileKey;
-      this.lastQueuedUpsertSignature.delete(`${mediaId}:playback:${fileKey}`);
-      this.playbackSqlite.prepare("DELETE FROM media_file_playback WHERE media_id = ? AND file_id = ?").run(mediaId, fileKey);
-      ops.push({
-        id: randomUUID(),
-        type: "media.file.playback.delete",
-        createdAt,
-        payload: { mediaId, fileId },
-      } satisfies MediaFilePlaybackDeleteOp);
-    }
-    if (ops.length) {
-      logger.debug({ mediaId, ops: ops.map((op) => op.type), unchanged }, "queueMediaUpsertV4: queued");
-      void this.queueOps(ops);
-    } else {
-      this.opsSkippedNoopUpserts += 1;
-      logger.debug({ mediaId, skippedTotal: this.opsSkippedNoopUpserts }, "queueMediaUpsertV4: nothing changed since last queued — skipped");
-    }
-    if (tooLarge) {
-      logger.error({ mediaId, fileId: tooLarge.fileId, bytes: tooLarge.bytes }, "queueMediaUpsertV4: file playback exceeds one op");
-      throw tooLarge;
-    }
   }
 
   async clearPendingSync() {
@@ -3008,66 +2648,12 @@ export class LibraryDb {
     return map;
   }
 
-  /**
-   * Packed chunk lists of the given formats or audio tracks (LIB-FMT-11), by owner id; empty before the conversion.
-   * Owners without a packed row keep their per-chunk rows (a list stored by an older writer before an op rewrote it).
-   */
-  private loadPackedChunkLists(ownerIds: string[]) {
-    const map = new Map<string, PackedChunkList>();
-    if (!this.packedPlayback || !ownerIds.length) return map;
-    const sqlite = this.playbackSqlite;
-    for (let offset = 0; offset < ownerIds.length; offset += 500) {
-      const page = ownerIds.slice(offset, offset + 500);
-      const rows = sqlite
-        .prepare(
-          `SELECT owner_id, placement_id, key_mode, key_data, count, sizes, starts FROM media_chunk_lists WHERE owner_id IN (${page.map(() => "?").join(",")})`
-        )
-        .all(...page) as PackedChunkListRow[];
-      for (const row of rows) map.set(String(row.owner_id), packedListFromRow(row));
-    }
-    return map;
-  }
-
-  /** A file whose playback this device just dropped: the next v4 upsert of its title sends `media.file.playback.delete`. */
-  private notePlaybackFileRemoved(mediaId: string, fileId: string) {
-    const keys = this.removedPlaybackFiles.get(mediaId) ?? new Set<string>();
-    keys.add(playbackFileKey(fileId));
-    this.removedPlaybackFiles.set(mediaId, keys);
-  }
-
-  /** Stores one owner's chunks as its packed row and drops its per-chunk rows (LIB-FMT-11 layout). */
-  private writePackedChunkList(
-    ownerId: string,
-    ownerKind: ChunkListOwnerKind,
-    chunks: ReadonlyArray<ChunkEntryInput> | ReadonlyArray<string>,
-    chunkKeySeed: string | null | undefined,
-    updatedAt: string
-  ) {
-    const sqlite = this.playbackSqlite;
-    const legacyTable = ownerKind === CHUNK_LIST_OWNER_KIND.format ? "media_format_chunks" : "media_audio_chunks";
-    const legacyColumn = ownerKind === CHUNK_LIST_OWNER_KIND.format ? "format_id" : "track_id";
-    sqlite.prepare(`DELETE FROM ${legacyTable} WHERE ${legacyColumn} = ?`).run(ownerId);
-    if (!chunks.length) {
-      sqlite.prepare("DELETE FROM media_chunk_lists WHERE owner_id = ?").run(ownerId);
-      return;
-    }
-    const list = packUploadedChunks(normalizeChunkEntries(chunks), chunkKeySeed);
-    sqlite
-      .prepare(
-        "INSERT OR REPLACE INTO media_chunk_lists (owner_id, owner_kind, placement_id, key_mode, key_data, count, sizes, starts, updated_at) VALUES (?,?,?,?,?,?,?,?,?)"
-      )
-      .run(ownerId, ownerKind, list.placementId, list.keyMode, list.keyData, list.count, list.sizes, list.starts, updatedAt);
-  }
-
   private loadFormatChunks(formatIds: string[]) {
     const map = new Map<
       string,
       Array<{ key: string; sizeBytes: number | null; startSeconds: number | null }>
     >();
     if (!formatIds.length) return map;
-    for (const [ownerId, list] of this.loadPackedChunkLists(formatIds)) map.set(ownerId, unpackChunkList(list));
-    const unpackedIds = map.size ? formatIds.filter((id) => !map.has(id)) : formatIds;
-    if (!unpackedIds.length) return map;
     const rows = this.playback
       .select({
         formatId: mediaFormatChunks.formatId,
@@ -3077,7 +2663,7 @@ export class LibraryDb {
         startSeconds: mediaFormatChunks.startSeconds,
       })
       .from(mediaFormatChunks)
-      .where(inArray(mediaFormatChunks.formatId, unpackedIds))
+      .where(inArray(mediaFormatChunks.formatId, formatIds))
       .orderBy(asc(mediaFormatChunks.formatId), asc(mediaFormatChunks.orderIndex))
       .all();
     rows.forEach((row) => {
@@ -3101,9 +2687,6 @@ export class LibraryDb {
       Array<{ key: string; sizeBytes: number | null; startSeconds: number | null }>
     >();
     if (!trackIds.length) return map;
-    for (const [ownerId, list] of this.loadPackedChunkLists(trackIds)) map.set(ownerId, unpackChunkList(list));
-    const unpackedIds = map.size ? trackIds.filter((id) => !map.has(id)) : trackIds;
-    if (!unpackedIds.length) return map;
     const rows = this.playback
       .select({
         trackId: mediaAudioChunks.trackId,
@@ -3113,7 +2696,7 @@ export class LibraryDb {
         startSeconds: mediaAudioChunks.startSeconds,
       })
       .from(mediaAudioChunks)
-      .where(inArray(mediaAudioChunks.trackId, unpackedIds))
+      .where(inArray(mediaAudioChunks.trackId, trackIds))
       .orderBy(asc(mediaAudioChunks.trackId), asc(mediaAudioChunks.orderIndex))
       .all();
     rows.forEach((row) => {
@@ -5198,12 +4781,6 @@ export class LibraryDb {
 
     existingFiles.forEach((row) => {
       const existingId = String(row.id);
-      if (this.packedPlayback) {
-        const sqlite = this.playbackSqlite;
-        sqlite.prepare("DELETE FROM media_chunk_lists WHERE owner_id IN (SELECT id FROM media_formats WHERE file_id = ?)").run(existingId);
-        sqlite.prepare("DELETE FROM media_chunk_lists WHERE owner_id IN (SELECT id FROM media_audio_tracks WHERE file_id = ?)").run(existingId);
-        this.notePlaybackFileRemoved(mediaId, existingId);
-      }
       this.playback.delete(mediaFormats).where(eq(mediaFormats.fileId, existingId)).run();
       this.playback.delete(mediaAudioTracks).where(eq(mediaAudioTracks.fileId, existingId)).run();
       this.playback.delete(mediaSubtitles).where(eq(mediaSubtitles.fileId, existingId)).run();
@@ -5335,16 +4912,6 @@ export class LibraryDb {
     const scopeFilter = episodeId ? eq(mediaAudioTracks.episodeId, episodeId) : isNull(mediaAudioTracks.episodeId);
     const subtitleScopeFilter = episodeId ? eq(mediaSubtitles.episodeId, episodeId) : isNull(mediaSubtitles.episodeId);
 
-    if (this.packedPlayback) {
-      const sqlite = this.playbackSqlite;
-      sqlite.prepare("DELETE FROM media_chunk_lists WHERE owner_id IN (SELECT id FROM media_formats WHERE file_id = ?)").run(fileId);
-      sqlite
-        .prepare(
-          `DELETE FROM media_chunk_lists WHERE owner_id IN (SELECT id FROM media_audio_tracks WHERE media_id = ? AND ${episodeId ? "episode_id = ?" : "episode_id IS NULL"})`
-        )
-        .run(...(episodeId ? [mediaId, episodeId] : [mediaId]));
-      this.notePlaybackFileRemoved(mediaId, fileId);
-    }
     this.playback.delete(mediaFormats).where(eq(mediaFormats.fileId, fileId)).run();
     this.playback
       .delete(mediaAudioTracks)
@@ -5688,8 +5255,6 @@ export class LibraryDb {
       // when re-transcoding a missing quality. Defaults to false for every
       // other call site (fallback variant, format-job, retranscode upload).
       isSource?: boolean;
-      // LIB-FMT-11: base64 16-byte seed the uploader derived the chunk keys from; sent only after `isPackedPlaybackLayout()`.
-      chunkKeySeed?: string | null;
     } = {}
   ) {
     const normalizedSizeMb = Number.isFinite(sizeMb) ? Math.max(1, Math.round(sizeMb)) : 1;
@@ -5729,11 +5294,6 @@ export class LibraryDb {
         })()
       )
       .run();
-    if (this.packedPlayback) {
-      this.writePackedChunkList(formatId, CHUNK_LIST_OWNER_KIND.format, chunks, options.chunkKeySeed, nowIso());
-      this.queueMediaUpsert(mediaId);
-      return this.persist().then(() => formatId);
-    }
     const entries: Array<{ key: string; sizeBytes?: number | null; startSeconds?: number | null }> =
       typeof chunks[0] === "string"
         ? (chunks as string[]).map((key) => ({ key, sizeBytes: null, startSeconds: null }))
@@ -5862,8 +5422,7 @@ export class LibraryDb {
 
   setMediaFormatChunks(
     formatId: string,
-    chunks: Array<{ key: string; sizeBytes?: number | null; startSeconds?: number | null }> | string[],
-    options: { chunkKeySeed?: string | null } = {}
+    chunks: Array<{ key: string; sizeBytes?: number | null; startSeconds?: number | null }> | string[]
   ) {
     if (isTemplateFormatId(formatId)) return this.persist();
     const formatRow = this.playback
@@ -5872,11 +5431,6 @@ export class LibraryDb {
       .where(eq(mediaFormats.id, formatId))
       .limit(1)
       .all()[0];
-    if (this.packedPlayback) {
-      this.writePackedChunkList(formatId, CHUNK_LIST_OWNER_KIND.format, chunks, options.chunkKeySeed, nowIso());
-      if (formatRow?.mediaId) this.queueMediaUpsert(String(formatRow.mediaId));
-      return this.persist();
-    }
     this.playback.delete(mediaFormatChunks).where(eq(mediaFormatChunks.formatId, formatId)).run();
     const entries: Array<{ key: string; sizeBytes?: number | null; startSeconds?: number | null }> =
       typeof chunks[0] === "string"
@@ -5917,7 +5471,6 @@ export class LibraryDb {
       .limit(1)
       .all()[0];
     this.playback.delete(mediaFormats).where(eq(mediaFormats.id, formatId)).run();
-    if (this.packedPlayback) this.playbackSqlite.prepare("DELETE FROM media_chunk_lists WHERE owner_id = ?").run(formatId);
     if (formatRow?.mediaId) {
       this.queueMediaUpsert(String(formatRow.mediaId));
     }
@@ -6121,8 +5674,6 @@ export class LibraryDb {
     chunks: Array<{ key: string; sizeBytes?: number | null; startSeconds?: number | null }>;
     isDefault?: boolean;
     source?: string;
-    // LIB-FMT-11: base64 16-byte seed the uploader derived the chunk keys from; sent only after `isPackedPlaybackLayout()`.
-    chunkKeySeed?: string | null;
   }) {
     const episodeId = this.ensureEpisodeEntry(input.mediaId, input.season, input.episode);
     const trackId = randomUUID();
@@ -6154,11 +5705,6 @@ export class LibraryDb {
     };
     validateDbRow("mediaAudioTracks", row);
     this.playback.insert(mediaAudioTracks).values(row).run();
-    if (this.packedPlayback) {
-      this.writePackedChunkList(trackId, CHUNK_LIST_OWNER_KIND.audioTrack, input.chunks, input.chunkKeySeed, timestamp);
-      this.queueMediaUpsert(input.mediaId);
-      return this.persist();
-    }
     input.chunks.forEach((entry, index) => {
       const normalizedSize =
         entry.sizeBytes !== null && Number.isFinite(Number(entry.sizeBytes)) ? Number(entry.sizeBytes) : null;
@@ -6500,12 +6046,17 @@ export class LibraryDb {
   // -------------------------------------------------------------------------
 
   /**
-   * Record one just-completed offline save. The runtime's offlineDownload step calls this only after every piece
-   * and the item manifest (`localPath`) are in place (OFFL-SAFE-01), so the row only exists for a complete copy.
+   * Insert one row capturing a just-completed offline download.
    *
-   * `schemaVersion` 2 = sealed pieces (OFFL-FILE-03, `container` "pieces", `localPath` = item manifest); 1 = the plain
-   * MKV/MP4 older desktop builds saved, kept only until the upgrade re-saves it (OFFL-MIGR-01). A row for the same
-   * file is replaced (UNIQUE file_id), which is how that re-save swaps the old row for the new one in one write.
+   * The runtime's offlineDownload step calls this AFTER the atomic-rename of
+   * the muxed MKV/MP4 lands at `localPath`. Failure modes upstream (cancel
+   * mid-mux, ffmpeg crash) never reach this method — the row only exists
+   * when there is a real file on disk.
+   *
+   * UNIQUE on file_id means re-downloading a file (after delete-local then
+   * re-save) will conflict; the handler is expected to call
+   * `dropLocalDownloads({ type: "file", fileId })` before the new row is
+   * inserted, so onConflictDoUpdate is not needed here.
    */
   registerLocalDownload(input: {
     id: string;
@@ -6518,7 +6069,6 @@ export class LibraryDb {
     totalBytes: number;
     downloadedAt: string;
     runtimeJobId: string | null;
-    schemaVersion?: number;
   }) {
     const row = {
       id: String(input.id),
@@ -6532,14 +6082,9 @@ export class LibraryDb {
       downloadedAt: String(input.downloadedAt),
       lastVerifiedAt: null as string | null,
       runtimeJobId: input.runtimeJobId === null ? null : String(input.runtimeJobId),
-      schemaVersion: Math.trunc(Number(input.schemaVersion ?? 1)),
+      schemaVersion: 1,
     };
-    const { fileId: _fileId, ...update } = row;
-    this.playback
-      .insert(mediaLocalDownloads)
-      .values(row)
-      .onConflictDoUpdate({ target: mediaLocalDownloads.fileId, set: update })
-      .run();
+    this.playback.insert(mediaLocalDownloads).values(row).run();
     return { inserted: 1 };
   }
 
@@ -6621,8 +6166,6 @@ export class LibraryDb {
     downloadedAt: string;
     lastVerifiedAt: string | null;
     runtimeJobId: string | null;
-    /** 2 = sealed pieces (OFFL-FILE-03), 1 = an old plain file awaiting its re-save (OFFL-MIGR-01). */
-    schemaVersion: number;
   }> {
     const filtered = mediaIds && mediaIds.length > 0;
     const baseSelect = this.playback
@@ -6638,7 +6181,6 @@ export class LibraryDb {
         downloadedAt: mediaLocalDownloads.downloadedAt,
         lastVerifiedAt: mediaLocalDownloads.lastVerifiedAt,
         runtimeJobId: mediaLocalDownloads.runtimeJobId,
-        schemaVersion: mediaLocalDownloads.schemaVersion,
       })
       .from(mediaLocalDownloads);
     const rows = filtered
@@ -6656,7 +6198,6 @@ export class LibraryDb {
       downloadedAt: String(row.downloadedAt),
       lastVerifiedAt: row.lastVerifiedAt ? String(row.lastVerifiedAt) : null,
       runtimeJobId: row.runtimeJobId ? String(row.runtimeJobId) : null,
-      schemaVersion: Number(row.schemaVersion ?? 1),
     }));
   }
 
@@ -8110,13 +7651,6 @@ export class LibraryDb {
     this.metadata.delete(mediaRoles).where(eq(mediaRoles.mediaId, mediaId)).run();
     this.metadata.delete(mediaCrew).where(eq(mediaCrew.mediaId, mediaId)).run();
     this.metadata.delete(mediaTrailers).where(eq(mediaTrailers.mediaId, mediaId)).run();
-    // Read before the tracks go, so their chunk lists go with them.
-    const audioTrackIds = this.playback
-      .select({ id: mediaAudioTracks.id })
-      .from(mediaAudioTracks)
-      .where(eq(mediaAudioTracks.mediaId, mediaId))
-      .all()
-      .map((row) => String(row.id));
     this.playback.delete(mediaAudioTracks).where(eq(mediaAudioTracks.mediaId, mediaId)).run();
     this.playback.delete(mediaSubtitles).where(eq(mediaSubtitles.mediaId, mediaId)).run();
     this.metadata.delete(mediaSkipMarkers).where(eq(mediaSkipMarkers.mediaId, mediaId)).run();
@@ -8134,17 +7668,14 @@ export class LibraryDb {
       this.playback.delete(mediaChapters).where(inArray(mediaChapters.formatId, formatIds)).run();
       this.playback.delete(mediaFormatChunks).where(inArray(mediaFormatChunks.formatId, formatIds)).run();
     }
+    const audioTrackIds = this.playback
+      .select({ id: mediaAudioTracks.id })
+      .from(mediaAudioTracks)
+      .where(eq(mediaAudioTracks.mediaId, mediaId))
+      .all()
+      .map((row) => String(row.id));
     if (audioTrackIds.length > 0) {
       this.playback.delete(mediaAudioChunks).where(inArray(mediaAudioChunks.trackId, audioTrackIds)).run();
-    }
-    if (this.packedPlayback) {
-      const sqlite = this.playbackSqlite;
-      const ownerIds = [...formatIds, ...audioTrackIds];
-      for (let offset = 0; offset < ownerIds.length; offset += 500) {
-        const page = ownerIds.slice(offset, offset + 500);
-        sqlite.prepare(`DELETE FROM media_chunk_lists WHERE owner_id IN (${page.map(() => "?").join(",")})`).run(...page);
-      }
-      sqlite.prepare("DELETE FROM media_file_playback WHERE media_id = ?").run(mediaId);
     }
     this.playback.delete(mediaFormats).where(eq(mediaFormats.mediaId, mediaId)).run();
     this.metadata.delete(mediaFileDesiredFormats).where(eq(mediaFileDesiredFormats.mediaId, mediaId)).run();
@@ -8167,19 +7698,8 @@ export class LibraryDb {
       const list = statements[group];
       if (!list || list.length === 0) continue;
       const db = this.sqliteForGroup(group);
-      // A remote page repeats the same few statement texts thousands of times: prepare each once per file.
-      let cache = this.opStatementCache.get(db);
-      if (!cache) {
-        cache = new Map();
-        this.opStatementCache.set(db, cache);
-      }
       for (const stmt of list) {
-        let prepared = cache.get(stmt.sql);
-        if (!prepared) {
-          prepared = db.prepare(stmt.sql) as { run(...params: unknown[]): unknown };
-          cache.set(stmt.sql, prepared);
-        }
-        prepared.run(...stmt.params);
+        db.prepare(stmt.sql).run(...stmt.params);
       }
     }
   }
@@ -8292,24 +7812,16 @@ export class LibraryDb {
     this.lastQueuedUpsertSignature.clear();
     const normalizedOps = compactLibraryOps(this.foldProfileSettingsOps(ops));
     if (!normalizedOps.length) return;
-    // LIB-FMT-12: version-4 ops exist only on a switched account (the server refuses them before the switch), so one
-    // in the batch is the switch itself: convert first, then apply every op of the batch on the packed layout (the
-    // translation makes the version-3 ops of the batch land the same as they would have before the conversion).
-    if (!this.packedPlayback && normalizedOps.some(isVersion4Op)) {
-      logger.info({ ops: normalizedOps.length }, "library.v4.convert: version-4 op received; converting before apply");
-      this.adoptTargetOpStreamVersion({ targetOpStreamVersion: 4 });
-    }
-    const needsDetails = normalizedOps.some(isPlaybackBearingOp);
+    const needsDetails = normalizedOps.some((op) => op.type === "media.upsert");
     if (needsDetails) {
       this.setDatasetStatus({ metadata: false, playback: false });
     }
     // Phase 5.2: build statement maps once per op; we'll reuse them in the
     // secondary phase below. The `core` and `ingest` groups apply now,
     // `metadata` + `playback` + `templates` defer.
-    const packedPlayback = this.packedPlayback;
     const opsWithStatements = normalizedOps.map((op) => ({
       op,
-      statements: buildOpStatements(op, () => randomUUID(), { packedPlayback }),
+      statements: buildOpStatements(op, () => randomUUID()),
     }));
     this.applyingRemoteOps = true;
     try {
@@ -8317,14 +7829,11 @@ export class LibraryDb {
       // every group (core / metadata / playback / ingest / templates) so a
       // single-DB transaction could only cover one of them in isolation —
       // SQLite has no cross-file transaction primitive without ATTACH (which
-      // defeats per-file locking). One transaction per file per page (LIB-SYNC-15):
-      // a page's statements commit together, and recovery stays with the version/snapshot machinery.
-      this.coreSqlite.transaction(() => {
-        for (const { statements } of opsWithStatements) this.executeOpStatementGroups(statements, ["core"]);
-      })();
-      this.ingestSqlite.transaction(() => {
-        for (const { statements } of opsWithStatements) this.executeOpStatementGroups(statements, ["ingest"]);
-      })();
+      // defeats per-file locking). We process the ops serially and rely on
+      // the version/snapshot machinery for partial-failure recovery.
+      for (const { statements } of opsWithStatements) {
+        this.executeOpStatementGroups(statements, ["core", "ingest"]);
+      }
     } finally {
       this.applyingRemoteOps = false;
     }
@@ -8338,11 +7847,10 @@ export class LibraryDb {
     // LIB-SYNC-08: the core UPSERT ignores a media.upsert older than the stored
     // details. Its metadata/playback/templates statements live in other files
     // (no cross-file guard in SQL), so apply them only for upserts whose
-    // `updated_at` the core row now carries. Version-4 playback ops carry their own clock (`media_file_playback`)
-    // in their statements and always run, in stream order with the upserts.
+    // `updated_at` the core row now carries.
     const coreRowClock = this.sqliteForGroup("core").prepare("SELECT updated_at FROM media_items WHERE id = ?");
-    const secondaryOps = opsWithStatements.filter(({ op }) => {
-      if (op.type !== "media.upsert") return isPlaybackBearingOp(op);
+    const upsertsHeldByCore = opsWithStatements.filter(({ op }) => {
+      if (op.type !== "media.upsert") return false;
       const row = coreRowClock.get(op.payload.details.id) as { updated_at?: string } | undefined;
       return row?.updated_at === op.payload.details.updatedAt;
     });
@@ -8362,17 +7870,18 @@ export class LibraryDb {
         // `secondaryOpsInFlight`, so re-collecting the set per transaction
         // would buy nothing.
         const existingMediaIds = this.collectMediaIdsWithSecondaryData();
-        const applied = secondaryOps.filter(({ op }) => {
-          if (op.type !== "media.upsert" || !isV3MediaUpsert(op)) return true;
-          if (!this.shouldSuppressMediaUpsertSecondary(op.payload.details, existingMediaIds)) return true;
-          logger.warn({
-            mediaId: op.payload.details.id,
-            hasFiles: op.payload.details.hasFiles,
-          }, "skipped incomplete playback payload");
-          return false;
-        });
         this.metadataSqlite.transaction(() => {
-          for (const { statements } of applied) this.executeOpStatementGroups(statements, ["metadata"]);
+          for (const { op, statements } of upsertsHeldByCore) {
+            if (op.type !== "media.upsert") continue;
+            if (this.shouldSuppressMediaUpsertSecondary(op.payload.details, existingMediaIds)) {
+              logger.warn({
+                mediaId: op.payload.details.id,
+                hasFiles: op.payload.details.hasFiles,
+              }, "skipped incomplete playback payload");
+              continue;
+            }
+            this.executeOpStatementGroups(statements, ["metadata"]);
+          }
         })();
         this.setDatasetStatus({ metadata: true });
         await saveCache({
@@ -8383,11 +7892,19 @@ export class LibraryDb {
           lastOpId: this.lastOpId,
         });
         this.playbackSqlite.transaction(() => {
-          for (const { statements } of applied) this.executeOpStatementGroups(statements, ["playback"]);
+          for (const { op, statements } of upsertsHeldByCore) {
+            if (op.type !== "media.upsert") continue;
+            if (this.shouldSuppressMediaUpsertSecondary(op.payload.details, existingMediaIds)) continue;
+            this.executeOpStatementGroups(statements, ["playback"]);
+          }
         })();
         // templates is desktop-only; mirror the playback-group transaction.
         this.templatesSqlite.transaction(() => {
-          for (const { statements } of applied) this.executeOpStatementGroups(statements, ["templates"]);
+          for (const { op, statements } of upsertsHeldByCore) {
+            if (op.type !== "media.upsert") continue;
+            if (this.shouldSuppressMediaUpsertSecondary(op.payload.details, existingMediaIds)) continue;
+            this.executeOpStatementGroups(statements, ["templates"]);
+          }
         })();
         this.setDatasetStatus({ playback: true });
         await saveCache({
@@ -8447,14 +7964,10 @@ export class LibraryDb {
         const prevStateHash = this.stateHash;
         const nextStateHash = deriveNextStateHash(prevStateHash, op.id, encrypted);
         try {
-          const result = await putLibraryOp(
-            this.token,
-            this.remoteVersion,
-            op.id,
-            encrypted,
-            { prevStateHash, nextStateHash },
-            this.writtenOpStreamVersion()
-          );
+          const result = await putLibraryOp(this.token, this.remoteVersion, op.id, encrypted, {
+            prevStateHash,
+            nextStateHash,
+          });
           if (this.closed) {
             logger.warn({ opId: op.id, version: result.version }, "flushOps: instance closed during upload — leaving queue state to the reopened instance");
             break;
@@ -8495,23 +8008,6 @@ export class LibraryDb {
               "flushOps: server refused the op (409) — syncing from the server before retrying"
             );
             await this.syncFromRemoteIfNewer().catch(() => undefined);
-          } else if (
-            error instanceof ApiError &&
-            error.status === 426 &&
-            error.payload.reason === "library_op_stream" &&
-            typeof error.payload.opStreamVersion === "number" &&
-            error.payload.opStreamVersion <= READ_OP_STREAM_VERSION &&
-            this.targetOpStreamVersion < error.payload.opStreamVersion
-          ) {
-            // LIB-FMT-13: the account switched while this instance was writing version 3. Not "please update": convert
-            // the local copy and send the same op again declaring 4.
-            this.opsFlushConsecutiveFailures = 0;
-            logger.info(
-              { opId: op.id, opStreamVersion: error.payload.opStreamVersion },
-              "library.v4.convert: server says the account switched — converting before retrying the op"
-            );
-            this.adoptTargetOpStreamVersion({ targetOpStreamVersion: error.payload.opStreamVersion });
-            continue;
           } else if (error instanceof ApiError && error.status === 413) {
             this.opsFlushQuotaExceeded = true;
             logger.error(
@@ -8607,7 +8103,6 @@ export class LibraryDb {
     if (!byCount && counted.bytes < counted.bytesThreshold) return;
     const meta = await getLibraryMeta(this.token).catch(() => null);
     if (!meta?.exists) return;
-    this.adoptTargetOpStreamVersion(meta);
     if (counted.snapshotVersion !== meta.snapshotVersion) return;
     const latestSnapshotMs = getLatestSnapshotMs(meta.snapshotHistory);
     if (latestSnapshotMs && Date.now() - latestSnapshotMs < SNAPSHOT_MIN_INTERVAL_MS) {
@@ -8631,7 +8126,6 @@ export class LibraryDb {
     const expectedVersion = meta.version;
     if (!(await this.ensurePublishableState("snapshot"))) return;
     await assertAccountLibraryKey(this.token, this.keyBase64, undefined, meta);
-    const opStreamVersion = this.writtenOpStreamVersion();
     const rawBytes = this.buildCombinedExportBytes();
     const encrypted = await encryptSnapshotBytes(this.keyBase64, rawBytes);
     if (maxBytes !== undefined && encrypted.length > maxBytes) {
@@ -8662,7 +8156,6 @@ export class LibraryDb {
       stateHash: this.stateHash,
       lastOpId: this.lastOpId,
       chunkRefs: chunks.map((entry) => entry.hash),
-      opStreamVersion,
     };
     this.pendingSync = pending;
     await savePending(pending);
@@ -8683,7 +8176,7 @@ export class LibraryDb {
       undefined,
       pending.chunkRefs,
       DESKTOP_CHUNK_REFS_SOURCE,
-      opStreamVersion
+      OP_STREAM_VERSION
     );
     this.remoteVersion = result.version;
     this.stateHash = normalizeStateHash(result.stateHash ?? pending.stateHash ?? null);
@@ -9243,15 +8736,9 @@ export class LibraryDb {
     const meta = metaOverride ?? (await getLibraryMeta(this.token));
     if (meta.syncUnavailable) return { kind: "none" };
     if (!meta.exists) return { kind: "none" };
-    // LIB-FMT-12: this device's unsent changes went above in the version it held; a switched account converts the
-    // local copy now, before anything newer than the server's head is applied to it.
-    this.adoptTargetOpStreamVersion(meta);
     this.stateHash = normalizeStateHash(meta.stateHash);
     this.lastOpId = meta.lastOpId ?? this.lastOpId;
-    if (meta.version <= this.remoteVersion) {
-      await this.publishConvertedCopy(meta);
-      return { kind: "none" };
-    }
+    if (meta.version <= this.remoteVersion) return { kind: "none" };
 
     const fromVersion = this.remoteVersion;
     let opsResult = await getLibraryOps(this.token, fromVersion);
@@ -9335,50 +8822,9 @@ export class LibraryDb {
   }
 
   private async applyRemoteSync(prepared: Exclude<PreparedRemoteSync, { kind: "none" }>): Promise<boolean> {
-    const changed = prepared.kind === "snapshot" ? await this.applyRemoteSnapshot(prepared) : await this.applyRemoteOps(prepared);
-    await this.publishConvertedCopy(prepared.meta);
-    return changed;
-  }
-
-  /**
-   * LIB-FMT-12 (c): the first converted device of a switched account publishes its converted library as a full copy
-   * declaring op stream 4; from then on the server holds the account at 4. Only from the server's head with nothing
-   * unsent, so the copy holds exactly the server's library. Two devices racing are serialised by the base-version
-   * check (LIB-SYNC-01): the loser's 409 leaves its converted copy in place, never downloads the winner's.
-   */
-  private async publishConvertedCopy(meta: LibraryMeta) {
-    if (!this.packedPlayback || this.targetOpStreamVersion < 4 || (meta.opStreamVersion ?? 0) >= 4) return;
-    if (this.closed || this.pendingOps.length > 0 || this.remoteVersion !== meta.version) return;
-    const startedAt = performance.now();
-    try {
-      await this.uploadSnapshot(meta);
-      logger.info(
-        {
-          baseVersion: meta.version,
-          version: this.remoteVersion,
-          published: this.remoteVersion !== meta.version,
-          ms: Math.round(performance.now() - startedAt),
-        },
-        "library.v4.convert: converted full copy upload (op stream 4)"
-      );
-    } catch (error) {
-      if (error instanceof ApiError && error.status === 409) {
-        logger.info(
-          { baseVersion: meta.version, error: error.payload.error ?? null },
-          "library.v4.convert: another device published first — keeping this converted copy"
-        );
-        // The loser's copy was built on a base that never comes back (as in flushPending's 409).
-        await this.clearPendingSync().catch(() => undefined);
-        return;
-      }
-      logger.error(
-        { baseVersion: meta.version, error: error instanceof Error ? error.message : String(error) },
-        "library.v4.convert: converted full copy upload failed — retried on the next sync"
-      );
+    if (prepared.kind === "snapshot") {
+      return this.applyRemoteSnapshot(prepared);
     }
-  }
-
-  private async applyRemoteOps(prepared: Extract<PreparedRemoteSync, { kind: "ops" }>): Promise<boolean> {
     const { meta, ops } = prepared;
     // Rebase local, not-yet-acknowledged writes on top of the remote ops.
     // `ops` is "everything after remoteVersion", which includes this
@@ -9744,17 +9190,6 @@ export class LibraryDb {
     if (!pending.snapshotPath || !pending.manifestPath) {
       return drainedSomething;
     }
-    if ((pending.opStreamVersion ?? OP_STREAM_VERSION) < this.targetOpStreamVersion) {
-      // LIB-FMT-13: a compaction snapshot built in version 3 before the account switched. The switched server refuses
-      // it, and its data already reached the server as ops; the conversion publishes the converted copy instead.
-      logger.info(
-        { snapshotId: pending.snapshotId, opStreamVersion: pending.opStreamVersion ?? OP_STREAM_VERSION },
-        "library.v4.convert: discarding a version-3 pending snapshot on a switched account"
-      );
-      this.pendingSync = null;
-      await clearPending().catch(() => undefined);
-      return drainedSomething;
-    }
     try {
       const snapshotBytes = readFileSync(pending.snapshotPath);
       const manifestPayload = readFileSync(pending.manifestPath);
@@ -9793,7 +9228,7 @@ export class LibraryDb {
         undefined,
         fileHashes,
         recordedRefs ? DESKTOP_CHUNK_REFS_SOURCE : undefined,
-        pending.opStreamVersion ?? OP_STREAM_VERSION
+        OP_STREAM_VERSION
       );
       // Like flushOps: an instance closed during the upload (runtime re-open,
       // clearLocalCache) must not rewrite cache.json / pending files the new

@@ -8,15 +8,7 @@
 
 import { PARROT_LEGACY_ID_COLUMNS, PARROT_LEGACY_VERSION_1 } from "./legacyFormat";
 
-/** The newest schema this build reads. */
-export const PARROT_LIBRARY_SCHEMA_VERSION = 11;
-
-/**
- * The schema a library is brought to when opened, and stays at until its account stores songs in parts (API-VER-01):
- * schema 11 is reached only by applying a change that stores a file in parts (`parrotLibraryStatementsForOps` in
- * @space/parrot-core), so a library no switched account touched stays readable by the builds released before it.
- */
-export const PARROT_LIBRARY_WHOLE_FILES_SCHEMA_VERSION = 10;
+export const PARROT_LIBRARY_SCHEMA_VERSION = 10;
 
 /** The first build's library (schema 1); its old id column names live in `legacyFormat.ts` (META-SRC-09). */
 const VERSION_1: readonly string[] = PARROT_LEGACY_VERSION_1;
@@ -173,16 +165,6 @@ const VERSION_10: readonly string[] = NEUTRAL_ID_TABLES.flatMap(({ table, column
   ];
 });
 
-/**
- * PAR-FMT-01: a song's file stored split (a header with no picture, the sound, the file's own tags in an object of
- * their own); null on files stored whole.
- */
-const VERSION_11: readonly string[] = [
-  `ALTER TABLE track_files ADD COLUMN header_bytes INTEGER`,
-  `ALTER TABLE track_files ADD COLUMN source_size_bytes INTEGER`,
-  `ALTER TABLE track_files ADD COLUMN tags_object_key TEXT`,
-];
-
 /** `PARROT_LIBRARY_MIGRATIONS[n - 1]` takes a file from version n-1 to n. */
 export const PARROT_LIBRARY_MIGRATIONS: readonly (readonly string[])[] = [
   VERSION_1,
@@ -195,7 +177,6 @@ export const PARROT_LIBRARY_MIGRATIONS: readonly (readonly string[])[] = [
   VERSION_8,
   VERSION_9,
   VERSION_10,
-  VERSION_11,
 ];
 
 export class ParrotLibraryTooNewError extends Error {
@@ -206,12 +187,14 @@ export class ParrotLibraryTooNewError extends Error {
 }
 
 /**
- * The statements that bring a file at `fileVersion` (its `PRAGMA user_version`) to `target` (by default the schema a
- * library stays at while its songs are stored whole), ending with the `user_version` bump. Run them in one
- * transaction. Empty when the file is at `target` or above: a file is never taken back to an older schema.
+ * The statements that bring a file at `fileVersion` (its `PRAGMA user_version`) to this build's
+ * schema, ending with the `user_version` bump. Run them in one transaction. Empty when current.
  */
-export const parrotLibraryMigrationStatements = (fileVersion: number, target: number = PARROT_LIBRARY_WHOLE_FILES_SCHEMA_VERSION): string[] => {
+export const parrotLibraryMigrationStatements = (fileVersion: number): string[] => {
   if (fileVersion > PARROT_LIBRARY_SCHEMA_VERSION) throw new ParrotLibraryTooNewError(fileVersion);
-  if (fileVersion >= target) return [];
-  return [...PARROT_LIBRARY_MIGRATIONS.slice(fileVersion, target).flat(), `PRAGMA user_version = ${target}`];
+  if (fileVersion === PARROT_LIBRARY_SCHEMA_VERSION) return [];
+  return [
+    ...PARROT_LIBRARY_MIGRATIONS.slice(fileVersion).flat(),
+    `PRAGMA user_version = ${PARROT_LIBRARY_SCHEMA_VERSION}`,
+  ];
 };

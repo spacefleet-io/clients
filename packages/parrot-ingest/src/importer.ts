@@ -2,7 +2,6 @@ import crypto from "node:crypto";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { sealMediaObjectWithPadding } from "@space/media-crypto";
-import { apportionDeclaredBytes } from "@space/shared/storageCounting";
 import { openStorageUploadSession, uploadStorageObjectViaTunnel } from "@space/library-db-runtime/api";
 import { fetchLibrarySnapshot, publishLibrarySnapshot } from "@space/library-db-runtime/snapshotTransport";
 import type { MusicLyrics, MusicLyricsQuery } from "@space/shared/api";
@@ -23,25 +22,24 @@ import {
   type TrackFileChunkRow,
 } from "@space/parrot-library-db-definition";
 import { makeParrotCoverCopies, parrotCoverProblem, uploadParrotCover } from "./covers";
-import { parrotChunkKey, parrotPlacementId, parrotTagsKey, parrotTrackIds, sha256Hex } from "./ids";
+import { parrotChunkKey, parrotPlacementId, parrotTrackIds, sha256Hex } from "./ids";
 import { applyParrotOps, getParrotAlbumRow, getParrotFile, type ParrotLibraryDb, type ParrotLibraryFile } from "./library";
 import { addParrotLightCopy, parrotOriginalInMemory, type ParrotLightCopyMaker } from "./lightCopy";
 import { fetchParrotLibraryState, PARROT_APP_ID, publishParrotEdits, type ParrotSnapshotTransport } from "./publish";
-import { parrotSplitPieces, splitParrotOriginal } from "./splitOriginal";
 
 export { PARROT_APP_ID };
 import { readParrotTrackInfo, type ParrotTrackInfo } from "./readTrack";
 import { parrotRootFinder } from "./scan";
 
-/** A file read, hashed and tagged before its song joins the library; `stored` when its original was stored now. */
+/** A file read, hashed and tagged before its song joins the library; `chunks` when its original was stored now. */
 type PreparedFile = {
   bytes: Uint8Array;
   fileHash: string;
   info: ParrotTrackInfo;
   ids: { fileId: string; albumId: string; trackId: string; artistId: string; albumArtistId: string };
 } & (
-  | { existing: ParrotLibraryFile; stored: null; lyricsAsked: null }
-  | { existing: null; stored: ParrotStoredOriginal; lyricsAsked: Promise<ParrotLibraryOp | null> }
+  | { existing: ParrotLibraryFile; chunks: null; lyricsAsked: null }
+  | { existing: null; chunks: TrackFileChunkRow[]; lyricsAsked: Promise<ParrotLibraryOp | null> }
 );
 type PreparedOutcome = { ok: true; value: PreparedFile } | { ok: false; error: unknown };
 
@@ -94,12 +92,6 @@ export type ParrotImportOptions = {
   roots?: string[];
   /** Reads a file's tags (`root`: the picked folder it was found under); the seed script passes names given on its command line. */
   readInfo?: (file: string, root?: string) => Promise<ParrotTrackInfo>;
-  /**
-   * PAR-FMT-01: stores each new song in parts (header, sound pieces, tags object). Off (the default): each file is
-   * stored whole, as before. The desktop passes the library meta's `splitOriginals`, which the API turns on only once
-   * every Parrot channel carries the build that reads songs stored in parts (`PARROT_SPLIT_ORIGINALS`).
-   */
-  splitOriginals?: boolean;
   /** Publishes the library after this many new songs (default 1: each song shows as soon as it is stored). */
   publishEvery?: number;
   /**
@@ -187,38 +179,27 @@ const PUBLISH_ATTEMPTS = 5;
 export const PARROT_UPLOAD_LANES = 4;
 
 /**
- * Seals and uploads one file as SFV1 chunks on its own placement; returns the chunk rows in order. The file is cut
- * into 1 MiB chunks, or into `pieces` when given (a split original, PAR-FMT-01), each declaring its share of
- * `declaredBytes` (STOR-USE-02; its own size without them). PARROT_UPLOAD_LANES lanes take the next chunk in turn;
- * each lane keeps one upload session (and its websocket) for all its chunks instead of opening one per chunk.
- * `onChunk` reports each stored chunk's declared bytes.
+ * Seals and uploads one file whole as 1 MiB SFV1 chunks on its own placement; returns the chunk rows in order.
+ * PARROT_UPLOAD_LANES lanes take the next chunk in turn; each lane keeps one upload session (and its websocket) for
+ * all its chunks instead of opening one per chunk. `onChunk` reports each stored chunk's plain size.
  */
-export type ParrotFileUpload = {
+export const uploadParrotFile = async (input: {
   token: string;
   userId: string;
   libraryKey: Buffer;
   fileId: string;
   fileHash: string;
+  /** Where the chunks' object names start; the file id unless the file is stored again (lyrics written in, PAR-LYR-01). */
+  keyBase?: string;
   bytes: Uint8Array;
-  pieces?: Uint8Array[];
-  declaredBytes?: number[];
   clientType: string;
   upload: ParrotImportTransport["upload"];
   openUploadSession?: ParrotImportTransport["openUploadSession"];
-  onChunk?: (declaredBytes: number) => void;
+  onChunk?: (plainBytes: number) => void;
   signal?: AbortSignal;
-};
-
-export const uploadParrotFile = async (input: ParrotFileUpload): Promise<TrackFileChunkRow[]> => {
+}): Promise<TrackFileChunkRow[]> => {
   const placementId = parrotPlacementId(input.userId, input.fileHash);
-  const pieces =
-    input.pieces ??
-    Array.from({ length: Math.ceil(input.bytes.length / TRACK_FILE_CHUNK_SIZE_BYTES) }, (_, idx) =>
-      input.bytes.subarray(idx * TRACK_FILE_CHUNK_SIZE_BYTES, (idx + 1) * TRACK_FILE_CHUNK_SIZE_BYTES)
-    );
-  const offsets: number[] = [];
-  pieces.reduce((offset, piece) => (offsets.push(offset), offset + piece.length), 0);
-  const count = pieces.length;
+  const count = Math.ceil(input.bytes.length / TRACK_FILE_CHUNK_SIZE_BYTES);
   const chunks: TrackFileChunkRow[] = new Array(count);
   const objectOptions = { objectNamespace: "media", contentType: "application/octet-stream" };
   let next = 0;
@@ -229,18 +210,17 @@ export const uploadParrotFile = async (input: ParrotFileUpload): Promise<TrackFi
       while (!failed && next < count) {
         input.signal?.throwIfAborted();
         const idx = next++;
-        const offset = offsets[idx]!;
-        const plain = pieces[idx]!;
+        const offset = idx * TRACK_FILE_CHUNK_SIZE_BYTES;
+        const plain = input.bytes.subarray(offset, offset + TRACK_FILE_CHUNK_SIZE_BYTES);
         const sealed = new Uint8Array(sealMediaObjectWithPadding(plain, input.libraryKey));
-        const key = parrotChunkKey(input.fileId, idx);
-        // STOR-USE-02: the song counts at the size of the file the user picked, one piece's share at a time.
-        const declaredBytes = input.declaredBytes?.[idx] ?? plain.length;
-        const pieceOptions = { ...objectOptions, counting: { role: "source" as const, declaredBytes } };
+        const key = parrotChunkKey(input.keyBase ?? input.fileId, idx);
+        // STOR-USE-02: the song counts at the size of the file the user picked, one chunk's plain bytes at a time.
+        const pieceOptions = { ...objectOptions, counting: { role: "source" as const, declaredBytes: plain.length } };
         const objectKey = session
           ? await session.upload(key, sealed, pieceOptions)
           : await input.upload(input.token, key, sealed, { ...pieceOptions, placementId, clientType: input.clientType }, PARROT_APP_ID);
         chunks[idx] = { idx, objectKey, plainOffset: offset, plainSize: plain.length };
-        input.onChunk?.(declaredBytes);
+        input.onChunk?.(plain.length);
       }
     } catch (error) {
       failed = true;
@@ -258,66 +238,12 @@ export const uploadParrotFile = async (input: ParrotFileUpload): Promise<TrackFi
   return chunks;
 };
 
-/** Where a split file's header, sound and tags went (PAR-FMT-01); null on a file stored whole. */
-type ParrotSplitStored = { headerBytes: number; sourceSizeBytes: number; tagsObjectKey: string | null };
-
-/** A song's file as stored: its chunks, the bytes a player reads, and how it was cut. */
-export type ParrotStoredOriginal = { chunks: TrackFileChunkRow[]; sizeBytes: number; split: ParrotSplitStored | null };
-
-/**
- * PAR-FMT-01: stores a song's file as the user picked it, cut by `splitParrotOriginal`: its header (no picture, no
- * user tag), its sound in a 256 KiB then 1 MiB pieces, and its own tags in a sealed object of their own. The pieces
- * and the tags object together declare the size of the user's file (STOR-USE-02). With `split` off, or a file it cannot
- * cut, the file is stored whole, as it was (a file it cannot cut logs the reason).
- */
-export const uploadParrotOriginal = async (
-  input: Omit<ParrotFileUpload, "pieces" | "declaredBytes"> & { container: string; split: boolean; log?: (message: string) => void }
-): Promise<ParrotStoredOriginal> => {
-  if (!input.split) return { chunks: await uploadParrotFile(input), sizeBytes: input.bytes.length, split: null };
-  const split = splitParrotOriginal(input.bytes, input.container);
-  if (split.kind === "unsupported") {
-    input.log?.(`[parrot-import] ${input.fileId} stored whole: ${split.reason}`);
-    return { chunks: await uploadParrotFile(input), sizeBytes: input.bytes.length, split: null };
-  }
-  const pieces = parrotSplitPieces(split.header, split.payload);
-  const tags = split.tags.groups.length > 0 ? new TextEncoder().encode(JSON.stringify(split.tags)) : null;
-  const shares = apportionDeclaredBytes(input.bytes.length, [...pieces.map((piece) => piece.length), ...(tags ? [tags.length] : [])]);
-  const chunks = await uploadParrotFile({ ...input, pieces, declaredBytes: shares.slice(0, pieces.length) });
-  let tagsObjectKey: string | null = null;
-  if (tags) {
-    const declaredBytes = shares.at(-1)!;
-    tagsObjectKey = await input.upload(
-      input.token,
-      parrotTagsKey(input.fileId),
-      new Uint8Array(sealMediaObjectWithPadding(tags, input.libraryKey)),
-      {
-        objectNamespace: "media",
-        contentType: "application/octet-stream",
-        counting: { role: "source", declaredBytes },
-        placementId: parrotPlacementId(input.userId, input.fileHash),
-        clientType: input.clientType,
-      },
-      PARROT_APP_ID
-    );
-    input.onChunk?.(declaredBytes);
-    input.signal?.throwIfAborted();
-  }
-  const sizeBytes = split.header.length + split.payload.length;
-  input.log?.(
-    `[parrot-import] ${input.fileId} stored split: header ${split.header.length} bytes, sound ${split.payload.length} bytes in ${chunks.length - (split.header.length > 0 ? 1 : 0)} piece(s), ` +
-      `tags ${tags?.length ?? 0} bytes, ${split.picturesDropped} picture(s) left out, from ${input.bytes.length} bytes`
-  );
-  return { chunks, sizeBytes, split: { headerBytes: split.header.length, sourceSizeBytes: input.bytes.length, tagsObjectKey } };
-};
-
 /** The ops that add one uploaded file and its song, album and artists to the library. */
 export const buildParrotTrackOps = (input: {
   info: ParrotTrackInfo;
   fileHash: string;
   sizeBytes: number;
   chunks: TrackFileChunkRow[];
-  /** How the file was cut when stored (PAR-FMT-01); absent or null: stored whole. */
-  split?: ParrotSplitStored | null;
   now: number;
 }): ParrotLibraryOp[] => {
   const { info, now } = input;
@@ -389,9 +315,6 @@ export const buildParrotTrackOps = (input: {
           sizeBytes: input.sizeBytes,
           lightCopy: false,
           createdAt: now,
-          headerBytes: input.split?.headerBytes ?? null,
-          sourceSizeBytes: input.split?.sourceSizeBytes ?? null,
-          tagsObjectKey: input.split?.tagsObjectKey ?? null,
         },
         chunks: input.chunks,
       },
@@ -405,7 +328,7 @@ export const buildParrotTrackOps = (input: {
 };
 
 /**
- * Imports audio files into the account's Parrot library: each new file is uploaded split as encrypted chunks
+ * Imports audio files into the account's Parrot library: each new file is uploaded whole as encrypted chunks
  * (PAR-FMT-01), its song added to the library, and the library snapshot published. A file already in the
  * library (same content) is skipped, so running the same import again after a stop resumes it. One file that
  * fails does not stop the others. An album without a cover takes the picture built into the first of its files
@@ -684,7 +607,7 @@ export const importParrotFiles = async (files: string[], options: ParrotImportOp
     const info = await readInfo(file, rootOf(file));
     const ids = parrotTrackIds({ ...info, fileHash });
     const existing = getParrotFile(state.db, ids.fileId);
-    if (existing) return { bytes, fileHash, info, ids, existing, stored: null, lyricsAsked: null };
+    if (existing) return { bytes, fileHash, info, ids, existing, chunks: null, lyricsAsked: null };
     const { fileId, albumId, trackId, artistId, albumArtistId } = ids;
     log(`[parrot-import] uploading ${path.basename(file)} (${bytes.length} bytes) as ${fileId}: ${info.artist} / ${info.album} / ${info.title}`);
     if (!albumsImporting.has(albumId)) {
@@ -696,26 +619,23 @@ export const importParrotFiles = async (files: string[], options: ParrotImportOp
     if (albumArtistId !== artistId) askPhoto(albumArtistId, info.albumArtistMusicId);
     const lyricsAsked = askLyrics(info, trackId);
     sending.set(index, 0);
-    const stored = await uploadParrotOriginal({
+    const chunks = await uploadParrotFile({
       token: options.token,
       userId: options.userId,
       libraryKey,
       fileId,
       fileHash,
       bytes,
-      container: info.format.container,
       clientType: options.clientType,
-      split: options.splitOriginals ?? false,
       upload: transport.upload,
       openUploadSession: transport.openUploadSession,
-      onChunk: (declaredBytes) => {
-        sending.set(index, Math.min(sizes[index], (sending.get(index) ?? 0) + declaredBytes));
+      onChunk: (plainBytes) => {
+        sending.set(index, Math.min(sizes[index], (sending.get(index) ?? 0) + plainBytes));
         report({ bytesDone: bytesDone() });
       },
       signal: options.signal,
-      log,
     });
-    return { bytes, info, ids, existing: null, stored, fileHash, lyricsAsked };
+    return { bytes, info, ids, existing: null, chunks, fileHash, lyricsAsked };
   };
   // A settled outcome, so a file that fails while the one before it is still finishing is no unhandled rejection.
   const start = (index: number): Promise<PreparedOutcome> | null =>
@@ -742,7 +662,7 @@ export const importParrotFiles = async (files: string[], options: ParrotImportOp
       };
       try {
         if (!outcome.ok) throw outcome.error;
-        const { bytes, fileHash, info, ids, existing, stored } = outcome.value;
+        const { bytes, fileHash, info, ids, existing, chunks } = outcome.value;
         const { fileId, albumId, trackId } = ids;
         if (existing) {
           log(`[parrot-import] already in the library: ${path.basename(file)} (${fileId})`);
@@ -754,7 +674,7 @@ export const importParrotFiles = async (files: string[], options: ParrotImportOp
           report({ done: progress.done + 1, skipped: progress.skipped + 1, bytesDone: through() });
           continue;
         }
-        const ops = buildParrotTrackOps({ info, fileHash, ...stored!, now: Date.now() });
+        const ops = buildParrotTrackOps({ info, fileHash, sizeBytes: bytes.length, chunks: chunks!, now: Date.now() });
         const lyrics = await within(outcome.value.lyricsAsked!, waitMs, options.signal);
         if (lyrics !== TIMED_OUT && lyrics) ops.push(lyrics);
         else if (options.lookupLyrics && !info.lyrics) {

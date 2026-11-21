@@ -29,8 +29,6 @@ interface Window {
     version?: string;
     /** REL-CD-29: this build's identity (null for an unpackaged run), stated on every API call. */
     clientIdentity?: _ClientIdentity | null;
-    /** REL-CD-29: a "please update" refusal the runtime got on its own API call, as the API gave it. */
-    onAppUpdateRequired?: (callback: (refusal: { status: number; payload: Record<string, unknown> }) => void) => () => void;
     /** STOR-UNIT-01: the storage unit base main worked out from the platform and desktop (null if main did not say). */
     storageUnitBase?: 1000 | 1024 | null;
     e2ePerfEnabled?: boolean;
@@ -178,13 +176,16 @@ interface Window {
     onPlaybackSaturationChange?: (callback: (state: _PlaybackSaturationState) => void) => () => void;
     reportPlaybackStopped?: () => Promise<void>;
     /**
-     * Offline playback (OFFL-FILE-03): an HLS session over the pieces saved on this device, from the item manifest
-     * (`manifestPath` = list_local entry localPath). Release with releasePlaybackHlsSession. Works offline.
+     * Offline-mode (Phase 2): open a range-served session over a single
+     * locally-downloaded file. Main resolves the on-disk path from the
+     * device-local media_local_downloads table by fileId. Works offline.
      */
-    createPlaybackOfflineHlsSession?: (payload: {
+    createPlaybackOfflineSession?: (payload: {
       fileId: string;
-      manifestPath: string;
-    }) => Promise<{ id: string; url: string; subtitleKeys: string[] }>;
+      mediaId?: string | null;
+      localPath?: string;
+    }) => Promise<{ id: string; url: string; totalSize: number }>;
+    releasePlaybackOfflineSession?: (sessionId: string) => Promise<void>;
     prewarmPlaybackHlsSession?: (payload: {
       sessionId: string;
       videoId?: string | null;
@@ -485,16 +486,6 @@ interface Window {
       }) => Promise<unknown>;
       listLocal?: (payload?: { mediaIds?: string[] }) => Promise<unknown>;
       reconcile?: (payload?: { mediaIds?: string[] }) => Promise<unknown>;
-    };
-    /**
-     * Export to plain files ("Download everything", ACCT-EXPORT-01). `pickFolder`
-     * resolves the folder the user picked (null when cancelled); estimate/submit accept only that folder. Results are
-     * `unknown`: parse them with `lib/exportIpc.ts`.
-     */
-    exportFiles?: {
-      pickFolder?: () => Promise<string | null>;
-      estimate?: (payload: import("@space/runtime-contracts/badger/export").BadgerExportEstimatePayload) => Promise<unknown>;
-      submit?: (payload: import("@space/runtime-contracts/badger/export").BadgerExportSubmitPayload) => Promise<unknown>;
     };
   };
   /**

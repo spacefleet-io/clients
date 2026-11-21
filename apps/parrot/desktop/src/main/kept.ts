@@ -1,20 +1,17 @@
-// "Save offline" (PAR-OFFL-01/02/03): the shared keeping loop (`createParrotKeeping` in `@space/parrot-core`,
+// "Keep on this computer" (PAR-OFFL-01/02/03): the shared keeping loop (`createParrotKeeping` in `@space/parrot-core`,
 // the phone runs the same one) with the kept list in `kept.json` and the songs in `@space/parrot-ingest`'s sealed kept
 // files. A desktop has no metered connection to wait out, so "Wi-Fi only" reads as "whenever online" here (agent
 // reading in PAR-OFFL-03): the kept files have no `mayDownload` gate.
 import { promises as fs } from "node:fs";
 import { join } from "node:path";
-import { createParrotKeeping, keptTrackIds, type KeptStatus, type ParrotKeeping } from "@space/parrot-core";
+import { createParrotKeeping, type KeptStatus, type ParrotKeeping } from "@space/parrot-core";
 import { getParrotFile, parrotKeepLibrary, type ParrotKeptFiles, type ParrotLibraryDb } from "@space/parrot-ingest";
-import type { ParrotKeptSizes } from "../shared/ipc";
 
 export type DesktopKeeping = Omit<ParrotKeeping, "keptFileId" | "notify"> & {
   /** The kept file to play for a song file, when the song is kept here (it may be another copy than the one asked). */
   playableFileId(fileId: string): string;
   /** Whether the song plays from this computer (no connection used, so no copy to pick: PAR-PLAY-02). */
   isKept(trackId: string): boolean;
-  /** Settings › Manage offline content (OFFL-MANAGE-01): each kept item's song files, and the bytes each kept file takes here. */
-  sizes(): ParrotKeptSizes;
 };
 
 export const createDesktopKeeping = async (input: {
@@ -75,20 +72,5 @@ export const createDesktopKeeping = async (input: {
       return (file && keeping.keptFileId(file.trackId)) ?? fileId;
     },
     isKept: (trackId) => keeping.keptFileId(trackId) != null,
-    sizes: () => {
-      const status = keeping.status();
-      const db = input.library();
-      const library = db ? parrotKeepLibrary(db) : null;
-      const fileOf = new Map(status.songs.map((song) => [song.trackId, song.fileId]));
-      const entries = status.entries.map((entry) => ({
-        kind: entry.kind,
-        id: entry.id,
-        fileIds: library
-          ? [...new Set(keptTrackIds(library, entry).flatMap((trackId) => fileOf.get(trackId) ?? []))].sort()
-          : [],
-      }));
-      const bytes = Object.fromEntries(input.files.fileIds().map((fileId) => [fileId, input.files.storedBytes(fileId)]));
-      return { entries, bytes };
-    },
   };
 };

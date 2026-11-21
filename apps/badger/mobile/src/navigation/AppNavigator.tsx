@@ -278,7 +278,7 @@ export const AppNavigator = () => {
     if (updateRequired) {
       return (
         <SafeAreaView style={styles.safeArea}>
-          <MobileUpdateRequiredScreen app="badger" />
+          <MobileUpdateRequiredScreen />
         </SafeAreaView>
       );
     }

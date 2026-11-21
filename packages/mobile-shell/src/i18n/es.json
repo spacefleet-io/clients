@@ -1007,7 +1007,8 @@
   },
   "libraryFormat": {
     "title": "Actualización necesaria",
-    "body": "Esta mediateca se creó con una versión más reciente de Badger."
+    "body": "Esta mediateca se creó con una versión más reciente de Badger. Actualiza la aplicación para abrirla.",
+    "update": "Actualizar ahora"
   },
   "home": {
     "empty": {
@@ -1365,27 +1366,6 @@
   },
   "appUpdate": {
     "title": "Actualiza {{app}} para seguir usándolo",
-    "tooOld": "Esta versión de {{app}} es demasiado antigua para conectarse.",
-    "how": {
-      "appstore": "Actualiza {{app}} en la App Store y vuelve a abrir la app.",
-      "testflight": "Instala la nueva versión de {{app}} desde TestFlight y vuelve a abrir la app.",
-      "play": "Actualiza {{app}} en Google Play y vuelve a abrir la app.",
-      "amazon": "Actualiza {{app}} en la Amazon Appstore y vuelve a abrir la app.",
-      "fdroid": "Actualiza {{app}} en F-Droid y vuelve a abrir la app.",
-      "obtainium": "Actualiza {{app}} en Obtainium y vuelve a abrir la app.",
-      "apk": "Descarga la nueva versión de {{app}}, instálala encima de esta y vuelve a abrir la app.",
-      "store": "Actualiza {{app}} en la tienda desde la que lo instalaste y vuelve a abrir la app.",
-      "unknown": "Instala la nueva versión desde donde obtuviste {{app}} y vuelve a abrir la app."
-    },
-    "open": {
-      "appstore": "Abrir la App Store",
-      "testflight": "Abrir TestFlight",
-      "play": "Abrir Google Play",
-      "amazon": "Abrir la Amazon Appstore",
-      "fdroid": "Abrir F-Droid",
-      "obtainium": "Abrir Obtainium",
-      "apk": "Descargar la nueva versión",
-      "store": "Abrir la tienda"
-    }
+    "body": "Esta versión de {{app}} es demasiado antigua para conectarse. Instala la nueva versión desde donde obtuviste {{app}} y vuelve a abrir la app."
   }
 }

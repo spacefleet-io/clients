@@ -13,7 +13,6 @@ import { BadgerIconButton, badgerTopBarIcons } from "@space/ui/badger";
 import { LibraryLoading } from "./LoadingMascot";
 import { libraryContent } from "@space/shared/libraryContent";
 import { ImportJobList, ImportJobs, importErrorPart, useImportJobs } from "./ImportJobs";
-import { useExportNotifications, type ExportNotify } from "./ExportJobs";
 import { MediaDetailTabs } from "@space/ui/badger/media-detail";
 import { keyedNotification, shownNotification } from "./notificationText";
 import {
@@ -467,9 +466,6 @@ export default function Library({ t, state, onState }: Props) {
   });
   const playlistName = playlistEditor.name;
   const like = (track: { id: string }) => playlistEditor.heart(track.id);
-  /** "Download everything" (Settings, OFFL-FILE-01) runs in the background: its end shows in the tray. */
-  const notifyExport: ExportNotify = (level, title, message) => notifications.push(keyedNotification(t, level, title, message));
-  useExportNotifications(language, notifyExport);
   /** A song row's heart and "Add to playlist", plus edit (PAR-META-16) and delete outside a playlist (PAR-LIB-03) or remove inside one. */
   const songActions = (remove?: (track: ParrotLibraryTrack, index: number) => void) => (track: ParrotLibraryTrack, index: number) => (
     <>
@@ -753,19 +749,6 @@ export default function Library({ t, state, onState }: Props) {
           }}
           onRefresh={() => void load(true)}
           onSignOut={() => void requestSignOut()}
-          describeKept={(kind, id) => {
-            if (kind === "album") {
-              const album = albums.find((item) => item.id === id);
-              return album ? { title: album.title, subtitle: album.artistName, imagePath: album.coverThumbUrl ?? album.coverUrl } : null;
-            }
-            if (kind === "playlist") {
-              const playlist = playlists.find((item) => item.id === id);
-              return playlist ? { title: playlistName(playlist) } : null;
-            }
-            const track = library?.tracks.find((item) => item.id === id);
-            const cover = track ? coverFor(track.albumId) : undefined;
-            return track ? { title: track.title, subtitle: track.artistName, imagePath: cover?.coverThumbUrl ?? cover?.coverUrl } : null;
-          }}
         />
       );
     }

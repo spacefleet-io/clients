@@ -70,14 +70,6 @@ export type LibraryMeta = {
     opsHistory: Array<LibraryOpEntry>;
     storageFormatVersion: number;
     opStreamVersion: number;
-    /**
-     * Badger library only: the op stream the account's writers move to, 4 once the account is switched (LIB-FMT-13), else 3.
-     */
-    targetOpStreamVersion?: number;
-    /**
-     * Parrot library only: whether this account's imports store each song in parts (a header, the sound in pieces, its tags in their own object; PAR-FMT-01). Off (whole files) until every Parrot channel carries the build that reads that format.
-     */
-    splitOriginals?: boolean;
 };
 
 export type LibraryChunkRefsSource = {
@@ -109,28 +101,6 @@ export type LibraryOpEntry = {
     payloadCiphertext?: string;
 };
 
-export type LibraryOpStreamUpdateRequired = {
-    error: 'app_update_required';
-    app: string;
-    platform: string;
-    /**
-     * The calling build's version from `x-space-client`; empty without it.
-     */
-    version: string;
-    /**
-     * The version floor for that app and platform; empty when none is set.
-     */
-    minVersion: string;
-    /**
-     * `library_op_stream`: the library is switched to op stream 4 (LIB-FMT-13). `library_schema`: a newer Parrot build saved the account's library at a schema this build cannot open (API-VER-01).
-     */
-    reason: 'library_op_stream' | 'library_schema';
-    /**
-     * With `library_op_stream`: the op stream version the library needs (4).
-     */
-    opStreamVersion?: number;
-};
-
 export type LibraryBlobPointer = {
     exists: boolean;
     version: number;
@@ -147,10 +117,6 @@ export type LibraryBlobPointer = {
     chunkSize: number | null;
     storageFormatVersion: number;
     opStreamVersion: number;
-    /**
-     * Badger library only: the op stream the account's writers move to, 4 once the account is switched (LIB-FMT-13), else 3.
-     */
-    targetOpStreamVersion?: number;
 };
 
 export type LibraryOps = {
@@ -163,10 +129,6 @@ export type LibraryOps = {
     ops: Array<LibraryOpEntry>;
     storageFormatVersion: number;
     opStreamVersion: number;
-    /**
-     * Badger library only: the op stream the account's writers move to, 4 once the account is switched (LIB-FMT-13), else 3.
-     */
-    targetOpStreamVersion?: number;
     /**
      * Operator notice, absent in the common case.
      */
@@ -1092,10 +1054,6 @@ export type GetLibraryMetaData = {
     body?: never;
     headers: {
         /**
-         * The op stream version the client reads; defaults to 1. On an account switched to op stream 4, below 4 answers 426.
-         */
-        'x-library-op-stream-version'?: string;
-        /**
          * SpaceFleet app the request belongs to (library: badger or parrot; storage and p2p: badger or parrot).
          */
         'x-space-app': 'badger' | 'parrot';
@@ -1130,10 +1088,6 @@ export type GetLibraryMetaErrors = {
         error: 'account_blocked' | 'account_deleted' | 'personal_token_not_allowed';
     };
     /**
-     * The app must update: the account's library is switched to op stream 4 and the request does not declare it (`x-library-op-stream-version`, LIB-FMT-13), or a newer Parrot build saved the account's music library at a schema this build cannot open (API-VER-01).
-     */
-    426: LibraryOpStreamUpdateRequired;
-    /**
      * The storage gateway could not tell whether a snapshot exists; keep the local library and retry.
      */
     503: {
@@ -1155,10 +1109,6 @@ export type GetLibraryMetaResponse = GetLibraryMetaResponses[keyof GetLibraryMet
 export type GetLibraryDbData = {
     body?: never;
     headers: {
-        /**
-         * The op stream version the client reads; defaults to 1. On an account switched to op stream 4, below 4 answers 426.
-         */
-        'x-library-op-stream-version'?: string;
         /**
          * SpaceFleet app the request belongs to (library: badger or parrot; storage and p2p: badger or parrot).
          */
@@ -1188,10 +1138,6 @@ export type GetLibraryDbErrors = {
     403: {
         error: 'account_blocked' | 'account_deleted' | 'personal_token_not_allowed';
     };
-    /**
-     * The app must update: the account's library is switched to op stream 4 and the request does not declare it (`x-library-op-stream-version`, LIB-FMT-13), or a newer Parrot build saved the account's music library at a schema this build cannot open (API-VER-01).
-     */
-    426: LibraryOpStreamUpdateRequired;
     /**
      * The storage gateway could not tell whether a snapshot exists; keep the local library and retry.
      */
@@ -1279,7 +1225,7 @@ export type PutLibraryDbErrors = {
      */
     404: Error;
     /**
-     * The version is stale, the publish would downgrade the library format, it declares op stream 4 before the account is switched (`op_stream_not_switched`, LIB-FMT-13), or the upload quota is exceeded.
+     * The version is stale, the publish would downgrade the library format, or the upload quota is exceeded.
      */
     409: {
         error: 'version_conflict';
@@ -1289,12 +1235,6 @@ export type PutLibraryDbErrors = {
         surface: 'storage' | 'op-stream';
         observed: number;
         stored: number;
-    } | {
-        error: 'op_stream_not_switched';
-        /**
-         * The op stream version the write declared.
-         */
-        observed: number;
     } | {
         error: 'upload_quota_exceeded';
     } | Error;
@@ -1306,10 +1246,6 @@ export type PutLibraryDbErrors = {
      * A gateway answered 415. The `error` is the code the storage gateway answered with, relayed as is.
      */
     415: Error;
-    /**
-     * The app must update: the account's library is switched to op stream 4 and the request does not declare it (`x-library-op-stream-version`, LIB-FMT-13), or a newer Parrot build saved the account's music library at a schema this build cannot open (API-VER-01).
-     */
-    426: LibraryOpStreamUpdateRequired;
     /**
      * Too many requests. The `error` is the code the storage gateway answered with, relayed as is.
      */
@@ -1353,10 +1289,6 @@ export type GetLibraryOpsData = {
     body?: never;
     headers: {
         /**
-         * The op stream version the client reads; defaults to 1. On an account switched to op stream 4, below 4 answers 426.
-         */
-        'x-library-op-stream-version'?: string;
-        /**
          * SpaceFleet app the request belongs to (library: badger or parrot; storage and p2p: badger or parrot).
          */
         'x-space-app': 'badger' | 'parrot';
@@ -1391,10 +1323,6 @@ export type GetLibraryOpsErrors = {
         error: 'account_blocked' | 'account_deleted' | 'personal_token_not_allowed';
     };
     /**
-     * The app must update: the account's library is switched to op stream 4 and the request does not declare it (`x-library-op-stream-version`, LIB-FMT-13), or a newer Parrot build saved the account's music library at a schema this build cannot open (API-VER-01).
-     */
-    426: LibraryOpStreamUpdateRequired;
-    /**
      * The stored operations do not match the contract.
      */
     500: {
@@ -1428,10 +1356,6 @@ export type PostLibraryOpData = {
          */
         'x-library-storage-format-version'?: string;
         /**
-         * The op stream the writer uses; defaults to 1. Below 4 is refused on an account switched to op stream 4 (426) and once the library holds op stream 4 (409); 4 before the switch answers 409 `op_stream_not_switched`.
-         */
-        'x-library-op-stream-version'?: string;
-        /**
          * SpaceFleet app the request belongs to (library: badger or parrot; storage and p2p: badger or parrot).
          */
         'x-space-app': 'badger' | 'parrot';
@@ -1461,7 +1385,7 @@ export type PostLibraryOpErrors = {
         error: 'account_blocked' | 'account_deleted' | 'personal_token_not_allowed';
     };
     /**
-     * The version or the state lineage is stale, the op declares an older format than the library's, or it declares op stream 4 before the account is switched (`op_stream_not_switched`, LIB-FMT-13).
+     * The version or the state lineage is stale.
      */
     409: {
         error: 'version_conflict';
@@ -1474,17 +1398,7 @@ export type PostLibraryOpErrors = {
         surface: string;
         observed: number;
         stored: number;
-    } | {
-        error: 'op_stream_not_switched';
-        /**
-         * The op stream version the write declared.
-         */
-        observed: number;
     };
-    /**
-     * The app must update: the account's library is switched to op stream 4 and the request does not declare it (`x-library-op-stream-version`, LIB-FMT-13), or a newer Parrot build saved the account's music library at a schema this build cannot open (API-VER-01).
-     */
-    426: LibraryOpStreamUpdateRequired;
     /**
      * The operation could not be stored.
      */
@@ -1508,10 +1422,6 @@ export type StreamLibraryEventsData = {
     body?: never;
     headers: {
         /**
-         * The op stream version the client reads; defaults to 1. On an account switched to op stream 4, below 4 answers 426.
-         */
-        'x-library-op-stream-version'?: string;
-        /**
          * SpaceFleet app the request belongs to (library: badger or parrot; storage and p2p: badger or parrot).
          */
         'x-space-app': 'badger' | 'parrot';
@@ -1526,10 +1436,6 @@ export type StreamLibraryEventsData = {
          * App id, for clients that cannot set the `x-space-app` header.
          */
         app?: string;
-        /**
-         * The op stream version the client reads, for clients that cannot set `x-library-op-stream-version` (LIB-FMT-13).
-         */
-        opStream?: string;
     };
     url: '/library/db/stream';
 };
@@ -1553,10 +1459,6 @@ export type StreamLibraryEventsErrors = {
     403: {
         error: 'account_blocked' | 'account_deleted' | 'personal_token_not_allowed';
     };
-    /**
-     * The app must update: the account's library is switched to op stream 4 and the request does not declare it (`x-library-op-stream-version`, LIB-FMT-13), or a newer Parrot build saved the account's music library at a schema this build cannot open (API-VER-01).
-     */
-    426: LibraryOpStreamUpdateRequired;
 };
 
 export type StreamLibraryEventsError = StreamLibraryEventsErrors[keyof StreamLibraryEventsErrors];

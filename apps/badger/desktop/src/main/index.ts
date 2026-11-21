@@ -748,6 +748,27 @@ app.whenReady().then(async () => {
     onSignedUrlRequest: (increment) => {
       playbackRuntimeBridge.recordSignedUrlRequest(increment);
     },
+    // Offline-mode (Phase 2): resolve a downloaded file's on-disk path from the
+    // device-local media_local_downloads table. Read lazily via
+    // getActiveLibraryDb() so it always reflects the currently-open library
+    // (the DB activates after login/onboarding, after this server is built).
+    // @bugfix offline-playback-ignored-local-file
+    resolveOfflineFile: ({ fileId, mediaId }) => {
+      const db = getActiveLibraryDb();
+      if (!db) return null;
+      try {
+        const rows = db.listLocalDownloads(mediaId ? [mediaId] : undefined);
+        const row = rows.find((r) => r.fileId === fileId);
+        if (!row) return null;
+        return { localPath: row.localPath, container: row.container };
+      } catch (err) {
+        logger.warn(
+          { error: err instanceof Error ? err.message : String(err), fileId },
+          "resolveOfflineFile failed",
+        );
+        return null;
+      }
+    },
   });
   await playbackServer.start();
   // Test seam (#25): SF_PLAYBACK_THROTTLE_CONTROL=1 → globalThis.__sfPlaybackThrottle.

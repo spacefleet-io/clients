@@ -110,7 +110,7 @@
       "likedEmpty": "Nog geen favoriete nummers"
     },
     "kept": {
-      "keep": "Offline opslaan",
+      "keep": "Bewaren op deze telefoon",
       "remove": "Verwijderen van deze telefoon",
       "line": "Bewaard op deze telefoon · {{size}}",
       "chooseBody": "Deze nummers zijn in meer dan één formaat opgeslagen. Kies welke je op deze telefoon bewaart.",

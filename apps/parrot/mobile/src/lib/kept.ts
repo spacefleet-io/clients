@@ -1,4 +1,4 @@
-// "Save offline" (PAR-OFFL-01/02): the shared keeping loop (`createParrotKeeping` in `@space/parrot-core`, the
+// "Keep on this phone" (PAR-OFFL-01/02): the shared keeping loop (`createParrotKeeping` in `@space/parrot-core`, the
 // desktop runs the same one) with the kept list in AsyncStorage and the songs in the phone's native download engine
 // (`@space/mobile-media-proxy/downloads`, one download per kept song file, stored encrypted like Badger's, OFFL-FILE-03).
 // The engine waits for Wi-Fi on its own: Parrot has no "Downloads over Wi-Fi only" switch yet, so it stays on, Badger's

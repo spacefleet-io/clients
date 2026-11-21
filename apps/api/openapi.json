@@ -289,14 +289,6 @@
           },
           "opStreamVersion": {
             "type": "integer"
-          },
-          "targetOpStreamVersion": {
-            "type": "integer",
-            "description": "Badger library only: the op stream the account's writers move to, 4 once the account is switched (LIB-FMT-13), else 3."
-          },
-          "splitOriginals": {
-            "type": "boolean",
-            "description": "Parrot library only: whether this account's imports store each song in parts (a header, the sound in pieces, its tags in their own object; PAR-FMT-01). Off (whole files) until every Parrot channel carries the build that reads that format."
           }
         },
         "required": [
@@ -377,51 +369,6 @@
           "size"
         ]
       },
-      "LibraryOpStreamUpdateRequired": {
-        "type": "object",
-        "properties": {
-          "error": {
-            "type": "string",
-            "enum": [
-              "app_update_required"
-            ]
-          },
-          "app": {
-            "type": "string"
-          },
-          "platform": {
-            "type": "string"
-          },
-          "version": {
-            "type": "string",
-            "description": "The calling build's version from `x-space-client`; empty without it."
-          },
-          "minVersion": {
-            "type": "string",
-            "description": "The version floor for that app and platform; empty when none is set."
-          },
-          "reason": {
-            "type": "string",
-            "enum": [
-              "library_op_stream",
-              "library_schema"
-            ],
-            "description": "`library_op_stream`: the library is switched to op stream 4 (LIB-FMT-13). `library_schema`: a newer Parrot build saved the account's library at a schema this build cannot open (API-VER-01)."
-          },
-          "opStreamVersion": {
-            "type": "integer",
-            "description": "With `library_op_stream`: the op stream version the library needs (4)."
-          }
-        },
-        "required": [
-          "error",
-          "app",
-          "platform",
-          "version",
-          "minVersion",
-          "reason"
-        ]
-      },
       "LibraryBlobPointer": {
         "type": "object",
         "properties": {
@@ -484,10 +431,6 @@
           },
           "opStreamVersion": {
             "type": "integer"
-          },
-          "targetOpStreamVersion": {
-            "type": "integer",
-            "description": "Badger library only: the op stream the account's writers move to, 4 once the account is switched (LIB-FMT-13), else 3."
           }
         },
         "required": [
@@ -529,10 +472,6 @@
           },
           "opStreamVersion": {
             "type": "integer"
-          },
-          "targetOpStreamVersion": {
-            "type": "integer",
-            "description": "Badger library only: the op stream the account's writers move to, 4 once the account is switched (LIB-FMT-13), else 3."
           },
           "migrationAdvisory": {
             "type": "object",
@@ -3009,16 +2948,6 @@
             "in": "query"
           },
           {
-            "schema": {
-              "type": "string",
-              "description": "The op stream version the client reads; defaults to 1. On an account switched to op stream 4, below 4 answers 426."
-            },
-            "required": false,
-            "description": "The op stream version the client reads; defaults to 1. On an account switched to op stream 4, below 4 answers 426.",
-            "name": "x-library-op-stream-version",
-            "in": "header"
-          },
-          {
             "name": "x-space-app",
             "in": "header",
             "required": true,
@@ -3109,16 +3038,6 @@
               }
             }
           },
-          "426": {
-            "description": "The app must update: the account's library is switched to op stream 4 and the request does not declare it (`x-library-op-stream-version`, LIB-FMT-13), or a newer Parrot build saved the account's music library at a schema this build cannot open (API-VER-01).",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/LibraryOpStreamUpdateRequired"
-                }
-              }
-            }
-          },
           "503": {
             "description": "The storage gateway could not tell whether a snapshot exists; keep the local library and retry.",
             "content": {
@@ -3154,31 +3073,6 @@
         "security": [
           {
             "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "description": "The op stream version the client reads; defaults to 1. On an account switched to op stream 4, below 4 answers 426."
-            },
-            "required": false,
-            "description": "The op stream version the client reads; defaults to 1. On an account switched to op stream 4, below 4 answers 426.",
-            "name": "x-library-op-stream-version",
-            "in": "header"
-          },
-          {
-            "name": "x-space-app",
-            "in": "header",
-            "required": true,
-            "description": "SpaceFleet app the request belongs to (library: badger or parrot; storage and p2p: badger or parrot).",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "badger",
-                "parrot"
-              ]
-            }
           }
         ],
         "responses": {
@@ -3258,16 +3152,6 @@
               }
             }
           },
-          "426": {
-            "description": "The app must update: the account's library is switched to op stream 4 and the request does not declare it (`x-library-op-stream-version`, LIB-FMT-13), or a newer Parrot build saved the account's music library at a schema this build cannot open (API-VER-01).",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/LibraryOpStreamUpdateRequired"
-                }
-              }
-            }
-          },
           "503": {
             "description": "The storage gateway could not tell whether a snapshot exists; keep the local library and retry.",
             "content": {
@@ -3289,7 +3173,22 @@
               }
             }
           }
-        }
+        },
+        "parameters": [
+          {
+            "name": "x-space-app",
+            "in": "header",
+            "required": true,
+            "description": "SpaceFleet app the request belongs to (library: badger or parrot; storage and p2p: badger or parrot).",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "badger",
+                "parrot"
+              ]
+            }
+          }
+        ]
       },
       "put": {
         "operationId": "putLibraryDb",
@@ -3520,7 +3419,7 @@
             }
           },
           "409": {
-            "description": "The version is stale, the publish would downgrade the library format, it declares op stream 4 before the account is switched (`op_stream_not_switched`, LIB-FMT-13), or the upload quota is exceeded.",
+            "description": "The version is stale, the publish would downgrade the library format, or the upload quota is exceeded.",
             "content": {
               "application/json": {
                 "schema": {
@@ -3579,25 +3478,6 @@
                         "error": {
                           "type": "string",
                           "enum": [
-                            "op_stream_not_switched"
-                          ]
-                        },
-                        "observed": {
-                          "type": "integer",
-                          "description": "The op stream version the write declared."
-                        }
-                      },
-                      "required": [
-                        "error",
-                        "observed"
-                      ]
-                    },
-                    {
-                      "type": "object",
-                      "properties": {
-                        "error": {
-                          "type": "string",
-                          "enum": [
                             "upload_quota_exceeded"
                           ]
                         }
@@ -3630,16 +3510,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "426": {
-            "description": "The app must update: the account's library is switched to op stream 4 and the request does not declare it (`x-library-op-stream-version`, LIB-FMT-13), or a newer Parrot build saved the account's music library at a schema this build cannot open (API-VER-01).",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/LibraryOpStreamUpdateRequired"
                 }
               }
             }
@@ -3761,7 +3631,7 @@
           "Library"
         ],
         "summary": "Library operations since a version",
-        "description": "Returns the encrypted operations committed after version `since` (default 0), with their ciphertext inlined, and the observed format versions. `tooOld` is true when `since` predates the retained history. With `Accept: application/vnd.space.library-ops` the answer is binary instead (LIB-FMT-13): one frame per op, `u64be version | u32be length | ciphertext`, and the page's state in the `x-library-version`, `x-library-snapshot-version`, `x-library-too-old`, `x-library-has-more` (`1`/`0`), `x-library-storage-format-version`, `x-library-op-stream-version` and `x-library-target-op-stream-version` response headers.\n\nPersonal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.",
+        "description": "Returns the encrypted operations committed after version `since` (default 0), with their ciphertext inlined, and the observed format versions. `tooOld` is true when `since` predates the retained history.\n\nPersonal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.",
         "security": [
           {
             "bearerAuth": []
@@ -3777,16 +3647,6 @@
             "description": "A version number, 0 or more (default 0).",
             "name": "since",
             "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "description": "The op stream version the client reads; defaults to 1. On an account switched to op stream 4, below 4 answers 426."
-            },
-            "required": false,
-            "description": "The op stream version the client reads; defaults to 1. On an account switched to op stream 4, below 4 answers 426.",
-            "name": "x-library-op-stream-version",
-            "in": "header"
           },
           {
             "name": "x-space-app",
@@ -3809,12 +3669,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/LibraryOps"
-                }
-              },
-              "application/vnd.space.library-ops": {
-                "schema": {
-                  "type": "string",
-                  "format": "binary"
                 }
               }
             }
@@ -3882,16 +3736,6 @@
                   "required": [
                     "error"
                   ]
-                }
-              }
-            }
-          },
-          "426": {
-            "description": "The app must update: the account's library is switched to op stream 4 and the request does not declare it (`x-library-op-stream-version`, LIB-FMT-13), or a newer Parrot build saved the account's music library at a schema this build cannot open (API-VER-01).",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/LibraryOpStreamUpdateRequired"
                 }
               }
             }
@@ -3972,16 +3816,6 @@
             "required": false,
             "description": "The library format the writer uses; defaults to 1. A lower one than the library's is refused.",
             "name": "x-library-storage-format-version",
-            "in": "header"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "description": "The op stream the writer uses; defaults to 1. Below 4 is refused on an account switched to op stream 4 (426) and once the library holds op stream 4 (409); 4 before the switch answers 409 `op_stream_not_switched`."
-            },
-            "required": false,
-            "description": "The op stream the writer uses; defaults to 1. Below 4 is refused on an account switched to op stream 4 (426) and once the library holds op stream 4 (409); 4 before the switch answers 409 `op_stream_not_switched`.",
-            "name": "x-library-op-stream-version",
             "in": "header"
           },
           {
@@ -4092,7 +3926,7 @@
             }
           },
           "409": {
-            "description": "The version or the state lineage is stale, the op declares an older format than the library's, or it declares op stream 4 before the account is switched (`op_stream_not_switched`, LIB-FMT-13).",
+            "description": "The version or the state lineage is stale.",
             "content": {
               "application/json": {
                 "schema": {
@@ -4161,37 +3995,8 @@
                         "observed",
                         "stored"
                       ]
-                    },
-                    {
-                      "type": "object",
-                      "properties": {
-                        "error": {
-                          "type": "string",
-                          "enum": [
-                            "op_stream_not_switched"
-                          ]
-                        },
-                        "observed": {
-                          "type": "integer",
-                          "description": "The op stream version the write declared."
-                        }
-                      },
-                      "required": [
-                        "error",
-                        "observed"
-                      ]
                     }
                   ]
-                }
-              }
-            }
-          },
-          "426": {
-            "description": "The app must update: the account's library is switched to op stream 4 and the request does not declare it (`x-library-op-stream-version`, LIB-FMT-13), or a newer Parrot build saved the account's music library at a schema this build cannot open (API-VER-01).",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/LibraryOpStreamUpdateRequired"
                 }
               }
             }
@@ -4253,26 +4058,6 @@
             "description": "App id, for clients that cannot set the `x-space-app` header.",
             "name": "app",
             "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "description": "The op stream version the client reads, for clients that cannot set `x-library-op-stream-version` (LIB-FMT-13)."
-            },
-            "required": false,
-            "description": "The op stream version the client reads, for clients that cannot set `x-library-op-stream-version` (LIB-FMT-13).",
-            "name": "opStream",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "description": "The op stream version the client reads; defaults to 1. On an account switched to op stream 4, below 4 answers 426."
-            },
-            "required": false,
-            "description": "The op stream version the client reads; defaults to 1. On an account switched to op stream 4, below 4 answers 426.",
-            "name": "x-library-op-stream-version",
-            "in": "header"
           },
           {
             "name": "x-space-app",
@@ -4354,16 +4139,6 @@
                   "required": [
                     "error"
                   ]
-                }
-              }
-            }
-          },
-          "426": {
-            "description": "The app must update: the account's library is switched to op stream 4 and the request does not declare it (`x-library-op-stream-version`, LIB-FMT-13), or a newer Parrot build saved the account's music library at a schema this build cannot open (API-VER-01).",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/LibraryOpStreamUpdateRequired"
                 }
               }
             }
@@ -12453,7 +12228,7 @@
           "Playback"
         ],
         "summary": "Start a stream",
-        "description": "Takes one of the profile's stream slots before playback starts: by default at most 1 stream per profile at a time in Badger, 2 in Parrot; an admin may set another number per account type or per account (ACCT-STREAM-07). At the limit the answer is 409 `stream_limit` naming the devices playing; the app asks \"Already playing on <device>. Play here instead?\" and, on yes, sends the same request with `takeover: true`, which ends the oldest stream(s). The same login session starting again replaces its own stream. A stream not heard from for 60 s no longer counts. Casting counts as the casting phone's stream (`kind: \"cast\"`); offline playback never asks.\n\nPersonal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.",
+        "description": "Takes one of the profile's stream slots before playback starts: at most 1 stream per profile at a time in Badger, 2 in Parrot. At the limit the answer is 409 `stream_limit` naming the devices playing; the app asks \"Already playing on <device>. Play here instead?\" and, on yes, sends the same request with `takeover: true`, which ends the oldest stream(s). The same login session starting again replaces its own stream. A stream not heard from for 60 s no longer counts. Casting counts as the casting phone's stream (`kind: \"cast\"`); offline playback never asks.\n\nPersonal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.",
         "security": [
           {
             "bearerAuth": []
