@@ -102,8 +102,8 @@ describe("parrot library db", () => {
       },
     ]);
     expect(state.albums).toEqual([
-      { id: paperboat.ids.albumId, title: "Hollow Signal", artistId: nook.ids.artistId, artistName: "Linnet Park", year: 2000, genre: null, trackCount: 1, coverObjectKey: null, coverThumbObjectKey: null, addedAt: expect.any(Number), tracklist: null },
-      { id: nook.ids.albumId, title: "Meltway", artistId: nook.ids.artistId, artistName: "Linnet Park", year: 2003, genre: null, trackCount: 2, coverObjectKey: null, coverThumbObjectKey: null, addedAt: expect.any(Number), tracklist: null },
+      { id: paperboat.ids.albumId, title: "Hollow Signal", artistId: nook.ids.artistId, artistName: "Linnet Park", year: 2000, trackCount: 1, coverObjectKey: null, coverThumbObjectKey: null, addedAt: expect.any(Number), tracklist: null },
+      { id: nook.ids.albumId, title: "Meltway", artistId: nook.ids.artistId, artistName: "Linnet Park", year: 2003, trackCount: 2, coverObjectKey: null, coverThumbObjectKey: null, addedAt: expect.any(Number), tracklist: null },
     ]);
     expect(state.tracks.map((track) => [track.albumTitle, track.number, track.title])).toEqual([
       ["Hollow Signal", 3, "Paperboat"],
@@ -129,10 +129,6 @@ describe("parrot library db", () => {
       albumGainDb: null,
       albumPeak: null,
       unidentified: false,
-      year: 2003,
-      genre: null,
-      lossless: false,
-      hasLyrics: false,
     });
 
     const file = getParrotFile(db, paperboat.ids.fileId);

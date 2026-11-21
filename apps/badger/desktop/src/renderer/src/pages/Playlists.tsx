@@ -203,8 +203,13 @@ export default function Playlists() {
   return (
     <div className="min-h-screen">
       <TopNav />
-      {/* Chris 2026-11-20: no page title or sentence; the top bar's lit Playlists tab says where the user is. */}
       <main className="container py-10 space-y-8">
+        <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <div className="space-y-2">
+            <h1 className="text-2xl font-bold tracking-tight">{t("playlists.title")}</h1>
+            <p className="text-muted-foreground">{t("playlists.subtitle")}</p>
+          </div>
+        </header>
         <PlaylistsManager
           playback={{ handlePlayMedia, pendingPlayId, playPending, playSpinnerVisible }}
         />

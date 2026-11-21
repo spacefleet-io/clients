@@ -65,8 +65,8 @@ import { TvProfilesScreen } from "../tv/screens/TvProfilesScreen";
 import { ProfilesScreen } from "../screens/ProfilesScreen";
 import { useProfileSession } from "../lib/profiles/useProfileSession";
 import { IS_TV, routeAvailable } from "../tv/lib/tvRuntime";
-import { stackHasScreenToPop } from "@space/mobile-shell/tv/menuKey";
-import { setTvMenuKeyHold } from "@space/mobile-shell/tv/useTvMenuKey";
+import { stackHasScreenToPop } from "../tv/lib/menuKey";
+import { setTvMenuKeyHold } from "../tv/lib/useTvMenuKey";
 const log = scopeLogger("pairing.link");
 
 const ScreenSuspenseFallback = () => (

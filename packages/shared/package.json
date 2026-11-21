@@ -84,7 +84,6 @@
     "./starSky": "./src/starSky.ts",
     "./setupFlow": "./src/setupFlow.ts",
     "./skyNebula": "./src/skyNebula.ts",
-    "./uiScale": "./src/uiScale.ts",
     "./mascotLoader": "./src/mascotLoader.ts",
     "./appFeatures": "./src/appFeatures.ts",
     "./profileAvatars": "./src/profileAvatars.ts",

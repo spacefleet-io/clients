@@ -6,11 +6,11 @@ encrypted and keeps it private; these apps are how you reach it.
 
 | App | Version |
 | --- | --- |
-| badger-desktop | 0.1.22 |
+| badger-desktop | 0.1.19 |
 | badger-mobile | 0.0.1 |
 | badger-kodi | 0.1.0 |
 | badger-jellyfin | 0.1.0.0 |
-| parrot-desktop | 0.1.23 |
+| parrot-desktop | 0.1.19 |
 | parrot-mobile | 0.0.1 |
 
 | Path | What it is |

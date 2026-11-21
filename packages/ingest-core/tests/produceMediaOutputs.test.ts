@@ -123,17 +123,17 @@ describe("produceMediaOutputs (encode-only entrypoint)", () => {
     createFfmpegTaskMock.mockReset();
     runFfmpegMock.mockResolvedValue({ stdout: "", stderr: "" });
     createFfmpegTaskMock.mockImplementation((args: string[]) => {
-      // Subtitle extraction writes every track of the run in one ffmpeg call:
-      // each `subtitle-<N>.<fmt>` positional arg is an output file (no `.mpd`).
-      const subtitleOutputs = args.filter((value) => typeof value === "string" && /subtitle-\d+\.\w+$/.test(value));
-      if (subtitleOutputs.length > 0) {
-        const promise = Promise.all(subtitleOutputs.map(setupSubtitleOutput)).then(() => ({ stdout: "", stderr: "" }));
+      // Subtitle extraction uses the LAST positional arg as the output file
+      // (not an `.mpd`). Detect that shape first.
+      const last = args[args.length - 1];
+      const isSubtitle = typeof last === "string" && /subtitle-\d+\.\w+$/.test(last);
+      if (isSubtitle) {
+        const promise = setupSubtitleOutput(last).then(() => ({ stdout: "", stderr: "" }));
         return { promise, cancel: vi.fn() };
       }
-      // One audio run writes every track's DASH output: each `.mpd` arg is one output.
-      const mpdPaths = args.filter((value) => value.endsWith(".mpd"));
+      const mpdPath = args.find((value) => value.endsWith(".mpd")) ?? last;
       const codecType = args.some((value) => value === "0:v:0") ? "video" : "audio";
-      const promise = Promise.all((mpdPaths.length > 0 ? mpdPaths : [args[args.length - 1]!]).map((mpdPath) => setupDashOutput(mpdPath, codecType))).then(() => ({ stdout: "", stderr: "" }));
+      const promise = setupDashOutput(mpdPath, codecType).then(() => ({ stdout: "", stderr: "" }));
       return { promise, cancel: vi.fn() };
     });
   });
@@ -414,176 +414,6 @@ describe("produceMediaOutputs (encode-only entrypoint)", () => {
     expect(state.subtitles[0].label).toBe("EN");
     expect(state.subtitles[1].language).toBe("fra");
     expect(state.subtitles[1].label).toBe("FR");
-  });
-
-  /** @req INGS-JOBS-06[runtime] */
-  it("@perf extracts every subtitle track in ONE ffmpeg run, and on resume only the missing ones", async () => {
-    console.info(`[${SUITE}:subs-one-pass:setup] 3 subtitles (one PGS bitmap), source-free run`);
-    const { configureMediaIngestRuntime, produceMediaOutputs } = await import("../src/mediaProcessor");
-    configureMediaIngestRuntime({
-      resolveJobDir: (userId, jobId) => join(root, "jobs", userId, jobId),
-      encryptMediaObject: vi.fn(() => Buffer.alloc(0)),
-      uploadStorageObject: vi.fn(async () => "would-not-run"),
-    });
-    runFfprobeMock.mockResolvedValue({
-      streams: [
-        { codec_type: "video", codec_name: "h264", width: 1920, height: 1080 },
-        { codec_type: "subtitle", codec_name: "subrip", tags: { language: "eng", title: "EN" } },
-        { codec_type: "subtitle", codec_name: "hdmv_pgs_subtitle", tags: { language: "fra", title: "FR" } },
-        { codec_type: "subtitle", codec_name: "subrip", tags: { language: "ger", title: "DE" } },
-      ],
-      data: { format: { duration: "120" }, chapters: [] },
-    });
-    const spec = {
-      userId: "u1",
-      jobId: "j-subs-one-pass",
-      inputPath: "/tmp/movie.mkv",
-      includeSource: false,
-      includeFallback: false,
-      includeAudio: false,
-      includeSubtitles: true,
-      includeChapters: false,
-    };
-    const subtitleCalls = () =>
-      createFfmpegTaskMock.mock.calls
-        .map((call) => call[0] as string[])
-        .filter((args) => args.some((value) => /subtitle-\d+\.\w+$/.test(value)));
-    const mapPairs = (args: string[]) =>
-      args.flatMap((value, i) => (value === "-map" ? [`${args[i + 1]} -> ${args.slice(i + 2).find((v) => /subtitle-\d+\.\w+$/.test(v))?.split("/").pop()}`] : []));
-
-    const logs: string[] = [];
-    const first = await produceMediaOutputs({ ...spec, onLog: (line: string) => logs.push(line) });
-    const firstCalls = subtitleCalls();
-    console.info(`[${SUITE}:subs-one-pass:run1] subtitle ffmpeg calls=${firstCalls.length} maps=${JSON.stringify(firstCalls.map(mapPairs))}`);
-    if (firstCalls.length !== 1) {
-      console.error(`[${SUITE}:subs-one-pass:run1] all ffmpeg args:\n${JSON.stringify(createFfmpegTaskMock.mock.calls.map((c) => c[0]), null, 2)}`);
-      dumpProduceSnapshot("subs-one-pass-run1", { stateSubtitles: first.stateStore.getState().subtitles });
-    }
-    expect(firstCalls).toHaveLength(1);
-    // Only one input read, each `-map 0:s:N` followed by its own output, in stream order.
-    expect(firstCalls[0].filter((value) => value === "-i")).toHaveLength(1);
-    expect(mapPairs(firstCalls[0])).toEqual(["0:s:0 -> subtitle-0.srt", "0:s:1 -> subtitle-1.sup", "0:s:2 -> subtitle-2.srt"]);
-    expect(logs.some((line) => line.includes("subtitles: extracting 3 track(s) in one pass"))).toBe(true);
-    const firstSubs = first.stateStore.getState().subtitles;
-    expect(firstSubs.map((s) => s.id)).toEqual(["sub-0", "sub-1", "sub-2"]);
-    expect(firstSubs.map((s) => s.format)).toEqual(["srt", "sup", "srt"]);
-    for (const sub of firstSubs) expect(existsSync(sub.path)).toBe(true);
-
-    // Resume: one output got lost; the next run extracts just that track, still in one call.
-    await fs.rm(firstSubs[1].path);
-    createFfmpegTaskMock.mockClear();
-    const second = await produceMediaOutputs(spec);
-    const secondCalls = subtitleCalls();
-    console.info(`[${SUITE}:subs-one-pass:run2] subtitle ffmpeg calls=${secondCalls.length} maps=${JSON.stringify(secondCalls.map(mapPairs))}`);
-    if (secondCalls.length !== 1) {
-      dumpProduceSnapshot("subs-one-pass-resume", { stateSubtitles: second.stateStore.getState().subtitles });
-    }
-    expect(secondCalls).toHaveLength(1);
-    expect(mapPairs(secondCalls[0])).toEqual(["0:s:1 -> subtitle-1.sup"]);
-    expect(second.stateStore.getState().subtitles.map((s) => s.id)).toEqual(["sub-0", "sub-1", "sub-2"]);
-
-    // Nothing missing: no subtitle ffmpeg run at all.
-    createFfmpegTaskMock.mockClear();
-    await produceMediaOutputs(spec);
-    console.info(`[${SUITE}:subs-one-pass:run3] subtitle ffmpeg calls=${subtitleCalls().length}`);
-    expect(subtitleCalls()).toHaveLength(0);
-  });
-
-  /** @req INGS-JOBS-07[runtime] */
-  it("@perf encodes every audio track in ONE ffmpeg run (own DASH output each), and on resume only the unfinished ones", async () => {
-    console.info(`[${SUITE}:audio-one-pass:setup] 3 audios: aac stereo (copy), eac3 5.1(side) (aac + standard layout), ac3 stereo (aac)`);
-    // Loaded after the per-test mock setup, like every case in this file.
-    const { configureMediaIngestRuntime, produceMediaOutputs } = await import("../src/mediaProcessor");
-    configureMediaIngestRuntime({
-      resolveJobDir: (userId, jobId) => join(root, "jobs", userId, jobId),
-      encryptMediaObject: vi.fn(() => Buffer.alloc(0)),
-      uploadStorageObject: vi.fn(async () => "would-not-run"),
-    });
-    runFfprobeMock.mockResolvedValue({
-      streams: [
-        { codec_type: "video", codec_name: "h264", width: 1920, height: 1080 },
-        { codec_type: "audio", codec_name: "aac", channel_layout: "stereo", tags: { language: "eng" } },
-        { codec_type: "audio", codec_name: "eac3", channel_layout: "5.1(side)", tags: { language: "fre" } },
-        { codec_type: "audio", codec_name: "ac3", channel_layout: "stereo", tags: { language: "ger" } },
-      ],
-      data: { format: { duration: "120" }, chapters: [] },
-    });
-    const spec = {
-      userId: "u1",
-      jobId: "j-audio-one-pass",
-      inputPath: "/tmp/movie.mkv",
-      includeSource: false,
-      includeFallback: false,
-      includeAudio: true,
-      includeSubtitles: false,
-      includeChapters: false,
-    };
-    const audioCalls = () =>
-      createFfmpegTaskMock.mock.calls
-        .map((call) => call[0] as string[])
-        .filter((args) => args.some((value) => /^0:a:\d+$/.test(value)));
-    // Each output: its `-map 0:a:N`, then that output's args up to its manifest.
-    const outputsOf = (args: string[]) => {
-      const outputs: Array<{ map: string; args: string[]; mpd: string }> = [];
-      let current: { map: string; args: string[] } | null = null;
-      for (let i = 0; i < args.length; i += 1) {
-        if (args[i] === "-map") {
-          current = { map: args[i + 1]!, args: [] };
-          i += 1;
-        } else if (current && args[i]!.endsWith(".mpd")) {
-          outputs.push({ ...current, mpd: args[i]!.split("/").slice(-2).join("/") });
-          current = null;
-        } else if (current) {
-          current.args.push(args[i]!);
-        }
-      }
-      return outputs;
-    };
-
-    const logs: string[] = [];
-    const first = await produceMediaOutputs({ ...spec, onLog: (line: string) => logs.push(line) });
-    const firstCalls = audioCalls();
-    console.info(`[${SUITE}:audio-one-pass:run1] audio ffmpeg calls=${firstCalls.length} outputs=${JSON.stringify(firstCalls.map(outputsOf), null, 1)}`);
-    if (firstCalls.length !== 1) {
-      console.error(`[${SUITE}:audio-one-pass:run1] all ffmpeg args:\n${JSON.stringify(createFfmpegTaskMock.mock.calls.map((c) => c[0]), null, 2)}`);
-      dumpProduceSnapshot("audio-one-pass-run1", { stateOutputs: first.stateStore.getState().outputs });
-    }
-    expect(firstCalls).toHaveLength(1);
-    expect(firstCalls[0]!.filter((value) => value === "-i")).toHaveLength(1);
-    const outputs = outputsOf(firstCalls[0]!);
-    expect(outputs.map((o) => `${o.map} -> ${o.mpd}`)).toEqual([
-      "0:a:0 -> audio-0/manifest.mpd",
-      "0:a:1 -> audio-1/manifest.mpd",
-      "0:a:2 -> audio-2/manifest.mpd",
-    ]);
-    // Per-output codec args, same as the run-per-track recipe: AAC copied, others encoded to AAC with their standard layout.
-    expect(outputs[0]!.args.slice(0, 2)).toEqual(["-c:a", "copy"]);
-    expect(outputs[1]!.args.slice(0, 4)).toEqual(["-c:a", "aac", "-af", "aformat=channel_layouts=5.1"]);
-    expect(outputs[2]!.args.slice(0, 4)).toEqual(["-c:a", "aac", "-af", "aformat=channel_layouts=stereo"]);
-    // Same DASH layout per output as the run-per-track recipe.
-    for (const o of outputs) {
-      expect(o.args).toEqual(expect.arrayContaining(["-f", "dash", "-init_seg_name", "init-$RepresentationID$.mp4", "-media_seg_name", "seg-$Number%05d$.m4s"]));
-    }
-    expect(logs.some((line) => line.includes("audio: encoding 3 track(s) in one pass"))).toBe(true);
-    const firstAudio = first.stateStore.getState().outputs.filter((o) => o.kind === "audio");
-    expect(firstAudio.map((o) => `${o.id}:${o.encodingComplete}:${o.segments.length}`)).toEqual([
-      "audio-0:true:3",
-      "audio-1:true:3",
-      "audio-2:true:3",
-    ]);
-
-    // Resume: one track lost a segment; the next run encodes just that track, still in one call.
-    await fs.rm(firstAudio[2]!.segments[1]!.path);
-    createFfmpegTaskMock.mockClear();
-    const second = await produceMediaOutputs(spec);
-    const secondCalls = audioCalls();
-    console.info(`[${SUITE}:audio-one-pass:run2] audio ffmpeg calls=${secondCalls.length} outputs=${JSON.stringify(secondCalls.map(outputsOf).map((os) => os.map((o) => o.map)))}`);
-    if (secondCalls.length !== 1) {
-      dumpProduceSnapshot("audio-one-pass-resume", { stateOutputs: second.stateStore.getState().outputs });
-    }
-    expect(secondCalls).toHaveLength(1);
-    expect(outputsOf(secondCalls[0]!).map((o) => o.map)).toEqual(["0:a:2"]);
-    expect(second.stateStore.getState().outputs.filter((o) => o.kind === "audio").every((o) => o.encodingComplete)).toBe(true);
   });
 
   it("does NOT emit uploading-stage progress (only transcoding)", async () => {
