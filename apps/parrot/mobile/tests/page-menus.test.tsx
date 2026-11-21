@@ -66,7 +66,7 @@ vi.mock("react-native-safe-area-context", () => ({ useSafeAreaInsets: () => ({ t
 vi.mock("@space/mobile-shell/bottom-sheet", () => ({ MobileBottomSheet: "MobileBottomSheet", MobileSheetScrollView: "ScrollView", useMobileDismissPan: () => () => ({}) }));
 vi.mock("lucide-react-native", () =>
   Object.fromEntries(
-    ["ArrowDownToLine","ArrowLeft","ArrowRight","ArrowUpDown","Cast","ChevronDown","ChevronLeft","CircleCheck","Disc3","Download","Ellipsis","FileAudio","Globe","Heart","HeartOff","House","Info","LibraryBig","ListEnd","ListMusic","ListPlus","ListStart","ListX","LoaderCircle","Lock","LogOut","Mail","Mic","MicVocal","Pause","Pencil","Play","Plus","Repeat","Repeat1","RotateCcw","RotateCw","Search","Settings","ShieldCheck","Shuffle","SkipBack","SkipForward","SlidersHorizontal","Trash2","UserRound","Users","Volume","Volume2","X"].map((name) => [name, `Icon:${name}`])
+    ["ArrowDownToLine","ArrowLeft","ArrowRight","ArrowUpDown","Cast","ChevronDown","CircleCheck","Disc3","Download","Ellipsis","FileAudio","Globe","Heart","HeartOff","House","Info","LibraryBig","ListEnd","ListMusic","ListPlus","ListStart","ListX","LoaderCircle","Lock","LogOut","Mail","Mic","MicVocal","Pause","Pencil","Play","Plus","Repeat","Repeat1","RotateCcw","RotateCw","Search","Settings","ShieldCheck","Shuffle","SkipBack","SkipForward","SlidersHorizontal","Trash2","UserRound","Users","Volume","Volume2","X"].map((name) => [name, `Icon:${name}`])
   )
 );
 vi.mock("@react-navigation/native", () => ({
@@ -116,7 +116,7 @@ vi.mock("../src/screens/art", () => ({ ParrotArt: "ParrotArt", WaveSeek: "WaveSe
 vi.mock("../src/screens/PlayerLyrics", () => ({ PlayerLyrics: "PlayerLyrics" }));
 vi.mock("../src/screens/AlbumGrid", () => ({ AlbumGrid: "AlbumGrid" }));
 vi.mock("../src/screens/shimmer", () => ({ Shimmer: "Shimmer" }));
-vi.mock("../src/screens/pageBack", () => ({ PageBackButton: "PageBackButton", PAGE_BACK_ROW: 60, usePageTop: () => 100 }));
+vi.mock("../src/screens/pageBack", () => ({ PageBackButton: "PageBackButton", usePageTop: () => 100 }));
 vi.mock("../src/screens/SongListRow", () => ({ SongListRow: "SongListRow", songRowNames: () => [] }));
 
 import { PlayerScreen } from "../src/screens/PlayerScreen";
@@ -187,7 +187,7 @@ describe("PARROT-MOBILE-PAGE-MENUS-001 the artist page", () => {
     log("page", { bins: bareBins(screen) });
     expect(bareBins(screen)).toEqual([]);
     expect(byTestId(screen, "artist-delete")).toBeUndefined();
-    expect(all(byTestId(screen, "artist-more"), (el) => el.type === "Icon:Ellipsis")).toHaveLength(1);
+    expect(byTestId(screen, "artist-more")!.props.icon).toBe("Icon:Ellipsis");
     press(screen, "artist-more");
     const sheet = fake.sheet!;
     log("sheet", { title: sheet.title, testID: sheet.testID, actions: sheet.actions.map((a) => [a.id, a.testID, a.destructive]) });
