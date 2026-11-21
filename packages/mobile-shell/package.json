@@ -66,7 +66,6 @@
     "./button-face": "./src/components/mobile-button-face.tsx",
     "./profiles-screen": "./src/profiles/MobileProfilesScreen.tsx",
     "./bottom-sheet": "./src/components/mobile-bottom-sheet.tsx",
-    "./library-row": "./src/components/mobile-library-row.tsx",
     "./bottom-sheet-motion": "./src/components/mobile-bottom-sheet-motion.ts",
     "./profile-avatar": "./src/profiles/ProfileAvatarImage.tsx",
     "./profile-setup": "./src/profiles/profileSetup.ts",
