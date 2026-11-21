@@ -1,7 +1,6 @@
 // The Library tab (PAR-LOOK-01, PAR-NAV-02, PAR-NAV-04): no page title, the tab bar names the page. Albums / Artists /
 // Songs chips over a line saying how the list is sorted and how many it holds, then the chosen view. Albums: the grid
-// of album art, by artist, or newest added first when Home's "Recently added" "See all" opened it (PAR-HOME-01).
-// Artists: each artist, a tap shows their albums. Songs: every song by title, a tap plays it and the
+// of album art. Artists: each artist, a tap shows their albums. Songs: every song by title, a tap plays it and the
 // songs after it. No search here: the bar's centre Search button searches the whole library (UX-PHONE-12). Playlists
 // live in their own tab. While the phone is offline, what is not kept on it is greyed out and does not play (PAR-OFFL-04).
 import React, { useEffect, useState } from "react";
@@ -14,7 +13,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useTranslation } from "@space/mobile-shell/i18n";
 import { libraryContent } from "@space/shared/libraryContent";
 import { guardRenderItem } from "@space/mobile-shell/render-boundary";
-import { parrotArtistPictureThumbKey, parrotCoverThumbKey, sortParrotAlbums, type ParrotAlbumSort } from "@space/parrot-core";
+import { parrotArtistPictureThumbKey, parrotCoverThumbKey } from "@space/parrot-core";
 import { useSession } from "../state/session";
 import { useQuery } from "../state/useQuery";
 import { usePlay } from "../state/usePlay";
@@ -40,36 +39,25 @@ export const LIBRARY_SORT: Record<LibraryView, string> = {
   songs: "parrot.library.sort.byTitle",
 };
 
-/** The line's words for an album order Home's "See all" asked for (PAR-HOME-01). */
-export const albumSortLabel = (sort: ParrotAlbumSort): string =>
-  sort === "recent" ? "shell.library.sortRecent" : sort === "title" ? "parrot.library.sort.byTitle" : "parrot.library.sort.byArtist";
-
-/** Home's "See all" asks for a list, and for albums maybe an order ("Recently added": "recent"). */
-export type LibraryRequest = { view: LibraryView; albumSort?: ParrotAlbumSort };
 
 type LibraryScreenProps = {
   /** False while another tab shows: the page stays mounted in the tab pager, so it goes back to Albums. */
   active: boolean;
   /** Home's "See all" asks for a list (PAR-HOME-01); each new request object opens that list. */
-  viewRequest: LibraryRequest | null;
+  viewRequest: { view: LibraryView } | null;
 };
 
 export const LibraryScreen = ({ active, viewRequest }: LibraryScreenProps) => {
   const { library, reloadLibrary } = useSession();
   const { t } = useTranslation();
   const [view, setView] = useState<LibraryView>(viewRequest?.view ?? "albums");
-  // null: the albums in the query's own order (by artist).
-  const [albumSort, setAlbumSort] = useState<ParrotAlbumSort | null>(viewRequest?.albumSort ?? null);
-  // The Library tab itself always opens on Albums by artist; only Home's "See all" picks another list or order.
+  // The Library tab itself always opens on Albums; only Home's "See all" picks another list.
   useEffect(() => {
     if (active) return;
     setView("albums");
-    setAlbumSort(null);
   }, [active]);
   useEffect(() => {
-    if (!viewRequest) return;
-    setView(viewRequest.view);
-    setAlbumSort(viewRequest.albumSort ?? null);
+    if (viewRequest) setView(viewRequest.view);
   }, [viewRequest]);
   // An empty library shows the empty-library screen instead of the chips over an empty list (PAR-EMPTY-01).
   const version = library.status === "ready" ? library.version : -1;
@@ -110,19 +98,19 @@ export const LibraryScreen = ({ active, viewRequest }: LibraryScreenProps) => {
       <View style={styles.head}>
         {chips}
       </View>
-      {view === "albums" ? <AlbumsView sort={albumSort} /> : view === "artists" ? <ArtistsView /> : <SongsView />}
+      {view === "albums" ? <AlbumsView /> : view === "artists" ? <ArtistsView /> : <SongsView />}
     </View>
   );
 };
 
-/** "⇅ By artist ……… 248 albums"; `sort` names another order's words. */
-export const CountLine = ({ view, count, sort }: { view: LibraryView; count: number | null; sort?: string }) => {
+/** "⇅ By artist ……… 248 albums". */
+export const CountLine = ({ view, count }: { view: LibraryView; count: number | null }) => {
   const { t } = useTranslation();
   return (
     <View style={styles.countLine} testID="library-count">
       <View style={styles.sort}>
         <ArrowUpDown size={14} color={colors.text} />
-        <Text style={styles.sortText}>{t(sort ?? LIBRARY_SORT[view])}</Text>
+        <Text style={styles.sortText}>{t(LIBRARY_SORT[view])}</Text>
       </View>
       {count === null ? null : <Text style={styles.count}>{t(`parrot.library.${view}`, { count })}</Text>}
     </View>
@@ -134,20 +122,20 @@ const useLibraryVersion = () => {
   return library.status === "ready" ? library.version : -1;
 };
 
-const AlbumsView = ({ sort }: { sort: ParrotAlbumSort | null }) => {
+const AlbumsView = () => {
   const { reloadLibrary } = useSession();
   const { t } = useTranslation();
   const version = useLibraryVersion();
   const albums = useQuery(() => listAlbums(), [version]);
   const reach = useOfflineReach();
-  const shown = albums.data ? (sort ? sortParrotAlbums(albums.data, sort) : albums.data) : [];
+  const shown = albums.data ?? [];
   return (
     <AlbumGrid
       albums={shown}
       loading={albums.loading}
       empty={t("parrot.library.noAlbums")}
       unavailable={reach ? (album) => !reach.album(album.id) : undefined}
-      header={<CountLine view="albums" count={albums.data ? shown.length : null} sort={sort ? albumSortLabel(sort) : undefined} />}
+      header={<CountLine view="albums" count={albums.data ? shown.length : null} />}
       onRefresh={() => void reloadLibrary()}
     />
   );

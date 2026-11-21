@@ -3,6 +3,7 @@
  * function and key store the shared completion (`@space/mobile-shell/pairing`, also Parrot's) uses.
  * Imported by the screens only; the logic modules stay free of native imports.
  */
+import { Platform } from "react-native";
 import { getApiBaseUrl } from "@space/shared/api";
 import { decryptBase64ToBytes } from "../../lib/crypto";
 import { scopeLogger } from "@space/mobile-shell/logger";
@@ -12,8 +13,7 @@ import {
   type PairingCompletionDeps,
   type PairingRuntimeOptions,
 } from "@space/mobile-shell/pairing";
-import { createTvPairingClient } from "@space/mobile-shell/tv/pairingClient";
-import { currentTvDeviceName } from "@space/mobile-shell/pairing-device";
+import { createTvPairingClient, resolveTvDeviceName } from "./pairingClient";
 
 /** Log prefix of every TV pairing line (client, controller, completion), so one grep follows a sign-in. */
 export const TV_PAIRING_LOG_TAG = "tv.pairing";
@@ -27,9 +27,20 @@ export const TV_PAIRING_RUNTIME: PairingRuntimeOptions = {
 
 const log = scopeLogger(TV_PAIRING_LOG_TAG);
 
+export const tvDeviceName = (): string => {
+  const constants = Platform.constants as unknown as Record<string, unknown>;
+  const text = (key: string) => (typeof constants[key] === "string" ? (constants[key] as string) : null);
+  return resolveTvDeviceName({
+    manufacturer: text("Manufacturer"),
+    brand: text("Brand"),
+    model: text("Model"),
+    isTVOS: Platform.OS === "ios",
+  });
+};
+
 /** `sessionToken`: key mode, the signed-in TV asks only for the library key (its key screen). */
 export const createRuntimePairingClient = (sessionToken?: () => string | null) =>
-  createTvPairingClient({ appId: "badger", getApiBaseUrl, deviceName: currentTvDeviceName, sessionToken, log: (message, extra) => log.info(message, extra) });
+  createTvPairingClient({ getApiBaseUrl, deviceName: tvDeviceName, sessionToken, log: (message, extra) => log.info(message, extra) });
 
 /** `keepSession`: key mode, a refused key never signs this TV out. */
 export const createRuntimeCompletionDeps = (setSession: PairingCompletionDeps["setSession"], keepSession = false): PairingCompletionDeps =>

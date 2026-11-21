@@ -45,7 +45,6 @@ import { colors, parrotShellTheme } from "./src/theme";
 import { PARROT_MASCOT } from "./src/brand";
 import { startI18n } from "./src/lib/i18n";
 import { PARROT_LINK_SCHEME } from "./src/lib/linkScheme";
-import { TvGates } from "./src/tv/TvGates";
 import { holdPairLink, onPairLink, takePairLink } from "./src/lib/pendingPairLink";
 
 // Started once at launch, before any screen reads a translated text (Settings may mount first, with a saved session).
@@ -199,8 +198,6 @@ const Gates = () => {
     setSetup(next);
     await setupStore.write(next);
   };
-  // Android TV, Google TV, Fire TV and Apple TV (PAR-TV-01): the same app shows its TV screens.
-  if (Platform.isTV) return <TvGates setup={setup} save={saveSetup} spinner={<Spinner />} />;
   // The same flow as Badger's phone (UX-SETUP-08): the language first, then the sign-in, then the numbered steps; a
   // sign-out comes back to the sign-in.
   const step = setup.done ? null : resolvePhoneSetupStep(setup, { hasKey: !!libraryKey, signedIn: !!session });

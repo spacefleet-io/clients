@@ -115,70 +115,6 @@ targets:
             /usr/libexec/PlistBuddy -c "Set :NSAppTransportSecurity:NSAllowsArbitraryLoads true" "$INFO_PLIST"
             /usr/libexec/PlistBuddy -c "Delete :NSAppTransportSecurity:NSAllowsLocalNetworking" "$INFO_PLIST" || true
           fi
-  # Apple TV (PAR-TV-01): the same JS app (index.js registers "Parrot", the TV branch picks the TV screens) and the same
-  # AppDelegate on react-native-tvos. Built from its own ParrotTV scheme only: the Parrot scheme (TestFlight, UI tests)
-  # never builds it.
-  ParrotTV:
-    type: application
-    platform: tvOS
-    deploymentTarget: "15.1"
-    sources:
-      - path: Parrot/AppDelegate.swift
-      - path: ParrotTV
-    settings:
-      base:
-        ASSETCATALOG_COMPILER_APPICON_NAME: "App Icon & Top Shelf Image"
-        CODE_SIGN_STYLE: Automatic
-        CURRENT_PROJECT_VERSION: 1
-        DEVELOPMENT_TEAM: 8766H6KW4V
-        ENABLE_BITCODE: NO
-        # React Native's bundle phase sources .xcode.env and runs node outside the sandbox.
-        ENABLE_USER_SCRIPT_SANDBOXING: NO
-        INFOPLIST_FILE: ParrotTV/Info.plist
-        LD_RUNPATH_SEARCH_PATHS: ["$(inherited)", "@executable_path/Frameworks"]
-        MARKETING_VERSION: "0.1.0"
-        OTHER_LDFLAGS: ["$(inherited)", "-ObjC", "-lc++"]
-        PRODUCT_NAME: ParrotTV
-        SDKROOT: appletvos
-        SWIFT_VERSION: "5.0"
-        TARGETED_DEVICE_FAMILY: "3"
-        TVOS_DEPLOYMENT_TARGET: "15.1"
-        VERSIONING_SYSTEM: apple-generic
-      configs:
-        Debug:
-          PRODUCT_BUNDLE_IDENTIFIER: io.spacefleet.parrot.debug
-          PARROT_DISPLAY_NAME: Parrot Dev
-          PARROT_ALLOW_CLEARTEXT: YES
-          SWIFT_OPTIMIZATION_LEVEL: "-Onone"
-        Release:
-          PRODUCT_BUNDLE_IDENTIFIER: io.spacefleet.parrot
-          PARROT_DISPLAY_NAME: Parrot
-          PARROT_ALLOW_CLEARTEXT: NO
-    postCompileScripts:
-      - name: Bundle React Native code and images
-        inputFiles:
-          - $(SRCROOT)/.xcode.env.local
-          - $(SRCROOT)/.xcode.env
-        basedOnDependencyAnalysis: false
-        script: |
-          set -e
-
-          WITH_ENVIRONMENT="$REACT_NATIVE_PATH/scripts/xcode/with-environment.sh"
-          REACT_NATIVE_XCODE="$REACT_NATIVE_PATH/scripts/react-native-xcode.sh"
-
-          /bin/sh -c "\"$WITH_ENVIRONMENT\" \"$REACT_NATIVE_XCODE\""
-    postBuildScripts:
-      - name: Configure App Transport Security
-        inputFiles:
-          - $(TARGET_BUILD_DIR)/$(INFOPLIST_PATH)
-        basedOnDependencyAnalysis: false
-        script: |
-          # Same as the Parrot target: plain-HTTP dev stacks only in builds with PARROT_ALLOW_CLEARTEXT=YES.
-          INFO_PLIST="${TARGET_BUILD_DIR}/${INFOPLIST_PATH}"
-          if [ "${PARROT_ALLOW_CLEARTEXT}" = "YES" ]; then
-            /usr/libexec/PlistBuddy -c "Set :NSAppTransportSecurity:NSAllowsArbitraryLoads true" "$INFO_PLIST"
-            /usr/libexec/PlistBuddy -c "Delete :NSAppTransportSecurity:NSAllowsLocalNetworking" "$INFO_PLIST" || true
-          fi
   # The playback logic of the AudioPlayback pod (limiter, up-next order) as plain XCTests: no app host, no pods.
   ParrotTests:
     type: bundle.unit-test
@@ -224,19 +160,6 @@ schemes:
       targets:
         - ParrotTests
         - ParrotUITests
-    profile:
-      config: Release
-    analyze:
-      config: Debug
-    archive:
-      config: Release
-  # Apple TV app (PAR-TV-01). Not in apple-testflight-build.sh's scheme list: no CI path archives or uploads it.
-  ParrotTV:
-    build:
-      targets:
-        ParrotTV: all
-    run:
-      config: Debug
     profile:
       config: Release
     analyze:

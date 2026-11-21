@@ -19,8 +19,7 @@ import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { act, create, type ReactTestInstance, type ReactTestRenderer } from "react-test-renderer";
 import { TvMainShell } from "./TvMainShell";
-import { currentTvSection, requestTvSection, tvBackLabelKey } from "@space/mobile-shell/tv/tvSection";
-import { MobileShellThemeProvider, mergeMobileShellTheme } from "@space/mobile-shell/theme";
+import { currentTvSection, requestTvSection, tvBackLabelKey } from "../lib/tvSection";
 
 const state = vi.hoisted(() => {
   // Metro turns `require("../../assets/badger-icon.png")` into an image reference; plain node would parse the bytes as JS.
@@ -84,25 +83,17 @@ vi.mock("../../theme/theme", () => ({
     font: { family: { display: "x" } },
   },
 }));
-vi.mock("@space/mobile-shell/tv/useTvMenuKey", () => ({ useTvMenuKeyHold: () => undefined }));
+vi.mock("../lib/useTvMenuKey", () => ({ useTvMenuKeyHold: () => undefined }));
 vi.mock("./TvHomeScreen", () => ({ TvHomeScreen: "TvHomeScreen" }));
 vi.mock("./TvLibraryScreen", () => ({ TvLibraryScreen: "TvLibraryScreen" }));
 vi.mock("./TvPlaylistsScreen", () => ({ TvPlaylistsScreen: "TvPlaylistsScreen" }));
 vi.mock("./TvSearchScreen", () => ({ TvSearchScreen: "TvSearchScreen" }));
 vi.mock("./TvSettingsScreen", () => ({ TvSettingsScreen: "TvSettingsScreen" }));
 
-/** The app's shell theme, as App.tsx provides it: the top bar reads Badger's name from it (UX-NAME-01). */
-const BADGER_THEME = mergeMobileShellTheme({ brandName: "Badger" });
-const shell = () => (
-  <MobileShellThemeProvider value={BADGER_THEME}>
-    <TvMainShell />
-  </MobileShellThemeProvider>
-);
-
 const render = () => {
   let tree!: ReactTestRenderer;
   act(() => {
-    tree = create(shell());
+    tree = create(<TvMainShell />);
   });
   return tree;
 };
@@ -332,7 +323,7 @@ describe.each([
     const tree = render();
     expect(navTab(tree).disabled).toBe(true);
     state.media = [{ id: "m1" }];
-    act(() => tree.update(shell()));
+    act(() => tree.update(<TvMainShell />));
     expect(navTab(tree)).toEqual({ disabled: false, focusable: true, a11yDisabled: false, opacity: 1 });
     act(() => tree.root.findByProps({ testID: `tv-nav-${id}` }).props.onPress());
     expect(tree.root.findAll(isType(screen))).toHaveLength(1);

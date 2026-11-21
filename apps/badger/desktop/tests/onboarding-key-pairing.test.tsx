@@ -50,7 +50,7 @@ vi.mock("../src/renderer/src/api", () => ({
   ApiError: class ApiError extends Error {
     status = 0;
   },
-  getLibraryMetaForKeyStep: vi.fn(async () => mocks.libraryMeta),
+  getLibraryMeta: vi.fn(async () => mocks.libraryMeta),
   resetLibrary: vi.fn(),
   rotateLibraryKey: vi.fn(),
 }));

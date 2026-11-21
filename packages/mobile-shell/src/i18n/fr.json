@@ -875,8 +875,8 @@
   },
   "tvPairing": {
     "signIn": {
-      "title": "Connectez-vous à {{app}}",
-      "subtitle": "Sur votre téléphone ou ordinateur, ouvrez {{app}} → Réglages → Associer un appareil, puis scannez le code ou saisissez-le.",
+      "title": "Connectez-vous à Badger",
+      "subtitle": "Sur votre téléphone ou ordinateur, ouvrez Badger → Réglages → Associer un appareil, puis scannez le code ou saisissez-le.",
       "codeLabel": "Ou saisissez ce code",
       "qrAccessibility": "QR code pour associer cette TV",
       "starting": "Obtention d'un code d'association…",
@@ -890,7 +890,7 @@
       },
       "errors": {
         "title": "Cette TV n'a pas pu être associée",
-        "unreachable": "Impossible de joindre {{app}}. Vérifiez la connexion de cette TV puis obtenez un nouveau code.",
+        "unreachable": "Impossible de joindre Badger. Vérifiez la connexion de cette TV puis obtenez un nouveau code.",
         "failed": "Un problème est survenu pendant l'association. Obtenez un nouveau code pour réessayer.",
         "key_unreadable": "L'approbation est bien arrivée sur cette TV mais sa clé de médiathèque est illisible. Obtenez un nouveau code et approuvez-le à nouveau.",
         "key_mismatch": "La clé de médiathèque envoyée n'ouvre pas la médiathèque de ce compte. Rien n'a été enregistré sur cette TV. Obtenez un nouveau code et approuvez-le à nouveau depuis une application qui a votre médiathèque."

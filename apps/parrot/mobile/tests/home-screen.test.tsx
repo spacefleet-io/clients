@@ -8,10 +8,8 @@
  * @req PAR-EMPTY-01[parrot]
  * @req UX-WAIT-04[parrot]
  * @why The phone opens on Home (PAR-NAV-02) and its Home is the desktop's (PAR-HOME-01): "Jump back in" on the album
- *   last played on this phone with "artist · year · N songs", Resume and Shuffle and the wave; "Recently played" newest
- *   first, then right under it "Recently added" (the library's albums newest added first, Chris 2026-11-20: under
- *   "Recently played", as on Badger's Home); "Your artists" most played first; each "See all" opening the
- *   library's album list (in "Recently added" order from that row) or artist list; and,
+ *   last played on this phone with "artist · year · N songs", Resume and Shuffle and the wave; "Recently played"
+ *   newest first; "Your artists" most played first; each "See all" opening the library's album or artist list; and,
  *   before anything is played, "Start listening" with Play over the library's albums. An empty or missing library shows
  *   the shared empty-library screen (PAR-EMPTY-01). Screens are called as functions against a mocked React Native,
  *   with translation keys standing for the texts. Home has no page title: the tab bar names the page (PAR-NAV-04).
@@ -196,32 +194,6 @@ describe("the phone's Home", () => {
     expect(queue.map((s) => s.title)).toEqual(["Fable", "Nook"]);
     expect(queue[index]?.title).toBe("Nook");
     expect(options.startPositionMs).toBe(78_000);
-  });
-
-  // @req PAR-HOME-01
-  it("Recently added sits right under Recently played, newest added first, before or after any play; its See all asks for Albums sorted Recently added", () => {
-    state.data = { albums, artists, songs };
-    for (const history of [
-      { version: 1, albums: [], artistPlays: {} },
-      { version: 1, albums: [{ albumId: "alb-me", trackId: "t-nook", positionMs: 78_000, playedAt: 20 }], artistPlays: { "art-lp": 1 } },
-    ] as ListeningHistory[]) {
-      state.history = history;
-      const seeAll: unknown[][] = [];
-      const home = HomeScreen({ onSeeAll: (...args) => void seeAll.push(args) }) as unknown as Element;
-      const order = all(home, (el) => typeof el.props?.testID === "string" && el.props.testID.startsWith("home-") && !el.props.testID.endsWith("see-all")).map(
-        (el) => el.props.testID
-      );
-      const added = shelf(home, "home-added");
-      const list = all(added, (el) => el.type === "FlatList")[0]!;
-      const titles = (list.props.data as { title: string }[]).map((a) => a.title);
-      log("recently added", { played: history.albums.length, order, title: texts(added)[0], titles });
-      expect(order.indexOf("home-added")).toBeGreaterThan(-1);
-      expect(order.indexOf("home-added")).toBe(order.indexOf("home-albums") + 1);
-      expect(texts(added)[0]).toBe("shell.home.recentlyAdded");
-      expect(titles).toEqual(["The Turning Tied", "Hollow Signal", "Meltway"]);
-      (byTestId(added, "home-added-see-all")!.props.onPress as () => void)();
-      expect(seeAll).toEqual([["albums", "recent"]]);
-    }
   });
 
   // @req PAR-HOME-01

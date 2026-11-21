@@ -705,21 +705,6 @@ export type MusicAlbumsQuery = { artist: string; album: string; limit?: number; 
  */
 export type MusicCopyChanges = { version: string | null; changes: Array<{ version: string; albums: string[] }> };
 export type MusicLyricsQuery = { artist: string; title: string; album?: string; durationMs?: number; id?: string };
-/** A field of the edit dialog that autocompletes (PAR-META-18): a song's title, its artist, its album. */
-export type MusicSuggestField = "title" | "artist" | "album";
-/** `field`: the field being typed in; `text`: what is typed there; the other fields as they stand (context). */
-export type MusicSuggestQuery = { field: MusicSuggestField; text: string; title?: string; artist?: string; album?: string; limit?: number };
-/** One autocomplete result of `music_suggest` (PAR-META-18), ranked by how well it fits every field together. */
-export type MusicSuggestion = {
-  kind: "song" | "album" | "artist";
-  artist: MusicArtistRef;
-  /** For kind song: the album the song is on (original album first, PAR-META-13); for album: the album itself; null for artist. */
-  album: { id: string | null; title: string; year: number | null; kind: string | null; trackNumber: number | null; disc: number | null } | null;
-  /** kind song only. */
-  song: { id: string | null; title: string; durationMs: number | null } | null;
-  /** Which fields this result fits (the typed field always true). */
-  fits: { title: boolean; artist: boolean; album: boolean };
-};
 /** One movie, or one episode of a show: all a subtitle search carries (PLAY-SUBGET-14, never the user's file). */
 export type SubtitlesRequest =
   | { type: "movie"; id: number }
@@ -784,33 +769,6 @@ export type LibraryMeta = {
 
 export const getLibraryMeta = (token: string, appId: SpaceAppId = DEFAULT_SPACE_APP_ID): Promise<LibraryMeta> =>
   unwrap(sdk.getLibraryMeta(scoped(token, appId)));
-
-/** The waits between tries of the key step's meta read: about 7 s in all, which covers one server copy restarting. */
-export const KEY_STEP_META_RETRY_DELAYS_MS: readonly number[] = [1_000, 2_000, 4_000];
-
-/**
- * `getLibraryMeta` for the library key step (STOR-GATEWAY-01). An update restarts the API and the storage gateway one
- * copy at a time, and a request that lands on a copy just going away gets a 502/503 or no answer at all. The key step
- * would read that as "the key cannot be checked" and show its error, so such a failure is tried again after each of
- * `delaysMs` first. Any other answer, a refused session (401/403) above all, is final at once.
- */
-export const getLibraryMetaForKeyStep = async (
-  token: string,
-  appId: SpaceAppId = DEFAULT_SPACE_APP_ID,
-  delaysMs: readonly number[] = KEY_STEP_META_RETRY_DELAYS_MS
-): Promise<LibraryMeta> => {
-  for (let attempt = 0; ; attempt++) {
-    try {
-      return await getLibraryMeta(token, appId);
-    } catch (error) {
-      const transient =
-        error instanceof ApiError ? error.status === 0 || error.status === 502 || error.status === 503 : error instanceof TypeError;
-      const delayMs = delaysMs[attempt];
-      if (!transient || delayMs === undefined) throw error;
-      await new Promise((resolve) => setTimeout(resolve, delayMs));
-    }
-  }
-};
 
 export const getLibraryDb = (
   token: string,

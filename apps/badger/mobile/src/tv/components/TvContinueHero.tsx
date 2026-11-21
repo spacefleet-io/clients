@@ -9,11 +9,11 @@ import { useMediaImage } from "../../lib/useMediaImage";
 import { MediaArtwork } from "../../components/MediaArtwork";
 import { useLibraryActions } from "../../store/library";
 import { minutesLeft, runtimeParts } from "../lib/detailsMedia";
-import type { TvViewInstance } from "@space/mobile-shell/tv/tvViewInstance";
+import type { TvViewInstance } from "../lib/tvViewInstance";
 import { useFocusAfterScreenAppears } from "../lib/useFocusAfterScreenAppears";
-import { useTvStyles } from "@space/mobile-shell/tv/tvScale";
-import { TvPillButton } from "@space/mobile-shell/tv/TvPillButton";
-import { TvBody, TvEyebrow, TvTitle } from "@space/mobile-shell/tv/TvText";
+import { useTvStyles } from "../lib/tvScale";
+import { TvPillButton } from "../ui/TvPillButton";
+import { TvBody, TvEyebrow, TvTitle } from "../ui/TvText";
 import { TV_COLOR, TV_SHADOW, TV_SPACE, tvCardStyle } from "../ui/tokens";
 
 export type TvHeroAction = "resume" | "startOver" | "details";

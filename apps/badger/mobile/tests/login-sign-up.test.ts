@@ -69,8 +69,7 @@ describe("the phone creates a free account, the TV signs in (ACCT-AUTH-10)", () 
 
   // @req ACCT-SIGNIN-04[badger-tv]
   it("the TV opens on the QR code, with the password form one button away", () => {
-    // The screen is the family's shared TV sign-in since 2026-11-20 (PAR-TV-02); Badger's wrapper passes LoginScreen.
-    const tvSignIn = readFileSync(resolve(APP, "../../../packages/mobile-shell/src/tv/TvSignIn.tsx"), "utf8");
+    const tvSignIn = readFileSync(join(SRC, "tv/screens/TvSignInScreen.tsx"), "utf8");
     const opensOnCode = /const \[passwordMode, setPasswordMode\] = useState\(false\)/.test(tvSignIn);
     console.info("[sign-up] TV opens on the QR code:", opensOnCode);
     expect(opensOnCode).toBe(true);
