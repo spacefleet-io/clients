@@ -874,8 +874,8 @@
   },
   "tvPairing": {
     "signIn": {
-      "title": "Inloggen bij {{app}}",
-      "subtitle": "Open op je telefoon of computer {{app}} → Instellingen → Apparaat koppelen en scan dan de code of typ hem in.",
+      "title": "Inloggen bij Badger",
+      "subtitle": "Open op je telefoon of computer Badger → Instellingen → Apparaat koppelen en scan dan de code of typ hem in.",
       "codeLabel": "Of typ deze code in",
       "qrAccessibility": "QR-code om deze tv te koppelen",
       "starting": "Koppelcode ophalen…",
@@ -889,7 +889,7 @@
       },
       "errors": {
         "title": "Deze tv kon niet worden gekoppeld",
-        "unreachable": "We konden {{app}} niet bereiken. Controleer de verbinding van deze tv en haal een nieuwe code op.",
+        "unreachable": "We konden Badger niet bereiken. Controleer de verbinding van deze tv en haal een nieuwe code op.",
         "failed": "Er ging iets mis bij het koppelen. Haal een nieuwe code op om het opnieuw te proberen.",
         "key_unreadable": "De goedkeuring is bij deze tv aangekomen, maar de mediatheeksleutel kon niet worden gelezen. Haal een nieuwe code op en keur hem opnieuw goed.",
         "key_mismatch": "De verstuurde mediatheeksleutel opent de mediatheek van dit account niet. Er is niets opgeslagen op deze tv. Haal een nieuwe code op en keur hem opnieuw goed via een app die je mediatheek heeft."

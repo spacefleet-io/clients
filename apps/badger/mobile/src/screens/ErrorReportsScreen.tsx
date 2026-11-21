@@ -6,12 +6,12 @@ import { Screen } from "../components/Screen";
 import { useAppSettings } from "../lib/appSettings";
 import { scopeLogger } from "@space/mobile-shell/logger";
 import { theme } from "../theme/theme";
-import { PairingButton } from "@space/mobile-shell/tv/PairingButton";
+import { PairingButton } from "../tv/components/PairingButton";
 import { TV_PANEL_BORDER, TV_RADIUS } from "../tv/lib/tvLook";
 import { IS_TV } from "../tv/lib/tvRuntime";
 import { TvSetupStepHeader } from "../tv/components/TvSetupStepHeader";
-import { useTvScale } from "@space/mobile-shell/tv/tvScale";
-import { scaleStyleSheet } from "@space/shared/uiScale";
+import { useTvScale } from "../tv/lib/tvScale";
+import { scaleStyleSheet } from "@space/mobile-mpv-playback/uiScale";
 import { useTranslation } from "@space/mobile-shell/i18n";
 import { MobileSetupMascot, TV_SETUP_CARD_TOP, TV_SETUP_MASCOT_SIZE } from "@space/mobile-shell/setup-step";
 

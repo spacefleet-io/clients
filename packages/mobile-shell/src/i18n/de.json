@@ -874,8 +874,8 @@
   },
   "tvPairing": {
     "signIn": {
-      "title": "Bei {{app}} anmelden",
-      "subtitle": "Öffne auf deinem Handy oder Computer {{app}} → Einstellungen → Gerät koppeln und scanne dann den Code oder gib ihn ein.",
+      "title": "Bei Badger anmelden",
+      "subtitle": "Öffne auf deinem Handy oder Computer Badger → Einstellungen → Gerät koppeln und scanne dann den Code oder gib ihn ein.",
       "codeLabel": "Oder gib diesen Code ein",
       "qrAccessibility": "QR-Code zum Koppeln dieses Fernsehers",
       "starting": "Kopplungscode wird abgerufen…",
@@ -889,7 +889,7 @@
       },
       "errors": {
         "title": "Dieser Fernseher konnte nicht gekoppelt werden",
-        "unreachable": "Wir konnten {{app}} nicht erreichen. Prüfe die Verbindung dieses Fernsehers und hol dir einen neuen Code.",
+        "unreachable": "Wir konnten Badger nicht erreichen. Prüfe die Verbindung dieses Fernsehers und hol dir einen neuen Code.",
         "failed": "Beim Koppeln ist etwas schiefgelaufen. Hol dir einen neuen Code, um es nochmal zu versuchen.",
         "key_unreadable": "Die Genehmigung ist bei diesem Fernseher angekommen, aber der Mediathek-Schlüssel konnte nicht gelesen werden. Hol dir einen neuen Code und genehmige ihn erneut.",
         "key_mismatch": "Der gesendete Mediathek-Schlüssel öffnet die Mediathek dieses Kontos nicht. Auf diesem Fernseher wurde nichts gespeichert. Hol dir einen neuen Code und genehmige ihn erneut in einer App, die deine Mediathek hat."

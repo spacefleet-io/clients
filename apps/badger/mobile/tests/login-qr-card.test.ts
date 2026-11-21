@@ -82,6 +82,7 @@ vi.mock("../src/lib/phonePairing", () => ({
 vi.mock("@space/mobile-shell/pair-sign-in", () => ({ MobilePairSignIn: "MobilePairSignIn" }));
 vi.mock("@space/mobile-shell/pairing", () => ({ completePairing: vi.fn() }));
 vi.mock("../src/setup/phoneSetupStore", () => ({ markPhoneSetupPaired: vi.fn() }));
+vi.mock("../src/tv/lib/pairingRuntime", () => ({ tvDeviceName: () => "TV" }));
 // The setup step bar (UX-SETUP-03) has its own test (phone-setup-gate.test.ts).
 vi.mock("../src/setup/BadgerSetupFlow", () => ({ SignInSetupBack: () => null }));
 
