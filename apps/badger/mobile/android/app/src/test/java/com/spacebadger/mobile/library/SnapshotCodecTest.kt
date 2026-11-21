@@ -153,25 +153,88 @@ class SnapshotCodecTest {
     assertFalse(File(target.path + ".partial").exists())
   }
 
+  /** A stored change the way every writer frames it: `00 5A 01` + raw deflate of the JSON, then AES-256-GCM. */
+  private fun framedChange(json: ByteArray): ByteArray {
+    val deflater = java.util.zip.Deflater(SnapshotCodec.DEFLATE_LEVEL, true)
+    val packed = java.io.ByteArrayOutputStream()
+    java.util.zip.DeflaterOutputStream(packed, deflater).use { it.write(json) }
+    deflater.end()
+    return gcmSeal(SnapshotCodec.FRAME_HEADER + packed.toByteArray())
+  }
+
+  /** Reads every slice the way `readTextSlice` does and checks each end starts a UTF-8 character. */
+  private fun readSlices(file: File, opened: SnapshotCodec.OpenedPayload, sliceBytes: Int): List<String> {
+    val bytes = file.readBytes()
+    assertEquals(bytes.size.toLong(), opened.jsonBytes)
+    var start = 0
+    return opened.sliceEnds.map { endLong ->
+      val end = endLong.toInt()
+      if (end < bytes.size) {
+        assertTrue("slice end $end must start a character", (bytes[end].toInt() and 0xC0) != 0x80)
+        assertTrue("slice $start..$end is at least the slice size", end - start >= sliceBytes)
+        assertTrue("slice $start..$end overshoots by less than one character", end - start < sliceBytes + 4)
+      }
+      String(bytes, start, end - start, Charsets.UTF_8).also { start = end }
+    }
+  }
+
   @Test
-  fun `opens one library change in memory - JS-written frame, v1 plain, wrong key`() {
+  fun `opens one library change into a file cut at UTF-8 character starts`() {
+    // A 3.5 MB stored change is ~56 MB of JSON; as one Java String that is 113 MB of UTF-16, OutOfMemoryError on op6's
+    // 256 MB heap. The change goes to a file and JS reads it back slice by slice; no slice may split a character.
+    val dir = tempDir()
+    val unit = "{\"title\":\"Amélie €12 🎬 naïve\",\"n\":"
+    val json = (0 until 4_000).joinToString(",", "[", "]") { "$unit$it}" }
+    val stored = framedChange(json.toByteArray(Charsets.UTF_8))
+    for (sliceBytes in listOf(1, 7, 1_000, 64 * 1024, 10_000_000)) {
+      val target = File(dir, "op-$sliceBytes.json")
+      val opened = SnapshotCodec.openPayloadToFile(stored, key, target, sliceBytes)
+      log("state:open-to-file", "sliceBytes=$sliceBytes jsonBytes=${opened.jsonBytes} slices=${opened.sliceEnds.size}")
+      val slices = readSlices(target, opened, sliceBytes)
+      assertEquals(json, slices.joinToString(""))
+      assertEquals(opened.jsonBytes, opened.sliceEnds.last())
+    }
+  }
+
+  @Test
+  fun `opens the JS-written frame and a v1 plain change into a file`() {
     // A change is stored in the same envelope as a saved copy (LIB-FMT-07), so the JS writer's copy is a valid change.
-    val opened = SnapshotCodec.openPayload(fixture("js-v2.bin"), key)
-    log("state:open-payload", "jsonBytes=${opened.size}")
-    assertArrayEquals(fixtureDb(), opened)
+    val dir = tempDir()
+    val fromJs = File(dir, "js.json")
+    val opened = SnapshotCodec.openPayloadToFile(fixture("js-v2.bin"), key, fromJs, 16 * 1024)
+    assertArrayEquals(fixtureDb(), fromJs.readBytes())
+    assertEquals(opened.jsonBytes, opened.sliceEnds.last())
     val plain = "{\"type\":\"noop\"}".toByteArray(Charsets.UTF_8)
-    assertArrayEquals(plain, SnapshotCodec.openPayload(gcmSeal(plain), key))
+    val v1 = File(dir, "v1.json")
+    val openedV1 = SnapshotCodec.openPayloadToFile(gcmSeal(plain), key, v1, 1024)
+    assertArrayEquals(plain, v1.readBytes())
+    assertArrayEquals(longArrayOf(plain.size.toLong()), openedV1.sliceEnds)
+  }
+
+  @Test
+  fun `a change that does not open leaves no file behind`() {
+    val dir = tempDir()
+    val target = File(dir, "op.json")
     try {
-      SnapshotCodec.openPayload(fixture("js-v2.bin"), ByteArray(32) { 9 })
+      SnapshotCodec.openPayloadToFile(fixture("js-v2.bin"), ByteArray(32) { 9 }, target, 1024)
       fail("wrong key must throw")
     } catch (expected: javax.crypto.AEADBadTagException) {
       log("state:open-payload-wrong-key", expected.javaClass.simpleName)
     }
+    assertFalse(target.exists())
     try {
-      SnapshotCodec.openPayload(ByteArray(20), key)
+      SnapshotCodec.openPayloadToFile(ByteArray(20), key, target, 1024)
       fail("short envelope must throw")
     } catch (error: IllegalArgumentException) {
       assertEquals("INVALID_BLOB", error.message)
     }
+    val corrupt = gcmSeal(SnapshotCodec.FRAME_HEADER + byteArrayOf(0xff.toByte(), 0xff.toByte(), 0xff.toByte()))
+    try {
+      SnapshotCodec.openPayloadToFile(corrupt, key, target, 1024)
+      fail("corrupt frame must throw")
+    } catch (error: java.io.IOException) {
+      assertEquals("corrupt_compressed_frame", error.message)
+    }
+    assertFalse(target.exists())
   }
 }

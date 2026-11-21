@@ -7,6 +7,7 @@ Outside Kodi (dev CLI, unit tests):
 """
 import json
 import os
+import re
 import sys
 import threading
 import time
@@ -23,7 +24,27 @@ except ImportError:  # dev / tests
 
 ADDON_ID = "plugin.video.spacebadger"
 CLIENT_TYPE = "badger-kodi"
-CLIENT_VERSION = "0.1.0"
+
+
+def _addon_version():
+    """The installed add-on's version, read from its addon.xml (the release build stamps the zip's copy), so the
+    x-space-client header can never drift from what Kodi installed (REL-CD-29)."""
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), os.pardir, os.pardir, "addon.xml")
+    try:
+        with open(path, "rb") as fh:
+            head = fh.read(4096).decode("utf-8", "replace")
+    except (IOError, OSError):
+        return "0.0.0"
+    match = re.search(r'<addon\b[^>]*\bversion="([^"]+)"', head)
+    return match.group(1) if match else "0.0.0"
+
+
+CLIENT_VERSION = _addon_version()
+# REL-CD-29 platform id of the Kodi add-on in `x-space-client: badger/kodi/<version>`.
+CLIENT_PLATFORM = "kodi"
+# LIB-FMT-13: the one string the add-on shows when the API refuses it (426 app_update_required) or the library holds
+# an op it does not know. Kodi has no in-app updater: the user updates from the add-on repository.
+UPDATE_REQUIRED_MESSAGE = "SpaceFleet has been updated. Update the add-on to keep watching your library."
 RENEW_URL = "https://spacebadger.io/"
 KEY_DOCS_URL = "https://spacebadger.io/docs/privacy/key-storage"
 

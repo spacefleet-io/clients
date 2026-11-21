@@ -13,6 +13,7 @@ import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { streamBridgeStub } from "./streamBridge";
+import { exportBridgeStub } from "./exportBridge";
 import type { ParrotImportStatus, ParrotLanguage, ParrotState } from "../src/shared/ipc";
 import Library from "../src/renderer/src/Library";
 import { translator } from "../src/renderer/src/i18n";
@@ -83,6 +84,7 @@ describe("import notifications", () => {
       configurable: true,
       value: {
         ...streamBridgeStub(),
+        ...exportBridgeStub(),
         getLibrary: vi.fn(async () => ({ ok: true, library })),
         getImportStatus: vi.fn(async () => status({})),
         getImportScan: vi.fn(async () => null),

@@ -12,6 +12,8 @@ import {
   buildParrotOpStatements,
   createParrotOp,
   PARROT_LIBRARY_SCHEMA_VERSION,
+  PARROT_LIBRARY_WHOLE_FILES_SCHEMA_VERSION,
+  isSplitTrackFile,
   parrotLibraryMigrationStatements,
   parseParrotTracklist,
   ParrotLibraryTooNewError,
@@ -23,14 +25,16 @@ import {
 
 const meta = { id: "op-1", createdAt: "2026-11-06T00:00:00.000Z" };
 
-const openLibrary = () => {
+const openLibrary = (target?: number) => {
   const db = new Database(":memory:");
   const version = db.query<{ user_version: number }, []>("PRAGMA user_version").get()?.user_version ?? 0;
   db.transaction(() => {
-    for (const sql of parrotLibraryMigrationStatements(version)) db.run(sql);
+    for (const sql of parrotLibraryMigrationStatements(version, target)) db.run(sql);
   })();
   return db;
 };
+
+const userVersion = (db: Database) => db.query<{ user_version: number }, []>("PRAGMA user_version").get()?.user_version;
 
 const apply = (db: Database, op: ParrotLibraryOp) =>
   db.transaction(() => {
@@ -95,10 +99,8 @@ const seedNook = (db: Database) => {
 
 describe("parrot library schema", () => {
   it("builds a current file whose tables and columns match the Drizzle schema", () => {
-    const db = openLibrary();
-    expect(db.query<{ user_version: number }, []>("PRAGMA user_version").get()?.user_version).toBe(
-      PARROT_LIBRARY_SCHEMA_VERSION
-    );
+    const db = openLibrary(PARROT_LIBRARY_SCHEMA_VERSION);
+    expect(userVersion(db)).toBe(PARROT_LIBRARY_SCHEMA_VERSION);
     for (const table of Object.values(parrotTables) as SQLiteTable[]) {
       const config = getTableConfig(table);
       const columns = db
@@ -117,6 +119,18 @@ describe("parrot library schema", () => {
   it("puts every table in exactly one library group", () => {
     const names = (Object.values(parrotTables) as SQLiteTable[]).map((t) => getTableConfig(t).name).sort();
     expect(Object.keys(parrotTableGroups).sort()).toEqual(names);
+  });
+
+  // @req API-VER-01: a library stays at schema 10 until an import stores a song in parts, so an account that is not
+  // switched to songs in parts never reaches the schema released apps refuse.
+  it("opens a new file at the whole-file schema by default and moves to the current one only when asked", () => {
+    const db = openLibrary();
+    expect(userVersion(db)).toBe(PARROT_LIBRARY_WHOLE_FILES_SCHEMA_VERSION);
+    expect(parrotLibraryMigrationStatements(PARROT_LIBRARY_WHOLE_FILES_SCHEMA_VERSION)).toEqual([]);
+    db.transaction(() => {
+      for (const sql of parrotLibraryMigrationStatements(PARROT_LIBRARY_WHOLE_FILES_SCHEMA_VERSION, PARROT_LIBRARY_SCHEMA_VERSION)) db.run(sql);
+    })();
+    expect(userVersion(db)).toBe(PARROT_LIBRARY_SCHEMA_VERSION);
   });
 
   it("migrates nothing on a current file and refuses a newer one", () => {
@@ -396,6 +410,27 @@ describe("parrot library ops", () => {
     expect(Object.keys(buildParrotOpStatements(createParrotOp("track.delete", { id: "t" }, meta))).sort()).toEqual([
       "catalog",
       "playback",
+    ]);
+  });
+
+  // @req API-VER-01: a song stored whole touches only schema 10's columns, so it applies to a library still at
+  // schema 10; a song in parts writes its layout and needs schema 11.
+  it("writes a song stored whole with schema 10's columns and a song in parts with its layout", () => {
+    const split = { ...nook.file, headerBytes: 56_022, sourceSizeBytes: 8_793_338, tagsObjectKey: "media/p1/nook-tags" };
+    expect(isSplitTrackFile(nook.file)).toBe(false);
+    expect(isSplitTrackFile(split)).toBe(true);
+
+    const atTen = openLibrary();
+    seedNook(atTen);
+    expect(userVersion(atTen)).toBe(PARROT_LIBRARY_WHOLE_FILES_SCHEMA_VERSION);
+    expect(atTen.query("SELECT id, size_bytes FROM track_files").all()).toEqual([{ id: "tf-nook", size_bytes: 2_621_440 }]);
+    expect(() => apply(atTen, createParrotOp("track_file.upsert", { file: split, chunks: nook.chunks }, meta))).toThrow(/header_bytes/);
+
+    const atEleven = openLibrary(PARROT_LIBRARY_SCHEMA_VERSION);
+    seedNook(atEleven);
+    apply(atEleven, createParrotOp("track_file.upsert", { file: split, chunks: nook.chunks }, meta));
+    expect(atEleven.query("SELECT header_bytes, source_size_bytes, tags_object_key FROM track_files").all()).toEqual([
+      { header_bytes: 56_022, source_size_bytes: 8_793_338, tags_object_key: "media/p1/nook-tags" },
     ]);
   });
 });

@@ -1,11 +1,8 @@
 import * as sdk from "@space/sdk";
-import { ApiError, SPACE_APP_HEADER, unwrap, type ApiErrorPayload, type LibraryMeta, type LibraryPutResult } from "@space/sdk";
+import { ApiError, SPACE_APP_HEADER, unwrap, type ApiErrorPayload } from "@space/sdk";
 import { getApiBaseUrl } from "./apiHost";
 import type { SpaceAppId } from "@space/shared/appScope";
 import type { StorageObjectCounting } from "@space/shared/storageCounting";
-import { clientIdentityHeaders } from "@space/shared/appVersion";
-import { OP_STREAM_VERSION } from "@space/library-db-definition/ops";
-import { STORAGE_FORMAT_VERSION } from "@space/library-db-definition/storageFormat";
 import {
   createUserStorageTunnelClient,
   type StorageDownloadHints,
@@ -17,8 +14,6 @@ import { scopeLogger } from "./logger";
 export { ApiError };
 export type { ApiErrorPayload };
 
-export type { LibraryMeta };
-
 export type {
   CastMember,
   TitleDetails,
@@ -29,7 +24,6 @@ export type {
   Trailer,
 } from "@space/shared/api";
 
-const toBinaryBody = (payload: Uint8Array) => Uint8Array.from(payload);
 const tunnelLogger = scopeLogger("storage-tunnel-client");
 
 const APP_ID: SpaceAppId = "badger";
@@ -75,106 +69,6 @@ export const onStorageTrafficChange = (listener: (snapshot: StorageTrafficSnapsh
   return () => {
     trafficListeners.delete(listener);
   };
-};
-
-export const getLibraryMeta = (token: string) => unwrap(sdk.getLibraryMeta(accountCall(token)));
-
-export const getLibraryDb = (token: string) => unwrap(sdk.getLibraryDb(accountCall(token)));
-
-export const putLibraryOp = (
-  token: string,
-  baseVersion: number,
-  opId: string,
-  payload: Uint8Array,
-  lineage?: { prevStateHash?: string | null; nextStateHash?: string | null }
-) => {
-  const scope = accountCall(token);
-  return unwrap(
-    sdk.postLibraryOp({
-      ...scope,
-      headers: {
-        ...scope.headers,
-        "x-library-base-version": String(baseVersion),
-        "x-library-op-id": opId,
-        ...(lineage?.prevStateHash ? { "x-library-prev-state-hash": lineage.prevStateHash } : {}),
-        ...(lineage?.nextStateHash ? { "x-library-next-state-hash": lineage.nextStateHash } : {}),
-      },
-      // Generated type says Blob|File; `bodySerializer: null` sends the bytes as-is (same call shape as the RN client).
-      body: toBinaryBody(payload) as unknown as Blob,
-    })
-  );
-};
-
-export const putLibraryDb = (
-  token: string,
-  version: number,
-  blobBase64: string,
-  snapshotId: string,
-  chunkSize: number,
-  keyProbe?: string | null,
-  force?: boolean,
-  stateHash?: string | null,
-  lastOpId?: string | null
-) =>
-  unwrap(
-    sdk.putLibraryDb({
-      ...accountCall(token),
-      body: {
-        expectedVersion: version,
-        manifest: blobBase64,
-        manifestEncoding: "base64",
-        snapshotId,
-        chunkSize,
-        chunkRefs: [],
-        keyProbe: keyProbe ?? null,
-        force: Boolean(force),
-        stateHash: stateHash ?? null,
-        lastOpId: lastOpId ?? null,
-        storageFormatVersion: STORAGE_FORMAT_VERSION,
-        opStreamVersion: OP_STREAM_VERSION,
-      },
-    })
-  );
-
-export const putLibraryDbBinary = async (
-  token: string,
-  version: number,
-  payload: Uint8Array,
-  snapshotId: string,
-  chunkSize: number,
-  keyProbe?: string | null,
-  force?: boolean,
-  stateHash?: string | null,
-  lastOpId?: string | null
-) => {
-  // Raw fetch, not the SDK: `sdk.putLibraryDb` types its body as the JSON `PutLibraryDbRequest` and
-  // always serializes it as JSON, so it cannot carry the raw `application/octet-stream` manifest this
-  // fallback sends (the octet-stream variant is only described in prose in the OpenAPI document).
-  const res = await fetch(`${getApiBaseUrl()}/library/db`, {
-    method: "PUT",
-    headers: {
-      "Content-Type": "application/octet-stream",
-      [SPACE_APP_HEADER]: APP_ID,
-      ...clientIdentityHeaders(),
-      "x-library-version": String(version),
-      "x-library-snapshot-id": snapshotId,
-      "x-library-chunk-size": String(chunkSize),
-      "x-library-force": String(Boolean(force)),
-      ...(keyProbe ? { "x-library-key-probe": keyProbe } : {}),
-      ...(stateHash ? { "x-library-state-hash": stateHash } : {}),
-      ...(lastOpId ? { "x-library-last-op-id": lastOpId } : {}),
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: toBinaryBody(payload),
-  });
-
-  if (!res.ok) {
-    const errorPayload: ApiErrorPayload = await res.json().catch(() => ({}));
-    throw new ApiError(res.status, errorPayload);
-  }
-
-  const result: LibraryPutResult = await res.json();
-  return result;
 };
 
 export const getStoragePlacementPolicy = (token: string) => unwrap(sdk.getStoragePlacement(accountCall(token)));

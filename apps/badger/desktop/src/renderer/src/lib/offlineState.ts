@@ -26,7 +26,8 @@ export type OfflineLocalEntry = {
   mediaId: string;
   fileId: string;
   quality: string;
-  container: "mkv" | "mp4";
+  /** "pieces" = sealed pieces + manifest (`localPath`); "mkv"/"mp4" = an old plain file awaiting its re-save. */
+  container: "pieces" | "mkv" | "mp4";
   totalBytes: number;
   downloadedAt: string;
   localPath: string;
@@ -245,14 +246,15 @@ export const localFileIdsForMedia = (mediaId: string): Set<string> => {
 };
 
 /**
- * Return the on-disk path of a locally-saved file, or null if not saved.
- * Used by the playback engine to pick the offline source: the path originates
- * from the runtime's `list_local` (trusted) and is validated again in the main
- * process before serving. Reads module state directly (the store is hydrated
- * by the time playback starts). @bugfix offline-playback-ignored-local-file
+ * The item manifest of a title saved offline as sealed pieces (OFFL-FILE-03), or null when not saved. Used by the
+ * playback engine to pick the offline source: the path originates from the runtime's `list_local` (trusted) and is
+ * validated again in the main process before serving. A copy an older build saved as one plain file (container
+ * mkv/mp4) returns null: it streams until the migration re-saves it as pieces (OFFL-MIGR-01, agent reading).
  */
-export const offlineLocalPathForFile = (fileId: string): string | null =>
-  state.byFileId.get(fileId)?.localPath ?? null;
+export const offlineManifestPathForFile = (fileId: string): string | null => {
+  const entry = state.byFileId.get(fileId);
+  return entry?.container === "pieces" ? entry.localPath : null;
+};
 
 /**
  * Resolve the modal-level offline counts for a MediaDetails. Pure wrapper

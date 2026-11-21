@@ -1,5 +1,6 @@
 import { ipcMain } from "electron";
 import { LibraryDb, type LibraryAccount } from "@space/library-db-runtime";
+import { onAppUpdateRefusal } from "@space/library-db-runtime/api";
 import { badgerLibraryUpsertSnapshot, badgerLibraryClear } from "@space/runtime-contracts/badger/library";
 import { createRuntimeSession, type RuntimeSessionHandle } from "@space/runtime-client/session";
 import { createRuntimeCommandClient } from "@space/runtime-client/command";
@@ -355,6 +356,12 @@ export const registerLibraryDbIpc = (
   };
 
   getWindow = windowProvider ?? null;
+  // REL-CD-29 / LIB-FMT-13: the library runs in this process here, so a "please update" refusal its API calls get
+  // goes to the window that shows the update gate (as the runtime proxy does for the runtime's).
+  onAppUpdateRefusal((refusal) => {
+    const window = getWindow?.() ?? null;
+    if (window && !window.isDestroyed()) window.webContents.send("sf-app-update-required", refusal);
+  });
   ipc.handle("sf-library-db-open", async (_event, payload: OpenPayload) =>
     runOpen("sf-library-db-open", LibraryDb.open, payload)
   );

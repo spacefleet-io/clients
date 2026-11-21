@@ -6,11 +6,13 @@ import {
   getLibraryMeta,
   getLibraryOps,
   listStorageObjects,
+  onAppUpdateRefusal,
   putLibraryDb,
   putLibraryDbBinary,
   putLibraryOp,
 } from "../src/api";
 import { STORAGE_FORMAT_VERSION } from "@space/library-db-definition/storageFormat";
+import { OP_STREAM_VERSION } from "@space/library-db-definition/ops";
 
 const fetchMock = mock((_input: string | URL | Request, _init?: RequestInit) =>
   Promise.resolve(new Response("{}", { status: 200 })),
@@ -98,7 +100,7 @@ describe("runtime api client", () => {
     );
 
     const payload = new Uint8Array([7, 8, 9]);
-    await putLibraryOp("token", 1, "op1", payload, { prevStateHash: "s1", nextStateHash: "s2" });
+    await putLibraryOp("token", 1, "op1", payload, { prevStateHash: "s1", nextStateHash: "s2" }, OP_STREAM_VERSION);
 
     const request = sdkRequestAt(0);
     expect(request.method).toBe("POST");
@@ -109,6 +111,7 @@ describe("runtime api client", () => {
     expect(request.headers.get("x-library-base-version")).toBe("1");
     expect(request.headers.get("x-library-op-id")).toBe("op1");
     expect(request.headers.get("x-library-storage-format-version")).toBe(String(STORAGE_FORMAT_VERSION));
+    expect(request.headers.get("x-library-op-stream-version")).toBe(String(OP_STREAM_VERSION));
     expect(request.headers.get("x-library-prev-state-hash")).toBe("s1");
     expect(request.headers.get("x-library-next-state-hash")).toBe("s2");
     expect(new Uint8Array(await request.arrayBuffer())).toEqual(payload);
@@ -119,7 +122,7 @@ describe("runtime api client", () => {
       jsonResponse({ version: 2, snapshotVersion: 1, stateHash: "s2", lastOpId: "op2" }),
     );
 
-    await putLibraryOp("token", 1, "op1", new Uint8Array([1]), undefined, "parrot");
+    await putLibraryOp("token", 1, "op1", new Uint8Array([1]), undefined, OP_STREAM_VERSION, "parrot");
 
     const request = sdkRequestAt(0);
     expect(request.headers.get("x-space-app")).toBe("parrot");
@@ -287,5 +290,39 @@ describe("runtime api client", () => {
     expect(request.method).toBe("POST");
     expect(request.url).toBe("https://api.dev.spacebadger.io/storage/delete");
     expect(await request.json()).toEqual({ keys: ["k1", "k2"] });
+  });
+
+  /**
+   * @test-id LIB-V4-RUNTIME-002
+   * @why The runtime has no screen: it hands "please update" refusals to the desktop app over IPC. A switched
+   *   account's 426 for an op stream this build reads is not one (the library converts and retries, LIB-FMT-13), so
+   *   forwarding it would lock a current app behind the update gate.
+   */
+  it("@req LIB-FMT-13 passes on app-update refusals but not an op-stream switch this build reads", async () => {
+    const seen: Array<{ status: number; reason: unknown }> = [];
+    const stop = onAppUpdateRefusal((refusal) => seen.push({ status: refusal.status, reason: refusal.payload.reason }));
+    try {
+      fetchMock.mockResolvedValueOnce(
+        jsonResponse({ error: "app_update_required", reason: "library_op_stream", opStreamVersion: 4, minVersion: "" }, 426)
+      );
+      await getLibraryMeta("token").catch(() => undefined);
+      fetchMock.mockResolvedValueOnce(
+        jsonResponse({ error: "app_update_required", reason: "library_op_stream", opStreamVersion: 5, minVersion: "" }, 426)
+      );
+      await getLibraryMeta("token").catch(() => undefined);
+      fetchMock.mockResolvedValueOnce(
+        jsonResponse({ error: "app_update_required", app: "badger", platform: "desktop", version: "1.0.0", minVersion: "9.0.0" }, 426)
+      );
+      await getLibraryMeta("token").catch(() => undefined);
+      fetchMock.mockResolvedValueOnce(jsonResponse({ error: "unauthorized" }, 401));
+      await getLibraryMeta("token").catch(() => undefined);
+    } finally {
+      stop();
+    }
+    console.info(`[LIB-V4-RUNTIME-002] seen ${JSON.stringify(seen)}`);
+    expect(seen).toEqual([
+      { status: 426, reason: "library_op_stream" },
+      { status: 426, reason: undefined },
+    ]);
   });
 });

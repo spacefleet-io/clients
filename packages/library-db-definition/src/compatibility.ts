@@ -16,7 +16,7 @@
  */
 
 import type { LibraryDbGroup } from "./manifest";
-import { OP_STREAM_VERSION } from "./ops";
+import { READ_OP_STREAM_VERSION } from "./ops";
 import { STORAGE_FORMAT_VERSION } from "./storageFormat";
 
 /**
@@ -188,7 +188,10 @@ const highestMigrationVersion = (
  * supports on all three library surfaces, to feed `assertLibraryCompatible`.
  *
  * The storage and op-stream versions are build constants of this package
- * (`STORAGE_FORMAT_VERSION`, `OP_STREAM_VERSION`) and are read directly. The
+ * (`STORAGE_FORMAT_VERSION`, `READ_OP_STREAM_VERSION`) and are read directly:
+ * the op-stream entry is the highest version this build READS (LIB-FMT-13), so
+ * a switched account's version-4 stream passes the "too new" gate; what a
+ * device WRITES is `writeOpStreamVersion`, never this value. The
  * per-group schema versions are NOT constants of this package: the migration
  * registries live in `@space/library-db-runtime` (desktop) and
  * `apps/badger/mobile` (mobile), both of which depend on this package — so
@@ -212,7 +215,7 @@ export const currentLibrarySupport = (
   }
   return {
     storageFormatVersion: STORAGE_FORMAT_VERSION,
-    opStreamVersion: OP_STREAM_VERSION,
+    opStreamVersion: READ_OP_STREAM_VERSION, // op-stream: read
     groupSchemaVersions: groupSchemaVersions as Readonly<
       Record<LibraryDbGroup, number>
     >,

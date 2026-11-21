@@ -15,6 +15,7 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { streamBridgeStub } from "./streamBridge";
+import { exportBridgeStub } from "./exportBridge";
 import {
   bytesToBase64,
   generateDeviceKeyPair,
@@ -134,6 +135,7 @@ describe("@req ACCT-PAIR-01 @req ACCT-PAIR-02 Parrot desktop approves a new devi
     };
     (window as unknown as { parrot: unknown }).parrot = {
       ...streamBridgeStub(),
+      ...exportBridgeStub(),
       lookupPairing: (code: string) => seen(approver.lookup(code)),
       approvePairing: (requestId: string, password: string) => seen(approver.approve(requestId, password)),
       denyPairing: (requestId: string) => seen(approver.deny(requestId)),

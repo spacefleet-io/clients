@@ -4,7 +4,6 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "no
 import os from "node:os";
 import path from "node:path";
 import {
-  flacPictureBlock,
   oggCrc,
   opusHead,
   opusTags,
@@ -63,8 +62,7 @@ describe("writeOggOpus", () => {
 });
 
 describe("tags", () => {
-  test("names, numbers, lyrics and the cover as METADATA_BLOCK_PICTURE", () => {
-    const cover = { bytes: new Uint8Array([0xff, 0xd8, 0xff, 1, 2, 3]), mime: "image/jpeg" };
+  test("names, numbers and lyrics, and no picture", () => {
     const comments = parrotOpusComments({
       title: "Paperboat",
       artist: "Linnet Park",
@@ -75,15 +73,13 @@ describe("tags", () => {
       year: 2000,
       genre: "Rock",
       lyrics: { synced: "[00:01.00]Where does it go", plain: "Where does it go" },
-      cover,
     });
     expect(comments).toContain("TITLE=Paperboat");
     expect(comments).toContain("ALBUMARTIST=Linnet Park");
     expect(comments).toContain("TRACKNUMBER=1");
     expect(comments).toContain("DATE=2000");
     expect(comments).toContain("LYRICS=[00:01.00]Where does it go");
-    const picture = comments.find((comment) => comment.startsWith("METADATA_BLOCK_PICTURE="))!;
-    expect(Buffer.from(picture.slice("METADATA_BLOCK_PICTURE=".length), "base64")).toEqual(Buffer.from(flacPictureBlock(cover)));
+    expect(comments.some((comment) => comment.startsWith("METADATA_BLOCK_PICTURE="))).toBe(false);
   });
 
   test("reads the pre-skip back from an OpusHead", () => {
@@ -95,7 +91,7 @@ describe("tags", () => {
 // The real check: libopus packets rewritten by writeOggOpus decode in FFmpeg to exactly the samples we declared.
 const FFMPEG = "/usr/bin/ffmpeg";
 describe.skipIf(!existsSync(FFMPEG))("with FFmpeg", () => {
-  test("FFmpeg decodes the written stream to exactly the declared length, with its tags and cover", () => {
+  test("FFmpeg decodes the written stream to exactly the declared length, with its tags and no picture stream", () => {
     const dir = mkdtempSync(path.join(os.tmpdir(), "parrot-ogg-"));
     try {
       const run = (args: string[]) => {
@@ -110,10 +106,9 @@ describe.skipIf(!existsSync(FFMPEG))("with FFmpeg", () => {
       const pages = readOggPages(new Uint8Array(readFileSync(source)));
       const [sourceHead, , ...packets] = readOggPackets(pages);
       const preSkip = readOpusHeadPreSkip(sourceHead)!;
-      const cover = { bytes: new Uint8Array(readFileSync(path.join(import.meta.dir, "../assets/mascot.webp"))), mime: "image/webp" };
       const written = writeOggOpus({
         head: opusHead({ channels: 2, preSkip, inputSampleRate: 48_000 }),
-        tags: opusTags("parrot-test", parrotOpusComments({ title: "Tone", artist: "Parrot", lyrics: { synced: null, plain: "la la" }, cover })),
+        tags: opusTags("parrot-test", parrotOpusComments({ title: "Tone", artist: "Parrot", lyrics: { synced: null, plain: "la la" } })),
         packets: packets.map((bytes) => ({ bytes, samples: 960 })),
         preSkip,
         samples,
@@ -129,8 +124,8 @@ describe.skipIf(!existsSync(FFMPEG))("with FFmpeg", () => {
       const audio = info.streams.find((stream) => stream.codec_name === "opus")!;
       expect(audio.tags?.title ?? audio.tags?.TITLE).toBe("Tone");
       expect(audio.tags?.LYRICS ?? audio.tags?.lyrics).toBe("la la");
-      // The cover comes back as an attached picture stream.
-      expect(info.streams.length).toBe(2);
+      // The light copy carries no picture (PAR-FMT-02): the only stream is the sound.
+      expect(info.streams.length).toBe(1);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

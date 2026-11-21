@@ -9,6 +9,7 @@
   },
   "exports": {
     ".": "./src/index.ts",
+    "./chunkKeySeeds": "./src/chunkKeySeeds.ts",
     "./labQueueShared": "./src/labQueueShared.ts",
     "./quality": "./src/quality.ts",
     "./mediaProcessor": "./src/mediaProcessor.ts",
@@ -20,6 +21,7 @@
     "@space/content-core": "workspace:*",
     "@space/desktop-platform": "workspace:*",
     "@space/ffmpeg": "workspace:*",
+    "@space/library-db-definition": "workspace:*",
     "@space/logger": "workspace:*",
     "@space/shared": "workspace:*",
     "franc": "^6.2.0",

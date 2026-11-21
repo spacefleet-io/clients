@@ -5,13 +5,14 @@
  * @why The approved demo (PAR-LOOK-01) shows three library pieces the desktop lacked: the Sort button at the end of the
  *   library's row, whose panel starts on "Recently added" (PAR-LIB-06), the album page's "…" after Play and Shuffle, and the "Also by <artist>" row of the
  *   artist's other albums under the songs. The "…" holds the album's actions (Play next, Add to queue, Go to artist,
- *   Add to playlist, Edit details (whose panel holds the lookups), Keep on this computer, Delete), each wired to the
+ *   Add to playlist, Edit details (whose panel holds the lookups), Save offline, Delete), each wired to the
  *   app's existing handler.
  */
 import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { streamBridgeStub } from "./streamBridge";
+import { exportBridgeStub } from "./exportBridge";
 import type { ParrotLibrary, ParrotState } from "../src/shared/ipc";
 import Library from "../src/renderer/src/Library";
 import { translator } from "../src/renderer/src/i18n";
@@ -111,6 +112,7 @@ describe("Parrot desktop: the demo's sort button, album menu and Also by row", (
       configurable: true,
       value: {
         ...streamBridgeStub(),
+        ...exportBridgeStub(),
         getLibrary: vi.fn(async () => ({ ok: true, library })),
         getImportStatus: vi.fn(async () => ({ running: false, phase: "idle", done: 0, total: 0, imported: 0, skipped: 0, failed: 0 })),
         getImportScan: vi.fn(async () => null),
@@ -215,14 +217,15 @@ describe("Parrot desktop: the demo's sort button, album menu and Also by row", (
     const labels = [...menuItems()].map((item) => item.textContent);
     console.log(SUITE, "album menu", labels);
     // The album card's list (PAR-CARD-01) without Play and Shuffle, its Edit details (PAR-META-18; the lookups live
-    // in the panel, PAR-META-20), then the page's own Keep and Delete (PAR-LOOK-05).
+    // in the panel, PAR-META-20), then the page's own Save offline (its one offline action, OFFL-FILE-01) and Delete
+    // (PAR-LOOK-05); no "Download file" (Chris 2026-11-21: export is Settings' Download everything only).
     expect(labels).toEqual([
       "Play next",
       "Add to queue",
       "Go to artist",
       "Add to playlist",
       "Edit details",
-      "Keep on this computer",
+      "Save offline",
       "Delete",
     ]);
 

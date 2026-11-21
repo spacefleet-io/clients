@@ -17,6 +17,13 @@ import {
   badgerOfflineListLocal,
   badgerOfflineReconcile,
 } from "@space/runtime-contracts/badger/offline";
+import {
+  badgerExportEstimate,
+  badgerExportSubmit,
+  type BadgerExportEstimatePayload,
+  type BadgerExportSubmitPayload,
+} from "@space/runtime-contracts/badger/export";
+import { isPickedExportFolder } from "./fileSystem";
 import { applyFallbackCopyToFormats } from "../shared/transcodeDefault";
 import { scopeLogger } from "./logger";
 import { runtimeOwnerSecretProvider } from "./runtimeOwnerSecret";
@@ -406,6 +413,41 @@ export const registerRuntimeJobsIpc = (config: {
       });
     }
   );
+
+  // ---------------------------------------------------------------------
+  // Export bridges ("Download everything", ACCT-EXPORT-01, OFFL-FILE-01):
+  // the whole library as plain files into a folder the user picked. Only a
+  // folder picked in `sf-pick-export-folder` is accepted.
+  // ---------------------------------------------------------------------
+
+  const exportFolderRefused = {
+    __runtimeJobsError: true as const,
+    status: 0,
+    errorCode: "dest_not_picked",
+    message: "The export folder was not picked in the folder dialog",
+  };
+
+  ipcMain.handle("sf-badger-export-estimate", async (_event, payload: BadgerExportEstimatePayload) => {
+    if (!isPickedExportFolder(payload?.destDir)) return exportFolderRefused;
+    const { commandClient: c } = await ensureClient();
+    try {
+      return await c.sendCommand(badgerExportEstimate, payload);
+    } catch (err) {
+      log.warn({ error: String(err), container: payload.container }, "badger_export_estimate_failed");
+      return toRendererError(err);
+    }
+  });
+
+  ipcMain.handle("sf-badger-export-submit", async (_event, payload: BadgerExportSubmitPayload) => {
+    if (!isPickedExportFolder(payload?.destDir)) return exportFolderRefused;
+    const { commandClient: c } = await ensureClient();
+    try {
+      return await c.sendCommand(badgerExportSubmit, payload);
+    } catch (err) {
+      log.warn({ error: String(err), container: payload.container }, "badger_export_submit_failed");
+      return toRendererError(err);
+    }
+  });
 
   // ---------------------------------------------------------------------
   // Offline-mode bridges — exposes the badger.offline.* commands to the

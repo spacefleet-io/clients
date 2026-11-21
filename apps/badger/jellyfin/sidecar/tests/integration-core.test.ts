@@ -174,6 +174,7 @@ const baseStatus: IntegrationStatus = {
   profile: { id: "main-id", name: "Chris", isMain: true },
   profiles: null,
   profileNeeded: null,
+  updateRequired: null,
 };
 
 const fakeDeps = (overrides: Partial<IntegrationDeps> = {}): IntegrationDeps => ({

@@ -16,6 +16,7 @@ import { retranscodeStepHandler } from "./retranscode";
 import { uploadStepHandler } from "./upload";
 import { commitStepHandler } from "./commit";
 import { offlineDownloadStepHandler } from "./offlineDownload";
+import { exportFileStepHandler } from "./exportFile";
 import { registerFormatCancelCleanup } from "./discardOnCancel";
 import { registerIngestSuccessCleanup } from "./cleanupOnSuccess";
 
@@ -27,6 +28,7 @@ export {
   retranscodeStepHandler,
   uploadStepHandler,
   commitStepHandler,
+  exportFileStepHandler,
   offlineDownloadStepHandler,
 };
 export { NotImplementedError } from "./notImplemented";
@@ -48,6 +50,8 @@ export const registerBadgerStepHandlers = (engine: EngineV2): void => {
   // track, muxes into MKV/MP4, atomic-renames the muxed file under the
   // user's offline dir, and registers a `media_local_downloads` row.
   engine.registerHandler("offline_download", offlineDownloadStepHandler);
+  // Exports (OFFL-FILE-01 / ACCT-EXPORT-01): `kind: "export"` jobs write a plain file to a folder the user picked.
+  engine.registerHandler("export_file", exportFileStepHandler);
   // #25: a format job can now be cancelled (source failed/cancelled) after
   // its transcode finished but before its upload ran — drop those local
   // encode outputs. Running steps clean up in their own handlers.

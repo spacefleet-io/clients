@@ -14,11 +14,12 @@ import { decideProgress, type ProgressDecision } from "./progress";
 import type { ObjectStore } from "./objectStore";
 import type { PairingSnapshot } from "./pairing";
 import type { JellyfinStreamSlots } from "./streamSlots";
+import type { IntegrationUpdateRequired } from "./updateRequired";
 
 export const API_PREFIX = "/integration/v1";
 
 export type IntegrationStatus = {
-  /** "starting" | "needs_login" | "needs_key" | "needs_profile" | "ok" | "signed_out" | "error" */
+  /** "starting" | "update_required" | "needs_login" | "needs_key" | "needs_profile" | "ok" | "signed_out" | "error" */
   state: string;
   signedIn: boolean;
   email: string | null;
@@ -44,6 +45,8 @@ export type IntegrationStatus = {
   profiles: ApiProfile[] | null;
   /** INTG-PROF-01: why no profile is followed while state is `needs_profile` outside pairing: `deleted` elsewhere, or `choose` (session from before profiles, several on the account). */
   profileNeeded: "deleted" | "choose" | null;
+  /** REL-CD-29 / LIB-FMT-13: this build was refused or the library is too new for it; nothing syncs until the plugin is updated. */
+  updateRequired: IntegrationUpdateRequired | null;
 };
 
 export type IntegrationProfileRef = { id: string; name: string; isMain: boolean };

@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { PACKED_PLAYBACK_DDL } from "./packedPlayback";
 import { ALL_LIBRARY_DB_GROUPS, type LibraryDbGroup } from "./manifest";
 import { MEDIA_CREW_DDL } from "./crewDdl";
 import { MEDIA_EDITIONS_DDL } from "./editionDdl";
@@ -407,6 +408,7 @@ const playbackDdl: ReadonlyArray<string> = [
     FOREIGN KEY(format_id) REFERENCES media_formats(id) ON DELETE CASCADE
   );`,
   `CREATE INDEX IF NOT EXISTS media_local_downloads_media_id_idx ON media_local_downloads(media_id);`,
+  ...PACKED_PLAYBACK_DDL,
 ];
 
 const ingestDdl: ReadonlyArray<string> = [

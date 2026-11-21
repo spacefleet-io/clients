@@ -12,7 +12,7 @@
 import { DatabaseSync } from "node:sqlite";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ALBUM_COVERS_SQL, parrotCoverThumbKey } from "@space/parrot-core";
-import { PARROT_LIBRARY_MIGRATIONS, PARROT_LIBRARY_SCHEMA_VERSION } from "@space/parrot-library-db-definition/migrations";
+import { PARROT_LIBRARY_MIGRATIONS, PARROT_LIBRARY_SCHEMA_VERSION, PARROT_LIBRARY_WHOLE_FILES_SCHEMA_VERSION } from "@space/parrot-library-db-definition/migrations";
 
 const state = vi.hoisted(() => ({
   db: null as null | DatabaseSync,
@@ -105,7 +105,7 @@ describe("the phone's album lists", () => {
     state.batches = [];
   });
 
-  it("brings a snapshot published before small covers to the current schema in the phone's own copy", async () => {
+  it("brings a snapshot published before small covers to the whole-file schema in the phone's own copy", async () => {
     state.db = snapshot(1);
     const columnsBefore = (state.db.prepare("PRAGMA table_info(albums)").all() as Array<{ name: string }>).map((c) => c.name);
     await openLibrary("token", "library-key");
@@ -113,7 +113,7 @@ describe("the phone's album lists", () => {
     const columnsAfter = (state.db.prepare("PRAGMA table_info(albums)").all() as Array<{ name: string }>).map((c) => c.name);
     log("migrated", { version, batches: state.batches, columnsBefore, columnsAfter });
     expect(columnsBefore).not.toContain("cover_thumb_object_key");
-    expect(version).toBe(PARROT_LIBRARY_SCHEMA_VERSION);
+    expect(version).toBe(PARROT_LIBRARY_WHOLE_FILES_SCHEMA_VERSION);
     expect(columnsAfter).toContain("cover_thumb_object_key");
     expect(state.batches).toHaveLength(1);
     // The covers query the tiles use now runs on it.

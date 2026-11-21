@@ -115,7 +115,8 @@ describe("library key probe (same check as typing the key by hand)", () => {
 
 const status = (overrides: Partial<IntegrationStatus> = {}): IntegrationStatus => ({
   state: "ok", signedIn: true, email: null, userId: null, accessState: "paid", paidUntil: null, wipeAt: null, libraryVersion: 1, mediaCount: 0,
-  lastSyncAt: null, lastError: null, apiUrl: "http://api", version: "0", pairing: null, signedOutReason: null, keyRejected: false, profile: null, profiles: null, profileNeeded: null, ...overrides,
+  lastSyncAt: null, lastError: null, apiUrl: "http://api", version: "0", pairing: null, signedOutReason: null, keyRejected: false, profile: null, profiles: null, profileNeeded: null,
+  updateRequired: null, ...overrides,
 });
 
 const deps = (overrides: Partial<IntegrationDeps> = {}): IntegrationDeps => ({

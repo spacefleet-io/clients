@@ -1006,8 +1006,7 @@
   },
   "libraryFormat": {
     "title": "Update erforderlich",
-    "body": "Diese Mediathek wurde mit einer neueren Version von Badger erstellt. Aktualisiere die App, um sie zu öffnen.",
-    "update": "Jetzt aktualisieren"
+    "body": "Diese Mediathek wurde mit einer neueren Version von Badger erstellt."
   },
   "home": {
     "empty": {
@@ -1363,6 +1362,27 @@
   },
   "appUpdate": {
     "title": "Aktualisiere {{app}}, um es weiter zu nutzen",
-    "body": "Diese {{app}}-Version ist zu alt, um sich zu verbinden. Installiere die neue Version von dort, woher du {{app}} hast, und öffne die App dann erneut."
+    "tooOld": "Diese {{app}}-Version ist zu alt, um sich zu verbinden.",
+    "how": {
+      "appstore": "Aktualisiere {{app}} im App Store und öffne die App dann erneut.",
+      "testflight": "Installiere die neue Version von {{app}} über TestFlight und öffne die App dann erneut.",
+      "play": "Aktualisiere {{app}} bei Google Play und öffne die App dann erneut.",
+      "amazon": "Aktualisiere {{app}} im Amazon Appstore und öffne die App dann erneut.",
+      "fdroid": "Aktualisiere {{app}} in F-Droid und öffne die App dann erneut.",
+      "obtainium": "Aktualisiere {{app}} in Obtainium und öffne die App dann erneut.",
+      "apk": "Lade die neue Version von {{app}} herunter, installiere sie über diese und öffne die App dann erneut.",
+      "store": "Aktualisiere {{app}} in dem Store, aus dem du die App installiert hast, und öffne sie dann erneut.",
+      "unknown": "Installiere die neue Version von dort, woher du {{app}} hast, und öffne die App dann erneut."
+    },
+    "open": {
+      "appstore": "App Store öffnen",
+      "testflight": "TestFlight öffnen",
+      "play": "Google Play öffnen",
+      "amazon": "Amazon Appstore öffnen",
+      "fdroid": "F-Droid öffnen",
+      "obtainium": "Obtainium öffnen",
+      "apk": "Neue Version herunterladen",
+      "store": "Store öffnen"
+    }
   }
 }

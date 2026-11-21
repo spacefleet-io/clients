@@ -16,9 +16,16 @@ import {
   type ParrotLightCopyMaker,
 } from "../src/lightCopy";
 import { readParrotTrackInfo } from "../src/readTrack";
+import { splitParrotOriginal } from "../src/splitOriginal";
 import { makeAudioFixture, makeTempDir, testLog } from "./helpers";
 
 const log = testLog("PARROT-INGEST-LIGHT-COPY-001");
+/** The bytes a split original keeps of `file` (PAR-FMT-01): its header and its sound. */
+const storedSize = async (file: string, container: string): Promise<number> => {
+  const split = splitParrotOriginal(new Uint8Array(await fs.readFile(file)), container);
+  if (split.kind !== "split") throw new Error(split.reason);
+  return split.header.length + split.payload.length;
+};
 const TOKEN = "token-abc";
 const USER_ID = "user-chris";
 
@@ -87,6 +94,7 @@ describe("light copies", () => {
     userId: USER_ID,
     libraryKeyBase64: keyBase64,
     clientType: "parrot-desktop",
+    splitOriginals: true,
     transport: server.transport,
     log: (message: string) => log(message),
   });
@@ -169,10 +177,11 @@ describe("light copies", () => {
     const result = await backfill(server, false, [], calls);
     log("backfill", result);
     expect(result).toMatchObject({ made: 2, failed: 0, left: 0 });
+    // The backfill reads the stored original, its header and sound (PAR-FMT-01), and names it from the library.
     expect(calls.map((call) => [call.title, call.codec, call.size]).sort()).toEqual(
       [
-        ["Other", "mp3", (await fs.stat(mp3)).size],
-        ["Tone", "flac", (await fs.stat(flac)).size],
+        ["Other", "mp3", await storedSize(mp3, "mp3")],
+        ["Tone", "flac", await storedSize(flac, "flac")],
       ].sort()
     );
     expect(server.files().filter((file) => file.lightCopy === 1)).toHaveLength(2);
@@ -211,7 +220,7 @@ describe("light copies", () => {
     const strong = await backfill(server, true, [], strongCalls);
     log("backfill on a strong computer", strong);
     expect(strong).toMatchObject({ made: 1, failed: 0, skipped: 0, left: 0 });
-    expect(strongCalls).toEqual([{ size: (await fs.stat(flac)).size, title: "Tone", codec: "flac" }]);
+    expect(strongCalls).toEqual([{ size: await storedSize(flac, "flac"), title: "Tone", codec: "flac" }]);
   });
 
   it("at import, songs up to 90 minutes (or of unknown length) always get their light copy, longer ones only on a strong computer", async () => {

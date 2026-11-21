@@ -4,10 +4,11 @@
  * @why A song kept on the computer must play with no connection (PAR-OFFL-03): its chunks are on disk still sealed,
  *      the player reads them from there and never asks the storage, a song another kept file shares a chunk with
  *      keeps it, and the library itself opens from its sealed copy. A plain file on disk would break the encrypted
- *      storage promise (OFFL-ENC-01).
+ *      storage promise (OFFL-FILE-03).
  * @covers packages/parrot-ingest/src/kept.ts
  * @covers packages/parrot-ingest/src/chunkReader.ts
  * @req PAR-OFFL-03[parrot]
+ * @req OFFL-FILE-03[parrot]
  */
 import { randomBytes } from "node:crypto";
 import { promises as fs } from "node:fs";
@@ -32,7 +33,10 @@ const storeFile = (id: string, size: number, chunkSize: number, key: Buffer, obj
     objects.set(objectKey, new Uint8Array(sealMediaObjectWithPadding(part, key)));
     chunks.push({ idx, objectKey, plainOffset: offset, plainSize: part.length });
   }
-  return { file: { id, trackId: `t-${id}`, mime: "audio/flac", sizeBytes: size, chunks }, plain };
+  return {
+    file: { id, trackId: `t-${id}`, mime: "audio/flac", sizeBytes: size, headerBytes: null, sourceSizeBytes: null, tagsObjectKey: null, chunks },
+    plain,
+  };
 };
 
 describe("songs kept on the computer", () => {
@@ -72,7 +76,7 @@ describe("songs kept on the computer", () => {
         throw new Error("no profile offline");
       },
       clientType: "test",
-      download: download as never,
+      openSession: (() => ({ download: (key: string) => download("tok", key), close: async () => undefined })) as never,
       readKept: reopened.readSealed,
     });
     const parts: Uint8Array[] = [];

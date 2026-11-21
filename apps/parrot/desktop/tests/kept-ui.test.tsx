@@ -12,6 +12,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getStorageUnitBase, setStorageUnitBase } from "@space/shared/format";
 import { streamBridgeStub } from "./streamBridge";
+import { exportBridgeStub } from "./exportBridge";
 import type { KeepCopyChoice, KeptKind, KeptStatus } from "@space/parrot-core";
 import type { ParrotLibrary, ParrotState } from "../src/shared/ipc";
 import Library from "../src/renderer/src/Library";
@@ -62,7 +63,7 @@ const CHOICES: KeepCopyChoice[] = [
   { key: "MP3:320k", label: "MP3 320 kbps", lossless: false, bitrateKbps: 320, songs: 2, bytes: 18_000_000 },
 ];
 
-describe("Parrot desktop: keep on this computer", () => {
+describe("Parrot desktop: save offline", () => {
   let container: HTMLDivElement;
   let root: Root;
   let kept: KeptStatus;
@@ -107,6 +108,7 @@ describe("Parrot desktop: keep on this computer", () => {
       configurable: true,
       value: {
         ...streamBridgeStub(),
+        ...exportBridgeStub(),
         getLibrary: vi.fn(async () => ({ ok: true, library })),
         getImportStatus: vi.fn(async () => ({ running: false, phase: "idle", done: 0, total: 0, imported: 0, skipped: 0, failed: 0 })),
         getImportScan: vi.fn(async () => null),
@@ -162,7 +164,7 @@ describe("Parrot desktop: keep on this computer", () => {
     await click(q("album-menu")[0]);
     const toggle = q("album-menu-keep")[0];
     console.log(SUITE, "album keep item", toggle?.textContent);
-    expect(toggle?.textContent).toBe("Keep on this computer");
+    expect(toggle?.textContent).toBe("Save offline");
     expect(q("kept-line")).toHaveLength(0);
 
     await click(toggle);

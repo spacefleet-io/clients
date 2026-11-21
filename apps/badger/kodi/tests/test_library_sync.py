@@ -15,6 +15,7 @@ import _path  # noqa: F401
 import api as api_module
 import crypto
 import library
+import ops_sql
 import payload_codec
 
 TEST_ID = "KODI-LIBRARY-SYNC-001"
@@ -170,7 +171,7 @@ class UploadApi(object):
         self.calls.append("download")
         raise AssertionError("no download expected")
 
-    def post_op(self, encrypted, op_id, base_version, prev, nxt):
+    def post_op(self, encrypted, op_id, base_version, prev, nxt, op_stream_version):
         self.calls.append("post_op")
         self.version = base_version + 1
         return {"version": self.version, "stateHash": nxt, "lastOpId": op_id}
@@ -221,10 +222,15 @@ class LineageServer(object):
         self.entries = {}
         self.calls = []
         self.posts = []
+        self.declared = []
+        self.target = None  # LIB-FMT-13: the account's targetOpStreamVersion once the knob switches it
 
     def library_meta(self):
         self.calls.append("library_meta")
-        return {"exists": True, "version": self.version, "stateHash": self.state_hash, "snapshotId": "snap", "snapshotVersion": 5}
+        meta = {"exists": True, "version": self.version, "stateHash": self.state_hash, "snapshotId": "snap", "snapshotVersion": 5}
+        if self.target is not None:
+            meta["targetOpStreamVersion"] = self.target
+        return meta
 
     def library_ops(self, since):
         self.calls.append("library_ops")
@@ -235,8 +241,13 @@ class LineageServer(object):
         self.calls.append("download")
         raise AssertionError("no download expected")
 
-    def post_op(self, encrypted, op_id, base_version, prev, nxt):
+    def post_op(self, encrypted, op_id, base_version, prev, nxt, op_stream_version):
         self.calls.append("post_op")
+        # LIB-FMT-13: before the switch a write declares op stream 3, never 4.
+        self.declared.append(op_stream_version)
+        if (self.target or 0) >= 4 and op_stream_version < 4:
+            # like the API on a switched account: an older-stream writer is refused with 426
+            raise api_module.AppUpdateRequiredError(426, {"error": "app_update_required", "reason": "library_op_stream", "opStreamVersion": 4})
         self.posts.append({"opId": op_id, "base": base_version, "prev": prev})
         if base_version != self.version:
             raise api_module.ApiError(409, {"error": "version_conflict", "version": self.version})
@@ -373,6 +384,84 @@ class OpUploadMetaReads(unittest.TestCase):
         self.assertFalse(ok)
         self.assertEqual(self.server.calls, ["post_op"])
         self.assertEqual(len(self.store._load_pending()), 1)
+
+
+class OpStreamSwitch(unittest.TestCase):
+    """LIB-FMT-13 (vault v4): the add-on reads stream 4 and takes the packed layout only once the account is
+    switched (`targetOpStreamVersion` >= 4); its writes declare 3 before, 4 after; an op type it does not know stops
+    the sync whole (nothing applied, the version stays) instead of being skipped."""
+
+    setUp = OpUploadMetaReads.setUp
+    tearDown = OpUploadMetaReads.tearDown
+
+    def packed(self):
+        return self.store.state().get("packedPlayback") is True
+
+    def test_before_the_switch_writes_declare_3_and_the_layout_stays(self):
+        # @req LIB-FMT-13[badger-kodi]
+        # @test-id kodi-v4-unswitched-write
+        # @why nothing writes op stream 4 or runs the layout step before the account is switched
+        ok = self.store.write_op(self.server, self.key, "media.progress", progress(10, "2026-11-21T10:00:00Z"))
+        self.store.sync(self.server, self.key)
+        phase("unswitched: ok=%s declared=%s packed=%s target=%s", ok, self.server.declared, self.packed(),
+              self.store.target_op_stream_version())
+        self.assertTrue(ok)
+        self.assertEqual(self.server.declared, [3])
+        self.assertFalse(self.packed())
+        self.assertEqual(self.store.target_op_stream_version(), 0)
+
+    def test_a_426_on_write_rebases_on_the_switched_account_and_retries_once_as_4(self):
+        # @req LIB-FMT-13[badger-kodi]
+        # @test-id kodi-v4-switch-on-write
+        # @why the knob can flip between two syncs: the refused write learns the target, converts, then declares 4
+        self.server.target = 4
+        ok = self.store.write_op(self.server, self.key, "media.progress", progress(11, "2026-11-21T10:00:01Z"))
+        phase("switch on write: ok=%s declared=%s calls=%s packed=%s", ok, self.server.declared, self.server.calls, self.packed())
+        self.assertTrue(ok)
+        self.assertEqual(self.server.declared, [3, 4])
+        self.assertEqual(self.server.calls.count("library_meta"), 1)
+        self.assertTrue(self.packed())
+        self.assertEqual(self.store.target_op_stream_version(), 4)
+        self.assertEqual(self.store._load_pending(), [])
+
+    def test_a_sync_on_a_switched_account_converts_then_writes_4(self):
+        # @req LIB-FMT-12[badger-kodi]
+        # @test-id kodi-v4-switch-on-sync
+        self.server.target = 4
+        self.store.sync(self.server, self.key)
+        tables = [r[0] for r in self.store.conn().execute("SELECT name FROM sqlite_master WHERE type = 'table'")]
+        phase("switched sync: packed=%s tables=%s", self.packed(), tables)
+        self.assertTrue(self.packed())
+        self.assertIn("media_chunk_lists", tables)
+        self.assertIn("media_file_playback", tables)
+        self.assertTrue(self.store.write_op(self.server, self.key, "media.progress", progress(12, "2026-11-21T10:00:02Z")))
+        self.assertEqual(self.server.declared, [4])
+
+    def test_the_tables_alone_do_not_make_a_copy_packed(self):
+        # @req LIB-FMT-11[badger-kodi]
+        # @test-id kodi-v4-empty-tables-unswitched
+        # @why a v4 build's snapshot carries the packed tables EMPTY before the switch: old ops keep the old path
+        c = self.store.conn()
+        for ddl in (library.chunk_lists.CHUNK_LISTS_DDL, library.chunk_lists.FILE_PLAYBACK_DDL):
+            c.execute(ddl)
+        self.store.sync(self.server, self.key)
+        phase("empty tables, unswitched: packed=%s", self.packed())
+        self.assertFalse(self.packed())
+        self.assertFalse(self.store._is_packed(self.store.conn()))
+
+    def test_an_unknown_op_type_stops_the_sync_and_applies_nothing(self):
+        # @req LIB-FMT-13[badger-kodi]
+        # @test-id kodi-v4-unknown-op-stops
+        # @why a skipped op would leave the library silently wrong; the user is asked to update instead
+        self.server.remote_write({"id": "op-known", "type": "media.progress", "createdAt": "2026-11-21T10:00:03Z",
+                                  "payload": progress(70, "2026-11-21T10:00:03Z")})
+        self.server.remote_write({"id": "op-future", "type": "media.hologram.set", "createdAt": "2026-11-21T10:00:04Z", "payload": {}})
+        with self.assertRaises(ops_sql.UnknownOpTypeError):
+            self.store.sync(self.server, self.key)
+        row = self.store.conn().execute("SELECT progress_pct FROM media_items WHERE id = 'm'").fetchone()
+        phase("unknown op: version=%s server=%s progress=%s", self.store.version(), self.server.version, row[0])
+        self.assertEqual(self.store.version(), 5)
+        self.assertIsNone(row[0])
 
 
 if __name__ == "__main__":

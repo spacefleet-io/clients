@@ -27,7 +27,7 @@
     },
     "apps/badger/desktop": {
       "name": "@space/badger-desktop",
-      "version": "0.1.29",
+      "version": "0.1.35",
       "dependencies": {
         "better-sqlite3": "^13.2.0",
         "drizzle-orm": "^0.45.3",
@@ -112,7 +112,7 @@
     },
     "apps/badger/jellyfin/sidecar": {
       "name": "@space/badger-jellyfin-sidecar",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "dependencies": {
         "@space/library-db-definition": "workspace:*",
         "@space/library-db-runtime": "workspace:*",
@@ -230,7 +230,7 @@
     },
     "apps/parrot/desktop": {
       "name": "@space/parrot-desktop",
-      "version": "0.1.26",
+      "version": "0.1.30",
       "devDependencies": {
         "@playwright/test": "~1.65.1",
         "@rolldown/plugin-babel": "^0.3.1",
@@ -507,6 +507,7 @@
         "@space/content-core": "workspace:*",
         "@space/desktop-platform": "workspace:*",
         "@space/ffmpeg": "workspace:*",
+        "@space/library-db-definition": "workspace:*",
         "@space/logger": "workspace:*",
         "@space/shared": "workspace:*",
         "franc": "^6.2.0",
@@ -550,6 +551,7 @@
     "packages/library-db-definition": {
       "name": "@space/library-db-definition",
       "dependencies": {
+        "@noble/hashes": "^2.4.0",
         "@space/shared": "workspace:*",
         "drizzle-orm": "^0.45.3",
       },
@@ -734,6 +736,7 @@
         "@space/legal": "workspace:*",
         "@space/library-db-definition": "workspace:*",
         "@space/metadata-client": "workspace:*",
+        "@space/mobile-media-proxy": "workspace:*",
         "@space/pairing-crypto": "workspace:*",
         "@space/profile-avatars": "workspace:*",
         "@space/shared": "workspace:*",

@@ -26,6 +26,11 @@
                 <strong>Your Badger subscription is not paid.</strong>
                 Playback is paused for everyone on this server<span id="sbUnpaidWipe"></span>. Renew in the Badger app and playback resumes by itself.
             </div>
+            <div id="sbUpdateRequired" class="infoBanner" style="display:none;margin-bottom:1.5em;border-left:4px solid #cc3333;">
+                <strong>Badger plugin update required.</strong>
+                <span id="sbUpdateRequiredText"></span>
+                Nothing syncs until then.
+            </div>
 
             <h2>Status</h2>
             <div id="sbStatus" class="fieldDescription">Loading…</div>
@@ -160,7 +165,7 @@
                 }
                 if (service) {
                     var who = service.signedIn ? ', signed in as ' + service.email : ', not signed in';
-                    lines.push('State: ' + (service.state === 'signed_out' ? 'signed out' : service.state) + who);
+                    lines.push('State: ' + (service.state === 'signed_out' ? 'signed out' : service.state === 'update_required' ? 'update required, sync stopped' : service.state) + who);
                     lines.push('Subscription: ' + service.accessState + (service.wipeAt ? ' (media removed on ' + wipeDate(service.wipeAt) + ')' : ''));
                     lines.push('Library: version ' + service.libraryVersion + ', ' + service.mediaCount + ' titles');
                     if (service.profileNeeded === 'deleted') {
@@ -337,6 +342,10 @@
                 var unpaid = service && service.accessState === 'unpaid';
                 el('sbUnpaid').style.display = unpaid ? '' : 'none';
                 el('sbUnpaidWipe').textContent = unpaid && service.wipeAt ? ' (your media on this server is removed on ' + wipeDate(service.wipeAt) + ' if it stays unpaid)' : '';
+                // REL-CD-29 / LIB-FMT-13: the sentence comes from the service, so the activity log and this page say the same.
+                var update = service && service.updateRequired;
+                el('sbUpdateRequired').style.display = update ? '' : 'none';
+                el('sbUpdateRequiredText').textContent = update ? update.message : '';
             }
 
             // From the last Status: true/false, or null while unknown (never loaded, or the call failed).

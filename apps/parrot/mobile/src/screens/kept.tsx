@@ -1,4 +1,4 @@
-// "Keep on this phone" on the screens (PAR-OFFL-01/02), as on the desktop (packages/ui/src/parrot/offline.tsx): the
+// "Save offline" on the screens (PAR-OFFL-01/02), as on the desktop (packages/ui/src/parrot/offline.tsx): the
 // keep button on an album or a playlist (a download arrow while not kept, a turning circle while its songs download, a
 // green tick once they are all here), and the line under a kept one ("Kept on this phone · 340 MB" or "Downloading 3
 // of 12"). The song sheet's keep row and the copy question live with the other sheets (../state/playlistEditor).

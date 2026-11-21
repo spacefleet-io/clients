@@ -66,37 +66,10 @@ export const opusTags = (vendor: string, comments: string[]): Uint8Array => {
   return out;
 };
 
-/** A FLAC picture block (front cover), as `METADATA_BLOCK_PICTURE` carries it base64-encoded. */
-export const flacPictureBlock = (cover: { bytes: Uint8Array; mime: string; width?: number; height?: number }): Uint8Array => {
-  const mime = encoder.encode(cover.mime);
-  const out = new Uint8Array(32 + mime.length + cover.bytes.length);
-  const view = new DataView(out.buffer);
-  let at = 0;
-  const u32 = (value: number) => {
-    view.setUint32(at, value);
-    at += 4;
-  };
-  u32(3); // front cover
-  u32(mime.length);
-  out.set(mime, at);
-  at += mime.length;
-  u32(0); // no description
-  u32(cover.width ?? 0);
-  u32(cover.height ?? 0);
-  u32(0); // colour depth unknown
-  u32(0); // not indexed
-  u32(cover.bytes.length);
-  out.set(cover.bytes, at);
-  return out;
-};
-
-const base64 = (bytes: Uint8Array): string => {
-  let binary = "";
-  for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
-  return btoa(binary);
-};
-
-/** What the light copy keeps of its original's tags (PAR-FMT-02): names, numbers, lyrics and the cover. */
+/**
+ * What the light copy keeps of its original's tags (PAR-FMT-02): names, numbers and lyrics. No picture: the album's
+ * cover is stored once, as its 1200 px and 500 px copies.
+ */
 export type ParrotCopyTags = {
   title?: string | null;
   artist?: string | null;
@@ -107,7 +80,6 @@ export type ParrotCopyTags = {
   year?: number | null;
   genre?: string | null;
   lyrics?: { synced: string | null; plain: string | null } | null;
-  cover?: { bytes: Uint8Array; mime: string; width?: number; height?: number } | null;
 };
 
 /** Vorbis comments for `tags` (the names Ogg players read); lyrics in LYRICS, timed (LRC) when the original had them so. */
@@ -127,7 +99,6 @@ export const parrotOpusComments = (tags: ParrotCopyTags): string[] => {
   add("DATE", tags.year);
   add("GENRE", tags.genre);
   add("LYRICS", tags.lyrics?.synced ?? tags.lyrics?.plain);
-  if (tags.cover?.bytes.length) comments.push(`METADATA_BLOCK_PICTURE=${base64(flacPictureBlock(tags.cover))}`);
   return comments;
 };
 

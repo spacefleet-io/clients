@@ -15,7 +15,7 @@ import {
   type SentPause,
 } from "@/lib/mpvPlaybackResilience";
 import { usePlaybackSaturation } from "@/lib/usePlaybackSaturation";
-import { offlineLocalPathForFile } from "@/lib/offlineState";
+import { offlineManifestPathForFile } from "@/lib/offlineState";
 import {
   buildMpvPlaybackState,
   externalLaunchStartedAt,
@@ -228,10 +228,11 @@ export const useMpvPlaybackEngine = ({
   }, []);
 
   const hlsSessionRef = useRef<HlsSession | null>(null);
-  // Offline-mode (Phase 2): id of the active /playback/offline/<id> session, so
-  // we can release it when switching sources / tearing down. @bugfix
-  // offline-playback-ignored-local-file
+  // Offline playback (OFFL-FILE-03): id of the active HLS session over the pieces saved on this device, so we can
+  // release it when switching sources / tearing down, and the subtitles saved with it (the only ones offered: their
+  // object URLs serve the local pieces). @bugfix offline-playback-ignored-local-file
   const offlineSessionRef = useRef<string | null>(null);
+  const offlineSubtitleKeysRef = useRef<ReadonlySet<string> | null>(null);
   const wasOpenRef = useRef(open);
   const lastKnownTimeRef = useRef(0);
   const seekTargetRef = useRef<number | null>(null);
@@ -1076,7 +1077,8 @@ export const useMpvPlaybackEngine = ({
     const subtitlePayload = (
       await Promise.all(
         subtitleTracks
-          .filter((track) => track.objectKey)
+          // Offline source: only the subtitles saved with the item (the others would need the network).
+          .filter((track) => track.objectKey && (offlineSubtitleKeysRef.current?.has(track.objectKey) ?? true))
           .map(async (track) => {
             const url = await getPlaybackObjectUrl(track.objectKey as string);
             if (!url) {
@@ -1571,80 +1573,43 @@ export const useMpvPlaybackEngine = ({
 
   const releaseOfflineSession = useCallback(async (sessionId: string | null) => {
     if (!sessionId) return;
-    await window.sf?.releasePlaybackOfflineSession?.(sessionId).catch(() => null);
+    await window.sf?.releasePlaybackHlsSession?.(sessionId).catch(() => null);
   }, []);
 
   /**
-   * Offline-mode (Phase 2): try to open a playback session backed by a single
-   * locally-downloaded muxed file for the current `fileId`. The MAIN process is
-   * the source of truth — it resolves the on-disk path from the device-local
-   * `media_local_downloads` table and returns a session ONLY if a valid local
-   * copy exists; otherwise it throws and we fall back to the HLS/tunnel path.
-   * This is what makes Play prefer the offline copy and work with the server
-   * unreachable. @bugfix offline-playback-ignored-local-file
+   * Offline playback (OFFL-FILE-03): try to open an HLS session over the sealed pieces saved on this device for the
+   * current `fileId`, built by MAIN from the item manifest (the same HLS path as streaming; MAIN serves the pieces
+   * locally, decrypting them, with no token and no network). Null when this title is not saved as pieces here (or the
+   * manifest is gone), so the caller falls back to streaming. @bugfix offline-playback-ignored-local-file
    */
   const tryCreateOfflineSession = useCallback(async (): Promise<{
     id: string;
     url: string;
+    subtitleKeys: string[];
   } | null> => {
-    if (!window.sf?.createPlaybackOfflineSession || !fileId) return null;
-    // Consult the offline-state store FIRST: it holds the trusted on-disk path
-    // for saved files (hydrated from the runtime's list_local). This avoids an
-    // IPC round-trip on the common streaming path AND gives main the path to
-    // serve — the library DB is runtime-owned, so main can't resolve it from
-    // getActiveLibraryDb() in the default runtime-proxy mode.
-    // @bugfix offline-playback-ignored-local-file
-    const localPath = offlineLocalPathForFile(fileId);
-    if (!localPath) {
-      mpvLog.info({ fileId }, "loadStream: no offline copy in store — using stream");
+    if (!window.sf?.createPlaybackOfflineHlsSession || !fileId) return null;
+    // The offline-state store (hydrated from the runtime's list_local) holds the trusted manifest path: no IPC
+    // round-trip on the common streaming path.
+    const manifestPath = offlineManifestPathForFile(fileId);
+    if (!manifestPath) {
+      mpvLog.info({ fileId }, "loadStream: no offline pieces in store — using stream");
       return null;
     }
     try {
-      const session = await window.sf.createPlaybackOfflineSession({
-        fileId,
-        mediaId: media.id,
-        localPath,
-      });
+      const session = await window.sf.createPlaybackOfflineHlsSession({ fileId, manifestPath });
       mpvLog.info(
-        { fileId, mediaId: media.id, sessionId: session.id, totalSize: session.totalSize },
-        "loadStream: offline copy found — playing local file",
+        { fileId, mediaId: media.id, sessionId: session.id, subtitles: session.subtitleKeys.length },
+        "loadStream: offline pieces found — playing from this device",
       );
-      return { id: session.id, url: session.url };
+      return session;
     } catch (err) {
       mpvLog.warn(
-        { fileId, localPath, reason: err instanceof Error ? err.message : String(err) },
+        { fileId, manifestPath, reason: err instanceof Error ? err.message : String(err) },
         "loadStream: offline session create failed — falling back to stream",
       );
       return null;
     }
   }, [fileId, media.id]);
-
-  /**
-   * Offline metadata payload: the muxed MKV carries its audio/subtitle/chapter
-   * tracks EMBEDDED, so mpv exposes them natively — we send no external
-   * sub-add / audio-track-add (those proxy URLs don't exist offline). Skip
-   * markers + next-episode are time-based and stream-independent, so they stay.
-   * Reuses the same pure builder as the streaming path → identical shape.
-   */
-  const buildOfflineMetadataPayload = useCallback(
-    () =>
-      buildExternalPlaybackMetadataPayload({
-        subtitles: [],
-        chapters: [],
-        audioOptions: [],
-        subtitlesOffLabel: t("player.subtitlesOff"),
-        menuPrompts: oscMenuPrompts(t),
-        skipMarkers: currentSkipMarkers,
-        title: nowPlaying.title,
-        meta: nowPlaying.meta,
-        previousEpisode: previousEpisode ?? null,
-        nextEpisode: nextEpisode ?? null,
-        autoplayNextEpisode,
-        autoSkipIntro,
-        autoSkipCredits,
-      }),
-    [currentSkipMarkers, nowPlaying, previousEpisode, nextEpisode, autoplayNextEpisode, autoSkipIntro, autoSkipCredits, t],
-  );
 
   const createHlsSession = useCallback(async () => {
     if (!window.sf?.createPlaybackHlsSession) {
@@ -1753,14 +1718,16 @@ export const useMpvPlaybackEngine = ({
         throw new Error(HLS_MASTER_FALLBACK_ERROR);
       };
       try {
-      // Offline-first source selection: prefer a locally-downloaded copy so
+      // Offline-first source selection: prefer the pieces saved on this device so
       // playback works with the server unreachable. Falls back to the
-      // HLS/tunnel path when no offline copy exists for this file.
+      // HLS/tunnel path when this file is not saved here as pieces.
       // @bugfix offline-playback-ignored-local-file
       const offlineSource = await tryCreateOfflineSession();
       const isOfflineSource = offlineSource !== null;
+      offlineSubtitleKeysRef.current = offlineSource ? new Set(offlineSource.subtitleKeys) : null;
       // Per-load tracks of a (re)load: an OSC pick of this file first (P18), else the app's audio choice as its HLS
-      // `aid` (PLAY-TRACK-04). An offline copy is one muxed file whose audio order the app does not know.
+      // `aid` (PLAY-TRACK-04). An offline source keeps mpv's default track (the saved audio set may differ from the
+      // streamed one, so the app's index does not apply).
       const loadTrackOptions = () => {
         const picks = oscTrackPicksRef.current.reloadOptions(fileIdRef.current);
         return { ...picks, audioTrack: picks.audioTrack ?? (isOfflineSource ? null : appAudioTrackRef.current) };
@@ -1890,10 +1857,9 @@ export const useMpvPlaybackEngine = ({
             const runPrewarm = async (): Promise<{ sourceUnreachable: boolean }> => {
               let sourceUnreachable = false;
               try {
-                // Offline sessions serve a complete local file — there are no
-                // tunnel chunks to pre-warm (and prewarm would 404 the non-HLS
-                // session id). @bugfix offline-playback-ignored-local-file
-                if (!isOfflineSource && window.sf?.prewarmPlaybackHlsSession) {
+                // Offline sessions prewarm too: the pieces are read and decrypted locally (no tunnel), so mpv's
+                // first reads are warm. @bugfix offline-playback-ignored-local-file
+                if (window.sf?.prewarmPlaybackHlsSession) {
                   const prewarmPromise = window.sf.prewarmPlaybackHlsSession({
                     sessionId: session.id,
                     videoId: effectiveFormat?.id ?? null,
@@ -1920,8 +1886,8 @@ export const useMpvPlaybackEngine = ({
                       elapsedMs: prewarmResult.elapsedMs,
                     }, "loadStream: hls prewarm complete");
                     // Zero warmed + at least one missed = the tunnel delivered
-                    // nothing → source unreachable. (Guarded by !isOfflineSource
-                    // for clarity; the offline branch never reaches prewarm.)
+                    // nothing → source unreachable. Never for an offline source:
+                    // its pieces are on this device.
                     sourceUnreachable =
                       !isOfflineSource &&
                       prewarmResult.warmedKeys.length === 0 &&
@@ -1941,10 +1907,9 @@ export const useMpvPlaybackEngine = ({
             // the launch below awaits it. Usually already started when the details dialog opened (#928).
             void window.sf?.warmExternalMpv?.().catch(() => undefined);
             const prelaunch = await runPrelaunchLoads({
-              // Offline source → embedded tracks (no external sub-add); streaming
-              // source → external sidecars via the proxy. @bugfix
-              // offline-playback-ignored-local-file
-              metadata: async () => (isOfflineSource ? buildOfflineMetadataPayload() : await buildExternalMetadataPayload()),
+              // Offline and streamed sources share the HLS path: subtitles are external sidecars via the proxy (an
+              // offline source offers only the ones saved with it). @bugfix offline-playback-ignored-local-file
+              metadata: buildExternalMetadataPayload,
               prewarm: runPrewarm,
               // A data URI of the user's own copy (META-ART-01), never a source nor its image CDN.
               // Null when there is no copy yet, after a short wait or on failure: mpv then launches straight on the stream.
@@ -2603,10 +2568,8 @@ export const useMpvPlaybackEngine = ({
           throw new Error("playback_external_loadfile_failed");
         }
         // Build metadata payload up-front so the ready-gate knows expected
-        // subtitle / chapter counts. Offline → embedded tracks (no sub-add).
-        const reloadMetadataPayload = isOfflineSource
-          ? buildOfflineMetadataPayload()
-          : await buildExternalMetadataPayload();
+        // subtitle / chapter counts.
+        const reloadMetadataPayload = await buildExternalMetadataPayload();
         // Phase 1: parallel metadata send + tracks-stable wait. Adaptive
         // backoff (0/100/300 ms) — shared with backdrop and direct-launch
         // branches via the pure helper. Replaces the previous fixed
@@ -2924,6 +2887,7 @@ export const useMpvPlaybackEngine = ({
     hlsSessionRef.current = null;
     await releaseOfflineSession(offlineSessionRef.current);
     offlineSessionRef.current = null;
+    offlineSubtitleKeysRef.current = null;
     // ACCT-STREAM-04: the player closed, so its stream place goes back at once.
     void releaseDesktopStreamSlot();
   }, [releaseHlsSession, releaseOfflineSession]);

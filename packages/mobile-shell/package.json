@@ -99,6 +99,7 @@
   "dependencies": {
     "@space/legal": "workspace:*",
     "@space/metadata-client": "workspace:*",
+    "@space/mobile-media-proxy": "workspace:*",
     "@space/shared": "workspace:*",
     "@space/error-report": "workspace:*",
     "@space/library-db-definition": "workspace:*",

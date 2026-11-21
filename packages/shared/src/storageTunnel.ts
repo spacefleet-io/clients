@@ -445,6 +445,22 @@ export type StorageUploadSession = {
   close(): Promise<void>;
 };
 
+/** Per-object options of a download on a reused session; the purpose, profile and client are the session's. */
+export type StorageDownloadSessionObjectOptions = {
+  downloadId?: string;
+  receiveWindow?: number;
+};
+
+/**
+ * A reused download session of one media placement (STOR-REUSE-02): `download` returns the object's stored (sealed)
+ * bytes. Downloads on one handle run one after another; open several handles to run them side by side.
+ */
+export type StorageDownloadSession = {
+  download(objectKey: string, options?: StorageDownloadSessionObjectOptions): Promise<Uint8Array>;
+  /** Waits for the queued downloads, then ends the session. */
+  close(): Promise<void>;
+};
+
 /**
  * An upload payload that never sits in JS memory (a file slice on a phone). Moving bytes through Hermes is
  * slow (base64 decode of 64 KB ~50 ms, WebSocket.send of 128 KB ~100 ms on a OnePlus 6), so a host that can
@@ -471,8 +487,8 @@ type UploadResumeState = { resumeId: string | null; resumesLeft: number };
 
 /** Waits before each resume of an interrupted upload (a gateway restart or drain, a dropped connection); its length is the resume budget. */
 const UPLOAD_RESUME_RETRY_DELAYS_MS = [250, 1_000, 3_000, 8_000, 15_000] as const;
-/** A reused upload session is renewed past this age, well inside the gateway's 10-minute session TTL. */
-const UPLOAD_SESSION_RENEW_MS = 4 * 60_000;
+/** A reused upload or download session is renewed past this age, well inside the gateway's 10-minute session TTL. */
+const REUSED_SESSION_RENEW_MS = 4 * 60_000;
 
 export const streamUploadFrames = async (input: {
   byteLength: number;
@@ -1503,7 +1519,7 @@ export const createUserStorageTunnelClient = (input: {
       if (closed) throw new Error("TUNNEL_UPLOAD_SESSION_CLOSED");
       const objectOptions = { ...options, placementId, clientType: session.clientType, clientVersion: session.clientVersion };
       let opened = current;
-      if (opened && Date.now() - (await opened.then((value) => value.openedAt).catch(() => 0)) >= UPLOAD_SESSION_RENEW_MS) {
+      if (opened && Date.now() - (await opened.then((value) => value.openedAt).catch(() => 0)) >= REUSED_SESSION_RENEW_MS) {
         await drop(opened);
       }
       opened = acquire();
@@ -1537,7 +1553,7 @@ export const createUserStorageTunnelClient = (input: {
     };
   };
 
-  const downloadObject = async (
+  const downloadObjectOnce = async (
     token: string,
     objectKey: string,
     options?: {
@@ -1553,20 +1569,27 @@ export const createUserStorageTunnelClient = (input: {
       hints?: StorageDownloadHints;
       onChunk?: (chunk: Uint8Array) => void | Promise<void>;
       skipAssemble?: boolean;
-    }
+    },
+    /** An open session of `createDownloadSession`: no session of its own is made, started or ended. */
+    reused?: { sessionId: string }
   ) => {
     const onTraffic = options?.hints?.onTraffic;
-    let session: StorageTunnelSession;
-    try {
-      session = await client.createSession(token, objectKey, {
-        purpose: options?.purpose ?? "playback",
-        profileId: options?.profileId,
-      });
-    } catch (error) {
-      // A refused session (STOR-BW-07) carries the report of the silo that refused it.
-      const refusal = storageTrafficFromError(error);
-      if (refusal) notifyTraffic(onTraffic, refusal);
-      throw error;
+    let session: Pick<StorageTunnelSession, "sessionId" | "resolvedObjectKey" | "traffic">;
+    if (reused) {
+      // The session's own prefix (media/<placementId>) is the gateway's: a key of that media is read as sent.
+      session = { sessionId: reused.sessionId, resolvedObjectKey: objectKey.trim() };
+    } else {
+      try {
+        session = await client.createSession(token, objectKey, {
+          purpose: options?.purpose ?? "playback",
+          profileId: options?.profileId,
+        });
+      } catch (error) {
+        // A refused session (STOR-BW-07) carries the report of the silo that refused it.
+        const refusal = storageTrafficFromError(error);
+        if (refusal) notifyTraffic(onTraffic, refusal);
+        throw error;
+      }
     }
     if (onTraffic) {
       sessionTrafficListenerById.set(session.sessionId, onTraffic);
@@ -1579,7 +1602,7 @@ export const createUserStorageTunnelClient = (input: {
     const hintFields = (withBurst: boolean) => buildDownloadHintFields(options?.hints, withBurst);
 
     try {
-      await startSession(token, sessionId, options?.clientType, options?.clientVersion);
+      if (!reused) await startSession(token, sessionId, options?.clientType, options?.clientVersion);
       const shouldAssemble = options?.skipAssemble !== true;
       const chunks: Uint8Array[] = [];
       let totalBytes = 0;
@@ -1701,6 +1724,9 @@ export const createUserStorageTunnelClient = (input: {
             ),
           ]);
           downloadPerf.wsFrames += 1;
+          // A reused session's socket may still hold a late answer of the download before it (its close is answered
+          // `download.complete`): a frame of another download is not this one's.
+          if (typeof frame.downloadId === "string" && frame.downloadId !== effectiveDownloadId) continue;
           const kind = String(frame.kind ?? "");
           if (kind === "download.complete") break;
           if (kind === "download.error") {
@@ -1816,7 +1842,7 @@ export const createUserStorageTunnelClient = (input: {
           ? await getWsConnection(token, sessionId, gatewayBaseUrl).catch(() => null)
           : null;
 
-      if (wsConn && input.preferWsDownloadStream === true) {
+      if (wsConn && input.preferWsDownloadStream === true && !reused) {
         downloadPerf.streamAttempted = true;
         try {
           let lastReceivedSeq = -1;
@@ -1917,8 +1943,9 @@ export const createUserStorageTunnelClient = (input: {
             await runRequestResponseDownload(downloadId, 0, (frame) => client.sendFrame(token, sessionId, frame));
           }
         } catch (error) {
-          // A stopped viewer (STOR-BW-08) stays stopped: no other route to the same bytes.
-          if (isPlaybackStoppedError(error)) throw error;
+          // A stopped viewer (STOR-BW-08) stays stopped: no other route to the same bytes. A reused session is dropped
+          // instead of falling back on it: `createDownloadSession` tries the object once more on a fresh session.
+          if (isPlaybackStoppedError(error) || reused) throw error;
           const reason = error instanceof Error ? error.message : "unknown";
           if (wsConn) {
             if (error instanceof Error && error.message === "ws_read_timeout") {
@@ -1972,9 +1999,110 @@ export const createUserStorageTunnelClient = (input: {
       });
       return merged;
     } finally {
-      await endSession(token, sessionId);
-      sessionTrafficListenerById.delete(sessionId);
+      if (!reused) {
+        await endSession(token, sessionId);
+        sessionTrafficListenerById.delete(sessionId);
+      }
     }
+  };
+
+  const downloadObject = (token: string, objectKey: string, options?: Parameters<typeof downloadObjectOnce>[2]) =>
+    downloadObjectOnce(token, objectKey, options);
+
+  /**
+   * One playback session for many objects of one media (STOR-REUSE-02): the session's create, start and websocket are
+   * paid once instead of per object (a song's 1 MiB chunks paid ~0.9 s each on prod, 2026-11-21); each object still
+   * has its own `download.open` / `download.close`. `objectKey` names the media (any of its keys); a key of another
+   * media, or outside any media, routes to another silo and is downloaded on a session of its own. Downloads on one
+   * handle run one after another (the websocket answers in order); open several handles to run them side by side. A
+   * failed download drops the session and is tried once more through `downloadObject` (fresh session); the next one
+   * opens a new session. A stopped viewer (STOR-BW-08) or a refused session stays refused. A session is renewed before
+   * the gateway's session TTL could end it.
+   */
+  const createDownloadSession = (
+    token: string,
+    session: {
+      objectKey: string;
+      purpose?: StorageTunnelPurpose;
+      profileId?: string | null;
+      clientType?: string;
+      clientVersion?: string;
+    }
+  ): StorageDownloadSession => {
+    const placementId = parseMediaPlacementIdFromObjectKey(session.objectKey);
+    const sessionOptions = {
+      purpose: session.purpose,
+      profileId: session.profileId,
+      clientType: session.clientType,
+      clientVersion: session.clientVersion,
+    };
+    let current: Promise<{ sessionId: string; openedAt: number }> | null = null;
+    let queue: Promise<unknown> = Promise.resolve();
+    let closed = false;
+    const drop = async (opened: Promise<{ sessionId: string }> | null) => {
+      if (current === opened) current = null;
+      const sessionId = await opened?.then((value) => value.sessionId).catch(() => null);
+      if (sessionId) await endSession(token, sessionId);
+    };
+    const acquire = () => {
+      if (current) return current;
+      const opened = (async () => {
+        const created = await client.createSession(token, session.objectKey, {
+          purpose: session.purpose ?? "playback",
+          profileId: session.profileId,
+        });
+        try {
+          await startSession(token, created.sessionId, session.clientType, session.clientVersion);
+        } catch (error) {
+          await endSession(token, created.sessionId);
+          throw error;
+        }
+        tunnelLog("tunnel.download_session.open", { placementId, sessionId: created.sessionId });
+        return { sessionId: created.sessionId, openedAt: Date.now() };
+      })();
+      current = opened;
+      opened.catch(() => {
+        if (current === opened) current = null;
+      });
+      return opened;
+    };
+    const downloadOne = async (objectKey: string, options?: StorageDownloadSessionObjectOptions): Promise<Uint8Array> => {
+      if (closed) throw new Error("TUNNEL_DOWNLOAD_SESSION_CLOSED");
+      const objectOptions = { ...options, ...sessionOptions };
+      if (!placementId || parseMediaPlacementIdFromObjectKey(objectKey) !== placementId) {
+        return downloadObject(token, objectKey, objectOptions);
+      }
+      let opened = current;
+      if (opened && Date.now() - (await opened.then((value) => value.openedAt).catch(() => 0)) >= REUSED_SESSION_RENEW_MS) {
+        await drop(opened);
+      }
+      opened = acquire();
+      try {
+        const { sessionId } = await opened;
+        return await downloadObjectOnce(token, objectKey, objectOptions, { sessionId });
+      } catch (error) {
+        await drop(opened);
+        if (isPlaybackStoppedError(error) || isFinalSessionRefusal(error)) throw error;
+        tunnelLog("tunnel.download_session.fallback", {
+          placementId,
+          objectKey,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        return downloadObject(token, objectKey, objectOptions);
+      }
+    };
+    return {
+      download(objectKey: string, options?: StorageDownloadSessionObjectOptions) {
+        const run = queue.then(() => downloadOne(objectKey, options));
+        queue = run.catch(() => undefined);
+        return run;
+      },
+      async close() {
+        await queue;
+        closed = true;
+        await drop(current);
+      },
+    };
   };
 
   const downloadObjectToSink = async (
@@ -2242,6 +2370,7 @@ export const createUserStorageTunnelClient = (input: {
     endSession,
     uploadObject,
     createUploadSession,
+    createDownloadSession,
     downloadObject,
     downloadObjectToSink,
     headObjects,

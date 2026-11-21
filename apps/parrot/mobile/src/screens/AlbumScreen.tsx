@@ -2,7 +2,7 @@
 // is marked (green title, equaliser for its number) and the cover is ringed while the album plays (PAR-LOOK-01). Under
 // the title sit the design's Play, Shuffle, heart and "…" (PAR-LOOK-05): the "…" holds the album card's actions
 // (the shared `parrotCardActionList` of @space/parrot-core, PAR-CARD-01) without Play and Shuffle, Edit metadata among
-// them (PAR-META-16/17), then Keep on this phone (PAR-OFFL-01) and last Delete (PAR-LIB-03). The album's songs the
+// them (PAR-META-16/17), then Save offline (PAR-OFFL-01) and last Delete (PAR-LIB-03). The album's songs the
 // user does not have sit greyed between them, never played (PAR-LIB-05).
 import React from "react";
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, View } from "react-native";

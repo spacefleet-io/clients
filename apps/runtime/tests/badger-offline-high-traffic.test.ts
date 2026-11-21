@@ -16,14 +16,6 @@ import { tmpdir } from "node:os";
 import { join as joinPath } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { runFfmpegMock } = vi.hoisted(() => ({ runFfmpegMock: vi.fn() }));
-
-vi.mock("@space/ffmpeg", () => ({
-  runFfmpeg: runFfmpegMock,
-  runFfprobe: vi.fn(),
-  createFfmpegTask: vi.fn(),
-}));
-
 import { offlineDownloadStepHandler, type OfflineDownloadManifest } from "../src/modules/badger/steps/offlineDownload";
 import type { StorageTraffic } from "@space/shared/storageTunnel";
 import {
@@ -115,8 +107,6 @@ const payload = {
   mediaId: "media-1",
   quality: "1080p",
   formatId: "format-1",
-  container: "mkv",
-  expectedBytes: 1024 + 4096 * 3,
   libraryId: "lib-test",
   manifest,
 };
@@ -159,11 +149,6 @@ describe("offline download while its silo is saturated", () => {
     merged = "normal";
     objectBytes = 0;
     abort = new AbortController();
-    runFfmpegMock.mockReset();
-    runFfmpegMock.mockImplementation(async (args: string[]) => {
-      await fsAsync.writeFile(args[args.length - 1], Buffer.from("mux-output-marker"));
-      return { stdout: "", stderr: "", code: 0 };
-    });
   });
 
   afterEach(() => {
@@ -186,6 +171,7 @@ describe("offline download while its silo is saturated", () => {
       },
       decrypt: (encrypted) => Buffer.from(`plain:${Buffer.from(encrypted).toString("utf8").slice(4)}`),
       resolveOfflineDir: (libraryId) => joinPath(tempRoot, "offline", libraryId),
+      freeDiskBytes: async () => 10 * 1024 * 1024 * 1024,
       registerLocalDownload: async () => ({ inserted: 1 }),
       traffic: {
         current: () => ({ state: merged, playbackBufferSeconds: merged === "high" ? 30 : null, observedAt: Date.now() }),

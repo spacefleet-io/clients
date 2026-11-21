@@ -207,4 +207,25 @@ describe("opening a split library DB migrates it before use (LIB-FMT-08)", () =>
       expect(userVersion(db)).toBe(latest(migrations));
     }
   });
+
+  // LIB-FMT-11: a playback DB an earlier build left at the latest version, without the packed tables. No migration
+  // step adds them (that would bump user_version before the switch, LIB-FMT-13), so the open creates them empty.
+  it("creates the packed playback tables on an existing playback DB without bumping its version (LIB-FMT-11)", async () => {
+    const packed = ["media_chunk_lists", "media_file_playback"];
+    const tables = (db: DatabaseSync) =>
+      (db.prepare(`SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('${packed.join("', '")}') ORDER BY name;`).all() as Row[])
+        .map((row) => String(row.name));
+    const db = new DatabaseSync(":memory:");
+    await ensurePlaybackSchema(phone(db));
+    for (const table of packed) db.exec(`DROP TABLE ${table};`);
+    const before = { userVersion: userVersion(db), tables: tables(db) };
+    log("packed.before_open", before);
+    expect(before).toEqual({ userVersion: latest(playbackMigrations), tables: [] });
+
+    await ensurePlaybackSchema(phone(db));
+    const after = { userVersion: userVersion(db), tables: tables(db) };
+    log("packed.after_open", after);
+    expect(after).toEqual({ userVersion: latest(playbackMigrations), tables: packed });
+    expect(db.prepare("SELECT COUNT(*) AS n FROM media_chunk_lists;").get()).toEqual({ n: 0 });
+  });
 });

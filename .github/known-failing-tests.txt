@@ -37,5 +37,4 @@ packages/mpv-protocol/tests/luaConstants.test.ts	expects eight Lua channels and 
 packages/parrot-core/tests/songs-query.test.ts	the song rows now carry the four ReplayGain columns the expected row does not list; fails upstream too
 packages/parrot-ingest/tests/covers.test.ts	shrinking a print-size JPEG cover can pass its 5 s limit on a busy runner; fails upstream too
 packages/parrot-ingest/tests/importer.test.ts	the large-cover cases can pass their 5 s limit on a busy runner, and the one-failing-file case fails intermittently; fails upstream too
-packages/parrot-ingest/tests/lyricsIntoFile.test.ts	writing lyrics into aac, ogg, opus and wav files can pass the 5 s limit on a busy runner; fails upstream too
 packages/sdk/tests/sdk.test.ts	regenerating the SDK from apps/api/openapi.json no longer gives the committed sdk.gen.ts; fails upstream too

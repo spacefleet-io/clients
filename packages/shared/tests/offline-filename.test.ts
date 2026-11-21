@@ -342,4 +342,15 @@ describe("resolveOfflineFilenameCollision", () => {
       ]);
     expect(got).toBe("foo (2)");
   });
+
+  // #618 / OFFL-FILE-02: Windows and macOS file systems ignore letter case, so a name that differs only in case
+  // from an existing one is a collision too (it would overwrite it there).
+  it("treats a name differing only in letter case as taken (#618)", () => {
+    const existing = new Set(["lattice (1999).MKV", "LATTICE (1999) (2).mkv"]);
+    console.info(`[offline-filename:collision-case] existing=${JSON.stringify([...existing])} → expect (3)`);
+    const got = resolveOfflineFilenameCollision("Lattice (1999).mkv", existing);
+    if (got !== "Lattice (1999) (3).mkv")
+      dumpOfflineFilenameSnapshot("collision-case", [{ input: [...existing], got, want: "Lattice (1999) (3).mkv" }]);
+    expect(got).toBe("Lattice (1999) (3).mkv");
+  });
 });

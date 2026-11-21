@@ -15,8 +15,15 @@ import {
   type ArtworkFetchOutcome,
   type ArtworkKind,
 } from "@space/library-db-definition/artworkCopy";
-import { LibraryDb } from "@space/library-db-runtime";
+import { LibraryDb, LibraryFormatTooNewError } from "@space/library-db-runtime";
 import { getLibraryMeta } from "@space/library-db-runtime/api";
+import { clientIdentityHeaders, onAppUpdateRequired } from "@space/shared/appVersion";
+import {
+  updateRequiredFromPayload,
+  updateRequiredFromResponse,
+  updateRequiredState,
+  type IntegrationUpdateRequired,
+} from "./updateRequired";
 import {
   createDetailsTexts,
   createMetadataClient,
@@ -138,6 +145,13 @@ export class IntegrationRuntime {
   private imageCacheIndex: Map<string, { size: number; shownAt: number }> | null = null;
   private imageCacheGeneration = 0;
   private imageCacheWrites: Promise<void> = Promise.resolve();
+  /**
+   * REL-CD-29 / LIB-FMT-13: the API refused this build (426 `app_update_required`, a switch to an op stream it does not
+   * read included) or the library holds a format newer than it reads. Nothing syncs or opens again until the plugin is
+   * updated (a new sidecar process); the library copy stays as it was, nothing of the refused answer is applied.
+   */
+  private updateRequired: IntegrationUpdateRequired | null = null;
+  private readonly stopUpdateWatch: () => void;
 
   constructor(
     private readonly config: IntegrationConfig,
@@ -165,7 +179,7 @@ export class IntegrationRuntime {
       storage: this.ticketStorage,
       fetch: fetchFn,
       // The same session credential the sidecar uses for every other API call; issuance refuses personal tokens.
-      getAuth: () => (this.auth ? { token: this.auth.token, headers: { "x-space-app": "badger" } } : null),
+      getAuth: () => (this.auth ? { token: this.auth.token, headers: { "x-space-app": "badger", ...clientIdentityHeaders() } } : null),
       apiBaseUrl: () => this.apiUrl,
       pinnedKeys,
       // Counts only, never a ticket or a title; a key mismatch names the API's key and the trusted ones (META-ANON-07).
@@ -192,6 +206,23 @@ export class IntegrationRuntime {
       deviceType: "jellyfin",
       onApproved: (result) => this.onPairingApproved(result),
     });
+    // Every refusal the shared API clients get (library reads and writes, storage sessions); a 426 for the switch to
+    // an op stream this build reads is not one: the library converts and retries (LIB-FMT-13).
+    this.stopUpdateWatch = onAppUpdateRequired((payload) => this.requireUpdate(updateRequiredFromPayload(payload), "api"));
+  }
+
+  /** Stops everything that talks to the API on the user's behalf, once; the plugin shows the message. */
+  private requireUpdate(state: IntegrationUpdateRequired, source: string) {
+    if (this.updateRequired || this.stopped) return;
+    this.updateRequired = state;
+    this.lastError = `update_required: ${state.reason}`;
+    this.log(`update required: ${state.message}`, { reason: state.reason, minVersion: state.minVersion, version: this.config.version, source });
+    this.tickets.stop();
+    this.artworkQueue?.stop();
+    this.artworkQueue = null;
+    this.textsQueue?.stop();
+    this.textsQueue = null;
+    this.bump();
   }
 
   private get apiUrl() {
@@ -251,6 +282,7 @@ export class IntegrationRuntime {
 
   async stop() {
     this.stopped = true;
+    this.stopUpdateWatch();
     this.tickets.stop();
     this.artworkQueue?.stop();
     this.artworkQueue = null;
@@ -324,7 +356,7 @@ export class IntegrationRuntime {
   /** State machine step: sign in if possible, open the library once token + key exist. */
   private async tick() {
     if (this.stopped || this.opening || this.db) return;
-    if (this.signedOutReason) return;
+    if (this.signedOutReason || this.updateRequired) return;
     if (!this.auth && this.config.email && this.config.password) {
       try {
         await this.performLogin({
@@ -409,6 +441,7 @@ export class IntegrationRuntime {
     try {
       profiles = await fetchProfiles(auth.apiUrl, auth.token);
     } catch (error) {
+      if (this.noteRefusal(error, "profiles")) return;
       this.log("profile list unavailable", { reason, error: errorMessage(error) });
       if (isUnauthorizedError(error)) await this.refreshAccess();
       return;
@@ -526,12 +559,26 @@ export class IntegrationRuntime {
       this.startTexts("library-open");
       await this.refreshAccess();
     } catch (error) {
+      if (this.noteTooNew(error, "open")) return;
       this.lastError = `library_open_failed: ${errorMessage(error)}`;
       this.log("library open failed", { error: errorMessage(error), stack: error instanceof Error ? error.stack : null });
       if (errorMessage(error) === "library_key_mismatch" || errorMessage(error) === "library_key_invalid") this.rejectedKey = keyText;
       // Only /auth/me answering 401 wipes the key and state; an error string alone never does.
       if (isUnauthorizedError(error)) await this.refreshAccess();
     }
+  }
+
+  /**
+   * LIB-FMT-13: a library (or a change in it) in a format this build does not read is never applied in part: the
+   * runtime refuses it whole, and the sidecar asks for the plugin update like a 426. Also true once a refusal of the
+   * same call already latched the update state, so the caller keeps that state's message instead of its own.
+   */
+  private noteTooNew(error: unknown, source: string): boolean {
+    if (error instanceof LibraryFormatTooNewError) {
+      this.log("library format is newer than this build reads", { source, error: errorMessage(error) });
+      this.requireUpdate(updateRequiredState("library_format_too_new", null), `${source}:too_new`);
+    }
+    return this.updateRequired !== null;
   }
 
   /** Same check as typing the key by hand on the desktop: the library's key probe must decrypt with this key. */
@@ -544,7 +591,7 @@ export class IntegrationRuntime {
   async syncOnce(reason: string) {
     const db = this.db;
     // INTG-PROF-01: paused for a profile pick: nothing syncs and no request is sent until the owner picks.
-    if (!db || this.stopped || this.profileNeeded) return;
+    if (!db || this.stopped || this.profileNeeded || this.updateRequired) return;
     await this.refreshProfiles(reason);
     try {
       const before = db.getVersion();
@@ -561,6 +608,10 @@ export class IntegrationRuntime {
         this.startTexts(`sync:${reason}`);
       }
     } catch (error) {
+      if (this.noteTooNew(error, `sync:${reason}`)) {
+        this.log("library sync stopped: update required, nothing applied", { reason, version: db.getVersion(), error: errorMessage(error) });
+        return;
+      }
       this.lastError = `sync_failed: ${errorMessage(error)}`;
       this.log("library sync failed", { reason, error: errorMessage(error) });
       if (isUnauthorizedError(error)) await this.refreshAccess();
@@ -572,13 +623,15 @@ export class IntegrationRuntime {
     if (!auth || this.stopped) return;
     try {
       const res = await fetch(`${auth.apiUrl}/auth/me`, {
-        headers: { Authorization: `Bearer ${auth.token}`, "x-space-app": "badger" },
+        headers: { Authorization: `Bearer ${auth.token}`, "x-space-app": "badger", ...clientIdentityHeaders() },
       });
       if (res.status === 401) {
         await this.wipe("api_401");
         return;
       }
       if (!res.ok) {
+        const refusal = updateRequiredFromResponse(res.status, await res.json().catch(() => null));
+        if (refusal) this.requireUpdate(refusal, "auth_me");
         this.log("auth/me failed", { status: res.status });
         return;
       }
@@ -656,7 +709,19 @@ export class IntegrationRuntime {
     if (this.auth && !this.signedOutReason) throw Object.assign(new Error("already_signed_in"), { status: 409 });
     this.dropPendingPairing("pairing_restarted");
     const apiUrl = this.accountApiUrl(input.apiUrl);
-    return this.pairing.start({ apiUrl, deviceName: input.deviceName || this.config.deviceName });
+    try {
+      return await this.pairing.start({ apiUrl, deviceName: input.deviceName || this.config.deviceName });
+    } catch (error) {
+      this.noteRefusal(error, "pairing");
+      throw error;
+    }
+  }
+
+  /** A hand-written call answered 426 `app_update_required` (the shared clients report theirs themselves). */
+  private noteRefusal(error: unknown, source: string): boolean {
+    const refusal = updateRequiredFromResponse(errorStatus(error) ?? 0, errorPayload(error));
+    if (refusal) this.requireUpdate(refusal, source);
+    return refusal !== null;
   }
 
   cancelPairing() {
@@ -673,7 +738,7 @@ export class IntegrationRuntime {
     this.log("pairing dropped before the profile pick: revoking its session", { reason });
     void fetch(`${pending.apiUrl}/auth/logout`, {
       method: "POST",
-      headers: { Authorization: `Bearer ${pending.token}`, "x-space-app": "badger" },
+      headers: { Authorization: `Bearer ${pending.token}`, "x-space-app": "badger", ...clientIdentityHeaders() },
     }).catch((error) => this.log("logout request failed", { error: errorMessage(error) }));
     this.bump();
   }
@@ -725,7 +790,7 @@ export class IntegrationRuntime {
     const apiUrl = this.accountApiUrl(input.apiUrl);
     const res = await fetch(`${apiUrl}/auth/login`, {
       method: "POST",
-      headers: { "content-type": "application/json", "x-space-app": "badger" },
+      headers: { "content-type": "application/json", "x-space-app": "badger", ...clientIdentityHeaders() },
       body: JSON.stringify({
         email: input.email,
         password: input.password,
@@ -739,6 +804,7 @@ export class IntegrationRuntime {
     if (!res.ok || !body.token) {
       const error = new Error(body.error ?? `api_${res.status}`);
       Object.assign(error, { status: res.status, payload: body });
+      this.noteRefusal(error, "login");
       throw error;
     }
     this.auth = { token: body.token, email: body.user?.email ?? input.email, userId: body.user?.id ?? null, apiUrl };
@@ -764,7 +830,7 @@ export class IntegrationRuntime {
     if (auth) {
       await fetch(`${auth.apiUrl}/auth/logout`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${auth.token}`, "x-space-app": "badger" },
+        headers: { Authorization: `Bearer ${auth.token}`, "x-space-app": "badger", ...clientIdentityHeaders() },
       }).catch((error) => this.log("logout request failed", { error: errorMessage(error) }));
     }
     await this.wipe("user_signout");
@@ -778,6 +844,8 @@ export class IntegrationRuntime {
     const hasKey = Boolean(this.readLibraryKey());
     let state = "starting";
     if (this.starting) state = "starting";
+    // REL-CD-29: first, because nothing else works until the plugin is updated (signing in again is refused too).
+    else if (this.updateRequired) state = "update_required";
     else if (this.pendingPairing) state = "needs_profile";
     else if (this.signedOutReason) state = "signed_out";
     else if (!this.auth) state = "needs_login";
@@ -796,7 +864,7 @@ export class IntegrationRuntime {
       libraryVersion: db ? db.getVersion() : null,
       mediaCount: db ? db.listMedia().length : 0,
       lastSyncAt: this.lastSyncAt,
-      lastError: this.lastError ?? this.signedOutReason,
+      lastError: this.updateRequired ? `update_required: ${this.updateRequired.reason}` : (this.lastError ?? this.signedOutReason),
       apiUrl: this.apiUrl,
       version: this.config.version,
       pairing: this.pairing.snapshot(),
@@ -805,6 +873,7 @@ export class IntegrationRuntime {
       profile: this.statusProfile(),
       profiles: this.profiles,
       profileNeeded: this.profileNeeded,
+      updateRequired: this.updateRequired,
     };
   }
 
@@ -985,7 +1054,7 @@ export class IntegrationRuntime {
    */
   private async startArtworkCopies(reason: string): Promise<number> {
     const db = this.db;
-    if (!db || this.stopped) return 0;
+    if (!db || this.stopped || this.updateRequired) return 0;
     this.artworkQueue ??= this.createArtworkQueue();
     try {
       const scheduled = await scheduleArtworkMigration({
@@ -1107,7 +1176,7 @@ export class IntegrationRuntime {
    */
   private startTexts(reason: string): number {
     const db = this.db;
-    if (!db || this.stopped) return 0;
+    if (!db || this.stopped || this.updateRequired) return 0;
     this.textsQueue ??= this.createTextsQueue();
     const language = this.config.uiLanguage;
     let scheduled = 0;

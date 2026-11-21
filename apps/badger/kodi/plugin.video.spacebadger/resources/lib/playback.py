@@ -11,8 +11,9 @@ import localized_texts
 import progress as prog
 import profiles
 import stream_slot
-from api import ApiError, PlaybackStoppedError, PlaybackUnavailableError, UnauthorizedError, UnpaidError
-from compat import ADDON_ID, RENEW_URL, HAVE_KODI, get_prop, log, notify, ok_dialog, set_prop, yes_no
+from api import ApiError, AppUpdateRequiredError, PlaybackStoppedError, PlaybackUnavailableError, UnauthorizedError, UnpaidError
+from compat import ADDON_ID, RENEW_URL, HAVE_KODI, UPDATE_REQUIRED_MESSAGE, get_prop, log, notify, ok_dialog, set_prop, yes_no
+from ops_sql import write_op_stream_version
 import core
 
 if HAVE_KODI:
@@ -283,9 +284,10 @@ def delete_media(ctx, media_id):
 
 
 def delete_episode(ctx, media_id, episode_id):
-    """Permanent delete of ONE episode (INTG-DEL-01): its storage objects, then a media.upsert of the show's details
-    without that episode's file/formats/tracks (what the desktop's deleteEpisode + deleteMediaFile leave behind),
-    then Kodi library + export cleanup. The episode's metadata row and the other episodes stay."""
+    """Permanent delete of ONE episode (INTG-DEL-01): its storage objects, then the library op, then Kodi library +
+    export cleanup. Before the account's switch (LIB-FMT-13) the op is a media.upsert of the show's details without
+    that episode's file/formats/tracks (what the desktop's deleteEpisode + deleteMediaFile leave behind); after it, one
+    media.episode.delete (LIB-FMT-11). The episode's metadata row and the other episodes stay."""
     media = ctx.lib.get_media(media_id)
     details = ctx.lib.media_details(media_id)
     episode = next((e for e in (details or {}).get("episodes") or [] if e["id"] == episode_id), None)
@@ -309,8 +311,18 @@ def delete_episode(ctx, media_id, episode_id):
         for i in range(0, len(keys), 200):
             res = ctx.api.delete_objects(keys[i:i + 200])
             log("delete episode batch %d: %s" % (i // 200, res))
-        remaining = details_mod.without_episode_files(details, episode_id)
-        ctx.lib.write_op(ctx.api, ctx.key, "media.upsert", {"details": remaining})
+        if write_op_stream_version(ctx.lib.target_op_stream_version()) >= 4:
+            # LIB-FMT-11: on a switched account the episode goes as one media.episode.delete, never as a full
+            # media.upsert carrying playback (op stream 4 has none in media.upsert).
+            ctx.lib.write_op(ctx.api, ctx.key, "media.episode.delete", {
+                "mediaId": media_id, "episodeId": episode_id, "seasonNumber": int(episode["seasonNumber"]),
+                "episodeNumber": int(episode["episodeNumber"]), "fileIds": details_mod.episode_file_ids(details, episode_id)})
+        else:
+            remaining = details_mod.without_episode_files(details, episode_id)
+            ctx.lib.write_op(ctx.api, ctx.key, "media.upsert", {"details": remaining})
+    except AppUpdateRequiredError:
+        ok_dialog("Badger", UPDATE_REQUIRED_MESSAGE)
+        return False
     except UnpaidError as exc:
         show_unpaid(exc.wipe_at)
         return False

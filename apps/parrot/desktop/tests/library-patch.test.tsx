@@ -11,6 +11,7 @@ import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { streamBridgeStub } from "./streamBridge";
+import { exportBridgeStub } from "./exportBridge";
 import type { ParrotImportStatus, ParrotLibrary, ParrotState } from "../src/shared/ipc";
 import { applyParrotLibraryPatch, diffParrotLibrary, type ParrotLibraryPatch } from "../src/shared/libraryPatch";
 import Library from "../src/renderer/src/Library";
@@ -105,6 +106,7 @@ describe("#2509 a publish's changes reach the window without reading the library
       configurable: true,
       value: {
         ...streamBridgeStub(),
+        ...exportBridgeStub(),
         getLibrary: vi.fn(async () => ({ ok: true, library: v1 })),
         getImportStatus: vi.fn(async () => status({})),
         getImportScan: vi.fn(async () => null),

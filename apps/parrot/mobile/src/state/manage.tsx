@@ -617,7 +617,7 @@ const styles = StyleSheet.create({
   suggestRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, minHeight: 48, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   suggestName: { flexShrink: 1, color: colors.text, fontSize: 15, fontWeight: "600" },
   suggestAbout: { color: colors.textMuted, fontSize: 12 },
-  tag: { color: colors.accent, fontSize: 10, fontWeight: "700", borderWidth: 1, borderColor: colors.accent, borderRadius: 8, paddingHorizontal: 6, paddingVertical: 1 },
+  tag: { color: colors.accent, fontSize: 11, fontWeight: "700", borderWidth: 1, borderColor: colors.accent, borderRadius: 8, paddingHorizontal: 6, paddingVertical: 1 },
   dots: { flexDirection: "row", gap: 4 },
   dot: { width: 7, height: 7, borderRadius: 4, borderWidth: 1, borderColor: colors.textMuted },
   dotOn: { backgroundColor: colors.accent, borderColor: colors.accent },

@@ -21,9 +21,10 @@ import crypto
 import payload_codec
 import profiles
 import tracks
-from api import ApiError, UnauthorizedError, next_state_hash
+from api import ApiError, AppUpdateRequiredError, UnauthorizedError, next_state_hash
 from compat import data_dir, log
-from ops_sql import CATALOG_ID_SOURCES_SQL, UnknownOpTypeError, build_op_statements
+import chunk_lists
+from ops_sql import CATALOG_ID_SOURCES_SQL, build_op_statements, write_op_stream_version
 
 DB_NAME = "library.sqlite"
 PENDING_NAME = "pending_ops.json"
@@ -270,6 +271,7 @@ class LibraryStore(object):
             return {"changed": False, "empty": True, "meta": meta}
         self.verify_key(key, meta)
         changed = False
+        target = int(meta.get("targetOpStreamVersion") or 0)
         st = self.state()
         remote_snapshot_id = meta.get("snapshotId")
         # LIB-SYNC-06: the full snapshot is the fallback for "ops too old" (or no local copy), never for
@@ -286,6 +288,11 @@ class LibraryStore(object):
             db_bytes = None  # the file is written: do not hold the snapshot through the op replay
             changed = True
             ops_resp = self._fetch_ops(api, int(meta.get("snapshotVersion") or 0))
+        target = max(target, int((ops_resp or {}).get("targetOpStreamVersion") or 0))
+        if target >= 4:
+            # LIB-FMT-12: the account is switched, so this copy takes the packed playback layout before any op of
+            # stream 4 applies. Never before the switch (an older reader of a shared snapshot could not read it).
+            self._ensure_packed_layout()
         applied = self._apply_remote_ops(api, key, ops_resp or {})
         changed = changed or applied > 0
         c = self.conn()
@@ -301,7 +308,7 @@ class LibraryStore(object):
         if not reload_snapshot:
             # another device's snapshot is not a reason to re-download: just track which one is current
             self._set_state(c, snapshotId=remote_snapshot_id, snapshotVersion=int(meta.get("snapshotVersion") or 0))
-        self._set_state(c, lastSyncAt=now_iso())
+        self._set_state(c, lastSyncAt=now_iso(), targetOpStreamVersion=target)
         c.execute("COMMIT")
         self.flush_pending(api, key)
         log("sync done: version=%s snapshot=%s applied_ops=%d reload=%s" % (self.version(), remote_snapshot_id, applied, reload_snapshot))
@@ -330,6 +337,33 @@ class LibraryStore(object):
         if inline:
             return base64.b64decode(inline)
         return api.download(entry["objectKey"], "library")
+
+    def _ensure_packed_layout(self):
+        """Runs the layout step once the account is switched (idempotent: a packed copy has no old chunk rows left)
+        and records that this copy holds the packed layout (`packedPlayback`). The tables alone prove nothing: a
+        snapshot built by a v4 client carries them empty before the switch (LIB-FMT-11)."""
+        c = self.conn()
+        c.execute("BEGIN IMMEDIATE")
+        try:
+            stats = chunk_lists.convert_to_packed_layout(c, now_iso())
+            self._set_state(c, packedPlayback=True)
+            c.execute("COMMIT")
+        except Exception:
+            c.execute("ROLLBACK")
+            raise
+        if stats["lists"]:
+            log("packed playback layout: %d chunk lists from %d chunk rows" % (stats["lists"], stats["rows"]))
+
+    @staticmethod
+    def _is_packed(c):
+        row = c.execute("SELECT value FROM sb_state WHERE key = 'packedPlayback'").fetchone()
+        return row is not None and json.loads(row[0]) is True
+
+    def target_op_stream_version(self):
+        try:
+            return int(self.state().get("targetOpStreamVersion") or 0)
+        except (TypeError, ValueError):
+            return 0
 
     def _apply_remote_ops(self, api, key, ops_resp):
         entries = sorted(ops_resp.get("ops") or [], key=lambda e: int(e.get("version") or 0))
@@ -370,11 +404,10 @@ class LibraryStore(object):
         return applied
 
     def _apply_op(self, c, op):
-        try:
-            statements = build_op_statements(op, lambda: str(uuid.uuid4()))
-        except UnknownOpTypeError as exc:
-            log("op %s: unknown type %s: skipped" % (op.get("id"), exc), "warning")
-            return
+        # LIB-FMT-13: an op type this build does not know raises UnknownOpTypeError out of here: the caller rolls the
+        # batch back (the version does not move) and the add-on asks for an update. Skipping it would leave the
+        # library silently wrong.
+        statements = build_op_statements(op, lambda: str(uuid.uuid4()), packed=self._is_packed(c))
         if op.get("type") == "media.upsert":
             # The core row is guarded by its updated_at (LIB-SYNC-08) but the metadata/playback tables are not:
             # an upsert older than the stored row must not rewrite formats, files or episodes either.
@@ -383,6 +416,7 @@ class LibraryStore(object):
             if row is not None and row["updated_at"] is not None and row["updated_at"] > (details.get("updatedAt") or ""):
                 log("op %s: media.upsert of %s is older than the stored row: ignored" % (op.get("id"), details.get("id")), "debug")
                 return
+        if op.get("type") in ("media.upsert", "media.file.playback.set"):
             # PLAY-TRACK-05: a snapshot from before OCR twins lacks the column the subtitle insert now writes.
             sub_cols = [r[1] for r in c.execute("PRAGMA table_info(media_subtitles)").fetchall()]
             if sub_cols and "derived_from_subtitle_id" not in sub_cols:
@@ -438,7 +472,9 @@ class LibraryStore(object):
         return self.flush_pending(api, key)
 
     # Answers that mean "your base is behind the server's head": re-read meta, catch up, retry once.
-    _BASE_MISMATCH = (("version_conflict", 409), ("lineage_conflict", 409), ("invalid_state_hash", 400))
+    _BASE_MISMATCH = (("version_conflict", 409), ("lineage_conflict", 409), ("invalid_state_hash", 400),
+                      # LIB-FMT-13: we declared 4 but the account is not (or no longer) switched: re-read its target.
+                      ("op_stream_not_switched", 409))
 
     def flush_pending(self, api, key):
         """Upload queued ops in order (LIB-STORE-05, #663).
@@ -461,8 +497,16 @@ class LibraryStore(object):
                 # hash from its own head; the base version still guards against a concurrent writer.
                 nxt = next_state_hash(prev, op["id"], encrypted) if prev else None
                 try:
-                    result = api.post_op(encrypted, op["id"], base, prev, nxt)
+                    result = api.post_op(encrypted, op["id"], base, prev, nxt, write_op_stream_version(self.target_op_stream_version()))
                 except UnauthorizedError:
+                    raise
+                except AppUpdateRequiredError as exc:
+                    # LIB-FMT-13: the account was switched since our last meta (we declared 3): re-read it, which
+                    # switches this copy too, and retry declaring 4. A second refusal is a real "update the add-on".
+                    if exc.reason == "library_op_stream" and attempt == 0:
+                        log("op %s refused by op stream switch: re-reading meta" % op["id"], "warning")
+                        self._rebase_on_server(api, key)
+                        continue
                     raise
                 except ApiError as exc:
                     if (exc.code, exc.status) in self._BASE_MISMATCH and attempt == 0:
@@ -500,14 +544,18 @@ class LibraryStore(object):
     def _rebase_on_server(self, api, key):
         """Catch up to the server head and adopt its state hash, so the retried op is based on it."""
         meta = api.library_meta()
+        target = int(meta.get("targetOpStreamVersion") or 0)
+        if target >= 4:
+            self._ensure_packed_layout()
         remote_version = int(meta.get("version") or 0)
         if remote_version > self.version():
             self._apply_remote_ops(api, key, self._fetch_ops(api, self.version()))
+        c = self.conn()
+        c.execute("BEGIN IMMEDIATE")
         if self.version() == remote_version:
-            c = self.conn()
-            c.execute("BEGIN IMMEDIATE")
             self._set_state(c, stateHash=meta.get("stateHash"), lastOpId=meta.get("lastOpId"))
-            c.execute("COMMIT")
+        self._set_state(c, targetOpStreamVersion=target)
+        c.execute("COMMIT")
 
     # ------------------------------------------------------------------ queries
     def q(self, sql, params=()):
@@ -609,22 +657,19 @@ class LibraryStore(object):
         if not file_row:
             return None
         formats = self.q("SELECT * FROM media_formats WHERE media_id = ? AND file_id = ? ORDER BY bitrate_kbps DESC, id", (media_id, file_row["id"]))
+        # LIB-FMT-11: chunk lists come from the packed rows (or the old per-chunk rows before the layout step).
+        format_chunks = chunk_lists.load_chunk_rows(self.conn(), chunk_lists.OWNER_KIND_FORMAT, [f["id"] for f in formats])
         for fmt in formats:
-            fmt["chunks"] = self.q(
-                "SELECT chunk_key, order_index, size_bytes, start_seconds FROM media_format_chunks WHERE format_id = ? ORDER BY order_index",
-                (fmt["id"],),
-            )
+            fmt["chunks"] = format_chunks.get(fmt["id"], [])
         eid = episode["id"] if episode else None
         audio = self.q(
             """SELECT * FROM media_audio_tracks WHERE media_id = ? AND (file_id = ? OR (file_id IS NULL AND (episode_id IS NULL OR episode_id = ?)))
                ORDER BY is_default DESC, created_at, id""",
             (media_id, file_row["id"], eid),
         )
+        track_chunks = chunk_lists.load_chunk_rows(self.conn(), chunk_lists.OWNER_KIND_AUDIO_TRACK, [t["id"] for t in audio])
         for track in audio:
-            track["chunks"] = self.q(
-                "SELECT chunk_key, order_index, size_bytes, start_seconds FROM media_audio_chunks WHERE track_id = ? ORDER BY order_index",
-                (track["id"],),
-            )
+            track["chunks"] = track_chunks.get(track["id"], [])
         subs = self.q(
             """SELECT * FROM media_subtitles WHERE media_id = ? AND (file_id = ? OR (file_id IS NULL AND (episode_id IS NULL OR episode_id = ?)))
                ORDER BY is_default DESC, created_at, id""",
@@ -666,16 +711,15 @@ class LibraryStore(object):
             for sheet in (previews.get("sheets") if isinstance(previews, dict) else None) or []:
                 if isinstance(sheet, dict):
                     keys.append(sheet.get("objectKey"))
-        for r in self.q(
-            "SELECT chunk_key FROM media_format_chunks WHERE format_id IN (SELECT id FROM media_formats WHERE media_id = ?)", (media_id,)
-        ):
-            keys.append(r["chunk_key"])
-        for r in self.q("SELECT init_key FROM media_audio_tracks WHERE media_id = ?", (media_id,)):
+        format_ids = [r["id"] for r in self.q("SELECT id FROM media_formats WHERE media_id = ? ORDER BY id", (media_id,))]
+        for rows in chunk_lists.load_chunk_rows(self.conn(), chunk_lists.OWNER_KIND_FORMAT, format_ids).values():
+            keys.extend(r["chunk_key"] for r in rows)
+        track_ids = []
+        for r in self.q("SELECT id, init_key FROM media_audio_tracks WHERE media_id = ? ORDER BY id", (media_id,)):
             keys.append(r["init_key"])
-        for r in self.q(
-            "SELECT chunk_key FROM media_audio_chunks WHERE track_id IN (SELECT id FROM media_audio_tracks WHERE media_id = ?)", (media_id,)
-        ):
-            keys.append(r["chunk_key"])
+            track_ids.append(r["id"])
+        for rows in chunk_lists.load_chunk_rows(self.conn(), chunk_lists.OWNER_KIND_AUDIO_TRACK, track_ids).values():
+            keys.extend(r["chunk_key"] for r in rows)
         for r in self.q("SELECT object_key FROM media_subtitles WHERE media_id = ?", (media_id,)):
             keys.append(r["object_key"])
         out = []

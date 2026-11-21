@@ -15,6 +15,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { translator } from "../src/renderer/src/i18n";
 import { ImportJobs } from "../src/renderer/src/ImportJobs";
 import { setStorageUnitBase } from "@space/shared/format";
+import { exportBridgeStub } from "./exportBridge";
 import {
   IMPORT_INTERRUPTED,
   type ParrotBackgroundWork,
@@ -98,6 +99,7 @@ describe("Parrot desktop Jobs panel", () => {
     Object.defineProperty(window, "parrot", {
       configurable: true,
       value: {
+        ...exportBridgeStub(),
         getImportJobs: vi.fn(() => jobs),
         onImportJobs: vi.fn((listener: (jobs: ParrotImportJob[]) => void) => {
           push = (next) => {

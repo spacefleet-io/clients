@@ -1,4 +1,4 @@
-// Parrot's "Keep on this computer" pieces (PAR-OFFL-01/02/03), shared by every Parrot app that keeps songs offline on a
+// Parrot's "Save offline" pieces (PAR-OFFL-01/02/03), shared by every Parrot app that keeps songs offline on a
 // web-technology screen (the desktop app today): the keep button on an album, a playlist or a song, the line saying
 // how much space a kept album or playlist takes, and the question asking which copy to keep. They take translated text
 // and callbacks only; downloading is the app's job. The web player keeps nothing

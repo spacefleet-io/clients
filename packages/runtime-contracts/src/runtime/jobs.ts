@@ -23,7 +23,7 @@ export const ingestJobStatusSchema = z.enum([
 ]);
 export type IngestJobStatusZ = z.infer<typeof ingestJobStatusSchema>;
 
-export const ingestJobKindSchema = z.enum(["source", "format", "download"]);
+export const ingestJobKindSchema = z.enum(["source", "format", "download", "export"]);
 export type IngestJobKindZ = z.infer<typeof ingestJobKindSchema>;
 
 export const ingestJobLaneSchema = z.enum(["source", "format", "upload"]);

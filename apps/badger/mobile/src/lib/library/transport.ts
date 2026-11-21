@@ -5,8 +5,8 @@ import BlobManager from "react-native/Libraries/Blob/BlobManager";
 import {
   downloadStorageObjectViaTunnel,
   uploadStorageObjectViaTunnel,
-  getLibraryDb,
 } from "@space/shared/api";
+import { readLibraryDb } from "./libraryReads";
 import type { TunnelUploadSource } from "@space/shared/storageTunnel";
 import type { StorageObjectCounting } from "@space/shared/storageCounting";
 import { decodeManifestBytes } from "@space/mobile-shell/librarySnapshot";
@@ -103,7 +103,7 @@ export const fetchManifestBytes = async (token: string, manifestKey: string) => 
 export const fetchRemoteManifestWithRetry = async (token: string, attempts = 3) => {
   let lastError: unknown = null;
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
-    const remote = await getLibraryDb(token);
+    const remote = await readLibraryDb(token);
     if (!remote.exists || !remote.manifestKey) {
       throw new Error("LIBRARY_MISSING");
     }

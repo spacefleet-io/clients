@@ -27,6 +27,7 @@
     "./LanguageMenu": "./src/LanguageMenu.tsx",
     "./flag": "./src/flag.tsx",
     "./founder": "./src/founder.tsx",
+    "./offline-content": "./src/offline-content.tsx",
     "./badger/continue-hero": "./src/badger/continue-hero.ts",
     "./badger/genre-icons": "./src/badger/genre-icons.ts",
     "./badger/media-detail": "./src/badger/media-detail.tsx",

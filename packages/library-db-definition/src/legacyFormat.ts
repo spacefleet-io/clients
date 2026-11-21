@@ -11,6 +11,7 @@
  *
  * Delete once `MIN_SUPPORTED_OP_STREAM_VERSION` is 3 or more and every supported app runs the source migration.
  */
+import type { MediaDetailsV4 } from "@space/shared/libraryOps";
 import type { MediaCastMember, MediaCrewMember, MediaDetails } from "@space/shared/libraryTypes";
 import { CATALOG_ID_SOURCE } from "./catalogId";
 
@@ -35,8 +36,11 @@ const personCatalogId = (person: LegacyPerson): number | null => person.catalogI
  * A `media.upsert` payload's details in the current shape: an op written by an app of op stream v1–v2 gets its
  * catalog ids from the old keys. Current details come back unchanged.
  */
-export const neutralMediaDetails = (details: MediaDetails): MediaDetails => {
-  const legacy = details as LegacyDetails;
+export function neutralMediaDetails(details: MediaDetails): MediaDetails;
+/** A version-4 upsert's details too: an op of op stream v1–v2 with no playback key has the version-4 shape (LIB-FMT-11). */
+export function neutralMediaDetails(details: MediaDetailsV4): MediaDetailsV4;
+export function neutralMediaDetails(details: MediaDetailsV4): MediaDetailsV4 {
+  const legacy: MediaDetailsV4 & Omit<LegacyDetails, keyof MediaDetails> = details;
   const isLegacy =
     "tmdbId" in legacy ||
     "externalIds" in legacy ||
@@ -62,7 +66,7 @@ export const neutralMediaDetails = (details: MediaDetails): MediaDetails => {
         }
       : {}),
   };
-};
+}
 
 /**
  * The external-id rows of an older library in the current shape: the catalog id under `catalog`, nothing else.

@@ -32,3 +32,28 @@ def catalog_id(entry):
         if isinstance(from_external_ids, (int, float)) and not isinstance(from_external_ids, bool):
             value = from_external_ids
     return value
+
+
+def neutral_media_details(details):
+    """neutralMediaDetails (legacyFormat.ts): a ``media.upsert``'s details with any v1-v2 catalog keys (``tmdbId``,
+    ``externalIds``, a cast or crew member's ``tmdbId``) turned into ``catalogId``. Current details come back as is."""
+    def legacy_person(member):
+        return isinstance(member, dict) and LEGACY_CATALOG_ID_KEY in member
+
+    if not (LEGACY_CATALOG_ID_KEY in details or LEGACY_EXTERNAL_IDS_KEY in details
+            or any(legacy_person(m) for m in details.get("cast") or [])
+            or any(legacy_person(m) for m in details.get("crew") or [])):
+        return details
+
+    def person(member):
+        out = dict((k, v) for k, v in member.items() if k != LEGACY_CATALOG_ID_KEY)
+        value = member.get("catalogId")
+        out["catalogId"] = value if value is not None else member.get(LEGACY_CATALOG_ID_KEY)
+        return out
+
+    out = dict((k, v) for k, v in details.items() if k not in (LEGACY_CATALOG_ID_KEY, LEGACY_EXTERNAL_IDS_KEY))
+    out["catalogId"] = catalog_id(details)
+    out["cast"] = [person(m) for m in details.get("cast") or []]
+    if isinstance(details.get("crew"), list):
+        out["crew"] = [person(m) for m in details["crew"]]
+    return out

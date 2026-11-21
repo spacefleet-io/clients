@@ -7,7 +7,7 @@ import { pickPlayableFile, type TrackFileRow } from "./catalog";
 
 export type KeptKind = "song" | "album" | "playlist";
 
-/** One "Keep on this phone / computer" the user turned on. `choice` is the copy picked when there was a real choice. */
+/** One "Save offline" the user turned on. `choice` is the copy picked when there was a real choice. */
 export type KeptEntry = { kind: KeptKind; id: string; choice: string | null; keptAt: number };
 
 /** What the device remembers (per device, PAR-OFFL-02 notes): the kept list in the order it was kept. */

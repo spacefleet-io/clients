@@ -97,6 +97,9 @@ export const trackFiles = sqliteTable(
     sizeBytes: integer("size_bytes").notNull(),
     lightCopy: integer("light_copy", { mode: "boolean" }).notNull().default(false),
     createdAt: integer("created_at").notNull(),
+    headerBytes: integer("header_bytes"),
+    sourceSizeBytes: integer("source_size_bytes"),
+    tagsObjectKey: text("tags_object_key"),
   },
   (table) => [index("track_files_track_id_idx").on(table.trackId)]
 );

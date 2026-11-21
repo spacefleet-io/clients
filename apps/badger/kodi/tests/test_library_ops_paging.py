@@ -74,7 +74,7 @@ class PagedApi(object):
     def download(self, key, purpose="playback"):
         raise AssertionError("unexpected download %s" % key)
 
-    def post_op(self, encrypted, op_id, base_version, prev, nxt):
+    def post_op(self, encrypted, op_id, base_version, prev, nxt, op_stream_version):
         # Like the server: a writer behind the head is refused, which is what sends the store to catch up.
         if base_version != self.head:
             raise api_module.ApiError(409, {"error": "version_conflict", "version": self.head})

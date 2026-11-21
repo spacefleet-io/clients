@@ -8,7 +8,7 @@
 import { Database } from "bun:sqlite";
 import { describe, expect, it } from "bun:test";
 import { PARROT_LEGACY_ID_COLUMNS } from "../src/legacyFormat";
-import { PARROT_LIBRARY_MIGRATIONS, PARROT_LIBRARY_SCHEMA_VERSION, parrotLibraryMigrationStatements } from "../src";
+import { PARROT_LIBRARY_MIGRATIONS, PARROT_LIBRARY_WHOLE_FILES_SCHEMA_VERSION, parrotLibraryMigrationStatements } from "../src";
 
 const userVersion = (db: Database) => db.query<{ user_version: number }, []>("PRAGMA user_version").get()?.user_version;
 const columnsOf = (db: Database, table: string) => db.query<{ name: string }, []>(`PRAGMA table_info(${table})`).all().map((column) => column.name);
@@ -37,7 +37,7 @@ describe("Parrot library legacy format", () => {
     db.transaction(() => {
       for (const sql of parrotLibraryMigrationStatements(9)) db.run(sql);
     })();
-    expect(userVersion(db)).toBe(PARROT_LIBRARY_SCHEMA_VERSION);
+    expect(userVersion(db)).toBe(PARROT_LIBRARY_WHOLE_FILES_SCHEMA_VERSION);
     expect(db.query("SELECT id, music_id, name FROM artists").all()).toEqual([{ id: "ar-1", music_id: "0a7e3c1e-0000-4000-8000-0000000000a1", name: "Linnet Park" }]);
     expect(db.query("SELECT id, music_id, music_edition_id, title FROM albums ORDER BY id").all()).toEqual([
       { id: "al-1", music_id: "0a7e3c1e-0000-4000-8000-0000000000b1", music_edition_id: "0a7e3c1e-0000-4000-8000-0000000000b2", title: "Meltway" },

@@ -18,7 +18,8 @@
     "./bunSqlite": "./src/bunSqlite.ts",
     "./crypto": "./src/crypto.ts",
     "./castRefetch": "./src/castRefetch.ts",
-    "./crewBackfill": "./src/crewBackfill.ts"
+    "./crewBackfill": "./src/crewBackfill.ts",
+    "./offlinePieceStore": "./src/offlinePieceStore.ts"
   },
   "dependencies": {
     "@space/library-db-definition": "workspace:*",

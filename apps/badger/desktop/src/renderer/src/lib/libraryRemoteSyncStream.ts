@@ -1,4 +1,5 @@
 import { ApiError, getApiBaseUrl, getLibraryMeta, getMe, type LibraryMeta } from "@/api";
+import { READ_OP_STREAM_VERSION } from "@space/library-db-definition/ops";
 import type { LibraryDb } from "@/lib/libraryDb";
 import { rendererLogger } from "@/logger";
 
@@ -221,7 +222,8 @@ export const attachLibraryRemoteSyncStream = ({
       streamTimerRef.current = window.setTimeout(connect, retryIn);
       return;
     }
-    const url = `${getApiBaseUrl()}/library/db/stream?token=${encodeURIComponent(token)}&app=badger`;
+    // LIB-FMT-13: EventSource sends no headers, so the stream states the op stream this build reads in its query.
+    const url = `${getApiBaseUrl()}/library/db/stream?token=${encodeURIComponent(token)}&app=badger&opStream=${READ_OP_STREAM_VERSION}`; // op-stream: read
     logStream("library.stream.connect", { url });
     lastConnectStartedAt = Date.now();
     const es = new EventSource(url);

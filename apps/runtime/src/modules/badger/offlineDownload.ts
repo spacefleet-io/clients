@@ -2,18 +2,21 @@
  * Phase 2 handlers for the five `badger.offline.*` commands.
  *
  * Each handler is a thin orchestration over the BadgerLibraryDbService +
- * the EngineV2 + the offline-deps registry. Heavy lifting (chunks → decrypt
- * → mux → DB row) lives in `steps/offlineDownload.ts`; this module:
+ * the EngineV2 + the offline-deps registry. Heavy lifting (sealed pieces →
+ * piece store → item manifest → DB row) lives in `steps/offlineDownload.ts`;
+ * this module:
  *
  *   - estimates: walks each requested media, picks the best ≤ preferred
- *     quality available, sums chunk sizes, computes the expected filename,
- *     checks free disk space, and reports `skippedSubsForContainer` for MP4.
+ *     quality available, sums object sizes, computes the label filename and
+ *     checks free disk space.
  *   - submits: re-runs the estimate (defense-in-depth), then submits one
  *     `IngestJobRecord` per non-skipped file to engineV2 (kind="download").
  *   - deletes: finds matching local rows + non-terminal jobs, cancels jobs
- *     with bounded-poll-until-terminal, unlinks files, drops DB rows.
+ *     with bounded-poll-until-terminal, removes the item (pieces no other item
+ *     lists), drops DB rows.
  *   - lists: pass-through query to `listLocalDownloads`.
- *   - reconciles: stat each row's `local_path`; drop missing or size-mismatched.
+ *   - reconciles: checks each pieces row's manifest + pieces; drops incomplete
+ *     ones. Rows of old plain files are the migration's (offlineMigration.ts).
  *
  * All five handlers run synchronously w.r.t. the runtime command dispatcher
  * (no background actors). Long-running work is captured in the engineV2
@@ -21,9 +24,16 @@
  */
 
 import { promises as fs } from "node:fs";
-import { statfsSync } from "node:fs";
 import { join as joinPath } from "node:path";
 import crypto from "node:crypto";
+import {
+  deleteOfflinePieceItem,
+  isPathUnderDir,
+  readOfflinePieceManifest,
+  sweepOfflinePieceStore,
+  verifyOfflinePieceItem,
+} from "@space/library-db-runtime/offlinePieceStore";
+import { FREE_DISK_SAFETY_MARGIN_BYTES, freeDiskBytesAt } from "./offlineDownloadDeps";
 import {
   badgerOfflineEstimateSize,
   badgerOfflineDownloadSubmit,
@@ -86,19 +96,6 @@ export type OfflineReconcilePayload = ReturnType<
 export type OfflineReconcileResult = ReturnType<
   typeof badgerOfflineReconcile.resultSchema.parse
 >;
-
-// 100 MB safety margin per the plan §B-4 (the same statfsSync pattern the
-// uploads use, so disk-low behaviour stays consistent).
-const FREE_DISK_SAFETY_MARGIN_BYTES = 100 * 1024 * 1024;
-
-// MP4-incompatible subtitle formats are reported via the contract's
-// `skippedSubsForContainer` field. ASS / SSA / PGS / SUP cannot embed
-// cleanly in MP4 without lossy conversion; SRT / VTT pass through to
-// `mov_text`. Anything else (unknown) is treated as skippable too.
-const isMp4CompatibleSub = (raw: string | null | undefined): boolean => {
-  const fmt = (raw ?? "").toLowerCase();
-  return fmt === "srt" || fmt === "vtt" || fmt === "webvtt";
-};
 
 // ---------------------------------------------------------------------------
 // Shared dep contract for all five handlers.
@@ -222,6 +219,9 @@ const buildEstimate = async (
             quality: string;
             initKey: string | null;
             initSize: number | null;
+            codecString?: string | null;
+            bitrateKbps?: number | null;
+            durationSeconds?: number | null;
             chunks: Array<{ key: string; sizeBytes: number | null; startSeconds: number | null }>;
           }>;
           audioTracks: Array<{
@@ -232,6 +232,8 @@ const buildEstimate = async (
             isDefault: boolean;
             initKey: string | null;
             initSize: number | null;
+            codecString?: string | null;
+            durationSeconds?: number | null;
             chunks: Array<{ key: string; sizeBytes: number | null; startSeconds: number | null }>;
           }>;
           subtitleTracks: Array<{
@@ -304,16 +306,12 @@ const buildEstimate = async (
       const subtitleTracks: SubtitleTrackRow[] = details.subtitleTracks.filter(
         (t) => t.fileId === file.id
       );
-      // Skip-list (MP4 only); SRT / VTT pass through.
+      // Pieces keep every subtitle as stored (OFFL-FILE-03): nothing is refused for a container. A track without an
+      // object key cannot be fetched and is listed as skipped.
       const skippedSubsForContainer: string[] = [];
       const includedSubs: SubtitleTrackRow[] = [];
       for (const s of subtitleTracks) {
-        if (payload.container === "mp4" && !isMp4CompatibleSub(s.format)) {
-          skippedSubsForContainer.push(s.language || s.label || s.id);
-          continue;
-        }
         if (!s.objectKey) {
-          // No object key = can't fetch; skip silently and don't count bytes.
           skippedSubsForContainer.push(s.language || s.label || s.id);
           continue;
         }
@@ -425,8 +423,14 @@ const buildEstimate = async (
             key: c.key,
             sizeBytes: Number(c.sizeBytes ?? 0),
             orderIndex: i,
+            startSeconds: c.startSeconds ?? null,
           }))
           .filter((c) => c.key.length > 0),
+        video: {
+          codecString: chosenFormat.codecString ?? null,
+          bitrateKbps: chosenFormat.bitrateKbps ?? null,
+          durationSeconds: chosenFormat.durationSeconds ?? null,
+        },
         audioTracks: audioTracks.map((t): ManifestAudioTrack => ({
           trackId: t.id,
           language: String(t.language ?? "und"),
@@ -434,11 +438,14 @@ const buildEstimate = async (
           isDefault: Boolean(t.isDefault),
           initKey: t.initKey,
           initSize: t.initSize,
+          codecString: t.codecString ?? null,
+          durationSeconds: t.durationSeconds ?? null,
           chunks: t.chunks
             .map((c, i) => ({
               key: c.key,
               sizeBytes: Number(c.sizeBytes ?? 0),
               orderIndex: i,
+              startSeconds: c.startSeconds ?? null,
             }))
             .filter((c) => c.key.length > 0),
         })),
@@ -458,26 +465,9 @@ const buildEstimate = async (
     }
   }
 
-  // statfs the offline root for free bytes. The dir may not exist yet on
-  // first run; fall back to its parent (the userData dir) so we still get
-  // a meaningful number.
+  // Free bytes on the disk of the offline root (its nearest existing parent on a first run).
   const libraryId = resolveLibraryIdSafe(deps);
-  const offlineDir = deps.resolveOfflineDir(libraryId);
-  let freeBytesAvailable = 0;
-  try {
-    const probePath = await statfsTarget(offlineDir);
-    const stat = statfsSync(probePath);
-    freeBytesAvailable = Number(stat.bavail) * Number(stat.bsize);
-    if (!Number.isFinite(freeBytesAvailable) || freeBytesAvailable < 0) {
-      freeBytesAvailable = 0;
-    }
-  } catch (err) {
-    console.warn(
-      `[badger.offline] statfs failed for ${offlineDir}:`,
-      err instanceof Error ? err.message : err
-    );
-    freeBytesAvailable = 0;
-  }
+  const freeBytesAvailable = await freeDiskBytesAt(deps.resolveOfflineDir(libraryId));
 
   const sufficientSpace = freeBytesAvailable >= totalBytes + FREE_DISK_SAFETY_MARGIN_BYTES;
   const { choices: qualityChoices, prompt } = listOfflineQualityChoices(qualityFiles);
@@ -491,25 +481,6 @@ const buildEstimate = async (
     prompt,
     manifests,
   };
-};
-
-/**
- * `statfsSync` only works on a directory that exists. If `offlineDir` does
- * not exist yet, walk up to the first ancestor that does.
- */
-const statfsTarget = async (start: string): Promise<string> => {
-  let candidate = start;
-  for (let i = 0; i < 8; i += 1) {
-    try {
-      await fs.access(candidate);
-      return candidate;
-    } catch {
-      const parent = joinPath(candidate, "..");
-      if (parent === candidate) return candidate;
-      candidate = parent;
-    }
-  }
-  return candidate;
 };
 
 export const createBadgerOfflineEstimateHandler = (
@@ -599,6 +570,95 @@ const baseDownloadRecord = (now: string): Pick<
   uploadSpeedBytesPerSec: null,
 });
 
+/**
+ * The `kind: "download"` job saving one estimate item as pieces. Null when the item's format id cannot be resolved
+ * (a job without it would fail at once). `legacyLocalPath`: the old plain file this save replaces (OFFL-MIGR-01).
+ */
+const buildOfflineDownloadJob = async (
+  deps: BadgerOfflineHandlerDeps,
+  input: {
+    item: EstimateItem;
+    manifest: OfflineDownloadManifest;
+    libraryId: string;
+    container: string;
+    now: string;
+    legacyLocalPath?: string;
+  }
+): Promise<IngestJobRecord | null> => {
+  const { item, manifest, libraryId, container, now } = input;
+  // A friendly label + season/episode hints on the job record so the jobs sidebar shows "Show - S01E01 - Title"
+  // (or "Movie (Year)") instead of the raw job UUID: the sanitized expectedFilename without its extension. Movies and
+  // null-season episodes emit no hints (>= 1 guard) so no phantom S00E00 chip is shown.
+  const containerExt = `.${container}`;
+  const friendlyLabel = item.expectedFilename.endsWith(containerExt)
+    ? item.expectedFilename.slice(0, -containerExt.length)
+    : item.expectedFilename;
+  const stampHints =
+    manifest.filenameInputs.kind === "episode" &&
+    manifest.filenameInputs.seasonNumber >= 1 &&
+    manifest.filenameInputs.episodeNumber >= 1
+      ? { season: manifest.filenameInputs.seasonNumber, episode: manifest.filenameInputs.episodeNumber }
+      : undefined;
+  // One getMediaDetails re-read per item: the estimate item does not carry the chosen format's id.
+  const formatId = await resolveFormatIdForSelected(deps, item.mediaId, item.fileId, item.selectedQuality);
+  if (!formatId) return null;
+  return {
+    ...baseDownloadRecord(now),
+    jobId: crypto.randomUUID(),
+    kind: "download",
+    lane: "upload",
+    variant: null,
+    priority: 70, // After ingest 144p (60) — offline downloads are user-paced
+    parentJobIds: [],
+    groupId: item.mediaId,
+    mediaId: item.mediaId,
+    payload: {
+      fileId: item.fileId,
+      mediaId: item.mediaId,
+      quality: item.selectedQuality,
+      formatId,
+      expectedBytes: item.totalBytes,
+      libraryId,
+      manifest,
+      ...(input.legacyLocalPath ? { legacyLocalPath: input.legacyLocalPath } : {}),
+      // Friendly label + S/E hints for the jobs sidebar. The renderer also reconstructs these from
+      // `manifest.filenameInputs` for jobs that completed before this stamp shipped.
+      filename: friendlyLabel,
+      ...(stampHints ? { hints: stampHints } : {}),
+    },
+  };
+};
+
+/**
+ * The job re-saving an old plain-file offline copy (schema 1) as pieces at the same file and quality (OFFL-MIGR-01).
+ * Null when the library no longer holds that file at any quality: nothing can replace it.
+ */
+export const buildOfflineResaveJob = async (
+  deps: BadgerOfflineHandlerDeps,
+  row: { mediaId: string; fileId: string; quality: string; container: string; localPath: string }
+): Promise<{ job: IngestJobRecord; requiredBytes: number } | null> => {
+  const estimate = await buildEstimate(deps, {
+    mediaIds: [row.mediaId],
+    fileIds: [row.fileId],
+    quality: row.quality as OfflineEstimatePayload["quality"],
+    container: row.container === "mp4" ? "mp4" : "mkv",
+  });
+  const item = estimate.items.find((it) => it.fileId === row.fileId);
+  const entry = estimate.manifests.get(row.fileId);
+  if (!item || !entry) return null;
+  const job = await buildOfflineDownloadJob(deps, {
+    item,
+    manifest: entry.manifest,
+    libraryId: entry.libraryId,
+    container: row.container,
+    now: new Date().toISOString(),
+    legacyLocalPath: row.localPath,
+  });
+  // The format exists (the estimate picked it) but its id did not read back: a passing failure, not a missing file.
+  if (!job) throw new Error("OFFLINE_RESAVE_FORMAT_UNRESOLVED");
+  return { job, requiredBytes: item.totalBytes };
+};
+
 export const createBadgerOfflineSubmitHandler = (
   deps: BadgerOfflineHandlerDeps
 ) => {
@@ -681,71 +741,18 @@ export const createBadgerOfflineSubmitHandler = (
         continue;
       }
       const { manifest, libraryId } = manifestEntry;
-      // Stamp a friendly label + season/episode hints onto the job record so the
-      // jobs sidebar shows "Show - S01E01 - Title" (or "Movie (Year)") instead
-      // of the raw job UUID. Reuse the already-sanitized expectedFilename (it
-      // matches the on-disk saved name); strip the container extension so the
-      // label reads as a title, not a filename. Movies and null-season episodes
-      // emit no hints (>= 1 guard) so no phantom S00E00 chip is shown.
-      const containerExt = `.${payload.container}`;
-      const friendlyLabel = item.expectedFilename.endsWith(containerExt)
-        ? item.expectedFilename.slice(0, -containerExt.length)
-        : item.expectedFilename;
-      const stampHints =
-        manifest.filenameInputs.kind === "episode" &&
-        manifest.filenameInputs.seasonNumber >= 1 &&
-        manifest.filenameInputs.episodeNumber >= 1
-          ? {
-              season: manifest.filenameInputs.seasonNumber,
-              episode: manifest.filenameInputs.episodeNumber,
-            }
-          : undefined;
-      const jobId = crypto.randomUUID();
-      const job: IngestJobRecord = {
-        ...baseDownloadRecord(now),
-        jobId,
-        kind: "download",
-        lane: "upload",
-        variant: null,
-        priority: 70, // After ingest 144p (60) — offline downloads are user-paced
-        parentJobIds: [],
-        groupId: item.mediaId,
-        mediaId: item.mediaId,
-        payload: {
-          fileId: item.fileId,
-          mediaId: item.mediaId,
-          quality: item.selectedQuality,
-          formatId:
-            // Look up the format id from the estimate item's chosen quality:
-            // it's the manifest's videoInitKey-bearing format. We don't track
-            // it on the EstimateItem so re-read the chosen quality via the
-            // libraryDb call's already-cached details would be ideal — instead
-            // we stash it via a lightweight `details` re-read. Cost is one
-            // extra getMediaDetails call per submitted media. Acceptable for
-            // v1 (the renderer rarely submits >40 items in one shot).
-            await resolveFormatIdForSelected(
-              deps,
-              item.mediaId,
-              item.fileId,
-              item.selectedQuality
-            ) ?? "",
-          container: payload.container,
-          expectedBytes: item.totalBytes,
-          libraryId,
-          manifest,
-          // Friendly label + S/E hints for the jobs sidebar (see above). The
-          // renderer also reconstructs these from `manifest.filenameInputs` for
-          // jobs that completed before this stamp shipped.
-          filename: friendlyLabel,
-          ...(stampHints ? { hints: stampHints } : {}),
-        },
-      };
-      // If formatId resolution failed, skip the item rather than submit a
-      // job that will crash on missing formatId.
-      if (!(job.payload as { formatId: string }).formatId) {
+      const job = await buildOfflineDownloadJob(deps, {
+        item,
+        manifest,
+        libraryId,
+        container: payload.container,
+        now,
+      });
+      if (!job) {
         additionalSkips.push({ mediaId: item.mediaId, reason: "no-quality-available" });
         continue;
       }
+      const { jobId } = job;
       try {
         await deps.engine.submit(job);
         submitted.push({
@@ -972,43 +979,42 @@ export const createBadgerOfflineDeleteHandler = (
       }
     }
 
-    // Resume-aware cleanup: the step handler now PRESERVES staging dirs on
-    // cancel/fail so retries can resume from partial. delete_local is the
-    // path that explicitly removes them. Walk every matching job (in-flight
-    // OR terminal) and nuke its `.tmp-<jobId>/` dir under the job's
-    // libraryId-resolved offline root. Errors are best-effort logged.
-    for (const job of matchingJobs) {
-      const jobLibraryId =
-        ((job.payload as { libraryId?: unknown }).libraryId as string | undefined) ||
-        "default";
-      try {
-        const offlineRoot = deps.resolveOfflineDir(jobLibraryId);
-        const stagingDir = joinPath(offlineRoot, `.tmp-${job.jobId}`);
-        await fs.rm(stagingDir, { recursive: true, force: true });
-        console.info(
-          `[badger.offline.delete] removed staging dir ${stagingDir} for job ${job.jobId}`
-        );
-      } catch (err) {
-        console.warn(
-          `[badger.offline.delete] failed to remove staging dir for job ${job.jobId}:`,
-          err instanceof Error ? err.message : err
-        );
-      }
-    }
-
-    // Unlink files + collect freed bytes.
+    // Remove the saved copies + collect freed bytes. A pieces item (schema 2) drops its manifest, then the pieces no
+    // other item lists (a piece shared with another title stays). An old plain file (schema 1) is removed only from
+    // inside the offline dir. Pieces a cancelled job left behind are swept at start-up (sweepOfflinePieceStore).
+    const offlineRoot = deps.resolveOfflineDir(resolveLibraryIdSafe(deps));
     let freedBytes = 0;
     let deleted = 0;
     for (const row of rowsToDelete) {
       try {
-        await fs.rm(row.localPath, { force: true });
-        freedBytes += Number(row.totalBytes ?? 0);
+        if (row.schemaVersion >= 2) {
+          const removed = await deleteOfflinePieceItem(offlineRoot, row.fileId);
+          console.info(`[badger.offline.delete] pieces item fileId=${row.fileId}`, removed);
+          freedBytes += removed.freedBytes;
+        } else if (isPathUnderDir(offlineRoot, row.localPath)) {
+          await fs.rm(row.localPath, { force: true });
+          freedBytes += Number(row.totalBytes ?? 0);
+        } else {
+          console.warn(
+            `[badger.offline.delete] ${row.localPath} is outside the offline dir ${offlineRoot}; only the row is dropped`
+          );
+        }
         deleted += 1;
       } catch (err) {
         console.warn(
-          `[badger.offline.delete] fs.rm failed for ${row.localPath}:`,
+          `[badger.offline.delete] removing ${row.localPath} failed:`,
           err instanceof Error ? err.message : err
         );
+      }
+    }
+    // A cancelled save's finished pieces count for nothing (OFFL-SAFE-01): sweep them now when no other save is in
+    // flight (an in-flight save may be reusing them), else the start-up sweep does.
+    if (cancelledJobIds.length > 0) {
+      const inFlight = (await deps.engine.list()).jobs.some((j) => j.kind === "download" && !isTerminal(j.status));
+      if (!inFlight) {
+        const swept = await sweepOfflinePieceStore(offlineRoot, { downloadsInFlight: false });
+        console.info("[badger.offline.delete] swept leftovers of the cancelled saves", swept);
+        freedBytes += swept.freedBytes;
       }
     }
 
@@ -1099,25 +1105,38 @@ export const createBadgerOfflineReconcileHandler = (
     }> = [];
     const survivorFileIds: string[] = [];
     const survivorBucketByScope = new Map<string, string[]>();
+    const offlineRoot = deps.resolveOfflineDir(resolveLibraryIdSafe(deps));
     for (const row of rows) {
       let reason: "missing" | "size_mismatch" | null = null;
-      try {
-        const stat = await fs.stat(row.localPath);
-        if (Number(stat.size) !== Number(row.totalBytes)) {
-          reason = "size_mismatch";
-        }
-      } catch (err) {
-        if ((err as NodeJS.ErrnoException).code === "ENOENT") {
-          reason = "missing";
-        } else {
+      if (row.schemaVersion >= 2) {
+        // A pieces item (OFFL-FILE-03) is whole when its manifest reads and every piece it lists is there at its size.
+        try {
+          const manifest = await readOfflinePieceManifest(row.localPath);
+          const check = await verifyOfflinePieceItem(offlineRoot, manifest);
+          if (!check.ok) {
+            reason = check.missing.length > 0 ? "missing" : "size_mismatch";
+            console.warn(`[badger.offline.reconcile] pieces item fileId=${row.fileId} incomplete`, {
+              missing: check.missing.length,
+              sizeMismatch: check.sizeMismatch.length,
+            });
+          }
+        } catch (err) {
           console.warn(
-            `[badger.offline.reconcile] stat failed for ${row.localPath}:`,
+            `[badger.offline.reconcile] manifest unreadable for ${row.localPath}:`,
             err instanceof Error ? err.message : err
           );
-          // Treat unknown stat errors as missing — defensible because the
-          // file is unreadable from the user's perspective.
           reason = "missing";
         }
+        if (reason) {
+          // The incomplete item counts for nothing (OFFL-SAFE-01): its manifest and its unshared pieces go with the row.
+          await deleteOfflinePieceItem(offlineRoot, row.fileId).catch((err) =>
+            console.warn(`[badger.offline.reconcile] deleting item ${row.fileId} failed:`, err)
+          );
+        }
+      } else {
+        // An old plain file (schema 1) belongs to the migration (OFFL-MIGR-01): the row is the user's selection and
+        // stays until its pieces replace it, even once the old file is gone (removed first when space was short).
+        continue;
       }
       if (reason) {
         dropped.push({ mediaId: row.mediaId, fileId: row.fileId, reason });
@@ -1165,12 +1184,14 @@ export const createBadgerOfflineReconcileHandler = (
 //   - A job whose CAS-cancel path raced past the step's preserve-on-fail
 //     branch and never produced a successor.
 //
-// On runtime startup we walk every `<offlineRoot>/<libraryId>/.tmp-*` dir,
+// On runtime startup we walk every `<offlineRoot>/<libraryId>/.tmp-*` dir (left by builds that muxed one file),
 // extract the jobId from the dir name, check the engine: if the jobId
-// matches a non-terminal queued/running job we leave it alone (resume can
-// still pick it up); otherwise we nuke the dir.
+// matches a non-terminal queued/running job we leave it alone; otherwise we
+// nuke the dir. Then the piece store of each library is swept
+// (`sweepOfflinePieceStore`): `.part` leftovers and pieces no item lists, only
+// while no save is in flight (OFFL-SAFE-01).
 //
-// Run at the same time as the startup reconcile; both are best-effort.
+// Run when the library DB opens, with the reconcile; both are best-effort.
 // ---------------------------------------------------------------------------
 
 const STAGING_DIR_PREFIX = ".tmp-";
@@ -1190,6 +1211,8 @@ interface SweepOrphanedStagingDirsResult {
   removed: number;
   preserved: number;
   errors: number;
+  removedPieceParts: number;
+  removedOrphanPieces: number;
 }
 
 /**
@@ -1205,6 +1228,8 @@ export const sweepOrphanedStagingDirs = async (
     removed: 0,
     preserved: 0,
     errors: 0,
+    removedPieceParts: 0,
+    removedOrphanPieces: 0,
   };
 
   // Snapshot non-terminal jobs once. The engine's `list()` returns ALL jobs
@@ -1285,6 +1310,18 @@ export const sweepOrphanedStagingDirs = async (
           err instanceof Error ? err.message : err
         );
       }
+    }
+    try {
+      const swept = await sweepOfflinePieceStore(libraryDir, { downloadsInFlight: nonTerminalJobIds.size > 0 });
+      result.removedPieceParts += swept.removedParts;
+      result.removedOrphanPieces += swept.removedOrphans;
+      console.info(`[badger.offline.sweep] piece store ${libraryDir}`, swept);
+    } catch (err) {
+      result.errors += 1;
+      console.warn(
+        `[badger.offline.sweep] piece store sweep of ${libraryDir} failed:`,
+        err instanceof Error ? err.message : err
+      );
     }
   }
   return result;

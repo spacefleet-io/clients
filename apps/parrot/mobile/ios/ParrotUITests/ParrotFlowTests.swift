@@ -122,7 +122,7 @@ final class ParrotFlowTests: XCTestCase {
     }
     step("keep it on this phone") {
       byId(app, "album-more").tap()
-      waitFor(byId(app, "album-menu-keep"), "Keep on this phone", timeout: 10, in: app).tap()
+      waitFor(byId(app, "album-menu-keep"), "Save offline", timeout: 10, in: app).tap()
       let choice = byId(app, "keep-choice-option")
       if choice.waitForExistence(timeout: 3) {
         ParrotLog.line("copy choice offered: taking the first (\"\(choice.label)\")")

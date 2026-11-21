@@ -876,6 +876,14 @@ const fetchSnapshotCoalesced = (reason: string): Promise<void> => {
  * normal 200ms throttle to keep React memo stable during ingest bursts.
  */
 const handleLibraryEvent = (frame: RuntimeEventFrame): void => {
+  if (frame.event === "badger.app.update_required") {
+    // REL-CD-29 / LIB-FMT-13: the runtime's own API call was refused with "please update"; the renderer owns the
+    // update gate (its `appVersion` latch), so hand it the refusal as the API gave it.
+    logger.warn({ event: "app_update_required_from_runtime", payload: frame.payload });
+    const window = getWindow?.() ?? null;
+    if (window && !window.isDestroyed()) window.webContents.send("sf-app-update-required", frame.payload);
+    return;
+  }
   if (frame.event !== "badger.library.updated") return;
   const { version, previousVersion, reason, changedMediaIds, snapshot } = readLibraryFrame(frame.payload);
   const force = reason.startsWith("commit:");

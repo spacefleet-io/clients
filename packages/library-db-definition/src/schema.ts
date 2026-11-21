@@ -1,4 +1,4 @@
-import { integer, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { blob, integer, primaryKey, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 export const mediaItems = sqliteTable("media_items", {
   id: text("id").primaryKey(),
@@ -253,6 +253,30 @@ export const mediaAudioChunks = sqliteTable("media_audio_chunks", {
   sizeBytes: integer("size_bytes"),
   startSeconds: real("start_seconds"),
 });
+
+/** LIB-FMT-11: one packed chunk list per format (`owner_kind` 1) or audio track (2). DDL: `PACKED_PLAYBACK_DDL`. */
+export const mediaChunkLists = sqliteTable("media_chunk_lists", {
+  ownerId: text("owner_id").primaryKey(),
+  ownerKind: integer("owner_kind").notNull(),
+  placementId: text("placement_id").notNull(),
+  keyMode: integer("key_mode").notNull(),
+  keyData: blob("key_data").notNull(),
+  count: integer("count").notNull(),
+  sizes: blob("sizes").notNull(),
+  starts: blob("starts"),
+  updatedAt: text("updated_at").notNull(),
+});
+
+/** LIB-FMT-11 / LIB-SYNC-08: the playback clock of one file group; `file_id` is `playbackFileKey` (`''` = no file). */
+export const mediaFilePlayback = sqliteTable(
+  "media_file_playback",
+  {
+    mediaId: text("media_id").notNull(),
+    fileId: text("file_id").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.mediaId, table.fileId] })]
+);
 
 export const mediaChapters = sqliteTable("media_chapters", {
   id: text("id").primaryKey(),

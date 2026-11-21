@@ -29,9 +29,12 @@
     "./snapshotPublish": "./src/snapshotPublish.ts",
     "./sqliteImage": "./src/sqliteImage.ts",
     "./compatibility": "./src/compatibility.ts",
-    "./systemPlaylists": "./src/systemPlaylists.ts"
+    "./systemPlaylists": "./src/systemPlaylists.ts",
+    "./chunkLists": "./src/chunkLists.ts",
+    "./packedPlayback": "./src/packedPlayback.ts"
   },
   "dependencies": {
+    "@noble/hashes": "^2.4.0",
     "@space/shared": "workspace:*",
     "drizzle-orm": "^0.45.3"
   },

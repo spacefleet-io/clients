@@ -1,13 +1,21 @@
 import { DatabaseSync, type SQLInputValue } from "node:sqlite";
 import {
-  parrotLibraryMigrationStatements,
   parseParrotTracklist,
   type AlbumRow,
   type ParrotListedTrack,
   type ParrotLibraryOp,
   type TrackFileChunkRow,
 } from "@space/parrot-library-db-definition";
-import { parrotOpStatements, readParrotLyrics, readParrotPlaylists, type ParrotLyrics, type ParrotPlaylist } from "@space/parrot-core";
+import { PARROT_LIBRARY_SCHEMA_VERSION } from "@space/parrot-library-db-definition/migrations";
+import {
+  parrotLibraryStatementsForOps,
+  parrotLibraryUpgradeStatements,
+  parrotOpStatements,
+  readParrotLyrics,
+  readParrotPlaylists,
+  type ParrotLyrics,
+  type ParrotPlaylist,
+} from "@space/parrot-core";
 import { asRollbackJournalImage } from "@space/library-db-definition/sqliteImage";
 
 /**
@@ -16,16 +24,18 @@ import { asRollbackJournalImage } from "@space/library-db-definition/sqliteImage
  */
 export type ParrotLibraryDb = DatabaseSync;
 
+const userVersion = (db: ParrotLibraryDb) => (db.prepare("PRAGMA user_version").get() as { user_version?: number } | undefined)?.user_version ?? 0;
+
 /**
- * Opens a snapshot's bytes (or a new empty library) and brings it to the current schema. A snapshot a phone stored
- * in WAL mode gets the rollback-journal header first (LIB-FMT-10): in-memory SQLite refuses a WAL header with
- * "unable to open database file".
+ * Opens a snapshot's bytes (or a new empty library) and brings it to the schema a library is kept at while its songs
+ * are stored whole (a library already at schema 11 stays there, API-VER-01). A snapshot a phone stored in WAL mode
+ * gets the rollback-journal header first (LIB-FMT-10): in-memory SQLite refuses a WAL header with "unable to open
+ * database file".
  */
 export const openParrotLibrary = (bytes: Uint8Array | null): ParrotLibraryDb => {
   const db = new DatabaseSync(":memory:");
   if (bytes) db.deserialize(asRollbackJournalImage(bytes));
-  const version = (db.prepare("PRAGMA user_version").get() as { user_version?: number } | undefined)?.user_version ?? 0;
-  const statements = parrotLibraryMigrationStatements(version);
+  const statements = parrotLibraryUpgradeStatements(userVersion(db));
   if (statements.length) {
     db.exec("BEGIN");
     try {
@@ -39,10 +49,14 @@ export const openParrotLibrary = (bytes: Uint8Array | null): ParrotLibraryDb => 
   return db;
 };
 
-/** Applies the ops in one transaction, in order. */
+/**
+ * Applies the ops in one transaction, in order. A change storing a file in parts first takes the library to schema 11
+ * (API-VER-01); every other change leaves its schema as it is.
+ */
 export const applyParrotOps = (db: ParrotLibraryDb, ops: readonly ParrotLibraryOp[]): void => {
   db.exec("BEGIN");
   try {
+    for (const sql of parrotLibraryStatementsForOps(userVersion(db), ops)) db.exec(sql);
     for (const { sql, params } of parrotOpStatements(ops)) db.prepare(sql).run(...(params as SQLInputValue[]));
     db.exec("COMMIT");
   } catch (error) {
@@ -122,6 +136,10 @@ export type ParrotLibraryFile = {
   /** The stored codec (`alac` for Apple Lossless, which the apps decode themselves, PAR-FMT-01). */
   codec?: string | null;
   sizeBytes: number;
+  /** PAR-FMT-01: set on a file stored split, null on one stored whole (see `TrackFileRow`). */
+  headerBytes: number | null;
+  sourceSizeBytes: number | null;
+  tagsObjectKey: string | null;
   chunks: TrackFileChunkRow[];
 };
 
@@ -199,8 +217,13 @@ export const getParrotLyrics = (db: ParrotLibraryDb, trackId: string): ParrotLyr
 
 /** One stored file with its chunk map, or null. */
 export const getParrotFile = (db: ParrotLibraryDb, fileId: string): ParrotLibraryFile | null => {
+  // Only a library at schema 11 has the layout columns of files stored in parts (API-VER-01).
+  const layout =
+    userVersion(db) >= PARROT_LIBRARY_SCHEMA_VERSION
+      ? "header_bytes AS headerBytes, source_size_bytes AS sourceSizeBytes, tags_object_key AS tagsObjectKey"
+      : "NULL AS headerBytes, NULL AS sourceSizeBytes, NULL AS tagsObjectKey";
   const file = db
-    .prepare("SELECT id, track_id AS trackId, mime, codec, size_bytes AS sizeBytes FROM track_files WHERE id = ?")
+    .prepare(`SELECT id, track_id AS trackId, mime, codec, size_bytes AS sizeBytes, ${layout} FROM track_files WHERE id = ?`)
     .get(fileId) as Omit<ParrotLibraryFile, "chunks"> | undefined;
   if (!file) return null;
   const chunks = db

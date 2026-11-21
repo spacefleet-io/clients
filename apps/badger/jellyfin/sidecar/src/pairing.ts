@@ -1,4 +1,5 @@
 import { bytesToBase64, generateDeviceKeyPair, isSealedKey, normalizeShortCode, openSealedKey, type SealedKey } from "@space/pairing-crypto";
+import { clientIdentityHeaders } from "@space/shared/appVersion";
 import { errorMessage } from "./errors";
 
 /**
@@ -101,14 +102,14 @@ export class PairingFlow {
     const apiUrl = input.apiUrl.replace(/\/+$/, "");
     const res = await this.fetchImpl(`${apiUrl}/pairing/requests`, {
       method: "POST",
-      headers: { "content-type": "application/json", "x-space-app": "badger" },
+      headers: { "content-type": "application/json", "x-space-app": "badger", ...clientIdentityHeaders() },
       body: JSON.stringify({ deviceType: this.options.deviceType, deviceName: input.deviceName, publicKey: keys.publicKey }),
     });
     const body = asObject(await res.json().catch(() => null));
     if (!res.ok || !body || typeof body.requestId !== "string" || typeof body.pollSecret !== "string") {
       const detail = typeof body?.error === "string" ? body.error : `api_${res.status}`;
       this.options.log("pairing request refused", { status: res.status, detail });
-      throw Object.assign(new Error(detail), { status: res.status });
+      throw Object.assign(new Error(detail), { status: res.status, payload: body });
     }
     const created = body as unknown as CreateResponse;
     const snapshot: PairingSnapshot = {
@@ -144,7 +145,7 @@ export class PairingFlow {
       }
       try {
         const res = await this.fetchImpl(`${apiUrl}/pairing/requests/${encodeURIComponent(requestId)}?pollSecret=${encodeURIComponent(pollSecret)}&wait=${POLL_WAIT_SECONDS}`, {
-          headers: { "x-space-app": "badger" },
+          headers: { "x-space-app": "badger", ...clientIdentityHeaders() },
           signal: AbortSignal.any([abort.signal, AbortSignal.timeout(POLL_TIMEOUT_MS)]),
         });
         const body = (await res.json().catch(() => null)) as PollResponse | null;

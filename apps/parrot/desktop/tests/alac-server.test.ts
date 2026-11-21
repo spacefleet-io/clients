@@ -9,7 +9,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { decodeAlacMp4 } from "@space/parrot-core";
+import { createParrotChunkReads, decodeAlacMp4 } from "@space/parrot-core";
 import type { ParrotLibraryFile } from "@space/parrot-ingest";
 import { startParrotPlaybackServer, type ParrotPlaybackServer } from "../src/main/playbackServer";
 
@@ -53,6 +53,7 @@ describe("parrot playback server, Apple Lossless", () => {
         throw new Error("the player's address never reads through the loudness pass's chunks");
       },
       loadCover: async () => null,
+      reads: createParrotChunkReads(),
       log: (line) => lines.push(line),
     });
 

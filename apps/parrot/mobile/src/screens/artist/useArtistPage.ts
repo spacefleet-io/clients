@@ -1,6 +1,6 @@
 // What the artist page (PAR-LOOK-06) reads and does: the artist's albums (newest last, as `listArtistAlbums` orders
 // them), every song on them, the photo with its shimmer (PAR-META-15, PAR-META-20), Play / Shuffle / Play next over all
-// the songs, Keep on this phone (each album kept, since the kept list has no artist kind, PAR-OFFL-01) and the "…" sheet
+// the songs, Save offline (each album kept, since the kept list has no artist kind, PAR-OFFL-01) and the "…" sheet
 // with Delete last (PAR-LIB-03).
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigation } from "@react-navigation/native";

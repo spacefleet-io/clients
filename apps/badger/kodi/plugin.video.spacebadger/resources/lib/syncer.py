@@ -6,15 +6,28 @@ import core
 import export
 import localized_texts
 import profiles
-from api import ApiError, UnauthorizedError, UnpaidError
-from compat import CLIENT_VERSION, HAVE_KODI, get_prop, get_setting, log, notify, set_prop
+from api import ApiError, AppUpdateRequiredError, UnauthorizedError, UnpaidError
+from compat import CLIENT_VERSION, HAVE_KODI, UPDATE_REQUIRED_MESSAGE, get_prop, get_setting, log, notify, ok_dialog, set_prop
 from library import KeyMismatchError
+from ops_sql import UnknownOpTypeError
 
 # Background work waits this long after the service starts (Kodi boot) and while something plays.
 BOOT_DELAY_SECONDS = 20.0
 # state.json: the add-on version + library version of the last export, and pictures it still waits for.
 EXPORT_MARKER_KEY = "exportedLibrary"
 EXPORT_PENDING_KEY = "exportArtPending"
+
+
+def show_update_required(why, interactive=False):
+    """LIB-FMT-13 / REL-CD-29: the API refused this add-on (426) or the library holds an op it does not know. The
+    sync stops (nothing applied, the version does not move) and the user is told to update the add-on. Returns the
+    message; a manual action shows it itself (router.action_sync), the background service gets the dialog once per
+    Kodi session."""
+    log("update required: %s" % why, "error")
+    if not interactive and get_prop("update_required") != "1":
+        set_prop("update_required", "1")
+        ok_dialog("Badger", UPDATE_REQUIRED_MESSAGE)
+    return UPDATE_REQUIRED_MESSAGE
 
 
 def refresh_access(ctx):
@@ -102,6 +115,10 @@ def run_sync(ctx, interactive=False):
         return False, "This device was signed out of Badger (its access was removed from another device or the account). Your library has been removed from Kodi. Open the Badger add-on to pair this device again."
     except UnpaidError as exc:
         return False, "subscription unpaid (wipe %s)" % exc.wipe_at
+    except AppUpdateRequiredError as exc:
+        return False, show_update_required("API 426 %s (reason %s)" % (exc.code, exc.reason), interactive)
+    except UnknownOpTypeError as exc:
+        return False, show_update_required("unknown library op type %s" % exc, interactive)
     except ApiError as exc:
         log("sync failed: %s" % exc, "error")
         return False, "server error: %s" % exc

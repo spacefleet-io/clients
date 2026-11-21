@@ -267,8 +267,9 @@ describe("PAR-PL-05: Parrot main puts every queued write behind the quit guard (
     const rawChains = source.match(/\.then\(run, run\)/g) ?? [];
     console.info(`${TAG} index.ts: ${runs.length} librarySaves.run, ${rawChains.length} raw .then(run, run)`);
     expect(rawChains).toEqual([]);
-    // 11: the edits, the lookups' saves, the retry of unidentified songs, the lyrics, artist-photo and album-cover passes (PAR-META-20).
-    expect(runs.length).toBe(11);
+    // 10: the edits, the lookups' saves, the retry of unidentified songs, the lyrics, artist-photo and album-cover passes (PAR-META-20).
+    // The pass that wrote lyrics into the stored file is gone (PAR-LYR-07 retired, PAR-FMT-01).
+    expect(runs.length).toBe(10);
     expect(source).toContain('{ name: "library", chain: librarySaves }');
     expect(source).toContain('app.on("before-quit", (event) => quitGuard.beforeQuit(event));');
     expect(source).toContain('mainWindow.on("query-session-end", (event) => quitGuard.sessionEnding(event, "Windows session end"));');

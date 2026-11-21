@@ -33,7 +33,7 @@ export type LabJob = {
   completedAt?: string;
   sourceQuality?: string;
   groupId?: string;
-  jobType?: "source" | "transcode" | "download";
+  jobType?: "source" | "transcode" | "download" | "export";
   includeSource?: boolean;
   includeFallback?: boolean;
   includeAudio?: boolean;
@@ -141,7 +141,7 @@ export type LabQueueFileInput = {
   sourceQuality?: string;
   videoMeta?: LabJob["videoMeta"] | null;
   groupId?: string;
-  jobType?: "source" | "transcode" | "download";
+  jobType?: "source" | "transcode" | "download" | "export";
   includeSource?: boolean;
   includeFallback?: boolean;
   includeAudio?: boolean;

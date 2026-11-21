@@ -4,7 +4,15 @@
  * manages the library uses these, so a song, album or artist leaves (or changes) the same way everywhere.
  */
 import type { MusicAlbum } from "@space/shared/api";
-import { createParrotOp, parseParrotTracklist, type AlbumRow, type ArtistRow, type ParrotLibraryOp, type TrackRow } from "@space/parrot-library-db-definition";
+import {
+  createParrotOp,
+  parseParrotTracklist,
+  PARROT_LIBRARY_SCHEMA_VERSION,
+  type AlbumRow,
+  type ArtistRow,
+  type ParrotLibraryOp,
+  type TrackRow,
+} from "@space/parrot-library-db-definition";
 import { parrotTrackByTitle } from "./importMatch";
 import { ALBUM_TRACKLIST_SQL } from "./queries";
 
@@ -60,16 +68,29 @@ const tracklistSlot = async (query: ParrotLibraryQuery, albumId: string, trackId
   return { disc: slot.disc, number: slot.number };
 };
 
-const chunkKeys = async (query: ParrotLibraryQuery, trackIds: readonly string[]) =>
-  trackIds.length === 0
-    ? []
-    : (
-        await query<{ objectKey: string }>(
-          `SELECT c.object_key AS objectKey FROM track_file_chunks c JOIN track_files f ON f.id = c.track_file_id
-         WHERE f.track_id IN (${placeholders(trackIds.length)}) ORDER BY f.track_id, f.id, c.idx`,
-          trackIds
-        )
-      ).map((r) => r.objectKey);
+/**
+ * Every stored object of the given songs' files: their chunks, then the file's own tags object when it was stored
+ * split (PAR-FMT-01; only a library at schema 11 has that column, API-VER-01).
+ */
+const chunkKeys = async (query: ParrotLibraryQuery, trackIds: readonly string[]) => {
+  if (trackIds.length === 0) return [];
+  const version = (await first(query<{ user_version: number }>("PRAGMA user_version")))?.user_version ?? 0;
+  const tags =
+    version >= PARROT_LIBRARY_SCHEMA_VERSION
+      ? `UNION ALL
+           SELECT f.tags_object_key, f.track_id, f.id, 2147483647 FROM track_files f
+           WHERE f.tags_object_key IS NOT NULL AND f.track_id IN (${placeholders(trackIds.length)})`
+      : "";
+  const rows = await query<{ objectKey: string }>(
+    `SELECT objectKey FROM (
+           SELECT c.object_key AS objectKey, f.track_id AS trackId, f.id AS fileId, c.idx AS idx FROM track_file_chunks c JOIN track_files f ON f.id = c.track_file_id
+           WHERE f.track_id IN (${placeholders(trackIds.length)})
+           ${tags}
+         ) ORDER BY trackId, fileId, idx`,
+    tags ? [...trackIds, ...trackIds] : [...trackIds]
+  );
+  return rows.map((r) => r.objectKey);
+};
 
 const coverKeys = (album: Pick<AlbumRow, "coverObjectKey" | "coverThumbObjectKey">) =>
   [album.coverObjectKey, album.coverThumbObjectKey].filter((k): k is string => !!k);

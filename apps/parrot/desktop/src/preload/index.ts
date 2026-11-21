@@ -4,7 +4,7 @@ import { contextBridge, ipcRenderer, webUtils } from "electron";
 import { createErrorReportsBridge } from "@space/error-report/desktop";
 import { createUpdaterBridge } from "@space/desktop-shell/updater-preload";
 import { readStorageUnitBase } from "@space/desktop-shell/storage-units";
-import { PARROT_IPC, type ParrotBackgroundWork, type ParrotBridge, type ParrotImportJob, type ParrotImportStatus } from "../shared/ipc";
+import { PARROT_IPC, type ParrotBackgroundWork, type ParrotBridge, type ParrotExportJob, type ParrotImportJob, type ParrotImportStatus } from "../shared/ipc";
 import type { ParrotLibraryPatch } from "../shared/libraryPatch";
 import type { KeptStatus } from "@space/parrot-core";
 import type { StreamSlotGateState } from "@space/stream-slots";
@@ -75,6 +75,16 @@ const bridge: ParrotBridge = {
     return () => ipcRenderer.off(PARROT_IPC.importJobsEvent, handler);
   },
   dismissImportJob: (id) => ipcRenderer.invoke(PARROT_IPC.dismissImportJob, id),
+  previewExport: () => ipcRenderer.invoke(PARROT_IPC.previewExport),
+  exportMusic: () => ipcRenderer.invoke(PARROT_IPC.exportMusic),
+  getExportJobs: () => ipcRenderer.invoke(PARROT_IPC.getExportJobs),
+  onExportJobs: (listener) => {
+    const handler = (_event: Electron.IpcRendererEvent, jobs: ParrotExportJob[]) => listener(jobs);
+    ipcRenderer.on(PARROT_IPC.exportJobsEvent, handler);
+    return () => ipcRenderer.off(PARROT_IPC.exportJobsEvent, handler);
+  },
+  cancelExport: (id) => ipcRenderer.invoke(PARROT_IPC.cancelExport, id),
+  dismissExportJob: (id) => ipcRenderer.invoke(PARROT_IPC.dismissExportJob, id),
   getBackgroundWork: () => ipcRenderer.invoke(PARROT_IPC.getBackgroundWork),
   onBackgroundWork: (listener) => {
     const handler = (_event: Electron.IpcRendererEvent, work: ParrotBackgroundWork[]) => listener(work);
@@ -155,6 +165,7 @@ const bridge: ParrotBridge = {
     return () => ipcRenderer.off(PARROT_IPC.paymentReturnEvent, handler);
   },
   getKept: () => ipcRenderer.invoke(PARROT_IPC.getKept),
+  getKeptSizes: () => ipcRenderer.invoke(PARROT_IPC.getKeptSizes),
   keepChoices: (kind, id) => ipcRenderer.invoke(PARROT_IPC.keepChoices, kind, id),
   keep: (kind, id, choice) => ipcRenderer.invoke(PARROT_IPC.keep, kind, id, choice),
   unkeep: (kind, id) => ipcRenderer.invoke(PARROT_IPC.unkeep, kind, id),

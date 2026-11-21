@@ -4,7 +4,12 @@ import { once } from "node:events";
 import { createReadStream, existsSync, promises as fs } from "node:fs";
 import { stat } from "node:fs/promises";
 import { URL } from "node:url";
-import { isAbsolute, join as joinPath, relative as relativePath, resolve as resolvePath } from "node:path";
+import { dirname, isAbsolute, join as joinPath, relative as relativePath, resolve as resolvePath } from "node:path";
+import {
+  offlinePiecePath,
+  readOfflinePieceManifest,
+  type OfflinePieceTrack,
+} from "@space/library-db-runtime/offlinePieceStore";
 import { decryptMediaObject, isEncryptedPayload, readKeyFromEnv } from "./mediaCrypto";
 import { downloadStorageObjectViaTunnelToSink } from "./api";
 import { runWithRetries } from "./retry";
@@ -479,7 +484,7 @@ type PlaybackServerHooks = {
    * window shrinks while high and is restored when normal. Omitted = always normal.
    */
   getTraffic?: () => StorageTrafficSnapshot;
-  /** A playback source was opened (an HLS session or an offline file): what was known about the previous silo no longer applies. */
+  /** A playback source was opened (an HLS session, streamed or offline): what was known about the previous silo no longer applies. */
   onPlaybackStart?: () => void;
   /** The report of the silo that served a playback object: session open and every `session.ack` (STOR-BW-07, STOR-BW-08). */
   onPlaybackTraffic?: (traffic: StorageTraffic) => void;
@@ -489,18 +494,6 @@ type PlaybackServerHooks = {
   onPlaybackStopped?: (traffic: StorageTraffic | null) => void;
   /** The server refused the profile named on the playback, or none was picked (STOR-BW-11): `profile_not_owned` / `profile_required`. */
   onPlaybackProfileRefused?: (code: string) => void;
-  /**
-   * Offline-mode (Phase 2): resolve a downloaded file's on-disk path from the
-   * device-local `media_local_downloads` table, given the file (and optionally
-   * its media) id. Returns null when no offline copy is registered. The MAIN
-   * process supplies this (it owns the library DB) so the renderer never hands
-   * a raw filesystem path to the server — only the trusted DB-resolved path is
-   * ever served. See createOfflineFileSession + handleOfflineRequest.
-   */
-  resolveOfflineFile?: (input: {
-    fileId: string;
-    mediaId?: string | null;
-  }) => { localPath: string; container?: string | null } | null;
 };
 
 /**
@@ -546,19 +539,27 @@ const isPathUnderOfflineRoot = (p: string): boolean => {
 };
 
 /**
- * Map an offline file's container (or path) to a sensible Content-Type so mpv
- * picks the right demuxer immediately. Defaults to octet-stream (mpv sniffs).
+ * An offline piece track as an HLS track: segment durations from the next segment's start, the last one from the
+ * track duration (same reading as the renderer's buildHlsTrackFromChunkMap for streaming).
  */
-const offlineContentType = (hint: string): string => {
-  const lower = hint.toLowerCase();
-  if (lower.endsWith(".mkv") || lower === "mkv" || lower.includes("matroska")) {
-    return "video/x-matroska";
-  }
-  if (lower.endsWith(".mp4") || lower === "mp4" || lower.includes("mpeg-4")) {
-    return "video/mp4";
-  }
-  if (lower.endsWith(".webm") || lower === "webm") return "video/webm";
-  return "application/octet-stream";
+const hlsTrackFromOfflinePieces = (track: OfflinePieceTrack): HlsTrack => {
+  const { chunks, durationSeconds } = track;
+  const fallback = durationSeconds && chunks.length > 0 ? durationSeconds / chunks.length : 0;
+  return {
+    initKey: track.initKey,
+    codecString: track.codecString,
+    segments: chunks.map((chunk, index) => {
+      const start = chunk.startSeconds ?? null;
+      const next = chunks[index + 1]?.startSeconds ?? null;
+      const duration =
+        start !== null && next !== null
+          ? next - start
+          : start !== null && durationSeconds
+            ? durationSeconds - start
+            : fallback;
+      return { key: chunk.key, durationSeconds: Math.max(0.001, duration), startSeconds: start };
+    }),
+  };
 };
 
 export class PlaybackServer {
@@ -567,11 +568,10 @@ export class PlaybackServer {
   private token: string | null = null;
   private signedUrlMetrics = { resetAt: Date.now(), requests: 0 };
   private streams = new Map<string, PlaybackStream>();
-  private offlineSessions = new Map<
-    string,
-    { localPath: string; totalSize: number; contentType: string }
-  >();
   private hlsSessions = new Map<string, HlsSession>();
+  // Pieces saved offline on this device (OFFL-FILE-03), by object key → sealed file in the app's piece store.
+  // Registered by createOfflineHlsSession; read before the tunnel, so a saved title never needs the network.
+  private localPieces = new Map<string, string>();
   private hlsKeyIndex = new Map<string, HlsKeyMetadata>();
   private hlsObjectPrefetchKeys = new Map<string, string[]>();
   private objectPayloadCache = new Map<string, Buffer>();
@@ -1014,145 +1014,74 @@ export class PlaybackServer {
   }
 
   /**
-   * Offline-mode (Phase 2): open a range-served session backed by a single
-   * locally-downloaded, fully-muxed file (the portable MKV/MP4 written by the
-   * offline-download runtime step). Unlike createStream/createHlsSession this
-   * touches NO chunk/tunnel machinery and requires NO auth token — the whole
-   * point is that playback works with the server unreachable. The on-disk path
-   * is resolved by MAIN from the device-local `media_local_downloads` table via
-   * the `resolveOfflineFile` hook, so the renderer only ever names a fileId.
-   *
-   * @bugfix offline-playback-ignored-local-file
+   * Offline playback (OFFL-FILE-03): an HLS session built from a saved item's manifest, the same path as streaming.
+   * Every piece the manifest lists (video, audio tracks, subtitles) is registered as local, so `/playback/object/<key>`
+   * serves it from the app's private store (decrypted here, Range honoured) with no tunnel and no token: playback works
+   * with the server unreachable. The manifest path comes from the runtime's list_local and must sit in an offline root.
    */
-  async createOfflineFileSession(payload: {
-    fileId: string;
-    mediaId?: string | null;
-    /** Renderer-supplied on-disk path (from the runtime's trusted list_local).
-     *  Preferred source — validated to be inside the offline root. */
-    localPath?: string;
-    id?: string;
-  }): Promise<PlaybackStreamResponse> {
+  async createOfflineHlsSession(payload: { fileId: string; manifestPath: string; id?: string }) {
     if (!this.baseUrl) {
       throw new Error("playback_server_not_ready");
     }
-    if (!payload || typeof payload.fileId !== "string" || payload.fileId.trim().length === 0) {
+    const fileId = typeof payload?.fileId === "string" ? payload.fileId.trim() : "";
+    const manifestPath = typeof payload?.manifestPath === "string" ? payload.manifestPath.trim() : "";
+    if (!fileId || !manifestPath) {
       throw new Error("offline_session_invalid_payload");
     }
-    const fileId = payload.fileId.trim();
-
-    // Resolve the on-disk path. PREFERRED: the renderer-supplied path (from the
-    // runtime's trusted list_local), validated to be inside the offline root —
-    // this is the path that works in the DEFAULT runtime-proxy mode, where the
-    // library DB is owned by the runtime and getActiveLibraryDb() is null.
-    // FALLBACK: the resolveOfflineFile hook (direct-sqlite mode only).
-    // @bugfix offline-playback-ignored-local-file
-    let localPath: string | null = null;
-    let container: string | null = null;
-    const supplied = typeof payload.localPath === "string" ? payload.localPath.trim() : "";
-    if (supplied) {
-      if (!isPathUnderOfflineRoot(supplied)) {
-        logPlayback("offline.path_rejected", { fileId, offlineRoots: resolveOfflineRoots() });
-        throw new Error("offline_path_outside_root");
-      }
-      localPath = supplied;
-    } else {
-      const resolved = this.hooks?.resolveOfflineFile?.({ fileId, mediaId: payload.mediaId ?? null });
-      if (resolved && typeof resolved.localPath === "string" && resolved.localPath.length > 0) {
-        localPath = resolved.localPath;
-        container = resolved.container ?? null;
-      }
+    if (!isPathUnderOfflineRoot(manifestPath)) {
+      logPlayback("offline.path_rejected", { fileId, offlineRoots: resolveOfflineRoots() });
+      throw new Error("offline_path_outside_root");
     }
-    if (!localPath) {
-      logPlayback("offline.not_registered", { fileId, mediaId: payload.mediaId ?? null });
-      throw new Error("offline_file_not_registered");
-    }
-    if (!existsSync(localPath)) {
-      logPlayback("offline.file_missing", { fileId, localPath });
-      throw new Error("offline_file_missing");
-    }
-    const fileStat = await stat(localPath);
-    const totalSize = fileStat.size;
-    const contentType = offlineContentType(container ?? localPath);
-    const explicitId =
-      typeof payload.id === "string" && payload.id.trim().length > 0 ? payload.id.trim() : null;
-    const id = explicitId ?? randomUUID();
-    this.offlineSessions.set(id, { localPath, totalSize, contentType });
-    this.hooks?.onPlaybackStart?.();
-    logPlayback("offline.created", { id, fileId, totalSize, contentType });
-    return {
-      id,
-      url: `${this.baseUrl}/playback/offline/${encodeURIComponent(id)}`,
-      totalSize,
-    };
-  }
-
-  releaseOfflineFileSession(id: string) {
-    if (this.offlineSessions.delete(id)) {
-      logPlayback("offline.released", { id });
-    }
-  }
-
-  private async handleOfflineRequest(
-    req: http.IncomingMessage,
-    res: http.ServerResponse,
-    url: URL,
-  ) {
-    const id = decodeURIComponent(url.pathname.replace("/playback/offline/", ""));
-    const session = id ? this.offlineSessions.get(id) : undefined;
-    if (!session) {
-      logPlayback("offline.session_not_found", { id });
-      res.writeHead(404).end("offline_session_not_found");
-      return;
-    }
-    // Re-stat on every request — the file could be deleted (or shrunk) between
-    // session creation and a later range read; serve a clean 410 rather than a
-    // truncated stream that would wedge mpv.
-    let totalSize: number;
+    let manifest;
     try {
-      const st = await stat(session.localPath);
-      totalSize = st.size;
+      manifest = await readOfflinePieceManifest(manifestPath);
     } catch (error) {
-      logPlayback("offline.gone", {
-        id,
-        localPath: session.localPath,
+      logPlayback("offline.manifest_unreadable", {
+        fileId,
+        manifestPath,
         error: error instanceof Error ? error.message : String(error),
       });
-      res.writeHead(410).end("offline_file_gone");
-      return;
+      throw new Error("offline_file_missing");
     }
-    const { start, end, isRange, invalid } = parseRangeHeader(req.headers.range, totalSize);
-    if (invalid) {
-      res.writeHead(416).end("range_invalid");
-      return;
+    if (manifest.fileId !== fileId) {
+      logPlayback("offline.manifest_mismatch", { fileId, manifestFileId: manifest.fileId });
+      throw new Error("offline_file_missing");
     }
-    const headers: Record<string, string> = {
-      "Accept-Ranges": "bytes",
-      "Content-Length": String(end - start + 1),
-      "Content-Type": session.contentType,
-    };
-    if (isRange) {
-      headers["Content-Range"] = `bytes ${start}-${end}/${totalSize}`;
-      res.writeHead(206, headers);
-    } else {
-      res.writeHead(200, headers);
+    // <root>/items/<sha>.json → the pieces live in <root>/objects/.
+    const root = dirname(dirname(manifestPath));
+    for (const object of manifest.objects) {
+      this.localPieces.set(object.key, offlinePiecePath(root, object.key));
     }
-    logPlayback("offline.serve", {
-      id,
-      start,
-      end,
-      totalSize,
-      range: isRange,
-      method: req.method ?? "GET",
+    const session = this.createHlsSession({
+      ...(payload.id ? { id: payload.id } : {}),
+      videos: [
+        {
+          id: manifest.video.id,
+          quality: manifest.video.quality,
+          bitrateKbps: manifest.video.bitrateKbps,
+          width: null,
+          height: null,
+          track: hlsTrackFromOfflinePieces(manifest.video.track),
+        },
+      ],
+      audio: manifest.audio.map((audio) => ({
+        id: audio.id,
+        language: audio.language,
+        label: audio.label,
+        isDefault: audio.isDefault,
+        track: hlsTrackFromOfflinePieces(audio.track),
+      })),
     });
-    if (req.method === "HEAD") {
-      res.end();
-      return;
-    }
-    this.throttle.wrap(res);
-    await pipeFileToResponse(session.localPath, start, end, res);
-    if (!res.writableEnded) {
-      res.end();
-    }
+    logPlayback("offline.hls.created", {
+      id: session.id,
+      fileId,
+      quality: manifest.video.quality,
+      audioTracks: manifest.audio.length,
+      subtitles: manifest.subtitles.length,
+      pieces: manifest.objects.length,
+    });
+    // The subtitles saved with the item: the renderer offers only these (their object URLs serve the local pieces).
+    return { ...session, subtitleKeys: manifest.subtitles.map((sub) => sub.objectKey) };
   }
 
   private async handleRequest(req: http.IncomingMessage, res: http.ServerResponse) {
@@ -1174,26 +1103,19 @@ export class PlaybackServer {
       await this.handleStreamRequest(req, res, url);
       return;
     }
-    if (url.pathname.startsWith("/playback/offline/")) {
-      // Intentionally NOT token-gated — offline playback must work with the
-      // server unreachable / the user logged out. The served path is resolved
-      // from the local DB (never renderer-supplied) and the listener binds to
-      // 127.0.0.1, so the exposure is the same local files the user already
-      // downloaded to this device.
-      await this.handleOfflineRequest(req, res, url);
-      return;
-    }
     if (!url.pathname.startsWith("/playback/object/")) {
       res.writeHead(404).end("not_found");
-      return;
-    }
-    if (!this.token) {
-      res.writeHead(401).end("token_missing");
       return;
     }
     const key = decodeURIComponent(url.pathname.replace("/playback/object/", ""));
     if (!key) {
       res.writeHead(400).end("key_missing");
+      return;
+    }
+    // A piece saved offline on this device is served with no token (offline playback works logged out / unreachable);
+    // the listener binds to 127.0.0.1 and serves only pieces of items the user saved here.
+    if (!this.token && !this.localPieces.has(key)) {
+      res.writeHead(401).end("token_missing");
       return;
     }
     const hlsMeta = this.hlsKeyIndex.get(key);
@@ -1743,7 +1665,7 @@ export class PlaybackServer {
     const promise = (async () => {
       const startMs = Date.now();
       const fetchStartMs = Date.now();
-      const raw = await this.fetchObjectViaTunnel(key, burst);
+      const raw = (await this.readLocalPiece(key)) ?? (await this.fetchObjectViaTunnel(key, burst));
       const fetchMs = Date.now() - fetchStartMs;
       const decryptStartMs = Date.now();
       const encrypted = isEncryptedPayload(raw);
@@ -1775,6 +1697,24 @@ export class PlaybackServer {
       return await promise;
     } finally {
       this.objectPayloadPending.delete(key);
+    }
+  }
+
+  /** The sealed bytes of a piece saved offline on this device, or null (not saved here / gone: fall back to the tunnel). */
+  private async readLocalPiece(key: string): Promise<Buffer | null> {
+    const path = this.localPieces.get(key);
+    if (!path) return null;
+    try {
+      const raw = await fs.readFile(path);
+      logPlayback("object.local_piece", { key, bytes: raw.length });
+      return raw;
+    } catch (error) {
+      logPlayback("object.local_piece_missing", {
+        key,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      this.localPieces.delete(key);
+      return null;
     }
   }
 }

@@ -4,14 +4,15 @@
  * @why Main (2026-11-18, REL-GATE-09): every phone bottom sheet of Badger and Parrot is one shared sheet that a drag on
  *   its 44 pt handle zone moves with the finger, closing past a distance or on a flick and springing back otherwise; the
  *   backdrop stays in place and only fades with the sheet's offset; the corners are clear. These tests check the motion
- *   rules, then mount the sheet and drive its drag and its close.
+ *   rules, then mount the sheet and drive its drag and its close. Chris (2026-11-21): on Android the sheet reaches the
+ *   bottom of the screen with nothing of the page showing under it, its buttons clear of the navigation bar.
  * @req UX-SHEET-01[badger-mobile,parrot]
  */
 import React from "react";
 import { act, create, type ReactTestInstance, type ReactTestRenderer } from "react-test-renderer";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const { FakeValue, anim } = vi.hoisted(() => {
+const { FakeValue, anim, platform, navBar } = vi.hoisted(() => {
   class FakeValue {
     value: number;
     constructor(value: number) {
@@ -25,7 +26,7 @@ const { FakeValue, anim } = vi.hoisted(() => {
       return { interpolation: config, source: this };
     }
   }
-  return { FakeValue, anim: { finish: true } };
+  return { FakeValue, anim: { finish: true }, platform: { OS: "ios" }, navBar: { bottom: 0 } };
 });
 type FakeValue = InstanceType<typeof FakeValue>;
 
@@ -59,7 +60,7 @@ vi.mock("react-native", async () => {
     },
     Text: host("Text"),
     View: host("View"),
-    Platform: { OS: "ios" },
+    Platform: platform,
     useWindowDimensions: () => ({ width: 400, height: 800 }),
   };
 });
@@ -94,6 +95,14 @@ vi.mock("react-native-gesture-handler", async () => {
     GestureHandlerRootView: ({ children }: { children: React.ReactNode }) => ReactActual.createElement("GHRoot", null, children),
   };
 });
+vi.mock("react-native-safe-area-context", async () => {
+  const ReactActual = await import("react");
+  const SafeAreaInsetsContext = ReactActual.createContext<{ top: number; right: number; bottom: number; left: number } | null>(null);
+  // The Modal's own provider measures its window: the navigation bar's height is its bottom inset.
+  const SafeAreaProvider = ({ children }: { children: React.ReactNode }) =>
+    ReactActual.createElement(SafeAreaInsetsContext.Provider, { value: { top: 0, right: 0, bottom: navBar.bottom, left: 0 } }, children);
+  return { SafeAreaInsetsContext, SafeAreaProvider };
+});
 vi.mock("../src/components/mobile-render-boundary", () => ({
   MobileRenderBoundary: ({ children }: { children: React.ReactNode }) => children,
 }));
@@ -119,6 +128,8 @@ afterEach(() => {
   act(() => renderer?.unmount());
   renderer = null;
   anim.finish = true;
+  platform.OS = "ios";
+  navBar.bottom = 0;
 });
 
 const byTestId = (id: string): ReactTestInstance =>
@@ -245,5 +256,30 @@ describe("MobileBottomSheet", () => {
     );
     expect(onClose).not.toHaveBeenCalled();
     expect(onClosed).toHaveBeenCalledTimes(1);
+  });
+
+  it("on Android runs on under the navigation bar to the screen bottom, its content kept clear of the bar", () => {
+    platform.OS = "android";
+    navBar.bottom = 48;
+    mount({}, React.createElement("Pressable", { testID: "apply" }));
+    const sheet = byTestId("s");
+    const room = byTestId("s-nav-bar-room");
+    expect(flatStyle(room).height).toBe(48);
+    // The room is the last thing in the sheet, under its content: the sheet's own colour fills the bar's strip.
+    const inside = sheet.findAll((node) => typeof node.type === "string" && node.props.testID !== undefined).map((node) => node.props.testID);
+    expect(inside.slice(-2)).toEqual(["apply", "s-nav-bar-room"]);
+    // The backdrop fills the whole window, which Android draws under the bar (ModalWindows.kt).
+    expect(flatStyle(byTestId("s-backdrop"))).toMatchObject({ position: "absolute", bottom: 0 });
+  });
+
+  it("adds no room without a navigation bar, nor on iOS", () => {
+    platform.OS = "android";
+    mount();
+    expect(renderer!.root.findAll((node) => node.props.testID === "s-nav-bar-room")).toHaveLength(0);
+    act(() => renderer?.unmount());
+    platform.OS = "ios";
+    navBar.bottom = 34;
+    mount();
+    expect(renderer!.root.findAll((node) => node.props.testID === "s-nav-bar-room")).toHaveLength(0);
   });
 });

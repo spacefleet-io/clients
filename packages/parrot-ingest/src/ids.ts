@@ -30,3 +30,6 @@ export const parrotPlacementId = (userId: string, fileHash: string): string =>
   `parrot-${sha256Hex(`${userId}:${fileHash}`).slice(0, 32)}`;
 
 export const parrotChunkKey = (fileId: string, idx: number): string => `${fileId}/chunk-${String(idx).padStart(5, "0")}`;
+
+/** The sealed object holding a split file's own tags (PAR-FMT-01), next to its chunks. */
+export const parrotTagsKey = (fileId: string): string => `${fileId}/tags`;

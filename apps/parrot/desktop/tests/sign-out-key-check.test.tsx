@@ -13,6 +13,7 @@ import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 import { streamBridgeStub } from "./streamBridge";
+import { exportBridgeStub } from "./exportBridge";
 import { profilesBridgeStub } from "./profilesBridge";
 import type { ParrotState } from "../src/shared/ipc";
 import Library from "../src/renderer/src/Library";
@@ -39,6 +40,7 @@ const signedOutState: ParrotState = { ...signedIn(false), user: null, hasLibrary
 
 const parrot = {
   ...streamBridgeStub(),
+  ...exportBridgeStub(),
   ...profilesBridgeStub(),
   signOut: vi.fn(async () => signedOutState),
   getLibrary: vi.fn(async () => ({ ok: true, library: { snapshotVersion: 1, artists: [], albums: [], tracks: [] } })),

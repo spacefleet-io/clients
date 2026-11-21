@@ -92,7 +92,7 @@ export const putLibraryDb = <ThrowOnError extends boolean = false>(options: Opti
 /**
  * Library operations since a version
  *
- * Returns the encrypted operations committed after version `since` (default 0), with their ciphertext inlined, and the observed format versions. `tooOld` is true when `since` predates the retained history.
+ * Returns the encrypted operations committed after version `since` (default 0), with their ciphertext inlined, and the observed format versions. `tooOld` is true when `since` predates the retained history. With `Accept: application/vnd.space.library-ops` the answer is binary instead (LIB-FMT-13): one frame per op, `u64be version | u32be length | ciphertext`, and the page's state in the `x-library-version`, `x-library-snapshot-version`, `x-library-too-old`, `x-library-has-more` (`1`/`0`), `x-library-storage-format-version`, `x-library-op-stream-version` and `x-library-target-op-stream-version` response headers.
  *
  * Personal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.
  */
@@ -930,7 +930,7 @@ export const updateProfile = <ThrowOnError extends boolean = false>(options: Opt
 /**
  * Start a stream
  *
- * Takes one of the profile's stream slots before playback starts: at most 1 stream per profile at a time in Badger, 2 in Parrot. At the limit the answer is 409 `stream_limit` naming the devices playing; the app asks "Already playing on <device>. Play here instead?" and, on yes, sends the same request with `takeover: true`, which ends the oldest stream(s). The same login session starting again replaces its own stream. A stream not heard from for 60 s no longer counts. Casting counts as the casting phone's stream (`kind: "cast"`); offline playback never asks.
+ * Takes one of the profile's stream slots before playback starts: by default at most 1 stream per profile at a time in Badger, 2 in Parrot; an admin may set another number per account type or per account (ACCT-STREAM-07). At the limit the answer is 409 `stream_limit` naming the devices playing; the app asks "Already playing on <device>. Play here instead?" and, on yes, sends the same request with `takeover: true`, which ends the oldest stream(s). The same login session starting again replaces its own stream. A stream not heard from for 60 s no longer counts. Casting counts as the casting phone's stream (`kind: "cast"`); offline playback never asks.
  *
  * Personal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.
  */

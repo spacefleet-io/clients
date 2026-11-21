@@ -76,6 +76,8 @@ const READ_ONLY_METHODS: Record<string, true> = {
   listMediaWithCollapsedCast: true,
   listMediaMissingCrew: true,
   getSnapshot: true,
+  getTargetOpStreamVersion: true,
+  isPackedPlaybackLayout: true,
 };
 
 /** Gate ops that waited or held at least this long are logged one by one. */
@@ -728,6 +730,7 @@ export class BadgerLibraryDbService {
     totalBytes: number;
     downloadedAt: string;
     runtimeJobId: string | null;
+    schemaVersion?: number;
   }): Promise<{ inserted: number }> {
     return (await this.call("registerLocalDownload", [input])) as {
       inserted: number;
@@ -758,6 +761,7 @@ export class BadgerLibraryDbService {
       downloadedAt: string;
       lastVerifiedAt: string | null;
       runtimeJobId: string | null;
+      schemaVersion: number;
     }>
   > {
     const args = mediaIds && mediaIds.length > 0 ? [mediaIds] : [];
@@ -773,6 +777,7 @@ export class BadgerLibraryDbService {
       downloadedAt: string;
       lastVerifiedAt: string | null;
       runtimeJobId: string | null;
+      schemaVersion: number;
     }>;
   }
 

@@ -7,7 +7,7 @@
  * and dumps a snapshot on failure.
  */
 
-import { mkdtempSync, rmSync, promises as fsAsync, writeFileSync, existsSync } from "node:fs";
+import { mkdtempSync, mkdirSync, rmSync, promises as fsAsync, writeFileSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join as joinPath } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -23,6 +23,13 @@ import {
 import type { BadgerLibraryDbService } from "../src/modules/badgerLibraryDb";
 import type { EngineV2 } from "../src/core/jobs/engineV2";
 import type { IngestJobRecord } from "@space/runtime-jobs";
+import {
+  OFFLINE_PIECES_MANIFEST_VERSION,
+  offlinePiecePath,
+  writeOfflinePiece,
+  writeOfflinePieceManifest,
+  type OfflinePieceManifest,
+} from "@space/library-db-runtime/offlinePieceStore";
 
 const SUITE = "badger-offline-handlers";
 
@@ -58,6 +65,7 @@ interface MockLibraryDbState {
     downloadedAt: string;
     lastVerifiedAt: string | null;
     runtimeJobId: string | null;
+    schemaVersion: number;
   }>;
   registerCalls: Array<Record<string, unknown>>;
   dropCalls: Array<Record<string, unknown>>;
@@ -95,6 +103,7 @@ const buildMockLibraryDb = (state: MockLibraryDbState): BadgerLibraryDbService =
         downloadedAt: String(input.downloadedAt),
         lastVerifiedAt: null,
         runtimeJobId: input.runtimeJobId === null ? null : String(input.runtimeJobId),
+        schemaVersion: Number(input.schemaVersion ?? 1),
       });
       return { inserted: 1 };
     }),
@@ -186,6 +195,50 @@ const buildDeps = (overrides: Partial<BadgerOfflineHandlerDeps> & {
     ((libraryId: string) => joinPath(overrides.offlineRoot, libraryId)),
   resolveLibraryId: overrides.resolveLibraryId,
 });
+
+// Writes a whole pieces item (OFFL-FILE-03) under `root`: one piece per key, then the manifest. Returns the manifest
+// path, which is what the row's localPath holds for a schema 2 row.
+const writePiecesItem = async (
+  root: string,
+  fileId: string,
+  pieces: Array<{ key: string; size: number }>
+): Promise<string> => {
+  for (const p of pieces) await writeOfflinePiece(root, p.key, Buffer.alloc(p.size, 7));
+  const [init, ...chunks] = pieces;
+  const manifest: OfflinePieceManifest = {
+    version: OFFLINE_PIECES_MANIFEST_VERSION,
+    fileId,
+    mediaId: "media-1",
+    formatId: "format-1",
+    quality: "720p",
+    savedAt: "2026-11-21T00:00:00.000Z",
+    video: {
+      id: "format-1",
+      quality: "720p",
+      bitrateKbps: null,
+      track: {
+        initKey: init.key,
+        codecString: null,
+        durationSeconds: null,
+        chunks: chunks.map((c) => ({ key: c.key, sizeBytes: c.size, startSeconds: null })),
+      },
+    },
+    audio: [],
+    subtitles: [],
+    objects: pieces.map((p) => ({ key: p.key, sizeBytes: p.size })),
+    totalBytes: pieces.reduce((sum, p) => sum + p.size, 0),
+  };
+  const path = await writeOfflinePieceManifest(root, manifest);
+  console.info(`[${SUITE}:fixture] pieces item fileId=${fileId} manifest=${path} pieces=${pieces.length}`);
+  return path;
+};
+
+// The offline root the handlers resolve for the default library (buildDeps → offlineRoot/<libraryId>).
+const defaultOfflineRoot = (tempRoot: string) => {
+  const root = joinPath(tempRoot, "default");
+  mkdirSync(root, { recursive: true });
+  return root;
+};
 
 // ---------------------------------------------------------------------------
 // Shared media-details fixtures.
@@ -480,8 +533,8 @@ describe(SUITE, () => {
       }
     });
 
-    it("MP4 mode flags ASS subs in skippedSubsForContainer", async () => {
-      console.info(`[${SUITE}:estimate-mp4-skips-ass] start`);
+    it("keeps every subtitle whatever the container (pieces store them sealed as they are)", async () => {
+      console.info(`[${SUITE}:estimate-keeps-all-subs] start`);
       libState.mediaDetails.set("media-movie-1", fixtureMovieDetails());
       const deps = buildDeps({ libraryDb, engine, offlineRoot: tempRoot });
       const handler = createBadgerOfflineEstimateHandler(deps);
@@ -492,12 +545,12 @@ describe(SUITE, () => {
         container: "mp4",
       });
       try {
-        expect(result.items[0].skippedSubsForContainer).toEqual(["fre"]);
-        // Only SRT counted in subtitleBytes (10 KB), not the 2 * 10 KB the
-        // MKV path counted.
-        expect(result.items[0].subtitleBytes).toBe(10 * 1024);
+        console.info(`[${SUITE}:estimate-keeps-all-subs] item`, result.items[0]);
+        expect(result.items[0].skippedSubsForContainer).toEqual([]);
+        // SRT + ASS both kept: 2 * 10 KB.
+        expect(result.items[0].subtitleBytes).toBe(2 * 10 * 1024);
       } catch (err) {
-        dump("estimate-mp4-skips-ass", { result });
+        dump("estimate-keeps-all-subs", { result });
         throw err;
       }
     });
@@ -517,6 +570,7 @@ describe(SUITE, () => {
         downloadedAt: "2026-01-01T00:00:00.000Z",
         lastVerifiedAt: null,
         runtimeJobId: null,
+        schemaVersion: 1,
       });
       const deps = buildDeps({ libraryDb, engine, offlineRoot: tempRoot });
       const handler = createBadgerOfflineEstimateHandler(deps);
@@ -647,7 +701,9 @@ describe(SUITE, () => {
         expect(p.fileId).toBe("file-movie-1");
         expect(p.quality).toBe("1080p");
         expect(p.formatId).toBe("format-1080");
-        expect(p.container).toBe("mkv");
+        // Pieces have no container (OFFL-FILE-03); the step checks free space against expectedBytes.
+        expect(p).not.toHaveProperty("container");
+        expect(typeof p.expectedBytes).toBe("number");
         // @req RT-SEC-05[runtime] the engine persists the payload: no token and no library key in it
         expect(p).not.toHaveProperty("token");
         expect(p).not.toHaveProperty("libraryKeyBase64");
@@ -808,6 +864,7 @@ describe(SUITE, () => {
         downloadedAt: "2026-01-01T00:00:00.000Z",
         lastVerifiedAt: null,
         runtimeJobId: null,
+        schemaVersion: 1,
       });
       const deps = buildDeps({ libraryDb, engine, offlineRoot: tempRoot });
       const handler = createBadgerOfflineSubmitHandler(deps);
@@ -875,7 +932,7 @@ describe(SUITE, () => {
   describe("delete", () => {
     it("unlinks the file, drops the DB row, returns freedBytes", async () => {
       console.info(`[${SUITE}:delete-happy] start`);
-      const filePath = joinPath(tempRoot, "Test Movie (2026).mkv");
+      const filePath = joinPath(defaultOfflineRoot(tempRoot), "Test Movie (2026).mkv");
       writeFileSync(filePath, Buffer.alloc(9216));
       libState.localRows.push({
         id: "local-1",
@@ -889,6 +946,7 @@ describe(SUITE, () => {
         downloadedAt: "2026-01-01T00:00:00.000Z",
         lastVerifiedAt: null,
         runtimeJobId: null,
+        schemaVersion: 1,
       });
       const deps = buildDeps({ libraryDb, engine, offlineRoot: tempRoot });
       const handler = createBadgerOfflineDeleteHandler(deps);
@@ -912,14 +970,99 @@ describe(SUITE, () => {
       }
     });
 
+    // @req OFFL-FILE-03[runtime] removing a pieces item drops its manifest and the pieces no other item lists
+    it("pieces item: removes manifest + unshared pieces, keeps a piece another item lists", async () => {
+      console.info(`[${SUITE}:delete-pieces] start`);
+      const root = defaultOfflineRoot(tempRoot);
+      const manifestA = await writePiecesItem(root, "file-a", [
+        { key: "a-init", size: 100 },
+        { key: "a-chunk-0", size: 400 },
+        { key: "shared-sub", size: 50 },
+      ]);
+      const manifestB = await writePiecesItem(root, "file-b", [
+        { key: "b-init", size: 100 },
+        { key: "shared-sub", size: 50 },
+      ]);
+      const base = {
+        quality: "720p",
+        formatId: "format-1",
+        container: "pieces",
+        downloadedAt: "2026-11-21T00:00:00.000Z",
+        lastVerifiedAt: null,
+        runtimeJobId: null,
+        schemaVersion: 2,
+      };
+      libState.localRows.push({ id: "row-a", fileId: "file-a", mediaId: "media-a", localPath: manifestA, totalBytes: 550, ...base });
+      libState.localRows.push({ id: "row-b", fileId: "file-b", mediaId: "media-b", localPath: manifestB, totalBytes: 150, ...base });
+      const deps = buildDeps({ libraryDb, engine, offlineRoot: tempRoot });
+      const result = await createBadgerOfflineDeleteHandler(deps)({ scope: { type: "file", fileId: "file-a" } });
+      const state = {
+        manifestA: existsSync(manifestA),
+        aInit: existsSync(offlinePiecePath(root, "a-init")),
+        aChunk: existsSync(offlinePiecePath(root, "a-chunk-0")),
+        shared: existsSync(offlinePiecePath(root, "shared-sub")),
+        manifestB: existsSync(manifestB),
+        rows: libState.localRows.map((r) => r.fileId),
+      };
+      console.info(`[${SUITE}:delete-pieces] after`, { result, state });
+      try {
+        expect(result.deleted).toBe(1);
+        expect(result.freedBytes).toBe(500);
+        expect(state).toEqual({
+          manifestA: false,
+          aInit: false,
+          aChunk: false,
+          shared: true,
+          manifestB: true,
+          rows: ["file-b"],
+        });
+      } catch (err) {
+        dump("delete-pieces", { result, state, libState });
+        throw err;
+      }
+    });
+
+    it("old plain file outside the offline dir: only the row is dropped, the file stays", async () => {
+      console.info(`[${SUITE}:delete-outside-root] start`);
+      const userPath = joinPath(tempRoot, "user-folder", "Mine.mkv");
+      mkdirSync(joinPath(tempRoot, "user-folder"), { recursive: true });
+      writeFileSync(userPath, Buffer.alloc(300));
+      libState.localRows.push({
+        id: "local-1",
+        fileId: "file-movie-1",
+        mediaId: "media-movie-1",
+        quality: "1080p",
+        formatId: "format-1080",
+        container: "mkv",
+        localPath: userPath,
+        totalBytes: 300,
+        downloadedAt: "2026-01-01T00:00:00.000Z",
+        lastVerifiedAt: null,
+        runtimeJobId: null,
+        schemaVersion: 1,
+      });
+      const deps = buildDeps({ libraryDb, engine, offlineRoot: tempRoot });
+      const result = await createBadgerOfflineDeleteHandler(deps)({ scope: { type: "media", mediaId: "media-movie-1" } });
+      console.info(`[${SUITE}:delete-outside-root] after`, { result, fileStays: existsSync(userPath) });
+      try {
+        expect(existsSync(userPath)).toBe(true);
+        expect(result.freedBytes).toBe(0);
+        expect(libState.localRows).toHaveLength(0);
+      } catch (err) {
+        dump("delete-outside-root", { result, libState });
+        throw err;
+      }
+    });
+
     it("season scope deletes ONLY files in (mediaId AND seasonNumber)", async () => {
       console.info(`[${SUITE}:delete-season-scope] start`);
       // 3 episodes across 2 seasons; all saved locally. Issue a season=1
       // delete; expect both S1 rows gone, S2 row preserved.
       libState.mediaDetails.set("media-show-1", fixtureShowDetailsThreeEpisodes());
-      const fileS1E1 = joinPath(tempRoot, "show-s1e1.mkv");
-      const fileS1E2 = joinPath(tempRoot, "show-s1e2.mkv");
-      const fileS2E1 = joinPath(tempRoot, "show-s2e1.mkv");
+      const showRoot = defaultOfflineRoot(tempRoot);
+      const fileS1E1 = joinPath(showRoot, "show-s1e1.mkv");
+      const fileS1E2 = joinPath(showRoot, "show-s1e2.mkv");
+      const fileS2E1 = joinPath(showRoot, "show-s2e1.mkv");
       writeFileSync(fileS1E1, Buffer.alloc(1100));
       writeFileSync(fileS1E2, Buffer.alloc(1100));
       writeFileSync(fileS2E1, Buffer.alloc(1100));
@@ -932,6 +1075,7 @@ describe(SUITE, () => {
         downloadedAt: "2026-01-01T00:00:00.000Z",
         lastVerifiedAt: null,
         runtimeJobId: null,
+        schemaVersion: 1,
       };
       libState.localRows.push({ id: "row-1", fileId: "file-s1e1", localPath: fileS1E1, ...base });
       libState.localRows.push({ id: "row-2", fileId: "file-s1e2", localPath: fileS1E2, ...base });
@@ -974,7 +1118,7 @@ describe(SUITE, () => {
     it("season scope cancels only in-flight download jobs for that season's files", async () => {
       console.info(`[${SUITE}:delete-season-scope-cancels-jobs] start`);
       libState.mediaDetails.set("media-show-1", fixtureShowDetailsThreeEpisodes());
-      const fileS1E1 = joinPath(tempRoot, "show-s1e1.mkv");
+      const fileS1E1 = joinPath(defaultOfflineRoot(tempRoot), "show-s1e1.mkv");
       writeFileSync(fileS1E1, Buffer.alloc(100));
       libState.localRows.push({
         id: "row-1",
@@ -988,6 +1132,7 @@ describe(SUITE, () => {
         downloadedAt: "2026-01-01T00:00:00.000Z",
         lastVerifiedAt: null,
         runtimeJobId: "job-s1e1",
+        schemaVersion: 1,
       });
       // Two in-flight jobs: one for the season-1 file (should be cancelled),
       // one for the season-2 file (should NOT be cancelled).
@@ -1054,7 +1199,7 @@ describe(SUITE, () => {
 
     it("cancels in-flight download jobs before unlinking", async () => {
       console.info(`[${SUITE}:delete-cancels-job] start`);
-      const filePath = joinPath(tempRoot, "Test Movie (2026).mkv");
+      const filePath = joinPath(defaultOfflineRoot(tempRoot), "Test Movie (2026).mkv");
       writeFileSync(filePath, Buffer.alloc(100));
       libState.localRows.push({
         id: "local-1",
@@ -1068,6 +1213,7 @@ describe(SUITE, () => {
         downloadedAt: "2026-01-01T00:00:00.000Z",
         lastVerifiedAt: null,
         runtimeJobId: "old-job-1",
+        schemaVersion: 1,
       });
       // Inject a non-terminal download job for the same media.
       const ts = new Date().toISOString();
@@ -1138,6 +1284,7 @@ describe(SUITE, () => {
         downloadedAt: "2026-01-01T00:00:00.000Z",
         lastVerifiedAt: null,
         runtimeJobId: null,
+        schemaVersion: 1,
       });
       const deps = buildDeps({ libraryDb, engine, offlineRoot: tempRoot });
       const handler = createBadgerOfflineListHandler(deps);
@@ -1166,91 +1313,87 @@ describe(SUITE, () => {
   // -------------------------------------------------------------------------
 
   describe("reconcile", () => {
-    it("drops rows whose file is gone (ENOENT)", async () => {
-      console.info(`[${SUITE}:reconcile-missing] start`);
-      const gonePath = joinPath(tempRoot, "vanished.mkv");
-      // Do NOT write the file.
-      libState.localRows.push({
-        id: "local-1",
-        fileId: "file-1",
-        mediaId: "media-1",
-        quality: "720p",
-        formatId: "format-1",
-        container: "mkv",
-        localPath: gonePath,
-        totalBytes: 1024,
-        downloadedAt: "2026-01-01T00:00:00.000Z",
-        lastVerifiedAt: null,
-        runtimeJobId: null,
-      });
-      const deps = buildDeps({ libraryDb, engine, offlineRoot: tempRoot });
-      const handler = createBadgerOfflineReconcileHandler(deps);
+    const pieceRow = (fileId: string, localPath: string, totalBytes: number) => ({
+      id: `row-${fileId}`,
+      fileId,
+      mediaId: "media-1",
+      quality: "720p",
+      formatId: "format-1",
+      container: "pieces",
+      localPath,
+      totalBytes,
+      downloadedAt: "2026-11-21T00:00:00.000Z",
+      lastVerifiedAt: null,
+      runtimeJobId: null,
+      schemaVersion: 2,
+    });
 
-      const result = await handler({});
+    // @req OFFL-SAFE-01[runtime] an item missing a piece counts for nothing: row dropped, its pieces removed
+    it("drops a pieces item with a missing piece and removes its leftovers", async () => {
+      console.info(`[${SUITE}:reconcile-missing] start`);
+      const root = defaultOfflineRoot(tempRoot);
+      const manifest = await writePiecesItem(root, "file-1", [
+        { key: "init-1", size: 100 },
+        { key: "chunk-1", size: 400 },
+      ]);
+      rmSync(offlinePiecePath(root, "chunk-1"));
+      libState.localRows.push(pieceRow("file-1", manifest, 500));
+      const result = await createBadgerOfflineReconcileHandler(buildDeps({ libraryDb, engine, offlineRoot: tempRoot }))({});
+      const after = { manifest: existsSync(manifest), init: existsSync(offlinePiecePath(root, "init-1")) };
+      console.info(`[${SUITE}:reconcile-missing] after`, { result, after, dropCalls: libState.dropCalls });
       try {
-        expect(result.dropped).toEqual([
-          { mediaId: "media-1", fileId: "file-1", reason: "missing" },
-        ]);
-        expect(libState.dropCalls).toHaveLength(1);
-        expect(libState.dropCalls[0]).toEqual({ type: "files", fileIds: ["file-1"] });
+        expect(result.dropped).toEqual([{ mediaId: "media-1", fileId: "file-1", reason: "missing" }]);
+        expect(libState.dropCalls).toEqual([{ type: "files", fileIds: ["file-1"] }]);
+        expect(after).toEqual({ manifest: false, init: false });
       } catch (err) {
         dump("reconcile-missing", { result, libState });
         throw err;
       }
     });
 
-    it("drops rows whose on-disk size doesn't match recorded totalBytes", async () => {
-      console.info(`[${SUITE}:reconcile-size-mismatch] start`);
-      const mismatchPath = joinPath(tempRoot, "mismatched.mkv");
-      writeFileSync(mismatchPath, Buffer.alloc(50)); // Real size 50; row claims 1024
-      libState.localRows.push({
-        id: "local-1",
-        fileId: "file-1",
-        mediaId: "media-1",
-        quality: "720p",
-        formatId: "format-1",
-        container: "mkv",
-        localPath: mismatchPath,
-        totalBytes: 1024,
-        downloadedAt: "2026-01-01T00:00:00.000Z",
-        lastVerifiedAt: null,
-        runtimeJobId: null,
-      });
-      const deps = buildDeps({ libraryDb, engine, offlineRoot: tempRoot });
-      const handler = createBadgerOfflineReconcileHandler(deps);
-
-      const result = await handler({});
+    it("drops a pieces item whose manifest is gone", async () => {
+      console.info(`[${SUITE}:reconcile-no-manifest] start`);
+      const root = defaultOfflineRoot(tempRoot);
+      libState.localRows.push(pieceRow("file-1", joinPath(root, "items", "vanished.json"), 500));
+      const result = await createBadgerOfflineReconcileHandler(buildDeps({ libraryDb, engine, offlineRoot: tempRoot }))({});
+      console.info(`[${SUITE}:reconcile-no-manifest] result`, result);
       try {
-        expect(result.dropped).toEqual([
-          { mediaId: "media-1", fileId: "file-1", reason: "size_mismatch" },
-        ]);
+        expect(result.dropped).toEqual([{ mediaId: "media-1", fileId: "file-1", reason: "missing" }]);
+      } catch (err) {
+        dump("reconcile-no-manifest", { result, libState });
+        throw err;
+      }
+    });
+
+    it("drops a pieces item whose piece has the wrong size", async () => {
+      console.info(`[${SUITE}:reconcile-size-mismatch] start`);
+      const root = defaultOfflineRoot(tempRoot);
+      const manifest = await writePiecesItem(root, "file-1", [
+        { key: "init-1", size: 100 },
+        { key: "chunk-1", size: 400 },
+      ]);
+      writeFileSync(offlinePiecePath(root, "chunk-1"), Buffer.alloc(50));
+      libState.localRows.push(pieceRow("file-1", manifest, 500));
+      const result = await createBadgerOfflineReconcileHandler(buildDeps({ libraryDb, engine, offlineRoot: tempRoot }))({});
+      console.info(`[${SUITE}:reconcile-size-mismatch] result`, result);
+      try {
+        expect(result.dropped).toEqual([{ mediaId: "media-1", fileId: "file-1", reason: "size_mismatch" }]);
       } catch (err) {
         dump("reconcile-size-mismatch", { result, libState });
         throw err;
       }
     });
 
-    it("stamps last_verified_at on surviving rows", async () => {
+    it("stamps last_verified_at on a whole pieces item", async () => {
       console.info(`[${SUITE}:reconcile-survivor] start`);
-      const surviorPath = joinPath(tempRoot, "ok.mkv");
-      writeFileSync(surviorPath, Buffer.alloc(1024));
-      libState.localRows.push({
-        id: "local-1",
-        fileId: "file-1",
-        mediaId: "media-1",
-        quality: "720p",
-        formatId: "format-1",
-        container: "mkv",
-        localPath: surviorPath,
-        totalBytes: 1024,
-        downloadedAt: "2026-01-01T00:00:00.000Z",
-        lastVerifiedAt: null,
-        runtimeJobId: null,
-      });
-      const deps = buildDeps({ libraryDb, engine, offlineRoot: tempRoot });
-      const handler = createBadgerOfflineReconcileHandler(deps);
-
-      const result = await handler({});
+      const root = defaultOfflineRoot(tempRoot);
+      const manifest = await writePiecesItem(root, "file-1", [
+        { key: "init-1", size: 100 },
+        { key: "chunk-1", size: 400 },
+      ]);
+      libState.localRows.push(pieceRow("file-1", manifest, 500));
+      const result = await createBadgerOfflineReconcileHandler(buildDeps({ libraryDb, engine, offlineRoot: tempRoot }))({});
+      console.info(`[${SUITE}:reconcile-survivor] after`, { result, touchCalls: libState.touchCalls });
       try {
         expect(result.dropped).toHaveLength(0);
         expect(libState.touchCalls).toHaveLength(1);
@@ -1258,6 +1401,27 @@ describe(SUITE, () => {
         expect(typeof libState.touchCalls[0].verifiedAt).toBe("string");
       } catch (err) {
         dump("reconcile-survivor", { result, libState });
+        throw err;
+      }
+    });
+
+    // @req OFFL-MIGR-01[runtime] an old plain-file row is the migration's marker: reconcile leaves it alone
+    it("leaves an old plain-file row (schema 1) alone, even when its file is gone", async () => {
+      console.info(`[${SUITE}:reconcile-legacy] start`);
+      libState.localRows.push({
+        ...pieceRow("file-1", joinPath(defaultOfflineRoot(tempRoot), "vanished.mkv"), 1024),
+        container: "mkv",
+        schemaVersion: 1,
+      });
+      const result = await createBadgerOfflineReconcileHandler(buildDeps({ libraryDb, engine, offlineRoot: tempRoot }))({});
+      console.info(`[${SUITE}:reconcile-legacy] after`, { result, rows: libState.localRows.length });
+      try {
+        expect(result.dropped).toEqual([]);
+        expect(libState.dropCalls).toEqual([]);
+        expect(libState.touchCalls).toEqual([]);
+        expect(libState.localRows).toHaveLength(1);
+      } catch (err) {
+        dump("reconcile-legacy", { result, libState });
         throw err;
       }
     });

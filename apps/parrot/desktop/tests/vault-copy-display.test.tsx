@@ -16,6 +16,7 @@ import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { streamBridgeStub } from "./streamBridge";
+import { exportBridgeStub } from "./exportBridge";
 import type { ParrotState } from "../src/shared/ipc";
 import Library from "../src/renderer/src/Library";
 import { translator } from "../src/renderer/src/i18n";
@@ -96,6 +97,7 @@ describe("[parrot desktop] display reads only the library's copies (PAR-COPY-01)
       configurable: true,
       value: {
         ...streamBridgeStub(),
+        ...exportBridgeStub(),
         ...spies,
         wantLyrics: vi.fn(async () => undefined),
         getLibrary: vi.fn(async () => ({ ok: true, library })),

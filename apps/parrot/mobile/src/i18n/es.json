@@ -110,7 +110,7 @@
       "likedEmpty": "Todavía no hay canciones que te gusten"
     },
     "kept": {
-      "keep": "Conservar en este teléfono",
+      "keep": "Guardar sin conexión",
       "remove": "Quitar de este teléfono",
       "line": "Guardado en este teléfono · {{size}}",
       "chooseBody": "Estas canciones están guardadas en más de un formato. Elige cuál conservar en este teléfono.",

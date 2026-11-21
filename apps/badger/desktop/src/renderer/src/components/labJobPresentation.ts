@@ -13,7 +13,7 @@ export const buildActiveLabJobPresentation = (
   // matchedTo?.type === "tv" the way ingest jobs are — the detectedSeason/episode
   // pair is sufficient to show which episode is being saved.
   const episodeLabel =
-    (job.matchedTo?.type === "tv" || job.jobType === "download") &&
+    (job.matchedTo?.type === "tv" || job.jobType === "download" || job.jobType === "export") &&
     job.detectedSeason &&
     job.detectedEpisode
       ? `S${String(job.detectedSeason).padStart(2, "0")}E${String(job.detectedEpisode).padStart(2, "0")}`
@@ -40,6 +40,8 @@ export const buildActiveLabJobPresentation = (
           : t("lab.queue.transcode")
         : job.jobType === "download"
           ? t("lab.queue.offlineDownloading")
+          : job.jobType === "export"
+            ? t("lab.queue.exportDownloading")
           : job.includeAudio || job.includeSubtitles
             ? t("lab.queue.tracks")
             : formatLabel ?? t("lab.queue.job");
@@ -61,13 +63,15 @@ export const buildActiveLabJobPresentation = (
         ? t("lab.queue.help.transcode")
         : job.jobType === "download"
           ? t("lab.queue.help.offlineDownloading")
+          : job.jobType === "export"
+            ? t("lab.queue.help.exportDownloading")
           : job.includeAudio || job.includeSubtitles
             ? t("lab.queue.help.tracks")
             : t("lab.queue.help.job");
   // Download jobs do not have per-track sub-jobs (the runtime muxes all of
   // them into a single output file). The trackChips array stays empty so
   // the sidebar row reads cleanly.
-  const trackChips = job.jobType === "download"
+  const trackChips = job.jobType === "download" || job.jobType === "export"
     ? []
     : ([
         job.includeSource ? t("lab.queue.splitSource") : null,
@@ -107,6 +111,8 @@ export const buildCompletedLabJobPresentation = (
         : t("lab.queue.sourceIngest")
       : job.jobType === "download"
         ? t("lab.queue.offlineSavedOffline")
+        : job.jobType === "export"
+          ? t("lab.queue.exportSaved")
         : formatList;
 
   const completedTime = job.completedAt ? new Date(job.completedAt).toLocaleString(i18n.language) : "";

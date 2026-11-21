@@ -30,6 +30,7 @@ public sealed class LibrarySynchronizer : IHostedService, IDisposable
     private Task? _loop;
     private string _lastAccessState = "unknown";
     private string? _lastProfileNeeded;
+    private bool _updateRequiredLogged;
     private bool _signedOutHandled;
 
     public LibrarySynchronizer(
@@ -223,6 +224,22 @@ public sealed class LibrarySynchronizer : IHostedService, IDisposable
 
         _lastProfileNeeded = status.ProfileNeeded;
         ct.ThrowIfCancellationRequested();
+
+        // REL-CD-29 / LIB-FMT-13: the sidecar stopped with nothing applied; told once per sidecar process, the settings page keeps showing it.
+        if (status.UpdateRequired is { } update && !_updateRequiredLogged)
+        {
+            _logger.LogWarning("SpaceBadger update required ({Reason}, minimum {MinVersion}): {Message}", update.Reason, update.MinVersion ?? "unknown", update.Message);
+            await _activity.CreateAsync(new ActivityLog(
+                "Badger plugin update required",
+                "SpaceBadgerUpdate",
+                Guid.Empty)
+            {
+                LogSeverity = LogLevel.Warning,
+                ShortOverview = update.Message,
+            }).ConfigureAwait(false);
+        }
+
+        _updateRequiredLogged = status.UpdateRequired is not null;
     }
 
     /// <summary>The device was signed out (revoked, 401 or user): nothing of the library may stay (ACCT-DEV-01, PRIV-KEY-05).</summary>

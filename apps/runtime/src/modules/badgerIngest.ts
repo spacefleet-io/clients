@@ -185,6 +185,7 @@ export const uploadBadgerProducedMedia = async (
       scope: input.scope,
       variant: input.variant,
       placementId: input.placementId,
+      seedChunkKeys: input.seedChunkKeys,
       stateStore: input.stateStore,
       signal: input.signal,
       onProgress: input.onProgress,

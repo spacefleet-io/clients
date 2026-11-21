@@ -16,6 +16,8 @@ export type MainUiStrings = {
   filterMedia: string;
   filterVideos: string;
   filterSubtitles: string;
+  exportFolderTitle: string;
+  exportFolderButton: string;
 };
 
 export const MAIN_UI_STRINGS: Record<ClientUiLanguage, MainUiStrings> = {
@@ -28,6 +30,8 @@ export const MAIN_UI_STRINGS: Record<ClientUiLanguage, MainUiStrings> = {
     filterMedia: "Media files",
     filterVideos: "Videos",
     filterSubtitles: "Subtitles",
+    exportFolderTitle: "Choose where to save the files",
+    exportFolderButton: "Save here",
   },
   fr: {
     quitTitle: "Traitement en cours",
@@ -38,6 +42,8 @@ export const MAIN_UI_STRINGS: Record<ClientUiLanguage, MainUiStrings> = {
     filterMedia: "Fichiers multimédias",
     filterVideos: "Vidéos",
     filterSubtitles: "Sous-titres",
+    exportFolderTitle: "Choisir où enregistrer les fichiers",
+    exportFolderButton: "Enregistrer ici",
   },
   nl: {
     quitTitle: "Verwerking bezig",
@@ -48,6 +54,8 @@ export const MAIN_UI_STRINGS: Record<ClientUiLanguage, MainUiStrings> = {
     filterMedia: "Mediabestanden",
     filterVideos: "Video's",
     filterSubtitles: "Ondertiteling",
+    exportFolderTitle: "Kies waar de bestanden worden opgeslagen",
+    exportFolderButton: "Hier opslaan",
   },
   de: {
     quitTitle: "Verarbeitung läuft",
@@ -58,6 +66,8 @@ export const MAIN_UI_STRINGS: Record<ClientUiLanguage, MainUiStrings> = {
     filterMedia: "Mediendateien",
     filterVideos: "Videos",
     filterSubtitles: "Untertitel",
+    exportFolderTitle: "Speicherort für die Dateien wählen",
+    exportFolderButton: "Hier speichern",
   },
   es: {
     quitTitle: "Procesamiento en curso",
@@ -68,6 +78,8 @@ export const MAIN_UI_STRINGS: Record<ClientUiLanguage, MainUiStrings> = {
     filterMedia: "Archivos multimedia",
     filterVideos: "Videos",
     filterSubtitles: "Subtítulos",
+    exportFolderTitle: "Elige dónde guardar los archivos",
+    exportFolderButton: "Guardar aquí",
   },
 };
 

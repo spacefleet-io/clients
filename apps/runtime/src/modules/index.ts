@@ -20,6 +20,7 @@ import {
   sweepOrphanedStagingDirs,
   type BadgerOfflineHandlerDeps,
 } from "./badger/offlineDownload";
+import { migrateLegacyOfflineFiles } from "./badger/offlineMigration";
 import {
   badgerIngestSubmitSources,
   badgerIngestAttachMetadata,
@@ -34,6 +35,8 @@ import {
   badgerOfflineListLocal,
   badgerOfflineReconcile,
 } from "@space/runtime-contracts/badger/offline";
+import { badgerExportEstimate, badgerExportSubmit } from "@space/runtime-contracts/badger/export";
+import { createBadgerExportEstimateHandler, createBadgerExportSubmitHandler } from "./badger/export";
 import { badgerPreviewsGetStatus } from "@space/runtime-contracts/badger/previews";
 import {
   configureBadgerOfflineDeps,
@@ -123,6 +126,9 @@ let sessionChangedListener: (() => void) | null = null;
 const badgerModuleDependencies = () => ({
   countUnfinishedEngineJobs: countUnfinishedBadgerEngineJobs,
   onLibraryClosed: ((reason) => libraryClosedListener?.(reason)) satisfies LibraryClosedListener,
+  onLibraryOpened: (mode: "online" | "local") => {
+    if (badgerEngineV2) void runOfflineLibraryMaintenance(badgerEngineV2, mode);
+  },
   onSessionChanged: () => sessionChangedListener?.(),
 });
 /** RT-JOBS-07: whether a job of `userId` belongs to the session's account (a job without a user always does). */
@@ -502,60 +508,45 @@ export const setEngineV2ForBadgerIngest = (engine: EngineV2 | null) => {
       return badgerModuleState.current.libraryDbService.registerLocalDownload(input);
     },
   });
-  // Kick a best-effort full-library reconcile on first engine wiring so
-  // dangling rows (file moved/deleted outside the app while we were down)
-  // are dropped before the renderer requests its first list_local snapshot.
-  // Errors here are swallowed — the on-modal-open reconcile is the
-  // user-visible safety net. We run it in a microtask so the wiring path
-  // returns immediately.
-  void (async () => {
+  // The engine may come up after the library opened: check the offline copies now too (no migration: whether the
+  // network is up is only known from how the library opened).
+  void runOfflineLibraryMaintenance(engine, null);
+};
+
+let offlineMaintenanceChain: Promise<void> = Promise.resolve();
+/**
+ * Offline copies check, best-effort, once the library DB is open (on open, or on the engine wiring if the library
+ * opened first): drop rows whose pieces are gone (reconcile), sweep `.tmp-*` staging dirs of older builds, `.part`
+ * leftovers and pieces no item lists (OFFL-SAFE-01), then, on an online open, re-save old plain files as pieces
+ * (OFFL-MIGR-01). Runs one after the other; a repeat is harmless (the migration skips files already being re-saved).
+ */
+const runOfflineLibraryMaintenance = (engine: EngineV2, mode: "online" | "local" | null): Promise<void> => {
+  offlineMaintenanceChain = offlineMaintenanceChain.then(async () => {
+    if (!badgerModuleState.current.libraryDbService.isOpen()) return;
+    const deps = buildOfflineHandlerDeps(engine);
     try {
-      if (!badgerModuleState.current.libraryDbService.isOpen()) {
-        // No library DB yet — the on-key-set path will re-fire this wiring
-        // (setEngineV2ForBadgerIngest is called once at boot; the renderer's
-        // db.open command lands later). Skip silently.
-        return;
-      }
-      const reconcileDeps: BadgerOfflineHandlerDeps = {
-        engine,
-        libraryDb: badgerModuleState.current.libraryDbService,
-        resolveToken: () => badgerModuleState.current.getActiveIngestToken(),
-        resolveLibraryKey: () =>
-          badgerModuleState.current.getActiveLibraryKey(),
-        resolveOfflineDir: resolveBadgerOfflineDir,
-      };
-      const reconcileHandler = createBadgerOfflineReconcileHandler(
-        reconcileDeps
-      );
-      const result = await reconcileHandler({});
-      console.info(
-        `[badger.offline] startup reconcile complete: dropped=${result.dropped.length}`
-      );
-      // Sweep orphaned `.tmp-<jobId>/` staging dirs. After the step handler
-      // started preserving staging on cancel/fail (resume support), a crash
-      // mid-download leaves the staging dir behind. We nuke any whose
-      // jobId no longer maps to a non-terminal engine job.
-      try {
-        const sweepResult = await sweepOrphanedStagingDirs({
-          engine,
-          resolveOfflineDir: reconcileDeps.resolveOfflineDir,
-        });
-        console.info(
-          `[badger.offline] startup staging sweep complete: scanned=${sweepResult.scanned} removed=${sweepResult.removed} preserved=${sweepResult.preserved} errors=${sweepResult.errors}`
-        );
-      } catch (sweepErr) {
-        console.warn(
-          "[badger.offline] startup staging sweep failed (non-fatal):",
-          sweepErr instanceof Error ? sweepErr.message : sweepErr
-        );
-      }
+      const result = await createBadgerOfflineReconcileHandler(deps)({});
+      console.info(`[badger.offline] library-open reconcile complete: dropped=${result.dropped.length}`);
     } catch (err) {
-      console.warn(
-        "[badger.offline] startup reconcile failed (non-fatal):",
-        err instanceof Error ? err.message : err
-      );
+      console.warn("[badger.offline] library-open reconcile failed (non-fatal):", err instanceof Error ? err.message : err);
     }
-  })();
+    try {
+      const sweep = await sweepOrphanedStagingDirs({ engine, resolveOfflineDir: deps.resolveOfflineDir });
+      console.info("[badger.offline] library-open sweep complete", sweep);
+    } catch (err) {
+      console.warn("[badger.offline] library-open sweep failed (non-fatal):", err instanceof Error ? err.message : err);
+    }
+    if (mode !== "online") {
+      console.info(`[badger.offline] migration of old plain files skipped: library opened ${mode ?? "before the engine"}`);
+      return;
+    }
+    try {
+      await migrateLegacyOfflineFiles(deps);
+    } catch (err) {
+      console.warn("[badger.offline] migration failed (non-fatal):", err instanceof Error ? err.message : err);
+    }
+  });
+  return offlineMaintenanceChain;
 };
 
 const engineV2NotEnabledResponse = (
@@ -599,7 +590,9 @@ const isV2BadgerIngestCommand = (command: string): boolean =>
   command === badgerOfflineDownloadSubmit.name ||
   command === badgerOfflineDeleteLocal.name ||
   command === badgerOfflineListLocal.name ||
-  command === badgerOfflineReconcile.name;
+  command === badgerOfflineReconcile.name ||
+  command === badgerExportEstimate.name ||
+  command === badgerExportSubmit.name;
 
 // Shared dep factory for the offline command handlers. All five
 // `createBadgerOffline*Handler` functions take the same shape; building it
@@ -752,6 +745,19 @@ const executeV2BadgerIngestCommand = async (
           error: null,
         },
       };
+    }
+    // ---- badger.export.* (OFFL-FILE-01 / ACCT-EXPORT-01) ----
+    if (request.command === badgerExportEstimate.name) {
+      const parsed = parsePayload(badgerExportEstimate, { payload: request.payload as Record<string, unknown> });
+      if (!parsed.ok) return { response: error(request.requestId, "invalid_payload", parsed.error) };
+      const result = await createBadgerExportEstimateHandler(buildOfflineHandlerDeps(badgerEngineV2))(parsed.data);
+      return { response: { requestId: request.requestId, ok: true, result, error: null } };
+    }
+    if (request.command === badgerExportSubmit.name) {
+      const parsed = parsePayload(badgerExportSubmit, { payload: request.payload as Record<string, unknown> });
+      if (!parsed.ok) return { response: error(request.requestId, "invalid_payload", parsed.error) };
+      const result = await createBadgerExportSubmitHandler(buildOfflineHandlerDeps(badgerEngineV2))(parsed.data);
+      return { response: { requestId: request.requestId, ok: true, result, error: null } };
     }
     // ---- badger.offline.* (Phase 2) ----
     if (request.command === badgerOfflineEstimateSize.name) {

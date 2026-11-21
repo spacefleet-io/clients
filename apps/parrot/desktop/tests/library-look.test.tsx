@@ -12,6 +12,7 @@ import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 import { streamBridgeStub } from "./streamBridge";
+import { exportBridgeStub } from "./exportBridge";
 import { profilesBridgeStub, stubProfile, type ProfilesBridgeStub } from "./profilesBridge";
 import type { ApiProfile } from "@space/shared/profiles";
 import { readFileSync } from "node:fs";
@@ -88,6 +89,7 @@ describe("Parrot desktop look", () => {
       configurable: true,
       value: {
         ...streamBridgeStub(),
+        ...exportBridgeStub(),
         ...profiles,
         signOut,
         getLibrary: vi.fn(async () => ({ ok: true, library })),

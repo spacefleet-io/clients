@@ -361,7 +361,7 @@ describe("the phone's playlist editing", () => {
     await press(one("song-go-to-artist"));
     expect(went).toEqual(["album", "artist"]);
 
-    // Keep on this phone (PAR-OFFL-01) keeps the song itself.
+    // Save offline (PAR-OFFL-01) keeps the song itself.
     await open();
     await press(one("song-keep"));
     log("kept", { keeps: fake.keeps });

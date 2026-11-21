@@ -1,6 +1,7 @@
 export * from "./catalog";
 export * from "./queries";
 export * from "./fileRange";
+export * from "./chunkReads";
 export * from "./queue";
 export * from "./covers";
 export * from "./coverCache";
@@ -33,3 +34,5 @@ export * from "./oggOpus";
 export * from "./audioStream";
 export * from "./missingTracks";
 export * from "./retryUnidentified";
+export * from "./librarySchema";
+export * from "./exportLayout";

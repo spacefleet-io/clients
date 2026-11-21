@@ -51,6 +51,11 @@ export type ContentObjectUploadOptions = {
   placementId?: string;
   /** How the object counts toward the allowance (STOR-USE-02). */
   counting?: StorageObjectCounting;
+  /**
+   * The key to store the object under, already decided by the caller: a seed-derived chunk key (LIB-FMT-11,
+   * `media/<placementId>/<uuid>`). Absent: a random UUID, as every upload did before op stream 4.
+   */
+  objectKey?: string;
 };
 
 export type ContentBytesUploadArgs = {
@@ -60,6 +65,8 @@ export type ContentBytesUploadArgs = {
   contentType?: string;
   placementId?: string;
   counting?: StorageObjectCounting;
+  /** See {@link ContentObjectUploadOptions.objectKey}. */
+  objectKey?: string;
 };
 
 const checksumBytes = (buf: Buffer) => createHash("sha256").update(buf).digest("hex");
@@ -98,6 +105,7 @@ export const uploadEncryptedContentObject = async (
     logicalRef: filePath,
     placementId: options.placementId,
     counting: options.counting,
+    ...(options.objectKey ? { objectKey: options.objectKey } : {}),
   });
   const result = {
     ...uploaded,
@@ -126,7 +134,7 @@ export const uploadEncryptedContentBytes = async (
 ): Promise<ContentObjectUploadResult> => {
   const checksum = checksumBytes(args.plaintext);
   const encrypted = runtime.encryptObject(args.plaintext);
-  const key = randomUUID();
+  const key = args.objectKey ?? randomUUID();
   const uploadPromise = runtime.uploadObject(token, key, encrypted, {
     objectNamespace: args.objectNamespace ?? "library",
     logicalRef: args.logicalRef,

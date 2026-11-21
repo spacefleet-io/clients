@@ -110,7 +110,7 @@
       "likedEmpty": "No liked songs yet"
     },
     "kept": {
-      "keep": "Keep on this phone",
+      "keep": "Save offline",
       "remove": "Remove from this phone",
       "line": "Kept on this phone · {{size}}",
       "chooseBody": "These songs are stored in more than one format. Pick the one to keep on this phone.",

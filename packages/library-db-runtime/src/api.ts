@@ -1,24 +1,55 @@
 import * as sdk from "@space/sdk";
-import { ApiError, SPACE_APP_HEADER, unwrap, type ApiErrorPayload, type LibraryMeta, type LibraryPutResult } from "@space/sdk";
+import {
+  ApiError,
+  onApiError,
+  SPACE_APP_HEADER,
+  unwrap,
+  type ApiErrorPayload,
+  type LibraryMeta,
+  type LibraryPutResult,
+} from "@space/sdk";
 import { getApiBaseUrl } from "./apiHost";
 import {
   createUserStorageTunnelClient,
+  type StorageDownloadSession,
   type StorageTunnelPurpose,
   type StorageUploadSession,
   type UserStorageTunnelClient,
 } from "@space/shared/storageTunnel";
 import { DEFAULT_SPACE_APP_ID, type SpaceAppId } from "@space/shared/appScope";
-import { clientIdentityHeaders } from "@space/shared/appVersion";
+import {
+  appUpdateRequiredFrom,
+  clientIdentityHeaders,
+  isLibraryOpStreamSwitch,
+  setLibraryReadOpStreamVersion,
+} from "@space/shared/appVersion";
 import type { StorageObjectCounting } from "@space/shared/storageCounting";
 import { parseLibraryOpsResponse, type ChunkRefsSource, type LibraryOpsResponse } from "@space/shared/contracts/library";
+import { postLibraryOp, type LibraryOpLineage } from "@space/shared/libraryOpUpload";
 import { STORAGE_FORMAT_VERSION } from "@space/library-db-definition/storageFormat";
+import { READ_OP_STREAM_VERSION } from "@space/library-db-definition/ops";
 import { scopeLogger } from "./logger";
 
 export { ApiError };
 export type { ApiErrorPayload, LibraryMeta };
-export type { StorageUploadSession };
+export type { StorageDownloadSession, StorageUploadSession };
+
+// LIB-FMT-13: this process reads the library, so a 426 for the account's switch to an op stream it reads is the
+// switch (the library converts and retries), never "please update" for its update latch.
+setLibraryReadOpStreamVersion(READ_OP_STREAM_VERSION); // op-stream: read
 
 export type { CastMember, Trailer, TitleDetails, TitleEpisode, TitleSearchResult, TitleSeason, TitleType } from "@space/shared/api";
+
+/**
+ * Calls `listener` with every "please update" refusal (REL-CD-29) this process's API calls get, so a process without
+ * the app's screen (the runtime) can hand it to the app that shows the update gate. A 426 for a switch to an op stream
+ * this build reads (LIB-FMT-13) is not one: the library converts and retries. Returns the unsubscribe function.
+ */
+export const onAppUpdateRefusal = (listener: (refusal: { status: number; payload: ApiErrorPayload }) => void) =>
+  onApiError((error) => {
+    if (appUpdateRequiredFrom(error) === null || isLibraryOpStreamSwitch(error)) return;
+    listener({ status: error.status, payload: error.payload });
+  });
 
 export type StorageTunnelSession = {
   sessionId: string;
@@ -76,11 +107,23 @@ export const setLibraryTunnelMode = (mode: "direct" | "waterfall") => {
   storageTunnelClients.clear();
 };
 
+/**
+ * A library READ's scope: the account call plus the highest op stream this build reads (LIB-FMT-13); a switched
+ * account answers 426 `app_update_required` to a read that does not state it.
+ */
+const libraryReadCall = (token: string, appId: SpaceAppId) => {
+  const scope = accountCall(token, appId);
+  return {
+    ...scope,
+    headers: { ...scope.headers, "x-library-op-stream-version": String(READ_OP_STREAM_VERSION) }, // op-stream: read
+  };
+};
+
 export const getLibraryMeta = (token: string, appId: SpaceAppId = DEFAULT_SPACE_APP_ID) =>
-  unwrap(sdk.getLibraryMeta(accountCall(token, appId)));
+  unwrap(sdk.getLibraryMeta(libraryReadCall(token, appId)));
 
 export const getLibraryDb = (token: string, appId: SpaceAppId = DEFAULT_SPACE_APP_ID) =>
-  unwrap(sdk.getLibraryDb(accountCall(token, appId)));
+  unwrap(sdk.getLibraryDb(libraryReadCall(token, appId)));
 
 export const getLibraryOps = async (
   token: string,
@@ -88,36 +131,28 @@ export const getLibraryOps = async (
   appId: SpaceAppId = DEFAULT_SPACE_APP_ID
 ): Promise<LibraryOpsResponse> => {
   const raw = await unwrap(
-    sdk.getLibraryOps({ ...accountCall(token, appId), query: { since: String(sinceVersion) } })
+    sdk.getLibraryOps({ ...libraryReadCall(token, appId), query: { since: String(sinceVersion) } })
   );
   return parseLibraryOpsResponse(raw);
 };
 
+/**
+ * Upload one encrypted op through the shared upload (`@space/shared/libraryOpUpload`). `opStreamVersion` is what this
+ * op is written in: `OP_STREAM_VERSION`, or `writeOpStreamVersion(target)` on a converted library (LIB-FMT-13).
+ */
 export const putLibraryOp = (
   token: string,
   baseVersion: number,
   opId: string,
   payload: Uint8Array,
-  lineage?: { prevStateHash?: string | null; nextStateHash?: string | null },
+  lineage: LibraryOpLineage | undefined,
+  opStreamVersion: number,
   appId: SpaceAppId = DEFAULT_SPACE_APP_ID
-) => {
-  const scope = accountCall(token, appId);
-  return unwrap(
-    sdk.postLibraryOp({
-      ...scope,
-      headers: {
-        ...scope.headers,
-        "x-library-base-version": String(baseVersion),
-        "x-library-op-id": opId,
-        "x-library-storage-format-version": String(STORAGE_FORMAT_VERSION),
-        ...(lineage?.prevStateHash ? { "x-library-prev-state-hash": lineage.prevStateHash } : {}),
-        ...(lineage?.nextStateHash ? { "x-library-next-state-hash": lineage.nextStateHash } : {}),
-      },
-      // Generated type says Blob|File; `bodySerializer: null` sends the bytes as-is (same call shape as the RN client).
-      body: toBinaryBody(payload) as unknown as Blob,
-    })
-  );
-};
+) =>
+  postLibraryOp(accountCall(token, appId), baseVersion, opId, payload, lineage, {
+    storageFormatVersion: STORAGE_FORMAT_VERSION,
+    opStreamVersion,
+  });
 
 /**
  * Send a snapshot PUT to /library/db. JSON-body contract: chunkRefs is mandatory and carried in the
@@ -256,6 +291,13 @@ export const openStorageUploadSession = (
   session: { placementId: string; clientType?: string; clientVersion?: string },
   appId: SpaceAppId = DEFAULT_SPACE_APP_ID
 ): StorageUploadSession => tunnelClientFor(appId).createUploadSession(token, session);
+
+/** One reused playback session for many objects of one media (STOR-REUSE-02); `objectKey` names the media. */
+export const openStorageDownloadSession = (
+  token: string,
+  session: { objectKey: string; purpose?: StorageTunnelPurpose; profileId?: string | null; clientType?: string; clientVersion?: string },
+  appId: SpaceAppId = DEFAULT_SPACE_APP_ID
+): StorageDownloadSession => tunnelClientFor(appId).createDownloadSession(token, session);
 
 export const downloadStorageObjectViaTunnel = (
   token: string,

@@ -2,7 +2,7 @@ import { randomBytes } from "node:crypto";
 import { once } from "node:events";
 import http from "node:http";
 import type { AddressInfo } from "node:net";
-import type { ParrotCoverImage, ParrotLibraryFile } from "@space/parrot-ingest";
+import { PARROT_DOWNLOAD_LANES_PER_FILE, type ParrotCoverImage, type ParrotLibraryFile } from "@space/parrot-ingest";
 import {
   alacWavLayout,
   indexAlacMp4,
@@ -12,7 +12,11 @@ import {
   readParrotFileRange,
   type AlacMp4Index,
   type ParrotChunkLoader,
+  type ParrotChunkReads,
 } from "@space/parrot-core";
+
+/** Chunks fetched ahead of the one being sent (PAR-PLAY-08): one per download session a song may use. */
+const READ_AHEAD_CHUNKS = PARROT_DOWNLOAD_LANES_PER_FILE - 1;
 
 export type ParrotPlaybackServer = {
   /** The address the window's player reads the file from. */
@@ -35,6 +39,8 @@ export type ParrotPlaybackServer = {
  * what it needs. An Apple Lossless song, which Chromium cannot play, is served as the WAV it decodes to (PAR-FMT-01):
  * the same address, and a byte range of the WAV decodes only the frames it covers, so seeking stays instant.
  * Background reads of a whole song (the loudness pass) have their own address and chunk loader beside the player's.
+ * Every answer holds the chunks of the file it reads in `reads` until it ends (PAR-LYR-07), so a step replacing the
+ * file meanwhile removes the old chunks only after it.
  */
 export const startParrotPlaybackServer = async (input: {
   findFile: (fileId: string) => ParrotLibraryFile | null;
@@ -42,12 +48,13 @@ export const startParrotPlaybackServer = async (input: {
   /** The chunks behind `readUrlFor`: no cache shared with `load`. */
   loadForReading: ParrotChunkLoader;
   loadCover: (objectKey: string) => Promise<ParrotCoverImage | null>;
+  reads: ParrotChunkReads;
   log: (line: string) => void;
 }): Promise<ParrotPlaybackServer> => {
   const secret = randomBytes(16).toString("hex");
   // ALAC frame tables, per stored file: built once from the file's `moov` box, kept for the few songs around the queue.
-  // Keyed by the file's version too (its first chunk and size): writing lyrics into a file (PAR-LYR-01) stores it
-  // again under the same id with its frames moved, so a table built before would read the wrong bytes.
+  // Keyed by the file's version too (its first chunk and size): storing an older file again split (PAR-FMT-01) keeps
+  // its id with its frames moved, so a table built before would read the wrong bytes.
   const alacIndexes = new Map<string, Promise<AlacMp4Index>>();
   const alacIndexOf = (file: ParrotLibraryFile, load: ParrotChunkLoader) => {
     const key = `${file.id}:${file.sizeBytes}:${file.chunks[0]?.objectKey ?? ""}`;
@@ -107,6 +114,8 @@ export const startParrotPlaybackServer = async (input: {
         res.writeHead(404).end();
         return;
       }
+      // Released when the answer ends, however it ends (sent, refused, failed or dropped by the player).
+      res.once("close", input.reads.hold(file.chunks.map((chunk) => chunk.objectKey)));
       const alac = isAlacCodec(file.codec) ? await alacIndexOf(file, load).catch((error: unknown) => error as Error) : null;
       if (alac instanceof Error) {
         input.log(`[playback] ${fileId}: cannot read its Apple Lossless frames: ${alac.message}`);
@@ -146,8 +155,8 @@ export const startParrotPlaybackServer = async (input: {
       res.once("close", () => onClose());
       try {
         const parts = alac
-          ? readAlacAsWav(alac, start, end, (from, to) => readParrotFileRange(file.chunks, from, to, load))
-          : readParrotFileRange(file.chunks, start, end, load);
+          ? readAlacAsWav(alac, start, end, (from, to) => readParrotFileRange(file.chunks, from, to, load, READ_AHEAD_CHUNKS))
+          : readParrotFileRange(file.chunks, start, end, load, READ_AHEAD_CHUNKS);
         for await (const part of parts) {
           if (aborted) break;
           sent += part.length;

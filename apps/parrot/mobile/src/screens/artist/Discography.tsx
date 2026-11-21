@@ -2,7 +2,7 @@
 // release with its own Play. A row of years jumps down the timeline when there are many. One album or thirty both read
 // as a list, never a half-empty grid; a short discography (one or two releases) lists its songs under the timeline.
 import React, { useRef } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { MobileRailScroll } from "@space/mobile-shell/components";
 import { Play } from "lucide-react-native";
 import { formatDuration, parrotCoverThumbKey } from "@space/parrot-core";
@@ -15,10 +15,18 @@ import { totalDuration, type ArtistPage } from "./useArtistPage";
 export const YEAR_JUMP_FROM = 8;
 /** A discography this short leaves the tab bare, so its songs follow the timeline. */
 export const SONGS_BELOW_UPTO = 2;
+/**
+ * The year rail: a 12 pt year ("2005" is about 28 wide at the default text size) with 14 on each side. Only the year
+ * grows with the phone's text size, so the margin stays and the release beside it keeps its room (56, 64 at 1.3, 84 at 2).
+ */
+export const RAIL_YEAR = 28;
+export const RAIL_MARGIN = 28;
 
 /** `onJump` gets how far down this block a year starts, for the page to scroll there. */
 export const Discography = ({ page, onJump }: { page: ArtistPage; onJump: (y: number) => void }) => {
   const { t } = page;
+  // The year grows with the text size (UX-A11Y-05); a fixed 56 put "2005" flush on the screen edge at 2x.
+  const railWidth = Math.round(RAIL_YEAR * Math.max(1, useWindowDimensions().fontScale ?? 1) + RAIL_MARGIN);
   const yearAt = useRef(new Map<number, number>());
   const railTop = useRef(0);
   const newestFirst = [...page.albums].reverse();
@@ -54,7 +62,7 @@ export const Discography = ({ page, onJump }: { page: ArtistPage; onJump: (y: nu
               style={styles.release}
               onLayout={firstOfYear && album.year ? (event) => yearAt.current.set(album.year!, event.nativeEvent.layout.y) : undefined}
             >
-              <View style={styles.railColumn}>
+              <View testID="artist-rail-year" style={[styles.railColumn, { width: railWidth }]}>
                 <Text style={styles.railYear}>{firstOfYear ? (album.year ?? "") : ""}</Text>
                 <View style={[styles.railLine, index === newestFirst.length - 1 && { opacity: 0 }]} />
               </View>
@@ -110,11 +118,11 @@ const styles = StyleSheet.create({
   yearText: { color: colors.text, fontSize: 13, fontWeight: "700" },
   rail: { paddingTop: spacing.xs, paddingRight: spacing.lg },
   release: { flexDirection: "row" },
-  railColumn: { width: 56, alignItems: "center" },
+  railColumn: { alignItems: "center" },
   railYear: { color: colors.accent, fontSize: 12, fontWeight: "800", minHeight: 18, marginTop: spacing.sm },
   railLine: { flex: 1, width: 2, borderRadius: 1, backgroundColor: colors.border, marginTop: 4 },
   releaseBody: { flex: 1, flexDirection: "row", alignItems: "center", gap: spacing.md, paddingVertical: spacing.sm },
-  newest: { color: colors.accent, fontSize: 10.5, letterSpacing: 1.2, fontWeight: "900" },
+  newest: { color: colors.accent, fontSize: 11, letterSpacing: 1.2, fontWeight: "900" },
   releaseTitle: { color: colors.text, fontSize: 15, fontWeight: "700" },
   releaseMeta: { color: colors.textMuted, fontSize: 12.5 },
   releasePlay: { width: 36, height: 36, borderRadius: 18, borderWidth: 1, borderColor: colors.border, alignItems: "center", justifyContent: "center" },

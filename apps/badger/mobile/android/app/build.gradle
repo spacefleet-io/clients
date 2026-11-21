@@ -136,6 +136,10 @@ android {
             // Google-free build takes the same NDK r27b libc++ from the media-deps bundle (@space/mobile-mpv-playback).
             if (fossBuild) jniLibs.srcDirs = []
         }
+        // ChunkListCodecTest reads the shared packed chunk list vectors (LIB-FMT-11) straight from the definition package.
+        test {
+            resources.srcDirs += "../../../../../packages/library-db-definition/test-vectors"
+        }
     }
     defaultConfig {
         applicationId "com.spacebadger.mobile"
@@ -233,4 +237,6 @@ dependencies {
 
     // JVM unit tests (src/test): pure-Kotlin code such as library.SnapshotCodec, run on the build host.
     testImplementation("junit:junit:4.13.2")
+    // android.jar's org.json is a stub on the JVM ("Method ... not mocked"); the real one parses the test vectors.
+    testImplementation("org.json:json:20260814")
 }

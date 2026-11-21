@@ -14,7 +14,7 @@ vi.mock("react-native", () => ({
   },
 }));
 
-import { deviceClientIdentity, mobileClientIdentity, mobileClientPlatform, nativeAppInfo } from "../src/appInfo";
+import { deviceClientIdentity, mobileClientIdentity, mobileClientPlatform, nativeAppInfo, openInstallerListing } from "../src/appInfo";
 import { formatClientHeader, type ClientIdentity } from "@space/shared/appVersion";
 
 const SUITE = "app-info";
@@ -103,6 +103,47 @@ describe("REL-CD-29 phone and TV builds state version and store", () => {
     const broken = deviceClientIdentity("parrot");
     log(testId, "broken-platform", broken);
     expect(broken).toBeNull();
+    log(testId, "done");
+  });
+});
+
+describe("REL-CD-29 update screen: where the update comes from", () => {
+  it("reads the Apple distribution and keeps it off the API header @req REL-CD-29", () => {
+    const testId = "apple-distribution";
+    const cases = [
+      nativeAppInfo({ SpaceAppInfo: { appVersion: "0.1.3", appleDistribution: "testflight" } }),
+      nativeAppInfo({ SpaceAppInfo: { getConstants: () => ({ appVersion: "0.1.3", appleDistribution: "appstore" }) } }),
+      nativeAppInfo({ SpaceAppInfo: { appVersion: "0.1.3", appleDistribution: "enterprise" } }),
+      nativeAppInfo({ SpaceAppInfo: { appVersion: "0.1.3" } }),
+    ];
+    log(testId, "read", cases);
+    expect(cases).toEqual([
+      { version: "0.1.3", installer: null, appleDistribution: "testflight" },
+      { version: "0.1.3", installer: null, appleDistribution: "appstore" },
+      { version: "0.1.3", installer: null },
+      { version: "0.1.3", installer: null },
+    ]);
+    const sent = header(mobileClientIdentity("badger", { OS: "ios" }, cases[0]!));
+    log(testId, "header", sent);
+    expect(sent).toBe("badger/ios/0.1.3");
+    log(testId, "done");
+  });
+
+  it("asks the installing app to show the listing, false when it cannot @req REL-CD-29", async () => {
+    const testId = "open-installer";
+    const opened = await openInstallerListing({ SpaceAppInfo: { openInstaller: async () => true } });
+    const nothing = await openInstallerListing({ SpaceAppInfo: { openInstaller: async () => false } });
+    const missing = await openInstallerListing({ SpaceAppInfo: { appVersion: "0.1.3" } });
+    const noModules = await openInstallerListing(undefined);
+    const thrown = await openInstallerListing({
+      SpaceAppInfo: {
+        openInstaller: async () => {
+          throw new Error("no activity");
+        },
+      },
+    });
+    log(testId, "results", { opened, nothing, missing, noModules, thrown });
+    expect([opened, nothing, missing, noModules, thrown]).toEqual([true, false, false, false, false]);
     log(testId, "done");
   });
 });

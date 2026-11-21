@@ -1007,8 +1007,7 @@
   },
   "libraryFormat": {
     "title": "Mise à jour requise",
-    "body": "Cette médiathèque a été créée par une version plus récente de Badger. Mettez l'application à jour pour l'ouvrir.",
-    "update": "Mettre à jour"
+    "body": "Cette médiathèque a été créée par une version plus récente de Badger."
   },
   "home": {
     "empty": {
@@ -1366,6 +1365,27 @@
   },
   "appUpdate": {
     "title": "Mettez {{app}} à jour pour continuer",
-    "body": "Cette version de {{app}} est trop ancienne pour se connecter. Installez la nouvelle version depuis l'endroit où vous avez obtenu {{app}}, puis rouvrez l'application."
+    "tooOld": "Cette version de {{app}} est trop ancienne pour se connecter.",
+    "how": {
+      "appstore": "Mettez {{app}} à jour dans l'App Store, puis rouvrez l'application.",
+      "testflight": "Installez la nouvelle version de {{app}} depuis TestFlight, puis rouvrez l'application.",
+      "play": "Mettez {{app}} à jour sur Google Play, puis rouvrez l'application.",
+      "amazon": "Mettez {{app}} à jour dans l'Amazon Appstore, puis rouvrez l'application.",
+      "fdroid": "Mettez {{app}} à jour dans F-Droid, puis rouvrez l'application.",
+      "obtainium": "Mettez {{app}} à jour dans Obtainium, puis rouvrez l'application.",
+      "apk": "Téléchargez la nouvelle version de {{app}} et installez-la par-dessus celle-ci, puis rouvrez l'application.",
+      "store": "Mettez {{app}} à jour dans la boutique qui a servi à l'installer, puis rouvrez l'application.",
+      "unknown": "Installez la nouvelle version depuis l'endroit où vous avez obtenu {{app}}, puis rouvrez l'application."
+    },
+    "open": {
+      "appstore": "Ouvrir l'App Store",
+      "testflight": "Ouvrir TestFlight",
+      "play": "Ouvrir Google Play",
+      "amazon": "Ouvrir l'Amazon Appstore",
+      "fdroid": "Ouvrir F-Droid",
+      "obtainium": "Ouvrir Obtainium",
+      "apk": "Télécharger la nouvelle version",
+      "store": "Ouvrir la boutique"
+    }
   }
 }

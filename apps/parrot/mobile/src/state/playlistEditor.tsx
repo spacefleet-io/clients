@@ -1,5 +1,5 @@
 // Editing playlists and the heart on the phone (PAR-PL-02, PAR-PL-04): one place that holds the song sheet (heart, go to
-// the album and the artist where the caller can, add to playlist, remove from this playlist, keep on this phone, edit
+// the album and the artist where the caller can, add to playlist, remove from this playlist, save offline, edit
 // metadata and delete through ./manage), the actions sheet of a page's "…", the playlist picker, the name dialog and
 // the delete confirm, saves each change through the session (a new encrypted library snapshot, PAR-PL-03) and says how
 // it went in a short notice. Every sheet is the phone's one bottom sheet (UX-SHEET-01): a tap outside, Back or a drag

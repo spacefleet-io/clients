@@ -73,19 +73,15 @@ export const registerPlaybackIpc = (ipcMain: IpcMain, deps: PlaybackIpcDeps) => 
   // Auto quality (#25): upstream link throughput measured over the tunnel
   // fetches of HLS video segments, capped by the test throttle when active.
   ipcMain.handle("sf-playback-link-estimate", () => deps.playbackServer.getLinkEstimate());
-  // Offline-mode (Phase 2): open/close a range-served session over a single
-  // locally-downloaded file. No runtime mirror — offline playback deliberately
-  // needs neither the runtime nor the backend reachable.
-  // @bugfix offline-playback-ignored-local-file
+  // Offline playback (OFFL-FILE-03): an HLS session over the pieces saved on this device, built from the item's
+  // manifest. Released with sf-playback-hls-release. No runtime mirror: offline playback needs neither the runtime nor
+  // the backend reachable.
   ipcMain.handle(
-    "sf-playback-offline-create",
-    async (_event, payload: { fileId: string; mediaId?: string | null; id?: string }) => {
-      return await deps.playbackServer.createOfflineFileSession(payload);
+    "sf-playback-offline-hls-create",
+    async (_event, payload: { fileId: string; manifestPath: string; id?: string }) => {
+      return await deps.playbackServer.createOfflineHlsSession(payload);
     },
   );
-  ipcMain.handle("sf-playback-offline-release", (_event, sessionId: string) => {
-    deps.playbackServer.releaseOfflineFileSession(sessionId);
-  });
   // Pre-warm chunks at the resume offset BEFORE launching mpv. Without
   // this, mpv hits the proxy cold for the segment at the resume offset
   // and the on-demand storage fetch takes long enough that mpv's HLS demuxer
