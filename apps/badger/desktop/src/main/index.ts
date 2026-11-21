@@ -598,6 +598,7 @@ const createWindow = (options: { show?: boolean } = {}) => {
   const show = options.show !== false;
   const appRoot = app.getAppPath();
   const devServerUrl = process.env.VITE_DEV_SERVER_URL ?? process.env.SF_DEV_SERVER_URL;
+  const isDev = Boolean(devServerUrl);
   if (!process.env.SF_APP_ROOT) {
     process.env.SF_APP_ROOT = appRoot;
   }
@@ -933,8 +934,6 @@ app.whenReady().then(async () => {
     getApiBaseUrl,
     getPlatformId: () => getDesktopPlatform().id,
     logger: scopeLogger("updater"),
-    // REL-UPD-07: a .deb/.rpm/.pacman copy updates through /usr/lib/spacebadger/system-update.
-    linuxPackageName: "spacebadger",
     // The windows close instead of going to the tray; `before-quit` still asks about work in progress.
     onQuitForUpdate: () => {
       isQuitting = true;

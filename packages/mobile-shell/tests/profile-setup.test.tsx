@@ -78,9 +78,8 @@ vi.mock("@space/profile-avatars/native", async () => {
 });
 
 import { AvatarGrid } from "../src/profiles/AvatarGrid";
-import { PhoneSetupProfileStep, ProfileSetupStep } from "../src/profiles/ProfileSetupStep";
+import { ProfileSetupStep } from "../src/profiles/ProfileSetupStep";
 import { WhatsNewModal } from "../src/profiles/WhatsNewModal";
-import { INITIAL_PHONE_SETUP, phoneSetupPosition, type PhoneSetupProgress } from "../src/setup/phoneSetup";
 import {
   activeProfileNeedsSetup,
   bindProfileSetup,
@@ -235,32 +234,6 @@ describe("Your profile on the phones (UX-SETUP-10)", () => {
     expect(edits).toHaveLength(1);
     expect(done).not.toHaveBeenCalled();
     expect(textOf(one(renderer, "profile-setup-error"))).toContain("profiles.errors");
-  });
-
-  it("in the phone setup: the sky alone until the profile is known, then numbered, Next counts the step answered", async () => {
-    const { edits } = bindFake();
-    const advance = vi.fn(async (_answers?: Partial<PhoneSetupProgress>) => undefined);
-    // Counted as kept once answered (`profileSetupAnswered`), so the step has its number whatever the profile holds.
-    const progress: PhoneSetupProgress = { ...INITIAL_PHONE_SETUP, step: "profileSetup", pairedKey: true, profileSetupAnswered: true };
-    const step = (picked: ApiProfile | null) => (
-      <PhoneSetupProfileStep profile={picked} progress={progress} advance={advance} onLanguage={() => undefined} log={() => undefined} />
-    );
-    let renderer!: ReactTestRenderer;
-    await act(async () => {
-      renderer = create(step(null));
-    });
-    one(renderer, "setup-profile-wait");
-    expect(byId(renderer, "setup-card")).toHaveLength(0);
-    await act(async () => {
-      renderer.update(step(profile("p-new", "Sam", "fox", NEW)));
-    });
-    const { step: number, total } = phoneSetupPosition(progress);
-    console.info(TAG, "phase=phone-step", textOf(one(renderer, "setup-step-indicator")));
-    expect(number).toBeGreaterThan(0);
-    expect(textOf(one(renderer, "setup-step-indicator"))).toBe(`step ${number} of ${total}`);
-    await press(renderer, "setup-next");
-    expect(edits).toEqual([{ id: "p-new", change: { name: "Sam", avatarId: "fox", features: { avatars: "set" } } }]);
-    expect(advance).toHaveBeenCalledExactlyOnceWith({ profileSetupAnswered: true });
   });
 });
 

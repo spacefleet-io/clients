@@ -1,4 +1,5 @@
 import {
+  apiRequest,
   completeProviderSignIn as sharedCompleteProviderSignIn,
   getApiBaseUrl,
   login as sharedLogin,
@@ -6,7 +7,13 @@ import {
   setApiClientType,
 } from "@space/shared/api";
 import { setClientIdentity } from "@space/shared/appVersion";
-import type { MetadataSkipMarkersResult, TitleType } from "@space/shared/api";
+import type {
+  MetadataSkipMarkersResult,
+  TitleDetails,
+  TitleType,
+  TitleSearchResult,
+  Trailer,
+} from "@space/shared/api";
 import type { createUserStorageTunnelClient, StorageTunnelPurpose } from "@space/shared/storageTunnel";
 import type { StorageObjectCounting } from "@space/shared/storageCounting";
 import { resolveInitialApiBaseUrl } from "./lib/apiBaseUrl";

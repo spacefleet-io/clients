@@ -13,8 +13,6 @@ import { TV_COLOR } from "./tokens";
 export type TvSkyProps = {
   /** Whether the screen is on top: the sky moves and listens to the remote only then (UX-SKY-04). */
   active: boolean;
-  /** Holds the shooting stars off while the screen is on top, e.g. while music plays (UX-SKY-01). */
-  paused?: boolean;
   children: ReactNode;
   style?: StyleProp<ViewStyle>;
 };
@@ -23,10 +21,10 @@ export type TvSkyProps = {
  * The family's night sky behind a TV screen (UX-SKY-02, UX-TV-36): the site hero's stars and shooting stars on the night
  * blue, with the app's glows from its shell theme's `nebula` (Badger's amber and yellow, Parrot's greens; `packages/shared` `SKY_NEBULAS`).
  * Remote keys hold it still until the remote is quiet (`useSkyRemoteInput`); it is still while another screen covers this
- * one or while the app pauses it (playback), and static with the still-sky setting, on a low-RAM box or with reduced motion. Cards inside mark themselves with
+ * one, and static with the still-sky setting, on a low-RAM box or with reduced motion. Cards inside mark themselves with
  * `SkyCover` so shooting stars pass behind them.
  */
-export const TvSky = ({ active, paused = false, children, style }: TvSkyProps) => {
+export const TvSky = ({ active, children, style }: TvSkyProps) => {
   const skyMode = useMobileSkyMode();
   const [covers] = useState(createSkyCoverRegistry);
   const [touchInput] = useState(createUserInputSignal);
@@ -35,7 +33,7 @@ export const TvSky = ({ active, paused = false, children, style }: TvSkyProps) =
   return (
     <SkyCoversProvider value={skyMode === "static" ? null : covers}>
       <View style={[styles.sky, style]}>
-        <MobileAppBackdrop paused={!active || paused} comets={comets} />
+        <MobileAppBackdrop paused={!active} comets={comets} />
         {children}
       </View>
     </SkyCoversProvider>
