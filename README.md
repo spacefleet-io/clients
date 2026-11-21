@@ -10,7 +10,7 @@ encrypted and keeps it private; these apps are how you reach it.
 | badger-mobile | 0.0.1 |
 | badger-kodi | 0.2.0 |
 | badger-jellyfin | 0.2.0.0 |
-| parrot-desktop | 0.1.30 |
+| parrot-desktop | 0.1.31 |
 | parrot-mobile | 0.0.1 |
 
 | Path | What it is |
