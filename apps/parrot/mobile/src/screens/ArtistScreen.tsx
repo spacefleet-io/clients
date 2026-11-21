@@ -22,9 +22,7 @@ import { ErrorText } from "./ui";
 export const ARTIST_TABS = ["albums", "songs"] as const;
 type Tab = (typeof ARTIST_TABS)[number];
 
-/** The photo's height, status bar included. Lower than Badger's title hero so the discography starts on the first
- * screen (Chris 2026-11-21, PAR-LOOK-06). */
-const HERO = 280;
+const HERO = 360;
 
 /** Where the page's top bar and floating back button take over: the hero's own back button has gone, and the name is
  * about to slide under the status bar. */
@@ -152,8 +150,7 @@ export const ArtistScreen = ({ route, navigation }: NativeStackScreenProps<RootS
   );
 };
 
-// Badger's MediaDetailsScreen styles, tightened so the discography starts on the first screen (PAR-LOOK-06): a lower
-// photo, a smaller name, a slimmer Play, smaller round buttons and tabs, and shorter gaps.
+// Badger's MediaDetailsScreen styles, kept as they are there so the two pages match.
 const styles = StyleSheet.create({
   heroTopRow: { position: "absolute", left: 0, right: 0, top: 0, flexDirection: "row", paddingHorizontal: 14 },
   heroRoundButton: {
@@ -172,21 +169,21 @@ const styles = StyleSheet.create({
   chipText: { color: colors.accent, fontSize: 11.5, fontWeight: "700" },
   title: {
     color: colors.text,
-    fontSize: 28,
-    lineHeight: 32,
+    fontSize: 32,
+    lineHeight: 36,
     fontWeight: "800",
     textAlign: "center",
-    marginTop: 6,
+    marginTop: 8,
     textShadowColor: "rgba(0,0,0,0.55)",
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 8,
   },
-  metaLine: { color: colors.textMuted, fontSize: 13.5, textAlign: "center", marginTop: 2 },
-  headBlock: { paddingHorizontal: 20, paddingTop: 4, marginBottom: 14, alignItems: "stretch" },
+  metaLine: { color: colors.textMuted, fontSize: 13.5, textAlign: "center", marginTop: 4 },
+  headBlock: { paddingHorizontal: 20, paddingTop: 8, marginBottom: 20, alignItems: "stretch" },
   playButton: {
-    height: 44,
+    height: 50,
     borderRadius: 14,
-    marginTop: 12,
+    marginTop: 16,
     backgroundColor: colors.accent,
     flexDirection: "row",
     gap: 8,
@@ -195,13 +192,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   playLabel: { color: colors.accentText, fontSize: 15, fontWeight: "800" },
-  actionsGrid: { flexDirection: "row", marginTop: 12 },
-  actionCell: { flex: 1, alignItems: "center", gap: 4, paddingHorizontal: 2 },
-  roundAction: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.surfaceRaised, alignItems: "center", justifyContent: "center" },
+  actionsGrid: { flexDirection: "row", marginTop: 14 },
+  actionCell: { flex: 1, alignItems: "center", gap: 6, paddingHorizontal: 2 },
+  roundAction: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.surfaceRaised, alignItems: "center", justifyContent: "center" },
   actionLabel: { color: colors.textMuted, fontSize: 11.5, lineHeight: 14, fontWeight: "600", textAlign: "center" },
-  segmentWrap: { paddingHorizontal: 16, marginBottom: 12 },
-  segmentedControl: { flexDirection: "row", borderRadius: 16, borderWidth: 1, borderColor: "rgba(255,255,255,0.05)", backgroundColor: colors.surface, padding: 4 },
-  segment: { flex: 1, height: 34, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  segmentWrap: { paddingHorizontal: 16, marginBottom: 22 },
+  segmentedControl: { flexDirection: "row", borderRadius: 18, borderWidth: 1, borderColor: "rgba(255,255,255,0.05)", backgroundColor: colors.surface, padding: 5 },
+  segment: { flex: 1, height: 38, borderRadius: 13, alignItems: "center", justifyContent: "center" },
   segmentActive: { backgroundColor: "rgba(255,255,255,0.08)" },
   segmentLabel: { color: colors.textMuted, fontSize: 11, letterSpacing: 1.1, fontWeight: "800" },
   segmentLabelActive: { color: colors.text },

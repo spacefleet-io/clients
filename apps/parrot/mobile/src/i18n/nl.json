@@ -57,10 +57,11 @@
         "artists": "Artiesten",
         "songs": "Nummers"
       },
-      "more": "+{{count}} meer",
-      "filterOn": "Filteren, {{count}} aan",
-      "searchGenres": "Zoeken",
-      "noMatch": "Geen resultaat"
+      "sort": {
+        "byArtist": "Op artiest",
+        "byName": "Op naam",
+        "byTitle": "Op titel"
+      }
     },
     "album": {
       "noPlayableFile": "Dit album heeft nog geen afspeelbaar bestand.",

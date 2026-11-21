@@ -4,23 +4,24 @@
 // Exposes the Swift `LibrarySync` class (LibrarySync.swift) to React Native.
 @interface RCT_EXTERN_MODULE (LibrarySync, RCTEventEmitter)
 
-RCT_EXTERN_METHOD(encryptSnapshotFile
-                  : (NSString *)dbPath keyBase64
+RCT_EXTERN_METHOD(decryptBase64File
+                  : (NSString *)sourcePath keyBase64
                   : (NSString *)keyBase64 outputPath
                   : (NSString *)outputPath resolve
                   : (RCTPromiseResolveBlock)resolve reject
                   : (RCTPromiseRejectBlock)reject)
 
-RCT_EXTERN_METHOD(decryptSnapshotFile
+RCT_EXTERN_METHOD(decryptBinaryFile
                   : (NSString *)sourcePath keyBase64
-                  : (NSString *)keyBase64 dbPath
-                  : (NSString *)dbPath resolve
+                  : (NSString *)keyBase64 outputPath
+                  : (NSString *)outputPath resolve
                   : (RCTPromiseResolveBlock)resolve reject
                   : (RCTPromiseRejectBlock)reject)
 
-RCT_EXTERN_METHOD(openOpPayload
-                  : (NSString *)payloadBase64 keyBase64
-                  : (NSString *)keyBase64 resolve
+RCT_EXTERN_METHOD(encryptBinaryFile
+                  : (NSString *)sourcePath keyBase64
+                  : (NSString *)keyBase64 outputPath
+                  : (NSString *)outputPath resolve
                   : (RCTPromiseResolveBlock)resolve reject
                   : (RCTPromiseRejectBlock)reject)
 

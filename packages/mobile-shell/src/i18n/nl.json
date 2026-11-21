@@ -1073,12 +1073,7 @@
       "added": "Datum toegevoegd",
       "release": "Jaar van uitgave",
       "asc": "Oplopend",
-      "desc": "Aflopend",
-      "title": "Sorteren op",
-      "by": "Veld",
-      "direction": "Volgorde",
-      "button": "Sorteren",
-      "done": "Klaar"
+      "desc": "Aflopend"
     },
     "row": {
       "runtimeMinutes": "{{minutes}} min",
@@ -1094,70 +1089,6 @@
     "poster": {
       "watched": "{{percent}}% bekeken",
       "downloaded": "gedownload"
-    },
-    "filters": {
-      "clear": "Filters wissen",
-      "genres": {
-        "title": "Genres",
-        "search": "Genres zoeken…",
-        "empty": "Geen genres gevonden voor deze zoekopdracht."
-      },
-      "actors": {
-        "title": "Acteurs",
-        "search": "Acteurs zoeken…",
-        "empty": "Geen acteurs gevonden voor deze zoekopdracht."
-      },
-      "title": "Filteren",
-      "clearShort": "Wissen",
-      "more": "+{{count}} meer",
-      "reset": "Resetten",
-      "apply": "Toepassen",
-      "qualities": {
-        "title": "Kwaliteit",
-        "search": "Kwaliteit zoeken",
-        "empty": "Geen kwaliteit gevonden"
-      },
-      "directors": {
-        "title": "Regie",
-        "search": "Regisseur zoeken",
-        "empty": "Geen regisseur gevonden"
-      },
-      "audioLanguages": {
-        "title": "Audiotaal",
-        "search": "Taal zoeken",
-        "empty": "Geen taal gevonden"
-      },
-      "subtitleLanguages": {
-        "title": "Ondertiteltaal",
-        "search": "Taal zoeken",
-        "empty": "Geen taal gevonden"
-      },
-      "watchStates": {
-        "title": "Kijkstatus",
-        "search": "Status zoeken",
-        "empty": "Geen status gevonden"
-      },
-      "quality": {
-        "sd": "SD (480p of lager)"
-      },
-      "watchState": {
-        "unwatched": "Niet bekeken",
-        "in-progress": "Bezig",
-        "watched": "Bekeken"
-      },
-      "undefinedLanguage": "Onbekende taal",
-      "active_one": "Filteren, {{count}} aan",
-      "active_other": "Filteren, {{count}} aan",
-      "showOnly": "Alleen tonen"
-    },
-    "stats": {
-      "movie_one": "{{count}} film",
-      "movie_other": "{{count}} films",
-      "movie_many": "{{count}} films",
-      "series_one": "{{count}} serie",
-      "series_other": "{{count}} series",
-      "series_many": "{{count}} series",
-      "shownOf": "{{shown}} van {{total}}"
     }
   },
   "playlists": {
@@ -1207,17 +1138,17 @@
   },
   "sync": {
     "indicator": {
-      "updating": "Mediatheek bijwerken…",
-      "updatingProgress": "Mediatheek bijwerken… {{percent}}%",
-      "savedStaysLabel": "Je opgeslagen mediatheek blijft beschikbaar",
+      "updating": "Bibliotheek bijwerken…",
+      "updatingProgress": "Bibliotheek bijwerken… {{percent}}%",
+      "savedStaysLabel": "Je opgeslagen mediabibliotheek blijft beschikbaar",
       "newEpisodes_one": "{{count}} nieuwe aflevering",
       "newEpisodes_other": "{{count}} nieuwe afleveringen",
       "newTitles_one": "{{count}} nieuwe titel",
       "newTitles_other": "{{count}} nieuwe titels",
-      "updated": "Mediatheek bijgewerkt",
+      "updated": "Bibliotheek bijgewerkt",
       "upToDate": "Bijgewerkt",
       "failed": "Bijwerken mislukt",
-      "failedLabel": "Bijwerken van de mediatheek mislukt — opgeslagen inhoud",
+      "failedLabel": "Bijwerken van de mediabibliotheek mislukt — opgeslagen inhoud",
       "retry": "Tik om opnieuw te proberen."
     }
   },

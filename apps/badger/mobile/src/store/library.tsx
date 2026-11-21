@@ -92,7 +92,7 @@ type LibraryStatusValue = {
    */
   settled: boolean;
   /**
-   * What the library sync is doing (LIB-SYNC-13): the tab bar's "Updating media library…" sign with its progress, then the
+   * What the library sync is doing (LIB-SYNC-13): the tab bar's "Updating library…" sign with its progress, then the
    * short result ("12 new episodes"), or the failure. Every sync trigger (cold start, back to the front, the live
    * stream, pull-to-refresh) shows here; the saved library stays usable throughout.
    */

@@ -10,7 +10,6 @@ import {
   listStorageObjects,
   putLibraryDb,
   putLibraryOp,
-  type LibraryDbPutResult,
   type LibraryMeta,
   type LibraryWriterFormats,
   TitleDetails,
@@ -105,7 +104,6 @@ import {
 import type { LibraryDbGroup } from "@space/library-db-definition/manifest";
 import { removeDownloadsOfDeletedMedia, removeDownloadsOutsideLibrary } from "./downloads/mediaDeleted";
 import { fetchOpPayloads } from "@space/mobile-shell/libraryOps";
-import { openOpPayload } from "../native/LibrarySync";
 import { encryptOpPayload } from "./library/opPayload";
 import { SEASON_COUNT_SQL, buildLibraryExtras, type LibraryExtras } from "./libraryExtras";
 import type { LibraryOpsResponse } from "@space/shared/contracts/library";
@@ -121,7 +119,7 @@ import type {
   PlaylistRow,
 } from "@space/shared/libraryTypes";
 import { decryptBase64ToBytes, decryptBytesToBytes, encryptBytesToBase64, encryptBytesToBytes } from "./crypto";
-import { keptLibraryKeyIsStale, keptLibraryKeyVerdict } from "@space/mobile-shell/kept-library-key";
+import { checkKeptLibraryKey, keptLibraryKeyIsStale } from "@space/mobile-shell/kept-library-key";
 import {
   ensureSchema,
   ensureCoreSchema,
@@ -256,14 +254,6 @@ export class QuotaExceededError extends Error {
   constructor(message = "Storage quota exceeded") {
     super(message);
     this.name = "QuotaExceededError";
-  }
-}
-
-/** A pending snapshot the server has moved past (LIB-SYNC-14): its changes already reached the server as ops. */
-class StaleSnapshotError extends Error {
-  constructor(readonly serverVersion: number) {
-    super("STALE_SNAPSHOT");
-    this.name = "StaleSnapshotError";
   }
 }
 
@@ -538,12 +528,6 @@ export class LibraryDb {
   /** Set while a pending snapshot is being published; a second flush would hash and upload it all again. */
   private flushPendingInFlight: Promise<void> | null = null;
   /**
-   * Set while a compaction (meta check + snapshot build + publish) runs. Every ops flush ends with a compaction
-   * check; a second one started meanwhile read meta before the first's ops landed, queued on the snapshot lock and
-   * rebuilt the whole snapshot again (0.1.17 on op9: two 52 s builds, the first PUT a 409). It now joins the first.
-   */
-  private compactionInFlight: Promise<void> | null = null;
-  /**
    * Single-flight remote sync. The foreground scheduler, the library stream, push and the store's
    * preflight all call syncFromRemoteIfNewer; two overlapping runs read the same remoteVersion and
    * fetched + applied + persisted the same op batch twice. A request made while a sync runs waits
@@ -570,8 +554,6 @@ export class LibraryDb {
   private closePromise: Promise<void> | null = null;
   private dataListeners = new Set<() => void>();
   private syncProgressListeners = new Set<(event: LibrarySyncProgressEvent) => void>();
-  /** The running sync found the server newer (emitted `start`) and has not said `end` yet. */
-  private syncRunStarted = false;
 
   private constructor(
     token: string,
@@ -663,7 +645,7 @@ export class LibraryDb {
 
   /**
    * What a sync is doing while it runs (LIB-SYNC-13): it found the server newer, applied a page of ops, or restores a
-   * snapshot. The store's sync tracker turns it into the tab bar's "Updating media library…" sign. Returns an unsubscribe.
+   * snapshot. The store's sync tracker turns it into the tab bar's "Updating library…" sign. Returns an unsubscribe.
    */
   onSyncProgress(callback: (event: LibrarySyncProgressEvent) => void) {
     this.syncProgressListeners.add(callback);
@@ -673,7 +655,6 @@ export class LibraryDb {
   }
 
   private emitSyncProgress(event: LibrarySyncProgressEvent) {
-    if (event.kind === "start") this.syncRunStarted = true;
     console.warn("library.sync.progress", JSON.stringify(event));
     for (const listener of this.syncProgressListeners) {
       try {
@@ -812,7 +793,7 @@ export class LibraryDb {
         await downloadChunksToFile(token, manifest, tempPath);
         const snapshotDbPath = getSnapshotDbPath();
         await removeSnapshotDbFile();
-        await decryptFileToDb(keyBase64, tempPath, snapshotDbPath).catch((error) => {
+        await decryptFileToDb(keyBase64, tempPath, snapshotDbPath, "binary").catch((error) => {
           console.warn(
             "library.db.decrypt.failed",
             JSON.stringify({ error: error instanceof Error ? error.message : String(error) })
@@ -889,7 +870,7 @@ export class LibraryDb {
       try {
         return await withSnapshotLock(async () => {
           await removeSnapshotDbFile();
-          await decryptFileToDb(keyBase64, cacheBlobPath, snapshotDbPath);
+          await decryptFileToDb(keyBase64, cacheBlobPath, snapshotDbPath, "binary");
           const snapshotDb = await openSnapshotDb();
           const { coreDb, metadataDb, playbackDb, ingestDb } = await splitSnapshotToLocalDbs(snapshotDb);
           await snapshotDb.close();
@@ -1024,7 +1005,7 @@ export class LibraryDb {
           await downloadChunksToFile(token, manifest, tempPath);
           const snapshotDbPath = getSnapshotDbPath();
           await removeSnapshotDbFile();
-          await decryptFileToDb(keyBase64, tempPath, snapshotDbPath).catch((error) => {
+          await decryptFileToDb(keyBase64, tempPath, snapshotDbPath, "binary").catch((error) => {
             console.warn(
               "library.db.decrypt.failed",
               JSON.stringify({ error: error instanceof Error ? error.message : String(error) })
@@ -1148,7 +1129,7 @@ export class LibraryDb {
     }
     return await withSnapshotLock(async () => {
       await removeSnapshotDbFile();
-      await decryptFileToDb(keyBase64, cacheBlobPath, snapshotDbPath).catch((error) => {
+      await decryptFileToDb(keyBase64, cacheBlobPath, snapshotDbPath, "binary").catch((error) => {
         console.warn(
           "library.db.decrypt.failed",
           JSON.stringify({ error: error instanceof Error ? error.message : String(error) })
@@ -1671,7 +1652,7 @@ export class LibraryDb {
     return [...formats, ...audio].map((row) => String(row.id));
   };
 
-  /** Cast, season counts, runtimes and Filter facets of every title in set-based queries: feeds the Filter sheet and the details list. */
+  /** Cast, season counts and runtimes of every title in three set-based queries: feeds the actor filter and the details list. */
   getLibraryExtras = async (): Promise<LibraryExtras> => {
     const [metadataDb, playbackDb] = await Promise.all([this.getMetadataDb(), this.getPlaybackDb()]);
     const [castRows, seasonRows, durationRows] = await Promise.all([
@@ -1688,21 +1669,7 @@ export class LibraryDb {
         "SELECT media_id, MAX(duration_seconds) AS duration_seconds FROM media_formats WHERE duration_seconds IS NOT NULL GROUP BY media_id;",
       ),
     ]);
-    // UX-LIB-03: the Filter sheet's quality, director, audio / subtitle language values. Older files have no media_crew.
-    type FacetRow = { media_id: string; value: string | null };
-    const hasCrew = (await queryAll<{ name: string }>(metadataDb, "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'media_crew';")).length > 0;
-    const [qualities, directors, audioLanguages, subtitleLanguages] = await Promise.all([
-      queryAll<FacetRow>(playbackDb, "SELECT DISTINCT media_id, quality AS value FROM media_formats;"),
-      hasCrew
-        ? queryAll<FacetRow>(
-            metadataDb,
-            "SELECT c.media_id AS media_id, p.name AS value FROM media_crew c JOIN people p ON p.id = c.person_id WHERE c.job = 'Director' ORDER BY c.order_index;",
-          )
-        : Promise.resolve([]),
-      queryAll<FacetRow>(playbackDb, "SELECT DISTINCT media_id, language AS value FROM media_audio_tracks;"),
-      queryAll<FacetRow>(playbackDb, "SELECT DISTINCT media_id, language AS value FROM media_subtitles;"),
-    ]);
-    return buildLibraryExtras(castRows, seasonRows, durationRows, { qualities, directors, audioLanguages, subtitleLanguages });
+    return buildLibraryExtras(castRows, seasonRows, durationRows);
   };
 
   /** Every episode of the library, for the phone's search (UX-PHONE-12): one query, the show's name is joined by the caller. */
@@ -2286,14 +2253,7 @@ export class LibraryDb {
     await saveSnapshotOpCount(this.snapshotOps).catch(() => undefined);
   }
 
-  private maybeCompactAfterOps(): Promise<void> {
-    this.compactionInFlight ??= this.compactAfterOps().finally(() => {
-      this.compactionInFlight = null;
-    });
-    return this.compactionInFlight;
-  }
-
-  private async compactAfterOps() {
+  private async maybeCompactAfterOps() {
     // Below the thresholds nothing is asked of the server at all (no meta round-trip per flush).
     const counted = await this.loadSnapshotOps();
     const byCount = counted.count >= OPS_SNAPSHOT_THRESHOLD;
@@ -2316,88 +2276,23 @@ export class LibraryDb {
     if (latestSnapshotMs && Date.now() - latestSnapshotMs < SNAPSHOT_MIN_INTERVAL_MS) {
       return;
     }
-    await this.uploadSnapshot(meta.version, byCount ? undefined : counted.bytes).catch((error) => {
-      console.warn("library.snapshot.compaction.failed", JSON.stringify({ error: errorMessage(error) }));
-    });
+    await this.uploadSnapshot(meta.version, byCount ? undefined : counted.bytes).catch(() => undefined);
   }
 
   /**
    * A snapshot carries a new key probe made with this key, so publishing one with a key the account no longer has
    * (erased or remade on another device) would override the account's key for every device (UX-KEY-01; root cause
    * of ParrotDesktopKey's e2e line b on desktop). Checked right before each snapshot PUT. A failed meta request is no
-   * verdict (UX-KEY-01: a network failure keeps the key); the PUT then fails or lands as before. Returns the meta it
-   * read (null when the request failed): the server's version right before the PUT.
+   * verdict (UX-KEY-01: a network failure keeps the key); the PUT then fails or lands as before.
    */
   private async assertKeyOpensAccount(where: string) {
-    const meta = await getLibraryMeta(this.token).catch(() => null);
-    const verdict = await keptLibraryKeyVerdict(this.keyBase64, meta, decryptBase64ToBytes);
+    const verdict = await checkKeptLibraryKey(this.keyBase64, {
+      fetchMeta: () => getLibraryMeta(this.token),
+      decrypt: decryptBase64ToBytes,
+    });
     if (keptLibraryKeyIsStale(verdict)) {
       console.warn("library.snapshot.key_mismatch", JSON.stringify({ where, verdict }));
       throw new Error("KEY_MISMATCH");
-    }
-    return meta;
-  }
-
-  /**
-   * The version a pending snapshot is published on (LIB-SYNC-14). The server takes a snapshot PUT only on its current
-   * version, and that moves while the snapshot is built and uploaded (this phone's own ops, other devices' ops). A
-   * snapshot that holds every change up to the server's version (`coveredVersion`, the durable cursor when it was
-   * built) is just as valid there, so it goes out on that version as it is, never rebuilt. One the server has moved
-   * past is stale: its changes already reached the server as ops, it is dropped, the next compaction builds a new one.
-   */
-  private snapshotBaseVersion(pending: PendingSync, serverVersion: number | null, where: string) {
-    if (serverVersion === null || serverVersion === pending.baseVersion) return pending.baseVersion;
-    const details = {
-      where,
-      snapshotId: pending.snapshotId,
-      baseVersion: pending.baseVersion,
-      coveredVersion: pending.coveredVersion ?? null,
-      serverVersion,
-    };
-    if (pending.coveredVersion !== undefined && pending.coveredVersion >= serverVersion) {
-      console.warn("library.snapshot.rebased", JSON.stringify(details));
-      return serverVersion;
-    }
-    console.warn("library.snapshot.stale", JSON.stringify(details));
-    throw new StaleSnapshotError(serverVersion);
-  }
-
-  /** Key check, then the snapshot PUT on the server's current version; one retry on the version a 409 names. */
-  private async putPendingSnapshot(
-    pending: PendingSync,
-    manifestPayload: Uint8Array,
-    publish: { force?: boolean; chunkRefs: string[]; chunkRefsSource?: ChunkRefsSource; where: string }
-  ) {
-    const meta = await this.assertKeyOpensAccount(publish.where);
-    const put = (baseVersion: number) =>
-      putLibraryDb(
-        this.token,
-        baseVersion,
-        Buffer.from(manifestPayload).toString("base64"),
-        pending.snapshotId,
-        pending.chunkSize,
-        pending.keyProbe,
-        publish.force,
-        undefined,
-        undefined,
-        undefined,
-        publish.chunkRefs,
-        publish.chunkRefsSource,
-        MOBILE_WRITER_FORMATS
-      );
-    const baseVersion = this.snapshotBaseVersion(pending, meta?.version ?? null, publish.where);
-    try {
-      return await put(baseVersion);
-    } catch (error) {
-      if (!(error instanceof ApiError && error.status === 409 && error.payload.error === "version_conflict")) throw error;
-      const serverVersion = typeof error.payload.version === "number" ? error.payload.version : null;
-      console.warn(
-        "library.snapshot.version_conflict",
-        JSON.stringify({ where: publish.where, baseVersion, serverVersion, coveredVersion: pending.coveredVersion ?? null })
-      );
-      const retryVersion = this.snapshotBaseVersion(pending, serverVersion, publish.where);
-      if (retryVersion === baseVersion) throw error;
-      return await put(retryVersion);
     }
   }
 
@@ -2408,8 +2303,6 @@ export class LibraryDb {
   private async uploadSnapshot(expectedVersion: number, maxBytes?: number) {
     await ensureLibraryDir();
     await withSnapshotLock(async () => {
-      // Read before the build: ops applied while it runs only add to what the snapshot holds.
-      const coveredVersion = this.durableVersion;
       const snapshotDb = await this.buildSnapshotDb();
       // Its own file (PR #143): the manifest's chunks must outlive any cache rewrite.
       const snapshotPath = getPendingSnapshotPath();
@@ -2442,7 +2335,6 @@ export class LibraryDb {
         updatedAt: nowIso(),
         keyProbe,
         chunkRefs,
-        coveredVersion,
       };
       this.pendingSync = pending;
       await savePending(pending);
@@ -2460,22 +2352,22 @@ export class LibraryDb {
       }
       // Send chunk hashes so the API can chunk-GC when this snapshot rotates
       // out of the kept window. Server can't read the encrypted manifest itself.
-      let result: LibraryDbPutResult;
-      try {
-        result = await this.putPendingSnapshot(pending, manifestPayload, {
-          force: true,
-          chunkRefs,
-          chunkRefsSource: MOBILE_CHUNK_REFS_SOURCE,
-          where: "upload",
-        });
-      } catch (error) {
-        if (!(error instanceof StaleSnapshotError)) throw error;
-        this.pendingSync = null;
-        await clearPending();
-        await snapshotDb.close();
-        await removeSnapshotDbFile();
-        return;
-      }
+      await this.assertKeyOpensAccount("upload");
+      const result = await putLibraryDb(
+        this.token,
+        pending.baseVersion,
+        Buffer.from(manifestPayload).toString("base64"),
+        pending.snapshotId,
+        pending.chunkSize,
+        pending.keyProbe,
+        true,
+        undefined,
+        undefined,
+        undefined,
+        chunkRefs,
+        MOBILE_CHUNK_REFS_SOURCE,
+        MOBILE_WRITER_FORMATS
+      );
       this.remoteVersion = result.version;
       this.durableVersion = Math.max(this.durableVersion, result.version);
       if (!this.pendingOps.length) {
@@ -3309,11 +3201,22 @@ export class LibraryDb {
       await uploadChunksFromFile(this.token, pending.snapshotPath, chunkIndex.chunks);
       console.warn("library.db.flush.upload.done", JSON.stringify({ ms: Date.now() - uploadStartedAt }));
       const commitStartedAt = Date.now();
-      const result = await this.putPendingSnapshot(pending, manifestPayload, {
-        chunkRefs: fileHashes,
-        chunkRefsSource: recordedRefs ? MOBILE_CHUNK_REFS_SOURCE : undefined,
-        where: "flush_pending",
-      });
+      await this.assertKeyOpensAccount("flush_pending");
+      const result = await putLibraryDb(
+        this.token,
+        pending.baseVersion,
+        Buffer.from(manifestPayload).toString("base64"),
+        pending.snapshotId,
+        pending.chunkSize,
+        pending.keyProbe,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        fileHashes,
+        recordedRefs ? MOBILE_CHUNK_REFS_SOURCE : undefined,
+        MOBILE_WRITER_FORMATS
+      );
       console.warn("library.db.flush.commit.done", JSON.stringify({ ms: Date.now() - commitStartedAt }));
       console.warn("library.db.flush.done", JSON.stringify({ ms: Date.now() - startedAt }));
       this.version = result.version;
@@ -3340,7 +3243,7 @@ export class LibraryDb {
           error: errorMessage(error),
         })
       );
-      if ((error instanceof ApiError && error.status === 409) || error instanceof StaleSnapshotError) {
+      if (error instanceof ApiError && error.status === 409) {
         // The pending snapshot was built on `baseVersion` and the server has moved past it (our
         // own ops advance it), so its base never comes back. It is a compaction snapshot: its
         // data already reached the server as ops. Disabling sync here (the old behaviour) turned
@@ -3388,28 +3291,9 @@ export class LibraryDb {
   }
 
   private startSync(metaOverride: LibraryMetaHint | undefined): Promise<boolean> {
-    this.syncRunStarted = false;
-    // LIB-SYNC-13: a run that found the server newer says when it ends, whoever started it (a caller the store tracks,
-    // or this db's own re-sync after a rejected publish), so the sign never outlives the sync.
-    const ended = (error: string | null) => {
-      if (!this.syncRunStarted) return;
-      this.syncRunStarted = false;
-      this.emitSyncProgress({ kind: "end", error });
-    };
-    const run = this.runSyncFromRemoteIfNewer(metaOverride)
-      .then(
-        (changed) => {
-          ended(null);
-          return changed;
-        },
-        (error: unknown) => {
-          ended(errorMessage(error));
-          throw error;
-        }
-      )
-      .finally(() => {
-        if (this.syncInFlight === run) this.syncInFlight = null;
-      });
+    const run = this.runSyncFromRemoteIfNewer(metaOverride).finally(() => {
+      if (this.syncInFlight === run) this.syncInFlight = null;
+    });
     this.syncInFlight = run;
     return run;
   }
@@ -3483,8 +3367,6 @@ export class LibraryDb {
         }
         return changed;
       }
-      // LIB-SYNC-13: the page's size, known before its download, lets the sign show before a large page holds the thread.
-      this.emitSyncProgress({ kind: "fetch", bytes: page.ops.reduce((sum, op) => sum + op.size, 0) });
       if (!(await this.applyOpPage(page, listMs))) return true;
       changed = true;
       this.emitSyncProgress({ kind: "page", version: page.version });
@@ -3504,8 +3386,6 @@ export class LibraryDb {
       download: (objectKey) => downloadObjectViaTunnel(this.token, objectKey),
       decrypt: (bytes) => decryptBytesToBytes(this.keyBase64, bytes),
       decode: decodeUtf8,
-      // A 2.8 MB op decrypted and inflated in JS held the thread for ~12 s (LIB-SYNC-14); natively it is off the JS thread.
-      openLarge: (payloadBase64) => openOpPayload(payloadBase64, this.keyBase64),
       log: debugLog,
     });
     timing.fetchMs = Date.now() - timing.fetchStartedAt;
@@ -3590,7 +3470,7 @@ export class LibraryDb {
         .slice(2)}.blob`;
       try {
         await downloadChunksToFile(this.token, manifest, tempPath);
-        await decryptFileToDb(this.keyBase64, tempPath, nextDbPath);
+        await decryptFileToDb(this.keyBase64, tempPath, nextDbPath, "binary");
         await this.coreDb.close();
         await (await this.getMetadataDb()).close();
         await (await this.getPlaybackDb()).close();

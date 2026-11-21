@@ -61,10 +61,6 @@ vi.mock("@react-navigation/native", () => ({
   useNavigation: () => ({ navigate: () => undefined, goBack: () => void (fake.wentBack += 1) }),
 }));
 vi.mock("@space/mobile-shell/i18n", () => ({ useTranslation: () => ({ t: (key: string) => key, i18n: { language: "en" } }) }));
-// The real rail (Discography's year row, UX-PHONE-09) without the barrel's native modules (reanimated).
-vi.mock("@space/mobile-shell/components", async () => ({
-  MobileRailScroll: (await vi.importActual<typeof import("../../../../packages/mobile-shell/src/components/mobile-rail")>("../../../../packages/mobile-shell/src/components/mobile-rail")).MobileRailScroll,
-}));
 vi.mock("../src/state/session", () => ({ useSession: () => ({ library: { status: "ready", version: 1 } }) }));
 vi.mock("../src/state/useQuery", () => ({
   useQuery: (load: () => unknown) => {

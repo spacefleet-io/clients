@@ -2,8 +2,7 @@
 // release with its own Play. A row of years jumps down the timeline when there are many. One album or thirty both read
 // as a list, never a half-empty grid; a short discography (one or two releases) lists its songs under the timeline.
 import React, { useRef } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
-import { MobileRailScroll } from "@space/mobile-shell/components";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Play } from "lucide-react-native";
 import { formatDuration, parrotCoverThumbKey } from "@space/parrot-core";
 import { colors, spacing } from "../../theme";
@@ -27,7 +26,7 @@ export const Discography = ({ page, onJump }: { page: ArtistPage; onJump: (y: nu
     <View testID="artist-discography">
       <SectionTitle right={t("parrot.library.albums", { count: page.albums.length })}>{t("parrot.artist.discography")}</SectionTitle>
       {page.albums.length >= YEAR_JUMP_FROM && years.length > 1 ? (
-        <MobileRailScroll contentContainerStyle={styles.years} testID="artist-years">
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.years} testID="artist-years">
           {years.map((year) => (
             <Pressable
               key={year}
@@ -39,7 +38,7 @@ export const Discography = ({ page, onJump }: { page: ArtistPage; onJump: (y: nu
               <Text style={styles.yearText}>{year}</Text>
             </Pressable>
           ))}
-        </MobileRailScroll>
+        </ScrollView>
       ) : null}
       <View style={styles.rail} onLayout={(event) => (railTop.current = event.nativeEvent.layout.y)}>
         {newestFirst.map((album, index) => {
@@ -105,10 +104,10 @@ export const Discography = ({ page, onJump }: { page: ArtistPage; onJump: (y: nu
 };
 
 const styles = StyleSheet.create({
-  years: { gap: spacing.sm, paddingHorizontal: spacing.lg, paddingTop: spacing.sm },
+  years: { gap: spacing.sm, paddingHorizontal: spacing.lg, paddingTop: spacing.md },
   year: { paddingHorizontal: 12, height: 30, borderRadius: 15, borderWidth: 1, borderColor: colors.border, justifyContent: "center" },
   yearText: { color: colors.text, fontSize: 13, fontWeight: "700" },
-  rail: { paddingTop: spacing.xs, paddingRight: spacing.lg },
+  rail: { paddingTop: spacing.md, paddingRight: spacing.lg },
   release: { flexDirection: "row" },
   railColumn: { width: 56, alignItems: "center" },
   railYear: { color: colors.accent, fontSize: 12, fontWeight: "800", minHeight: 18, marginTop: spacing.sm },

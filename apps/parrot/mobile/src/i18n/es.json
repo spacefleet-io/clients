@@ -57,10 +57,11 @@
         "artists": "Artistas",
         "songs": "Canciones"
       },
-      "more": "+{{count}} más",
-      "filterOn": "Filtrar, {{count}} activos",
-      "searchGenres": "Buscar",
-      "noMatch": "Sin resultados"
+      "sort": {
+        "byArtist": "Por artista",
+        "byName": "Por nombre",
+        "byTitle": "Por título"
+      }
     },
     "album": {
       "noPlayableFile": "Este álbum todavía no tiene ningún archivo reproducible.",
