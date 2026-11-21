@@ -879,9 +879,6 @@ export const putLibraryOp = (
     })
   );
 
-/** What the server answers once it has taken a library snapshot (the new library version and its stamps). */
-export type LibraryDbPutResult = { version: number; stateHash: string | null; lastOpId: string | null; snapshotVersion?: number };
-
 /**
  * Send a snapshot PUT to /library/db. The new JSON-body contract carries
  * chunkRefs in the body (no header-size cap) — every snapshot's chunk refs
@@ -910,7 +907,7 @@ export const putLibraryDb = (
   // Formats this build writes; omitted = the server assumes 1 and answers
   // 409 `library_format_downgrade` once the library is stamped higher.
   formats?: LibraryWriterFormats
-): Promise<LibraryDbPutResult> =>
+): Promise<{ version: number; stateHash: string | null; lastOpId: string | null; snapshotVersion?: number }> =>
   unwrap(
     sdk.putLibraryDb({
       ...scoped(token, appId),

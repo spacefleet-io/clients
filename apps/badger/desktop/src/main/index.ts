@@ -933,8 +933,6 @@ app.whenReady().then(async () => {
     getApiBaseUrl,
     getPlatformId: () => getDesktopPlatform().id,
     logger: scopeLogger("updater"),
-    // REL-UPD-07: a .deb/.rpm/.pacman copy updates through /usr/lib/spacebadger/system-update.
-    linuxPackageName: "spacebadger",
     // The windows close instead of going to the tray; `before-quit` still asks about work in progress.
     onQuitForUpdate: () => {
       isQuitting = true;

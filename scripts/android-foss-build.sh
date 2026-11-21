@@ -89,23 +89,13 @@ gradle_args=(
   -Pkotlin.compiler.execution.strategy=in-process
   "-P${app}VersionCode=$SF_VERSION_CODE"
   "-P${app}VersionName=$SF_VERSION_NAME"
-  # Reproducible wherever it is built (F-Droid rebuilds it elsewhere, REL-DIST-22): the native code's paths are mapped
-  # to fixed names and its libraries carry no build ID, and React Native's dev-server address resource (resources.arsc)
-  # is a constant rather than this machine's network address. Release builds never use that address.
-  --init-script "$root/scripts/android-foss-reproducible.gradle"
-  "-PsfSourceRoot=$root"
-  -PreactNativeDevServerIp=localhost
 )
 [ -n "${reactNativeArchitectures:-}" ] && gradle_args+=("-PreactNativeArchitectures=$reactNativeArchitectures")
-# F-Droid's build server deletes every Gradle wrapper before building and puts its own `gradle` on PATH (gradlew-fdroid,
-# which runs the Gradle version gradle/wrapper/gradle-wrapper.properties names, checksum-verified).
-gradle=./gradlew
-[ -f "$mobile/android/gradlew" ] || gradle=gradle
 # clean runs on its own: in one invocation with assembleRelease, after an earlier (Play) build in the same checkout,
 # Gradle ran the subprojects' clean (ordered only within its own project) after react-native-reanimated's up-to-date prefab tasks, deleting their output, and the
 # app's CMake configure failed on the missing prefab directory (badger-android-release run 14645).
-(cd "$mobile/android" && "$gradle" "${gradle_args[@]}" clean >&2)
-(cd "$mobile/android" && "$gradle" "${gradle_args[@]}" :app:assembleRelease >&2)
+(cd "$mobile/android" && ./gradlew "${gradle_args[@]}" clean >&2)
+(cd "$mobile/android" && ./gradlew "${gradle_args[@]}" :app:assembleRelease >&2)
 
 out="$root/$mobile/android/app/build/outputs/apk/release"
 apk="$out/app-release.apk"
