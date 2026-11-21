@@ -231,15 +231,7 @@
     "manageKey": "Gérer la clé de bibliothèque",
     "browseTitle": "Parcourir",
     "browseSubtitle": "Les médias sans fichier sont grisés mais leurs métadonnées restent visibles.",
-    "stats": {
-      "movie_one": "{{count}} film",
-      "movie_other": "{{count}} films",
-      "movie_many": "{{count}} films",
-      "tv_one": "{{count}} série",
-      "tv_other": "{{count}} séries",
-      "tv_many": "{{count}} séries",
-      "shownOf": "{{shown}} sur {{total}}"
-    },
+    "searchPlaceholder": "Rechercher des titres…",
     "sort": {
       "title": "Trier par",
       "by": "Champ",
@@ -272,41 +264,47 @@
       "clear": "Effacer les filtres",
       "genres": {
         "title": "Genres",
+        "placeholder": "Choisissez des genres pour affiner.",
         "search": "Rechercher un genre…",
         "empty": "Aucun genre ne correspond."
       },
       "actors": {
         "title": "Acteurs",
+        "placeholder": "Choisissez des acteurs pour affiner.",
         "search": "Rechercher un acteur…",
         "empty": "Aucun acteur ne correspond."
       },
       "title": "Filtrer",
       "clearShort": "Effacer",
-      "more": "+{{count}} de plus",
       "reset": "Réinitialiser",
       "apply": "Appliquer",
       "qualities": {
         "title": "Qualité",
+        "placeholder": "Toutes les qualités",
         "search": "Rechercher une qualité",
         "empty": "Aucune qualité trouvée"
       },
       "directors": {
         "title": "Réalisation",
+        "placeholder": "Tous les réalisateurs",
         "search": "Rechercher un réalisateur",
         "empty": "Aucun réalisateur trouvé"
       },
       "audioLanguages": {
         "title": "Langue audio",
+        "placeholder": "Toutes les langues audio",
         "search": "Rechercher une langue",
         "empty": "Aucune langue trouvée"
       },
       "subtitleLanguages": {
         "title": "Langue des sous-titres",
+        "placeholder": "Toutes les langues de sous-titres",
         "search": "Rechercher une langue",
         "empty": "Aucune langue trouvée"
       },
       "watchStates": {
         "title": "État de visionnage",
+        "placeholder": "Tous les états",
         "search": "Rechercher un état",
         "empty": "Aucun état trouvé"
       },
@@ -637,6 +635,8 @@
     }
   },
   "playlists": {
+    "title": "Playlists",
+    "subtitle": "Créez des playlists pour retrouver vos contenus facilement.",
     "manageTitle": "Vos playlists",
     "manageSubtitle": "Les favoris sont toujours disponibles. Le reste est à vous.",
     "newPlaceholder": "Nom de la nouvelle playlist",

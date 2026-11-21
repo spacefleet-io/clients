@@ -14,44 +14,9 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { changeLanguage, initI18n } from "@space/mobile-shell/i18n";
 import { MainShellScreen } from "../src/screens/MainShellScreen";
 import type { SeeAllTarget } from "../src/lib/phoneHome";
-import { tabBarHalfFits, tabBarHalfWidth } from "../../../../packages/mobile-shell/src/components/mobile-tab-bar-geometry";
-
-/**
- * Each shipped tab label's width in points as the bar draws it (Inter semibold 11 pt, as written), measured on an iOS
- * simulator with the real MobileTabBar (2026-11-20); Android draws the same bundled Inter, and the font file gives the
- * same widths within 0.5 pt. A label not in this table fails the fit test until it is measured.
- */
-const BADGER_TAB_LABEL_WIDTHS: Record<string, number> = {
-  Home: 31.3,
-  Library: 37.7,
-  Playlists: 44.7,
-  Settings: 44.0,
-  Accueil: 40.0,
-  Bibliothèque: 67.0,
-  Paramètres: 61.3,
-  Bibliotheek: 59.7,
-  Afspeellijsten: 73.0,
-  Instellingen: 62.0,
-  Start: 25.7,
-  Bibliothek: 53.0,
-  Einstellungen: 72.3,
-  Inicio: 28.7,
-  Biblioteca: 52.7,
-  Listas: 31.7,
-  Ajustes: 40.3,
-};
 
 type TabProp = { id: string; label: string; icon: unknown };
-type ActionProp = { id: string; label: string; icon: unknown; after: string; disabled?: boolean; onPress: () => void };
-type FrameProps = {
-  tabs: TabProp[];
-  activeTab: string;
-  onTabChange: (id: string) => void;
-  disabledTabs: string[];
-  tabBarAction?: ActionProp;
-  overlay?: ReactNode;
-  children: (tabId: string) => ReactNode;
-};
+type FrameProps = { tabs: TabProp[]; activeTab: string; onTabChange: (id: string) => void; disabledTabs: string[]; children: (tabId: string) => ReactNode };
 const shell = vi.hoisted(() => ({
   frame: null as FrameProps | null,
   onSeeAll: null as ((target: SeeAllTarget) => void) | null,
@@ -70,22 +35,16 @@ vi.mock("react-native", () => {
 // real i18next instance and the real translation files stay, only the hook is bound to them directly.
 vi.mock("@space/mobile-shell/i18n", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@space/mobile-shell/i18n")>();
-  return { ...actual, useTranslation: () => ({ t: actual.translate, i18n: { language: actual.getCurrentLanguage() } }) };
+  return { ...actual, useTranslation: () => ({ t: actual.translate }) };
 });
 vi.mock("@react-navigation/native", () => ({ useIsFocused: () => true }));
-vi.mock("lucide-react-native", () => ({
-  Home: "icon:Home",
-  LibraryBig: "icon:LibraryBig",
-  ListVideo: "icon:ListVideo",
-  Search: "icon:Search",
-  Settings: "icon:Settings",
-}));
+vi.mock("lucide-react-native", () => ({ Home: "icon:Home", LibraryBig: "icon:LibraryBig", ListVideo: "icon:ListVideo", Settings: "icon:Settings" }));
 vi.mock("@space/mobile-shell/components", () => {
   const passthrough = (props: { children?: ReactNode }) => createElement("Region", null, props.children);
   return {
     MobileShellFrame: (props: FrameProps) => {
       shell.frame = props;
-      return createElement("Frame", null, props.overlay, props.children(props.activeTab));
+      return createElement("Frame", null, props.children(props.activeTab));
     },
     MobileOfflineBanner: () => null,
     MobileNoticeToast: () => null,
@@ -113,7 +72,6 @@ vi.mock("../src/screens/HomeScreen", () => ({
 }));
 vi.mock("../src/screens/LibraryScreen", () => ({ LibraryScreen: "LibraryScreen" }));
 vi.mock("../src/components/PlaylistsPanel", () => ({ PlaylistsPanel: "PlaylistsPanel" }));
-vi.mock("../src/components/PhoneSearch", () => ({ PhoneSearch: "PhoneSearch" }));
 vi.mock("../src/screens/SettingsScreen", () => ({ SettingsScreen: "SettingsScreen" }));
 
 const render = () => {
@@ -218,67 +176,5 @@ describe("phone bottom bar: Home, Library, Playlists, Settings (UX-PHONE-07)", (
     act(() => shell.onSeeAll?.({ tab: "library", scope: "tv" }));
     expect(frame().activeTab).toBe("library");
     expect(tree.root.find((n) => String(n.type) === "LibraryScreen").props.scopeRequest).toEqual({ scope: "tv" });
-  });
-
-  /**
-   * @req UX-PHONE-12
-   * Chris, 2026-11-19: "the main menu should have a search button in the center (between library and playlists).
-   * Swiping right and left goes straight from library to playlists of course."
-   */
-  it("a Search button stands between Library and Playlists; it is not a tab (the pager never stops on it) and opens the search", () => {
-    const tree = render();
-    const action = frame().tabBarAction;
-    console.info("[MOBILE-MAIN-TABS-001] action", JSON.stringify({ id: action?.id, label: action?.label, after: action?.after, disabled: action?.disabled }));
-    expect(action).toMatchObject({ id: "search", label: "Search", icon: "icon:Search", after: "library", disabled: false });
-    expect(frame().tabs.map((tab) => tab.id)).toEqual(["home", "library", "playlists", "settings"]);
-    const search = () => tree.root.find((n) => String(n.type) === "PhoneSearch");
-    expect(search().props.visible).toBe(false);
-    act(() => frame().onTabChange("library"));
-    act(() => frame().tabBarAction!.onPress());
-    expect(search().props.visible).toBe(true);
-    expect(frame().activeTab).toBe("library");
-    act(() => search().props.onClose());
-    expect(search().props.visible).toBe(false);
-  });
-
-  /** @req UX-PHONE-12 @req UX-LIBTAB-01[badger-mobile] */
-  it("the Search button is greyed out while the library is empty, and named in the UI language", async () => {
-    shell.media = [];
-    render();
-    expect(frame().tabBarAction?.disabled).toBe(true);
-    await changeLanguage("fr");
-    shell.media = [{ id: "m1" }];
-    render();
-    expect(frame().tabBarAction).toMatchObject({ label: "Rechercher", disabled: false });
-  });
-
-  /**
-   * @req UX-PHONE-12 @req UX-PHONE-11
-   * Main, 2026-11-20 (review of 9c1e5a5fe): the circle stays exactly at the screen's centre, each half holds its two
-   * tabs split by label width with about 8 pt between labels, and nothing ends in "…" on a 360 dp phone.
-   */
-  it.each(["en", "fr", "nl", "de", "es"])("every %s tab label fits its half of the bar at 360 and 375 wide, 8 pt apart", async (language) => {
-    await changeLanguage(language);
-    render();
-    const action = frame().tabBarAction!;
-    const labels = frame().tabs.map((tab) => tab.label);
-    const after = frame().tabs.findIndex((tab) => tab.id === action.after) + 1;
-    const width = (label: string) => {
-      const measured = BADGER_TAB_LABEL_WIDTHS[label];
-      if (measured === undefined) throw new Error(`no measured width for "${label}": measure it on a phone and add it to BADGER_TAB_LABEL_WIDTHS`);
-      return measured;
-    };
-    for (const phone of [360, 375]) {
-      for (const half of [labels.slice(0, after), labels.slice(after)]) {
-        const widths = half.map(width);
-        console.info(`[MOBILE-MAIN-TABS-001] ${language} ${phone}: ${half.join(" + ")} = ${widths.join(" + ")} in ${tabBarHalfWidth(phone)}`);
-        expect(tabBarHalfFits(phone, widths), `${language} ${phone}: ${half.join(" + ")}`).toBe(true);
-      }
-    }
-  });
-
-  it("the fit check catches a label that is too long for its half", () => {
-    expect(tabBarHalfFits(360, [73, 62])).toBe(true); // Dutch "Afspeellijsten" + "Instellingen"
-    expect(tabBarHalfFits(360, [73, 72.3])).toBe(false);
   });
 });

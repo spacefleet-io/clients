@@ -83,8 +83,6 @@ describe("Parrot phone translation files", () => {
     const COGNATES: Record<string, true> = {
       "fr parrot.player.position": true,
       "de parrot.player.position": true,
-      // The tab bar's "Playlists" is the word French, Dutch, German and Spanish music apps use (UX-PHONE-12).
-      ...Object.fromEntries(["fr", "nl", "de", "es"].map((language) => [`${language} parrot.nav.playlistsTab`, true as const])),
       ...Object.fromEntries(
         ["fr", "nl"].flatMap((language) =>
           ["parrot.library.view.albums", "parrot.library.albums_one", "parrot.library.albums_other"].map((key) => [`${language} ${key}`, true as const])

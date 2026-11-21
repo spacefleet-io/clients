@@ -1,8 +1,7 @@
 // Home (PAR-HOME-01, PAR-HOME-02): the desktop's Home on the phone, with no page title: the tab bar names the page
 // (PAR-NAV-04). "Jump back in" with the album played last here
-// (Resume where it stopped, or Shuffle), then "Recently played", "Recently added" and "Your artists" as rows that
-// scroll sideways. What it picks is `homeView` and `homeRecentlyAdded` from @space/parrot-core, the same on every
-// surface; the history is this phone's own.
+// (Resume where it stopped, or Shuffle), then "Recently played" and "Your artists" as rows that scroll sideways. What
+// it picks is `homeView` from @space/parrot-core, the same on every surface; the history is this phone's own.
 import React from "react";
 import { FlatList, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
@@ -13,17 +12,7 @@ import { useTranslation } from "@space/mobile-shell/i18n";
 import { MobileLibraryLoading, SkyCover, useSkyScroll } from "@space/mobile-shell/components";
 import { libraryContent } from "@space/shared/libraryContent";
 import { guardRenderItem } from "@space/mobile-shell/render-boundary";
-import {
-  formatDuration,
-  homeAlbumDetail,
-  homeAlbumStart,
-  homeJumpButton,
-  homeRecentlyAdded,
-  homeView,
-  parrotArtistPictureThumbKey,
-  parrotCoverThumbKey,
-  type ParrotAlbumSort,
-} from "@space/parrot-core";
+import { formatDuration, homeAlbumDetail, homeAlbumStart, homeJumpButton, homeView, parrotArtistPictureThumbKey, parrotCoverThumbKey } from "@space/parrot-core";
 import { useSession } from "../state/session";
 import { useQuery } from "../state/useQuery";
 import { usePlay } from "../state/usePlay";
@@ -44,7 +33,7 @@ const TILE = 140;
 /** Which library list a row's "See all" opens. */
 export type HomeSeeAll = "albums" | "artists";
 
-export const HomeScreen = ({ onSeeAll }: { onSeeAll: (view: HomeSeeAll, sort?: ParrotAlbumSort) => void }) => {
+export const HomeScreen = ({ onSeeAll }: { onSeeAll: (view: HomeSeeAll) => void }) => {
   const { t } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<RootStack>>();
   const { library } = useSession();
@@ -75,7 +64,6 @@ export const HomeScreen = ({ onSeeAll }: { onSeeAll: (view: HomeSeeAll, sort?: P
   if (content === "loading") return <MobileLibraryLoading app="parrot" source={PARROT_MASCOT} label={t("parrot.library.loading")} />;
   if (content === "empty") return <EmptyLibrary />;
   const view = homeView(history, albums, artists, songs);
-  const added = homeRecentlyAdded(albums);
   const playAlbum = (albumId: string, shuffle: boolean) => {
     const entry = view.jump?.album.id === albumId ? view.jump.entry : null;
     const start = homeAlbumStart(songs, albumId, entry, shuffle);
@@ -89,34 +77,6 @@ export const HomeScreen = ({ onSeeAll }: { onSeeAll: (view: HomeSeeAll, sort?: P
   // While the card's album is queued the button follows the player: Pause while it plays, Resume where it stands.
   const button = jump ? homeJumpButton(jump.album.id, entry, now && player ? { ...now, positionMs: player.positionMs, playing: showsPause(player) } : null) : null;
   const waveTrack = button?.trackId ? songs.find((song) => song.id === button.trackId) : undefined;
-  // One sideways row of album tiles, shared by "Recently added" and "Recently played".
-  const albumRow = (rowAlbums: typeof albums) => (
-    <FlatList
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={styles.row}
-      data={rowAlbums}
-      keyExtractor={(album) => album.id}
-      {...skyScroll}
-      renderItem={guardRenderItem("album-tile", ({ item }) => (
-        <SkyCover>
-          <AlbumTile
-            album={item}
-            size={TILE}
-            playing={now?.albumId === item.id ? { animated: now.playing } : null}
-            onPress={() =>
-              navigation.navigate("Album", {
-                albumId: item.id,
-                title: item.title,
-                artistName: item.artistName,
-                cover: { coverObjectKey: item.coverObjectKey ?? null, coverThumbObjectKey: item.coverThumbObjectKey ?? null },
-              })
-            }
-          />
-        </SkyCover>
-      ), { width: TILE, height: TILE, margin: 0 })}
-    />
-  );
 
   return (
     <ScrollView contentContainerStyle={styles.scroll} {...skyScroll}>
@@ -173,14 +133,32 @@ export const HomeScreen = ({ onSeeAll }: { onSeeAll: (view: HomeSeeAll, sort?: P
       ) : null}
 
       <Shelf title={view.played ? t("shell.home.recentlyPlayed") : t("parrot.library.view.albums")} onSeeAll={() => onSeeAll("albums")} testID="home-albums">
-        {albumRow(view.albums)}
+        <FlatList
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.row}
+          data={view.albums}
+          keyExtractor={(album) => album.id}
+          {...skyScroll}
+          renderItem={guardRenderItem("album-tile", ({ item }) => (
+            <SkyCover>
+              <AlbumTile
+                album={item}
+                size={TILE}
+                playing={now?.albumId === item.id ? { animated: now.playing } : null}
+                onPress={() =>
+                  navigation.navigate("Album", {
+                    albumId: item.id,
+                    title: item.title,
+                    artistName: item.artistName,
+                    cover: { coverObjectKey: item.coverObjectKey ?? null, coverThumbObjectKey: item.coverThumbObjectKey ?? null },
+                  })
+                }
+              />
+            </SkyCover>
+          ), { width: TILE, height: TILE, margin: 0 })}
+        />
       </Shelf>
-
-      {added.length > 0 ? (
-        <Shelf title={t("shell.home.recentlyAdded")} onSeeAll={() => onSeeAll("albums", "recent")} testID="home-added">
-          {albumRow(added)}
-        </Shelf>
-      ) : null}
 
       {view.artists.length > 0 ? (
         <Shelf title={t("shell.home.yourArtists")} onSeeAll={() => onSeeAll("artists")} testID="home-artists">

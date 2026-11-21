@@ -3,8 +3,8 @@
  * @level unit
  *
  * UX-PHONE-06: the phone's Library page is drawn as the validated mockup (`phone-library`): the Movies / TV shows
- * switch with the film and tv icons and a solid yellow selected tab (Playlists is its own bottom tab, UX-PHONE-07) and ONE sort
- * button (arrow-down-wide-narrow) beside it, no view or filter buttons and no search field (UX-PHONE-12: the bar's Search); a three-column poster grid whose cards show the
+ * switch with the film and tv icons and a solid yellow selected tab (Playlists is its own bottom tab, UX-PHONE-07); a search field and ONE sort
+ * button (arrow-down-wide-narrow) instead of the view and filter buttons; a three-column poster grid whose cards show the
  * watch progress bar and a check on watched titles. The real screen and the real `PosterCard` render with react-test-renderer
  * (store, children and native modules stubbed); icons render as host elements named after the lucide icon.
  */
@@ -137,16 +137,15 @@ describe("phone Library page follows the validated mockup (UX-PHONE-06)", () => 
     expect(read[1]).toMatchObject({ selected: false, bg: null, text: theme.colors.textMuted });
   });
 
-  /** @req UX-PHONE-06 @req UX-PHONE-12 */
-  it("the toolbar is the switch and one sort button: no search field (the bar's Search button searches), no view or filter buttons", () => {
+  /** @req UX-PHONE-06 */
+  it("the toolbar is a search field and one sort button; the view and filter buttons are gone", () => {
     const tree = render(createElement(LibraryScreen, { active: true }));
     const buttons = tree.root.findAll((n) => String(n.type) === "IconButton").map((b) => ({ label: b.props.label, icons: icons(b) }));
-    const inputs = tree.root.findAll((n) => String(n.type) === "TextInput");
-    console.info(`${LOG} toolbar ${JSON.stringify({ buttons, inputs: inputs.length })}`);
-    expect(inputs).toHaveLength(0);
-    expect(tree.root.findAll((n) => n.props.testID === "library-search")).toHaveLength(0);
+    const input = tree.root.findByType("TextInput" as never);
+    console.info(`${LOG} toolbar ${JSON.stringify({ buttons, placeholder: input.props.placeholder })}`);
+    expect(input.props.placeholder).toBe("Search titles");
     expect(buttons).toEqual([{ label: "Sort and filter", icons: ["ArrowDownWideNarrow"] }]);
-    for (const gone of ["LayoutGrid", "List", "Rows3", "SlidersHorizontal", "Search"]) expect(icons(tree.root)).not.toContain(gone);
+    for (const gone of ["LayoutGrid", "List", "Rows3", "SlidersHorizontal"]) expect(icons(tree.root)).not.toContain(gone);
   });
 
   /** @req UX-PHONE-06 */

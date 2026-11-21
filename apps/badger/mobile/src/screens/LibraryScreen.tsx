@@ -1,8 +1,8 @@
-import React, { memo, useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import React, { memo, useCallback, useDeferredValue, useEffect, useMemo, useReducer, useRef, useState } from "react";
+import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { ArrowDownWideNarrow, Film, Tv } from "lucide-react-native";
+import { ArrowDownWideNarrow, Film, Search, Tv, X } from "lucide-react-native";
 import {
   EMPTY_LIBRARY_FILTERS,
   countActiveLibraryFilters,
@@ -43,7 +43,7 @@ const SCOPES: readonly { id: LibraryScope; labelKey: string; icon: typeof Film }
 ];
 
 type LibraryScreenProps = {
-  /** False while another tab is showing: filters reset then (the pager keeps this screen mounted). */
+  /** False while another tab is showing: search and filters reset then (the pager keeps this screen mounted). */
   active: boolean;
   /** Home's "See all" on the Movies or TV shows row asks for that scope; a new object each time, so a repeat works. */
   scopeRequest?: { scope: LibraryScope } | null;
@@ -51,9 +51,9 @@ type LibraryScreenProps = {
 
 /**
  * Library tab, drawn as the validated mockup (UX-PHONE-06): no page title; the Movies / TV shows switch with a solid
- * yellow selected tab and, beside it, one sort button (which opens the sort and filter sheet); movies / TV shows as a
- * poster grid with watch progress. No search field: the bar's centre Search button searches the whole library
- * (UX-PHONE-12). Playlists are their own tab (UX-PHONE-07). Sort is remembered per tab on this device; filters are not.
+ * yellow selected tab; a search field and one sort button (which opens the sort and filter sheet); movies / TV shows as a
+ * poster grid with watch progress. Playlists are their own tab (UX-PHONE-07). Sort is remembered per tab on this device;
+ * search and filters are not.
  */
 export const LibraryScreen = memo(({ active, scopeRequest }: LibraryScreenProps) => {
   const { t } = useTranslation();
@@ -66,6 +66,7 @@ export const LibraryScreen = memo(({ active, scopeRequest }: LibraryScreenProps)
   const [settings] = useAppSettings();
   const [extras, setExtras] = useState<LibraryExtras | null>(null);
   const downloadedMediaIds = useDownloadedMediaIds();
+  const deferredQuery = useDeferredValue(filters.query);
   const pull = usePullToRefresh(refresh);
   const sheet = usePickerSheet();
 
@@ -99,12 +100,12 @@ export const LibraryScreen = memo(({ active, scopeRequest }: LibraryScreenProps)
       selectLibraryItems({
         media,
         tab,
-        filters,
+        filters: { ...filters, query: deferredQuery },
         prefs,
         castLookup,
         downloadedMediaIds,
       }),
-    [media, tab, filters, prefs, castLookup, downloadedMediaIds],
+    [media, tab, filters, deferredQuery, prefs, castLookup, downloadedMediaIds],
   );
 
   const genreOptions = useMemo(
@@ -129,6 +130,8 @@ export const LibraryScreen = memo(({ active, scopeRequest }: LibraryScreenProps)
     handledScopeRequest.current = scopeRequest;
     if (scopeRequest.scope !== scope) changeScope(scopeRequest.scope);
   }, [changeScope, scope, scopeRequest]);
+  const setQuery = useCallback((query: string) => dispatch({ type: "query", query }), []);
+  const clearQuery = useCallback(() => dispatch({ type: "query", query: "" }), []);
   const changePrefs = useCallback(
     (patch: Parameters<typeof updateLibraryTabPrefs>[1]) => updateLibraryTabPrefs(tab, patch),
     [tab],
@@ -149,7 +152,6 @@ export const LibraryScreen = memo(({ active, scopeRequest }: LibraryScreenProps)
   return (
     <View style={styles.page}>
       <View style={styles.body}>
-        <View style={styles.toolbar}>
         <SkyCover style={styles.scopes} accessibilityRole="tablist">
           {SCOPES.map(({ id, labelKey, icon: Icon }) => {
             const selected = scope === id;
@@ -172,6 +174,27 @@ export const LibraryScreen = memo(({ active, scopeRequest }: LibraryScreenProps)
             );
           })}
         </SkyCover>
+
+        <View style={styles.toolbar}>
+          <SkyCover style={styles.search}>
+            <Search size={16} color={theme.colors.textDim} />
+            <TextInput
+              style={styles.searchInput}
+              testID="library-search"
+              value={filters.query}
+              onChangeText={setQuery}
+              placeholder={t("library.search.placeholder")}
+              placeholderTextColor={theme.colors.textDim}
+              returnKeyType="search"
+              autoCorrect={false}
+              accessibilityLabel={t("library.search.label")}
+            />
+            {filters.query.length > 0 ? (
+              <IconButton label={t("library.search.clear")} onPress={clearQuery} style={styles.clear}>
+                <X size={16} color={theme.colors.textMuted} />
+              </IconButton>
+            ) : null}
+          </SkyCover>
           {/* The box sits on the wrapper: on Android a Pressable's ripple replaces its own background and border. */}
           <SkyCover style={[styles.sortButton, activeFilterCount > 0 && styles.sortButtonActive]}>
             <IconButton label={sheetLabel} onPress={sheet.open} style={styles.sortPress}>
@@ -221,7 +244,6 @@ const styles = StyleSheet.create({
   page: { flex: 1, paddingTop: 8, gap: 12 },
   body: { flex: 1, gap: 12, marginBottom: 8 },
   scopes: {
-    flex: 1,
     flexDirection: "row",
     padding: 4,
     gap: 4,
@@ -244,6 +266,20 @@ const styles = StyleSheet.create({
   scopeLabel: { fontSize: 13, fontWeight: "700", color: theme.colors.textMuted },
   scopeLabelActive: { color: theme.accentTextHex },
   toolbar: { flexDirection: "row", gap: 8, alignItems: "center" },
+  search: {
+    flex: 1,
+    height: 42,
+    borderRadius: 12,
+    paddingLeft: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.controlBorder,
+  },
+  searchInput: { flex: 1, fontSize: 14, paddingVertical: 0, color: theme.colors.text },
+  clear: { width: 42, height: 42 },
   sortButton: {
     width: 42,
     height: 42,

@@ -6,12 +6,10 @@
  * @req PAR-NAV-04[parrot]
  * @req UX-WAIT-02[parrot]
  * @req UX-WAIT-04[parrot]
- * @req UX-PHONE-12[parrot]
  * @why The approved phone design: a bottom tab bar (the fleet's shared one) with Home, Library, Playlists and
- *   Settings over Parrot's sky, and the bar's centre Search button between Library and Playlists that opens the search
- *   card and is not a page (Chris, 2026-11-19: the swipe goes from Library straight to Playlists); the floating mini
- *   player sits above the tab bar; the Library has no page title (the tab bar names it, PAR-NAV-04) and no search of its
- *   own (the bar's button replaces it), no add-music button (the phone only plays), and Albums / Artists / Songs chips (playlists have
+ *   Settings over Parrot's sky; the floating mini player sits above the tab bar; the Library has no page title (the tab
+ *   bar names it, PAR-NAV-04), its search button sits at the right of the chips (no add-music button: the phone only
+ *   plays), and Albums / Artists / Songs chips (playlists have
  *   their own tab) over a line with the sort and the count; and the player's header reads "Playing from album" over
  *   the album's name, with the time left as "−m:ss". Screens are called as functions against a mocked React Native,
  *   with translation keys standing for the texts. Chris, 2026-11-18: the empty library showed before the library had
@@ -77,10 +75,9 @@ vi.mock("../src/screens/sky", () => ({ ParrotSky: "ParrotSky", PLAYER_TINT: "tin
 vi.mock("../src/screens/HomeScreen", () => ({ HomeScreen: "HomeScreen" }));
 vi.mock("../src/screens/PlaylistsView", () => ({ PlaylistsView: "PlaylistsView" }));
 vi.mock("@space/mobile-shell/i18n", () => ({
-  useTranslation: () => ({ t: (key: string, options?: { count?: number }) => (options?.count === undefined ? key : `${key}#${options.count}`), i18n: { language: "en" } }),
+  useTranslation: () => ({ t: (key: string, options?: { count?: number }) => (options?.count === undefined ? key : `${key}#${options.count}`) }),
 }));
 vi.mock("@space/mobile-shell/tab-bar", () => ({ MobileTabBar: "MobileTabBar" }));
-vi.mock("../src/screens/PhoneSearch", () => ({ PhoneSearch: "PhoneSearch" }));
 vi.mock("@space/mobile-audio-playback", () => ({
   AudioPlayback: { canShowOutputSwitcher: async () => false },
   showsPause: (s: { playWhenReady: boolean; suppressed?: boolean }) => s.playWhenReady && !s.suppressed,
@@ -131,8 +128,8 @@ describe("the phone's tabs", () => {
     expect(tabs.map((tab) => [tab.id, tab.label, tab.icon])).toEqual([
       ["home", "shell.nav.home", "Icon:House"],
       ["library", "parrot.nav.library", "Icon:LibraryBig"],
-      ["playlists", "parrot.nav.playlistsTab", "Icon:ListMusic"],
-      ["settings", "parrot.nav.settingsTab", "Icon:Settings"],
+      ["playlists", "shell.nav.playlists", "Icon:ListMusic"],
+      ["settings", "shell.nav.settings", "Icon:Settings"],
     ]);
     expect(MAIN_TABS.map((tab) => tab.id)).toEqual(["home", "library", "playlists", "settings"]);
     expect(bar.props.activeTab).toBe("home");
@@ -143,21 +140,6 @@ describe("the phone's tabs", () => {
     expect(pager.props.tabIds).toEqual(["home", "library", "playlists", "settings"]);
     expect(pager.props.activeTab).toBe("home");
     expect(all((pager.props.children as (id: string) => unknown)("home"), (el) => el.type === "HomeScreen")).toHaveLength(1);
-  });
-
-  it("@req UX-PHONE-12 have the Search button in the bar's centre, after Library: it opens the search card and is never a page", () => {
-    const main = MainScreen({ navigation, route: {} } as never) as unknown as Element;
-    const bar = all(main, (el) => el.type === "MobileTabBar")[0]!;
-    const action = bar.props.action as { id: string; label: string; icon: unknown; after: string; disabled: boolean; onPress: () => void };
-    const search = all(main, (el) => el.type === "PhoneSearch")[0]!;
-    log("search action", { action, search: search.props });
-    expect(action).toMatchObject({ id: "search", label: "Search", icon: "Icon:Search", after: "library", disabled: false });
-    expect(search.props.visible).toBe(false);
-    // Not a page: the swipe goes from Library straight to Playlists.
-    const pager = all(main, (el) => el.type === "MobileTabPager")[0]!;
-    const tabIds = [pager.props.tabIds].flat().map(String);
-    expect(tabIds).not.toContain("search");
-    expect(tabIds.indexOf("playlists") - tabIds.indexOf("library")).toBe(1);
   });
 });
 
@@ -184,17 +166,18 @@ describe("the Library tab", () => {
     expect(empty.type).toBe("EmptyLibrary");
   });
 
-  it("has no page title and no search of its own: Albums / Artists / Songs chips at the top, Albums first, and no Kept offline chip", () => {
+  it("has no page title: Albums / Artists / Songs chips at the top with search at their right, Albums first, and no Kept offline chip", () => {
     const library = LibraryScreen({ active: true, viewRequest: null }) as unknown as Element;
     const [head, ...rest] = [library.props.children].flat().filter(Boolean) as Element[];
-    const headParts = [head!.props.children].flat().filter(Boolean) as Element[];
+    const headParts = [head!.props.children].flat() as Element[];
     log("head", { parts: headParts.map((el) => el.type), headings: all(library, (el) => el.props?.accessibilityRole === "header").length });
     expect(all(library, (el) => el.props?.accessibilityRole === "header")).toHaveLength(0);
-    // The first row is the chips (in their side-scroll): nothing above them, no search beside them (UX-PHONE-12).
-    expect(headParts.map((el) => el.type)).toEqual(["ScrollView"]);
+    // The first row is the chips (in their side-scroll) then the search button: nothing above them.
+    expect(headParts.map((el) => el.type)).toEqual(["ScrollView", IconButton]);
     expect(all(headParts[0], (el) => el.type === Chips)).toHaveLength(1);
-    expect(all(library, (el) => el.type === IconButton)).toHaveLength(0);
-    expect(all(library, (el) => el.type === "TextInput")).toHaveLength(0);
+    expect(headParts[1]!.props).toMatchObject({ testID: "library-search", label: "parrot.library.search" });
+    // The search button is the page's only button outside the lists.
+    expect(all(library, (el) => el.type === IconButton).map((el) => el.props.testID)).toEqual(["library-search"]);
     expect(rest.length).toBeGreaterThan(0);
     const chips = all(library, (el) => el.type === Chips)[0]!;
     log("chips", chips.props.options);

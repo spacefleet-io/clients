@@ -7,8 +7,6 @@
     "nav": {
       "back": "Retour",
       "library": "Bibliothèque",
-      "playlistsTab": "Playlists",
-      "settingsTab": "Réglages",
       "settings": "Réglages",
       "nowPlaying": "En cours de lecture"
     },
@@ -50,7 +48,9 @@
         "byArtist": "Par artiste",
         "byName": "Par nom",
         "byTitle": "Par titre"
-      }
+      },
+      "search": "Rechercher dans votre bibliothèque",
+      "closeSearch": "Fermer la recherche"
     },
     "album": {
       "noPlayableFile": "Cet album n'a pas encore de fichier lisible.",
@@ -92,11 +92,6 @@
     },
     "setup": {
       "notificationsBody": "Parrot peut vous prévenir quand la musique ajoutée depuis votre ordinateur est prête à être écoutée ici."
-    },
-    "tvSearch": {
-      "hint": "Les résultats changent à chaque lettre. Appuyez sur ▶ de la télécommande pour passer des touches aux résultats.",
-      "space": "Espace",
-      "delete": "Effacer"
     },
     "playlists": {
       "likedEmpty": "Aucun titre liké pour l'instant"

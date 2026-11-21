@@ -25,11 +25,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     reactNativeFactory = factory
 
     // Reconnect the background download session (kept songs, PAR-OFFL-01) before JS comes up: a system relaunch for
-    // finished downloads has no JS at all. The Apple TV app (ParrotTV, PAR-TV-01) keeps no songs: MediaProxy builds its
-    // downloads for iOS only.
-    #if os(iOS)
-      _ = DownloadEngine.shared
-    #endif
+    // finished downloads has no JS at all.
+    _ = DownloadEngine.shared
 
     window = UIWindow(frame: UIScreen.main.bounds)
     factory.startReactNative(withModuleName: "Parrot", in: window, launchOptions: launchOptions)
@@ -37,18 +34,16 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     return true
   }
 
-  #if os(iOS)
-    // The system relaunches (or wakes) the app when background download tasks need attention; reconnecting the
-    // engine's background session delivers the pending events, then the handler tells the system we are done.
-    func application(
-      _ application: UIApplication,
-      handleEventsForBackgroundURLSession identifier: String,
-      completionHandler: @escaping () -> Void
-    ) {
-      NSLog("[parrot.app] background URL session events for %@", identifier)
-      DownloadEngine.shared.handleBackgroundEvents(identifier: identifier, completion: completionHandler)
-    }
-  #endif
+  // The system relaunches (or wakes) the app when background download tasks need attention; reconnecting the engine's
+  // background session delivers the pending events, then the handler tells the system we are done.
+  func application(
+    _ application: UIApplication,
+    handleEventsForBackgroundURLSession identifier: String,
+    completionHandler: @escaping () -> Void
+  ) {
+    NSLog("[parrot.app] background URL session events for %@", identifier)
+    DownloadEngine.shared.handleBackgroundEvents(identifier: identifier, completion: completionHandler)
+  }
 
   // parrot://auth/provider (ACCT-SIGNIN-05): hand the URL to JS Linking.
   func application(

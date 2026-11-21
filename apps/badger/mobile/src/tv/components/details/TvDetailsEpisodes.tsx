@@ -1,6 +1,6 @@
 import React, { memo, useCallback, useState } from "react";
 import { ScrollView, StyleSheet, Text, TVFocusGuideView, View } from "react-native";
-import { focusDestination, type TvViewInstance } from "@space/mobile-shell/tv/tvViewInstance";
+import { focusDestination, type TvViewInstance } from "../../lib/tvViewInstance";
 import { useTranslation } from "@space/mobile-shell/i18n";
 import type { MediaEpisode, MediaSeason } from "@space/shared/libraryTypes";
 import { episodeFileKey } from "../../../lib/playback/episodeSelection";
@@ -10,8 +10,8 @@ import { theme } from "../../../theme/theme";
 import { qualitiesLine, type MediaTracksBlock } from "../../lib/detailsMedia";
 import { UNAVAILABLE_LOOK } from "@space/mobile-shell/theme";
 import { TV_RADIUS } from "../../lib/tvLook";
-import { useTvStyles } from "@space/mobile-shell/tv/tvScale";
-import { TvFocusable } from "@space/mobile-shell/tv/TvFocusable";
+import { useTvStyles } from "../../lib/tvScale";
+import { TvFocusable } from "../TvFocusable";
 import { TvEpisodeRow } from "./TvEpisodeRow";
 
 type Props = {

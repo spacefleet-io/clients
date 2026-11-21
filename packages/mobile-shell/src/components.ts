@@ -3,13 +3,7 @@ export { MobileShellFrame } from "./components/mobile-shell-frame";
 export { MobileNoticeToast } from "./components/mobile-notice-toast";
 export { MobileFounderBadge, MobileFounderNotice, MobileFounderNoticeHost } from "./components/mobile-founder";
 export { MobileRenderBoundary, type MobileRenderBoundaryProps } from "./components/mobile-render-boundary";
-export { MobileTabBar, type MobileTabBarAction, type MobileTabBarLook, type MobileTabDefinition } from "./components/mobile-tab-bar";
-export {
-  MobileSearchOverlay,
-  type MobileSearchGroup,
-  type MobileSearchOverlayProps,
-  type MobileSearchRow,
-} from "./components/mobile-search-overlay";
+export { MobileTabBar, type MobileTabBarLook, type MobileTabDefinition } from "./components/mobile-tab-bar";
 export { MobileTabPager, type MobileTabPagerProps } from "./components/mobile-tab-pager";
 export { MobileScreen } from "./components/mobile-screen";
 export { default as MobileAppBackdrop } from "./components/mobile-app-backdrop";
