@@ -29,7 +29,7 @@ const store = vi.hoisted(() => {
 });
 
 // vi.mock factories are hoisted above the static imports, so they load the fixture with `await import()`.
-vi.mock("react-native", async () => ({ ...(await import("./setup/reactNativeMock")).reactNativeBase(), Platform: { OS: "ios" } }));
+vi.mock("react-native", () => ({ Platform: { OS: "ios" } }));
 vi.mock("react-native-fs", async () => ({ default: (await import("./library-db-fixture")).fakeRnfs }));
 vi.mock("react-native-sqlite-storage", () => ({ default: { enablePromise: () => undefined } }));
 vi.mock("react-native-quick-crypto", async () => (await import("./library-db-fixture")).quickCryptoMock());

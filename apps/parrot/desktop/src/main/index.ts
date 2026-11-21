@@ -347,8 +347,6 @@ const updater = createDesktopUpdater({
   loadAutoUpdater: () => electronUpdater.autoUpdater,
   getApiBaseUrl: () => apiBaseUrl,
   getPlatformId: () => getDesktopPlatform().id,
-  // REL-UPD-07: a .deb/.rpm/.pacman copy updates through /usr/lib/spaceparrot/system-update.
-  linuxPackageName: "spaceparrot",
   logger: { info: updaterLogLine("info"), warn: updaterLogLine("warn"), error: updaterLogLine("error") },
   onAutoUpdateChange: (enabled) => {
     void store.setAutoUpdate(enabled).catch((error: unknown) => fail(`[store] automatic updates setting not saved: ${errorText(error)}`));

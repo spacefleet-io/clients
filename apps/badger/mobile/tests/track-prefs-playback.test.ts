@@ -41,7 +41,7 @@ const log = (phase: string, data?: unknown) =>
 
 const trackStore = vi.hoisted(() => ({ settings: new Map<string, string>() }));
 
-vi.mock("react-native", async () => ({ ...(await import("./setup/reactNativeMock")).reactNativeBase(), Platform: { OS: "ios" } }));
+vi.mock("react-native", () => ({ Platform: { OS: "ios" } }));
 vi.mock("react-native-fs", async () => ({ default: (await import("./library-db-fixture")).fakeRnfs }));
 vi.mock("react-native-sqlite-storage", () => ({ default: { enablePromise: () => undefined } }));
 vi.mock("react-native-quick-crypto", async () => (await import("./library-db-fixture")).quickCryptoMock());
