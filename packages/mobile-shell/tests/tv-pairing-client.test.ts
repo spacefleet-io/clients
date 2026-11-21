@@ -184,7 +184,7 @@ describe("TV pairing client (new device)", () => {
       }
       return Response.json({ status: "pending" });
     }) as unknown as typeof fetch;
-    const client = createTvPairingClient({ appId: "badger", getApiBaseUrl: () => "http://api.test", deviceName: () => "TV", fetchImpl });
+    const client = createTvPairingClient({ getApiBaseUrl: () => "http://api.test", deviceName: () => "TV", fetchImpl });
 
     const slow = client.start();
     client.cancel();

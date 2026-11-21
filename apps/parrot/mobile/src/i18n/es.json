@@ -93,11 +93,6 @@
     "setup": {
       "notificationsBody": "Parrot puede avisarte cuando la música que añades desde tu computadora esté lista para reproducirse aquí."
     },
-    "tvSearch": {
-      "hint": "Los resultados cambian con cada letra. Presiona ▶ en el control remoto para pasar de las teclas a los resultados.",
-      "space": "Espacio",
-      "delete": "Borrar"
-    },
     "playlists": {
       "likedEmpty": "Todavía no hay canciones que te gusten"
     },

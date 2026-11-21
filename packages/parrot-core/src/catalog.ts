@@ -16,8 +16,6 @@ export type AlbumRow = {
   trackCount: number;
   /** When the album first came into the library (ms since 1970), for the "Recently added" order. */
   addedAt: number;
-  /** Its genre tag, for the library's Genre filter (PAR-LIB-06); absent on rows read by other queries. */
-  genre?: string | null;
 };
 
 export type TrackRow = {

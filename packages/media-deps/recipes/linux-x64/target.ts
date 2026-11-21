@@ -109,8 +109,7 @@ const target: DepsTarget = {
   // Left to the host, never bundled: glibc; the graphics stack a host GPU driver is part of (GL/GLX/EGL dispatch,
   // libdrm, gbm, Vulkan loader, Wayland, X11/xcb); and the runtime that driver links (mesa links libstdc++, libgcc_s,
   // expat, zlib). The driver is loaded into mpv from the host, so a bundled copy would shadow the host's.
-  // libva stays bundled: drivers are dlopen'd from the host and bind to the libva already loaded (pinned at least at
-  // the libva current Mesa is built against, src/sources.ts).
+  // libva stays bundled: drivers are dlopen'd from the host and bind to the (newer) libva already loaded.
   // Size: the X11 client libraries the app's own Electron loads (it NEEDS libX11, libxcb, libXext, libXfixes,
   // libXrandr; they pull libXrender, libXau, libXdmcp) are on every host that runs the app. libXss / libXpresent
   // are not in that closure and stay bundled.

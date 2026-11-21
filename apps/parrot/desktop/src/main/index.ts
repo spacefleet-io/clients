@@ -14,7 +14,6 @@ import {
   getMe,
   markFounderNoticeSeen,
   getLibraryMeta,
-  getLibraryMetaForKeyStep,
   getSubscription,
   listProfiles,
   createProfile,
@@ -91,8 +90,7 @@ import { PARROT_OP_STREAM_VERSION } from "@space/parrot-library-db-definition/op
 import {
   createParrotCopyPicker,
   fetchParrotLyrics,
-  parrotLookupSuggestions,
-  parrotMusicSuggestQuery,
+  fetchParrotMetadata,
   isKeptKind,
   parrotCoverThumbKey,
   parrotPlaylistEditOps,
@@ -126,8 +124,6 @@ import {
   toTrackFileRow,
   PARROT_COPY_TICKET_FLOOR,
   TRACK_FILES_SQL,
-  type ParrotEditCover,
-  type ParrotEditSuggestQuery,
   type ParrotLyricsFetch,
   type ParrotManageTarget,
   type ParrotPlaylistEdit,
@@ -192,7 +188,7 @@ import {
   type ParrotDeletePreview,
   type ParrotEditValues,
   type ParrotFetchLyricsResult,
-  type ParrotEditSuggestResult,
+  type ParrotFetchMetadataResult,
   type ParrotLibraryResult,
   type ParrotMeasuredLoudness,
   type ParrotPairedSignIn,
@@ -1760,46 +1756,38 @@ const saveLoudness = (measured: ParrotMeasuredLoudness[]): Promise<ParrotLibrary
 // An import pauses it (confirmImport) and its end resumes it.
 const loudnessGate = createLoudnessGate({ save: saveLoudness, heldResult: libraryResult, log });
 
-/** How many results the edit dialog asks the lookup for at a time (PAR-META-18). */
-const EDIT_SUGGEST_LIMIT = 12;
-
 /**
- * PAR-META-18: the metadata service's suggestions for what is typed in the edit dialog, ranked against all its
- * fields; the dialog ranks the library's own beside them. Nothing is written. A lookup that can't answer (none
- * configured: 501) says why; the dialog keeps the library's suggestions.
+ * PAR-META-18: asks our music library about a song or an album (and an album's cover) through the same anonymous
+ * lookup; nothing is written, the renderer opens the edit dialog with what was found.
  */
-const suggestEdit = async (asked: unknown): Promise<ParrotEditSuggestResult> => {
-  const q = (asked ?? {}) as Partial<ParrotEditSuggestQuery>;
-  const fields = (q.fields ?? {}) as Partial<ParrotEditSuggestQuery["fields"]>;
-  const field = q.field === "title" || q.field === "artist" || q.field === "album" ? q.field : null;
-  if ((q.kind !== "track" && q.kind !== "album") || !field || typeof q.text !== "string") return { ok: false, error: "invalid question" };
-  const query: ParrotEditSuggestQuery = {
-    kind: q.kind,
-    field,
-    text: q.text,
-    fields: { title: String(fields.title ?? ""), artist: String(fields.artist ?? ""), ...(fields.album === undefined ? {} : { album: String(fields.album) }) },
-  };
-  if (query.text.trim() === "") return { ok: true, results: [] };
+const fetchMetadata = async (target: unknown): Promise<ParrotFetchMetadataResult> => {
+  if (!isManageTarget(target) || target.kind === "artist") return { ok: false, error: "invalid target" };
+  if (!store.token() || !store.libraryKey()) return { ok: false, error: "not signed in" };
+  if (!library) await loadLibrary();
+  if (!library) return { ok: false, error: "library not loaded" };
+  const query = currentLibraryQuery;
   try {
-    const { results } = await (await lookupClient()).musicSuggest(parrotMusicSuggestQuery(query, EDIT_SUGGEST_LIMIT));
-    log(`[metadata] suggest ${query.kind} ${query.field} (${query.text.length} chars typed): ${results.length} result(s)`);
-    return { ok: true, results: parrotLookupSuggestions(results, query) };
+    const client = await lookupClient();
+    const found = await fetchParrotMetadata({
+      query,
+      target: { kind: target.kind, id: target.id },
+      recordings: (question) => client.musicRecordings(question),
+      albums: (question) => client.musicAlbums(question),
+    });
+    log(`[metadata] ${target.kind} ${target.id}: ${found.kind === "track" || found.kind === "album" ? "found" : found.kind}`);
+    if (found.kind === "missing" || found.kind === "none") return { ok: true, outcome: "none" };
+    if (found.kind === "track") return { ok: true, outcome: "found", found: { kind: "track", edit: found.found }, current: { kind: "track", edit: found.current }, cover: null };
+    const { cover } = found.coverId ? await client.musicCover(found.coverId, 500) : { cover: null };
+    return {
+      ok: true,
+      outcome: "found",
+      found: { kind: "album", edit: found.found },
+      current: { kind: "album", edit: found.current },
+      cover: cover ? { kind: "file", bytes: new Uint8Array(Buffer.from(cover.base64, "base64")), mime: cover.mime } : null,
+    };
   } catch (error) {
-    fail(`[metadata] suggest ${query.kind} ${query.field} failed: ${errorText(error)}`);
+    fail(`[metadata] lookup for ${target.kind} ${target.id} failed: ${errorText(error)}`);
     return { ok: false, error: errorText(error) };
-  }
-};
-
-/** PAR-META-18: the cover of an album picked in the edit dialog, kept with the album only when the dialog is saved. */
-const suggestEditCover = async (coverId: unknown): Promise<ParrotEditCover | null> => {
-  if (typeof coverId !== "string" || coverId === "") return null;
-  try {
-    const { cover } = await (await lookupClient()).musicCover(coverId, 500);
-    log(`[metadata] edit cover ${coverId}: ${cover ? cover.mime : "none"}`);
-    return cover ? { kind: "file", bytes: new Uint8Array(Buffer.from(cover.base64, "base64")), mime: cover.mime } : null;
-  } catch (error) {
-    fail(`[metadata] edit cover ${coverId} failed: ${errorText(error)}`);
-    return null;
   }
 };
 
@@ -2165,7 +2153,7 @@ const verifyLibraryKey = (
     key,
     {
       fetchSnapshot: (appId) => fetchLibrarySnapshot({ token, keyBase64: key, appId }),
-      fetchKeyProbe: async () => (await getLibraryMetaForKeyStep(token, PARROT_APP_ID)).keyProbe ?? null,
+      fetchKeyProbe: async () => (await getLibraryMeta(token, PARROT_APP_ID)).keyProbe ?? null,
       decryptProbe: decryptBase64ToBytes,
       claimAccount: async (claimed) => {
         const empty = openParrotLibrary(null);
@@ -2217,7 +2205,7 @@ const createLibraryKey = async (): Promise<ParrotCreateKeyResult> => {
   const newKey = generateLibraryKeyWords(store.setup.language);
   return makeAccountKey(newKey, {
     fetchSnapshot: (appId) => fetchLibrarySnapshot({ token, keyBase64: newKey.keyBase64, appId }),
-    fetchKeyProbe: async () => (await getLibraryMetaForKeyStep(token, PARROT_APP_ID)).keyProbe ?? null,
+    fetchKeyProbe: async () => (await getLibraryMeta(token, PARROT_APP_ID)).keyProbe ?? null,
     log,
     fail,
   });
@@ -2776,8 +2764,7 @@ const registerIpc = () => {
       ? loudnessGate.save(measured)
       : Promise.resolve<ParrotLibraryResult>({ ok: false, error: "invalid loudness" })
   );
-  ipcMain.handle(PARROT_IPC.suggestEdit, (_event, query: unknown) => suggestEdit(query));
-  ipcMain.handle(PARROT_IPC.suggestEditCover, (_event, coverId: unknown) => suggestEditCover(coverId));
+  ipcMain.handle(PARROT_IPC.fetchMetadata, (_event, target: unknown) => fetchMetadata(target));
   ipcMain.handle(PARROT_IPC.playbackUrl, async (_event, fileId: string) => (await ensurePlayback()).urlFor(playbackFileFor(String(fileId))));
   // The loudness pass reads the song's own file, beside the player: no copy is picked for it (PAR-PLAY-04).
   ipcMain.handle(PARROT_IPC.measureUrl, async (_event, fileId: string) => (await ensurePlayback()).readUrlFor(String(fileId)));
