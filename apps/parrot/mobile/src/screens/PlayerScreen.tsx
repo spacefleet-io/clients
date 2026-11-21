@@ -1,10 +1,11 @@
 // The full player in the approved Parrot design (PAR-LOOK-01, PAR-PLAY-05): over the sky with a teal wash, a header
-// ("PLAYING FROM ALBUM" over the album, a menu to go to the album or the artist), the album art, what plays with a
+// ("PLAYING FROM ALBUM" over the album, a "…" opening the song sheet every song row opens, with Go to album and Go to
+// artist in it), the album art, what plays with a
 // heart when the song is liked, its position on the waveform (tap to seek) with the time played and the time left,
 // shuffle / previous / play-pause / next / repeat, a slider tied to the phone's media volume (the one its buttons move),
 // then the output switcher, the lyrics and the queue. The notification and lock screen carry the same transport.
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Alert, Animated, Easing, Platform, Pressable, StyleSheet, Text, useWindowDimensions, View } from "react-native";
+import { Animated, Easing, Platform, Pressable, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { GestureDetector } from "react-native-gesture-handler";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -124,15 +125,14 @@ export const PlayerScreen = () => {
     : undefined;
   const openArtist = meta?.artistId ? () => navigation.navigate("Artist", { artistId: meta.artistId!, name: meta.artist }) : undefined;
 
-  const openMenu = () => {
-    const buttons: Array<{ text: string; onPress?: () => void; style?: "cancel" }> = [];
-    if (openAlbum) buttons.push({ text: t("parrot.player.goToAlbum"), onPress: openAlbum });
-    if (openArtist) buttons.push({ text: t("parrot.player.goToArtist"), onPress: openArtist });
-    const mediaId = state.mediaId!;
-    buttons.push({ text: t("shell.playlists.addTo"), onPress: () => editor.addToPlaylist({ id: mediaId, title: meta?.title ?? t("parrot.player.unknownSong") }) });
-    buttons.push({ text: t("parrot.player.close"), style: "cancel" });
-    Alert.alert(meta?.title ?? t("parrot.player.unknownSong"), meta?.artist, buttons);
-  };
+  // The song sheet every song row opens (the app's own bottom sheet: a tap outside, Back or a drag down closes it),
+  // with the way to the album and the artist on top.
+  const openMenu = () =>
+    editor.openSong(
+      { id: state.mediaId!, title: meta?.title ?? t("parrot.player.unknownSong"), artist: meta?.artist },
+      undefined,
+      { onGoToAlbum: openAlbum, onGoToArtist: openArtist }
+    );
 
   return (
     <Animated.View style={{ flex: 1, transform: [{ translateY: drag }] }}>

@@ -3,7 +3,6 @@ package com.spacebadger.mobile.library
 import android.app.ActivityManager
 import android.content.Context
 import android.util.Base64
-import android.util.Base64InputStream
 import android.util.Log
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
@@ -13,18 +12,12 @@ import com.facebook.react.bridge.WritableNativeArray
 import com.facebook.react.bridge.WritableNativeMap
 import com.facebook.react.modules.blob.BlobModule
 import com.facebook.react.modules.core.DeviceEventManagerModule
-import java.io.BufferedOutputStream
 import java.io.File
 import java.io.RandomAccessFile
 import java.nio.ByteBuffer
 import org.json.JSONObject
 import java.io.FileInputStream
-import java.io.FileOutputStream
 import java.security.MessageDigest
-import java.security.SecureRandom
-import javax.crypto.Cipher
-import javax.crypto.spec.GCMParameterSpec
-import javax.crypto.spec.SecretKeySpec
 import kotlin.concurrent.thread
 
 class LibrarySyncModule(private val context: ReactApplicationContext) : ReactContextBaseJavaModule(context) {
@@ -46,215 +39,89 @@ class LibrarySyncModule(private val context: ReactApplicationContext) : ReactCon
       .emit("librarySyncProgress", payload)
   }
 
+  private fun snapshotResult(result: SnapshotCodec.Result, startedAt: Long) = WritableNativeMap().apply {
+    putDouble("dbBytes", result.dbBytes.toDouble())
+    putDouble("storedBytes", result.storedBytes.toDouble())
+    putBoolean("compressed", result.compressed)
+    putDouble("ms", (System.currentTimeMillis() - startedAt).toDouble())
+  }
+
+  private fun snapshotProgress(event: String) = SnapshotCodec.Progress { stage, done, total ->
+    emitProgress(stage, done, total)
+    Log.i(tag, "$event.progress bytes=$done total=$total")
+  }
+
+  /**
+   * SQLite file -> saved copy of the library (LIB-FMT-07 v2: compressed, then AES-256-GCM), in one streaming pass on
+   * a worker thread (LIB-SYNC-14). The JS thread only waits on the promise.
+   */
   @ReactMethod
-  fun decryptBase64File(sourcePath: String, keyBase64: String, outputPath: String, promise: Promise) {
-    thread(name = "LibrarySyncDecrypt") {
+  fun encryptSnapshotFile(dbPath: String, keyBase64: String, outputPath: String, promise: Promise) {
+    thread(name = "LibrarySyncSnapshotEncrypt") {
+      val startedAt = System.currentTimeMillis()
       try {
-        Log.i(tag, "decrypt.start source=$sourcePath output=$outputPath")
-        val inputFile = File(sourcePath)
-        if (!inputFile.exists()) {
-          throw IllegalArgumentException("SOURCE_MISSING")
-        }
-        val totalSize = inputFile.length()
+        Log.i(tag, "snapshot.encrypt.start db=$dbPath output=$outputPath")
         val rawKey = Base64.decode(keyBase64.trim(), Base64.DEFAULT)
-        if (rawKey.size != 32) {
-          throw IllegalArgumentException("INVALID_KEY")
-        }
-        val keySpec = SecretKeySpec(rawKey, "AES")
-
-        FileInputStream(inputFile).use { fileStream ->
-          val countingStream = CountingInputStream(fileStream)
-          val base64Stream = Base64InputStream(countingStream, Base64.DEFAULT)
-
-          val iv = ByteArray(12)
-          val ivRead = base64Stream.read(iv)
-          if (ivRead != iv.size) {
-            throw IllegalArgumentException("INVALID_IV")
-          }
-          Log.i(tag, "decrypt.iv_read bytes=${countingStream.bytesRead} total=$totalSize")
-
-          val cipher = Cipher.getInstance("AES/GCM/NoPadding")
-          val gcmSpec = GCMParameterSpec(128, iv)
-          cipher.init(Cipher.DECRYPT_MODE, keySpec, gcmSpec)
-
-          val outputFile = File(outputPath)
-          outputFile.parentFile?.mkdirs()
-          FileOutputStream(outputFile).use { outputStream ->
-            BufferedOutputStream(outputStream).use { bufferedOut ->
-              val buffer = ByteArray(64 * 1024)
-              emitProgress("decrypt", 0, totalSize)
-              var lastPct = -1
-              var lastEmit = System.currentTimeMillis()
-              while (true) {
-                val read = base64Stream.read(buffer)
-                if (read <= 0) break
-                val decoded = cipher.update(buffer, 0, read)
-                if (decoded != null && decoded.isNotEmpty()) {
-                  bufferedOut.write(decoded)
-                }
-                val pct = if (totalSize <= 0) 0 else ((countingStream.bytesRead * 100) / totalSize).toInt()
-                val now = System.currentTimeMillis()
-                if ((pct != lastPct && pct % 5 == 0) || now - lastEmit >= 1000) {
-                  lastPct = pct
-                  lastEmit = now
-                  emitProgress("decrypt", countingStream.bytesRead, totalSize)
-                  Log.i(tag, "decrypt.progress bytes=${countingStream.bytesRead} total=$totalSize pct=$pct")
-                }
-              }
-              val finalBytes = cipher.doFinal()
-              if (finalBytes.isNotEmpty()) {
-                bufferedOut.write(finalBytes)
-              }
-              emitProgress("decrypt", totalSize, totalSize)
-            }
-          }
-        }
-
-        Log.i(tag, "decrypt.done bytes=$totalSize")
-        promise.resolve(true)
-      } catch (error: Exception) {
-        Log.e(tag, "decrypt.failed", error)
-        promise.reject("DECRYPT_FAILED", error)
+        val result = SnapshotCodec.encrypt(File(dbPath), rawKey, File(outputPath), snapshotProgress("snapshot.encrypt"))
+        Log.i(
+          tag,
+          "snapshot.encrypt.done dbBytes=${result.dbBytes} storedBytes=${result.storedBytes} ms=${System.currentTimeMillis() - startedAt}"
+        )
+        promise.resolve(snapshotResult(result, startedAt))
+      } catch (error: Throwable) {
+        Log.e(tag, "snapshot.encrypt.failed", error)
+        promise.reject("ENCRYPT_FAILED", error.message ?: error.javaClass.simpleName, error)
       }
     }
   }
 
+  /** Saved copy (v2 framed or v1 plain) -> SQLite file, decrypted and inflated in one pass on a worker thread. */
   @ReactMethod
-  fun decryptBinaryFile(sourcePath: String, keyBase64: String, outputPath: String, promise: Promise) {
-    thread(name = "LibrarySyncDecryptBinary") {
+  fun decryptSnapshotFile(sourcePath: String, keyBase64: String, dbPath: String, promise: Promise) {
+    thread(name = "LibrarySyncSnapshotDecrypt") {
+      val startedAt = System.currentTimeMillis()
       try {
-        Log.i(tag, "decrypt.binary.start source=$sourcePath output=$outputPath")
-        val inputFile = File(sourcePath)
-        if (!inputFile.exists()) {
-          throw IllegalArgumentException("SOURCE_MISSING")
-        }
-        val totalSize = inputFile.length()
+        Log.i(tag, "snapshot.decrypt.start source=$sourcePath db=$dbPath")
         val rawKey = Base64.decode(keyBase64.trim(), Base64.DEFAULT)
-        if (rawKey.size != 32) {
-          throw IllegalArgumentException("INVALID_KEY")
-        }
-        val keySpec = SecretKeySpec(rawKey, "AES")
-
-        FileInputStream(inputFile).use { fileStream ->
-          val countingStream = CountingInputStream(fileStream)
-          val iv = ByteArray(12)
-          val ivRead = countingStream.read(iv)
-          if (ivRead != iv.size) {
-            throw IllegalArgumentException("INVALID_IV")
-          }
-          Log.i(tag, "decrypt.binary.iv_read bytes=${countingStream.bytesRead} total=$totalSize")
-
-          val cipher = Cipher.getInstance("AES/GCM/NoPadding")
-          val gcmSpec = GCMParameterSpec(128, iv)
-          cipher.init(Cipher.DECRYPT_MODE, keySpec, gcmSpec)
-
-          val outputFile = File(outputPath)
-          outputFile.parentFile?.mkdirs()
-          FileOutputStream(outputFile).use { outputStream ->
-            BufferedOutputStream(outputStream).use { bufferedOut ->
-              val buffer = ByteArray(64 * 1024)
-              emitProgress("decrypt", 0, totalSize)
-              var lastPct = -1
-              var lastEmit = System.currentTimeMillis()
-              while (true) {
-                val read = countingStream.read(buffer)
-                if (read <= 0) break
-                val decoded = cipher.update(buffer, 0, read)
-                if (decoded != null && decoded.isNotEmpty()) {
-                  bufferedOut.write(decoded)
-                }
-                val pct = if (totalSize <= 0) 0 else ((countingStream.bytesRead * 100) / totalSize).toInt()
-                val now = System.currentTimeMillis()
-                if ((pct != lastPct && pct % 5 == 0) || now - lastEmit >= 1000) {
-                  lastPct = pct
-                  lastEmit = now
-                  emitProgress("decrypt", countingStream.bytesRead, totalSize)
-                  Log.i(tag, "decrypt.binary.progress bytes=${countingStream.bytesRead} total=$totalSize pct=$pct")
-                }
-              }
-              val finalBytes = cipher.doFinal()
-              if (finalBytes.isNotEmpty()) {
-                bufferedOut.write(finalBytes)
-              }
-              emitProgress("decrypt", totalSize, totalSize)
-            }
-          }
-        }
-
-        Log.i(tag, "decrypt.binary.done bytes=$totalSize")
-        promise.resolve(true)
-      } catch (error: Exception) {
-        Log.e(tag, "decrypt.binary.failed", error)
-        promise.reject("DECRYPT_FAILED", error)
+        val result = SnapshotCodec.decrypt(File(sourcePath), rawKey, File(dbPath), snapshotProgress("snapshot.decrypt"))
+        Log.i(
+          tag,
+          "snapshot.decrypt.done storedBytes=${result.storedBytes} dbBytes=${result.dbBytes} compressed=${result.compressed} ms=${System.currentTimeMillis() - startedAt}"
+        )
+        promise.resolve(snapshotResult(result, startedAt))
+      } catch (error: Throwable) {
+        Log.e(tag, "snapshot.decrypt.failed", error)
+        promise.reject("DECRYPT_FAILED", error.message ?: error.javaClass.simpleName, error)
       }
     }
   }
 
+  /**
+   * One stored library change (base64 envelope) -> its JSON text, opened on a worker thread (LIB-SYNC-14). Rejects
+   * with message `DECRYPT_FAILED` for a wrong key or a broken envelope, and with the frame error
+   * (`corrupt_compressed_frame`, `unknown_compression_codec:N`) otherwise: the messages the JS reader throws.
+   */
   @ReactMethod
-  fun encryptBinaryFile(sourcePath: String, keyBase64: String, outputPath: String, promise: Promise) {
-    thread(name = "LibrarySyncEncryptBinary") {
+  fun openOpPayload(payloadBase64: String, keyBase64: String, promise: Promise) {
+    thread(name = "LibrarySyncOpOpen") {
+      val startedAt = System.currentTimeMillis()
+      val envelope: ByteArray
+      val plain: ByteArray
       try {
-        Log.i(tag, "encrypt.binary.start source=$sourcePath output=$outputPath")
-        val inputFile = File(sourcePath)
-        if (!inputFile.exists()) {
-          throw IllegalArgumentException("SOURCE_MISSING")
+        envelope = Base64.decode(payloadBase64, Base64.DEFAULT)
+        plain = try {
+          SnapshotCodec.openPayload(envelope, Base64.decode(keyBase64.trim(), Base64.DEFAULT))
+        } catch (error: java.security.GeneralSecurityException) {
+          throw IllegalStateException("DECRYPT_FAILED", error)
         }
-        val totalSize = inputFile.length()
-        val rawKey = Base64.decode(keyBase64.trim(), Base64.DEFAULT)
-        if (rawKey.size != 32) {
-          throw IllegalArgumentException("INVALID_KEY")
-        }
-        val keySpec = SecretKeySpec(rawKey, "AES")
-        val iv = ByteArray(12)
-        SecureRandom().nextBytes(iv)
-
-        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
-        val gcmSpec = GCMParameterSpec(128, iv)
-        cipher.init(Cipher.ENCRYPT_MODE, keySpec, gcmSpec)
-
-        val outputFile = File(outputPath)
-        outputFile.parentFile?.mkdirs()
-        FileInputStream(inputFile).use { inputStream ->
-          FileOutputStream(outputFile).use { outputStream ->
-            BufferedOutputStream(outputStream).use { bufferedOut ->
-              bufferedOut.write(iv)
-              val buffer = ByteArray(64 * 1024)
-              var bytesRead = 0L
-              emitProgress("encrypt", 0, totalSize)
-              var lastPct = -1
-              var lastEmit = System.currentTimeMillis()
-              while (true) {
-                val read = inputStream.read(buffer)
-                if (read <= 0) break
-                bytesRead += read
-                val encrypted = cipher.update(buffer, 0, read)
-                if (encrypted != null && encrypted.isNotEmpty()) {
-                  bufferedOut.write(encrypted)
-                }
-                val pct = if (totalSize <= 0) 0 else ((bytesRead * 100) / totalSize).toInt()
-                val now = System.currentTimeMillis()
-                if ((pct != lastPct && pct % 5 == 0) || now - lastEmit >= 1000) {
-                  lastPct = pct
-                  lastEmit = now
-                  emitProgress("encrypt", bytesRead, totalSize)
-                  Log.i(tag, "encrypt.binary.progress bytes=$bytesRead total=$totalSize pct=$pct")
-                }
-              }
-              val finalBytes = cipher.doFinal()
-              if (finalBytes.isNotEmpty()) {
-                bufferedOut.write(finalBytes)
-              }
-              emitProgress("encrypt", totalSize, totalSize)
-            }
-          }
-        }
-
-        Log.i(tag, "encrypt.binary.done bytes=$totalSize")
-        promise.resolve(true)
-      } catch (error: Exception) {
-        Log.e(tag, "encrypt.binary.failed", error)
-        promise.reject("ENCRYPT_FAILED", error)
+      } catch (error: Throwable) {
+        val message = if (error.message == "INVALID_BLOB" || error.message == "INVALID_KEY") "DECRYPT_FAILED" else error.message
+        Log.e(tag, "op.open.failed message=$message", error)
+        promise.reject("OPEN_FAILED", message ?: error.javaClass.simpleName, error)
+        return@thread
       }
+      Log.i(tag, "op.open.done storedBytes=${envelope.size} jsonBytes=${plain.size} ms=${System.currentTimeMillis() - startedAt}")
+      promise.resolve(String(plain, Charsets.UTF_8))
     }
   }
 

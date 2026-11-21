@@ -35,7 +35,7 @@ const h = vi.hoisted(() => ({
 
 const sha = (value: string) => createHash("sha256").update(value).digest("hex");
 
-vi.mock("react-native", () => ({ Platform: { OS: "ios" } }));
+vi.mock("react-native", async () => ({ ...(await import("./setup/reactNativeMock")).reactNativeBase(), Platform: { OS: "ios" } }));
 vi.mock("react-native-fs", () => ({
   default: {
     DocumentDirectoryPath: "/docs",

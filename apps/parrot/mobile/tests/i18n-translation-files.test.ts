@@ -90,6 +90,10 @@ describe("Parrot phone translation files", () => {
           ["parrot.library.view.albums", "parrot.library.albums_one", "parrot.library.albums_other"].map((key) => [`${language} ${key}`, true as const])
         )
       ),
+      // The artist page's release kinds (PAR-LOOK-06): French, Dutch and German music apps say "Album" and "Single".
+      ...Object.fromEntries(
+        ["fr", "nl", "de"].flatMap((language) => ["parrot.artist.album", "parrot.artist.single"].map((key) => [`${language} ${key}`, true as const]))
+      ),
     };
     for (const [language, flat] of TRANSLATIONS) {
       const empty = Object.entries(flat).filter(([, v]) => v.trim() === "").map(([k]) => k);

@@ -116,8 +116,8 @@ targets:
             /usr/libexec/PlistBuddy -c "Delete :NSAppTransportSecurity:NSAllowsLocalNetworking" "$INFO_PLIST" || true
           fi
   # Apple TV (PAR-TV-01): the same JS app (index.js registers "Parrot", the TV branch picks the TV screens) and the same
-  # AppDelegate on react-native-tvos. Built from its own ParrotTV scheme only: the Parrot scheme (TestFlight, UI tests)
-  # never builds it.
+  # AppDelegate on react-native-tvos. Built from its own ParrotTV scheme only: the Parrot scheme (iPhone TestFlight, UI
+  # tests) never builds it.
   ParrotTV:
     type: application
     platform: tvOS
@@ -230,7 +230,7 @@ schemes:
       config: Debug
     archive:
       config: Release
-  # Apple TV app (PAR-TV-01). Not in apple-testflight-build.sh's scheme list: no CI path archives or uploads it.
+  # Apple TV app (PAR-TV-01). apple-testflight-build.sh archives and uploads it after the iPhone app (REL-MOB-04).
   ParrotTV:
     build:
       targets:

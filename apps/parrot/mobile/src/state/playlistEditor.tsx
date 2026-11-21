@@ -1,14 +1,17 @@
-// Editing playlists and the heart on the phone (PAR-PL-02, PAR-PL-04): one place that holds the song sheet (heart, add
-// to playlist, remove from this playlist, keep on this phone, edit metadata and delete through ./manage), the playlist picker, the name dialog and the delete
-// confirm, saves each change through the session (a new encrypted library snapshot, PAR-PL-03) and says how it went in
-// a short notice. A change that could not be saved never shows: the heart goes back and the lists keep the server's
+// Editing playlists and the heart on the phone (PAR-PL-02, PAR-PL-04): one place that holds the song sheet (heart, go to
+// the album and the artist where the caller can, add to playlist, remove from this playlist, keep on this phone, edit
+// metadata and delete through ./manage), the actions sheet of a page's "…", the playlist picker, the name dialog and
+// the delete confirm, saves each change through the session (a new encrypted library snapshot, PAR-PL-03) and says how
+// it went in a short notice. Every sheet is the phone's one bottom sheet (UX-SHEET-01): a tap outside, Back or a drag
+// down closes it. A change that could not be saved never shows: the heart goes back and the lists keep the server's
 // library. Keeping an album, a playlist or a song (PAR-OFFL-01) asks first which copy to keep when the songs have more
 // than one besides the light copy (PAR-OFFL-02).
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { Alert, KeyboardAvoidingView, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
-import { ArrowDownToLine, CircleCheck, FileAudio, Heart, HeartOff, ListMusic, ListPlus, ListX, Pencil, Plus, Trash2, X } from "lucide-react-native";
+import { Alert, KeyboardAvoidingView, Modal, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { ArrowDownToLine, CircleCheck, Disc3, FileAudio, Heart, HeartOff, ListMusic, ListPlus, ListX, MicVocal, Pencil, Plus, Trash2, X } from "lucide-react-native";
 import crypto from "react-native-quick-crypto";
 import { useTranslation } from "@space/mobile-shell/i18n";
+import { MobileBottomSheet, MobileSheetScrollView } from "@space/mobile-shell/bottom-sheet";
 import { MobileNoticeBanner } from "@space/mobile-shell/components";
 import { MobileRenderBoundary } from "@space/mobile-shell/render-boundary";
 import { formatLocalizedStorage } from "@space/shared/format";
@@ -33,15 +36,24 @@ import { useSession } from "./session";
 import { useQuery } from "./useQuery";
 import { useManage } from "./manage";
 
-/** A song, or an album standing for its songs (`trackIds`) when it is added to a playlist whole. */
-export type EditableSong = { id: string; title: string; trackIds?: string[] };
-/** One row of an actions sheet (the album page's "…", PAR-LOOK-05). */
-export type SheetAction = { id: string; label: string; icon: React.ComponentType<{ size?: number; color?: string }>; onSelect: () => void; testID: string };
+/** A song, or an album standing for its songs (`trackIds`) when it is added to a playlist whole; `artist` shows under the song sheet's title. */
+export type EditableSong = { id: string; title: string; artist?: string; trackIds?: string[] };
+/** One row of an actions sheet (the album page's "…", PAR-LOOK-05); `destructive` draws it in the danger colour (Delete). */
+export type SheetAction = {
+  id: string;
+  label: string;
+  icon: React.ComponentType<{ size?: number; color?: string }>;
+  onSelect: () => void;
+  testID: string;
+  destructive?: boolean;
+};
+/** The song sheet's way to the song's album and artist pages (the player's "…", PAR-NAV-05); left out where unknown. */
+export type SongLinks = { onGoToAlbum?: () => void; onGoToArtist?: () => void };
 /** Where a song row sits when it is a playlist's: removing it takes out that one entry. */
 export type SongPlace = { playlistId: string; position: number };
 
 type Dialog =
-  | { kind: "song"; song: EditableSong; place?: SongPlace }
+  | { kind: "song"; song: EditableSong; place?: SongPlace; links?: SongLinks }
   | { kind: "picker"; song: EditableSong }
   | { kind: "new"; song?: EditableSong; onCreated?: (id: string, name: string) => void }
   | { kind: "rename"; playlist: Pick<ParrotPlaylist, "id" | "name"> }
@@ -62,10 +74,10 @@ export type PlaylistEditor = {
   toggleLikeAll: (trackIds: readonly string[]) => void;
   /** A sheet of actions under a title; picking one closes it and runs it. */
   openActions: (title: string, actions: SheetAction[], testID: string) => void;
-  /** The song sheet: heart, add to playlist, and remove when the row is a playlist's. */
-  openSong: (song: EditableSong, place?: SongPlace) => void;
+  /** The song sheet: heart, go to album and artist (with `links`), add to playlist, remove when the row is a playlist's, keep, edit, delete. */
+  openSong: (song: EditableSong, place?: SongPlace, links?: SongLinks) => void;
   newPlaylist: (onCreated?: (id: string, name: string) => void) => void;
-  /** The playlist picker straight away (the player's menu). */
+  /** The playlist picker straight away (an album added whole). */
   addToPlaylist: (song: EditableSong) => void;
   renamePlaylist: (playlist: Pick<ParrotPlaylist, "id" | "name">) => void;
   /** Asks first; on yes `onDeleted` runs at once (the page closes) and the deletion is saved. */
@@ -180,7 +192,7 @@ export const PlaylistEditorProvider = ({ children }: { children: React.ReactNode
         if (edits[0]) setLiked(edits.map((edit) => edit.trackId), edits[0].liked);
       },
       openActions: (title, actions, testID) => setDialog({ kind: "actions", title, actions, testID }),
-      openSong: (song, place) => setDialog({ kind: "song", song, place }),
+      openSong: (song, place, links) => setDialog({ kind: "song", song, place, links }),
       newPlaylist: (onCreated) => setDialog({ kind: "new", onCreated }),
       addToPlaylist: (song) => setDialog({ kind: "picker", song }),
       renamePlaylist: (playlist) => setDialog({ kind: "rename", playlist }),
@@ -223,9 +235,14 @@ export const PlaylistEditorProvider = ({ children }: { children: React.ReactNode
       <Sheet visible={dialog?.kind === "song" || dialog?.kind === "picker"} onClose={close} testID={dialog?.kind === "picker" ? "playlist-picker" : "song-sheet"}>
         {dialog?.kind === "song" ? (
           <>
-            <Text style={styles.sheetTitle} numberOfLines={2}>
+            <Text style={styles.sheetTitle} numberOfLines={2} testID="song-sheet-title">
               {dialog.song.title}
             </Text>
+            {dialog.song.artist ? (
+              <Text style={styles.detail} numberOfLines={1} testID="song-sheet-artist">
+                {dialog.song.artist}
+              </Text>
+            ) : null}
             <SheetRow
               testID="song-like"
               icon={liked(dialog.song.id) ? HeartOff : Heart}
@@ -235,6 +252,30 @@ export const PlaylistEditorProvider = ({ children }: { children: React.ReactNode
                 setLike(dialog.song.id, !liked(dialog.song.id));
               }}
             />
+            {dialog.links?.onGoToAlbum ? (
+              <SheetRow
+                testID="song-go-to-album"
+                icon={Disc3}
+                label={t("shell.card.goToAlbum")}
+                onPress={() => {
+                  const go = dialog.links!.onGoToAlbum!;
+                  close();
+                  go();
+                }}
+              />
+            ) : null}
+            {dialog.links?.onGoToArtist ? (
+              <SheetRow
+                testID="song-go-to-artist"
+                icon={MicVocal}
+                label={t("shell.card.goToArtist")}
+                onPress={() => {
+                  const go = dialog.links!.onGoToArtist!;
+                  close();
+                  go();
+                }}
+              />
+            ) : null}
             <SheetRow testID="song-add-to" icon={ListPlus} label={t("shell.playlists.addTo")} onPress={() => setDialog({ kind: "picker", song: dialog.song })} />
             {dialog.place ? (
               <SheetRow
@@ -268,6 +309,7 @@ export const PlaylistEditorProvider = ({ children }: { children: React.ReactNode
             <SheetRow
               testID="song-delete"
               icon={Trash2}
+              destructive
               label={t("shell.manage.delete")}
               onPress={() => {
                 close();
@@ -280,7 +322,7 @@ export const PlaylistEditorProvider = ({ children }: { children: React.ReactNode
             <Text style={styles.sheetTitle} numberOfLines={2}>
               {t("shell.playlists.addSongTo", { title: dialog.song.title })}
             </Text>
-            <ScrollView style={{ maxHeight: 420 }}>
+            <MobileSheetScrollView style={{ maxHeight: 420 }}>
               <SheetRow testID="picker-new" icon={Plus} label={t("shell.playlists.new")} onPress={() => setDialog({ kind: "new", song: dialog.song })} />
               {playlists.map((playlist) => (
                 <SheetRow
@@ -292,7 +334,7 @@ export const PlaylistEditorProvider = ({ children }: { children: React.ReactNode
                   onPress={() => addTo(playlist, dialog.song)}
                 />
               ))}
-            </ScrollView>
+            </MobileSheetScrollView>
           </>
         ) : null}
       </Sheet>
@@ -308,6 +350,7 @@ export const PlaylistEditorProvider = ({ children }: { children: React.ReactNode
                 testID={action.testID}
                 icon={action.icon}
                 label={action.label}
+                destructive={action.destructive}
                 onPress={() => {
                   close();
                   action.onSelect();
@@ -359,27 +402,36 @@ export const PlaylistEditorProvider = ({ children }: { children: React.ReactNode
   );
 };
 
+/** The phone's one bottom sheet (UX-SHEET-01); while it slides out it keeps showing what it showed. */
 const Sheet = ({ visible, onClose, testID, children }: { visible: boolean; onClose: () => void; testID: string; children: React.ReactNode }) => {
-  const { t } = useTranslation();
+  const shown = useRef<{ testID: string; children: React.ReactNode }>({ testID, children });
+  if (visible) shown.current = { testID, children };
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      {/* UX-CRASH-01: a crash inside the sheet closes it; the window guard says why. */}
-      <MobileRenderBoundary name="modal:playlist-sheet" onDismiss={onClose}>
-      <Pressable style={styles.scrim} onPress={onClose} accessibilityLabel={t("shell.playlists.cancel")} />
-      <View style={styles.sheet} testID={testID}>
-        <View style={styles.grabber} />
-        {children}
-      </View>
-      </MobileRenderBoundary>
-    </Modal>
+    <MobileBottomSheet visible={visible} onClose={onClose} testID={shown.current.testID}>
+      {shown.current.children}
+    </MobileBottomSheet>
   );
 };
 
-const SheetRow = ({ icon: Icon, label, detail, onPress, testID }: { icon: React.ComponentType<{ size?: number; color?: string }>; label: string; detail?: string; onPress: () => void; testID: string }) => (
+const SheetRow = ({
+  icon: Icon,
+  label,
+  detail,
+  onPress,
+  testID,
+  destructive = false,
+}: {
+  icon: React.ComponentType<{ size?: number; color?: string }>;
+  label: string;
+  detail?: string;
+  onPress: () => void;
+  testID: string;
+  destructive?: boolean;
+}) => (
   <Pressable testID={testID} accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={({ pressed }) => [styles.sheetRow, pressed && { opacity: 0.6 }]}>
-    <Icon size={22} color={colors.accent} />
+    <Icon size={22} color={destructive ? colors.danger : colors.accent} />
     <View style={{ flex: 1 }}>
-      <Text style={styles.sheetRowText} numberOfLines={1}>
+      <Text style={[styles.sheetRowText, destructive && { color: colors.danger }]} numberOfLines={1}>
         {label}
       </Text>
       {detail ? <Text style={styles.detail}>{detail}</Text> : null}
@@ -452,9 +504,6 @@ const NameDialog = ({ dialog, onClose, onSubmit }: { dialog: Extract<Dialog, { k
 
 const styles = StyleSheet.create({
   noticeWrap: { position: "absolute", left: spacing.lg, right: spacing.lg, bottom: 140 },
-  scrim: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)" },
-  sheet: { backgroundColor: colors.surfaceRaised, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: spacing.xl, paddingTop: spacing.md, gap: spacing.sm },
-  grabber: { alignSelf: "center", width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border },
   sheetTitle: { color: colors.text, fontSize: 18, fontWeight: "800" },
   sheetRow: { flexDirection: "row", alignItems: "center", gap: spacing.lg, minHeight: 52, paddingVertical: spacing.sm },
   sheetRowText: { color: colors.text, fontSize: 16, fontWeight: "600" },

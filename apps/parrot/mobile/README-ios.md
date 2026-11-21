@@ -23,8 +23,9 @@ There is no libmpv in Parrot (that pod is Badger's only).
 The Debug id installs beside the TestFlight build. Team `8766H6KW4V`, automatic signing. Pass
 `PARROT_ALLOW_CLEARTEXT=YES` to a Release build that talks to a dev stack on another machine.
 
-The library database lives in `Library/LocalDatabase/parrot.library.sqlite` (react-native-sqlite-storage's `default`
-location on iOS, `src/lib/dbPath.ts`).
+The library database lives in `Library/LocalDatabase/parrot.library.sqlite` on the iPhone (react-native-sqlite-storage's
+`default` location on iOS). On the Apple TV it lives in `Library/Caches/parrot.library.sqlite`: tvOS lets an app write
+only to Caches on the device, and the patched plugin keeps a `Documents` database there (`src/lib/dbPath.ts`).
 
 ## Build (simulator)
 

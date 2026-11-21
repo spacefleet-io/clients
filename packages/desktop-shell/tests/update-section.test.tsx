@@ -208,6 +208,10 @@ describe("strings", () => {
       ["sha512 checksum mismatch, expected abc, got def", "errorIntegrity"],
       ["New version 0.1.9 is not signed by the application owner: publisherNames: PENA Chris-Alexandre", "errorIntegrity"],
       ["ENOSPC: no space left on device, write", "errorDisk"],
+      [
+        "Cannot update while running on a read-only volume. The application is on a read-only volume. Please move the application and try again. If you're on macOS Sierra or later, you'll need to move the application out of the Downloads directory. See https://github.com/Squirrel/Squirrel.Mac/issues/182 for more information.",
+        "errorReadOnly",
+      ],
       ["update_failed", "errorOther"],
     ];
     for (const [raw, key] of cases) {
@@ -221,7 +225,7 @@ describe("strings", () => {
     expect(shown).toContain("Couldn't reach the update server. Try again later.");
     expect(shown).not.toMatch(/500|HttpError|Internal Server Error|https:/);
     for (const language of ["en", "fr", "nl", "de", "es"])
-      for (const key of ["errorNetwork", "errorIntegrity", "errorDisk", "errorOther"] as const)
-        expect(updateSectionText(language, key)).not.toMatch(/\{\w+\}/);
+      for (const key of ["errorNetwork", "errorIntegrity", "errorDisk", "errorReadOnly", "errorOther"] as const)
+        expect(updateSectionText(language, key, { app: "Badger" })).not.toMatch(/\{\w+\}/);
   });
 });

@@ -4,6 +4,17 @@
     "collectionKey": "library key"
   },
   "parrot": {
+    "artist": {
+      "label": "Artist",
+      "latestRelease": "Latest release",
+      "discography": "Discography",
+      "allSongs": "All songs",
+      "album": "Album",
+      "single": "Single",
+      "ep": "EP",
+      "hoursMinutes": "{{hours}} h {{minutes}} min",
+      "minutes": "{{minutes}} min"
+    },
     "nav": {
       "back": "Back",
       "library": "Library",
@@ -46,11 +57,10 @@
         "artists": "Artists",
         "songs": "Songs"
       },
-      "sort": {
-        "byArtist": "By artist",
-        "byName": "By name",
-        "byTitle": "By title"
-      }
+      "more": "+{{count}} more",
+      "filterOn": "Filter, {{count}} on",
+      "searchGenres": "Search",
+      "noMatch": "No match"
     },
     "album": {
       "noPlayableFile": "This album has no playable file yet.",
@@ -69,8 +79,6 @@
       "error": "Playback error: {{error}}",
       "playingFromAlbum": "Playing from album",
       "close": "Close",
-      "goToAlbum": "Go to album",
-      "goToArtist": "Go to artist",
       "more": "More",
       "output": "Play on another device"
     },

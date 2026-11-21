@@ -9,6 +9,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   INITIAL_UPDATER_STATE,
+  awaitsRestart,
   reduceUpdaterState,
   type UpdaterBridge,
   type UpdaterPhase,
@@ -60,7 +61,7 @@ export const useDesktopUpdater = (
       setState((prev) => ({ ...prev, phase: "unsupported" }));
       return "unsupported";
     }
-    setState((prev) => (prev.phase === "downloaded" ? prev : { ...prev, phase: "checking", errorMessage: null }));
+    setState((prev) => (awaitsRestart(prev.phase) ? prev : { ...prev, phase: "checking", errorMessage: null }));
     const result = await updater.check().catch((err: unknown) => ({
       status: "error" as const,
       message: err instanceof Error ? err.message : String(err),
@@ -70,7 +71,7 @@ export const useDesktopUpdater = (
     switch (result.status) {
       case "available":
         setState((prev) =>
-          prev.phase === "downloaded" || prev.phase === "downloading"
+          awaitsRestart(prev.phase) || prev.phase === "downloading" || prev.phase === "installing"
             ? { ...prev, lastCheckedAt: checkedAt }
             : { ...prev, phase: "available", version: result.version, lastCheckedAt: checkedAt },
         );
@@ -79,23 +80,41 @@ export const useDesktopUpdater = (
         setState((prev) => ({ ...prev, phase: "unsupported" }));
         return "unsupported";
       case "error":
-        setState((prev) => (prev.phase === "downloaded" ? prev : { ...prev, phase: "error", errorMessage: result.message }));
+        setState((prev) => (awaitsRestart(prev.phase) ? prev : { ...prev, phase: "error", errorMessage: result.message }));
         return "error";
       case "up-to-date":
-        setState((prev) => (prev.phase === "downloaded" ? prev : { ...prev, phase: "idle", lastCheckedAt: checkedAt }));
+        setState((prev) => (awaitsRestart(prev.phase) ? prev : { ...prev, phase: "idle", lastCheckedAt: checkedAt }));
         return "idle";
     }
   }, [updater]);
 
+  /**
+   * Channel `self`: download, then the `update-downloaded` event moves the phase to `downloaded`. Channel `system`
+   * (REL-UPD-07): the same IPC opens the password dialog and runs the package manager; the main process's
+   * `system-*` events carry the phase (installing → installed, back to available on a dismissed dialog, error with
+   * the reason), so only a bridge failure lands here.
+   */
   const download = useCallback(async (): Promise<void> => {
     if (!updater) return;
-    setState((prev) => ({ ...prev, phase: "downloading", progress: 0, errorMessage: null }));
+    setState((prev) =>
+      prev.channel === "system"
+        ? { ...prev, phase: "installing", errorMessage: null, failure: null, failureDetail: null }
+        : { ...prev, phase: "downloading", progress: 0, errorMessage: null },
+    );
     const result = await updater.downloadUpdate().catch((err: unknown) => ({
       ok: false,
       message: err instanceof Error ? err.message : String(err),
+      thrown: true,
     }));
-    // Success: the `update-downloaded` event moves the phase to `downloaded`.
-    if (!result.ok) setState((prev) => ({ ...prev, phase: "error", errorMessage: result.message ?? "download_failed" }));
+    if (result.ok) return;
+    setState((prev) => {
+      if (prev.channel !== "system") return { ...prev, phase: "error", errorMessage: result.message ?? "download_failed" };
+      // The events already set the phase (installed, available after a dismissed dialog, error with the reason); a
+      // thrown bridge call or a refusal before any event did not. "busy" = an install is already running: keep it.
+      if (result.message === "busy") return prev;
+      if ("thrown" in result || prev.phase === "installing") return { ...prev, phase: "error", errorMessage: result.message ?? "install_failed" };
+      return prev;
+    });
   }, [updater]);
 
   const install = useCallback((): void => {

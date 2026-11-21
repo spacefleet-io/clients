@@ -40,7 +40,7 @@ const plugin = vi.hoisted(() => ({
 }));
 
 // vi.mock factories are hoisted above the static imports, so they reach the fixture through dynamic imports.
-vi.mock("react-native", () => ({ Platform: { OS: "ios" } }));
+vi.mock("react-native", async () => ({ ...(await import("./setup/reactNativeMock")).reactNativeBase(), Platform: { OS: "ios" } }));
 vi.mock("react-native-fs", async () => ({ default: (await import("./library-db-fixture")).fakeRnfs }));
 vi.mock("react-native-sqlite-storage", async () => {
   const { fx: files, sleep: wait } = await import("./library-db-fixture");

@@ -27,6 +27,8 @@ export type LibraryFiltersAction =
    * Re-selecting the tab already showing changes nothing.
    */
   | { type: "switchTab"; from: LibraryScope; to: LibraryScope }
+  /** The Filter sheet's Apply, or its Clear: every filter at once. */
+  | { type: "set"; filters: LibraryFilters }
   /** Leaving the media library: search and every filter go back to empty. */
   | { type: "reset" };
 
@@ -44,6 +46,8 @@ export const libraryFiltersReducer = (state: LibraryFilters, action: LibraryFilt
       return action.from === action.to || (state.genres.length === 0 && state.actors.length === 0)
         ? state
         : { ...state, genres: [], actors: [] };
+    case "set":
+      return action.filters;
     case "reset":
       return EMPTY_LIBRARY_FILTERS;
   }

@@ -209,8 +209,6 @@ export default function Library() {
     return name;
   };
 
-  const activeFilterCount = selectedGenres.length + selectedActors.length;
-
   const dedupedMedia = useMemo(() => dedupeMediaByIdentity(media), [media]);
   const deferredMedia = useDeferredValue(dedupedMedia);
   // Offline-availability roll-up for tile badges. The hook acquires the

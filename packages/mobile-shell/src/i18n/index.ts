@@ -6,6 +6,7 @@ import { withTitleLanguageTexts } from "@space/shared/titleLanguage";
 import { withProfilesTexts } from "@space/shared/profileTexts";
 import { withAccountDeletionLabels } from "@space/shared/accountDeletionLabels";
 import { CLIENT_UI_LANGUAGES, isClientUiLanguage, type ClientUiLanguage, type ClientUiLanguageOption } from "@space/shared/i18n";
+import { installClientPluralRules } from "@space/shared/pluralRules";
 import de from "./de.json";
 import en from "./en.json";
 import es from "./es.json";
@@ -66,6 +67,8 @@ export const initI18n = async (savedLanguage?: string | null) => {
     }
     return;
   }
+  // Hermes has no Intl.PluralRules: without one i18next says "0 titres" in French and never picks a `_many` text.
+  installClientPluralRules();
   await i18n.use(initReactI18next).init({
     resources,
     lng: savedLanguage ?? DEFAULT_MOBILE_UI_LANGUAGE,

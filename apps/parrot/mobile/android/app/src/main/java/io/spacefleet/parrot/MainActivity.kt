@@ -8,6 +8,7 @@ import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
 import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.fabricEnabled
 import com.facebook.react.defaults.DefaultReactActivityDelegate
+import com.swmansion.rnscreens.fragment.restoration.RNScreensFragmentFactory
 
 class MainActivity : ReactActivity() {
   /** The component index.js registers (app.json `name`). */
@@ -21,6 +22,11 @@ class MainActivity : ReactActivity() {
     // than in the manifest (as Badger's MainActivity).
     if (!television) requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
     Log.i("parrot.app", "MainActivity onCreate television=$television")
+    // When Android recreates the activity (a font size or language change, or the system reclaiming it in the
+    // background), the fragment manager restores react-native-screens' fragments, which throw "Screen fragments should
+    // never be restored". The library's factory restores them as empty fragments that remove themselves, and React
+    // renders the screens again. It must be set before super.onCreate, which is where the restore happens (as Badger).
+    supportFragmentManager.fragmentFactory = RNScreensFragmentFactory()
     super.onCreate(savedInstanceState)
   }
 

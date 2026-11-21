@@ -99,7 +99,7 @@ vi.mock("@space/mobile-shell/notice-queue", () => ({
 vi.mock("../src/store/auth", () => ({ useAuth: () => ({ token: null }) }));
 vi.mock("../src/store/library", () => ({
   useLibraryData: () => ({ media: shell.media }),
-  useLibraryStatus: () => ({ loadStatus: { kind: "ready" }, reload: () => undefined }),
+  useLibraryStatus: () => ({ loadStatus: { kind: "ready" }, syncState: { kind: "idle" }, reload: () => undefined }),
 }));
 vi.mock("../src/lib/pairing/deviceWatch", () => ({ checkForNewDevices: async () => undefined, markDeviceSeen: async () => undefined }));
 vi.mock("../src/lib/pairing/newDevice", () => ({ newDeviceKey: () => "", newDeviceMessage: () => "", subscribeNewDevice: () => () => undefined }));

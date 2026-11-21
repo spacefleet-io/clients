@@ -13,6 +13,7 @@ import type { ApiProfile } from "@space/shared/profiles";
 import { createProfileStore, type ProfileLibraryMoves, type ProfileStore } from "@space/shared/profileStore";
 import { profilesTranslator } from "@space/shared/profileTexts";
 import { ProfileMenu, ProfilesManager } from "@space/ui/profiles";
+import { MASCOT_GLOW } from "@space/ui/floating-mascot";
 import { ProfileSetupStep, UpdateFeaturesHost, needsProfileSetupStep, saveProfileSetup } from "@space/desktop-shell/profile-setup";
 import mascotUrl from "@space/parrot-core/mascot.webp";
 import type { ParrotBridge, ParrotLanguage, ParrotProfilesResult } from "../../shared/ipc";
@@ -164,9 +165,6 @@ export function ProfilesSection({
   );
 }
 
-/** Parrot's green mascot glow on the setup card (Setup.tsx). */
-export const PARROT_MASCOT_GLOW = "drop-shadow-[0_0_30px_rgba(64,221,143,0.3)]";
-
 /**
  * The profile this computer is on (the current one, else the main one) once the list is known; `ready` is true without
  * a store (a browser preview), so nothing waits on it.
@@ -224,7 +222,7 @@ export function ParrotProfileSetupStep({
       backLabel={t("back")}
       nextLabel={progress && progress.current === progress.total ? t("finish") : t("next")}
       mascotSrc={mascotUrl}
-      mascotGlowClassName={PARROT_MASCOT_GLOW}
+      mascotGlowClassName={MASCOT_GLOW.parrot}
       log={log}
       onBack={onBack}
       onNext={async (answer) => {
@@ -265,7 +263,7 @@ export function ParrotProfileSetupOverlays({ store, language, t }: { store: Prof
       backLabel={t("back")}
       nextLabel={t("next")}
       mascotSrc={mascotUrl}
-      mascotGlowClassName={PARROT_MASCOT_GLOW}
+      mascotGlowClassName={MASCOT_GLOW.parrot}
       frame={(screen) => <ParrotSetupFrame>{screen}</ParrotSetupFrame>}
     />
   );

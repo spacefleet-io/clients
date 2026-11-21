@@ -1,6 +1,7 @@
 import React, { memo, useCallback } from "react";
-import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { MediaRow } from "@space/shared/libraryTypes";
+import { MobileRail } from "@space/mobile-shell/components";
 import { MobileRenderBoundary } from "@space/mobile-shell/render-boundary";
 import { PosterCard, posterCardHeight } from "./PosterCard";
 import { theme } from "../theme/theme";
@@ -49,22 +50,20 @@ export const PosterRail = memo(({ title, items, cardWidth, onOpenMedia, showProg
           </Pressable>
         ) : null}
       </View>
-      <FlatList
-        horizontal
+      {/* The shared rail keeps a sideways swipe from the tab pager (UX-PHONE-09). */}
+      <MobileRail
         data={items}
         keyExtractor={keyExtractor}
         renderItem={renderItem}
         getItemLayout={getItemLayout}
         ItemSeparatorComponent={Separator}
         style={{ height: posterCardHeight(cardWidth) }}
-        showsHorizontalScrollIndicator={false}
         snapToInterval={itemLength}
         decelerationRate="fast"
         initialNumToRender={4}
         maxToRenderPerBatch={4}
         windowSize={5}
         removeClippedSubviews
-        nestedScrollEnabled
       />
     </View>
   );

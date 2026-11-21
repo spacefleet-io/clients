@@ -41,7 +41,7 @@ const log = (phase: string, data?: unknown) =>
 
 // vi.mock factories are hoisted above the static imports, so they cannot use
 // them: the dynamic imports are the only way to reach the shared fixture.
-vi.mock("react-native", () => ({ Platform: { OS: "ios" } }));
+vi.mock("react-native", async () => ({ ...(await import("./setup/reactNativeMock")).reactNativeBase(), Platform: { OS: "ios" } }));
 vi.mock("react-native-fs", async () => ({ default: (await import("./library-db-fixture")).fakeRnfs }));
 vi.mock("react-native-sqlite-storage", () => ({ default: { enablePromise: () => undefined } }));
 vi.mock("react-native-quick-crypto", async () => (await import("./library-db-fixture")).quickCryptoMock());

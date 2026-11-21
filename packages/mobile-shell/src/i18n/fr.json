@@ -1075,7 +1075,12 @@
       "added": "Date d'ajout",
       "release": "Année de sortie",
       "asc": "Croissant",
-      "desc": "Décroissant"
+      "desc": "Décroissant",
+      "title": "Trier par",
+      "by": "Champ",
+      "direction": "Ordre",
+      "button": "Trier",
+      "done": "Terminé"
     },
     "row": {
       "runtimeMinutes": "{{minutes}} min",
@@ -1091,6 +1096,70 @@
     "poster": {
       "watched": "{{percent}} % regardé",
       "downloaded": "téléchargé"
+    },
+    "filters": {
+      "clear": "Effacer les filtres",
+      "genres": {
+        "title": "Genres",
+        "search": "Rechercher un genre…",
+        "empty": "Aucun genre ne correspond."
+      },
+      "actors": {
+        "title": "Acteurs",
+        "search": "Rechercher un acteur…",
+        "empty": "Aucun acteur ne correspond."
+      },
+      "title": "Filtrer",
+      "clearShort": "Effacer",
+      "more": "+{{count}} de plus",
+      "reset": "Réinitialiser",
+      "apply": "Appliquer",
+      "qualities": {
+        "title": "Qualité",
+        "search": "Rechercher une qualité",
+        "empty": "Aucune qualité trouvée"
+      },
+      "directors": {
+        "title": "Réalisation",
+        "search": "Rechercher un réalisateur",
+        "empty": "Aucun réalisateur trouvé"
+      },
+      "audioLanguages": {
+        "title": "Langue audio",
+        "search": "Rechercher une langue",
+        "empty": "Aucune langue trouvée"
+      },
+      "subtitleLanguages": {
+        "title": "Langue des sous-titres",
+        "search": "Rechercher une langue",
+        "empty": "Aucune langue trouvée"
+      },
+      "watchStates": {
+        "title": "État de visionnage",
+        "search": "Rechercher un état",
+        "empty": "Aucun état trouvé"
+      },
+      "quality": {
+        "sd": "SD (480p ou moins)"
+      },
+      "watchState": {
+        "unwatched": "Non vu",
+        "in-progress": "En cours",
+        "watched": "Vu"
+      },
+      "undefinedLanguage": "Langue inconnue",
+      "active_one": "Filtrer, {{count}} actif",
+      "active_other": "Filtrer, {{count}} actifs",
+      "showOnly": "Afficher seulement"
+    },
+    "stats": {
+      "movie_one": "{{count}} film",
+      "movie_other": "{{count}} films",
+      "movie_many": "{{count}} films",
+      "series_one": "{{count}} série",
+      "series_other": "{{count}} séries",
+      "series_many": "{{count}} séries",
+      "shownOf": "{{shown}} sur {{total}}"
     }
   },
   "playlists": {
@@ -1137,6 +1206,22 @@
         "hint": "Votre médiathèque enregistrée reste affichée."
       },
       "close": "Fermer l'avis"
+    }
+  },
+  "sync": {
+    "indicator": {
+      "updating": "Mise à jour de la médiathèque…",
+      "updatingProgress": "Mise à jour de la médiathèque… {{percent}} %",
+      "savedStaysLabel": "Votre médiathèque enregistrée reste disponible",
+      "newEpisodes_one": "{{count}} nouvel épisode",
+      "newEpisodes_other": "{{count}} nouveaux épisodes",
+      "newTitles_one": "{{count}} nouveau titre",
+      "newTitles_other": "{{count}} nouveaux titres",
+      "updated": "Médiathèque mise à jour",
+      "upToDate": "À jour",
+      "failed": "Échec de la mise à jour",
+      "failedLabel": "Échec de la mise à jour de la médiathèque — contenu enregistré",
+      "retry": "Touchez pour réessayer."
     }
   },
   "shell": {

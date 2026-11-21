@@ -5,33 +5,18 @@
 import React from "react";
 import { View } from "react-native";
 import { MobileProfilesScreen } from "@space/mobile-shell/profiles-screen";
-import { ProfileSetupStep } from "@space/mobile-shell/profile-setup-step";
-import { phoneSetupPosition } from "@space/mobile-shell/setup";
+import { PhoneSetupProfileStep } from "@space/mobile-shell/profile-setup-step";
 import type { PhoneSetupStepProps } from "@space/mobile-shell/setup-flow";
 import { parrotProfileMoves, profileStore, useProfiles } from "../lib/profiles";
 
 export const profileSetupLog = (event: string, data: Record<string, unknown>) => console.info(`parrot.profile_setup.${event}`, JSON.stringify(data));
 const pickLog = (event: string, data: Record<string, unknown>) => console.info(`parrot.profiles.screen.${event}`, JSON.stringify(data));
 
-export const ProfileSetupPhoneStep = ({ progress, advance, back, onLanguage }: PhoneSetupStepProps) => {
+export const ProfileSetupPhoneStep = (props: PhoneSetupStepProps) => {
   const { profiles, activeId, needsChoice, status } = useProfiles();
   if (status !== "ready") return <View testID="setup-profile-wait" />;
   if (needsChoice) {
     return <MobileProfilesScreen store={profileStore} moves={parrotProfileMoves} startMode="pick" audience="listening" onClose={null} log={pickLog} />;
   }
-  const profile = profiles.find(({ id }) => id === activeId);
-  if (!profile) return <View testID="setup-profile-wait" />;
-  const { step, total } = phoneSetupPosition(progress);
-  return (
-    <ProfileSetupStep
-      key={profile.id}
-      profile={profile}
-      position={{ step, total }}
-      onBack={back}
-      onLanguage={(code) => void onLanguage(code)}
-      // Kept counted once answered here, so the steps after it keep their numbers.
-      onDone={() => void advance({ profileSetupAnswered: true })}
-      log={profileSetupLog}
-    />
-  );
+  return <PhoneSetupProfileStep {...props} profile={profiles.find(({ id }) => id === activeId) ?? null} log={profileSetupLog} />;
 };

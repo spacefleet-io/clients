@@ -16,6 +16,7 @@ import { Button } from "@space/ui";
 import { Input } from "@space/ui";
 import { Label } from "@space/ui";
 import { BadgerPhoneSignInCard, BadgerSignInDivider } from "@space/ui/badger/sign-in";
+import { MASCOT_GLOW } from "@space/ui/floating-mascot";
 import { isClientUiLanguage } from "@space/shared";
 import AuthApiHostButton from "@/components/AuthApiHostButton";
 import {
@@ -260,7 +261,7 @@ export default function Login() {
         subtitle={t("login.subtitle")}
         mascotSrc={mascotSrc}
         mascotAlt={t("brand.mascotAlt")}
-        mascotGlowClassName="drop-shadow-[0_0_30px_rgba(255,170,84,0.3)]"
+        mascotGlowClassName={MASCOT_GLOW.badger}
       >
             {mode === "pair" ? (
               <PairWithPhone

@@ -27,7 +27,8 @@ const ctl = vi.hoisted(() => ({
   languages: [] as string[],
 }));
 
-vi.mock("react-native", () => ({
+vi.mock("react-native", async () => ({
+  ...(await import("./setup/reactNativeMock")).reactNativeBase(),
   View: "View",
   Text: "Text",
   ScrollView: "ScrollView",

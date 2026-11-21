@@ -1073,7 +1073,12 @@
       "added": "Date added",
       "release": "Release year",
       "asc": "Ascending",
-      "desc": "Descending"
+      "desc": "Descending",
+      "title": "Sort by",
+      "by": "Field",
+      "direction": "Direction",
+      "button": "Sort",
+      "done": "Done"
     },
     "row": {
       "runtimeMinutes": "{{minutes}} min",
@@ -1089,6 +1094,70 @@
     "poster": {
       "watched": "{{percent}}% watched",
       "downloaded": "downloaded"
+    },
+    "filters": {
+      "clear": "Clear filters",
+      "genres": {
+        "title": "Genres",
+        "search": "Search genres…",
+        "empty": "No genres match this search."
+      },
+      "actors": {
+        "title": "Actors",
+        "search": "Search actors…",
+        "empty": "No actors match this search."
+      },
+      "title": "Filter",
+      "clearShort": "Clear",
+      "more": "+{{count}} more",
+      "reset": "Reset",
+      "apply": "Apply",
+      "qualities": {
+        "title": "Quality",
+        "search": "Search qualities",
+        "empty": "No quality found"
+      },
+      "directors": {
+        "title": "Director",
+        "search": "Search directors",
+        "empty": "No director found"
+      },
+      "audioLanguages": {
+        "title": "Audio language",
+        "search": "Search languages",
+        "empty": "No language found"
+      },
+      "subtitleLanguages": {
+        "title": "Subtitle language",
+        "search": "Search languages",
+        "empty": "No language found"
+      },
+      "watchStates": {
+        "title": "Watch state",
+        "search": "Search states",
+        "empty": "No state found"
+      },
+      "quality": {
+        "sd": "SD (480p or less)"
+      },
+      "watchState": {
+        "unwatched": "Unwatched",
+        "in-progress": "In progress",
+        "watched": "Watched"
+      },
+      "undefinedLanguage": "Unknown language",
+      "active_one": "Filter, {{count}} on",
+      "active_other": "Filter, {{count}} on",
+      "showOnly": "Show only"
+    },
+    "stats": {
+      "movie_one": "{{count}} movie",
+      "movie_other": "{{count}} movies",
+      "movie_many": "{{count}} movies",
+      "series_one": "{{count}} show",
+      "series_other": "{{count}} shows",
+      "series_many": "{{count}} shows",
+      "shownOf": "{{shown}} of {{total}}"
     }
   },
   "playlists": {
@@ -1134,6 +1203,22 @@
         "hint": "Your saved media library stays on screen."
       },
       "close": "Dismiss notice"
+    }
+  },
+  "sync": {
+    "indicator": {
+      "updating": "Updating media library…",
+      "updatingProgress": "Updating media library… {{percent}}%",
+      "savedStaysLabel": "Your saved media library stays available",
+      "newEpisodes_one": "{{count}} new episode",
+      "newEpisodes_other": "{{count}} new episodes",
+      "newTitles_one": "{{count}} new title",
+      "newTitles_other": "{{count}} new titles",
+      "updated": "Media library updated",
+      "upToDate": "Up to date",
+      "failed": "Update failed",
+      "failedLabel": "Media library update failed — saved content",
+      "retry": "Tap to retry."
     }
   },
   "shell": {

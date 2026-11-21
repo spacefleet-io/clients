@@ -512,7 +512,8 @@ export const buildExternalMpvArgs = (options: ExternalMpvLaunchOptions) => {
     if (options.audioUrl) {
       args.push(`--audio-file=${options.audioUrl}`);
     }
-    args.push(options.url);
+    // "--" ends mpv's options: the URL is always read as a file, even one starting with "-".
+    args.push("--", options.url);
   } else {
     // No file: stay up with the forced window until the caller loads one.
     args.push("--idle=yes");

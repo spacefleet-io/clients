@@ -1,7 +1,7 @@
 /**
  * @test-id MOBILE-SHELL-OFFLINE-NOTICE-001
  * @level unit
- * @req UX-NOTICE-02[badger-mobile] @req UX-NOTICE-01[badger-mobile]
+ * @req UX-NOTICE-02[badger-mobile] @req UX-NOTICE-01[badger-mobile] @req LIB-SYNC-13[badger-mobile]
  * @why Chris 2026-11-13 (design feedback on a dev build that could not reach its server): the phone showed a big red
  *   "Offline" box above every page plus the line "Offline mode: using cached media library." under it, about a quarter
  *   of the screen for as long as it stayed offline. Offline is a normal state (downloads and the saved library work
@@ -25,7 +25,10 @@ type LoadStatus =
 
 const state = vi.hoisted(() => ({
   loadStatus: { kind: "ready" } as LoadStatus,
+  /** The store's `syncState` (LIB-SYNC-13); typed loosely, the screen passes it through. */
+  syncState: { kind: "idle" } as Record<string, unknown> & { kind: string },
   reloads: 0,
+  refreshes: 0,
   focused: true,
 }));
 
@@ -65,6 +68,7 @@ vi.mock("@space/mobile-shell/components", () => {
       ),
     MobileNoticeToast: (props: Record<string, unknown>) => createElement("NoticeToast", props),
     MobileOfflineIndicator: (props: Record<string, unknown>) => createElement("OfflineIndicator", props),
+    MobileSyncIndicator: (props: Record<string, unknown>) => createElement("SyncIndicator", props),
     SkyCover: passthrough,
     SkyRegion: passthrough,
   };
@@ -74,8 +78,12 @@ vi.mock("../src/store/library", () => ({
   useLibraryData: () => ({ media: [] }),
   useLibraryStatus: () => ({
     loadStatus: state.loadStatus,
+    syncState: state.syncState,
     reload: () => {
       state.reloads += 1;
+    },
+    refresh: async () => {
+      state.refreshes += 1;
     },
   }),
 }));
@@ -146,6 +154,8 @@ describe("offline on the phone: a passing notice and a small sign, never a banne
     vi.useFakeTimers();
     state.loadStatus = { kind: "ready" };
     state.reloads = 0;
+    state.refreshes = 0;
+    state.syncState = { kind: "idle" };
     state.focused = true;
   });
   afterEach(() => {
@@ -252,5 +262,32 @@ describe("offline on the phone: a passing notice and a small sign, never a banne
     });
     dump("after offline notice", tree);
     expect(notices(tree).map((n) => n.props.testID)).toEqual(["new-device-notice"]);
+  });
+
+  it("LIB-SYNC-13: an updating library shows its sign on the tab bar with the progress; offline still wins", () => {
+    state.syncState = { kind: "syncing", source: "start", fromVersion: 10, toVersion: 30, doneVersion: 15, phase: "ops" };
+    const tree = render();
+    const sync = tree.root.findAll(isType("SyncIndicator"));
+    log("syncing", sync.map((n) => n.props.state));
+    expect(sync).toHaveLength(1);
+    expect(sync[0].props.state).toEqual({ kind: "syncing", progress: 0.25 });
+    expect(indicators(tree)).toHaveLength(0);
+
+    rerender(tree, OFFLINE);
+    expect(tree.root.findAll(isType("SyncIndicator")), "the offline sign takes the slot").toHaveLength(0);
+    expect(indicators(tree)).toHaveLength(1);
+  });
+
+  it("LIB-SYNC-13: a failed update's sign retries as a pull; an idle library shows nothing", () => {
+    state.syncState = { kind: "failed", source: "foreground", error: "boom" };
+    const tree = render();
+    act(() => (tree.root.find(isType("SyncIndicator")).props.onRetry as () => void)());
+    expect(state.refreshes).toBe(1);
+
+    act(() => {
+      state.syncState = { kind: "idle" };
+      tree.update(createElement(MainShellScreen));
+    });
+    expect(tree.root.findAll(isType("SyncIndicator"))).toHaveLength(0);
   });
 });

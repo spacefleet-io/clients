@@ -70,6 +70,13 @@ describe("mpv stream cache args", () => {
     expect(args).toContain(`--demuxer-max-back-bytes=${16 * 1024 * 1024}`);
   });
 
+  it("ends mpv's options before the URL, so a URL is never read as an option", async () => {
+    const { buildExternalMpvArgs } = await import(MPV_EXTERNAL);
+    const args = buildExternalMpvArgs({ ...BASE_OPTIONS, url: "--script=/tmp/x.lua" });
+    expect(args.slice(-2)).toEqual(["--", "--script=/tmp/x.lua"]);
+    expect(args.filter((entry: string) => entry === "--script=/tmp/x.lua")).toHaveLength(1);
+  });
+
   it("allows disabling cache via env", async () => {
     console.info("[mpv-args:disable] setting SF_MPV_STREAM_CACHE_SECS=0, importing external.ts");
     process.env.SF_MPV_STREAM_CACHE_SECS = "0";

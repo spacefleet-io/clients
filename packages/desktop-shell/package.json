@@ -35,6 +35,7 @@
     "./updater-section": "./src/updater/UpdateSection.tsx",
     "./updater-required": "./src/updater/UpdateRequiredScreen.tsx",
     "./updater-strings": "./src/updater/strings.ts",
+    "./updater-system-prompt": "./src/updater/SystemUpdatePrompt.tsx",
     "./tour": "./src/tour/index.ts",
     "./library-key-erase": "./src/libraryKeyErase.ts",
     "./library-kept-key": "./src/libraryKeptKey.ts",

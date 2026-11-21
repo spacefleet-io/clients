@@ -17,7 +17,10 @@
 # Signing: with <APP>_UPLOAD_STORE_FILE and its passwords in the environment (or as gradle properties) the APK is
 # signed with the upload key, otherwise it is left unsigned for F-Droid to sign. reactNativeArchitectures picks the
 # ABIs (default: the app's gradle.properties, every ABI for both apps). GRADLE_OPTS is passed through to Gradle.
-# MEDIA_DEPS_GH_TOKEN is needed by Badger's libmpv download while the media-deps repo is private.
+# Badger's libmpv (packages/media-deps, android-<arch>) is the published bundle (bun scripts/fetch-deps.ts) by default;
+# with SF_MEDIA_DEPS_FROM_SOURCE=1 (F-Droid's build server) it is built here from the pinned sources of the same recipe,
+# at the Docker build's paths, so the libraries are byte-identical to the published ones (packages/media-deps/scripts/
+# build-android-host.ts, which lists the host tools and the directories it needs).
 #
 # The APK carries the self-updater (REL-UPD-06: @space/mobile-self-update, its native module and the
 # REQUEST_INSTALL_PACKAGES permission), the same for our repository, the website and F-Droid's build server; on
@@ -60,7 +63,7 @@ bun install --frozen-lockfile >&2
 bun run --cwd "$mobile" error-report-config >&2
 
 if [ "$app" = badger ]; then
-  # libmpv for every ABI the APK carries (@space/mobile-mpv-playback).
+  # libmpv for every ABI the APK carries (@space/mobile-mpv-playback): downloaded, or built from source.
   default_abis=$(sed -n 's/^reactNativeArchitectures=//p' "$mobile/android/gradle.properties")
   IFS=',' read -r -a abis <<< "${reactNativeArchitectures:-$default_abis}"
   for abi in "${abis[@]}"; do
@@ -71,7 +74,11 @@ if [ "$app" = badger ]; then
       x86_64) target=android-x64 ;;
       *) echo "unknown ABI '$abi'" >&2; exit 2 ;;
     esac
-    bun scripts/fetch-deps.ts --target "$target" >&2
+    if [ "${SF_MEDIA_DEPS_FROM_SOURCE:-}" = 1 ]; then
+      bun packages/media-deps/scripts/build-android-host.ts --target "$target" --docker-paths >&2
+    else
+      bun scripts/fetch-deps.ts --target "$target" >&2
+    fi
   done
 fi
 
@@ -82,13 +89,23 @@ gradle_args=(
   -Pkotlin.compiler.execution.strategy=in-process
   "-P${app}VersionCode=$SF_VERSION_CODE"
   "-P${app}VersionName=$SF_VERSION_NAME"
+  # Reproducible wherever it is built (F-Droid rebuilds it elsewhere, REL-DIST-22): the native code's paths are mapped
+  # to fixed names and its libraries carry no build ID, and React Native's dev-server address resource (resources.arsc)
+  # is a constant rather than this machine's network address. Release builds never use that address.
+  --init-script "$root/scripts/android-foss-reproducible.gradle"
+  "-PsfSourceRoot=$root"
+  -PreactNativeDevServerIp=localhost
 )
 [ -n "${reactNativeArchitectures:-}" ] && gradle_args+=("-PreactNativeArchitectures=$reactNativeArchitectures")
+# F-Droid's build server deletes every Gradle wrapper before building and puts its own `gradle` on PATH (gradlew-fdroid,
+# which runs the Gradle version gradle/wrapper/gradle-wrapper.properties names, checksum-verified).
+gradle=./gradlew
+[ -f "$mobile/android/gradlew" ] || gradle=gradle
 # clean runs on its own: in one invocation with assembleRelease, after an earlier (Play) build in the same checkout,
 # Gradle ran the subprojects' clean (ordered only within its own project) after react-native-reanimated's up-to-date prefab tasks, deleting their output, and the
 # app's CMake configure failed on the missing prefab directory (badger-android-release run 14645).
-(cd "$mobile/android" && ./gradlew "${gradle_args[@]}" clean >&2)
-(cd "$mobile/android" && ./gradlew "${gradle_args[@]}" :app:assembleRelease >&2)
+(cd "$mobile/android" && "$gradle" "${gradle_args[@]}" clean >&2)
+(cd "$mobile/android" && "$gradle" "${gradle_args[@]}" :app:assembleRelease >&2)
 
 out="$root/$mobile/android/app/build/outputs/apk/release"
 apk="$out/app-release.apk"

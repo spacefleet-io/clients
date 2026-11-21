@@ -32,6 +32,11 @@ const mainState = (state: Partial<UpdaterState> = {}): UpdaterState => ({
   autoUpdate: true,
   currentVersion: null,
   lastCheckedAt: null,
+  channel: "self",
+  canInstall: false,
+  manualCommand: null,
+  failure: null,
+  failureDetail: null,
   ...state,
 });
 

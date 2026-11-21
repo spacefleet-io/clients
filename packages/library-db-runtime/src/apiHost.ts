@@ -1,8 +1,8 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
+import { PRODUCTION_API_BASE_URL } from "@space/shared/productionApi";
 import { getUserDataPath } from "./userDataPath";
 
-const DEFAULT_API_BASE_URL = "https://api.spacebadger.io";
 const CONFIG_FILENAME = "runtime-config.json";
 
 type RuntimeConfig = {
@@ -58,7 +58,7 @@ export const getApiBaseUrl = (): string => {
   if (fromEnv) return fromEnv;
   const custom = getCustomApiBaseUrl();
   if (custom) return custom;
-  return DEFAULT_API_BASE_URL;
+  return PRODUCTION_API_BASE_URL;
 };
 
 export const setCustomApiBaseUrl = (value: string | null): { apiBaseUrl: string; customApiBaseUrl: string | null } => {
@@ -74,4 +74,4 @@ export const setCustomApiBaseUrl = (value: string | null): { apiBaseUrl: string;
   };
 };
 
-export const getDefaultApiBaseUrl = () => DEFAULT_API_BASE_URL;
+export const getDefaultApiBaseUrl = () => PRODUCTION_API_BASE_URL;

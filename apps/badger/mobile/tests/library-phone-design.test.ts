@@ -3,8 +3,9 @@
  * @level unit
  *
  * UX-PHONE-06: the phone's Library page is drawn as the validated mockup (`phone-library`): the Movies / TV shows
- * switch with the film and tv icons and a solid yellow selected tab (Playlists is its own bottom tab, UX-PHONE-07) and ONE sort
- * button (arrow-down-wide-narrow) beside it, no view or filter buttons and no search field (UX-PHONE-12: the bar's Search); a three-column poster grid whose cards show the
+ * switch with the film and tv icons and a solid yellow selected tab (Playlists is its own bottom tab, UX-PHONE-07), with the
+ * desktop library row's Filter and Sort buttons beside it (draft layout A, the default) and no view buttons and no search
+ * field (UX-PHONE-12: the bar's Search); a three-column poster grid whose cards show the
  * watch progress bar and a check on watched titles. The real screen and the real `PosterCard` render with react-test-renderer
  * (store, children and native modules stubbed); icons render as host elements named after the lucide icon.
  */
@@ -41,13 +42,20 @@ vi.mock("react-native", () => {
 });
 vi.mock("@space/mobile-shell/i18n", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@space/mobile-shell/i18n")>();
-  return { ...actual, useTranslation: () => ({ t: actual.translate }) };
+  return { ...actual, useTranslation: () => ({ t: actual.translate, i18n: { language: actual.getCurrentLanguage() } }) };
 });
 vi.mock("@react-navigation/native", () => ({ useNavigation: () => ({ navigate: () => undefined }), useIsFocused: () => true }));
 vi.mock("lucide-react-native", () => {
-  const names = ["Film", "Tv", "ListVideo", "ListPlus", "Search", "X", "ArrowDownWideNarrow", "SlidersHorizontal", "LayoutGrid", "List", "Rows3", "ArrowDownToLine", "Check"];
+  const names = ["Film", "Tv", "ListVideo", "ListPlus", "Search", "X", "ArrowDownWideNarrow", "SlidersHorizontal", "LayoutGrid", "List", "Rows3", "ArrowDownToLine", "Check", "ListFilter", "ArrowDownUp"];
   return Object.fromEntries(names.map((name) => [name, (props: Record<string, unknown>) => createElement(`icon:${name}`, props)]));
 });
+vi.mock("react-native-svg", () => ({ default: "Svg", Defs: "Defs", LinearGradient: "LinearGradient", Rect: "Rect", Stop: "Stop" }));
+// The shared sheet's drags load gesture-handler's native code; the library header renders without it.
+vi.mock("@space/mobile-shell/bottom-sheet", () => ({
+  MobileBottomSheet: () => null,
+  MobileSheetScrollView: "ScrollView",
+  useMobileSheetClose: () => (after?: () => void) => after?.(),
+}));
 vi.mock("@space/mobile-shell/components", () => {
   const passthrough = (props: { children?: ReactNode; style?: unknown }) => createElement("Region", { style: props.style }, props.children);
   return { MobileEmptyState: () => null, SkyCover: passthrough, SkyRegion: passthrough };
@@ -68,7 +76,6 @@ vi.mock("../src/components/PlaylistsPanel", () => ({ PlaylistsPanel: () => null 
 vi.mock("../src/components/IconButton", () => ({
   IconButton: (props: { label: string; children?: ReactNode }) => createElement("IconButton", props, props.children),
 }));
-vi.mock("../src/components/LibraryFilterSheet", () => ({ LibraryFilterSheet: () => null }));
 vi.mock("../src/components/usePickerSheet", () => ({ usePickerSheet: () => ({ visible: false, open: () => undefined }) }));
 vi.mock("../src/lib/usePullToRefresh", () => ({ usePullToRefresh: () => ({}) }));
 vi.mock("../src/lib/downloads/downloadsStore", () => ({
@@ -102,8 +109,13 @@ const render = (element: ReactElement) => {
   });
   return tree;
 };
+// A Pressable's style may be a function of its state: read it at rest.
 const flat = (style: unknown): Record<string, unknown> =>
-  Array.isArray(style) ? Object.assign({}, ...style.flat(Infinity).filter(Boolean).map(flat)) : ((style as Record<string, unknown>) ?? {});
+  typeof style === "function"
+    ? flat(style({ pressed: false }))
+    : Array.isArray(style)
+      ? Object.assign({}, ...style.flat(Infinity).filter(Boolean).map(flat))
+      : ((style as Record<string, unknown>) ?? {});
 const icons = (node: ReactTestInstance): string[] =>
   node.findAll((n) => typeof n.type === "string" && n.type.startsWith("icon:")).map((n) => (n.type as string).slice(5));
 const text = (node: ReactTestInstance): string => node.children.map((c) => (typeof c === "string" ? c : text(c))).join("");
@@ -137,16 +149,25 @@ describe("phone Library page follows the validated mockup (UX-PHONE-06)", () => 
     expect(read[1]).toMatchObject({ selected: false, bg: null, text: theme.colors.textMuted });
   });
 
-  /** @req UX-PHONE-06 @req UX-PHONE-12 */
-  it("the toolbar is the switch and one sort button: no search field (the bar's Search button searches), no view or filter buttons", () => {
+  /** @req UX-PHONE-06 @req UX-PHONE-12 @req UX-LIB-04 */
+  it("the toolbar is one row, the switch with a Filter and a Sort button: no search field (the bar's Search button searches), no view buttons", () => {
     const tree = render(createElement(LibraryScreen, { active: true }));
-    const buttons = tree.root.findAll((n) => String(n.type) === "IconButton").map((b) => ({ label: b.props.label, icons: icons(b) }));
+    const header = tree.root.find((n) => n.props.testID === "library-header");
+    const row = header.findAll((n) => n.props.testID === "library-filter-button")[0]!.parent!;
+    expect(row.findAll((n) => n.props.testID === "library-tabs").length).toBeGreaterThan(0);
+    expect(row.findAll((n) => n.props.testID === "library-sort-button").length).toBeGreaterThan(0);
+    const buttons = header
+      .findAll((n) => String(n.type) === "Pressable" && n.props.accessibilityRole === "button")
+      .map((b) => ({ testID: b.props.testID, label: b.props.accessibilityLabel, icons: icons(b) }));
     const inputs = tree.root.findAll((n) => String(n.type) === "TextInput");
     console.info(`${LOG} toolbar ${JSON.stringify({ buttons, inputs: inputs.length })}`);
     expect(inputs).toHaveLength(0);
     expect(tree.root.findAll((n) => n.props.testID === "library-search")).toHaveLength(0);
-    expect(buttons).toEqual([{ label: "Sort and filter", icons: ["ArrowDownWideNarrow"] }]);
-    for (const gone of ["LayoutGrid", "List", "Rows3", "SlidersHorizontal", "Search"]) expect(icons(tree.root)).not.toContain(gone);
+    expect(buttons.map(({ testID, icons }) => ({ testID, icons }))).toEqual([
+      { testID: "library-filter-button", icons: ["ListFilter"] },
+      { testID: "library-sort-button", icons: ["ArrowDownUp"] },
+    ]);
+    for (const gone of ["LayoutGrid", "List", "Rows3", "Search"]) expect(icons(tree.root)).not.toContain(gone);
   });
 
   /** @req UX-PHONE-06 */

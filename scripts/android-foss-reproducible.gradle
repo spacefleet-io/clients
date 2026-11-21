@@ -1,0 +1,32 @@
+// Gradle init script of the Google-free build (scripts/android-foss-build.sh, REL-DIST-22): the same source gives the
+// same APK whatever directory it is built in, so F-Droid's rebuild (in /home/vagrant/build/<appId>, Gradle home
+// /home/vagrant/.gradle) matches our signed APK (CI: /workspace/spacefleet/spacefleet, Gradle home /gradle-home).
+// Every CMake build (the app's and each native library's):
+// - maps the checkout and the Gradle home to fixed names in the paths the compiler writes into the .so files
+//   (__FILE__ in asserts);
+// - links without a build ID (F-Droid's advice, f-droid.org/docs/Reproducible_Builds, "NDK build-id"). The ID hashes
+//   the unstripped library, whose debug info and symbols still hold machine-specific paths: CMake's build directory
+//   .cxx/RelWithDebInfo/<hash of these flags>, and the source paths behind the names ThinLTO gives promoted symbols
+//   (react-native-reanimated). The NDK's own -Wl,--build-id=sha1 comes first, so this one wins.
+// Included builds (React Native's Gradle plugin) run this script too, with the property only on the top build.
+def top = gradle
+while (top.parent != null) top = top.parent
+def sourceRoot = new File(top.startParameter.projectProperties["sfSourceRoot"] ?: { throw new GradleException("-PsfSourceRoot is required") }()).canonicalPath
+def prefixMaps = [
+    "-ffile-prefix-map=${sourceRoot}=/src",
+    "-ffile-prefix-map=${gradle.gradleUserHomeDir.canonicalPath}=/gradle-home",
+].collect { it.toString() }
+
+allprojects {
+    ["com.android.application", "com.android.library"].each { id ->
+        plugins.withId(id) {
+            // finalizeDsl runs after the module's own build script, so a module that assigns its flags keeps these too.
+            androidComponents.finalizeDsl { android ->
+                def cmake = android.defaultConfig.externalNativeBuild.cmake
+                cmake.cFlags.addAll(prefixMaps)
+                cmake.cppFlags.addAll(prefixMaps)
+                cmake.arguments.add("-DCMAKE_SHARED_LINKER_FLAGS=-Wl,--build-id=none")
+            }
+        }
+    }
+}

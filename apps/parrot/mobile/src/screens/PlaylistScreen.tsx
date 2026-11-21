@@ -1,10 +1,11 @@
 // One playlist's songs in its order (opened from the Playlists tab or chip): a tap plays the list from that song on.
-// A song's sheet takes it out of the playlist; the title row renames or deletes it (PAR-PL-02), never "Liked songs",
-// and keeps it on this phone (PAR-OFFL-01), "Liked songs" included.
+// A song's sheet takes it out of the playlist; the title row keeps it on this phone (PAR-OFFL-01), "Liked songs"
+// included, and its "…" (never on "Liked songs") opens the actions sheet to rename it or, last and in red, delete it
+// after asking (PAR-PL-02).
 import React from "react";
 import { ActivityIndicator, FlatList, StyleSheet } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { Pencil, Trash2 } from "lucide-react-native";
+import { Ellipsis, Pencil, Trash2 } from "lucide-react-native";
 import { useTranslation } from "@space/mobile-shell/i18n";
 import { useSkyScroll } from "@space/mobile-shell/components";
 import { guardRenderItem } from "@space/mobile-shell/render-boundary";
@@ -60,15 +61,28 @@ export const PlaylistScreen = ({ route, navigation }: NativeStackScreenProps<Roo
                 <>
                   <KeepButton testID="playlist-keep" state={kept.state("playlist", playlistId)} onPress={() => editor.toggleKeep("playlist", playlistId)} />
                   {liked ? null : (
-                    <>
-                      <IconButton testID="playlist-rename" icon={Pencil} label={t("shell.playlists.rename")} onPress={() => editor.renamePlaylist(playlist)} />
-                      <IconButton
-                        testID="playlist-delete"
-                        icon={Trash2}
-                        label={t("shell.playlists.delete")}
-                        onPress={() => editor.deletePlaylist(playlist, () => navigation.goBack())}
-                      />
-                    </>
+                    <IconButton
+                      testID="playlist-more"
+                      icon={Ellipsis}
+                      label={t("shell.card.more")}
+                      onPress={() =>
+                        editor.openActions(
+                          name,
+                          [
+                            { id: "rename", label: t("shell.playlists.rename"), icon: Pencil, onSelect: () => editor.renamePlaylist(playlist), testID: "playlist-menu-rename" },
+                            {
+                              id: "delete",
+                              label: t("shell.playlists.delete"),
+                              icon: Trash2,
+                              destructive: true,
+                              onSelect: () => editor.deletePlaylist(playlist, () => navigation.goBack()),
+                              testID: "playlist-menu-delete",
+                            },
+                          ],
+                          "playlist-menu"
+                        )
+                      }
+                    />
                   )}
                 </>
               }

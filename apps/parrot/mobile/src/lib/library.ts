@@ -20,7 +20,7 @@ import { publishLibrarySnapshotWith, type LibrarySnapshotPublishDeps } from "@sp
 import { PARROT_OP_STREAM_VERSION, parseParrotTracklist, type ParrotListedTrack, type ParrotPhotoCredit } from "@space/parrot-library-db-definition/ops";
 import { createPhoneOpsSaver, type PhoneLibraryState } from "./saveEdits";
 import { phoneCoverCopies } from "./coverCopies";
-import { sqliteDefaultDbPath } from "./dbPath";
+import { sqliteDb } from "./dbPath";
 import * as sdk from "@space/sdk";
 import { API_BASE_URL } from "../config";
 import { SPACE_APP_HEADER } from "@space/shared/appScope";
@@ -101,8 +101,11 @@ import {
 SQLite.enablePromise(true);
 
 const DB_NAME = "parrot.library.sqlite";
-/** Where react-native-sqlite-storage keeps a `location: "default"` database (Android `databases/`, iOS `Library/LocalDatabase`). */
-const dbPath = () => sqliteDefaultDbPath(Platform.OS, { document: RNFS.DocumentDirectoryPath, library: RNFS.LibraryDirectoryPath }, DB_NAME);
+/** Where the SQLite plugin keeps a database on this device (Android `databases/`, iPhone `Library/LocalDatabase`, Apple TV Caches). */
+const deviceDb = (name: string) =>
+  sqliteDb(Platform.OS, Platform.isTV, { document: RNFS.DocumentDirectoryPath, library: RNFS.LibraryDirectoryPath, caches: RNFS.CachesDirectoryPath }, name);
+const dbPath = () => deviceDb(DB_NAME).path;
+const openLibraryFile = () => SQLite.openDatabase({ name: DB_NAME, location: deviceDb(DB_NAME).location });
 
 let db: SQLite.SQLiteDatabase | null = null;
 /** The server version the open copy is: the snapshot opened, or the one this phone published since. */
@@ -184,7 +187,7 @@ export const openLibrary = async (token: string, libraryKey: string): Promise<{ 
   const path = dbPath();
   await RNFS.mkdir(path.slice(0, path.lastIndexOf("/")));
   await RNFS.writeFile(path, Buffer.from(dbBytes).toString("base64"), "base64");
-  const opened = await SQLite.openDatabase({ name: DB_NAME, location: "default" });
+  const opened = await openLibraryFile();
   // A snapshot published by an older build is brought to this build's schema in the phone's own copy (e.g. the small
   // cover column, PAR-META-04); the next playlist save publishes it at that schema.
   const [version] = await opened.executeSql("PRAGMA user_version");
@@ -232,7 +235,7 @@ export const openLibraryCopy = async (token: string, libraryKey: string): Promis
   if (marker === null || !(await RNFS.exists(dbPath()))) return null;
   await closeDb();
   coverKeys = null;
-  db = await SQLite.openDatabase({ name: DB_NAME, location: "default" });
+  db = await openLibraryFile();
   openedVersion = Number(marker) || 0;
   session = { token, libraryKey };
   copyKept = true;
@@ -369,7 +372,7 @@ const keepOpenCopy = async (): Promise<() => Promise<void>> => {
     coverKeys = null;
     for (const leftover of [dbPath(), `${dbPath()}-wal`, `${dbPath()}-shm`]) await RNFS.unlink(leftover).catch(() => undefined);
     await RNFS.copyFile(backupPath(), dbPath());
-    db = await SQLite.openDatabase({ name: DB_NAME, location: "default" });
+    db = await openLibraryFile();
     log("parrot.library.change_undone", { version: openedVersion });
   };
 };
@@ -409,8 +412,7 @@ const phoneSnapshotDeps = (current: () => { token: string; libraryKey: string })
 });
 
 const CLAIM_DB_NAME = "parrot.claim.sqlite";
-const claimFilePath = () =>
-  sqliteDefaultDbPath(Platform.OS, { document: RNFS.DocumentDirectoryPath, library: RNFS.LibraryDirectoryPath }, CLAIM_DB_NAME);
+const claimFilePath = () => deviceDb(CLAIM_DB_NAME).path;
 
 /**
  * A new key made on this phone becomes the account's key (UX-KEY-01): an empty Parrot library is published with it
@@ -427,7 +429,7 @@ export const claimAccountKey = async (token: string, libraryKey: string): Promis
   await removeClaimFile();
   log("parrot.library.claim.start", {});
   try {
-    const empty = await SQLite.openDatabase({ name: CLAIM_DB_NAME, location: "default" });
+    const empty = await SQLite.openDatabase({ name: CLAIM_DB_NAME, location: deviceDb(CLAIM_DB_NAME).location });
     try {
       await empty.sqlBatch(parrotLibraryMigrationStatements(0).map((sql): [string, unknown[]] => [sql, []]));
       await empty.executeSql("PRAGMA wal_checkpoint(TRUNCATE)").catch(() => undefined);

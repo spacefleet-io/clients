@@ -28,7 +28,7 @@ const TAG = "[library-ops-flush-resilience]";
 const log = (phase: string, data?: unknown) =>
   console.info(`${TAG} ${phase}${data === undefined ? "" : ` ${JSON.stringify(data)}`}`);
 
-vi.mock("react-native", () => ({ Platform: { OS: "ios" } }));
+vi.mock("react-native", async () => ({ ...(await import("./setup/reactNativeMock")).reactNativeBase(), Platform: { OS: "ios" } }));
 vi.mock("react-native-fs", async () => ({ default: (await import("./library-db-fixture")).fakeRnfs }));
 vi.mock("react-native-sqlite-storage", () => ({ default: { enablePromise: () => undefined } }));
 vi.mock("react-native-quick-crypto", async () => (await import("./library-db-fixture")).quickCryptoMock());
@@ -99,7 +99,7 @@ beforeEach(() => {
 });
 
 describe("mobile op flush survives a stale pending snapshot", () => {
-  it("@bugfix @regression-proof a 409 on the pending snapshot discards it and keeps sync (and op flushing) enabled", async () => {
+  it("@bugfix @regression-proof a stale pending snapshot (409, or a server already past it) is discarded and keeps sync (and op flushing) enabled", async () => {
     setServer({ version: 10, snapshotVersion: 10 });
     seedSplitCache({ version: 10 });
     seedStalePendingSnapshot(5); // built on v5; our own ops moved the server to v10
@@ -111,13 +111,16 @@ describe("mobile op flush survives a stale pending snapshot", () => {
     await db.flushPending();
     log("after 409", { putDbCalls: fx.putDbCalls, syncEnabled: db.syncEnabled, pendingSync: db.pendingSync, files: [...fx.files.keys()] });
     try {
+      // LIB-SYNC-14: the version read right before the PUT (10) is past what the snapshot covers (5), so it is dropped
+      // without uploading it; the 409 configured above is the answer it would have met.
+      expect(fx.putDbCalls, "a snapshot the server has moved past is never uploaded").toBe(0);
       expect(db.syncEnabled, "a stale compaction snapshot must not switch off sync for the session").toBe(true);
       expect(db.pendingSync, "the stale snapshot is dropped (its data already reached the server as ops)").toBeNull();
       expect(fx.files.has(PENDING_JSON), "pending.json must be removed so the next cold start does not retry").toBe(false);
       expect(fx.files.has(PENDING_SNAPSHOT)).toBe(false);
 
       await db.flushPending();
-      expect(fx.putDbCalls, "no second full-snapshot upload attempt for a discarded snapshot").toBe(1);
+      expect(fx.putDbCalls, "no later full-snapshot upload attempt for a discarded snapshot").toBe(0);
 
       await db.queueOp(settingOp("local-1", "episode_resume_v1:e1", "{}"));
       await db.flushOps();

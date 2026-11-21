@@ -111,6 +111,7 @@ export const AlbumScreen = ({ route }: NativeStackScreenProps<RootStack, "Album"
           id: "delete",
           label: t("shell.manage.delete"),
           icon: Trash2,
+          destructive: true,
           onSelect: () => manage.remove({ kind: "album", id: albumId }, title, () => navigation.goBack()),
           testID: "album-menu-delete",
         },

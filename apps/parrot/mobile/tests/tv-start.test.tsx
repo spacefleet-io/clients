@@ -57,7 +57,7 @@ vi.mock("../src/brand", () => ({ PARROT_TV_ICON: 7 }));
 vi.mock("@space/mobile-shell/tv/TvLanguage", () => ({ TvLanguageView: (_: unknown) => null }));
 vi.mock("@space/mobile-shell/tv/TvProfiles", () => ({ TvProfilesView: (_: unknown) => null }));
 vi.mock("@space/mobile-shell/tv/TvSignIn", () => ({ TvSignInScreen: (_: unknown) => null }));
-vi.mock("@space/mobile-shell/tv/TvSky", () => ({ TvSky: ({ children }: { children?: React.ReactNode }) => <>{children}</> }));
+vi.mock("../src/tv/TvPlayerSky", () => ({ TvPlayerSky: ({ children }: { children?: React.ReactNode }) => <>{children}</> }));
 vi.mock("@space/mobile-shell/tv/TvTopBar", () => ({ TvTopBar: (_: unknown) => null }));
 vi.mock("@space/mobile-shell/tv/useTvMenuKey", () => ({
   useTvMenuKeyHold: (reason: string, active: boolean) => void h.menuHolds.push([reason, active]),

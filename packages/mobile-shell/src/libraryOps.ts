@@ -43,10 +43,19 @@ export const collectOpPages = async (
 /** Longest a payload loop runs in one piece before yielding (a frame is ~16 ms, the UI budget 100 ms). */
 export const OP_FETCH_SLICE_BUDGET_MS = 20;
 
+/**
+ * Inline payloads at least this long (base64 chars, ~24 KB) are opened by `openLarge` when given. Opening in JS costs
+ * ~4 s per MB on a OnePlus 9 Pro, all of it one uninterruptible piece; below this size the in-thread path is cheaper
+ * than a native round-trip.
+ */
+export const OP_OPEN_LARGE_MIN_BASE64 = 32 * 1024;
+
 export type FetchOpPayloadsDeps = {
   download: (objectKey: string) => Promise<Uint8Array>;
   decrypt: (bytes: Uint8Array) => Promise<Uint8Array>;
   decode: (bytes: Uint8Array) => string;
+  /** Opens a large inline payload (base64 envelope -> JSON text) off the JS thread (LIB-SYNC-14). */
+  openLarge?: (payloadBase64: string) => Promise<string>;
   log?: (event: string, data: Record<string, unknown>) => void;
 };
 
@@ -78,20 +87,35 @@ export const fetchOpPayloads = async <Op = unknown>(
     const results = await Promise.all(
       batch.map(async (entry) => {
         try {
-          const inline = decodeInlinePayload(entry);
-          const payload = inline ?? (await deps.download(entry.objectKey));
-          const decrypted = await deps.decrypt(payload).catch(() => {
-            throw new Error("DECRYPT_FAILED");
-          });
-          // v2 ops arrive as a compressed frame; v1 ops are plain JSON (LIB-FMT-07)
-          const op = JSON.parse(deps.decode(decodeCompressedFrame(decrypted, fflateCodec))) as Op;
+          const startedAt = Date.now();
+          const inlineBase64 = entry.payloadCiphertext;
+          let text: string;
+          let source: string;
+          if (deps.openLarge && inlineBase64 && inlineBase64.length >= OP_OPEN_LARGE_MIN_BASE64) {
+            text = await deps.openLarge(inlineBase64);
+            source = "native";
+          } else {
+            const inline = decodeInlinePayload(entry);
+            const payload = inline ?? (await deps.download(entry.objectKey));
+            const decrypted = await deps.decrypt(payload).catch(() => {
+              throw new Error("DECRYPT_FAILED");
+            });
+            // v2 ops arrive as a compressed frame; v1 ops are plain JSON (LIB-FMT-07)
+            text = deps.decode(decodeCompressedFrame(decrypted, fflateCodec));
+            source = inline ? "inline" : "tunnel";
+          }
+          const openMs = Date.now() - startedAt;
+          const parsed: unknown = JSON.parse(text);
           deps.log?.("library.ops.item", {
             id: entry.opId,
-            type: (op as { type?: string }).type,
+            type: parsed && typeof parsed === "object" && "type" in parsed ? parsed.type : undefined,
             version: entry.version,
-            source: inline ? "inline" : "tunnel",
+            source,
+            chars: text.length,
+            openMs,
+            parseMs: Date.now() - startedAt - openMs,
           });
-          return op;
+          return parsed as Op;
         } catch (error) {
           deps.log?.("library.ops.parse.failed", {
             id: entry.opId,

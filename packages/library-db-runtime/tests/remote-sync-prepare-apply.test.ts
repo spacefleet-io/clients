@@ -188,7 +188,7 @@ mock.module("../src/api", () => ({
       version: pageOps.length && hasMore ? pageOps[pageOps.length - 1]!.version : fake.version,
       snapshotVersion: fake.snapshotVersion,
       tooOld,
-      ops: pageOps.map((op) => ({ ...op, objectKey: `library/ops/${op.opId}`, size: 0 })),
+      ops: pageOps.map((op) => ({ ...op, objectKey: `library/ops/${op.opId}`, size: Buffer.from(op.payloadCiphertext, "base64").length })),
       hasMore,
       storageFormatVersion: 1,
       opStreamVersion: 1,
@@ -300,8 +300,8 @@ type Internals = {
   remoteVersion: number;
   opsFlushInFlight: boolean;
   pendingOps: Array<{ type: string; payload: { progressPct?: number } }>;
-  /** Non-progress ops since the last snapshot (LIB-SYNC-07). */
-  opsSinceSnapshot: { snapshotVersion: number; count: number };
+  /** Non-progress ops since the last snapshot (LIB-SYNC-07) and their ciphertext bytes (LIB-SYNC-12). */
+  opsSinceSnapshot: { snapshotVersion: number; count: number; bytes: number; bytesThreshold: number };
 };
 const internalsOf = (db: Db) => {
   const internals = db as unknown as Internals; // test-only peek at private sync state
@@ -910,4 +910,81 @@ describe("LIB-SYNC-07 — viewing progress never causes a full save of the libra
     expect(crossed.snapshotsPublished).toBe(1);
     db.close();
   }, 60_000);
+
+  const TAIL_BYTES = 16 * 1024 * 1024; // SNAPSHOT_TAIL_BYTES_THRESHOLD in library-db-definition/opClass.ts
+
+  // @req LIB-SYNC-12[badger-desktop]
+  // @req LIB-SYNC-12[runtime]
+  it("LIB-SYNC-12: ~1 MiB structural ops publish a snapshot on the op that takes the tail past 16 MiB, far below 250 ops", async () => {
+    const { db } = await bootstrapWithMovie();
+    const publishedAtStart = snapshotsPublished();
+    const bytesAtStart = internalsOf(db).opsSinceSnapshot.bytes;
+    const sizes: number[] = [];
+    // One key rewritten: the tail grows by every value while the snapshot holds only the last one.
+    while (snapshotsPublished() === publishedAtStart && sizes.length < 40) {
+      db.setSetting("ui.big", randomBytes(1024 * 1024).toString("base64"));
+      await flushUntilDrained(db);
+      sizes.push(Buffer.from(fake.ops.at(-1)!.payloadCiphertext, "base64").length);
+    }
+    const tailBytes = bytesAtStart + sizes.reduce((sum, size) => sum + size, 0);
+    const measured = {
+      ops: sizes.length,
+      tailBytes,
+      counted: internalsOf(db).opsSinceSnapshot,
+      snapshotsPublished: snapshotsPublished() - publishedAtStart,
+    };
+    log("measure:LIB-SYNC-12 tail bytes", measured);
+    expect(measured.snapshotsPublished).toBe(1);
+    expect(measured.ops).toBeLessThan(SNAPSHOT_THRESHOLD);
+    expect(measured.counted.bytes).toBe(tailBytes);
+    expect(tailBytes).toBeGreaterThanOrEqual(TAIL_BYTES);
+    expect(tailBytes - sizes.at(-1)!, "not one op earlier").toBeLessThan(TAIL_BYTES);
+    db.close();
+  }, 120_000);
+
+  // @req LIB-SYNC-12[badger-desktop]
+  // @req LIB-SYNC-12[runtime]
+  it("LIB-SYNC-12: pulled ops count the ciphertext sizes the server lists", async () => {
+    const { db, mediaId } = await bootstrapWithMovie();
+    const before = internalsOf(db).opsSinceSnapshot;
+    const op = {
+      id: randomBytes(16).toString("hex"),
+      type: "setting.set",
+      createdAt: new Date().toISOString(),
+      payload: { key: "ui.remote", value: "x".repeat(10_000), updatedAt: new Date().toISOString() },
+    } as LibraryOp;
+    const encrypted = await encryptBytesToBytes(KEY, new TextEncoder().encode(JSON.stringify(op)));
+    fake.version += 1;
+    fake.stateHash = `remote-device-${fake.version}`;
+    fake.lastOpId = op.id;
+    fake.ops.push({ version: fake.version, opId: op.id, payloadCiphertext: Buffer.from(encrypted).toString("base64"), createdAt: op.createdAt });
+    await pushRemoteProgress(mediaId, 12); // progress-class: never counts
+    const outcome = await db.applyPreparedRemoteSync(await db.prepareRemoteSync(null));
+    const after = internalsOf(db).opsSinceSnapshot;
+    log("measure:LIB-SYNC-12 pulled", { outcome, before, after, opBytes: encrypted.length });
+    expect(outcome).toBe(true);
+    expect(after.count - before.count).toBe(1);
+    expect(after.bytes - before.bytes).toBe(encrypted.length);
+    db.close();
+  }, 30_000);
+
+  // @req LIB-SYNC-12[badger-desktop]
+  // @req LIB-SYNC-12[runtime]
+  it("LIB-SYNC-12: a snapshot larger than the tail it would replace is not published; the byte threshold rises to its size", async () => {
+    const { db } = await bootstrapWithMovie();
+    const compactable = db as unknown as { maybeCompactAfterOps(): Promise<void> };
+    const publishedAtStart = snapshotsPublished();
+    // Due by bytes alone with a tail smaller than any snapshot of this library.
+    internalsOf(db).opsSinceSnapshot = { snapshotVersion: fake.snapshotVersion, count: 1, bytes: 10, bytesThreshold: 5 };
+    await compactable.maybeCompactAfterOps();
+    const first = { ...internalsOf(db).opsSinceSnapshot };
+    const metaCallsAfterFirst = metaCalls();
+    internalsOf(db).opsSinceSnapshot = { ...first, bytes: 11 };
+    await compactable.maybeCompactAfterOps();
+    log("measure:LIB-SYNC-12 larger than the tail", { first, snapshotsPublished: snapshotsPublished() - publishedAtStart });
+    expect(snapshotsPublished() - publishedAtStart).toBe(0);
+    expect(first.bytesThreshold, "raised to the snapshot's size").toBeGreaterThan(10);
+    expect(metaCalls() - metaCallsAfterFirst, "below the raised threshold the server is not asked").toBe(0);
+    db.close();
+  }, 30_000);
 });

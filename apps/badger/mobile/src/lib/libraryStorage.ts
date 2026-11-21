@@ -1,6 +1,7 @@
 import { Platform } from "react-native";
 import { Buffer } from "buffer";
 import RNFS from "react-native-fs";
+import { SNAPSHOT_TAIL_BYTES_THRESHOLD } from "@space/library-db-definition/opClass";
 
 export type LibraryCache = {
   version: number;
@@ -26,6 +27,10 @@ export type PendingSync = {
   // this list. Absent on records written by older builds, whose snapshotPath
   // was the shared cache blob that persist() re-encrypts.
   chunkRefs?: string[];
+  // Every server change up to this version is in the snapshot (the phone's durable cursor when it was built). The
+  // PUT goes out on the server's version at send time while that version is <= this one (LIB-SYNC-14); absent on
+  // records written by older builds, which publish on `baseVersion` only.
+  coveredVersion?: number;
 };
 
 export type PendingOp = {
@@ -189,16 +194,26 @@ export const removeCacheBlob = async () => {
 };
 
 /**
- * Non-progress ops since the server's latest snapshot (LIB-SYNC-07). The server only sees
- * opaque versions, so the client keeps this count itself; it is tied to `snapshotVersion` and
- * restarts from zero whenever a newer snapshot exists.
+ * Non-progress ops since the server's latest snapshot (LIB-SYNC-07): how many, and their ciphertext `bytes`
+ * (LIB-SYNC-12). The server only sees opaque versions, so the client keeps this count itself; it is tied to
+ * `snapshotVersion` and restarts from zero whenever a newer snapshot exists. `bytesThreshold` is the tail size that
+ * makes a snapshot due: `SNAPSHOT_TAIL_BYTES_THRESHOLD`, or the size of a snapshot that came out larger than the tail
+ * it would have replaced.
  */
-export type SnapshotOpCount = { snapshotVersion: number; count: number };
+export type SnapshotOpCount = { snapshotVersion: number; count: number; bytes: number; bytesThreshold: number };
 
 export const loadSnapshotOpCount = async (): Promise<SnapshotOpCount | null> => {
-  const stored = await readJson<SnapshotOpCount>(snapshotOpCountFile());
+  const stored = await readJson<Partial<SnapshotOpCount>>(snapshotOpCountFile());
   if (!stored || !Number.isFinite(stored.snapshotVersion) || !Number.isFinite(stored.count)) return null;
-  return { snapshotVersion: stored.snapshotVersion, count: Math.max(0, Math.floor(stored.count)) };
+  // A file written before LIB-SYNC-12 has no bytes: the tail counts from now on.
+  const bytes = Number(stored.bytes);
+  const bytesThreshold = Number(stored.bytesThreshold);
+  return {
+    snapshotVersion: Number(stored.snapshotVersion),
+    count: Math.max(0, Math.floor(Number(stored.count))),
+    bytes: Number.isFinite(bytes) && bytes > 0 ? bytes : 0,
+    bytesThreshold: Number.isFinite(bytesThreshold) && bytesThreshold > 0 ? bytesThreshold : SNAPSHOT_TAIL_BYTES_THRESHOLD,
+  };
 };
 
 export const saveSnapshotOpCount = async (value: SnapshotOpCount) => {

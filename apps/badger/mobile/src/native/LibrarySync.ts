@@ -23,37 +23,45 @@ export const onLibrarySyncProgress = (listener: (event: LibrarySyncProgress) => 
   return emitter.addListener("librarySyncProgress", (event) => listener(event as LibrarySyncProgress));
 };
 
-export const decryptLibraryFromFile = async (
-  sourcePath: string,
-  keyBase64: string,
-  outputPath: string
-) => {
-  if (!LibrarySync?.decryptBase64File) {
-    throw new Error("LIBRARY_SYNC_UNAVAILABLE");
-  }
-  return await LibrarySync.decryptBase64File(sourcePath, keyBase64, outputPath);
+export type SnapshotFileResult = {
+  /** Bytes of the SQLite file. */
+  dbBytes: number;
+  /** Bytes of the encrypted saved copy. */
+  storedBytes: number;
+  /** False only when a v1 (uncompressed) saved copy was read. */
+  compressed: boolean;
+  /** Time spent on the native worker thread. */
+  ms: number;
 };
 
-export const decryptLibraryFromBinaryFile = async (
-  sourcePath: string,
-  keyBase64: string,
-  outputPath: string
-) => {
-  if (!LibrarySync?.decryptBinaryFile) {
+/**
+ * SQLite file -> saved copy of the library (LIB-FMT-07 v2: `00 5A 01` + raw deflate, then AES-256-GCM), streamed on a
+ * native worker thread (LIB-SYNC-14): the database never reaches the JS thread.
+ */
+export const encryptSnapshotFile = async (dbPath: string, keyBase64: string, outputPath: string): Promise<SnapshotFileResult> => {
+  if (!LibrarySync?.encryptSnapshotFile) {
     throw new Error("LIBRARY_SYNC_UNAVAILABLE");
   }
-  return await LibrarySync.decryptBinaryFile(sourcePath, keyBase64, outputPath);
+  return await LibrarySync.encryptSnapshotFile(dbPath, keyBase64, outputPath);
 };
 
-export const encryptLibraryToBinaryFile = async (
-  sourcePath: string,
-  keyBase64: string,
-  outputPath: string
-) => {
-  if (!LibrarySync?.encryptBinaryFile) {
+/** Saved copy (v2 compressed or v1 plain) -> SQLite file, decrypted and inflated on a native worker thread. */
+export const decryptSnapshotFile = async (sourcePath: string, keyBase64: string, dbPath: string): Promise<SnapshotFileResult> => {
+  if (!LibrarySync?.decryptSnapshotFile) {
     throw new Error("LIBRARY_SYNC_UNAVAILABLE");
   }
-  return await LibrarySync.encryptBinaryFile(sourcePath, keyBase64, outputPath);
+  return await LibrarySync.decryptSnapshotFile(sourcePath, keyBase64, dbPath);
+};
+
+/**
+ * One stored library change (base64 `iv | GCM(frame or v1 JSON) | tag`) -> its JSON text, opened on a native worker
+ * thread (LIB-SYNC-14). Rejects with `DECRYPT_FAILED`, `corrupt_compressed_frame` or `unknown_compression_codec:N`.
+ */
+export const openOpPayload = async (payloadBase64: string, keyBase64: string): Promise<string> => {
+  if (!LibrarySync?.openOpPayload) {
+    throw new Error("LIBRARY_SYNC_UNAVAILABLE");
+  }
+  return await LibrarySync.openOpPayload(payloadBase64, keyBase64);
 };
 
 export type FileHashes = {

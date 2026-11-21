@@ -108,6 +108,7 @@ export const createBuilderConfig = ({ targetId, updateFeedUrl = DEFAULT_UPDATE_F
     ...nativeLinuxPackageOptions({
       appDir,
       packageName: "spacebadger",
+      productName: "Badger",
       legacyName: "badger",
       version: JSON.parse(readFileSync(join(appDir, "package.json"), "utf8")).version,
       mpv: true,

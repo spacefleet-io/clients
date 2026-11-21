@@ -48,6 +48,11 @@ const baseState: UpdaterState = {
   autoUpdate: true,
   currentVersion: "1.3.0",
   lastCheckedAt: null,
+  channel: "self",
+  canInstall: false,
+  manualCommand: null,
+  failure: null,
+  failureDetail: null,
 };
 
 let container: HTMLDivElement;

@@ -5,12 +5,15 @@
  *  - `ParrotUpdateSection`: Settings › About & updates, the shared `DesktopUpdateSection` (REL-UPD-05, the section
  *    Badger shows too) over `window.parrot.updater`, with the automatic-updates switch saved in main.
  *  - `UpdateReadyNotice`: on every screen, once a version has downloaded, a small card offers "Restart now".
+ *  - `ParrotSystemUpdatePrompt`: a copy from SpaceFleet's .deb/.rpm/.pacman packages asks before updating through the
+ *    package manager (REL-UPD-07, the shared `SystemUpdatePrompt`); a Flatpak copy shows `flatpak update`.
  */
 import { useState } from "react";
 import { Download } from "lucide-react";
 import { Button } from "@space/ui";
 import { useDesktopUpdater, type DesktopUpdaterControls } from "@space/desktop-shell/updater-react";
 import { DesktopUpdateSection } from "@space/desktop-shell/updater-section";
+import { SystemUpdatePrompt } from "@space/desktop-shell/updater-system-prompt";
 import type { ParrotLanguage } from "../../shared/ipc";
 import type { Translate } from "./i18n";
 
@@ -28,6 +31,11 @@ export function ParrotUpdateSection({ language }: { language: ParrotLanguage }) 
       autoUpdate={{ checked: updater.state.autoUpdate, onCheckedChange: (on) => void updater.setAutoUpdate(on) }}
     />
   );
+}
+
+export function ParrotSystemUpdatePrompt({ language }: { language: ParrotLanguage }) {
+  const updater = useParrotUpdater();
+  return <SystemUpdatePrompt controls={updater} language={language} appName="Parrot" />;
 }
 
 export function UpdateReadyNotice({ t }: { t: Translate }) {

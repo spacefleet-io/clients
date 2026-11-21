@@ -25,6 +25,7 @@ import {
   type ParrotEditSuggestQuery,
   type ParrotManageTarget,
 } from "@space/parrot-core";
+import { shellPluralForm } from "@space/parrot-core/shell-strings";
 import { deleteFromLibrary, editDetails, getEditValues, previewDelete } from "../lib/library";
 import { ParrotArt } from "../screens/art";
 import { Shimmer } from "../screens/shimmer";
@@ -77,7 +78,7 @@ export const ManageProvider = ({ children }: { children: React.ReactNode }) => {
     (target: ParrotManageTarget, trackCount: number) =>
       target.kind === "track"
         ? t("shell.manage.deleteBody.track")
-        : t(`shell.manage.deleteBody.${target.kind}.${new Intl.PluralRules(i18n.language).select(trackCount) === "one" ? "one" : "other"}`, { count: trackCount }),
+        : t(`shell.manage.deleteBody.${target.kind}.${shellPluralForm(i18n.language, trackCount)}`, { count: trackCount }),
     [t, i18n.language]
   );
 
@@ -94,8 +95,9 @@ export const ManageProvider = ({ children }: { children: React.ReactNode }) => {
         );
       },
       remove: (target, title, onDeleted) => {
-        void previewDelete(target).then(
-          ({ trackCount }) =>
+        // A throw while asking (not only a failed preview) says why rather than leaving the tap without an answer.
+        void previewDelete(target)
+          .then(({ trackCount }) =>
             Alert.alert(t("shell.manage.deleteTitle", { title }), deleteBody(target, trackCount), [
               { text: t("shell.manage.cancel"), style: "cancel" },
               {
@@ -107,9 +109,9 @@ export const ManageProvider = ({ children }: { children: React.ReactNode }) => {
                     (error: unknown) => notify(t("shell.manage.deleteFailed", { reason: errorText(error) }), "error")
                   ),
               },
-            ]),
-          (error: unknown) => notify(t("shell.manage.deleteFailed", { reason: errorText(error) }), "error")
-        );
+            ])
+          )
+          .catch((error: unknown) => notify(t("shell.manage.deleteFailed", { reason: errorText(error) }), "error"));
       },
       notify,
     }),

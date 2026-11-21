@@ -64,7 +64,10 @@ describe("PARROT-MOBILE-PUSHED-PAGE-TOP-001 album, artist and playlist pages sta
       const page = source(`src/screens/${name}Screen.tsx`);
       log("page", { name, back: page.includes("<PageBackButton") });
       expect(page).toContain("<PageBackButton onPress={() => navigation.goBack()} />");
-      expect(page).toMatch(/usePageTop\(\)/);
+      // The artist page (PAR-LOOK-06) opens on its photo edge to edge, up behind the status bar, so its content does not
+      // start below the back row: the hero draws its own round back button under the status bar instead.
+      if (name === "Artist") expect(page).toMatch(/testID="page-back"[\s\S]*?\bback\b/);
+      else expect(page).toMatch(/usePageTop\(\)/);
     }
   });
 });

@@ -10,7 +10,6 @@ import { ListMusic } from "lucide-react-native";
 import { scopeLogger } from "@space/mobile-shell/logger";
 import { MobileRenderBoundary } from "@space/mobile-shell/render-boundary";
 import { TvProfilesView } from "@space/mobile-shell/tv/TvProfiles";
-import { TvSky } from "@space/mobile-shell/tv/TvSky";
 import { TvTopBar } from "@space/mobile-shell/tv/TvTopBar";
 import { setCurrentTvSection, subscribeTvSectionRequest, type TvSectionId } from "@space/mobile-shell/tv/tvSection";
 import { useTvMenuKeyHold } from "@space/mobile-shell/tv/useTvMenuKey";
@@ -26,6 +25,7 @@ import { TvLibrarySection } from "./TvLibrarySection";
 import { TvLyricsPage } from "./TvLyricsPage";
 import { TvNowPlayingPage } from "./TvNowPlayingPage";
 import { TvPlaylistsSection } from "./TvPlaylistsSection";
+import { TvPlayerSky } from "./TvPlayerSky";
 import { TvQueuePage } from "./TvQueuePage";
 import { TvSearchSection } from "./TvSearchSection";
 import { TvSettingsSection } from "./TvSettingsSection";
@@ -185,7 +185,7 @@ export const TvMainShell = () => {
 
   return (
     <TvPagesContext.Provider value={pages}>
-      <TvSky active>
+      <TvPlayerSky>
         {/* Under a full-screen page the bar and its layers stay mounted but hidden (out of the remote's reach), so Back
             returns to the same card and scroll position. */}
         <View style={[styles.shell, fullScreen && styles.hidden]} testID="parrot-tv-shell">
@@ -216,7 +216,7 @@ export const TvMainShell = () => {
             </MobileRenderBoundary>
           </View>
         ))}
-      </TvSky>
+      </TvPlayerSky>
     </TvPagesContext.Provider>
   );
 };

@@ -7,18 +7,21 @@
  * @req UX-WAIT-02[parrot]
  * @req UX-WAIT-04[parrot]
  * @req UX-PHONE-12[parrot]
+ * @req UX-LIB-04[parrot]
  * @why The approved phone design: a bottom tab bar (the fleet's shared one) with Home, Library, Playlists and
  *   Settings over Parrot's sky, and the bar's centre Search button between Library and Playlists that opens the search
  *   card and is not a page (Chris, 2026-11-19: the swipe goes from Library straight to Playlists); the floating mini
  *   player sits above the tab bar; the Library has no page title (the tab bar names it, PAR-NAV-04) and no search of its
- *   own (the bar's button replaces it), no add-music button (the phone only plays), and Albums / Artists / Songs chips (playlists have
- *   their own tab) over a line with the sort and the count; and the player's header reads "Playing from album" over
+ *   own (the bar's button replaces it), no add-music button (the phone only plays), and one row with the Albums /
+ *   Artists / Songs switch (playlists have their own tab), Filter with its count badge and Sort (UX-LIB-04, Chris
+ *   2026-11-21), the counts under it; and the player's header reads "Playing from album" over
  *   the album's name, with the time left as "−m:ss". Screens are called as functions against a mocked React Native,
  *   with translation keys standing for the texts. Chris, 2026-11-18: the empty library showed before the library had
  *   loaded; the Library tab shows the app's loading screen, "Loading library…", until its album list is read.
  */
 import React from "react";
 import { describe, expect, it, vi } from "vitest";
+import type * as ParrotCore from "@space/parrot-core";
 
 const state = vi.hoisted(() => ({
   options: [] as Record<string, unknown>[],
@@ -27,7 +30,20 @@ const state = vi.hoisted(() => ({
   libraryStatus: "ready" as string,
   /** What every library query answers (the real hook's shape): one album, read for the open library version. */
   query: { data: [{ id: "al-lo", title: "Low Orbit", artistName: "Nova", year: 2020, kind: "album", trackCount: 9, addedAt: 1 }] as unknown[] | null, error: null, loading: false, answered: true },
+  /** The Albums tab's filters the library opens with; null keeps the defaults (none on). */
+  albumFilters: null as null | Record<string, unknown>,
 }));
+// The library's remembered view (filters on or off) comes from the defaults: a test can turn Albums' filters on.
+vi.mock("@space/parrot-core", async () => {
+  const actual = await vi.importActual<typeof ParrotCore>("@space/parrot-core");
+  return {
+    ...actual,
+    defaultParrotLibraryPrefs: () => {
+      const prefs = actual.defaultParrotLibraryPrefs();
+      return state.albumFilters ? { ...prefs, albums: { ...prefs.albums, filters: state.albumFilters } } : prefs;
+    },
+  };
+});
 const log = (step: string, detail: unknown) => console.info(`[PARROT-MOBILE-LIBRARY-TABS-001] ${step}`, JSON.stringify(detail));
 
 vi.mock("react", async () => {
@@ -37,7 +53,9 @@ vi.mock("react", async () => {
   const useState = <T,>(initial: T | (() => T)) => [typeof initial === "function" ? (initial as () => T)() : initial, () => undefined];
   const useCallback = <T,>(fn: T) => fn;
   const useMemo = <T,>(fn: () => T) => fn();
-  const hooks = { useRef, useEffect, useLayoutEffect: useEffect, useState, useCallback, useMemo };
+  // No provider above a screen called as a function: a context reads its default (the library's listening history).
+  const useContext = <T,>(context: { _currentValue: T }) => context._currentValue;
+  const hooks = { useRef, useEffect, useLayoutEffect: useEffect, useState, useCallback, useMemo, useContext };
   return { ...actual, default: { ...actual, ...hooks }, ...hooks };
 });
 vi.mock("react-native", () => ({
@@ -71,7 +89,7 @@ vi.mock("lucide-react-native", () =>
 );
 vi.mock("@react-navigation/native", () => ({ useNavigation: () => ({ navigate: () => undefined }), useIsFocused: () => true }));
 vi.mock("react-native-safe-area-context", () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) }));
-vi.mock("@space/mobile-shell/components", () => ({ MobileTabPager: "MobileTabPager", SkyCover: "SkyCover", useSkyScroll: () => ({}), MobileFounderNoticeHost: "MobileFounderNoticeHost", MobileLibraryLoading: "MobileLibraryLoading" }));
+vi.mock("@space/mobile-shell/components", () => ({ MobileTabPager: "MobileTabPager", MobileRailScroll: "ScrollView", SkyCover: "SkyCover", useSkyScroll: () => ({}), MobileFounderNoticeHost: "MobileFounderNoticeHost", MobileLibraryLoading: "MobileLibraryLoading" }));
 vi.mock("../src/screens/EmptyLibrary", () => ({ EmptyLibrary: "EmptyLibrary" }));
 vi.mock("../src/screens/sky", () => ({ ParrotSky: "ParrotSky", PLAYER_TINT: "tint" }));
 vi.mock("../src/screens/HomeScreen", () => ({ HomeScreen: "HomeScreen" }));
@@ -102,10 +120,10 @@ vi.mock("../src/screens/NowPlayingBar", () => ({ NowPlayingBar: "NowPlayingBar" 
 vi.mock("../src/screens/kept", () => ({ useKept: () => ({ entry: () => undefined, state: () => "off", holdsSong: () => false }), useOfflineReach: () => null }));
 
 import { MAIN_TABS, MainScreen } from "../src/screens/MainScreen";
-import { CountLine, LIBRARY_SORT, LibraryScreen } from "../src/screens/LibraryScreen";
+import { LibraryScreen } from "../src/screens/LibraryScreen";
 import { PlayerScreen, remainingLabel } from "../src/screens/PlayerScreen";
 import { nowPlayingTitles } from "../src/lib/nowPlaying";
-import { Chips, IconButton } from "../src/screens/ui";
+import { MobileLibraryHeader, MobileLibrarySegmented } from "@space/mobile-shell/library-row";
 
 type Element = { type: unknown; props: Record<string, unknown> & { children?: unknown } };
 const all = (node: unknown, match: (el: Element) => boolean, out: Element[] = []): Element[] => {
@@ -184,48 +202,49 @@ describe("the Library tab", () => {
     expect(empty.type).toBe("EmptyLibrary");
   });
 
-  it("has no page title and no search of its own: Albums / Artists / Songs chips at the top, Albums first, and no Kept offline chip", () => {
+  it("@req UX-LIB-04[parrot] has no page title and no search of its own: one row with the Albums / Artists / Songs switch, Filter and Sort, Albums first", () => {
     const library = LibraryScreen({ active: true, viewRequest: null }) as unknown as Element;
     const [head, ...rest] = [library.props.children].flat().filter(Boolean) as Element[];
     const headParts = [head!.props.children].flat().filter(Boolean) as Element[];
     log("head", { parts: headParts.map((el) => el.type), headings: all(library, (el) => el.props?.accessibilityRole === "header").length });
     expect(all(library, (el) => el.props?.accessibilityRole === "header")).toHaveLength(0);
-    // The first row is the chips (in their side-scroll): nothing above them, no search beside them (UX-PHONE-12).
-    expect(headParts.map((el) => el.type)).toEqual(["ScrollView"]);
-    expect(all(headParts[0], (el) => el.type === Chips)).toHaveLength(1);
-    expect(all(library, (el) => el.type === IconButton)).toHaveLength(0);
+    // The header is the shared phone row (layout A): nothing above it, no search beside it (UX-PHONE-12).
+    expect(headParts.map((el) => el.type)).toEqual([MobileLibraryHeader]);
     expect(all(library, (el) => el.type === "TextInput")).toHaveLength(0);
     expect(rest.length).toBeGreaterThan(0);
-    const chips = all(library, (el) => el.type === Chips)[0]!;
-    log("chips", chips.props.options);
-    expect(chips.props.value).toBe("albums");
-    expect(chips.props.options).toEqual([
-      { id: "albums", label: "parrot.library.view.albums" },
-      { id: "artists", label: "parrot.library.view.artists" },
-      { id: "songs", label: "parrot.library.view.songs" },
+    const header = headParts[0]!.props as Parameters<typeof MobileLibraryHeader>[0];
+    const switcher = header.switcher as unknown as Element;
+    log("header", { switcher: switcher.props, filterCount: header.filterCount, counts: header.counts, labels: header.labels });
+    expect(switcher.type).toBe(MobileLibrarySegmented);
+    expect(switcher.props.value).toBe("albums");
+    expect(switcher.props.options).toEqual([
+      { id: "albums", label: "parrot.library.view.albums", testID: "library-tab-albums" },
+      { id: "artists", label: "parrot.library.view.artists", testID: "library-tab-artists" },
+      { id: "songs", label: "parrot.library.view.songs", testID: "library-tab-songs" },
     ]);
-    const rendered = Chips(chips.props as never) as unknown as Element;
-    const selected = all(rendered, (el) => el.type === "Pressable").map((el) => (el.props.accessibilityState as { selected: boolean }).selected);
-    expect(selected).toEqual([true, false, false]);
+    expect(header.filterCount).toBe(0);
+    expect(header.labels).toMatchObject({ filter: "shell.library.filter", sort: "shell.library.sort", clear: "shell.library.clearFilters" });
+    expect(header.labels.filterActive(2)).toBe("parrot.library.filterOn#2");
     expect(all(library, (el) => el.props?.testID === "library-chip-kept" || el.props?.testID === "library-add")).toEqual([]);
   });
 
-  it("says how each view is sorted (with the sort mark) and how many it holds", () => {
-    for (const view of ["albums", "artists", "songs"] as const) {
-      const line = CountLine({ view, count: 248 }) as unknown as Element;
-      log("count", { view, texts: texts(line) });
-      expect(texts(line)).toEqual([LIBRARY_SORT[view], `parrot.library.${view}#248`]);
-      expect(all(line, (el) => el.type === "Icon:ArrowUpDown")).toHaveLength(1);
-    }
-    expect(texts(CountLine({ view: "songs", count: null }))).toEqual([LIBRARY_SORT.songs]);
+  it("@req UX-LIB-04[parrot] with filters on, the Filter button gets their count for its badge and the counts say how many are shown", () => {
+    state.albumFilters = { genre: "Rock", lossless: true };
+    const library = LibraryScreen({ active: true, viewRequest: null }) as unknown as Element;
+    state.albumFilters = null;
+    const header = all(library, (el) => el.type === MobileLibraryHeader)[0]!.props as Parameters<typeof MobileLibraryHeader>[0];
+    log("filters on", { filterCount: header.filterCount, counts: header.counts });
+    expect(header.filterCount).toBe(2);
+    expect(header.counts).toHaveLength(1);
+    expect(header.counts[0]!.text).toContain("shell.library.shownOf");
   });
 
   // @req PAR-HOME-01[parrot]
   it("opens on the list Home's \"See all\" asked for: Artists for Your artists", () => {
     const library = LibraryScreen({ active: true, viewRequest: { view: "artists" } }) as unknown as Element;
-    const chips = all(library, (el) => el.type === Chips)[0]!;
-    log("see-all-artists", { value: chips.props.value });
-    expect(chips.props.value).toBe("artists");
+    const switcher = all(library, (el) => el.type === MobileLibraryHeader)[0]!.props.switcher as Element;
+    log("see-all-artists", { value: switcher.props.value });
+    expect(switcher.props.value).toBe("artists");
   });
 });
 

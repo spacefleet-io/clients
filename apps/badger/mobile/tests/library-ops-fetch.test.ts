@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { LibraryOpEntry } from "@space/shared/contracts/library";
-import { fetchOpPayloads } from "@space/mobile-shell/libraryOps";
+import { fetchOpPayloads, OP_OPEN_LARGE_MIN_BASE64 } from "@space/mobile-shell/libraryOps";
 
 /**
  * @test-id MOBILE-OPS-FETCH-001
@@ -248,6 +248,45 @@ describe("fetchOpPayloads", () => {
       expect(calls).toEqual(["k/1", "k/2", "k/3", "k/4", "k/5"]);
     } catch (err) {
       dumpOpsFetchSnapshot("batch-order-mismatch", { download, decrypt, decode, downloaded: calls, result });
+      throw err;
+    }
+  });
+
+  it("opens a large inline change with openLarge (off the JS thread) and keeps small ones in-thread", async () => {
+    /**
+     * @test-id MOBILE-OPS-FETCH-OPEN-LARGE-001
+     * @bugfix @regression-proof LIB-SYNC-14: one 2.8 MB change held the phone's JS thread ~12 s (base64, GCM, fflate,
+     *   UTF-8 all in Hermes, one uninterruptible piece; slicing between changes cannot split it). Large inline
+     *   payloads must go to the injected native opener untouched (still base64), small ones keep the JSI path.
+     */
+    const events: Array<{ event: string; data: Record<string, unknown> }> = [];
+    const largeBase64 = "A".repeat(OP_OPEN_LARGE_MIN_BASE64);
+    const ops = [
+      makeEntry({ opId: "large", version: 1, payloadCiphertext: largeBase64 }),
+      makeEntry({ opId: "small", version: 2, payloadCiphertext: "AQID" }),
+    ];
+    const download = vi.fn(async () => new Uint8Array([0xff]));
+    const decrypt = vi.fn(async (bytes: Uint8Array) => bytes);
+    const decode = vi.fn(() => JSON.stringify({ type: "small" }));
+    const openLarge = vi.fn(async () => JSON.stringify({ type: "large" }));
+    const log = vi.fn((event: string, data: Record<string, unknown>) => {
+      events.push({ event, data });
+    });
+
+    const result = await fetchOpPayloads(ops, { download, decrypt, decode, openLarge, log });
+    console.info(
+      `[library-ops-fetch-integration:open-large] result=${JSON.stringify(result)} openLarge.calls=${openLarge.mock.calls.length} decrypt.calls=${decrypt.mock.calls.length} items=${JSON.stringify(events.map((e) => e.data))}`
+    );
+
+    try {
+      expect(result).toEqual([{ type: "large" }, { type: "small" }]);
+      expect(openLarge).toHaveBeenCalledTimes(1);
+      expect(openLarge.mock.calls[0]).toEqual([largeBase64]);
+      expect(decrypt).toHaveBeenCalledTimes(1);
+      expect(download).not.toHaveBeenCalled();
+      expect(events.filter((e) => e.event === "library.ops.item").map((e) => e.data.source)).toEqual(["native", "inline"]);
+    } catch (err) {
+      dumpOpsFetchSnapshot("open-large-mismatch", { download, decrypt, decode, events, result });
       throw err;
     }
   });
