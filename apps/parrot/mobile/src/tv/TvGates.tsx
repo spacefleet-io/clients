@@ -16,9 +16,6 @@ import { LibraryKeyScreen } from "../screens/LibraryKeyScreen";
 import { LoginScreen } from "../screens/LoginScreen";
 import { useSession } from "../state/session";
 import { TvMainShell } from "./TvMainShell";
-import { HistoryProvider } from "../state/history";
-import { ManageProvider } from "../state/manage";
-import { PlaylistEditorProvider } from "../state/playlistEditor";
 import { useTvPairing } from "./useTvPairing";
 
 const log = scopeLogger("parrot.tv.start");
@@ -71,7 +68,6 @@ export const TvGates = ({ setup, save, spinner }: TvGatesProps) => {
 /** "Who's listening?" at every start of the TV app when the account has more than one profile (PAR-TV-02, UX-PROF-02). */
 const TvProfileGate = ({ spinner }: { spinner: ReactNode }) => {
   const profiles = useProfiles();
-  const { session } = useSession();
   const activeId = profiles.profiles.find((profile) => profile.id === profiles.activeId)?.id ?? null;
   // A switch stops the song of the profile before, as on the phone.
   const previous = useRef(activeId);
@@ -92,17 +88,5 @@ const TvProfileGate = ({ spinner }: { spinner: ReactNode }) => {
       />
     );
   }
-  // The phone's library providers (App.tsx's `Library`): the profile's listening history, the album and artist edits,
-  // and the playlists with the heart (`PlaylistEditorProvider` reads `useManage`, so it sits inside `ManageProvider`).
-  const active = profiles.profiles.find((profile) => profile.id === activeId) ?? null;
-  const owner = { userId: session?.user.id ?? "", profileId: active?.id ?? "main", isMain: active?.isMain ?? true };
-  return (
-    <HistoryProvider owner={owner}>
-      <ManageProvider>
-        <PlaylistEditorProvider>
-          <TvMainShell />
-        </PlaylistEditorProvider>
-      </ManageProvider>
-    </HistoryProvider>
-  );
+  return <TvMainShell />;
 };

@@ -4,7 +4,6 @@
  * @req PAR-TV-01[parrot-tv]
  * @req PAR-TV-02[parrot-tv]
  * @req PAR-TV-10[parrot-tv]
- * @req PAR-TV-12[parrot-tv]
  * @why The Parrot TV app is the phone app showing its TV screens (PAR-TV-01): on a TV the start goes language, the
  *   sign-in by pairing (the family's TV sign-in with Parrot's pairing, the phone's password form behind "Use email and
  *   password instead"), the key only after a password sign-in, then "Who's listening?" at every start, then the TV shell
@@ -13,7 +12,6 @@
  *   banner, phone-only portrait lock, the separate ParrotTV target and scheme) that makes the same app a TV app.
  * @covers apps/parrot/mobile/src/tv/TvGates.tsx
  * @covers apps/parrot/mobile/src/tv/TvMainShell.tsx
- * @covers apps/parrot/mobile/src/tv/tvPages.tsx
  */
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
@@ -21,8 +19,6 @@ import React from "react";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { PhoneSetupProgress } from "@space/mobile-shell/setup";
-import { TvFocusGuide } from "@space/mobile-shell/tv/TvFocusGuide";
-import type { TvPages } from "../src/tv/tvPages";
 
 const h = vi.hoisted(() => ({
   session: null as { token: string; user: { id: string } } | null,
@@ -32,18 +28,11 @@ const h = vi.hoisted(() => ({
   menuHolds: [] as Array<[string, boolean]>,
   languages: [] as string[],
   stops: 0,
-  remoteKeys: 0,
-  /** The shell's keep-awake asks, one entry per change (`useTvKeepAwake`). */
-  awake: [] as boolean[],
-  owner: null as unknown,
-  pages: null as TvPages | null,
-  seeAll: null as ((albumSort?: "recent") => void) | null,
-  focusRequests: [] as string[],
 }));
 
 vi.mock("react-native", () => ({
   Platform: { OS: "android", isTV: true },
-  StyleSheet: { create: <T,>(styles: T) => styles, absoluteFill: {} },
+  StyleSheet: { create: <T,>(styles: T) => styles },
   View: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
   BackHandler: {
     addEventListener: (_event: string, handler: () => boolean) => {
@@ -69,46 +58,6 @@ vi.mock("../src/screens/LibraryKeyScreen", () => ({ LibraryKeyScreen: () => null
 vi.mock("../src/screens/LoginScreen", () => ({ LoginScreen: () => null }));
 vi.mock("../src/state/session", () => ({ useSession: () => ({ session: h.session, libraryKey: h.libraryKey }) }));
 vi.mock("../src/tv/useTvPairing", () => ({ useTvPairing: () => ({ state: { status: "idle" }, restart: () => undefined }) }));
-vi.mock("@space/mobile-shell/render-boundary", () => ({ MobileRenderBoundary: ({ children }: { children?: React.ReactNode }) => <>{children}</> }));
-vi.mock("../src/tv/useTvRemoteKeys", () => ({ useTvRemoteKeys: () => void (h.remoteKeys += 1) }));
-vi.mock("../src/tv/useTvKeepAwake", () => ({ useTvKeepAwake: (on: boolean) => void (h.awake.at(-1) === on || h.awake.push(on)) }));
-vi.mock("../src/state/usePlay", () => ({ usePlayWith: () => ({}) }));
-vi.mock("../src/state/history", () => ({
-  HistoryProvider: ({ owner, children }: { owner: unknown; children?: React.ReactNode }) => {
-    h.owner = owner;
-    return <>{children}</>;
-  },
-}));
-vi.mock("../src/state/manage", () => ({ ManageProvider: ({ children }: { children?: React.ReactNode }) => <>{children}</> }));
-vi.mock("../src/state/playlistEditor", () => ({ PlaylistEditorProvider: ({ children }: { children?: React.ReactNode }) => <>{children}</> }));
-// The sections and pages are tried on a TV; here each is a stand-in, Home handing the test the shell's page stack.
-vi.mock("../src/tv/TvHomeSection", async () => {
-  // A hoisted mock factory runs before the file's imports: it reaches the page context through import().
-  const { useTvPages } = await import("../src/tv/tvPages");
-  return {
-    TvHomeSection: function TvHomeSection({ onSeeAll }: { onSeeAll: () => void }) {
-      h.pages = useTvPages();
-      h.seeAll = onSeeAll;
-      return null;
-    },
-  };
-});
-vi.mock("../src/tv/TvLibrarySection", () => ({ TvLibrarySection: function TvLibrarySection() { return null; } }));
-vi.mock("../src/tv/TvPlaylistsSection", () => ({ TvPlaylistsSection: function TvPlaylistsSection() { return null; } }));
-vi.mock("../src/tv/TvSearchSection", () => ({ TvSearchSection: function TvSearchSection() { return null; } }));
-vi.mock("../src/tv/TvSettingsSection", () => ({ TvSettingsSection: function TvSettingsSection() { return null; } }));
-vi.mock("../src/tv/TvAlbumPage", () => ({ TvAlbumPage: function TvAlbumPage(_: unknown) { return null; } }));
-vi.mock("../src/tv/TvArtistPage", () => ({ TvArtistPage: function TvArtistPage(_: unknown) { return null; } }));
-vi.mock("../src/tv/TvNowPlayingPage", () => ({ TvNowPlayingPage: function TvNowPlayingPage() { return null; } }));
-vi.mock("../src/tv/TvLyricsPage", () => ({ TvLyricsPage: function TvLyricsPage() { return null; } }));
-vi.mock("../src/tv/TvQueuePage", () => ({ TvQueuePage: function TvQueuePage() { return null; } }));
-// The shell's focus guides: each hands the test its native view, whose focus requests it records by the guide's testID.
-vi.mock("@space/mobile-shell/tv/TvFocusGuide", () => ({
-  TvFocusGuide: function TvFocusGuide({ children, ref, testID }: { children?: React.ReactNode; enabled?: boolean; ref?: (view: unknown) => void; testID?: string }) {
-    ref?.({ requestTVFocus: () => void h.focusRequests.push(testID ?? "") });
-    return <>{children}</>;
-  },
-}));
 
 import { TvLanguageView } from "@space/mobile-shell/tv/TvLanguage";
 import { TvProfilesView } from "@space/mobile-shell/tv/TvProfiles";
@@ -119,13 +68,6 @@ import { LoginScreen } from "../src/screens/LoginScreen";
 import { TvGates, tvStartScreen } from "../src/tv/TvGates";
 import { TvMainShell } from "../src/tv/TvMainShell";
 import { useTvPairing } from "../src/tv/useTvPairing";
-import { TvAlbumPage } from "../src/tv/TvAlbumPage";
-import { TvArtistPage } from "../src/tv/TvArtistPage";
-import { TvHomeSection } from "../src/tv/TvHomeSection";
-import { TvLibrarySection } from "../src/tv/TvLibrarySection";
-import { TvNowPlayingPage } from "../src/tv/TvNowPlayingPage";
-import { TvPlaylistsSection } from "../src/tv/TvPlaylistsSection";
-import { TvQueuePage } from "../src/tv/TvQueuePage";
 
 const SUITE = "[PARROT-TV-START-001]";
 const mobile = path.resolve(import.meta.dirname, "..");
@@ -147,12 +89,6 @@ const props = <P,>(type: React.ComponentType<P> | React.ExoticComponent<P>): P =
   return found;
 };
 const has = (type: React.ElementType) => renderer!.root.findAllByType(type).length > 0;
-/** Mounted and in a layer the shell shows: a layer kept under the topmost one has its focus guide disabled (hidden). */
-const shown = (type: React.ElementType) =>
-  renderer!.root.findAllByType(type).some((node) => {
-    for (let at = node.parent; at; at = at.parent) if (at.type === TvFocusGuide && at.props.enabled === false) return false;
-    return true;
-  });
 
 beforeEach(() => {
   h.session = null;
@@ -162,17 +98,6 @@ beforeEach(() => {
   h.menuHolds = [];
   h.languages = [];
   h.stops = 0;
-  h.remoteKeys = 0;
-  h.awake = [];
-  h.owner = null;
-  h.pages = null;
-  h.seeAll = null;
-  h.focusRequests = [];
-  vi.stubGlobal("requestAnimationFrame", (run: () => void) => {
-    run();
-    return 0;
-  });
-  vi.stubGlobal("cancelAnimationFrame", () => undefined);
 });
 afterEach(async () => {
   await act(async () => renderer?.unmount());
@@ -237,8 +162,6 @@ describe("@req PAR-TV-02[parrot-tv] Parrot TV start: language, pairing, key, Who
     h.profiles = { status: "ready", needsChoice: false, profiles: [{ id: "a" }, { id: "b" }], activeId: "b" };
     await act(async () => renderer!.update(<TvGates setup={DONE} save={async () => undefined} spinner={null} />));
     expect(has(TvMainShell)).toBe(true);
-    // The shell gets the phone's library providers, with the picked profile's listening history.
-    expect(h.owner).toEqual({ userId: "u1", profileId: "b", isMain: true });
   });
 
   it("the TV asks at every start; the phone keeps its pick (session.tsx)", () => {
@@ -247,102 +170,24 @@ describe("@req PAR-TV-02[parrot-tv] Parrot TV start: language, pairing, key, Who
   });
 });
 
-describe("@req PAR-TV-10[parrot-tv] Parrot TV shell: the top bar, the page stack, Back", () => {
-  const back = async () => {
-    let handled = false;
-    await act(async () => void (handled = h.backHandlers.at(-1)!()));
-    return handled;
-  };
-
+describe("@req PAR-TV-10[parrot-tv] Parrot TV shell: the top bar, Back to Home", () => {
   it("shows the family's top bar with Parrot's mark; Back on another tab returns Home and holds Menu only there", async () => {
     await mount(<TvMainShell />);
     const bar = props(TvTopBar);
     expect(bar.active).toBe("home");
     expect(bar.brandIcon).toBeTruthy();
-    expect(h.remoteKeys).toBeGreaterThan(0);
-    expect(h.menuHolds.at(-1)).toEqual(["tv-tab", false]);
-    // On Home with no page open, Back is the system's: the app leaves.
-    expect(await back()).toBe(false);
+    expect(h.backHandlers).toHaveLength(0);
     await act(async () => bar.onSelect("library"));
     expect(props(TvTopBar).active).toBe("library");
-    expect(has(TvLibrarySection)).toBe(true);
+    expect(h.backHandlers).toHaveLength(1);
     expect(h.menuHolds.at(-1)).toEqual(["tv-tab", true]);
-    const handled = await back();
-    console.info(`${SUITE} back`, JSON.stringify({ handled, active: props(TvTopBar).active, holds: h.menuHolds.slice(-2) }));
+    let handled = false;
+    await act(async () => void (handled = h.backHandlers[0]!()));
+    console.info(`${SUITE} back`, JSON.stringify({ handled, active: props(TvTopBar).active, holds: h.menuHolds }));
     expect(handled).toBe(true);
     expect(props(TvTopBar).active).toBe("home");
+    expect(h.backHandlers).toHaveLength(0);
     expect(h.menuHolds.at(-1)).toEqual(["tv-tab", false]);
-    // Home's "See all" opens the Library: the albums by artist, or newest added first from "Recently added" (PAR-HOME-01).
-    await act(async () => h.seeAll!());
-    expect(props(TvTopBar).active).toBe("library");
-    expect(props(TvLibrarySection).albumSort).toBeNull();
-    await act(async () => void props(TvTopBar).onSelect("home"));
-    await act(async () => h.seeAll!("recent"));
-    expect(props(TvTopBar).active).toBe("library");
-    expect(props(TvLibrarySection).albumSort).toBe("recent");
-    // The Library tab picked on the bar lists the albums by artist again.
-    await act(async () => void props(TvTopBar).onSelect("home"));
-    await act(async () => void props(TvTopBar).onSelect("library"));
-    console.info(`${SUITE} see_all`, JSON.stringify({ albumSort: props(TvLibrarySection).albumSort }));
-    expect(props(TvLibrarySection).albumSort).toBeNull();
-  });
-
-  it("album and artist pages open under the bar, Now playing over it; Back closes the topmost page first and refocuses what opened it", async () => {
-    await mount(<TvMainShell />);
-    await act(async () => h.pages!.push({ kind: "artist", artistId: "r1", name: "Linkin Park" }));
-    expect(props(TvArtistPage)).toMatchObject({ artistId: "r1", name: "Linkin Park" });
-    // Home stays mounted under the artist page, hidden, so Back finds its card and scroll where they were.
-    expect(has(TvHomeSection)).toBe(true);
-    expect(shown(TvHomeSection)).toBe(false);
-    expect(h.menuHolds.at(-1)).toEqual(["tv-tab", true]);
-    await act(async () => h.pages!.push({ kind: "album", albumId: "a1" }));
-    expect(props(TvAlbumPage).source).toEqual({ kind: "album", albumId: "a1" });
-    expect(shown(TvArtistPage)).toBe(false);
-    await act(async () => h.pages!.push({ kind: "nowPlaying" }));
-    // Now playing fills the screen; the album page stays mounted under it (hidden), so Back returns to the same row.
-    expect(has(TvNowPlayingPage)).toBe(true);
-    expect(has(TvAlbumPage)).toBe(true);
-    await act(async () => h.pages!.push({ kind: "queue" }));
-    // PAR-TV-12: the TV stays awake under Now playing only; Up next over it lets the screensaver start.
-    expect(h.awake).toEqual([false, true, false]);
-    // Up next fills the screen over Now playing, which stays mounted under it, hidden: as it shows again it hands the
-    // focus back to its Up next button (TvNowPlayingPage `shown`).
-    expect(has(TvQueuePage)).toBe(true);
-    expect(props(TvNowPlayingPage).shown).toBe(false);
-    // Each page opened under the bar is handed the focus (its own first focus); a full-screen page takes its own.
-    expect(h.focusRequests).toEqual(["parrot-tv-page-artist", "parrot-tv-page-album"]);
-    h.focusRequests = [];
-    const trail: string[] = [];
-    for (const expected of ["nowPlaying", "album", "artist", "home"]) {
-      expect(await back()).toBe(true);
-      const now = has(TvNowPlayingPage) && props(TvNowPlayingPage).shown ? "nowPlaying" : shown(TvAlbumPage) ? "album" : shown(TvArtistPage) ? "artist" : shown(TvHomeSection) ? "home" : "?";
-      trail.push(now);
-      expect(now).toBe(expected);
-    }
-    console.info(`${SUITE} back through pages`, JSON.stringify({ trail, focusRequests: h.focusRequests }));
-    // Now playing takes its own focus back; each layer under the bar gets the focus back from its guide as it shows again.
-    expect(h.focusRequests).toEqual(["parrot-tv-page-album", "parrot-tv-page-artist", "parrot-tv-section-home"]);
-    // Back to Now playing keeps the TV awake again, and leaving it lets the screensaver start.
-    expect(h.awake).toEqual([false, true, false, true, false]);
-    expect(await back()).toBe(false);
-  });
-
-  it("a tab picked on the bar closes the pages over the section before", async () => {
-    await mount(<TvMainShell />);
-    await act(async () => h.pages!.push({ kind: "album", albumId: "a1" }));
-    await act(async () => props(TvTopBar).onSelect("playlists"));
-    expect(has(TvAlbumPage)).toBe(false);
-    expect(has(TvPlaylistsSection)).toBe(true);
-  });
-
-  it("Settings opens Who's listening? in the app, closed by a pick or Done", async () => {
-    await mount(<TvMainShell />);
-    await act(async () => h.pages!.push({ kind: "profiles", mode: "manage" }));
-    const view = props(TvProfilesView);
-    expect(view).toMatchObject({ startMode: "manage", inApp: true, audience: "listening", store: { name: "store" }, moves: { name: "moves" } });
-    await act(async () => view.onClose!());
-    expect(has(TvProfilesView)).toBe(false);
-    expect(has(TvHomeSection)).toBe(true);
   });
 });
 

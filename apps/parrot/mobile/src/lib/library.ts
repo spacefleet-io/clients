@@ -36,7 +36,6 @@ import {
   type ParrotEditCover,
   type ParrotEditTarget,
   type ParrotEditValues,
-  type ParrotSuggestLibrary,
   type ParrotLibraryQuery,
   type ParrotManageTarget,
   fetchParrotLyrics,
@@ -58,6 +57,7 @@ import {
   runParrotAutoArtistPictures,
   type ParrotAutoArtistPicturesReport,
   type ParrotAutoLyricsReport,
+  fetchParrotMetadata,
   PLAYLIST_TRACKS_SQL,
   PLAYLISTS_SQL,
   toParrotLyrics,
@@ -537,31 +537,32 @@ export const deleteFromLibrary = (target: ParrotManageTarget): Promise<number> =
     }
   });
 
-/**
- * The library as the edit dialog's autocomplete ranks it (PAR-META-18): every artist, album and song with the names it
- * is matched on. Read once when the dialog opens (and again after the library changed), never per keystroke.
- */
-export const readSuggestLibrary = async (): Promise<ParrotSuggestLibrary> => {
-  const [artists, albums, tracks] = await Promise.all([
-    query<ParrotSuggestLibrary["artists"][number]>("SELECT id, name FROM artists"),
-    query<ParrotSuggestLibrary["albums"][number]>(
-      `SELECT al.id AS id, al.title AS title, COALESCE(ar.name, '') AS artist, al.year AS year, al.kind AS kind, al.music_id AS musicId
-         FROM albums al LEFT JOIN artists ar ON ar.id = al.album_artist_id`
-    ),
-    query<ParrotSuggestLibrary["tracks"][number]>(
-      `SELECT t.id AS id, t.title AS title, COALESCE(ar.name, '') AS artist, t.album_id AS albumId, al.title AS album,
-              t.number AS number, t.disc AS disc, COALESCE(t.year, al.year) AS year
-         FROM tracks t LEFT JOIN artists ar ON ar.id = t.artist_id LEFT JOIN albums al ON al.id = t.album_id`
-    ),
-  ]);
-  log("parrot.library.suggest_read", { artists: artists.length, albums: albums.length, tracks: tracks.length });
-  return { artists, albums, tracks };
-};
+/** What "Look it up again" found (PAR-META-18): the lookup's details beside the library's, or none. */
+export type FetchedMetadata =
+  | { outcome: "none" }
+  | { outcome: "found"; found: NonNullable<ParrotEditValues>; current: NonNullable<ParrotEditValues>; cover: ParrotEditCover | null };
 
-/** The cover of an album picked in the edit dialog's autocomplete, by its lookup id, for review; nothing is saved. */
-export const fetchSuggestionCover = async (coverId: string, client: Pick<MetadataClient, "musicCover">): Promise<ParrotEditCover | null> => {
-  const { cover } = await client.musicCover(coverId, 500);
-  return cover ? { kind: "file", bytes: new Uint8Array(Buffer.from(cover.base64, "base64")), mime: cover.mime } : null;
+/**
+ * PAR-META-18: asks our music library (through the anonymous lookup) about one song or album; for an album also its
+ * cover. Nothing is saved: the edit form opens with the answer for review. A failed lookup rejects.
+ */
+export const fetchMetadata = async (target: { kind: "track" | "album"; id: string }, client: Pick<MetadataClient, "musicRecordings" | "musicAlbums" | "musicCover">): Promise<FetchedMetadata> => {
+  const found = await fetchParrotMetadata({
+    query: libraryQuery,
+    target,
+    recordings: (question) => client.musicRecordings(question),
+    albums: (question) => client.musicAlbums(question),
+  });
+  log("metadata.fetch", { target, kind: found.kind });
+  if (found.kind === "missing" || found.kind === "none") return { outcome: "none" };
+  if (found.kind === "track") return { outcome: "found", found: { kind: "track", edit: found.found }, current: { kind: "track", edit: found.current }, cover: null };
+  const { cover } = found.coverId ? await client.musicCover(found.coverId, 500) : { cover: null };
+  return {
+    outcome: "found",
+    found: { kind: "album", edit: found.found },
+    current: { kind: "album", edit: found.current },
+    cover: cover ? { kind: "file", bytes: new Uint8Array(Buffer.from(cover.base64, "base64")), mime: cover.mime } : null,
+  };
 };
 
 /** The details the edit form opens with (PAR-META-16): a song's or an album's current values; null when it is gone. */

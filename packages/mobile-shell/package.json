@@ -74,7 +74,6 @@
     "./tv/tokens": "./src/tv/tokens.ts",
     "./tv/tvScale": "./src/tv/tvScale.ts",
     "./tv/tvViewInstance": "./src/tv/tvViewInstance.ts",
-    "./tv/TvFocusGuide": "./src/tv/TvFocusGuide.ts",
     "./tv/layout": "./src/tv/layout.ts",
     "./tv/focusOrder": "./src/tv/focusOrder.ts",
     "./tv/menuKey": "./src/tv/menuKey.ts",

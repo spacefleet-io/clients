@@ -148,9 +148,8 @@ describe("Parrot desktop shell", () => {
       "parrot.history.u1",
       JSON.stringify({ version: 1, albums: [{ albumId: "alb-1", trackId: "t2", positionMs: 78_000, playedAt: 1 }], artistPlays: { "art-1": 3 } })
     );
-    // The user last sorted the library by title with a filter that hides every album: See all must still open all of
-    // them in the row's order.
-    localStorage.setItem("parrot.libraryPrefs", JSON.stringify({ albums: { sort: "title", filters: { decade: 1950 } } }));
+    // The user last sorted the library by title: See all must still open it in the row's order.
+    localStorage.setItem("parrot.albumSort", "title");
     await mount();
     const rows = [...q("home")[0]!.querySelectorAll("section[data-testid]")].map((el) => el.getAttribute("data-testid"));
     const added = q("home-added")[0]!;
@@ -164,11 +163,11 @@ describe("Parrot desktop shell", () => {
     expect(q("home-recent")[0]?.textContent).toContain("Recently played");
     await click("home-added-see-all");
     const grid = q("library-album").map((el) => el.textContent);
-    console.info(SUITE, "see all: prefs", localStorage.getItem("parrot.libraryPrefs"), "grid", grid);
-    expect(q("library-filter-button")[0]?.textContent).toBe("Filter");
+    console.info(SUITE, "see all: sort", q("library-sort")[0]?.textContent, "grid", grid);
+    expect(q("library-sort")[0]?.textContent).toContain("Recently added");
     expect(grid[0]).toContain("Second Wind");
     expect(grid[1]).toContain("First Light");
-    expect(JSON.parse(localStorage.getItem("parrot.libraryPrefs") ?? "{}").albums).toEqual({ sort: "recent", filters: {} });
+    expect(localStorage.getItem("parrot.albumSort")).toBe("recent");
   });
 
   // @req PAR-HOME-01

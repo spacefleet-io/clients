@@ -27,7 +27,7 @@ vi.mock("@space/mobile-shell/mascot-loader", () => ({ MobileMascotLoader: () => 
 vi.mock("@space/mobile-shell/logger", () => ({ scopeLogger: () => ({ info: () => undefined, warn: () => undefined }) }));
 vi.mock("@space/mobile-shell/libraryEnvelope", () => ({ decryptBase64ToBytes: async () => new Uint8Array() }));
 vi.mock("@space/shared/api", () => ({
-  getLibraryMetaForKeyStep: async () => ({ exists: false, keyProbe: null }),
+  getLibraryMeta: async () => ({ exists: false, keyProbe: null }),
   resetLibrary: async () => undefined,
 }));
 vi.mock("../src/brand", () => ({ PARROT_MASCOT: 1 }));

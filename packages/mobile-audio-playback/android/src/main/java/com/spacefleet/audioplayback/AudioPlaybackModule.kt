@@ -9,7 +9,6 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
-import android.view.WindowManager
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
@@ -232,27 +231,6 @@ class AudioPlaybackModule(context: ReactApplicationContext) : ReactContextBaseJa
                 Log.w(NAME, "output switcher failed", error)
                 promise.resolve(false)
             }
-        }
-    }
-
-    /**
-     * Keeps the screen awake (no screensaver, no sleep) while `enabled`: Parrot TV's Now playing and lyrics (PAR-TV-12).
-     * FLAG_KEEP_SCREEN_ON on the app's window only holds while that window shows, so in the background the TV's
-     * screensaver starts as usual. Resolves false without an activity.
-     */
-    @ReactMethod
-    fun setKeepScreenOn(enabled: Boolean, promise: Promise) {
-        val activity = reactApplicationContext.currentActivity
-        if (activity == null) {
-            Log.w(NAME, "keep_awake enabled=$enabled applied=false reason=no_activity")
-            promise.resolve(false)
-            return
-        }
-        activity.runOnUiThread {
-            if (enabled) activity.window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-            else activity.window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-            Log.i(NAME, "keep_awake enabled=$enabled")
-            promise.resolve(true)
         }
     }
 

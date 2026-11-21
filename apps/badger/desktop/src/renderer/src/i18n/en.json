@@ -231,15 +231,7 @@
     "manageKey": "Manage library key",
     "browseTitle": "Browse",
     "browseSubtitle": "Media without uploaded files is greyed out, but you can still view its metadata.",
-    "stats": {
-      "movie_one": "{{count}} movie",
-      "movie_other": "{{count}} movies",
-      "movie_many": "{{count}} movies",
-      "tv_one": "{{count}} show",
-      "tv_other": "{{count}} shows",
-      "tv_many": "{{count}} shows",
-      "shownOf": "{{shown}} of {{total}}"
-    },
+    "searchPlaceholder": "Search titles…",
     "sort": {
       "title": "Sort by",
       "by": "Field",
@@ -272,41 +264,47 @@
       "clear": "Clear filters",
       "genres": {
         "title": "Genres",
+        "placeholder": "Pick genres to narrow the results.",
         "search": "Search genres…",
         "empty": "No genres match this search."
       },
       "actors": {
         "title": "Actors",
+        "placeholder": "Pick actors to narrow the results.",
         "search": "Search actors…",
         "empty": "No actors match this search."
       },
       "title": "Filter",
       "clearShort": "Clear",
-      "more": "+{{count}} more",
       "reset": "Reset",
       "apply": "Apply",
       "qualities": {
         "title": "Quality",
+        "placeholder": "Any quality",
         "search": "Search qualities",
         "empty": "No quality found"
       },
       "directors": {
         "title": "Director",
+        "placeholder": "Any director",
         "search": "Search directors",
         "empty": "No director found"
       },
       "audioLanguages": {
         "title": "Audio language",
+        "placeholder": "Any audio language",
         "search": "Search languages",
         "empty": "No language found"
       },
       "subtitleLanguages": {
         "title": "Subtitle language",
+        "placeholder": "Any subtitle language",
         "search": "Search languages",
         "empty": "No language found"
       },
       "watchStates": {
         "title": "Watch state",
+        "placeholder": "Any state",
         "search": "Search states",
         "empty": "No state found"
       },
@@ -637,6 +635,8 @@
     }
   },
   "playlists": {
+    "title": "Playlists",
+    "subtitle": "Group titles into playlists you can revisit anytime.",
     "manageTitle": "Your playlists",
     "manageSubtitle": "Favorites is always available. Everything else is yours to manage.",
     "newPlaceholder": "New playlist name",

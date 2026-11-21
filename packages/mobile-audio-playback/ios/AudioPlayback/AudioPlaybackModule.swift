@@ -209,34 +209,6 @@ final class AudioPlaybackModule: RCTEventEmitter {
     #endif
   }
 
-  /// What JS last asked for. The idle timer is put back each time the app becomes active while it is still wanted, so a
-  /// trip through the background never leaves the screen free to sleep under Now playing (Badger's `MpvControl` does the
-  /// same for films). In the background the system ignores it: the TV's screensaver starts as usual.
-  private static var keepScreenOnWanted = false
-  private static var keepScreenOnObserver: NSObjectProtocol?
-
-  /// Keeps the screen awake (no screensaver, no sleep) while `enabled`: Parrot TV's Now playing and lyrics (PAR-TV-12).
-  @objc(setKeepScreenOn:resolve:reject:)
-  func setKeepScreenOn(_ enabled: Bool, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
-    DispatchQueue.main.async {
-      let previous = UIApplication.shared.isIdleTimerDisabled
-      Self.keepScreenOnWanted = enabled
-      UIApplication.shared.isIdleTimerDisabled = enabled
-      AudioLog.info("audio.keep_awake enabled=\(enabled) previous=\(previous)")
-      if Self.keepScreenOnObserver == nil {
-        Self.keepScreenOnObserver = NotificationCenter.default.addObserver(
-          forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main
-        ) { _ in
-          if Self.keepScreenOnWanted && !UIApplication.shared.isIdleTimerDisabled {
-            AudioLog.info("audio.keep_awake restored=true")
-            UIApplication.shared.isIdleTimerDisabled = true
-          }
-        }
-      }
-      resolve(true)
-    }
-  }
-
   private static func firstButton(in view: UIView) -> UIButton? {
     for subview in view.subviews {
       if let button = subview as? UIButton { return button }
