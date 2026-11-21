@@ -5,8 +5,8 @@
  */
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { ListMusic, Loader2, Mic2, Pause, Play, Repeat, Repeat1, Shuffle, SkipBack, SkipForward } from "lucide-react";
-import { activeLyricIndex, formatDuration, homeJumpButton, homeView } from "@space/parrot-core";
-import type { HistoryAlbum, HomeNowPlaying, ListeningHistory, ParrotLyrics, RepeatMode } from "@space/parrot-core";
+import { activeLyricIndex, formatDuration, homeJumpButton, homeRecentlyAdded, homeView } from "@space/parrot-core";
+import type { HistoryAlbum, HomeNowPlaying, ListeningHistory, ParrotAlbumSort, ParrotLyrics, RepeatMode } from "@space/parrot-core";
 import { Button } from "../button";
 import { GuardedItems, RenderBoundary } from "../render-boundary";
 import { cn } from "../utils";
@@ -633,6 +633,7 @@ export type ParrotHomeLabels = {
   play: string;
   pause: string;
   shuffle: string;
+  recentlyAdded: string;
   recentlyPlayed: string;
   albums: string;
   yourArtists: string;
@@ -640,7 +641,7 @@ export type ParrotHomeLabels = {
   unknownArtist: string;
 };
 
-type ParrotHomeAlbum = { id: string; title: string; artistName: string; year: number | null };
+type ParrotHomeAlbum = { id: string; title: string; artistName: string; year: number | null; addedAt: number };
 
 type ParrotHomeProps<A extends ParrotHomeAlbum, R extends { id: string; name: string }, T extends { id: string; title: string; albumId: string; durationMs: number | null }> = {
   history: ListeningHistory;
@@ -659,7 +660,7 @@ type ParrotHomeProps<A extends ParrotHomeAlbum, R extends { id: string; name: st
    * null: no cover (the drawn picture); undefined: still on its way (a shimmer, PAR-META-20).
    */
   useJumpCover: (album: A | null) => string | null | undefined;
-  /** An album tile of the "Recently played" row with its small cover. */
+  /** An album tile of the "Recently added" and "Recently played" rows with its small cover. */
   albumTile: (album: A) => ReactNode;
   /** An artist's Play and "..." menu in "Your artists" (PAR-CARD-01). */
   artistControls?: (artist: R) => ParrotCardControls;
@@ -671,13 +672,15 @@ type ParrotHomeProps<A extends ParrotHomeAlbum, R extends { id: string; name: st
   onOpenArtist: (id: string) => void;
   /** Plays the album: from the history's song and position when there is one, else from its first song. */
   onPlayAlbum: (albumId: string, entry: HistoryAlbum | null, shuffle: boolean) => void;
-  onSeeAll: (view: "albums" | "artists") => void;
+  /** Opens the library's album or artist list; `sort` is the album order it opens in ("Recently added": "recent"). */
+  onSeeAll: (view: "albums" | "artists", sort?: ParrotAlbumSort) => void;
 };
 
 /**
  * Home in the approved design (PAR-HOME-01), the same on the desktop and in the browser: "Jump back in" with the last
- * album played on this device, "Recently played" and "Your artists". All of it comes from this device's own listening
- * history (PAR-HOME-02), never from suggestions (PAR-PROD-02). Nothing played yet: the card offers the library's first
+ * album played on this device, "Recently played", "Recently added" (the library's albums, newest added first; under
+ * "Recently played" as on Badger's Home) and "Your artists". Played rows come from this device's own listening history (PAR-HOME-02) and every row from the
+ * user's own library, never from suggestions (PAR-PROD-02). Nothing played yet: the card offers the library's first
  * album, said plainly ("Start listening").
  */
 export function ParrotHome<A extends ParrotHomeAlbum, R extends { id: string; name: string }, T extends { id: string; title: string; albumId: string; durationMs: number | null }>(
@@ -686,6 +689,7 @@ export function ParrotHome<A extends ParrotHomeAlbum, R extends { id: string; na
   const { labels, now } = props;
   const { jump, played, albums, artists } = homeView(props.history, props.albums, props.artists, props.tracks);
   const button = jump ? homeJumpButton(jump.album.id, jump.entry, now) : null;
+  const added = homeRecentlyAdded(props.albums);
   const waveTrack = button?.trackId ? props.tracks.find((track) => track.id === button.trackId) : undefined;
   const jumpCover = props.useJumpCover(jump?.album ?? null);
   return (
@@ -718,6 +722,13 @@ export function ParrotHome<A extends ParrotHomeAlbum, R extends { id: string; na
           <ParrotShelfRow>{albums.map((album) => props.albumTile(album))}</ParrotShelfRow>
         </RenderBoundary>
       </ParrotShelf>
+      {added.length > 0 && (
+        <ParrotShelf title={labels.recentlyAdded} seeAll={labels.seeAll} onSeeAll={() => props.onSeeAll("albums", "recent")} testId="home-added">
+          <RenderBoundary name="home-row:added">
+            <ParrotShelfRow>{added.map((album) => props.albumTile(album))}</ParrotShelfRow>
+          </RenderBoundary>
+        </ParrotShelf>
+      )}
       <ParrotShelf title={labels.yourArtists} seeAll={labels.seeAll} onSeeAll={() => props.onSeeAll("artists")} testId="home-artists">
         <RenderBoundary name="home-row:artists">
           <ParrotShelfRow kind="artist">

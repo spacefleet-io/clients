@@ -5,8 +5,7 @@
  */
 import { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { ArrowDownUp, Check, Ellipsis } from "lucide-react";
-import { PARROT_ALBUM_SORT_STORAGE_KEY, PARROT_ALBUM_SORTS, parseParrotAlbumSort, type ParrotAlbumSort } from "@space/parrot-core";
+import { Ellipsis } from "lucide-react";
 import { RenderBoundary } from "../render-boundary";
 import { cn } from "../utils";
 
@@ -159,42 +158,5 @@ export function ParrotMenu({ label, items, testId = "parrot-menu", onOpenChange,
         </RenderBoundary>
       )}
     </div>
-  );
-}
-
-/** The library's album order, kept in the browser's storage so the grid opens in the user's last pick ("Recently added" first time). */
-export function useParrotAlbumSort(): [ParrotAlbumSort, (sort: ParrotAlbumSort) => void] {
-  const [sort, setSort] = useState<ParrotAlbumSort>(() => parseParrotAlbumSort(globalThis.localStorage?.getItem(PARROT_ALBUM_SORT_STORAGE_KEY)));
-  const pick = (next: ParrotAlbumSort) => {
-    setSort(next);
-    globalThis.localStorage?.setItem(PARROT_ALBUM_SORT_STORAGE_KEY, next);
-  };
-  return [sort, pick];
-}
-
-/**
- * The design's sort button beside the library's search field: its icon and the order in use ("Recently added"),
- * opening the orders with a tick on the one in use.
- */
-export function ParrotAlbumSortMenu({ value, onChange, labels }: { value: ParrotAlbumSort; onChange: (sort: ParrotAlbumSort) => void; labels: { sort: string } & Record<ParrotAlbumSort, string> }) {
-  return (
-    <ParrotMenu
-      label={labels.sort}
-      testId="library-sort"
-      align="end"
-      triggerClassName="h-10"
-      trigger={
-        <>
-          <ArrowDownUp className="h-4 w-4" aria-hidden />
-          {labels[value]}
-        </>
-      }
-      items={PARROT_ALBUM_SORTS.map((sort) => ({
-        id: sort,
-        label: labels[sort],
-        icon: sort === value ? <Check className="h-4 w-4 text-primary" /> : <span />,
-        onSelect: () => onChange(sort),
-      }))}
-    />
   );
 }

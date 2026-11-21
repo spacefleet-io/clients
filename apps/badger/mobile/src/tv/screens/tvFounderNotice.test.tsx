@@ -92,7 +92,7 @@ vi.mock("../../theme/theme", () => ({
     font: { family: { display: "x" } },
   },
 }));
-vi.mock("../lib/useTvMenuKey", () => ({ useTvMenuKeyHold: () => undefined }));
+vi.mock("@space/mobile-shell/tv/useTvMenuKey", () => ({ useTvMenuKeyHold: () => undefined }));
 vi.mock("./TvHomeScreen", () => ({ TvHomeScreen: "TvHomeScreen" }));
 vi.mock("./TvLibraryScreen", () => ({ TvLibraryScreen: "TvLibraryScreen" }));
 vi.mock("./TvPlaylistsScreen", () => ({ TvPlaylistsScreen: "TvPlaylistsScreen" }));

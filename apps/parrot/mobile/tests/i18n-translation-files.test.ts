@@ -21,6 +21,7 @@ import { describe, expect, it } from "vitest";
 import sharedEn from "../../../../packages/mobile-shell/src/i18n/en.json";
 import { SHELL_EN } from "../../../../packages/parrot-core/src/shellStrings";
 import { profilesTexts } from "../../../../packages/shared/src/profileTexts";
+import { withAccountDeletionLabels } from "../../../../packages/shared/src/accountDeletionLabels";
 import de from "../src/i18n/de.json";
 import en from "../src/i18n/en.json";
 import es from "../src/i18n/es.json";
@@ -82,6 +83,8 @@ describe("Parrot phone translation files", () => {
     const COGNATES: Record<string, true> = {
       "fr parrot.player.position": true,
       "de parrot.player.position": true,
+      // The tab bar's "Playlists" is the word French, Dutch, German and Spanish music apps use (UX-PHONE-12).
+      ...Object.fromEntries(["fr", "nl", "de", "es"].map((language) => [`${language} parrot.nav.playlistsTab`, true as const])),
       ...Object.fromEntries(
         ["fr", "nl"].flatMap((language) =>
           ["parrot.library.view.albums", "parrot.library.albums_one", "parrot.library.albums_other"].map((key) => [`${language} ${key}`, true as const])
@@ -115,9 +118,10 @@ describe("Parrot phone translation files", () => {
   it("every key the code looks up exists in the shared or Parrot English file", () => {
     // `shell.*`: the Parrot texts every surface shares (@space/parrot-core), which `src/lib/i18n.ts` nests under `shell.`.
     const shellKeys = Object.keys(SHELL_EN).map((key) => `shell.${key}`);
-    // `profiles.*`: the profile screens' texts every app shares (`withProfilesTexts`, added by the phone shell's i18n).
-    const profileKeys = baseKeys(flatten({ profiles: profilesTexts.en } as Tree));
-    const known = new Set([...baseKeys(flatten(sharedEn as Tree)), ...baseKeys(enFlat), ...shellKeys, ...profileKeys]);
+    // `profiles.*` and the labels on the way to account deletion (`settings.account.deleteAccount`): texts every app
+    // shares, added by the phone shell's i18n (`withProfilesTexts`, `withAccountDeletionLabels`).
+    const sharedKeys = baseKeys(flatten(withAccountDeletionLabels({ profiles: profilesTexts.en }, "mobile", "en") as Tree));
+    const known = new Set([...baseKeys(flatten(sharedEn as Tree)), ...baseKeys(enFlat), ...shellKeys, ...sharedKeys]);
     const missing: string[] = [];
     let lookups = 0;
     for (const file of SOURCES) {

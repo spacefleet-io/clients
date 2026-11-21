@@ -61,6 +61,17 @@ target 'SpaceBadgerMobile' do
       :mac_catalyst_enabled => false,
       # :ccache_enabled => true
     )
+    # Xcode 27 refuses deployment targets below iOS/tvOS 15, and some pods (and their privacy/resource bundles) still
+    # declare 9.0–13.4: raise those to the app's own minimum.
+    minimums = { 'IPHONEOS_DEPLOYMENT_TARGET' => min_ios_version_supported, 'TVOS_DEPLOYMENT_TARGET' => min_supported_versions[:tvos] }
+    installer.pods_project.targets.each do |t|
+      t.build_configurations.each do |c|
+        minimums.each do |key, min|
+          value = c.build_settings[key]
+          c.build_settings[key] = min if value && Gem::Version.new(value) < Gem::Version.new(min)
+        end
+      end
+    end
   end
 end
 

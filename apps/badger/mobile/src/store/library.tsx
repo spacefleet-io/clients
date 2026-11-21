@@ -8,6 +8,7 @@ import { LibraryFormatTooNewError } from "@space/library-db-definition";
 import EventSource from "react-native-sse";
 import { LibraryDb, QuotaExceededError, type PlaybackChunks } from "../lib/libraryDb";
 import type { EpisodeResume } from "@space/shared/playbackResume";
+import type { SearchEpisode } from "../lib/phoneSearch";
 import { onViewingScopeChange } from "../lib/profiles/activeViewingScope";
 import { attachProfileSettingsLibrary } from "../lib/profileSettings";
 import { setMobileTextsLibrary } from "../lib/metadata/keptTexts";
@@ -143,6 +144,8 @@ type LibraryActionsValue = {
   deleteStoredObjects: (keys: string[]) => Promise<void>;
   /** Cast, season counts and runtimes for the media library list; waits for the metadata + playback databases. */
   getLibraryExtras: () => Promise<LibraryExtras>;
+  /** Every episode of the library for the phone's search (UX-PHONE-12); waits for the metadata database. */
+  listEpisodesForSearch: () => Promise<SearchEpisode[]>;
   listPlaylistItems: (playlistId: string) => Promise<string[]>;
   createPlaylist: (name: string) => Promise<void>;
   deletePlaylist: (playlistId: string) => Promise<void>;
@@ -1738,6 +1741,12 @@ export const LibraryProvider = ({ children }: { children: React.ReactNode }) => 
     return await db.getLibraryExtras();
   }, [db, awaitDatasetReady]);
 
+  const listEpisodesForSearch = useCallback(async (): Promise<SearchEpisode[]> => {
+    if (!db) return [];
+    await awaitDatasetReady("metadata");
+    return await db.listEpisodesForSearch();
+  }, [db, awaitDatasetReady]);
+
   const shownMedia = useMemo(
     () => media.map((item) => shownTitleArt(item, titleVariants.get(item.id) ?? null, titleLanguage)),
     [media, titleVariants, titleLanguage],
@@ -1761,6 +1770,7 @@ export const LibraryProvider = ({ children }: { children: React.ReactNode }) => 
       subtitleObjectInUse,
       deleteStoredObjects,
       getLibraryExtras,
+      listEpisodesForSearch,
       listPlaylistItems,
       createPlaylist,
       deletePlaylist,
@@ -1788,6 +1798,7 @@ export const LibraryProvider = ({ children }: { children: React.ReactNode }) => 
       subtitleObjectInUse,
       deleteStoredObjects,
       getLibraryExtras,
+      listEpisodesForSearch,
       listPlaylistItems,
       createPlaylist,
       deletePlaylist,

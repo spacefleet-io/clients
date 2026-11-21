@@ -119,8 +119,10 @@ describe("@bugfix @regression-proof media processor progress is monotonic across
     let step = 0;
     createFfmpegTaskMock.mockImplementation((args: string[], options: any) => {
       step += 1;
-      const mpdPath = args.find((value) => value.endsWith(".mpd"));
-      const subtitleOutput = args.find((value) => value.endsWith(".srt"));
+      // One audio run writes every track's DASH output: each `.mpd` arg is one output.
+      const mpdPaths = args.filter((value) => value.endsWith(".mpd"));
+      // All subtitle tracks come out of one ffmpeg run: every `.srt` arg is an output.
+      const subtitleOutputs = args.filter((value) => value.endsWith(".srt"));
       const isVideo = args.some((value) => value === "0:v:0");
       const codecType: "video" | "audio" = isVideo ? "video" : "audio";
 
@@ -128,11 +130,13 @@ describe("@bugfix @regression-proof media processor progress is monotonic across
         // Fire mid-encode progress so transcodeActive ramps; then "complete".
         options?.progress?.onUpdate?.({ percent: 50 });
         options?.progress?.onUpdate?.({ percent: 100 });
-        if (mpdPath) {
-          await writeDashOutput(mpdPath, codecType);
-        } else if (subtitleOutput) {
-          await fs.mkdir(dirname(subtitleOutput), { recursive: true });
-          await fs.writeFile(subtitleOutput, "1\n00:00:00,000 --> 00:00:01,000\nhi\n");
+        if (mpdPaths.length > 0) {
+          for (const mpdPath of mpdPaths) await writeDashOutput(mpdPath, codecType);
+        } else {
+          for (const subtitleOutput of subtitleOutputs) {
+            await fs.mkdir(dirname(subtitleOutput), { recursive: true });
+            await fs.writeFile(subtitleOutput, "1\n00:00:00,000 --> 00:00:01,000\nhi\n");
+          }
         }
         // Space steps ≥400ms apart AFTER the final progress emit so
         // emitProgress' 400ms debouncer does not swallow the next step's

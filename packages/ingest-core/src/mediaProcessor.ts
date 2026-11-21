@@ -23,7 +23,7 @@ import { finalizeMediaJob, type ProducedMedia, type ProducedAudioTrack, type Pro
 import { defaultCodecForQuality, normalizeSourceCodec, QUALITY_ORDER, type CodecPreset, type QualityPreset, type SourceCodec } from "./quality";
 import { UploadSessionManager, uploadEncryptedObjectFile } from "@space/content-core/storageTransport";
 import { reclaimOrphanEncoder, releaseEncoderLease, writeEncoderLease } from "./encoderLease";
-import { generatePreviewSheets } from "./previewSheets";
+import { generatePreviewSheets, type PreviewHardwareDecode } from "./previewSheets";
 import { PREVIEW_SHEETS_VERSION, type MediaPreviewSheets } from "@space/shared/previewSheets";
 import type { StorageObjectCounting } from "@space/shared/storageCounting";
 import { readAacChannelConfiguration, readAacPceLayout, standardAacLayoutFor } from "./aacChannelLayout";
@@ -207,6 +207,21 @@ export const uploadEncryptedFile = async (
 };
 
 /**
+ * Graphics-card decode for the preview sampling pass, from the encoder this computer's test encode proved works
+ * (`detectEncoder`, probed once per process): NVENC means NVDEC + CUDA, VA-API its render node, VideoToolbox its
+ * decoder. Other encoders (QSV, AMF) and CPU-only computers decode previews on the CPU.
+ */
+const previewHardwareDecodeFor = (encoder: Exclude<VideoEncoder, "copy">): PreviewHardwareDecode | null => {
+  if (encoder === "nvenc") return { kind: "cuda" };
+  if (encoder === "videotoolbox") return { kind: "videotoolbox" };
+  if (encoder === "vaapi") {
+    const device = getDesktopPlatform().hardware.deviceFor("vaapi");
+    return device ? { kind: "vaapi", device } : null;
+  }
+  return null;
+};
+
+/**
  * Seek-bar preview sheets (MPV-PREV-01) of a committed source: made from the local file, then each sheet is
  * encrypted and uploaded on the media's placement (same uploader, pool and retries as the video chunks). Runs after
  * the source commit, so the video is playable before the decode starts. The ffmpeg runs at the encoders' background
@@ -229,6 +244,8 @@ export const producePreviewSheets = async (args: {
       workDir: args.workDir,
       durationSeconds: args.durationSeconds,
       threads: buildFfmpegThreadArgs({ softwareEncoder: true }),
+      hardware: previewHardwareDecodeFor(await detectEncoder()),
+      signal: args.signal,
       onLog: args.onLog,
       run: (ffmpegArgs) =>
         runFfmpegWithSignal(
@@ -344,18 +361,17 @@ export const toFfmpegOutputUrl = (path: string, separator: string = sep): string
   separator === "/" ? path : path.split(separator).join("/");
 
 /**
- * Run a DASH muxer that writes `outputDir`: first reclaim the dir from an
- * orphaned encoder left by a killed runtime (P26, see `encoderLease.ts`),
- * then hold a lease on it for the lifetime of this ffmpeg.
+ * Run a DASH muxer that writes one or more output dirs (one ffmpeg can mux several DASH outputs): first reclaim each
+ * dir from an orphaned encoder left by a killed runtime (P26, see `encoderLease.ts`), then hold a lease on every dir
+ * for the lifetime of this ffmpeg.
  */
 const runDashEncoder = async (
   args: string[],
-  outputDir: string,
-  mpdPath: string,
+  outputs: ReadonlyArray<{ outputDir: string; mpdPath: string }>,
   options: NonNullable<Parameters<typeof runFfmpegWithSignal>[1]>,
   signal?: AbortSignal
 ) => {
-  await reclaimOrphanEncoder(outputDir);
+  for (const { outputDir } of outputs) await reclaimOrphanEncoder(outputDir);
   let leasedPid: number | null = null;
   try {
     return await runFfmpegWithSignal(
@@ -368,13 +384,15 @@ const runDashEncoder = async (
         onSpawn: ({ pid }) => {
           if (typeof pid !== "number") return;
           leasedPid = pid;
-          writeEncoderLease(outputDir, pid, mpdPath);
+          for (const { outputDir, mpdPath } of outputs) writeEncoderLease(outputDir, pid, mpdPath);
         },
       },
       signal
     );
   } finally {
-    if (leasedPid !== null) releaseEncoderLease(outputDir, leasedPid);
+    if (leasedPid !== null) {
+      for (const { outputDir } of outputs) releaseEncoderLease(outputDir, leasedPid);
+    }
   }
 };
 
@@ -857,8 +875,7 @@ const encodeDashVideo = async (
   });
   await runDashEncoder(
     ffmpegArgs,
-    outputDir,
-    mpdUrl,
+    [{ outputDir, mpdPath: mpdUrl }],
     {
       ffmpegPath: resolveFfmpegPath(),
       stdin: inputStream ?? null,
@@ -980,59 +997,68 @@ const encodeDashVideoWithFallback = async (
   }
 };
 
-const encodeDashAudio = async (
+type DashAudioTrack = {
+  /** Audio-relative stream index (`0:a:N`). */
+  streamIndex: number;
+  outputDir: string;
+  codec: string;
+  channelLayout: string | null;
+};
+
+/** Per-output ffmpeg args of one DASH audio track. */
+const buildDashAudioOutputArgs = (streamIndex: number, audioCodecArgs: string[], segmentSeconds: number, mpdUrl: string) => [
+  "-map",
+  `0:a:${streamIndex}`,
+  ...audioCodecArgs,
+  "-vn",
+  "-sn",
+  "-dn",
+  "-map_chapters",
+  "-1",
+  "-f",
+  "dash",
+  "-seg_duration",
+  String(segmentSeconds),
+  "-use_timeline",
+  "1",
+  "-use_template",
+  "1",
+  "-init_seg_name",
+  "init-$RepresentationID$.mp4",
+  "-media_seg_name",
+  "seg-$Number%05d$.m4s",
+  mpdUrl,
+];
+
+/**
+ * Encode every given audio track to its own DASH output dir in ONE ffmpeg run: one input, one DASH output per track
+ * (each with a single representation, so `init-0.mp4` / `seg-NNNNN.m4s` / `manifest.mpd` are the same as a run per
+ * track). ffmpeg runs each output's encoder in its own thread, so the tracks encode in parallel, and the source is
+ * read once instead of once per track. Returns each track's manifest path, in the order given.
+ */
+const encodeDashAudioTracks = async (
   inputPath: string,
-  outputDir: string,
+  tracks: ReadonlyArray<DashAudioTrack>,
   segmentSeconds: number,
-  streamIndex: number,
-  codec: string,
-  channelLayout: string | null,
   signal?: AbortSignal,
   onLog?: (line: string) => void,
   progress?: { durationMs?: number | null; onUpdate?: (percent: number) => void }
-) => {
-  await ensureDir(outputDir);
-  const mpdPath = joinPath(outputDir, "manifest.mpd");
-  const mpdUrl = toFfmpegOutputUrl(mpdPath);
-  // Browsers only decode AAC with a standard channel configuration (#1176): a
-  // re-encode of a layout that relabels losslessly (5.1(side) → 5.1) is forced
-  // to that standard layout; any other layout is left as it is.
-  const standardLayout = standardAacLayoutFor(channelLayout);
-  const encodeArgs = [
-    "-c:a",
-    "aac",
-    ...(standardLayout ? ["-af", `aformat=channel_layouts=${standardLayout}`] : []),
-  ];
-  const runAudio = (audioCodecArgs: string[]) =>
-    runDashEncoder(
-      [
-        "-y",
-        "-i",
-        inputPath,
-        "-map",
-        `0:a:${streamIndex}`,
-        ...audioCodecArgs,
-        "-vn",
-        "-sn",
-        "-dn",
-        "-map_chapters",
-        "-1",
-        "-f",
-        "dash",
-        "-seg_duration",
-        String(segmentSeconds),
-        "-use_timeline",
-        "1",
-        "-use_template",
-        "1",
-        "-init_seg_name",
-        "init-$RepresentationID$.mp4",
-        "-media_seg_name",
-        "seg-$Number%05d$.m4s",
-        mpdUrl,
-      ],
-      outputDir,
-      mpdUrl,
+): Promise<string[]> => {
+  const planned = tracks.map((track) => {
+    const mpdPath = joinPath(track.outputDir, "manifest.mpd");
+    // Browsers only decode AAC with a standard channel configuration (#1176): a
+    // re-encode of a layout that relabels losslessly (5.1(side) → 5.1) is forced
+    // to that standard layout; any other layout is left as it is.
+    const standardLayout = standardAacLayoutFor(track.channelLayout);
+    const encodeArgs = ["-c:a", "aac", ...(standardLayout ? ["-af", `aformat=channel_layouts=${standardLayout}`] : [])];
+    const copy = track.codec.toLowerCase() === "aac";
+    return { track, mpdPath, mpdUrl: toFfmpegOutputUrl(mpdPath), standardLayout, codecArgs: copy ? ["-c:a", "copy"] : encodeArgs, copy };
+  });
+  const runAudio = async (batch: ReadonlyArray<(typeof planned)[number]>) => {
+    for (const item of batch) await ensureDir(item.track.outputDir);
+    return runDashEncoder(
+      ["-y", "-i", inputPath, ...batch.flatMap((item) => buildDashAudioOutputArgs(item.track.streamIndex, item.codecArgs, segmentSeconds, item.mpdUrl))],
+      batch.map((item) => ({ outputDir: item.track.outputDir, mpdPath: item.mpdUrl })),
       {
         ffmpegPath: resolveFfmpegPath(),
         progress: progress
@@ -1058,45 +1084,59 @@ const encodeDashAudio = async (
       },
       signal
     );
-  if (codec.toLowerCase() !== "aac") {
-    await runAudio(encodeArgs);
-    return mpdPath;
-  }
-  await runAudio(["-c:a", "copy"]);
+  };
+  onLog?.(
+    `[ingest] audio: encoding ${planned.length} track(s) in one pass (${planned.map((item) => `0:a:${item.track.streamIndex}→${item.copy ? "copy" : "aac"}${item.standardLayout ? `/${item.standardLayout}` : ""}`).join(", ")})`
+  );
+  await runAudio(planned);
   // A copied AAC keeps the source's channel configuration; configuration 0
   // (program config element, no browser decodes it) of a layout that relabels
-  // losslessly is re-encoded instead. ffprobe (FFmpeg 8) names no layout for
-  // such a track, so the layout is read from the program config element.
-  const { init } = await listDashSegments(outputDir);
-  const initBytes = init ? await fs.readFile(joinPath(outputDir, init)) : null;
-  const config = initBytes ? readAacChannelConfiguration(initBytes) : null;
-  const pceLayout = config === 0 && initBytes ? readAacPceLayout(initBytes) : null;
-  const reencodeLayout = standardLayout ?? standardAacLayoutFor(pceLayout);
-  if (reencodeLayout && config === 0) {
+  // losslessly is re-encoded instead, in one more pass over just those tracks.
+  // ffprobe (FFmpeg 8) names no layout for such a track, so the layout is read
+  // from the program config element.
+  const reencode: Array<(typeof planned)[number]> = [];
+  for (const item of planned) {
+    if (!item.copy) continue;
+    const { outputDir, streamIndex, channelLayout } = item.track;
+    const { init } = await listDashSegments(outputDir);
+    const initBytes = init ? await fs.readFile(joinPath(outputDir, init)) : null;
+    const config = initBytes ? readAacChannelConfiguration(initBytes) : null;
+    const pceLayout = config === 0 && initBytes ? readAacPceLayout(initBytes) : null;
+    const reencodeLayout = item.standardLayout ?? standardAacLayoutFor(pceLayout);
+    if (!reencodeLayout || config !== 0) continue;
     onLog?.(
       `[ingest] audio ${streamIndex}: copied AAC has channel configuration ${config} (probed layout ${channelLayout ?? "none"}, program config element ${pceLayout ?? "none"}); re-encoding as ${reencodeLayout}`
     );
     console.warn("[mediaProcessor] removing outputs dir", { reason: "aac-channel-configuration", outputDir, config, channelLayout, pceLayout });
     await fs.rm(outputDir, { recursive: true, force: true });
-    await ensureDir(outputDir);
-    await runAudio(["-c:a", "aac", "-af", `aformat=channel_layouts=${reencodeLayout}`]);
+    reencode.push({ ...item, codecArgs: ["-c:a", "aac", "-af", `aformat=channel_layouts=${reencodeLayout}`] });
   }
-  return mpdPath;
+  if (reencode.length > 0) await runAudio(reencode);
+  return planned.map((item) => item.mpdPath);
 };
 
-const extractSubtitle = async (
+/**
+ * Extract every requested subtitle track in ONE ffmpeg run: one input, one `-map 0:s:N <codec args> <file>` output
+ * per track, in the order given. A subtitle track is a few KB, but ffmpeg demuxes the whole container to reach its
+ * packets, so one run per track read the full source once per track (35% of all bytes an import read, measured on
+ * a 5-subtitle WEB-DL episode). Outputs keep the per-track name `subtitle-<N>.<format>`.
+ */
+const extractSubtitles = async (
   inputPath: string,
   outputDir: string,
-  streamIndex: number,
-  format: string,
-  codecArgs: string[],
+  tracks: ReadonlyArray<{ streamIndex: number; format: string; codecArgs: string[] }>,
   signal?: AbortSignal,
   onLog?: (line: string) => void,
   progress?: { durationMs?: number | null; onUpdate?: (percent: number) => void }
 ) => {
   await ensureDir(outputDir);
-  const outputPath = joinPath(outputDir, `subtitle-${streamIndex}.${format}`);
-  const args = ["-y", "-i", inputPath, "-map", `0:s:${streamIndex}`, ...codecArgs, outputPath];
+  const outputPaths = tracks.map(({ streamIndex, format }) => joinPath(outputDir, `subtitle-${streamIndex}.${format}`));
+  const args = [
+    "-y",
+    "-i",
+    inputPath,
+    ...tracks.flatMap(({ streamIndex, codecArgs }, i) => ["-map", `0:s:${streamIndex}`, ...codecArgs, outputPaths[i]]),
+  ];
   await runFfmpegWithSignal(
     args,
     {
@@ -1124,7 +1164,7 @@ const extractSubtitle = async (
     },
     signal
   );
-  return outputPath;
+  return outputPaths;
 };
 
 export const resolveSubtitleOutput = (codecName: string) => {
@@ -1606,15 +1646,16 @@ export const produceMediaOutputs = async (
     transcodeActive = 0;
     bumpTranscodeProgress();
   };
-  const finishTranscodeStep = () => {
-    transcodeDone += 1;
+  /** `outputs`: how many planned outputs the finished ffmpeg run produced (one run can write several tracks). */
+  const finishTranscodeStep = (outputs = 1) => {
+    transcodeDone += outputs;
     transcodeActive = 0;
     bumpTranscodeProgress();
   };
-  const makeProgressHandler = () => ({
+  const makeProgressHandler = (outputs = 1) => ({
     durationMs,
     onUpdate: (percent: number) => {
-      transcodeActive = Math.max(0, Math.min(1, percent / 100));
+      transcodeActive = outputs * Math.max(0, Math.min(1, percent / 100));
       bumpTranscodeProgress();
     },
   });
@@ -1736,6 +1777,7 @@ export const produceMediaOutputs = async (
       ? new Set(payload.audioTrackIndexes)
       : null;
   if (payload.includeAudio !== false) {
+    const pendingAudio: Array<{ output: OutputState; track: DashAudioTrack }> = [];
     for (let index = 0; index < audioStreams.length; index += 1) {
       if (allowedAudioIndexes && !allowedAudioIndexes.has(index)) continue;
       const stream = audioStreams[index];
@@ -1756,21 +1798,33 @@ export const produceMediaOutputs = async (
       audioOutput.durationSeconds = durationSeconds;
       const needsAudioEncode = !audioOutput.encodingComplete || (await ensureDashOutput(audioOutput));
       if (needsAudioEncode) {
-        startTranscodeStep();
         audioOutput.encodingComplete = false;
-        throwIfAborted(payload.signal);
-        const mpdPath = await encodeDashAudio(
-          payload.inputPath,
-          audioOutput.outputDir,
-          SEGMENT_SECONDS_SOURCE,
-          index,
-          streamCodec,
-          typeof stream.channel_layout === "string" ? stream.channel_layout : null,
-          payload.signal,
-          logLine(`audio-${index}`),
-          makeProgressHandler()
-        );
-        const mpd = await fs.readFile(mpdPath, "utf8");
+        pendingAudio.push({
+          output: audioOutput,
+          track: {
+            streamIndex: index,
+            outputDir: audioOutput.outputDir,
+            codec: streamCodec,
+            channelLayout: typeof stream.channel_layout === "string" ? stream.channel_layout : null,
+          },
+        });
+      }
+    }
+    // Every track still to encode (all of them on a first run, the unfinished ones on a resume) comes out of one
+    // ffmpeg run: the source is read once and the tracks encode in parallel.
+    if (pendingAudio.length > 0) {
+      startTranscodeStep();
+      throwIfAborted(payload.signal);
+      const mpdPaths = await encodeDashAudioTracks(
+        payload.inputPath,
+        pendingAudio.map((item) => item.track),
+        SEGMENT_SECONDS_SOURCE,
+        payload.signal,
+        logLine("audio"),
+        makeProgressHandler(pendingAudio.length)
+      );
+      for (const [i, { output: audioOutput }] of pendingAudio.entries()) {
+        const mpd = await fs.readFile(mpdPaths[i]!, "utf8");
         audioOutput.codecString = extractCodecStringFromMpd(mpd, "audio");
         const timeline = parseSegmentTimeline(mpd);
         const { init, segments } = await listDashSegments(audioOutput.outputDir);
@@ -1790,10 +1844,12 @@ export const produceMediaOutputs = async (
           };
         });
         audioOutput.encodingComplete = true;
-        finishTranscodeStep();
-        await stateStore.save();
       }
-      audioOutput.codecString = audioOutput.codecString ?? "mp4a.40.2";
+      finishTranscodeStep(pendingAudio.length);
+      await stateStore.save();
+    }
+    for (const output of state.outputs) {
+      if (output.kind === "audio") output.codecString = output.codecString ?? "mp4a.40.2";
     }
   }
 
@@ -1804,6 +1860,7 @@ export const produceMediaOutputs = async (
       : null;
   const subtitleDir = joinPath(jobDir, "subtitles");
   if (payload.includeSubtitles !== false) {
+    const planned: Array<{ index: number; language: string; label: string; format: string; codecArgs: string[]; entry: SubtitleState | undefined }> = [];
     for (let index = 0; index < subtitleStreams.length; index += 1) {
       if (allowedSubtitleIndexes && !allowedSubtitleIndexes.has(index)) continue;
       const stream = subtitleStreams[index];
@@ -1816,37 +1873,47 @@ export const produceMediaOutputs = async (
         parseLabel(stream, language === "und" ? "Undefined" : language.toUpperCase());
       const codec = String(stream.codec_name ?? "");
       const { format, codecArgs } = resolveSubtitleOutput(codec);
-      let entry = state.subtitles.find((item) => item.id === `sub-${index}`);
-      if (!entry || !(await exists(entry.path))) {
-        startTranscodeStep();
-        throwIfAborted(payload.signal);
-        const outputPath = await extractSubtitle(
-          payload.inputPath,
-          subtitleDir,
-          index,
-          format,
-          codecArgs,
-          payload.signal,
-          logLine(`subtitle-${index}`),
-          makeProgressHandler()
-        );
-        entry = {
-          id: `sub-${index}`,
-          path: outputPath,
-          language,
-          label,
-          format,
+      const existing = state.subtitles.find((item) => item.id === `sub-${index}`);
+      const entry = existing && (await exists(existing.path)) ? existing : undefined;
+      planned.push({ index, language, label, format, codecArgs, entry });
+    }
+    // Every track still missing (all of them on a first run, the lost ones on a resume) comes out of one ffmpeg run.
+    const pending = planned.filter((track) => !track.entry);
+    if (pending.length > 0) {
+      startTranscodeStep();
+      throwIfAborted(payload.signal);
+      payload.onLog?.(
+        `[ingest] subtitles: extracting ${pending.length} track(s) in one pass (${pending.map((track) => `0:s:${track.index}→${track.format}`).join(", ")})`
+      );
+      const outputPaths = await extractSubtitles(
+        payload.inputPath,
+        subtitleDir,
+        pending.map((track) => ({ streamIndex: track.index, format: track.format, codecArgs: track.codecArgs })),
+        payload.signal,
+        logLine("subtitles"),
+        makeProgressHandler(pending.length)
+      );
+      pending.forEach((track, i) => {
+        const entry: SubtitleState = {
+          id: `sub-${track.index}`,
+          path: outputPaths[i],
+          language: track.language,
+          label: track.label,
+          format: track.format,
         };
-        const existingIndex = state.subtitles.findIndex((item) => item.id === `sub-${index}`);
+        const existingIndex = state.subtitles.findIndex((item) => item.id === entry.id);
         if (existingIndex >= 0) {
           state.subtitles[existingIndex] = entry;
         } else {
           state.subtitles.push(entry);
         }
-        finishTranscodeStep();
-        await stateStore.save();
-      }
-      subtitleStates.push(entry);
+        track.entry = entry;
+      });
+      finishTranscodeStep(pending.length);
+      await stateStore.save();
+    }
+    for (const track of planned) {
+      subtitleStates.push(track.entry!);
     }
   }
 

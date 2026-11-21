@@ -52,7 +52,7 @@ vi.mock("@space/mobile-shell/mascot-loader", () => ({ MobileMascotLoader: () => 
 vi.mock("../src/brand", () => ({ PARROT_MASCOT: 1 }));
 vi.mock("@space/mobile-shell/logger", () => ({ scopeLogger: () => ({ info: () => undefined, warn: () => undefined }) }));
 vi.mock("@space/shared/api", () => ({
-  getLibraryMeta: async () => ({ keyProbe: phone.keyProbe, exists: phone.exists }),
+  getLibraryMetaForKeyStep: async () => ({ keyProbe: phone.keyProbe, exists: phone.exists }),
   resetLibrary: async (...args: unknown[]) => {
     phone.reset.push(args);
     if (phone.resetError) throw phone.resetError;

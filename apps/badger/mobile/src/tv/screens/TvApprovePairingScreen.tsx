@@ -18,9 +18,9 @@ import {
 } from "@space/mobile-shell/pairing-approve";
 import { rememberSession } from "../../lib/pairing/deviceWatch";
 import { useAuth } from "../../store/auth";
-import { PairingButton } from "../components/PairingButton";
+import { PairingButton } from "@space/mobile-shell/tv/PairingButton";
 import { TV_RADIUS } from "../lib/tvLook";
-import { useTvStyles } from "../lib/tvScale";
+import { useTvStyles } from "@space/mobile-shell/tv/tvScale";
 
 type Stage =
   | { name: "code"; error: string | null }

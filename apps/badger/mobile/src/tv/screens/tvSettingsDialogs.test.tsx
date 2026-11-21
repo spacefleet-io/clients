@@ -80,7 +80,7 @@ vi.mock("@space/mobile-shell/components", () => ({
 // vi.mock factories run before the file's imports, so the shared stand-ins load inside it.
 vi.mock("lucide-react-native", async () => (await import("../../../tests/setup/lucideMock")).lucideStandIns());
 vi.mock("@react-navigation/native", () => ({ useNavigation: () => ({ navigate: () => undefined }) }));
-vi.mock("../lib/useTvMenuKey", () => ({ useTvMenuKeyHold: () => undefined }));
+vi.mock("@space/mobile-shell/tv/useTvMenuKey", () => ({ useTvMenuKeyHold: () => undefined }));
 vi.mock("../../lib/uiLanguage", () => ({ chooseUiLanguage: async () => undefined }));
 vi.mock("../../lib/metadata/runtime", () => ({ mobileCreditsSource: { load: null, store: null } }));
 vi.mock("../../lib/onboarding", async () => {

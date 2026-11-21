@@ -1,6 +1,6 @@
 // The signed-in state every screen reads: the session, the library key, and the open library.
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { AppState } from "react-native";
+import { AppState, Platform } from "react-native";
 import type { ShellAuthSession } from "@space/mobile-shell/services/auth";
 import { getLibraryMeta, logout } from "@space/shared/api";
 import { decryptBase64ToBytes } from "@space/mobile-shell/libraryEnvelope";
@@ -395,10 +395,11 @@ export const SessionProvider = ({ children }: { children: React.ReactNode }) => 
     });
   }, [session, libraryKey, checkKey, forgetLibraryKey]);
 
-  // The account's profiles (ACCT-PROF-01): the phone keeps its pick, like Badger's phone (UX-PROF-01). The list is read
-  // again each time the app comes back to the front, so a profile added, renamed or deleted on another device shows here.
+  // The account's profiles (ACCT-PROF-01): the phone keeps its pick, like Badger's phone (UX-PROF-01); the TV asks
+  // "Who's listening?" at every start, like Badger TV (PAR-TV-02, UX-PROF-02). The list is read again each time the app
+  // comes back to the front, so a profile added, renamed or deleted on another device shows here.
   useEffect(() => {
-    if (session) void profileStore.startSession({ userId: session.user.id, token: session.token, askEveryStart: false });
+    if (session) void profileStore.startSession({ userId: session.user.id, token: session.token, askEveryStart: Platform.isTV });
   }, [session]);
 
   const profilesUserId = session?.user.id ?? null;

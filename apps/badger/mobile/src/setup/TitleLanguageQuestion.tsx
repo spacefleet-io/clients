@@ -17,10 +17,10 @@ import { MobileChoiceList, MobileSetupChoices, MobileSetupMascot, MobileSetupSte
 import { useActiveTitleLanguageAnswer } from "../lib/profileSettings";
 import { answerTitleLanguage } from "../lib/titleLanguageQuestion";
 import { IS_TV } from "../tv/lib/tvRuntime";
-import { useTvScale, useTvStyles } from "../tv/lib/tvScale";
+import { useTvScale, useTvStyles } from "@space/mobile-shell/tv/tvScale";
 import { tvCardStyle } from "../tv/ui/tokens";
-import { TvBody, TvTitle } from "../tv/ui/TvText";
-import { TvPillButton } from "../tv/ui/TvPillButton";
+import { TvBody, TvTitle } from "@space/mobile-shell/tv/TvText";
+import { TvPillButton } from "@space/mobile-shell/tv/TvPillButton";
 
 const log = scopeLogger("title-language");
 

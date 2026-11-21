@@ -3,7 +3,13 @@ export { MobileShellFrame } from "./components/mobile-shell-frame";
 export { MobileNoticeToast } from "./components/mobile-notice-toast";
 export { MobileFounderBadge, MobileFounderNotice, MobileFounderNoticeHost } from "./components/mobile-founder";
 export { MobileRenderBoundary, type MobileRenderBoundaryProps } from "./components/mobile-render-boundary";
-export { MobileTabBar, type MobileTabBarLook, type MobileTabDefinition } from "./components/mobile-tab-bar";
+export { MobileTabBar, type MobileTabBarAction, type MobileTabBarLook, type MobileTabDefinition } from "./components/mobile-tab-bar";
+export {
+  MobileSearchOverlay,
+  type MobileSearchGroup,
+  type MobileSearchOverlayProps,
+  type MobileSearchRow,
+} from "./components/mobile-search-overlay";
 export { MobileTabPager, type MobileTabPagerProps } from "./components/mobile-tab-pager";
 export { MobileScreen } from "./components/mobile-screen";
 export { default as MobileAppBackdrop } from "./components/mobile-app-backdrop";
@@ -64,4 +70,5 @@ export { MobileFeedbackForm } from "./components/mobile-feedback-form";
 export { MobileCreditsPanel } from "./components/mobile-credits-panel";
 export { MobileOpenSourceNotice } from "./components/mobile-open-source-notice";
 export { MobilePasswordReset } from "./components/mobile-password-reset";
+export { MobileSignUp, MobileSignUpTermsNotice, type MobileSignUpStep } from "./components/mobile-sign-up";
 export { MobileNebula, type MobileNebulaSpot } from "./components/mobile-nebula";

@@ -79,6 +79,8 @@ export type ParrotLibraryAlbum = {
   coverThumbObjectKey: string | null;
   /** When it first came into the library (ms), for the "Recently added" order. */
   addedAt: number;
+  /** Its genre tag, for the library's Genre filter (PAR-LIB-06). */
+  genre: string | null;
   /**
    * Its full tracklist from the metadata, owned songs and missing ones (PAR-LIB-05); null when unknown (an album
    * imported before tracklists were stored, or never matched): its page then lists only the songs the user has.
@@ -106,6 +108,12 @@ export type ParrotLibraryTrack = {
   albumPeak: number | null;
   /** The user kept the song as is at import, matched to nothing, so it can be identified later (PAR-UP-05). */
   unidentified: boolean;
+  /** The year and genre the song shows: its own, else its album's unless the user emptied them (PAR-META-17). */
+  year: number | null;
+  genre: string | null;
+  /** Its original file is lossless, and it has stored lyrics: the library's filters (PAR-LIB-06). */
+  lossless: boolean;
+  hasLyrics: boolean;
 };
 export type ParrotLibraryFile = {
   id: string;
@@ -133,7 +141,7 @@ export const listParrotAlbums = (db: ParrotLibraryDb): ParrotLibraryAlbum[] =>
   (
     db
       .prepare(
-        `SELECT al.id, al.title, al.album_artist_id AS artistId, ar.name AS artistName, al.year,
+        `SELECT al.id, al.title, al.album_artist_id AS artistId, ar.name AS artistName, al.year, al.genre,
                 al.cover_object_key AS coverObjectKey, al.cover_thumb_object_key AS coverThumbObjectKey, al.created_at AS addedAt,
                 (SELECT COUNT(*) FROM tracks t WHERE t.album_id = al.id) AS trackCount, al.tracklist
          FROM albums al JOIN artists ar ON ar.id = al.album_artist_id
@@ -164,7 +172,11 @@ export const listParrotTracks = (db: ParrotLibraryDb): ParrotLibraryTrack[] =>
               t.disc, t.number, t.duration_ms AS durationMs,
               f.id AS fileId, f.mime, f.size_bytes AS sizeBytes,
               t.gain_db AS gainDb, t.peak, t.album_gain_db AS albumGainDb, t.album_peak AS albumPeak,
-              COALESCE(t.unidentified, 0) AS unidentified
+              COALESCE(t.unidentified, 0) AS unidentified,
+              CASE WHEN t.year_edited THEN t.year ELSE COALESCE(t.year, al.year) END AS year,
+              CASE WHEN t.genre_edited THEN t.genre ELSE COALESCE(t.genre, al.genre) END AS genre,
+              COALESCE(f.lossless, 0) AS lossless,
+              EXISTS (SELECT 1 FROM lyrics l WHERE l.track_id = t.id AND (l.plain IS NOT NULL OR l.synced IS NOT NULL)) AS hasLyrics
        FROM tracks t
        JOIN albums al ON al.id = t.album_id
        JOIN artists ar ON ar.id = t.artist_id
@@ -174,8 +186,8 @@ export const listParrotTracks = (db: ParrotLibraryDb): ParrotLibraryTrack[] =>
        ORDER BY (SELECT sort_name FROM artists WHERE id = al.album_artist_id) COLLATE NOCASE, al.year,
                 al.title COLLATE NOCASE, t.disc, t.number, t.title COLLATE NOCASE`
       )
-      .all() as Array<Omit<ParrotLibraryTrack, "unidentified"> & { unidentified: number }>
-  ).map((track) => ({ ...track, unidentified: track.unidentified === 1 }));
+      .all() as Array<Omit<ParrotLibraryTrack, "unidentified" | "lossless" | "hasLyrics"> & { unidentified: number; lossless: number; hasLyrics: number }>
+  ).map((track) => ({ ...track, unidentified: track.unidentified === 1, lossless: track.lossless === 1, hasLyrics: track.hasLyrics === 1 }));
 
 /** The playlists with their songs in order, Liked songs first (PAR-PL-01, PAR-PL-04). */
 export const listParrotPlaylists = (db: ParrotLibraryDb): ParrotPlaylist[] =>

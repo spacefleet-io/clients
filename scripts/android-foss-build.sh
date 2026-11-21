@@ -2,7 +2,10 @@
 # The Google-free Android release build (SF_FOSS=1, PLAT-MOBILE-06): the same recipe for F-Droid's build server,
 # the APK attached to our releases, and anyone rebuilding either to compare.
 #
-#   SF_VERSION_CODE=<n> SF_VERSION_NAME=<name> scripts/android-foss-build.sh <badger|parrot>
+#   [SF_VERSION_CODE=<n> SF_VERSION_NAME=<name>] scripts/android-foss-build.sh <badger|parrot>
+#
+# The version defaults to apps/<app>/mobile/android/version.properties, which every public release tag carries
+# (REL-DIST-22); without that file both variables are required.
 #
 # Needs bun, a JDK 21 and an Android SDK with NDK 27.1.12297006 (ANDROID_HOME). Run it after any Play build
 # in a separate invocation: it cleans the app first. The build leaves out Firebase, Google Cast and the ML Kit QR
@@ -26,16 +29,22 @@ set -euo pipefail
 app="${1:-}"
 case "$app" in
   badger | parrot) ;;
-  *) echo "usage: SF_VERSION_CODE=<n> SF_VERSION_NAME=<name> $0 <badger|parrot>" >&2; exit 2 ;;
+  *) echo "usage: [SF_VERSION_CODE=<n> SF_VERSION_NAME=<name>] $0 <badger|parrot>" >&2; exit 2 ;;
 esac
-: "${SF_VERSION_CODE:?SF_VERSION_CODE is required}"
-: "${SF_VERSION_NAME:?SF_VERSION_NAME is required}"
-[[ "$SF_VERSION_CODE" =~ ^[1-9][0-9]*$ ]] || { echo "bad SF_VERSION_CODE '$SF_VERSION_CODE'" >&2; exit 2; }
-[[ "$SF_VERSION_NAME" =~ ^[0-9A-Za-z][0-9A-Za-z.+-]*$ ]] || { echo "bad SF_VERSION_NAME '$SF_VERSION_NAME'" >&2; exit 2; }
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$root"
 mobile="apps/$app/mobile"
+
+version_file="$mobile/android/version.properties"
+if [ -f "$version_file" ]; then
+  : "${SF_VERSION_CODE:=$(sed -n 's/^versionCode=//p' "$version_file")}"
+  : "${SF_VERSION_NAME:=$(sed -n 's/^versionName=//p' "$version_file")}"
+fi
+: "${SF_VERSION_CODE:?SF_VERSION_CODE is required}"
+: "${SF_VERSION_NAME:?SF_VERSION_NAME is required}"
+[[ "$SF_VERSION_CODE" =~ ^[1-9][0-9]*$ ]] || { echo "bad SF_VERSION_CODE '$SF_VERSION_CODE'" >&2; exit 2; }
+[[ "$SF_VERSION_NAME" =~ ^[0-9A-Za-z][0-9A-Za-z.+-]*$ ]] || { echo "bad SF_VERSION_NAME '$SF_VERSION_NAME'" >&2; exit 2; }
 
 # The reporting addresses come from the committed file only, and no dev ticket key, whatever the calling environment
 # carries. The debug ID is always on, so a rebuild of the same source gives the same bundle.
@@ -69,7 +78,8 @@ fi
 export SF_FOSS=1
 gradle_args=(
   --no-daemon
-  -Dkotlin.compiler.execution.strategy=in-process
+  # A Gradle property, not -D: KGP ignores the system property and forks a KotlinCompileDaemon (REL-ENV-40).
+  -Pkotlin.compiler.execution.strategy=in-process
   "-P${app}VersionCode=$SF_VERSION_CODE"
   "-P${app}VersionName=$SF_VERSION_NAME"
 )

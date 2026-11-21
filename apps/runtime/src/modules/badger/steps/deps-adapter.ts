@@ -50,6 +50,7 @@ import {
   type UploadProducedMediaResult,
 } from "@space/ingest-core/mediaProcessor";
 import { QUALITY_ORDER, type QualityPreset } from "@space/ingest-core/quality";
+import { guessQualityLabel } from "@space/ingest-core/labQueueShared";
 import { parseFilename } from "@space/ingest-core/parseMediaFilename";
 import { isValidPlacementId } from "@space/shared/storagePlacement";
 import { PICTURE_SUBTITLE_FORMATS } from "@space/shared/libraryTypes";
@@ -708,16 +709,9 @@ export function buildBadgerStepDeps(
         startSeconds: Number(c.start_time ?? 0),
       })) ?? [];
     const heightNum = video?.height ?? null;
-    const sourceQuality =
-      heightNum && heightNum >= 1080
-        ? "1080p"
-        : heightNum && heightNum >= 720
-        ? "720p"
-        : heightNum && heightNum >= 480
-        ? "480p"
-        : heightNum && heightNum > 0
-        ? "360p"
-        : null;
+    // Same width-aware label the encode stamps on the source row (mediaProcessor), so a 1920×960 scope source
+    // reads 1080p here too, not 720p from its height alone.
+    const sourceQuality = heightNum && heightNum > 0 ? guessQualityLabel(heightNum, video?.width ?? undefined) : null;
 
     return {
       durationSeconds,

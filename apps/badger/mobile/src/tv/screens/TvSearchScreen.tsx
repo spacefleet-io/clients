@@ -11,9 +11,9 @@ import type { RootStackParamList } from "../../navigation/AppNavigator";
 import { useLibraryData } from "../../store/library";
 import { theme } from "../../theme/theme";
 import { TvPosterCard } from "../components/TvPosterCard";
-import { TV_CARD_GAP, TV_PANEL_CONTENT_X, TV_SAFE_MARGIN_Y, tvGridColumns, tvRailCardWidth } from "../lib/layout";
+import { TV_CARD_GAP, TV_PANEL_CONTENT_X, TV_SAFE_MARGIN_Y, tvGridColumns, tvRailCardWidth } from "@space/mobile-shell/tv/layout";
 import { TV_RADIUS } from "../lib/tvLook";
-import { useTvScale, useTvStyles } from "../lib/tvScale";
+import { useTvScale, useTvStyles } from "@space/mobile-shell/tv/tvScale";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 

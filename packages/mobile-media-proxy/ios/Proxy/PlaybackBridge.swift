@@ -182,11 +182,22 @@ final class PlaybackBridge: RCTEventEmitter {
       serverFingerprint = nil
     }
     let masterKey = try MediaCrypto.deriveMasterKey(libraryKey: libraryKey)
+    // The server is built after its fetcher: the tunnel's traffic reports reach it through this box.
+    weak var built: PlaybackHttpServer?
     let fetcher = try buildChunkFetcher(
       config, masterKey: masterKey,
-      onTraffic: { event in trafficOwner?.sendEvent(withName: trafficEvent, body: event) },
+      onTraffic: { event in
+        // STOR-BW-01: a silo at high traffic loads no next-song opening (PAR-PLAY-07); old gateways send no state.
+        switch (event["traffic"] as? [String: Any])?["state"] as? String {
+        case "high": built?.setTrafficHigh(true)
+        case "normal": built?.setTrafficHigh(false)
+        default: break
+        }
+        trafficOwner?.sendEvent(withName: trafficEvent, body: event)
+      },
       onDownloaded: { bytes, ms in trafficOwner?.sendEvent(withName: downloadEvent, body: ["bytes": bytes, "ms": ms]) })
     let s = PlaybackHttpServer(fetcher: fetcher)
+    built = s
     try s.start()
     s.setBufferCap(bufferCapSeconds)
     server = s
@@ -209,6 +220,23 @@ final class PlaybackBridge: RCTEventEmitter {
       hook?(seconds)
       PlaybackLog.info(
         "bufferCap seconds=\(seconds) cacheSecs=\(TrafficBuffer.cacheSecs(seconds)) readaheadSecs=\(TrafficBuffer.readaheadSecs(seconds)) playerHook=\(hook != nil)")
+      resolve(true)
+    }
+  }
+
+  /// The registered ids of the song playing and the songs Next and Previous go to (PAR-PLAY-07): the proxy loads their
+  /// openings while the player reads nothing. Resolves false when no proxy runs.
+  @objc(setNeighbours:next:previous:resolve:reject:)
+  func setNeighbours(
+    _ current: String?, next: String?, previous: String?, resolve: @escaping RCTPromiseResolveBlock,
+    reject: @escaping RCTPromiseRejectBlock
+  ) {
+    Self.queue.async {
+      guard let s = Self.server else {
+        resolve(false)
+        return
+      }
+      s.setNeighbours(current: current, next: next, previous: previous)
       resolve(true)
     }
   }

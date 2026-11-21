@@ -8,7 +8,7 @@ import { SkyCoversProvider } from "./mobile-sky-cover";
 import { useMobileSkyMode } from "./mobile-sky-mode";
 import { createSkyCoverRegistry } from "./mobile-sky-covers";
 import { createUserInputSignal } from "./mobile-user-input";
-import { MobileTabBar, type MobileTabBarLook, type MobileTabDefinition } from "./mobile-tab-bar";
+import { MobileTabBar, type MobileTabBarAction, type MobileTabBarLook, type MobileTabDefinition } from "./mobile-tab-bar";
 import { MobileTabPager } from "./mobile-tab-pager";
 
 type MobileShellFrameProps = {
@@ -29,6 +29,8 @@ type MobileShellFrameProps = {
   overlay?: React.ReactNode;
   /** A small lasting status sign on the tab bar's top edge (`MobileTabBar`'s `badge`), e.g. `MobileOfflineIndicator`. */
   tabBarBadge?: React.ReactNode;
+  /** A button among the tabs that is not a page (`MobileTabBar`'s `action`, UX-PHONE-12): the pager never stops on it. */
+  tabBarAction?: MobileTabBarAction;
   children: (activeTab: string) => React.ReactNode;
 };
 
@@ -42,6 +44,7 @@ export const MobileShellFrame = ({
   tabBarLook,
   overlay,
   tabBarBadge,
+  tabBarAction,
   children,
 }: MobileShellFrameProps) => {
   const theme = useMobileShellTheme();
@@ -82,6 +85,7 @@ export const MobileShellFrame = ({
             disabledTabs={disabledTabs}
             look={tabBarLook}
             badge={tabBarBadge}
+            action={tabBarAction}
           />
         )}
         {/* UX-NOTICE-01: notices float over the pages and the bar, never inside them, so no page moves. */}

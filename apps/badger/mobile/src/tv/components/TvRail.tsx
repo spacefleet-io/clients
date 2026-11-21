@@ -3,9 +3,9 @@ import { FlatList, StyleSheet, TVFocusGuideView, View, useWindowDimensions } fro
 import { SkyCover } from "@space/mobile-shell/components";
 import { MobileRenderBoundary } from "@space/mobile-shell/render-boundary";
 import type { MediaRow } from "@space/shared/libraryTypes";
-import { railScrollOffset } from "../lib/focusOrder";
-import { useTvScale, useTvStyles } from "../lib/tvScale";
-import { TvTitle } from "../ui/TvText";
+import { railScrollOffset } from "@space/mobile-shell/tv/focusOrder";
+import { useTvScale, useTvStyles } from "@space/mobile-shell/tv/tvScale";
+import { TvTitle } from "@space/mobile-shell/tv/TvText";
 import { TV_SPACE } from "../ui/tokens";
 import { TvPosterCard, tvPosterCardHeight } from "./TvPosterCard";
 

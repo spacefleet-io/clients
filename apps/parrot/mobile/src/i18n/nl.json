@@ -7,6 +7,8 @@
     "nav": {
       "back": "Terug",
       "library": "Bibliotheek",
+      "playlistsTab": "Playlists",
+      "settingsTab": "Opties",
       "settings": "Instellingen",
       "nowPlaying": "Speelt nu"
     },
@@ -48,9 +50,7 @@
         "byArtist": "Op artiest",
         "byName": "Op naam",
         "byTitle": "Op titel"
-      },
-      "search": "Zoeken in je bibliotheek",
-      "closeSearch": "Zoeken sluiten"
+      }
     },
     "album": {
       "noPlayableFile": "Dit album heeft nog geen afspeelbaar bestand.",
@@ -92,6 +92,11 @@
     },
     "setup": {
       "notificationsBody": "Parrot kan je laten weten wanneer de muziek die je vanaf je computer toevoegt hier klaar is om af te spelen."
+    },
+    "tvSearch": {
+      "hint": "De resultaten veranderen bij elke letter. Druk op ▶ op de afstandsbediening om van de toetsen naar de resultaten te gaan.",
+      "space": "Spatie",
+      "delete": "Wissen"
     },
     "playlists": {
       "likedEmpty": "Nog geen favoriete nummers"

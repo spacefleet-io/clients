@@ -3,19 +3,22 @@
  * @level unit
  * @req PAR-PLAY-04[parrot]
  * @req PAR-PLAY-02[parrot]
+ * @req PAR-PLAY-07[parrot]
  * @why The phone picks each song's copy itself, from how fast the media proxy downloads (PAR-PLAY-02), and changes it
  *   only from one song to the next (PAR-PLAY-04): "Nook" plays its FLAC original; the connection slows, so "Fable",
  *   the song after it, plays the light copy; once the connection is fast again a following song plays its original.
  *   The copy of a queued song is settled when the song before it starts and is swapped behind the song's own proxy id;
  *   songs further ahead follow the measured speed too, since the player may read ahead more than one song (seen on the
  *   emulator with one-minute songs). The song playing is never swapped. A song kept on the phone always plays its kept
- *   original. The native player, the media proxy and the library are replaced; playTracks, queueTracks and the shared
- *   copy picker are the real code.
+ *   original. Once the next song's copy is settled, the proxy is told the playing, next and previous entries so it
+ *   loads their openings (PAR-PLAY-07), and told again when Next or Previous lead elsewhere (shuffle, a queue edit).
+ *   The native player, the media proxy and the library are replaced; playTracks, queueTracks and the shared copy
+ *   picker are the real code.
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 type Item = Record<string, unknown> & { id: string; key: string; url: string };
-type State = { key: string | null; nextKey: string | null };
+type State = { key: string | null; nextKey: string | null; previousKey?: string | null };
 
 const state = vi.hoisted(() => ({
   queued: [] as Item[],
@@ -24,6 +27,9 @@ const state = vi.hoisted(() => ({
   download: null as null | ((event: { bytes: number; ms: number }) => void),
   playerState: null as null | ((state: State) => void),
   kept: {} as Record<string, string>,
+  /** Swaps and neighbour calls in the order the proxy got them. */
+  calls: [] as string[],
+  neighbours: [] as Array<{ current: string | null; next: string | null; previous: string | null }>,
 }));
 const log = (step: string, detail: unknown) => console.info(`[PARROT-MOBILE-LIGHT-COPY-001] ${step}`, JSON.stringify(detail));
 
@@ -38,6 +44,12 @@ vi.mock("@space/mobile-media-proxy", () => ({
     },
     swapChunkedFile: async (file: { id: string; mime: string }) => {
       state.swaps.push({ id: file.id, mime: file.mime });
+      state.calls.push(`swap ${file.id}`);
+      return true;
+    },
+    setNeighbours: async (neighbours: { current: string | null; next: string | null; previous: string | null }) => {
+      state.neighbours.push(neighbours);
+      state.calls.push(`neighbours ${neighbours.current} ${neighbours.next} ${neighbours.previous}`);
       return true;
     },
     onDownload: (handler: (event: { bytes: number; ms: number }) => void) => {
@@ -139,6 +151,8 @@ describe("Parrot phone: which copy each song plays", () => {
     state.registered = [];
     state.swaps = [];
     state.kept = {};
+    state.calls = [];
+    state.neighbours = [];
   });
 
   it("plays the original, drops the next song to the light copy when the connection slows, and climbs back", async () => {
@@ -202,5 +216,33 @@ describe("Parrot phone: which copy each song plays", () => {
     await starts("tr-habit");
     await starts("tr-fable");
     expect(state.swaps).toEqual([]);
+  });
+
+  it("tells the proxy the neighbours once the next song's copy is settled, and again when they change", async () => {
+    await playTracks({ token: "t", libraryKey: "k", albumTitle: "Meltway", tracks: [nook, fable, habit] as never, startIndex: 0 });
+    downloads(340, 4);
+    state.playerState!({ key: keyOf("tr-nook"), nextKey: keyOf("tr-fable"), previousKey: null });
+    await vi.waitFor(() => expect(state.neighbours).toHaveLength(1));
+    log("calls after Nook started", state.calls);
+    // The proxy loads the next opening from the copy registered: only after "Fable" was settled on its light copy.
+    const swapAt = state.calls.indexOf(`swap ${keyOf("tr-fable")}`);
+    const toldAt = state.calls.indexOf(`neighbours ${keyOf("tr-nook")} ${keyOf("tr-fable")} null`);
+    expect(swapAt).toBeGreaterThanOrEqual(0);
+    expect(toldAt).toBeGreaterThan(swapAt);
+
+    // Progress events of the same song repeat nothing: the next call the proxy gets is for the change below.
+    state.playerState!({ key: keyOf("tr-nook"), nextKey: keyOf("tr-fable"), previousKey: null });
+
+    // Shuffle (or a queue edit) makes Next lead to "Breaking the Tide" midway: its copy is settled, then the proxy is told.
+    const before = state.calls.length;
+    state.playerState!({ key: keyOf("tr-nook"), nextKey: keyOf("tr-habit"), previousKey: keyOf("tr-fable") });
+    await vi.waitFor(() => expect(state.neighbours).toHaveLength(2));
+    log("calls after the next song changed", state.calls.slice(before));
+    expect(state.neighbours[1]).toEqual({ current: keyOf("tr-nook"), next: keyOf("tr-habit"), previous: keyOf("tr-fable") });
+
+    // "Fable" starts: "Nook" is now the previous song.
+    state.playerState!({ key: keyOf("tr-fable"), nextKey: keyOf("tr-habit"), previousKey: keyOf("tr-nook") });
+    await vi.waitFor(() => expect(state.neighbours).toHaveLength(3));
+    expect(state.neighbours[2]).toEqual({ current: keyOf("tr-fable"), next: keyOf("tr-habit"), previous: keyOf("tr-nook") });
   });
 });

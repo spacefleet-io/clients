@@ -1,12 +1,15 @@
 // @vitest-environment jsdom
 /**
  * @test-id UI-PARROT-EDIT-DIALOG-001
- * @level component (jsdom)
- * @why PAR-LYR-05, PAR-META-18, PAR-META-20: the edit panel carries the lookups. "Look it up again" fills the form and
- *   says so; the Lyrics section shimmers while the words are on their way, shows the first lines once found, and says
- *   "No lyrics found" with "Search again" only after a lookup came back empty, never while one runs; an album counts
- *   its songs with words and offers to look for the missing ones. A cover whose picture is still loading shimmers;
- *   the drawn picture means "no cover" only.
+ * @level component (jsdom; the real ranking from @space/parrot-core over an in-memory library and a canned lookup)
+ * @why PAR-META-18, PAR-META-20, PAR-LYR-05: the edit panel's fields autocomplete together (draft B2, issue #3273):
+ *   typing "mete" in Album with "Pinkin Park" / "Numb" lists Meteora by Linkin Park under "Fits this song" with three
+ *   lit dots, the library's results at once and tagged "in your library", the lookup's after a short pause with
+ *   "Still asking…" (never "nothing found") meanwhile and one honest line when the lookup fails. ↓/Enter pick, Esc
+ *   closes the list changing nothing; a pick fills every field it knows, strikes the old values with ↺, and says
+ *   where it came from with Undo; an album pick also takes its cover. The Lyrics section shimmers while the words are
+ *   on their way, shows the first lines once found, and says "No lyrics found" with "Search again" only after a
+ *   lookup came back empty. A cover whose picture is still loading shimmers; the drawn picture means "no cover" only.
  * @req PAR-LYR-05[parrot]
  * @req PAR-META-18[parrot]
  * @req PAR-META-20[parrot]
@@ -15,7 +18,16 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { createRoot, type Root } from "react-dom/client";
 import { act } from "react";
-import { ParrotEditMetadataDialog, type ParrotEditLookUp, type ParrotEditLookUpLabels, type ParrotEditLyrics } from "../src/parrot/manage";
+import { parrotLibrarySuggestions, parrotLookupSuggestions, type ParrotEditFields, type ParrotSuggestLibrary } from "@space/parrot-core";
+import type { MusicSuggestion } from "@space/shared/api";
+import {
+  ParrotEditMetadataDialog,
+  type ParrotCoverInput,
+  type ParrotEditLyrics,
+  type ParrotEditLyricsLabels,
+  type ParrotEditSuggest,
+  type ParrotEditSuggestLabels,
+} from "../src/parrot/manage";
 import { ParrotCover } from "../src/parrot/components";
 
 const T = "[ui-parrot-edit-dialog]";
@@ -28,11 +40,7 @@ const labels = {
   coverHint: "Drop a picture",
   coverPick: "Choose…",
 };
-const lookUpLabels: ParrotEditLookUpLabels = {
-  lookUp: "Look it up again",
-  lookUpHint: "Parrot fills in what it finds; nothing is saved until you save.",
-  lookUpFound: "Filled in what Parrot found. Check it, then save.",
-  searching: "Searching…",
+const lyricsLabels: ParrotEditLyricsLabels = {
   lyrics: "Lyrics",
   lyricsSearching: "Looking for lyrics…",
   lyricsNone: "No lyrics found",
@@ -41,7 +49,61 @@ const lookUpLabels: ParrotEditLookUpLabels = {
   albumLyrics: (found, count) => `${found} of ${count} songs have lyrics`,
   albumLyricsSearch: "Look for the missing ones",
 };
+const suggestLabels: ParrotEditSuggestLabels = {
+  fits: "Fits this song",
+  fitsAlbum: "Fits this album",
+  only: (text) => `Only “${text}”`,
+  inLibrary: "in your library",
+  stillAsking: "Still asking…",
+  trackOn: (title, number) => `“${title}” is track ${number}`,
+  filledFrom: (name) => `Filled in from ${name}. Check it, then save.`,
+  undo: "Undo",
+  restore: (value) => `Put back ${value}`,
+  dots: (fields) => `Fits: ${fields}`,
+  failed: (reason) => `Could not look it up: ${reason}`,
+};
 const FABLE = { title: "Fable", artist: "Linnet Park", album: "Meltway", number: 7, disc: 1, year: 2003, genre: "Nu metal" };
+// The example Chris gave (issue #3273): artist typed with a typo, title right, the album wrong.
+const NUMB: ParrotEditFields = { title: "Numb", artist: "Pinkin Park", album: "Live in Texas", number: 1, disc: 1, year: 2003, genre: "Nu metal" };
+
+// The library has Meteor Shower (matches "mete" only), not the right album: Meteora comes from the lookup.
+const library: ParrotSuggestLibrary = {
+  artists: [{ id: "ar-bonobo", name: "Bonobo" }],
+  albums: [{ id: "al-shower", title: "Meteor Shower", artist: "Bonobo", year: 2011, kind: "Album", musicId: null }],
+  tracks: [{ id: "t-kiara", title: "Kiara", artist: "Bonobo", albumId: "al-shower", album: "Meteor Shower", number: 2, disc: 1, year: null }],
+};
+const METEORA_SONG: MusicSuggestion = {
+  kind: "song",
+  artist: { id: "mb-lp", name: "Linkin Park" },
+  album: { id: "rg-meteora", title: "Meteora", year: 2003, kind: "Album", trackNumber: 13, disc: 1 },
+  song: { id: "rec-numb", title: "Numb", durationMs: 185000 },
+  fits: { title: true, artist: true, album: true },
+};
+const METEORA_ALBUM: MusicSuggestion = { ...METEORA_SONG, kind: "album", album: { ...METEORA_SONG.album!, trackNumber: null, disc: null }, song: null, fits: { title: false, artist: true, album: true } };
+
+/** A suggest whose lookup answers only when the test says so. */
+const fakeSuggest = (answer: MusicSuggestion[] | Error) => {
+  const pending: Array<() => void> = [];
+  const asked: string[] = [];
+  const cover = vi.fn(async (coverId: string): Promise<ParrotCoverInput | null> => ({ kind: "file", bytes: new Uint8Array([1, 2, 3]), mime: `image/test-${coverId}` }));
+  const suggest: ParrotEditSuggest = {
+    library: (query) => parrotLibrarySuggestions(library, query),
+    lookup: (query) => {
+      asked.push(`${query.field}:${query.text}`);
+      const { promise, resolve, reject } = Promise.withResolvers<ReturnType<typeof parrotLookupSuggestions>>();
+      pending.push(() => (answer instanceof Error ? reject(answer) : resolve(parrotLookupSuggestions(answer, query))));
+      return promise;
+    },
+    cover,
+  };
+  const answerAll = async () => {
+    await act(async () => {
+      for (const go of pending.splice(0)) go();
+      await new Promise((r) => setTimeout(r, 0));
+    });
+  };
+  return { suggest, asked, cover, answerAll };
+};
 
 let root: Root | null = null;
 afterEach(async () => {
@@ -50,40 +112,221 @@ afterEach(async () => {
   document.body.innerHTML = "";
 });
 
-const open = async (props: { lookUp?: ParrotEditLookUp; lyrics?: ParrotEditLyrics; kind?: "track" | "album" }) => {
+const open = async (props: {
+  lyrics?: ParrotEditLyrics;
+  suggest?: ParrotEditSuggest;
+  kind?: "track" | "album";
+  initial?: ParrotEditFields;
+  onSubmit?: (fields: ParrotEditFields, cover: ParrotCoverInput | null) => void;
+  onOpenChange?: (open: boolean) => void;
+}) => {
   Reflect.set(globalThis, "IS_REACT_ACT_ENVIRONMENT", true);
   const host = document.createElement("div");
   document.body.append(host);
   root = createRoot(host);
+  const initial = props.initial ?? FABLE;
   await act(async () =>
     root!.render(
-      <ParrotEditMetadataDialog open onOpenChange={() => {}} kind={props.kind ?? "track"} initial={FABLE} labels={labels} lookUp={props.lookUp} lyrics={props.lyrics} lookUpLabels={lookUpLabels} onSubmit={() => {}} />
+      <ParrotEditMetadataDialog
+        open
+        onOpenChange={props.onOpenChange ?? (() => {})}
+        kind={props.kind ?? "track"}
+        initial={initial}
+        current={initial}
+        labels={labels}
+        suggest={props.suggest}
+        suggestLabels={props.suggest ? suggestLabels : undefined}
+        lyrics={props.lyrics}
+        lyricsLabels={lyricsLabels}
+        onSubmit={props.onSubmit ?? (() => {})}
+      />
     )
   );
   return (testId: string) => document.body.querySelector<HTMLElement>(`[data-testid="${testId}"]`);
 };
+const all = (testId: string) => [...document.body.querySelectorAll<HTMLElement>(`[data-testid="${testId}"]`)];
+const input = (key: string) => document.body.querySelector<HTMLInputElement>(`[data-testid="manage-field-${key}"]`)!;
 
-describe("[parrot] edit panel lookups", () => {
-  it("Look it up again: a hint, then searching (disabled), then what it filled in", async () => {
-    const onLookUp = vi.fn();
-    let get = await open({ lookUp: { state: "idle", onLookUp } });
-    expect(get("manage-look-up-note")?.textContent).toBe(lookUpLabels.lookUpHint);
-    await act(async () => get("manage-look-up-button")!.click());
-    expect(onLookUp).toHaveBeenCalledTimes(1);
-    await act(async () => root!.unmount());
-    get = await open({ lookUp: { state: "busy", onLookUp } });
-    console.info(T, "busy", get("manage-look-up")?.outerHTML);
-    expect(get("manage-look-up")?.dataset.state).toBe("busy");
-    expect(get("manage-look-up-note")?.textContent).toBe("Searching…");
-    expect((get("manage-look-up-button") as HTMLButtonElement).disabled).toBe(true);
-    await act(async () => root!.unmount());
-    get = await open({ lookUp: { state: "found", onLookUp } });
-    expect(get("manage-look-up-note")?.textContent).toBe(lookUpLabels.lookUpFound);
-    await act(async () => root!.unmount());
-    get = await open({ lookUp: { state: "none", message: "Parrot found nothing more for this song.", onLookUp } });
-    expect(get("manage-look-up-note")?.textContent).toBe("Parrot found nothing more for this song.");
+/** Types into a controlled React input the way a user does (the native setter, then an input event). */
+const type = async (key: string, text: string) => {
+  const el = input(key);
+  await act(async () => {
+    el.focus();
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(el, text);
+    el.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+};
+const key = async (field: string, name: string) => {
+  await act(async () => {
+    input(field).dispatchEvent(new KeyboardEvent("keydown", { key: name, bubbles: true, cancelable: true }));
+  });
+};
+/** Past the pause after the last keystroke, so the lookup is asked. */
+const pause = () => act(async () => new Promise((r) => setTimeout(r, 300)));
+
+describe("[parrot] edit panel: connected autocomplete (PAR-META-18)", () => {
+  it("@req PAR-META-18 typing mete in Album: library at once, Still asking…, then Meteora fits all three fields", async () => {
+    const fake = fakeSuggest([METEORA_SONG, METEORA_ALBUM]);
+    const get = await open({ suggest: fake.suggest, initial: NUMB });
+    await type("album", "mete");
+    // The library's answer is there before any lookup: Meteor Shower, matching only the typed text.
+    expect(get("manage-suggest-list")?.dataset.lookup).toBe("asking");
+    expect(input("album").getAttribute("aria-expanded")).toBe("true");
+    expect(get("manage-suggest-asking")?.textContent).toContain("Still asking…");
+    expect(document.body.textContent).not.toMatch(/not found|nothing/i);
+    expect(get("manage-suggest-only")?.textContent).toContain("Only “mete”");
+    expect(all("manage-suggest-option").map((o) => [o.dataset.scope, o.dataset.inLibrary, o.querySelector('[data-testid="manage-suggest-name"]')?.textContent])).toEqual([
+      ["field", "true", "Meteor Showerin your library"],
+    ]);
+    expect(fake.asked).toEqual([]);
+    await pause();
+    expect(fake.asked).toEqual(["album:mete"]);
+    await fake.answerAll();
+    console.info(T, "list", get("manage-suggest-list")?.outerHTML);
+    expect(get("manage-suggest-list")?.dataset.lookup).toBe("done");
+    expect(get("manage-suggest-asking")).toBeNull();
+    expect(get("manage-suggest-fits")?.textContent).toContain("Fits this song");
+    const first = all("manage-suggest-option")[0]!;
+    expect(first.dataset.scope).toBe("all");
+    expect(first.dataset.inLibrary).toBe("false");
+    expect(first.querySelector('[data-testid="manage-suggest-name"]')?.textContent).toBe("Meteora");
+    expect(first.querySelector("mark")?.textContent).toBe("Mete");
+    expect(first.querySelector('[data-testid="manage-suggest-details"]')?.textContent).toBe("Linkin Park · 2003 · “Numb” is track 13");
+    expect(first.querySelector<HTMLElement>('[data-testid="manage-suggest-dots"]')?.dataset.fits).toBe("111");
+    expect(first.getAttribute("aria-selected")).toBe("true");
+    expect(input("album").getAttribute("aria-activedescendant")).toBe(first.id);
+    // The library's result stays, still in its own section.
+    expect(all("manage-suggest-option").some((o) => o.dataset.scope === "field" && o.dataset.inLibrary === "true")).toBe(true);
   });
 
+  it("@req PAR-META-18 Enter picks: every field it knows is filled, old values struck with ↺, Undo, and Save sends them", async () => {
+    const fake = fakeSuggest([METEORA_SONG]);
+    const onSubmit = vi.fn();
+    const get = await open({ suggest: fake.suggest, initial: NUMB, onSubmit });
+    await type("album", "mete");
+    await pause();
+    await fake.answerAll();
+    await key("album", "Enter");
+    expect(get("manage-suggest-list")).toBeNull();
+    expect([input("title").value, input("artist").value, input("album").value, input("number").value, input("disc").value, input("year").value, input("genre").value]).toEqual([
+      "Numb",
+      "Linkin Park",
+      "Meteora",
+      "13",
+      "1",
+      "2003",
+      "Nu metal",
+    ]);
+    expect(get("manage-suggest-filled")?.textContent).toContain("Filled in from Meteora. Check it, then save.");
+    expect(get("manage-was-artist")?.textContent).toBe("Pinkin Park");
+    expect(get("manage-was-album")?.textContent).toBe("Live in Texas");
+    expect(get("manage-was-number")?.textContent).toBe("1");
+    expect(get("manage-was-title")).toBeNull();
+    expect(get("manage-changed-artist")).not.toBeNull();
+    // ↺ puts one field back.
+    await act(async () => get("manage-restore-number")!.click());
+    expect(input("number").value).toBe("1");
+    expect(input("artist").value).toBe("Linkin Park");
+    expect(get("manage-was-number")).toBeNull();
+    // Undo puts every field back as it was before the pick.
+    await act(async () => get("manage-suggest-undo")!.click());
+    expect([input("artist").value, input("album").value, input("number").value]).toEqual(["Pinkin Park", "Live in Texas", "1"]);
+    expect(get("manage-suggest-filled")).toBeNull();
+    expect(get("manage-was-artist")).toBeNull();
+    // Pick again with ↓ from a closed list, then Save.
+    await type("album", "mete");
+    await pause();
+    await fake.answerAll();
+    await key("album", "Enter");
+    await act(async () => get("manage-edit-submit")!.click());
+    console.info(T, "saved", JSON.stringify(onSubmit.mock.calls[0]));
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+    expect(onSubmit.mock.calls[0]![0]).toEqual({ title: "Numb", artist: "Linkin Park", album: "Meteora", number: 13, disc: 1, year: 2003, genre: "Nu metal" });
+  });
+
+  it("@req PAR-META-18 ↓/↑ move through the options; Esc closes the list changing nothing, the next Esc closes the dialog", async () => {
+    const fake = fakeSuggest([METEORA_SONG, METEORA_ALBUM]);
+    const onOpenChange = vi.fn();
+    const get = await open({ suggest: fake.suggest, initial: NUMB, onOpenChange });
+    await type("album", "mete");
+    await pause();
+    await fake.answerAll();
+    const count = all("manage-suggest-option").length;
+    expect(count).toBeGreaterThan(1);
+    await key("album", "ArrowDown");
+    expect(all("manage-suggest-option")[1]!.getAttribute("aria-selected")).toBe("true");
+    await key("album", "ArrowUp");
+    await key("album", "ArrowUp");
+    expect(all("manage-suggest-option")[count - 1]!.getAttribute("aria-selected")).toBe("true");
+    await key("album", "Escape");
+    expect(get("manage-suggest-list")).toBeNull();
+    expect(onOpenChange).not.toHaveBeenCalled();
+    expect([input("artist").value, input("album").value, input("number").value]).toEqual(["Pinkin Park", "mete", "1"]);
+    expect(get("manage-suggest-filled")).toBeNull();
+    // ↓ on a closed list opens it again.
+    await key("album", "ArrowDown");
+    expect(get("manage-suggest-list")).not.toBeNull();
+    await key("album", "Escape");
+    await key("album", "Escape");
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it("@req PAR-META-20 a failing lookup says why in one line and keeps the library's results", async () => {
+    const fake = fakeSuggest(new Error("metadata lookup is not configured (501)"));
+    const get = await open({ suggest: fake.suggest, initial: NUMB });
+    await type("album", "mete");
+    await pause();
+    await fake.answerAll();
+    console.info(T, "failed", get("manage-suggest-list")?.outerHTML);
+    expect(get("manage-suggest-list")?.dataset.lookup).toBe("failed");
+    expect(get("manage-suggest-failed")?.textContent).toBe("Could not look it up: metadata lookup is not configured (501)");
+    expect(get("manage-suggest-asking")).toBeNull();
+    expect(all("manage-suggest-option").map((o) => o.dataset.inLibrary)).toEqual(["true"]);
+  });
+
+  it("@req PAR-META-18 an answer to an older keystroke is dropped", async () => {
+    const fake = fakeSuggest([METEORA_SONG]);
+    const get = await open({ suggest: fake.suggest, initial: NUMB });
+    await type("album", "mete");
+    await pause();
+    await type("album", "meteo");
+    await fake.answerAll();
+    expect(get("manage-suggest-list")?.dataset.lookup).toBe("asking");
+    expect(all("manage-suggest-option").every((o) => o.dataset.inLibrary === "true")).toBe(true);
+  });
+
+  it("@req PAR-META-18 album dialog: two dots (album, album artist), Fits this album, and a pick takes the cover", async () => {
+    const fake = fakeSuggest([METEORA_ALBUM]);
+    const get = await open({ suggest: fake.suggest, kind: "album", initial: { title: "Live in Texas", artist: "Pinkin Park", year: null, genre: null } });
+    expect(input("album")).toBeNull();
+    await type("title", "mete");
+    await pause();
+    await fake.answerAll();
+    expect(get("manage-suggest-fits")?.textContent).toContain("Fits this album");
+    const first = all("manage-suggest-option")[0]!;
+    expect(first.querySelector('[data-testid="manage-suggest-name"]')?.textContent).toBe("Meteora");
+    expect(first.querySelector<HTMLElement>('[data-testid="manage-suggest-dots"]')?.dataset.fits).toBe("11");
+    expect(get("manage-changed-cover")).toBeNull();
+    await act(async () => first.click());
+    await act(async () => new Promise((r) => setTimeout(r, 0)));
+    expect([input("title").value, input("artist").value, input("year").value]).toEqual(["Meteora", "Linkin Park", "2003"]);
+    expect(fake.cover).toHaveBeenCalledWith("rg-meteora");
+    expect(get("manage-changed-cover")).not.toBeNull();
+    // Undo takes the cover back too.
+    await act(async () => get("manage-suggest-undo")!.click());
+    expect(get("manage-changed-cover")).toBeNull();
+    expect(input("title").value).toBe("Live in Texas");
+  });
+
+  it("@req PAR-META-18 without suggest the fields are plain inputs", async () => {
+    await open({});
+    expect(input("album").getAttribute("role")).toBeNull();
+    await type("album", "mete");
+    expect(document.body.querySelector('[data-testid="manage-suggest-list"]')).toBeNull();
+  });
+});
+
+describe("[parrot] edit panel lyrics", () => {
   it("lyrics loading shimmer, never 'No lyrics found' or Search again while it runs", async () => {
     const get = await open({ lyrics: { kind: "track", state: { status: "loading" }, onSearchAgain: () => {} } });
     console.info(T, "loading", get("manage-lyrics")?.outerHTML);

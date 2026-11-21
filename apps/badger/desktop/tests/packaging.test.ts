@@ -1,9 +1,11 @@
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
 import { createBuilderConfig } from "../electron-builder.config.mjs";
+import { resolveDesktopDevEnv } from "../../../../scripts/desktop-dev-lane.mjs";
 
 const packageJsonPath = resolve(import.meta.dirname, "../package.json");
 const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf8")) as {
@@ -40,19 +42,25 @@ const dumpPackagingSnapshot = (label: string, extra?: Record<string, unknown>) =
 
 describe("desktop packaging", () => {
   it("defaults the devtools port to 9222 while preserving overrides for electron MCP access", () => {
-    console.info(`[packaging:devtools-port] reading dev script + checking SF_DEVTOOLS_PORT default`);
-    const devScriptPath = resolve(import.meta.dirname, "../scripts/dev.mjs");
-    const devScript = readFileSync(devScriptPath, "utf8");
+    // The dev launcher (scripts/dev.mjs) takes its env from the shared lane resolver; the main process opens the
+    // devtools port from SF_DEVTOOLS_PORT. No lane: the app's default port; a caller's SF_DEVTOOLS_PORT wins.
+    const cwd = mkdtempSync(join(tmpdir(), "sf-packaging-devtools-"));
+    const env = { HOME: cwd };
+    const byDefault = resolveDesktopDevEnv({ app: "badger-desktop", env, cwd }).env.SF_DEVTOOLS_PORT;
+    const overridden = resolveDesktopDevEnv({ app: "badger-desktop", env: { ...env, SF_DEVTOOLS_PORT: "9333" }, cwd }).env
+      .SF_DEVTOOLS_PORT;
     console.info(
-      `[packaging:devtools-port] scripts.dev=${JSON.stringify(packageJson.scripts?.dev)} hasPortEnv=${devScript.includes("SF_DEVTOOLS_PORT")} hasDefault9222=${devScript.includes('"9222"')}`,
+      `[packaging:devtools-port] scripts.dev=${JSON.stringify(packageJson.scripts?.dev)} default=${byDefault} override=${overridden}`,
     );
     try {
       expect(packageJson.scripts?.dev).toContain("scripts/dev.mjs");
-      expect(devScript).toContain('SF_DEVTOOLS_PORT');
-      expect(devScript).toContain('"9222"');
+      expect(byDefault).toBe("9222");
+      expect(overridden).toBe("9333");
     } catch (err) {
-      dumpPackagingSnapshot("devtools-port", { devScriptPath, devScriptBytes: devScript.length });
+      dumpPackagingSnapshot("devtools-port", { cwd, byDefault, overridden });
       throw err;
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
     }
   });
 

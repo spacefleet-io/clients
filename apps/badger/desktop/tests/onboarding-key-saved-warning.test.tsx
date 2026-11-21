@@ -40,7 +40,7 @@ vi.mock("../src/renderer/src/api", () => ({
     status = 0;
   },
   // A brand-new account: the server never had a library, so the screen makes a key.
-  getLibraryMeta: vi.fn(async () => ({ exists: false, keyProbe: null, bootstrapRequired: true })),
+  getLibraryMetaForKeyStep: vi.fn(async () => ({ exists: false, keyProbe: null, bootstrapRequired: true })),
   resetLibrary: vi.fn(),
   rotateLibraryKey: vi.fn(),
 }));

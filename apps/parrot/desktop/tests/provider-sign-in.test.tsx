@@ -324,12 +324,12 @@ describe("Parrot desktop: Google, Apple and Microsoft sign-in", () => {
     await act(async () => host.querySelector<HTMLButtonElement>('[data-testid="signin-create-account"]')!.click());
     await flush();
     expect(host.querySelector('[data-testid="sign-up"]')).not.toBeNull();
-    await nudge({ error: "no_account" });
+    await nudge({ error: "cancelled" });
     const notice = host.querySelector('[data-testid="provider-sign-in-notice"]');
     dump("notice", notice?.textContent);
     expect(host.querySelector('[data-testid="sign-up"]')).toBeNull();
     expect(host.querySelector('[data-testid="signin-email"]')).not.toBeNull();
-    expect(notice?.textContent).toBe("No SpaceFleet account uses this email address yet.");
+    expect(notice?.textContent).toBe("The sign-in was cancelled.");
     expect(complete).not.toHaveBeenCalled();
     expect(localStorage.getItem(PROVIDER_VERIFIER_KEY)).toBeNull();
   });

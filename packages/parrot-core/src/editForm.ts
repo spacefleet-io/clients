@@ -18,10 +18,10 @@ export type ParrotEditFields = {
 /** The current details of a song or an album, for the edit form; null when it is gone. */
 export type ParrotEditValues = { kind: "track"; edit: ParrotTrackEdit } | { kind: "album"; edit: Omit<ParrotAlbumEdit, "cover"> } | null;
 
-/** The form filled with a song's or an album's details. */
+/** The form filled with a song's or an album's details. A track number of 0 (a file without the tag) is none. */
 export const parrotEditFields = (values: NonNullable<ParrotEditValues>): ParrotEditFields =>
   values.kind === "track"
-    ? { title: values.edit.title, artist: values.edit.artist, album: values.edit.album, number: values.edit.number, disc: values.edit.disc, year: values.edit.year, genre: values.edit.genre }
+    ? { title: values.edit.title, artist: values.edit.artist, album: values.edit.album, number: values.edit.number || null, disc: values.edit.disc, year: values.edit.year, genre: values.edit.genre }
     : { title: values.edit.title, artist: values.edit.albumArtist, year: values.edit.year, genre: values.edit.genre };
 
 /** A typed number field: a whole number above zero, else none. */

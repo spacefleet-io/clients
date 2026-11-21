@@ -5,9 +5,9 @@ import { MobileEmptyLibrary } from "@space/mobile-shell/components";
 import { useTranslation } from "@space/mobile-shell/i18n";
 import { QrCode } from "@space/mobile-shell/pairing-qr";
 import { websiteUrl } from "@space/shared/websiteLinks";
-import { TV_SCREEN_X } from "../lib/layout";
-import { useTvScale, useTvStyles } from "../lib/tvScale";
-import { TvPillButton } from "../ui/TvPillButton";
+import { TV_SCREEN_X } from "@space/mobile-shell/tv/layout";
+import { useTvScale, useTvStyles } from "@space/mobile-shell/tv/tvScale";
+import { TvPillButton } from "@space/mobile-shell/tv/TvPillButton";
 import { TV_COLOR, TV_RADII } from "../ui/tokens";
 
 const MASCOT = require("../../assets/mascot.webp");

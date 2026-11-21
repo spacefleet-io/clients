@@ -93,7 +93,6 @@
       "continueInBrowser": "Rond het inloggen af in je browser. Badger komt daarna terug.",
       "errorStart": "Inloggen kon niet starten. Probeer het opnieuw.",
       "errors": {
-        "no_account": "Er is nog geen SpaceFleet-account met dit e-mailadres.",
         "email_unverified": "Het e-mailadres van dit account is niet bevestigd. Bevestig het bij de aanbieder, of log in met je e-mailadres en wachtwoord.",
         "email_domain_disallowed": "Met dit e-mailadres kan geen account worden aangemaakt.",
         "account_deletion_pending": "Dit account wordt binnenkort verwijderd.",
@@ -232,7 +231,15 @@
     "manageKey": "Mediatheeksleutel beheren",
     "browseTitle": "Bladeren",
     "browseSubtitle": "Media zonder geüploade bestanden wordt grijs weergegeven, maar je kunt de metadata nog steeds bekijken.",
-    "searchPlaceholder": "Titels zoeken…",
+    "stats": {
+      "movie_one": "{{count}} film",
+      "movie_other": "{{count}} films",
+      "movie_many": "{{count}} films",
+      "tv_one": "{{count}} serie",
+      "tv_other": "{{count}} series",
+      "tv_many": "{{count}} series",
+      "shownOf": "{{shown}} van {{total}}"
+    },
     "sort": {
       "title": "Sorteren op",
       "by": "Veld",
@@ -265,47 +272,41 @@
       "clear": "Filters wissen",
       "genres": {
         "title": "Genres",
-        "placeholder": "Kies genres om de resultaten te verfijnen.",
         "search": "Genres zoeken…",
         "empty": "Geen genres gevonden voor deze zoekopdracht."
       },
       "actors": {
         "title": "Acteurs",
-        "placeholder": "Kies acteurs om de resultaten te verfijnen.",
         "search": "Acteurs zoeken…",
         "empty": "Geen acteurs gevonden voor deze zoekopdracht."
       },
       "title": "Filteren",
       "clearShort": "Wissen",
+      "more": "+{{count}} meer",
       "reset": "Resetten",
       "apply": "Toepassen",
       "qualities": {
         "title": "Kwaliteit",
-        "placeholder": "Elke kwaliteit",
         "search": "Kwaliteit zoeken",
         "empty": "Geen kwaliteit gevonden"
       },
       "directors": {
         "title": "Regie",
-        "placeholder": "Elke regisseur",
         "search": "Regisseur zoeken",
         "empty": "Geen regisseur gevonden"
       },
       "audioLanguages": {
         "title": "Audiotaal",
-        "placeholder": "Elke audiotaal",
         "search": "Taal zoeken",
         "empty": "Geen taal gevonden"
       },
       "subtitleLanguages": {
         "title": "Ondertiteltaal",
-        "placeholder": "Elke ondertiteltaal",
         "search": "Taal zoeken",
         "empty": "Geen taal gevonden"
       },
       "watchStates": {
         "title": "Kijkstatus",
-        "placeholder": "Elke status",
         "search": "Status zoeken",
         "empty": "Geen status gevonden"
       },
@@ -636,8 +637,6 @@
     }
   },
   "playlists": {
-    "title": "Afspeellijsten",
-    "subtitle": "Groepeer titels in afspeellijsten waar je altijd naar terug kunt.",
     "manageTitle": "Je afspeellijsten",
     "manageSubtitle": "Favorieten is er altijd. Al het andere beheer je zelf.",
     "newPlaceholder": "Naam nieuwe afspeellijst",

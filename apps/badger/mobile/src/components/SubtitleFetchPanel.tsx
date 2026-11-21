@@ -27,7 +27,7 @@ import {
   type SubtitleFetchFlowInput,
 } from "@space/shared/subtitleFetchFlow";
 import { IS_TV } from "../tv/lib/tvRuntime";
-import { TvFocusable } from "../tv/components/TvFocusable";
+import { TvFocusable } from "@space/mobile-shell/tv/TvFocusable";
 import { theme } from "../theme/theme";
 
 export type SubtitleFetchPanelProps = {

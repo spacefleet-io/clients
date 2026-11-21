@@ -151,7 +151,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
 #if os(tvOS)
   // react-native-tvos hands Menu to JS through a tap recognizer on the React root view while JS holds the key
-  // (`TVEventControl.enableTVMenuKey`, see src/tv/lib/menuKey.ts). A native-stack screen lives in a UINavigationController
+  // (`TVEventControl.enableTVMenuKey`, see packages/mobile-shell/src/tv/menuKey.ts). A native-stack screen lives in a UINavigationController
   // whose own Menu recognizer sits deeper in the view tree and wins, so it popped the screen before JS saw the key: Menu
   // in the player, meant to close a panel or the controls, left the player. Every other Menu recognizer now waits for
   // React's to fail; while JS does not hold the key, React's recognizer is detached and the system handles Menu as usual.

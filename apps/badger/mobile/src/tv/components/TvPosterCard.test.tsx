@@ -50,7 +50,7 @@ vi.mock("../../theme/theme", () => ({
     font: { family: { sans: "Inter", display: "SpaceGrotesk" } },
   },
 }));
-vi.mock("./TvFocusable", () => ({ TvFocusable: "TvFocusable" }));
+vi.mock("@space/mobile-shell/tv/TvFocusable", () => ({ TvFocusable: "TvFocusable" }));
 vi.mock("../lib/useFocusAfterScreenAppears", () => ({ useFocusAfterScreenAppears: () => () => undefined }));
 vi.mock("../../lib/imageLog", () => ({ logImageError: () => () => undefined }));
 

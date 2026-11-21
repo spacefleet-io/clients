@@ -42,6 +42,8 @@ import { getActivePlaybackProfileId } from "../src/main/activePlaybackProfile";
 
 const SUITE = "library-db-ipc";
 
+// LIB-STORE-06: the library opens only for a signed-in account, so every open carries one.
+const USER_ID = "user-1";
 const jsonReplacer = (_key: string, value: unknown) => {
   if (value instanceof Uint8Array) {
     return `<Uint8Array bytes=${value.byteLength}>`;
@@ -229,15 +231,16 @@ describe("libraryDbIpc integration", () => {
     const opened = await handlers.get("sf-library-db-open")?.(null, {
       token: "token",
       keyBase64: "key",
+      userId: USER_ID,
     });
     console.info(`[${SUITE}:${label}] open returned ${JSON.stringify(opened)} openMock.calls=${openMock.mock.calls.length}`);
     try {
       expect(opened).toEqual({ handle: "default" });
-      expect(openMock).toHaveBeenCalledWith("token", "key");
+      expect(openMock).toHaveBeenCalledWith("token", "key", { userId: USER_ID });
     } catch (err) {
       dumpLibraryDbIpcSnapshot(label, {
         channel: "sf-library-db-open",
-        payload: { token: "token", keyBase64: "key" },
+        payload: { token: "token", keyBase64: "key", userId: USER_ID },
         result: opened,
         expected: { handle: "default" },
         actual: opened,
@@ -375,6 +378,7 @@ describe("libraryDbIpc integration", () => {
     const local = await handlers.get("sf-library-db-open-local")?.(null, {
       token: "token",
       keyBase64: "key",
+      userId: USER_ID,
     });
     console.info(`[${SUITE}:${label}] open-local returned ${JSON.stringify(local)}`);
     try {
@@ -382,7 +386,7 @@ describe("libraryDbIpc integration", () => {
     } catch (err) {
       dumpLibraryDbIpcSnapshot(label, {
         channel: "sf-library-db-open-local",
-        payload: { token: "token", keyBase64: "key" },
+        payload: { token: "token", keyBase64: "key", userId: USER_ID },
         result: local,
         expected: { handle: "default" },
         actual: local,
@@ -540,12 +544,13 @@ describe("libraryDbIpc integration", () => {
         handlers.get("sf-library-db-open")?.(null, {
           token: "token",
           keyBase64: "key",
+          userId: USER_ID,
         })
       ).rejects.toThrow("sync_broken");
     } catch (err) {
       dumpLibraryDbIpcSnapshot(label, {
         channel: "sf-library-db-open",
-        payload: { token: "token", keyBase64: "key" },
+        payload: { token: "token", keyBase64: "key", userId: USER_ID },
         expected: { rejection: "sync_broken" },
         openMockCalls: openMock.mock.calls,
         loggerErrorCalls: loggerErrorMock.mock.calls,
@@ -581,6 +586,35 @@ describe("libraryDbIpc integration", () => {
     console.info(`[${SUITE}:${label}] done`);
   });
 
+  // @req LIB-STORE-06[badger-desktop]
+  it("refuses to open the library without a signed-in account and never touches a shared dir", async () => {
+    const label = "open-without-account";
+    const { ipc, handlers } = createIpcHarness();
+    const { win } = createWindowHarness();
+    openMock.mockResolvedValue({ subscribe: () => () => undefined });
+    registerLibraryDbIpc(ipc as any, () => win as any);
+
+    for (const userId of [undefined, "  "]) {
+      console.info(`[${SUITE}:${label}] invoking sf-library-db-open with userId=${JSON.stringify(userId)}`);
+      try {
+        await expect(handlers.get("sf-library-db-open")?.(null, { token: "token", keyBase64: "key", userId })).rejects.toThrow(
+          "LIBRARY_USER_ID_MISSING"
+        );
+        expect(openMock).not.toHaveBeenCalled();
+      } catch (err) {
+        dumpLibraryDbIpcSnapshot(label, {
+          channel: "sf-library-db-open",
+          payload: { token: "token", keyBase64: "key", userId },
+          expected: { rejection: "LIBRARY_USER_ID_MISSING", openMockCalls: 0 },
+          openMockCalls: openMock.mock.calls,
+          error: err,
+        });
+        throw err;
+      }
+    }
+    console.info(`[${SUITE}:${label}] done`);
+  });
+
   /**
    * @test-id DESKTOP-IPC-007
    * @level integration
@@ -607,6 +641,7 @@ describe("libraryDbIpc integration", () => {
     const openPromise = handlers.get("sf-library-db-open")?.(null, {
       token: "token",
       keyBase64: "key",
+      userId: USER_ID,
     });
     const callPromise = handlers.get("sf-library-db-call")?.(null, {
       method: "getSnapshot",
@@ -685,6 +720,7 @@ describe("libraryDbIpc integration", () => {
     await handlers.get("sf-library-db-open")?.(null, {
       token: "",
       keyBase64: "key",
+      userId: USER_ID,
     });
 
     console.info(`[${SUITE}:${label}] invoking sf-library-db-call createPlaylist — expecting LIBRARY_WRITE_BLOCKED`);
@@ -800,6 +836,7 @@ describe("libraryDbIpc integration", () => {
     await handlers.get("sf-library-db-open")?.(null, {
       token: "backend-token",
       keyBase64: "key",
+      userId: USER_ID,
     });
     console.info(`[${SUITE}:${label}] invoking createPlaylist (triggers mirror+debounce)`);
     await handlers.get("sf-library-db-call")?.(null, {
@@ -951,13 +988,14 @@ describe("libraryDbIpc integration", () => {
         handlers.get("sf-library-db-open")?.(null, {
           token: "token",
           keyBase64: "key",
+          userId: USER_ID,
         })
       ).rejects.toThrow(BETTER_SQLITE_NATIVE_LOAD_GUIDANCE);
       expect(openMock).toHaveBeenCalledTimes(1);
     } catch (err) {
       dumpLibraryDbIpcSnapshot(label, {
         channel: "sf-library-db-open",
-        payload: { token: "token", keyBase64: "key" },
+        payload: { token: "token", keyBase64: "key", userId: USER_ID },
         expected: { rejection: BETTER_SQLITE_NATIVE_LOAD_GUIDANCE },
         openMockCalls: openMock.mock.calls,
         loggerErrorCalls: loggerErrorMock.mock.calls,

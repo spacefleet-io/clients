@@ -7,8 +7,8 @@ import { MediaArtwork } from "../../../components/MediaArtwork";
 import { theme } from "../../../theme/theme";
 import type { MediaTracksBlock } from "../../lib/detailsMedia";
 import { TV_PANEL_BORDER, TV_RADIUS } from "../../lib/tvLook";
-import { useTvScale, useTvStyles } from "../../lib/tvScale";
-import { TvFocusable } from "../TvFocusable";
+import { useTvScale, useTvStyles } from "@space/mobile-shell/tv/tvScale";
+import { TvFocusable } from "@space/mobile-shell/tv/TvFocusable";
 import { TvMediaTracksBlock } from "./TvMediaTracksBlock";
 
 type Props = {

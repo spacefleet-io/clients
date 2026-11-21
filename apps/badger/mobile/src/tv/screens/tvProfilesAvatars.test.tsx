@@ -113,7 +113,8 @@ vi.mock("../../lib/profiles/profileStore", () => {
   };
 });
 
-import { TV_AVATAR_COLUMNS, TV_TILE_AVATAR, TvProfilesScreen } from "./TvProfilesScreen";
+import { TV_AVATAR_COLUMNS, TV_TILE_AVATAR } from "@space/mobile-shell/tv/TvProfiles";
+import { TvProfilesScreen } from "./TvProfilesScreen";
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 

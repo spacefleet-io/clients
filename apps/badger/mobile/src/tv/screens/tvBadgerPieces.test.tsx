@@ -67,8 +67,8 @@ vi.mock("../../theme/theme", () => {
   const anyKey = new Proxy({}, { get: () => "x" });
   return { theme: { colors: anyKey, font: new Proxy({}, { get: () => anyKey }), accentTextHex: "#000" } };
 });
-vi.mock("../lib/tvScale", () => ({ useTvScale: () => 1, useTvStyles: <T,>(styles: T) => styles }));
-vi.mock("../components/TvFocusable", () => ({ TvFocusable: "TvFocusable" }));
+vi.mock("@space/mobile-shell/tv/tvScale", () => ({ useTvScale: () => 1, useTvStyles: <T,>(styles: T) => styles }));
+vi.mock("@space/mobile-shell/tv/TvFocusable", () => ({ TvFocusable: "TvFocusable" }));
 vi.mock("../components/TvPosterCard", () => ({ TvPosterCard: "TvPosterCard" }));
 vi.mock("../../lib/playback/episodeSelection", () => ({
   uploadedEpisodeKeys: () => new Set<string>(),

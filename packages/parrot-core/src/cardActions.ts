@@ -47,8 +47,8 @@ export type ParrotPlayActionHandlers = {
   onGoToArtist?: () => void;
   onAddToPlaylist?: () => void;
   /**
-   * Edit details (PAR-META-16): only where the app can edit. Lookups run on their own; the edit panel holds the manual
-   * "Look it up again" and the lyrics section (PAR-META-18, PAR-LYR-05), so the card has no lookup entry.
+   * Edit details (PAR-META-16): only where the app can edit. Lookups run on their own; the edit panel suggests as the
+   * user types and holds the lyrics section (PAR-META-18, PAR-LYR-05), so the card has no lookup entry.
    */
   onEdit?: () => void;
 };

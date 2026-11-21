@@ -193,8 +193,8 @@ type WaveProps = {
   height?: number;
 };
 
-/** The bars of a song's wave (PAR-LOOK-01): the shared `parrotWaveBars` shape, green up to the played share. */
-const WaveBars = ({ seed, progress, bars, height }: { seed: string; progress: number; bars: number; height: number }) => {
+/** The bars of a song's wave (PAR-LOOK-01): the shared `parrotWaveBars` shape, green up to the played share. The TV draws them at its own size. */
+export const WaveBars = ({ seed, progress, bars, height }: { seed: string; progress: number; bars: number; height: number }) => {
   const heights = useMemo(() => parrotWaveBars(seed, bars), [seed, bars]);
   const played = Math.max(0, Math.min(1, Number.isFinite(progress) ? progress : 0));
   return <>{heights.map((h, i) => (

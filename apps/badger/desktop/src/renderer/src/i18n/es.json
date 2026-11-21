@@ -93,7 +93,6 @@
       "continueInBrowser": "Termina de iniciar sesión en tu navegador. Badger volverá cuando acabes.",
       "errorStart": "No se pudo iniciar el inicio de sesión. Vuelve a intentarlo.",
       "errors": {
-        "no_account": "Ninguna cuenta de SpaceFleet usa todavía este correo.",
         "email_unverified": "El correo de esta cuenta no está confirmado. Confírmalo con el proveedor o inicia sesión con tu correo y contraseña.",
         "email_domain_disallowed": "No se pueden crear cuentas con este correo.",
         "account_deletion_pending": "La eliminación de esta cuenta está programada.",
@@ -232,7 +231,15 @@
     "manageKey": "Gestionar la clave de la mediateca",
     "browseTitle": "Explorar",
     "browseSubtitle": "El contenido sin archivos subidos aparece en gris, pero puedes seguir viendo sus metadatos.",
-    "searchPlaceholder": "Buscar títulos…",
+    "stats": {
+      "movie_one": "{{count}} película",
+      "movie_other": "{{count}} películas",
+      "movie_many": "{{count}} películas",
+      "tv_one": "{{count}} serie",
+      "tv_other": "{{count}} series",
+      "tv_many": "{{count}} series",
+      "shownOf": "{{shown}} de {{total}}"
+    },
     "sort": {
       "title": "Ordenar por",
       "by": "Campo",
@@ -265,47 +272,41 @@
       "clear": "Borrar filtros",
       "genres": {
         "title": "Géneros",
-        "placeholder": "Elige géneros para acotar los resultados.",
         "search": "Buscar géneros…",
         "empty": "Ningún género coincide con esta búsqueda."
       },
       "actors": {
         "title": "Actores",
-        "placeholder": "Elige actores para acotar los resultados.",
         "search": "Buscar actores…",
         "empty": "Ningún actor coincide con esta búsqueda."
       },
       "title": "Filtrar",
       "clearShort": "Borrar",
+      "more": "+{{count}} más",
       "reset": "Restablecer",
       "apply": "Aplicar",
       "qualities": {
         "title": "Calidad",
-        "placeholder": "Cualquier calidad",
         "search": "Buscar calidades",
         "empty": "No se encontró ninguna calidad"
       },
       "directors": {
         "title": "Director",
-        "placeholder": "Cualquier director",
         "search": "Buscar directores",
         "empty": "No se encontró ningún director"
       },
       "audioLanguages": {
         "title": "Idioma del audio",
-        "placeholder": "Cualquier idioma de audio",
         "search": "Buscar idiomas",
         "empty": "No se encontró ningún idioma"
       },
       "subtitleLanguages": {
         "title": "Idioma de los subtítulos",
-        "placeholder": "Cualquier idioma de subtítulos",
         "search": "Buscar idiomas",
         "empty": "No se encontró ningún idioma"
       },
       "watchStates": {
         "title": "Estado de visualización",
-        "placeholder": "Cualquier estado",
         "search": "Buscar estados",
         "empty": "No se encontró ningún estado"
       },
@@ -636,8 +637,6 @@
     }
   },
   "playlists": {
-    "title": "Listas de reproducción",
-    "subtitle": "Agrupa títulos en listas a las que puedes volver cuando quieras.",
     "manageTitle": "Tus listas",
     "manageSubtitle": "Favoritos siempre está disponible. Todo lo demás lo gestionas tú.",
     "newPlaceholder": "Nombre de la nueva lista",

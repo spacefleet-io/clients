@@ -93,6 +93,10 @@ final class OfflineChunkFetcher: ChunkFetcher {
     if !reader.has(key) { try fallback?.prefetch(key) }
   }
 
+  func cancelInFlight(_ matches: (String) -> Bool) -> Int { fallback?.cancelInFlight(matches) ?? 0 }
+
+  func pin(_ keys: Set<String>) { fallback?.pin(keys) }
+
   func shutdown() {
     fallback?.shutdown()
     spool.clear()

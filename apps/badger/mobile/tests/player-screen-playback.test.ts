@@ -146,7 +146,7 @@ vi.mock("../src/store/auth", () => ({ useAuth: () => ({ user: null, token: metad
 // The phone player under test: the TV runtime is off and its remote is not mounted.
 vi.mock("../src/tv/lib/tvRuntime", () => ({ IS_TV: false }));
 vi.mock("../src/tv/components/TvPlayerRemote", () => ({ TvPlayerRemote: "TvPlayerRemote" }));
-vi.mock("../src/tv/components/TvFocusable", () => ({ TvFocusable: "TvFocusable" }));
+vi.mock("@space/mobile-shell/tv/TvFocusable", () => ({ TvFocusable: "TvFocusable" }));
 vi.mock("../src/store/library", () => {
   const library = {
     setPlaybackProgress: async (_mediaId: string, episodeId: string | null, pct: number, at: { positionSeconds: number }, final: boolean) => {

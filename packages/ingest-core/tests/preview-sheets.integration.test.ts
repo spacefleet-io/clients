@@ -23,6 +23,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { runFfmpeg, runFfprobe } from "@space/ffmpeg";
 import { requireMediaBinary } from "@space/media-deps";
 import { configureMediaIngestRuntime, producePreviewSheets } from "../src/mediaProcessor";
+import { generatePreviewSheets, type PreviewHardwareDecode } from "../src/previewSheets";
 
 const SUITE = "preview-sheets-integration";
 const MARKER = Buffer.from("ENCRYPTED:");
@@ -193,6 +194,38 @@ describe("seek-bar preview sheets at import (real ffmpeg)", () => {
       expect(failure).toBeInstanceOf(Error);
       expect(reported).toEqual([`persisted-${uploads[0]!.key}`]);
       expect(existsSync(workDir), "work dir removed").toBe(false);
+    },
+    300_000,
+  );
+
+  it.skipIf(!ffmpegAvailable)(
+    "@req MPV-PREV-02 a graphics-card decode that fails (no such VA-API device) falls back to the CPU with the same sheets",
+    async () => {
+      const { clip, duration } = await makeClip(203);
+      const run = (args: string[]) => runFfmpeg(args);
+      const threads = { input: [], output: [] };
+      const logs: string[] = [];
+      const sheetsOf = async (label: string, hardware: PreviewHardwareDecode | null) => {
+        const generated = await generatePreviewSheets({
+          inputPath: clip,
+          workDir: join(root, `sheets-${label}`),
+          durationSeconds: duration,
+          run,
+          threads,
+          hardware,
+          onLog: (line) => logs.push(`${label}: ${line}`),
+        });
+        const decoded = [];
+        for (const sheet of generated.sheets) decoded.push(await jpegSize(sheet.path));
+        return { pictures: [generated.pictureWidth, generated.pictureHeight, generated.pictureCount], decoded };
+      };
+      const cpu = await sheetsOf("cpu", null);
+      const fallback = await sheetsOf("vaapi-missing", { kind: "vaapi", device: join(root, "no-such-render-node") });
+      console.info(`[${SUITE}:hw-fallback] cpu=${JSON.stringify(cpu)} fallback=${JSON.stringify(fallback)}\n${logs.join("\n")}`);
+      expect(logs.some((line) => line.startsWith("vaapi-missing: [preview-sheets] vaapi decode failed, sampling again on the CPU"))).toBe(true);
+      expect(logs.some((line) => line.startsWith("vaapi-missing: [preview-sheets] sampled pictures=") && line.includes("decode=cpu"))).toBe(true);
+      expect(fallback).toEqual(cpu);
+      expect(cpu.pictures).toEqual([160, 66, Math.ceil(duration / 5)]);
     },
     300_000,
   );

@@ -8,6 +8,7 @@
  * failed. This sink:
  *
  *  - writes every line as `[runtime][job <id>][<step>] <line>`,
+ *  - drops ffmpeg's per-file `Opening '…' for writing` lines,
  *  - rate-limits progress-style lines (ffmpeg `frame=`/`size=`, upload
  *    `MiB/s`) to one per {@link PROGRESS_LINE_INTERVAL_MS},
  *  - caps the lines written per step run at {@link MAX_LINES_PER_STEP}
@@ -23,6 +24,13 @@ export const TAIL_LINES = 40;
 const PROGRESS_LINE = /(^|\]\s*)(frame=|size=\s*\d|time=\d\d:)|MiB\/s|\b\d{1,3}(\.\d+)?%\s*$/;
 
 export const isProgressLine = (line: string): boolean => PROGRESS_LINE.test(line);
+
+/**
+ * ffmpeg's DASH muxer logs `[dash @ 0x…] Opening '<file>' for writing` for every segment, temp file and manifest
+ * rewrite: thousands of lines per encode that filled the per-step cap (and runtime.log's rotation) within hours and
+ * crowded real warnings out of the failure tail. They carry nothing a failure report needs, so they are dropped.
+ */
+const FFMPEG_OPENING_FOR_WRITING = /\bOpening '.*' for writing\b/;
 
 export type StepLogSink = {
   /** Pass as the library's `onLog`. */
@@ -54,7 +62,7 @@ export const createStepLogSink = (opts: StepLogSinkOptions): StepLogSink => {
 
   const onLog = (raw: string): void => {
     const line = raw.replace(/\s+$/, "");
-    if (line.length === 0) return;
+    if (line.length === 0 || FFMPEG_OPENING_FOR_WRITING.test(line)) return;
     tailBuf.push(line);
     if (tailBuf.length > TAIL_LINES) tailBuf.shift();
     if (isProgressLine(line)) {

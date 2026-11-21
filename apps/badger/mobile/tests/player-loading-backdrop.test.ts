@@ -18,7 +18,7 @@ vi.mock("react-native", () => ({
 }));
 // The prompt buttons pick their TV flavour from the runtime; the phone one is under test here.
 vi.mock("../src/tv/lib/tvRuntime", () => ({ IS_TV: false }));
-vi.mock("../src/tv/components/TvFocusable", () => ({ TvFocusable: "TvFocusable" }));
+vi.mock("@space/mobile-shell/tv/TvFocusable", () => ({ TvFocusable: "TvFocusable" }));
 vi.mock("@space/mobile-shell/i18n", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 vi.mock("../src/lib/uiLanguage", () => ({ ensureI18n: () => undefined }));
 // Resolves a stored picture path to a URL the way the real hook does once signed in: size + path, or nothing.

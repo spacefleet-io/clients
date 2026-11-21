@@ -17,9 +17,47 @@
     "saving": "Opslaan…",
     "error": "De API-host kon niet worden opgeslagen. Controleer de waarde en probeer het opnieuw."
   },
+  "signup": {
+    "title": "Account aanmaken",
+    "subtitle": "Je moet je e-mail bevestigen voordat je kunt inloggen.",
+    "emailLabel": "E-mail",
+    "passwordLabel": "Wachtwoord",
+    "confirmLabel": "Herhaal wachtwoord",
+    "button": "Account aanmaken",
+    "creating": "Aanmaken…",
+    "haveAccountPrompt": "Heb je al een account?",
+    "signIn": "Inloggen",
+    "errors": {
+      "passwordLength": "Je wachtwoord moet minstens 8 tekens hebben.",
+      "passwordMismatch": "De wachtwoorden komen niet overeen.",
+      "emailExists": "Dit e-mailadres is al geregistreerd.",
+      "emailDomainDisallowed": "Dit e-maildomein is niet toegestaan. Gebruik een andere e-mailprovider.",
+      "generic": "Registreren mislukt. Probeer het opnieuw."
+    }
+  },
+  "verifyEmail": {
+    "title": "Bevestig je e-mail",
+    "subtitle": "We hebben een verificatiecode naar je e-mail gestuurd. Vul hem hier in om je registratie af te ronden.",
+    "codeLabel": "Verificatiecode",
+    "codePlaceholder": "123456",
+    "submit": "E-mail bevestigen",
+    "verifying": "Bevestigen…",
+    "resend": "Verificatiecode opnieuw sturen",
+    "sending": "Versturen…",
+    "backToSignIn": "Terug naar inloggen",
+    "sent": "Verificatiecode verstuurd. Kijk in je inbox.",
+    "errors": {
+      "invalidCode": "Ongeldige verificatiecode. Probeer het opnieuw.",
+      "emailNotFound": "Geen account gevonden voor dit e-mailadres.",
+      "sendFailed": "Kan de verificatiecode niet versturen.",
+      "generic": "Kan je e-mail niet bevestigen."
+    }
+  },
   "login": {
     "title": "Inloggen",
     "withAccount": "Log in met je SpaceFleet-account",
+    "noAccountPrompt": "Nog geen account?",
+    "createAccount": "Account aanmaken",
     "emailLabel": "E-mail",
     "passwordLabel": "Wachtwoord",
     "twoFactorLabel": "Verificatiecode",
@@ -63,11 +101,11 @@
     },
     "provider": {
       "signInWith": "Inloggen met {{provider}}",
+      "signUpWith": "Registreren met {{provider}}",
       "or": "of",
       "continueInBrowser": "Rond het inloggen af in je browser. Daarna kom je hier terug.",
       "errorStart": "Inloggen kon niet starten. Probeer het opnieuw.",
       "errors": {
-        "no_account": "Er is geen SpaceFleet-account met dit e-mailadres. Maak er een aan in Badger of Parrot op een computer en log dan hier in.",
         "email_unverified": "Het e-mailadres van dit account is niet bevestigd. Bevestig het bij de aanbieder, of log in met je e-mailadres en wachtwoord.",
         "email_domain_disallowed": "Met dit e-mailadres kan geen account worden aangemaakt.",
         "account_deletion_pending": "Dit account wordt binnenkort verwijderd.",
@@ -836,8 +874,8 @@
   },
   "tvPairing": {
     "signIn": {
-      "title": "Inloggen bij Badger",
-      "subtitle": "Open op je telefoon of computer Badger → Instellingen → Apparaat koppelen en scan dan de code of typ hem in.",
+      "title": "Inloggen bij {{app}}",
+      "subtitle": "Open op je telefoon of computer {{app}} → Instellingen → Apparaat koppelen en scan dan de code of typ hem in.",
       "codeLabel": "Of typ deze code in",
       "qrAccessibility": "QR-code om deze tv te koppelen",
       "starting": "Koppelcode ophalen…",
@@ -851,7 +889,7 @@
       },
       "errors": {
         "title": "Deze tv kon niet worden gekoppeld",
-        "unreachable": "We konden Badger niet bereiken. Controleer de verbinding van deze tv en haal een nieuwe code op.",
+        "unreachable": "We konden {{app}} niet bereiken. Controleer de verbinding van deze tv en haal een nieuwe code op.",
         "failed": "Er ging iets mis bij het koppelen. Haal een nieuwe code op om het opnieuw te proberen.",
         "key_unreadable": "De goedkeuring is bij deze tv aangekomen, maar de mediatheeksleutel kon niet worden gelezen. Haal een nieuwe code op en keur hem opnieuw goed.",
         "key_mismatch": "De verstuurde mediatheeksleutel opent de mediatheek van dit account niet. Er is niets opgeslagen op deze tv. Haal een nieuwe code op en keur hem opnieuw goed via een app die je mediatheek heeft."

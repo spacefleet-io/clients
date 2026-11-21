@@ -39,6 +39,24 @@ describe("badger step job log", () => {
     expect(info).toEqual(["[runtime][job job-1][transcode] Stream #0:0 -> #0:0 (h264 -> hevc)"]);
   });
 
+  it("drops ffmpeg 'Opening … for writing' lines from the log and the tail, keeps the rest", () => {
+    const { sink, info } = makeSink();
+    for (let i = 0; i < MAX_LINES_PER_STEP + 50; i++) {
+      sink.onLog(`[dash @ 0x5581] Opening '/jobs/j/video-source/seg-${String(i).padStart(5, "0")}.m4s.tmp' for writing`);
+      sink.onLog(`[dash @ 0x5581] Opening '/jobs/j/video-source/stream.mpd.tmp' for writing\n`);
+    }
+    sink.onLog("[aac @ 0x55] Too many bits 8832 > 6144 per frame requested");
+    sink.onLog("Output file is opening 'x' slowly"); // not the muxer line
+    console.info("[test] written after 2100 Opening lines + 2 real lines", info);
+    if (info.length !== 2) console.error("[test] tail", sink.tail());
+    expect(info).toEqual([
+      "[runtime][job job-1][transcode] [aac @ 0x55] Too many bits 8832 > 6144 per frame requested",
+      "[runtime][job job-1][transcode] Output file is opening 'x' slowly",
+    ]);
+    expect(info.some((l) => l.includes("log cap"))).toBe(false);
+    expect(sink.tail()).toEqual(["[aac @ 0x55] Too many bits 8832 > 6144 per frame requested", "Output file is opening 'x' slowly"]);
+  });
+
   it("recognises ffmpeg and upload progress lines", () => {
     for (const l of ["frame=  120 fps=30", "size=  1024kB time=00:00:04", "upload 12.3 MiB/s eta 40s", "upload 57%"]) {
       expect(isProgressLine(l), l).toBe(true);

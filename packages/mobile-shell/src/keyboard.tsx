@@ -25,7 +25,8 @@ export const keyboardLiftFor = (os: string, version: string | number): KeyboardL
 export const keyboardInsetAfter = (shown: boolean, event?: Pick<KeyboardEvent, "endCoordinates">): number =>
   shown ? Math.max(0, event?.endCoordinates.height ?? 0) : 0;
 
-const useKeyboardInset = (active: boolean): number => {
+/** The on-screen keyboard's height while `active` and the keyboard is shown, else 0. */
+export const useKeyboardInset = (active: boolean): number => {
   const [inset, setInset] = useState(0);
   useEffect(() => {
     if (!active) return undefined;

@@ -93,6 +93,7 @@ import {
 import { isProgressClassOp } from "@space/library-db-definition/opClass";
 import { readMediaDetails } from "@space/library-db-definition/mediaDetails";
 import { mediaFilesAndEditionsStatements } from "@space/library-db-definition/editionDdl";
+import type { SearchEpisode } from "./phoneSearch";
 import {
   assertLibraryCompatible,
   currentLibrarySupport,
@@ -1630,6 +1631,22 @@ export class LibraryDb {
       ),
     ]);
     return buildLibraryExtras(castRows, seasonRows, durationRows);
+  };
+
+  /** Every episode of the library, for the phone's search (UX-PHONE-12): one query, the show's name is joined by the caller. */
+  listEpisodesForSearch = async (): Promise<SearchEpisode[]> => {
+    const rows = await queryAll<{ id: string; media_id: string; season_number: number; episode_number: number; title: string; still_path: string | null }>(
+      await this.getMetadataDb(),
+      "SELECT id, media_id, season_number, episode_number, title, still_path FROM media_episodes ORDER BY media_id, season_number, episode_number;",
+    );
+    return rows.map((row) => ({
+      id: String(row.id),
+      mediaId: String(row.media_id),
+      seasonNumber: Number(row.season_number),
+      episodeNumber: Number(row.episode_number),
+      title: row.title,
+      stillPath: row.still_path,
+    }));
   };
 
   private applyMediaCoreStatements(details: MediaDetails, batch: SqlBatcher) {

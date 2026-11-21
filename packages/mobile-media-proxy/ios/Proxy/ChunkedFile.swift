@@ -177,6 +177,14 @@ final class ChunkedFileRegistry {
     return file
   }
 
+  /// The file registered at `id` now, nil when none; unlike `serve` the id stays open to `swap` (loading a song's
+  /// opening ahead is not the player asking, PAR-PLAY-07).
+  func peek(_ id: String) -> ChunkedFile? {
+    lock.lock()
+    defer { lock.unlock() }
+    return files[id]
+  }
+
   /// Forgets `id`; false when it was not registered.
   func unregister(_ id: String) -> Bool {
     lock.lock()

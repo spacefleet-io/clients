@@ -7,6 +7,8 @@
     "nav": {
       "back": "Back",
       "library": "Library",
+      "playlistsTab": "Playlists",
+      "settingsTab": "Settings",
       "settings": "Settings",
       "nowPlaying": "Now playing"
     },
@@ -48,9 +50,7 @@
         "byArtist": "By artist",
         "byName": "By name",
         "byTitle": "By title"
-      },
-      "search": "Search your library",
-      "closeSearch": "Close search"
+      }
     },
     "album": {
       "noPlayableFile": "This album has no playable file yet.",
@@ -92,6 +92,11 @@
     },
     "setup": {
       "notificationsBody": "Parrot can tell you when the music you add from your computer is ready to play here."
+    },
+    "tvSearch": {
+      "hint": "Results change with each letter. Press ▶ on the remote to move from the keys to the results.",
+      "space": "Space",
+      "delete": "Delete"
     },
     "playlists": {
       "likedEmpty": "No liked songs yet"

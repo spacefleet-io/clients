@@ -5,11 +5,11 @@ package = JSON.parse(File.read(File.join(__dir__, "package.json")))
 Pod::Spec.new do |s|
   s.name         = "AudioPlayback"
   s.version      = package["version"]
-  s.summary      = "Parrot's in-app music player on the iPhone: AVQueuePlayer, even volume, lock screen (PAR-PLAY-01)"
+  s.summary      = "Parrot's in-app music player on the iPhone and Apple TV: AVQueuePlayer, even volume, lock screen (PAR-PLAY-01, PAR-TV-11)"
   s.homepage     = "https://github.com/spacefleet-io/clients"
   s.license      = { :type => "GPL-3.0-only", :file => "LICENSE" }
   s.author       = "SpaceFleet"
-  s.platforms    = { :ios => "15.1" }
+  s.platforms    = { :ios => "15.1", :tvos => "15.1" }
   s.source       = { :git => "https://github.com/spacefleet-io/clients.git", :tag => "v#{s.version}" }
 
   # ios/AudioPlayback/Core holds the pure logic (limiter, gains, queue order) that the app's unit-test target compiles

@@ -172,6 +172,7 @@ describe("Parrot library across an app update", () => {
         artistId: "ar-lp",
         artistName: "Linnet Park",
         year: 2003,
+        genre: "Nu metal",
         trackCount: 1,
         coverObjectKey: "media/p1/cover-large",
         coverThumbObjectKey: "media/p1/cover-thumb",

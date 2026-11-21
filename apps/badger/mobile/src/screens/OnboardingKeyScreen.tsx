@@ -6,7 +6,7 @@ import { StyleSheet, Text } from "react-native";
 import { Screen } from "../components/Screen";
 import { useAuth } from "../store/auth";
 import { useLibrary } from "../store/library";
-import { getLibraryMeta, resetLibrary } from "@space/shared/api";
+import { getLibraryMetaForKeyStep, resetLibrary } from "@space/shared/api";
 import { getStoredLibraryKey, setStoredLibraryKey, clearLibraryKey } from "../lib/onboarding";
 import { generateLibraryKeyWords, readLibraryKeyInput } from "@space/shared/libraryKeyWords";
 import { useSignOut } from "../lib/useSignOut";
@@ -72,7 +72,7 @@ export const OnboardingKeyScreen = () => {
       const existing = await getStoredLibraryKey().catch(() => null);
       if (cancelled) return;
       if (existing && token) {
-        const meta = await getLibraryMeta(token).catch(() => null);
+        const meta = await getLibraryMetaForKeyStep(token).catch(() => null);
         if (cancelled) return;
         if (!meta) {
           // Status unknown (API unreachable): keep the stored key; it may be the
@@ -106,7 +106,7 @@ export const OnboardingKeyScreen = () => {
       }
       let metaState: LibraryMetaState | null = null;
       try {
-        metaState = accountKeyState(await getLibraryMeta(token));
+        metaState = accountKeyState(await getLibraryMetaForKeyStep(token));
       } catch {
         setError("checkStatus");
       }
@@ -141,7 +141,7 @@ export const OnboardingKeyScreen = () => {
       }
       try {
         log.info("library.create.start");
-        const meta = await getLibraryMeta(token).catch(() => null);
+        const meta = await getLibraryMetaForKeyStep(token).catch(() => null);
         const action = generatedKeyAction(meta ? accountKeyState(meta) : null);
         if (action === "retry") {
           setError("unavailable");
@@ -171,7 +171,7 @@ export const OnboardingKeyScreen = () => {
 
     setLoading(true);
     try {
-      const meta = await getLibraryMeta(token);
+      const meta = await getLibraryMetaForKeyStep(token);
       log.info("validate.meta", { exists: meta.exists, hasKeyProbe: Boolean(meta.keyProbe) });
       // The account's key may have been made in Parrot: a probe from either app means a key exists, even with no
       // Badger library yet (KeyProbeFix 791aa12f8, same rule as Badger desktop bd8b196c2).

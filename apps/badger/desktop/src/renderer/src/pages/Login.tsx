@@ -347,8 +347,9 @@ export default function Login() {
               </DesktopAuthPrimaryButton>
 
               {twoFactorRequired && twoFactorMethod === "email" ? (
+                // UX-BTN-01: a plain text button, the ghost button like every other "Resend code".
                 <Button
-                  variant="secondary"
+                  variant="ghost"
                   type="button"
                   disabled={resending}
                   onClick={() => void resendCode()}

@@ -93,7 +93,6 @@
       "continueInBrowser": "Schließe die Anmeldung in deinem Browser ab. Danach kommt Badger wieder nach vorne.",
       "errorStart": "Die Anmeldung konnte nicht gestartet werden. Bitte versuch es noch einmal.",
       "errors": {
-        "no_account": "Noch kein SpaceFleet-Konto nutzt diese E-Mail-Adresse.",
         "email_unverified": "Die E-Mail-Adresse dieses Kontos ist nicht bestätigt. Bestätige sie beim Anbieter oder melde dich mit E-Mail und Passwort an.",
         "email_domain_disallowed": "Mit dieser E-Mail-Adresse kann kein Konto erstellt werden.",
         "account_deletion_pending": "Die Löschung dieses Kontos ist geplant.",
@@ -232,7 +231,15 @@
     "manageKey": "Mediathek-Schlüssel verwalten",
     "browseTitle": "Durchsuchen",
     "browseSubtitle": "Medien ohne hochgeladene Dateien sind ausgegraut, ihre Metadaten kannst du aber trotzdem ansehen.",
-    "searchPlaceholder": "Titel suchen…",
+    "stats": {
+      "movie_one": "{{count}} Film",
+      "movie_other": "{{count}} Filme",
+      "movie_many": "{{count}} Filme",
+      "tv_one": "{{count}} Serie",
+      "tv_other": "{{count}} Serien",
+      "tv_many": "{{count}} Serien",
+      "shownOf": "{{shown}} von {{total}}"
+    },
     "sort": {
       "title": "Sortieren nach",
       "by": "Feld",
@@ -265,47 +272,41 @@
       "clear": "Filter zurücksetzen",
       "genres": {
         "title": "Genres",
-        "placeholder": "Wähle Genres, um die Ergebnisse einzugrenzen.",
         "search": "Genres suchen…",
         "empty": "Keine Genres passen zu dieser Suche."
       },
       "actors": {
         "title": "Darsteller",
-        "placeholder": "Wähle Darsteller, um die Ergebnisse einzugrenzen.",
         "search": "Darsteller suchen…",
         "empty": "Keine Darsteller passen zu dieser Suche."
       },
       "title": "Filtern",
       "clearShort": "Löschen",
+      "more": "+{{count}} weitere",
       "reset": "Zurücksetzen",
       "apply": "Anwenden",
       "qualities": {
         "title": "Qualität",
-        "placeholder": "Jede Qualität",
         "search": "Qualität suchen",
         "empty": "Keine Qualität gefunden"
       },
       "directors": {
         "title": "Regie",
-        "placeholder": "Jede Regie",
         "search": "Regie suchen",
         "empty": "Keine Regie gefunden"
       },
       "audioLanguages": {
         "title": "Audiosprache",
-        "placeholder": "Jede Audiosprache",
         "search": "Sprache suchen",
         "empty": "Keine Sprache gefunden"
       },
       "subtitleLanguages": {
         "title": "Untertitelsprache",
-        "placeholder": "Jede Untertitelsprache",
         "search": "Sprache suchen",
         "empty": "Keine Sprache gefunden"
       },
       "watchStates": {
         "title": "Wiedergabestatus",
-        "placeholder": "Jeder Status",
         "search": "Status suchen",
         "empty": "Kein Status gefunden"
       },
@@ -636,8 +637,6 @@
     }
   },
   "playlists": {
-    "title": "Playlists",
-    "subtitle": "Fasse Titel in Playlists zusammen, zu denen du jederzeit zurückkehren kannst.",
     "manageTitle": "Deine Playlists",
     "manageSubtitle": "Favoriten gibt es immer. Alles andere verwaltest du selbst.",
     "newPlaceholder": "Name der neuen Playlist",

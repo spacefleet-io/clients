@@ -17,9 +17,47 @@
     "saving": "Guardando…",
     "error": "No se pudo guardar el host de la API. Revisa el valor y vuelve a intentarlo."
   },
+  "signup": {
+    "title": "Crear cuenta",
+    "subtitle": "Tendrás que verificar tu correo antes de iniciar sesión.",
+    "emailLabel": "Correo electrónico",
+    "passwordLabel": "Contraseña",
+    "confirmLabel": "Repite la contraseña",
+    "button": "Crear cuenta",
+    "creating": "Creando…",
+    "haveAccountPrompt": "¿Ya tienes cuenta?",
+    "signIn": "Iniciar sesión",
+    "errors": {
+      "passwordLength": "La contraseña debe tener al menos 8 caracteres.",
+      "passwordMismatch": "Las contraseñas no coinciden.",
+      "emailExists": "Este correo ya está registrado.",
+      "emailDomainDisallowed": "Este dominio de correo no está permitido. Usa otro proveedor de correo.",
+      "generic": "No se pudo crear la cuenta. Vuelve a intentarlo."
+    }
+  },
+  "verifyEmail": {
+    "title": "Verifica tu correo",
+    "subtitle": "Te enviamos un código de verificación por correo. Introdúcelo aquí para terminar el registro.",
+    "codeLabel": "Código de verificación",
+    "codePlaceholder": "123456",
+    "submit": "Verificar correo",
+    "verifying": "Verificando…",
+    "resend": "Reenviar código de verificación",
+    "sending": "Enviando…",
+    "backToSignIn": "Volver a iniciar sesión",
+    "sent": "Código de verificación enviado. Revisa tu bandeja de entrada.",
+    "errors": {
+      "invalidCode": "Código de verificación no válido. Vuelve a intentarlo.",
+      "emailNotFound": "No hay ninguna cuenta con este correo.",
+      "sendFailed": "No se pudo enviar el código de verificación.",
+      "generic": "No se pudo verificar tu correo."
+    }
+  },
   "login": {
     "title": "Iniciar sesión",
     "withAccount": "Inicia sesión con tu cuenta de SpaceFleet",
+    "noAccountPrompt": "¿No tienes cuenta?",
+    "createAccount": "Crear cuenta",
     "emailLabel": "Correo electrónico",
     "passwordLabel": "Contraseña",
     "twoFactorLabel": "Código de verificación",
@@ -63,11 +101,11 @@
     },
     "provider": {
       "signInWith": "Iniciar sesión con {{provider}}",
+      "signUpWith": "Registrarse con {{provider}}",
       "or": "o",
       "continueInBrowser": "Termina de iniciar sesión en tu navegador. Después volverás aquí.",
       "errorStart": "No se pudo iniciar el inicio de sesión. Vuelve a intentarlo.",
       "errors": {
-        "no_account": "Ninguna cuenta de SpaceFleet usa este correo. Crea una en Badger o Parrot desde un ordenador y luego inicia sesión aquí.",
         "email_unverified": "El correo de esta cuenta no está confirmado. Confírmalo con el proveedor o inicia sesión con tu correo y contraseña.",
         "email_domain_disallowed": "No se pueden crear cuentas con este correo.",
         "account_deletion_pending": "La eliminación de esta cuenta está programada.",
@@ -837,8 +875,8 @@
   },
   "tvPairing": {
     "signIn": {
-      "title": "Inicia sesión en Badger",
-      "subtitle": "En tu teléfono o computadora, abre Badger → Ajustes → Vincular un dispositivo y escanea el código o escríbelo.",
+      "title": "Inicia sesión en {{app}}",
+      "subtitle": "En tu teléfono o computadora, abre {{app}} → Ajustes → Vincular un dispositivo y escanea el código o escríbelo.",
       "codeLabel": "O escribe este código",
       "qrAccessibility": "Código QR para vincular esta TV",
       "starting": "Obteniendo un código de vinculación…",
@@ -852,7 +890,7 @@
       },
       "errors": {
         "title": "No se pudo vincular esta TV",
-        "unreachable": "No pudimos conectar con Badger. Revisa la conexión de esta TV y obtén un código nuevo.",
+        "unreachable": "No pudimos conectar con {{app}}. Revisa la conexión de esta TV y obtén un código nuevo.",
         "failed": "Algo ha fallado durante la vinculación. Obtén un código nuevo para volver a intentarlo.",
         "key_unreadable": "La aprobación llegó a esta TV, pero no se pudo leer la clave de la mediateca. Obtén un código nuevo y vuelve a aprobarlo.",
         "key_mismatch": "La clave de la mediateca enviada no abre la mediateca de esta cuenta. No se ha guardado nada en esta TV. Obtén un código nuevo y vuelve a aprobarlo desde una aplicación que tenga tu mediateca."

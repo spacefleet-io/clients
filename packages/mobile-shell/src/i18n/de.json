@@ -17,9 +17,47 @@
     "saving": "Wird gespeichert…",
     "error": "Der API-Host konnte nicht gespeichert werden. Prüfe den Wert und versuch es nochmal."
   },
+  "signup": {
+    "title": "Konto erstellen",
+    "subtitle": "Du musst deine E-Mail-Adresse bestätigen, bevor du dich anmelden kannst.",
+    "emailLabel": "E-Mail",
+    "passwordLabel": "Passwort",
+    "confirmLabel": "Passwort wiederholen",
+    "button": "Konto erstellen",
+    "creating": "Wird erstellt…",
+    "haveAccountPrompt": "Du hast schon ein Konto?",
+    "signIn": "Anmelden",
+    "errors": {
+      "passwordLength": "Das Passwort muss mindestens 8 Zeichen lang sein.",
+      "passwordMismatch": "Die Passwörter stimmen nicht überein.",
+      "emailExists": "Diese E-Mail-Adresse ist bereits registriert.",
+      "emailDomainDisallowed": "Diese E-Mail-Domain ist nicht erlaubt. Bitte nutze einen anderen E-Mail-Anbieter.",
+      "generic": "Registrierung fehlgeschlagen. Versuch es noch einmal."
+    }
+  },
+  "verifyEmail": {
+    "title": "Bestätige deine E-Mail-Adresse",
+    "subtitle": "Wir haben dir einen Bestätigungscode per E-Mail geschickt. Gib ihn hier ein, um die Registrierung abzuschließen.",
+    "codeLabel": "Bestätigungscode",
+    "codePlaceholder": "123456",
+    "submit": "E-Mail bestätigen",
+    "verifying": "Wird bestätigt…",
+    "resend": "Bestätigungscode erneut senden",
+    "sending": "Wird gesendet…",
+    "backToSignIn": "Zurück zur Anmeldung",
+    "sent": "Bestätigungscode gesendet. Schau in deinen Posteingang.",
+    "errors": {
+      "invalidCode": "Ungültiger Bestätigungscode. Versuch es noch einmal.",
+      "emailNotFound": "Für diese E-Mail-Adresse wurde kein Konto gefunden.",
+      "sendFailed": "Der Bestätigungscode konnte nicht gesendet werden.",
+      "generic": "Deine E-Mail-Adresse konnte nicht bestätigt werden."
+    }
+  },
   "login": {
     "title": "Anmelden",
     "withAccount": "Melde dich mit deinem SpaceFleet-Konto an",
+    "noAccountPrompt": "Noch kein Konto?",
+    "createAccount": "Konto erstellen",
     "emailLabel": "E-Mail",
     "passwordLabel": "Passwort",
     "twoFactorLabel": "Bestätigungscode",
@@ -63,11 +101,11 @@
     },
     "provider": {
       "signInWith": "Mit {{provider}} anmelden",
+      "signUpWith": "Mit {{provider}} registrieren",
       "or": "oder",
       "continueInBrowser": "Schließe die Anmeldung in deinem Browser ab. Danach kommst du hierher zurück.",
       "errorStart": "Die Anmeldung konnte nicht gestartet werden. Bitte versuch es noch einmal.",
       "errors": {
-        "no_account": "Kein SpaceFleet-Konto nutzt diese E-Mail-Adresse. Erstell eins in Badger oder Parrot auf einem Computer und melde dich dann hier an.",
         "email_unverified": "Die E-Mail-Adresse dieses Kontos ist nicht bestätigt. Bestätige sie beim Anbieter oder melde dich mit E-Mail und Passwort an.",
         "email_domain_disallowed": "Mit dieser E-Mail-Adresse kann kein Konto erstellt werden.",
         "account_deletion_pending": "Die Löschung dieses Kontos ist geplant.",
@@ -836,8 +874,8 @@
   },
   "tvPairing": {
     "signIn": {
-      "title": "Bei Badger anmelden",
-      "subtitle": "Öffne auf deinem Handy oder Computer Badger → Einstellungen → Gerät koppeln und scanne dann den Code oder gib ihn ein.",
+      "title": "Bei {{app}} anmelden",
+      "subtitle": "Öffne auf deinem Handy oder Computer {{app}} → Einstellungen → Gerät koppeln und scanne dann den Code oder gib ihn ein.",
       "codeLabel": "Oder gib diesen Code ein",
       "qrAccessibility": "QR-Code zum Koppeln dieses Fernsehers",
       "starting": "Kopplungscode wird abgerufen…",
@@ -851,7 +889,7 @@
       },
       "errors": {
         "title": "Dieser Fernseher konnte nicht gekoppelt werden",
-        "unreachable": "Wir konnten Badger nicht erreichen. Prüfe die Verbindung dieses Fernsehers und hol dir einen neuen Code.",
+        "unreachable": "Wir konnten {{app}} nicht erreichen. Prüfe die Verbindung dieses Fernsehers und hol dir einen neuen Code.",
         "failed": "Beim Koppeln ist etwas schiefgelaufen. Hol dir einen neuen Code, um es nochmal zu versuchen.",
         "key_unreadable": "Die Genehmigung ist bei diesem Fernseher angekommen, aber der Mediathek-Schlüssel konnte nicht gelesen werden. Hol dir einen neuen Code und genehmige ihn erneut.",
         "key_mismatch": "Der gesendete Mediathek-Schlüssel öffnet die Mediathek dieses Kontos nicht. Auf diesem Fernseher wurde nichts gespeichert. Hol dir einen neuen Code und genehmige ihn erneut in einer App, die deine Mediathek hat."

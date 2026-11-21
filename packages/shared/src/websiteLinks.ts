@@ -22,3 +22,13 @@ export const errorReportsPrivacyUrl = (language: string): string => {
   const lang = (WEBSITE_LANGUAGES as readonly string[]).includes(base) ? base : "en";
   return `${LEGAL_WEBSITE}/${lang}/privacy#error-reports`;
 };
+
+/**
+ * A legal page on spacefleet.io (`/<lang>/<slug>`, e.g. `terms`, `privacy`), in the app's language: the phones' sign-up
+ * line links the terms and the privacy policy (ACCT-AUTH-10, WEB-LEGAL-18).
+ */
+export const legalPageUrl = (language: string, slug: string): string => {
+  const base = language.split("-")[0] ?? "";
+  const lang = (WEBSITE_LANGUAGES as readonly string[]).includes(base) ? base : "en";
+  return `${LEGAL_WEBSITE}/${lang}/${slug}`;
+};

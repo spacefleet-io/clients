@@ -48,12 +48,12 @@ import type { RootStackParamList } from "../../navigation/AppNavigator";
 import { useAuth } from "../../store/auth";
 import { TvListDialog, type TvListDialogItem } from "../components/TvListDialog";
 import { rememberTvSettingsGroup, tvSettingsGroups, tvSettingsOpenGroup, type TvSettingsGroupId } from "../lib/tvSettingsGroups";
-import { focusDestination, type TvViewInstance } from "../lib/tvViewInstance";
-import { useTvScale, useTvStyles } from "../lib/tvScale";
-import { TvFocusable } from "../components/TvFocusable";
-import { TvSegmented } from "../ui/TvChip";
-import { TvRow, TvRowList } from "../ui/TvRow";
-import { TvBody, TvEyebrow, TvTitle } from "../ui/TvText";
+import { focusDestination, type TvViewInstance } from "@space/mobile-shell/tv/tvViewInstance";
+import { useTvScale, useTvStyles } from "@space/mobile-shell/tv/tvScale";
+import { TvFocusable } from "@space/mobile-shell/tv/TvFocusable";
+import { TvSegmented } from "@space/mobile-shell/tv/TvChip";
+import { TvRow, TvRowList } from "@space/mobile-shell/tv/TvRow";
+import { TvBody, TvEyebrow, TvTitle } from "@space/mobile-shell/tv/TvText";
 import { TV_COLOR, TV_RADII, TV_SPACE, TV_TYPE } from "../ui/tokens";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;

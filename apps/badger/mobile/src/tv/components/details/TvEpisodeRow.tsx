@@ -1,13 +1,13 @@
 import React, { memo, useCallback } from "react";
 import { StyleSheet, Text, View } from "react-native";
-import type { TvViewInstance } from "../../lib/tvViewInstance";
+import type { TvViewInstance } from "@space/mobile-shell/tv/tvViewInstance";
 import type { MediaEpisode } from "@space/shared/libraryTypes";
 import { MediaArtwork } from "../../../components/MediaArtwork";
 import { theme } from "../../../theme/theme";
 import { UNAVAILABLE_LOOK } from "@space/mobile-shell/theme";
 import { TV_RADIUS } from "../../lib/tvLook";
-import { useTvStyles } from "../../lib/tvScale";
-import { TvFocusable } from "../TvFocusable";
+import { useTvStyles } from "@space/mobile-shell/tv/tvScale";
+import { TvFocusable } from "@space/mobile-shell/tv/TvFocusable";
 
 export type TvEpisodeRowProps = {
   episode: MediaEpisode;

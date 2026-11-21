@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { accountDeletionError, accountDeletionModeInput, finishAccountDeletion } from "../src/lib/accountDeletion";
+import { accountDeletionError, accountDeletionModeInput, finishAccountDeletion } from "@space/mobile-shell/account-deletion";
 
 describe("accountDeletionError", () => {
   it("asks for the verification code only when the API demands or rejects one", () => {
@@ -26,6 +26,7 @@ describe("accountDeletionError", () => {
  * @bugfix @regression-proof Found in the PR #361 review, 2026-10-16.
  */
 describe("finishAccountDeletion", () => {
+  // @req ACCT-DEL-01[badger-mobile]
   it("removes every download and the library key, then signs out", async () => {
     const calls: string[] = [];
     await finishAccountDeletion({

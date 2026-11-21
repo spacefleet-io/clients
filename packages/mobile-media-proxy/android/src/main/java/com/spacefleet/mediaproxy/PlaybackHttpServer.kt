@@ -75,6 +75,7 @@ class PlaybackHttpServer(
   private lateinit var pool: ExecutorService
   private lateinit var prefetchPool: ExecutorService
   private lateinit var prefetcher: SegmentPrefetcher
+  private lateinit var preloader: NeighbourPreloader
 
   fun start(): Int {
     val s = ServerSocket(0, 64, lan?.address ?: InetAddress.getByName("127.0.0.1"))
@@ -88,6 +89,7 @@ class PlaybackHttpServer(
       Thread(r, "PlaybackHttp-prefetch").apply { isDaemon = true }
     }
     prefetcher = SegmentPrefetcher(chunkFetcher, prefetchPool)
+    preloader = NeighbourPreloader(chunkFetcher, chunkedFiles::peek)
     running.set(true)
     acceptThread = Thread({ acceptLoop(s) }, "PlaybackHttp-accept").apply {
       isDaemon = true
@@ -102,6 +104,7 @@ class PlaybackHttpServer(
     try { server?.close() } catch (_: Throwable) {}
     try { pool.shutdownNow() } catch (_: Throwable) {}
     try { prefetchPool.shutdownNow() } catch (_: Throwable) {}
+    try { preloader.stop() } catch (_: Throwable) {}
     sessions.clear()
     lanKeys.clear()
     chunkedFiles.clear()
@@ -113,6 +116,20 @@ class PlaybackHttpServer(
   /** High-traffic playback buffer (STOR-BW-01): the look-ahead the proxy keeps; [TrafficBuffer.NO_CAP] restores the normal one. */
   fun setBufferCap(seconds: Double) {
     prefetcher.bufferCapSeconds = seconds
+    preloader.setBufferCap(seconds)
+  }
+
+  /** The silo's high-traffic state as the tunnel hears it (STOR-BW-01): no next-song opening is loaded ahead while high. */
+  fun setTrafficHigh(high: Boolean) {
+    preloader.setTrafficHigh(high)
+  }
+
+  /**
+   * The playing, next and previous queue entries (registered chunked-file ids, null where none): their openings stay
+   * cached and the missing ones load while the player is idle (PAR-PLAY-07, [NeighbourPreloader]).
+   */
+  fun setNeighbours(current: String?, next: String?, previous: String?) {
+    preloader.setNeighbours(current, next, previous)
   }
 
   /** Make-before-break rung switch: see [SegmentPrefetcher.beginSwitch]. */
@@ -523,10 +540,13 @@ class PlaybackHttpServer(
     Log.d(TAG, "chunked.served connId=$connId id=$id bytes=$sliceLen chunks=${slices.size} elapsedMs=${System.currentTimeMillis() - startMs}")
   }
 
-  /** Decrypted chunk [index] of [file], checked against the size the library recorded for it. */
+  /**
+   * Decrypted chunk [index] of [file], checked against the size the library recorded for it. A player read: loading ahead
+   * yields to it (PAR-PLAY-07).
+   */
   private fun openChunk(file: ChunkedFile, index: Int): ObjectBody {
     val chunk = file.chunks[index]
-    val body = chunkFetcher.openObject(chunk.objectKey)
+    val body = preloader.playerRead(chunk.objectKey) { chunkFetcher.openObject(chunk.objectKey) }
     if (body.length != chunk.plainSize) {
       body.release()
       throw IOException("chunk_size_mismatch id=${file.id} chunk=$index key=${chunk.objectKey} got=${body.length} want=${chunk.plainSize}")
@@ -539,7 +559,7 @@ class PlaybackHttpServer(
     try {
       prefetchPool.submit {
         try {
-          chunkFetcher.prefetch(chunk.objectKey)
+          preloader.playerRead(chunk.objectKey) { chunkFetcher.prefetch(chunk.objectKey) }
         } catch (e: Throwable) {
           Log.d(TAG, "chunked.prefetch.failed id=${file.id} chunk=$index msg=${e.message}")
         }

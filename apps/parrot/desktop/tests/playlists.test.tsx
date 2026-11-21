@@ -141,11 +141,13 @@ describe("Parrot desktop playlists", () => {
   });
 
   // @req PAR-PL-02
-  it("the Playlists tab lists the playlists and a new playlist made there opens empty", async () => {
+  // @req PAR-NAV-06[parrot]
+  it("the Playlists tab lists the playlists under no title and a new playlist made there opens empty", async () => {
     await mount();
     await click(q("playlists-tab")[0]);
     expect(q("playlists-tab")[0]!.getAttribute("aria-current")).toBe("page");
-    expect(q("playlists-heading")[0]!.textContent).toBe("Playlists");
+    expect(q("playlists-page")).toHaveLength(1);
+    expect(q("playlists-heading")).toHaveLength(0);
     console.log(SUITE, "tiles", tileNames());
     expect(tileNames()).toEqual(["Gym"]);
 
@@ -203,7 +205,8 @@ describe("Parrot desktop playlists", () => {
     await click(q("song-add-to-playlist")[0]);
     await click(q("add-to-playlist-new")[0]);
     await submitName("Calm");
-    expect(saved.at(-1)![0]).toMatchObject({ kind: "create", name: "Calm", trackIds: ["t1"] });
+    // The Songs list opens by title (PAR-LIB-06), so its first row is Gale (t3).
+    expect(saved.at(-1)![0]).toMatchObject({ kind: "create", name: "Calm", trackIds: ["t3"] });
     await click(q("playlists-tab")[0]);
     expect(tileNames()).toEqual(["Calm", "Gym"]);
   });

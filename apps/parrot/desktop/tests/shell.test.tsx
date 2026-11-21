@@ -3,7 +3,8 @@
  * @test-id PARROT-DESKTOP-SHELL-001
  * @level integration (real Library shell, Home, player bar and now-playing page, real translator; `window.parrot` mocked)
  * @why Chris, 2026-11-09: "you should build everything in the app like the demo you had showed me". The app opens on
- *   Home with "Jump back in" (Resume from where the song stopped, Shuffle), "Recently played" and "Your artists"; the
+ *   Home with "Jump back in" (Resume from where the song stopped, Shuffle), "Recently played", "Recently added" and
+ *   "Your artists" (Chris 2026-11-20: "Recently added" under "Recently played", as on Badger's Home); the
  *   player bar has shuffle, repeat, lyrics and queue; the now-playing page has Lyrics / Up next / About, and Lyrics says
  *   plainly that there are none yet; Account and Settings hold what left the top bar.
  */
@@ -49,8 +50,9 @@ const library = {
     { id: "art-2", name: "Other Act", albumCount: 1, trackCount: 1 },
   ],
   albums: [
-    { id: "alb-1", title: "First Light", artistId: "art-1", artistName: "Test Band", year: 2020, trackCount: 2, coverUrl: null, coverThumbUrl: null },
-    { id: "alb-2", title: "Second Wind", artistId: "art-2", artistName: "Other Act", year: 2022, trackCount: 1, coverUrl: null, coverThumbUrl: null },
+    { id: "alb-1", title: "First Light", artistId: "art-1", artistName: "Test Band", year: 2020, trackCount: 2, addedAt: 1_000, coverUrl: null, coverThumbUrl: null },
+    // Added after First Light: first under "Recently added".
+    { id: "alb-2", title: "Second Wind", artistId: "art-2", artistName: "Other Act", year: 2022, trackCount: 1, addedAt: 2_000, coverUrl: null, coverThumbUrl: null },
   ],
   tracks: [
     track("t1", "Harbour", "alb-1", "First Light", 1),
@@ -133,9 +135,40 @@ describe("Parrot desktop shell", () => {
     expect(q("home-jump-title")[0]?.textContent).toBe("First Light");
     expect(q("home-jump-back-in")[0]?.textContent).toContain("Test Band · 2020 · 2 songs");
     expect(q("home-resume")[0]?.textContent).toBe("Play");
+    // Recently added shows as soon as the library has albums, before anything was played.
+    expect(q("home-added")[0]?.textContent).toContain("Recently added");
     expect(q("home-recent")[0]?.textContent).toContain("Albums");
-    expect(q("home-album")).toHaveLength(2);
+    expect(q("home-recent")[0]?.querySelectorAll('[data-testid="home-album"]')).toHaveLength(2);
     expect(q("home-artist").map((el) => el.textContent)).toEqual(["Other Act", "Test Band"]);
+  });
+
+  // @req PAR-HOME-01
+  it("Recently added sits under Recently played, newest added first, and its See all opens Albums sorted Recently added", async () => {
+    localStorage.setItem(
+      "parrot.history.u1",
+      JSON.stringify({ version: 1, albums: [{ albumId: "alb-1", trackId: "t2", positionMs: 78_000, playedAt: 1 }], artistPlays: { "art-1": 3 } })
+    );
+    // The user last sorted the library by title with a filter that hides every album: See all must still open all of
+    // them in the row's order.
+    localStorage.setItem("parrot.libraryPrefs", JSON.stringify({ albums: { sort: "title", filters: { decade: 1950 } } }));
+    await mount();
+    const rows = [...q("home")[0]!.querySelectorAll("section[data-testid]")].map((el) => el.getAttribute("data-testid"));
+    const added = q("home-added")[0]!;
+    const titles = [...added.querySelectorAll('[data-testid="home-album"]')].map((el) => el.textContent);
+    console.info(SUITE, "home rows", rows, "recently added", titles);
+    expect(rows).toEqual(["home-jump-back-in", "home-recent", "home-added", "home-artists"]);
+    expect(added.textContent).toContain("Recently added");
+    expect(titles).toHaveLength(2);
+    expect(titles[0]).toContain("Second Wind");
+    expect(titles[1]).toContain("First Light");
+    expect(q("home-recent")[0]?.textContent).toContain("Recently played");
+    await click("home-added-see-all");
+    const grid = q("library-album").map((el) => el.textContent);
+    console.info(SUITE, "see all: prefs", localStorage.getItem("parrot.libraryPrefs"), "grid", grid);
+    expect(q("library-filter-button")[0]?.textContent).toBe("Filter");
+    expect(grid[0]).toContain("Second Wind");
+    expect(grid[1]).toContain("First Light");
+    expect(JSON.parse(localStorage.getItem("parrot.libraryPrefs") ?? "{}").albums).toEqual({ sort: "recent", filters: {} });
   });
 
   // @req PAR-HOME-01

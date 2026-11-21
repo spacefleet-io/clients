@@ -1,8 +1,9 @@
 // Settings, the same rows as the desktop's Account and Settings pages (PAR-NAV-01): who is signed in, the plan (read
 // only: no payment on a phone, ACCT-PAY-02), pairing a device, who is listening (profiles, ACCT-PROF-01), the app's language,
 // Even out volume (off by default: songs play as recorded, PAR-PLAY-03), a message to the team (with the
-// error log when ticked), error reports, loading the library again, and sign out (which stops the music and removes
-// the library and key from the phone). Feedback and error reports are the phone apps' shared basis (REL-FAM-03).
+// error log when ticked), error reports, loading the library again, sign out (which stops the music and removes
+// the library and key from the phone) and delete the account (ACCT-DEL-01: a phone that creates accounts deletes them).
+// Feedback and error reports are the phone apps' shared basis (REL-FAM-03).
 import React, { useEffect, useState } from "react";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -218,6 +219,13 @@ export const SettingsScreen = () => {
           />
           <Body muted>{t("parrot.settings.pairDeviceDescription")}</Body>
         </View>
+        {/* ACCT-DEL-01: Settings > Account > Delete account, the same path as on Badger's phone. */}
+        <Button
+          testID="settings-delete-account"
+          label={t("settings.account.deleteAccount")}
+          tone="plain"
+          onPress={() => navigation.navigate("DeleteAccount")}
+        />
       </Section>
       <ProfilesSection onOpen={(mode) => navigation.navigate("Profiles", { mode })} />
       <Section title={t("parrot.settings.language")}>

@@ -42,6 +42,11 @@ describe("SONGS_SQL", () => {
       peak: null,
       albumGainDb: null,
       albumPeak: null,
+      // PAR-LIB-06: what the library row's Decade, Genre, With lyrics and Lossless filters read (no file stored here).
+      year: 1902,
+      genre: null,
+      lossless: null,
+      hasLyrics: 0,
     });
     expect(rows[0].durationMs).toBeNull();
   });

@@ -12,11 +12,11 @@ import React from "react";
 import { describe, expect, it, vi } from "vitest";
 import { act, create, type ReactTestInstance, type ReactTestRenderer } from "react-test-renderer";
 import type { LucideIcon } from "lucide-react-native";
-import { TvFocusable } from "../components/TvFocusable";
-import { TvChip, TvSegmented } from "./TvChip";
-import { TvIconButton, TvPillButton } from "./TvPillButton";
-import { TvRow, TvRowList } from "./TvRow";
-import { TvEyebrow } from "./TvText";
+import { TvFocusable } from "@space/mobile-shell/tv/TvFocusable";
+import { TvChip, TvSegmented } from "@space/mobile-shell/tv/TvChip";
+import { TvIconButton, TvPillButton } from "@space/mobile-shell/tv/TvPillButton";
+import { TvRow, TvRowList } from "@space/mobile-shell/tv/TvRow";
+import { TvEyebrow } from "@space/mobile-shell/tv/TvText";
 import { TV_COLOR, TV_FOCUS, TV_RADII } from "./tokens";
 
 vi.mock("react-native", async () => {
@@ -35,7 +35,8 @@ vi.mock("@space/mobile-shell/components", () => ({ SkyCover: "SkyCover" }));
 vi.mock("../../theme/theme", () => ({
   theme: {
     colors: { bg: "#000", surface: "#111", surfaceRaised: "#222", border: "#333", accent: "#ffb357", text: "#fff", textMuted: "#888", danger: "#f00" },
-    accentTextHex: "#1a1300",
+    // Badger's real text on the accent (the shell default): the shared pieces read it from the theme provider's default.
+    accentTextHex: "#121421",
     font: { family: { sans: "Inter", display: "SpaceGrotesk" } },
   },
 }));

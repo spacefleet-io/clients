@@ -37,10 +37,10 @@ vi.mock("react-native", async () => {
 });
 vi.mock("@space/mobile-shell/i18n", async (importOriginal) => {
   const actual = await importOriginal<typeof I18nModule>();
-  return { ...actual, useTranslation: () => ({ t: actual.translate }) };
+  return { ...actual, useTranslation: () => ({ t: actual.translate, i18n: { language: actual.getCurrentLanguage() } }) };
 });
 vi.mock("@react-navigation/native", () => ({ useIsFocused: () => state.focused }));
-vi.mock("lucide-react-native", () => ({ Home: "Icon", LibraryBig: "Icon", ListVideo: "Icon", Settings: "Icon" }));
+vi.mock("lucide-react-native", () => ({ Home: "Icon", LibraryBig: "Icon", ListVideo: "Icon", Search: "Icon", Settings: "Icon" }));
 vi.mock("@space/mobile-shell/components", () => {
   const passthrough = (props: { children?: ReactNode }) => createElement("Region", null, props.children);
   return {
@@ -75,6 +75,8 @@ vi.mock("../src/components/UnpaidAccessBanner", () => ({ UnpaidAccessBanner: () 
 vi.mock("../src/screens/HomeScreen", () => ({ HomeScreen: () => createElement("HomeScreen") }));
 vi.mock("../src/screens/LibraryScreen", () => ({ LibraryScreen: () => null }));
 vi.mock("../src/components/PlaylistsPanel", () => ({ PlaylistsPanel: () => null }));
+// The phone Search overlay (UX-PHONE-12) pulls react-native-fs and the real shell components, which plain node cannot load.
+vi.mock("../src/components/PhoneSearch", () => ({ PhoneSearch: () => null }));
 vi.mock("../src/screens/SettingsScreen", () => ({ SettingsScreen: () => createElement("SettingsScreen") }));
 
 const log = (step: string, detail: unknown) => console.info(`[MOBILE-NEW-DEVICE-NOTICE-OVERLAY-001] ${step}`, JSON.stringify(detail));

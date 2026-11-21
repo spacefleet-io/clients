@@ -37,7 +37,7 @@ vi.mock("@space/mobile-shell/render-boundary", () => ({
   MobileRenderBoundary: ({ children }: { children: React.ReactNode }) => children,
 }));
 vi.mock("../src/tv/lib/tvRuntime", () => ({ IS_TV: false }));
-vi.mock("../src/tv/components/TvFocusable", () => ({ TvFocusable: "TvFocusable" }));
+vi.mock("@space/mobile-shell/tv/TvFocusable", () => ({ TvFocusable: "TvFocusable" }));
 vi.mock("../src/theme/theme", () => {
   const anyKey = new Proxy({}, { get: () => "x" });
   return { theme: { colors: anyKey, spacing: anyKey } };

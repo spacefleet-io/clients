@@ -14,7 +14,7 @@ import { scopeLogger } from "./logger";
  * starts the sign-in at the API with the SHA-256 of a fresh secret and opens the provider in the system browser; the
  * API sends the browser back to `<scheme>://auth/provider` with `signinCode` or `signinError`. The app's root hands
  * every link to {@link handOffProviderReturn}; the sign-in screen's {@link useMobileProviderSignIn} trades the code and
- * the secret for a session. A phone never creates an account: an unknown email comes back as `no_account`.
+ * the secret for a session. An email with no account gets a new free account, as on the website (ACCT-AUTH-10).
  */
 
 const log = scopeLogger("provider-sign-in");

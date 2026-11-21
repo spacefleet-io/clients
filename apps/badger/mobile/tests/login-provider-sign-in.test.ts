@@ -29,6 +29,7 @@ const h = vi.hoisted(() => {
     store: new Map<string, string>(),
     openURL: vi.fn(),
     setSession: vi.fn(),
+    login: vi.fn(),
     listSignInProviders: vi.fn(),
     startProviderSignIn: vi.fn(),
     completeProviderSignIn: vi.fn(),
@@ -58,6 +59,8 @@ vi.mock("@space/mobile-shell/components", async () => {
     MobilePhoneSignInCard: "MobilePhoneSignInCard",
     MobileOrDivider: "MobileOrDivider",
     MobileProviderSignInRows: rows.MobileProviderSignInRows,
+    MobileSignUp: "MobileSignUp",
+    MobileSignUpTermsNotice: "MobileSignUpTermsNotice",
   };
 });
 vi.mock("@react-native-async-storage/async-storage", () => ({
@@ -85,7 +88,7 @@ vi.mock("@space/shared/api", async () => ({
   completeProviderSignIn: (...a: unknown[]) => h.completeProviderSignIn(...a),
 }));
 vi.mock("../src/lib/apiConfig", () => ({ getStoredApiHost: async () => null, serverPickerAllowed: () => false, setStoredApiHost: vi.fn() }));
-vi.mock("../src/store/auth", () => ({ useAuth: () => ({ login: vi.fn(), setSession: h.setSession }) }));
+vi.mock("../src/store/auth", () => ({ useAuth: () => ({ login: h.login, setSession: h.setSession }) }));
 vi.mock("@space/mobile-shell/logger", () => ({
   scopeLogger: (scope: string) => ({
     info: (event: string, data?: unknown) => console.info(`[${scope}] ${event}`, data ?? ""),
@@ -100,7 +103,6 @@ vi.mock("../src/tv/lib/tvRuntime", () => ({
   },
 }));
 vi.mock("../src/lib/phonePairing", () => ({ currentPhoneDeviceName: () => "Badger (Pixel 8)" }));
-vi.mock("../src/tv/lib/pairingRuntime", () => ({ tvDeviceName: () => "TV" }));
 vi.mock("../src/setup/BadgerSetupFlow", () => ({ SignInSetupBack: () => null }));
 
 import { ApiError } from "@space/shared/api";
@@ -282,12 +284,12 @@ describe(`[${SUITE}] Google, Apple and Microsoft on the Badger phone`, () => {
   });
 
   // @req ACCT-SIGNIN-05[badger-mobile]
-  it("ACCT-SIGNIN-05[badger-mobile]: an email with no account says to create one elsewhere, and drops the secret", async () => {
+  it("ACCT-SIGNIN-05[badger-mobile]: a cancelled sign-in says so in words, and drops the secret", async () => {
     const tree = await render();
     h.store.set(PROVIDER_VERIFIER_KEY, "stored-verifier");
-    await deliver("spacebadger://auth/provider?signinError=no_account");
-    console.info(`[${SUITE}] no_account texts`, texts(tree));
-    expect(texts(tree)).toContain(en.login.provider.errors.no_account);
+    await deliver("spacebadger://auth/provider?signinError=cancelled");
+    console.info(`[${SUITE}] cancelled texts`, texts(tree));
+    expect(texts(tree)).toContain(en.login.provider.errors.cancelled);
     expect(h.completeProviderSignIn).not.toHaveBeenCalled();
     expect(h.store.has(PROVIDER_VERIFIER_KEY)).toBe(false);
   });
@@ -300,5 +302,77 @@ describe(`[${SUITE}] Google, Apple and Microsoft on the Badger phone`, () => {
     expect(rowIds(tree)).toEqual([]);
     expect(byTestId(tree, "provider-sign-in-divider")).toHaveLength(0);
     expect(h.listSignInProviders).not.toHaveBeenCalled();
+  });
+});
+
+describe(`[${SUITE}] creating an account on the Badger phone (ACCT-AUTH-10)`, () => {
+  beforeEach(() => {
+    h.isTv = false;
+    h.listSignInProviders.mockResolvedValue({ providers: ["google", "apple", "microsoft"] });
+    h.setSession.mockReset().mockResolvedValue(undefined);
+    h.login.mockReset();
+  });
+
+  const signUp = (tree: ReactTestRenderer) => byType(tree, "MobileSignUp");
+
+  // @req ACCT-AUTH-10[badger-mobile]
+  // @req ACCT-AUTH-12[badger-mobile]
+  it("ACCT-AUTH-10[badger-mobile]: the sign-in screen offers a free account, and the provider rows carry the sign-up line", async () => {
+    const tree = await render();
+    const link = byTestId(tree, "login-create-account")[0]!;
+    console.info(`[${SUITE}] create-account link`, link.props.label);
+    expect(link.props.label).toBe(`${en.login.noAccountPrompt} ${en.login.createAccount}`.toUpperCase());
+    expect(byTestId(tree, "provider-terms-notice")).toHaveLength(1);
+
+    await act(async () => {
+      link.props.onPress();
+    });
+    const card = signUp(tree)[0]!;
+    console.info(`[${SUITE}] sign-up props`, { initialStep: card.props.initialStep, device: card.props.device });
+    expect(card.props.initialStep).toBe("form");
+    expect(card.props.device).toEqual({ deviceType: "mobile", deviceName: "Badger (Pixel 8)" });
+    expect(card.props.onSignedIn).toBe(h.setSession);
+    // The rows under the form read "Sign up with …": a new email gets an account through them too (Apple 4.8: Apple
+    // wherever Google is).
+    let rows!: ReactTestRenderer;
+    await act(async () => {
+      rows = create(card.props.providerRows);
+    });
+    const labels = rows.root.findAll((n) => (n.type as unknown) === "Pressable" && typeof n.props.accessibilityLabel === "string").map((n) => n.props.accessibilityLabel as string);
+    console.info(`[${SUITE}] sign-up rows`, labels);
+    expect(labels).toEqual(["Sign up with Google", "Sign up with Apple", "Sign up with Microsoft"]);
+
+    await act(async () => {
+      card.props.onSignIn("new@example.test");
+    });
+    expect(signUp(tree)).toHaveLength(0);
+    expect(byTestId(tree, "login-email")[0]!.props.value).toBe("new@example.test");
+  });
+
+  // @req ACCT-AUTH-10[badger-mobile]
+  it("ACCT-AUTH-10[badger-mobile]: signing in to an unverified account opens the emailed-code step", async () => {
+    h.login.mockRejectedValueOnce(new ApiError(403, { error: "email_not_verified" }));
+    const tree = await render();
+    await act(async () => {
+      byTestId(tree, "login-email")[0]!.props.onChangeText("new@example.test");
+      byTestId(tree, "login-password")[0]!.props.onChangeText("long-enough-1");
+    });
+    await act(async () => {
+      byTestId(tree, "login-submit")[0]!.props.onPress();
+    });
+    const card = signUp(tree)[0]!;
+    console.info(`[${SUITE}] unverified → step`, card?.props.initialStep);
+    expect(card.props.initialStep).toBe("verify");
+    expect(card.props.initialEmail).toBe("new@example.test");
+  });
+
+  // @req ACCT-AUTH-10[badger-tv]
+  it("ACCT-AUTH-10[badger-tv]: the TV only signs in: no create-account link, no sign-up line", async () => {
+    h.isTv = true;
+    const tree = await render();
+    console.info(`[${SUITE}] TV create-account links`, byTestId(tree, "login-create-account").length);
+    expect(byTestId(tree, "login-create-account")).toHaveLength(0);
+    expect(byTestId(tree, "provider-terms-notice")).toHaveLength(0);
+    expect(signUp(tree)).toHaveLength(0);
   });
 });

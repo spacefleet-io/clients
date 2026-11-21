@@ -5,7 +5,7 @@ import type { TrackFileRow, TrackRow } from "./catalog";
 
 /** Albums with their album artist, in artist sort order, then year, then title. */
 export const ALBUMS_SQL = `SELECT al.id AS id, al.title AS title, COALESCE(ar.name, '') AS artistName, al.album_artist_id AS artistId, al.year AS year, al.kind AS kind,
-       (SELECT COUNT(*) FROM tracks t WHERE t.album_id = al.id) AS trackCount, al.created_at AS addedAt
+       (SELECT COUNT(*) FROM tracks t WHERE t.album_id = al.id) AS trackCount, al.created_at AS addedAt, al.genre AS genre
   FROM albums al LEFT JOIN artists ar ON ar.id = al.album_artist_id
  ORDER BY COALESCE(ar.sort_name, ar.name, '') COLLATE NOCASE, al.year, al.title COLLATE NOCASE`;
 
@@ -49,10 +49,18 @@ export const ALBUM_TRACKS_SQL = `SELECT t.id AS id, t.album_id AS albumId, t.dis
   FROM tracks t LEFT JOIN artists ar ON ar.id = t.artist_id
  WHERE t.album_id = ?`;
 
-/** Every song of the library with its album's title, by title then artist; the phone's Songs view. */
+/**
+ * Every song of the library with its album's title, by title then artist; the phone's Songs view and the web player's
+ * Songs tab. The year and genre are the ones the song shows (its own, else its album's unless the user emptied them,
+ * PAR-META-17); `lossless` is its original file's and `hasLyrics` says lyrics are stored, for the filters (PAR-LIB-06).
+ */
 export const SONGS_SQL = `SELECT t.id AS id, t.album_id AS albumId, t.disc AS disc, t.number AS number, t.title AS title,
        COALESCE(ar.name, '') AS artistName, COALESCE(t.artist_id, '') AS artistId, t.duration_ms AS durationMs, COALESCE(al.title, '') AS albumTitle, t.gain_db AS gainDb, t.peak AS peak,
-       t.album_gain_db AS albumGainDb, t.album_peak AS albumPeak
+       t.album_gain_db AS albumGainDb, t.album_peak AS albumPeak,
+       CASE WHEN t.year_edited THEN t.year ELSE COALESCE(t.year, al.year) END AS year,
+       CASE WHEN t.genre_edited THEN t.genre ELSE COALESCE(t.genre, al.genre) END AS genre,
+       (SELECT f.lossless FROM track_files f WHERE f.track_id = t.id ORDER BY f.light_copy, f.created_at LIMIT 1) AS lossless,
+       EXISTS (SELECT 1 FROM lyrics l WHERE l.track_id = t.id AND (l.plain IS NOT NULL OR l.synced IS NOT NULL)) AS hasLyrics
   FROM tracks t LEFT JOIN artists ar ON ar.id = t.artist_id LEFT JOIN albums al ON al.id = t.album_id
  ORDER BY t.title COLLATE NOCASE, ar.name COLLATE NOCASE, al.title COLLATE NOCASE`;
 
@@ -88,8 +96,17 @@ export type ArtistRow = {
   pictureLicenceUrl: string | null;
 };
 
-/** A `SONGS_SQL` row: a song and the title of its album. */
-export type SongRow = TrackRow & { albumTitle: string };
+/**
+ * A `SONGS_SQL` row: a song, the title of its album and what the library's filters read (SQLite's booleans are 0 or 1;
+ * absent on rows read by other queries).
+ */
+export type SongRow = TrackRow & {
+  albumTitle: string;
+  year?: number | null;
+  genre?: string | null;
+  lossless?: number | boolean | null;
+  hasLyrics?: number | boolean | null;
+};
 
 /** A `TRACK_FILES_SQL` row as SQLite returns it: its booleans are 0 or 1. */
 export type RawTrackFileRow = Omit<TrackFileRow, "lossless" | "lightCopy"> & {

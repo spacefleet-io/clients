@@ -8,6 +8,11 @@
     <!-- Settings → Pair a device scans a new device's QR code (ACCT-PAIR-01). Typing the short code works without a camera,
          so the camera stays optional and phones without one still install the app. -->
     <uses-permission android:name="android.permission.CAMERA" />
+    <!-- One APK for phones and Android TV / Google TV / Fire TV (PAR-TV-01, as Badger's PLAT-TV-01). TVs have no
+         touchscreen and no camera; marking both optional keeps Google Play and the Amazon Appstore from hiding the app
+         on TVs. Leanback is optional so phones still install it. -->
+    <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+    <uses-feature android:name="android.software.leanback" android:required="false" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
 
@@ -16,6 +21,7 @@
       android:label="@string/app_name"
       android:icon="@mipmap/ic_launcher"
       android:roundIcon="@mipmap/ic_launcher_round"
+      android:banner="@drawable/tv_banner"
       android:allowBackup="false"
       android:theme="@style/AppTheme"
       android:networkSecurityConfig="${networkSecurityConfig}"
@@ -28,12 +34,13 @@
         android:label="@string/app_name"
         android:configChanges="keyboard|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode"
         android:launchMode="singleTask"
-        android:screenOrientation="portrait"
         android:windowSoftInputMode="adjustResize"
         android:exported="true">
         <intent-filter>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
+            <!-- Shows the app on the Android TV / Google TV home screen (PAR-TV-01). -->
+            <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
         </intent-filter>
         <!-- parrot://auth/provider: the browser back from Google, Apple or Microsoft (ACCT-SIGNIN-05). -->
         <intent-filter>

@@ -16,8 +16,11 @@ const anim = vi.hoisted(() => ({
   springs: [] as { toValue: number; damping: number; stiffness: number; mass: number; useNativeDriver: boolean }[],
   set: [] as number[],
   width: 360,
-  // The tabs' measured spans (x and width from the bar's left edge): as if their onLayout already ran; none = not yet.
+  // The tabs' measured spans (x and width from their row's left edge): as if their onLayout already ran; none = not yet.
   spans: {} as Record<string, { x: number; width: number }>,
+  // Each half's x from the bar's left edge, with an action: as if its onLayout already ran.
+  halfX: {} as { left?: number; right?: number },
+  objectStates: 0,
 }));
 
 const log = (step: string, detail: unknown) => console.info(`[MOBILE-SHELL-TAB-BAR-001] ${step}`, JSON.stringify(detail));
@@ -26,9 +29,17 @@ vi.mock("react", async () => {
   const actual = await vi.importActual<typeof import("react")>("react");
   const useRef = <T,>(initial: T) => ({ current: initial });
   const useEffect = (fn: () => void | (() => void)) => void fn();
-  // The bar's measured width: as if onLayout already ran.
-  const useState = <T,>(initial: T) => [typeof initial === "number" ? anim.width : typeof initial === "object" ? anim.spans : initial, () => undefined];
-  return { ...actual, default: { ...actual, useRef, useEffect, useState }, useRef, useEffect, useState };
+  const useMemo = <T,>(fn: () => T) => fn();
+  // The bar's measured width (its first state), then the tabs' spans, then the halves' x: as if onLayout already ran.
+  const useState = <T,>(initial: T) => {
+    if (typeof initial === "number") {
+      anim.objectStates = 0;
+      return [anim.width, () => undefined];
+    }
+    if (typeof initial === "object") return [anim.objectStates++ === 0 ? anim.spans : anim.halfX, () => undefined];
+    return [initial, () => undefined];
+  };
+  return { ...actual, default: { ...actual, useRef, useEffect, useMemo, useState }, useRef, useEffect, useMemo, useState };
 });
 vi.mock("react-native", () => {
   class Value {
@@ -58,6 +69,7 @@ vi.mock("react-native", () => {
 vi.mock("react-native-safe-area-context", () => ({ useSafeAreaInsets: () => ({ bottom: 0 }) }));
 vi.mock("../src/theme", () => ({
   useMobileShellTheme: () => ({
+    accentTextHex: "#0b0d14",
     colors: { accent: "#40dd8f", textMuted: "#b6bace", textDim: "#555" },
     font: { family: { sans: "Inter" } },
   }),
@@ -227,5 +239,94 @@ describe("MobileTabBar on React Native Animated", () => {
     expect(MOBILE_TAB_DISABLED_OPACITY).toBe(0.5);
     expect(idle).toEqual({ opacity: 1, labelColour: "#b6bace", iconColour: "#b6bace", disabled: false });
     expect(disabled).toEqual({ opacity: 0.5, labelColour: "#b6bace", iconColour: "#b6bace", disabled: true });
+  });
+
+  // Chris, 2026-11-19: "the main menu should have a search button in the center (between library and playlists)".
+  // Chris, 2026-11-20 (relayed by Main): "I prefer the version that isn't raised", "to make the text fit maybe the
+  // search button doesn't need the 'search' subtext" and "the search button can still have its own rounded design to
+  // make it different from the other menu items". The action is a button, never a tab: never selected, never under the
+  // dot, its press calls only its own handler; it is a filled accent circle with a dark icon, centred on the tab icons
+  // (no lift, no shadow), its name spoken only, in a slot as wide as the circle, and the tabs' capitals sit closer.
+  // Main, 2026-11-20 (review of 9c1e5a5fe): the circle stays exactly at the bar's centre whatever the labels; each side
+  // of it is an equal half holding its tabs, split by label width.
+  // @req UX-PHONE-12[badger-mobile,parrot]
+  it("an action sits exactly in the bar's centre as a level, icon-only accent circle that is never a tab, between two equal halves", () => {
+    type Button = (props: unknown) => Element;
+    const renderButton = (el: Element): Element => {
+      const button: Button = el.type as Button; // the bar's own TabButton / ActionButton function components
+      return button(el.props);
+    };
+    const idOf = (el: Element) => {
+      const { tab, action: own } = el.props;
+      const source = tab ?? own;
+      return source && typeof source === "object" && "id" in source ? source.id : null;
+    };
+    anim.set.length = 0;
+    const pressed: string[] = [];
+    const three = [tabs[0]!, { id: "playlists", label: "Playlists", icon: Icon }, tabs[1]!];
+    const action = { id: "search", label: "Search", icon: Icon, after: "library", onPress: () => void pressed.push("search") };
+    const tree = MobileTabBar({ tabs: three, activeTab: "playlists", onTabChange: (id) => void pressed.push(`tab:${id}`), action }) as unknown as Element;
+    const buttons = all(tree, (el) => typeof el.type === "function" && el.type !== Icon);
+    const order = buttons.map(idOf);
+    const rendered = renderButton(buttons[1]!);
+    const [pressable] = all(rendered, (el) => el.type === "Pressable");
+    const press: unknown = pressable!.props.onPress;
+    if (typeof press === "function") press();
+    log("action", { order, role: pressable!.props.accessibilityRole, testID: pressable!.props.testID, state: pressable!.props.accessibilityState, pressed, dot: anim.set });
+    expect(order).toEqual(["library", "search", "playlists", "settings"]);
+    expect(pressable!.props).toMatchObject({ accessibilityRole: "button", testID: "tab-search", accessibilityLabel: "Search", accessibilityState: { disabled: false } });
+    expect(pressed).toEqual(["search"]);
+    const icon = all(rendered, (el) => el.type === Icon)[0]!;
+    const circleStyle = Object.assign({}, ...[pressable!.props.style].flat(3).filter(Boolean));
+    const slotStyle = Object.assign({}, ...[rendered.props.style].flat(3).filter(Boolean));
+    const labelStyle = (bar: Element, id: string) => {
+      const tab = all(bar, (el) => typeof el.type === "function" && idOf(el) === id && el.props.tab !== undefined)[0]!;
+      const label = all(renderButton(tab), (el) => el.type === "Text")[0]!;
+      return Object.assign({}, ...[label.props.style].flat(3).filter(Boolean));
+    };
+    // 360 wide, 6 padding, a 36 slot: halves of (360 − 12 − 36) / 2 = 156. Playlists is the first of the right half's two
+    // tabs (78 each until measured): 6 + 156 + 36 + 39 = 237, minus half the 6 dp dot.
+    expect(anim.set).toEqual([234]);
+    const half = (bar: Element, side: string) => all(bar, (el) => el.props?.testID === `mobile-tab-half-${side}`)[0]!;
+    const halfIds = (bar: Element, side: string) => all(half(bar, side), (el) => el.props?.tab !== undefined).map(idOf);
+    expect(halfIds(tree, "left")).toEqual(["library"]);
+    expect(halfIds(tree, "right")).toEqual(["playlists", "settings"]);
+    expect(Object.assign({}, ...[half(tree, "left").props.style].flat(3).filter(Boolean))).toMatchObject({ flexGrow: 1, flexShrink: 1, flexBasis: 0, flexDirection: "row" });
+    const barStyle = (bar: Element) => Object.assign({}, ...[bar.props.style].flat(3).filter(Boolean));
+    // Equal halves either side of a 36 slot inside equal padding: the circle's centre is the bar's, 6 + 156 + 18 = 180.
+    expect(barStyle(tree).paddingHorizontal).toBe(6);
+    const plain = MobileTabBar({ tabs: three, activeTab: "playlists", onTabChange: () => undefined }) as unknown as Element;
+    log("action look", { iconColour: icon.props.color, iconSize: icon.props.size, circleStyle, slotStyle, hitSlop: pressable!.props.hitSlop, tight: labelStyle(tree, "library"), plain: labelStyle(plain, "library") });
+    expect(all(rendered, (el) => el.type === "Text")).toHaveLength(0);
+    // A 36 circle centred on the 24 tab icons: 6 above and below them, inside the bar's 16 top padding; no shadow.
+    expect(circleStyle).toEqual({ width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: "#40dd8f", marginTop: -6 });
+    expect(icon.props.color).toBe("#0b0d14");
+    expect(slotStyle).toMatchObject({ width: 36, flexShrink: 0 });
+    expect(pressable!.props.hitSlop).toMatchObject({ left: 6, right: 6 });
+    expect(labelStyle(tree, "library")).toMatchObject({ fontSize: 11, letterSpacing: 0 });
+    expect(labelStyle(plain, "library")).toMatchObject({ fontSize: 11, letterSpacing: 0.9 });
+    expect(barStyle(plain).paddingHorizontal).toBe(12);
+    expect(all(plain, (el) => String(el.props?.testID).startsWith("mobile-tab-half-"))).toHaveLength(0);
+
+    // Measured: the dot centres on the tab inside its half, counted from the half's own x.
+    anim.set.length = 0;
+    anim.spans = { playlists: { x: 10, width: 60 } };
+    anim.halfX = { left: 6, right: 198 };
+    try {
+      MobileTabBar({ tabs: three, activeTab: "playlists", onTabChange: () => undefined, action });
+    } finally {
+      anim.spans = {};
+      anim.halfX = {};
+    }
+    // 198 + 10 + 60 / 2 = 238, minus 3.
+    expect(anim.set).toEqual([235]);
+
+    const off = MobileTabBar({ tabs: three, activeTab: "library", onTabChange: () => undefined, action: { ...action, disabled: true } }) as unknown as Element;
+    const offButton = all(off, (el) => typeof el.type === "function" && el.props.action !== undefined)[0]!;
+    const offPressable = all(renderButton(offButton), (el) => el.type === "Pressable")[0]!;
+    const offStyle = Object.assign({}, ...[offPressable.props.style].flat(3).filter(Boolean));
+    log("disabled action", { disabled: offPressable.props.disabled, offStyle });
+    expect(offPressable.props.disabled).toBe(true);
+    expect(offStyle.opacity).toBe(MOBILE_TAB_DISABLED_OPACITY);
   });
 });

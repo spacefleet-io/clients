@@ -171,13 +171,15 @@ export const SOURCES = {
     license: "MIT",
   },
   libva: {
-    version: "2.22.0",
+    // Mesa's VA drivers export only `__vaDriverInit_<their libva's API>`, and libva tries its own API version down to
+    // 1.0: the bundled libva must be at least the one the user's Mesa was built against (Mesa 26 needs 1.24).
+    version: "2.24.1",
     repo: "libva",
     upstream: { kind: "git", url: "https://github.com/intel/libva.git" },
-    upstreamRef: "2.22.0",
-    sha: "5d680d6491551906e804b2b9e6ca1351f94274ce",
+    upstreamRef: "2.24.1",
+    sha: "809612ca0b4a95eb4845c14d72357b02d40d0896",
     license: "MIT",
-    release: { url: "https://github.com/intel/libva/releases/download/2.22.0/libva-2.22.0.tar.bz2", sha256: "e3da2250654c8d52b3f59f8cb3f3d8e7fb1a2ee64378dbc400fbc5663de7edb8" },
+    release: { url: "https://github.com/intel/libva/releases/download/2.24.1/libva-2.24.1.tar.bz2", sha256: "eec6050b52876f229bd35e9df17cd31a06785e18e6f7990c445b584628483d67" },
   },
   libplacebo: {
     version: LIBPLACEBO_REF,

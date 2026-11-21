@@ -23,10 +23,14 @@ const appDir = import.meta.dirname;
 
 /** The in-app updater's generic feed (REL-UPD-01): the API serves latest-linux.yml / latest.yml / latest-mac.yml there. */
 export const DEFAULT_UPDATE_FEED_URL = "https://api.spacefleet.io/desktop/parrot";
-// The app icon (UX-THEME-04, drawn by scripts/app-icons/generate.py): the 1024 px PNG, the mascot alone on
-// transparency, for the .exe/.ico and NSIS installer, the AppImage/.deb/.rpm icon and the window / tray icon on Linux
-// and Windows; the .icns (the mascot on the navy rounded square, Apple's grid with its margin) for the Mac.
+// The app icons (UX-THEME-04, drawn by scripts/app-icons/generate.py), as Badger's. Linux and Windows: the helmet alone
+// on transparency. ICON_SOURCE (1024 px) is the window / tray icon on Linux and Windows; LINUX_ICONS (one PNG per hicolor
+// size) the AppImage/.deb/.rpm/.pacman icons; WINDOWS_ICON the .exe and NSIS installer icon; the .icns (the mascot on
+// the navy rounded square, Apple's grid with its margin) the Mac's. Each platform names its own: without linux.icon
+// electron-builder draws the Linux icons from mac.icon, the navy tile.
 const ICON_SOURCE = "installer/icon.png";
+const LINUX_ICONS = "installer/icons";
+const WINDOWS_ICON = "installer/icon.ico";
 const MAC_ICON = "installer/icon.icns";
 // macOS menu-bar icon: monochrome template image (16 pt, @2x 32 px), PLAT-DESK-06 / PLAT-DESK-10.
 export const TRAY_TEMPLATE_ICONS = ["trayTemplate.png", "trayTemplate@2x.png"];
@@ -45,7 +49,6 @@ export const createBuilderConfig = ({ targetId, linuxFormats, updateFeedUrl = DE
     appId: "io.spacefleet.parrot-desktop",
     productName: PRODUCT_NAME,
     electronVersion: "45.3.2",
-    icon: ICON_SOURCE,
     // PLAT-DESK-10: the window / tray icon (Linux, Windows) and the macOS menu-bar template image (16 pt, @2x 32 px),
     // read from process.resourcesPath by src/main/index.ts.
     extraResources: [
@@ -75,6 +78,7 @@ export const createBuilderConfig = ({ targetId, linuxFormats, updateFeedUrl = DE
       maintainer: "SpaceFleet <contact@spacefleet.io>",
       vendor: "SpaceFleet",
       artifactName: "Parrot-${version}-${arch}.${ext}",
+      icon: LINUX_ICONS,
     },
     // PLAT-DESK-01: the .deb/.rpm/.pacman package name, dependencies and file names, shared with Badger (Parrot bundles
     // no mpv). REL-DIST-14: named "spaceparrot", taking over the "parrot" packages of Parrot 0.1.0 to 0.1.2.
@@ -92,6 +96,7 @@ export const createBuilderConfig = ({ targetId, linuxFormats, updateFeedUrl = DE
       // refused). The executable is always edited (icon, version info), which needs wine on Linux.
       ...winSigning,
       executableName: "Parrot",
+      icon: WINDOWS_ICON,
     },
     mac: {
       // REL-MAC-02/03 (as Badger): the dmg to install, the zip for the in-app updater (Squirrel.Mac), one per arch.

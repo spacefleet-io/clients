@@ -15,7 +15,7 @@ export type AudioQueueItem = {
   artworkUri?: string;
   /** The song's even-volume gain in dB (PAR-PLAY-03 item 2), applied from its first sample; absent = as recorded. */
   gainDb?: number;
-  /** Names this queue entry for the app: the state's `key` (the song playing) and `nextKey` (the one after it). */
+  /** Names this queue entry for the app: the state's `key` (the song playing), `nextKey` and `previousKey` (its neighbours). */
   key?: string;
 };
 
@@ -37,6 +37,8 @@ export type AudioPlaybackState = {
   key?: string | null;
   /** The `key` of the song that plays after it (shuffle and repeat included), null when none or it has no key. */
   nextKey?: string | null;
+  /** The `key` of the song Previous goes back to (shuffle and repeat included), null when none or it has no key. */
+  previousKey?: string | null;
   mediaId: string | null;
   /** Media3 error code name (e.g. `ERROR_CODE_IO_CLEARTEXT_NOT_PERMITTED`) of the last failure, else null. The
    * iPhone maps its AVFoundation errors onto the same names. */
@@ -75,6 +77,7 @@ type NativeAudioPlayback = {
   setRepeatMode: (mode: AudioRepeatMode) => Promise<AudioPlaybackState>;
   canShowOutputSwitcher: () => Promise<boolean>;
   showOutputSwitcher: () => Promise<boolean>;
+  setKeepScreenOn: (enabled: boolean) => Promise<boolean>;
 };
 
 const native = NativeModules.AudioPlayback as NativeAudioPlayback | undefined;
@@ -116,6 +119,9 @@ export const AudioPlayback = {
   /** Opens the system's "play on" picker (Android's output switcher, the iPhone's AirPlay picker); resolves false
    * when none opened. */
   showOutputSwitcher: () => requireNative().showOutputSwitcher(),
+  /** Keeps the screen awake (no screensaver, no sleep) while the app shows and `enabled` holds; resolves false when it
+   * could not (no native module, no activity). */
+  setKeepScreenOn: (enabled: boolean) => (native ? native.setKeepScreenOn(enabled) : Promise.resolve(false)),
   /** Every player change (play, pause, track, buffering, error). Positions between changes come from `getState`. */
   onState: (listener: (state: AudioPlaybackState) => void): EmitterSubscription =>
     DeviceEventEmitter.addListener("AudioPlaybackState", listener),

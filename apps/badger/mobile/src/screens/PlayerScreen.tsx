@@ -13,7 +13,7 @@ import { usePlayerSession } from "./player/usePlayerSession";
 import { useLocalizedPlayback } from "../lib/useLocalizedShowDetails";
 import { IS_TV } from "../tv/lib/tvRuntime";
 import { episodeSwitchStartAt } from "@space/shared/playbackResume";
-import { useTvScale } from "../tv/lib/tvScale";
+import { useTvScale } from "@space/mobile-shell/tv/tvScale";
 import { TvPlayerRemote } from "../tv/components/TvPlayerRemote";
 import { PlayerCastPicker } from "../components/PlayerCastPicker";
 import { googleCastAvailable } from "../lib/cast/googleCastAvailable";

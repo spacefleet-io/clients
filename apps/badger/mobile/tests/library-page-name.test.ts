@@ -43,7 +43,7 @@ vi.mock("react-native", () => {
 // real i18next instance and the real en/fr files stay, only the hook is bound to them directly.
 vi.mock("@space/mobile-shell/i18n", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@space/mobile-shell/i18n")>();
-  return { ...actual, useTranslation: () => ({ t: actual.translate }) };
+  return { ...actual, useTranslation: () => ({ t: actual.translate, i18n: { language: actual.getCurrentLanguage() } }) };
 });
 vi.mock("@react-navigation/native", () => ({ useNavigation: () => ({ navigate: () => undefined }), useIsFocused: () => true }));
 vi.mock("lucide-react-native", () => {
@@ -85,6 +85,8 @@ vi.mock("../src/screens/HomeScreen", () => ({ HomeScreen: () => null }));
 vi.mock("../src/screens/SettingsScreen", () => ({ SettingsScreen: () => null }));
 vi.mock("../src/components/PosterGrid", () => ({ PosterGrid: () => null }));
 vi.mock("../src/components/PlaylistsPanel", () => ({ PlaylistsPanel: () => null }));
+// The phone Search overlay (UX-PHONE-12) pulls react-native-fs and the real shell components, which plain node cannot load.
+vi.mock("../src/components/PhoneSearch", () => ({ PhoneSearch: () => null }));
 vi.mock("../src/components/IconButton", () => ({ IconButton: () => null }));
 vi.mock("../src/components/LibraryFilterSheet", () => ({ LibraryFilterSheet: () => null }));
 vi.mock("../src/components/PosterCard", () => ({ RIPPLE: {} }));

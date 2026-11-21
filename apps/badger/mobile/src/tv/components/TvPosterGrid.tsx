@@ -3,8 +3,8 @@ import { FlatList, StyleSheet, TVFocusGuideView, useWindowDimensions } from "rea
 import { SkyCover, useSkyScroll } from "@space/mobile-shell/components";
 import { MobileRenderBoundary } from "@space/mobile-shell/render-boundary";
 import type { MediaRow } from "@space/shared/libraryTypes";
-import { TV_LIBRARY_COLUMNS, TV_LIBRARY_GAP_X, TV_LIBRARY_GAP_Y, TV_SAFE_MARGIN_Y, TV_SCREEN_X, tvLibraryCardWidth } from "../lib/layout";
-import { useTvScale, useTvStyles } from "../lib/tvScale";
+import { TV_LIBRARY_COLUMNS, TV_LIBRARY_GAP_X, TV_LIBRARY_GAP_Y, TV_SAFE_MARGIN_Y, TV_SCREEN_X, tvLibraryCardWidth } from "@space/mobile-shell/tv/layout";
+import { useTvScale, useTvStyles } from "@space/mobile-shell/tv/tvScale";
 import { TvPosterCard } from "./TvPosterCard";
 
 const keyExtractor = (item: MediaRow) => item.id;

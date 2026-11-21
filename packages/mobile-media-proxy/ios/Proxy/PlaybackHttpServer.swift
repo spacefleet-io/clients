@@ -31,6 +31,8 @@ final class PlaybackHttpServer {
   /// Cast server only: the object keys of the sessions it was given (see `HlsSession.objectKeys`); unused on loopback.
   private var lanKeys = Set<String>()
   private let chunkedFiles = ChunkedFileRegistry()
+  /// Loads the openings of the songs around the playing one while the player reads nothing (PAR-PLAY-07).
+  private var preloader: NeighbourPreloader!
   /// Connection number for the logs (`connId=`); only touched on `netQueue`.
   private var connCounter = 0
 
@@ -52,6 +54,8 @@ final class PlaybackHttpServer {
     prefetchQueue.maxConcurrentOperationCount = Self.prefetchThreads
     prefetchQueue.qualityOfService = .utility
     prefetcher = SegmentPrefetcher(fetcher: fetcher, queue: prefetchQueue)
+    let files = chunkedFiles
+    preloader = NeighbourPreloader(fetcher: fetcher, peek: { files.peek($0) })
   }
 
   /// Binds loopback on an ephemeral port (the cast server: its Wi-Fi IPv4 address); returns once the listener is ready.
@@ -124,6 +128,7 @@ final class PlaybackHttpServer {
     listener?.cancel()
     listener = nil
     workers.cancelAllOperations()
+    preloader.stop()
     prefetchQueue.cancelAllOperations()
     sessionsLock.lock()
     sessions.removeAll()
@@ -169,6 +174,17 @@ final class PlaybackHttpServer {
   /// High-traffic playback buffer (STOR-BW-01): the look-ahead the proxy keeps; `TrafficBuffer.noCap` restores the normal one.
   func setBufferCap(_ seconds: Double) {
     prefetcher.setBufferCap(seconds)
+    preloader.setBufferCap(seconds)
+  }
+
+  /// The silo's high-traffic state (STOR-BW-01) as the tunnel heard it: no next-song opening loads while it holds.
+  func setTrafficHigh(_ high: Bool) {
+    preloader.setTrafficHigh(high)
+  }
+
+  /// The registered ids of the song playing and the songs Next and Previous go to (PAR-PLAY-07).
+  func setNeighbours(current: String?, next: String?, previous: String?) {
+    preloader.setNeighbours(current: current, next: next, previous: previous)
   }
 
   func createSession(_ session: HlsSession) -> String {
@@ -473,7 +489,7 @@ final class PlaybackHttpServer {
   /// Decrypted chunk `index` of `file`, checked against the size the library recorded for it.
   private func openChunk(_ file: ChunkedFile, _ index: Int) throws -> Data {
     let chunk = file.chunks[index]
-    let data = try fetcher.getObject(chunk.objectKey)
+    let data = try preloader.playerRead(chunk.objectKey) { try fetcher.getObject(chunk.objectKey) }
     if data.count != chunk.plainSize {
       throw TunnelError(
         message: "chunk_size_mismatch id=\(file.id) chunk=\(index) key=\(chunk.objectKey) got=\(data.count) want=\(chunk.plainSize)")
@@ -485,9 +501,10 @@ final class PlaybackHttpServer {
     guard index >= 0, index < file.chunks.count else { return }
     let key = file.chunks[index].objectKey
     let fetcher = self.fetcher
+    let preloader = self.preloader!
     prefetchQueue.addOperation {
       do {
-        try fetcher.prefetch(key)
+        try preloader.playerRead(key) { try fetcher.prefetch(key) }
       } catch {
         PlaybackLog.debug("chunked.prefetch.failed id=\(file.id) chunk=\(index) msg=\(error.localizedDescription)")
       }

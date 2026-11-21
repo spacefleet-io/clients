@@ -163,7 +163,7 @@ vi.mock("../../store/auth", () => ({ useAuth: () => ({ user: null, refresh: asyn
 vi.mock("../../lib/metadata/runtime", () => ({ fetchEpisodes: async () => [] }));
 vi.mock("../lib/tvRuntime", () => ({ IS_TV: true }));
 vi.mock("../components/TvPlayerRemote", () => ({ TvPlayerRemote: "TvPlayerRemote" }));
-vi.mock("../components/TvFocusable", () => ({ TvFocusable: "TvFocusable" }));
+vi.mock("@space/mobile-shell/tv/TvFocusable", () => ({ TvFocusable: "TvFocusable" }));
 vi.mock("../../lib/playOnTv/playerLink", () => ({
   attachRemotePlayer: () => {
     fake.remoteAttached += 1;

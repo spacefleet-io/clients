@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth";
 import ReauthPasswordField from "@/components/ReauthPasswordField";
-import { ApiError, getLibraryMeta, resetLibrary, rotateLibraryKey } from "@/api";
+import { ApiError, getLibraryMetaForKeyStep, resetLibrary, rotateLibraryKey } from "@/api";
 import {
   acknowledgeLibraryKey,
   clearLibraryKey,
@@ -133,7 +133,7 @@ export default function OnboardingKey() {
         if (token) {
           try {
             step("existingKey.meta.start");
-            const meta = await getLibraryMeta(token);
+            const meta = await getLibraryMetaForKeyStep(token);
             step("existingKey.meta.done", { remoteExists: meta.exists, hasKeyProbe: Boolean(meta.keyProbe) });
             if (meta.exists) {
               if (meta.keyProbe) {
@@ -213,7 +213,7 @@ export default function OnboardingKey() {
       let decision: OnboardingRemoteDecision;
       try {
         step("meta.start");
-        const meta = await getLibraryMeta(token);
+        const meta = await getLibraryMetaForKeyStep(token);
         step("meta.done", { remoteExists: meta.exists, bootstrapRequired: meta.bootstrapRequired });
         decision = deriveNoStoredKeyDecision(meta);
       } catch (err) {
@@ -330,7 +330,7 @@ export default function OnboardingKey() {
       const step = (name: string, extra?: Record<string, unknown>) =>
         log.info({ step: name, elapsedMs: Date.now() - startedAt, ...extra }, "continueNext step");
       step("meta.start");
-      const meta = token ? await getLibraryMeta(token).catch(() => null) : null;
+      const meta = token ? await getLibraryMetaForKeyStep(token).catch(() => null) : null;
       step("meta.done", { exists: meta?.exists ?? null });
       if (token && !meta?.exists) {
         step("activate.start");
@@ -435,7 +435,7 @@ export default function OnboardingKey() {
     setEnterError(null);
     try {
       // Lightweight validation: ensure the API has a DB and that we can decrypt it later.
-      const meta = await getLibraryMeta(token);
+      const meta = await getLibraryMetaForKeyStep(token);
       // The account's key probe decides first (PRIV-KEY-01: one key per account, the probe is the account's): with
       // no Badger library yet, a key made in Parrot is still the only right one, and a wrong key here would encrypt
       // Badger's library under it and split the apps for good. WebCrypto rejects a wrong key with a bare

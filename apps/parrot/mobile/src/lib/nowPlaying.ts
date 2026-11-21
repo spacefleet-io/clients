@@ -12,6 +12,8 @@ export type NowPlayingTitles = {
   artistId?: string;
   /** The album's cover keys: the small copy in the mini player, the large one in the player (PAR-META-04). */
   cover?: ParrotCoverKeys | null;
+  /** The song's length, for the TV's Up next (PAR-TV-09); null when the library does not know it. */
+  durationMs?: number | null;
 };
 
 /** Track titles by queued id, so the bar, the player and the library can name what plays. */

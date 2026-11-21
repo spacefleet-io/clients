@@ -12,6 +12,7 @@ type PlaybackBridgeNative = {
   swapChunkedFile: (fileJson: string) => Promise<boolean>;
   unregisterChunkedFile: (id: string) => Promise<boolean>;
   stopProxy: () => Promise<boolean>;
+  setNeighbours: (current: string | null, next: string | null, previous: string | null) => Promise<boolean>;
   setBufferCap: (seconds: number) => Promise<boolean>;
   /** Android only (iOS has no make-before-break switch yet). */
   warmRung?: (variantId: string, atSeconds: number) => Promise<boolean>;
@@ -148,6 +149,15 @@ export const MediaProxy = {
    * changes copy midway, PAR-PLAY-04). Resolves true when swapped.
    */
   swapChunkedFile: (file: ChunkedFile): Promise<boolean> => native.swapChunkedFile(JSON.stringify(file)),
+
+  /**
+   * Names the registered files of the song playing and the songs Next and Previous go to (PAR-PLAY-07). While the player
+   * reads nothing for a moment, the proxy loads the opening of `next` and then of `previous` and keeps all three
+   * openings in its cache; any read the player makes stops that load at once. Call it once `next` has its copy for good:
+   * the preload reads the copy registered now. Resolves false when the proxy is not running.
+   */
+  setNeighbours: ({ current, next, previous }: { current: string | null; next: string | null; previous: string | null }): Promise<boolean> =>
+    native.setNeighbours(current, next, previous),
 
   /** Subscribes to each object downloaded for the player (`PLAYBACK_DOWNLOAD_EVENT`); returns the unsubscribe function. */
   onDownload: (handler: (event: PlaybackDownload) => void): (() => void) => {

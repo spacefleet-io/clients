@@ -62,6 +62,10 @@ final class StorageTunnelClient: ChunkFetcher {
   private var cacheOrder: [String] = []  // least recently used first
   private var cacheSize = 0
   private var pending: [String: FetchDeferred] = [:]
+  /// Objects the LRU keeps whatever else is fetched (`pin`, PAR-PLAY-07); guarded by `cacheLock`.
+  private var pinned = Set<String>()
+  /// The download task of each key on the wire now, so `cancelInFlight` can abort it; guarded by `cacheLock`.
+  private var tasks: [String: URLSessionDataTask] = [:]
 
   init(
     gatewayCandidates: [String], authToken: String, appId: String, profileId: String, masterKey: SymmetricKey,
@@ -106,7 +110,17 @@ final class StorageTunnelClient: ChunkFetcher {
     }
     if let existing = pending[key] {
       cacheLock.unlock()
-      return try existing.waitValue()
+      do {
+        return try existing.waitValue()
+      } catch {
+        // The fetch this read joined was cancelled for another reader (a preload yielding, PAR-PLAY-07; a rung switch):
+        // this read still wants the object, so it fetches it itself.
+        cacheLock.lock()
+        let cancelled = existing.cancelled
+        cacheLock.unlock()
+        if cancelled { return try getObject(key) }
+        throw error
+      }
     }
     if let spooled = spool.open(key) {
       cacheLock.unlock()
@@ -139,6 +153,26 @@ final class StorageTunnelClient: ChunkFetcher {
     }
   }
 
+  func cancelInFlight(_ matches: (String) -> Bool) -> Int {
+    cacheLock.lock()
+    let keys = Set(pending.keys).union(tasks.keys).filter(matches)
+    // Marked under the lock `fetchRaw` registers its task under: a fetch still opening the session has no task yet and
+    // is aborted the moment it makes one, so a cancel never misses a fetch that has not reached the wire.
+    for key in keys { pending[key]?.cancelled = true }
+    let hits = keys.compactMap { tasks[$0] }
+    cacheLock.unlock()
+    for task in hits { task.cancel() }
+    for key in keys { PlaybackLog.info("fetch.cancelled key=\(key)") }
+    return keys.count
+  }
+
+  func pin(_ keys: Set<String>) {
+    cacheLock.lock()
+    pinned = keys
+    cacheLock.unlock()
+    PlaybackLog.info("cache.pin keys=\(keys.count) \(keys.sorted().joined(separator: ","))")
+  }
+
   func shutdown() {
     endSessionBestEffort()
     cacheLock.lock()
@@ -166,12 +200,22 @@ final class StorageTunnelClient: ChunkFetcher {
     cacheOrder.append(key)
   }
 
+  /// Oldest first, skipping `pinned` objects; stops when only pinned ones are left.
   private func evictLocked() {
-    while cacheSize > Self.cacheBudgetBytes, let oldest = cacheOrder.first {
-      cacheOrder.removeFirst()
+    guard cacheSize > Self.cacheBudgetBytes else { return }
+    var kept: [String] = []
+    var i = 0
+    while cacheSize > Self.cacheBudgetBytes && i < cacheOrder.count {
+      let oldest = cacheOrder[i]
+      i += 1
+      if pinned.contains(oldest) {
+        kept.append(oldest)
+        continue
+      }
       if let v = cache.removeValue(forKey: oldest) { cacheSize -= v.count }
       PlaybackLog.debug("cache.evict key=\(oldest) cacheSize=\(cacheSize) budget=\(Self.cacheBudgetBytes)")
     }
+    cacheOrder = kept + cacheOrder[i...]
   }
 
   // MARK: session
@@ -327,7 +371,12 @@ final class StorageTunnelClient: ChunkFetcher {
     if refreshDue { refreshTraffic(base, sid) }
     let req = try request("\(base)/storage/tunnel/download", json: ["sessionId": sid, "objectKey": key])
     let start = Date().timeIntervalSince1970
-    let (data, status) = try Self.send(req, on: http)
+    let (data, status) = try Self.send(req, on: http) { task in
+      self.cacheLock.lock()
+      self.tasks[key] = task
+      if task != nil, self.pending[key]?.cancelled == true { task?.cancel() }
+      self.cacheLock.unlock()
+    }
     guard (200..<300).contains(status) else {
       let code = emitTraffic("download", status, data)
       if status == 404 && code == "invalid_session" && !renewed {
@@ -368,15 +417,19 @@ final class StorageTunnelClient: ChunkFetcher {
 
   // MARK: sync HTTP
 
-  /// Blocking request; only ever called from worker threads, never the main or the RN module queue.
-  static func send(_ req: URLRequest, on session: URLSession) throws -> (Data, Int) {
+  /// Blocking request; only ever called from worker threads, never the main or the RN module queue. `track` is handed the
+  /// task once it runs and nil once it ended, so a caller can cancel it midway.
+  static func send(_ req: URLRequest, on session: URLSession, track: ((URLSessionDataTask?) -> Void)? = nil) throws -> (Data, Int) {
     let sem = DispatchSemaphore(value: 0)
     var out: (Data?, URLResponse?, Error?) = (nil, nil, nil)
-    session.dataTask(with: req) { d, r, e in
+    let task = session.dataTask(with: req) { d, r, e in
       out = (d, r, e)
       sem.signal()
-    }.resume()
+    }
+    track?(task)
+    task.resume()
     sem.wait()
+    track?(nil)
     if let e = out.2 { throw e }
     guard let http = out.1 as? HTTPURLResponse else { throw TunnelError(message: "tunnel_no_response") }
     return (out.0 ?? Data(), http.statusCode)

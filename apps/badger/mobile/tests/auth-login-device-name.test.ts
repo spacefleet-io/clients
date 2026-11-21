@@ -33,7 +33,6 @@ vi.mock("react-native", () => ({
 vi.mock("@space/mobile-shell/pairing", () => ({ createPairingCompletionDeps: () => ({}) }));
 vi.mock("../src/lib/crypto", () => ({ decryptBase64ToBytes: () => new Uint8Array() }));
 vi.mock("../src/lib/onboarding", () => ({ setLibraryKeyAcknowledged: async () => undefined, setStoredLibraryKey: async () => undefined }));
-vi.mock("../src/tv/lib/pairingRuntime", () => ({ tvDeviceName: () => "TV model" }));
 vi.mock("lucide-react-native", () => ({ ArrowRight: "Icon", ChevronRight: "Icon", Lock: "Icon", Mail: "Icon", QrCode: "Icon" }));
 vi.mock("@react-navigation/native", () => ({ useNavigation: () => ({ navigate: vi.fn() }) }));
 vi.mock("@space/mobile-shell/components", () => {

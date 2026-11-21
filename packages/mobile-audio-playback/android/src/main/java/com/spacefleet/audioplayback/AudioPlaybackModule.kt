@@ -9,6 +9,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import android.view.WindowManager
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
@@ -234,6 +235,27 @@ class AudioPlaybackModule(context: ReactApplicationContext) : ReactContextBaseJa
         }
     }
 
+    /**
+     * Keeps the screen awake (no screensaver, no sleep) while `enabled`: Parrot TV's Now playing and lyrics (PAR-TV-12).
+     * FLAG_KEEP_SCREEN_ON on the app's window only holds while that window shows, so in the background the TV's
+     * screensaver starts as usual. Resolves false without an activity.
+     */
+    @ReactMethod
+    fun setKeepScreenOn(enabled: Boolean, promise: Promise) {
+        val activity = reactApplicationContext.currentActivity
+        if (activity == null) {
+            Log.w(NAME, "keep_awake enabled=$enabled applied=false reason=no_activity")
+            promise.resolve(false)
+            return
+        }
+        activity.runOnUiThread {
+            if (enabled) activity.window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            else activity.window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            Log.i(NAME, "keep_awake enabled=$enabled")
+            promise.resolve(true)
+        }
+    }
+
     /** Clears the queue and stops the service (sign out). */
     @ReactMethod
     fun stop(promise: Promise) = withController(promise) { controller ->
@@ -280,6 +302,9 @@ class AudioPlaybackModule(context: ReactApplicationContext) : ReactContextBaseJa
         val nextIndex = player.nextMediaItemIndex
         val nextKey = if (nextIndex == C.INDEX_UNSET) null else player.getMediaItemAt(nextIndex).mediaMetadata.extras?.getString(KEY_EXTRA)
         nextKey?.let { putString("nextKey", it) } ?: putNull("nextKey")
+        val previousIndex = player.previousMediaItemIndex
+        val previousKey = if (previousIndex == C.INDEX_UNSET) null else player.getMediaItemAt(previousIndex).mediaMetadata.extras?.getString(KEY_EXTRA)
+        previousKey?.let { putString("previousKey", it) } ?: putNull("previousKey")
         player.playerError?.let { putString("error", it.errorCodeName) } ?: putNull("error")
         putBoolean("shuffle", player.shuffleModeEnabled)
         putString(

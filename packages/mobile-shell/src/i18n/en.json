@@ -17,9 +17,47 @@
     "saving": "Saving…",
     "error": "Could not save API host. Check the value and try again."
   },
+  "signup": {
+    "title": "Create account",
+    "subtitle": "You'll need to verify your email before signing in.",
+    "emailLabel": "Email",
+    "passwordLabel": "Password",
+    "confirmLabel": "Repeat password",
+    "button": "Create account",
+    "creating": "Creating…",
+    "haveAccountPrompt": "Already have an account?",
+    "signIn": "Sign in",
+    "errors": {
+      "passwordLength": "Password must be at least 8 characters.",
+      "passwordMismatch": "Passwords do not match.",
+      "emailExists": "This email is already registered.",
+      "emailDomainDisallowed": "This email domain is not allowed. Please use a different email provider.",
+      "generic": "Signup failed. Try again."
+    }
+  },
+  "verifyEmail": {
+    "title": "Verify your email",
+    "subtitle": "We sent a verification code to your email. Enter it here to finish signing up.",
+    "codeLabel": "Verification code",
+    "codePlaceholder": "123456",
+    "submit": "Verify email",
+    "verifying": "Verifying…",
+    "resend": "Resend verification code",
+    "sending": "Sending…",
+    "backToSignIn": "Back to sign in",
+    "sent": "Verification code sent. Check your inbox.",
+    "errors": {
+      "invalidCode": "Invalid verification code. Try again.",
+      "emailNotFound": "No account found for this email.",
+      "sendFailed": "Could not send verification code.",
+      "generic": "Could not verify your email."
+    }
+  },
   "login": {
     "title": "Sign in",
     "withAccount": "Sign in with your SpaceFleet account",
+    "noAccountPrompt": "Don't have an account?",
+    "createAccount": "Create account",
     "emailLabel": "Email",
     "passwordLabel": "Password",
     "twoFactorLabel": "Verification code",
@@ -63,11 +101,11 @@
     },
     "provider": {
       "signInWith": "Sign in with {{provider}}",
+      "signUpWith": "Sign up with {{provider}}",
       "or": "or",
       "continueInBrowser": "Finish signing in in your browser. You'll come back here once you're done.",
       "errorStart": "Could not start the sign-in. Please try again.",
       "errors": {
-        "no_account": "No SpaceFleet account uses this email address. Create one in Badger or Parrot on a computer, then sign in here.",
         "email_unverified": "This account's email address is not confirmed. Confirm it with the provider, or sign in with your email and password.",
         "email_domain_disallowed": "Accounts with this email address cannot be created.",
         "account_deletion_pending": "This account is scheduled for deletion.",
@@ -836,8 +874,8 @@
   },
   "tvPairing": {
     "signIn": {
-      "title": "Sign in to Badger",
-      "subtitle": "On your phone or computer, open Badger → Settings → Pair a device, then scan the code or type it in.",
+      "title": "Sign in to {{app}}",
+      "subtitle": "On your phone or computer, open {{app}} → Settings → Pair a device, then scan the code or type it in.",
       "codeLabel": "Or type this code",
       "qrAccessibility": "QR code to pair this TV",
       "starting": "Getting a pairing code…",
@@ -851,7 +889,7 @@
       },
       "errors": {
         "title": "This TV could not be paired",
-        "unreachable": "We couldn't reach Badger. Check this TV's connection and get a new code.",
+        "unreachable": "We couldn't reach {{app}}. Check this TV's connection and get a new code.",
         "failed": "Something went wrong while pairing. Get a new code to try again.",
         "key_unreadable": "The approval reached this TV but its media library key could not be read. Get a new code and approve it again.",
         "key_mismatch": "The media library key that was sent does not open this account's media library. Nothing was saved on this TV. Get a new code and approve it again from an app that has your media library."

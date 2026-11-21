@@ -186,8 +186,11 @@ public struct PlayQueue<Item> {
   /// What plays when the current song ends by itself; -1 when the queue ends.
   public var nextWhenEnded: Int { nextIndex(after: current, mode: repeatMode) }
 
+  /// What the Previous button goes back to within the first seconds and the state's `previousKey`; -1 when none.
+  public var previousForNavigation: Int { previousIndex(before: current, mode: navigationMode) }
+
   public func previousAction(positionMs: Int64) -> PreviousAction {
-    let previous = previousIndex(before: current, mode: navigationMode)
+    let previous = previousForNavigation
     if previous >= 0 && positionMs <= Self.maxSeekToPreviousMs { return .item(previous) }
     return .restart
   }

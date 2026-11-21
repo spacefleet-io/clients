@@ -189,6 +189,18 @@ class PlaybackBridge(reactContext: ReactApplicationContext) :
   }
 
   /**
+   * The playing, next and previous queue entries (registered ids, null where none): the proxy keeps their openings
+   * cached and loads the missing ones while the player is idle, so Next and Previous start at once (PAR-PLAY-07). Resolves
+   * false before [start].
+   */
+  @ReactMethod
+  fun setNeighbours(current: String?, next: String?, previous: String?, promise: Promise) {
+    val s = server ?: return promise.resolve(false)
+    s.setNeighbours(current, next, previous)
+    promise.resolve(true)
+  }
+
+  /**
    * The running server for this key and backend config, built when there is none or the config changed. Rejects [promise]
    * and returns null on a refused config (no profile, bad key); throws on any other failure.
    */
@@ -220,16 +232,19 @@ class PlaybackBridge(reactContext: ReactApplicationContext) :
       serverFingerprint = null
     }
     val masterKey = MediaCrypto.deriveMasterKey(libraryKey)
+    var built: PlaybackHttpServer? = null
     val fetcher = PlaybackSetup.buildChunkFetcher(
       reactApplicationContext,
       config,
       masterKey,
       profileId = streamingProfileId(config),
       onTraffic = { json -> trafficOwner?.emitTraffic(json) },
+      onTrafficReport = { report -> built?.setTrafficHigh(report.high) },
       onDownloaded = { bytes, ms -> trafficOwner?.emitDownloaded(bytes, ms) },
     )
     val s = PlaybackHttpServer(fetcher)
     s.start()
+    built = s
     s.setBufferCap(bufferCapSeconds)
     server = s
     serverFingerprint = fingerprint

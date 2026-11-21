@@ -60,6 +60,11 @@ class OfflineChunkFetcher(
   /** Only the live fetcher has network fetches to abort. */
   override fun cancelInFlight(matches: (String) -> Boolean): Int = fallback?.cancelInFlight(matches) ?: 0
 
+  /** Stored objects are read from disk anyway: only the live fetcher's cache keeps pinned objects. */
+  override fun pin(keys: Set<String>) {
+    fallback?.pin(keys)
+  }
+
   override fun shutdown() {
     fallback?.shutdown()
     spool.clear()

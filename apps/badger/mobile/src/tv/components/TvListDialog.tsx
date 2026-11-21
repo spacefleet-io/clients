@@ -4,11 +4,11 @@ import { Check } from "lucide-react-native";
 import { SkyCover } from "@space/mobile-shell/components";
 import { useTranslation } from "@space/mobile-shell/i18n";
 import { theme } from "../../theme/theme";
-import { useTvMenuKeyHold } from "../lib/useTvMenuKey";
-import { TV_SAFE_MARGIN_X, TV_SAFE_MARGIN_Y } from "../lib/layout";
-import { TvFocusable } from "./TvFocusable";
+import { useTvMenuKeyHold } from "@space/mobile-shell/tv/useTvMenuKey";
+import { TV_SAFE_MARGIN_X, TV_SAFE_MARGIN_Y } from "@space/mobile-shell/tv/layout";
+import { TvFocusable } from "@space/mobile-shell/tv/TvFocusable";
 import { TV_RADIUS } from "../lib/tvLook";
-import { useTvScale, useTvStyles } from "../lib/tvScale";
+import { useTvScale, useTvStyles } from "@space/mobile-shell/tv/tvScale";
 
 export type TvListDialogItem = {
   key: string;

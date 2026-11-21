@@ -37,6 +37,7 @@ import { formatDuration, nextRepeatMode, parrotCoverThumbKey } from "@space/parr
 import { nowPlayingTitles } from "../lib/nowPlaying";
 import { usePlaylistEditor } from "../state/playlistEditor";
 import { usePlayerState } from "../state/usePlayerState";
+import { useUpNext } from "../state/useUpNext";
 import { colors, spacing } from "../theme";
 import { ParrotArt, WaveSeek } from "./art";
 import { Body, Centered, ErrorText, IconButton } from "./ui";
@@ -265,24 +266,6 @@ export const PlayerScreen = () => {
     </ParrotSky>
     </Animated.View>
   );
-};
-
-/** The ids that play after the song playing, in the native player's order; re-read when the queue or its order changes. */
-const useUpNext = (open: boolean, state: AudioPlaybackState): string[] => {
-  const [ids, setIds] = useState<string[]>([]);
-  const { mediaId, count, shuffle, repeat } = state;
-  useEffect(() => {
-    if (!open) return;
-    let live = true;
-    AudioPlayback.getUpNext().then(
-      (next) => live && setIds(next),
-      () => live && setIds([])
-    );
-    return () => {
-      live = false;
-    };
-  }, [open, mediaId, count, shuffle, repeat]);
-  return ids;
 };
 
 /** The lyrics of the song playing (PlayerLyrics) and the queue, in a sheet over the player (UX-SHEET-01). */

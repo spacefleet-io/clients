@@ -324,7 +324,9 @@ function AuthenticatedRoutes() {
       <Suspense fallback={null}>
         <Notifications />
       </Suspense>
-      <div className="min-h-screen bg-background text-foreground flex relative overflow-hidden">
+      {/* overflow-clip, not hidden: it clips the backdrop the same, but a hidden box is a scroller of its own, and the
+          library row could not stay pinned under the top bar while the window scrolls (UX-LIB-01, Chris 2026-11-20). */}
+      <div className="min-h-screen bg-background text-foreground flex relative overflow-clip">
         <AppBackdrop nebula="badger" />
 
         <WindowDropOverlay

@@ -39,11 +39,11 @@ const openCopies = new Map<string, { files: TrackFileRow[]; durationMs: number |
 let queueKeyCounter = 0;
 let stopWatchingCopies: (() => void) | null = null;
 
-/** Puts `file` behind queue entry `key`; the proxy refuses once the player has started reading that entry. */
-const swapCopy = (key: string, open: { fileId: string }, file: TrackFileRow, step: "next" | "ahead") => {
+/** Puts `file` behind queue entry `key`; the proxy refuses once the player has started reading that entry. Settles when done. */
+const swapCopy = (key: string, open: { fileId: string }, file: TrackFileRow, step: "next" | "ahead"): Promise<void> => {
   const previous = open.fileId;
   open.fileId = file.id;
-  chunkedFile(file)
+  return chunkedFile(file)
     .then((layout) => MediaProxy.swapChunkedFile({ ...layout, id: key }))
     .then((swapped) => {
       if (!swapped) open.fileId = previous;
@@ -57,28 +57,54 @@ const swapCopy = (key: string, open: { fileId: string }, file: TrackFileRow, ste
 
 /**
  * Each time a song starts: settles the next song's copy for good, and brings every song further ahead to the copy the
- * measured speed gives now, since the player may read ahead more than one song (short songs, light copies). Feeds the
- * picker every download. Installed once per proxy.
+ * measured speed gives now, since the player may read ahead more than one song (short songs, light copies). When what
+ * Next plays changes midway (shuffle, repeat, a queue edit), that song's copy is settled then. Once the next copy is
+ * settled, the proxy is told the songs Next and Previous go to, so it loads their openings while the player is idle
+ * (PAR-PLAY-07). Feeds the picker every download. Installed once per proxy.
  */
 const watchCopies = () => {
   if (stopWatchingCopies) return;
   const downloads = MediaProxy.onDownload(({ bytes, ms }) => copyPicker.record(bytes, ms));
   let playingKey: string | null = null;
+  let neighbours = "";
   const states = AudioPlayback.onState((state) => {
-    if (!state.key || state.key === playingKey) return;
-    playingKey = state.key;
-    openCopies.delete(state.key);
-    const nextKey = state.nextKey;
+    if (!state.key) return;
+    const started = state.key !== playingKey;
+    if (started) {
+      playingKey = state.key;
+      openCopies.delete(state.key);
+    }
+    const nextKey = state.nextKey ?? null;
+    const previousKey = state.previousKey ?? null;
+    const triple = JSON.stringify([state.key, nextKey, previousKey]);
+    if (!started && triple === neighbours) return;
+    neighbours = triple;
     const next = nextKey ? openCopies.get(nextKey) : undefined;
+    let settled: Promise<void> = Promise.resolve();
     if (nextKey && next) {
       openCopies.delete(nextKey);
       const file = copyPicker.pick(next.files, next.durationMs);
-      if (file && file.id !== next.fileId) swapCopy(nextKey, next, file, "next");
+      if (file && file.id !== next.fileId) settled = swapCopy(nextKey, next, file, "next");
     }
-    for (const [key, ahead] of openCopies) {
-      const file = copyPicker.peek(ahead.files, ahead.durationMs);
-      if (file && file.id !== ahead.fileId) swapCopy(key, ahead, file, "ahead");
+    if (started) {
+      for (const [key, ahead] of openCopies) {
+        const file = copyPicker.peek(ahead.files, ahead.durationMs);
+        if (file && file.id !== ahead.fileId) void swapCopy(key, ahead, file, "ahead");
+      }
     }
+    const current = state.key;
+    void settled.then(() => {
+      // A later state already named other neighbours: that one tells the proxy.
+      if (neighbours !== triple) return;
+      console.log("parrot.preload.neighbours", JSON.stringify({ current, next: nextKey, previous: previousKey }));
+      return MediaProxy.setNeighbours({ current, next: nextKey, previous: previousKey }).then(
+        (running) => {
+          if (!running) console.log("parrot.preload.neighbours_skipped", JSON.stringify({ reason: "proxy_not_running" }));
+        },
+        (error) =>
+          console.log("parrot.preload.neighbours_failed", JSON.stringify({ message: error instanceof Error ? error.message : String(error) })),
+      );
+    });
   });
   stopWatchingCopies = () => {
     downloads();

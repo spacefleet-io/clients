@@ -105,7 +105,7 @@ vi.mock("../src/lib/libraryDb", () => ({
   },
 }));
 vi.mock("@space/shared/api", () => ({
-  getLibraryMeta: async () => ({ ...ctl.meta }),
+  getLibraryMetaForKeyStep: async () => ({ ...ctl.meta }),
   resetLibrary: async (...args: unknown[]) => {
     ctl.reset.push(args);
     if (ctl.resetError) throw ctl.resetError;

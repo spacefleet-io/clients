@@ -5,14 +5,16 @@ import { SearchPalette, type SearchPaletteItem } from "../search-palette";
 
 /**
  * Parrot's search palette (UX-SEARCH-01), shared by the desktop app and the web player: the library's artists,
- * albums and songs, an album or song also found by its artist; Enter opens the artist or the album, and a song
- * opens its album (Parrot has no page for one song). The artist's and album's names under a result open their own
+ * albums, songs and playlists, an album or song also found by its artist; Enter opens the artist, the album or the
+ * playlist, and a song opens its album (Parrot has no page for one song). The artist's and album's names under a result open their own
  * pages (PAR-NAV-05).
  */
 
 export type ParrotSearchArtist = { id: string; name: string };
 export type ParrotSearchAlbum = { id: string; title: string; artistName: string; artistId?: string | null };
 export type ParrotSearchSong = { id: string; title: string; artistName: string; artistId?: string | null; albumId: string; albumTitle: string };
+/** A playlist under the name the user sees (Liked songs in the app's language). */
+export type ParrotSearchPlaylist = { id: string; name: string };
 
 export type ParrotSearchPaletteProps = {
   open: boolean;
@@ -21,15 +23,17 @@ export type ParrotSearchPaletteProps = {
   albums: readonly ParrotSearchAlbum[];
   /** Read only while the palette is open (the web player gathers them album by album). */
   songs: () => readonly ParrotSearchSong[];
+  playlists: readonly ParrotSearchPlaylist[];
   /** The app's UI language code. */
   language: string | undefined;
   onOpenArtist: (id: string) => void;
   onOpenAlbum: (id: string) => void;
+  onOpenPlaylist: (id: string) => void;
   /** Draws an album's cover. */
   renderCover?: (albumId: string) => React.ReactNode;
 };
 
-export function ParrotSearchPalette({ open, onOpenChange, artists, albums, songs, language, onOpenArtist, onOpenAlbum, renderCover }: ParrotSearchPaletteProps) {
+export function ParrotSearchPalette({ open, onOpenChange, artists, albums, songs, playlists, language, onOpenArtist, onOpenAlbum, onOpenPlaylist, renderCover }: ParrotSearchPaletteProps) {
   const labels = React.useMemo(() => searchPaletteStrings("parrot", language), [language]);
   const items = React.useMemo<SearchPaletteItem[]>(() => {
     if (!open) return [];
@@ -54,8 +58,9 @@ export function ParrotSearchPalette({ open, onOpenChange, artists, albums, songs
         image: s.albumId,
         keywords: [s.artistName, s.albumTitle],
       })),
+      ...playlists.map((p) => ({ key: `playlist:${p.id}`, kind: "playlist", title: p.name })),
     ];
-  }, [open, artists, albums, songs, onOpenArtist, onOpenAlbum]);
+  }, [open, artists, albums, songs, playlists, onOpenArtist, onOpenAlbum]);
   return (
     <SearchPalette
       open={open}
@@ -65,6 +70,7 @@ export function ParrotSearchPalette({ open, onOpenChange, artists, albums, songs
       onSelect={(item) => {
         const [kind, id] = [item.kind, item.key.slice(item.key.indexOf(":") + 1)];
         if (kind === "artist") onOpenArtist(id);
+        else if (kind === "playlist") onOpenPlaylist(id);
         else onOpenAlbum(kind === "album" ? id : item.image!);
       }}
       renderImage={renderCover ? (item) => renderCover(item.image!) : undefined}

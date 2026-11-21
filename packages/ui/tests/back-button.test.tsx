@@ -62,11 +62,21 @@ describe("shared back and text buttons", () => {
     console.info(LOG, "see all", seeAll);
     for (const cls of accentHover) expect(seeAll).toContain(cls);
 
-    const pages = join(import.meta.dirname, "../../../apps/badger/desktop/src/renderer/src/pages");
-    for (const file of ["Login.tsx", "OnboardingKey.tsx", "SettingsRecoveryDialogs.tsx"]) {
-      const src = readFileSync(join(pages, file), "utf8");
-      const resend = src.match(/<(\w+)\s[^>]*?onClick=\{\(\) => void resendResetCode\(\)\}/s)?.[0] ?? "";
-      console.info(LOG, file, resend.replace(/\s+/g, " "));
+    // Where Badger desktop's "Resend code" buttons live now: the sign-in's two-step code on Login itself, Login's
+    // forgot-password dialog (the shared DesktopPasswordReset, #2575), the key step's erase dialog (the shared
+    // LibraryKeyStep, #1998), and Settings' own recovery dialogs.
+    const repo = join(import.meta.dirname, "../../..");
+    const resendButtons = [
+      { file: "apps/badger/desktop/src/renderer/src/pages/Login.tsx", call: "() => void resendCode()" },
+      { file: "packages/desktop-shell/src/components/desktop-password-reset.tsx", call: "() => void resend()" },
+      { file: "packages/desktop-shell/src/components/library-key-step.tsx", call: "() => void run(true)" },
+      { file: "apps/badger/desktop/src/renderer/src/pages/SettingsRecoveryDialogs.tsx", call: "() => void resendResetCode()" },
+    ];
+    for (const { file, call } of resendButtons) {
+      const src = readFileSync(join(repo, file), "utf8");
+      const escaped = call.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const resend = src.match(new RegExp(`<(\\w+)\\s[^>]*?onClick=\\{${escaped}\\}`, "s"))?.[0] ?? "";
+      console.info(LOG, file, resend.replace(/\s+/g, " ") || "(no resend button found)");
       expect(resend.startsWith("<Button")).toBe(true);
       expect(resend).toContain('variant="ghost"');
     }

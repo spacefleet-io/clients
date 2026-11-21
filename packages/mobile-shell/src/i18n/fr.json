@@ -17,9 +17,47 @@
     "saving": "Enregistrement…",
     "error": "Impossible d'enregistrer l'hôte API. Vérifiez la valeur et réessayez."
   },
+  "signup": {
+    "title": "Créer un compte",
+    "subtitle": "Vous devrez vérifier votre email avant de vous connecter.",
+    "emailLabel": "Email",
+    "passwordLabel": "Mot de passe",
+    "confirmLabel": "Répéter le mot de passe",
+    "button": "Créer un compte",
+    "creating": "Création…",
+    "haveAccountPrompt": "Vous avez déjà un compte ?",
+    "signIn": "Se connecter",
+    "errors": {
+      "passwordLength": "Le mot de passe doit avoir au moins 8 caractères.",
+      "passwordMismatch": "Les mots de passe ne correspondent pas.",
+      "emailExists": "Cet email est déjà enregistré.",
+      "emailDomainDisallowed": "Ce domaine d'email n'est pas autorisé. Utilisez une autre adresse email.",
+      "generic": "Inscription échouée. Réessayez."
+    }
+  },
+  "verifyEmail": {
+    "title": "Vérifier votre email",
+    "subtitle": "Nous avons envoyé un code de vérification par email. Saisissez-le ici pour terminer l'inscription.",
+    "codeLabel": "Code de vérification",
+    "codePlaceholder": "123456",
+    "submit": "Vérifier l'email",
+    "verifying": "Vérification…",
+    "resend": "Renvoyer le code de vérification",
+    "sending": "Envoi…",
+    "backToSignIn": "Retour à la connexion",
+    "sent": "Code de vérification envoyé. Vérifiez votre boîte mail.",
+    "errors": {
+      "invalidCode": "Code de vérification invalide. Réessayez.",
+      "emailNotFound": "Aucun compte pour cet email.",
+      "sendFailed": "Impossible d'envoyer le code de vérification.",
+      "generic": "Impossible de vérifier votre email."
+    }
+  },
   "login": {
     "title": "Se connecter",
     "withAccount": "Connectez-vous avec votre compte SpaceFleet",
+    "noAccountPrompt": "Pas de compte ?",
+    "createAccount": "Créer un compte",
     "emailLabel": "Email",
     "passwordLabel": "Mot de passe",
     "twoFactorLabel": "Code de vérification",
@@ -63,11 +101,11 @@
     },
     "provider": {
       "signInWith": "Se connecter avec {{provider}}",
+      "signUpWith": "S'inscrire avec {{provider}}",
       "or": "ou",
       "continueInBrowser": "Terminez la connexion dans votre navigateur. Vous reviendrez ici une fois terminé.",
       "errorStart": "Impossible de lancer la connexion. Veuillez réessayer.",
       "errors": {
-        "no_account": "Aucun compte SpaceFleet n'utilise cette adresse e-mail. Créez-en un dans Badger ou Parrot sur un ordinateur, puis connectez-vous ici.",
         "email_unverified": "L'adresse e-mail de ce compte n'est pas confirmée. Confirmez-la auprès du fournisseur, ou connectez-vous avec votre e-mail et votre mot de passe.",
         "email_domain_disallowed": "Impossible de créer un compte avec cette adresse e-mail.",
         "account_deletion_pending": "La suppression de ce compte est programmée.",
@@ -837,8 +875,8 @@
   },
   "tvPairing": {
     "signIn": {
-      "title": "Connectez-vous à Badger",
-      "subtitle": "Sur votre téléphone ou ordinateur, ouvrez Badger → Réglages → Associer un appareil, puis scannez le code ou saisissez-le.",
+      "title": "Connectez-vous à {{app}}",
+      "subtitle": "Sur votre téléphone ou ordinateur, ouvrez {{app}} → Réglages → Associer un appareil, puis scannez le code ou saisissez-le.",
       "codeLabel": "Ou saisissez ce code",
       "qrAccessibility": "QR code pour associer cette TV",
       "starting": "Obtention d'un code d'association…",
@@ -852,7 +890,7 @@
       },
       "errors": {
         "title": "Cette TV n'a pas pu être associée",
-        "unreachable": "Impossible de joindre Badger. Vérifiez la connexion de cette TV puis obtenez un nouveau code.",
+        "unreachable": "Impossible de joindre {{app}}. Vérifiez la connexion de cette TV puis obtenez un nouveau code.",
         "failed": "Un problème est survenu pendant l'association. Obtenez un nouveau code pour réessayer.",
         "key_unreadable": "L'approbation est bien arrivée sur cette TV mais sa clé de médiathèque est illisible. Obtenez un nouveau code et approuvez-le à nouveau.",
         "key_mismatch": "La clé de médiathèque envoyée n'ouvre pas la médiathèque de ce compte. Rien n'a été enregistré sur cette TV. Obtenez un nouveau code et approuvez-le à nouveau depuis une application qui a votre médiathèque."

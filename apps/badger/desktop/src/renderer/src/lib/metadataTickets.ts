@@ -120,6 +120,7 @@ export const metadataClient: MetadataClient = {
   musicCover: (album, size) => getDesktopMetadata().client.musicCover(album, size),
   musicArtistImage: (artist) => getDesktopMetadata().client.musicArtistImage(artist),
   musicCopyChanges: (since) => getDesktopMetadata().client.musicCopyChanges(since),
+  musicSuggest: (query) => getDesktopMetadata().client.musicSuggest(query),
 };
 
 let imageResolver: MetadataImageResolver | null = null;
