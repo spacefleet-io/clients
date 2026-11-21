@@ -3,7 +3,7 @@
   "license": "GPL-3.0-only",
   "productName": "Badger",
   "desktopName": "spacebadger.desktop",
-  "version": "0.1.36",
+  "version": "0.1.38",
   "description": "Badger desktop client",
   "author": "SpaceFleet",
   "private": true,
