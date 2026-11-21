@@ -4,7 +4,6 @@ import { hostname, release } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { randomUUID } from "node:crypto";
-import { setTimeout as sleep } from "node:timers/promises";
 import {
   ApiError,
   approvePairing,
@@ -80,10 +79,9 @@ import { classifySignInError, retryAfterMinutes, signInErrorDetails, type SignIn
 import { classifyResendVerificationError, classifySignUpError, classifyVerifyEmailError } from "@space/shared/signUp";
 import { asksKeySavedBeforeSignOut, type SignedOutReason } from "@space/shared/keptLibraryKey";
 import { fetchLibrarySnapshot, publishLibrarySnapshot, type FetchedLibrarySnapshot } from "@space/library-db-runtime/snapshotTransport";
-import { deleteStorageObjects, downloadStorageObjectViaTunnel, uploadStorageObjectViaTunnel } from "@space/library-db-runtime/api";
+import { deleteStorageObjects, uploadStorageObjectViaTunnel } from "@space/library-db-runtime/api";
 import { decryptBase64ToBytes } from "@space/library-db-runtime/crypto";
 import { checkKeyAgainstAccount, makeAccountKey } from "./libraryKeyCheck";
-import { createParrotExportJobs } from "./exportJobs";
 import { checkKeptLibraryKey } from "@space/desktop-shell/library-kept-key";
 import { serveStorageUnitBase } from "@space/desktop-shell/storage-units";
 import { createPasswordResetActions } from "@space/desktop-shell/password-reset";
@@ -173,10 +171,6 @@ import {
   PARROT_AUDIO_FORMATS,
   uploadParrotCover,
   publishParrotEdits,
-  clearParrotExportPartials,
-  exportParrotSongs,
-  listParrotExportSongs,
-  parrotExportFreeBytes,
   type ParrotLibraryDb,
 } from "@space/parrot-ingest";
 import {
@@ -409,9 +403,6 @@ const libraryDbs = createLibraryDbs<ParrotLibraryDb>((db) => db.close(), log);
 const setLibrary = (next: { db: ParrotLibraryDb; version: number | null } | null) => {
   library = next;
   libraryDbs.setCurrent(next?.db ?? null);
-  // OFFL-FILE-01: an export waits while no library is open (sign-out) and goes on once one is.
-  if (next) exportJobs.resume();
-  else exportJobs.pause();
 };
 /** Songs kept on this computer (PAR-OFFL-03): sealed under userData/offline, set up once the store is open. */
 const offlineDir = join(userDataDir, "offline");
@@ -419,56 +410,6 @@ let keptFiles: ParrotKeptFiles | null = null;
 let keeping: DesktopKeeping | null = null;
 let sessionChecked: Promise<void> | null = null;
 const importAbort = new AbortController();
-
-/** Reads one sealed chunk for an export: kept on this computer, else downloaded, retried a few times (OFFL-FILE-01). */
-const readSealedForExport = async (objectKey: string, signal: AbortSignal): Promise<Uint8Array> => {
-  const kept = await keptFiles?.readSealed(objectKey);
-  if (kept) return kept;
-  for (let attempt = 1; ; attempt++) {
-    signal.throwIfAborted();
-    try {
-      // `export` downloads stay allowed once the account is unpaid (#145).
-      return await downloadStorageObjectViaTunnel(store.token() ?? "", objectKey, { clientType: CLIENT_TYPE, purpose: "export" }, PARROT_APP_ID);
-    } catch (error) {
-      if (attempt >= 4) throw error;
-      log(`[export] chunk ${objectKey} download failed (try ${attempt}): ${errorText(error)}`);
-      await sleep(1000 * 2 ** attempt, undefined, { signal });
-    }
-  }
-};
-
-/** "Download everything" (OFFL-FILE-01, ACCT-EXPORT-01): the queue, kept in userData. */
-const exportJobs = createParrotExportJobs({
-  file: join(userDataDir, "export-jobs.json"),
-  userId: () => store?.user?.id ?? "",
-  db: () => library?.db ?? null,
-  listSongs: listParrotExportSongs,
-  pickFolder: async () => {
-    if (!mainWindow) return null;
-    const picked = await dialog.showOpenDialog(mainWindow, { properties: ["openDirectory", "createDirectory"] });
-    return picked.canceled ? null : (picked.filePaths[0] ?? null);
-  },
-  freeBytes: parrotExportFreeBytes,
-  run: ({ db, songs, dest, signal, onProgress, onSongDone }) =>
-    libraryDbs.hold(db, async () => {
-      // What an export stopped by a crash left half-written in that folder (OFFL-SAFE-01).
-      await clearParrotExportPartials(dest);
-      return exportParrotSongs({
-        db,
-        songs,
-        dest,
-        libraryKeyBase64: () => store.libraryKey() ?? "",
-        readSealed: readSealedForExport,
-        signal,
-        onProgress,
-        onSongDone,
-        log,
-      });
-    }),
-  emit: (jobs) => mainWindow?.webContents.send(PARROT_IPC.exportJobsEvent, jobs),
-  log,
-});
-
 /** The running scan or upload's own stop, for the Jobs panel's X (UX-JOBS-02); null while none runs. */
 let importRun: AbortController | null = null;
 
@@ -2730,11 +2671,6 @@ const registerIpc = () => {
   ipcMain.handle(PARROT_IPC.getImportStatus, () => importStatus);
   ipcMain.handle(PARROT_IPC.getImportJobs, () => accountImportJobs());
   ipcMain.handle(PARROT_IPC.dismissImportJob, (_event, id: unknown) => dismissImportJob(String(id)));
-  ipcMain.handle(PARROT_IPC.previewExport, () => exportJobs.preview());
-  ipcMain.handle(PARROT_IPC.exportMusic, () => exportJobs.start());
-  ipcMain.handle(PARROT_IPC.getExportJobs, () => exportJobs.list());
-  ipcMain.handle(PARROT_IPC.cancelExport, (_event, id: unknown) => exportJobs.cancel(String(id)));
-  ipcMain.handle(PARROT_IPC.dismissExportJob, (_event, id: unknown) => exportJobs.dismiss(String(id)));
   ipcMain.handle(PARROT_IPC.getBackgroundWork, () => [...backgroundWork.values()]);
   ipcMain.handle(PARROT_IPC.getLibrary, (_event, refresh: boolean) => (refresh || !library ? loadLibrary() : libraryResult()));
   ipcMain.handle(PARROT_IPC.wantLyrics, (_event, trackId: unknown) => wantLyrics(trackId));
@@ -2895,7 +2831,6 @@ const quitGuard = createQuitGuard({
     isQuitting = true;
     appTray.destroy();
     importAbort.abort();
-    exportJobs.pause();
     lightCopyAbort.abort();
     lightCopies.close();
     void streamSlots.release();

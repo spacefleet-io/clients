@@ -172,44 +172,6 @@ export type ParrotBackgroundWork = { kind: "lyrics" | "artistPhotos" | "covers";
 export const IMPORT_INTERRUPTED = "interrupted";
 
 /**
- * "Download everything" (OFFL-FILE-01, ACCT-EXPORT-01, Chris 2026-11-21): the whole library saved as plain audio
- * files into a folder the user picks. How many songs it would save and their size, for its confirm.
- */
-export type ParrotExportPreview = { songs: number; bytes: number };
-
-/**
- * One export in the Jobs panel. An export Parrot's closing cut short goes on at the next start (ACCT-EXPORT-01).
- * `error` is `EXPORT_NO_SPACE` (the disk filled up, OFFL-SAFE-02) or the reason as it came.
- */
-export type ParrotExportJob = {
-  id: string;
-  /** The folder the user picked. */
-  dest: string;
-  startedAt: number;
-  finishedAt: number | null;
-  phase: "queued" | "running" | "done" | "cancelled" | "failed";
-  doneSongs: number;
-  totalSongs: number;
-  doneBytes: number;
-  totalBytes: number;
-  /** The song being written now. */
-  current: string | null;
-  error: string | null;
-  /** Songs that could not be saved, with the reason; the others are in the folder. */
-  failures: Array<{ title: string; reason: string }>;
-};
-
-/** Why an export did not start: no folder picked, nothing to save, or not enough room on that disk (OFFL-SAFE-02). */
-export type ParrotExportStart =
-  | { ok: true; job: ParrotExportJob }
-  | { ok: false; reason: "no-folder" | "empty" | "no-library" }
-  | { ok: false; reason: "no-space"; neededBytes: number; freeBytes: number };
-
-export const EXPORT_NO_SPACE = "no-space";
-/** An export Parrot's closing cut short whose folder is gone at the next start (a memory stick taken out). */
-export const EXPORT_FOLDER_MISSING = "folder-missing";
-
-/**
  * An album as the window gets it: instead of the cover's storage keys, the addresses main serves the opened cover from
  * (PAR-META-04, the picture built into the music files), or null when the album has none (the drawn tile). `coverUrl`
  * is the large copy (album page, system media panel); `coverThumbUrl` the small one (tiles, now-playing bar), which is
@@ -400,17 +362,6 @@ export type ParrotBridge = {
   onImportJobs(listener: (jobs: ParrotImportJob[]) => void): () => void;
   /** Removes a finished or failed import from the list; a running one stays. */
   dismissImportJob(id: string): Promise<ParrotImportJob[]>;
-  /** OFFL-FILE-01 / ACCT-EXPORT-01: how many songs "Download everything" would save, and their size. */
-  previewExport(): Promise<ParrotExportPreview>;
-  /** Asks for a folder, then saves the whole library there as plain audio files, in the background (Jobs panel). */
-  exportMusic(): Promise<ParrotExportStart>;
-  /** The signed-in account's exports, newest first. */
-  getExportJobs(): Promise<ParrotExportJob[]>;
-  onExportJobs(listener: (jobs: ParrotExportJob[]) => void): () => void;
-  /** Stops a running or waiting export: the songs already saved stay, nothing half-written is left. */
-  cancelExport(id: string): Promise<ParrotExportJob[]>;
-  /** Removes an ended export from the list (the files stay where they are). */
-  dismissExportJob(id: string): Promise<ParrotExportJob[]>;
   /** The background lookups running now, for the Jobs panel's quiet line (UX-JOBS-02); empty when none runs. */
   getBackgroundWork(): Promise<ParrotBackgroundWork[]>;
   onBackgroundWork(listener: (work: ParrotBackgroundWork[]) => void): () => void;
@@ -574,12 +525,6 @@ export const PARROT_IPC = {
   getImportJobs: "parrot:import:jobs",
   importJobsEvent: "parrot:import:jobs-event",
   dismissImportJob: "parrot:import:jobs-dismiss",
-  previewExport: "parrot:export:preview",
-  exportMusic: "parrot:export:start",
-  getExportJobs: "parrot:export:jobs",
-  exportJobsEvent: "parrot:export:jobs-event",
-  cancelExport: "parrot:export:cancel",
-  dismissExportJob: "parrot:export:dismiss",
   getBackgroundWork: "parrot:background-work:get",
   backgroundWorkEvent: "parrot:background-work:event",
   getLibrary: "parrot:library:get",

@@ -1,4 +1,4 @@
-// "Save offline" (PAR-OFFL-01/02/03): the shared keeping loop (`createParrotKeeping` in `@space/parrot-core`,
+// "Keep on this computer" (PAR-OFFL-01/02/03): the shared keeping loop (`createParrotKeeping` in `@space/parrot-core`,
 // the phone runs the same one) with the kept list in `kept.json` and the songs in `@space/parrot-ingest`'s sealed kept
 // files. A desktop has no metered connection to wait out, so "Wi-Fi only" reads as "whenever online" here (agent
 // reading in PAR-OFFL-03): the kept files have no `mayDownload` gate.

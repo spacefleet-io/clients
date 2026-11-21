@@ -198,7 +198,7 @@ const toLabJob = (
   // Offline-download metadata snapshot. Only consulted for download jobs —
   // source/format jobs never carry `manifest.filenameInputs`, so `fi` stays
   // undefined and every fallback below is inert (ingest labels unchanged).
-  // Export jobs ("Download everything", ACCT-EXPORT-01) carry the same manifest snapshot.
+  // Export jobs (plain-file "Download file", OFFL-FILE-01) carry the same manifest snapshot.
   const fi = rec.kind === "download" || rec.kind === "export" ? payload.manifest?.filenameInputs : undefined;
   const manifestLabel = offlineManifestLabel(fi);
   // Stamp wins for new jobs (payload.filename); manifest covers completed/legacy

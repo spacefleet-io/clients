@@ -487,7 +487,7 @@ interface Window {
       reconcile?: (payload?: { mediaIds?: string[] }) => Promise<unknown>;
     };
     /**
-     * Export to plain files ("Download everything", ACCT-EXPORT-01). `pickFolder`
+     * Export to plain files (OFFL-FILE-01 "Download file", ACCT-EXPORT-01 "Download everything"). `pickFolder`
      * resolves the folder the user picked (null when cancelled); estimate/submit accept only that folder. Results are
      * `unknown`: parse them with `lib/exportIpc.ts`.
      */

@@ -41,6 +41,7 @@ const payloadFor = (overrides: Partial<ExportJobPayload> = {}): ExportJobPayload
   mediaId: "movie-1",
   quality: "1080p",
   container: "mkv",
+  layout: "flat",
   destDir,
   expectedBytes: 4000,
   filename: "Lattice (1999)",
@@ -158,27 +159,28 @@ afterEach(() => {
 });
 
 describe("exportFileStepHandler", () => {
-  it("writes one plain file into Movies/ of the picked folder with every audio and subtitle track, never registered offline", async () => {
+  it("writes one plain file into the picked folder with every audio and subtitle track, never registered offline", async () => {
     const { ctx, progress, outputs } = makeCtx(makeJob(payloadFor()));
     await exportFileStepHandler(ctx);
     const files = tree(destDir);
     const args = runFfmpegMock.mock.calls[0]?.[0] as string[];
-    log("movie", { files, downloads, args, progress, outputs });
-    expect(files).toEqual(["Movies/", "Movies/Lattice (1999).mkv"]);
-    expect(readFileSync(joinPath(destDir, "Movies", "Lattice (1999).mkv"), "utf8")).toBe("MUXED");
+    log("flat", { files, downloads, args, progress, outputs });
+    expect(files).toEqual(["Lattice (1999).mkv"]);
+    expect(readFileSync(joinPath(destDir, "Lattice (1999).mkv"), "utf8")).toBe("MUXED");
     expect(downloads).toEqual(["v-init", "v-c0", "v-c1", "a-init", "a-c0", "a-fr-c0", "s-key"]);
     expect(args.filter((a) => a === "-i")).toHaveLength(4);
     expect(args).toContain("-map");
     expect(args).toContain("language=fra");
     expect(registerCalls).toEqual([]);
     expect(outputs.at(-1)).toEqual({
-      exportResult: { path: joinPath(destDir, "Movies", "Lattice (1999).mkv"), totalBytes: 5, container: "mkv", skippedSubsForContainer: [] },
+      exportResult: { path: joinPath(destDir, "Lattice (1999).mkv"), totalBytes: 5, container: "mkv", skippedSubsForContainer: [] },
     });
     expect(progress.at(-1)?.[0]).toBe(100);
   });
 
-  it("an episode lands in Shows/<Show>/Season NN/", async () => {
+  it("library layout: an episode lands in Shows/<Show>/Season NN/", async () => {
     const payload = payloadFor({
+      layout: "library",
       container: "mp4",
       fileId: "ep-2",
       mediaId: "show-1",
@@ -196,14 +198,13 @@ describe("exportFileStepHandler", () => {
   });
 
   it("a file already there in another letter case is kept; the export gets a suffix (#618)", async () => {
-    mkdirSync(joinPath(destDir, "Movies"));
-    writeFileSync(joinPath(destDir, "Movies", "lattice (1999).MKV"), "theirs");
+    writeFileSync(joinPath(destDir, "lattice (1999).MKV"), "theirs");
     const { ctx } = makeCtx(makeJob(payloadFor()));
     await exportFileStepHandler(ctx);
     const files = tree(destDir).sort();
     log("collision", files);
-    expect(files).toEqual(["Movies/", "Movies/Lattice (1999) (2).mkv", "Movies/lattice (1999).MKV"]);
-    expect(readFileSync(joinPath(destDir, "Movies", "lattice (1999).MKV"), "utf8")).toBe("theirs");
+    expect(files).toEqual(["Lattice (1999) (2).mkv", "lattice (1999).MKV"]);
+    expect(readFileSync(joinPath(destDir, "lattice (1999).MKV"), "utf8")).toBe("theirs");
   });
 
   it("a failed mux leaves nothing in the folder: no partial file, no staging folder", async () => {
@@ -220,26 +221,12 @@ describe("exportFileStepHandler", () => {
     expect(files).toEqual(["keep/"]);
   });
 
-  it("a failed mux keeps a layout folder the user already had, even when empty", async () => {
-    mkdirSync(joinPath(destDir, "Movies"));
-    runFfmpegMock.mockImplementation(async (args: string[]) => {
-      writeFileSync(args[args.length - 1], "HALF");
-      throw new Error("ffmpeg exited 1");
-    });
-    const { ctx } = makeCtx(makeJob(payloadFor()));
-    const err = await exportFileStepHandler(ctx).then(() => null, (e: unknown) => e);
-    const files = tree(destDir);
-    log("mux-failure-existing-dir", { err: String(err), files });
-    expect(String(err)).toContain("ffmpeg exited 1");
-    expect(files).toEqual(["Movies/"]);
-  });
-
   it("two exports of the same title finishing together get two names", async () => {
     const a = makeCtx(makeJob(payloadFor(), "job-a"));
     const b = makeCtx(makeJob(payloadFor(), "job-b"));
     await Promise.all([exportFileStepHandler(a.ctx), exportFileStepHandler(b.ctx)]);
     const files = tree(destDir).sort();
     log("concurrent", files);
-    expect(files).toEqual(["Movies/", "Movies/Lattice (1999) (2).mkv", "Movies/Lattice (1999).mkv"]);
+    expect(files).toEqual(["Lattice (1999) (2).mkv", "Lattice (1999).mkv"]);
   });
 });

@@ -200,6 +200,9 @@
   },
   "library": {
     "export": {
+      "menuItem": "Bestand downloaden",
+      "menuItemShow": "Afleveringen als bestanden downloaden",
+      "episodeButton": "Bestand downloaden",
       "submittedToast_one": "{{count}} bestand wordt opgeslagen in {{folder}}",
       "submittedToast_other": "{{count}} bestanden worden opgeslagen in {{folder}}",
       "errors": {

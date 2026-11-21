@@ -2,7 +2,7 @@
 // UX-PHONE-04) for an artist, so the two apps read as one fleet: the photo edge to edge fading into the sky, with its
 // credit line (PAR-META-15), shimmering while it may still come (PAR-META-20) and giving way to the artist's drawn
 // picture with their initials when there is none; the ARTIST chip, the name and the counts over the fade; a full-width
-// Play, then round Shuffle, Save offline (each album), Play next and More. Two tabs, Albums first: the
+// Play, then round Shuffle, Keep on this phone (each album), Play next and More. Two tabs, Albums first: the
 // discography timeline, then every song. Delete is only in the More sheet, last, in red, after asking (PAR-LIB-03).
 import React, { useRef, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View, type ScrollViewInstance } from "react-native";

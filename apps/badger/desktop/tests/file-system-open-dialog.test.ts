@@ -89,7 +89,7 @@ describe("sf-pick-subtitle-file (Add a subtitle file…, PLAY-SUBGET-23)", () =>
 });
 
 // @req OFFL-FILE-01[badger-desktop] @req ACCT-EXPORT-01[badger-desktop]
-describe("sf-pick-export-folder (Download everything)", () => {
+describe("sf-pick-export-folder (Download file / Download everything)", () => {
   beforeEach(() => {
     state.showOpenDialog.mockReset();
   });

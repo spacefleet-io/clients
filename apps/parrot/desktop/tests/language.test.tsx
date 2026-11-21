@@ -12,7 +12,6 @@ import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { streamBridgeStub } from "./streamBridge";
-import { exportBridgeStub } from "./exportBridge";
 import { updateRequiredBridgeStub } from "./updateRequiredBridge";
 import { PARROT_LANGUAGES, type ParrotLanguage, type ParrotState } from "../src/shared/ipc";
 import App from "../src/renderer/src/App";
@@ -65,7 +64,6 @@ describe("@req UX-I18N-01 Parrot desktop languages", () => {
     let current: ParrotState;
     const parrot = {
       ...streamBridgeStub(),
-      ...exportBridgeStub(),
       ...updateRequiredBridgeStub(),
       getState: vi.fn(async () => current),
       saveSetup: vi.fn(async (patch: Partial<ParrotState["setup"]>) => {

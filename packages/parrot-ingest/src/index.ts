@@ -11,4 +11,3 @@ export * from "./kept";
 export * from "./lightCopy";
 export * from "./exportFile";
 export type { ParrotOriginalTagGroup, ParrotOriginalTags } from "./splitOriginal";
-export * from "./exportSongs";
