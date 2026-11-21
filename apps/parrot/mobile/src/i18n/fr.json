@@ -93,11 +93,6 @@
     "setup": {
       "notificationsBody": "Parrot peut vous prévenir quand la musique ajoutée depuis votre ordinateur est prête à être écoutée ici."
     },
-    "tvSearch": {
-      "hint": "Les résultats changent à chaque lettre. Appuyez sur ▶ de la télécommande pour passer des touches aux résultats.",
-      "space": "Espace",
-      "delete": "Effacer"
-    },
     "playlists": {
       "likedEmpty": "Aucun titre liké pour l'instant"
     },

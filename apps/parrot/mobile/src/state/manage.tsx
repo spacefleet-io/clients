@@ -2,27 +2,23 @@
 // (PAR-META-16/17) and deleting a song, an album or an artist (PAR-LIB-03). The form, the changed marks and the edit it
 // saves are the shared ones of @space/parrot-core; this provider only draws them, asks before a delete, saves through
 // the session (a new encrypted library snapshot) and says how it went in a short notice. The form looks things up on
-// its own (`useEditLookups`): the fields that name something suggest as the user types, connected to every other field
-// (PAR-META-18), and the song's or album's lyrics (PAR-LYR-05), with a shimmer while an answer is on its way, so
-// loading never looks like "nothing found" (PAR-META-20).
+// its own (`useEditLookups`): "Look it up again" (PAR-META-18) and the song's or album's lyrics (PAR-LYR-05), with a
+// shimmer while an answer is on its way, so loading never looks like "nothing found" (PAR-META-20).
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { Alert, Image, KeyboardAvoidingView, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type ScrollViewInstance } from "react-native";
-import { ImagePlus, RotateCcw, RotateCw } from "lucide-react-native";
+import { Alert, Image, KeyboardAvoidingView, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { ImagePlus, RotateCw, Search } from "lucide-react-native";
 import { launchImageLibrary } from "react-native-image-picker";
 import { Buffer } from "buffer";
 import { useTranslation } from "@space/mobile-shell/i18n";
 import { MobileNoticeBanner } from "@space/mobile-shell/components";
 import { MobileRenderBoundary } from "@space/mobile-shell/render-boundary";
 import {
-  applyParrotEditSuggestion,
   parrotEditFieldChanged,
   parrotEditFields,
   parrotEditNumber,
   parrotEditTarget,
   type ParrotEditCover,
   type ParrotEditFields,
-  type ParrotEditSuggestion,
-  type ParrotEditSuggestQuery,
   type ParrotManageTarget,
 } from "@space/parrot-core";
 import { deleteFromLibrary, editDetails, getEditValues, previewDelete } from "../lib/library";
@@ -150,13 +146,6 @@ const coverPreview = (cover: ParrotEditCover | null) => {
   return `data:${cover.mime};base64,${Buffer.from(cover.bytes).toString("base64")}`;
 };
 
-type SuggestField = ParrotEditSuggestQuery["field"];
-/** What a pick replaced, so Undo puts the whole form back as it was just before (an earlier pick included). */
-type Filled = { name: string; before: { fields: ParrotEditFields; cover: ParrotEditCover | null; current: ParrotEditFields | undefined; filled: Filled | null } };
-
-/** A field's value as the form shows it (the struck-through old value beside "changed"). */
-const shownValue = (value: ParrotEditFields[keyof ParrotEditFields]) => (value === null || value === undefined ? "" : String(value));
-
 /** The phone's edit form: the desktop dialog's fields and marks, one under the other; an album's cover from the gallery. */
 export const EditDetailsDialog = ({
   editing,
@@ -180,14 +169,8 @@ export const EditDetailsDialog = ({
   const [year, setYear] = useState("");
   const [genre, setGenre] = useState("");
   const [cover, setCover] = useState<ParrotEditCover | null>(null);
-  // The library's values a pick is marked against: the fields it changed show "changed", the old value and ↺ (PAR-META-18).
+  // The library's values a lookup was marked against: the fields that differ show "changed" (PAR-META-18).
   const [current, setCurrent] = useState<ParrotEditFields | undefined>(undefined);
-  const [filled, setFilled] = useState<Filled | null>(null);
-  // The field whose suggestions show (the one being typed in).
-  const [typing, setTyping] = useState<SuggestField | null>(null);
-  const coverAsked = useRef(0);
-  const scroll = useRef<ScrollViewInstance | null>(null);
-  const fieldTops = useRef<Partial<Record<SuggestField, number>>>({});
   const libraryVersion = useSession().library.version;
 
   const fill = (values: ParrotEditFields) => {
@@ -204,12 +187,18 @@ export const EditDetailsDialog = ({
     fill(editing.fields);
     setCover(null);
     setCurrent(undefined);
-    setFilled(null);
-    setTyping(null);
-    coverAsked.current += 1;
   }, [editing]);
 
-  const lookups = useEditLookups({ item: editing?.item ?? null, original: editing ? { kind: editing.item.kind, values: editing.fields } : null, libraryVersion });
+  const lookups = useEditLookups({
+    item: editing?.item ?? null,
+    libraryVersion,
+    // What was found fills the form, marked against the library's values; nothing is saved until Save.
+    onFound: (answer) => {
+      fill(parrotEditFields(answer.found));
+      setCurrent(parrotEditFields(answer.current));
+      if (answer.cover) setCover(answer.cover);
+    },
+  });
 
   const kind = editing?.item.kind ?? "track";
   const fields = (): ParrotEditFields => ({
@@ -228,105 +217,27 @@ export const EditDetailsDialog = ({
     setCover({ kind: "file", bytes: new Uint8Array(Buffer.from(asset.base64, "base64")), mime: asset.type ?? "image/jpeg" });
   };
 
-  const closeSuggestions = () => {
-    setTyping(null);
-    lookups?.suggest.ask(null);
-  };
-
-  /** Typing in a field that names something asks what fits it and every other field, and shows the list under it. */
-  const typeIn = (key: SuggestField, set: (value: string) => void) => (text: string) => {
-    set(text);
-    if (typing !== key) scroll.current?.scrollTo({ y: Math.max(0, (fieldTops.current[key] ?? 0) - spacing.md), animated: true });
-    setTyping(key);
-    const others = { title, artist, album, [key]: text };
-    lookups?.suggest.ask({ kind, field: key, text, fields: { title: others.title, artist: others.artist, ...(kind === "track" ? { album: others.album } : {}) } });
-  };
-
-  /** A pick fills every field it knows, marked against the library's values; nothing is saved until Save. */
-  const pick = (suggestion: ParrotEditSuggestion, name: string) => {
-    if (!editing || !lookups) return;
-    const before = { fields: fields(), cover, current, filled };
-    fill(applyParrotEditSuggestion(kind, before.fields, suggestion));
-    setCurrent(editing.fields);
-    setFilled({ name, before });
-    closeSuggestions();
-    const ask = (coverAsked.current += 1);
-    const sameAlbum = suggestion.inLibrary && suggestion.album?.id === editing.item.id;
-    if (kind !== "album" || !suggestion.coverId || sameAlbum) return;
-    lookups.suggest.cover(suggestion).then(
-      (found) => {
-        if (found && coverAsked.current === ask) setCover(found);
-      },
-      (failure: unknown) => console.warn(`[parrot] edit dialog could not fetch the picked album's cover: ${errorText(failure)}`)
-    );
-  };
-
-  const undo = () => {
-    if (!filled) return;
-    coverAsked.current += 1;
-    fill(filled.before.fields);
-    setCover(filled.before.cover);
-    setCurrent(filled.before.current);
-    setFilled(filled.before.filled);
-  };
-
-  const setters: Record<keyof ParrotEditFields, (value: string) => void> = {
-    title: setTitle,
-    artist: setArtist,
-    album: setAlbum,
-    number: setNumber,
-    disc: setDisc,
-    year: setYear,
-    genre: setGenre,
-  };
-
-  const field = (key: keyof ParrotEditFields, label: string, value: string, set: (v: string) => void, numeric = false) => {
-    const suggests = key === "title" || key === "artist" || key === "album";
-    const was = current && parrotEditFieldChanged(fields(), current, key) ? shownValue(current[key]) : null;
-    const list = suggests && typing === key && lookups?.suggest.list?.field === key ? lookups.suggest.list : null;
-    return (
-      <View
-        style={styles.field}
-        key={key}
-        onLayout={suggests ? (event) => (fieldTops.current[key as SuggestField] = event.nativeEvent.layout.y) : undefined}
-      >
-        <View style={styles.labelRow}>
-          <Text style={styles.label}>{label}</Text>
-          {was !== null ? (
-            <>
-              <Text style={styles.changed} testID={`manage-changed-${key}`}>
-                {t("shell.manage.changed")}
-              </Text>
-              <Text style={styles.was} numberOfLines={1} testID={`manage-was-${key}`}>
-                {was}
-              </Text>
-              <Pressable
-                testID={`manage-restore-${key}`}
-                accessibilityRole="button"
-                accessibilityLabel={t("shell.manage.suggestRestore", { value: was })}
-                hitSlop={12}
-                onPress={() => setters[key](was === "" && key === "disc" ? "1" : was)}
-              >
-                <RotateCcw size={14} color={colors.accent} />
-              </Pressable>
-            </>
-          ) : null}
-        </View>
-        <TextInput
-          testID={`manage-field-${key}`}
-          value={value}
-          onChangeText={suggests ? typeIn(key as SuggestField, set) : set}
-          onFocus={() => typing !== null && typing !== key && closeSuggestions()}
-          keyboardType={numeric ? "number-pad" : "default"}
-          autoCorrect={suggests ? false : undefined}
-          accessibilityLabel={label}
-          placeholderTextColor={colors.textMuted}
-          style={styles.input}
-        />
-        {list ? <SuggestList list={list} kind={kind} onPick={pick} /> : null}
+  const field = (key: keyof ParrotEditFields, label: string, value: string, set: (v: string) => void, numeric = false) => (
+    <View style={styles.field} key={key}>
+      <View style={styles.labelRow}>
+        <Text style={styles.label}>{label}</Text>
+        {parrotEditFieldChanged(fields(), current, key) ? (
+          <Text style={styles.changed} testID={`manage-changed-${key}`}>
+            {t("shell.manage.changed")}
+          </Text>
+        ) : null}
       </View>
-    );
-  };
+      <TextInput
+        testID={`manage-field-${key}`}
+        value={value}
+        onChangeText={set}
+        keyboardType={numeric ? "number-pad" : "default"}
+        accessibilityLabel={label}
+        placeholderTextColor={colors.textMuted}
+        style={styles.input}
+      />
+    </View>
+  );
 
   const preview = coverPreview(cover);
   return (
@@ -335,18 +246,9 @@ export const EditDetailsDialog = ({
       <MobileRenderBoundary name="modal:manage-edit" onDismiss={onClose}>
         <KeyboardAvoidingView behavior="padding" style={styles.scrim}>
           <View style={styles.dialog} testID="manage-edit-dialog">
-            <ScrollView ref={scroll} contentContainerStyle={{ gap: spacing.md }} keyboardShouldPersistTaps="handled">
+            <ScrollView contentContainerStyle={{ gap: spacing.md }} keyboardShouldPersistTaps="handled">
               <Text style={styles.title}>{t(`shell.manage.editTitle.${kind}`)}</Text>
-              {filled ? (
-                <View style={styles.filled} testID="manage-suggest-filled">
-                  <Text style={[styles.body, { flex: 1 }]} testID="manage-suggest-filled-note">
-                    {t("shell.manage.suggestFilledFrom", { name: filled.name })}
-                  </Text>
-                  <Pressable testID="manage-suggest-undo" accessibilityRole="button" onPress={undo} style={styles.undo}>
-                    <Text style={styles.pick}>{t("shell.manage.suggestUndo")}</Text>
-                  </Pressable>
-                </View>
-              ) : null}
+              {lookups && editing ? <LookUpRow lookUp={lookups.lookUp} title={editing.item.title} /> : null}
               {field("title", t("shell.manage.field.title"), title, setTitle)}
               {field("artist", kind === "album" ? t("shell.manage.field.albumArtist") : t("shell.manage.field.artist"), artist, setArtist)}
               {kind === "track" ? field("album", t("shell.manage.field.album"), album, setAlbum) : null}
@@ -357,40 +259,23 @@ export const EditDetailsDialog = ({
               </View>
               {field("genre", t("shell.manage.field.genre"), genre, setGenre)}
               {kind === "album" ? (
-                <View style={styles.coverRow}>
-                  <Pressable testID="manage-cover-pick" accessibilityRole="button" accessibilityLabel={t("shell.manage.coverPick")} onPress={() => void pickCover()} style={styles.cover}>
-                    {preview ? (
-                      <Image source={{ uri: preview }} style={styles.coverImage} testID="manage-cover-preview" />
-                    ) : (
-                      <ParrotArt seed={editing?.item.id ?? ""} size={64} radius={8} coverKey={editing?.item.coverKey ?? null} />
-                    )}
-                    <View style={{ flex: 1, gap: spacing.xs }}>
-                      <View style={styles.labelRow}>
-                        <Text style={styles.label}>{t("shell.manage.field.cover")}</Text>
-                        {cover ? <Text style={styles.changed}>{t("shell.manage.changed")}</Text> : null}
-                      </View>
-                      <View style={styles.labelRow}>
-                        <ImagePlus size={18} color={colors.accent} />
-                        <Text style={styles.pick}>{t("shell.manage.coverPick")}</Text>
-                      </View>
+                <Pressable testID="manage-cover-pick" accessibilityRole="button" accessibilityLabel={t("shell.manage.coverPick")} onPress={() => void pickCover()} style={styles.cover}>
+                  {preview ? (
+                    <Image source={{ uri: preview }} style={styles.coverImage} testID="manage-cover-preview" />
+                  ) : (
+                    <ParrotArt seed={editing?.item.id ?? ""} size={64} radius={8} coverKey={editing?.item.coverKey ?? null} />
+                  )}
+                  <View style={{ flex: 1, gap: spacing.xs }}>
+                    <View style={styles.labelRow}>
+                      <Text style={styles.label}>{t("shell.manage.field.cover")}</Text>
+                      {cover ? <Text style={styles.changed}>{t("shell.manage.changed")}</Text> : null}
                     </View>
-                  </Pressable>
-                  {cover ? (
-                    <Pressable
-                      testID="manage-restore-cover"
-                      accessibilityRole="button"
-                      accessibilityLabel={t("shell.manage.suggestRestore", { value: t("shell.manage.field.cover") })}
-                      hitSlop={12}
-                      onPress={() => {
-                        coverAsked.current += 1;
-                        setCover(null);
-                      }}
-                      style={styles.restoreCover}
-                    >
-                      <RotateCcw size={18} color={colors.accent} />
-                    </Pressable>
-                  ) : null}
-                </View>
+                    <View style={styles.labelRow}>
+                      <ImagePlus size={18} color={colors.accent} />
+                      <Text style={styles.pick}>{t("shell.manage.coverPick")}</Text>
+                    </View>
+                  </View>
+                </Pressable>
               ) : null}
               {lookups ? <LyricsSection lyrics={lookups.lyrics} /> : null}
               {error ? (
@@ -421,114 +306,39 @@ export const EditDetailsDialog = ({
   );
 };
 
-/** How many results each section shows: the list stays short enough to sit under the field above the keyboard. */
-const SUGGEST_SECTION_MAX = 5;
-
-/**
- * The list under the field being typed in (PAR-META-18): "Fits this song" (results that fit the other fields too), then
- * "Only “…”" (the typed text alone); the library's first in each, tagged, with dots for the fields each fits. While our
- * music library is still being asked a shimmer row says so (PAR-META-20); a failed ask says why in one line.
- */
-const SuggestList = ({
-  list,
-  kind,
-  onPick,
-}: {
-  list: NonNullable<EditLookups["suggest"]["list"]>;
-  kind: "track" | "album";
-  onPick: (suggestion: ParrotEditSuggestion, name: string) => void;
-}) => {
+/** "Look it up again" (PAR-META-18): asks for a better match and fills the form with it; nothing is saved until Save. */
+const LookUpRow = ({ lookUp, title }: { lookUp: EditLookups["lookUp"]; title: string }) => {
   const { t } = useTranslation();
-  // In music terms: an album dialog's title is the album's title.
-  const music = kind === "album" && list.field === "title" ? "album" : list.field;
-  const dots: Array<{ fit: "title" | "artist" | "album"; label: string }> =
-    kind === "track"
-      ? [
-          { fit: "title", label: t("shell.manage.field.title") },
-          { fit: "artist", label: t("shell.manage.field.artist") },
-          { fit: "album", label: t("shell.manage.field.album") },
-        ]
-      : [
-          { fit: "artist", label: t("shell.manage.field.albumArtist") },
-          { fit: "album", label: t("shell.manage.field.title") },
-        ];
-  const row = (suggestion: ParrotEditSuggestion) => {
-    const named = { title: suggestion.song?.title, artist: suggestion.artist.name, album: suggestion.album?.title }[music];
-    const name = named ?? suggestion.song?.title ?? suggestion.album?.title ?? suggestion.artist.name;
-    const track = suggestion.kind === "song" && music !== "title" && suggestion.song && suggestion.album?.trackNumber != null ? suggestion.album.trackNumber : null;
-    const about = [
-      music !== "artist" ? suggestion.artist.name : null,
-      music !== "album" ? suggestion.album?.title : null,
-      suggestion.album?.year,
-      track !== null ? t("shell.manage.suggestTrackOn", { title: suggestion.song?.title ?? "", number: track }) : null,
-    ]
-      .filter((part) => part !== null && part !== undefined && part !== "")
-      .join(" · ");
-    const fits = dots.filter((dot) => suggestion.fits[dot.fit]).map((dot) => dot.label);
-    return (
-      <Pressable
-        key={suggestion.key}
-        testID="manage-suggest-row"
-        accessibilityRole="button"
-        accessibilityLabel={[name, about, suggestion.inLibrary ? t("shell.manage.suggestInLibrary") : null].filter(Boolean).join(", ")}
-        onPress={() => onPick(suggestion, name)}
-        style={({ pressed }) => [styles.suggestRow, pressed && { backgroundColor: colors.surface }]}
-      >
-        <View style={{ flex: 1, gap: 2 }}>
-          <View style={styles.labelRow}>
-            <Text style={styles.suggestName} numberOfLines={1}>
-              {name}
-            </Text>
-            {suggestion.inLibrary ? (
-              <Text style={styles.tag} testID="manage-suggest-in-library">
-                {t("shell.manage.suggestInLibrary")}
-              </Text>
-            ) : null}
-          </View>
-          {about ? (
-            <Text style={styles.suggestAbout} numberOfLines={1}>
-              {about}
-            </Text>
-          ) : null}
-        </View>
-        <View style={styles.dots} testID="manage-suggest-dots" accessibilityLabel={t("shell.manage.suggestDots", { fields: fits.join(", ") })}>
-          {dots.map((dot) => (
-            <View key={dot.fit} style={[styles.dot, suggestion.fits[dot.fit] && styles.dotOn]} />
-          ))}
-        </View>
-      </Pressable>
-    );
-  };
-  const fitting = list.suggestions.all.slice(0, SUGGEST_SECTION_MAX);
-  const only = list.suggestions.field.slice(0, SUGGEST_SECTION_MAX);
-  const asking = list.lookup.status === "busy";
-  const failed = list.lookup.status === "failed" ? list.lookup.reason : null;
-  if (fitting.length === 0 && only.length === 0 && !asking && failed === null) return null;
+  const busy = lookUp.state === "busy";
+  const note = busy
+    ? t("shell.manage.searching")
+    : lookUp.state === "found"
+      ? t("shell.manage.lookUpFound")
+      : lookUp.state === "none"
+        ? t("shell.manage.fetchNone", { title })
+        : lookUp.state === "failed"
+          ? t("shell.manage.fetchFailed", { reason: lookUp.reason ?? "" })
+          : t("shell.manage.lookUpHint");
   return (
-    <View style={styles.suggest} testID="manage-suggest" accessibilityState={{ busy: asking }}>
-      {fitting.length > 0 ? (
-        <View testID="manage-suggest-fits">
-          <Text style={styles.section}>{t(kind === "album" ? "shell.manage.suggestFitsAlbum" : "shell.manage.suggestFits")}</Text>
-          {fitting.map(row)}
-        </View>
-      ) : null}
-      {only.length > 0 ? (
-        <View testID="manage-suggest-only">
-          <Text style={styles.section}>{t("shell.manage.suggestOnly", { text: list.text.trim() })}</Text>
-          {only.map(row)}
-        </View>
-      ) : null}
-      {asking ? (
-        <View style={styles.asking} testID="manage-suggest-asking">
-          <Shimmer style={[styles.shimmerLine, { flex: 1 }]} />
-          <Text style={styles.suggestAbout}>{t("shell.manage.suggestStillAsking")}</Text>
-        </View>
-      ) : null}
-      {failed !== null ? (
-        <Text style={[styles.suggestAbout, { color: colors.danger }]} accessibilityRole="alert" testID="manage-suggest-failed" numberOfLines={1}>
-          {t("shell.manage.fetchFailed", { reason: failed })}
-        </Text>
-      ) : null}
+    <View style={styles.lookUp} testID="manage-look-up" accessibilityState={{ busy }}>
+      <Text
+        style={[styles.body, { flex: 1 }, lookUp.state === "failed" && { color: colors.danger }]}
+        accessibilityRole={lookUp.state === "failed" ? "alert" : undefined}
+        testID="manage-look-up-note"
+      >
+        {note}
+      </Text>
+      <Pressable
+        testID="manage-look-up-button"
+        accessibilityRole="button"
+        accessibilityState={{ disabled: busy, busy }}
+        disabled={busy}
+        onPress={lookUp.run}
+        style={[styles.lookUpButton, busy && { opacity: 0.4 }]}
+      >
+        <Search size={16} color={colors.accent} />
+        <Text style={styles.pick}>{t("shell.manage.lookUp")}</Text>
+      </Pressable>
     </View>
   );
 };
@@ -600,26 +410,13 @@ const styles = StyleSheet.create({
   labelRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   label: { color: colors.textMuted, fontSize: 13 },
   changed: { color: colors.accent, fontSize: 11, fontWeight: "700" },
-  was: { flexShrink: 1, color: colors.textMuted, fontSize: 12, textDecorationLine: "line-through" },
   input: { color: colors.text, fontSize: 16, borderWidth: 1, borderColor: colors.border, borderRadius: 10, paddingHorizontal: spacing.md, minHeight: 48 },
-  coverRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
-  cover: { flex: 1, flexDirection: "row", alignItems: "center", gap: spacing.md, borderWidth: 1, borderStyle: "dashed", borderColor: colors.border, borderRadius: 12, padding: spacing.md },
-  restoreCover: { minWidth: 44, minHeight: 44, alignItems: "center", justifyContent: "center" },
+  cover: { flexDirection: "row", alignItems: "center", gap: spacing.md, borderWidth: 1, borderStyle: "dashed", borderColor: colors.border, borderRadius: 12, padding: spacing.md },
   coverImage: { width: 64, height: 64, borderRadius: 8 },
   pick: { color: colors.accent, fontSize: 14, fontWeight: "700" },
   error: { color: colors.danger, fontSize: 14 },
-  filled: { flexDirection: "row", alignItems: "center", gap: spacing.md, borderRadius: 12, padding: spacing.md, backgroundColor: colors.surface },
-  undo: { minHeight: 44, paddingHorizontal: spacing.md, borderRadius: 22, borderWidth: 1, borderColor: colors.border, justifyContent: "center" },
-  suggest: { borderWidth: 1, borderColor: colors.border, borderRadius: 12, paddingVertical: spacing.xs, backgroundColor: colors.bg },
-  section: { color: colors.textMuted, fontSize: 11, fontWeight: "700", textTransform: "uppercase", paddingHorizontal: spacing.md, paddingTop: spacing.sm, paddingBottom: spacing.xs },
-  suggestRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, minHeight: 48, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
-  suggestName: { flexShrink: 1, color: colors.text, fontSize: 15, fontWeight: "600" },
-  suggestAbout: { color: colors.textMuted, fontSize: 12 },
-  tag: { color: colors.accent, fontSize: 10, fontWeight: "700", borderWidth: 1, borderColor: colors.accent, borderRadius: 8, paddingHorizontal: 6, paddingVertical: 1 },
-  dots: { flexDirection: "row", gap: 4 },
-  dot: { width: 7, height: 7, borderRadius: 4, borderWidth: 1, borderColor: colors.textMuted },
-  dotOn: { backgroundColor: colors.accent, borderColor: colors.accent },
-  asking: { flexDirection: "row", alignItems: "center", gap: spacing.md, minHeight: 40, paddingHorizontal: spacing.md },
+  lookUp: { flexDirection: "row", alignItems: "center", gap: spacing.md, borderRadius: 12, padding: spacing.md, backgroundColor: colors.surface },
+  lookUpButton: { flexDirection: "row", alignItems: "center", gap: spacing.xs, minHeight: 44, paddingHorizontal: spacing.md, borderRadius: 22, borderWidth: 1, borderColor: colors.border },
   lyrics: { gap: spacing.sm, borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: spacing.md },
   lyricLine: { color: colors.text, fontSize: 14 },
   shimmerLine: { height: 12, borderRadius: 4 },

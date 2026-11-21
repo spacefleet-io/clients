@@ -17,7 +17,7 @@ import type { ParrotPhotoCredit } from "@space/parrot-library-db-definition";
 import type { ParrotImportPlacedFile, ParrotImportUnidentifiedFile } from "@space/parrot-core";
 import type { ParrotLibraryPatch } from "./libraryPatch";
 
-import type { ParrotEditCover, ParrotEditSuggestion, ParrotEditSuggestQuery, ParrotEditValues } from "@space/parrot-core";
+import type { ParrotEditCover, ParrotEditValues } from "@space/parrot-core";
 
 export type { ParrotEditCover, ParrotEditValues } from "@space/parrot-core";
 export type { ParrotImportEdit, ParrotImportScan, ParrotScanEntry } from "@space/parrot-ingest";
@@ -211,10 +211,13 @@ export type ParrotFetchLyricsResult = { ok: true; outcome: "found" | "none"; lyr
 /** What deleting a song, an album or an artist would remove, for the confirm dialog (PAR-LIB-03). */
 export type ParrotDeletePreview = { ok: true; trackCount: number; albumCount: number } | { ok: false; error: string };
 /**
- * PAR-META-18: what our music library suggests for what is typed in the edit dialog, ranked against all its fields;
- * a lookup that fails says why (the dialog keeps the library's own suggestions).
+ * PAR-META-18: what our music library found for a song or an album, next to the library's values, plus a found album
+ * cover; nothing is saved until the user applies it in the edit dialog.
  */
-export type ParrotEditSuggestResult = { ok: true; results: ParrotEditSuggestion[] } | { ok: false; error: string };
+export type ParrotFetchMetadataResult =
+  | { ok: true; outcome: "none" }
+  | { ok: true; outcome: "found"; found: NonNullable<ParrotEditValues>; current: NonNullable<ParrotEditValues>; cover: ParrotEditCover | null }
+  | { ok: false; error: string };
 
 /** PAR-UP-05: an album of our music library with its 500 px cover as a data: URL (null when it has none). */
 export type ParrotImportFoundAlbum = { album: MusicAlbum; cover: string | null };
@@ -403,10 +406,8 @@ export type ParrotBridge = {
    * value by now keeps it. The result is the library after it.
    */
   saveLoudness(measured: readonly ParrotMeasuredLoudness[]): Promise<ParrotLibraryResult>;
-  /** PAR-META-18: asks our music library what fits what is typed in the edit dialog; changes nothing. */
-  suggestEdit(query: ParrotEditSuggestQuery): Promise<ParrotEditSuggestResult>;
-  /** PAR-META-18: the cover of an album picked in the edit dialog (500 px), null when none or the lookup fails. */
-  suggestEditCover(coverId: string): Promise<ParrotEditCover | null>;
+  /** PAR-META-18: asks our music library about a song or an album; changes nothing. */
+  fetchMetadata(target: ParrotManageTarget & { kind: "track" | "album" }): Promise<ParrotFetchMetadataResult>;
   /** A local address the in-app player streams the file from (PAR-PLAY-01). */
   playbackUrl(fileId: string): Promise<string>;
   /**
@@ -538,8 +539,7 @@ export const PARROT_IPC = {
   fetchLyrics: "parrot:library:fetch-lyrics",
   wantLyrics: "parrot:library:want-lyrics",
   saveLoudness: "parrot:library:save-loudness",
-  suggestEdit: "parrot:library:suggest-edit",
-  suggestEditCover: "parrot:library:suggest-edit-cover",
+  fetchMetadata: "parrot:library:fetch-metadata",
   playbackUrl: "parrot:player:url",
   measureUrl: "parrot:player:measure-url",
   streamAcquire: "parrot:stream:acquire",

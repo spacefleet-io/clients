@@ -16,8 +16,6 @@ import type {
   MusicLyricsQuery,
   MusicRecording,
   MusicRecordingsQuery,
-  MusicSuggestion,
-  MusicSuggestQuery,
   SubtitleFileResult,
   SubtitlesRequest,
   SubtitlesResult,
@@ -134,7 +132,6 @@ export type LookupBody = Record<string, unknown> & {
     | "skipMarkers"
     | "musicRecordings"
     | "musicAlbums"
-    | "musicSuggest"
     | "musicCopyChanges"
     | "musicLyrics"
     | "musicCover"
@@ -213,8 +210,6 @@ export interface MetadataClient {
   musicAlbums(query: MusicAlbumsQuery): Promise<{ results: MusicAlbum[] }>;
   /** PAR-COPY-01: the albums each music copy newer than `since` changed (null: only the current copy's version), one list for every app. */
   musicCopyChanges(since?: string | null): Promise<MusicCopyChanges>;
-  /** PAR-META-18: the edit dialog's autocomplete, best fit first; build the query with parrot-core `parrotMusicSuggestQuery`. */
-  musicSuggest(query: MusicSuggestQuery): Promise<{ results: MusicSuggestion[] }>;
   /** Lyrics past the user's own file (PAR-LYR-01). */
   musicLyrics(query: MusicLyricsQuery): Promise<MusicLyrics>;
   /** One album cover by the album's `id`, `size` 500 (default) or 1200 px; `cover: null` when the service has none. */
@@ -284,7 +279,6 @@ export function createMetadataClient(config: MetadataClientConfig): MetadataClie
     musicAlbums: (query) => lookup({ op: "musicAlbums", ...query, contract: 2 }),
     musicLyrics: (query) => lookup({ op: "musicLyrics", ...query, contract: 2 }),
     musicCopyChanges: (since) => lookup({ op: "musicCopyChanges", ...(since ? { since } : {}), contract: 2 }),
-    musicSuggest: (query) => lookup({ op: "musicSuggest", ...query, contract: 2 }),
     musicCover: (album, size = 500) => lookup({ op: "musicCover", id: album, size, contract: 2 }),
     musicArtistImage: (artist) => lookup({ op: "musicArtistImage", id: artist, contract: 2 }),
     subtitles: (request) => lookup({ op: "subtitles", ...request }),
