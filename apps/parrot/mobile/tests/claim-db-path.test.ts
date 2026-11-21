@@ -16,17 +16,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const APP = "/var/mobile/Containers/Data/Application/ABC";
 const state = vi.hoisted(() => ({
   os: "ios",
-  tv: false,
-  // Where the SQLite plugin really writes a file, per platform and `location` (the patched plugin keeps a tvOS
-  // "Documents" database in Caches).
-  pluginDir: (location: string) =>
-    state.os === "android"
-      ? "/data/user/0/io.spacefleet.parrot/databases"
-      : location === "Documents"
-        ? state.tv
-          ? "/var/mobile/Containers/Data/Application/ABC/Library/Caches"
-          : "/var/mobile/Containers/Data/Application/ABC/Documents"
-        : "/var/mobile/Containers/Data/Application/ABC/Library/LocalDatabase",
+  // Where the SQLite plugin really writes a `location: "default"` file, per platform.
+  pluginDir: { ios: "/var/mobile/Containers/Data/Application/ABC/Library/LocalDatabase", android: "/data/user/0/io.spacefleet.parrot/databases" } as Record<string, string>,
   written: new Set<string>(),
   reads: [] as string[],
   published: [] as Array<{ bytes: number; baseVersion: number }>,
@@ -40,9 +31,6 @@ vi.mock("react-native", () => ({
     get OS() {
       return state.os;
     },
-    get isTV() {
-      return state.tv;
-    },
   },
 }));
 vi.mock("react-native-fs", () => ({
@@ -51,7 +39,7 @@ vi.mock("react-native-fs", () => ({
       return state.os === "ios" ? "/var/mobile/Containers/Data/Application/ABC/Documents" : "/data/user/0/io.spacefleet.parrot/files";
     },
     LibraryDirectoryPath: "/var/mobile/Containers/Data/Application/ABC/Library",
-    CachesDirectoryPath: "/var/mobile/Containers/Data/Application/ABC/Library/Caches",
+    CachesDirectoryPath: "/tmp/cache",
     mkdir: async () => undefined,
     writeFile: async () => undefined,
     unlink: async () => undefined,
@@ -67,8 +55,8 @@ vi.mock("react-native-fs", () => ({
 vi.mock("react-native-sqlite-storage", () => ({
   default: {
     enablePromise: () => undefined,
-    openDatabase: async ({ name, location }: { name: string; location: string }) => {
-      state.written.add(`${state.pluginDir(location)}/${name}`);
+    openDatabase: async ({ name }: { name: string }) => {
+      state.written.add(`${state.pluginDir[state.os]}/${name}`);
       return { sqlBatch: async () => undefined, executeSql: async () => [{ rows: { length: 0, item: () => ({}) } }], close: async () => undefined };
     },
   },
@@ -97,7 +85,6 @@ describe("claiming a new account's key", () => {
 
   it("publishes the empty library from Library/LocalDatabase on the iPhone", async () => {
     state.os = "ios";
-    state.tv = false;
     const result = await claimAccountKey("token", "key").catch((err: Error) => ({ error: err.message }));
     log("ios claim", { result, reads: state.reads, written: [...state.written], published: state.published });
     expect(result).toEqual({ version: 1 });
@@ -105,19 +92,8 @@ describe("claiming a new account's key", () => {
     expect(state.published).toEqual([{ bytes: 16, baseVersion: 0 }]);
   });
 
-  it("publishes the empty library from Library/Caches on the Apple TV", async () => {
-    state.os = "ios";
-    state.tv = true;
-    const result = await claimAccountKey("token", "key").catch((err: Error) => ({ error: err.message }));
-    log("tvos claim", { result, reads: state.reads, written: [...state.written], published: state.published });
-    expect(result).toEqual({ version: 1 });
-    expect(state.reads).toEqual([`${APP}/Library/Caches/parrot.claim.sqlite`]);
-    expect(state.published).toEqual([{ bytes: 16, baseVersion: 0 }]);
-  });
-
   it("still reads the app's databases folder on Android", async () => {
     state.os = "android";
-    state.tv = false;
     const result = await claimAccountKey("token", "key").catch((err: Error) => ({ error: err.message }));
     log("android claim", { result, reads: state.reads, published: state.published });
     expect(result).toEqual({ version: 1 });

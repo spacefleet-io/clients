@@ -63,8 +63,9 @@ vi.mock("react-native-fs", () => ({
   },
 }));
 vi.mock("../src/native/LibrarySync", () => ({
-  encryptSnapshotFile: vi.fn(),
-  decryptSnapshotFile: vi.fn(),
+  encryptLibraryToBinaryFile: vi.fn(),
+  decryptLibraryFromBinaryFile: vi.fn(),
+  decryptLibraryFromFile: vi.fn(),
   onLibrarySyncProgress: vi.fn(),
   sha256File: (...args: unknown[]) => h.sha256File(...args),
   buildUploadFrameBlob: (...args: unknown[]) => h.buildUploadFrameBlob(...args),

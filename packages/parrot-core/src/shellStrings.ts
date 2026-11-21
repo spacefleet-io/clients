@@ -3,8 +3,6 @@
  * the now-playing page, Account and Settings. Shared by Parrot desktop and the web player (REL-FAM-02); each app spreads
  * them into its own language tables.
  */
-import { pluralCategory } from "@space/shared/pluralRules";
-
 export const SHELL_EN = {
   "nav.home": "Home",
   "nav.notifications": "Notifications",
@@ -1137,8 +1135,15 @@ export const SHELL_ES: ShellStrings = {
   "kept.cancel": "Cancelar",
 };
 
-/** Whether `n` takes `language`'s "one" or "other" text, also where the engine has no `Intl.PluralRules` (Hermes). */
-export const shellPluralForm = (language: string, n: number): "one" | "other" => (pluralCategory(language, n) === "one" ? "one" : "other");
+/**
+ * Whether `n` takes `language`'s "one" or "other" text. The phone's engine (Hermes) has no `Intl.PluralRules`; there
+ * the shell's languages' own rule stands in: French says "one" for 0 and 1, English, Dutch, German and Spanish for 1.
+ */
+export const shellPluralForm = (language: string, n: number): "one" | "other" => {
+  if (typeof Intl.PluralRules === "function") return new Intl.PluralRules(language).select(n) === "one" ? "one" : "other";
+  const one = language.toLowerCase().startsWith("fr") ? n >= 0 && n < 2 : n === 1;
+  return one ? "one" : "other";
+};
 
 /** The shell key of "N albums / songs / artists" in `language`'s plural form (`{n}` is the count). */
 export const shellCountKey = (language: string, kind: "album" | "song" | "artist", n: number) => `library.count.${kind}.${shellPluralForm(language, n)}` as const;

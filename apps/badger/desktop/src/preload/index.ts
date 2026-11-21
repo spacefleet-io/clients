@@ -861,7 +861,7 @@ const clientIdentity = (() => {
 })();
 
 contextBridge.exposeInMainWorld("sf", {
-  version: "0.1.29",
+  version: "0.1.23",
   clientIdentity,
   // STOR-UNIT-01: the storage unit base main worked out (1000 or 1024), set by the renderer before its first render.
   storageUnitBase: readStorageUnitBase(ipcRenderer),

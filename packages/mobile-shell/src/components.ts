@@ -59,12 +59,6 @@ export { MobileRail, MobileRailScroll, type MobileRailProps, type MobileRailScro
 export { MobileNoticeBanner } from "./components/mobile-notice-banner";
 export { MobileErrorReportsLink } from "./components/mobile-error-reports-link";
 export { MobileOfflineIndicator, formatPendingOpsLabel, type MobileOfflineVariant } from "./components/mobile-offline-indicator";
-export {
-  MobileSyncIndicator,
-  syncIndicatorCopy,
-  type MobileSyncIndicatorCopy,
-  type MobileSyncIndicatorState,
-} from "./components/mobile-sync-indicator";
 
 // UI primitives
 export { MobileButton } from "./components/mobile-button";
