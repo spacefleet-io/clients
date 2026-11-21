@@ -136,7 +136,7 @@ export const registerFileSystemIpc = (ipc: typeof ipcMain) => {
     return { name: basename(path), content };
   });
 
-  // "Download everything" (ACCT-EXPORT-01, OFFL-FILE-01): the folder the plain files go to; null
+  // "Download file" / "Download everything" (OFFL-FILE-01, ACCT-EXPORT-01): the folder the plain files go to; null
   // when cancelled. Only a folder picked here this session is accepted by the export IPCs (`isPickedExportFolder`),
   // so the renderer cannot make the runtime write anywhere else.
   ipc.handle("sf-pick-export-folder", async () => {

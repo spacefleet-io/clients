@@ -21,7 +21,6 @@ import { ParrotUpdateSection } from "./updates";
 import { desktopTourText } from "@space/desktop-shell/tour";
 import { localStorageCreditsStore, type CreditsSource } from "@space/metadata-client/credits";
 import { OfflineContent, type DescribeKept } from "./OfflineContent";
-import { DownloadEverythingRow } from "./ExportJobs";
 
 /** Settings › About's data credits (META-SRC-09): main asks the lookups' metadata service; the last answer stays in localStorage. */
 const creditsSource: CreditsSource = {
@@ -155,8 +154,6 @@ export function SettingsPage({
                   {t("library.pairDevice")}
                 </Button>
               </Row>
-              {/* ACCT-EXPORT-01: every song as plain music files in a folder the user picks. */}
-              <DownloadEverythingRow t={t} language={language} />
               {news.value !== undefined ? (
                 <Row title={newsText.news} body={newsText.newsHint}>
                   <Switch

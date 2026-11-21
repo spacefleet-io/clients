@@ -1,4 +1,4 @@
-// The keeping loop of "Save offline" (PAR-OFFL-01/02/03), one for every Parrot app that keeps songs
+// The keeping loop of "Keep on this phone / computer" (PAR-OFFL-01/02/03), one for every Parrot app that keeps songs
 // offline: the kept list (remembered per device), and the runs that make the device hold exactly the songs it names,
 // downloading what is missing and deleting what no kept item holds any more. The rules are ./offline's; each app gives
 // its own storage for the list (the desktop's kept.json, the phone's AsyncStorage) and its own kept files (the

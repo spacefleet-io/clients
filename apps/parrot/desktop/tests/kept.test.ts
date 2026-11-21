@@ -1,7 +1,7 @@
 /**
  * @test-id PARROT-DESKTOP-KEPT-001
  * @level integration
- * @why "Save offline" (PAR-OFFL-01/02/03): keeping an album downloads its songs and reports "Kept · size",
+ * @why "Keep on this computer" (PAR-OFFL-01/02/03): keeping an album downloads its songs and reports "Kept · size",
  *   two stored formats make a real copy question and the chosen copy is the one fetched, a song later added to a kept
  *   album arrives on its own, removing the album deletes its files, the kept list survives a restart, a failed
  *   download stops quietly and the next library load resumes, and sign-out forgets everything. The keeping loop and
@@ -116,7 +116,7 @@ const setup = async () => {
   return { dir, db, one, two, albumId, store, changes, anyKept, open };
 };
 
-describe("save offline", () => {
+describe("keep on this computer", () => {
   it("keeps an album, reports its size, and plays the kept file", async () => {
     const t = await setup();
     const keeping = await t.open();

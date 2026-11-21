@@ -22,7 +22,6 @@ import { createDesktopStreamSlots } from "../src/main/streamSlot";
 import Library from "../src/renderer/src/Library";
 import { translator } from "../src/renderer/src/i18n";
 import { streamBridgeStub, type StreamBridgeStub } from "./streamBridge";
-import { exportBridgeStub } from "./exportBridge";
 
 const SUITE = "[PARROT-DESKTOP-STREAM-SLOT-001]";
 const API = "http://api.test";
@@ -256,7 +255,6 @@ describe("Parrot desktop: the window's question and the player", () => {
       configurable: true,
       value: {
         ...bridge,
-        ...exportBridgeStub(),
         getLibrary: vi.fn(async () => ({ ok: true, library })),
         getImportStatus: vi.fn(async () => ({ running: false, phase: "idle", done: 0, total: 0, imported: 0, skipped: 0, failed: 0 })),
         getImportScan: vi.fn(async () => null),
