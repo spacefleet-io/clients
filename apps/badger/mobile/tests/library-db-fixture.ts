@@ -69,10 +69,6 @@ export const fx = {
   opsTooOldFrom: null as number | null,
   /** `getLibraryOps` returns at most this many entries per call (`hasMore` + `version` of the last one); null = unpaged. */
   opsPageSize: null as number | null,
-  /** `getLibraryOps` rejects like RN's fetch on a read that broke ("Network request failed") when asked from this version on. */
-  opsFailFrom: null as number | null,
-  /** Size (bytes) of the encrypted snapshot file `buildChunkIndexFromFile` reports (LIB-SYNC-12). */
-  snapshotBytes: 0,
   /** The encrypted bytes of every op `putLibraryOp` received, in call order. */
   postedOps: [] as Uint8Array[],
   nextPutVersion: 0,
@@ -146,8 +142,6 @@ export const resetFixture = () => {
   fx.opsTooOld = false;
   fx.opsTooOldFrom = null;
   fx.opsPageSize = null;
-  fx.opsFailFrom = null;
-  fx.snapshotBytes = 0;
   fx.postedOps = [];
   fx.nextPutVersion = 0;
   fx.putOpError = null;
@@ -517,7 +511,6 @@ export const sharedApiMock = (actual: typeof SharedApi) => ({
   getLibraryMeta: async () => fx.meta,
   getLibraryOps: async (_token: string, since: number) => {
     fx.opsSince.push(since);
-    if (fx.opsFailFrom !== null && since >= fx.opsFailFrom) throw new TypeError("Network request failed");
     return opsResponse(since);
   },
   putLibraryOp: async (
@@ -632,7 +625,7 @@ export const snapshotMock = () => ({
   isSqliteHeader: () => false,
   decodeUtf8: (bytes: Uint8Array) => new TextDecoder().decode(bytes),
   encodeUtf8: (value: string) => new TextEncoder().encode(value),
-  buildChunkIndexFromFile: async () => ({ totalSize: fx.snapshotBytes, chunks: [] }),
+  buildChunkIndexFromFile: async () => ({ chunks: [] }),
   hashDbFile: async () => ({ sizeBytes: 0, hash: "hash" }),
   buildManifest: () => ({}),
   decodeStoredManifest: async () => new Uint8Array(),

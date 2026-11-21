@@ -3,8 +3,6 @@
  * the now-playing page, Account and Settings. Shared by Parrot desktop and the web player (REL-FAM-02); each app spreads
  * them into its own language tables.
  */
-import { pluralCategory } from "@space/shared/pluralRules";
-
 export const SHELL_EN = {
   "nav.home": "Home",
   "nav.notifications": "Notifications",
@@ -1137,8 +1135,6 @@ export const SHELL_ES: ShellStrings = {
   "kept.cancel": "Cancelar",
 };
 
-/** Whether `n` takes `language`'s "one" or "other" text, also where the engine has no `Intl.PluralRules` (Hermes). */
-export const shellPluralForm = (language: string, n: number): "one" | "other" => (pluralCategory(language, n) === "one" ? "one" : "other");
-
 /** The shell key of "N albums / songs / artists" in `language`'s plural form (`{n}` is the count). */
-export const shellCountKey = (language: string, kind: "album" | "song" | "artist", n: number) => `library.count.${kind}.${shellPluralForm(language, n)}` as const;
+export const shellCountKey = (language: string, kind: "album" | "song" | "artist", n: number) =>
+  `library.count.${kind}.${new Intl.PluralRules(language).select(n) === "one" ? "one" : "other"}` as const;

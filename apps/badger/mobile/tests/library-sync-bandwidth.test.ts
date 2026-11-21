@@ -59,7 +59,7 @@ const seedCombinedCache = () => {
   fx.files.set(`${LIB_DIR}/cache.blob`, "blob");
 };
 
-vi.mock("react-native", async () => ({ ...(await import("./setup/reactNativeMock")).reactNativeBase(), Platform: { OS: "ios" } }));
+vi.mock("react-native", () => ({ Platform: { OS: "ios" } }));
 vi.mock("react-native-fs", async () => ({ default: (await import("./library-db-fixture")).fakeRnfs }));
 vi.mock("react-native-sqlite-storage", () => ({ default: { enablePromise: () => undefined } }));
 vi.mock("react-native-quick-crypto", async () => (await import("./library-db-fixture")).quickCryptoMock());
@@ -223,75 +223,6 @@ describe("LIB-SYNC-07: progress ops do not count toward the snapshot threshold",
     await settle(db);
     log("after retry", { counted: fx.files.get(`${LIB_DIR}/snapshot_ops.json`), cache: readCacheJson() });
     expect(JSON.parse(String(fx.files.get(`${LIB_DIR}/snapshot_ops.json`))).count, "one op, counted once").toBe(1);
-  });
-});
-
-describe("LIB-SYNC-12: a large op tail is snapshotted below the op count", () => {
-  const TAIL_BYTES = 16 * 1024 * 1024; // SNAPSHOT_TAIL_BYTES_THRESHOLD
-  const COUNTER = `${LIB_DIR}/snapshot_ops.json`;
-  const counted = () => JSON.parse(String(fx.files.get(COUNTER))) as { count: number; bytes: number; bytesThreshold: number };
-  const pushOne = async (db: LibraryDbSeam, id: string) => {
-    await db.queueOp(settingOp(id, id, "v"), 0);
-    fx.nextPutVersion += 1;
-    await db.flushOps();
-  };
-
-  it("@req LIB-SYNC-12 a pushed op counts its ciphertext bytes", async () => {
-    setServer({ version: 10, snapshotVersion: 10 });
-    seedSplitCache({ version: 10 });
-    fx.files.set(COUNTER, JSON.stringify({ snapshotVersion: 10, count: 0 }));
-    fx.nextPutVersion = 11;
-    const db = await openLocal();
-    await pushOne(db, "s-0");
-    log("state:pushed", { counted: counted(), posted: fx.postedOps.map((bytes) => bytes.length), putDbCalls: fx.putDbCalls });
-    expect(fx.postedOps[0]!.length).toBeGreaterThan(0);
-    expect(counted()).toMatchObject({ count: 1, bytes: fx.postedOps[0]!.length, bytesThreshold: TAIL_BYTES });
-    expect(fx.putDbCalls).toBe(0);
-  });
-
-  it("@req LIB-SYNC-12 pulled ops count the sizes the server lists", async () => {
-    const ops = [4, 5].map((version) => ({ opId: `op-${version}`, version, op: settingOp(`op-${version}`, `k${version}`, "v") }));
-    setServer({ version: 5, snapshotVersion: 3, ops });
-    seedSplitCache({ version: 3 });
-    fx.files.set(COUNTER, JSON.stringify({ snapshotVersion: 3, count: 0, bytes: 0 }));
-    const db = await openLocal();
-    await db.syncFromRemoteIfNewer(fx.meta ?? undefined);
-    await settle(db);
-    const listed = ops.reduce((sum, entry) => sum + JSON.stringify(entry.op).length, 0);
-    log("state:pulled", { counted: counted(), listed });
-    expect(counted()).toMatchObject({ count: 2, bytes: listed });
-  });
-
-  it("@req LIB-SYNC-12 crossing 16 MiB of tail publishes a snapshot far below 500 ops", async () => {
-    setServer({ version: 10, snapshotVersion: 10 });
-    seedSplitCache({ version: 10 });
-    fx.files.set(COUNTER, JSON.stringify({ snapshotVersion: 10, count: 3, bytes: TAIL_BYTES - 1 }));
-    fx.nextPutVersion = 11;
-    fx.snapshotBytes = 4 * 1024 * 1024;
-    const db = await openLocal();
-    await pushOne(db, "s-0");
-    log("state:crossed", { putDbCalls: fx.putDbCalls, counted: counted() });
-    expect(fx.putDbCalls, "4 ops, 16 MiB of tail: one snapshot").toBe(1);
-    expect(counted(), "the count restarts on the new snapshot").toMatchObject({ count: 0, bytes: 0 });
-  });
-
-  it("@req LIB-SYNC-12 a snapshot larger than the tail is not published; the byte threshold rises to its size", async () => {
-    setServer({ version: 10, snapshotVersion: 10 });
-    seedSplitCache({ version: 10 });
-    fx.files.set(COUNTER, JSON.stringify({ snapshotVersion: 10, count: 3, bytes: TAIL_BYTES - 1 }));
-    fx.nextPutVersion = 11;
-    fx.snapshotBytes = 40 * 1024 * 1024;
-    const db = await openLocal();
-    await pushOne(db, "s-0");
-    const afterFirst = { putDbCalls: fx.putDbCalls, builds: fx.encryptTargets.length, counted: counted() };
-    await pushOne(db, "s-1");
-    const afterSecond = { putDbCalls: fx.putDbCalls, builds: fx.encryptTargets.length, counted: counted() };
-    log("state:larger-than-tail", { afterFirst, afterSecond });
-    expect(afterFirst.putDbCalls, "a 40 MiB snapshot never replaces a 16 MiB tail").toBe(0);
-    expect(afterFirst.builds).toBe(1);
-    expect(afterFirst.counted.bytesThreshold).toBe(40 * 1024 * 1024);
-    expect(afterSecond.putDbCalls).toBe(0);
-    expect(afterSecond.builds, "below the raised threshold no snapshot is even built").toBe(1);
   });
 });
 

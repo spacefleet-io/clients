@@ -36,7 +36,7 @@ import {
   uploadChunks,
   type LibrarySnapshotManifest,
 } from "./snapshotTransport";
-import { isProgressClassOp, SNAPSHOT_TAIL_BYTES_THRESHOLD } from "@space/library-db-definition/opClass";
+import { isProgressClassOp } from "@space/library-db-definition/opClass";
 import {
   addProfilePlaylistItem,
   buildMediaProgressValue,
@@ -838,7 +838,7 @@ type ScopedViewingReads = {
  */
 export type PreparedRemoteSync =
   | { kind: "none" }
-  | { kind: "ops"; meta: LibraryMeta; fromVersion: number; toVersion: number; ops: LibraryOp[]; opSizes: number[] }
+  | { kind: "ops"; meta: LibraryMeta; fromVersion: number; toVersion: number; ops: LibraryOp[] }
   | {
       kind: "snapshot";
       meta: LibraryMeta;
@@ -7982,7 +7982,7 @@ export class LibraryDb {
           this.opsFlushConsecutiveFailures = 0;
           this.opsFlushBackoffMs = 2000;
           flushedCount += 1;
-          this.countOpsTowardSnapshot(result.snapshotVersion, [op], [encrypted.length]);
+          this.countOpsTowardSnapshot(result.snapshotVersion, [op]);
           await savePendingOps(this.pendingOps);
           await saveCache({
             version: Math.max(this.version, this.remoteVersion),
@@ -8068,47 +8068,31 @@ export class LibraryDb {
   }
 
   /**
-   * Count `ops` toward the snapshot thresholds (LIB-SYNC-07, LIB-SYNC-12): only
-   * ops that are not progress-class count, so watching never causes a full
-   * snapshot. `sizes[i]` is the ciphertext size of `ops[i]` as the server
-   * stores it. The count belongs to one server `snapshotVersion`; a different
-   * one means a snapshot was published since, and the count restarts.
+   * Count `ops` toward the snapshot threshold (LIB-SYNC-07): only ops that are
+   * not progress-class count, so watching never causes a full snapshot. The
+   * count belongs to one server `snapshotVersion`; a different one means a
+   * snapshot was published since, and the count restarts.
    */
-  private countOpsTowardSnapshot(
-    snapshotVersion: number,
-    ops: ReadonlyArray<{ type: string; payload?: unknown }>,
-    sizes: ReadonlyArray<number>
-  ) {
-    let counted = 0;
-    let bytes = 0;
-    ops.forEach((op, index) => {
-      if (isProgressClassOp(op)) return;
-      counted += 1;
-      bytes += sizes[index] ?? 0;
-    });
-    const current = this.opsSinceSnapshot;
-    if (current.snapshotVersion === snapshotVersion && counted === 0) return;
-    this.opsSinceSnapshot =
-      current.snapshotVersion === snapshotVersion
-        ? { ...current, count: current.count + counted, bytes: current.bytes + bytes }
-        : { snapshotVersion, count: counted, bytes, bytesThreshold: SNAPSHOT_TAIL_BYTES_THRESHOLD };
+  private countOpsTowardSnapshot(snapshotVersion: number, ops: ReadonlyArray<{ type: string; payload?: unknown }>) {
+    const counted = ops.filter((op) => !isProgressClassOp(op)).length;
+    if (this.opsSinceSnapshot.snapshotVersion === snapshotVersion && counted === 0) return;
+    const base = this.opsSinceSnapshot.snapshotVersion === snapshotVersion ? this.opsSinceSnapshot.count : 0;
+    this.opsSinceSnapshot = { snapshotVersion, count: base + counted };
     saveOpsSinceSnapshot(this.opsSinceSnapshot);
   }
 
   private async maybeCompactAfterOps() {
-    // LIB-STORE-05: below the thresholds nothing is asked of the server, so a
+    // LIB-STORE-05: below the threshold nothing is asked of the server, so a
     // progress-only flush (which never counts, LIB-SYNC-07) costs no meta GET.
-    const counted = this.opsSinceSnapshot;
-    const byCount = counted.count >= OPS_SNAPSHOT_THRESHOLD;
-    if (!byCount && counted.bytes < counted.bytesThreshold) return;
+    if (this.opsSinceSnapshot.count < OPS_SNAPSHOT_THRESHOLD) return;
     const meta = await getLibraryMeta(this.token).catch(() => null);
     if (!meta?.exists) return;
-    if (counted.snapshotVersion !== meta.snapshotVersion) return;
+    if (this.opsSinceSnapshot.snapshotVersion !== meta.snapshotVersion) return;
     const latestSnapshotMs = getLatestSnapshotMs(meta.snapshotHistory);
     if (latestSnapshotMs && Date.now() - latestSnapshotMs < SNAPSHOT_MIN_INTERVAL_MS) {
       return;
     }
-    await this.uploadSnapshot(meta, byCount ? undefined : counted.bytes).catch((error: unknown) => {
+    await this.uploadSnapshot(meta).catch((error: unknown) => {
       logger.error(
         { baseVersion: meta.version, error: error instanceof Error ? error.message : String(error) },
         "uploadSnapshot: compaction snapshot upload failed — will retry on a later flush"
@@ -8118,25 +8102,14 @@ export class LibraryDb {
 
   /**
    * Publish the compaction snapshot on top of `meta.version`. The key check (PRIV-KEY-01) reuses the meta just read
-   * by `maybeCompactAfterOps`, so reaching the threshold costs one meta GET (LIB-STORE-05). `maxBytes` is set when
-   * the snapshot is due by tail bytes alone (LIB-SYNC-12): a snapshot larger than the tail it replaces is not
-   * published, and the byte threshold rises to its size instead.
+   * by `maybeCompactAfterOps`, so reaching the threshold costs one meta GET (LIB-STORE-05).
    */
-  private async uploadSnapshot(meta: LibraryMeta, maxBytes?: number) {
+  private async uploadSnapshot(meta: LibraryMeta) {
     const expectedVersion = meta.version;
     if (!(await this.ensurePublishableState("snapshot"))) return;
     await assertAccountLibraryKey(this.token, this.keyBase64, undefined, meta);
     const rawBytes = this.buildCombinedExportBytes();
     const encrypted = await encryptSnapshotBytes(this.keyBase64, rawBytes);
-    if (maxBytes !== undefined && encrypted.length > maxBytes) {
-      this.opsSinceSnapshot = { ...this.opsSinceSnapshot, bytesThreshold: encrypted.length };
-      saveOpsSinceSnapshot(this.opsSinceSnapshot);
-      logger.info(
-        { tailBytes: maxBytes, snapshotBytes: encrypted.length },
-        "uploadSnapshot: snapshot larger than the op tail it would replace — not published (LIB-SYNC-12)"
-      );
-      return;
-    }
     const chunks = buildChunks(encrypted);
     const snapshotId = randomUUID();
     const manifest = buildManifest(snapshotId, encrypted, rawBytes, chunks);
@@ -8797,7 +8770,7 @@ export class LibraryDb {
       );
       ops.push(...results);
     }
-    return { kind: "ops", meta, fromVersion, toVersion, ops, opSizes: entries.map((entry) => entry.size) };
+    return { kind: "ops", meta, fromVersion, toVersion, ops };
   }
 
   /**
@@ -8844,7 +8817,7 @@ export class LibraryDb {
       toVersion: prepared.toVersion,
     }, "syncFromRemoteIfNewer: applying remote ops + rebasing pending local ops");
     if (ops.length > 0) await this.applyLibraryOps([...ops, ...rebasedPending]);
-    this.countOpsTowardSnapshot(meta.snapshotVersion, ops, prepared.opSizes);
+    this.countOpsTowardSnapshot(meta.snapshotVersion, ops);
     this.remoteVersion = prepared.toVersion;
     if (!this.pendingOps.length) {
       this.version = Math.max(this.version, prepared.toVersion);

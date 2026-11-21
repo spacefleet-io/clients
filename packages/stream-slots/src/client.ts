@@ -16,7 +16,7 @@ import {
  */
 
 export type StreamSlotsClientOptions = {
-  /** API origin, e.g. `https://api.spacefleet.io`; a trailing slash is ignored. A function is read at each request
+  /** API origin, e.g. `https://api.spacebadger.io`; a trailing slash is ignored. A function is read at each request
    * (an app whose API origin can change at runtime, e.g. Badger phone's API picker). */
   baseUrl: string | (() => string);
   /** The login session token sent as `Authorization: Bearer`. */

@@ -47,7 +47,6 @@
     "./libraryMetaState": "./src/libraryMetaState.ts",
     "./media-languages": "./src/media-languages.ts",
     "./mediaLanguageDisplay": "./src/mediaLanguageDisplay.ts",
-    "./pluralRules": "./src/pluralRules.ts",
     "./genres": "./src/genres.ts",
     "./genreNames": "./src/genreNames.ts",
     "./libraryOps": "./src/libraryOps.ts",
