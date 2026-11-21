@@ -36,8 +36,6 @@ vi.mock("react-native", () => ({
       return { remove: () => void (phone.appState = phone.appState.filter((other) => other !== listener)) };
     },
   },
-  // A phone: the session asks "Who's listening?" at every start only on a TV (PAR-TV-02).
-  Platform: { OS: "ios", isTV: false },
 }));
 vi.mock("@space/mobile-shell/i18n", () => ({
   getCurrentLanguage: () => phone.shown,

@@ -103,6 +103,7 @@ vi.mock("../src/tv/lib/tvRuntime", () => ({
   },
 }));
 vi.mock("../src/lib/phonePairing", () => ({ currentPhoneDeviceName: () => "Badger (Pixel 8)" }));
+vi.mock("../src/tv/lib/pairingRuntime", () => ({ tvDeviceName: () => "TV" }));
 vi.mock("../src/setup/BadgerSetupFlow", () => ({ SignInSetupBack: () => null }));
 
 import { ApiError } from "@space/shared/api";

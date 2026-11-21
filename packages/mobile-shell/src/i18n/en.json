@@ -874,8 +874,8 @@
   },
   "tvPairing": {
     "signIn": {
-      "title": "Sign in to {{app}}",
-      "subtitle": "On your phone or computer, open {{app}} → Settings → Pair a device, then scan the code or type it in.",
+      "title": "Sign in to Badger",
+      "subtitle": "On your phone or computer, open Badger → Settings → Pair a device, then scan the code or type it in.",
       "codeLabel": "Or type this code",
       "qrAccessibility": "QR code to pair this TV",
       "starting": "Getting a pairing code…",
@@ -889,7 +889,7 @@
       },
       "errors": {
         "title": "This TV could not be paired",
-        "unreachable": "We couldn't reach {{app}}. Check this TV's connection and get a new code.",
+        "unreachable": "We couldn't reach Badger. Check this TV's connection and get a new code.",
         "failed": "Something went wrong while pairing. Get a new code to try again.",
         "key_unreadable": "The approval reached this TV but its media library key could not be read. Get a new code and approve it again.",
         "key_mismatch": "The media library key that was sent does not open this account's media library. Nothing was saved on this TV. Get a new code and approve it again from an app that has your media library."

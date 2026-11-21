@@ -875,8 +875,8 @@
   },
   "tvPairing": {
     "signIn": {
-      "title": "Inicia sesión en {{app}}",
-      "subtitle": "En tu teléfono o computadora, abre {{app}} → Ajustes → Vincular un dispositivo y escanea el código o escríbelo.",
+      "title": "Inicia sesión en Badger",
+      "subtitle": "En tu teléfono o computadora, abre Badger → Ajustes → Vincular un dispositivo y escanea el código o escríbelo.",
       "codeLabel": "O escribe este código",
       "qrAccessibility": "Código QR para vincular esta TV",
       "starting": "Obteniendo un código de vinculación…",
@@ -890,7 +890,7 @@
       },
       "errors": {
         "title": "No se pudo vincular esta TV",
-        "unreachable": "No pudimos conectar con {{app}}. Revisa la conexión de esta TV y obtén un código nuevo.",
+        "unreachable": "No pudimos conectar con Badger. Revisa la conexión de esta TV y obtén un código nuevo.",
         "failed": "Algo ha fallado durante la vinculación. Obtén un código nuevo para volver a intentarlo.",
         "key_unreadable": "La aprobación llegó a esta TV, pero no se pudo leer la clave de la mediateca. Obtén un código nuevo y vuelve a aprobarlo.",
         "key_mismatch": "La clave de la mediateca enviada no abre la mediateca de esta cuenta. No se ha guardado nada en esta TV. Obtén un código nuevo y vuelve a aprobarlo desde una aplicación que tenga tu mediateca."

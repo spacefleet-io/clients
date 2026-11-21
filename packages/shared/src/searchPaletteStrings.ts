@@ -22,7 +22,7 @@ type LanguageStrings = {
   hint: string;
   badger: { placeholder: string; matchedVia: string };
   parrot: { placeholder: string; matchedVia: string };
-  kinds: { movie: string; tv: string; artist: string; album: string; song: string; playlist: string };
+  kinds: { movie: string; tv: string; artist: string; album: string; song: string };
 };
 
 const STRINGS: Record<ClientUiLanguage, LanguageStrings> = {
@@ -31,40 +31,40 @@ const STRINGS: Record<ClientUiLanguage, LanguageStrings> = {
     empty: "Nothing matches.",
     hint: "Type to search. ↑ ↓ to move, Enter to open, Esc to close.",
     badger: { placeholder: "Search titles and people", matchedVia: "With" },
-    parrot: { placeholder: "Search artists, albums, songs and playlists", matchedVia: "By" },
-    kinds: { movie: "Movie", tv: "TV show", artist: "Artist", album: "Album", song: "Song", playlist: "Playlist" },
+    parrot: { placeholder: "Search artists, albums and songs", matchedVia: "By" },
+    kinds: { movie: "Movie", tv: "TV show", artist: "Artist", album: "Album", song: "Song" },
   },
   fr: {
     title: "Rechercher",
     empty: "Aucun résultat.",
     hint: "Tapez pour chercher. ↑ ↓ pour vous déplacer, Entrée pour ouvrir, Échap pour fermer.",
     badger: { placeholder: "Chercher des titres et des personnes", matchedVia: "Avec" },
-    parrot: { placeholder: "Chercher des artistes, albums, morceaux et playlists", matchedVia: "Par" },
-    kinds: { movie: "Film", tv: "Série", artist: "Artiste", album: "Album", song: "Morceau", playlist: "Playlist" },
+    parrot: { placeholder: "Chercher des artistes, albums et morceaux", matchedVia: "Par" },
+    kinds: { movie: "Film", tv: "Série", artist: "Artiste", album: "Album", song: "Morceau" },
   },
   nl: {
     title: "Zoeken",
     empty: "Niets gevonden.",
     hint: "Typ om te zoeken. ↑ ↓ om te bewegen, Enter om te openen, Esc om te sluiten.",
     badger: { placeholder: "Zoek titels en personen", matchedVia: "Met" },
-    parrot: { placeholder: "Zoek artiesten, albums, nummers en afspeellijsten", matchedVia: "Door" },
-    kinds: { movie: "Film", tv: "Serie", artist: "Artiest", album: "Album", song: "Nummer", playlist: "Afspeellijst" },
+    parrot: { placeholder: "Zoek artiesten, albums en nummers", matchedVia: "Door" },
+    kinds: { movie: "Film", tv: "Serie", artist: "Artiest", album: "Album", song: "Nummer" },
   },
   de: {
     title: "Suchen",
     empty: "Nichts gefunden.",
     hint: "Tippen zum Suchen. ↑ ↓ zum Bewegen, Enter zum Öffnen, Esc zum Schließen.",
     badger: { placeholder: "Titel und Personen suchen", matchedVia: "Mit" },
-    parrot: { placeholder: "Künstler, Alben, Songs und Playlists suchen", matchedVia: "Von" },
-    kinds: { movie: "Film", tv: "Serie", artist: "Künstler", album: "Album", song: "Song", playlist: "Playlist" },
+    parrot: { placeholder: "Künstler, Alben und Songs suchen", matchedVia: "Von" },
+    kinds: { movie: "Film", tv: "Serie", artist: "Künstler", album: "Album", song: "Song" },
   },
   es: {
     title: "Buscar",
     empty: "No hay resultados.",
     hint: "Escribe para buscar. ↑ ↓ para moverte, Intro para abrir, Esc para cerrar.",
     badger: { placeholder: "Buscar títulos y personas", matchedVia: "Con" },
-    parrot: { placeholder: "Buscar artistas, álbumes, canciones y playlists", matchedVia: "De" },
-    kinds: { movie: "Película", tv: "Serie", artist: "Artista", album: "Álbum", song: "Canción", playlist: "Playlist" },
+    parrot: { placeholder: "Buscar artistas, álbumes y canciones", matchedVia: "De" },
+    kinds: { movie: "Película", tv: "Serie", artist: "Artista", album: "Álbum", song: "Canción" },
   },
 };
 

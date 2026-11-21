@@ -36,8 +36,8 @@ import { useAuth } from "../store/auth";
 import { scopeLogger } from "@space/mobile-shell/logger";
 import { chooseUiLanguage, ensureI18n } from "../lib/uiLanguage";
 import { IS_TV } from "../tv/lib/tvRuntime";
-import { TV_PAIRING_DEVICE_TYPE } from "@space/mobile-shell/tv/pairingClient";
-import { currentTvDeviceName } from "@space/mobile-shell/pairing-device";
+import { TV_PAIRING_DEVICE_TYPE } from "../tv/lib/pairingClient";
+import { tvDeviceName } from "../tv/lib/pairingRuntime";
 import { currentPhoneDeviceName } from "../lib/phonePairing";
 import { SignInSetupBack } from "../setup/BadgerSetupFlow";
 import { BADGER_LINK_SCHEME } from "../lib/linkScheme";
@@ -177,7 +177,7 @@ const AuthScreenInner = ({
         email.trim(),
         password,
         needsTwoFactor ? twoFactor.trim() : undefined,
-        IS_TV ? { deviceType: TV_PAIRING_DEVICE_TYPE, deviceName: currentTvDeviceName() } : { deviceType: "mobile", deviceName: currentPhoneDeviceName() },
+        IS_TV ? { deviceType: TV_PAIRING_DEVICE_TYPE, deviceName: tvDeviceName() } : { deviceType: "mobile", deviceName: currentPhoneDeviceName() },
       );
     } catch (err) {
       const failure = classifySignInError(err);

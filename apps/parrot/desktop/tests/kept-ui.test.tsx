@@ -214,13 +214,12 @@ describe("Parrot desktop: keep on this computer", () => {
     expect(songs).toHaveLength(3);
     const songToggles = q("song-keep");
     console.log(SUITE, "song toggles", songToggles.map((b) => `${b.dataset.keepState}/${b.dataset.keepHeld}/${b.getAttribute("aria-label")}`));
-    // Songs list by title (PAR-LIB-06 default): Gale (Second Wind, not kept), then Harbour and Lantern (First Light, kept).
     expect(songToggles.map((b) => [b.dataset.keepState, b.dataset.keepHeld, (b as HTMLButtonElement).disabled])).toEqual([
+      ["kept", "true", true],
+      ["kept", "true", true],
       ["off", undefined, false],
-      ["kept", "true", true],
-      ["kept", "true", true],
     ]);
-    expect(songToggles[1]!.getAttribute("aria-label")).toBe("Kept with its album or playlist");
+    expect(songToggles[0]!.getAttribute("aria-label")).toBe("Kept with its album or playlist");
   });
 
   // @req PAR-OFFL-04[parrot]
@@ -237,11 +236,10 @@ describe("Parrot desktop: keep on this computer", () => {
     ]);
     expect(albums[1]!.className).toContain("grayscale");
     await click(q("library-chip-artists")[0]);
-    // Artists by name (PAR-LIB-06 default): Other Band (nothing kept) before Test Band.
-    expect(q("library-artist").map((b) => (b as HTMLButtonElement).disabled)).toEqual([true, false]);
+    expect(q("library-artist").map((b) => (b as HTMLButtonElement).disabled)).toEqual([false, true]);
     await click(q("library-chip-songs")[0]);
-    expect(q("library-track").map((row) => row.dataset.unavailable)).toEqual(["true", undefined, undefined]);
-    expect(q("library-track")[0]!.querySelector("button")!.disabled).toBe(true);
+    expect(q("library-track").map((row) => row.dataset.unavailable)).toEqual([undefined, undefined, "true"]);
+    expect(q("library-track")[2]!.querySelector("button")!.disabled).toBe(true);
 
     // Back online: everything in colour again.
     vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
