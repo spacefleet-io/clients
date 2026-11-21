@@ -62,7 +62,7 @@ const library = {
 };
 
 /** Every bridge call that reaches the metadata service (main's `lookupClient()`). */
-const LOOKUP_IPC = ["fetchLyrics", "suggestEdit", "suggestEditCover", "importCover", "importArtistPhoto", "searchImportAlbums", "searchImportSongs", "matchImport"] as const;
+const LOOKUP_IPC = ["fetchLyrics", "suggestEdit", "suggestEditCover", "importCover", "importArtistPhoto", "searchImportAlbums", "matchImportAlbum"] as const;
 
 describe("[parrot desktop] display reads only the library's copies (PAR-COPY-01)", () => {
   let container: HTMLDivElement;

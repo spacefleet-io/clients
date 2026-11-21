@@ -7,18 +7,20 @@
  * (PAR-META-20).
  */
 import { useEffect, useId, useRef, useState, type ClipboardEvent, type DragEvent, type FormEvent, type KeyboardEvent } from "react";
-import { ImagePlus, RotateCcw, RotateCw } from "lucide-react";
+import { Crop, ImagePlus, RotateCcw, RotateCw } from "lucide-react";
 import { Button } from "../button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../dialog";
 import { Input } from "../input";
 import { cn } from "../utils";
 import { ParrotCover } from "./components";
+import { ParrotCoverFrameDialog, ParrotFramedCover, type ParrotCoverFrameLabels } from "./cover-frame";
 import {
   applyParrotEditSuggestion,
   mergeParrotEditSuggestions,
   parrotEditFieldChanged,
   parrotEditNumber as numberOrNull,
   type ParrotEditAlbumLyricsState,
+  type ParrotEditCover,
   type ParrotEditFields,
   type ParrotEditLyricsState,
   type ParrotEditSuggestion,
@@ -33,6 +35,8 @@ import {
 } from "./editSuggest";
 
 export type { ParrotEditSuggest, ParrotEditSuggestLabels } from "./editSuggest";
+// PAR-UP-08: the import review's artist field shows the same list.
+export { ParrotEditSuggestList, suggestionName } from "./editSuggest";
 
 /** The dialog's Lyrics section (PAR-LYR-05): a song's words, or how many of an album's songs have some. */
 export type ParrotEditLyrics =
@@ -106,8 +110,8 @@ function LyricsSection({ lyrics, labels }: { lyrics: ParrotEditLyrics; labels: P
 
 export type { ParrotEditFields } from "@space/parrot-core";
 
-/** A cover the user dropped, picked or pasted; a found cover arrives as bytes too. */
-export type ParrotCoverInput = { kind: "file"; bytes: Uint8Array; mime: string } | { kind: "url"; url: string };
+/** A cover the user dropped, picked or pasted, with the square framed on it; a found cover arrives as bytes too. */
+export type ParrotCoverInput = ParrotEditCover;
 
 export type ParrotEditLabels = {
   title: string;
@@ -118,6 +122,9 @@ export type ParrotEditLabels = {
   field: { title: string; artist: string; album: string; albumArtist: string; number: string; disc: string; year: string; genre: string; cover: string };
   coverHint: string;
   coverPick: string;
+  /** "Frame the cover…" (PAR-META-22): shown, with `frame`, once a new picture is given. */
+  coverFrame?: string;
+  frame?: ParrotCoverFrameLabels;
 };
 
 const isImageUrl = (text: string) => /^https?:\/\/\S+$/i.test(text.trim());
@@ -181,6 +188,7 @@ export function ParrotEditMetadataDialog({
 }) {
   const [texts, setTexts] = useState<Texts>(() => textsOf(initial));
   const [cover, setCover] = useState<ParrotCoverInput | null>(initialCover);
+  const [framing, setFraming] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
   const [list, setList] = useState<SuggestState | null>(null);
   const [active, setActive] = useState(0);
@@ -206,6 +214,7 @@ export function ParrotEditMetadataDialog({
     stopAsking();
     setTexts(textsOf(initial));
     setCover(initialCover);
+    setFraming(false);
     setList(null);
     setFilled(null);
     typedFrom.current = {};
@@ -452,8 +461,12 @@ export function ParrotEditMetadataDialog({
                 onDrop={onDrop}
                 data-testid="manage-cover-drop"
               >
-                <div className="size-16 shrink-0 overflow-hidden rounded-md">
-                  <ParrotCover seed={initial.title} label={initial.title} src={preview ?? coverUrl ?? null} />
+                <div className="size-16 shrink-0 overflow-hidden rounded-md" data-testid="manage-cover-preview" data-framed={cover?.crop ? "true" : undefined}>
+                  {preview && cover?.crop ? (
+                    <ParrotFramedCover src={preview} crop={cover.crop} className="size-full" />
+                  ) : (
+                    <ParrotCover seed={initial.title} label={initial.title} src={preview ?? coverUrl ?? null} />
+                  )}
                 </div>
                 <div className="grid gap-1 text-sm">
                   <span className="flex items-center gap-2 text-muted-foreground">
@@ -465,10 +478,30 @@ export function ParrotEditMetadataDialog({
                     ) : null}
                   </span>
                   <span className="text-xs text-muted-foreground">{labels.coverHint}</span>
-                  <Button type="button" variant="ghost" size="sm" className="justify-start px-0" onClick={() => fileInput.current?.click()} data-testid="manage-cover-pick">
-                    <ImagePlus className="size-4" /> {labels.coverPick}
-                  </Button>
+                  <div className="flex flex-wrap gap-x-3">
+                    <Button type="button" variant="ghost" size="sm" className="justify-start px-0" onClick={() => fileInput.current?.click()} data-testid="manage-cover-pick">
+                      <ImagePlus className="size-4" /> {labels.coverPick}
+                    </Button>
+                    {preview && labels.frame && labels.coverFrame ? (
+                      <Button type="button" variant="ghost" size="sm" className="justify-start px-0" onClick={() => setFraming(true)} data-testid="manage-cover-frame">
+                        <Crop className="size-4" /> {labels.coverFrame}
+                      </Button>
+                    ) : null}
+                  </div>
                   <input ref={fileInput} type="file" accept="image/*" hidden onChange={(event) => void takeFile(event.target.files?.[0])} data-testid="manage-cover-file" />
+                  {framing && preview && cover && labels.frame ? (
+                    <ParrotCoverFrameDialog
+                      labels={labels.frame}
+                      testId="manage-frame"
+                      src={preview}
+                      crop={cover.crop ?? null}
+                      onCancel={() => setFraming(false)}
+                      onUse={(crop) => {
+                        setCover({ ...cover, crop });
+                        setFraming(false);
+                      }}
+                    />
+                  ) : null}
                 </div>
               </div>
             ) : null}

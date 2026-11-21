@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import AppBackdrop from "@space/ui/app-backdrop";
 import App from "./App";
 import { applyErrorReports } from "./errorReports";
+import { answerCoverCuts } from "./coverCut";
 // The fonts load through Vite, not through styles.css: @tailwindcss/postcss inlines a CSS @import without rebasing
 // its relative url()s, so the font files were never emitted and every heading fell back to a serif.
 import "@space/ui/styles/fleet-fonts.css";
@@ -18,6 +19,10 @@ void applyErrorReports();
 // STOR-UNIT-01: storage figures follow this computer's file manager; main worked the base out, set it before any
 // component formats a size.
 applyStorageUnitBase(window.parrot.storageUnitBase);
+
+// PAR-META-22: covers main cannot decode (WebP, GIF) are cut to their square here, for the import, the edit dialog and
+// the automatic covers alike.
+answerCoverCuts();
 
 // The star sky (UX-SKY-01) is mounted once here, so setup, sign-in and the library all show it with Parrot's green
 // nebula (UX-SKY-03). The page sits in a positioned layer above it.

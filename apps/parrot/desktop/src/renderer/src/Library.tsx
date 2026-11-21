@@ -86,7 +86,7 @@ import Home, { EmptyMusicLibrary } from "./Home";
 import { countText, type ParrotStringKey, type Translate } from "./i18n";
 import { editLyricsLabels, useEditLyrics } from "./editLookups";
 import { editSuggestLabels, useEditSuggest } from "./editSuggest";
-import ImportReview from "./ImportReview";
+import ImportReview, { coverFrameLabels } from "./ImportReview";
 import Plans from "./Plans";
 import Player from "./Player";
 import { StreamSlotPrompt } from "./StreamSlotPrompt";
@@ -1324,6 +1324,8 @@ export default function Library({ t, state, onState }: Props) {
             },
             coverHint: t("manage.coverHint"),
             coverPick: t("manage.coverPick"),
+            coverFrame: t("import.cover.frame"),
+            frame: coverFrameLabels(t),
           }}
           error={editError}
           busy={editBusy}
@@ -1334,7 +1336,7 @@ export default function Library({ t, state, onState }: Props) {
           onSubmit={(fields, cover) => void saveEdit(fields, cover)}
         />
       ) : null}
-      {importScan && importStatus?.phase === "review" ? <ImportReview t={t} language={language} scan={importScan} onDone={() => setImportScan(null)} /> : null}
+      {importScan && importStatus?.phase === "review" ? <ImportReview t={t} language={language} scan={importScan} suggest={editSuggest} onDone={() => setImportScan(null)} /> : null}
       <span className="hidden" data-testid="signed-in-user">
         {state.user?.email}
       </span>

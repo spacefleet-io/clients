@@ -22,7 +22,8 @@ import {
   type ParrotPhotoCredit,
   type TrackFileChunkRow,
 } from "@space/parrot-library-db-definition";
-import { makeParrotCoverCopies, parrotCoverProblem, uploadParrotCover } from "./covers";
+import { makeParrotCoverCopies, parrotCoverProblem, uploadParrotCover, type ParrotCoverImage } from "./covers";
+import type { ParrotCoverCopies, ParrotCoverCrop } from "@space/parrot-core";
 import { parrotChunkKey, parrotPlacementId, parrotTagsKey, parrotTrackIds, sha256Hex } from "./ids";
 import { applyParrotOps, getParrotAlbumRow, getParrotFile, type ParrotLibraryDb, type ParrotLibraryFile } from "./library";
 import { addParrotLightCopy, parrotOriginalInMemory, type ParrotLightCopyMaker } from "./lightCopy";
@@ -135,6 +136,12 @@ export type ParrotImportOptions = {
   onArtistPhotosAsked?: (artistIds: string[]) => void;
   /** agent reading (2026-11-15): an album gets its first new song of this import; the window shows it as importing. */
   onAlbumImporting?: (albumId: string) => void;
+  /**
+   * PAR-META-22: the large and small copies of an album cover, cut to its square (`crop`, else the centre one). The
+   * desktop passes its own, which has the window cut a picture this package cannot decode (WebP, GIF); without it
+   * `makeParrotCoverCopies` makes them, and such a picture keeps its shape.
+   */
+  albumCoverCopies?: (cover: ParrotCoverImage, crop: ParrotCoverCrop | null) => Promise<ParrotCoverCopies | null>;
   /**
    * Each publish that went out, with the library as published (#2509): the app shows it without reading the library
    * back from the server. `db` is the importer's own and changes after this returns: copy it here, synchronously.
@@ -480,7 +487,9 @@ export const importParrotFiles = async (files: string[], options: ParrotImportOp
       return;
     }
     try {
-      const copies = makeParrotCoverCopies(cover.bytes, log);
+      const copies = options.albumCoverCopies
+        ? await options.albumCoverCopies(cover, info.coverCrop ?? null)
+        : makeParrotCoverCopies(cover.bytes, log, { square: true, crop: info.coverCrop ?? null });
       // A WebP or GIF wider than the large size, or an undecodable picture too big to keep as it is, is skipped (the
       // `[covers]` line says which); the album's next song may bring a usable picture.
       if (!copies) {

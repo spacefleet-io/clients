@@ -94,6 +94,60 @@ describe("saveParrotEdit", () => {
     expect(steps.some((step) => step.startsWith("delete"))).toBe(false);
   });
 
+  const framedSave = async (crop: unknown) => {
+    const db = seed();
+    const stored: Uint8Array[] = [];
+    const seen: unknown[] = [];
+    const width = 1600;
+    const height = 900;
+    const wide = new Uint8Array(jpeg.encode({ data: Buffer.alloc(width * height * 4, 128), width, height }, 60).data);
+    const result = await saveParrotEdit({
+      target: edit,
+      cover: { kind: "file", bytes: wide, mime: "image/jpeg", crop },
+      db,
+      query,
+      makeCoverCopies: (bytes, given) => {
+        seen.push(given);
+        return makeParrotCoverCopies(bytes, log, { square: true, crop: given });
+      },
+      storeCover: async (bytes) => {
+        stored.push(bytes);
+        return `cover/new-${stored.length}`;
+      },
+      publish: async (ops) => {
+        apply(db, ops);
+        return { ok: true as const };
+      },
+      deleteObjects: async (keys) => ({ deleted: keys.length }),
+      newId: () => crypto.randomUUID(),
+      log,
+      fail: log,
+    });
+    return { result, seen, stored };
+  };
+
+  it("@req PAR-META-22 a cover framed in Edit details is cut to the framed square", async () => {
+    const { result, seen, stored } = await framedSave({ left: 0, top: 0, size: 0.5 });
+    expect(result).toEqual({ ok: true });
+    expect(seen).toEqual([{ left: 0, top: 0, size: 0.5 }]);
+    const large = jpeg.decode(Buffer.from(stored[0]!));
+    log("framed large", { width: large.width, height: large.height });
+    expect([large.width, large.height]).toEqual([450, 450]);
+  });
+
+  it("@req PAR-META-22 a cover with no framing goes in as its centre square", async () => {
+    const { seen, stored } = await framedSave(undefined);
+    expect(seen).toEqual([null]);
+    const large = jpeg.decode(Buffer.from(stored[0]!));
+    expect([large.width, large.height]).toEqual([900, 900]);
+  });
+
+  it("@req PAR-META-22 a cover sent with a broken framing is not taken", async () => {
+    const { seen, stored } = await framedSave({ left: 2, top: 0, size: 0.5 });
+    expect(seen).toEqual([]);
+    expect(stored).toEqual([]);
+  });
+
   it("@req PAR-META-16 refuses a malformed edit without storing anything", async () => {
     const steps: string[] = [];
     const result = await saveParrotEdit({

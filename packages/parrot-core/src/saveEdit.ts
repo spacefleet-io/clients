@@ -3,12 +3,15 @@
  * store them, publish the library and remove storage objects; the order and the checks live here.
  */
 import type { ParrotLibraryOp } from "@space/parrot-library-db-definition";
-import type { ParrotCoverCopies } from "./covers";
+import { isParrotCoverCrop, type ParrotCoverCopies, type ParrotCoverCrop } from "./covers";
 import { PARROT_EDIT_IDS } from "./ids";
 import { planParrotEdit, type ParrotEditTarget, type ParrotLibraryQuery } from "./manage";
 
-/** The picture the user gave the edit dialog (PAR-META-16): a picked or dropped file, or a picture link dropped from a web page. */
-export type ParrotEditCover = { kind: "file"; bytes: Uint8Array; mime: string } | { kind: "url"; url: string };
+/**
+ * The picture the user gave the edit dialog (PAR-META-16): a picked or dropped file, or a picture link dropped from a
+ * web page; `crop` is the square the user framed on it (PAR-META-22), none for the centre one.
+ */
+export type ParrotEditCover = ({ kind: "file"; bytes: Uint8Array; mime: string } | { kind: "url"; url: string }) & { crop?: ParrotCoverCrop | null };
 
 export const isParrotEditTarget = (value: unknown): value is ParrotEditTarget => {
   if (typeof value !== "object" || value === null) return false;
@@ -24,7 +27,8 @@ export const isParrotEditTarget = (value: unknown): value is ParrotEditTarget =>
 
 export const isParrotEditCover = (value: unknown): value is ParrotEditCover => {
   if (typeof value !== "object" || value === null) return false;
-  const { kind, bytes, url } = value as Record<string, unknown>;
+  const { kind, bytes, url, crop } = value as Record<string, unknown>;
+  if (crop !== undefined && crop !== null && !isParrotCoverCrop(crop)) return false;
   return (kind === "file" && bytes instanceof Uint8Array) || (kind === "url" && typeof url === "string" && /^https?:\/\//i.test(url));
 };
 
@@ -34,8 +38,8 @@ export type ParrotEditSave<Db, Result extends { ok: boolean }> = {
   /** The library as it is open now. */
   db: Db;
   query: (db: Db) => ParrotLibraryQuery;
-  /** The large (1200 px) and small (500 px) copies of a picture (PAR-COPY-01); null when the picture cannot be used. */
-  makeCoverCopies: (bytes: Uint8Array) => ParrotCoverCopies | null | Promise<ParrotCoverCopies | null>;
+  /** The large (1200 px) and small (500 px) copies of a picture (PAR-COPY-01), cut to `crop`, else its centre square (PAR-META-22); null when the picture cannot be used. */
+  makeCoverCopies: (bytes: Uint8Array, crop: ParrotCoverCrop | null) => ParrotCoverCopies | null | Promise<ParrotCoverCopies | null>;
   /** Encrypts and stores one cover copy; returns its object key. */
   storeCover: (bytes: Uint8Array) => Promise<string>;
   /** Applies `ops` and publishes the library; `build` plans the edit again on a newer library after a concurrent publish. */
@@ -71,8 +75,8 @@ export const saveParrotEdit = async <Db, Result extends { ok: boolean }>(
   let edited: ParrotEditTarget = target;
   if (target.kind === "album" && isParrotEditCover(cover)) {
     try {
-      const copies = await input.makeCoverCopies(await coverBytes(cover, input.fetchPicture ?? ((url) => fetch(url))));
-      if (!copies) return { ok: false, error: "the picture is a WebP or GIF wider than 1200 px" };
+      const copies = await input.makeCoverCopies(await coverBytes(cover, input.fetchPicture ?? ((url) => fetch(url))), cover.crop ?? null);
+      if (!copies) return { ok: false, error: "the picture could not be read" };
       const coverObjectKey = await input.storeCover(copies.large);
       const coverThumbObjectKey = copies.thumb ? await input.storeCover(copies.thumb) : null;
       log(`[edit] album ${target.id}: new cover stored (${copies.thumb ? "large and small copies" : "one copy"})`);
