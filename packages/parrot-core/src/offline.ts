@@ -7,8 +7,12 @@ import { pickPlayableFile, type TrackFileRow } from "./catalog";
 
 export type KeptKind = "song" | "album" | "playlist";
 
-/** One "Save offline" the user turned on. `choice` is the copy picked when there was a real choice. */
-export type KeptEntry = { kind: KeptKind; id: string; choice: string | null; keptAt: number };
+/**
+ * One "Save offline" the user turned on. `choice` is the copy picked when there was a real choice. `except` = songs of a
+ * kept album or playlist the user removed one by one on "Manage offline content" (OFFL-MANAGE-01); the entry stays kept,
+ * so songs added to it later still arrive.
+ */
+export type KeptEntry = { kind: KeptKind; id: string; choice: string | null; keptAt: number; except?: string[] };
 
 /** What the device remembers (per device, PAR-OFFL-02 notes): the kept list in the order it was kept. */
 export type KeptState = { version: 1; entries: KeptEntry[] };
@@ -39,7 +43,8 @@ export const parseKeptState = (raw: string | null | undefined): KeptState => {
         KINDS.includes(entry.kind) &&
         typeof entry.id === "string" &&
         (entry.choice === null || typeof entry.choice === "string") &&
-        typeof entry.keptAt === "number"
+        typeof entry.keptAt === "number" &&
+        (entry.except === undefined || (Array.isArray(entry.except) && entry.except.every((id) => typeof id === "string")))
     );
     return { version: 1, entries };
   } catch {
@@ -57,6 +62,47 @@ export const unkeepEntry = (state: KeptState, kind: KeptKind, id: string): KeptS
   version: 1,
   entries: state.entries.filter((entry) => !(entry.kind === kind && entry.id === id)),
 });
+
+/**
+ * Remove songs from what is kept (OFFL-MANAGE-01). `from: "library"` drops songs kept on their own and leaves the songs
+ * out of kept albums; `{ playlist }` leaves them out of that kept playlist only. Other kept items that hold a song keep
+ * it on the device. An album or playlist with every song left out stops being kept. `whole` names kept albums and
+ * playlists (in that scope) to stop keeping outright, songs with no playable file included: the bin on an album or a
+ * playlist row lists only the songs on the device, so leaving those out would keep the item with an `except` list.
+ */
+export const leaveOutSongs = (
+  state: KeptState,
+  library: Pick<KeepLibrary, "albumTrackIds" | "playlistTrackIds">,
+  trackIds: readonly string[],
+  from: "library" | { playlist: string },
+  whole: ReadonlyArray<{ kind: "album" | "playlist"; id: string }> = []
+): KeptState => {
+  const gone = new Set(trackIds);
+  const inScope = (entry: KeptEntry) => (from === "library" ? entry.kind !== "playlist" : entry.kind === "playlist" && entry.id === from.playlist);
+  const unsaved = (entry: KeptEntry) => whole.some((item) => item.kind === entry.kind && item.id === entry.id);
+  const entries: KeptEntry[] = [];
+  for (const entry of state.entries) {
+    if (!inScope(entry)) {
+      entries.push(entry);
+      continue;
+    }
+    if (unsaved(entry)) continue;
+    if (entry.kind === "song") {
+      if (!gone.has(entry.id)) entries.push(entry);
+      continue;
+    }
+    const songs = keptTrackIds(library, { kind: entry.kind, id: entry.id });
+    const hits = songs.filter((trackId) => gone.has(trackId));
+    if (hits.length === 0) {
+      entries.push(entry);
+      continue;
+    }
+    const except = [...new Set([...(entry.except ?? []), ...hits])];
+    if (songs.every((trackId) => except.includes(trackId))) continue;
+    entries.push({ ...entry, except });
+  }
+  return { version: 1, entries };
+};
 
 const FORMAT_BY_SUBTYPE: Record<string, string> = {
   mpeg: "MP3",
@@ -133,9 +179,15 @@ export const keepCopyChoices = (library: Pick<KeepLibrary, "trackFiles">, trackI
   );
 };
 
-/** The songs one kept entry holds right now: the album's or playlist's current songs, or the song itself. */
-export const keptTrackIds = (library: Pick<KeepLibrary, "albumTrackIds" | "playlistTrackIds">, entry: Pick<KeptEntry, "kind" | "id">) =>
-  entry.kind === "song" ? [entry.id] : entry.kind === "album" ? [...library.albumTrackIds(entry.id)] : [...library.playlistTrackIds(entry.id)];
+/** The songs one kept entry holds right now: the album's or playlist's current songs (less any left out), or the song itself. */
+export const keptTrackIds = (
+  library: Pick<KeepLibrary, "albumTrackIds" | "playlistTrackIds">,
+  entry: Pick<KeptEntry, "kind" | "id"> & { except?: readonly string[] }
+) => {
+  if (entry.kind === "song") return [entry.id];
+  const songs = entry.kind === "album" ? library.albumTrackIds(entry.id) : library.playlistTrackIds(entry.id);
+  return entry.except?.length ? songs.filter((trackId) => !entry.except?.includes(trackId)) : [...songs];
+};
 
 /** One song the device should hold: the file kept for it and the kept entries that hold it. */
 export type KeptSong = { trackId: string; file: TrackFileRow; holders: KeptEntry[] };

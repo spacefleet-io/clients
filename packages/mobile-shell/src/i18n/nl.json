@@ -290,6 +290,36 @@
       "playlist": "Afspeellijst"
     }
   },
+  "offlineContent": {
+    "entry": "Offline inhoud beheren",
+    "title": "Offline inhoud",
+    "back": "Terug",
+    "totalSuffix": "offline opgeslagen",
+    "unknownArtist": "Onbekende artiest",
+    "removeAll": "Alles verwijderen",
+    "confirmCancel": "Annuleren",
+    "confirmRemove": "Alles verwijderen",
+    "removeFailed": "Verwijderen is niet gelukt. Probeer het opnieuw.",
+    "expand": "Inhoud van {{name}} tonen of verbergen",
+    "remove": "{{name}} van deze telefoon verwijderen",
+    "season": "Seizoen {{n}}",
+    "episodeNumber": "S{{season}} A{{episode}}",
+    "unknownTitle": "Titel staat niet meer in de bibliotheek",
+    "unknownEpisode": "Aflevering staat niet meer in de bibliotheek",
+    "unknown": "Staat niet meer in de bibliotheek",
+    "badger": {
+      "entryDescription": "Bekijk wat er op deze telefoon wordt bewaard en maak ruimte vrij",
+      "confirmTitle": "Alles verwijderen wat op deze telefoon wordt bewaard?",
+      "confirmBody": "Alle films en afleveringen die op deze telefoon zijn gedownload, worden verwijderd. Je kunt ze later opnieuw downloaden.",
+      "empty": "Er wordt niets op deze telefoon bewaard. Tik op Downloaden bij een film of aflevering om die zonder verbinding te bekijken."
+    },
+    "parrot": {
+      "entryDescription": "Bekijk wat er offline op deze telefoon is opgeslagen en maak ruimte vrij",
+      "confirmTitle": "Alles verwijderen wat offline is opgeslagen?",
+      "confirmBody": "Alle albums, playlists en nummers die offline op deze telefoon zijn opgeslagen, worden verwijderd. Je kunt ze later opnieuw offline opslaan.",
+      "empty": "Er staat nog niets offline op deze telefoon. Tik op Offline opslaan bij een album, playlist of nummer om het zonder verbinding te beluisteren."
+    }
+  },
   "downloads": {
     "title": "Downloads",
     "back": "Terug",
@@ -1384,5 +1414,18 @@
       "apk": "Nieuwe versie downloaden",
       "store": "Winkel openen"
     }
+  },
+  "sibling": {
+    "title": "Doorgaan met je {{other}}-account",
+    "body": "{{other}} is ingelogd op deze telefoon. Je hoeft niets in te typen.",
+    "button": "Doorgaan als {{email}}",
+    "otherAccount": "Een ander account gebruiken",
+    "waiting": "Wachten op {{other}}…",
+    "waitingNote": "Sta het toe in {{other}} en kom dan terug.",
+    "cancel": "Annuleren",
+    "failure": "{{other}} kon je niet inloggen. Log op een andere manier in.",
+    "askTitle": "{{app}} je SpaceFleet-account laten gebruiken?",
+    "askBody": "{{app}} op deze telefoon wordt ingelogd als {{email}}, met een eigen kopie van je mediatheeksleutel. Je kunt het altijd uitloggen bij Apparaten.",
+    "allow": "Toestaan"
   }
 }
