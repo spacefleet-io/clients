@@ -100,7 +100,11 @@ const render = async (visible = true) => {
         onClose={() => events.push("close")}
         strings={strings}
         groups={groups}
-        describe={(item) => (item.kind === "artist" ? { key: item.name, title: item.name } : { key: item.song.id, title: item.song.title, subtitle: item.song.artist })}
+        describe={(item) =>
+          item.kind === "artist"
+            ? { key: item.name, title: item.name }
+            : { key: item.song.id, title: item.song.title, subtitle: item.song.artist, onLongPress: () => events.push(`hold:${item.song.id}`) }
+        }
         onSelect={(item, group) => events.push(`select:${group}:${item.kind === "artist" ? item.name : item.song.id}`)}
       />
     );
@@ -195,5 +199,20 @@ describe("MobileSearchOverlay (UX-PHONE-12)", () => {
     await act(async () => byId(tree, "search-overlay-close")[0]!.props.onPress());
     log("events", events);
     expect(events).toEqual(["close", "select:artists:Nova", "close", "close"]);
+  });
+
+  // @req PAR-CARD-02[parrot]: a song result held down opens the song's sheet (with Add to queue); results without a
+  // hold action (artists here) only open on a tap.
+  it("a held result with a hold action closes the card and runs it; one without has none", async () => {
+    const tree = await render();
+    await type(tree, "linnet");
+    const song = byId(tree, "search-result-songs-0")[0]!;
+    const artist = byId(tree, "search-result-artists-0")[0]!;
+    log("hold-props", { song: song.props.accessibilityLabel, songHold: typeof song.props.onLongPress, artist: typeof artist.props.onLongPress });
+    expect(song.props.accessibilityLabel).toBe("Linnet Park, Nova");
+    expect(artist.props.onLongPress).toBeUndefined();
+    await act(async () => song.props.onLongPress());
+    log("events", events);
+    expect(events).toEqual(["close", "hold:s-lp"]);
   });
 });

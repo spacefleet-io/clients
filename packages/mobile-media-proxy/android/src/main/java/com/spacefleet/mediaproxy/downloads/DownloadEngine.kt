@@ -199,6 +199,25 @@ class DownloadEngine private constructor(context: Context) {
 
   fun stateJson(): String = lock.withLock { stateJsonLocked() }
 
+  /** Complete downloads with their size on disk (OFFL-MANAGE-01); shared objects count once in the total. */
+  fun listItems(): OfflineInventory {
+    val completed = lock.withLock {
+      items.values.filter { it.status == DownloadStatus.COMPLETED }.map { it.id to it.completedAt }
+    }
+    val inventory = OfflineInventory.compute(completed, { queueStore.loadObjects(it) }, { store.sizeOf(it) })
+    Log.i(TAG, "inventory items=${inventory.items.size} totalBytes=${inventory.totalBytes}")
+    return inventory
+  }
+
+  /** Cancels and deletes every download, finished or not (Settings › "Remove all", OFFL-MANAGE-01). */
+  fun removeAll() {
+    lock.withLock {
+      val ids = items.keys.toList()
+      Log.i(TAG, "remove.all count=${ids.size}")
+      remove(ids)
+    }
+  }
+
   fun networkType(): String {
     val cm = connectivity ?: return "none"
     val net = cm.activeNetwork ?: return "none"
@@ -747,13 +766,10 @@ class DownloadEngine private constructor(context: Context) {
       // Audio / subtitle objects are shared by every episode of a title: only
       // delete the keys no other download (queued, active, failed or completed)
       // still lists. A re-enqueue of the same id counts as "another" item too.
-      val inUse = HashSet<String>()
-      for (other in items.values) {
-        if (other === item) continue
-        val otherObjects = other.objects ?: queueStore.loadObjects(other.id) ?: continue
-        for (o in otherObjects) inUse.add(o.key)
-      }
-      val doomed = objects.map { it.key }.filter { it !in inUse }
+      val others = items.values.asSequence()
+        .filter { it !== item }
+        .mapNotNull { other -> other.objects ?: queueStore.loadObjects(other.id) }
+      val doomed = OfflineInventory.keysToDelete(objects, others.asIterable())
       Log.i(TAG, "delete.files id=${item.id} objects=${objects.size} deleting=${doomed.size} shared=${objects.size - doomed.size}")
       store.delete(doomed)
     }
