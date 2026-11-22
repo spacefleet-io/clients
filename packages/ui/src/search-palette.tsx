@@ -28,6 +28,15 @@ export type SearchPaletteItem = {
   image?: string | null;
   /** Other searched texts (people in a title, the artist of an album); a match there names it on the row. */
   keywords?: readonly string[];
+  /** Icon buttons on the row (Parrot's Add to queue on a song, PAR-CARD-02); they act without opening the result. */
+  actions?: readonly SearchPaletteItemAction[];
+};
+
+export type SearchPaletteItemAction = {
+  label: string;
+  icon: React.ReactNode;
+  onSelect: () => void;
+  testId: string;
 };
 
 export type SearchPaletteLabels = {
@@ -192,6 +201,23 @@ export function SearchPalette({ open, onOpenChange, items, labels, onSelect, ren
                         </span>
                       ) : null}
                     </span>
+                    {item.actions?.map((action) => (
+                      <button
+                        key={action.testId}
+                        type="button"
+                        aria-label={action.label}
+                        title={action.label}
+                        data-testid={action.testId}
+                        className="flex size-8 shrink-0 items-center justify-center rounded-md opacity-80 hover:bg-background/40 hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        onClick={(event) => {
+                          // Acts on the song and leaves the palette open, to add more.
+                          event.stopPropagation();
+                          action.onSelect();
+                        }}
+                      >
+                        {action.icon}
+                      </button>
+                    ))}
                     <span
                       data-testid="search-palette-kind"
                       className={cn(
