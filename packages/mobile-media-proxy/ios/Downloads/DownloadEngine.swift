@@ -487,12 +487,8 @@ public final class DownloadEngine: NSObject, URLSessionDataDelegate {
       runtimes[id] = nil
       // Audio / subtitle objects are shared by every episode of a title: only delete the keys no other
       // download still lists.
-      var inUse = Set<String>()
-      for otherId in order {
-        let other = runtimes[otherId]?.keys ?? Set((loadObjects(otherId) ?? []).map { $0.key })
-        inUse.formUnion(other)
-      }
-      let doomed = objects.map { $0.key }.filter { !inUse.contains($0) }
+      let others = order.map { otherId in runtimes[otherId]?.keys ?? Set((loadObjects(otherId) ?? []).map { $0.key }) }
+      let doomed = OfflineInventory.keysToDelete(removing: objects, others: others)
       for key in doomed {
         doomedKeys.insert(key)
         inflight[key]?.cancel()
@@ -527,6 +523,27 @@ public final class DownloadEngine: NSObject, URLSessionDataDelegate {
     root["wifiOnly"] = config?.wifiOnly ?? true
     let data = (try? JSONSerialization.data(withJSONObject: root)) ?? Data("{}".utf8)
     return String(decoding: data, as: UTF8.self)
+  }
+
+  /// Complete downloads with their size on disk (OFFL-MANAGE-01); shared objects count once in the total.
+  func listItems() -> OfflineInventory {
+    let completed = order.compactMap { id -> (id: String, completedAt: Int64)? in
+      guard let item = items[id], item.status == DownloadStatus.completed else { return nil }
+      return (id: id, completedAt: item.completedAt)
+    }
+    let inventory = OfflineInventory.compute(
+      completed: completed,
+      objectsOf: { self.loadObjects($0) },
+      sizeOf: { self.store.sizeOf($0) }
+    )
+    NSLog("[Downloads] inventory items=%d totalBytes=%lld", inventory.items.count, inventory.totalBytes)
+    return inventory
+  }
+
+  /// Cancels and deletes every download, finished or not (Settings › "Remove all", OFFL-MANAGE-01).
+  func removeAll() {
+    NSLog("[Downloads] remove.all count=%d", order.count)
+    remove(ids: order)
   }
 
   /// `{ networkType, freeBytes }`. Waits (briefly) for the first network path update after launch.

@@ -290,6 +290,36 @@
       "playlist": "Playlist"
     }
   },
+  "offlineContent": {
+    "entry": "Manage offline content",
+    "title": "Offline content",
+    "back": "Back",
+    "totalSuffix": "saved offline",
+    "unknownArtist": "Unknown artist",
+    "removeAll": "Remove all",
+    "confirmCancel": "Cancel",
+    "confirmRemove": "Remove all",
+    "removeFailed": "Couldn't remove it. Try again.",
+    "expand": "Show or hide what is inside {{name}}",
+    "remove": "Remove {{name}} from this phone",
+    "season": "Season {{n}}",
+    "episodeNumber": "S{{season}} E{{episode}}",
+    "unknownTitle": "Title no longer in the library",
+    "unknownEpisode": "Episode no longer in the library",
+    "unknown": "No longer in the library",
+    "badger": {
+      "entryDescription": "See what is kept on this phone and free up space",
+      "confirmTitle": "Remove everything kept on this phone?",
+      "confirmBody": "Every film and episode downloaded to this phone is deleted. You can download them again later.",
+      "empty": "Nothing is kept on this phone. Tap Download on a film or an episode to watch it without a connection."
+    },
+    "parrot": {
+      "entryDescription": "See what is saved offline on this phone and free up space",
+      "confirmTitle": "Remove everything saved offline?",
+      "confirmBody": "Every album, playlist and song saved offline on this phone is removed. You can save them offline again later.",
+      "empty": "Nothing is saved offline on this phone yet. Tap Save offline on an album, a playlist or a song to listen without a connection."
+    }
+  },
   "downloads": {
     "title": "Downloads",
     "back": "Back",
@@ -1384,5 +1414,18 @@
       "apk": "Download the new version",
       "store": "Open the store"
     }
+  },
+  "sibling": {
+    "title": "Continue with your {{other}} account",
+    "body": "{{other}} is signed in on this phone. Nothing to type.",
+    "button": "Continue as {{email}}",
+    "otherAccount": "Use another account",
+    "waiting": "Waiting for {{other}}…",
+    "waitingNote": "Allow it in {{other}}, then come back.",
+    "cancel": "Cancel",
+    "failure": "{{other}} could not sign you in. Sign in another way.",
+    "askTitle": "Let {{app}} use your SpaceFleet account?",
+    "askBody": "{{app}} on this phone will be signed in as {{email}}, with its own copy of your library key. You can sign it out at any time in Devices.",
+    "allow": "Allow"
   }
 }

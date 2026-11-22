@@ -97,11 +97,29 @@ export type NativeStatus = {
   freeBytes: number;
 };
 
+/** One complete download with the space it takes on disk (Settings › "Manage offline content", OFFL-MANAGE-01). */
+export type OfflineInventoryItem = {
+  /** The download id: Badger `media_files.id`, Parrot `track_files.id`. */
+  itemId: string;
+  /** Bytes on disk of every object it holds (an object shared with another item counts in both). */
+  bytes: number;
+  objectCount: number;
+  /** When it finished downloading (epoch ms); null when unknown. */
+  savedAt: number | null;
+};
+
+/** Complete downloads and the space they take; an object shared by several items counts once in `totalBytes`. */
+export type OfflineInventory = { items: OfflineInventoryItem[]; totalBytes: number };
+
+export const EMPTY_OFFLINE_INVENTORY: OfflineInventory = Object.freeze({ items: [] as OfflineInventoryItem[], totalBytes: 0 }) as OfflineInventory;
+
 type NativeDownloads = {
   configure(authToken: string, appId: string, wifiOnly: boolean, labelsJson: string): Promise<boolean>;
   enqueue(itemJson: string): Promise<boolean>;
   retry(id: string, gatewayCandidatesJson: string | null): Promise<boolean>;
   remove(idsJson: string): Promise<boolean>;
+  removeAll(): Promise<boolean>;
+  listItems(): Promise<string>;
   resume(): Promise<boolean>;
   getState(): Promise<string>;
   getStatus(): Promise<string>;
@@ -148,6 +166,17 @@ export const parseDownloadsState = (raw: string): DownloadsState => {
   };
 };
 
+export const parseOfflineInventory = (raw: string): OfflineInventory => {
+  const parsed = JSON.parse(raw) as Partial<OfflineInventory>;
+  const items = (parsed.items ?? []).map((item) => ({
+    itemId: String(item.itemId),
+    bytes: Number(item.bytes) || 0,
+    objectCount: Number(item.objectCount) || 0,
+    savedAt: typeof item.savedAt === "number" && item.savedAt > 0 ? item.savedAt : null,
+  }));
+  return { items, totalBytes: Number(parsed.totalBytes) || 0 };
+};
+
 export const nativeConfigure = (authToken: string, appId: string, wifiOnly: boolean, labels: DownloadNotificationLabels) =>
   native().configure(authToken, appId, wifiOnly, JSON.stringify(labels));
 
@@ -157,6 +186,15 @@ export const nativeRetry = (id: string, gatewayCandidates: string[] | null) =>
   native().retry(id, gatewayCandidates ? JSON.stringify(gatewayCandidates) : null);
 
 export const nativeRemove = (ids: string[]) => native().remove(JSON.stringify(ids));
+
+/** Cancels and deletes every download, finished or not. */
+export const nativeRemoveAll = () => native().removeAll();
+
+/** Complete downloads and their size on disk; empty where the engine is absent (TV, tests). */
+export const nativeListItems = async (): Promise<OfflineInventory> => {
+  if (!downloadsNativeAvailable()) return EMPTY_OFFLINE_INVENTORY;
+  return parseOfflineInventory(await native().listItems());
+};
 
 export const nativeResume = () => native().resume();
 

@@ -31,6 +31,7 @@ import type { ApiProfile, ProfilesResponse } from "@space/shared/profiles";
 import type { BillingPeriod } from "@space/shared/storagePlans";
 import type { ApprovePairingProof, ApprovePairingResult, PairingRequestView } from "@space/pairing-crypto";
 import type { PairedKeyCheck, PairingPollResult, PairingStartOptions, PairingStartResult } from "@space/desktop-shell/pairing";
+import type { SiblingSignInActions } from "@space/desktop-shell/sibling";
 import type { StreamSlotAnswer, StreamSlotGateState } from "@space/stream-slots";
 import type { AppUpdateRequiredPayload } from "@space/shared/appVersion";
 import type { FounderStatusResponse } from "@space/shared/founder";
@@ -358,6 +359,8 @@ export type ParrotBridge = {
     poll(requestId: string): Promise<PairingPollResult<ParrotPairedSignIn>>;
     cancel(): Promise<void>;
   };
+  /** ACCT-PAIR-07: "Continue with your Badger account" when Badger is signed in on this computer; the key check only. */
+  sibling?: SiblingSignInActions<ParrotPairedSignIn>;
   signOut(): Promise<ParrotState>;
   /**
    * The key as base64 (typed words' `keyBase64`, or a new key once written down). Checked against the account; on an
