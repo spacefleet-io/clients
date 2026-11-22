@@ -295,6 +295,14 @@ export const SettingsScreen = memo(({ devicesRequest = 0 }: { devicesRequest?: n
           description={t("settings.downloads.manage.description")}
           onPress={() => navigation.navigate("Downloads")}
         />
+        <Divider />
+        {/* OFFL-MANAGE-01: what is kept on this phone, its size, remove one or all. */}
+        <LinkRow
+          testID="settings-offline-content"
+          title={t("offlineContent.entry")}
+          description={t("offlineContent.badger.entryDescription")}
+          onPress={() => navigation.navigate("OfflineContent")}
+        />
       </SettingsGroup>
 
       {/* REL-LOG-06: only in a build that can send reports; a build with no reporting address has no Privacy group (#2570). */}
