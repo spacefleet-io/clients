@@ -149,3 +149,12 @@ export const listStorageObjects = (token: string) => unwrap(sdk.listStorageObjec
 
 export const deleteStorageObjects = (token: string, keys: string[]) =>
   unwrap(sdk.deleteStorageObjects({ ...accountCall(token), body: { keys } }));
+
+// ACCT-PAIR-07: approving Parrot's sign-in on this computer (the local channel, `@space/desktop-shell/sibling-main`).
+export const lookupPairing = (token: string, code: string) => unwrap(sdk.lookupPairing({ ...accountCall(token), query: { code } }));
+
+/** `{ localKey: true }`: the library key goes to Parrot over the local channel, never to the API. */
+export const approvePairingLocal = (token: string, requestId: string) =>
+  unwrap(sdk.approvePairing({ ...accountCall(token), path: { requestId }, body: { localKey: true } }));
+
+export const denyPairing = (token: string, requestId: string) => unwrap(sdk.denyPairing({ ...accountCall(token), path: { requestId } }));

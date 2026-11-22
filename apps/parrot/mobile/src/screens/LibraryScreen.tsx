@@ -360,7 +360,7 @@ const ArtistsView = ({ artists, loading }: { artists: ArtistRow[]; loading: bool
 
 const SongsView = ({ songs, loading, error: readError }: { songs: Array<WithCoverKeys<SongRow>>; loading: boolean; error: string | null }) => {
   const { t } = useTranslation();
-  const { play, starting, error } = usePlay();
+  const { play, queue, starting, error } = usePlay();
   const now = useNowPlaying();
   const skyScroll = useSkyScroll();
   const editor = usePlaylistEditor();
@@ -393,7 +393,7 @@ const SongsView = ({ songs, loading, error: readError }: { songs: Array<WithCove
           unavailable={reach ? !reach.song(item.id) : false}
           accessibilityLabel={t("parrot.album.play", { title: item.title })}
           onPress={() => void play(songs, index)}
-          onMore={() => editor.openSong({ id: item.id, title: item.title })}
+          onMore={() => editor.openSong({ id: item.id, title: item.title }, undefined, { onAddToQueue: () => queue([item], "end") })}
           moreLabel={`${t("parrot.player.more")}, ${item.title}`}
         />
       ))}

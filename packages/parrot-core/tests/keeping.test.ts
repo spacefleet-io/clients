@@ -9,6 +9,7 @@
  * @req PAR-OFFL-01[parrot]
  * @req PAR-OFFL-02[parrot]
  * @req PAR-OFFL-03[parrot]
+ * @req OFFL-MANAGE-01[parrot]
  */
 import { describe, expect, it } from "bun:test";
 import type { TrackFileRow } from "../src/catalog";
@@ -160,5 +161,23 @@ describe("createParrotKeeping with a download queue", () => {
     expect(stored()).toBeNull();
     expect(keeping.status().entries).toEqual([]);
     expect(keptAny).toEqual([true, false]);
+  });
+
+  it("removes one song by hand: its file goes, a playlist's copy of another song stays", async () => {
+    console.log("[PARROT-CORE-KEEPING-001] phase=leaveOut");
+    const { keeping, files, stored } = await setup();
+    await keeping.keep("album", "a1", null);
+    await keeping.keep("playlist", "p1", null);
+    await keeping.reconcile();
+    expect([...files.queued].sort()).toEqual(["f1", "f2", "f3"]);
+    const status = await keeping.leaveOut(["t1", "t2"], "library");
+    await keeping.reconcile();
+    console.log(`[PARROT-CORE-KEEPING-001] after leaveOut stored=${stored()} queued=${[...files.queued].join(",")}`);
+    expect(status.entries.map((entry) => `${entry.kind}:${entry.id}`)).toEqual(["playlist:p1"]);
+    expect([...files.queued].sort()).toEqual(["f1", "f3"]);
+    await keeping.leaveOut(["t1"], { playlist: "p1" });
+    await keeping.reconcile();
+    expect([...files.queued]).toEqual(["f3"]);
+    expect(JSON.parse(stored() ?? "{}").entries).toEqual([{ kind: "playlist", id: "p1", choice: null, keptAt: 10, except: ["t1"] }]);
   });
 });

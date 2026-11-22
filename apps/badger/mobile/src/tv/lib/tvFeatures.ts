@@ -31,6 +31,7 @@ export const featureAvailability = (isTV: boolean): Record<TvFeature, boolean> =
 export const ROUTE_FEATURE = {
   Subscription: "subscription",
   Downloads: "downloads",
+  OfflineContent: "downloads",
   // PairDevice is not here: on TV it is the typed-code approver (TvApprovePairingScreen), not the camera scanner.
 } as const satisfies Record<string, TvFeature>;
 

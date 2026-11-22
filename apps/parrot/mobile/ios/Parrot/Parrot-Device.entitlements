@@ -9,5 +9,13 @@
 	<array>
 		<string>applinks:spacefleet.io</string>
 	</array>
+	<!-- ACCT-PAIR-07: same-device sign-in. The app's own group stays first (the default group of every keychain item
+		 the app writes); the team's shared group holds only the sign-in status ({email, userId}) and, for a few
+		 seconds, the answer to a same-device sign-in request. -->
+	<key>keychain-access-groups</key>
+	<array>
+		<string>$(AppIdentifierPrefix)$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+		<string>$(AppIdentifierPrefix)io.spacefleet.shared</string>
+	</array>
 </dict>
 </plist>

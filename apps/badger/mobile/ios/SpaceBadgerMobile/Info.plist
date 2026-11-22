@@ -47,6 +47,20 @@
 				<string>spacebadger</string>
 			</array>
 		</dict>
+		<!-- ACCT-PAIR-07: Parrot asks for a same-device sign-in on spacebadger://sibling-approval (a Debug build: spacebadger-dev). -->
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>io.spacefleet.sibling</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>$(SF_SIBLING_URL_SCHEME)</string>
+			</array>
+		</dict>
+	</array>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>parrot</string>
+		<string>parrot-dev</string>
 	</array>
 	<key>NSCameraUsageDescription</key>
 	<string>Badger uses the camera to scan the code on a new device you want to add to your account.</string>

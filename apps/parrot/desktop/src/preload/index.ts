@@ -4,6 +4,7 @@ import { contextBridge, ipcRenderer, webUtils } from "electron";
 import { createErrorReportsBridge } from "@space/error-report/desktop";
 import { createUpdaterBridge } from "@space/desktop-shell/updater-preload";
 import { readStorageUnitBase } from "@space/desktop-shell/storage-units";
+import { SIBLING_IPC } from "@space/desktop-shell/sibling";
 import { PARROT_IPC, type ParrotBackgroundWork, type ParrotBridge, type ParrotCoverCutRequest, type ParrotExportJob, type ParrotImportJob, type ParrotImportStatus } from "../shared/ipc";
 import type { ParrotLibraryPatch } from "../shared/libraryPatch";
 import type { KeptStatus } from "@space/parrot-core";
@@ -45,6 +46,11 @@ const bridge: ParrotBridge = {
     start: (options) => ipcRenderer.invoke(PARROT_IPC.pairingStart, options),
     poll: (requestId) => ipcRenderer.invoke(PARROT_IPC.pairingPoll, requestId),
     cancel: () => ipcRenderer.invoke(PARROT_IPC.pairingCancel),
+  },
+  sibling: {
+    offer: () => ipcRenderer.invoke(SIBLING_IPC.offer),
+    signIn: () => ipcRenderer.invoke(SIBLING_IPC.signIn),
+    cancel: () => ipcRenderer.invoke(SIBLING_IPC.cancel),
   },
   signOut: () => ipcRenderer.invoke(PARROT_IPC.signOut),
   setLibraryKey: (keyBase64) => ipcRenderer.invoke(PARROT_IPC.setLibraryKey, keyBase64),
