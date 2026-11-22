@@ -1,4 +1,5 @@
 import * as React from "react";
+import { ListEnd } from "lucide-react";
 import { searchPaletteStrings } from "@space/shared/searchPaletteStrings";
 
 import { SearchPalette, type SearchPaletteItem } from "../search-palette";
@@ -7,7 +8,7 @@ import { SearchPalette, type SearchPaletteItem } from "../search-palette";
  * Parrot's search palette (UX-SEARCH-01), shared by the desktop app and the web player: the library's artists,
  * albums, songs and playlists, an album or song also found by its artist; Enter opens the artist, the album or the
  * playlist, and a song opens its album (Parrot has no page for one song). The artist's and album's names under a result open their own
- * pages (PAR-NAV-05).
+ * pages (PAR-NAV-05). A song result also has Add to queue (PAR-CARD-02).
  */
 
 export type ParrotSearchArtist = { id: string; name: string };
@@ -31,9 +32,11 @@ export type ParrotSearchPaletteProps = {
   onOpenPlaylist: (id: string) => void;
   /** Draws an album's cover. */
   renderCover?: (albumId: string) => React.ReactNode;
+  /** A song result's Add to queue button, under the card's label (PAR-CARD-02). */
+  addToQueue?: { label: string; onAdd: (song: ParrotSearchSong) => void };
 };
 
-export function ParrotSearchPalette({ open, onOpenChange, artists, albums, songs, playlists, language, onOpenArtist, onOpenAlbum, onOpenPlaylist, renderCover }: ParrotSearchPaletteProps) {
+export function ParrotSearchPalette({ open, onOpenChange, artists, albums, songs, playlists, language, onOpenArtist, onOpenAlbum, onOpenPlaylist, renderCover, addToQueue }: ParrotSearchPaletteProps) {
   const labels = React.useMemo(() => searchPaletteStrings("parrot", language), [language]);
   const items = React.useMemo<SearchPaletteItem[]>(() => {
     if (!open) return [];
@@ -57,10 +60,13 @@ export function ParrotSearchPalette({ open, onOpenChange, artists, albums, songs
         subtitleLinks: [...artistLink(s.artistName, s.artistId), { text: s.albumTitle, onOpen: () => onOpenAlbum(s.albumId) }],
         image: s.albumId,
         keywords: [s.artistName, s.albumTitle],
+        actions: addToQueue
+          ? [{ label: addToQueue.label, icon: <ListEnd aria-hidden className="h-4 w-4" />, onSelect: () => addToQueue.onAdd(s), testId: "search-palette-add-to-queue" }]
+          : undefined,
       })),
       ...playlists.map((p) => ({ key: `playlist:${p.id}`, kind: "playlist", title: p.name })),
     ];
-  }, [open, artists, albums, songs, playlists, onOpenArtist, onOpenAlbum]);
+  }, [open, artists, albums, songs, playlists, onOpenArtist, onOpenAlbum, addToQueue]);
   return (
     <SearchPalette
       open={open}

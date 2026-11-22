@@ -8,10 +8,14 @@ import UIKit
 import React
 import React_RCTAppDelegate
 import ReactAppDependencyProvider
+import SiblingSignIn
 import UserNotifications
 
+// The UIScene lifecycle (PLAT-MOBILE-09): iOS 27 stops at launch an app linked against its SDK that has none. The app
+// starts its services here; SceneDelegate (below) makes the window and starts React once UIKit connects the scene.
 @main
 class AppDelegate: UIResponder, UIApplicationDelegate {
+  /// The scene's window, set by SceneDelegate: the orientation mask and the tvOS Menu handling below look for it.
   var window: UIWindow?
 #if os(tvOS)
   private var menuKeyObserver: NSObjectProtocol?
@@ -50,29 +54,15 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
 #if os(iOS)
     // Reconnect the background download session (and re-attach surviving transfers) as early as possible,
-    // before JS comes up: a system relaunch for finished downloads has no JS at all. The Apple TV app has no
-    // downloads (the MediaProxy pod builds its download engine for iOS only).
+    // before JS comes up: a system relaunch for finished downloads has no JS at all (and, with the UIScene
+    // lifecycle, no scene either). The Apple TV app has no downloads (the MediaProxy pod builds its download engine
+    // for iOS only).
     _ = DownloadEngine.shared
-#endif
 
-    window = UIWindow(frame: UIScreen.main.bounds)
-#if os(tvOS) && DEBUG
-    // The Metro banner ("Fast Refresh disconnected", "Loading from Metro") sits over the TV picture and its Dismiss
-    // button cannot be focused with the Siri Remote. A Release build never shows it; Metro's own log still has it.
-    RCTDevLoadingViewSetEnabled(false)
-#endif
+    // Parrot on this phone asking to sign in with Badger's account (ACCT-PAIR-07): the confirm screen is its own
+    // React root, shown over the app by SiblingSignIn.
+    SiblingLinks.makeApprovalView = { [weak factory] in factory?.rootViewFactory.view(withModuleName: "SiblingApproval") }
 
-    factory.startReactNative(
-      withModuleName: "SpaceBadgerMobile",
-      in: window,
-      launchOptions: launchOptions
-    )
-
-#if os(tvOS)
-    letReactTakeMenuFirst()
-#endif
-
-#if os(iOS)
     // Register for remote (silent) notifications so the JS-side push handler
     // can forward APNs tokens to Firebase Messaging. Apple's permission prompt
     // only fires once the user is signed in — that flow is driven from JS via
@@ -82,6 +72,27 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 #endif
 
     return true
+  }
+
+  /// Called by SceneDelegate when UIKit connects the app's scene: React runs in the scene's window.
+  func showReact(in window: UIWindow, launchOptions: [UIApplication.LaunchOptionsKey: Any]) {
+    self.window = window
+#if os(tvOS) && DEBUG
+    // The Metro banner ("Fast Refresh disconnected", "Loading from Metro") sits over the TV picture and its Dismiss
+    // button cannot be focused with the Siri Remote. A Release build never shows it; Metro's own log still has it.
+    RCTDevLoadingViewSetEnabled(false)
+#endif
+
+    // A cold start on a same-device sign-in link (ACCT-PAIR-07): the link goes to SiblingSignIn, never to JS.
+    reactNativeFactory?.startReactNative(
+      withModuleName: "SpaceBadgerMobile",
+      in: window,
+      launchOptions: SiblingLinks.launchOptionsWithoutSiblingLink(launchOptions)
+    )
+
+#if os(tvOS)
+    letReactTakeMenuFirst()
+#endif
   }
 
   // APNs delivers tokens via native delegate methods even when the JS thread
@@ -115,25 +126,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     DownloadEngine.shared.handleBackgroundEvents(identifier: identifier, completion: completionHandler)
   }
 #endif
-
-  // spacebadger://auth/provider (ACCT-SIGNIN-05): hand the URL to JS Linking.
-  func application(
-    _ app: UIApplication,
-    open url: URL,
-    options: [UIApplication.OpenURLOptionsKey: Any] = [:]
-  ) -> Bool {
-    return RCTLinkingManager.application(app, open: url, options: options)
-  }
-
-  // ACCT-PAIR-06: https://spacefleet.io/pair/badger?code=... (a Universal Link, the associated domain in the
-  // entitlements) reaches JS Linking like a scheme link.
-  func application(
-    _ application: UIApplication,
-    continue userActivity: NSUserActivity,
-    restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void
-  ) -> Bool {
-    return RCTLinkingManager.application(application, continue: userActivity, restorationHandler: restorationHandler)
-  }
 
 #if os(iOS)
   // Portrait everywhere, landscape only while the player is up (UX-ORIENT-01); the player module flips the mask.
@@ -187,6 +179,67 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     NSLog("[tv.menuKey] %d native Menu recognizer(s) now wait for React's", others.count)
   }
 #endif
+}
+
+/// The app's one window scene (`UIApplicationSceneManifest` in both Info.plists, PLAT-MOBILE-09). Once the app has a
+/// scene manifest UIKit no longer calls the AppDelegate's URL and user-activity methods: opened links arrive here.
+class SceneDelegate: UIResponder, UIWindowSceneDelegate {
+  var window: UIWindow?
+
+  func scene(
+    _ scene: UIScene,
+    willConnectTo session: UISceneSession,
+    options connectionOptions: UIScene.ConnectionOptions
+  ) {
+    guard let windowScene = scene as? UIWindowScene, let app = UIApplication.shared.delegate as? AppDelegate else {
+      NSLog("[scene] no window scene or no AppDelegate; nothing to show")
+      return
+    }
+    let window = UIWindow(windowScene: windowScene)
+    self.window = window
+    NSLog(
+      "[scene] connecting: %ld URL(s), %ld user activit(ies)",
+      connectionOptions.urlContexts.count, connectionOptions.userActivities.count
+    )
+    app.showReact(in: window, launchOptions: Self.launchOptions(connectionOptions))
+    // A cold start on a same-device sign-in link (ACCT-PAIR-07): showReact kept it from JS, SiblingSignIn takes it.
+    for context in connectionOptions.urlContexts {
+      _ = SiblingLinks.handleOpenURL(context.url, sourceApplication: context.options.sourceApplication)
+    }
+  }
+
+  // spacebadger://auth/provider (ACCT-SIGNIN-05): hand the URL to JS Linking. Same-device sign-in links (ACCT-PAIR-07,
+  // spacebadger://sibling-approval…) stay native: SiblingSignIn takes them, or swallows them from any app but Parrot.
+  func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
+    let forJs = URLContexts.filter {
+      !SiblingLinks.handleOpenURL($0.url, sourceApplication: $0.options.sourceApplication)
+    }
+    if !forJs.isEmpty { RCTLinkingManager.scene(scene, openURLContexts: forJs) }
+  }
+
+  // ACCT-PAIR-06: https://spacefleet.io/pair/badger?code=... (a Universal Link, the associated domain in the
+  // entitlements) reaches JS Linking like a scheme link.
+  func scene(_ scene: UIScene, continue userActivity: NSUserActivity) {
+    RCTLinkingManager.scene(scene, continue: userActivity)
+  }
+
+  /// The launch options the app used to start React with, from the scene's connection options: the link or Universal
+  /// Link the app was opened with, which JS reads with `Linking.getInitialURL()` (React Native's own conversion, plus
+  /// the source app SiblingSignIn checks).
+  private static func launchOptions(_ options: UIScene.ConnectionOptions) -> [UIApplication.LaunchOptionsKey: Any] {
+    var launch: [UIApplication.LaunchOptionsKey: Any] = [:]
+    if let context = options.urlContexts.first {
+      launch[.url] = context.url
+      launch[.sourceApplication] = context.options.sourceApplication
+    }
+    if let activity = options.userActivities.first {
+      launch[.userActivityDictionary] = [
+        UIApplication.LaunchOptionsKey.userActivityType.rawValue: activity.activityType,
+        "UIApplicationLaunchOptionsUserActivityKey": activity,
+      ] as [String: Any]
+    }
+    return launch
+  }
 }
 
 #if os(iOS)

@@ -16,3 +16,13 @@ const { extensions } = process.getBuiltinModule("node:module").createRequire(imp
 extensions[".webp"] = (m: { exports: unknown }) => {
   m.exports = 7;
 };
+// Same-device sign-in (ACCT-PAIR-07) talks to the native SiblingSignIn module: no sister app in a unit test. The
+// offer and status have their own tests (login-sibling-offer, auth-sibling-status), which mock this themselves.
+vi.mock("@space/mobile-shell/sibling", () => ({
+  publishSiblingStatus: async () => undefined,
+  getSiblingStatus: async () => null,
+}));
+vi.mock("@space/mobile-shell/sibling-ui", () => ({
+  MobileSiblingOffer: () => null,
+  SiblingApprovalScreen: () => null,
+}));

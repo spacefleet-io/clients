@@ -16,7 +16,7 @@
  */
 import { hostname as osHostname } from "node:os";
 import QRCode from "qrcode";
-import { PairingHttpError, clampDeviceName, createPairingClientCore, type PairingClientCore } from "@space/pairing-crypto";
+import { PairingHttpError, clampDeviceName, createPairingClientCore, type PairingClientCore, type SealedKey } from "@space/pairing-crypto";
 import type { SpaceAppId } from "@space/shared/appScope";
 import { retryAfterSecondsToMinutes } from "@space/shared/signInError";
 import type { PairingMode, PairingPoll, PairingRefusal, PairingStart, PairingStartOptions } from "./types";
@@ -41,6 +41,8 @@ export type DesktopPairingClient = {
   start: (options?: PairingStartOptions) => Promise<PairingStart>;
   poll: (requestId: string) => Promise<PairingPoll>;
   cancel: () => void;
+  /** ACCT-PAIR-07: the library key the sister app on this computer sealed to this request, over the local channel. */
+  deliverLocalKey: (requestId: string, sealedKey: SealedKey) => boolean;
 };
 
 const SYSTEM_NAMES: Partial<Record<NodeJS.Platform, string>> = { linux: "Linux", darwin: "macOS", win32: "Windows" };
@@ -94,5 +96,6 @@ export const createDesktopPairingClient = (deps: DesktopPairingClientDeps): Desk
     start,
     poll: (requestId) => cores[mode].poll(requestId),
     cancel: () => cores[mode].cancel(),
+    deliverLocalKey: (requestId, sealedKey) => cores[mode].deliverLocalKey(requestId, sealedKey),
   };
 };

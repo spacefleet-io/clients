@@ -433,6 +433,23 @@ export const approvePairing = (
     })
   );
 
+/**
+ * Same-device sign-in (ACCT-PAIR-07): approves the sister app's request on this device with no key in the body; the
+ * caller hands the sealed key to that app over the local channel, so the server never sees it.
+ */
+export const approvePairingLocal = (
+  token: string,
+  requestId: string,
+  approverDeviceId?: string
+): Promise<{ ok: boolean; sessionId?: string }> =>
+  unwrap(
+    sdk.approvePairing({
+      ...scoped(token),
+      path: { requestId },
+      body: { localKey: true, ...(approverDeviceId ? { approverDeviceId } : {}) },
+    })
+  );
+
 export const denyPairing = (token: string, requestId: string): Promise<{ ok: boolean }> =>
   unwrap(sdk.denyPairing({ ...scoped(token), path: { requestId } }));
 

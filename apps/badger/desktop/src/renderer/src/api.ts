@@ -18,7 +18,9 @@ import { resolveInitialApiBaseUrl } from "./lib/apiBaseUrl";
 import { metadataClient } from "./lib/metadataTickets";
 
 setApiBaseUrl(resolveInitialApiBaseUrl(import.meta.env));
-const DESKTOP_CLIENT_TYPE = "client-web";
+// `<app>-<deviceType>` as Parrot's `parrot-desktop`: only such a session may hand the library key to the sister app on
+// this computer (ACCT-PAIR-07); the Devices list already reads it as a computer.
+const DESKTOP_CLIENT_TYPE = "badger-desktop";
 setApiClientType(DESKTOP_CLIENT_TYPE);
 // REL-CD-29: the window states the same build main does (read once by the preload).
 setClientIdentity(typeof window === "undefined" ? null : (window.sf?.clientIdentity ?? null));
