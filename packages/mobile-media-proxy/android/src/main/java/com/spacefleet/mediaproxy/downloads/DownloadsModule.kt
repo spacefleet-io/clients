@@ -97,6 +97,20 @@ class DownloadsModule(private val reactContext: ReactApplicationContext) :
   }
 
   @ReactMethod
+  fun removeAll(promise: Promise) {
+    run(promise) {
+      engine.removeAll()
+      true
+    }
+  }
+
+  /** `{ items: [{ itemId, bytes, objectCount, savedAt }], totalBytes }`: complete downloads only (OFFL-MANAGE-01). */
+  @ReactMethod
+  fun listItems(promise: Promise) {
+    run(promise) { engine.listItems().toJson().toString() }
+  }
+
+  @ReactMethod
   fun resume(promise: Promise) {
     run(promise) {
       engine.resume()

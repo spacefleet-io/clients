@@ -156,14 +156,20 @@ describe("electron-builder config", () => {
     const version = JSON.parse(readFileSync(join(import.meta.dirname, "..", "package.json"), "utf8")).version;
     const relations = { deb: linux.deb.fpm, rpm: linux.rpm.fpm, pacman: linux.pacman.fpm };
     console.info(`[package-targets] legacy relations ${JSON.stringify(relations)}`);
+    // REL-UPD-07: every native package also carries its root update helper and polkit action, last in fpm
+    const updateFiles = [
+      expect.stringMatching(/\/spacebadger-system-update=\/usr\/lib\/spacebadger\/system-update$/),
+      expect.stringMatching(/\/io\.spacefleet\.spacebadger\.update\.policy=\/usr\/share\/polkit-1\/actions\/io\.spacefleet\.spacebadger\.update\.policy$/),
+    ];
     expect(relations).toEqual({
-      deb: ["--conflicts", "badger (<< 1)", "--replaces", "badger (<< 1)"],
+      deb: ["--conflicts", "badger (<< 1)", "--replaces", "badger (<< 1)", ...updateFiles],
       rpm: [
         "--replaces", "badger < 1", "--provides", `badger = ${version}`, "--rpm-posttrans", expect.stringMatching(/rpm-posttrans\.sh$/),
         // no /usr/lib/.build-id links: Parrot ships the same Electron binaries, rpm would refuse both together
         "--rpm-rpmbuild-define", "_build_id_links none",
+        ...updateFiles,
       ],
-      pacman: ["--conflicts", "badger<1", "--replaces", "badger<1", "--provides", `badger=${version}`],
+      pacman: ["--conflicts", "badger<1", "--replaces", "badger<1", "--provides", `badger=${version}`, ...updateFiles],
     });
     const patterns = PACKAGE_TARGETS["linux-x64"].artifactPatterns;
     const built = ["Badger-1.2.3.AppImage", "Badger-1.2.3-amd64.deb", "Badger-1.2.3-x86_64.rpm", "Badger-1.2.3-x64.pacman", "latest-linux.yml"];

@@ -21,6 +21,10 @@ module.exports = {
     "@space/mobile-media-volume": {
       root: path.resolve(__dirname, "../../../packages/mobile-media-volume"),
     },
+    // Same-device sign-in with Badger (ACCT-PAIR-07).
+    "@space/mobile-sibling": {
+      root: path.resolve(__dirname, "../../../packages/mobile-sibling"),
+    },
     ...(appleTv
       ? Object.fromEntries(appleTvExcluded.map((name) => [name, { platforms: { ios: null } }]))
       : {}),

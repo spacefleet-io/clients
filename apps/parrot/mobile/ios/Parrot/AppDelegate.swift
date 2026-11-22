@@ -3,6 +3,7 @@ import UIKit
 import React
 import React_RCTAppDelegate
 import ReactAppDependencyProvider
+import SiblingSignIn
 
 // Parrot's iPhone app (PLAT-MOBILE-07): the same JS app as Android (index.js registers "Parrot"). Playback is the
 // AudioPlayback pod, the local stream proxy and the kept-songs downloads are the MediaProxy pod; both are autolinked.
@@ -32,7 +33,12 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     #endif
 
     window = UIWindow(frame: UIScreen.main.bounds)
-    factory.startReactNative(withModuleName: "Parrot", in: window, launchOptions: launchOptions)
+    // A cold start on a same-device sign-in link (ACCT-PAIR-07): the link goes to SiblingSignIn below, never to JS.
+    factory.startReactNative(
+      withModuleName: "Parrot", in: window, launchOptions: SiblingLinks.launchOptionsWithoutSiblingLink(launchOptions))
+    // Badger on this phone asking to sign in with Parrot's account (ACCT-PAIR-07): the confirm screen is its own
+    // React root, shown over the app by SiblingSignIn.
+    SiblingLinks.makeApprovalView = { [weak factory] in factory?.rootViewFactory.view(withModuleName: "SiblingApproval") }
     NSLog("[parrot.app] started React Native (bundle %@)", Bundle.main.bundleIdentifier ?? "?")
     return true
   }
@@ -50,12 +56,14 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
   #endif
 
-  // parrot://auth/provider (ACCT-SIGNIN-05): hand the URL to JS Linking.
+  // parrot://auth/provider (ACCT-SIGNIN-05): hand the URL to JS Linking. Same-device sign-in links (ACCT-PAIR-07,
+  // parrot://sibling-approval…) stay native: SiblingSignIn takes them, or swallows them from any app but Badger.
   func application(
     _ app: UIApplication,
     open url: URL,
     options: [UIApplication.OpenURLOptionsKey: Any] = [:]
   ) -> Bool {
+    if SiblingLinks.handleOpenURL(url, options: options) { return true }
     return RCTLinkingManager.application(app, open: url, options: options)
   }
 

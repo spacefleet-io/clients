@@ -65,6 +65,8 @@ android {
         versionName parrotVersionName
         // Release policy (res/xml/network_security_config.xml): cleartext only to the on-device media proxy.
         manifestPlaceholders = [networkSecurityConfig: "@xml/network_security_config"]
+        // The sister app named in <queries> (ACCT-PAIR-07) carries the same test suffix.
+        manifestPlaceholders += [sfApplicationIdSuffix: (findProperty("sfApplicationIdSuffix") ?: "").toString()]
         ndk {
             // The ABI list lives in gradle.properties only (Play and Google-free builds share it).
             abiFilters(*findProperty("reactNativeArchitectures").toString().split(","))
