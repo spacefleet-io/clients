@@ -83,11 +83,14 @@ targets:
           PRODUCT_BUNDLE_IDENTIFIER: io.spacefleet.parrot.debug
           PARROT_DISPLAY_NAME: Parrot Dev
           PARROT_ALLOW_CLEARTEXT: YES
+          # ACCT-PAIR-07: same-device sign-in links (Info.plist); Debug talks to Debug, never to the TestFlight app.
+          SF_SIBLING_URL_SCHEME: parrot-dev
           SWIFT_OPTIMIZATION_LEVEL: "-Onone"
         Release:
           PRODUCT_BUNDLE_IDENTIFIER: io.spacefleet.parrot
           PARROT_DISPLAY_NAME: Parrot
           PARROT_ALLOW_CLEARTEXT: NO
+          SF_SIBLING_URL_SCHEME: parrot
     postCompileScripts:
       - name: Bundle React Native code and images
         inputFiles:
@@ -179,13 +182,16 @@ targets:
             /usr/libexec/PlistBuddy -c "Set :NSAppTransportSecurity:NSAllowsArbitraryLoads true" "$INFO_PLIST"
             /usr/libexec/PlistBuddy -c "Delete :NSAppTransportSecurity:NSAllowsLocalNetworking" "$INFO_PLIST" || true
           fi
-  # The playback logic of the AudioPlayback pod (limiter, up-next order) as plain XCTests: no app host, no pods.
+  # Plain XCTests, no app host, no pods: the playback logic of the AudioPlayback pod (limiter, up-next order) and the
+  # same-device sign-in rules of the SiblingSignIn pod (ACCT-PAIR-07).
   ParrotTests:
     type: bundle.unit-test
     platform: iOS
     sources:
       - path: ../../../../packages/mobile-audio-playback/ios/AudioPlayback/Core
       - path: ../../../../packages/mobile-audio-playback/ios/Tests
+      - path: ../../../../packages/mobile-sibling/ios/SiblingSignIn/Core
+      - path: ../../../../packages/mobile-sibling/ios/Tests
     settings:
       base:
         CODE_SIGN_STYLE: Automatic

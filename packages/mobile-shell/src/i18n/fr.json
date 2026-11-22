@@ -290,6 +290,36 @@
       "playlist": "Playlist"
     }
   },
+  "offlineContent": {
+    "entry": "Gérer le contenu hors ligne",
+    "title": "Contenu hors ligne",
+    "back": "Retour",
+    "totalSuffix": "conservés hors ligne",
+    "unknownArtist": "Artiste inconnu",
+    "removeAll": "Tout retirer",
+    "confirmCancel": "Annuler",
+    "confirmRemove": "Tout retirer",
+    "removeFailed": "Impossible de le retirer. Réessaie.",
+    "expand": "Afficher ou masquer le contenu de {{name}}",
+    "remove": "Retirer {{name}} de ce téléphone",
+    "season": "Saison {{n}}",
+    "episodeNumber": "S{{season}} É{{episode}}",
+    "unknownTitle": "Titre absent de la médiathèque",
+    "unknownEpisode": "Épisode absent de la médiathèque",
+    "unknown": "Absent de la médiathèque",
+    "badger": {
+      "entryDescription": "Voir ce qui est gardé sur ce téléphone et libérer de l'espace",
+      "confirmTitle": "Retirer tout ce qui est gardé sur ce téléphone ?",
+      "confirmBody": "Tous les films et épisodes téléchargés sur ce téléphone seront supprimés. Tu pourras les télécharger de nouveau plus tard.",
+      "empty": "Rien n'est gardé sur ce téléphone. Touche Télécharger sur un film ou un épisode pour le regarder sans connexion."
+    },
+    "parrot": {
+      "entryDescription": "Voir ce qui est conservé hors ligne sur ce téléphone et libérer de l'espace",
+      "confirmTitle": "Retirer tout ce qui est conservé hors ligne ?",
+      "confirmBody": "Tous les albums, playlists et morceaux conservés hors ligne sur ce téléphone seront retirés. Tu pourras de nouveau les conserver hors ligne plus tard.",
+      "empty": "Rien n'est encore conservé hors ligne sur ce téléphone. Touche Conserver hors ligne sur un album, une playlist ou un morceau pour l'écouter sans connexion."
+    }
+  },
   "downloads": {
     "title": "Téléchargements",
     "back": "Retour",
@@ -1387,5 +1417,18 @@
       "apk": "Télécharger la nouvelle version",
       "store": "Ouvrir la boutique"
     }
+  },
+  "sibling": {
+    "title": "Continuer avec votre compte {{other}}",
+    "body": "{{other}} est connecté sur ce téléphone. Rien à saisir.",
+    "button": "Continuer : {{email}}",
+    "otherAccount": "Utiliser un autre compte",
+    "waiting": "En attente de {{other}}…",
+    "waitingNote": "Autorisez-le dans {{other}}, puis revenez.",
+    "cancel": "Annuler",
+    "failure": "{{other}} n'a pas pu vous connecter. Connectez-vous autrement.",
+    "askTitle": "Autoriser {{app}} à utiliser votre compte SpaceFleet ?",
+    "askBody": "{{app}}, sur ce téléphone, sera connecté en tant que {{email}}, avec sa propre copie de votre clé de médiathèque. Vous pourrez le déconnecter à tout moment dans Appareils.",
+    "allow": "Autoriser"
   }
 }

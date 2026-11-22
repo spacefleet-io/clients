@@ -31,7 +31,9 @@ import { translator } from "../src/renderer/src/i18n";
 const SECRET_EMAIL = "alice.secret@example.com";
 const SECRET_PATH = "/home/alice/Music/Private Album/03 Hidden Track.flac";
 
-const makeSender = (log = createErrorLog()) => {
+const REQUEST_ID = "3f2c9a1e-7b4d-4e8f-9a0b-1c2d3e4f5a6b";
+
+const makeSender = (log = createErrorLog(), requestIds: string[] = []) => {
   const sent: Array<{ token: string; body: FeedbackInput }> = [];
   const lines: string[] = [];
   const sender = createDesktopFeedbackSender({
@@ -40,6 +42,7 @@ const makeSender = (log = createErrorLog()) => {
     errorLog: log,
     appVersion: "1.2.3",
     platform: "linux 7.3.1-1-cachyos-with-a-very-long-kernel-name",
+    requestIds: () => requestIds,
     send: async (token, body) => {
       sent.push({ token, body });
       return { id: "fb_1" };
@@ -60,7 +63,17 @@ describe("@req UX-SUP-05[parrot] @req UX-SUP-02[parrot] @req REL-LOG-06[parrot] 
     expect(result).toEqual({ ok: true });
     expect(sent).toHaveLength(1);
     // The API keeps 32 characters of the platform.
-    expect(sent[0]!.body).toEqual({ message: "Love it", app: "parrot-desktop", appVersion: "1.2.3", platform: "linux 7.3.1-1-cachyos-with-a-ver", log: null });
+    expect(sent[0]!.body).toEqual({ message: "Love it", app: "parrot-desktop", appVersion: "1.2.3", platform: "linux 7.3.1-1-cachyos-with-a-ver", log: null, requestIds: [] });
+  });
+
+  /** @req UX-SUP-07[parrot] */
+  it("carries the request ids of the last failed API calls, ticked or not, and says how many it sent", async () => {
+    const { sender, sent, lines, dump } = makeSender(createErrorLog(), [REQUEST_ID]);
+    await sender({ message: "Sync broke", attachLog: false });
+    dump("request ids");
+    expect(sent[0]!.body.requestIds).toEqual([REQUEST_ID]);
+    expect(sent[0]!.body.log).toBeNull();
+    expect(lines).toContain("[feedback] sent (log not attached, 1 request ids)");
   });
 
   it("ticked: the scrubbed log goes along, without the email or the file path", async () => {
@@ -108,6 +121,7 @@ describe("@req UX-SUP-05[parrot] @req UX-SUP-02[parrot] @req REL-LOG-06[parrot] 
       errorLog: createErrorLog(),
       appVersion: "1.2.3",
       platform: "linux",
+      requestIds: () => [],
       send: sendSpy,
       log: () => undefined,
       fail: () => undefined,
@@ -125,6 +139,7 @@ describe("@req UX-SUP-05[parrot] @req UX-SUP-02[parrot] @req REL-LOG-06[parrot] 
       errorLog: log,
       appVersion: "1.2.3",
       platform: "linux",
+      requestIds: () => [],
       send: async () => Promise.reject(new Error("offline")),
       log: (line) => lines.push(line),
       fail: (line) => lines.push(`FAIL ${line}`),

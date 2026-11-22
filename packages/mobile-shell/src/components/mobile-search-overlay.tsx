@@ -14,8 +14,11 @@ import { useMobileShellTheme } from "../theme";
 
 export type MobileSearchGroup<T> = { id: string; index: FuzzyIndex<T> };
 
-/** What a result row says: its title, a second line (year, artist, show and episode number) and its picture. */
-export type MobileSearchRow = { key: string; title: string; subtitle?: string; art?: React.ReactNode };
+/**
+ * What a result row says: its title, a second line (year, artist, show and episode number) and its picture. A row with
+ * `onLongPress` (Parrot: a song's sheet, with Add to queue, PAR-CARD-02) runs it when held, once the overlay has closed.
+ */
+export type MobileSearchRow = { key: string; title: string; subtitle?: string; art?: React.ReactNode; onLongPress?: () => void };
 
 export type MobileSearchOverlayProps<T> = {
   visible: boolean;
@@ -107,6 +110,11 @@ export const MobileSearchOverlay = <T,>({ visible, onClose, strings, groups, des
     onClose();
     onSelect(item, groupId);
   };
+  const hold = (row: MobileSearchRow, groupId: string, rank: number) => {
+    console.info("search-overlay.hold", JSON.stringify({ group: groupId, rank, length: query.length }));
+    onClose();
+    row.onLongPress?.();
+  };
 
   const trimmed = query.trim();
   const message = trimmed === "" ? strings.hint : loading && groups.length === 0 ? null : results.length === 0 && deferredQuery === query ? strings.empty : null;
@@ -169,6 +177,7 @@ export const MobileSearchOverlay = <T,>({ visible, onClose, strings, groups, des
                         accessibilityRole="button"
                         accessibilityLabel={row.subtitle ? `${row.title}, ${row.subtitle}` : row.title}
                         onPress={() => select(hit.item, group.id, rank)}
+                        onLongPress={row.onLongPress ? () => hold(row, group.id, rank) : undefined}
                         style={({ pressed }) => [styles.row, pressed && { backgroundColor: theme.colors.surface }]}
                       >
                         {row.art !== undefined ? <View style={styles.art}>{row.art}</View> : null}

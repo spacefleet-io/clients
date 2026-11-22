@@ -5166,6 +5166,18 @@ export type GetPairingRequestResponses = {
         sealedKey: SealedKey;
         clientType: string;
     } | {
+        status: 'approved';
+        /**
+         * Session token of the new device.
+         */
+        token: string;
+        user: {
+            id: string;
+            email: string;
+        };
+        localKey: true;
+        clientType: string;
+    } | {
         status: 'key_approved';
         user: {
             id: string;
@@ -5266,7 +5278,11 @@ export type LookupPairingResponse = LookupPairingResponses[keyof LookupPairingRe
 export type ApprovePairingData = {
     body: {
         /**
-         * Required: a sealed key `{ v: 1, epk, iv, ct }` with base64 fields; otherwise 400 `invalid_sealed_key`.
+         * Same-device sign-in (ACCT-PAIR-07): approve with no key; the approving app hands the sealed key to its sister app on this device itself. Replaces `sealedKey`.
+         */
+        localKey?: true;
+        /**
+         * Required unless `localKey`: a sealed key `{ v: 1, epk, iv, ct }` with base64 fields; otherwise 400 `invalid_sealed_key`.
          */
         sealedKey?: unknown;
         /**
@@ -5294,7 +5310,7 @@ export type ApprovePairingData = {
 
 export type ApprovePairingErrors = {
     /**
-     * The sealed key is missing or malformed.
+     * The sealed key is missing or malformed, or sent together with `localKey`.
      */
     400: {
         error: 'invalid_request' | 'invalid_sealed_key';
@@ -5307,10 +5323,10 @@ export type ApprovePairingErrors = {
         method?: 'email' | 'totp';
     };
     /**
-     * The account is blocked or scheduled for deletion, or a personal token was used on a route that needs a login session.
+     * The account is blocked or deleted, a personal token was used, or (`localKey`) the request is not the sister app's sign-in on this device type.
      */
     403: {
-        error: 'account_blocked' | 'account_deleted' | 'personal_token_not_allowed';
+        error: 'account_blocked' | 'account_deleted' | 'personal_token_not_allowed' | 'pairing_local_key_refused';
     };
     /**
      * Unknown, expired or already used request or code.
@@ -6498,6 +6514,10 @@ export type SendFeedbackData = {
          * The app's error log, only when the user chose to attach it. 200 KB at most.
          */
         log?: string | null;
+        /**
+         * UX-SUP-07: the `x-request-id` of each of the app's last failed API calls (answers of 400 or more), newest last; at most 10 UUIDs. Ids only: never a URL, a body or an address.
+         */
+        requestIds?: Array<string> | null;
     };
     path?: never;
     query?: never;
@@ -6510,7 +6530,7 @@ export type SendFeedbackErrors = {
      */
     400: {
         error: 'invalid_feedback';
-        field: 'message' | 'app' | 'appVersion' | 'platform' | 'deviceModel' | 'log';
+        field: 'message' | 'app' | 'appVersion' | 'platform' | 'deviceModel' | 'log' | 'requestIds';
     } | {
         error: 'invalid_request';
     };

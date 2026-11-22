@@ -14,6 +14,7 @@ import {
   TitleDetails,
 } from "@space/shared/api";
 import { isLibraryOpStreamSwitch, requireLibraryUpdate } from "@space/shared/appVersion";
+import { LIBRARY_SYNC_STUCK_AFTER_409S, LIBRARY_SYNC_STUCK_RETRY_MS, libraryRefusalFields } from "@space/shared/apiFailure";
 import { fetchLibraryOpsPage, type LibraryOpsPage } from "./library/opsPage";
 import { readLibraryMeta } from "./library/libraryReads";
 import { inlineBlobParams, PACKED_LIST_SELECT, packedListFromRow, packedRowWithBytes } from "./library/packedChunkRows";
@@ -579,6 +580,10 @@ export class LibraryDb {
    * ops stay in pending_ops.json for the next signed-in library.
    */
   private opsFlushUnauthorized = false;
+  /** LIB-SYNC-16: op uploads in a row the server refused with 409; reset by an accepted op. */
+  private opsFlushConsecutive409 = 0;
+  /** LIB-SYNC-17: while stuck behind 409s, no op upload starts before this time (ms since epoch). */
+  private opsFlushStuckUntil = 0;
   /** Set while a pending snapshot is being published; a second flush would hash and upload it all again. */
   private flushPendingInFlight: Promise<void> | null = null;
   /**
@@ -1114,6 +1119,11 @@ export class LibraryDb {
       });
     } catch (error) {
       if (error instanceof ApiError && error.status === 409) {
+        // REL-LOG-31: another device created the library first; say why before opening the server's copy.
+        console.warn(
+          "library.bootstrap.refused",
+          JSON.stringify(libraryRefusalFields(error, { baseVersion: 0, consecutive409: 1 }))
+        );
         const { remote, manifestBytes } = await fetchRemoteManifestWithRetry(token);
         return await withSnapshotLock(async () => {
           // Versioned dual reader — see the remote-open site above.
@@ -2414,6 +2424,12 @@ export class LibraryDb {
   private async flushOps(options: { insideSync?: boolean } = {}) {
     if (!this.syncEnabled || this.opsFlushInFlight || this.opsFlushUnauthorized) return;
     if (!this.pendingOps.length) return;
+    // LIB-SYNC-17: stuck behind repeated 409s, only the scheduled slow retry uploads (a sync or a write does not
+    // restart the same refused upload at full pace); the retry stays scheduled.
+    if (Date.now() < this.opsFlushStuckUntil) {
+      this.scheduleOpsFlush(this.opsFlushStuckUntil - Date.now());
+      return;
+    }
     this.opsFlushInFlight = true;
     // LIB-FMT-13: one re-read of meta + conversion + resend per flush when the server says the account's op stream
     // differs from the one this write declared; a second refusal waits for the next flush.
@@ -2438,20 +2454,38 @@ export class LibraryDb {
             this.version = Math.max(this.version, result.version);
           }
           this.pendingOps.shift();
+          this.opsFlushConsecutive409 = 0;
+          this.opsFlushStuckUntil = 0;
           await this.noteSnapshotOps([op], [encrypted.length]);
           await savePendingOps(this.pendingOps);
           await this.persistCursor("own_op");
         } catch (error) {
+          const refused409 = error instanceof ApiError && error.status === 409;
+          if (refused409) this.opsFlushConsecutive409 += 1;
+          // REL-LOG-31 / LIB-SYNC-16: why the server refused (code, request id, versions), never the op or its id.
+          const refusal = libraryRefusalFields(error, {
+            baseVersion: this.remoteVersion,
+            consecutive409: refused409 ? this.opsFlushConsecutive409 : 0,
+          });
           console.warn(
             "library.ops.flush.error",
             JSON.stringify({
-              opId: op.id,
               type: op.type,
-              status: error instanceof ApiError ? error.status : null,
+              ...refusal,
               error: errorMessage(error),
               pendingOps: this.pendingOps.length,
             })
           );
+          if (refused409 && this.opsFlushConsecutive409 >= LIBRARY_SYNC_STUCK_AFTER_409S) {
+            // LIB-SYNC-17: slow down for every refusal of the streak; LIB-SYNC-16: say it is stuck once per streak.
+            this.opsFlushStuckUntil = Date.now() + LIBRARY_SYNC_STUCK_RETRY_MS;
+            if (this.opsFlushConsecutive409 === LIBRARY_SYNC_STUCK_AFTER_409S) {
+              console.warn(
+                "library.ops.flush.stuck",
+                JSON.stringify({ ...refusal, pendingOps: this.pendingOps.length, retryInMs: LIBRARY_SYNC_STUCK_RETRY_MS })
+              );
+            }
+          }
           if (error instanceof ApiError && error.status === 401) {
             this.opsFlushUnauthorized = true;
             debugLog("library.ops.flush.unauthorized", { pendingOps: this.pendingOps.length });
@@ -2470,7 +2504,7 @@ export class LibraryDb {
             await this.adoptTargetOpStreamVersion(meta);
             console.warn(
               "library.v4.write_retry",
-              JSON.stringify({ opId: op.id, declared, now: this.writtenOpStreamVersion(), packed: this.packedPlayback })
+              JSON.stringify({ declared, now: this.writtenOpStreamVersion(), packed: this.packedPlayback, requestId: error instanceof ApiError ? error.requestId : null })
             );
             if (this.writtenOpStreamVersion() !== declared) continue;
             break;
@@ -2484,7 +2518,8 @@ export class LibraryDb {
     } finally {
       this.opsFlushInFlight = false;
       if (this.pendingOps.length > 0) {
-        this.scheduleOpsFlush(2000);
+        const stuckFor = this.opsFlushStuckUntil - Date.now();
+        this.scheduleOpsFlush(stuckFor > 0 ? stuckFor : 2000);
       }
     }
     await this.maybeCompactAfterOps().catch(() => undefined);
@@ -2632,7 +2667,11 @@ export class LibraryDb {
       const serverVersion = typeof error.payload.version === "number" ? error.payload.version : null;
       console.warn(
         "library.snapshot.version_conflict",
-        JSON.stringify({ where: publish.where, baseVersion, serverVersion, coveredVersion: pending.coveredVersion ?? null })
+        JSON.stringify({
+          where: publish.where,
+          ...libraryRefusalFields(error, { baseVersion, consecutive409: 1 }),
+          coveredVersion: pending.coveredVersion ?? null,
+        })
       );
       const retryVersion = this.snapshotBaseVersion(pending, serverVersion, publish.where);
       if (retryVersion === baseVersion) throw error;
@@ -3571,12 +3610,14 @@ export class LibraryDb {
       await this.resetSnapshotOps(result.version);
       await this.runLibraryGc();
     } catch (error) {
+      const refused409 = error instanceof ApiError && error.status === 409;
       console.warn(
         "library.db.flush.failed",
         JSON.stringify({
-          snapshotId: this.pendingSync?.snapshotId ?? null,
-          baseVersion: this.pendingSync?.baseVersion ?? null,
-          status: error instanceof ApiError ? error.status : null,
+          ...libraryRefusalFields(error, {
+            baseVersion: this.pendingSync?.baseVersion ?? null,
+            consecutive409: refused409 ? 1 : 0,
+          }),
           error: errorMessage(error),
         })
       );

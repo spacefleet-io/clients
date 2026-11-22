@@ -32,7 +32,7 @@ describe("send feedback (UX-SUP-05)", () => {
       return "secret";
     });
     console.info("feedback.no-log", body);
-    expect(body).toEqual({ message: "Play froze", ...device, log: null });
+    expect(body).toEqual({ message: "Play froze", ...device, log: null, requestIds: [] });
     expect(logRead).toBe(false);
   });
 
@@ -40,6 +40,15 @@ describe("send feedback (UX-SUP-05)", () => {
     const body = buildFeedback({ message: "Crash", attachLog: true }, device, () => "line one\nline two");
     console.info("feedback.with-log", body);
     expect(body?.log).toBe("line one\nline two");
+  });
+
+  /** @req UX-SUP-07[badger-mobile,parrot] */
+  it("always carries the request ids of the app's last failed API calls, with or without the log", () => {
+    const ids = ["3f2c9a1e-7b4d-4e8f-9a0b-1c2d3e4f5a6b"];
+    const body = buildFeedback({ message: "Sync broke", attachLog: false }, device, () => "secret", () => ids);
+    console.info("feedback.request-ids", body);
+    expect(body?.requestIds).toEqual(ids);
+    expect(body?.log).toBeNull();
   });
 
   it("caps the message at the API's limit", () => {

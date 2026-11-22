@@ -8,6 +8,7 @@ import { PRODUCTION_API_BASE_URL } from "@space/shared/productionApi";
 import { createAsyncStoragePlatformBridge, type MobilePlatformBridge } from "@space/mobile-shell/platform";
 import { currentMobileBuildEnv, isMobileDevBuild, type MobileBuildEnv } from "./devBuild";
 import { scopeLogger } from "@space/mobile-shell/logger";
+import { logApiFailuresOnDevice } from "@space/mobile-shell/apiFailureLog";
 
 /** The local dev stack's API port (`bun run dev:core:full`). */
 export const DEV_API_PORT = 3000;
@@ -68,6 +69,8 @@ setApiClientType(Platform.isTV ? "badger-tv" : "client-mobile");
 // REL-CD-29: every call says which build is calling (`badger/android/0.3.1+play`), so an outdated one is told to
 // update, and installs are counted per store.
 setClientIdentity(deviceClientIdentity("badger"));
+// REL-LOG-31: a local line per failed API call, with the server's request id.
+logApiFailuresOnDevice();
 // LIB-FMT-13: this build reads op stream 4, so a 426 for the account's switch to it is the switch (the library
 // converts and retries), never "please update" for the update latch.
 setLibraryReadOpStreamVersion(READ_OP_STREAM_VERSION); // op-stream: read

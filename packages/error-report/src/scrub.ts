@@ -28,14 +28,63 @@ const UUID_PATTERN = /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]
 const HEX_ID_PATTERN = /\b(?=[0-9a-f]*\d)(?=[0-9a-f]*[a-f])[0-9a-f]{8,}\b/gi;
 const LONG_NUMBER_PATTERN = /\b\d{4,}\b/g;
 
+// What a word of an error message may look like and still be kept (REL-LOG-06). Anything else could be part of an
+// unquoted title ("Cannot open Blade Runner 2049 (2017) 2160p"), so it goes.
+const PLACEHOLDER_WORD = /^<[a-z]+>$/;
+const SHORT_NUMBER_WORD = /^\d{1,3}$/;
+// Lowercase words and identifiers: "properties", "undefined", "process.env", "is_ready".
+const LOWERCASE_WORD = /^[\p{Ll}_$][\p{Ll}_$.-]*$/u;
+// Error codes: ENOENT, SQLITE_BUSY, HTTP, JSON.
+const CODE_WORD = /^[A-Z][A-Z_]+$/;
+// Code identifiers with a capital inside: TypeError, readFile, LibraryVersionDowngradeError, foo.barBaz.
+const IDENTIFIER_WORD = /^[A-Za-z_$][A-Za-z_$.]*[a-z][A-Z][A-Za-z_$.]*$/;
 /**
- * Removes everything from an error message that could name a file, a title, a
- * place, an address or an account. Quoted text goes as a whole: a title in an
- * error ("Cannot play 'Blade Runner'") cannot be told apart from an identifier
- * by pattern, and the stack already says where the error happened.
+ * Capitalised words kept when they open a clause (the message's first word, or the first after `:` `.` `!` `?`):
+ * how error messages start. Anywhere else a capitalised word goes, as titles are capitalised.
  */
-export function scrubText(text: string): string {
-  const scrubbed = text
+const CLAUSE_STARTS: Record<string, true> = Object.fromEntries(
+  [
+    "A", "An", "The", "This", "No", "Not", "Cannot", "Could", "Can", "Did", "Does", "Do", "Is", "Was", "Has", "Must", "Should",
+    "Failed", "Failure", "Unable", "Unexpected", "Unknown", "Invalid", "Missing", "Expected", "Required", "Unsupported",
+    "Error", "Exception", "Uncaught", "Unhandled", "Network", "Request", "Response", "Timeout", "Timed", "Permission",
+    "Access", "Maximum", "Out", "Object", "Attempted", "Load", "Invariant", "Value", "Native", "Module", "Internal",
+    "Aborted", "Too", "Connection", "Server", "Database", "Storage", "Operation", "Already", "Only", "Rejected", "Refused",
+    "Bad", "Empty", "Reading", "Writing", "Stream", "Socket", "Render", "Rendered", "Encountered", "Status", "Quota",
+    "Memory", "Version", "Sync", "Key",
+  ].map((word) => [word, true])
+);
+const CLAUSE_END = /[:.!?]$/;
+
+/** Replaces every word whose shape is not allowed with `<redacted>`, a run of them with one. */
+function redactUnknownWords(text: string): string {
+  let clauseStart = true;
+  const out = text.split(/(\s+)/).map((part) => {
+    if (!part || /^\s+$/.test(part)) {
+      if (part.includes("\n")) clauseStart = true;
+      return part;
+    }
+    const [, lead = "", core = "", trail = ""] = /^([([{]*)(.*?)([)\]},;:.!?]*)$/s.exec(part) ?? [];
+    const keep =
+      core === "" ||
+      PLACEHOLDER_WORD.test(core) ||
+      SHORT_NUMBER_WORD.test(core) ||
+      LOWERCASE_WORD.test(core) ||
+      CODE_WORD.test(core) ||
+      IDENTIFIER_WORD.test(core) ||
+      (clauseStart && Object.hasOwn(CLAUSE_STARTS, core));
+    clauseStart = CLAUSE_END.test(trail);
+    return keep ? part : `${lead}<redacted>${trail}`;
+  });
+  return out.join("").replace(/<redacted>(?:\s+<redacted>)+/g, "<redacted>");
+}
+
+/**
+ * Removes everything from a string that could name a file, a place, an address or an account, by pattern.
+ * Quoted text goes as a whole: a title in an error ("Cannot play 'Blade Runner'") cannot be told apart from an
+ * identifier by pattern, and the stack already says where the error happened.
+ */
+const replacePatterns = (text: string): string =>
+  text
     .replace(URL_PATTERN, "<url>")
     .replace(QUOTED_PATTERN, "<redacted>")
     .replace(WINDOWS_PATH_PATTERN, "<path>")
@@ -48,7 +97,21 @@ export function scrubText(text: string): string {
     .replace(IPV4_PATTERN, "<ip>")
     .replace(HEX_ID_PATTERN, "<id>")
     .replace(LONG_NUMBER_PATTERN, "<n>");
-  return scrubbed.length > MAX_MESSAGE_LENGTH ? `${scrubbed.slice(0, MAX_MESSAGE_LENGTH)}...` : scrubbed;
+
+const capLength = (text: string): string =>
+  text.length > MAX_MESSAGE_LENGTH ? `${text.slice(0, MAX_MESSAGE_LENGTH)}...` : text;
+
+/** A code string (a function or class name, a release): the patterns only, as code is not English. */
+const scrubCode = (text: string): string => capLength(replacePatterns(text));
+
+/**
+ * Removes everything from free text (an error message, a log line) that could name a file, a title, a place, an
+ * address or an account. After the patterns, an unquoted title cannot be found by pattern, so only words shaped
+ * like error text are kept: lowercase words, error codes, code identifiers, short numbers and the fixed words an
+ * error message starts a clause with.
+ */
+export function scrubText(text: string): string {
+  return capLength(redactUnknownWords(replacePatterns(text)));
 }
 
 /**
@@ -83,7 +146,7 @@ function scrubFrame(frame: unknown): Json | undefined {
   if (!isRecord(frame)) return undefined;
   const out: Json = {};
   const fn = asString(frame.function);
-  if (fn) out.function = scrubText(fn).slice(0, 120);
+  if (fn) out.function = scrubCode(fn).slice(0, 120);
   const filename = asString(frame.filename) ?? asString(frame.abs_path);
   if (filename) {
     out.filename = normalizeScriptPath(filename);
@@ -104,7 +167,7 @@ function scrubException(exception: unknown): Json | undefined {
   if (!isRecord(exception)) return undefined;
   const out: Json = {};
   const type = asString(exception.type);
-  if (type) out.type = scrubText(type).slice(0, 80);
+  if (type) out.type = scrubCode(type).slice(0, 80);
   const value = asString(exception.value);
   if (value) out.value = scrubText(value);
   const mechanism = pick(exception.mechanism, ["type", "handled"]);
@@ -169,7 +232,7 @@ export function scrubErrorEvent<T extends object>(event: T): T | null {
   const out: Json = {};
   for (const key of ["event_id", "platform", "level", "release", "dist", "environment"] as const) {
     const value = asString(source[key]);
-    if (value) out[key] = key === "release" || key === "dist" || key === "environment" ? scrubText(value) : value;
+    if (value) out[key] = key === "release" || key === "dist" || key === "environment" ? scrubCode(value) : value;
   }
   const timestamp = asNumber(source.timestamp);
   if (timestamp !== undefined) out.timestamp = timestamp;

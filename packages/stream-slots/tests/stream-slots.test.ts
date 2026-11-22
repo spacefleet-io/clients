@@ -4,6 +4,7 @@
  * `StreamSlot` controller (20 s heartbeat, takeover callback, expiry restart, stop) on fake timers, and the prompt
  * text in every language. The API side is proven by the API's own integration tests.
  */
+import { setClientIdentity } from "@space/shared/appVersion";
 import { describe, expect, it, vi } from "vitest";
 import {
   STREAM_LIMITS,
@@ -106,6 +107,31 @@ describe("stream slots client", () => {
     api.queue("POST /playback/streams/s1/heartbeat", { status: 503 });
     await expect(client.heartbeat("s1")).rejects.toBeInstanceOf(StreamSlotsError);
     await expect(client.stopStream("s1")).rejects.toMatchObject({ status: 0, operation: "stop" });
+  });
+
+  it("@req REL-CD-29 @req REL-LOG-28 states the process's build and app on every call, and nothing without an identity", async () => {
+    const api = fakeApi();
+    const client = createStreamSlotsClient({ baseUrl: "https://api.test", getToken: () => "tok", fetch: api.fetchImpl });
+    setClientIdentity({ app: "parrot", platform: "desktop", version: "0.1.3+flatpak" });
+    try {
+      api.queue("POST /playback/streams", started("s1"));
+      api.queue("POST /playback/streams/s1/heartbeat", { status: 200, body: { expiresInSeconds: 60 } });
+      api.queue("DELETE /playback/streams/s1", { status: 204 });
+      await client.startStream({ app: "parrot" });
+      await client.heartbeat("s1");
+      await client.stopStream("s1");
+      console.info(`[${SUITE}] identity headers ${JSON.stringify(api.requests.map((request) => request.headers))}`);
+      for (const request of api.requests) {
+        expect(request.headers).toMatchObject({ "x-space-client": "parrot/desktop/0.1.3+flatpak", "x-space-app": "parrot", Authorization: "Bearer tok" });
+      }
+    } finally {
+      setClientIdentity(null);
+    }
+    api.queue("POST /playback/streams/s1/heartbeat", { status: 200, body: { expiresInSeconds: 60 } });
+    await client.heartbeat("s1");
+    const last = api.requests.at(-1)!.headers;
+    expect(last["x-space-client"]).toBeUndefined();
+    expect(last["x-space-app"]).toBeUndefined();
   });
 });
 

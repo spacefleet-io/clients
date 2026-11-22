@@ -82,8 +82,8 @@ export const AlbumScreen = ({ route }: NativeStackScreenProps<RootStack, "Album"
   const player: ParrotCardPlayer<TrackRow> = {
     play: (list) => void play(list, 0, albumInfo),
     shuffle: (list) => void play(list, Math.floor(Math.random() * list.length), albumInfo, { shuffle: true }),
-    playNext: (list) => void queue(list, "next", albumInfo),
-    addToQueue: (list) => void queue(list, "end", albumInfo),
+    playNext: (list) => void queue(list, "next", albumInfo).then(editor.queued),
+    addToQueue: (list) => void queue(list, "end", albumInfo).then(editor.queued),
   };
   const artistId = header.data?.artistId || songs.find((track) => track.artistId)?.artistId;
   const openArtist = artistId ? () => navigation.navigate("Artist", { artistId, name: artistName }) : undefined;
@@ -200,7 +200,7 @@ export const AlbumScreen = ({ route }: NativeStackScreenProps<RootStack, "Album"
             unavailable={reach ? !reach.song(item.id) : false}
             accessibilityLabel={t("parrot.album.play", { title: item.title })}
             onPress={() => void play(songs, index, { title, cover })}
-            onMore={() => editor.openSong({ id: item.id, title: item.title })}
+            onMore={() => editor.openSong({ id: item.id, title: item.title }, undefined, { onAddToQueue: () => queue([item], "end", albumInfo) })}
             moreLabel={`${t("parrot.player.more")}, ${item.title}`}
           />
         );

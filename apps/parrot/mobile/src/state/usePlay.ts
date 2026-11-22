@@ -79,18 +79,23 @@ export const usePlayWith = (openPlayer: () => void) => {
 
   /**
    * Play next ("next") or Add to queue ("end", PAR-CARD-01): adds the songs without stopping the one playing and
-   * without opening the player; an empty queue starts playing them.
+   * without opening the player; an empty queue starts playing them. Resolves to how many songs were added (0: all were
+   * playing or up next already, PAR-CARD-02), null when nothing could be queued.
    */
-  const queue = async (tracks: PlayTrack[], where: AudioQueueInsert, album?: { title: string; cover?: ParrotCoverKeys | null }) => {
+  const queue = async (tracks: PlayTrack[], where: AudioQueueInsert, album?: { title: string; cover?: ParrotCoverKeys | null }): Promise<number | null> => {
     setError(null);
     try {
       const queued = register(tracks, album);
-      await queueTracks({ token, libraryKey, albumTitle: album?.title, tracks: queued, where });
+      return await queueTracks({ token, libraryKey, albumTitle: album?.title, tracks: queued, where });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      if (message === "STREAM_CANCELLED") return log.info("play.stream_cancelled", { where });
+      if (message === "STREAM_CANCELLED") {
+        log.info("play.stream_cancelled", { where });
+        return null;
+      }
       log.warn("play.queue_failed", { message, where });
       setError(message === "NO_PLAYABLE_FILE" ? t("parrot.album.noPlayableFile") : t("parrot.album.playFailed", { error: message }));
+      return null;
     }
   };
 

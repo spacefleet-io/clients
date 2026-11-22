@@ -14,9 +14,14 @@ export type DesktopFeedbackBody = {
   appVersion: string;
   platform: string;
   log: string | null;
+  /** UX-SUP-07: the server's request ids of the app's last failed API calls. */
+  requestIds: string[];
 };
 
-/** The message, plus the scrubbed error log (REL-LOG-06) only when the user ticked "Attach the app's error log". */
+/**
+ * The message, plus the scrubbed error log (REL-LOG-06) only when the user ticked "Attach the app's error log", and
+ * always the request ids of the app's last failed API calls (UX-SUP-07).
+ */
 export const createDesktopFeedbackSender = (deps: {
   app: DesktopFeedbackBody["app"];
   token: () => string | null;
@@ -24,6 +29,8 @@ export const createDesktopFeedbackSender = (deps: {
   appVersion: string;
   /** "linux 6.8.0"; the API keeps 32 characters. */
   platform: string;
+  /** UX-SUP-07: `recentFailedRequestIds` of `@space/shared/apiFailure`, read when the message is sent. */
+  requestIds: () => string[];
   send: (token: string, body: DesktopFeedbackBody) => Promise<unknown>;
   log: (line: string) => void;
   fail: (line: string) => void;
@@ -36,10 +43,11 @@ export const createDesktopFeedbackSender = (deps: {
     appVersion: deps.appVersion,
     platform: deps.platform.slice(0, 32),
     log: input.attachLog === true ? clampLog(deps.errorLog.read()) || null : null,
+    requestIds: deps.requestIds(),
   };
   try {
     await deps.send(token, body);
-    deps.log(`[feedback] sent (log ${body.log ? `${body.log.length} chars` : "not attached"})`);
+    deps.log(`[feedback] sent (log ${body.log ? `${body.log.length} chars` : "not attached"}, ${body.requestIds.length} request ids)`);
     return { ok: true };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

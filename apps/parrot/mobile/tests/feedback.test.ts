@@ -21,11 +21,11 @@ vi.mock("react-native", () => ({
 
 afterEach(() => vi.unstubAllGlobals());
 
-const stubFetch = (status: number, body: unknown) => {
+const stubFetch = (status: number, body: unknown, headers: Record<string, string> = {}) => {
   const calls: Request[] = [];
   vi.stubGlobal("fetch", async (input: Request) => {
     calls.push(input);
-    return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
+    return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json", ...headers } });
   });
   return calls;
 };
@@ -57,6 +57,7 @@ describe("@req UX-SUP-05[parrot] Parrot phone feedback", () => {
       platform: "android 16",
       deviceModel: "Google Pixel 8",
       log: null,
+      requestIds: [],
     });
   });
 
@@ -81,5 +82,19 @@ describe("@req UX-SUP-05[parrot] Parrot phone feedback", () => {
   it("surfaces the API's refusal (rate limit) as an ApiError", async () => {
     stubFetch(429, { error: "rate_limited" });
     await expect(sendParrotFeedback("tok", draftBody("hi", false))).rejects.toBeInstanceOf(ApiError);
+  });
+
+  /** @req UX-SUP-07[parrot] */
+  it("carries the server's request id of a call that failed before, through the app's own start-up wiring", async () => {
+    const requestId = "3f2c9a1e-7b4d-4e8f-9a0b-1c2d3e4f5a6b";
+    // `../src/config` (imported by the sender) wires `logApiFailuresOnDevice`, which remembers failed calls' ids.
+    stubFetch(404, { error: "not_found" }, { "x-request-id": requestId });
+    await sendParrotFeedback("tok", draftBody("first", false)).catch(() => undefined);
+    const calls = stubFetch(201, { id: "f3" });
+    await sendParrotFeedback("tok", draftBody("the sync failed", false));
+    const sent = await calls[0].json();
+    console.info(`${P} phase=request-ids body=${JSON.stringify(sent)}`);
+    expect(sent.requestIds).toContain(requestId);
+    expect(sent.log).toBeNull();
   });
 });

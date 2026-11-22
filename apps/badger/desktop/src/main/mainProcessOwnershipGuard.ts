@@ -36,6 +36,7 @@ export const BADGER_MAIN_ENTRY_ALLOWED_LOCAL_IMPORTS = new Set([
   "./runtimeSpawnEnv",
   "./secondInstanceHandler",
   "./sessionIpc",
+  "./siblingSignIn",
   "./storageTraffic",
   "./toolAccessIpc",
   "./uiStrings",
