@@ -52,6 +52,8 @@ import {
 import { scopeLogger } from "./logger";
 import { isAllowedExternalUrl } from "@space/desktop-shell/externalUrl";
 import { registerSessionIpc } from "./sessionIpc";
+import { createBadgerSiblingHost, registerSiblingIpc, siblingAccountOf } from "./siblingSignIn";
+import { SIBLING_SIGN_IN_ARG, armSiblingHiddenQuit, isSiblingSignInLaunch, type SiblingHiddenQuit } from "@space/desktop-shell/sibling-main";
 import { setClientIdentity } from "@space/shared/appVersion";
 import { CLIENT_IDENTITY_CHANNEL, desktopClientIdentity } from "@space/desktop-shell/client-identity";
 import { serveStorageUnitBase } from "@space/desktop-shell/storage-units";
@@ -130,6 +132,8 @@ getDesktopPlatform().shell.prepareApp(app, { appUserModelId: "io.spacefleet.badg
 // handing over to the user's Badger (PLAT-DESK-12).
 app.setPath("userData", appIdentity.userDataDir);
 
+/** ACCT-PAIR-07: started by Parrot (`--sibling-sign-in`) only to sign it in: no window, quits soon after. */
+const siblingHiddenStart = isSiblingSignInLaunch(process.argv);
 // Single-instance lock: a second launch of the binary must not race the first
 // instance's runtime/library state. The first instance keeps the lock; later
 // instances receive a "second-instance" event and exit. Tests can dispatch
@@ -141,6 +145,18 @@ if (!gotSingleInstanceLock) {
   app.quit();
 } else {
   app.on("second-instance", (_event, argv) => {
+    if (siblingHiddenStart) {
+      // ACCT-PAIR-07: this run has no window (it only answers Parrot): the user's launch gets a full Badger.
+      logger.info({}, "sibling: Badger launched during a hidden start: relaunching in full");
+      app.relaunch({ args: argv.slice(1).filter((arg) => arg !== SIBLING_SIGN_IN_ARG) });
+      app.exit(0);
+      return;
+    }
+    if (isSiblingSignInLaunch(argv)) {
+      // Parrot started Badger to answer it while this one runs: this one already answers on the local channel.
+      logger.info({}, "sibling: hidden start while Badger runs: ignored");
+      return;
+    }
     handleSecondInstance({
       showMainWindow: () => showMainWindow(),
       requestQuit: () => {
@@ -458,7 +474,12 @@ serveStorageUnitBase(ipcMain, {
 // Its async safeStorage decrypt (`sessionStore.load()`) runs once the app is
 // ready and must finish before the first window exists: the preload reads the
 // session over a synchronous IPC (ACCT-AUTH-08).
-const sessionStore = registerSessionIpc();
+// ACCT-PAIR-07: same-device sign-in with Parrot (siblingSignIn.ts). The session's changes publish or withdraw this
+// account for Parrot on this computer.
+let siblingHiddenQuit: SiblingHiddenQuit | null = null;
+const siblingHost = createBadgerSiblingHost({ onAnswered: () => siblingHiddenQuit?.answered() });
+app.on("will-quit", () => void siblingHost.close());
+const sessionStore = registerSessionIpc({ onReplace: (entries) => void siblingHost.setAccount(siblingAccountOf(entries)) });
 let sessionStoreLoaded = false;
 
 // Runtime Jobs v2 IPC bridge — gated by the renderer feature flag
@@ -703,8 +724,25 @@ app.whenReady().then(async () => {
   electronSession.defaultSession.webRequest.onBeforeSendHeaders({ urls: ["*://*/lookup"] }, (details, callback) => {
     callback({ requestHeaders: details.method === "POST" ? { ...details.requestHeaders, "User-Agent": NEUTRAL_USER_AGENT } : details.requestHeaders });
   });
+  if (siblingHiddenStart) {
+    // ACCT-PAIR-07: started by Parrot only to answer its sign-in: no window, no runtime, only the local channel.
+    initializeApiBaseUrl();
+    await sessionStore.load();
+    sessionStoreLoaded = true;
+    const account = siblingAccountOf(sessionStore.read());
+    logger.info({ signedIn: Boolean(account) }, "sibling: hidden start for Parrot's sign-in");
+    if (!account) {
+      app.quit();
+      return;
+    }
+    siblingHiddenQuit = armSiblingHiddenQuit({ quit: () => app.quit(), log: (message) => logger.info(message) });
+    await siblingHost.setAccount(account);
+    return;
+  }
   const sessionLoaded = sessionStore.load().then(() => {
     sessionStoreLoaded = true;
+    // ACCT-PAIR-07: signed in, Parrot on this computer can offer this account; signed out, nothing is published.
+    void siblingHost.setAccount(siblingAccountOf(sessionStore.read()));
   });
   // Skip the guardian when an external runtime is provided (e.g., e2e tests),
   // or when using direct SQLite mode (no runtime needed).
@@ -902,6 +940,7 @@ app.whenReady().then(async () => {
     },
   });
   registerPairingIpc();
+  registerSiblingIpc(siblingHost);
   // In-app updates (REL-UPD-01), from `<api>/desktop/badger/`. `getWindow` is resolved lazily so a recreated window
   // still receives update events. The renderer arms the background check by pushing its `autoUpdate` setting (ON by
   // default) once it has loaded.

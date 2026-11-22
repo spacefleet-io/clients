@@ -8,6 +8,7 @@ import UIKit
 import React
 import React_RCTAppDelegate
 import ReactAppDependencyProvider
+import SiblingSignIn
 import UserNotifications
 
 @main
@@ -62,10 +63,11 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     RCTDevLoadingViewSetEnabled(false)
 #endif
 
+    // A cold start on a same-device sign-in link (ACCT-PAIR-07): the link goes to SiblingSignIn below, never to JS.
     factory.startReactNative(
       withModuleName: "SpaceBadgerMobile",
       in: window,
-      launchOptions: launchOptions
+      launchOptions: SiblingLinks.launchOptionsWithoutSiblingLink(launchOptions)
     )
 
 #if os(tvOS)
@@ -73,6 +75,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 #endif
 
 #if os(iOS)
+    // Parrot on this phone asking to sign in with Badger's account (ACCT-PAIR-07): the confirm screen is its own
+    // React root, shown over the app by SiblingSignIn.
+    SiblingLinks.makeApprovalView = { [weak factory] in factory?.rootViewFactory.view(withModuleName: "SiblingApproval") }
+
     // Register for remote (silent) notifications so the JS-side push handler
     // can forward APNs tokens to Firebase Messaging. Apple's permission prompt
     // only fires once the user is signed in — that flow is driven from JS via
@@ -116,12 +122,14 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
   }
 #endif
 
-  // spacebadger://auth/provider (ACCT-SIGNIN-05): hand the URL to JS Linking.
+  // spacebadger://auth/provider (ACCT-SIGNIN-05): hand the URL to JS Linking. Same-device sign-in links (ACCT-PAIR-07,
+  // spacebadger://sibling-approval…) stay native: SiblingSignIn takes them, or swallows them from any app but Parrot.
   func application(
     _ app: UIApplication,
     open url: URL,
     options: [UIApplication.OpenURLOptionsKey: Any] = [:]
   ) -> Bool {
+    if SiblingLinks.handleOpenURL(url, options: options) { return true }
     return RCTLinkingManager.application(app, open: url, options: options)
   }
 

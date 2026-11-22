@@ -16,6 +16,7 @@
 import { Buffer } from "node:buffer";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type * as SharedApi from "@space/shared/api";
+import type { LibraryOp } from "@space/shared/libraryOps";
 import type * as NativeLibrarySync from "../src/native/LibrarySync";
 import { LibraryDb, SQL_BATCH_ROUND } from "../src/lib/libraryDb";
 import { fx, mediaUpsertOp, resetFixture, seedSplitCache, setServer, settle, sqliteRows } from "./library-db-fixture";

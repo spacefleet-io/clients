@@ -21,3 +21,9 @@ export const SPACE_APP_NAMES: Record<SpaceAppId, string> = {
   badger: "Badger",
   parrot: "Parrot",
 };
+
+/** The other app of the same suite on the same device (ACCT-PAIR-07): a signed-in Badger signs in a new Parrot on that
+ * phone or computer without a typed code, and the reverse. Apps outside the pair have none. */
+const SIBLING_APPS: Partial<Record<SpaceAppId, SpaceAppId>> = { badger: "parrot", parrot: "badger" };
+
+export const siblingAppOf = (app: SpaceAppId): SpaceAppId | null => SIBLING_APPS[app] ?? null;
