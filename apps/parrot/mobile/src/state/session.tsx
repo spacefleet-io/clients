@@ -24,6 +24,7 @@ import { loadEvenVolume } from "../lib/evenVolume";
 import { scopeLogger } from "@space/mobile-shell/logger";
 import { profileStore } from "../lib/profiles";
 import { applyAccountLanguageFromServer, reconcileAfterSignIn, setupSettlesLanguage } from "../lib/accountLanguage";
+import { publishSiblingStatus } from "@space/mobile-shell/sibling";
 
 const log = scopeLogger("session");
 
@@ -41,7 +42,7 @@ type LibraryStatus = "idle" | "loading" | "ready" | "missing" | "error";
 /** Why the sign-in screen is showing again: the server rejected the saved session (it shows a short explanation). */
 export type SignInNotice = "sessionRejected" | null;
 
-type SessionState = {
+export type SessionState = {
   booting: boolean;
   session: ShellAuthSession | null;
   libraryKey: string | null;
@@ -257,6 +258,15 @@ export const SessionProvider = ({ children }: { children: React.ReactNode }) => 
       }
     })();
   }, []);
+
+  // Badger on this phone offers "Continue with your Parrot account" only while Parrot can sign it in (ACCT-PAIR-07): a
+  // session and the library key it seals to Badger. The native status store gets the account, never the token or key.
+  const siblingUserId = session && libraryKey ? session.user.id : null;
+  const siblingEmail = session && libraryKey ? session.user.email : null;
+  useEffect(() => {
+    if (booting) return;
+    void publishSiblingStatus(siblingUserId && siblingEmail ? { email: siblingEmail, userId: siblingUserId } : null);
+  }, [booting, siblingUserId, siblingEmail]);
 
   /**
    * Forgets the session and the library on this phone; the API is told only when the token still works. The library

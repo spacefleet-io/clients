@@ -1,9 +1,10 @@
 import { Platform } from "react-native";
-import { approvePairing, denyPairing, lookupPairing } from "@space/shared/api";
+import { approvePairing, approvePairingLocal, denyPairing, lookupPairing } from "@space/shared/api";
 import { getOrCreateDeviceId } from "../../native/pushHandler";
 import { getStoredLibraryKey } from "../onboarding";
 import { requireDeviceUnlock } from "@space/mobile-shell/pairing-approve/deviceUnlock";
 import type { PairingDeps } from "@space/mobile-shell/pairing-approve";
+import type { SiblingApproveDeps } from "@space/pairing-crypto";
 
 /**
  * The real side effects behind the pairing flow: API, library key in the keychain, phone unlock. A TV has no
@@ -19,5 +20,18 @@ export const pairingDeps: PairingDeps = {
   deny: denyPairing,
   getLibraryKey: getStoredLibraryKey,
   requireUnlock: Platform.isTV ? null : requireDeviceUnlock,
+  now: () => Date.now(),
+};
+
+/**
+ * Parrot on this phone asks to sign in with Badger's account (ACCT-PAIR-07): the API is told only to approve; the key,
+ * sealed to Parrot, goes back over the local channel. No unlock: the user answered on this unlocked phone.
+ */
+export const siblingApproveDeps: SiblingApproveDeps = {
+  lookup: lookupPairing,
+  // As above: this phone is not notified about the app it just signed in itself (ACCT-PAIR-03).
+  approveLocal: async (token, requestId) => approvePairingLocal(token, requestId, await getOrCreateDeviceId().catch(() => undefined)),
+  deny: denyPairing,
+  getLibraryKey: getStoredLibraryKey,
   now: () => Date.now(),
 };

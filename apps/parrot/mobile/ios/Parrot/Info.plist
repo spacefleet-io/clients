@@ -32,6 +32,20 @@
 				<string>parrot</string>
 			</array>
 		</dict>
+		<!-- ACCT-PAIR-07: Badger asks for a same-device sign-in on parrot://sibling-approval (a Debug build: parrot-dev). -->
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>io.spacefleet.sibling</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>$(SF_SIBLING_URL_SCHEME)</string>
+			</array>
+		</dict>
+	</array>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>spacebadger</string>
+		<string>spacebadger-dev</string>
 	</array>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>

@@ -26,6 +26,7 @@ export const desktopShellComponents: DesktopShellComponentBoundary[] = [
   { id: "ShellErrorCard", description: "Shared shell-level error card surface with actions." },
   { id: "SignOutKeyCheck", description: "Shared saved-library-key question before the user's own Sign out (ACCT-DEV-03)." },
   { id: "PairWithPhone", description: "Shared 'Sign in with another device' screen: QR code, short code, countdown (ACCT-PAIR-01/05)." },
+  { id: "SameDeviceSignIn", description: "Shared 'Continue with your Badger/Parrot account' card above the sign-in, signed in by the sister app on this computer (ACCT-PAIR-07)." },
   { id: "DesktopPasswordReset", description: "Shared 'Forgot password?' link under the sign-in form and its reset dialog (ACCT-AUTH-05, ACCT-SIGNIN-05)." },
   { id: "ChoiceList", description: "Shared scrollable single-choice list with keyboard navigation (setup language picker)." },
   { id: "DesktopSettingsShell", description: "Shared Settings page: grouped, filterable category rail on the left and the open category on the right (UX-SET-01)." },
@@ -111,6 +112,8 @@ export {
 } from "./components/pair-device-strings";
 export { default as PairWithPhone, PAIRING_POLL_INTERVAL_MS, type PairWithPhoneActions } from "./components/pair-with-phone";
 export { pairWithPhoneStrings, pairWithPhoneText, type PairWithPhoneStringKey } from "./components/pair-with-phone-strings";
+export { SameDeviceSignIn, type SameDeviceSignInProps } from "./components/same-device-sign-in-card";
+export { sameDeviceSignInStrings, sameDeviceSignInText, type SameDeviceSignInStringKey } from "./components/same-device-sign-in-strings";
 export { DesktopForgotPasswordLink, DesktopPasswordResetDialog } from "./components/desktop-password-reset";
 export { passwordResetStrings, passwordResetText, type PasswordResetStringKey } from "./components/password-reset-strings";
 export {

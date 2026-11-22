@@ -1,35 +1,42 @@
 /**
  * Settings › "Manage offline content" (OFFL-MANAGE-01): what is kept on the device to play offline, each item with the
- * space it takes and the total at the top. Pure grouping shared by every app that shows the list (Badger and Parrot
- * desktop now, the phones later): no app, platform or React import here.
+ * space it takes and the total at the top. Pure grouping shared by every app that shows the list (Badger and Parrot on
+ * the phones and the computers): no app, platform or React import here.
  *
  * - Badger: saved files group into films, and shows › seasons › episodes.
- * - Parrot: kept albums, playlists and songs kept on their own.
+ * - Parrot phone: artists › albums › songs (a song kept on its own sits under its artist and album too), then playlists
+ *   › songs (`groupParrotOfflineTree`). Parrot desktop: kept albums, playlists and songs kept on their own
+ *   (`groupParrotOffline`).
  *
  * A file counts once in the total even when two items hold it (a song in a kept album and a kept playlist).
  */
 
-export type OfflineManageKind = "movie" | "show" | "season" | "episode" | "album" | "playlist" | "song";
+export type OfflineManageKind = "movie" | "show" | "season" | "episode" | "artist" | "album" | "playlist" | "song";
 
 export type OfflineManageRow = {
   /** Unique among the list's rows (React key, test id). */
   key: string;
   kind: OfflineManageKind;
-  /** Library id of the film, show, album, playlist or song; a season or episode row carries its show's id. */
+  /**
+   * Library id of the film, show, artist, album, playlist or song; a season or episode row carries its show's id; an
+   * artist row with no artist in the library is "".
+   */
   id: string;
   /** Null when the library no longer names it (the screen shows a fallback). */
   title: string | null;
   /** Second line: the artist of an album or song. */
   subtitle: string | null;
-  /** The app's own picture reference (Badger poster path, Parrot cover URL); null = none. */
+  /** The app's own picture reference (Badger poster path, Parrot cover key); null = none. */
   imagePath: string | null;
   bytes: number;
   /** Badger season and episode rows. */
   seasonNumber?: number;
   episodeNumber?: number;
-  /** Badger film and episode rows: the saved file. */
+  /** Badger film and episode rows, Parrot phone song rows: the saved file. */
   fileId?: string;
-  /** A show's seasons (then episodes the library no longer places); a season's episodes. */
+  /** Parrot phone: a playlist row and the song rows under it (removing them leaves the songs out of that playlist only). */
+  playlistId?: string;
+  /** A show's seasons (then episodes the library no longer places), a season's episodes; an artist's albums, an album's or a playlist's songs. */
   children: OfflineManageRow[];
 };
 
@@ -187,3 +194,120 @@ export const groupParrotOffline = (
   rows.sort((a, b) => PARROT_ORDER[a.kind as ParrotOfflineKind] - PARROT_ORDER[b.kind as ParrotOfflineKind] || byTitle(a, b));
   return { rows, totalBytes: [...all].reduce((sum, fileId) => sum + bytesOf(fileId), 0) };
 };
+
+/** One kept song on the Parrot phone with the file kept for it and what the library says about it. */
+export type ParrotOfflineSong = {
+  trackId: string;
+  fileId: string;
+  title: string | null;
+  albumId: string | null;
+  /** The song's own artist: used when the album is not in the library. */
+  artistId: string | null;
+  artistName: string | null;
+  disc?: number;
+  number?: number | null;
+};
+
+export type ParrotOfflineAlbum = { title: string; artistId: string | null; artistName: string | null; imagePath: string | null };
+
+/**
+ * The Parrot phone's three-level list (OFFL-MANAGE-01): artists A–Z › albums › songs from kept albums and songs kept on
+ * their own (a song in both is listed once), then kept playlists A–Z › their songs. An album's artist places it (the
+ * song's own artist when the library no longer has the album); a song whose album is gone sits right under its artist.
+ * Row keys: `artist:<id>`, `album:<id>`, `song:<trackId>`, `playlist:<id>`, `playlist:<id>/song:<trackId>`. Each row's
+ * size and the total count every file once.
+ */
+export const groupParrotOfflineTree = (input: {
+  /** Songs of kept albums and songs kept on their own. */
+  songs: readonly ParrotOfflineSong[];
+  playlists: ReadonlyArray<{ id: string; title: string | null; imagePath?: string | null; songs: readonly ParrotOfflineSong[] }>;
+  albumOf: (albumId: string) => ParrotOfflineAlbum | null;
+  /** An artist's own picture; its first album's cover otherwise. */
+  artistImageOf?: (artistId: string) => string | null;
+  bytesOf: (fileId: string) => number;
+}): OfflineManageList => {
+  const { albumOf, bytesOf } = input;
+  const sizeOf = (fileIds: Iterable<string>) => [...new Set(fileIds)].reduce((sum, fileId) => sum + bytesOf(fileId), 0);
+  const filesUnder = (row: OfflineManageRow): string[] => (row.fileId ? [row.fileId] : row.children.flatMap(filesUnder));
+  const bySong = (a: { song: ParrotOfflineSong; row: OfflineManageRow }, b: { song: ParrotOfflineSong; row: OfflineManageRow }) =>
+    (a.song.disc ?? 1) - (b.song.disc ?? 1) || (a.song.number ?? Number.MAX_SAFE_INTEGER) - (b.song.number ?? Number.MAX_SAFE_INTEGER) || byTitle(a.row, b.row);
+  const songRow = (song: ParrotOfflineSong, playlistId?: string): OfflineManageRow => ({
+    key: playlistId ? `playlist:${playlistId}/song:${song.trackId}` : `song:${song.trackId}`,
+    kind: "song",
+    id: song.trackId,
+    title: song.title,
+    subtitle: playlistId ? song.artistName : null,
+    imagePath: null,
+    bytes: bytesOf(song.fileId),
+    fileId: song.fileId,
+    ...(playlistId ? { playlistId } : {}),
+    children: [],
+  });
+
+  type Artist = { row: OfflineManageRow; albums: Map<string, { row: OfflineManageRow; songs: Array<{ song: ParrotOfflineSong; row: OfflineManageRow }> }>; loose: Array<{ song: ParrotOfflineSong; row: OfflineManageRow }> };
+  const artists = new Map<string, Artist>();
+  const seen = new Set<string>();
+  for (const song of input.songs) {
+    if (seen.has(song.trackId)) continue;
+    seen.add(song.trackId);
+    const album = song.albumId ? albumOf(song.albumId) : null;
+    const artistId = (album ? album.artistId : song.artistId) || "";
+    const artistName = (album ? album.artistName : song.artistName) || null;
+    const artistKey = artistId || `name:${artistName ?? ""}`;
+    let artist = artists.get(artistKey);
+    if (!artist) {
+      artist = {
+        row: { key: `artist:${artistKey}`, kind: "artist", id: artistId, title: artistName, subtitle: null, imagePath: (artistId && input.artistImageOf?.(artistId)) || null, bytes: 0, children: [] },
+        albums: new Map(),
+        loose: [],
+      };
+      artists.set(artistKey, artist);
+    }
+    const entry = { song, row: songRow(song) };
+    if (!album || !song.albumId) {
+      artist.loose.push(entry);
+      continue;
+    }
+    let albumSlot = artist.albums.get(song.albumId);
+    if (!albumSlot) {
+      albumSlot = {
+        row: { key: `album:${song.albumId}`, kind: "album", id: song.albumId, title: album.title, subtitle: null, imagePath: album.imagePath, bytes: 0, children: [] },
+        songs: [],
+      };
+      artist.albums.set(song.albumId, albumSlot);
+    }
+    albumSlot.songs.push(entry);
+  }
+
+  const artistRows = [...artists.values()].map(({ row, albums, loose }) => {
+    const albumRows = [...albums.values()].map((slot) => ({ ...slot.row, children: slot.songs.sort(bySong).map((entry) => entry.row) })).sort(byTitle);
+    for (const album of albumRows) album.bytes = sizeOf(filesUnder(album));
+    const artistRow: OfflineManageRow = { ...row, imagePath: row.imagePath ?? albumRows.find((album) => album.imagePath)?.imagePath ?? null, children: [...albumRows, ...loose.sort(bySong).map((entry) => entry.row)] };
+    artistRow.bytes = sizeOf(filesUnder(artistRow));
+    return artistRow;
+  });
+  artistRows.sort(byTitle);
+
+  const playlistRows = input.playlists.map((playlist): OfflineManageRow => {
+    const children = [...new Map(playlist.songs.map((song) => [song.trackId, song])).values()].map((song) => songRow(song, playlist.id));
+    return {
+      key: `playlist:${playlist.id}`,
+      kind: "playlist",
+      id: playlist.id,
+      title: playlist.title,
+      subtitle: null,
+      imagePath: playlist.imagePath ?? null,
+      bytes: sizeOf(children.flatMap(filesUnder)),
+      playlistId: playlist.id,
+      children,
+    };
+  });
+  playlistRows.sort(byTitle);
+
+  const rows = [...artistRows, ...playlistRows];
+  return { rows, totalBytes: sizeOf(rows.flatMap(filesUnder)) };
+};
+
+/** The songs a Parrot phone row stands for (itself, or every song under it), for removing them. */
+export const parrotOfflineTrackIds = (row: OfflineManageRow): string[] =>
+  row.kind === "song" ? [row.id] : [...new Set(row.children.flatMap(parrotOfflineTrackIds))];
