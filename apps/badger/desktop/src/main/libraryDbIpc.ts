@@ -5,6 +5,7 @@ import { badgerLibraryUpsertSnapshot, badgerLibraryClear } from "@space/runtime-
 import { createRuntimeSession, type RuntimeSessionHandle } from "@space/runtime-client/session";
 import { createRuntimeCommandClient } from "@space/runtime-client/command";
 import * as sdk from "@space/sdk";
+import { apiFailureFields } from "@space/shared/apiFailure";
 import { getApiBaseUrl } from "./apiHost";
 import { BETTER_SQLITE_NATIVE_LOAD_GUIDANCE, isBetterSqliteNativeMismatchError } from "./nativeDeps";
 import { scopeLogger } from "./logger";
@@ -183,11 +184,9 @@ const getWriteGuardIssue = async () => {
     return writeGuardIssueCache.value;
   }
   try {
-    const payload = await sdk
-      .unwrap(sdk.getSystemContract({ client: sdk.createSpaceClient({ baseUrl: getApiBaseUrl() }) }))
-      .catch((error: unknown) => {
-        throw error instanceof sdk.ApiError ? new Error(`contract_${error.status}`) : error;
-      });
+    const payload = await sdk.unwrap(
+      sdk.getSystemContract({ client: sdk.createSpaceClient({ baseUrl: getApiBaseUrl() }) })
+    );
     const issue = resolveContractIssue(payload);
     writeGuardIssueCache = {
       value: issue,
@@ -195,9 +194,10 @@ const getWriteGuardIssue = async () => {
     };
     return issue;
   } catch (error) {
+    // REL-LOG-31: an API answer keeps its status, code and the server's request id (it used to read `contract_<status>`).
     logger.warn({
       event: "write_guard_contract_unavailable",
-      message: error instanceof Error ? error.message : String(error ?? "unknown_error"),
+      ...(apiFailureFields(error) ?? { message: error instanceof Error ? error.message : String(error ?? "unknown_error") }),
     });
     writeGuardIssueCache = {
       value: null,

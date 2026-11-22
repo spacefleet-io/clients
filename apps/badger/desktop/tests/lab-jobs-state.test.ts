@@ -4,6 +4,8 @@ import {
   hasProcessingLabJobs,
   splitLabJobsByCompletion,
 } from "../src/renderer/src/lib/labJobsState";
+import { buildDashboardActiveJobsByMediaId } from "../src/renderer/src/lib/dashboardState";
+import type { LabJob } from "../src/shared/labQueueShared";
 
 // Dump-on-failure: surface the input jobs + computed split so a
 // completion/terminal-state classification mismatch is diagnosable without
@@ -86,6 +88,51 @@ describe("lab jobs state helpers", () => {
       expect(hasProcessingLabJobs([cancelledJob])).toBe(false);
     } catch (err) {
       dumpLabJobsSnapshot("cancelled-terminal", { cancelledJob, split, processing });
+      throw err;
+    }
+  });
+
+  // @bugfix @regression-proof @req UX-HOME-05
+  // Chris 2026-11-22: Ted Lasso's Home poster read "Preparing…" for two days while nothing ran. Its runtime
+  // jobs were 39 source + 38 format succeeded and ONE 360p format job failed (handler-error invalid_session).
+  // The failed job stayed in `activeJobs`, and Home's overlay builder counts every job it is handed, so the
+  // fully playable title wore a permanent "Preparing…" overlay.
+  it("[@bugfix][@regression-proof] a failed job is not active, so Home draws no import overlay for it", () => {
+    const mediaId = "media-ted";
+    const succeededSource = {
+      id: "j-src",
+      filename: "S01E01.mkv",
+      status: "done",
+      progress: 100,
+      matchedMediaId: mediaId,
+      jobType: "source",
+      createdAt: "2026-11-20T12:39:48.413Z",
+    } satisfies LabJob;
+    const failedFormat = {
+      id: "j-360p",
+      filename: "S01E01.mkv",
+      status: "failed",
+      progress: 23,
+      error: "invalid_session",
+      matchedMediaId: mediaId,
+      jobType: "transcode",
+      selectedFormats: [{ quality: "360p", codec: "h264" }],
+      createdAt: "2026-11-20T12:39:48.413Z",
+    } satisfies LabJob;
+    const jobs: LabJob[] = [succeededSource, failedFormat];
+    console.info(`[lab-jobs-state:failed-not-active] input statuses=${jobs.map((j) => j.status).join(",")}`);
+    const split = splitLabJobsByCompletion(jobs);
+    const overlays = buildDashboardActiveJobsByMediaId(split.activeJobs);
+    console.info(
+      `[lab-jobs-state:failed-not-active] active=${JSON.stringify(split.activeJobs.map((j) => [j.id, j.status]))} ` +
+        `completed=${JSON.stringify(split.completedJobs.map((j) => [j.id, j.status]))} overlay=${JSON.stringify(overlays.get(mediaId) ?? null)}`,
+    );
+    try {
+      expect(split.activeJobs).toEqual([]);
+      expect(overlays.has(mediaId)).toBe(false);
+      expect(hasProcessingLabJobs(jobs)).toBe(false);
+    } catch (err) {
+      dumpLabJobsSnapshot("failed-not-active", { split, overlay: overlays.get(mediaId) ?? null });
       throw err;
     }
   });

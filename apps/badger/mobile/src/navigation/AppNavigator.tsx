@@ -41,6 +41,7 @@ import { parseLegacyPairLink, parsePairLink } from "@space/pairing-crypto";
 import { handOffProviderReturn } from "@space/mobile-shell/provider-sign-in";
 import { BADGER_LINK_SCHEME } from "../lib/linkScheme";
 import { DownloadsScreen } from "../screens/DownloadsScreen";
+import { OfflineContentScreen } from "../screens/OfflineContentScreen";
 import { useDownloadsBootstrap } from "../lib/downloads/useDownloadsBootstrap";
 import { useAccountLanguageSync } from "../lib/useAccountLanguageSync";
 import { SubscriptionScreen } from "../screens/SubscriptionScreen";
@@ -135,6 +136,7 @@ const SubscriptionScreenLazy = withSuspense(SubscriptionScreen, "SubscriptionScr
 const DeleteAccountScreenLazy = withSuspense(DeleteAccountScreen, "DeleteAccountScreen");
 const ResetKeyScreenLazy = withSuspense(ResetKeyScreen, "ResetKeyScreen");
 const DownloadsScreenLazy = withSuspense(DownloadsScreen, "DownloadsScreen");
+const OfflineContentScreenLazy = withSuspense(OfflineContentScreen, "OfflineContentScreen");
 
 export const navigationRef = createNavigationContainerRef<RootStackParamList>();
 
@@ -179,6 +181,8 @@ export type RootStackParamList = {
   /** `code` comes from the pairing link (ACCT-PAIR-06); absent when opened from Settings. */
   PairDevice: { code?: string };
   Downloads: undefined;
+  /** Phone only: Settings › "Manage offline content" (OFFL-MANAGE-01). */
+  OfflineContent: undefined;
   /** "Who's watching?" at start (UX-PROF-01/02): the gate before the app opens. */
   Profiles: undefined;
   /** The same screen opened from Settings: switch profile (`pick`) or add / rename / delete (`manage`). */
@@ -378,6 +382,7 @@ export const AppNavigator = () => {
             {/* TV: no camera, the approver types the code and proves the account password (ACCT-PAIR-02). */}
             <Stack.Screen name="PairDevice" component={IS_TV ? TvApprovePairingScreen : PairDeviceScreen} />
             {routeAvailable("Downloads") ? <Stack.Screen name="Downloads" component={DownloadsScreenLazy} /> : null}
+            {routeAvailable("OfflineContent") ? <Stack.Screen name="OfflineContent" component={OfflineContentScreenLazy} /> : null}
             <Stack.Screen name="SwitchProfile" component={IS_TV ? TvProfilesScreen : ProfilesScreen} />
           </>
         )}

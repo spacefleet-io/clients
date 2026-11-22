@@ -1,3 +1,5 @@
+import { SPACE_APP_HEADER } from "@space/shared/appScope";
+import { clientIdentityHeaders, getClientIdentity } from "@space/shared/appVersion";
 import {
   STREAM_ERRORS,
   type HeartbeatBody,
@@ -71,7 +73,10 @@ export const createStreamSlotsClient = (options: StreamSlotsClientOptions): Stre
 
   const send = async (operation: StreamSlotsError["operation"], method: string, path: string, body?: unknown) => {
     const token = await options.getToken();
-    const headers: Record<string, string> = {};
+    // REL-CD-29, REL-LOG-28: the build calling (`x-space-client`) and its app (`x-space-app`), as every other API call
+    // of the process states them; nothing while the process has set no identity (a dev build).
+    const app = getClientIdentity()?.app;
+    const headers: Record<string, string> = { ...clientIdentityHeaders(), ...(app ? { [SPACE_APP_HEADER]: app } : {}) };
     if (token) headers.Authorization = `Bearer ${token}`;
     if (body !== undefined) headers["Content-Type"] = "application/json";
     try {

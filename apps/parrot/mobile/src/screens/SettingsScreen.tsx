@@ -261,6 +261,16 @@ export const SettingsScreen = () => {
             }
           }}
         />
+        {/* OFFL-MANAGE-01: what is kept on this phone, its size, remove one or all. */}
+        <View style={{ gap: spacing.xs }}>
+          <Button
+            testID="settings-offline-content"
+            label={t("offlineContent.entry")}
+            tone="plain"
+            onPress={() => navigation.navigate("OfflineContent")}
+          />
+          <Body muted>{t("offlineContent.parrot.entryDescription")}</Body>
+        </View>
         {errorReportsOffered() ? <ErrorReportsSwitch /> : null}
       </Section>
       {/* REL-UPD-06: on a hand-installed APK, the version and its updates (nothing when a store manages the app). */}

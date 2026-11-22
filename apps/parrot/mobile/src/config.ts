@@ -2,6 +2,7 @@
 // first).
 import { setApiBaseUrl, setApiClientType, setStorageTunnelOptions } from "@space/shared/api";
 import { setClientIdentity } from "@space/shared/appVersion";
+import { logApiFailuresOnDevice } from "@space/mobile-shell/apiFailureLog";
 import { PRODUCTION_API_BASE_URL } from "@space/shared/productionApi";
 import { deviceClientIdentity } from "@space/mobile-media-proxy/app-info";
 
@@ -12,6 +13,8 @@ setApiBaseUrl(API_BASE_URL);
 setApiClientType("parrot-mobile");
 // REL-CD-29: every call says which build is calling (`parrot/android/0.1.3+play`, `parrot/ios/0.1.3`), as Badger's do.
 setClientIdentity(deviceClientIdentity("parrot"));
+// REL-LOG-31: a local line per failed API call, with the server's request id.
+logApiFailuresOnDevice();
 // Parrot's library and audio live in Parrot's storage scope (`x-space-app: parrot`, PLAT-SUITE-01).
 setStorageTunnelOptions({
   tunnelMode: "waterfall",

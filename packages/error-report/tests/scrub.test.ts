@@ -156,6 +156,49 @@ describe("error report scrubber", () => {
     expect(scrubText("x is not a function")).toBe("x is not a function");
   });
 
+  // @req REL-LOG-06[badger-desktop,badger-mobile]
+  it(`@req REL-LOG-06${APPS} removes a title written into a message without quotes`, () => {
+    const cases: Array<[string, string[]]> = [
+      ["Cannot open Blade Runner 2049 (2017) 2160p", ["Blade", "Runner", "2049", "2017", "2160p"]],
+      ["Metadata lookup failed for Dune: Part Two", ["Dune", "Part", "Two"]],
+      ["Heat failed to load", ["Heat"]],
+      ["Cannot play Network", ["Network"]],
+      ["Playback error: Amélie stalled at 00:42", ["Amélie"]],
+      ["Cannot resume 千と千尋の神隠し", ["千と千尋の神隠し"]],
+      ["No subtitles for The Office S03E07", ["Office", "S03E07"]],
+      ["Artwork missing for M3GAN", ["M3GAN"]],
+    ];
+    for (const [input, forbidden] of cases) {
+      const output = scrubText(input);
+      console.info(`[scrub-test] G0 ${JSON.stringify(input)} -> ${JSON.stringify(output)}`);
+      for (const word of forbidden) expect(output, input).not.toContain(word);
+    }
+    // The same message thrown by the app and carried by an SDK event.
+    const event = scrubErrorEvent({
+      exception: { values: [{ type: "Error", value: "Cannot open Blade Runner 2049 (2017) 2160p" }] },
+    });
+    console.info(`[scrub-test] G0 event -> ${JSON.stringify(event)}`);
+    expect(JSON.stringify(event)).not.toMatch(/Blade|Runner|2160p/);
+  });
+
+  // @req REL-LOG-06[badger-desktop,badger-mobile]
+  it(`@req REL-LOG-06${APPS} keeps the error words of common runtime messages`, () => {
+    const kept: Array<[string, string]> = [
+      ["Network request failed", "Network request failed"],
+      ["TypeError: Failed to fetch", "TypeError: Failed to fetch"],
+      ["Maximum call stack size exceeded", "Maximum call stack size exceeded"],
+      ["SQLITE_BUSY: database is locked", "SQLITE_BUSY: database is locked"],
+      ["Request failed with status code 409", "Request failed with status code 409"],
+      ["Cannot read properties of undefined (reading 'title')", "Cannot read properties of undefined (reading <redacted>)"],
+      ["LibraryVersionDowngradeError: library is newer", "LibraryVersionDowngradeError: library is newer"],
+    ];
+    for (const [input, expected] of kept) {
+      const output = scrubText(input);
+      console.info(`[scrub-test] G0-keep ${JSON.stringify(input)} -> ${JSON.stringify(output)}`);
+      expect(output, input).toBe(expected);
+    }
+  });
+
   it("caps the message length", () => {
     expect(scrubText("a".repeat(2000)).length).toBeLessThan(310);
   });

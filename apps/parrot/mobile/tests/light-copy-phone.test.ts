@@ -71,6 +71,9 @@ vi.mock("@space/mobile-audio-playback", () => ({
       state.queued.push(...items);
       return { state: "playing" };
     },
+    // Nothing added in this test is playing or up next already (PAR-CARD-02 leaves those out).
+    getState: async () => ({ mediaId: null }),
+    getUpNext: async () => [],
     setShuffle: async () => ({ state: "buffering" }),
     setGains: async () => undefined,
     setLimiting: async () => undefined,

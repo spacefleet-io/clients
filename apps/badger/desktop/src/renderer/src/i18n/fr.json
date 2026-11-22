@@ -203,13 +203,13 @@
       "submittedToast_one": "Enregistrement de {{count}} fichier dans {{folder}}",
       "submittedToast_other": "Enregistrement de {{count}} fichiers dans {{folder}}",
       "errors": {
-        "insufficient_disk_space": "Pas assez d'espace libre dans ce dossier : {{required}} nécessaires, {{free}} libres.",
+        "insufficient_disk_space": "Pas assez d'espace libre dans ce dossier\u202f: {{required}} nécessaires, {{free}} libres.",
         "not_authenticated": "Reconnectez-vous pour télécharger des fichiers.",
         "library_db_not_open": "Votre bibliothèque n'est pas encore ouverte. Réessayez dans un instant.",
         "dest_not_writable": "Impossible d'enregistrer dans ce dossier. Choisissez-en un autre.",
         "dest_not_picked": "Choisissez à nouveau le dossier.",
         "nothing_to_export": "Rien à télécharger pour l'instant.",
-        "generic": "Échec du téléchargement : {{reason}}"
+        "generic": "Échec du téléchargement\u202f: {{reason}}"
       }
     },
     "showDelisting": {
@@ -732,7 +732,7 @@
       "help": "Enregistrez toute votre bibliothèque en fichiers vidéo dans le dossier de votre choix, à la meilleure qualité disponible. Les films vont dans Movies, les séries dans Shows.",
       "button": "Tout télécharger",
       "moreOptions": "Plus d'options",
-      "confirmTitle": "Tout télécharger ?",
+      "confirmTitle": "Tout télécharger\u202f?",
       "confirmBody_one": "{{count}} fichier, {{size}} au total, sera enregistré dans {{folder}}.",
       "confirmBody_other": "{{count}} fichiers, {{size}} au total, seront enregistrés dans {{folder}}.",
       "confirm": "Télécharger",
@@ -1470,7 +1470,7 @@
         "sourceIngest": "On découpe le fichier original en morceaux prêts pour le streaming afin de démarrer la lecture rapidement.",
         "transcode": "On crée des qualités supplémentaires pour garder une lecture fluide sur les connexions lentes.",
         "tracks": "On prépare les pistes audio et sous-titres pour pouvoir changer la langue et les sous-titres.",
-        "exportDownloading": "On récupère la meilleure qualité disponible, on la déchiffre, puis on enregistre un seul fichier vidéo avec toutes les pistes dans le dossier choisi.",
+        "exportDownloading": "On récupère la meilleure qualité disponible, on la déchiffre, puis on écrit un seul fichier vidéo avec toutes les pistes dans le dossier choisi.",
         "offlineDownloading": "On télécharge chaque morceau, on le déchiffre, puis on assemble toutes les pistes dans un seul fichier lisible hors ligne.",
         "job": "Cette étape prépare les fichiers média pour la lecture et la synchronisation."
       }
