@@ -37,35 +37,5 @@ target 'Parrot' do
       config[:reactNativePath],
       :mac_catalyst_enabled => false,
     )
-    # Xcode 27 refuses deployment targets below iOS/tvOS 15, and some pods (and their resource bundles) still declare
-    # older ones: raise those to the app's own minimum.
-    minimums = { 'IPHONEOS_DEPLOYMENT_TARGET' => min_ios_version_supported, 'TVOS_DEPLOYMENT_TARGET' => min_supported_versions[:tvos] }
-    installer.pods_project.targets.each do |t|
-      t.build_configurations.each do |c|
-        minimums.each do |key, min|
-          value = c.build_settings[key]
-          c.build_settings[key] = min if value && Gem::Version.new(value) < Gem::Version.new(min)
-        end
-      end
-    end
   end
-end
-
-# Apple TV (PAR-TV-01): the same JS app and native sources on react-native-tvos, as Badger's SpaceBadgerTV.
-# PARROT_APPLE_TV=1 makes react-native.config.js drop the modules tvOS has no SDK for (camera, photo picker, image
-# resizer). Both targets share one codegen output, which the "[CP-User] Generate Specs" build phase regenerates from
-# build/generated/autolinking/autolinking.json. use_native_modules! rewrites that file, so the phone's (full) module
-# list is put back after the TV's: the phone keeps every component, and the TV skips the classes it does not link
-# (patched RCTThirdPartyComponentsProvider template, patches/react-native-tvos@0.88.1-0.patch).
-autolinking_json = File.join(__dir__, 'build/generated/autolinking/autolinking.json')
-target 'ParrotTV' do
-  platform :tvos, min_supported_versions[:tvos]
-  phone_autolinking = File.read(autolinking_json)
-  config = use_native_modules!(['env', 'PARROT_APPLE_TV=1'] + $default_command)
-  File.write(autolinking_json, phone_autolinking)
-
-  use_react_native!(
-    :path => config[:reactNativePath],
-    :app_path => "#{Pod::Config.instance.installation_root}/.."
-  )
 end

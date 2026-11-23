@@ -46,8 +46,9 @@ vi.mock("react-native-fs", () => ({ default: {} }));
 
 vi.mock("../src/native/LibrarySync", () => ({
   sha256File: vi.fn(),
-  encryptSnapshotFile: vi.fn(),
-  decryptSnapshotFile: vi.fn(),
+  encryptLibraryToBinaryFile: vi.fn(),
+  decryptLibraryFromBinaryFile: vi.fn(),
+  decryptLibraryFromFile: vi.fn(),
   onLibrarySyncProgress: vi.fn(),
 }));
 
@@ -70,8 +71,7 @@ const { encodeStorageHeader, STORAGE_OBJECT_KIND } = await import(
 const { assertLibraryCompatible, currentLibrarySupport, LibraryFormatTooNewError } = await import(
   "@space/library-db-definition/compatibility"
 );
-// The read gate admits every op stream this build reads (LIB-FMT-13): READ_OP_STREAM_VERSION, not the written one.
-const { READ_OP_STREAM_VERSION } = await import("@space/library-db-definition/ops");
+const { OP_STREAM_VERSION } = await import("@space/library-db-definition/ops");
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -270,11 +270,11 @@ describe("decodeStoredManifest — too-new storage version (Part A5)", () => {
 });
 
 describe("assertLibraryCompatible — op-stream gate (Part A5)", () => {
-  it("opStreamVersion > READ_OP_STREAM_VERSION throws LibraryFormatTooNewError surface='op-stream'", () => {
-    console.info(`[library-decode-stored-manifest:op-stream-gate] asserting opStreamVersion=${READ_OP_STREAM_VERSION + 1} > supported=${READ_OP_STREAM_VERSION}`);
+  it("opStreamVersion > OP_STREAM_VERSION throws LibraryFormatTooNewError surface='op-stream'", () => {
+    console.info(`[library-decode-stored-manifest:op-stream-gate] asserting opStreamVersion=${OP_STREAM_VERSION + 1} > supported=${OP_STREAM_VERSION}`);
     let caught: unknown;
     try {
-      assertLibraryCompatible({ opStreamVersion: READ_OP_STREAM_VERSION + 1 }, support);
+      assertLibraryCompatible({ opStreamVersion: OP_STREAM_VERSION + 1 }, support);
     } catch (e) {
       caught = e;
     }
@@ -282,23 +282,24 @@ describe("assertLibraryCompatible — op-stream gate (Part A5)", () => {
       expect(caught).toBeInstanceOf(LibraryFormatTooNewError);
       const err = caught as InstanceType<typeof LibraryFormatTooNewError>;
       expect(err.surface).toBe("op-stream");
-      expect(err.observed).toBe(READ_OP_STREAM_VERSION + 1);
-      expect(err.supported).toBe(READ_OP_STREAM_VERSION);
+      expect(err.observed).toBe(OP_STREAM_VERSION + 1);
+      expect(err.supported).toBe(OP_STREAM_VERSION);
     } catch (assertErr) {
       dumpDecodeManifestSnapshot("op-stream-gate-mismatch", { error: caught });
       throw assertErr;
     }
   });
 
-  it("opStreamVersion === READ_OP_STREAM_VERSION does not throw", () => {
+  it("opStreamVersion === OP_STREAM_VERSION does not throw", () => {
     expect(() =>
-      assertLibraryCompatible({ opStreamVersion: READ_OP_STREAM_VERSION }, support)
+      assertLibraryCompatible({ opStreamVersion: OP_STREAM_VERSION }, support)
     ).not.toThrow();
   });
 
-  it("opStreamVersion < READ_OP_STREAM_VERSION does not throw (older op-stream is readable)", () => {
+  it("opStreamVersion < OP_STREAM_VERSION does not throw (older op-stream is readable)", () => {
+    if (OP_STREAM_VERSION <= 1) return; // nothing below v1 to test
     expect(() =>
-      assertLibraryCompatible({ opStreamVersion: READ_OP_STREAM_VERSION - 1 }, support)
+      assertLibraryCompatible({ opStreamVersion: OP_STREAM_VERSION - 1 }, support)
     ).not.toThrow();
   });
 });

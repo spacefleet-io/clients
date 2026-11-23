@@ -9,6 +9,5 @@ export { fetchParrotLibraryState, publishParrotEdits, type ParrotLibraryState, t
 export * from "./scan";
 export * from "./kept";
 export * from "./lightCopy";
-export * from "./exportFile";
-export type { ParrotOriginalTagGroup, ParrotOriginalTags } from "./splitOriginal";
-export * from "./exportSongs";
+export * from "./lyricsTags";
+export * from "./lyricsIntoFile";

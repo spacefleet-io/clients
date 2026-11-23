@@ -1,4 +1,4 @@
-import { homeAlbumDetail, type HistoryAlbum, type ListeningHistory, type ParrotAlbumSort } from "@space/parrot-core";
+import { homeAlbumDetail, type HistoryAlbum, type ListeningHistory } from "@space/parrot-core";
 import type { ParrotLibraryTrack } from "@space/parrot-ingest";
 import type { ParrotCardControls } from "@space/ui/parrot/card-actions";
 import { ParrotAlbumTile } from "@space/ui/parrot/library";
@@ -29,8 +29,7 @@ type HomeProps = {
   onOpenArtist: (id: string) => void;
   /** Plays the album: from the history's song and position when there is one, else from its first song. */
   onPlayAlbum: (albumId: string, entry: HistoryAlbum | null, shuffle: boolean) => void;
-  /** Opens the library's album or artist list; "Recently added"'s "See all" asks for that album order (PAR-HOME-01). */
-  onSeeAll: (view: "albums" | "artists", sort?: ParrotAlbumSort) => void;
+  onSeeAll: (view: "albums" | "artists") => void;
   /** Each card's Play and "..." menu (PAR-CARD-01). */
   albumControls?: (album: ParrotDesktopAlbum) => ParrotCardControls;
   artistControls?: (artist: ParrotDesktopArtist) => ParrotCardControls;
@@ -107,7 +106,6 @@ export default function Home({
         play: t("player.play"),
         pause: t("player.pause"),
         shuffle: t("home.shuffle"),
-        recentlyAdded: t("home.recentlyAdded"),
         recentlyPlayed: t("home.recentlyPlayed"),
         albums: t("library.albums"),
         yourArtists: t("home.yourArtists"),

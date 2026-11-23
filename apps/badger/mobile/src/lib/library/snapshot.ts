@@ -1,10 +1,27 @@
 import RNFS from "react-native-fs";
 import { Buffer } from "buffer";
 import crypto from "react-native-quick-crypto";
-import { decryptSnapshotFile, encryptSnapshotFile, onLibrarySyncProgress, sha256File } from "../../native/LibrarySync";
+import {
+  encryptLibraryToBinaryFile,
+  decryptLibraryFromBinaryFile,
+  decryptLibraryFromFile,
+  onLibrarySyncProgress,
+  sha256File,
+} from "../../native/LibrarySync";
 import { CHUNK_SIZE_BYTES, downloadObjectViaTunnel } from "./transport";
-import { decryptBytesToBytes, encryptBytesToBase64 } from "../crypto";
+import {
+  decryptBytesToBytes,
+  encryptBytesToBase64,
+  encryptBytesToBytes,
+} from "../crypto";
 import { decodeStoredManifest as decodeSharedStoredManifest } from "@space/mobile-shell/librarySnapshot";
+import {
+  COMPRESSED_FRAME_HEADER_SIZE,
+  decodeCompressedFrame,
+  encodeCompressedFrame,
+  isCompressedFrame,
+} from "@space/library-db-definition/payloadCompression";
+import { fflateCodec } from "@space/mobile-shell/libraryOps";
 import type { LibrarySupport } from "@space/library-db-definition/compatibility";
 
 export const SQLITE_HEADER = "SQLite format 3 ";
@@ -118,18 +135,31 @@ export const fetchManifestChunks = async (
   return chunkHashes;
 };
 
-/**
- * Saved copy -> SQLite file at `dbPath`. Decrypt and inflate (a v2 copy, LIB-FMT-07) or plain write (v1) run in one
- * pass on a native worker thread (LIB-SYNC-14): a 16 MB copy of a 60 MB library used to hold the JS thread ~17 s here.
- */
-export const decryptFileToDb = async (keyBase64: string, sourcePath: string, dbPath: string) => {
+export const decryptFileToDb = async (
+  keyBase64: string,
+  sourcePath: string,
+  dbPath: string,
+  encoding: "base64" | "binary"
+) => {
   const subscription = onLibrarySyncProgress((event) => {
     console.warn("library.db.decrypt.progress", JSON.stringify(event));
   });
   try {
     console.warn("library.db.decrypt.start", JSON.stringify({ sourcePath, dbPath }));
-    const result = await decryptSnapshotFile(sourcePath, keyBase64, dbPath);
-    console.warn("library.db.decrypt.done", JSON.stringify({ dbPath, ...result }));
+    if (encoding === "binary") {
+      await decryptLibraryFromBinaryFile(sourcePath, keyBase64, dbPath);
+    } else {
+      await decryptLibraryFromFile(sourcePath, keyBase64, dbPath);
+    }
+    // A v2 snapshot (LIB-FMT-07) decrypts to a compressed frame, a v1 one to the SQLite file itself.
+    const head = new Uint8Array(Buffer.from(await RNFS.read(dbPath, COMPRESSED_FRAME_HEADER_SIZE, 0, "base64"), "base64"));
+    if (isCompressedFrame(head)) {
+      const framed = new Uint8Array(Buffer.from(await RNFS.readFile(dbPath, "base64"), "base64"));
+      const plain = decodeCompressedFrame(framed, fflateCodec);
+      await RNFS.writeFile(dbPath, Buffer.from(plain).toString("base64"), "base64");
+      console.warn("library.db.decompress.done", JSON.stringify({ framedBytes: framed.length, dbBytes: plain.length }));
+    }
+    console.warn("library.db.decrypt.done", JSON.stringify({ dbPath }));
   } finally {
     subscription.remove();
   }
@@ -159,14 +189,21 @@ export const createSnapshotId = () => {
 };
 
 /**
- * Saved copy of the library: compressed, THEN encrypted (LIB-FMT-07), streamed from the SQLite file to `targetPath` on
- * a native worker thread (LIB-SYNC-14). Reading the database into JS first (a base64 string of 4/3 its size, then a
- * deflate in Hermes) threw OutOfMemoryError and froze the UI ~52 s for a 60 MB library.
+ * Saved copy of the library: compressed, THEN encrypted (LIB-FMT-07). The native encryptor streams a file, so the
+ * framed bytes are staged next to the target and removed afterwards.
  */
 export const encryptDbToBinaryFile = async (dbPath: string, keyBase64: string, targetPath: string) => {
-  const result = await encryptSnapshotFile(dbPath, keyBase64, targetPath);
-  console.warn("library.snapshot.encrypt.done", JSON.stringify(result));
-  return result;
+  const framed = encodeCompressedFrame(await exportDbBytes(dbPath), fflateCodec);
+  const framedPath = `${targetPath}.frame`;
+  try {
+    await RNFS.writeFile(framedPath, Buffer.from(framed).toString("base64"), "base64");
+    await encryptLibraryToBinaryFile(framedPath, keyBase64, targetPath);
+  } catch {
+    const encrypted = await encryptBytesToBytes(keyBase64, framed);
+    await RNFS.writeFile(targetPath, Buffer.from(encrypted).toString("base64"), "base64");
+  } finally {
+    await RNFS.unlink(framedPath).catch(() => undefined);
+  }
 };
 
 export const getLatestSnapshotMs = (history?: Array<{ createdAt: string }>) => {

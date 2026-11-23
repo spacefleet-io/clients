@@ -16,8 +16,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { ensureLibrarySchema, type SqliteDb } from "@space/library-db-definition/migrations";
-import { buildOpStatements, isV3MediaUpsert } from "@space/library-db-definition/ops";
-import type { LibraryOp, MediaUpsertOp } from "@space/shared/libraryOps";
+import { buildOpStatements } from "@space/library-db-definition/ops";
+import type { LibraryOp } from "@space/shared/libraryOps";
 import type { MediaPreviewSheets } from "@space/shared/previewSheets";
 import { LibraryDb } from "../src/libraryDb";
 
@@ -70,7 +70,7 @@ const PREVIEWS: MediaPreviewSheets = {
   ],
 };
 
-type UpsertOp = MediaUpsertOp;
+type UpsertOp = Extract<LibraryOp, { type: "media.upsert" }>;
 type Row = { id: string; quality: string; isSource: number; previews: string | null };
 
 /** The desktop's own `media.upsert` for a movie whose source format carries preview sheets. */
@@ -104,7 +104,7 @@ const desktopUpsert = async (): Promise<UpsertOp> => {
     if (!recorded) throw new Error("preview sheets not recorded on the source format");
     // Test seam: the op queue the sync uploads (PendingOp rows are LibraryOps on the wire).
     const ops = (db as unknown as { pendingOps: LibraryOp[] }).pendingOps;
-    const upserts = ops.filter((op): op is UpsertOp => op.type === "media.upsert" && isV3MediaUpsert(op));
+    const upserts = ops.filter((op): op is UpsertOp => op.type === "media.upsert");
     const last = upserts[upserts.length - 1];
     console.info(`[${SUITE}:fixture] pending=${ops.length} upserts=${upserts.length}`);
     if (!last) throw new Error("no media.upsert queued");

@@ -27,7 +27,5 @@ RCT_EXTERN_METHOD(setRepeatMode : (NSString *)mode resolve : (RCTPromiseResolveB
                       reject)
 RCT_EXTERN_METHOD(canShowOutputSwitcher : (RCTPromiseResolveBlock)resolve reject : (RCTPromiseRejectBlock)reject)
 RCT_EXTERN_METHOD(showOutputSwitcher : (RCTPromiseResolveBlock)resolve reject : (RCTPromiseRejectBlock)reject)
-RCT_EXTERN_METHOD(setKeepScreenOn : (BOOL)enabled resolve : (RCTPromiseResolveBlock)resolve reject : (RCTPromiseRejectBlock)
-                      reject)
 
 @end

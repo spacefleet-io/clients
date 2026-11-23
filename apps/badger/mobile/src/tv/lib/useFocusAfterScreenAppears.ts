@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, type RefObject } from "react";
 import { Platform } from "react-native";
-import type { TvViewInstance } from "@space/mobile-shell/tv/tvViewInstance";
+import type { TvViewInstance } from "./tvViewInstance";
 import { useNavigation, type ParamListBase } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 

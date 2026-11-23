@@ -65,8 +65,7 @@ vi.mock("react-native", async () => {
 // the real hooks cannot run inside this renderer: the same i18n instance and default theme are served directly.
 vi.mock("@space/mobile-shell/theme", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@space/mobile-shell/theme")>();
-  // Badger's name and mascot, as `badgerShellTheme` gives them: the shared sign-in reads both from the theme (PAR-TV-02).
-  return { ...actual, useMobileShellTheme: () => actual.mergeMobileShellTheme({ brandName: "Badger", mascotSource: 1 }) };
+  return { ...actual, useMobileShellTheme: () => actual.mergeMobileShellTheme(null) };
 });
 vi.mock("@space/mobile-shell/i18n", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@space/mobile-shell/i18n")>();
@@ -127,10 +126,7 @@ vi.mock("../../lib/pairing/pairingDeps", async () => {
   };
 });
 
-// Loaded after the mocks and the hoisted `.webp` loader above, as before the screen moved to the shared package.
-const { TvSignInView, TV_SIGN_IN_QR } = await import("@space/mobile-shell/tv/TvSignIn");
-const { TvSignInScreen } = await import("./TvSignInScreen");
-const noLanguage = () => undefined;
+const { TvSignInView, TvSignInScreen, TV_SIGN_IN_QR } = await import("./TvSignInScreen");
 const { TvApprovePairingScreen } = await import("./TvApprovePairingScreen");
 
 beforeAll(async () => {
@@ -229,7 +225,7 @@ const waiting = (expiresInMs: number): PairingState => ({
 describe("TV sign-in screen", () => {
   it("shows the QR code, the typed code, the countdown and the TV's name", async () => {
     console.info("[tv-screens:phase] sign-in waiting");
-    await mount(<TvSignInView state={waiting(4 * 60_000 + 7_000)} onRetry={() => undefined} onUsePassword={() => undefined} onLanguage={noLanguage} />);
+    await mount(<TvSignInView state={waiting(4 * 60_000 + 7_000)} onRetry={() => undefined} onUsePassword={() => undefined} />);
     const text = allText();
     console.info("[tv-screens:state]", { text });
 
@@ -243,7 +239,7 @@ describe("TV sign-in screen", () => {
 
   it("counts down every second while the code is on screen", async () => {
     vi.useFakeTimers({ now: Date.parse("2026-10-20T10:00:00Z") });
-    await mount(<TvSignInView state={waiting(125_000)} onRetry={() => undefined} onUsePassword={() => undefined} onLanguage={noLanguage} />);
+    await mount(<TvSignInView state={waiting(125_000)} onRetry={() => undefined} onUsePassword={() => undefined} />);
     expect(textOf(one("tv-pairing-countdown"))).toContain("2:05");
     await act(async () => {
       vi.advanceTimersByTime(5_000);
@@ -256,7 +252,7 @@ describe("TV sign-in screen", () => {
     ["starting", { phase: "starting" } as PairingState, "Getting a pairing code"],
     ["completing", { phase: "completing" } as PairingState, "Signing in"],
   ])("says what is happening while %s", async (_label, state, expected) => {
-    await mount(<TvSignInView state={state} onRetry={() => undefined} onUsePassword={() => undefined} onLanguage={noLanguage} />);
+    await mount(<TvSignInView state={state} onRetry={() => undefined} onUsePassword={() => undefined} />);
     expect(textOf(one("tv-pairing-progress"))).toContain(expected);
   });
 
@@ -269,7 +265,7 @@ describe("TV sign-in screen", () => {
   ])("explains a %s pairing and offers a new code and the password form", async (_label, state, expected) => {
     const onRetry = vi.fn();
     const onUsePassword = vi.fn();
-    await mount(<TvSignInView state={state} onRetry={onRetry} onUsePassword={onUsePassword} onLanguage={noLanguage} />);
+    await mount(<TvSignInView state={state} onRetry={onRetry} onUsePassword={onUsePassword} />);
     console.info("[tv-screens:state]", { text: allText() });
     expect(allText()).toContain(expected);
     await press("tv-pairing-retry");
@@ -279,7 +275,7 @@ describe("TV sign-in screen", () => {
   });
 
   it("@req UX-TV-31 shows the badger, the title, one line, then one card with the QR and the code side by side", async () => {
-    await mount(<TvSignInView state={waiting(4 * 60_000 + 7_000)} onRetry={() => undefined} onUsePassword={() => undefined} onLanguage={noLanguage} />);
+    await mount(<TvSignInView state={waiting(4 * 60_000 + 7_000)} onRetry={() => undefined} onUsePassword={() => undefined} />);
     const text = allText();
     console.info("[tv-screens:state] tv redesign", { text });
     // No numbered steps and no logo or app name at the top left: the badger alone, over the title.
@@ -301,7 +297,7 @@ describe("TV sign-in screen", () => {
     expect(halves(one("tv-pairing-short-code"))).toEqual(["ABCD", "EFGH"]);
     expect(one("tv-pairing-short-code").props.accessibilityLabel).toBe("A B C D E F G H");
     const legacy = waiting(300_000) as Extract<PairingState, { phase: "waiting" }>;
-    await mount(<TvSignInView state={{ ...legacy, request: { ...legacy.request, shortCode: "ABCD-EFGH" } }} onRetry={() => undefined} onUsePassword={() => undefined} onLanguage={noLanguage} />);
+    await mount(<TvSignInView state={{ ...legacy, request: { ...legacy.request, shortCode: "ABCD-EFGH" } }} onRetry={() => undefined} onUsePassword={() => undefined} />);
     expect(halves(one("tv-pairing-short-code"))).toEqual(["ABCD", "EFGH"]);
     expect(textOf(one("tv-pairing-short-code"))).not.toContain("-");
     // Under the card, one pill with the mail icon; the language button alone, with a globe.
@@ -313,7 +309,7 @@ describe("TV sign-in screen", () => {
 
   it("@req UX-TV-31 the ring empties as the code ages", async () => {
     vi.useFakeTimers({ now: Date.parse("2026-11-12T10:00:00Z") });
-    await mount(<TvSignInView state={waiting(240_000)} onRetry={() => undefined} onUsePassword={() => undefined} onLanguage={noLanguage} />);
+    await mount(<TvSignInView state={waiting(240_000)} onRetry={() => undefined} onUsePassword={() => undefined} />);
     const arc = () => {
       const circles = one("tv-pairing-code-life").findAll((node) => String(node.type) === "Circle");
       const [shown, length] = String(circles[1]?.props.strokeDasharray).split(" ").map(Number);
@@ -360,7 +356,7 @@ describe("TV sign-in layout and Back", () => {
 
   it("keeps the short code on one line and draws the QR at the TV's scale", async () => {
     ctl.window = { width: 1920, height: 1080 };
-    await mount(<TvSignInView state={waiting(300_000)} onRetry={() => undefined} onUsePassword={() => undefined} onLanguage={noLanguage} />);
+    await mount(<TvSignInView state={waiting(300_000)} onRetry={() => undefined} onUsePassword={() => undefined} />);
     const halves = one("tv-pairing-short-code").findAll((node) => String(node.type) === "Text");
     console.info("[tv-screens:state]", { halves: halves.map((half) => [half.props.numberOfLines, half.props.adjustsFontSizeToFit]) });
     expect(halves).toHaveLength(2);
@@ -382,7 +378,7 @@ describe("TV sign-in focus (remote)", () => {
     );
 
   it("@req UX-TV-31 starts on \"Use email and password instead\"; the language button is the only other stop", async () => {
-    await mount(<TvSignInView state={waiting(300_000)} onRetry={() => undefined} onUsePassword={() => undefined} onLanguage={noLanguage} />);
+    await mount(<TvSignInView state={waiting(300_000)} onRetry={() => undefined} onUsePassword={() => undefined} />);
     console.info("[tv-screens:focus]", { focusable: focusable(), preferred: preferred() });
     expect(preferred()).toEqual(["tv-pairing-use-password"]);
     expect(focusable()).toEqual(["tv-pairing-use-password", "tv-pairing-language"]);
@@ -392,7 +388,7 @@ describe("TV sign-in focus (remote)", () => {
     ["denied", { phase: "denied" } as PairingState],
     ["rate limited", { phase: "error", reason: "rate_limited", retryAfterMinutes: 4 } as PairingState],
   ])("@req UX-TV-31 starts on \"Get a new code\" when %s, next to the password", async (_label, state) => {
-    await mount(<TvSignInView state={state} onRetry={() => undefined} onUsePassword={() => undefined} onLanguage={noLanguage} />);
+    await mount(<TvSignInView state={state} onRetry={() => undefined} onUsePassword={() => undefined} />);
     console.info("[tv-screens:focus]", { focusable: focusable(), preferred: preferred() });
     expect(preferred()).toEqual(["tv-pairing-retry"]);
     expect(focusable()).toEqual(["tv-pairing-retry", "tv-pairing-use-password", "tv-pairing-language"]);

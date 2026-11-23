@@ -7,7 +7,6 @@
  * @covers apps/parrot/desktop/src/main/playbackServer.ts
  */
 import { afterEach, describe, expect, it } from "vitest";
-import { createParrotChunkReads } from "@space/parrot-core";
 import { startParrotPlaybackServer, type ParrotPlaybackServer } from "../src/main/playbackServer";
 
 const log = (message: string, data?: unknown) => console.log(`[PARROT-DESKTOP-COVER-SERVER-001] ${message}`, data === undefined ? "" : JSON.stringify(data));
@@ -35,7 +34,6 @@ describe("parrot playback server covers", () => {
         asked.push(objectKey);
         return objectKey === "assets/one" ? { bytes: JPEG, mime: "image/jpeg" } : null;
       },
-      reads: createParrotChunkReads(),
       log: (line) => lines.push(line),
     });
     const url = server.coverUrlFor("assets/one");

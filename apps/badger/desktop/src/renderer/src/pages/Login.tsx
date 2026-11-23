@@ -16,7 +16,6 @@ import { Button } from "@space/ui";
 import { Input } from "@space/ui";
 import { Label } from "@space/ui";
 import { BadgerPhoneSignInCard, BadgerSignInDivider } from "@space/ui/badger/sign-in";
-import { MASCOT_GLOW } from "@space/ui/floating-mascot";
 import { isClientUiLanguage } from "@space/shared";
 import AuthApiHostButton from "@/components/AuthApiHostButton";
 import {
@@ -29,7 +28,6 @@ import {
   DesktopStartupPage,
   NoticeSurface,
   PairWithPhone,
-  SameDeviceSignIn,
   desktopAuthInputClassName,
   desktopAuthPromptActionClassName,
   pairWithPhoneText,
@@ -262,7 +260,7 @@ export default function Login() {
         subtitle={t("login.subtitle")}
         mascotSrc={mascotSrc}
         mascotAlt={t("brand.mascotAlt")}
-        mascotGlowClassName={MASCOT_GLOW.badger}
+        mascotGlowClassName="drop-shadow-[0_0_30px_rgba(255,170,84,0.3)]"
       >
             {mode === "pair" ? (
               <PairWithPhone
@@ -278,17 +276,6 @@ export default function Login() {
               />
             ) : null}
             {mode === "email" ? (
-            <div className="grid gap-4">
-            {/* ACCT-PAIR-07: Parrot signed in on this computer signs Badger in with one click, above the normal sign-in. */}
-            {window.sf?.sibling && !providerCode && !twoFactorRequired ? (
-              <SameDeviceSignIn
-                language={pairLanguage}
-                app="badger"
-                actions={window.sf.sibling}
-                onApproved={completePairing}
-                log={(message, extra) => log.info(extra ?? {}, message)}
-              />
-            ) : null}
             <form className="grid gap-4" onSubmit={onSubmit}>
               {systemIssue ? (
                 <NoticeSurface tone="info">
@@ -360,9 +347,8 @@ export default function Login() {
               </DesktopAuthPrimaryButton>
 
               {twoFactorRequired && twoFactorMethod === "email" ? (
-                // UX-BTN-01: a plain text button, the ghost button like every other "Resend code".
                 <Button
-                  variant="ghost"
+                  variant="secondary"
                   type="button"
                   disabled={resending}
                   onClick={() => void resendCode()}
@@ -405,7 +391,6 @@ export default function Login() {
                 </>
               ) : null}
             </form>
-            </div>
             ) : null}
       </AuthCardLayout>
 

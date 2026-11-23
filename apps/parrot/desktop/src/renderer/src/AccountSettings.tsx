@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { CreditCard, HardDrive, Info, LifeBuoy, LogOut, MessageSquare, RefreshCw, SlidersHorizontal, Smartphone, User } from "lucide-react";
+import { CreditCard, Info, LifeBuoy, LogOut, MessageSquare, RefreshCw, SlidersHorizontal, Smartphone, User } from "lucide-react";
 import { Button, LanguageSelect, Switch } from "@space/ui";
 import { CLIENT_UI_LANGUAGES } from "@space/shared/i18n";
 import { useErrorReportsSetting } from "@space/error-report/react";
@@ -20,17 +20,14 @@ import { newsOptInText } from "@space/legal";
 import { ParrotUpdateSection } from "./updates";
 import { desktopTourText } from "@space/desktop-shell/tour";
 import { localStorageCreditsStore, type CreditsSource } from "@space/metadata-client/credits";
-import { OfflineContent, type DescribeKept } from "./OfflineContent";
-import { DownloadEverythingRow } from "./ExportJobs";
 
 /** Settings › About's data credits (META-SRC-09): main asks the lookups' metadata service; the last answer stays in localStorage. */
 const creditsSource: CreditsSource = {
   load: (product, language) => window.parrot.sourceCredits(product, language),
   store: localStorageCreditsStore,
 };
-const noLibrary: DescribeKept = () => null;
 
-export type ParrotSettingsSection = "account" | "general" | "offline" | "support" | "about";
+export type ParrotSettingsSection = "account" | "general" | "support" | "about";
 
 type SettingsPageProps = {
   t: Translate;
@@ -53,8 +50,6 @@ type SettingsPageProps = {
   profileStore?: ProfileStore | null;
   /** The avatar menu's "Add profile": the profiles open straight on a new one, then show the list once it is saved or cancelled. */
   profilesStartWith?: "add";
-  /** Settings › Manage offline content (OFFL-MANAGE-01): the name, artist and cover of a kept item, from the library (none: no library loaded). */
-  describeKept?: DescribeKept;
 };
 
 /**
@@ -62,8 +57,7 @@ type SettingsPageProps = {
  * categories on the left. Account holds who is signed in, the plan, pairing another device and the account's profiles
  * (ACCT-PROF-01, ACCT-PROF-02; there is no separate
  * account button or page any more); General holds the language (UX-I18N-01), Even out volume (PAR-PLAY-03), Refresh and
- * Send error reports (REL-LOG-06); Manage offline content lists what is kept on this computer, with sizes and remove
- * (OFFL-MANAGE-01); Help & feedback holds Send feedback (PAR-SUP-01); About & updates holds the version,
+ * Send error reports (REL-LOG-06); Help & feedback holds Send feedback (PAR-SUP-01); About & updates holds the version,
  * the updater's state and button and the automatic-updates switch (REL-UPD-05, REL-UPD-01; the section Badger shows
  * too), then "Show the tour again", the open-source line and the credits. Sign out sits under the rail, as in Badger.
  */
@@ -83,7 +77,6 @@ export function SettingsPage({
   initialSection = "general",
   profileStore = null,
   profilesStartWith,
-  describeKept = noLibrary,
 }: SettingsPageProps) {
   const [section, setSection] = useState<ParrotSettingsSection>(initialSection);
   const [query, setQuery] = useState("");
@@ -102,7 +95,6 @@ export function SettingsPage({
       label: t("settings.group.app"),
       sections: [
         { id: "general", label: t("settings.section.general"), icon: SlidersHorizontal },
-        { id: "offline", label: t("settings.section.offline"), icon: HardDrive },
         { id: "support", label: t("settings.section.support"), icon: LifeBuoy },
         { id: "about", label: t("settings.section.about"), icon: Info },
       ],
@@ -155,8 +147,6 @@ export function SettingsPage({
                   {t("library.pairDevice")}
                 </Button>
               </Row>
-              {/* ACCT-EXPORT-01: every song as plain music files in a folder the user picks. */}
-              <DownloadEverythingRow t={t} language={language} />
               {news.value !== undefined ? (
                 <Row title={newsText.news} body={newsText.newsHint}>
                   <Switch
@@ -238,8 +228,6 @@ export function SettingsPage({
                 </Row>
               ) : null}
             </>
-          ) : section === "offline" ? (
-            <OfflineContent t={t} language={language} describe={describeKept} />
           ) : section === "support" ? (
             <Row title={t("library.feedback")} body={t("settings.feedbackBody")}>
               <Button variant="outline" onClick={onFeedback} data-testid="library-feedback">

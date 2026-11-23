@@ -158,8 +158,6 @@ class StorageTunnelClient(
   private val cache = LinkedHashMap<String, ObjectBody.InMemory>(64, 0.75f, false)
   private var cacheSize = 0L
   private val pending = ConcurrentHashMap<String, Deferred>()
-  /** Objects the eviction skips (PAR-PLAY-07): see [pin]. Replaced whole, read under [cacheLock]. */
-  @Volatile private var pinned: Set<String> = emptySet()
   /** The download call of each key on the wire now, so [cancelInFlight] can abort it. */
   private val calls = ConcurrentHashMap<String, Call>()
 
@@ -170,8 +168,6 @@ class StorageTunnelClient(
     private var done = false
     private var value: ObjectBody.InMemory? = null
     private var error: Throwable? = null
-    /** Set by [cancelInFlight]: the fetch is aborted, also when its download had not started yet (see [download]). */
-    @Volatile var cancelled = false
 
     fun resolve(v: ObjectBody.InMemory?) {
       lock.withLock { value = v; done = true; ready.signalAll() }
@@ -204,14 +200,7 @@ class StorageTunnelClient(
     val existing = pending.putIfAbsent(key, newDeferred)
     if (existing != null) {
       Log.d(TAG, "fetch.dedup.wait key=$key")
-      val inMemory = try {
-        existing.await()
-      } catch (e: Throwable) {
-        // The fetch this read joined was cancelled for another reader (a preload yielding, PAR-PLAY-07; a rung switch):
-        // this read still wants the object, so it fetches it itself.
-        if (existing.cancelled) return openObject(key)
-        throw e
-      }
+      val inMemory = existing.await()
       if (inMemory != null) return inMemory
       return spool?.open(key) ?: throw IllegalStateException("spool_entry_gone: $key")
     }
@@ -230,41 +219,29 @@ class StorageTunnelClient(
       newDeferred.resolve(inMemory)
       return body
     } catch (e: Throwable) {
-      // Freed before the waiters wake: one whose fetch was cancelled fetches again and must find the slot empty.
-      pending.remove(key, newDeferred)
       newDeferred.reject(e)
       throw e
     } finally {
-      pending.remove(key, newDeferred)
+      pending.remove(key)
     }
   }
 
   override fun cancelInFlight(matches: (String) -> Boolean): Int {
     var aborted = 0
-    for (key in (pending.keys + calls.keys).filter(matches)) {
-      // Marked before the call is looked up: a fetch still opening the session or refreshing traffic has no call yet and
-      // is aborted by [download] the moment it makes one, so a cancel never misses a fetch that has not reached the wire.
-      pending[key]?.cancelled = true
-      calls[key]?.cancel()
+    for ((key, call) in calls) {
+      if (!matches(key)) continue
+      call.cancel()
       aborted += 1
       Log.i(TAG, "fetch.cancelled key=$key")
     }
     return aborted
   }
 
-  override fun pin(keys: Set<String>) {
-    pinned = keys
-    Log.i(TAG, "cache.pin keys=${keys.size} ${keys.joinToString(",")}")
-  }
-
-  /** Caller must hold [cacheLock]. Oldest first, skipping [pinned] objects; stops when only pinned ones are left. */
+  /** Caller must hold [cacheLock]. */
   private fun evictIfNeededLocked() {
-    if (cacheSize <= cacheBudgetBytes) return
-    val keep = pinned
-    val it = cache.entries.iterator()
-    while (cacheSize > cacheBudgetBytes && it.hasNext()) {
+    while (cacheSize > cacheBudgetBytes && cache.isNotEmpty()) {
+      val it = cache.entries.iterator()
       val (k, v) = it.next()
-      if (k in keep) continue
       it.remove()
       cacheSize -= v.plaintext.bytes.size
       Log.d(TAG, "cache.evict key=$k freed=${v.plaintext.bytes.size} cacheSize=$cacheSize budget=$cacheBudgetBytes")
@@ -525,7 +502,6 @@ class StorageTunnelClient(
     var sessionGone = false
     val call = http.newCall(req)
     calls[key] = call
-    if (pending[key]?.cancelled == true) call.cancel()
     try {
       call.execute().use { res ->
         if (!res.isSuccessful) {

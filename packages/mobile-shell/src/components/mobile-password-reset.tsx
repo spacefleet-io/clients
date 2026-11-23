@@ -1,5 +1,5 @@
 /**
- * "Forgot password?" on a phone sign-in screen: the e-mail gets a code, then the
+ * "Forgot password?" on a phone sign-in screen (ACCT-AUTH-10: phones only sign in): the e-mail gets a code, then the
  * code and a new password reset it. A card over the sign-in form; `onDone` hands back the notice to show under it.
  */
 import React, { useState } from "react";

@@ -70,9 +70,9 @@ const actions = vi.hoisted(() => ({
   },
 }));
 vi.mock("../../store/library", () => ({ useLibraryActions: () => actions }));
-vi.mock("@space/mobile-shell/tv/tvScale", () => ({ useTvScale: () => 1, useTvStyles: <T,>(styles: T) => styles }));
-vi.mock("@space/mobile-shell/tv/TvPillButton", () => ({ TvPillButton: "TvPillButton" }));
-vi.mock("@space/mobile-shell/tv/TvText", () => ({ TvTitle: "TvTitle", TvBody: "TvBody", TvEyebrow: "TvEyebrow" }));
+vi.mock("../lib/tvScale", () => ({ useTvScale: () => 1, useTvStyles: <T,>(styles: T) => styles }));
+vi.mock("../ui/TvPillButton", () => ({ TvPillButton: "TvPillButton" }));
+vi.mock("../ui/TvText", () => ({ TvTitle: "TvTitle", TvBody: "TvBody", TvEyebrow: "TvEyebrow" }));
 
 const t = (key: string, options?: Record<string, unknown>) => (options ? `${key}${JSON.stringify(options)}` : key);
 
