@@ -1,5 +1,5 @@
 // Editing playlists and the heart on the phone (PAR-PL-02, PAR-PL-04): one place that holds the song sheet (heart, go to
-// the album and the artist where the caller can, add to playlist, remove from this playlist, save offline, edit
+// the album and the artist where the caller can, add to playlist, remove from this playlist, keep on this phone, edit
 // metadata and delete through ./manage), the actions sheet of a page's "…", the playlist picker, the name dialog and
 // the delete confirm, saves each change through the session (a new encrypted library snapshot, PAR-PL-03) and says how
 // it went in a short notice. Every sheet is the phone's one bottom sheet (UX-SHEET-01): a tap outside, Back or a drag
@@ -8,7 +8,7 @@
 // than one besides the light copy (PAR-OFFL-02).
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { Alert, KeyboardAvoidingView, Modal, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
-import { ArrowDownToLine, CircleCheck, Disc3, FileAudio, Heart, HeartOff, ListEnd, ListMusic, ListPlus, ListX, MicVocal, Pencil, Plus, Trash2, X } from "lucide-react-native";
+import { ArrowDownToLine, CircleCheck, Disc3, FileAudio, Heart, HeartOff, ListMusic, ListPlus, ListX, MicVocal, Pencil, Plus, Trash2, X } from "lucide-react-native";
 import crypto from "react-native-quick-crypto";
 import { useTranslation } from "@space/mobile-shell/i18n";
 import { MobileBottomSheet, MobileSheetScrollView } from "@space/mobile-shell/bottom-sheet";
@@ -47,11 +47,8 @@ export type SheetAction = {
   testID: string;
   destructive?: boolean;
 };
-/**
- * The song sheet's way to the song's album and artist pages (the player's "…", PAR-NAV-05), and its "Add to queue"
- * (PAR-CARD-02, resolving to how many songs were added); each left out where the caller has none.
- */
-export type SongLinks = { onGoToAlbum?: () => void; onGoToArtist?: () => void; onAddToQueue?: () => Promise<number | null> };
+/** The song sheet's way to the song's album and artist pages (the player's "…", PAR-NAV-05); left out where unknown. */
+export type SongLinks = { onGoToAlbum?: () => void; onGoToArtist?: () => void };
 /** Where a song row sits when it is a playlist's: removing it takes out that one entry. */
 export type SongPlace = { playlistId: string; position: number };
 
@@ -87,8 +84,6 @@ export type PlaylistEditor = {
   deletePlaylist: (playlist: Pick<ParrotPlaylist, "id" | "name">, onDeleted?: () => void) => void;
   /** Keeps an album, a playlist or a song on this phone (asking which copy when there is a real choice), or removes it. */
   toggleKeep: (kind: KeptKind, id: string) => void;
-  /** After Play next or Add to queue: says "Already in Up next" when every song was there already (PAR-CARD-02). */
-  queued: (added: number | null) => void;
 };
 
 const EditorContext = createContext<PlaylistEditor | null>(null);
@@ -216,11 +211,8 @@ export const PlaylistEditorProvider = ({ children }: { children: React.ReactNode
           },
         ]),
       toggleKeep,
-      queued: (added) => {
-        if (added === 0) show({ message: t("shell.card.alreadyInUpNext"), tone: "info" });
-      },
     }),
-    [playlists, liked, setLike, setLiked, allLiked, save, show, t, toggleKeep]
+    [playlists, liked, setLike, setLiked, allLiked, save, t, toggleKeep]
   );
 
   const close = () => setDialog(null);
@@ -260,18 +252,6 @@ export const PlaylistEditorProvider = ({ children }: { children: React.ReactNode
                 setLike(dialog.song.id, !liked(dialog.song.id));
               }}
             />
-            {dialog.links?.onAddToQueue ? (
-              <SheetRow
-                testID="song-add-to-queue"
-                icon={ListEnd}
-                label={t("shell.card.addToQueue")}
-                onPress={() => {
-                  const add = dialog.links!.onAddToQueue!;
-                  close();
-                  void add().then(value.queued);
-                }}
-              />
-            ) : null}
             {dialog.links?.onGoToAlbum ? (
               <SheetRow
                 testID="song-go-to-album"

@@ -23,8 +23,6 @@ import {
   type PackedChunkList,
   type PackedChunkListJson,
 } from "../src/chunkLists";
-import { translateV3MediaUpsert, type TranslatedMediaUpsert } from "../src/ops";
-import type { MediaUpsertOp } from "@space/shared/libraryOps";
 
 const SUITE = "chunk-lists-vectors";
 type Expected = Record<string, unknown> & { json: PackedChunkListJson; decodedStarts: Array<number | null> };
@@ -38,7 +36,6 @@ type Vectors = {
   }>;
   seedKeys: Array<{ seedHex: string; placementId: string; index: number; key: string }>;
   invalid: Array<{ name: string; note: string; json: PackedChunkListJson }>;
-  translations: Array<{ name: string; note: string; input: MediaUpsertOp; expected: TranslatedMediaUpsert }>;
 };
 const vectors: Vectors = JSON.parse(readFileSync(join(__dirname, "../test-vectors/chunk-lists.json"), "utf8"));
 const hex = (bytes: Uint8Array | null) => (bytes === null ? null : Buffer.from(bytes).toString("hex"));
@@ -154,24 +151,5 @@ describe("packed chunk list vectors", () => {
     dump("size", { chunks: chunks.length, packedJsonBytes: json.length, rowsJsonBytes: rowsJson.length });
     expect(json.length).toBeLessThan(30_000);
     expect(unpackChunkList(chunkListFromJson(JSON.parse(json)))).toEqual(chunks);
-  });
-});
-
-describe("v3 media.upsert translation vectors (LIB-FMT-11)", () => {
-  it.each(vectors.translations)("$name", (v) => {
-    const actual = translateV3MediaUpsert(v.input);
-    dump(`translation:${v.name}`, {
-      sets: actual.playbackSets.map((set) => set.payload.fileId),
-      keep: actual.prune.keepFileIds,
-    });
-    expect(actual).toEqual(v.expected);
-  });
-
-  it("has the three translation cases", () => {
-    expect(vectors.translations.map((v) => v.name)).toEqual([
-      "movie-two-files",
-      "empty-playback-prunes-all",
-      "row-file-not-in-files",
-    ]);
   });
 });

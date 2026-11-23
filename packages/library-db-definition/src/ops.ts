@@ -21,18 +21,6 @@ import { mediaFilesAndEditionsStatements } from "./editionDdl";
 import { neutralMediaDetails } from "./legacyFormat";
 import { CATALOG_ID_SOURCE } from "./catalogId";
 import { systemPlaylistForSlug } from "./systemPlaylists";
-import {
-  CHUNK_LIST_KEY_MODE,
-  CHUNK_LIST_OWNER_KIND,
-  chunkListFromJson,
-  chunkListKeys,
-  chunkListToJson,
-  decodeChunkSizes,
-  decodeChunkStarts,
-  packChunkList,
-  type ChunkListOwnerKind,
-  type PackedChunkListJson,
-} from "./chunkLists";
 import type {
   IngestJob,
   IngestJobEvent,
@@ -42,13 +30,8 @@ import type {
 import type {
   LibraryOp,
   MediaUpsertOp,
-  MediaUpsertV4Op,
-  MediaDetailsV4,
   MediaDeleteOp,
   MediaProgressOp,
-  MediaFilePlaybackSetOp,
-  MediaFilePlaybackDeleteOp,
-  MediaEpisodeDeleteOp,
   PlaylistCreateOp,
   PlaylistDeleteOp,
   PlaylistItemAddOp,
@@ -101,10 +84,10 @@ export const writeOpStreamVersion = (targetOpStreamVersion: number | null | unde
   (targetOpStreamVersion ?? OP_STREAM_VERSION) >= READ_OP_STREAM_VERSION ? READ_OP_STREAM_VERSION : OP_STREAM_VERSION;
 
 /**
- * Lowest op-stream version this build can still apply. A stream whose `opStreamVersion` exceeds this build's
- * `READ_OP_STREAM_VERSION` is too new and must be refused *before* `buildOpStatements` runs (`currentLibrarySupport`
- * carries `READ_OP_STREAM_VERSION`, so a switched account's version-4 stream passes the gate of a v4 build). Raising
- * this lower bound is the deliberate act that drops support for an old op vocabulary.
+ * Lowest op-stream version this build can still apply. A stream whose
+ * `opStreamVersion` exceeds this build's `OP_STREAM_VERSION` is too new and
+ * must be refused *before* `buildOpStatements` runs. Raising this lower bound
+ * is the deliberate act that drops support for an old op vocabulary.
  */
 export const MIN_SUPPORTED_OP_STREAM_VERSION = 1;
 
@@ -125,40 +108,6 @@ export class UnknownOpTypeError extends Error {
     this.opType = opType;
   }
 }
-
-/**
- * LIB-FMT-11: an op of change types 4 (or a translated old `media.upsert`) reached `buildOpStatements` without
- * `packedPlayback`, i.e. before this library's playback group was converted (`convertPlaybackToPackedLayout`). No
- * version-4 op exists before the account is switched, and every device converts before it applies anything newer, so
- * this is a caller bug: fail loud rather than write rows the old layout cannot hold.
- */
-export class PlaybackLayoutError extends Error {
-  readonly opType: string;
-  constructor(opType: string) {
-    super(`PLAYBACK_LAYOUT: ${opType} needs the packed playback layout (buildOpStatements packedPlayback)`);
-    this.name = "PlaybackLayoutError";
-    this.opType = opType;
-  }
-}
-
-/** LIB-OPS-01: an op of a known type whose payload has a shape no writer produces. Refused, never skipped. */
-export class LibraryOpShapeError extends Error {
-  readonly opType: string;
-  constructor(opType: string, detail: string) {
-    super(`LIBRARY_OP_SHAPE: ${opType}: ${detail}`);
-    this.name = "LibraryOpShapeError";
-    this.opType = opType;
-  }
-}
-
-export type BuildOpOptions = {
-  /**
-   * The playback group holds packed chunk lists (`media_chunk_lists`, `media_file_playback`): set once this library
-   * ran `convertPlaybackToPackedLayout`, which happens only after its account is switched (LIB-FMT-12/13). Without it
-   * the statements are today's (per-chunk rows) and a version-4 op throws `PlaybackLayoutError`.
-   */
-  packedPlayback?: boolean;
-};
 
 export type LibrarySqlStatement = {
   readonly sql: string;
@@ -261,7 +210,7 @@ const appendPlaylistItemRemove = (b: Builders, op: PlaylistItemRemoveOp) => {
   ]);
 };
 
-const appendMediaCore = (b: Builders, details: MediaDetailsV4, newId: IdGenerator) => {
+const appendMediaCore = (b: Builders, details: MediaDetails, newId: IdGenerator) => {
   const mediaId = details.id;
   // An UPSERT guarded by the details clock, not INSERT OR REPLACE (LIB-SYNC-08):
   // - an upsert older than the stored `updated_at` is ignored, so a stale
@@ -337,7 +286,7 @@ const appendMediaCore = (b: Builders, details: MediaDetailsV4, newId: IdGenerato
   }
 };
 
-const appendMediaMetadata = (b: Builders, details: MediaDetailsV4, newId: IdGenerator) => {
+const appendMediaMetadata = (b: Builders, details: MediaDetails, newId: IdGenerator) => {
   const mediaId = details.id;
   const cast = details.cast ?? [];
   const trailers = details.trailers ?? [];
@@ -610,387 +559,17 @@ const appendMediaPlayback = (b: Builders, details: MediaDetails, newId: IdGenera
   }
 };
 
-// --- Change types 4: per-file playback with packed chunk lists (LIB-FMT-11) ------------------------------------------
-
-/**
- * `media_file_playback.file_id` of a playback group: the file's id, `''` for the title's rows that name no file
- * (`file_id IS NULL`). The one place that maps between the two (SQLite cannot hold NULL in a primary key column).
- */
-export const playbackFileKey = (fileId: string | null): string => fileId ?? "";
-
-/** Inverse of `playbackFileKey`. */
-export const playbackFileIdFromKey = (key: string): string | null => (key === "" ? null : key);
-
-const V3_PLAYBACK_KEYS = ["formats", "audioTracks", "subtitles", "subtitleTracks", "chapters"] as const;
-
-/**
- * The shape rule of LIB-FMT-11: ops carry no version of their own (only the account does) and an old op written
- * before the switch can sit in a page declared 4, so the payload decides. A `media.upsert` whose details carry any
- * playback key is the old type and is translated (`translateV3MediaUpsert`); one without is the version-4 upsert and
- * never touches playback. The one guard every TS reader narrows a `media.upsert` with (Kodi ports it).
- */
-export const isV3MediaUpsert = (op: MediaUpsertOp | MediaUpsertV4Op): op is MediaUpsertOp =>
-  V3_PLAYBACK_KEYS.some((key) => Reflect.get(op.payload.details, key) !== undefined);
-
-/** An old `media.upsert` as change types 4 (vault v4 plan §1.1; vectors: `test-vectors/chunk-lists.json` `translations`). */
-export type TranslatedMediaUpsert = {
-  upsert: MediaUpsertV4Op;
-  /** One per file the title names (its `files`, then any other file a row names), then the no-file group, always. */
-  playbackSets: MediaFilePlaybackSetOp[];
-  /**
-   * The old upsert replaced the title's whole playback: rows of a file not in `keepFileIds` are deleted (unless that
-   * file's playback clock is newer than the upsert). Only a translated upsert prunes; a version-4 upsert never does.
-   */
-  prune: { mediaId: string; updatedAt: string; keepFileIds: string[] };
-};
-
-/**
- * Translate an old `media.upsert` (playback inline, one row per chunk) into the version-4 op set. Pure; ported by
- * Kodi, checked by every port against the `translations` vectors. Every set carries the details' `updatedAt` as its
- * clock; a chapter whose format is not in the payload is dropped (no reader could ever show it).
- */
-export const translateV3MediaUpsert = (op: MediaUpsertOp): TranslatedMediaUpsert => {
+const appendMediaUpsert = (b: Builders, op: MediaUpsertOp, newId: IdGenerator) => {
   const details = neutralMediaDetails(op.payload.details);
-  const { formats = [], audioTracks = [], subtitles, subtitleTracks, chapters = [], ...core } = details;
-  const subtitleRows = subtitles ?? subtitleTracks ?? [];
-  const fileIds: string[] = [];
-  const seen = new Set<string>();
-  for (const fileId of [
-    ...(details.files ?? []).map((file) => file.id),
-    ...formats.map((format) => format.fileId),
-    ...audioTracks.map((track) => track.fileId),
-    ...subtitleRows.map((subtitle) => subtitle.fileId),
-  ]) {
-    if (!fileId || seen.has(fileId)) continue;
-    seen.add(fileId);
-    fileIds.push(fileId);
-  }
-  const formatFile = new Map(formats.map((format) => [format.id, format.fileId ?? null]));
-  const playbackSets = [...fileIds, null].map(
-    (fileId): MediaFilePlaybackSetOp => ({
-      id: `${op.id}:playback:${playbackFileKey(fileId)}`,
-      type: "media.file.playback.set",
-      createdAt: op.createdAt,
-      payload: {
-        mediaId: details.id,
-        fileId,
-        updatedAt: details.updatedAt,
-        formats: formats
-          .filter((format) => (format.fileId ?? null) === fileId)
-          .map(({ chunks, ...format }) => ({ ...format, chunkList: chunkListToJson(packChunkList(chunks ?? [])) })),
-        audioTracks: audioTracks
-          .filter((track) => (track.fileId ?? null) === fileId)
-          .map(({ chunks, ...track }) => ({ ...track, chunkList: chunkListToJson(packChunkList(chunks ?? [])) })),
-        subtitles: subtitleRows.filter((subtitle) => (subtitle.fileId ?? null) === fileId),
-        chapters: chapters.filter((chapter) => formatFile.has(chapter.formatId) && formatFile.get(chapter.formatId) === fileId),
-      },
-    })
-  );
-  return {
-    upsert: { id: `${op.id}:upsert`, type: "media.upsert", createdAt: op.createdAt, payload: { details: core } },
-    playbackSets,
-    prune: { mediaId: details.id, updatedAt: details.updatedAt, keepFileIds: fileIds },
-  };
-};
-
-/** A packed list's row values, validated (LIB-OPS-01: a list that does not decode is refused, never stored). */
-const chunkListRow = (opType: string, json: PackedChunkListJson) => {
-  try {
-    const list = chunkListFromJson(json);
-    decodeChunkSizes(list.sizes, list.count);
-    decodeChunkStarts(list.starts, list.count);
-    // A seed derives its keys on read; any other mode must hold exactly `count` keys.
-    if (list.keyMode !== CHUNK_LIST_KEY_MODE.seed) chunkListKeys(list);
-    return list;
-  } catch (error) {
-    throw new LibraryOpShapeError(opType, `bad chunkList: ${error instanceof Error ? error.message : String(error)}`);
-  }
-};
-
-type SqlGuard = { sql: string; params: ReadonlyArray<unknown> };
-
-const NO_GUARD: SqlGuard = { sql: "1", params: [] };
-
-/** Deletes one file group's chunk lists and chapters (formats and tracks stay; the caller decides). */
-const appendFileListsClear = (b: Builders, mediaId: string, fileId: string | null, guard: SqlGuard) => {
-  const scope = [mediaId, fileId, ...guard.params];
-  b.playback.add(
-    `DELETE FROM media_chunk_lists WHERE owner_id IN (SELECT id FROM media_formats WHERE media_id = ? AND file_id IS ?) AND ${guard.sql};`,
-    scope
-  );
-  b.playback.add(
-    `DELETE FROM media_chunk_lists WHERE owner_id IN (SELECT id FROM media_audio_tracks WHERE media_id = ? AND file_id IS ?) AND ${guard.sql};`,
-    scope
-  );
-  b.playback.add(
-    `DELETE FROM media_chapters WHERE format_id IN (SELECT id FROM media_formats WHERE media_id = ? AND file_id IS ?) AND ${guard.sql};`,
-    scope
-  );
-};
-
-const appendChunkListInsert = (
-  b: Builders,
-  opType: string,
-  ownerId: string,
-  ownerKind: ChunkListOwnerKind,
-  json: PackedChunkListJson,
-  updatedAt: string,
-  guard: SqlGuard
-) => {
-  const list = chunkListRow(opType, json);
-  b.playback.add(
-    `INSERT OR REPLACE INTO media_chunk_lists (owner_id, owner_kind, placement_id, key_mode, key_data, count, sizes, starts, updated_at)
-     SELECT ?, ?, ?, ?, ?, ?, ?, ?, ? WHERE ${guard.sql};`,
-    [ownerId, ownerKind, list.placementId, list.keyMode, list.keyData, list.count, list.sizes, list.starts, updatedAt, ...guard.params]
-  );
-};
-
-/**
- * `media.file.playback.set`: replaces one file group's playback, guarded by that group's clock (LIB-SYNC-08): an
- * older set than the stored one changes nothing; an equal one applies (the later arrival wins a tie).
- */
-const appendFilePlaybackSet = (b: Builders, op: MediaFilePlaybackSetOp) => {
-  const { mediaId, fileId, updatedAt, formats, audioTracks, subtitles, chapters } = op.payload;
-  const formatIds = new Set(formats.map((format) => format.id));
-  for (const row of [...formats, ...audioTracks, ...subtitles]) {
-    if ((row.fileId ?? null) !== fileId) throw new LibraryOpShapeError(op.type, `row ${row.id} names file ${String(row.fileId)}, not ${String(fileId)}`);
-  }
-  for (const chapter of chapters) {
-    if (!formatIds.has(chapter.formatId)) throw new LibraryOpShapeError(op.type, `chapter ${chapter.id} names format ${chapter.formatId} outside this file`);
-  }
-  const fileKey = playbackFileKey(fileId);
-  b.playback.add(
-    `INSERT INTO media_file_playback (media_id, file_id, updated_at) VALUES (?, ?, ?)
-     ON CONFLICT(media_id, file_id) DO UPDATE SET updated_at = excluded.updated_at
-     WHERE excluded.updated_at >= media_file_playback.updated_at;`,
-    [mediaId, fileKey, updatedAt]
-  );
-  const guard: SqlGuard = {
-    sql: "EXISTS (SELECT 1 FROM media_file_playback WHERE media_id = ? AND file_id = ? AND updated_at = ?)",
-    params: [mediaId, fileKey, updatedAt],
-  };
-  appendFileListsClear(b, mediaId, fileId, guard);
-
-  for (const format of formats) {
-    // Seek-bar previews (MPV-PREV-01): a format without the field keeps what is stored, as in `appendMediaPlayback`.
-    const keepPreviews = format.previewSheets === undefined;
-    b.playback.add(
-      `INSERT OR REPLACE INTO media_formats (
-        id, media_id, file_id, quality, codec, codec_string, bitrate_kbps, init_key, init_size, duration_seconds, total_size, size_mb, is_source,
-        preview_sheets
-      ) SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ${
-        keepPreviews
-          ? "(SELECT preview_sheets FROM media_formats WHERE media_id = ? AND (id = ? OR (file_id = ? AND quality = ?)) ORDER BY id = ? DESC LIMIT 1)"
-          : "?"
-      } WHERE ${guard.sql};`,
-      [
-        format.id,
-        mediaId,
-        format.fileId,
-        format.quality,
-        format.codec,
-        format.codecString ?? null,
-        format.bitrateKbps ?? null,
-        format.initKey ?? null,
-        format.initSize ?? null,
-        format.durationSeconds ?? null,
-        format.totalSize ?? null,
-        format.sizeMb,
-        format.isSource ? 1 : 0,
-        ...(keepPreviews
-          ? [mediaId, format.id, format.fileId, format.quality, format.id]
-          : [format.previewSheets ? JSON.stringify(format.previewSheets) : null]),
-        ...guard.params,
-      ]
-    );
-    appendChunkListInsert(b, op.type, format.id, CHUNK_LIST_OWNER_KIND.format, format.chunkList, updatedAt, guard);
-  }
-  b.playback.add(
-    `DELETE FROM media_formats WHERE media_id = ? AND file_id IS ? AND id NOT IN (${formats.map(() => "?").join(", ")}) AND ${guard.sql};`,
-    [mediaId, fileId, ...formats.map((format) => format.id), ...guard.params]
-  );
-
-  b.playback.add(`DELETE FROM media_audio_tracks WHERE media_id = ? AND file_id IS ? AND ${guard.sql};`, [
-    mediaId,
-    fileId,
-    ...guard.params,
-  ]);
-  for (const track of audioTracks) {
-    b.playback.add(
-      `INSERT OR REPLACE INTO media_audio_tracks (
-        id, media_id, file_id, episode_id, language, label, is_default, source, codec, codec_string, init_key, init_size, duration_seconds, total_size, created_at
-      ) SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? WHERE ${guard.sql};`,
-      [
-        track.id,
-        mediaId,
-        fileId,
-        track.episodeId ?? null,
-        track.language,
-        track.label,
-        track.isDefault ? 1 : 0,
-        track.source,
-        track.codec ?? null,
-        track.codecString ?? null,
-        track.initKey ?? null,
-        track.initSize ?? null,
-        track.durationSeconds ?? null,
-        track.totalSize ?? null,
-        updatedAt,
-        ...guard.params,
-      ]
-    );
-    appendChunkListInsert(b, op.type, track.id, CHUNK_LIST_OWNER_KIND.audioTrack, track.chunkList, updatedAt, guard);
-  }
-
-  b.playback.add(`DELETE FROM media_subtitles WHERE media_id = ? AND file_id IS ? AND ${guard.sql};`, [
-    mediaId,
-    fileId,
-    ...guard.params,
-  ]);
-  for (const subtitle of subtitles) {
-    b.playback.add(
-      `INSERT OR REPLACE INTO media_subtitles (
-        id, media_id, file_id, episode_id, language, label, object_key, format, is_default, source, created_at,
-        derived_from_subtitle_id
-      ) SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? WHERE ${guard.sql};`,
-      [
-        subtitle.id,
-        mediaId,
-        fileId,
-        subtitle.episodeId ?? null,
-        subtitle.language,
-        subtitle.label,
-        subtitle.objectKey ?? null,
-        subtitle.format ?? null,
-        subtitle.isDefault ? 1 : 0,
-        subtitle.source,
-        subtitle.createdAt ?? updatedAt,
-        subtitle.derivedFromSubtitleId ?? null,
-        ...guard.params,
-      ]
-    );
-  }
-
-  for (const chapter of chapters) {
-    b.playback.add(
-      `INSERT OR REPLACE INTO media_chapters (id, format_id, title, start_seconds) SELECT ?, ?, ?, ? WHERE ${guard.sql};`,
-      [chapter.id, chapter.formatId, chapter.title, chapter.startSeconds, ...guard.params]
-    );
-  }
-};
-
-/** One file group's playback gone, with its offline copy bookkeeping and its clock (no clock guards a delete). */
-const appendFilePlaybackDelete = (b: Builders, mediaId: string, fileId: string | null) => {
-  appendFileListsClear(b, mediaId, fileId, NO_GUARD);
-  b.playback.add("DELETE FROM media_formats WHERE media_id = ? AND file_id IS ?;", [mediaId, fileId]);
-  b.playback.add("DELETE FROM media_audio_tracks WHERE media_id = ? AND file_id IS ?;", [mediaId, fileId]);
-  b.playback.add("DELETE FROM media_subtitles WHERE media_id = ? AND file_id IS ?;", [mediaId, fileId]);
-  if (fileId !== null) b.playback.add("DELETE FROM media_local_downloads WHERE file_id = ?;", [fileId]);
-  b.playback.add("DELETE FROM media_file_playback WHERE media_id = ? AND file_id = ?;", [mediaId, playbackFileKey(fileId)]);
-};
-
-/** `media.episode.delete`: the episode and only its rows, in every group (the writer names its files). */
-const appendEpisodeDelete = (b: Builders, op: MediaEpisodeDeleteOp) => {
-  const { mediaId, episodeId, seasonNumber, episodeNumber, fileIds } = op.payload;
-  const fileList = fileIds.map(() => "?").join(", ");
-  const episodeFiles = `media_id = ? AND (id IN (${fileList}) OR (season = ? AND episode = ?))`;
-  const episodeFileParams = [mediaId, ...fileIds, seasonNumber, episodeNumber];
-  b.metadata.add("DELETE FROM media_episodes WHERE media_id = ? AND season_number = ? AND episode_number = ?;", [
-    mediaId,
-    seasonNumber,
-    episodeNumber,
-  ]);
-  if (episodeId !== null) {
-    b.metadata.add("DELETE FROM media_skip_markers WHERE media_id = ? AND episode_id = ?;", [mediaId, episodeId]);
-  }
-  b.metadata.add(
-    `DELETE FROM media_file_desired_formats WHERE file_id IN (SELECT id FROM media_files WHERE ${episodeFiles});`,
-    episodeFileParams
-  );
-  b.metadata.add(`DELETE FROM media_files WHERE ${episodeFiles};`, episodeFileParams);
-  b.metadata.add("DELETE FROM media_editions WHERE media_id = ? AND season = ? AND episode = ?;", [
-    mediaId,
-    seasonNumber,
-    episodeNumber,
-  ]);
-  for (const fileId of fileIds) appendFilePlaybackDelete(b, mediaId, fileId);
-  if (episodeId !== null) {
-    b.playback.add(
-      "DELETE FROM media_chunk_lists WHERE owner_id IN (SELECT id FROM media_audio_tracks WHERE media_id = ? AND episode_id = ?);",
-      [mediaId, episodeId]
-    );
-    b.playback.add("DELETE FROM media_audio_tracks WHERE media_id = ? AND episode_id = ?;", [mediaId, episodeId]);
-    b.playback.add("DELETE FROM media_subtitles WHERE media_id = ? AND episode_id = ?;", [mediaId, episodeId]);
-  }
-};
-
-/**
- * The prune of a translated old upsert: the title's rows of files it no longer names, unless that file's playback
- * clock is newer than the upsert. Rows that name no file are the no-file set's, never pruned here.
- */
-const appendTranslatedPrune = (b: Builders, prune: TranslatedMediaUpsert["prune"]) => {
-  const { mediaId, updatedAt, keepFileIds } = prune;
-  const keep = keepFileIds.map(() => "?").join(", ");
-  const scope = (table: string): SqlGuard => ({
-    sql: `${table}.media_id = ? AND ${table}.file_id IS NOT NULL AND ${table}.file_id NOT IN (${keep})
-      AND NOT EXISTS (SELECT 1 FROM media_file_playback c WHERE c.media_id = ${table}.media_id AND c.file_id = ${table}.file_id AND c.updated_at > ?)`,
-    params: [mediaId, ...keepFileIds, updatedAt],
-  });
-  const formats = scope("media_formats");
-  const tracks = scope("media_audio_tracks");
-  const subtitles = scope("media_subtitles");
-  b.playback.add(`DELETE FROM media_chunk_lists WHERE owner_id IN (SELECT id FROM media_formats WHERE ${formats.sql});`, formats.params);
-  b.playback.add(`DELETE FROM media_chunk_lists WHERE owner_id IN (SELECT id FROM media_audio_tracks WHERE ${tracks.sql});`, tracks.params);
-  b.playback.add(`DELETE FROM media_chapters WHERE format_id IN (SELECT id FROM media_formats WHERE ${formats.sql});`, formats.params);
-  b.playback.add(`DELETE FROM media_formats WHERE ${formats.sql};`, formats.params);
-  b.playback.add(`DELETE FROM media_audio_tracks WHERE ${tracks.sql};`, tracks.params);
-  b.playback.add(`DELETE FROM media_subtitles WHERE ${subtitles.sql};`, subtitles.params);
-  b.playback.add(
-    `DELETE FROM media_file_playback WHERE media_id = ? AND file_id <> '' AND file_id NOT IN (${keep}) AND updated_at <= ?;`,
-    [mediaId, ...keepFileIds, updatedAt]
-  );
-};
-
-const appendMediaUpsert = (
-  b: Builders,
-  op: MediaUpsertOp | MediaUpsertV4Op,
-  newId: IdGenerator,
-  options: BuildOpOptions
-) => {
-  if (!isV3MediaUpsert(op)) {
-    // A version-4 upsert: core and metadata only. Playback travels in `media.file.playback.*` and is never pruned
-    // here. An op of op stream v1–v2 with no playback key has this shape too, so its old catalog keys are still read.
-    const details = neutralMediaDetails(op.payload.details);
-    appendMediaCore(b, details, newId);
-    appendMediaMetadata(b, details, newId);
-  } else {
-    const raw = op.payload.details;
-    for (const key of ["formats", "audioTracks"] as const) {
-      const rows: ReadonlyArray<object> | undefined = raw[key];
-      if (Array.isArray(rows) && rows.some((row) => "chunkList" in row)) {
-        throw new LibraryOpShapeError(op.type, `${key} carry packed chunkList; a version-4 upsert carries no playback`);
-      }
-    }
-    if (!options.packedPlayback) {
-      const details = neutralMediaDetails(raw);
-      appendMediaCore(b, details, newId);
-      appendMediaMetadata(b, details, newId);
-      appendMediaPlayback(b, details, newId);
-    } else {
-      const translated = translateV3MediaUpsert(op);
-      const details = translated.upsert.payload.details;
-      appendMediaCore(b, details, newId);
-      appendMediaMetadata(b, details, newId);
-      appendTranslatedPrune(b, translated.prune);
-      for (const set of translated.playbackSets) appendFilePlaybackSet(b, set);
-    }
-  }
+  appendMediaCore(b, details, newId);
+  appendMediaMetadata(b, details, newId);
+  appendMediaPlayback(b, details, newId);
   // Stale ML analysis must be cleared whenever the media payload is rewritten.
   // The templates group is desktop-only — mobile silently drops it.
-  b.templates.add("DELETE FROM media_skip_analysis WHERE media_id = ?;", [op.payload.details.id]);
+  b.templates.add("DELETE FROM media_skip_analysis WHERE media_id = ?;", [details.id]);
 };
 
-const appendMediaDelete = (b: Builders, op: MediaDeleteOp, options: BuildOpOptions) => {
+const appendMediaDelete = (b: Builders, op: MediaDeleteOp) => {
   const mediaId = op.payload.mediaId;
   b.core.add("DELETE FROM media_external_ids WHERE media_id = ?;", [mediaId]);
   b.core.add("DELETE FROM media_genres WHERE media_id = ?;", [mediaId]);
@@ -1007,17 +586,6 @@ const appendMediaDelete = (b: Builders, op: MediaDeleteOp, options: BuildOpOptio
   b.metadata.add("DELETE FROM media_files WHERE media_id = ?;", [mediaId]);
   b.metadata.add("DELETE FROM media_editions WHERE media_id = ?;", [mediaId]);
 
-  if (options.packedPlayback) {
-    b.playback.add(
-      "DELETE FROM media_chunk_lists WHERE owner_id IN (SELECT id FROM media_formats WHERE media_id = ?);",
-      [mediaId]
-    );
-    b.playback.add(
-      "DELETE FROM media_chunk_lists WHERE owner_id IN (SELECT id FROM media_audio_tracks WHERE media_id = ?);",
-      [mediaId]
-    );
-    b.playback.add("DELETE FROM media_file_playback WHERE media_id = ?;", [mediaId]);
-  }
   b.playback.add(
     "DELETE FROM media_format_chunks WHERE format_id IN (SELECT id FROM media_formats WHERE media_id = ?);",
     [mediaId]
@@ -1157,8 +725,7 @@ const appendIngestJobHistoryClear = (b: Builders, op: IngestJobHistoryClearOp) =
  */
 export const buildOpStatements = (
   op: LibraryOp,
-  idGen: IdGenerator,
-  options: BuildOpOptions = {}
+  idGen: IdGenerator
 ): OpStatementsByGroup => {
   const b = newBuilders();
   switch (op.type) {
@@ -1175,22 +742,10 @@ export const buildOpStatements = (
       appendPlaylistItemRemove(b, op);
       break;
     case "media.upsert":
-      appendMediaUpsert(b, op, idGen, options);
+      appendMediaUpsert(b, op, idGen);
       break;
     case "media.delete":
-      appendMediaDelete(b, op, options);
-      break;
-    case "media.file.playback.set":
-      if (!options.packedPlayback) throw new PlaybackLayoutError(op.type);
-      appendFilePlaybackSet(b, op);
-      break;
-    case "media.file.playback.delete":
-      if (!options.packedPlayback) throw new PlaybackLayoutError(op.type);
-      appendFilePlaybackDelete(b, op.payload.mediaId, op.payload.fileId);
-      break;
-    case "media.episode.delete":
-      if (!options.packedPlayback) throw new PlaybackLayoutError(op.type);
-      appendEpisodeDelete(b, op);
+      appendMediaDelete(b, op);
       break;
     case "media.progress":
       appendMediaProgress(b, op);
@@ -1253,17 +808,13 @@ export const buildMediaPlaybackStatements = (
   return finalize(b);
 };
 
-export const buildMediaDeleteStatements = (mediaId: string, options: BuildOpOptions = {}): OpStatementsByGroup => {
+export const buildMediaDeleteStatements = (mediaId: string): OpStatementsByGroup => {
   const b = newBuilders();
-  appendMediaDelete(
-    b,
-    {
-      id: "synthetic",
-      type: "media.delete",
-      createdAt: "",
-      payload: { mediaId },
-    },
-    options
-  );
+  appendMediaDelete(b, {
+    id: "synthetic",
+    type: "media.delete",
+    createdAt: "",
+    payload: { mediaId },
+  });
   return finalize(b);
 };

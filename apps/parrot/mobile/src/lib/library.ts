@@ -96,7 +96,6 @@ import {
   type TrackFileChunkRow,
   type TrackFileRow,
   type TrackRow,
-  parrotLibraryUpgradeStatements,
 } from "@space/parrot-core";
 
 SQLite.enablePromise(true);
@@ -189,11 +188,11 @@ export const openLibrary = async (token: string, libraryKey: string): Promise<{ 
   await RNFS.mkdir(path.slice(0, path.lastIndexOf("/")));
   await RNFS.writeFile(path, Buffer.from(dbBytes).toString("base64"), "base64");
   const opened = await openLibraryFile();
-  // A snapshot published by an older build is brought to schema 10 in the phone's own copy (e.g. the small cover
-  // column, PAR-META-04); a file at 11 stays there (API-VER-01). The next playlist save publishes it at that schema.
+  // A snapshot published by an older build is brought to this build's schema in the phone's own copy (e.g. the small
+  // cover column, PAR-META-04); the next playlist save publishes it at that schema.
   const [version] = await opened.executeSql("PRAGMA user_version");
   const fileVersion = Number(version.rows.item(0)?.user_version ?? 0);
-  const statements = parrotLibraryUpgradeStatements(fileVersion);
+  const statements = parrotLibraryMigrationStatements(fileVersion);
   if (statements.length) {
     await opened.sqlBatch(statements);
     log("parrot.library.migrated", { from: fileVersion, statements: statements.length });

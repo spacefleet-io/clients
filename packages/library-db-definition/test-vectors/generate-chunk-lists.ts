@@ -16,8 +16,6 @@ import {
   type ChunkRef,
   type PackedChunkList,
 } from "../src/chunkLists";
-import { translateV3MediaUpsert } from "../src/ops";
-import type { MediaUpsertOp } from "@space/shared/libraryOps";
 
 const hex = (bytes: Uint8Array | null) => (bytes === null ? null : Buffer.from(bytes).toString("hex"));
 const fromHex = (value: string) => Uint8Array.from(Buffer.from(value, "hex"));
@@ -96,171 +94,6 @@ const seedCases = [
   },
 ];
 
-// --- Translation of an old `media.upsert` (vault v4 plan §1.1, LIB-FMT-11 shape rule) ---------------------------------
-
-const M = "5d1c9a20-0000-4000-8000-00000000a001";
-const T0 = "2026-11-01T10:00:00.000Z";
-const T1 = "2026-11-02T10:00:00.000Z";
-
-const baseDetails = {
-  id: M,
-  type: "movie" as const,
-  catalogId: 603,
-  title: "Vector Movie",
-  originalTitle: null,
-  originalLanguage: "en",
-  overview: null,
-  year: "1999",
-  rating: null,
-  posterPath: null,
-  backdropPath: null,
-  genres: [28],
-  addedAt: T0,
-  updatedAt: T1,
-  hasFiles: true,
-  progressPct: 0,
-  lastWatchedAt: null,
-  totalEpisodes: null,
-  episodeCount: 0,
-  cast: [],
-  playlistIds: [],
-  seasons: [],
-  episodes: [],
-  trailers: [],
-  skipMarkers: [],
-  hasLocalFiles: false,
-  files: [
-    { id: "file-a", filename: "a.mkv", season: null, episode: null, desiredFormats: [] },
-    { id: "file-b", filename: "b.mkv", season: null, episode: null, desiredFormats: [] },
-  ],
-};
-
-const format = (id: string, fileId: string, chunks: ChunkRef[]) => ({
-  id,
-  mediaId: M,
-  fileId,
-  quality: "1080p",
-  codec: "h264",
-  codecString: "avc1.640028",
-  bitrateKbps: 5000,
-  sizeMb: 10,
-  initKey: `media/${P}/init-${id}`,
-  initSize: 900,
-  durationSeconds: 18.018,
-  totalSize: 3_145_728,
-  isSource: true,
-  chunks,
-});
-
-const audio = (id: string, fileId: string | null, chunks: ChunkRef[]) => ({
-  id,
-  mediaId: M,
-  fileId,
-  episodeId: null,
-  language: "fr",
-  label: "Français",
-  isDefault: fileId === null,
-  source: fileId === null ? "added" : "embedded",
-  codec: "aac",
-  codecString: "mp4a.40.2",
-  initKey: null,
-  initSize: null,
-  durationSeconds: 18,
-  totalSize: 600,
-  chunks,
-});
-
-const subtitle = (id: string, fileId: string | null) => ({
-  id,
-  mediaId: M,
-  fileId,
-  episodeId: null,
-  language: "en",
-  label: "English",
-  objectKey: `subtitles/${id}.vtt`,
-  format: "vtt",
-  isDefault: false,
-  source: "embedded",
-  createdAt: T0,
-});
-
-const translationCases: Array<{ name: string; note: string; op: MediaUpsertOp }> = [
-  {
-    name: "movie-two-files",
-    note:
-      "two files, chapters, an added audio track with no file, subtitles under `subtitles`; a chapter of a format not in the payload is dropped; a set per file then the no-file set",
-    op: {
-      id: "op-movie-1",
-      type: "media.upsert",
-      createdAt: T1,
-      payload: {
-        details: {
-          ...baseDetails,
-          formats: [
-            format("fmt-a", "file-a", [0, 1, 2].map((i) => ({ key: uuidKey(30 + i), sizeBytes: 1_000_000 + i, startSeconds: i * 6.006 }))),
-            format("fmt-b", "file-b", [{ key: "shards/9/x", sizeBytes: 77, startSeconds: null }]),
-          ],
-          audioTracks: [
-            audio("aud-a", "file-a", [{ key: uuidKey(40), sizeBytes: 600, startSeconds: 0 }]),
-            audio("aud-added", null, [
-              { key: uuidKey(41), sizeBytes: 300, startSeconds: 0 },
-              { key: uuidKey(42), sizeBytes: 300, startSeconds: 12 },
-            ]),
-          ],
-          subtitles: [subtitle("sub-a", "file-a"), subtitle("sub-added", null)],
-          subtitleTracks: [subtitle("sub-a", "file-a"), subtitle("sub-added", null)],
-          chapters: [
-            { id: "ch-1", formatId: "fmt-a", title: "Opening", startSeconds: 0 },
-            { id: "ch-2", formatId: "fmt-a", title: "End", startSeconds: 12.5 },
-            { id: "ch-gone", formatId: "fmt-missing", title: "Dropped", startSeconds: 1 },
-          ],
-        },
-      },
-    },
-  },
-  {
-    name: "empty-playback-prunes-all",
-    note:
-      "formats: [] (old semantics: the title's whole playback replaced by nothing): keepFileIds = the files only, every set empty, so every stored row of the title goes",
-    op: {
-      id: "op-movie-2",
-      type: "media.upsert",
-      createdAt: T1,
-      payload: {
-        details: {
-          ...baseDetails,
-          files: [baseDetails.files[0]!],
-          formats: [],
-          audioTracks: [],
-          subtitles: [],
-          subtitleTracks: [],
-          chapters: [],
-        },
-      },
-    },
-  },
-  {
-    name: "row-file-not-in-files",
-    note: "a format names a file missing from `files`: that file still gets its set and is kept, after the listed files",
-    op: {
-      id: "op-movie-3",
-      type: "media.upsert",
-      createdAt: T1,
-      payload: {
-        details: {
-          ...baseDetails,
-          files: [baseDetails.files[1]!],
-          formats: [format("fmt-c", "file-c", [{ key: uuidKey(50), sizeBytes: 1, startSeconds: 0 }])],
-          audioTracks: [],
-          subtitles: [],
-          subtitleTracks: [],
-          chapters: [],
-        },
-      },
-    },
-  },
-];
-
 const vectors = {
   description:
     "Packed chunk lists (LIB-FMT-11, vault v4 plan §1.2-1.5). Generated by generate-chunk-lists.ts from src/chunkLists.ts; do not edit by hand. Hex fields are lowercase; json is the op-stream-4 object (standard padded base64).",
@@ -273,8 +106,6 @@ const vectors = {
     keyMode2:
       "keyData = 16-byte seed; key i = media/<placementId>/ + lowercase 8-4-4-4-12 hex of the first 16 bytes of HMAC-SHA256(key = seed, message = ASCII 'chunk:' || u32 big-endian i)",
   },
-  translation:
-    "translateV3MediaUpsert (LIB-FMT-11): an upsert whose details hold any of formats/audioTracks/subtitles/subtitleTracks/chapters is the old type. upsert = details without those keys, id <op>:upsert. playbackSets = one per file id (files, then other file ids rows name, first-seen order) then fileId null, id <op>:playback:<fileId or ''>, updatedAt = details.updatedAt; rows go to the set of their fileId; chunks packed (packChunkList); subtitles = subtitles ?? subtitleTracks ?? []; a chapter goes to its format's set, dropped when its format is absent. prune = {mediaId, updatedAt, keepFileIds = the file ids of the sets}: rows of other files are deleted unless that file's clock is newer than updatedAt.",
   explicit: explicitCases.map(({ name, note, chunks }) => ({ name, note, input: { chunks }, expected: expected(packChunkList(chunks)) })),
   seeded: seedCases.map(({ name, note, placementId, seedHex, sizes, starts }) => ({
     name,
@@ -288,7 +119,6 @@ const vectors = {
     index,
     key: seedChunkKey(fromHex("000102030405060708090a0b0c0d0e0f"), P, index),
   })),
-  translations: translationCases.map(({ name, note, op }) => ({ name, note, input: op, expected: translateV3MediaUpsert(op) })),
   invalid: [
     { name: "sizes-short", note: "count 2 but one size", json: { placementId: "", keyMode: 0, keyData: btoa("a\nb"), count: 2, sizes: "AQ==", starts: null } },
     { name: "sizes-trailing", note: "bytes left after count sizes", json: { placementId: "", keyMode: 0, keyData: btoa("a"), count: 1, sizes: "AQE=", starts: null } },
@@ -302,6 +132,4 @@ const vectors = {
 
 const path = join(import.meta.dir, "chunk-lists.json");
 writeFileSync(path, `${JSON.stringify(vectors, null, 2)}\n`);
-console.info(
-  `wrote ${path}: ${vectors.explicit.length} explicit, ${vectors.seeded.length} seeded, ${vectors.seedKeys.length} seed keys, ${vectors.translations.length} translations, ${vectors.invalid.length} invalid`
-);
+console.info(`wrote ${path}: ${vectors.explicit.length} explicit, ${vectors.seeded.length} seeded, ${vectors.seedKeys.length} seed keys, ${vectors.invalid.length} invalid`);

@@ -5,11 +5,9 @@
  *   account to whatever a full copy or change declares (LIB-FMT-05), so a single writer declaring 4 early locks every
  *   older app out, irreversibly for users. Writers declare `OP_STREAM_VERSION` (3) and only a writer migrated to v4
  *   declares through `writeOpStreamVersion(targetOpStreamVersion)`. This suite fails when any app or package source:
- *   - uses `READ_OP_STREAM_VERSION` other than in a comparison, an import/export, a comment, or a line marked
- *     `op-stream: read` (the `x-library-op-stream-version` header on library READS, `currentLibrarySupport`);
- *   - declares a literal 4 as an op stream version (TS, Kotlin, Swift, Python);
- *   - takes a writer's op stream version from a read gate (`*_SUPPORT.opStreamVersion`), which carries
- *     `READ_OP_STREAM_VERSION` (the mobile `MOBILE_WRITER_FORMATS` bug this suite first caught).
+ *   - uses `READ_OP_STREAM_VERSION` other than in a comparison, an import/export, or a line marked `op-stream: read`
+ *     (the `x-library-op-stream-version` header on library READS);
+ *   - declares a literal 4 as an op stream version (TS, Kotlin, Swift, Python).
  */
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
@@ -27,11 +25,10 @@ const sourceFiles = execFileSync("git", ["ls-files", "apps", "packages"], { cwd:
   .filter((path) => !/\.(test|spec)\.tsx?$/.test(path) && !/Tests?\.(kt|swift)$/.test(path) && !/(^|\/)test_[^/]*\.py$/.test(path))
   .filter((path) => path !== "packages/library-db-definition/src/ops.ts");
 
-const WRITE_VERSION_OFFENCES = [
+const LITERAL_FOUR = [
   /opStreamVersion\s*[:=]\s*4\b/,
   /op_stream_version\s*[:=]\s*4\b/i,
   /x-library-op-stream-version["']?\s*[:,]\s*(String\()?["']?4\b/i,
-  /opStreamVersion\s*:\s*\w*SUPPORT\w*\.opStreamVersion\b/,
 ];
 
 describe("op stream write version (LIB-FMT-13)", () => {
@@ -53,20 +50,15 @@ describe("op stream write version (LIB-FMT-13)", () => {
       if (!text.includes("READ_OP_STREAM_VERSION") && !/stream[-_]?version/i.test(text)) continue;
       text.split("\n").forEach((line, index) => {
         const where = `${path}:${index + 1}: ${line.trim()}`;
-        // The read constant's own definition in a port (Python, Kotlin `const val`, Swift `static let`), typed or not.
-        const definesReadVersion =
-          /^\s*((public|internal|private|const|val|static|let)\s+)*READ_OP_STREAM_VERSION\s*(:\s*\w+\s*)?=\s*4\b/.test(line);
         if (line.includes("READ_OP_STREAM_VERSION")) {
           const allowed =
-            definesReadVersion ||
             /^\s*(import|export)\b/.test(line) ||
             /^\s*(READ_OP_STREAM_VERSION|type\b)/.test(line) ||
-            /(<=?|>=?|===?|!==?)\s*READ_OP_STREAM_VERSION|READ_OP_STREAM_VERSION\s*(<=?|>=?|===?|!==?)/.test(line) ||
-            /^\s*(\*|\/\/|\/\*|#)/.test(line) ||
+            /(<=?|>=?|===|!==)\s*READ_OP_STREAM_VERSION|READ_OP_STREAM_VERSION\s*(<=?|>=?|===|!==)/.test(line) ||
             line.includes("op-stream: read");
           if (!allowed) offenders.push(where);
         }
-        if (!definesReadVersion && WRITE_VERSION_OFFENCES.some((pattern) => pattern.test(line))) offenders.push(where);
+        if (LITERAL_FOUR.some((pattern) => pattern.test(line))) offenders.push(where);
       });
     }
     console.info(`[${SUITE}] scanned ${sourceFiles.length} files; offenders=${JSON.stringify(offenders, null, 2)}`);

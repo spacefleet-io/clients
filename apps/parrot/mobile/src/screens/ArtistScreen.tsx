@@ -2,7 +2,7 @@
 // UX-PHONE-04) for an artist, so the two apps read as one fleet: the photo edge to edge fading into the sky, with its
 // credit line (PAR-META-15), shimmering while it may still come (PAR-META-20) and giving way to the artist's drawn
 // picture with their initials when there is none; the ARTIST chip, the name and the counts over the fade; a full-width
-// Play, then round Shuffle, Save offline (each album), Play next and More. Two tabs, Albums first: the
+// Play, then round Shuffle, Keep on this phone (each album), Play next and More. Two tabs, Albums first: the
 // discography timeline, then every song. Delete is only in the More sheet, last, in red, after asking (PAR-LIB-03).
 import React, { useRef, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View, type ScrollViewInstance } from "react-native";
@@ -22,14 +22,13 @@ import { ErrorText } from "./ui";
 export const ARTIST_TABS = ["albums", "songs"] as const;
 type Tab = (typeof ARTIST_TABS)[number];
 
-/** The photo's least height, status bar included. Lower than Badger's title hero so the discography starts on the
- * first screen (Chris 2026-11-21, PAR-LOOK-06). It grows when the name wraps at a large phone text size (UX-A11Y-05),
- * so the name never shrinks and never slides under the back button. */
+/** The photo's height, status bar included. Lower than Badger's title hero so the discography starts on the first
+ * screen (Chris 2026-11-21, PAR-LOOK-06). */
 const HERO = 280;
 
-/** How far above the hero's bottom the page's top bar and floating back button take over: the hero's own back button
- * has gone, and the name is about to slide under the status bar. */
-const BAR_BEFORE_END = 240;
+/** Where the page's top bar and floating back button take over: the hero's own back button has gone, and the name is
+ * about to slide under the status bar. */
+const BAR_FROM = HERO - 240;
 
 export const ArtistScreen = ({ route, navigation }: NativeStackScreenProps<RootStack, "Artist">) => {
   const { artistId, name } = route.params;
@@ -37,8 +36,7 @@ export const ArtistScreen = ({ route, navigation }: NativeStackScreenProps<RootS
   const { t } = page;
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
-  const [heroHeight, setHeroHeight] = useState(HERO);
-  const bar = useTopBarScroll(heroHeight - BAR_BEFORE_END);
+  const bar = useTopBarScroll(BAR_FROM);
   const [tab, setTab] = useState<Tab>(ARTIST_TABS[0]);
   const scroll = useRef<ScrollViewInstance | null>(null);
   const discographyTop = useRef(0);
@@ -58,22 +56,20 @@ export const ArtistScreen = ({ route, navigation }: NativeStackScreenProps<RootS
   return (
     <ParrotSky>
       <ScrollView ref={scroll} onScroll={bar.onScroll} scrollEventThrottle={32} contentContainerStyle={{ paddingBottom: spacing.xl * 2 }} testID="artist-page">
-        <View testID="artist-hero-box" style={styles.heroBox} onLayout={(event) => setHeroHeight(Math.max(HERO, Math.round(event.nativeEvent.layout.height)))}>
-          <View style={StyleSheet.absoluteFill}>
-            <ArtistHero artistId={artistId} name={name} page={page} width={width} height={heroHeight} />
-          </View>
+        <View style={{ height: HERO }}>
+          <ArtistHero artistId={artistId} name={name} page={page} width={width} height={HERO} />
           <View style={[styles.heroTopRow, { paddingTop: insets.top + spacing.sm }]}>
             <Pressable testID="page-back" style={styles.heroRoundButton} onPress={back} accessibilityRole="button" accessibilityLabel={t("parrot.nav.back")} hitSlop={8}>
               <ChevronLeft size={28} color={colors.text} strokeWidth={2.75} />
             </Pressable>
           </View>
-          <View style={[styles.heroMeta, { paddingTop: insets.top + PAGE_BACK_ROW }]} pointerEvents="box-none">
+          <View style={styles.heroMetaWrap}>
             <View style={styles.chipRow}>
               <View style={styles.chip}>
                 <Text style={styles.chipText}>{t("parrot.artist.label").toUpperCase()}</Text>
               </View>
             </View>
-            <Text style={styles.title} accessibilityRole="header" numberOfLines={3}>
+            <Text style={styles.title} accessibilityRole="header" numberOfLines={3} adjustsFontSizeToFit minimumFontScale={0.6}>
               {name}
             </Text>
             <Text style={styles.metaLine} numberOfLines={2}>
@@ -170,10 +166,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  heroBox: { minHeight: HERO, justifyContent: "flex-end" },
-  heroMeta: { paddingHorizontal: 20 },
+  heroMetaWrap: { position: "absolute", left: 20, right: 20, bottom: 0 },
   chipRow: { flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 6 },
-  chip: { minHeight: 22, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2, justifyContent: "center", backgroundColor: parrotShellTheme.colors.accentSoft },
+  chip: { height: 22, borderRadius: 6, paddingHorizontal: 8, justifyContent: "center", backgroundColor: parrotShellTheme.colors.accentSoft },
   chipText: { color: colors.accent, fontSize: 11.5, fontWeight: "700" },
   title: {
     color: colors.text,

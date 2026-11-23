@@ -3,9 +3,8 @@
  * @level unit
  * @req PAR-LOOK-06[parrot]
  * @req PAR-LIB-03[parrot]
- * @req UX-A11Y-05[parrot]
  * @why Chris, 2026-11-21 (chat, morning review): of the three artist page drafts he picked A (the photo edge to edge, the
- *   ARTIST chip, the name and counts over the fade, a big Play, round Shuffle / Save offline / Play next / More),
+ *   ARTIST chip, the name and counts over the fade, a big Play, round Shuffle / Keep on this phone / Play next / More),
  *   with no Overview tab ("no point next to Albums and Songs"): two tabs, Albums first and open, and the Albums tab is
  *   draft B's discography timeline (newest first, each release with its own Play, a row of years to jump down a long
  *   one) instead of a two-column grid. Delete is only in the More sheet, last and red, and asks first. The screen is
@@ -30,20 +29,13 @@ const fake = vi.hoisted(() => ({
   wentBack: 0,
   sheet: null as null | { title: string; actions: Action[]; testID: string },
   setTab: [] as unknown[],
-  /** The hero's measured height the page's state holds (its onLayout), in place of the 280 least height. */
-  heroHeight: null as null | number,
-  /** The phone's text size (useWindowDimensions().fontScale). */
-  fontScale: 1,
 }));
 
 vi.mock("react", async () => {
   const actual = await vi.importActual<typeof import("react")>("react");
   const useRef = <T,>(initial: T) => ({ current: initial });
   const useEffect = () => undefined;
-  const useState = <T,>(initial: T) => [
-    initial === "albums" && fake.tab ? fake.tab : initial === 280 && fake.heroHeight ? fake.heroHeight : initial,
-    (next: unknown) => void fake.setTab.push(next),
-  ];
+  const useState = <T,>(initial: T) => [initial === "albums" && fake.tab ? fake.tab : initial, (next: unknown) => void fake.setTab.push(next)];
   const useMemo = <T,>(fn: () => T) => fn();
   const useCallback = <T,>(fn: T) => fn;
   const hooks = { useRef, useEffect, useState, useMemo, useCallback };
@@ -56,7 +48,7 @@ vi.mock("react-native", () => ({
   StyleSheet: { create: <T extends Record<string, unknown>>(styles: T) => styles, hairlineWidth: 1, absoluteFill: {} },
   Text: "Text",
   View: "View",
-  useWindowDimensions: () => ({ width: 400, height: 800, fontScale: fake.fontScale }),
+  useWindowDimensions: () => ({ width: 400, height: 800 }),
 }));
 vi.mock("react-native-svg", () => ({ default: "Svg", Defs: "Defs", LinearGradient: "LinearGradient", Rect: "Rect", Stop: "Stop" }));
 vi.mock("react-native-safe-area-context", () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) }));
@@ -160,7 +152,7 @@ const library = (count: number) => {
 };
 
 beforeEach(() => {
-  Object.assign(fake, { albums: [], songs: [], picture: null, tab: null, calls: [], played: [], wentBack: 0, sheet: null, setTab: [], heroHeight: null, fontScale: 1 });
+  Object.assign(fake, { albums: [], songs: [], picture: null, tab: null, calls: [], played: [], wentBack: 0, sheet: null, setTab: [] });
 });
 
 describe("PARROT-MOBILE-ARTIST-PAGE-001 the tabs", () => {
@@ -225,7 +217,7 @@ describe("PARROT-MOBILE-ARTIST-PAGE-001 the Albums tab is the discography timeli
 });
 
 describe("PARROT-MOBILE-ARTIST-PAGE-001 Delete is only in the More sheet", () => {
-  it("shows Shuffle, Save offline, Play next and More under Play, nothing that deletes, and the sheet ends with Delete in red, which asks", () => {
+  it("shows Shuffle, Keep on this phone, Play next and More under Play, nothing that deletes, and the sheet ends with Delete in red, which asks", () => {
     library(2);
     const page = render("Radiohead");
     const round = all(page, (el) => typeof el.props?.testID === "string" && /^artist-(shuffle|keep|unkeep|play-next|more)$/.test(el.props.testID as string));
@@ -246,56 +238,5 @@ describe("PARROT-MOBILE-ARTIST-PAGE-001 Delete is only in the More sheet", () =>
     // manage.remove is the existing confirm (PARROT-MOBILE-MANAGE-001): it asks, deletes, then runs onDeleted.
     expect(fake.calls).toEqual(["delete:artist:ar-kg:Radiohead"]);
     expect(fake.wentBack).toBe(1);
-  });
-});
-
-describe("PARROT-MOBILE-ARTIST-PAGE-001 the name follows the phone's text size", () => {
-  it("wraps a long name over at most 3 lines without shrinking it, in a hero that grows to hold it", () => {
-    library(1);
-    const name = "The Most Extraordinarily Long-Named Philharmonic Orchestra and Chorus of Somewhere";
-    const page = render(name);
-    const [title] = all(page, (el) => el.type === "Text" && el.props.accessibilityRole === "header" && el.props.children === name);
-    const [box] = byTestId(page, "artist-hero-box");
-    log("long-name", { title: title?.props, box: box?.props.style });
-    expect(title!.props.numberOfLines).toBe(3);
-    expect(title!.props.adjustsFontSizeToFit).toBeUndefined();
-    expect(title!.props.minimumFontScale).toBeUndefined();
-    // A least height, not a fixed one: three lines at a large text size push the photo taller instead of under the back button.
-    expect(box!.props.style).toMatchObject({ minHeight: 280 });
-    expect((box!.props.style as { height?: number }).height).toBeUndefined();
-    expect(typeof box!.props.onLayout).toBe("function");
-  });
-
-  it("draws the photo and its fade at the grown hero's height in numbers, so no unfaded strip shows under a 3-line name", () => {
-    library(1);
-    const name = "Thee Silver Mt. Zion Memorial Orchestra & Tra-La-La Band";
-    const [box] = byTestId(render(name), "artist-hero-box");
-    // The box measures about 308 at 2x text: the page keeps that as the hero's height.
-    (box!.props.onLayout as (event: unknown) => void)({ nativeEvent: { layout: { height: 307.6 } } });
-    expect(fake.setTab).toContain(308);
-    fake.heroHeight = 308;
-    const [hero] = byTestId(render(name), "artist-hero");
-    const [art] = all(hero, (el) => el.type === "ParrotArt");
-    const [fade] = byTestId(hero, "artist-hero-fade");
-    const [veil] = all(fade, (el) => el.type === "Rect");
-    log("grown-hero", { hero: hero?.props.style, art: art?.props.style, fade: [fade?.props.width, fade?.props.height], veil: [veil?.props.width, veil?.props.height] });
-    expect(hero!.props.style).toMatchObject({ height: 308 });
-    expect(art!.props.style).toMatchObject({ height: 308 });
-    // A "100%" fade stayed at the first layout's size on Android; numbers follow the hero.
-    expect([fade!.props.width, fade!.props.height]).toEqual([400, 308]);
-    expect([veil!.props.width, veil!.props.height]).toEqual([400, 308]);
-  });
-
-  it("widens the year rail with the text size so the year never touches the screen edge", () => {
-    library(1);
-    const railWidth = (scale: number) => {
-      fake.fontScale = scale;
-      const [rail] = byTestId(render(), "artist-rail-year");
-      return Object.assign({}, ...(rail!.props.style as object[])).width as number;
-    };
-    const widths = [0.85, 1, 1.3, 2].map(railWidth);
-    log("rail", { widths });
-    // Only the year's own width grows: 14 either side at every size, and the release keeps its room.
-    expect(widths).toEqual([56, 56, 64, 84]);
   });
 });

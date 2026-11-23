@@ -26,6 +26,5 @@ class MainApplication : Application(), ReactApplication {
       Log.i("parrot.app", "TV fonts registered: Inter, Space Grotesk")
     }
     loadReactNative(this)
-    ModalWindows.install(reactHost)
   }
 }
