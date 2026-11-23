@@ -24,7 +24,8 @@ const toBytes = (value: PairingKeyInput, expected: number, label: string): Uint8
   return bytes;
 };
 
-const randomBytes = (length: number): Uint8Array => {
+/** CSPRNG bytes from WebCrypto (Bun, Node, browsers, React Native with its polyfill). */
+export const randomBytes = (length: number): Uint8Array => {
   const out = new Uint8Array(length);
   const c = (globalThis as { crypto?: { getRandomValues?: (a: Uint8Array) => Uint8Array } }).crypto;
   if (!c?.getRandomValues) throw new Error("no secure random source: globalThis.crypto.getRandomValues missing");
@@ -51,6 +52,7 @@ export type SealLibraryKeyInput = {
 };
 
 /** Approver: seals the 32-byte library key to the new device's public key. */
+// tla: PairingV2/ASeal
 export const sealLibraryKey = (input: SealLibraryKeyInput): SealedKey => {
   const devicePublicKey = toBytes(input.devicePublicKey, 32, "device public key");
   const libraryKey = toBytes(input.libraryKey, LIBRARY_KEY_BYTES, "library key");
@@ -96,6 +98,7 @@ export type OpenSealedKeyInput = {
  * New device: recovers the library key. Throws if the blob is malformed, tampered, or sealed for a
  * different request/device. The caller MUST still verify the key against the library keyProbe.
  */
+// tla: PairingV2/RApproved
 export const openSealedKey = (input: OpenSealedKeyInput): Uint8Array => {
   if (!isSealedKey(input.sealed)) throw new Error("malformed sealed key");
   const devicePrivate = toBytes(input.devicePrivateKey, 32, "device private key");

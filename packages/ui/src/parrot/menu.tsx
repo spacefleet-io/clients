@@ -77,7 +77,6 @@ export function ParrotMenu({ label, items, testId = "parrot-menu", onOpenChange,
       window.removeEventListener("resize", onMove);
     };
     // setOpen only wraps state and the caller's callback.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   const onKeyDown = (event: React.KeyboardEvent) => {

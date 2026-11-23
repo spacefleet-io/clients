@@ -24,6 +24,9 @@ import { useAppSettings } from "../lib/appSettings";
 import { MainShellScreen } from "../screens/MainShellScreen";
 import { LibraryFormatTooNewScreen } from "../screens/LibraryFormatTooNewScreen";
 import { AppLoadingScreen } from "./AppLoadingScreen";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { getApiBaseUrl } from "@space/shared/api";
+import { keyValueHelloStore, noteHelloScreen, startDailyHello } from "@space/shared/dailyHello";
 // Secondary screens eagerly imported — RN 0.85 + Hermes in dev mode rejects
 // Metro's lazy-chunk format ("Parsing source code unsupported: __d(function
 // (global, _$$_REQUIR…)") when React.lazy() triggers loadBundleFromServer.
@@ -191,6 +194,9 @@ export type RootStackParamList = {
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
+/** The navigator route last counted as an opened screen (OPS-BIZ-20). */
+let lastNotedScreenKey: string | null = null;
+
 export { resolveNavigatorScreen, type NavigatorScreen } from "./resolveScreen";
 import { resolveNavigatorScreen } from "./resolveScreen";
 
@@ -244,6 +250,8 @@ export const AppNavigator = () => {
   });
   // TV: reachable for "Play on TV" from the phone while signed in and the library is open (UX-TV-02).
   usePlayOnTvReceiver(IS_TV && screen === "main");
+  // OPS-BIZ-20: the daily hello, once per local day, a few seconds after start, silent on failure.
+  useEffect(() => startDailyHello({ baseUrl: getApiBaseUrl, store: keyValueHelloStore(AsyncStorage) }), []);
 
   // https://spacefleet.io/pair/badger?code=ABCDEFGH (ACCT-PAIR-06: a QR scanned with the system camera, or a tapped
   // link) opens the pairing flow. The code is held until the user is signed in and the navigator is ready.
@@ -311,6 +319,14 @@ export const AppNavigator = () => {
     setTvMenuKeyHold("stack", stackHasScreenToPop(navigationRef.getRootState()?.routes.length ?? 0));
   }
 
+  // OPS-BIZ-20: each screen the navigator opens adds one to the hello's screen tally.
+  function noteOpenedScreen() {
+    const key = navigationRef.getCurrentRoute()?.key ?? null;
+    if (!key || key === lastNotedScreenKey) return;
+    lastNotedScreenKey = key;
+    noteHelloScreen();
+  }
+
   return (
     <NavigationContainer
       ref={navigationRef}
@@ -318,8 +334,12 @@ export const AppNavigator = () => {
       onReady={() => {
         setNavReady(true);
         syncTvStackMenuKey();
+        noteOpenedScreen();
       }}
-      onStateChange={syncTvStackMenuKey}
+      onStateChange={() => {
+        syncTvStackMenuKey();
+        noteOpenedScreen();
+      }}
     >
       <Stack.Navigator
         screenOptions={{ headerShown: false }}

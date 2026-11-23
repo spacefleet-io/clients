@@ -30,6 +30,8 @@ import { useProfiles } from "../lib/profiles/profileStore";
 import { mobileCreditsSource } from "../lib/metadata/runtime";
 import { RootStackParamList } from "../navigation/AppNavigator";
 import { ChoiceRow, Divider, LinkRow, SettingsGroup, SwitchRow } from "../components/SettingsRows";
+import { keyChangeOffered } from "@space/shared/keyChange";
+import { useKeyRotationReadiness } from "@space/shared/useKeyRotationReadiness";
 import { TITLE_LANGUAGES } from "@space/shared/titleLanguage";
 import { useSignOut } from "../lib/useSignOut";
 import { PasswordChangeSection } from "../components/AccountSecurity";
@@ -62,6 +64,8 @@ const QUALITY_OPTIONS: readonly { value: DefaultQuality; label: string }[] = [
 export const SettingsScreen = memo(({ devicesRequest = 0 }: { devicesRequest?: number }) => {
   const { t, i18n } = useTranslation();
   const { user, token, setUser } = useAuth();
+  // ACCT-KEYCHG-04: the key-change row shows exactly when the server would accept the change.
+  const keyChange = keyChangeOffered(useKeyRotationReadiness(token));
   const signOut = useSignOut();
   const navigation = useNavigation<Nav>();
   const [settings, update] = useAppSettings();
@@ -406,13 +410,16 @@ export const SettingsScreen = memo(({ devicesRequest = 0 }: { devicesRequest?: n
                 onChange={(animatedBackground) => update({ animatedBackground })}
               />
             </SettingsGroup>
-            <SettingsGroup title={t("settings.advanced.libraryKey")}>
-              <LinkRow
-                title={t("settings.advanced.resetKey.title")}
-                description={t("settings.advanced.resetKey.description")}
-                onPress={() => navigation.navigate("ResetKey")}
-              />
-            </SettingsGroup>
+            {/* ACCT-KEYCHG-04: no key-change entry while the account's media could not be re-sealed. */}
+            {keyChange ? (
+              <SettingsGroup title={t("settings.advanced.libraryKey")}>
+                <LinkRow
+                  title={t("settings.advanced.resetKey.title")}
+                  description={t("settings.advanced.resetKey.description")}
+                  onPress={() => navigation.navigate("ResetKey")}
+                />
+              </SettingsGroup>
+            ) : null}
             {token ? <PasswordChangeSection token={token} hasPassword={user?.hasPassword !== false} /> : null}
           </View>
         ) : null}

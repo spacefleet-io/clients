@@ -78,6 +78,7 @@ export default function Signup() {
   return (
     <DesktopStartupPage nebula="badger"
       topNav={<PublicTopNav />}
+      mainClassName="py-12"
       controls={
         <DesktopStartupControls>
           <SetupLanguageMenu />

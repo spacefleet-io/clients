@@ -89,3 +89,24 @@ describe("compactLibraryOps keeps the newest change, not the last to arrive", ()
     expect(actualIds).toEqual(["u-new", "p-new", "s-tie"]);
   });
 });
+
+describe("compactLibraryOps drops the playback of a title deleted later in the batch", () => {
+  // @bugfix @regression-proof LIB-SYNC-22: a device replaying "add a film, delete it" kept the film's playback rows.
+  // @req LIB-SYNC-22[runtime]
+  it("drops version-4 playback and episode ops before the delete, keeps the ones of a re-add after it", () => {
+    const set = (id: string, mediaId: string) =>
+      ({ id, type: "media.file.playback.set", createdAt: id, payload: { mediaId, fileId: "f1", updatedAt: id, formats: [], audioTracks: [], subtitles: [], chapters: [] } });
+    const ops = [
+      set("set-m1-before", "m1"),
+      { id: "pdel-m1-before", type: "media.file.playback.delete", createdAt: "2", payload: { mediaId: "m1", fileId: null } },
+      { id: "ep-m1-before", type: "media.episode.delete", createdAt: "3", payload: { mediaId: "m1", episodeId: "e1", seasonNumber: 1, episodeNumber: 1, fileIds: [] } },
+      set("set-m2", "m2"),
+      { id: "del-m1", type: "media.delete", createdAt: "4", payload: { mediaId: "m1" } },
+      set("set-m1-readd", "m1"),
+    ] as unknown as LibraryOp[];
+    console.info(`[${SUITE}:delete-drops-playback] input ids=${JSON.stringify(ops.map((o) => o.id))}`);
+    const actualIds = compactLibraryOps(ops).map((op) => op.id);
+    console.info(`[${SUITE}:delete-drops-playback] actualIds=${JSON.stringify(actualIds)}`);
+    expect(actualIds).toEqual(["set-m2", "del-m1", "set-m1-readd"]);
+  });
+});

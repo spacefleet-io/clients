@@ -1,5 +1,8 @@
 import { useEffect, useRef } from "react";
 import { TitleDetails } from "@/api";
+import { rendererLogger } from "@/logger";
+
+const trailerLog = rendererLogger.child({ scope: "trailer" });
 
 export const selectTrailersByLanguage = (
   details: Pick<TitleDetails, "trailers" | "originalLanguage">,
@@ -45,7 +48,7 @@ export const useCloseTrailerOnPlayerEscape = (open: boolean, close: () => void) 
     return window.sf?.onEscapeKey?.(() => {
       const focused = document.activeElement;
       const inPlayer = focused?.tagName === "IFRAME" && Boolean(focused.closest('[role="dialog"]'));
-      console.info(`[trailer] Escape forwarded by main: focus=${focused?.tagName ?? "none"} inPlayer=${inPlayer} closed=${closed}`);
+      trailerLog.info(`[trailer] Escape forwarded by main: focus=${focused?.tagName ?? "none"} inPlayer=${inPlayer} closed=${closed}`);
       if (!inPlayer || closed) return;
       closed = true;
       closeRef.current();

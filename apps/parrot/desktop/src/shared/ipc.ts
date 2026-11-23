@@ -491,6 +491,8 @@ export type ParrotBridge = {
    * at "Already playing on {device}. Play here instead?". A song kept on this computer never asks.
    */
   streamAcquire(trackId: string): Promise<"play" | "cancel">;
+  /** OPS-BIZ-20: the window opened a screen; adds one to the daily hello's screen tally. */
+  noteScreen(): Promise<void>;
   streamAnswer(answer: StreamSlotAnswer): Promise<void>;
   /** Closes the "Playing on {device} now" notice. */
   streamDismiss(): Promise<void>;
@@ -627,6 +629,7 @@ export const PARROT_IPC = {
   playbackUrl: "parrot:player:url",
   measureUrl: "parrot:player:measure-url",
   streamAcquire: "parrot:stream:acquire",
+  noteScreen: "parrot:usage:note-screen",
   streamAnswer: "parrot:stream:answer",
   streamDismiss: "parrot:stream:dismiss",
   streamRelease: "parrot:stream:release",

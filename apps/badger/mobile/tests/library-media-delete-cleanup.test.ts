@@ -207,6 +207,47 @@ describe("a remote media.delete removes everything of the media on the phone", (
     expect(native.removed.length).toBe(1);
     expect(readCacheJson()?.version, "the delete rows are on disk; the cursor moves on").toBe(4);
   });
+
+  /**
+   * @bugfix @regression-proof LIB-SYNC-22 (Badger delete leak, 2026-11-23 release smoke): a batch holding a title's
+   * version-4 playback op and then its `media.delete` ran the delete's playback cleanup first and the playback op
+   * after it, so the phone kept `media_file_playback` rows of a title it no longer has; the next delete on the phone
+   * then tripped the publish guard (`semantic_orphaned_playback_rows`) and never reached the server.
+   */
+  // @req LIB-SYNC-22[badger-mobile,badger-tv]
+  it("@bugfix @regression-proof a title's playback and its delete in one batch leave no playback rows", async () => {
+    seedPhone(["media-1", "media-2"]);
+    // Already on the packed playback layout (LIB-FMT-12, `PACKED_PLAYBACK_LAYOUT_VERSION` 6), like a phone of a switched account.
+    sqliteFile("library.playback.sqlite").exec("PRAGMA user_version = 6;");
+    const playbackSet: LibraryOp = {
+      id: "op-4",
+      type: "media.file.playback.set",
+      createdAt: "2026-10-15T00:00:00.000Z",
+      payload: {
+        mediaId: "media-1",
+        fileId: "file-1",
+        updatedAt: "2026-10-15T00:00:00.000Z",
+        formats: [],
+        audioTracks: [],
+        subtitles: [],
+        chapters: [],
+      },
+    };
+    setServer({
+      version: 5,
+      snapshotVersion: 3,
+      ops: [
+        { opId: "op-4", version: 4, op: playbackSet },
+        { opId: "op-5", version: 5, op: deleteOp("op-5", "media-1") },
+      ],
+    });
+    await openAndSync();
+    const playback = sqliteRows("library.playback.sqlite", "SELECT media_id, file_id FROM media_file_playback ORDER BY media_id;");
+    log("playback rows after playback.set + delete", { playback, library: libraryIds(), cache: readCacheJson() });
+    expect(libraryIds()).toEqual(["media-2"]);
+    expect(readCacheJson()?.version, "both ops applied").toBe(5);
+    expect(playback, "no playback row of the deleted title is left").toEqual([]);
+  });
 });
 
 /** The phone at the server's version, then a delete started on this device (phone or TV Delete button). */

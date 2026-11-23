@@ -14,7 +14,8 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { DEFAULT_SPACE_APP_ID, type SpaceAppId } from "@space/shared/appScope";
 import { TRUSTED_CHUNK_REFS_VERSION, type ChunkRefsSource } from "@space/shared/contracts/library";
-import { decodeStorageHeader, STORAGE_HEADER_SIZE } from "@space/library-db-definition/storageFormat";
+import { decodeStorageHeader, STORAGE_FORMAT_VERSION, STORAGE_HEADER_SIZE } from "@space/library-db-definition/storageFormat";
+import { reencryptLibrarySnapshotWith, type RotationSnapshotCopy } from "@space/library-db-definition/snapshotPublish";
 import {
   assertLibraryCompatible,
   currentLibrarySupport,
@@ -30,7 +31,7 @@ import {
 } from "./api";
 import { getApiBaseUrl } from "./apiHost";
 import { decryptBase64ToBytes, decryptBytesToBytes, encryptBytesToBase64, encryptBytesToBytes } from "./crypto";
-import { decryptLibraryPayload, encryptSnapshotBytes } from "./payloadCodec";
+import { decryptLibraryPayload, encryptSnapshotBytes, nodeDeflateCodec } from "./payloadCodec";
 import { retryTransient } from "./transientRetry";
 import { scopeLogger } from "./logger";
 
@@ -92,20 +93,24 @@ export const KEY_MISMATCH = "KEY_MISMATCH";
  * erase elsewhere would otherwise overwrite the new key's probe with its own and lock the other apps out. Reads the
  * account's probe (or uses `meta` already read) and throws `KEY_MISMATCH` when one exists that `keyBase64` cannot open.
  * An account with no probe yet is left to the publish (a first library, or an account from before probes).
+ * Returns the probe it checked (null: none), for the publish to send as `checkedKeyProbe`: the API refuses it (412
+ * `key_probe_changed`) when the account's probe changed in between (PRIV-KEY-06/10).
  */
+// tla: VaultKeys/PubCheck
 export const assertAccountLibraryKey = async (
   token: string,
   keyBase64: string,
   appId: SpaceAppId = DEFAULT_SPACE_APP_ID,
   meta?: Pick<LibraryMeta, "keyProbe"> | null,
-) => {
+): Promise<string | null> => {
   const probe = (meta ?? (await getLibraryMeta(token, appId))).keyProbe;
-  if (!probe) return;
+  if (!probe) return null;
   const opens = await decryptBase64ToBytes(keyBase64, probe).then(
     () => true,
     () => false,
   );
   if (!opens) throw new Error(KEY_MISMATCH);
+  return probe;
 };
 
 export const buildChunks = (bytes: Uint8Array): SnapshotChunk[] => {
@@ -327,7 +332,7 @@ export const publishLibrarySnapshot = async (input: {
   lastOpId?: string | null;
 }): Promise<PublishedLibrarySnapshot> => {
   const { token, keyBase64, dbBytes, baseVersion, appId } = input;
-  await assertAccountLibraryKey(token, keyBase64, appId);
+  const checkedKeyProbe = await assertAccountLibraryKey(token, keyBase64, appId);
   const encrypted = await encryptSnapshotBytes(keyBase64, dbBytes);
   const chunks = buildChunks(encrypted);
   const snapshotId = randomUUID();
@@ -347,7 +352,8 @@ export const publishLibrarySnapshot = async (input: {
     appId,
     chunks.map((entry) => entry.hash),
     DESKTOP_CHUNK_REFS_SOURCE,
-    input.opStreamVersion
+    input.opStreamVersion,
+    checkedKeyProbe
   );
   return {
     version: result.version,
@@ -396,4 +402,108 @@ export const fetchLibrarySnapshot = async (input: {
     snapshotVersion: remote.snapshotVersion ?? remote.version,
     dbBytes,
   };
+};
+
+/** Another app's library re-encrypted under the new key: one entry of the rotation's `otherLibraries`. */
+export type RotationLibraryCopy = RotationSnapshotCopy & {
+  appId: SpaceAppId;
+  chunkRefsSource: ChunkRefsSource;
+  storageFormatVersion: number;
+  opStreamVersion: number;
+};
+
+/**
+ * PRIV-KEY-13: the rotating device's own library for POST /library/recovery/rotate: its snapshot under the new key (a
+ * manifest naming the chunks, uploaded already) and the storage format and op stream it is written in.
+ */
+export type RotationOwnLibrary = {
+  manifestBase64: string;
+  snapshotId: string;
+  chunkSize: number;
+  chunkRefs: string[];
+  chunkRefsSource: ChunkRefsSource;
+  storageFormatVersion: number;
+  opStreamVersion: number;
+};
+
+/**
+ * PRIV-KEY-13: library bytes sealed under `keyBase64` and cut into chunks exactly as this build publishes a snapshot
+ * (`uploadSnapshot`), the chunks uploaded; the rotation writes the manifest. The op stream is the caller's to declare.
+ */
+export const sealLibrarySnapshot = async (
+  token: string,
+  keyBase64: string,
+  rawBytes: Uint8Array
+): Promise<Omit<RotationOwnLibrary, "opStreamVersion">> => {
+  const encrypted = await encryptSnapshotBytes(keyBase64, rawBytes);
+  const chunks = buildChunks(encrypted);
+  const snapshotId = randomUUID();
+  const manifest = buildManifest(snapshotId, encrypted, rawBytes, chunks);
+  const manifestPayload = await encryptBytesToBytes(keyBase64, new TextEncoder().encode(JSON.stringify(manifest)));
+  await uploadChunks(token, chunks);
+  return {
+    manifestBase64: Buffer.from(manifestPayload).toString("base64"),
+    snapshotId,
+    chunkSize: CHUNK_SIZE_BYTES,
+    chunkRefs: chunks.map((chunk) => chunk.hash),
+    chunkRefsSource: DESKTOP_CHUNK_REFS_SOURCE,
+    storageFormatVersion: STORAGE_FORMAT_VERSION,
+  };
+};
+
+/** A library the rotating device cannot re-encrypt whole: changes after its latest snapshot (PRIV-KEY-06). */
+export const LIBRARY_NOT_SNAPSHOTTED = "LIBRARY_NOT_SNAPSHOTTED";
+
+/**
+ * PRIV-KEY-06: before a key rotation, every other app's library is opened with the old key and re-encrypted under the
+ * new one (its chunks uploaded), each with the version it was read at, for the rotation to write all of them in one
+ * step. An app with no snapshot is skipped (the server refuses the rotation if it has a library after all); a library
+ * the old key does not open (`DECRYPT_FAILED`) or with changes after its snapshot (`LIBRARY_NOT_SNAPSHOTTED`) throws,
+ * so nothing is rotated and nothing is lost.
+ */
+// tla: VaultKeys/RotateRead
+export const reencryptLibrariesForRotation = async (input: {
+  token: string;
+  oldKeyBase64: string;
+  newKeyBase64: string;
+  appIds: readonly SpaceAppId[];
+}): Promise<RotationLibraryCopy[]> => {
+  const copies: RotationLibraryCopy[] = [];
+  for (const appId of input.appIds) {
+    const fetched = await fetchLibrarySnapshot({ token: input.token, keyBase64: input.oldKeyBase64, appId });
+    if (!fetched) continue;
+    // Changes after the latest snapshot are not in it: re-encrypting it would drop them, so the rotation waits.
+    if (fetched.meta.version !== fetched.meta.snapshotVersion) throw new Error(`${LIBRARY_NOT_SNAPSHOTTED}:${appId}`);
+    // Read at the snapshot's version: an edit landing since makes the server answer `version_conflict` (user tries again).
+    const copy = await reencryptLibrarySnapshotWith(fetched.dbBytes, fetched.snapshotVersion, {
+      seal: (plaintext) => encryptBytesToBytes(input.newKeyBase64, plaintext),
+      codec: nodeDeflateCodec,
+      sha256Hex: async (bytes) => hashBytes(bytes),
+      randomId: () => randomUUID(),
+      uploadChunk: async (objectKey, bytes) => {
+        await uploadStorageObjectViaTunnel(
+          input.token,
+          objectKey,
+          bytes,
+          {
+            clientType: "library-db-runtime",
+            clientVersion: "library-db-runtime",
+            objectNamespace: "library",
+            logicalRef: objectKey,
+            uploadId: randomUUID(),
+            checksumFn: (data) => `sha256:${hashBytes(data)}`,
+          },
+          appId
+        );
+      },
+    });
+    copies.push({
+      ...copy,
+      appId,
+      chunkRefsSource: DESKTOP_CHUNK_REFS_SOURCE,
+      storageFormatVersion: STORAGE_FORMAT_VERSION,
+      opStreamVersion: fetched.meta.opStreamVersion,
+    });
+  }
+  return copies;
 };

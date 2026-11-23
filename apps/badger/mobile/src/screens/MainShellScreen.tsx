@@ -24,7 +24,7 @@ import { newDeviceKey, newDeviceMessage, subscribeNewDevice, type NewDeviceInfo 
 import { useOpenDevices } from "../lib/pairing/useOpenDevices";
 import { useLibraryData, useLibraryStatus } from "../store/library";
 import { librarySyncProgress } from "../lib/librarySyncStatus";
-import { UnpaidAccessBanner } from "../components/UnpaidAccessBanner";
+import { UnpaidAccessBanner } from "@space/mobile-shell/unpaid-access-banner";
 import { PlaylistsPanel } from "../components/PlaylistsPanel";
 import { PhoneSearch } from "../components/PhoneSearch";
 import { HomeScreen } from "./HomeScreen";
@@ -71,7 +71,7 @@ export const MainShellScreen = () => {
   const { media } = useLibraryData();
   const { loadStatus, reload, refresh, syncState } = useLibraryStatus();
   const isFocused = useIsFocused();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const [activeTab, setActiveTab] = useState("home");
   // Home's "See all" opens the Library on that row's scope, or Playlists for Favorites (UX-PHONE-01, UX-PHONE-07).
   const [libraryScopeRequest, setLibraryScopeRequest] = useState<{ scope: LibraryScope } | null>(null);
@@ -226,7 +226,7 @@ export const MainShellScreen = () => {
     >
       {(tabId) => (
         <View style={styles.tab}>
-          <UnpaidAccessBanner />
+          <UnpaidAccessBanner access={user?.access} />
           <SkyRegion style={styles.content}>
             {tabId === "home" ? (
               <HomeScreen onSeeAll={seeAll} />

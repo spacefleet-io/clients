@@ -17,6 +17,7 @@ import { House, LibraryBig, ListMusic, Search, Settings } from "lucide-react-nat
 import { MobileTabBar, type MobileTabBarAction, type MobileTabDefinition } from "@space/mobile-shell/tab-bar";
 import { MobileFounderNoticeHost, MobileTabPager } from "@space/mobile-shell/components";
 import { useTranslation } from "@space/mobile-shell/i18n";
+import { UnpaidAccessBanner } from "@space/mobile-shell/unpaid-access-banner";
 import { HomeScreen } from "./HomeScreen";
 import { LibraryScreen, type LibraryRequest, type LibraryView } from "./LibraryScreen";
 import { PlaylistsView } from "./PlaylistsView";
@@ -53,7 +54,7 @@ export const MainScreen = ({ navigation }: NativeStackScreenProps<RootStack, "Ma
   const [tab, setTab] = useState<MainTab>("home");
   const [libraryRequest, setLibraryRequest] = useState<LibraryRequest | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
-  const { library, session } = useSession();
+  const { library, session, access } = useSession();
   const isFocused = useIsFocused();
   const version = library.status === "ready" ? library.version : -1;
   const albums = useQuery(() => (version < 0 ? Promise.resolve(null) : listAlbums()), [version]);
@@ -87,6 +88,8 @@ export const MainScreen = ({ navigation }: NativeStackScreenProps<RootStack, "Ma
   return (
     <ParrotSky>
       <View style={[styles.content, { paddingTop: insets.top }]}>
+        {/* ACCT-UNPAID-03: while the account is unpaid, every main tab says playback is stopped and when the files go. */}
+        <UnpaidAccessBanner access={access} />
         {/* A swipe left or right moves between the tabs, as on Badger's phone (UX-PHONE-09). */}
         <MobileTabPager tabIds={libraryClosed ? OPEN_WITHOUT_LIBRARY : TAB_IDS} activeTab={tab} onTabChange={changeTab}>
           {(id) =>

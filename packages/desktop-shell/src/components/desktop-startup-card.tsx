@@ -25,7 +25,8 @@ type DesktopStartupCardProps = {
   /**
    * `card` (setup and onboarding steps, UX-SETUP-08): the phone's look, the mascot about half over the card's top
    * border with a soft disc of the app's colour behind it, and the card's top padded so nothing sits under it.
-   * `above`: the sign-in screens' small mascot floating apart above the card, as on the phone's sign-in.
+   * `above`: the sign-in screens' small mascot floating apart above the card, as on the phone's sign-in. It takes its
+   * own room above the card, so a card taller than the window never pushes it under the window's top bar.
    */
   mascotPlacement?: "card" | "above";
   headerActions?: ReactNode;
@@ -96,10 +97,11 @@ export const DesktopStartupCard = ({
           src={mascotSrc}
           alt={mascotAlt}
           glowClassName={mascotGlowClassName}
-          className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-[120%]"
+          className="mx-auto mb-4"
+          testId="startup-card-mascot-above"
         />
       ) : null}
-      <Card className="w-full border-border/70 bg-card/80 backdrop-blur-md">
+      <Card className="w-full border-border/70 bg-card/80 backdrop-blur-md" data-testid="startup-card">
         {/* Under an on-card mascot the header starts below its overlap (45% of its width) plus 12 px; a padding
             percentage is of the card's width, so it follows the mascot's size: 6.75% is 45% of its 15%, 5.4vh 45% of
             its 12vh cap, and 2.55rem and 3.45rem 45% of its 4rem and 6rem bounds plus 0.75rem. */}

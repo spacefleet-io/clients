@@ -14,8 +14,12 @@ import { setApiBaseUrl } from "@space/shared/api";
 import { SettingsScreen } from "../src/screens/SettingsScreen";
 import { FeedbackScreen } from "../src/screens/FeedbackScreen";
 import packageJson from "../package.json";
+import type { KeyRotationReadiness } from "@space/shared/keyChange";
 
 const ctl = vi.hoisted(() => ({ navigate: vi.fn(), goBack: vi.fn() }));
+// ACCT-KEYCHG-04: the server's answer to "would a key rotation be accepted now", driven per case.
+const server = vi.hoisted(() => ({ readiness: null as KeyRotationReadiness | null }));
+vi.mock("@space/shared/useKeyRotationReadiness", () => ({ useKeyRotationReadiness: () => server.readiness }));
 
 vi.mock("react-native", () => {
   const host = (name: string) => (props: { children?: ReactNode }) => createElement(name, props, props.children);
@@ -161,6 +165,7 @@ describe("@req UX-SUP-05[badger-mobile] Badger phone Send feedback", () => {
       platform: "android 15",
       deviceModel: "Google Pixel 8",
       log: null,
+      requestIds: [],
     });
     expect(text(thanks)).toBe("Thank you! Your message has been sent.");
   });
@@ -170,5 +175,36 @@ describe("@req UX-SUP-05[badger-mobile] Badger phone Send feedback", () => {
     const tree = render(createElement(FeedbackScreen));
     const refusal = await sendFrom(tree, "again", "feedback-error");
     expect(text(refusal)).toBe("You've sent many messages in the last hour. Please try again later.");
+  });
+});
+
+describe("@req ACCT-KEYCHG-04[badger-mobile] Badger phone Settings offer a key change only when the server accepts it", () => {
+  const advancedRows = (readiness: KeyRotationReadiness | null) => {
+    server.readiness = readiness;
+    const tree = render(createElement(SettingsScreen));
+    const toggle = tree.root.find((n) => n.props.accessibilityLabel === "Advanced" && typeof n.props.onPress === "function");
+    act(() => toggle.props.onPress());
+    expect(tree.root.find((n) => n.props.accessibilityLabel === "Advanced" && typeof n.props.onPress === "function").props.accessibilityState).toEqual({ expanded: true });
+    const rows = tree.root.findAll((n) => String(n.type) === "LinkRow").map((n) => String(n.props.title));
+    console.info(`[key-change-hidden] readiness=${JSON.stringify(readiness)} rows=${JSON.stringify(rows)}`);
+    expect(rows).toContain("Send feedback");
+    return { tree, rows };
+  };
+
+  it.each([
+    ["the server's answer is not known (loading, offline)", null],
+    ["the account stores media", { needsMediaReseal: true }],
+  ])("offers no way to change the media library key when %s, even with Advanced open", (_label, readiness) => {
+    const { rows } = advancedRows(readiness);
+    expect(rows).not.toContain("Reset encryption key");
+    expect(ctl.navigate).not.toHaveBeenCalledWith("ResetKey");
+  });
+
+  it("offers Reset encryption key to an account without media", () => {
+    const { tree, rows } = advancedRows({ needsMediaReseal: false });
+    expect(rows).toContain("Reset encryption key");
+    const row = tree.root.find((n) => String(n.type) === "LinkRow" && n.props.title === "Reset encryption key");
+    act(() => row.props.onPress());
+    expect(ctl.navigate).toHaveBeenCalledWith("ResetKey");
   });
 });

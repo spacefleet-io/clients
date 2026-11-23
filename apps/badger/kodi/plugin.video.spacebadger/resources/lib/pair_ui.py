@@ -20,6 +20,7 @@ from api import ApiClient
 from compat import ADDON_ID, addon_path, data_dir, localized, log, notify, ok_dialog, select, set_prop
 
 CTRL_QR, CTRL_CODE, CTRL_COUNTDOWN, CTRL_TEXT, CTRL_CODE_END = 100, 101, 102, 103, 104
+CTRL_CHECK_LABEL, CTRL_CHECK = 105, 106
 BTN_NEW, BTN_ADVANCED, BTN_CANCEL = 200, 201, 202
 
 RESULT_PAIRED, RESULT_ADVANCED, RESULT_CANCELLED = "paired", "advanced", "cancelled"
@@ -91,6 +92,15 @@ class PairDialog(xbmcgui.WindowXMLDialog):
         first, second = pairing.short_code_groups(self.session.short_code)
         self.getControl(CTRL_CODE).setLabel(first)
         self.getControl(CTRL_CODE_END).setLabel(second)
+        self._show_check(None)
+
+    def _show_check(self, code):
+        """PRIV-PAIR-01: the six digits the approving phone shows too; empty until it connected."""
+        self.getControl(CTRL_CHECK_LABEL).setLabel(localized(30113, "Code to check") if code else "")
+        self.getControl(CTRL_CHECK).setLabel(pairing.format_check_code(code) if code else "")
+        self.getControl(CTRL_TEXT).setText(
+            localized(30114, "Compare it with your other device. Approve only if both show the same six digits.") if code
+            else localized(30101, "Open Badger on your phone, go to Settings, then Pair a device, and scan this code."))
 
     @staticmethod
     def _cleanup_png(keep):
@@ -117,6 +127,7 @@ class PairDialog(xbmcgui.WindowXMLDialog):
             return
         last_poll = 0.0
         expired = False
+        shown_check = False
         inflight = None  # (session, box) of the long poll running in its own thread, so the countdown keeps ticking
         while not self.stop.is_set():
             if self.new_code.is_set():
@@ -124,6 +135,7 @@ class PairDialog(xbmcgui.WindowXMLDialog):
                 try:
                     self._new_session()
                     expired = False
+                    shown_check = False
                     last_poll = 0.0
                     inflight = None
                 except Exception as exc:  # noqa: BLE001
@@ -156,6 +168,9 @@ class PairDialog(xbmcgui.WindowXMLDialog):
                         self.error = "Pairing failed: %s" % exc
                     self._close()
                     return
+                if state == "pending" and status.get("checkCode") and not shown_check:
+                    shown_check = True
+                    self._show_check(status["checkCode"])
                 if state == "denied":
                     self.error = "Your phone declined this device."
                     self._close()

@@ -475,7 +475,6 @@ export const useCastPlayback = (mediaId: string, episodeId: string | null, targe
       void stop();
     };
     // The target is fixed for the screen's life (the route is keyed by it).
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mediaId, episodeId, token]);
 
   /** Plays (`true`) or pauses (`false`) on the device; the view follows at once, the next poll corrects it. */

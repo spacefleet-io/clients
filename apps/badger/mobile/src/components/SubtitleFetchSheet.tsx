@@ -44,7 +44,6 @@ export const SubtitleFetchSheet = memo(({ request, onClosed }: { request: Subtit
       cancelled = true;
     };
     // Opens once per request; `online` is only logged.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [request]);
 
   const input = useMemo(

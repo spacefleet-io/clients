@@ -20,8 +20,7 @@ export default function WhoIsWatching() {
     log.info({ count: snapshot.profiles.length, stale: snapshot.stale }, "profiles.picker.shown");
     // The list may have changed on another device since the app started.
     void profileStore.refresh();
-    // Once per opening of the picker.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per opening of the picker
   }, []);
 
   return (

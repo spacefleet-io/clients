@@ -13,6 +13,7 @@ import { MobileBottomSheet, useMobileSheetClose } from "./components/mobile-bott
 import { useTranslation } from "./i18n";
 import { scopeLogger } from "./logger";
 import { formatCountdown } from "./pairing/countdown";
+import { PairingCheckCode } from "./pairing/check-code";
 import type { PairingState } from "./pairing/controller";
 import { usePairingPanel, type MobilePairingApp, type MobilePairingPanelProps } from "./pairing-panel";
 import { QrCode } from "./pairing-qr";
@@ -207,6 +208,7 @@ export const MobilePairSignInView = ({ app, state, restart, now, lifetimeMs, dev
               <View style={[styles.orLine, { backgroundColor: colors.border }]} />
             </View>
             <ShortCodeTiles code={code} testID="pair-sign-in-code" style={styles.code} />
+            {waiting?.checkCode ? <PairingCheckCode checkCode={waiting.checkCode} testID="pair-sign-in-check-code" /> : null}
             <View style={styles.wait}>
               {waiting ? <PulsingDot color={colors.accent} /> : null}
               <Text style={[styles.waitText, { color: colors.text, fontFamily: sans }]} testID="pair-sign-in-status">

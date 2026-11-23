@@ -34,9 +34,6 @@ export const findBadgerLink = (argv: readonly unknown[]): string | null => {
   return null;
 };
 
-export const isBadgerLink = (value: unknown): value is string =>
-  typeof value === "string" && value.trim().toLowerCase().startsWith(LINK_PREFIX);
-
 export type LaunchVisibility = "background" | "foreground";
 
 /** The payment id of a `badger://billing/return` link, or null for any other link. */
@@ -55,24 +52,6 @@ const bringsAppForward = (link: string): boolean => paymentReturnOf(link) !== nu
 export const decideLaunchVisibility = (input: { argv: readonly unknown[]; openUrlBeforeWindow: boolean }): LaunchVisibility => {
   const link = findBadgerLink(input.argv);
   return input.openUrlBeforeWindow || (link !== null && !bringsAppForward(link)) ? "background" : "foreground";
-};
-
-/**
- * Arguments for `app.setAsDefaultProtocolClient`. A packaged app registers itself. A dev run (`process.defaultApp`:
- * `electron <main.js>`) must register the Electron binary plus the absolute path of its main script, else the OS
- * would start a bare Electron.
- */
-export const protocolClientArgs = (input: {
-  defaultApp: boolean;
-  execPath: string;
-  argv: readonly string[];
-  resolvePath: (path: string) => string;
-}): [scheme: string] | [scheme: string, path: string, args: string[]] => {
-  const script = input.argv[1];
-  if (input.defaultApp && typeof script === "string" && script.length > 0 && !isBadgerLink(script)) {
-    return [BADGER_PROTOCOL_SCHEME, input.execPath, [input.resolvePath(script)]];
-  }
-  return [BADGER_PROTOCOL_SCHEME];
 };
 
 /**

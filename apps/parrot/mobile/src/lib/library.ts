@@ -407,7 +407,8 @@ const phoneSnapshotDeps = (current: () => { token: string; libraryKey: string })
       "parrot",
       put.chunkRefs,
       { client: "parrot-mobile", refsVersion: TRUSTED_CHUNK_REFS_VERSION },
-      { storageFormatVersion: STORAGE_FORMAT_VERSION, opStreamVersion: PARROT_OP_STREAM_VERSION }
+      { storageFormatVersion: STORAGE_FORMAT_VERSION, opStreamVersion: PARROT_OP_STREAM_VERSION },
+      put.checkedKeyProbe
     ),
   log,
 });
@@ -415,13 +416,28 @@ const phoneSnapshotDeps = (current: () => { token: string; libraryKey: string })
 const CLAIM_DB_NAME = "parrot.claim.sqlite";
 const claimFilePath = () => deviceDb(CLAIM_DB_NAME).path;
 
+/** The claim running now: every claim uses the one `parrot.claim.sqlite`, so a second one joins it (#3350 S15). */
+let claiming: Promise<{ version: number }> | null = null;
+
 /**
  * A new key made on this phone becomes the account's key (UX-KEY-01): an empty Parrot library is published with it
  * over version 0, which also writes the account's key probe, as the desktop apps do when they make the key. Until
  * then no other device can check a key against it, and this phone's own start check would find no probe and forget
- * the key. Rejects as the PUT does (409: another device made the account's library first).
+ * the key. Rejects as the PUT does (409: another device made the account's library first). A call while a claim runs
+ * (a second tap) waits for that claim instead of deleting its file under it.
  */
-export const claimAccountKey = async (token: string, libraryKey: string): Promise<{ version: number }> => {
+export const claimAccountKey = (token: string, libraryKey: string): Promise<{ version: number }> => {
+  if (claiming) {
+    log("parrot.library.claim.joined", {});
+    return claiming;
+  }
+  claiming = claimOnce(token, libraryKey).finally(() => {
+    claiming = null;
+  });
+  return claiming;
+};
+
+const claimOnce = async (token: string, libraryKey: string): Promise<{ version: number }> => {
   const removeClaimFile = async () => {
     for (const leftover of [claimFilePath(), `${claimFilePath()}-wal`, `${claimFilePath()}-shm`, `${claimFilePath()}-journal`]) {
       await RNFS.unlink(leftover).catch(() => undefined);
@@ -438,7 +454,13 @@ export const claimAccountKey = async (token: string, libraryKey: string): Promis
       await empty.close().catch(() => undefined);
     }
     const bytes = new Uint8Array(Buffer.from(await RNFS.readFile(claimFilePath(), "base64"), "base64"));
-    const { version } = await publishLibrarySnapshotWith(bytes, 0, phoneSnapshotDeps(() => ({ token, libraryKey })));
+    // The key step chose "make a key" because the account had no probe: the claim says so (`checkedKeyProbe: null`),
+    // and the API refuses it (412) when another device made the account's key in between (PRIV-KEY-06/10).
+    const deps = phoneSnapshotDeps(() => ({ token, libraryKey }));
+    const { version } = await publishLibrarySnapshotWith(bytes, 0, {
+      ...deps,
+      putSnapshot: (put) => deps.putSnapshot({ ...put, checkedKeyProbe: null }),
+    });
     log("parrot.library.claim.done", { version });
     return { version };
   } finally {
@@ -455,12 +477,14 @@ const keyCheckedSnapshotDeps = (deps: LibrarySnapshotPublishDeps): LibrarySnapsh
   ...deps,
   putSnapshot: async (put) => {
     const { token, libraryKey } = openSession();
-    const verdict = await keptLibraryKeyVerdict(libraryKey, await getLibraryMeta(token, "parrot"), decryptBase64ToBytes);
+    const meta = await getLibraryMeta(token, "parrot");
+    const verdict = await keptLibraryKeyVerdict(libraryKey, meta, decryptBase64ToBytes);
     if (keptLibraryKeyIsStale(verdict)) {
       log("parrot.library.snapshot.key_mismatch", { verdict });
       throw new Error("KEY_MISMATCH");
     }
-    return deps.putSnapshot(put);
+    // The probe just checked rides the PUT: the API refuses it when the account's key changed since (PRIV-KEY-06/10).
+    return deps.putSnapshot({ ...put, checkedKeyProbe: meta.keyProbe ?? null });
   },
 });
 

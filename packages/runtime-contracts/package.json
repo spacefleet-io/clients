@@ -12,6 +12,7 @@
     "./envelope": "./src/envelope.ts",
     "./lifecycle": "./src/lifecycle.ts",
     "./helpers": "./src/helpers.ts",
+    "./wireBytes": "./src/wireBytes.ts",
     "./badger": "./src/badger/index.ts",
     "./badger/*": "./src/badger/*.ts",
     "./runtime": "./src/runtime/index.ts",

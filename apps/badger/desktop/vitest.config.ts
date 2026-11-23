@@ -32,7 +32,8 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["tests/**/*.test.ts", "tests/**/*.test.tsx"],
-    exclude: ["tests/**/*.integration.test.ts", "node_modules/**"],
+    // *.perf.test.ts: absolute timing budgets, run only by the non-gating perf lane (vitest.perf.config.ts).
+    exclude: ["tests/**/*.integration.test.ts", "tests/**/*.perf.test.ts", "node_modules/**"],
     clearMocks: true,
     mockReset: true,
     restoreMocks: true,

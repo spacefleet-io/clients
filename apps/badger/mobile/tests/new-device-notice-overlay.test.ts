@@ -71,7 +71,7 @@ vi.mock("../src/lib/pairing/deviceWatch", () => ({
     state.seen.push(sessionId);
   },
 }));
-vi.mock("../src/components/UnpaidAccessBanner", () => ({ UnpaidAccessBanner: () => null }));
+vi.mock("@space/mobile-shell/unpaid-access-banner", () => ({ UnpaidAccessBanner: () => null }));
 vi.mock("../src/screens/HomeScreen", () => ({ HomeScreen: () => createElement("HomeScreen") }));
 vi.mock("../src/screens/LibraryScreen", () => ({ LibraryScreen: () => null }));
 vi.mock("../src/components/PlaylistsPanel", () => ({ PlaylistsPanel: () => null }));

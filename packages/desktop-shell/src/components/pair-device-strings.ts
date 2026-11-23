@@ -10,7 +10,9 @@ export type PairDeviceStringKey =
   | "tryAgain"
   | "code.label"
   | "code.submit"
-  | "code.looking"
+  | "code.checking"
+  | "check.question"
+  | "check.hint"
   | "confirm.question"
   | "confirm.keyQuestion"
   | "confirm.warning"
@@ -50,7 +52,6 @@ export const pairDeviceStrings: Record<
     tryAgain: "Try another code",
     "code.label": "Pairing code",
     "code.submit": "Continue",
-    "code.looking": "Looking up the code…",
     "confirm.keyQuestion": "{app} on {name} ({type}) is signed in to your account and wants your media library key.",
     "confirm.question": "{app} on {name} ({type}) wants to sign in to your account.",
     "confirm.warning":
@@ -89,6 +90,12 @@ export const pairDeviceStrings: Record<
     "errors.bad_request":
       "This code could not be approved. Get a new code on the device.",
     "errors.unknown": "Something went wrong. Try again.",
+    "errors.update_required": "This device runs an older version. Update it, then try again.",
+    "errors.stale_key": "This computer doesn't have your account's current key, so it can't send it.",
+    "errors.check_failed": "The codes could not be checked, so nothing was sent. Get a new code on the device.",
+    "code.checking": "Waiting for the device…",
+    "check.question": "Does {name} show this code?",
+    "check.hint": "Approve only if both screens show the same six digits. If they differ, decline.",
     "type.desktop": "Computer",
     "type.mobile": "Phone",
     "type.tv": "TV",
@@ -105,7 +112,6 @@ export const pairDeviceStrings: Record<
     tryAgain: "Essayer un autre code",
     "code.label": "Code d’association",
     "code.submit": "Continuer",
-    "code.looking": "Recherche du code…",
     "confirm.keyQuestion": "{app} sur {name} ({type}) est connecté à votre compte et demande votre clé de médiathèque.",
     "confirm.question": "{app} sur {name} ({type}) veut se connecter à votre compte.",
     "confirm.warning":
@@ -146,6 +152,12 @@ export const pairDeviceStrings: Record<
     "errors.bad_request":
       "Ce code n’a pas pu être approuvé. Obtenez un nouveau code sur l’appareil.",
     "errors.unknown": "Une erreur est survenue. Réessayez.",
+    "errors.update_required": "Cet appareil utilise une ancienne version. Mettez-le à jour, puis réessayez.",
+    "errors.stale_key": "Cet ordinateur n’a pas la clé actuelle de votre compte, il ne peut donc pas l’envoyer.",
+    "errors.check_failed": "Les codes n’ont pas pu être vérifiés, rien n’a été envoyé. Demandez un nouveau code sur l’appareil.",
+    "code.checking": "En attente de l’appareil…",
+    "check.question": "{name} affiche-t-il ce code ?",
+    "check.hint": "N’approuvez que si les deux écrans affichent les mêmes six chiffres. Sinon, refusez.",
     "type.desktop": "Ordinateur",
     "type.mobile": "Téléphone",
     "type.tv": "TV",
@@ -162,7 +174,6 @@ export const pairDeviceStrings: Record<
     tryAgain: "Andere code proberen",
     "code.label": "Koppelcode",
     "code.submit": "Doorgaan",
-    "code.looking": "Code opzoeken…",
     "confirm.keyQuestion": "{app} op {name} ({type}) is ingelogd op je account en vraagt om je mediatheeksleutel.",
     "confirm.question": "{app} op {name} ({type}) wil inloggen op je account.",
     "confirm.warning":
@@ -203,6 +214,12 @@ export const pairDeviceStrings: Record<
     "errors.bad_request":
       "Deze code kon niet worden goedgekeurd. Vraag een nieuwe code op het apparaat.",
     "errors.unknown": "Er ging iets mis. Probeer het opnieuw.",
+    "errors.update_required": "Dit apparaat gebruikt een oudere versie. Werk het bij en probeer het opnieuw.",
+    "errors.stale_key": "Deze computer heeft de huidige sleutel van je account niet en kan hem dus niet sturen.",
+    "errors.check_failed": "De codes konden niet worden gecontroleerd, er is niets verstuurd. Vraag een nieuwe code op het apparaat.",
+    "code.checking": "Wachten op het apparaat…",
+    "check.question": "Toont {name} deze code?",
+    "check.hint": "Keur alleen goed als beide schermen dezelfde zes cijfers tonen. Anders weiger je.",
     "type.desktop": "Computer",
     "type.mobile": "Telefoon",
     "type.tv": "Tv",
@@ -219,7 +236,6 @@ export const pairDeviceStrings: Record<
     tryAgain: "Anderen Code versuchen",
     "code.label": "Kopplungscode",
     "code.submit": "Weiter",
-    "code.looking": "Code wird gesucht…",
     "confirm.keyQuestion": "{app} auf {name} ({type}) ist bei deinem Konto angemeldet und möchte deinen Mediathek-Schlüssel.",
     "confirm.question": "{app} auf {name} ({type}) möchte sich bei deinem Konto anmelden.",
     "confirm.warning":
@@ -260,6 +276,12 @@ export const pairDeviceStrings: Record<
     "errors.bad_request":
       "Dieser Code konnte nicht freigegeben werden. Hol dir einen neuen Code auf dem Gerät.",
     "errors.unknown": "Etwas ist schiefgelaufen. Versuch es noch einmal.",
+    "errors.update_required": "Dieses Gerät nutzt eine ältere Version. Aktualisiere es und versuch es dann noch einmal.",
+    "errors.stale_key": "Dieser Computer hat nicht den aktuellen Schlüssel deines Kontos und kann ihn deshalb nicht senden.",
+    "errors.check_failed": "Die Codes ließen sich nicht prüfen, es wurde nichts gesendet. Hol dir auf dem Gerät einen neuen Code.",
+    "code.checking": "Warte auf das Gerät…",
+    "check.question": "Zeigt {name} diesen Code?",
+    "check.hint": "Bestätige nur, wenn beide Bildschirme dieselben sechs Ziffern zeigen. Sonst lehne ab.",
     "type.desktop": "Computer",
     "type.mobile": "Telefon",
     "type.tv": "Fernseher",
@@ -276,7 +298,6 @@ export const pairDeviceStrings: Record<
     tryAgain: "Probar otro código",
     "code.label": "Código de vinculación",
     "code.submit": "Continuar",
-    "code.looking": "Buscando el código…",
     "confirm.keyQuestion": "{app} en {name} ({type}) ha iniciado sesión en tu cuenta y pide la clave de tu mediateca.",
     "confirm.question": "{app} en {name} ({type}) quiere iniciar sesión en tu cuenta.",
     "confirm.warning":
@@ -317,6 +338,12 @@ export const pairDeviceStrings: Record<
     "errors.bad_request":
       "No se pudo aprobar este código. Obtén un código nuevo en el dispositivo.",
     "errors.unknown": "Algo salió mal. Vuelve a intentarlo.",
+    "errors.update_required": "Este dispositivo usa una versión antigua. Actualízalo y vuelve a intentarlo.",
+    "errors.stale_key": "Este ordenador no tiene la clave actual de tu cuenta, así que no puede enviarla.",
+    "errors.check_failed": "No se pudieron comprobar los códigos y no se envió nada. Pide un código nuevo en el dispositivo.",
+    "code.checking": "Esperando al dispositivo…",
+    "check.question": "¿Muestra {name} este código?",
+    "check.hint": "Aprueba solo si las dos pantallas muestran los mismos seis dígitos. Si no, recházalo.",
     "type.desktop": "Computadora",
     "type.mobile": "Teléfono",
     "type.tv": "TV",

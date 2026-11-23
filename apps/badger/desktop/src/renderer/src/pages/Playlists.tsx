@@ -196,7 +196,6 @@ export function PlaylistsManager({ playback }: { playback: InlinePlaybackControl
 }
 
 export default function Playlists() {
-  const { t } = useTranslation();
   const { handlePlayMedia, pendingPlayId, playPending, playSpinnerVisible, playbackMount } =
     useInlinePlayback();
 
