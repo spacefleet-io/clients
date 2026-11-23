@@ -29,44 +29,14 @@ export const apiFailureFields = (error: unknown): ApiFailureFields | null => {
   return { status: error.status, code: apiErrorCode(error.payload?.error), requestId: error.requestId ?? null };
 };
 
-/** UX-SUP-07: how many request ids of the last failed API calls the process keeps for a feedback message. */
-export const RECENT_FAILED_REQUEST_IDS_MAX = 5;
-
-const failedRequestIds: string[] = [];
-
-/** Keeps the request id of an answer of 400 or more, newest last, at most {@link RECENT_FAILED_REQUEST_IDS_MAX}. */
-const rememberFailedRequestId = (fields: ApiFailureFields): void => {
-  if (fields.status < 400 || !fields.requestId) return;
-  const known = failedRequestIds.indexOf(fields.requestId);
-  if (known !== -1) failedRequestIds.splice(known, 1);
-  failedRequestIds.push(fields.requestId);
-  if (failedRequestIds.length > RECENT_FAILED_REQUEST_IDS_MAX) failedRequestIds.shift();
-};
-
 /**
- * UX-SUP-07: the server's request ids of this process's last failed API calls (answers of 400 or more), oldest
- * first, for the `requestIds` of a "Send feedback" message. That message already names the account, and the server's
- * line for each id names it too (REL-LOG-28), so the ids add no personal data; they only let an admin find those
- * lines. Ids only: never the call's path, body or answer. Filled by {@link logFailedApiCalls}; kept in memory only.
- */
-export const recentFailedRequestIds = (): string[] => [...failedRequestIds];
-
-/** Test seam: forgets the remembered request ids. */
-export const clearRecentFailedRequestIds = (): void => {
-  failedRequestIds.length = 0;
-};
-
-/**
- * Calls `write` once for every failed API call of this process (SDK and hand-written fetch alike: every `ApiError`),
- * and remembers its request id for a feedback message (UX-SUP-07). Each app wires it to its own local logger at
- * start-up; the web app does not. Returns the unsubscribe function.
+ * Calls `write` once for every failed API call of this process (SDK and hand-written fetch alike: every `ApiError`).
+ * Each app wires it to its own local logger at start-up; the web app does not. Returns the unsubscribe function.
  */
 export const logFailedApiCalls = (write: (fields: ApiFailureFields) => void): (() => void) =>
   onApiError((error) => {
     const fields = apiFailureFields(error);
-    if (!fields) return;
-    rememberFailedRequestId(fields);
-    write(fields);
+    if (fields) write(fields);
   });
 
 /**

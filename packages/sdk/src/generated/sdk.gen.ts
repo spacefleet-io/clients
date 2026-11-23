@@ -1404,7 +1404,7 @@ export const unregisterPushDevice = <ThrowOnError extends boolean = false>(optio
 /**
  * Send feedback
  *
- * Sends a feedback message from an app's "Send feedback" entry (UX-SUP-05); it lands in the admin dashboard's Feedback inbox with the account that sent it. `message` is trimmed, 1 to 4000 characters. `log` is the app's error log, sent only when the user ticked the box, at most 200 KB. Never put a title or a file name in it. `requestIds` are the server's `x-request-id` values of the app's last failed API calls (UX-SUP-07), at most 10 UUIDs. A wrong field answers 400 `invalid_feedback` naming it. At most 10 messages an hour per account: beyond, 429 `rate_limited` with `retryAfterSeconds`.
+ * Sends a feedback message from an app's "Send feedback" entry (UX-SUP-05); it lands in the admin dashboard's Feedback inbox with the account that sent it. `message` is trimmed, 1 to 4000 characters. `log` is the app's error log, sent only when the user ticked the box, at most 200 KB. Never put a title or a file name in it. A wrong field answers 400 `invalid_feedback` naming it. At most 10 messages an hour per account: beyond, 429 `rate_limited` with `retryAfterSeconds`.
  *
  * Personal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.
  */

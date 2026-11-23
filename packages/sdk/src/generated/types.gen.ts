@@ -6514,10 +6514,6 @@ export type SendFeedbackData = {
          * The app's error log, only when the user chose to attach it. 200 KB at most.
          */
         log?: string | null;
-        /**
-         * UX-SUP-07: the `x-request-id` of each of the app's last failed API calls (answers of 400 or more), newest last; at most 10 UUIDs. Ids only: never a URL, a body or an address.
-         */
-        requestIds?: Array<string> | null;
     };
     path?: never;
     query?: never;
@@ -6530,7 +6526,7 @@ export type SendFeedbackErrors = {
      */
     400: {
         error: 'invalid_feedback';
-        field: 'message' | 'app' | 'appVersion' | 'platform' | 'deviceModel' | 'log' | 'requestIds';
+        field: 'message' | 'app' | 'appVersion' | 'platform' | 'deviceModel' | 'log';
     } | {
         error: 'invalid_request';
     };

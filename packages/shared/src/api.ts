@@ -382,8 +382,6 @@ export type FeedbackInput = {
   platform?: string | null;
   deviceModel?: string | null;
   log?: string | null;
-  /** UX-SUP-07: the server's request ids of the app's last failed API calls (`recentFailedRequestIds`), ids only. */
-  requestIds?: string[] | null;
 };
 
 export const sendFeedback = (token: string, body: FeedbackInput): Promise<{ id: string }> =>
