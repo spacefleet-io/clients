@@ -108,65 +108,30 @@ const insertAfter = <T>(list: QueueEntry<T>[], anchor: QueueEntry<T> | null, add
   return [...list.slice(0, at), ...added, ...list.slice(at)];
 };
 
-/** Who a song is: its id for the apps' song rows; the song itself where the queue holds plain ids (the tests). */
-export type SongIdentity<T> = (track: T) => unknown;
-
-const itself = <T>(track: T): unknown => track;
-
-/**
- * PAR-CARD-02: of `tracks`, the songs not yet in `taken` (the song playing and Up next), each once, in their order. Play
- * next and Add to queue add only these, so a song sits in Up next at most once.
- */
-export const notYetQueued = <T>(taken: Iterable<unknown>, tracks: readonly T[], idOf: SongIdentity<T> = itself): T[] => {
-  const seen = new Set(taken);
-  return tracks.filter((track) => {
-    const id = idOf(track);
-    if (seen.has(id)) return false;
-    seen.add(id);
-    return true;
-  });
-};
-
-/** The songs of `tracks` that Play next or Add to queue would add to `queue`: none already playing or in Up next. */
-export const newToUpNext = <T>(queue: PlayQueue<T>, tracks: readonly T[], idOf: SongIdentity<T> = itself): T[] =>
-  notYetQueued(
-    queue.entries.slice(Math.max(queue.position, 0)).map((entry) => idOf(entry.track)),
-    tracks,
-    idOf
-  );
-
-/**
- * Puts `tracks` right after the current song (in that order); into an empty queue they start playing. Songs already
- * playing or in Up next stay where they are and are not added again (PAR-CARD-02).
- */
-export const playNext = <T>(queue: PlayQueue<T>, tracks: readonly T[], idOf: SongIdentity<T> = itself): PlayQueue<T> => {
-  const fresh = newToUpNext(queue, tracks, idOf);
-  if (fresh.length === 0) return queue;
-  const added = keyed(fresh, queue.nextKey);
+/** Puts `tracks` right after the current song (in that order); into an empty queue they start playing. */
+export const playNext = <T>(queue: PlayQueue<T>, tracks: readonly T[]): PlayQueue<T> => {
+  if (tracks.length === 0) return queue;
+  const added = keyed(tracks, queue.nextKey);
   const current = currentEntry(queue);
   return {
     ...queue,
     entries: insertAfter(queue.entries, current, added),
     queued: insertAfter(queue.queued, current, added),
     position: current ? queue.position : queue.entries.length,
-    nextKey: queue.nextKey + fresh.length,
+    nextKey: queue.nextKey + tracks.length,
   };
 };
 
-/**
- * Adds `tracks` at the end of the queue; into an empty queue they start playing. Songs already playing or in Up next
- * are not added again (PAR-CARD-02).
- */
-export const addToQueue = <T>(queue: PlayQueue<T>, tracks: readonly T[], idOf: SongIdentity<T> = itself): PlayQueue<T> => {
-  const fresh = newToUpNext(queue, tracks, idOf);
-  if (fresh.length === 0) return queue;
-  const added = keyed(fresh, queue.nextKey);
+/** Adds `tracks` at the end of the queue; into an empty queue they start playing. */
+export const addToQueue = <T>(queue: PlayQueue<T>, tracks: readonly T[]): PlayQueue<T> => {
+  if (tracks.length === 0) return queue;
+  const added = keyed(tracks, queue.nextKey);
   return {
     ...queue,
     entries: [...queue.entries, ...added],
     queued: [...queue.queued, ...added],
     position: queue.position < 0 ? queue.entries.length : queue.position,
-    nextKey: queue.nextKey + fresh.length,
+    nextKey: queue.nextKey + tracks.length,
   };
 };
 

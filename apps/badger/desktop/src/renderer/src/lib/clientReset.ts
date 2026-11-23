@@ -8,7 +8,6 @@ import {
 } from "@/lib/onboarding";
 import { LibraryDb } from "@/lib/libraryDb";
 import { idbReset } from "@/lib/idb";
-import { logoutStep } from "@/lib/logoutStep";
 import { persistSessionToMain } from "@/lib/sessionMirror";
 
 type ResetClientStorageOptions = {
@@ -53,14 +52,28 @@ export const resetClientStorage = async (options?: ResetClientStorageOptions) =>
       // Ignore storage read errors.
     }
   }
-  // Each step that waits on another process (the runtime, main, other IndexedDB connections) is bounded
-  // (ACCT-DEV-01): run 38822's cache clear never answered, and nothing after it ran, the key clear included.
-  await logoutStep("LibraryDb.clearLocalCache", () => LibraryDb.clearLocalCache());
-  await logoutStep("clearExternalMpvSubtitleCache", async () => window.sf?.clearExternalMpvSubtitleCache?.());
-  if (!preserveLibraryKey) {
-    await logoutStep("clearLibraryKey", () => clearLibraryKey());
+  try {
+    await LibraryDb.clearLocalCache();
+  } catch {
+    // Ignore cache cleanup errors.
   }
-  await logoutStep("idbReset", () => idbReset());
+  try {
+    await window.sf?.clearExternalMpvSubtitleCache?.();
+  } catch {
+    // Ignore cache cleanup errors.
+  }
+  try {
+    if (!preserveLibraryKey) {
+      await clearLibraryKey();
+    }
+  } catch {
+    // Ignore key cleanup errors.
+  }
+  try {
+    await idbReset();
+  } catch {
+    // Ignore IDB reset errors.
+  }
   try {
     window.localStorage.clear();
   } catch {

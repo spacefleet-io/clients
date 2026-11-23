@@ -13,10 +13,10 @@ import type { RootStackParamList } from "../../navigation/AppNavigator";
 import { useLibraryData, useLibraryStatus } from "../../store/library";
 import { TvEmptyLibrary } from "../components/TvEmptyLibrary";
 import { TvPosterGrid } from "../components/TvPosterGrid";
-import { TV_SCREEN_X } from "@space/mobile-shell/tv/layout";
-import { useTvScale, useTvStyles } from "@space/mobile-shell/tv/tvScale";
-import { TvChip, TvSegmented } from "@space/mobile-shell/tv/TvChip";
-import { TvBody } from "@space/mobile-shell/tv/TvText";
+import { TV_SCREEN_X } from "../lib/layout";
+import { useTvScale, useTvStyles } from "../lib/tvScale";
+import { TvChip, TvSegmented } from "../ui/TvChip";
+import { TvBody } from "../ui/TvText";
 
 const MASCOT = require("../../assets/mascot.webp");
 

@@ -14,12 +14,9 @@ import {
   compareVersions,
   formatClientHeader,
   getAppUpdateRequired,
-  isLibraryOpStreamSwitch,
   onAppUpdateRequired,
   parseClientHeader,
   setClientIdentity,
-  requireLibraryUpdate,
-  setLibraryReadOpStreamVersion,
   webClientIdentity,
 } from "../src/appVersion";
 import { WEB_UPDATE_COPY, webUpdateCopyFor } from "../src/webUpdate";
@@ -137,72 +134,6 @@ describe("update refusal", () => {
     log(id, "phase:errors", errors.map((e) => [e.status, e.payload]));
     expect(errors.map(appUpdateRequiredFrom)).toEqual([null, null]);
     expect(getAppUpdateRequired()).toBeNull();
-  });
-});
-
-describe("library op stream switch (LIB-FMT-13)", () => {
-  const switchRefusal = { ...refusal, reason: "library_op_stream", opStreamVersion: 4 };
-
-  it("does not latch a switch this build reads; the writer retries instead @req REL-CD-29", async () => {
-    const id = "OP-STREAM-SWITCH-READ";
-    setApiBaseUrl("http://api.test");
-    setLibraryReadOpStreamVersion(4);
-    fetchMock.mockImplementation(async () => new Response(JSON.stringify(switchRefusal), { status: 426 }));
-    const error = await apiRequest("/library/db/ops").catch((caught: unknown) => caught);
-    log(id, "phase:refused", { error: String(error), switch: isLibraryOpStreamSwitch(error), latched: getAppUpdateRequired() });
-    expect(error).toBeInstanceOf(ApiError);
-    expect(isLibraryOpStreamSwitch(error)).toBe(true);
-    expect(getAppUpdateRequired()).toBeNull();
-  });
-
-  it("latches it for a build that reads an older op stream or never said @req REL-CD-29", async () => {
-    const id = "OP-STREAM-SWITCH-OLD";
-    setApiBaseUrl("http://api.test");
-    fetchMock.mockImplementation(async () => new Response(JSON.stringify(switchRefusal), { status: 426 }));
-    const unset = await apiRequest("/library/db/ops").catch((caught: unknown) => caught);
-    const unsetLatched = getAppUpdateRequired();
-    __resetAppVersionStateForTests();
-    setLibraryReadOpStreamVersion(3);
-    const older = await apiRequest("/library/db/ops").catch((caught: unknown) => caught);
-    log(id, "phase:refused", {
-      unsetSwitch: isLibraryOpStreamSwitch(unset),
-      unsetLatched,
-      olderSwitch: isLibraryOpStreamSwitch(older),
-      olderLatched: getAppUpdateRequired(),
-    });
-    expect(isLibraryOpStreamSwitch(unset)).toBe(false);
-    expect(unsetLatched).toEqual(refusal);
-    expect(isLibraryOpStreamSwitch(older)).toBe(false);
-    expect(getAppUpdateRequired()).toEqual(refusal);
-    expect(isLibraryOpStreamSwitch(new ApiError(426, refusal))).toBe(false);
-  });
-
-  it("latches an op type this build does not know into the same state, once @req LIB-FMT-13[badger-mobile] @req LIB-FMT-13[badger-tv]", () => {
-    const id = "LIBRARY-UPDATE-LATCH";
-    setClientIdentity({ app: "badger", platform: "android", version: "0.4.0" });
-    const seen: unknown[] = [];
-    onAppUpdateRequired((payload) => seen.push(payload));
-    requireLibraryUpdate();
-    requireLibraryUpdate();
-    // A 426 after it (same latch as the API hook) changes nothing either: one source of truth, first payload wins.
-    void new ApiError(426, refusal);
-    const expected = {
-      error: "app_update_required",
-      app: "badger",
-      platform: "android",
-      version: "0.4.0",
-      minVersion: "",
-      reason: "library_op_stream",
-    };
-    log(id, "phase:latched", { seen, latched: getAppUpdateRequired() });
-    expect(getAppUpdateRequired()).toEqual(expected);
-    expect(seen).toEqual([expected]);
-
-    // The API's refusal fills the same latch: a later requireLibraryUpdate keeps it.
-    __resetAppVersionStateForTests();
-    void new ApiError(426, refusal);
-    requireLibraryUpdate("library_schema");
-    expect(getAppUpdateRequired()).toEqual(refusal);
   });
 });
 

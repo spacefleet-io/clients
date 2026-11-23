@@ -68,12 +68,6 @@ const PLAYBACK_STATEMENTS: readonly string[] = [
   `INSERT OR REPLACE INTO main.media_chapters (id, format_id, title, start_seconds)
   SELECT id, format_id, title, start_seconds FROM src_playback.media_chapters
   WHERE format_id IN (${LIBRARY_FORMATS});`,
-  // LIB-FMT-11: packed chunk lists and the per-file playback clock of a converted library (empty before the switch).
-  `INSERT OR REPLACE INTO main.media_chunk_lists (owner_id, owner_kind, placement_id, key_mode, key_data, count, sizes, starts, updated_at)
-  SELECT owner_id, owner_kind, placement_id, key_mode, key_data, count, sizes, starts, updated_at FROM src_playback.media_chunk_lists
-  WHERE owner_id IN (${LIBRARY_FORMATS}) OR owner_id IN (${LIBRARY_AUDIO_TRACKS});`,
-  `INSERT OR REPLACE INTO main.media_file_playback (media_id, file_id, updated_at)
-  SELECT media_id, file_id, updated_at FROM src_playback.media_file_playback WHERE media_id IN (${LIBRARY_MEDIA});`,
 ];
 
 export const copyStatements = (alias: string, tables: readonly CopyTable[]) =>
@@ -155,17 +149,6 @@ const PLAYBACK_COPIES: readonly PlaybackCopy[] = [
     table: "media_chapters",
     columns: ["id", "format_id", "title", "start_seconds"],
     where: `format_id IN (${SNAPSHOT_FORMATS})`,
-  },
-  {
-    // LIB-FMT-11: a converted snapshot's packed chunk lists and per-file playback clock (empty before the switch).
-    table: "media_chunk_lists",
-    columns: ["owner_id", "owner_kind", "placement_id", "key_mode", "key_data", "count", "sizes", "starts", "updated_at"],
-    where: `owner_id IN (${SNAPSHOT_FORMATS}) OR owner_id IN (${SNAPSHOT_AUDIO_TRACKS})`,
-  },
-  {
-    table: "media_file_playback",
-    columns: ["media_id", "file_id", "updated_at"],
-    where: `media_id IN (${SNAPSHOT_MEDIA})`,
   },
 ];
 

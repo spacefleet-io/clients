@@ -34,13 +34,6 @@ export type OutputState = {
     path?: string;
   }>;
   uploadSessionId?: string;
-  /**
-   * Base64 16-byte seed this output's chunk keys derive from (LIB-FMT-11 key mode 2; key i =
-   * `seedChunkKey(seed, placementId, i)` of `@space/library-db-definition/chunkLists`). Set once, before the first
-   * chunk of the output is uploaded, and only on an account whose library is converted to change types 4; kept
-   * across resumes so a re-upload lands on the same key. Absent: every chunk got a random key.
-   */
-  chunkKeySeed?: string;
 };
 
 export type SubtitleState = {

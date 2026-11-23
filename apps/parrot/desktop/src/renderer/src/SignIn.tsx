@@ -1,14 +1,12 @@
 import { useState, type FormEvent } from "react";
 import { Button, Input, LanguageMenu, Spinner } from "@space/ui";
 import { BadgerPhoneSignInCard, BadgerSignInDivider } from "@space/ui/badger/sign-in";
-import { MASCOT_GLOW } from "@space/ui/floating-mascot";
 import {
   DesktopForgotPasswordLink,
   DesktopPasswordResetDialog,
   DesktopStartupCard,
   DesktopStartupControls,
   PairWithPhone,
-  SameDeviceSignIn,
   pairWithPhoneText,
 } from "@space/desktop-shell/components";
 import { CLIENT_UI_LANGUAGES, isClientUiLanguage } from "@space/shared/i18n";
@@ -94,7 +92,7 @@ export default function SignIn({ t, state, onState }: Props) {
         <DesktopStartupCard
           title={mode === "signUp" ? t("signUp.title") : mode === "verify" ? t("verify.title") : t("signIn.title")}
           mascotSrc={mascotUrl}
-          mascotGlowClassName={MASCOT_GLOW.parrot}
+          mascotGlowClassName="drop-shadow-[0_0_30px_rgba(64,221,143,0.3)]"
           mascotPlacement="above"
           maxWidthClassName="max-w-xl"
         >
@@ -135,19 +133,6 @@ export default function SignIn({ t, state, onState }: Props) {
             <ProviderSecondStep t={t} flow={providerFlow} message={providerNotice?.text ?? null} />
           ) : (
             <div className="space-y-4">
-              {/* ACCT-PAIR-07: Badger signed in on this computer signs Parrot in with one click, above the normal sign-in. */}
-              {window.parrot.sibling ? (
-                <SameDeviceSignIn<ParrotPairedSignIn>
-                  language={language}
-                  app="parrot"
-                  actions={window.parrot.sibling}
-                  onApproved={async (approved) => {
-                    if (approved.check === "verified") await signedIn();
-                    return approved.check;
-                  }}
-                  log={pairLog.info}
-                />
-              ) : null}
               <EmailSignIn
                 t={t}
                 state={state}

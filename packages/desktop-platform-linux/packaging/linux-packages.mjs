@@ -10,7 +10,6 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
-import { systemUpdateFpmFiles } from "./system-update.mjs";
 
 /** The formats, in build order. AppImage first: electron-builder writes latest-linux.yml's top-level `path:` from the first one, and AppImage clients older than this list read that field. */
 export const LINUX_FORMATS = ["AppImage", "deb", "rpm", "pacman"];
@@ -167,21 +166,16 @@ export const RPM_FPM_NO_BUILD_ID_LINKS = ["--rpm-rpmbuild-define", "_build_id_li
 /**
  * electron-builder options for the native formats: one `<format>: { packageName, depends, artifactName, fpm,
  * afterInstall, afterRemove }` entry each (electron-builder takes `packageName` per format only, not under `linux`).
- * @param {{ appDir: string; packageName: string; productName: string; legacyName: string; version: string; mpv: boolean; afterInstall: string }} options
+ * @param {{ appDir: string; packageName: string; legacyName: string; version: string; mpv: boolean; afterInstall: string }} options
  *   `appDir`: the app's folder (the generated scripts go under its node_modules/.cache); `packageName`: the lower-case
  *   package name, also the executable (`spacebadger`, `spaceparrot`, REL-DIST-14); `legacyName`: the name the app's
  *   packages had before 0.1.2/0.1.3 (`badger`, `parrot`), taken over through `legacyPackageRelations`; `version`: the
  *   app version; `mpv`: the app bundles Badger's mpv/ffmpeg (adds MPV_HOST_DEPENDS); `afterInstall`: the
- *   after-install script (file-modes.mjs `linuxAfterInstallScript`, REL-DIST-13); `productName`: the name the update
- *   password dialog shows ("Badger", REL-UPD-07)
- *
- * REL-UPD-07: every native package also carries its root update helper and polkit action (system-update.mjs). They go
- * last in `fpm`: they are source=destination paths, and electron-builder appends the app's own paths after them.
+ *   after-install script (file-modes.mjs `linuxAfterInstallScript`, REL-DIST-13)
  */
-export const nativeLinuxPackageOptions = ({ appDir, packageName, productName, legacyName, version, mpv, afterInstall }) => {
+export const nativeLinuxPackageOptions = ({ appDir, packageName, legacyName, version, mpv, afterInstall }) => {
   const afterRemove = linuxAfterRemoveScript(appDir);
   const posttrans = rpmPosttransScript(appDir, packageName);
-  const updateFiles = systemUpdateFpmFiles({ appDir, packageName, productName });
   return Object.fromEntries(
     NATIVE_LINUX_FORMATS.map((format) => [
       format,
@@ -192,7 +186,6 @@ export const nativeLinuxPackageOptions = ({ appDir, packageName, productName, le
         fpm: [
           ...legacyPackageRelations(format, legacyName, version),
           ...(format === "rpm" ? ["--rpm-posttrans", posttrans, ...RPM_FPM_NO_BUILD_ID_LINKS] : []),
-          ...updateFiles,
         ],
         afterInstall,
         afterRemove,

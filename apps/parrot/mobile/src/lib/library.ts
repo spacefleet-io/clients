@@ -20,7 +20,7 @@ import { publishLibrarySnapshotWith, type LibrarySnapshotPublishDeps } from "@sp
 import { PARROT_OP_STREAM_VERSION, parseParrotTracklist, type ParrotListedTrack, type ParrotPhotoCredit } from "@space/parrot-library-db-definition/ops";
 import { createPhoneOpsSaver, type PhoneLibraryState } from "./saveEdits";
 import { phoneCoverCopies } from "./coverCopies";
-import { sqliteDb } from "./dbPath";
+import { sqliteDefaultDbPath } from "./dbPath";
 import * as sdk from "@space/sdk";
 import { API_BASE_URL } from "../config";
 import { SPACE_APP_HEADER } from "@space/shared/appScope";
@@ -36,7 +36,6 @@ import {
   type ParrotEditCover,
   type ParrotEditTarget,
   type ParrotEditValues,
-  type ParrotSuggestLibrary,
   type ParrotLibraryQuery,
   type ParrotManageTarget,
   fetchParrotLyrics,
@@ -58,6 +57,7 @@ import {
   runParrotAutoArtistPictures,
   type ParrotAutoArtistPicturesReport,
   type ParrotAutoLyricsReport,
+  fetchParrotMetadata,
   PLAYLIST_TRACKS_SQL,
   PLAYLISTS_SQL,
   toParrotLyrics,
@@ -96,17 +96,13 @@ import {
   type TrackFileChunkRow,
   type TrackFileRow,
   type TrackRow,
-  parrotLibraryUpgradeStatements,
 } from "@space/parrot-core";
 
 SQLite.enablePromise(true);
 
 const DB_NAME = "parrot.library.sqlite";
-/** Where the SQLite plugin keeps a database on this device (Android `databases/`, iPhone `Library/LocalDatabase`, Apple TV Caches). */
-const deviceDb = (name: string) =>
-  sqliteDb(Platform.OS, Platform.isTV, { document: RNFS.DocumentDirectoryPath, library: RNFS.LibraryDirectoryPath, caches: RNFS.CachesDirectoryPath }, name);
-const dbPath = () => deviceDb(DB_NAME).path;
-const openLibraryFile = () => SQLite.openDatabase({ name: DB_NAME, location: deviceDb(DB_NAME).location });
+/** Where react-native-sqlite-storage keeps a `location: "default"` database (Android `databases/`, iOS `Library/LocalDatabase`). */
+const dbPath = () => sqliteDefaultDbPath(Platform.OS, { document: RNFS.DocumentDirectoryPath, library: RNFS.LibraryDirectoryPath }, DB_NAME);
 
 let db: SQLite.SQLiteDatabase | null = null;
 /** The server version the open copy is: the snapshot opened, or the one this phone published since. */
@@ -188,12 +184,12 @@ export const openLibrary = async (token: string, libraryKey: string): Promise<{ 
   const path = dbPath();
   await RNFS.mkdir(path.slice(0, path.lastIndexOf("/")));
   await RNFS.writeFile(path, Buffer.from(dbBytes).toString("base64"), "base64");
-  const opened = await openLibraryFile();
-  // A snapshot published by an older build is brought to schema 10 in the phone's own copy (e.g. the small cover
-  // column, PAR-META-04); a file at 11 stays there (API-VER-01). The next playlist save publishes it at that schema.
+  const opened = await SQLite.openDatabase({ name: DB_NAME, location: "default" });
+  // A snapshot published by an older build is brought to this build's schema in the phone's own copy (e.g. the small
+  // cover column, PAR-META-04); the next playlist save publishes it at that schema.
   const [version] = await opened.executeSql("PRAGMA user_version");
   const fileVersion = Number(version.rows.item(0)?.user_version ?? 0);
-  const statements = parrotLibraryUpgradeStatements(fileVersion);
+  const statements = parrotLibraryMigrationStatements(fileVersion);
   if (statements.length) {
     await opened.sqlBatch(statements);
     log("parrot.library.migrated", { from: fileVersion, statements: statements.length });
@@ -236,7 +232,7 @@ export const openLibraryCopy = async (token: string, libraryKey: string): Promis
   if (marker === null || !(await RNFS.exists(dbPath()))) return null;
   await closeDb();
   coverKeys = null;
-  db = await openLibraryFile();
+  db = await SQLite.openDatabase({ name: DB_NAME, location: "default" });
   openedVersion = Number(marker) || 0;
   session = { token, libraryKey };
   copyKept = true;
@@ -373,7 +369,7 @@ const keepOpenCopy = async (): Promise<() => Promise<void>> => {
     coverKeys = null;
     for (const leftover of [dbPath(), `${dbPath()}-wal`, `${dbPath()}-shm`]) await RNFS.unlink(leftover).catch(() => undefined);
     await RNFS.copyFile(backupPath(), dbPath());
-    db = await openLibraryFile();
+    db = await SQLite.openDatabase({ name: DB_NAME, location: "default" });
     log("parrot.library.change_undone", { version: openedVersion });
   };
 };
@@ -413,7 +409,8 @@ const phoneSnapshotDeps = (current: () => { token: string; libraryKey: string })
 });
 
 const CLAIM_DB_NAME = "parrot.claim.sqlite";
-const claimFilePath = () => deviceDb(CLAIM_DB_NAME).path;
+const claimFilePath = () =>
+  sqliteDefaultDbPath(Platform.OS, { document: RNFS.DocumentDirectoryPath, library: RNFS.LibraryDirectoryPath }, CLAIM_DB_NAME);
 
 /**
  * A new key made on this phone becomes the account's key (UX-KEY-01): an empty Parrot library is published with it
@@ -430,7 +427,7 @@ export const claimAccountKey = async (token: string, libraryKey: string): Promis
   await removeClaimFile();
   log("parrot.library.claim.start", {});
   try {
-    const empty = await SQLite.openDatabase({ name: CLAIM_DB_NAME, location: deviceDb(CLAIM_DB_NAME).location });
+    const empty = await SQLite.openDatabase({ name: CLAIM_DB_NAME, location: "default" });
     try {
       await empty.sqlBatch(parrotLibraryMigrationStatements(0).map((sql): [string, unknown[]] => [sql, []]));
       await empty.executeSql("PRAGMA wal_checkpoint(TRUNCATE)").catch(() => undefined);
@@ -540,31 +537,32 @@ export const deleteFromLibrary = (target: ParrotManageTarget): Promise<number> =
     }
   });
 
-/**
- * The library as the edit dialog's autocomplete ranks it (PAR-META-18): every artist, album and song with the names it
- * is matched on. Read once when the dialog opens (and again after the library changed), never per keystroke.
- */
-export const readSuggestLibrary = async (): Promise<ParrotSuggestLibrary> => {
-  const [artists, albums, tracks] = await Promise.all([
-    query<ParrotSuggestLibrary["artists"][number]>("SELECT id, name FROM artists"),
-    query<ParrotSuggestLibrary["albums"][number]>(
-      `SELECT al.id AS id, al.title AS title, COALESCE(ar.name, '') AS artist, al.year AS year, al.kind AS kind, al.music_id AS musicId
-         FROM albums al LEFT JOIN artists ar ON ar.id = al.album_artist_id`
-    ),
-    query<ParrotSuggestLibrary["tracks"][number]>(
-      `SELECT t.id AS id, t.title AS title, COALESCE(ar.name, '') AS artist, t.album_id AS albumId, al.title AS album,
-              t.number AS number, t.disc AS disc, COALESCE(t.year, al.year) AS year
-         FROM tracks t LEFT JOIN artists ar ON ar.id = t.artist_id LEFT JOIN albums al ON al.id = t.album_id`
-    ),
-  ]);
-  log("parrot.library.suggest_read", { artists: artists.length, albums: albums.length, tracks: tracks.length });
-  return { artists, albums, tracks };
-};
+/** What "Look it up again" found (PAR-META-18): the lookup's details beside the library's, or none. */
+export type FetchedMetadata =
+  | { outcome: "none" }
+  | { outcome: "found"; found: NonNullable<ParrotEditValues>; current: NonNullable<ParrotEditValues>; cover: ParrotEditCover | null };
 
-/** The cover of an album picked in the edit dialog's autocomplete, by its lookup id, for review; nothing is saved. */
-export const fetchSuggestionCover = async (coverId: string, client: Pick<MetadataClient, "musicCover">): Promise<ParrotEditCover | null> => {
-  const { cover } = await client.musicCover(coverId, 500);
-  return cover ? { kind: "file", bytes: new Uint8Array(Buffer.from(cover.base64, "base64")), mime: cover.mime } : null;
+/**
+ * PAR-META-18: asks our music library (through the anonymous lookup) about one song or album; for an album also its
+ * cover. Nothing is saved: the edit form opens with the answer for review. A failed lookup rejects.
+ */
+export const fetchMetadata = async (target: { kind: "track" | "album"; id: string }, client: Pick<MetadataClient, "musicRecordings" | "musicAlbums" | "musicCover">): Promise<FetchedMetadata> => {
+  const found = await fetchParrotMetadata({
+    query: libraryQuery,
+    target,
+    recordings: (question) => client.musicRecordings(question),
+    albums: (question) => client.musicAlbums(question),
+  });
+  log("metadata.fetch", { target, kind: found.kind });
+  if (found.kind === "missing" || found.kind === "none") return { outcome: "none" };
+  if (found.kind === "track") return { outcome: "found", found: { kind: "track", edit: found.found }, current: { kind: "track", edit: found.current }, cover: null };
+  const { cover } = found.coverId ? await client.musicCover(found.coverId, 500) : { cover: null };
+  return {
+    outcome: "found",
+    found: { kind: "album", edit: found.found },
+    current: { kind: "album", edit: found.current },
+    cover: cover ? { kind: "file", bytes: new Uint8Array(Buffer.from(cover.base64, "base64")), mime: cover.mime } : null,
+  };
 };
 
 /** The details the edit form opens with (PAR-META-16): a song's or an album's current values; null when it is gone. */
