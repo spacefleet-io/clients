@@ -28,11 +28,10 @@ const TAG = "[library-ops-flush-resilience]";
 const log = (phase: string, data?: unknown) =>
   console.info(`${TAG} ${phase}${data === undefined ? "" : ` ${JSON.stringify(data)}`}`);
 
-vi.mock("react-native", async () => ({ ...(await import("./setup/reactNativeMock")).reactNativeBase(), Platform: { OS: "ios" } }));
+vi.mock("react-native", () => ({ Platform: { OS: "ios" } }));
 vi.mock("react-native-fs", async () => ({ default: (await import("./library-db-fixture")).fakeRnfs }));
 vi.mock("react-native-sqlite-storage", () => ({ default: { enablePromise: () => undefined } }));
 vi.mock("react-native-quick-crypto", async () => (await import("./library-db-fixture")).quickCryptoMock());
-vi.mock("../src/lib/library/opsPage", async (importOriginal) => (await import("./library-db-fixture")).opsPageMock(await importOriginal()));
 vi.mock("@space/shared/api", async (importOriginal) =>
   (await import("./library-db-fixture")).sharedApiMock(await importOriginal<typeof SharedApi>())
 );
@@ -100,7 +99,7 @@ beforeEach(() => {
 });
 
 describe("mobile op flush survives a stale pending snapshot", () => {
-  it("@bugfix @regression-proof a stale pending snapshot (409, or a server already past it) is discarded and keeps sync (and op flushing) enabled", async () => {
+  it("@bugfix @regression-proof a 409 on the pending snapshot discards it and keeps sync (and op flushing) enabled", async () => {
     setServer({ version: 10, snapshotVersion: 10 });
     seedSplitCache({ version: 10 });
     seedStalePendingSnapshot(5); // built on v5; our own ops moved the server to v10
@@ -112,16 +111,13 @@ describe("mobile op flush survives a stale pending snapshot", () => {
     await db.flushPending();
     log("after 409", { putDbCalls: fx.putDbCalls, syncEnabled: db.syncEnabled, pendingSync: db.pendingSync, files: [...fx.files.keys()] });
     try {
-      // LIB-SYNC-14: the version read right before the PUT (10) is past what the snapshot covers (5), so it is dropped
-      // without uploading it; the 409 configured above is the answer it would have met.
-      expect(fx.putDbCalls, "a snapshot the server has moved past is never uploaded").toBe(0);
       expect(db.syncEnabled, "a stale compaction snapshot must not switch off sync for the session").toBe(true);
       expect(db.pendingSync, "the stale snapshot is dropped (its data already reached the server as ops)").toBeNull();
       expect(fx.files.has(PENDING_JSON), "pending.json must be removed so the next cold start does not retry").toBe(false);
       expect(fx.files.has(PENDING_SNAPSHOT)).toBe(false);
 
       await db.flushPending();
-      expect(fx.putDbCalls, "no later full-snapshot upload attempt for a discarded snapshot").toBe(0);
+      expect(fx.putDbCalls, "no second full-snapshot upload attempt for a discarded snapshot").toBe(1);
 
       await db.queueOp(settingOp("local-1", "episode_resume_v1:e1", "{}"));
       await db.flushOps();
@@ -174,7 +170,7 @@ describe("mobile progress ops are queued even while sync is switched off", () =>
 });
 
 describe("mobile op flush failures are logged", () => {
-  it("@bugfix @regression-proof a rejected op upload emits library.ops.flush.error with status and op type, never the op id", async () => {
+  it("@bugfix @regression-proof a rejected op upload emits library.ops.flush.error with status and op id", async () => {
     setServer({ version: 10, snapshotVersion: 10 });
     seedSplitCache({ version: 10 });
     fx.putOpError = { status: 500, payload: { error: "library_op_failed" } };
@@ -187,71 +183,8 @@ describe("mobile op flush failures are logged", () => {
       log("warn lines", lines);
       expect(lines, "the failed upload must be visible in logcat").toContain("library.ops.flush.error");
       const payload = warnSpy.mock.calls.find((call: unknown[]) => call[0] === "library.ops.flush.error")?.[1];
-      const fields = JSON.parse(String(payload)) as Record<string, unknown>;
-      expect(fields).toMatchObject({ status: 500, code: "library_op_failed", type: "setting.set", error: "library_op_failed" });
-      expect(String(payload), "REL-LOG-31: an op id is never logged").not.toContain("local-err");
+      expect(JSON.parse(String(payload))).toMatchObject({ status: 500, opId: "local-err", error: "library_op_failed" });
       expect(queuedOnDisk().map((op) => op.id), "the failed op stays queued for retry").toEqual(["local-err"]);
-    } finally {
-      await db.close();
-    }
-  });
-});
-
-describe("LIB-SYNC-16/17: a refused op upload says why, and a stuck one is flagged once and slows down", () => {
-  /**
-   * @req LIB-SYNC-16[badger-mobile,badger-tv]
-   * @req LIB-SYNC-17[badger-mobile,badger-tv]
-   * @req REL-LOG-31[badger-mobile,badger-tv]
-   * Pre-fix: the 409 line held only the op id and the message, and the refused op was sent again every 2 s for as
-   * long as the server refused it.
-   */
-  it("each 409 logs code, request id, versions and the streak; the 5th flags it once; from then on it waits 5 min", async () => {
-    const requestId = "0d6c1b9a-2e3f-4a5b-8c7d-9e0f1a2b3c4d";
-    setServer({ version: 10, snapshotVersion: 10 });
-    seedSplitCache({ version: 10 });
-    fx.putOpError = { status: 409, payload: { error: "version_conflict", version: 10 }, requestId };
-    const db = await openLocal();
-    try {
-      await db.queueOp(settingOp("local-409", "episode_resume_v1:e1", "{}"));
-      // A sync or a new write calls flushOps again at once; drive those calls directly.
-      for (let call = 0; call < 10 && fx.putOpCalls < 5; call += 1) await db.flushOps();
-      const lines = (name: string) =>
-        warnSpy.mock.calls
-          .filter((call: unknown[]) => call[0] === name)
-          .map((call: unknown[]) => JSON.parse(String(call[1])) as Record<string, unknown>);
-      const refusals = lines("library.ops.flush.error");
-      log("after refusals", { putOpCalls: fx.putOpCalls, refusals, stuck: lines("library.ops.flush.stuck") });
-      expect(refusals.map((fields) => fields.consecutive409)).toEqual([1, 2, 3, 4, 5]);
-      expect(refusals[4]).toMatchObject({ status: 409, code: "version_conflict", requestId, baseVersion: 10, serverVersion: 10 });
-      expect(lines("library.ops.flush.stuck")).toEqual([
-        expect.objectContaining({ code: "version_conflict", requestId, consecutive409: 5, retryInMs: 5 * 60_000 }),
-      ]);
-      const written = JSON.stringify(warnSpy.mock.calls);
-      expect(written, "an op id is never logged").not.toContain("local-409");
-
-      await db.flushOps();
-      await db.flushOps();
-      expect(fx.putOpCalls, "no upload while stuck").toBe(5);
-
-      vi.setSystemTime(Date.now() + 5 * 60_000 + 1_000);
-      try {
-        await db.flushOps();
-        log("after first slow retry", { putOpCalls: fx.putOpCalls, stuck: lines("library.ops.flush.stuck").length });
-        expect(fx.putOpCalls, "the slow retry sends the op").toBe(6);
-        expect(lines("library.ops.flush.stuck"), "the stuck line is written once per streak").toHaveLength(1);
-        await db.flushOps();
-        expect(fx.putOpCalls, "still refused: the next try waits 5 min again").toBe(6);
-
-        fx.putOpError = null;
-        fx.nextPutVersion = 11;
-        vi.setSystemTime(Date.now() + 5 * 60_000 + 1_000);
-        await db.flushOps();
-      } finally {
-        vi.useRealTimers();
-      }
-      log("after accepted retry", { putOpCalls: fx.putOpCalls, queued: queuedOnDisk().length });
-      expect(fx.putOpCalls, "the accepted retry sends the op").toBe(7);
-      expect(queuedOnDisk()).toEqual([]);
     } finally {
       await db.close();
     }

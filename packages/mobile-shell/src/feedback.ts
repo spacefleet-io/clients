@@ -1,13 +1,10 @@
 /**
  * "Send feedback" (UX-SUP-05), shared by the phone apps (Badger, Parrot): builds the `POST /feedback` body and maps the
  * API's answer to what the form shows. The error log goes along only when the user ticked the box (UX-SUP-02); the log
- * (`@space/error-report/error-log`) scrubs each line with the REL-LOG-06 scrubber as it is recorded. The body always
- * carries the server's request ids of the app's last failed API calls (UX-SUP-07): ids only, so an admin finds the
- * server's lines about what went wrong.
+ * (`@space/error-report/error-log`) scrubs each line with the REL-LOG-06 scrubber as it is recorded.
  */
 import { clampLog } from "@space/error-report/error-log";
 import { ApiError, type FeedbackInput } from "@space/shared/api";
-import { recentFailedRequestIds } from "@space/shared/apiFailure";
 
 /** The API's limits (feedback route). */
 export const FEEDBACK_MESSAGE_MAX = 4000;
@@ -24,16 +21,11 @@ export type FeedbackDevice = {
 export type FeedbackDraft = { message: string; attachLog: boolean };
 
 /** The request body, or null when the message is empty after trimming. */
-export const buildFeedback = (
-  draft: FeedbackDraft,
-  device: FeedbackDevice,
-  readLog: () => string,
-  requestIds: () => string[] = recentFailedRequestIds
-): FeedbackInput | null => {
+export const buildFeedback = (draft: FeedbackDraft, device: FeedbackDevice, readLog: () => string): FeedbackInput | null => {
   const message = draft.message.trim().slice(0, FEEDBACK_MESSAGE_MAX);
   if (!message) return null;
   const log = draft.attachLog ? clampLog(readLog()) : null;
-  return { message, ...device, log: log || null, requestIds: requestIds() };
+  return { message, ...device, log: log || null };
 };
 
 export type FeedbackFailure = "rate_limited" | "invalid" | "offline" | "failed";

@@ -4,22 +4,16 @@ import SQLite from "react-native-sqlite-storage";
 import crypto from "react-native-quick-crypto";
 import {
   ApiError,
+  getLibraryMeta,
+  getLibraryOps,
   deleteStorageObjects,
   listStorageObjects,
   putLibraryDb,
   putLibraryOp,
-  type LibraryDbPutResult,
   type LibraryMeta,
   type LibraryWriterFormats,
   TitleDetails,
 } from "@space/shared/api";
-import { isLibraryOpStreamSwitch, requireLibraryUpdate } from "@space/shared/appVersion";
-import { LIBRARY_SYNC_STUCK_AFTER_409S, LIBRARY_SYNC_STUCK_RETRY_MS, libraryRefusalFields } from "@space/shared/apiFailure";
-import { fetchLibraryOpsPage, type LibraryOpsPage } from "./library/opsPage";
-import { readLibraryMeta } from "./library/libraryReads";
-import { inlineBlobParams, PACKED_LIST_SELECT, packedListFromRow, packedRowWithBytes } from "./library/packedChunkRows";
-import { chunkListToJson, unpackChunkList, type PackedChunkList } from "@space/library-db-definition/chunkLists";
-import { convertChunkLists } from "../native/LibrarySync";
 import {
   CHUNK_SIZE_BYTES,
   uploadObjectViaTunnel,
@@ -92,12 +86,7 @@ import {
 } from "@space/shared/playbackResume";
 import {
   buildOpStatements,
-  isV3MediaUpsert,
   OP_STREAM_VERSION,
-  playbackFileKey,
-  translateV3MediaUpsert,
-  UnknownOpTypeError,
-  writeOpStreamVersion,
   type LibrarySqlStatement,
   type OpStatementsByGroup,
 } from "@space/library-db-definition/ops";
@@ -105,7 +94,6 @@ import { isProgressClassOp, SNAPSHOT_TAIL_BYTES_THRESHOLD } from "@space/library
 import { readMediaDetails } from "@space/library-db-definition/mediaDetails";
 import { mediaFilesAndEditionsStatements } from "@space/library-db-definition/editionDdl";
 import type { SearchEpisode } from "./phoneSearch";
-import type { LibrarySyncProgressEvent } from "./librarySyncStatus";
 import {
   assertLibraryCompatible,
   currentLibrarySupport,
@@ -114,9 +102,11 @@ import {
 } from "@space/library-db-definition/compatibility";
 import type { LibraryDbGroup } from "@space/library-db-definition/manifest";
 import { removeDownloadsOfDeletedMedia, removeDownloadsOutsideLibrary } from "./downloads/mediaDeleted";
+import { fetchOpPayloads } from "@space/mobile-shell/libraryOps";
 import { encryptOpPayload } from "./library/opPayload";
 import { SEASON_COUNT_SQL, buildLibraryExtras, type LibraryExtras } from "./libraryExtras";
-import type { LibraryOp, MediaFilePlaybackDeleteOp, MediaFilePlaybackSetOp, MediaUpsertV4Op } from "@space/shared/libraryOps";
+import type { LibraryOpsResponse } from "@space/shared/contracts/library";
+import type { LibraryOp } from "@space/shared/libraryOps";
 import type {
   LibrarySnapshot,
   MediaCastDraft,
@@ -128,9 +118,8 @@ import type {
   PlaylistRow,
 } from "@space/shared/libraryTypes";
 import { decryptBase64ToBytes, decryptBytesToBytes, encryptBytesToBase64, encryptBytesToBytes } from "./crypto";
-import { keptLibraryKeyIsStale, keptLibraryKeyVerdict } from "@space/mobile-shell/kept-library-key";
+import { checkKeptLibraryKey, keptLibraryKeyIsStale } from "@space/mobile-shell/kept-library-key";
 import {
-  convertPlaybackToPacked,
   ensureSchema,
   ensureCoreSchema,
   ensureMetadataSchema,
@@ -169,9 +158,7 @@ import {
 import {
   coreMigrations,
   metadataMigrations,
-  PACKED_PLAYBACK_LAYOUT_VERSION,
-  playbackMigrationsPacked,
-  readPlaybackLayoutVersion,
+  playbackMigrations,
   ingestMigrations,
 } from "./libraryMigrations";
 import { TRUSTED_CHUNK_REFS_VERSION, type ChunkRefsSource } from "@space/shared/contracts/library";
@@ -234,14 +221,12 @@ SQLite.enablePromise(true);
  * mobile per-group migration registries to their highest `user_version`;
  * the storage/op-stream versions are build constants. Mobile opens four
  * groups (core/metadata/playback/ingest) — there is no `templates` group.
- * Playback folds the registry WITH the conversion step (LIB-FMT-12): this
- * build opens a converted library, though it converts only a switched one.
  * Computed once — the registries and constants are static for the process.
  */
 const MOBILE_LIBRARY_SUPPORT: LibrarySupport = currentLibrarySupport({
   core: coreMigrations,
   metadata: metadataMigrations,
-  playback: playbackMigrationsPacked(async () => undefined),
+  playback: playbackMigrations,
   ingest: ingestMigrations,
 });
 
@@ -252,38 +237,22 @@ const MOBILE_LIBRARY_SUPPORT: LibrarySupport = currentLibrarySupport({
  */
 const MOBILE_CHUNK_REFS_SOURCE: ChunkRefsSource = { client: "badger-mobile", refsVersion: TRUSTED_CHUNK_REFS_VERSION };
 
-/** The op-stream version the account is switched to (`/library/db/meta` `targetOpStreamVersion`); 3 when absent. */
-const metaTargetOpStreamVersion = (meta: unknown): 3 | 4 => {
-  const raw = meta && typeof meta === "object" && "targetOpStreamVersion" in meta ? meta.targetOpStreamVersion : null;
-  return typeof raw === "number" && raw >= 4 ? 4 : 3;
-};
-
-/** Op types that exist only in op stream 4 (LIB-FMT-11); a `media.upsert` without playback keys is one too. */
-const isVersion4Op = (op: LibraryOp) =>
-  op.type === "media.file.playback.set" ||
-  op.type === "media.file.playback.delete" ||
-  op.type === "media.episode.delete" ||
-  (op.type === "media.upsert" && !isV3MediaUpsert(op));
-
 /**
- * Version-4 ops whose rows live only in the metadata / playback files. They carry their own clock guards
- * (LIB-SYNC-08), so the secondary apply runs them all, in op order, beside the upserts the core row holds.
+ * Declared on every write (op POST and snapshot PUT). The API rejects a write
+ * declaring less than the library's stored format with 409
+ * `library_format_downgrade` (LIB-FMT-05), so a mobile write into a library a
+ * newer desktop stamped v2 only succeeds because this tracks the build's
+ * constants. Same source as the read gate above.
  */
-const isSecondaryOnlyOp = (op: LibraryOp) =>
-  op.type === "media.file.playback.set" || op.type === "media.file.playback.delete" || op.type === "media.episode.delete";
+const MOBILE_WRITER_FORMATS: LibraryWriterFormats = {
+  storageFormatVersion: MOBILE_LIBRARY_SUPPORT.storageFormatVersion,
+  opStreamVersion: MOBILE_LIBRARY_SUPPORT.opStreamVersion,
+};
 
 export class QuotaExceededError extends Error {
   constructor(message = "Storage quota exceeded") {
     super(message);
     this.name = "QuotaExceededError";
-  }
-}
-
-/** A pending snapshot the server has moved past (LIB-SYNC-14): its changes already reached the server as ops. */
-class StaleSnapshotError extends Error {
-  constructor(readonly serverVersion: number) {
-    super("STALE_SNAPSHOT");
-    this.name = "StaleSnapshotError";
   }
 }
 
@@ -297,49 +266,24 @@ const OPS_SNAPSHOT_THRESHOLD = 500;
 /** Bound parameters per statement stay far below SQLite's 999-variable limit. */
 const SQL_VARIABLE_CHUNK = 500;
 const SNAPSHOT_MIN_INTERVAL_MS = 10 * 60 * 1000;
-/**
- * Statements per native call. A TV episode's media.upsert carries one playback row per segment: a 57 MB op is ~500k
- * statements, and one bridge call holding them all grew op6's native heap past 1 GB and ran its 256 MB Java heap out
- * (LIB-SYNC-14).
- */
-export const SQL_BATCH_ROUND = 2000;
 
 /**
- * Collects SQL statements and executes them in ONE native transaction. This turns N sequential
- * `await executeSql()` round-trips into a batch — critical for applying hundreds of media upserts
- * without N+1 query overhead. Up to `SQL_BATCH_ROUND` statements go in a single `sqlBatch()` call;
- * a larger batch is handed to the native side `SQL_BATCH_ROUND` statements at a time inside that
- * transaction: the plugin runs statements queued from a statement's success callback in the same
- * transaction, before its COMMIT, so the batch stays all-or-nothing.
+ * Collects SQL statements and executes them in a single `sqlBatch()` call,
+ * which wraps everything in one native transaction. This turns N sequential
+ * `await executeSql()` round-trips into 1 batch call — critical for applying
+ * hundreds of media upserts without N+1 query overhead.
  */
 class SqlBatcher {
   private statements: Array<[string, unknown[]]> = [];
-  // The RN SQLite bridge has no BLOB parameter: packed chunk-list bytes (LIB-FMT-11) go into the SQL as X'..'.
-  add(sql: string, params: readonly unknown[] = []) {
-    this.statements.push(inlineBlobParams(sql, params));
+  add(sql: string, params: unknown[] = []) {
+    this.statements.push([sql, params]);
   }
   get length() {
     return this.statements.length;
   }
   async flush(db: SQLite.SQLiteDatabase) {
-    const statements = this.statements;
-    if (!statements.length) return;
-    if (statements.length <= SQL_BATCH_ROUND) {
-      await db.sqlBatch(statements);
-    } else {
-      // A failing statement makes the plugin roll the whole transaction back (its error callback does not return false).
-      const rollback = () => true;
-      await db.transaction((tx) => {
-        const round = (from: number) => {
-          const end = Math.min(from + SQL_BATCH_ROUND, statements.length);
-          const next = end < statements.length ? () => round(end) : undefined;
-          statements.slice(from, end).forEach(([sql, params], offset) => {
-            tx.executeSql(sql, params, from + offset === end - 1 ? next : undefined, rollback);
-          });
-        };
-        round(0);
-      });
-    }
+    if (!this.statements.length) return;
+    await db.sqlBatch(this.statements);
     this.statements = [];
   }
 }
@@ -371,7 +315,7 @@ const waitForPendingCloses = async () => {
 const PROGRESS_FLUSH_DELAY_MS = 10_000;
 
 const pickBlob = async (token: string, knownMeta?: LibraryMeta) => {
-  const [meta, cache] = await Promise.all([knownMeta ?? readLibraryMeta(token), loadCache()]);
+  const [meta, cache] = await Promise.all([knownMeta ?? getLibraryMeta(token), loadCache()]);
   if (!meta.exists) {
     return { source: "none" as const, cache, meta };
   }
@@ -580,18 +524,8 @@ export class LibraryDb {
    * ops stay in pending_ops.json for the next signed-in library.
    */
   private opsFlushUnauthorized = false;
-  /** LIB-SYNC-16: op uploads in a row the server refused with 409; reset by an accepted op. */
-  private opsFlushConsecutive409 = 0;
-  /** LIB-SYNC-17: while stuck behind 409s, no op upload starts before this time (ms since epoch). */
-  private opsFlushStuckUntil = 0;
   /** Set while a pending snapshot is being published; a second flush would hash and upload it all again. */
   private flushPendingInFlight: Promise<void> | null = null;
-  /**
-   * Set while a compaction (meta check + snapshot build + publish) runs. Every ops flush ends with a compaction
-   * check; a second one started meanwhile read meta before the first's ops landed, queued on the snapshot lock and
-   * rebuilt the whole snapshot again (0.1.17 on op9: two 52 s builds, the first PUT a 409). It now joins the first.
-   */
-  private compactionInFlight: Promise<void> | null = null;
   /**
    * Single-flight remote sync. The foreground scheduler, the library stream, push and the store's
    * preflight all call syncFromRemoteIfNewer; two overlapping runs read the same remoteVersion and
@@ -618,14 +552,6 @@ export class LibraryDb {
   private closed = false;
   private closePromise: Promise<void> | null = null;
   private dataListeners = new Set<() => void>();
-  private syncProgressListeners = new Set<(event: LibrarySyncProgressEvent) => void>();
-  /** The running sync found the server newer (emitted `start`) and has not said `end` yet. */
-  private syncRunStarted = false;
-  /** The op stream the account is switched to (LIB-FMT-13). One-way: once 4, never back to 3. */
-  private targetOpStreamVersion: 3 | 4 = 3;
-  /** The playback file is converted to packed chunk lists (LIB-FMT-12, `user_version` 6). Known once it opened. */
-  private packedPlayback = false;
-  private playbackConvert: Promise<void> | null = null;
 
   private constructor(
     token: string,
@@ -646,7 +572,7 @@ export class LibraryDb {
     this.playbackDbReady = playbackDb;
     this.ingestDbReady = ingestDb;
     if (!(metadataDb instanceof Promise)) this.metadataDbResolved = metadataDb;
-    // The playback handle resolves through getPlaybackDb even when already open: it reads the layout (LIB-FMT-12).
+    if (!(playbackDb instanceof Promise)) this.playbackDbResolved = playbackDb;
     if (!(ingestDb instanceof Promise)) this.ingestDbResolved = ingestDb;
     this.version = version;
     this.remoteVersion = remoteVersion;
@@ -666,59 +592,8 @@ export class LibraryDb {
 
   private async getPlaybackDb(): Promise<SQLite.SQLiteDatabase> {
     if (this.playbackDbResolved) return this.playbackDbResolved;
-    const db = await this.playbackDbReady;
-    this.packedPlayback = (await readPlaybackLayoutVersion(db)) >= PACKED_PLAYBACK_LAYOUT_VERSION;
-    this.playbackDbResolved = db;
-    return db;
-  }
-
-  /**
-   * The op stream this device's writes declare (LIB-FMT-13): 4 only once the account is switched AND the local copy
-   * is converted, so an op never carries a shape the rows it was built from do not hold.
-   */
-  private writtenOpStreamVersion() {
-    return this.packedPlayback ? writeOpStreamVersion(this.targetOpStreamVersion) : OP_STREAM_VERSION;
-  }
-
-  /** Declared on every write (op POST and snapshot PUT); a declared storage format below the stored one is a 409. */
-  private writerFormats(): LibraryWriterFormats {
-    return {
-      storageFormatVersion: MOBILE_LIBRARY_SUPPORT.storageFormatVersion,
-      opStreamVersion: this.writtenOpStreamVersion(),
-    };
-  }
-
-  /**
-   * Takes the account's switch from a meta or ops answer (LIB-FMT-13) and converts the local copy in place when it
-   * just became 4. One-way: an answer without the field never switches a device back. A failed conversion leaves the
-   * file unchanged and the device writing 3: the server's 426 on the next write, or the next v4 op, tries again.
-   */
-  private async adoptTargetOpStreamVersion(answer: unknown) {
-    if (metaTargetOpStreamVersion(answer) !== 4) return;
-    this.targetOpStreamVersion = 4;
-    await this.getPlaybackDb();
-    if (this.packedPlayback) return;
-    await this.convertPlaybackInPlace().catch((error) => {
-      console.warn("library.v4.convert_failed", JSON.stringify({ error: errorMessage(error) }));
-    });
-  }
-
-  /** LIB-FMT-12: packs every chunk list of the playback file (native, own connection), then `user_version` 6. */
-  private convertPlaybackInPlace() {
-    this.playbackConvert ??= (async () => {
-      const playbackDb = await this.getPlaybackDb();
-      if (this.packedPlayback) return;
-      const started = Date.now();
-      const stats = { lists: 0, rows: 0, ms: 0 };
-      await convertPlaybackToPacked(playbackDb, async () => {
-        Object.assign(stats, await convertChunkLists(getPlaybackDbPath(), nowIso()));
-      });
-      this.packedPlayback = true;
-      console.warn("library.v4.convert", JSON.stringify({ ...stats, totalMs: Date.now() - started }));
-    })().finally(() => {
-      this.playbackConvert = null;
-    });
-    return this.playbackConvert;
+    this.playbackDbResolved = await this.playbackDbReady;
+    return this.playbackDbResolved;
   }
 
   /** The combined snapshot is copied from the split DB files, so each must have finished opening (schema applied). */
@@ -762,29 +637,6 @@ export class LibraryDb {
         listener();
       } catch (error) {
         console.warn("library.data.listener_failed", JSON.stringify({ error: errorMessage(error) }));
-      }
-    }
-  }
-
-  /**
-   * What a sync is doing while it runs (LIB-SYNC-13): it found the server newer, applied a page of ops, or restores a
-   * snapshot. The store's sync tracker turns it into the tab bar's "Updating media library…" sign. Returns an unsubscribe.
-   */
-  onSyncProgress(callback: (event: LibrarySyncProgressEvent) => void) {
-    this.syncProgressListeners.add(callback);
-    return () => {
-      this.syncProgressListeners.delete(callback);
-    };
-  }
-
-  private emitSyncProgress(event: LibrarySyncProgressEvent) {
-    if (event.kind === "start") this.syncRunStarted = true;
-    console.warn("library.sync.progress", JSON.stringify(event));
-    for (const listener of this.syncProgressListeners) {
-      try {
-        listener(event);
-      } catch (error) {
-        console.warn("library.sync.progress.listener_failed", JSON.stringify({ error: errorMessage(error) }));
       }
     }
   }
@@ -917,7 +769,7 @@ export class LibraryDb {
         await downloadChunksToFile(token, manifest, tempPath);
         const snapshotDbPath = getSnapshotDbPath();
         await removeSnapshotDbFile();
-        await decryptFileToDb(keyBase64, tempPath, snapshotDbPath).catch((error) => {
+        await decryptFileToDb(keyBase64, tempPath, snapshotDbPath, "binary").catch((error) => {
           console.warn(
             "library.db.decrypt.failed",
             JSON.stringify({ error: error instanceof Error ? error.message : String(error) })
@@ -948,7 +800,6 @@ export class LibraryDb {
           pending,
           pendingOps
         );
-        await instance.adoptTargetOpStreamVersion(selection.meta);
         if (pendingOps.length) {
           await instance.applyLibraryOps(pendingOps as LibraryOp[]);
         }
@@ -961,7 +812,7 @@ export class LibraryDb {
     if (selection.source === "cache" && selection.cache) {
       if (selection.cache.mode === "split") {
         // Warm-start hot path (see openSplitCache).
-        const instance = await LibraryDb.openSplitCache(
+        return await LibraryDb.openSplitCache(
           token,
           keyBase64,
           selection.cache,
@@ -970,8 +821,6 @@ export class LibraryDb {
           selection.meta?.version ?? null,
           selection.meta?.snapshotVersion ?? null
         );
-        await instance.adoptTargetOpStreamVersion(selection.meta);
-        return instance;
       }
       const snapshotDbPath = getSnapshotDbPath();
       let cacheBlobPath = selection.cache.blobPath;
@@ -997,7 +846,7 @@ export class LibraryDb {
       try {
         return await withSnapshotLock(async () => {
           await removeSnapshotDbFile();
-          await decryptFileToDb(keyBase64, cacheBlobPath, snapshotDbPath);
+          await decryptFileToDb(keyBase64, cacheBlobPath, snapshotDbPath, "binary");
           const snapshotDb = await openSnapshotDb();
           const { coreDb, metadataDb, playbackDb, ingestDb } = await splitSnapshotToLocalDbs(snapshotDb);
           await snapshotDb.close();
@@ -1029,7 +878,6 @@ export class LibraryDb {
             pending,
             pendingOps
           );
-          await instance.adoptTargetOpStreamVersion(selection.meta);
           if (pendingOps.length) {
             await instance.applyLibraryOps(pendingOps as LibraryOp[]);
           }
@@ -1089,8 +937,7 @@ export class LibraryDb {
           undefined,
           chunkIndex.chunks.map((entry) => entry.hash),
           MOBILE_CHUNK_REFS_SOURCE,
-          // A new library is never switched yet: it writes the op stream this build starts on (LIB-FMT-13).
-          { storageFormatVersion: MOBILE_LIBRARY_SUPPORT.storageFormatVersion, opStreamVersion: OP_STREAM_VERSION }
+          MOBILE_WRITER_FORMATS
         );
         await saveCache({
           version: created.version,
@@ -1119,11 +966,6 @@ export class LibraryDb {
       });
     } catch (error) {
       if (error instanceof ApiError && error.status === 409) {
-        // REL-LOG-31: another device created the library first; say why before opening the server's copy.
-        console.warn(
-          "library.bootstrap.refused",
-          JSON.stringify(libraryRefusalFields(error, { baseVersion: 0, consecutive409: 1 }))
-        );
         const { remote, manifestBytes } = await fetchRemoteManifestWithRetry(token);
         return await withSnapshotLock(async () => {
           // Versioned dual reader — see the remote-open site above.
@@ -1139,7 +981,7 @@ export class LibraryDb {
           await downloadChunksToFile(token, manifest, tempPath);
           const snapshotDbPath = getSnapshotDbPath();
           await removeSnapshotDbFile();
-          await decryptFileToDb(keyBase64, tempPath, snapshotDbPath).catch((error) => {
+          await decryptFileToDb(keyBase64, tempPath, snapshotDbPath, "binary").catch((error) => {
             console.warn(
               "library.db.decrypt.failed",
               JSON.stringify({ error: error instanceof Error ? error.message : String(error) })
@@ -1263,7 +1105,7 @@ export class LibraryDb {
     }
     return await withSnapshotLock(async () => {
       await removeSnapshotDbFile();
-      await decryptFileToDb(keyBase64, cacheBlobPath, snapshotDbPath).catch((error) => {
+      await decryptFileToDb(keyBase64, cacheBlobPath, snapshotDbPath, "binary").catch((error) => {
         console.warn(
           "library.db.decrypt.failed",
           JSON.stringify({ error: error instanceof Error ? error.message : String(error) })
@@ -1440,10 +1282,6 @@ export class LibraryDb {
     // The upsert op carries the library's own row (main profile progress), never a profile's overlay.
     const details = await this.getMediaDetails(mediaId, { ownStorage: true });
     if (!details) return;
-    if (this.writtenOpStreamVersion() === 4) {
-      await this.queueMediaUpsertV4(details);
-      return;
-    }
     void this.queueOp({
       id: crypto.randomUUID(),
       type: "media.upsert",
@@ -1452,82 +1290,10 @@ export class LibraryDb {
     });
   }
 
-  /**
-   * A title's change as op stream 4 (LIB-FMT-11), as the runtime sends it: its details as a `media.upsert` without
-   * playback, one `media.file.playback.set` per file (and the no-file group) carrying the stored packed lists, and a
-   * `media.file.playback.delete` per file announced before whose playback is gone. Each set also stamps this device's
-   * playback clock for the file, so an older remote set never replaces what it just wrote (LIB-SYNC-08).
-   */
-  private async queueMediaUpsertV4(details: MediaDetails) {
-    const mediaId = details.id;
-    const createdAt = nowIso();
-    const translated = translateV3MediaUpsert({ id: mediaId, type: "media.upsert", createdAt, payload: { details } });
-    const ownerIds = translated.playbackSets.flatMap((set) => [
-      ...set.payload.formats.map((format) => format.id),
-      ...set.payload.audioTracks.map((track) => track.id),
-    ]);
-    const playbackDb = await this.getPlaybackDb();
-    // The stored rows, not a re-pack of the keys: a seeded list (key mode 2) stays a seed on the wire.
-    const stored = new Map<string, PackedChunkList>();
-    for (let start = 0; start < ownerIds.length; start += SQL_VARIABLE_CHUNK) {
-      const ids = ownerIds.slice(start, start + SQL_VARIABLE_CHUNK);
-      const rows = await queryAll<Record<string, unknown>>(
-        playbackDb,
-        `SELECT ${PACKED_LIST_SELECT} FROM media_chunk_lists WHERE owner_id IN (${ids.map(() => "?").join(",")});`,
-        ids
-      );
-      for (const row of rows) stored.set(String(row.owner_id), packedListFromRow(row));
-    }
-    const announced = await queryAll<{ file_id: string }>(
-      playbackDb,
-      "SELECT file_id FROM media_file_playback WHERE media_id = ?;",
-      [mediaId]
-    );
-    const ops: LibraryOp[] = [
-      { id: crypto.randomUUID(), type: "media.upsert", createdAt, payload: { details: translated.upsert.payload.details } } satisfies MediaUpsertV4Op,
-    ];
-    const clocks = new SqlBatcher();
-    const currentKeys = new Set<string>();
-    for (const set of translated.playbackSets) {
-      const fileKey = playbackFileKey(set.payload.fileId);
-      currentKeys.add(fileKey);
-      const payload = {
-        ...set.payload,
-        formats: set.payload.formats.map((format) => {
-          const list = stored.get(format.id);
-          return list ? { ...format, chunkList: chunkListToJson(list) } : format;
-        }),
-        audioTracks: set.payload.audioTracks.map((track) => {
-          const list = stored.get(track.id);
-          return list ? { ...track, chunkList: chunkListToJson(list) } : track;
-        }),
-      };
-      clocks.add(
-        `INSERT INTO media_file_playback (media_id, file_id, updated_at) VALUES (?, ?, ?)
-         ON CONFLICT(media_id, file_id) DO UPDATE SET updated_at = excluded.updated_at;`,
-        [mediaId, fileKey, payload.updatedAt]
-      );
-      ops.push({ id: crypto.randomUUID(), type: "media.file.playback.set", createdAt, payload } satisfies MediaFilePlaybackSetOp);
-    }
-    for (const { file_id } of announced) {
-      const fileKey = String(file_id);
-      if (currentKeys.has(fileKey)) continue;
-      clocks.add("DELETE FROM media_file_playback WHERE media_id = ? AND file_id = ?;", [mediaId, fileKey]);
-      ops.push({
-        id: crypto.randomUUID(),
-        type: "media.file.playback.delete",
-        createdAt,
-        payload: { mediaId, fileId: fileKey === "" ? null : fileKey },
-      } satisfies MediaFilePlaybackDeleteOp);
-    }
-    await clocks.flush(playbackDb);
-    for (const op of ops) await this.queueOp(op);
-  }
-
   // Op blobs are not touched: ops live in the server's database (LIB-STORE-04), the server removes the old
   // storage copies, and the meta no longer lists every op since the snapshot (LIB-STORE-05).
   private async runLibraryGc() {
-    const meta = await readLibraryMeta(this.token).catch(() => null);
+    const meta = await getLibraryMeta(this.token).catch(() => null);
     if (!meta?.exists) return;
     const snapshots = selectSnapshotsForRetention(meta.snapshotHistory ?? []);
     const manifestKeys = new Set(snapshots.map((entry) => entry.manifestKey));
@@ -1579,20 +1345,6 @@ export class LibraryDb {
     );
     const value = rows[0]?.count ?? 0;
     return Number(value);
-  };
-
-  /** Titles, and episodes that have a file, in the library: read before and after a sync for its result (LIB-SYNC-13). */
-  countLibraryContents = async () => {
-    const [titleRows, episodeRows] = await Promise.all([
-      queryAll<{ count: number }>(this.coreDb, "SELECT COUNT(*) as count FROM media_items;"),
-      this.getMetadataDb().then((metadataDb) =>
-        queryAll<{ count: number }>(
-          metadataDb,
-          "SELECT COUNT(*) as count FROM (SELECT DISTINCT media_id, season, episode FROM media_files WHERE episode IS NOT NULL);"
-        )
-      ),
-    ]);
-    return { titles: Number(titleRows[0]?.count ?? 0), episodes: Number(episodeRows[0]?.count ?? 0) };
   };
 
   listMedia = async () => {
@@ -1763,13 +1515,6 @@ export class LibraryDb {
       async (query) => {
         const db = dbs[query.group as keyof typeof dbs];
         if (!db) throw new Error(`library.details.group_unknown:${query.group}`);
-        // The RN SQLite bridge returns no BLOB column: the packed lists are read as hex and turned back into bytes.
-        if (query.name === "chunkLists") {
-          const sql = query.sql.replace("SELECT * FROM media_chunk_lists", `SELECT ${PACKED_LIST_SELECT} FROM media_chunk_lists`);
-          const rows = (await queryAll<Record<string, unknown>>(db, sql, query.params)).map(packedRowWithBytes);
-          phases[query.name] = Date.now() - tStart;
-          return rows;
-        }
         const rows = await queryAll(db, query.sql, query.params);
         phases[query.name] = Date.now() - tStart;
         return rows;
@@ -1808,18 +1553,9 @@ export class LibraryDb {
             FROM ${table} WHERE ${idColumn} IN (${ids.map(() => "?").join(",")}) GROUP BY ${idColumn}, order_index / ${PACK_PAGE};`,
             ids
           );
-    const allIds = [...formatIds, ...audioTrackIds];
-    const [formatRows, audioRows, listRows] = await Promise.all([
+    const [formatRows, audioRows] = await Promise.all([
       packed("media_format_chunks", "format_id", formatIds),
       packed("media_audio_chunks", "track_id", audioTrackIds),
-      // LIB-FMT-11: a converted library holds each track's chunks as one packed row (BLOBs read as hex).
-      allIds.length === 0
-        ? Promise.resolve([])
-        : queryAll<Record<string, unknown>>(
-            playbackDb,
-            `SELECT ${PACKED_LIST_SELECT} FROM media_chunk_lists WHERE owner_id IN (${allIds.map(() => "?").join(",")});`,
-            allIds
-          ),
     ]);
     let rowCount = 0;
     const group = (rows: PackedChunkRow[]): Record<string, PlaybackChunk[]> => {
@@ -1850,14 +1586,6 @@ export class LibraryDb {
       formats: group(formatRows),
       audio: group(audioRows),
     };
-    // A packed list replaces the owner's rows (a converted file keeps none for it).
-    const audioIds = new Set(audioTrackIds);
-    for (const row of listRows) {
-      const ownerId = String(row.owner_id);
-      const list = unpackChunkList(packedListFromRow(row));
-      rowCount += list.length;
-      (audioIds.has(ownerId) ? chunks.audio : chunks.formats)[ownerId] = list;
-    }
     console.warn(
       "library.playback.chunks",
       JSON.stringify({ formats: formatIds.length, audioTracks: audioTrackIds.length, rows: rowCount, ms: Date.now() - tStart })
@@ -1874,19 +1602,19 @@ export class LibraryDb {
     const [formats, audio] = await Promise.all([
       queryAll<{ id: string }>(
         playbackDb,
-        "SELECT f.id AS id FROM media_formats f WHERE f.media_id = ? AND (EXISTS (SELECT 1 FROM media_format_chunks c WHERE c.format_id = f.id) OR EXISTS (SELECT 1 FROM media_chunk_lists l WHERE l.owner_id = f.id));",
+        "SELECT f.id AS id FROM media_formats f WHERE f.media_id = ? AND EXISTS (SELECT 1 FROM media_format_chunks c WHERE c.format_id = f.id);",
         [mediaId]
       ),
       queryAll<{ id: string }>(
         playbackDb,
-        "SELECT t.id AS id FROM media_audio_tracks t WHERE t.media_id = ? AND (EXISTS (SELECT 1 FROM media_audio_chunks c WHERE c.track_id = t.id) OR EXISTS (SELECT 1 FROM media_chunk_lists l WHERE l.owner_id = t.id));",
+        "SELECT t.id AS id FROM media_audio_tracks t WHERE t.media_id = ? AND EXISTS (SELECT 1 FROM media_audio_chunks c WHERE c.track_id = t.id);",
         [mediaId]
       ),
     ]);
     return [...formats, ...audio].map((row) => String(row.id));
   };
 
-  /** Cast, season counts, runtimes and Filter facets of every title in set-based queries: feeds the Filter sheet and the details list. */
+  /** Cast, season counts and runtimes of every title in three set-based queries: feeds the actor filter and the details list. */
   getLibraryExtras = async (): Promise<LibraryExtras> => {
     const [metadataDb, playbackDb] = await Promise.all([this.getMetadataDb(), this.getPlaybackDb()]);
     const [castRows, seasonRows, durationRows] = await Promise.all([
@@ -1903,21 +1631,7 @@ export class LibraryDb {
         "SELECT media_id, MAX(duration_seconds) AS duration_seconds FROM media_formats WHERE duration_seconds IS NOT NULL GROUP BY media_id;",
       ),
     ]);
-    // UX-LIB-03: the Filter sheet's quality, director, audio / subtitle language values. Older files have no media_crew.
-    type FacetRow = { media_id: string; value: string | null };
-    const hasCrew = (await queryAll<{ name: string }>(metadataDb, "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'media_crew';")).length > 0;
-    const [qualities, directors, audioLanguages, subtitleLanguages] = await Promise.all([
-      queryAll<FacetRow>(playbackDb, "SELECT DISTINCT media_id, quality AS value FROM media_formats;"),
-      hasCrew
-        ? queryAll<FacetRow>(
-            metadataDb,
-            "SELECT c.media_id AS media_id, p.name AS value FROM media_crew c JOIN people p ON p.id = c.person_id WHERE c.job = 'Director' ORDER BY c.order_index;",
-          )
-        : Promise.resolve([]),
-      queryAll<FacetRow>(playbackDb, "SELECT DISTINCT media_id, language AS value FROM media_audio_tracks;"),
-      queryAll<FacetRow>(playbackDb, "SELECT DISTINCT media_id, language AS value FROM media_subtitles;"),
-    ]);
-    return buildLibraryExtras(castRows, seasonRows, durationRows, { qualities, directors, audioLanguages, subtitleLanguages });
+    return buildLibraryExtras(castRows, seasonRows, durationRows);
   };
 
   /** Every episode of the library, for the phone's search (UX-PHONE-12): one query, the show's name is joined by the caller. */
@@ -2325,26 +2039,16 @@ export class LibraryDb {
       return acc;
     }, {});
     debugLog("library.ops.apply.start", { count: normalizedOps.length, types: opCounts });
-    // LIB-FMT-12: version-4 ops exist only on a switched account (the server refuses them before the switch), so one
-    // in the batch is the switch itself: convert first, then apply every op of the batch on the packed layout (the
-    // translation lands the version-3 ops of the batch the same as before the conversion).
-    await this.getPlaybackDb();
-    if (!this.packedPlayback && normalizedOps.some(isVersion4Op)) {
-      console.warn("library.v4.convert.on_op", JSON.stringify({ ops: normalizedOps.length }));
-      this.targetOpStreamVersion = 4;
-      await this.convertPlaybackInPlace();
-    }
-    const needsDetails = normalizedOps.some((op) => op.type === "media.upsert" || isSecondaryOnlyOp(op));
+    const needsDetails = normalizedOps.some((op) => op.type === "media.upsert");
     if (needsDetails) {
       this.setDatasetStatus({ metadata: false, playback: false });
     }
     // Phase 5.3: build per-op statement maps once and reuse them in both the
     // primary (core) flush and the secondary (metadata + playback) flush.
     const buildStartedAt = Date.now();
-    const packedPlayback = this.packedPlayback;
     const opsWithStatements = normalizedOps.map((op) => ({
       op,
-      statements: buildOpStatements(op, randomUuid, { packedPlayback }),
+      statements: buildOpStatements(op, randomUuid),
     }));
     const buildMs = Date.now() - buildStartedAt;
     await this.applyOpStatements(opsWithStatements, { origin: "remote", buildMs });
@@ -2374,11 +2078,8 @@ export class LibraryDb {
           );
           for (const row of rows) coreClocks.set(String(row.id), String(row.updated_at));
         }
-        // Version-4 playback/episode ops carry their own clock guards and go on in op order beside them.
         const upsertsHeldByCore = opsWithStatements.filter(
-          ({ op }) =>
-            isSecondaryOnlyOp(op) ||
-            (op.type === "media.upsert" && coreClocks.get(op.payload.details.id) === op.payload.details.updatedAt)
+          ({ op }) => op.type === "media.upsert" && coreClocks.get(op.payload.details.id) === op.payload.details.updatedAt
         );
         await (await this.getMetadataDb()).executeSql("PRAGMA foreign_keys=OFF;");
         const metaBatch = new SqlBatcher();
@@ -2424,26 +2125,15 @@ export class LibraryDb {
   private async flushOps(options: { insideSync?: boolean } = {}) {
     if (!this.syncEnabled || this.opsFlushInFlight || this.opsFlushUnauthorized) return;
     if (!this.pendingOps.length) return;
-    // LIB-SYNC-17: stuck behind repeated 409s, only the scheduled slow retry uploads (a sync or a write does not
-    // restart the same refused upload at full pace); the retry stays scheduled.
-    if (Date.now() < this.opsFlushStuckUntil) {
-      this.scheduleOpsFlush(this.opsFlushStuckUntil - Date.now());
-      return;
-    }
     this.opsFlushInFlight = true;
-    // LIB-FMT-13: one re-read of meta + conversion + resend per flush when the server says the account's op stream
-    // differs from the one this write declared; a second refusal waits for the next flush.
-    let switchRetried = false;
     try {
-      // The declared op stream depends on the playback file's layout, known once it opened.
-      await this.getPlaybackDb();
       while (this.pendingOps.length > 0) {
         const op = this.pendingOps[0];
         const payload = encodeUtf8(JSON.stringify(op));
         const encrypted = await encryptOpPayload(this.keyBase64, payload);
         try {
           const baseVersion = this.remoteVersion;
-          const result = await putLibraryOp(this.token, baseVersion, op.id, encrypted, undefined, undefined, this.writerFormats());
+          const result = await putLibraryOp(this.token, baseVersion, op.id, encrypted, undefined, undefined, MOBILE_WRITER_FORMATS);
           this.remoteVersion = result.version;
           // Our own op is already applied locally; it only extends the durable
           // cursor when every remote op before it is on disk too.
@@ -2454,38 +2144,20 @@ export class LibraryDb {
             this.version = Math.max(this.version, result.version);
           }
           this.pendingOps.shift();
-          this.opsFlushConsecutive409 = 0;
-          this.opsFlushStuckUntil = 0;
           await this.noteSnapshotOps([op], [encrypted.length]);
           await savePendingOps(this.pendingOps);
           await this.persistCursor("own_op");
         } catch (error) {
-          const refused409 = error instanceof ApiError && error.status === 409;
-          if (refused409) this.opsFlushConsecutive409 += 1;
-          // REL-LOG-31 / LIB-SYNC-16: why the server refused (code, request id, versions), never the op or its id.
-          const refusal = libraryRefusalFields(error, {
-            baseVersion: this.remoteVersion,
-            consecutive409: refused409 ? this.opsFlushConsecutive409 : 0,
-          });
           console.warn(
             "library.ops.flush.error",
             JSON.stringify({
+              opId: op.id,
               type: op.type,
-              ...refusal,
+              status: error instanceof ApiError ? error.status : null,
               error: errorMessage(error),
               pendingOps: this.pendingOps.length,
             })
           );
-          if (refused409 && this.opsFlushConsecutive409 >= LIBRARY_SYNC_STUCK_AFTER_409S) {
-            // LIB-SYNC-17: slow down for every refusal of the streak; LIB-SYNC-16: say it is stuck once per streak.
-            this.opsFlushStuckUntil = Date.now() + LIBRARY_SYNC_STUCK_RETRY_MS;
-            if (this.opsFlushConsecutive409 === LIBRARY_SYNC_STUCK_AFTER_409S) {
-              console.warn(
-                "library.ops.flush.stuck",
-                JSON.stringify({ ...refusal, pendingOps: this.pendingOps.length, retryInMs: LIBRARY_SYNC_STUCK_RETRY_MS })
-              );
-            }
-          }
           if (error instanceof ApiError && error.status === 401) {
             this.opsFlushUnauthorized = true;
             debugLog("library.ops.flush.unauthorized", { pendingOps: this.pendingOps.length });
@@ -2495,21 +2167,7 @@ export class LibraryDb {
             debugLog("library.ops.flush.quota_exceeded");
             break;
           }
-          const notSwitched =
-            error instanceof ApiError && error.status === 409 && error.payload.error === "op_stream_not_switched";
-          if (!switchRetried && (notSwitched || isLibraryOpStreamSwitch(error))) {
-            switchRetried = true;
-            const declared = this.writtenOpStreamVersion();
-            const meta = await readLibraryMeta(this.token).catch(() => null);
-            await this.adoptTargetOpStreamVersion(meta);
-            console.warn(
-              "library.v4.write_retry",
-              JSON.stringify({ declared, now: this.writtenOpStreamVersion(), packed: this.packedPlayback, requestId: error instanceof ApiError ? error.requestId : null })
-            );
-            if (this.writtenOpStreamVersion() !== declared) continue;
-            break;
-          }
-          if (error instanceof ApiError && error.status === 409 && !notSwitched && !options.insideSync) {
+          if (error instanceof ApiError && error.status === 409 && !options.insideSync) {
             await this.syncFromRemoteIfNewer().catch(() => undefined);
           }
           break;
@@ -2518,8 +2176,7 @@ export class LibraryDb {
     } finally {
       this.opsFlushInFlight = false;
       if (this.pendingOps.length > 0) {
-        const stuckFor = this.opsFlushStuckUntil - Date.now();
-        this.scheduleOpsFlush(stuckFor > 0 ? stuckFor : 2000);
+        this.scheduleOpsFlush(2000);
       }
     }
     await this.maybeCompactAfterOps().catch(() => undefined);
@@ -2558,22 +2215,13 @@ export class LibraryDb {
     await saveSnapshotOpCount(this.snapshotOps).catch(() => undefined);
   }
 
-  private maybeCompactAfterOps(): Promise<void> {
-    this.compactionInFlight ??= this.compactAfterOps().finally(() => {
-      this.compactionInFlight = null;
-    });
-    return this.compactionInFlight;
-  }
-
-  private async compactAfterOps() {
+  private async maybeCompactAfterOps() {
     // Below the thresholds nothing is asked of the server at all (no meta round-trip per flush).
     const counted = await this.loadSnapshotOps();
     const byCount = counted.count >= OPS_SNAPSHOT_THRESHOLD;
     if (!byCount && counted.bytes < counted.bytesThreshold) return;
-    const meta = await readLibraryMeta(this.token).catch(() => null);
+    const meta = await getLibraryMeta(this.token).catch(() => null);
     if (!meta?.exists) return;
-    // The snapshot PUT declares the op stream of the rows it carries: a switched account converts first (LIB-FMT-13).
-    await this.adoptTargetOpStreamVersion(meta);
     if (counted.snapshotVersion === -1) {
       // No record of which snapshot the count started from (first run on this build, cache cleared):
       // adopt the server's current one and keep counting; never upload on an untagged count.
@@ -2590,92 +2238,23 @@ export class LibraryDb {
     if (latestSnapshotMs && Date.now() - latestSnapshotMs < SNAPSHOT_MIN_INTERVAL_MS) {
       return;
     }
-    await this.uploadSnapshot(meta.version, byCount ? undefined : counted.bytes).catch((error) => {
-      console.warn("library.snapshot.compaction.failed", JSON.stringify({ error: errorMessage(error) }));
-    });
+    await this.uploadSnapshot(meta.version, byCount ? undefined : counted.bytes).catch(() => undefined);
   }
 
   /**
    * A snapshot carries a new key probe made with this key, so publishing one with a key the account no longer has
    * (erased or remade on another device) would override the account's key for every device (UX-KEY-01; root cause
    * of ParrotDesktopKey's e2e line b on desktop). Checked right before each snapshot PUT. A failed meta request is no
-   * verdict (UX-KEY-01: a network failure keeps the key); the PUT then fails or lands as before. Returns the meta it
-   * read (null when the request failed): the server's version right before the PUT.
+   * verdict (UX-KEY-01: a network failure keeps the key); the PUT then fails or lands as before.
    */
   private async assertKeyOpensAccount(where: string) {
-    const meta = await readLibraryMeta(this.token).catch(() => null);
-    const verdict = await keptLibraryKeyVerdict(this.keyBase64, meta, decryptBase64ToBytes);
+    const verdict = await checkKeptLibraryKey(this.keyBase64, {
+      fetchMeta: () => getLibraryMeta(this.token),
+      decrypt: decryptBase64ToBytes,
+    });
     if (keptLibraryKeyIsStale(verdict)) {
       console.warn("library.snapshot.key_mismatch", JSON.stringify({ where, verdict }));
       throw new Error("KEY_MISMATCH");
-    }
-    return meta;
-  }
-
-  /**
-   * The version a pending snapshot is published on (LIB-SYNC-14). The server takes a snapshot PUT only on its current
-   * version, and that moves while the snapshot is built and uploaded (this phone's own ops, other devices' ops). A
-   * snapshot that holds every change up to the server's version (`coveredVersion`, the durable cursor when it was
-   * built) is just as valid there, so it goes out on that version as it is, never rebuilt. One the server has moved
-   * past is stale: its changes already reached the server as ops, it is dropped, the next compaction builds a new one.
-   */
-  private snapshotBaseVersion(pending: PendingSync, serverVersion: number | null, where: string) {
-    if (serverVersion === null || serverVersion === pending.baseVersion) return pending.baseVersion;
-    const details = {
-      where,
-      snapshotId: pending.snapshotId,
-      baseVersion: pending.baseVersion,
-      coveredVersion: pending.coveredVersion ?? null,
-      serverVersion,
-    };
-    if (pending.coveredVersion !== undefined && pending.coveredVersion >= serverVersion) {
-      console.warn("library.snapshot.rebased", JSON.stringify(details));
-      return serverVersion;
-    }
-    console.warn("library.snapshot.stale", JSON.stringify(details));
-    throw new StaleSnapshotError(serverVersion);
-  }
-
-  /** Key check, then the snapshot PUT on the server's current version; one retry on the version a 409 names. */
-  private async putPendingSnapshot(
-    pending: PendingSync,
-    manifestPayload: Uint8Array,
-    publish: { force?: boolean; chunkRefs: string[]; chunkRefsSource?: ChunkRefsSource; where: string }
-  ) {
-    const meta = await this.assertKeyOpensAccount(publish.where);
-    const put = (baseVersion: number) =>
-      putLibraryDb(
-        this.token,
-        baseVersion,
-        Buffer.from(manifestPayload).toString("base64"),
-        pending.snapshotId,
-        pending.chunkSize,
-        pending.keyProbe,
-        publish.force,
-        undefined,
-        undefined,
-        undefined,
-        publish.chunkRefs,
-        publish.chunkRefsSource,
-        this.writerFormats()
-      );
-    const baseVersion = this.snapshotBaseVersion(pending, meta?.version ?? null, publish.where);
-    try {
-      return await put(baseVersion);
-    } catch (error) {
-      if (!(error instanceof ApiError && error.status === 409 && error.payload.error === "version_conflict")) throw error;
-      const serverVersion = typeof error.payload.version === "number" ? error.payload.version : null;
-      console.warn(
-        "library.snapshot.version_conflict",
-        JSON.stringify({
-          where: publish.where,
-          ...libraryRefusalFields(error, { baseVersion, consecutive409: 1 }),
-          coveredVersion: pending.coveredVersion ?? null,
-        })
-      );
-      const retryVersion = this.snapshotBaseVersion(pending, serverVersion, publish.where);
-      if (retryVersion === baseVersion) throw error;
-      return await put(retryVersion);
     }
   }
 
@@ -2686,8 +2265,6 @@ export class LibraryDb {
   private async uploadSnapshot(expectedVersion: number, maxBytes?: number) {
     await ensureLibraryDir();
     await withSnapshotLock(async () => {
-      // Read before the build: ops applied while it runs only add to what the snapshot holds.
-      const coveredVersion = this.durableVersion;
       const snapshotDb = await this.buildSnapshotDb();
       // Its own file (PR #143): the manifest's chunks must outlive any cache rewrite.
       const snapshotPath = getPendingSnapshotPath();
@@ -2720,7 +2297,6 @@ export class LibraryDb {
         updatedAt: nowIso(),
         keyProbe,
         chunkRefs,
-        coveredVersion,
       };
       this.pendingSync = pending;
       await savePending(pending);
@@ -2738,22 +2314,22 @@ export class LibraryDb {
       }
       // Send chunk hashes so the API can chunk-GC when this snapshot rotates
       // out of the kept window. Server can't read the encrypted manifest itself.
-      let result: LibraryDbPutResult;
-      try {
-        result = await this.putPendingSnapshot(pending, manifestPayload, {
-          force: true,
-          chunkRefs,
-          chunkRefsSource: MOBILE_CHUNK_REFS_SOURCE,
-          where: "upload",
-        });
-      } catch (error) {
-        if (!(error instanceof StaleSnapshotError)) throw error;
-        this.pendingSync = null;
-        await clearPending();
-        await snapshotDb.close();
-        await removeSnapshotDbFile();
-        return;
-      }
+      await this.assertKeyOpensAccount("upload");
+      const result = await putLibraryDb(
+        this.token,
+        pending.baseVersion,
+        Buffer.from(manifestPayload).toString("base64"),
+        pending.snapshotId,
+        pending.chunkSize,
+        pending.keyProbe,
+        true,
+        undefined,
+        undefined,
+        undefined,
+        chunkRefs,
+        MOBILE_CHUNK_REFS_SOURCE,
+        MOBILE_WRITER_FORMATS
+      );
       this.remoteVersion = result.version;
       this.durableVersion = Math.max(this.durableVersion, result.version);
       if (!this.pendingOps.length) {
@@ -3477,8 +3053,7 @@ export class LibraryDb {
       "SELECT key, value FROM app_settings WHERE key LIKE 'p:%';"
     );
     const buildStartedAt = Date.now();
-    await this.getPlaybackDb();
-    const statements = buildOpStatements(op, randomUuid, { packedPlayback: this.packedPlayback });
+    const statements = buildOpStatements(op, randomUuid);
     await this.applyOpStatements([{ op, statements }], { origin: "local", buildMs: Date.now() - buildStartedAt });
     await this.queueOp(op);
     const now = nowIso();
@@ -3588,11 +3163,22 @@ export class LibraryDb {
       await uploadChunksFromFile(this.token, pending.snapshotPath, chunkIndex.chunks);
       console.warn("library.db.flush.upload.done", JSON.stringify({ ms: Date.now() - uploadStartedAt }));
       const commitStartedAt = Date.now();
-      const result = await this.putPendingSnapshot(pending, manifestPayload, {
-        chunkRefs: fileHashes,
-        chunkRefsSource: recordedRefs ? MOBILE_CHUNK_REFS_SOURCE : undefined,
-        where: "flush_pending",
-      });
+      await this.assertKeyOpensAccount("flush_pending");
+      const result = await putLibraryDb(
+        this.token,
+        pending.baseVersion,
+        Buffer.from(manifestPayload).toString("base64"),
+        pending.snapshotId,
+        pending.chunkSize,
+        pending.keyProbe,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        fileHashes,
+        recordedRefs ? MOBILE_CHUNK_REFS_SOURCE : undefined,
+        MOBILE_WRITER_FORMATS
+      );
       console.warn("library.db.flush.commit.done", JSON.stringify({ ms: Date.now() - commitStartedAt }));
       console.warn("library.db.flush.done", JSON.stringify({ ms: Date.now() - startedAt }));
       this.version = result.version;
@@ -3610,18 +3196,16 @@ export class LibraryDb {
       await this.resetSnapshotOps(result.version);
       await this.runLibraryGc();
     } catch (error) {
-      const refused409 = error instanceof ApiError && error.status === 409;
       console.warn(
         "library.db.flush.failed",
         JSON.stringify({
-          ...libraryRefusalFields(error, {
-            baseVersion: this.pendingSync?.baseVersion ?? null,
-            consecutive409: refused409 ? 1 : 0,
-          }),
+          snapshotId: this.pendingSync?.snapshotId ?? null,
+          baseVersion: this.pendingSync?.baseVersion ?? null,
+          status: error instanceof ApiError ? error.status : null,
           error: errorMessage(error),
         })
       );
-      if ((error instanceof ApiError && error.status === 409) || error instanceof StaleSnapshotError) {
+      if (error instanceof ApiError && error.status === 409) {
         // The pending snapshot was built on `baseVersion` and the server has moved past it (our
         // own ops advance it), so its base never comes back. It is a compaction snapshot: its
         // data already reached the server as ops. Disabling sync here (the old behaviour) turned
@@ -3669,28 +3253,9 @@ export class LibraryDb {
   }
 
   private startSync(metaOverride: LibraryMetaHint | undefined): Promise<boolean> {
-    this.syncRunStarted = false;
-    // LIB-SYNC-13: a run that found the server newer says when it ends, whoever started it (a caller the store tracks,
-    // or this db's own re-sync after a rejected publish), so the sign never outlives the sync.
-    const ended = (error: string | null) => {
-      if (!this.syncRunStarted) return;
-      this.syncRunStarted = false;
-      this.emitSyncProgress({ kind: "end", error });
-    };
-    const run = this.runSyncFromRemoteIfNewer(metaOverride)
-      .then(
-        (changed) => {
-          ended(null);
-          return changed;
-        },
-        (error: unknown) => {
-          ended(errorMessage(error));
-          throw error;
-        }
-      )
-      .finally(() => {
-        if (this.syncInFlight === run) this.syncInFlight = null;
-      });
+    const run = this.runSyncFromRemoteIfNewer(metaOverride).finally(() => {
+      if (this.syncInFlight === run) this.syncInFlight = null;
+    });
     this.syncInFlight = run;
     return run;
   }
@@ -3705,14 +3270,12 @@ export class LibraryDb {
       await this.secondaryOpsInFlight.catch(() => undefined);
     }
     await this.flushOps({ insideSync: true }).catch(() => undefined);
-    const meta = metaOverride ?? (await readLibraryMeta(this.token));
+    const meta = metaOverride ?? (await getLibraryMeta(this.token));
     if (!meta || typeof meta.version !== "number") {
       return false;
     }
     if (!meta.exists) return false;
-    await this.adoptTargetOpStreamVersion(meta);
     if (meta.version <= this.remoteVersion) return false;
-    this.emitSyncProgress({ kind: "start", fromVersion: this.remoteVersion, toVersion: meta.version });
     debugLog("library.ops.meta", {
       metaVersion: meta.version,
       remoteVersion: this.remoteVersion,
@@ -3720,7 +3283,7 @@ export class LibraryDb {
     });
 
     let pageStartedAt = Date.now();
-    let page = await fetchLibraryOpsPage(this.token, this.keyBase64, this.remoteVersion);
+    let page = await getLibraryOps(this.token, this.remoteVersion);
     // Op-stream version gate — fail fast BEFORE downloading or decrypting any
     // op payload. If the server's op stream is a newer format than this build
     // understands, applying it would silently drop the unknown op types;
@@ -3737,7 +3300,6 @@ export class LibraryDb {
         throw new Error("OPS_RESPONSE_INVALID");
       }
       assertOpStreamSupported(page);
-      await this.adoptTargetOpStreamVersion(page);
       const listMs = Date.now() - pageStartedAt;
       debugLog("library.ops.list", {
         version: page.version,
@@ -3751,7 +3313,6 @@ export class LibraryDb {
       // superseded or the head moved by a snapshot): advance the cursor, never refetch the snapshot.
       if (page.tooOld) {
         debugLog("library.ops.snapshot", { reason: "too_old" });
-        this.emitSyncProgress({ kind: "snapshot" });
         return (await this.syncFromSnapshot(meta)) || changed;
       }
       if (!page.ops.length) {
@@ -3766,14 +3327,11 @@ export class LibraryDb {
         }
         return changed;
       }
-      // LIB-SYNC-13: the page's size lets the sign show before a large page holds the thread.
-      this.emitSyncProgress({ kind: "fetch", bytes: page.bytes });
       if (!(await this.applyOpPage(page, listMs))) return true;
       changed = true;
-      this.emitSyncProgress({ kind: "page", version: page.version });
       if (!page.hasMore) return true;
       pageStartedAt = Date.now();
-      page = await fetchLibraryOpsPage(this.token, this.keyBase64, page.version);
+      page = await getLibraryOps(this.token, page.version);
     }
   }
 
@@ -3781,23 +3339,19 @@ export class LibraryDb {
    * Applies one page of the op tail and moves the cursor to its `version`. False when a media.upsert's rows failed
    * to land: the cursor is then rewound so the next sync fetches this page again.
    */
-  private async applyOpPage(page: LibraryOpsPage, listMs: number): Promise<boolean> {
-    // The native page read fetched, decrypted and inflated every op off the JS thread (LIB-SYNC-14, LIB-FMT-13).
-    const timing = { fetchMs: page.ms, applyMs: 0, count: page.ops.length };
-    const ops = page.ops.map((entry) => entry.op);
+  private async applyOpPage(page: LibraryOpsResponse, listMs: number): Promise<boolean> {
+    const timing = { fetchStartedAt: Date.now(), fetchMs: 0, applyMs: 0, count: page.ops.length };
+    const ops = await fetchOpPayloads<LibraryOp>(page.ops, {
+      download: (objectKey) => downloadObjectViaTunnel(this.token, objectKey),
+      decrypt: (bytes) => decryptBytesToBytes(this.keyBase64, bytes),
+      decode: decodeUtf8,
+      log: debugLog,
+    });
+    timing.fetchMs = Date.now() - timing.fetchStartedAt;
 
     const failuresBefore = this.secondaryFailureCount;
     const applyStartedAt = Date.now();
-    try {
-      await this.applyLibraryOps(ops);
-    } catch (error) {
-      if (!(error instanceof UnknownOpTypeError)) throw error;
-      // LIB-FMT-13: an op type this build does not know. Every statement is built before any is written, so nothing
-      // of the page was applied and the cursor stays put; the app asks for an update (the #3484 screen).
-      console.warn("library.ops.unknown_type", JSON.stringify({ opType: error.opType, version: page.version }));
-      requireLibraryUpdate();
-      throw error;
-    }
+    await this.applyLibraryOps(ops);
     timing.applyMs = Date.now() - applyStartedAt;
     console.warn(
       "library.ops.sync.timing",
@@ -3825,8 +3379,7 @@ export class LibraryDb {
     await this.persistCursor("sync");
     await this.pruneDownloadsOnceCurrent();
     // Counted once the batch is durably applied: a rewound batch is fetched again and must not count twice.
-    // The native page states each op's JSON size, not its ciphertext: an upper bound (ops are deflated before sealing).
-    await this.noteSnapshotOps(ops, page.ops.map((entry) => entry.jsonBytes));
+    await this.noteSnapshotOps(ops, page.ops.map((entry) => entry.size));
     return true;
   }
 
@@ -3859,8 +3412,7 @@ export class LibraryDb {
       if (this.secondaryOpsInFlight) {
         await this.secondaryOpsInFlight.catch(() => undefined);
       }
-      const meta = metaOverride ?? (await readLibraryMeta(this.token));
-      if (metaTargetOpStreamVersion(meta) === 4) this.targetOpStreamVersion = 4;
+      const meta = metaOverride ?? (await getLibraryMeta(this.token));
       if (!meta.exists) return false;
       const { remote, manifestBytes } = await fetchRemoteManifestWithRetry(this.token);
       // Versioned dual reader — see the remote-open site in LibraryDb.open.
@@ -3877,7 +3429,7 @@ export class LibraryDb {
         .slice(2)}.blob`;
       try {
         await downloadChunksToFile(this.token, manifest, tempPath);
-        await decryptFileToDb(this.keyBase64, tempPath, nextDbPath);
+        await decryptFileToDb(this.keyBase64, tempPath, nextDbPath, "binary");
         await this.coreDb.close();
         await (await this.getMetadataDb()).close();
         await (await this.getPlaybackDb()).close();
@@ -3893,9 +3445,7 @@ export class LibraryDb {
         this.metadataDbReady = metadataDb;
         this.metadataDbResolved = metadataDb;
         this.playbackDbReady = playbackDb;
-        // Re-read the split file's layout on the next use; a switched account converts it right here (LIB-FMT-12).
-        this.playbackDbResolved = null;
-        if (this.targetOpStreamVersion === 4) await this.convertPlaybackInPlace();
+        this.playbackDbResolved = playbackDb;
         this.ingestDbReady = ingestDb;
         this.ingestDbResolved = ingestDb;
         const snapshotVersion = remote.snapshotVersion ?? remote.version;
