@@ -1,10 +1,11 @@
 /**
- * Unpaid-account presentation for the phone app (ACCT-UNPAID-03). Once the paid period ended the account is
- * "unpaid": playback and uploads are refused (gateway 402 `subscription_unpaid`) until the wipe date.
+ * Unpaid-account presentation for the phone and TV apps, Badger and Parrot (ACCT-UNPAID-03). Once the paid period
+ * ended the account is "unpaid": playback and uploads are refused (gateway 402 `subscription_unpaid`) until the wipe
+ * date. One account, one billing rule: both apps say the same thing.
  *
- * The phone only informs (ACCT-PAY-02): no link, button or instruction to pay. Mirrors the desktop helper
- * (`apps/badger/desktop/src/renderer/src/lib/unpaidAccess.ts`). No polling: the access object comes from the
- * `GET /auth/me` answer kept in the auth store and is re-evaluated against the clock at render time.
+ * The phone and TV only inform (ACCT-PAY-02): no link, button or instruction to pay. Mirrors the desktop helper
+ * (`apps/badger/desktop/src/renderer/src/lib/unpaidAccess.ts`). No polling: the access object comes from the app's
+ * last `GET /auth/me` answer and is re-evaluated against the clock at render time.
  */
 import type { AccountAccess } from "@space/shared/accountAccess";
 import { formatAccessDate, resolveEffectiveAccess } from "@space/shared/effectiveAccess";

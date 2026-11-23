@@ -44,7 +44,8 @@ vi.mock("../src/lib/i18n", () => ({
   },
 }));
 
-import { applyAccountLanguageFromServer, pickSignedInLanguage, reconcileAfterSignIn } from "../src/lib/accountLanguage";
+import type { User } from "@space/shared/api";
+import { applyAccountLanguage, pickSignedInLanguage, reconcileAfterSignIn } from "../src/lib/accountLanguage";
 
 const SUITE = "[PARROT-MOBILE-ACCOUNT-LANGUAGE-001]";
 const dump = (label: string) => console.info(`${SUITE} ${label}`, JSON.stringify(phone));
@@ -96,12 +97,12 @@ describe("@req UX-I18N-07 Parrot phone: the account's one language", () => {
   });
 
   it("shows the account's language when a restored session's /auth/me brings another one", async () => {
-    phone.account = "es";
-    await applyAccountLanguageFromServer("tok");
+    const me = { uiLanguage: "es", preferences: {} } as Pick<User, "uiLanguage" | "preferences">;
+    await applyAccountLanguage(me);
     dump("auth/me");
     expect(phone.applied).toEqual(["es"]);
     expect(phone.saved).toEqual([]);
-    await applyAccountLanguageFromServer("tok");
+    await applyAccountLanguage(me);
     expect(phone.applied).toEqual(["es"]);
   });
 

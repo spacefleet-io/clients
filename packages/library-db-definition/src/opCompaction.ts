@@ -37,7 +37,8 @@ const supersedeKey = (op: LibraryOp): string | null => {
  * the last one to arrive; the SQL guards in `ops.ts` ignore an older op, so
  * keeping the last-arrived one would drop the newer change). A tie goes to the
  * later arrival. Deletes and every other op type are preserved in order;
- * upserts and progress for a media deleted later in the batch are dropped.
+ * upserts, progress and version-4 playback / episode ops for a media deleted
+ * later in the batch are dropped.
  */
 export const compactLibraryOps = (ops: LibraryOp[]) => {
   const newest = new Map<string, LibraryOp>();
@@ -68,6 +69,15 @@ export const compactLibraryOps = (ops: LibraryOp[]) => {
       }
       case "media.progress": {
         if (deletedMedia.has(op.payload.mediaId) || newest.get(supersedeKey(op)!) !== op) break;
+        filtered.push(op);
+        break;
+      }
+      // LIB-SYNC-22: a title deleted later in the batch keeps none of its playback either (the delete clears it on
+      // the receiver; applying it first only writes rows that are deleted again).
+      case "media.file.playback.set":
+      case "media.file.playback.delete":
+      case "media.episode.delete": {
+        if (deletedMedia.has(op.payload.mediaId)) break;
         filtered.push(op);
         break;
       }

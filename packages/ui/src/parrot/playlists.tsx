@@ -2,9 +2,9 @@
 // cover, the heart, the name and delete dialogs, the "Add to playlist" picker, and `useParrotPlaylistEditor`, which
 // wires them to the edits of @space/parrot-core. They take translated text and callbacks only; saving the edits is
 // the app's job.
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { Heart, ListMusic, ListPlus, Pencil, Plus, Trash2, X } from "lucide-react";
-import { areAllLiked, isLikedPlaylist, isLikedSong, newPlaylistEdit, toggleLikeAllEdits, toggleLikeEdit, type ParrotPlaylist, type ParrotPlaylistEdit } from "@space/parrot-core";
+import { areAllLiked, isLikedPlaylist, newPlaylistEdit, toggleLikeAllEdits, toggleLikeEdit, type ParrotPlaylist, type ParrotPlaylistEdit } from "@space/parrot-core";
 import { Button } from "../button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../dialog";
 import { Input } from "../input";
@@ -337,6 +337,8 @@ export function useParrotPlaylistEditor<Song extends { id: string; title: string
   // The heart reads the playlists of the last render, not of the render that drew it.
   const current = useRef(playlists);
   current.current = playlists;
+  // #3350 C4: one set for every heart on the page, rather than a scan of Liked songs per song row.
+  const likedIds = useMemo(() => new Set(playlists.find((playlist) => isLikedPlaylist(playlist.id))?.trackIds ?? []), [playlists]);
 
   const name = (playlist: Pick<ParrotPlaylist, "id" | "name">) => (isLikedPlaylist(playlist.id) ? t("playlists.liked") : playlist.name);
   const saveEdits = async (edits: ParrotPlaylistEdit[]) => {
@@ -348,7 +350,7 @@ export function useParrotPlaylistEditor<Song extends { id: string; title: string
   const heart = (trackId: string, options: { size?: "sm" | "md"; testId?: string } = {}) => (
     <ParrotHeartButton
       size={options.size}
-      liked={isLikedSong(playlists, trackId)}
+      liked={likedIds.has(trackId)}
       labels={{ like: t("playlists.like"), unlike: t("playlists.unlike") }}
       onToggle={() => toggleLike(trackId)}
       testId={options.testId}
@@ -358,7 +360,7 @@ export function useParrotPlaylistEditor<Song extends { id: string; title: string
     const ids = songs.map((song) => song.id);
     return (
       <ParrotHeartButton
-        liked={areAllLiked(playlists, ids)}
+        liked={areAllLiked(playlists, ids, (trackId) => likedIds.has(trackId))}
         labels={{ like: t("playlists.like"), unlike: t("playlists.unlike") }}
         onToggle={() => {
           const edits = toggleLikeAllEdits(current.current, ids);

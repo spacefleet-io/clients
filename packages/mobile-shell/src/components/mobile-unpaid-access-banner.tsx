@@ -1,24 +1,30 @@
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { AlertTriangle } from "lucide-react-native";
-import { SkyCover } from "@space/mobile-shell/components";
-import { getCurrentLanguage, useTranslation } from "@space/mobile-shell/i18n";
-import { useMobileShellTheme } from "@space/mobile-shell/theme";
-import { useAuth } from "../store/auth";
-import { getUnpaidAccessInfo, unpaidMessage } from "../lib/unpaidAccess";
+import type { AccountAccess } from "@space/shared/accountAccess";
+import { getCurrentLanguage, useTranslation } from "../i18n";
+import { useMobileShellTheme } from "../theme";
+import { getUnpaidAccessInfo, unpaidMessage } from "../unpaidAccess";
+import { SkyCover } from "./mobile-sky-cover";
 
 /**
- * Notice shown above every main screen while the account is unpaid (ACCT-UNPAID-03): playback and uploads are
- * stopped and the files are deleted on the wipe date. It only informs; it never links to or mentions paying
- * (ACCT-PAY-02). Renders nothing for free and paid accounts. `user.access` is refreshed by the existing
- * `/auth/me` call, no polling.
+ * Notice shown above every main screen of the phone and TV apps (Badger, Parrot) while the account is unpaid
+ * (ACCT-UNPAID-03): playback and uploads are stopped and the files are deleted on the wipe date. It only informs; it
+ * never links to or mentions paying (ACCT-PAY-02). Renders nothing for free and paid accounts. `access` is the app's
+ * last `GET /auth/me` answer, re-evaluated against the clock at render time; no polling.
  */
-export const UnpaidAccessBanner = ({ scale = 1 }: { /** Multiplies every size; the TV passes its screen scale (UX-TV-13), phones 1. */ scale?: number }) => {
-  const { user } = useAuth();
+export const UnpaidAccessBanner = ({
+  access,
+  scale = 1,
+}: {
+  access: AccountAccess | null | undefined;
+  /** Multiplies every size; the TV passes its screen scale (UX-TV-13), phones 1. */
+  scale?: number;
+}) => {
   const styles = stylesFor(scale);
   const { t } = useTranslation();
   const theme = useMobileShellTheme();
-  const { unpaid, wipeAt } = getUnpaidAccessInfo(user?.access);
+  const { unpaid, wipeAt } = getUnpaidAccessInfo(access);
   if (!unpaid) return null;
   return (
     <SkyCover>

@@ -6,10 +6,11 @@
 // (PAR-META-18), and the song's or album's lyrics (PAR-LYR-05), with a shimmer while an answer is on its way, so
 // loading never looks like "nothing found" (PAR-META-20).
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { Alert, Image, KeyboardAvoidingView, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type ScrollViewInstance } from "react-native";
+import { Alert, Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type ScrollViewInstance } from "react-native";
 import { ImagePlus, RotateCcw, RotateCw } from "lucide-react-native";
 import { launchImageLibrary } from "react-native-image-picker";
 import { Buffer } from "buffer";
+import { KeyboardAvoidingForm } from "@space/mobile-shell/keyboard";
 import { useTranslation } from "@space/mobile-shell/i18n";
 import { MobileNoticeBanner } from "@space/mobile-shell/components";
 import { MobileRenderBoundary } from "@space/mobile-shell/render-boundary";
@@ -335,7 +336,7 @@ export const EditDetailsDialog = ({
     <Modal visible={editing !== null} transparent animationType="fade" onRequestClose={onClose}>
       {/* UX-CRASH-01: a crash inside the form closes it; the window guard says why. */}
       <MobileRenderBoundary name="modal:manage-edit" onDismiss={onClose}>
-        <KeyboardAvoidingView behavior="padding" style={styles.scrim}>
+        <KeyboardAvoidingForm style={styles.scrim}>
           <View style={styles.dialog} testID="manage-edit-dialog">
             <ScrollView ref={scroll} contentContainerStyle={{ gap: spacing.md }} keyboardShouldPersistTaps="handled">
               <Text style={styles.title}>{t(`shell.manage.editTitle.${kind}`)}</Text>
@@ -417,7 +418,7 @@ export const EditDetailsDialog = ({
               </View>
             </ScrollView>
           </View>
-        </KeyboardAvoidingView>
+        </KeyboardAvoidingForm>
       </MobileRenderBoundary>
     </Modal>
   );

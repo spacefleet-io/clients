@@ -3,15 +3,16 @@ import { useLocalArtwork, useMediaSession } from "@space/media-session/react";
 import {
   advance,
   currentEntry,
-  goBack,
   HISTORY_POSITION_EVERY_MS,
   nextRepeatMode,
   parrotAlbumLoudness,
   parrotEvenVolumeLimits,
   parrotLoudnessMode,
   parrotPlaybackGainDb,
+  previousAction,
   setRepeat,
   setShuffle,
+  transportState,
   type PlayQueue,
 } from "@space/parrot-core";
 import { GaplessEngine, type GaplessContext, type GaplessElement, type GaplessLimiter } from "@space/parrot-core/gapless";
@@ -312,12 +313,12 @@ export default function Player({ t, userId, queue, onQueue, onPlaying, startAt, 
     setQueue(after);
   };
   const previous = () => {
-    // Like every player: past the first seconds, "previous" goes back to the start of the song.
-    if (engine.position() > 3) engine.seek(0);
-    else onQueue(goBack(queue));
+    // PAR-PLAY-09: past the first 3 s the song starts over, else the song before plays.
+    const action = previousAction(queue, engine.position());
+    if (action.kind === "restart") engine.seek(0);
+    else onQueue(action.queue);
   };
-  const canNext = queue.position + 1 < queue.entries.length || queue.repeat === "all";
-  const canPrevious = queue.position > 0 || queue.repeat === "all" || position > 3;
+  const { canNext, canPrevious } = transportState(queue);
 
   // The panel shows the large cover, read into a blob: picture the window holds (PLAY-OSMEDIA-01 item 2).
   const artworkUrl = useLocalArtwork(track ? coverFor(track.albumId)?.coverUrl : null, coverArtwork);

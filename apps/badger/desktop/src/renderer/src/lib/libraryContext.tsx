@@ -1151,6 +1151,7 @@ export const LibraryProvider = ({
     [db, refreshSnapshot]
   );
 
+  // tla: VaultKeys/Retry
   const reload = useCallback(() => {
     const { promise, resolve } = Promise.withResolvers<void>();
     reloadWaitersRef.current.push(resolve);

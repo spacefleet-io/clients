@@ -7,12 +7,12 @@ PODS:
     - ReactNativeDependencies
   - FBLazyVector (0.88.1-0):
     - React-Core-prebuilt
-  - Firebase/CoreOnly (12.19.0):
-    - FirebaseCore (~> 12.19.0)
-  - Firebase/Messaging (12.19.0):
+  - Firebase/CoreOnly (12.19.3):
+    - FirebaseCore (~> 12.19.3)
+  - Firebase/Messaging (12.19.3):
     - Firebase/CoreOnly
     - FirebaseMessaging (~> 12.19.0)
-  - FirebaseCore (12.19.0):
+  - FirebaseCore (12.19.3):
     - FirebaseCoreInternal (~> 12.19.0)
     - GoogleUtilities/Environment (~> 8.1)
     - GoogleUtilities/Logger (~> 8.1)
@@ -1567,6 +1567,29 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
+  - react-native-document-picker (12.1.0):
+    - hermes-engine
+    - RCTRequired
+    - RCTTypeSafety
+    - React-bridging
+    - React-Core
+    - React-Core-prebuilt
+    - React-cxxstableapi
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/core
+    - ReactNativeDependencies
+    - Yoga
   - react-native-get-random-values (2.1.0):
     - hermes-engine
     - RCTRequired
@@ -1691,7 +1714,7 @@ PODS:
     - Yoga
   - react-native-sqlite-storage (6.0.1):
     - React-Core
-  - react-native-webview (14.0.1):
+  - react-native-webview (17.1.0):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2403,7 +2426,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - RNSentry (8.34.0):
+  - RNSentry (8.36.0):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2661,6 +2684,7 @@ DEPENDENCIES:
   - React-microtasksnativemodule (from `../node_modules/react-native/ReactCommon/react/nativemodule/microtasks`)
   - React-mutationobservernativemodule (from `../node_modules/react-native/ReactCommon/react/nativemodule/mutationobserver`)
   - react-native-blob-util (from `../node_modules/react-native-blob-util`)
+  - "react-native-document-picker (from `../node_modules/@react-native-documents/picker`)"
   - react-native-get-random-values (from `../node_modules/react-native-get-random-values`)
   - react-native-google-cast (from `../node_modules/react-native-google-cast`)
   - react-native-quick-base64 (from `../node_modules/react-native-quick-base64`)
@@ -2843,6 +2867,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native/ReactCommon/react/nativemodule/mutationobserver"
   react-native-blob-util:
     :path: "../node_modules/react-native-blob-util"
+  react-native-document-picker:
+    :path: "../node_modules/@react-native-documents/picker"
   react-native-get-random-values:
     :path: "../node_modules/react-native-get-random-values"
   react-native-google-cast:
@@ -2967,8 +2993,8 @@ SPEC CHECKSUMS:
   DoubleConversion: 6c34961e46ea2895439ba98d0f48deda29577158
   fast_float: 9693371e9800f5a1f6226afda015031169e35b73
   FBLazyVector: 4799445607b4d370afd39153808e144200c98576
-  Firebase: 7ca191e43724142f79fae653547b3382c45413cc
-  FirebaseCore: c990214798d7c568ad436a15ba7da25c7a278c9a
+  Firebase: e3c5ab38229ae085490d02398d97b9f5374bbe6e
+  FirebaseCore: ab948de5d99e69aeed3cd6f5ace263ce795b2559
   FirebaseCoreExtension: 201c78d7491a273d61d8afbf491214276a951e6d
   FirebaseCoreInternal: 656b1c2fd5a1c5976183dc54b73deda78fb26ee3
   FirebaseInstallations: f70a49eed611f5602f373e40974b3b01556ac217
@@ -2980,12 +3006,12 @@ SPEC CHECKSUMS:
   GoogleUtilities: 7dc09b3fa9ecb5c2298b952313d14628b61b9da3
   hermes-engine: 85e928e3bd3f273b2999bc199f07f814c3a32376
   MediaProxy: 02ca5b9b02458683be1c035186f27f0fec617e0a
-  MediaVolume: b4a5b0cad9c9257ec1f9fca27e72dc9df8229959
+  MediaVolume: 089512ccb018e01944e5167fed7b3de2fc5ac6a5
   MpvPlayback: 2c02b53ba859107155d358d0fb374083676abdae
   nanopb: fad817b59e0457d11a5dfbde799381cd727c1275
   NitroModules: f1a11047ebbb0202a7d0033d6e99ad0527d34b00
   PromisesObjC: 752c3227f599e3467650e47ea36f433eeb10c273
-  QuickCrypto: 139f522bda97480508a47a2c3cfeed905f91ec0d
+  QuickCrypto: 6640c87f66ae9a911bc44e72443050cf92c7eab4
   RCT-Folly: 208e257d8a7d3973721d2444bc2a6d3bcc99ff0d
   RCTDeprecation: d0d93266840172416eccb81076ac4e3685ea8fa4
   RCTRequired: 325c116f128af285610574e09263a43b6c1cf6a8
@@ -3027,12 +3053,13 @@ SPEC CHECKSUMS:
   React-microtasksnativemodule: 332bce8f94f61f5d5aba9013a30c3b73e12b962e
   React-mutationobservernativemodule: 74ca91dc1c85f24123511dd251cb1b3a857495c7
   react-native-blob-util: d6d697d317d909e343fdd36ff6bdfac72586aff4
+  react-native-document-picker: 50a726bc25bddb4816c4dd3726681a5f85e9c1ed
   react-native-get-random-values: 625b34d7f8a66d85c594071603f748d756bd90da
   react-native-google-cast: 7be68a5d0b7eeb95a5924c3ecef8d319ef6c0a44
-  react-native-quick-base64: d530613fbc277aa6899775d17f3bc8390399026c
+  react-native-quick-base64: 2be2ef19cf13f118e982b71a9c3108f16930fed8
   react-native-safe-area-context: 56700b839169ce88ffcec68c40447916fe512462
   react-native-sqlite-storage: 9ae90f5938fcc21983451c76aa6c670ec9e7bae4
-  react-native-webview: 3a3d1fd130d39e4dcabeebe89e6b245478ee177e
+  react-native-webview: fdd37419a16d5222b0e3ebc4e6e754b486c0a2f8
   React-NativeModulesApple: a649718531d14057266676835fad21c23536faaa
   React-networking: 9709644a1ce4ad9dc1ca6311f2bb5a6ed6c7d371
   React-oscompat: 9fec8f6a78ab37494d918dc47548260507b7a508
@@ -3079,12 +3106,12 @@ SPEC CHECKSUMS:
   RNKeychain: 9549107267cadd3c5757a316f7ce19e7ce6f3ceb
   RNReanimated: e641b7b1f1d20f8f70c579efcae252884c1a8750
   RNScreens: f15a5bda1ddeff8575b8ce41d83885b67129f84b
-  RNSentry: a666a08b436f44bde674b12c848322dfa8deabe5
+  RNSentry: 7aa85ebf9042598991be88de42fafb53795f2d51
   RNSVG: 0851af4352d2e692b44aada9dd7a1d361c18fcfc
   RNWorklets: 7ef1179b4af22f6fbc160d2a0e7e054d26cc5d26
   SiblingSignIn: 130598cca268450f398db3cfe442f4291725087c
   SocketRocket: 9c5c51020fcd1d1d9a4c6d626d5efef98e15425c
-  SpaceMediaSession: 85786a4d7b44e5ebb94ea36c2f201a80944515af
+  SpaceMediaSession: bfd3ebb6d9db45bfa3f7a064c23022444a318877
   Yoga: 506238f8e7575a3c20290b98402eabc8590f57cc
 
 PODFILE CHECKSUM: 6b53660283ae37a806955126416b35e7843301d2

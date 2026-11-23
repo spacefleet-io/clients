@@ -5,16 +5,16 @@
 //   SF_UPDATE_FEED_URL  electron-updater generic feed base URL baked into app-update.yml
 //                       (default https://api.spacefleet.io/desktop/parrot)
 //   SF_PACKAGE_TEST_BUILD "1" only for `package.mjs --test-build`: the version gets the `-devkey` suffix and a Windows
-//                       build may be unsigned (Badger's scripts/test-build-lib.mjs, META-ANON-06)
-// Mirrors apps/badger/desktop/electron-builder.config.mjs and shares its signing code (scripts/windows-signing-lib.mjs,
-// scripts/mac-signing-lib.mjs there), minus what Parrot does not ship: no runtime, no media-deps bundle, no mpv, no
+//                       build may be unsigned (packages/desktop-platform/packaging/test-build-lib.mjs, META-ANON-06)
+// Mirrors apps/badger/desktop/electron-builder.config.mjs and shares its signing code (packages/desktop-platform-windows/packaging/windows-signing-lib.mjs,
+// packages/desktop-platform-macos/packaging/mac-signing-lib.mjs), minus what Parrot does not ship: no runtime, no media-deps bundle, no mpv, no
 // native module (SQLite is node:sqlite), no NSIS hook. The tray icons ship as Badger's do (PLAT-DESK-10). Nothing here
 // inspects the host OS.
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { TEST_BUILD_ENV, testBuildVersion } from "../../badger/desktop/scripts/test-build-lib.mjs";
-import { resolveWindowsSigning, windowsSigningBuilderOptions, windowsUpdatePublisherFor } from "../../badger/desktop/scripts/windows-signing-lib.mjs";
+import { TEST_BUILD_ENV, testBuildVersion } from "../../../packages/desktop-platform/packaging/test-build-lib.mjs";
+import { resolveWindowsSigning, windowsSigningBuilderOptions, windowsUpdatePublisherFor } from "../../../packages/desktop-platform-windows/packaging/windows-signing-lib.mjs";
 import { nativeLinuxPackageOptions } from "../../../packages/desktop-platform-linux/packaging/linux-packages.mjs";
 import { linuxAfterInstallScript, withLinuxModes } from "../../../packages/desktop-platform-linux/packaging/file-modes.mjs";
 import { ELECTRON_LANGUAGES, MAC_MINIMUM_SYSTEM_VERSION, PRODUCT_NAME, resolveLinuxFormats, resolvePackageTarget } from "./scripts/package-targets.mjs";
