@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import { Settings } from "lucide-react";
-import { PRODUCTION_API_BASE_URL } from "@space/shared/productionApi";
 import { Button } from "@space/ui";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@space/ui";
 import { Input } from "@space/ui";
@@ -58,9 +57,9 @@ export const formatActiveApiHostLabel = (
 };
 
 const fallbackApiState: ApiHostState = {
-  apiBaseUrl: PRODUCTION_API_BASE_URL,
+  apiBaseUrl: "https://api.spacebadger.io",
   customApiBaseUrl: null,
-  defaultApiBaseUrl: PRODUCTION_API_BASE_URL,
+  defaultApiBaseUrl: "https://api.spacebadger.io",
 };
 
 export const ApiHostSettingsButton = ({

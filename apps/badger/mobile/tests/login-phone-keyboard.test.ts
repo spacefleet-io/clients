@@ -56,18 +56,7 @@ vi.mock("@space/mobile-shell/i18n", () => ({
   useTranslation: () => ({ t: (k: string) => k }),
 }));
 // listSignInProviders: the provider rows (#2437) ask for the enabled providers on mount; none here.
-// listProfiles, createProfile, updateProfile, deleteProfile: the screen's import chain reaches the profile store (#3594),
-// which binds them at load; never called here.
-vi.mock("@space/shared/api", () => ({
-  ApiError: class extends Error {},
-  requestPasswordReset: vi.fn(),
-  confirmPasswordReset: vi.fn(),
-  listSignInProviders: async () => ({ providers: [] }),
-  listProfiles: vi.fn(),
-  createProfile: vi.fn(),
-  updateProfile: vi.fn(),
-  deleteProfile: vi.fn(),
-}));
+vi.mock("@space/shared/api", () => ({ ApiError: class extends Error {}, requestPasswordReset: vi.fn(), confirmPasswordReset: vi.fn(), listSignInProviders: async () => ({ providers: [] }) }));
 vi.mock("@space/shared/signInError", () => ({
   classifySignInError: vi.fn(),
   signInErrorDetails: vi.fn(),

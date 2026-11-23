@@ -63,11 +63,6 @@ vi.mock("@space/shared/api", async () => ({
   ApiError: (await vi.importActual<typeof SharedApi>("@space/shared/api")).ApiError,
   requestPasswordReset: (...a: unknown[]) => h.requestPasswordReset(...a),
   confirmPasswordReset: vi.fn(),
-  // The screen's import chain reaches the profile store (#3594), which binds these at load; never called here.
-  listProfiles: vi.fn(),
-  createProfile: vi.fn(),
-  updateProfile: vi.fn(),
-  deleteProfile: vi.fn(),
 }));
 vi.mock("../src/lib/apiConfig", () => ({ getStoredApiHost: async () => null, serverPickerAllowed: () => false, setStoredApiHost: vi.fn() }));
 vi.mock("../src/store/auth", () => ({ useAuth: () => ({ login: h.login }) }));

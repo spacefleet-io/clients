@@ -3,9 +3,10 @@
  * web player): the album page's "…" in the approved design (PAR-LOOK-01) and the "…" on album and artist tiles. The
  * list closes on a pick, on Escape and on a click outside it; arrow keys move between items.
  */
-import { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { Ellipsis } from "lucide-react";
+import { ArrowDownUp, Check, Ellipsis } from "lucide-react";
+import { PARROT_ALBUM_SORT_STORAGE_KEY, PARROT_ALBUM_SORTS, parseParrotAlbumSort, type ParrotAlbumSort } from "@space/parrot-core";
 import { RenderBoundary } from "../render-boundary";
 import { cn } from "../utils";
 
@@ -158,5 +159,53 @@ export function ParrotMenu({ label, items, testId = "parrot-menu", onOpenChange,
         </RenderBoundary>
       )}
     </div>
+  );
+}
+
+// Every user of the pick reads the same value: Home's "Recently added" "See all" (PAR-HOME-01) picks "recent" for the
+// library's grid, which may be another component.
+const albumSortListeners = new Set<() => void>();
+let albumSortWithoutStorage: ParrotAlbumSort | null = null;
+const readAlbumSort = (): ParrotAlbumSort =>
+  globalThis.localStorage ? parseParrotAlbumSort(globalThis.localStorage.getItem(PARROT_ALBUM_SORT_STORAGE_KEY)) : (albumSortWithoutStorage ?? parseParrotAlbumSort(null));
+const subscribeAlbumSort = (listener: () => void) => {
+  albumSortListeners.add(listener);
+  return () => void albumSortListeners.delete(listener);
+};
+const pickAlbumSort = (next: ParrotAlbumSort) => {
+  if (globalThis.localStorage) globalThis.localStorage.setItem(PARROT_ALBUM_SORT_STORAGE_KEY, next);
+  else albumSortWithoutStorage = next;
+  for (const listener of albumSortListeners) listener();
+};
+
+/** The library's album order, kept in the browser's storage so the grid opens in the user's last pick ("Recently added" first time). */
+export function useParrotAlbumSort(): [ParrotAlbumSort, (sort: ParrotAlbumSort) => void] {
+  return [useSyncExternalStore(subscribeAlbumSort, readAlbumSort, readAlbumSort), pickAlbumSort];
+}
+
+/**
+ * The design's sort button beside the library's search field: its icon and the order in use ("Recently added"),
+ * opening the orders with a tick on the one in use.
+ */
+export function ParrotAlbumSortMenu({ value, onChange, labels }: { value: ParrotAlbumSort; onChange: (sort: ParrotAlbumSort) => void; labels: { sort: string } & Record<ParrotAlbumSort, string> }) {
+  return (
+    <ParrotMenu
+      label={labels.sort}
+      testId="library-sort"
+      align="end"
+      triggerClassName="h-10"
+      trigger={
+        <>
+          <ArrowDownUp className="h-4 w-4" aria-hidden />
+          {labels[value]}
+        </>
+      }
+      items={PARROT_ALBUM_SORTS.map((sort) => ({
+        id: sort,
+        label: labels[sort],
+        icon: sort === value ? <Check className="h-4 w-4 text-primary" /> : <span />,
+        onSelect: () => onChange(sort),
+      }))}
+    />
   );
 }

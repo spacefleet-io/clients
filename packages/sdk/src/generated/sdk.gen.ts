@@ -92,7 +92,7 @@ export const putLibraryDb = <ThrowOnError extends boolean = false>(options: Opti
 /**
  * Library operations since a version
  *
- * Returns the encrypted operations committed after version `since` (default 0), with their ciphertext inlined, and the observed format versions. `tooOld` is true when `since` predates the retained history. With `Accept: application/vnd.space.library-ops` the answer is binary instead (LIB-FMT-13): one frame per op, `u64be version | u32be length | ciphertext`, and the page's state in the `x-library-version`, `x-library-snapshot-version`, `x-library-too-old`, `x-library-has-more` (`1`/`0`), `x-library-storage-format-version`, `x-library-op-stream-version` and `x-library-target-op-stream-version` response headers.
+ * Returns the encrypted operations committed after version `since` (default 0), with their ciphertext inlined, and the observed format versions. `tooOld` is true when `since` predates the retained history.
  *
  * Personal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.
  */
@@ -930,7 +930,7 @@ export const updateProfile = <ThrowOnError extends boolean = false>(options: Opt
 /**
  * Start a stream
  *
- * Takes one of the profile's stream slots before playback starts: by default at most 1 stream per profile at a time in Badger, 2 in Parrot; an admin may set another number per account type or per account (ACCT-STREAM-07). At the limit the answer is 409 `stream_limit` naming the devices playing; the app asks "Already playing on <device>. Play here instead?" and, on yes, sends the same request with `takeover: true`, which ends the oldest stream(s). The same login session starting again replaces its own stream. A stream not heard from for 60 s no longer counts. Casting counts as the casting phone's stream (`kind: "cast"`); offline playback never asks.
+ * Takes one of the profile's stream slots before playback starts: at most 1 stream per profile at a time in Badger, 2 in Parrot. At the limit the answer is 409 `stream_limit` naming the devices playing; the app asks "Already playing on <device>. Play here instead?" and, on yes, sends the same request with `takeover: true`, which ends the oldest stream(s). The same login session starting again replaces its own stream. A stream not heard from for 60 s no longer counts. Casting counts as the casting phone's stream (`kind: "cast"`); offline playback never asks.
  *
  * Personal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.
  */
@@ -1080,7 +1080,7 @@ export const lookupPairing = <ThrowOnError extends boolean = false>(options?: Op
 /**
  * Approve a pairing request with a sealed library key
  *
- * Body `{ sealedKey: { v:1, epk, iv, ct }, approverDeviceId?, password? }`. `password` is the account password, sent by approvers with no device unlock of their own (the TV app, whose session client type ends in `-tv`, e.g. `badger-tv`: for it the password is required, a missing one is 401 `invalid_password`): checked before anything is approved, wrong answers are 401 `invalid_password` (the request stays pending) and are limited to 10 per minute per account (429 `rate_limited`). Any signed-in Badger or Parrot app may approve a request of any app on the same account; nothing filters by app (ACCT-PAIR-05). Creates a new session for the approver's account (clientType `<app>-<deviceType>` with the requesting app, e.g. `parrot-desktop`; device name/type stored), parks the sealed key for the new device and pushes 'New device added' to the account's other push devices (except `approverDeviceId`). Same-device sign-in (ACCT-PAIR-07): a signed-in Badger approving Parrot's sign-in on the same computer or phone (or the reverse) sends `{ localKey: true }` and no `sealedKey`, then hands the sealed key to that app itself, so the server never holds it, not even sealed; the poll answers `{ status: approved, token, user, localKey: true, clientType }`. Allowed only when the request is the sister app's sign-in (not a key request) on the approving session's own device type; otherwise 403 `pairing_local_key_refused` and nothing is approved. Sending both `localKey` and `sealedKey` is 400 `invalid_request`. 410 `pairing_expired`, 409 `pairing_already_used`, 404 `pairing_not_found`. Allowed on unpaid accounts (browse access).
+ * Body `{ sealedKey: { v:1, epk, iv, ct }, approverDeviceId?, password? }`. `password` is the account password, sent by approvers with no device unlock of their own (the TV app, whose session client type ends in `-tv`, e.g. `badger-tv`: for it the password is required, a missing one is 401 `invalid_password`): checked before anything is approved, wrong answers are 401 `invalid_password` (the request stays pending) and are limited to 10 per minute per account (429 `rate_limited`). Any signed-in Badger or Parrot app may approve a request of any app on the same account; nothing filters by app (ACCT-PAIR-05). Creates a new session for the approver's account (clientType `<app>-<deviceType>` with the requesting app, e.g. `parrot-desktop`; device name/type stored), parks the sealed key for the new device and pushes 'New device added' to the account's other push devices (except `approverDeviceId`). 410 `pairing_expired`, 409 `pairing_already_used`, 404 `pairing_not_found`. Allowed on unpaid accounts (browse access).
  *
  * Personal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.
  */
@@ -1404,7 +1404,7 @@ export const unregisterPushDevice = <ThrowOnError extends boolean = false>(optio
 /**
  * Send feedback
  *
- * Sends a feedback message from an app's "Send feedback" entry (UX-SUP-05); it lands in the admin dashboard's Feedback inbox with the account that sent it. `message` is trimmed, 1 to 4000 characters. `log` is the app's error log, sent only when the user ticked the box, at most 200 KB. Never put a title or a file name in it. `requestIds` are the server's `x-request-id` values of the app's last failed API calls (UX-SUP-07), at most 10 UUIDs. A wrong field answers 400 `invalid_feedback` naming it. At most 10 messages an hour per account: beyond, 429 `rate_limited` with `retryAfterSeconds`.
+ * Sends a feedback message from an app's "Send feedback" entry (UX-SUP-05); it lands in the admin dashboard's Feedback inbox with the account that sent it. `message` is trimmed, 1 to 4000 characters. `log` is the app's error log, sent only when the user ticked the box, at most 200 KB. Never put a title or a file name in it. A wrong field answers 400 `invalid_feedback` naming it. At most 10 messages an hour per account: beyond, 429 `rate_limited` with `retryAfterSeconds`.
  *
  * Personal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.
  */

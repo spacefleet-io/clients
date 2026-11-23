@@ -146,21 +146,14 @@ export const sanitizeOfflineFilename = (raw: string): string => {
  * and the set of already-present names, returns the name unchanged if it does
  * not collide, or appends ` (2)`, ` (3)`, … before the extension until free.
  *
- * Names are compared without letter case (#618, OFFL-FILE-02): Windows and
- * macOS file systems treat `Lattice.mkv` and `lattice.MKV` as one file, so a
- * case-only match is a collision on every OS.
- *
  * Pure — does NOT touch the filesystem. The caller is expected to pass in the
- * dir listing (`fs.readdir` or equivalent) so this stays testable; the
- * race-safe move into place is `placeExportFile` (`./exportPlacement`).
+ * dir listing (`fs.readdir` or equivalent) so this stays testable.
  */
 export const resolveOfflineFilenameCollision = (
   desired: string,
   existing: ReadonlySet<string>,
 ): string => {
-  const taken = new Set<string>();
-  for (const name of existing) taken.add(name.toLowerCase());
-  if (!taken.has(desired.toLowerCase())) return desired;
+  if (!existing.has(desired)) return desired;
 
   const lastDotIdx = desired.lastIndexOf(".");
   const hasExt = lastDotIdx > 0
@@ -174,7 +167,7 @@ export const resolveOfflineFilenameCollision = (
   // they can surface to the user).
   for (let i = 2; i < 1000; i++) {
     const candidate = ext ? `${base} (${i}).${ext}` : `${base} (${i})`;
-    if (!taken.has(candidate.toLowerCase())) return candidate;
+    if (!existing.has(candidate)) return candidate;
   }
   return ext ? `${base} (999).${ext}` : `${base} (999)`;
 };

@@ -22,7 +22,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { ensureLibrarySchema, type SqliteDb } from "@space/library-db-definition/migrations";
-import { buildOpStatements, isV3MediaUpsert } from "@space/library-db-definition/ops";
+import { buildOpStatements } from "@space/library-db-definition/ops";
 import type { LibraryOp } from "@space/shared/libraryOps";
 import { locatePreviewPicture, type MediaPreviewSheets } from "@space/shared/previewSheets";
 import { LibraryDb } from "../src/libraryDb";
@@ -170,8 +170,8 @@ describe("seek-bar preview sheets in the library (MPV-PREV-02)", () => {
       const upserts = ops.filter((op) => op.type === "media.upsert");
       const last = upserts[upserts.length - 1];
       console.info(`${TAG} pending=${ops.length} upserts=${upserts.length} lastType=${last?.type}`);
-      expect(last?.type === "media.upsert" && isV3MediaUpsert(last)).toBe(true);
-      if (last?.type !== "media.upsert" || !isV3MediaUpsert(last)) return;
+      expect(last?.type).toBe("media.upsert");
+      if (last?.type !== "media.upsert") return;
       expect(last.payload.details.formats?.find((format) => format.isSource)?.previewSheets).toEqual(PREVIEWS);
 
       const fresh = new Database(":memory:");

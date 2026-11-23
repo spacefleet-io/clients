@@ -290,36 +290,6 @@
       "playlist": "Playlist"
     }
   },
-  "offlineContent": {
-    "entry": "Manage offline content",
-    "title": "Offline content",
-    "back": "Back",
-    "totalSuffix": "saved offline",
-    "unknownArtist": "Unknown artist",
-    "removeAll": "Remove all",
-    "confirmCancel": "Cancel",
-    "confirmRemove": "Remove all",
-    "removeFailed": "Couldn't remove it. Try again.",
-    "expand": "Show or hide what is inside {{name}}",
-    "remove": "Remove {{name}} from this phone",
-    "season": "Season {{n}}",
-    "episodeNumber": "S{{season}} E{{episode}}",
-    "unknownTitle": "Title no longer in the media library",
-    "unknownEpisode": "Episode no longer in the media library",
-    "unknown": "No longer in the media library",
-    "badger": {
-      "entryDescription": "See what is kept on this phone and free up space",
-      "confirmTitle": "Remove everything kept on this phone?",
-      "confirmBody": "Every film and episode downloaded to this phone is deleted. You can download them again later.",
-      "empty": "Nothing is kept on this phone. Tap Download on a film or an episode to watch it without a connection."
-    },
-    "parrot": {
-      "entryDescription": "See what is saved offline on this phone and free up space",
-      "confirmTitle": "Remove everything saved offline?",
-      "confirmBody": "Every album, playlist and song saved offline on this phone is removed. You can save them offline again later.",
-      "empty": "Nothing is saved offline on this phone yet. Tap Save offline on an album, a playlist or a song to listen without a connection."
-    }
-  },
   "downloads": {
     "title": "Downloads",
     "back": "Back",
@@ -1036,7 +1006,8 @@
   },
   "libraryFormat": {
     "title": "Update required",
-    "body": "This media library was created by a newer version of Badger."
+    "body": "This media library was created by a newer version of Badger. Update the app to open it.",
+    "update": "Update Now"
   },
   "home": {
     "empty": {
@@ -1102,12 +1073,7 @@
       "added": "Date added",
       "release": "Release year",
       "asc": "Ascending",
-      "desc": "Descending",
-      "title": "Sort by",
-      "by": "Field",
-      "direction": "Direction",
-      "button": "Sort",
-      "done": "Done"
+      "desc": "Descending"
     },
     "row": {
       "runtimeMinutes": "{{minutes}} min",
@@ -1123,70 +1089,6 @@
     "poster": {
       "watched": "{{percent}}% watched",
       "downloaded": "downloaded"
-    },
-    "filters": {
-      "clear": "Clear filters",
-      "genres": {
-        "title": "Genres",
-        "search": "Search genres…",
-        "empty": "No genres match this search."
-      },
-      "actors": {
-        "title": "Actors",
-        "search": "Search actors…",
-        "empty": "No actors match this search."
-      },
-      "title": "Filter",
-      "clearShort": "Clear",
-      "more": "+{{count}} more",
-      "reset": "Reset",
-      "apply": "Apply",
-      "qualities": {
-        "title": "Quality",
-        "search": "Search qualities",
-        "empty": "No quality found"
-      },
-      "directors": {
-        "title": "Director",
-        "search": "Search directors",
-        "empty": "No director found"
-      },
-      "audioLanguages": {
-        "title": "Audio language",
-        "search": "Search languages",
-        "empty": "No language found"
-      },
-      "subtitleLanguages": {
-        "title": "Subtitle language",
-        "search": "Search languages",
-        "empty": "No language found"
-      },
-      "watchStates": {
-        "title": "Watch state",
-        "search": "Search states",
-        "empty": "No state found"
-      },
-      "quality": {
-        "sd": "SD (480p or less)"
-      },
-      "watchState": {
-        "unwatched": "Unwatched",
-        "in-progress": "In progress",
-        "watched": "Watched"
-      },
-      "undefinedLanguage": "Unknown language",
-      "active_one": "Filter, {{count}} on",
-      "active_other": "Filter, {{count}} on",
-      "showOnly": "Show only"
-    },
-    "stats": {
-      "movie_one": "{{count}} movie",
-      "movie_other": "{{count}} movies",
-      "movie_many": "{{count}} movies",
-      "series_one": "{{count}} show",
-      "series_other": "{{count}} shows",
-      "series_many": "{{count}} shows",
-      "shownOf": "{{shown}} of {{total}}"
     }
   },
   "playlists": {
@@ -1232,22 +1134,6 @@
         "hint": "Your saved media library stays on screen."
       },
       "close": "Dismiss notice"
-    }
-  },
-  "sync": {
-    "indicator": {
-      "updating": "Updating media library…",
-      "updatingProgress": "Updating media library… {{percent}}%",
-      "savedStaysLabel": "Your saved media library stays available",
-      "newEpisodes_one": "{{count}} new episode",
-      "newEpisodes_other": "{{count}} new episodes",
-      "newTitles_one": "{{count}} new title",
-      "newTitles_other": "{{count}} new titles",
-      "updated": "Media library updated",
-      "upToDate": "Up to date",
-      "failed": "Update failed",
-      "failedLabel": "Media library update failed — saved content",
-      "retry": "Tap to retry."
     }
   },
   "shell": {
@@ -1392,40 +1278,6 @@
   },
   "appUpdate": {
     "title": "Update {{app}} to keep using it",
-    "tooOld": "This version of {{app}} is too old to connect.",
-    "how": {
-      "appstore": "Update {{app}} in the App Store, then open it again.",
-      "testflight": "Install the new version of {{app}} from TestFlight, then open it again.",
-      "play": "Update {{app}} on Google Play, then open it again.",
-      "amazon": "Update {{app}} in the Amazon Appstore, then open it again.",
-      "fdroid": "Update {{app}} in F-Droid, then open it again.",
-      "obtainium": "Update {{app}} in Obtainium, then open it again.",
-      "apk": "Download the new version of {{app}} and install it over this one, then open it again.",
-      "store": "Update {{app}} in the store you installed it from, then open it again.",
-      "unknown": "Install the new version from where you got {{app}}, then open it again."
-    },
-    "open": {
-      "appstore": "Open the App Store",
-      "testflight": "Open TestFlight",
-      "play": "Open Google Play",
-      "amazon": "Open the Amazon Appstore",
-      "fdroid": "Open F-Droid",
-      "obtainium": "Open Obtainium",
-      "apk": "Download the new version",
-      "store": "Open the store"
-    }
-  },
-  "sibling": {
-    "title": "Continue with your {{other}} account",
-    "body": "{{other}} is signed in on this phone. Nothing to type.",
-    "button": "Continue as {{email}}",
-    "otherAccount": "Use another account",
-    "waiting": "Waiting for {{other}}…",
-    "waitingNote": "Allow it in {{other}}, then come back.",
-    "cancel": "Cancel",
-    "failure": "{{other}} could not sign you in. Sign in another way.",
-    "askTitle": "Let {{app}} use your SpaceFleet account?",
-    "askBody": "{{app}} on this phone will be signed in as {{email}}, with its own copy of your media library key. You can sign it out at any time in Devices.",
-    "allow": "Allow"
+    "body": "This version of {{app}} is too old to connect. Install the new version from where you got {{app}}, then open it again."
   }
 }

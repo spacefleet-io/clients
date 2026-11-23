@@ -33,7 +33,7 @@ export type ParrotFileUploader = (input: { fileId: string; fileHash: string; byt
 /** The light copy's file ID: one per original, so making it again (another computer, a retry) lands on the same row. */
 export const parrotLightFileId = (originalFileId: string): string => parrotShortId("tf", "light", originalFileId);
 
-/** What the light copy keeps of the original's tags: names, numbers and lyrics; no picture (PAR-FMT-02). */
+/** What the light copy keeps of the original's tags: names, numbers, lyrics and the cover (PAR-FMT-02). */
 export const parrotCopyTagsOf = (info: ParrotTrackInfo): ParrotCopyTags => ({
   title: info.title,
   artist: info.artist,
@@ -44,6 +44,7 @@ export const parrotCopyTagsOf = (info: ParrotTrackInfo): ParrotCopyTags => ({
   year: info.year,
   genre: info.genre ?? null,
   lyrics: info.lyrics ?? null,
+  cover: info.cover ? { bytes: info.cover.bytes, mime: info.cover.mime } : null,
 });
 
 /** The op that records an uploaded light copy of `trackId`. */
@@ -112,8 +113,6 @@ export const addParrotLightCopy = async (input: {
   originalFileId: string;
   original: ParrotLightCopyOriginal;
   info: ParrotTrackInfo;
-  /** The tags the copy carries; the original's (`info`) when absent. */
-  tags?: ParrotCopyTags;
   /** Whether this computer makes light copies of songs over 90 minutes (the shared hardware rule). */
   longSongs: boolean;
   make: ParrotLightCopyMaker;
@@ -135,7 +134,7 @@ export const addParrotLightCopy = async (input: {
     container: input.info.format.container,
     codec: input.info.format.codec,
     durationMs: input.info.durationMs,
-    tags: input.tags ?? parrotCopyTagsOf(input.info),
+    tags: parrotCopyTagsOf(input.info),
   });
   const chunks = await input.upload({ fileId, fileHash: sha256Hex(bytes), bytes });
   const op = buildParrotLightCopyOp({ trackId: input.trackId, fileId, sizeBytes: bytes.length, chunks, now: input.now?.() ?? Date.now() });
@@ -165,32 +164,6 @@ export const listParrotSongsWithoutLightCopy = (db: ParrotLibraryDb): Array<{ tr
     )
     .all() as Array<{ trackId: string; fileId: string; durationMs: number | null }>;
 
-type ParrotLibraryCopyRow = Omit<ParrotCopyTags, "lyrics"> & { lyricsPlain: string | null; lyricsSynced: string | null };
-
-/**
- * The names, numbers and lyrics the library holds for a song (PAR-META-04): a stored original keeps no tags since
- * 2026-11-21 (PAR-FMT-01), so a light copy made from it later takes the library's. Null for a song not in the library.
- */
-const parrotLibraryCopyTags = (db: ParrotLibraryDb, trackId: string): ParrotCopyTags | null => {
-  const row = db
-    .prepare(
-      `SELECT t.title, ar.name AS artist, al.title AS album, aa.name AS albumArtist, t.number, t.disc,
-              CASE WHEN t.year_edited THEN t.year ELSE COALESCE(t.year, al.year) END AS year,
-              CASE WHEN t.genre_edited THEN t.genre ELSE COALESCE(t.genre, al.genre) END AS genre,
-              l.plain AS lyricsPlain, l.synced AS lyricsSynced
-         FROM tracks t
-         JOIN albums al ON al.id = t.album_id
-         JOIN artists ar ON ar.id = t.artist_id
-         JOIN artists aa ON aa.id = al.album_artist_id
-         LEFT JOIN lyrics l ON l.track_id = t.id
-        WHERE t.id = ?`
-    )
-    .get(trackId) as ParrotLibraryCopyRow | undefined;
-  if (!row) return null;
-  const { lyricsPlain, lyricsSynced, ...names } = row;
-  return { ...names, lyrics: lyricsPlain || lyricsSynced ? { plain: lyricsPlain, synced: lyricsSynced } : null };
-};
-
 /** The extension the original's temporary copy gets, so the tag reader takes it (PAR-UP-01's formats). */
 const parrotTempExtension = (file: { mime: string; codec?: string | null }): string => {
   const formats = Object.entries(PARROT_AUDIO_FORMATS);
@@ -219,9 +192,8 @@ export const parrotOriginalOnDisk = (handle: fs.FileHandle, size: number): Parro
 
 /**
  * Gives every song of the library that has none its light copy (PAR-FMT-02 for songs imported before light copies):
- * downloads and decrypts the original chunk by chunk into a temporary file (never whole in memory), reads its format,
- * makes the copy from that file with the song's names and lyrics from the library (a split original keeps no tags,
- * PAR-FMT-01) and uploads it, and publishes the library every `publishEvery` copies. One song at a
+ * downloads and decrypts the original chunk by chunk into a temporary file (never whole in memory), reads its tags,
+ * makes the copy from that file and uploads it, and publishes the library every `publishEvery` copies. One song at a
  * time; a song that fails is left for the next run and does not stop the others. A song over 90 minutes on a computer
  * that does not make long copies (`longSongs` false) is skipped before anything of it is downloaded.
  */
@@ -234,7 +206,7 @@ export const backfillParrotLightCopies = async (options: {
   upload: ParrotFileUploader;
   /** Whether this computer makes light copies of songs over 90 minutes (the shared hardware rule). */
   longSongs: boolean;
-  /** Reads the original's format and length from a temporary copy of it (tests swap it). */
+  /** Reads the original's tags from a temporary copy of it (tests swap it). */
   readInfo?: (file: string) => Promise<ParrotTrackInfo>;
   publishEvery?: number;
   log?: (message: string) => void;
@@ -292,7 +264,6 @@ export const backfillParrotLightCopies = async (options: {
           originalFileId: song.fileId,
           original: parrotOriginalOnDisk(reader, file.sizeBytes),
           info,
-          tags: parrotLibraryCopyTags(state.db, song.trackId) ?? undefined,
           longSongs: options.longSongs,
           make: options.make,
           upload: options.upload,

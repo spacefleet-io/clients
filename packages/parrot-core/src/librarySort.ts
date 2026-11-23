@@ -1,12 +1,15 @@
 /**
- * The album orders of the phone's library and of Home's "See all" (PAR-LOOK-01: the design's "Recently added"). The
- * desktop and the web player have more orders per tab (`libraryView.ts`, PAR-LIB-06).
+ * The orders the library's album grid offers behind its sort button (PAR-LOOK-01: the design's "Recently added"),
+ * shared by every app so the same pick gives the same grid everywhere.
  */
 export const PARROT_ALBUM_SORTS = ["recent", "title", "artist"] as const;
 export type ParrotAlbumSort = (typeof PARROT_ALBUM_SORTS)[number];
 
 /** The design's default: the albums added last first. */
 export const DEFAULT_PARROT_ALBUM_SORT: ParrotAlbumSort = "recent";
+
+/** Where a browser-engine app (desktop renderer, web player) keeps the user's pick, so the grid opens in it next time. */
+export const PARROT_ALBUM_SORT_STORAGE_KEY = "parrot.albumSort";
 
 /** What the album orders read off an album. */
 export type ParrotSortableAlbum = { title: string; artistName: string; year: number | null; addedAt: number };
