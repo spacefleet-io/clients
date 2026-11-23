@@ -61,7 +61,6 @@ export const uploadEncryptedObjectFile = async (
         signal: options.signal,
         placementId: options.placementId,
         counting: options.counting,
-        ...(options.objectKey ? { objectKey: options.objectKey } : {}),
       });
     },
     // A chunk waiting out a pause must still react to cancel / shutdown.

@@ -8,7 +8,6 @@ import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactContextBaseJavaModule
 import com.facebook.react.bridge.ReactMethod
-import com.facebook.react.bridge.ReadableMap
 import com.facebook.react.bridge.WritableNativeArray
 import com.facebook.react.bridge.WritableNativeMap
 import com.facebook.react.modules.blob.BlobModule
@@ -26,22 +25,6 @@ class LibrarySyncModule(private val context: ReactApplicationContext) : ReactCon
   private val tag = "LibrarySync"
 
   override fun getName(): String = "LibrarySync"
-
-  private val opPageDir: File get() = File(context.cacheDir, "library-op-pages")
-
-  /**
-   * No page is in flight when the module starts: every op page file written before now is an orphan of a killed or
-   * crashed app (files of a page fetched while this sweep runs are newer, and stay).
-   */
-  override fun initialize() {
-    super.initialize()
-    val startedAt = System.currentTimeMillis()
-    thread(name = "LibrarySyncOpPageSweep") {
-      // 2 s margin: file times can be whole seconds.
-      val removed = LibraryOpsPage.sweepStale(opPageDir, 2_000L, startedAt)
-      Log.i(tag, "ops.page.sweep.startup removed=$removed")
-    }
-  }
 
   private fun emitProgress(stage: String, bytesRead: Long, totalBytes: Long) {
     val payload = WritableNativeMap().apply {
@@ -114,155 +97,31 @@ class LibrarySyncModule(private val context: ReactApplicationContext) : ReactCon
   }
 
   /**
-   * One stored library change (base64 envelope) -> its JSON text in the file at [targetPath], opened on a worker thread
-   * (LIB-SYNC-14), plus `sliceEnds`: where to cut the file into slices of about [sliceBytes] that each decode as UTF-8.
-   * The text never becomes one Java String (a 3.5 MB change is a 113 MB String; OutOfMemoryError on a 256 MB heap):
-   * JS reads it back with [readTextSlice]. Rejects with message `DECRYPT_FAILED` for a wrong key or a broken envelope,
-   * and with the frame error (`corrupt_compressed_frame`, `unknown_compression_codec:N`) otherwise: the messages the JS
-   * reader throws.
+   * One stored library change (base64 envelope) -> its JSON text, opened on a worker thread (LIB-SYNC-14). Rejects
+   * with message `DECRYPT_FAILED` for a wrong key or a broken envelope, and with the frame error
+   * (`corrupt_compressed_frame`, `unknown_compression_codec:N`) otherwise: the messages the JS reader throws.
    */
   @ReactMethod
-  fun openOpPayloadToFile(payloadBase64: String, keyBase64: String, targetPath: String, sliceBytes: Double, promise: Promise) {
+  fun openOpPayload(payloadBase64: String, keyBase64: String, promise: Promise) {
     thread(name = "LibrarySyncOpOpen") {
       val startedAt = System.currentTimeMillis()
+      val envelope: ByteArray
+      val plain: ByteArray
       try {
-        val envelope = Base64.decode(payloadBase64, Base64.DEFAULT)
-        val opened = try {
-          SnapshotCodec.openPayloadToFile(
-            envelope, Base64.decode(keyBase64.trim(), Base64.DEFAULT), File(targetPath), sliceBytes.toInt()
-          )
+        envelope = Base64.decode(payloadBase64, Base64.DEFAULT)
+        plain = try {
+          SnapshotCodec.openPayload(envelope, Base64.decode(keyBase64.trim(), Base64.DEFAULT))
         } catch (error: java.security.GeneralSecurityException) {
           throw IllegalStateException("DECRYPT_FAILED", error)
         }
-        val ms = System.currentTimeMillis() - startedAt
-        Log.i(tag, "op.open.done storedBytes=${envelope.size} jsonBytes=${opened.jsonBytes} slices=${opened.sliceEnds.size} ms=$ms")
-        val ends = WritableNativeArray().apply { opened.sliceEnds.forEach { pushDouble(it.toDouble()) } }
-        promise.resolve(
-          WritableNativeMap().apply {
-            putDouble("storedBytes", envelope.size.toDouble())
-            putDouble("jsonBytes", opened.jsonBytes.toDouble())
-            putArray("sliceEnds", ends)
-            putDouble("ms", ms.toDouble())
-          }
-        )
       } catch (error: Throwable) {
         val message = if (error.message == "INVALID_BLOB" || error.message == "INVALID_KEY") "DECRYPT_FAILED" else error.message
         Log.e(tag, "op.open.failed message=$message", error)
         promise.reject("OPEN_FAILED", message ?: error.javaClass.simpleName, error)
+        return@thread
       }
-    }
-  }
-
-  /** Bytes [start, end) of a UTF-8 file as text, read on a worker thread: one slice from [openOpPayloadToFile]. */
-  @ReactMethod
-  fun readTextSlice(path: String, start: Double, end: Double, promise: Promise) {
-    thread(name = "LibrarySyncTextSlice") {
-      try {
-        val from = start.toLong()
-        val length = end.toLong() - from
-        require(from >= 0 && length >= 0 && length <= Int.MAX_VALUE) { "INVALID_RANGE" }
-        val bytes = ByteArray(length.toInt())
-        RandomAccessFile(path, "r").use { file ->
-          file.seek(from)
-          file.readFully(bytes)
-        }
-        promise.resolve(String(bytes, Charsets.UTF_8))
-      } catch (error: Throwable) {
-        Log.e(tag, "text.slice.failed path=$path start=$start end=$end", error)
-        promise.reject("READ_FAILED", error.message ?: error.javaClass.simpleName, error)
-      }
-    }
-  }
-
-  /**
-   * One page of the binary op stream (vault v4 plan §1.7, LIB-SYNC-15): `{url, headers, keyBase64, fromVersion}` ->
-   * `{version, snapshotVersion, hasMore, tooOld, storageFormatVersion, opStreamVersion, targetOpStreamVersion, ops,
-   * bytes, ms}`, fetched, decrypted and inflated on a worker thread. Each op is `{version, jsonBytes, text}` or, when
-   * large, `{version, jsonBytes, path, sliceEnds}` (read with [readTextSlice], then deleted by JS). Rejects `HTTP_<status>`
-   * (message = body, e.g. the 426 `app_update_required`), `NETWORK_FAILED`, `BAD_FRAMES`, `INVALID_KEY`, `OPEN_FAILED`.
-   */
-  @ReactMethod
-  fun fetchOpsPage(request: ReadableMap, promise: Promise) {
-    thread(name = "LibrarySyncOpsPage") {
-      val startedAt = System.currentTimeMillis()
-      try {
-        val url = request.getString("url") ?: throw LibraryOpsPage.Failure("BAD_REQUEST", "url missing")
-        val fromVersion = request.getDouble("fromVersion").toLong()
-        val headers = HashMap<String, String>()
-        request.getMap("headers")?.toHashMap()?.forEach { (name, value) -> if (value != null) headers[name] = value.toString() }
-        val rawKey = try {
-          Base64.decode((request.getString("keyBase64") ?: "").trim(), Base64.DEFAULT)
-        } catch (error: IllegalArgumentException) {
-          throw LibraryOpsPage.Failure("INVALID_KEY", "INVALID_KEY", error)
-        }
-        val fileDir = opPageDir
-        val swept = LibraryOpsPage.sweepStale(fileDir, 60 * 60 * 1000L)
-        Log.i(tag, "ops.page.start since=$fromVersion swept=$swept")
-        val page = LibraryOpsPage.fetch(url, headers, rawKey, fromVersion, fileDir) { Log.i(tag, it) }
-        val ops = WritableNativeArray()
-        var files = 0
-        for (op in page.ops) {
-          ops.pushMap(WritableNativeMap().apply {
-            putDouble("version", op.version.toDouble())
-            putDouble("jsonBytes", op.jsonBytes.toDouble())
-            when (op) {
-              is LibraryOpsPage.OpenedOp.Inline -> putString("text", op.text)
-              is LibraryOpsPage.OpenedOp.InFile -> {
-                files += 1
-                putString("path", op.path)
-                putArray("sliceEnds", WritableNativeArray().apply { op.sliceEnds.forEach { pushDouble(it.toDouble()) } })
-              }
-            }
-          })
-        }
-        val ms = System.currentTimeMillis() - startedAt
-        Log.i(tag, "ops.page.done since=$fromVersion version=${page.version} ops=${page.ops.size} files=$files bytes=${page.bodyBytes} ms=$ms")
-        promise.resolve(WritableNativeMap().apply {
-          putDouble("version", page.version.toDouble())
-          putDouble("snapshotVersion", page.snapshotVersion.toDouble())
-          putBoolean("hasMore", page.hasMore)
-          putBoolean("tooOld", page.tooOld)
-          putDouble("storageFormatVersion", page.storageFormatVersion.toDouble())
-          putDouble("opStreamVersion", page.opStreamVersion.toDouble())
-          val target = page.targetOpStreamVersion
-          if (target == null) putNull("targetOpStreamVersion") else putDouble("targetOpStreamVersion", target.toDouble())
-          putArray("ops", ops)
-          putDouble("bytes", page.bodyBytes.toDouble())
-          putDouble("ms", ms.toDouble())
-        })
-      } catch (error: LibraryOpsPage.Failure) {
-        Log.e(tag, "ops.page.failed code=${error.code} message=${error.message?.take(300)}", error)
-        promise.reject(error.code, error.message ?: error.code, error)
-      } catch (error: Throwable) {
-        Log.e(tag, "ops.page.failed code=OPS_PAGE_FAILED", error)
-        promise.reject("OPS_PAGE_FAILED", error.message ?: error.javaClass.simpleName, error)
-      }
-    }
-  }
-
-  /**
-   * One-time packing of the playback DB's chunk tables into `media_chunk_lists` (LIB-FMT-12), on a worker thread:
-   * `{lists, rows, ms}`. JS runs it from the gated layout step with no transaction open on that file. Rejects
-   * `NO_CHUNK_LISTS_TABLE` or `CONVERT_FAILED`; on either the file is unchanged.
-   */
-  @ReactMethod
-  fun convertChunkLists(playbackDbPath: String, nowIso: String, promise: Promise) {
-    thread(name = "LibrarySyncChunkLists") {
-      try {
-        Log.i(tag, "chunkLists.convert.start db=$playbackDbPath")
-        val result = ChunkListConversion.convert(playbackDbPath, nowIso) { Log.i(tag, it) }
-        promise.resolve(WritableNativeMap().apply {
-          putInt("lists", result.lists)
-          putDouble("rows", result.rows.toDouble())
-          putDouble("ms", result.ms.toDouble())
-        })
-      } catch (error: ChunkListConversion.Failure) {
-        Log.e(tag, "chunkLists.convert.failed code=${error.code}", error)
-        promise.reject(error.code, error.message ?: error.code, error)
-      } catch (error: Throwable) {
-        Log.e(tag, "chunkLists.convert.failed code=CONVERT_FAILED", error)
-        promise.reject("CONVERT_FAILED", error.message ?: error.javaClass.simpleName, error)
-      }
+      Log.i(tag, "op.open.done storedBytes=${envelope.size} jsonBytes=${plain.size} ms=${System.currentTimeMillis() - startedAt}")
+      promise.resolve(String(plain, Charsets.UTF_8))
     }
   }
 

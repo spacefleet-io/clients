@@ -123,8 +123,7 @@ export type LibraryOp =
   | IngestJobUpsertOp
   | IngestJobDeleteOp
   | IngestJobEventAddOp
-  | IngestJobHistoryClearOp
-  | LibraryOpV4Addition;
+  | IngestJobHistoryClearOp;
 
 // --- Op stream 4 (LIB-FMT-11) ---------------------------------------------------------------------------------------
 // Codec and byte layout: `@space/library-db-definition/chunkLists` and `test-vectors/chunk-lists.json`.
@@ -204,9 +203,5 @@ export type MediaEpisodeDeleteOp = LibraryOpBase & {
   };
 };
 
-/**
- * The ops op stream 4 adds (LIB-FMT-11). Joins `LibraryOp` with their builders (vault v4 plan §1.1). The version-4
- * `media.upsert` shares its type with the old one: its details carry no playback keys; narrow with `isV3MediaUpsert`
- * from `@space/library-db-definition/ops`.
- */
-export type LibraryOpV4Addition = MediaUpsertV4Op | MediaFilePlaybackSetOp | MediaFilePlaybackDeleteOp | MediaEpisodeDeleteOp;
+/** The ops op stream 4 adds (LIB-FMT-11). Joins `LibraryOp` with their builders (vault v4 plan §1.1). */
+export type LibraryOpV4Addition = MediaFilePlaybackSetOp | MediaFilePlaybackDeleteOp | MediaEpisodeDeleteOp;

@@ -14,7 +14,7 @@ vi.mock("electron", () => ({
   },
 }));
 
-import { isPickedExportFolder, registerFileSystemIpc } from "../src/main/fileSystem";
+import { registerFileSystemIpc } from "../src/main/fileSystem";
 
 type Handler = (event: unknown, ...args: unknown[]) => unknown;
 
@@ -85,35 +85,5 @@ describe("sf-pick-subtitle-file (Add a subtitle file…, PLAY-SUBGET-23)", () =>
 
     state.showOpenDialog.mockResolvedValueOnce({ canceled: true, filePaths: [] });
     await expect(pick?.({})).resolves.toBeNull();
-  });
-});
-
-// @req OFFL-FILE-01[badger-desktop] @req ACCT-EXPORT-01[badger-desktop]
-describe("sf-pick-export-folder (Download everything)", () => {
-  beforeEach(() => {
-    state.showOpenDialog.mockReset();
-  });
-
-  it("picks a folder, remembers it for the next dialog, and only that folder counts as picked", async () => {
-    const pick = registerHandlers().get("sf-pick-export-folder");
-    expect(pick).toBeDefined();
-    console.log("[export-folder] phase=before picked(/exports/a)=", isPickedExportFolder("/exports/a"));
-    expect(isPickedExportFolder("/exports/a")).toBe(false);
-
-    state.showOpenDialog.mockResolvedValueOnce({ canceled: false, filePaths: ["/exports/a"] });
-    await expect(pick?.({})).resolves.toBe("/exports/a");
-    const first = state.showOpenDialog.mock.calls[0]?.[0] as { properties: string[]; title: string; defaultPath?: string };
-    console.log("[export-folder] phase=first-dialog options=", JSON.stringify(first));
-    expect(first.properties).toEqual(["openDirectory", "createDirectory"]);
-    expect(first.title).toBe("Choose where to save the files");
-    expect(first).not.toHaveProperty("defaultPath");
-    expect(isPickedExportFolder("/exports/a")).toBe(true);
-    expect(isPickedExportFolder("/exports")).toBe(false);
-    expect(isPickedExportFolder(42)).toBe(false);
-
-    state.showOpenDialog.mockResolvedValueOnce({ canceled: true, filePaths: [] });
-    await expect(pick?.({})).resolves.toBeNull();
-    console.log("[export-folder] phase=second-dialog options=", JSON.stringify(state.showOpenDialog.mock.calls[1]?.[0]));
-    expect(state.showOpenDialog.mock.calls[1]?.[0]).toMatchObject({ defaultPath: "/exports/a" });
   });
 });

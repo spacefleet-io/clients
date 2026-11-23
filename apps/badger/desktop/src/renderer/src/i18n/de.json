@@ -199,19 +199,6 @@
     "openingImport": "Medienimport wird geöffnet…"
   },
   "library": {
-    "export": {
-      "submittedToast_one": "{{count}} Datei wird in {{folder}} gespeichert",
-      "submittedToast_other": "{{count}} Dateien werden in {{folder}} gespeichert",
-      "errors": {
-        "insufficient_disk_space": "Nicht genug freier Speicher in diesem Ordner: {{required}} nötig, {{free}} frei.",
-        "not_authenticated": "Melde dich erneut an, um Dateien herunterzuladen.",
-        "library_db_not_open": "Deine Bibliothek ist noch nicht geöffnet. Versuch es gleich noch einmal.",
-        "dest_not_writable": "In diesem Ordner kann nicht gespeichert werden. Wähle einen anderen.",
-        "dest_not_picked": "Wähle den Ordner erneut.",
-        "nothing_to_export": "Noch nichts zum Herunterladen.",
-        "generic": "Download fehlgeschlagen: {{reason}}"
-      }
-    },
     "showDelisting": {
       "title": "Folgen nicht mehr im Katalog",
       "description": "Der Katalog führt diese Folgen von {{show}} nicht mehr. Möchtest du sie aus deiner Mediathek entfernen?",
@@ -711,36 +698,9 @@
         "original": "Original"
       }
     },
-    "offlineContent": {
-      "total": "Auf diesem Computer gespeichert",
-      "empty": "Auf diesem Computer ist nichts zum Offline-Ansehen gespeichert. Nutze „Offline speichern“ bei einem Film, einer Staffel oder einer Folge, um sie hier zu behalten.",
-      "remove": "{{name}} von diesem Computer entfernen",
-      "removeAll": "Alles entfernen",
-      "expand": "Inhalt von {{name}} ein- oder ausblenden",
-      "confirmTitle": "Alles Offline-Gespeicherte entfernen?",
-      "confirmBody": "Alle auf diesem Computer gespeicherten Filme und Folgen werden davon gelöscht und der Platz wird sofort frei. Sie bleiben in deiner Mediathek und laufen online wieder von deinem Server.",
-      "confirmCancel": "Abbrechen",
-      "confirmRemove": "Alles entfernen",
-      "season": "Staffel {{n}}",
-      "episodeNumber": "S{{season}} · F{{episode}}",
-      "unknownTitle": "Ein Titel, der nicht mehr in deiner Mediathek ist",
-      "unknownEpisode": "Folge",
-      "removeFailed": "Konnte nicht von diesem Computer entfernt werden. Versuch es noch einmal."
-    },
-    "exportAll": {
-      "title": "Alles herunterladen",
-      "help": "Speichere deine ganze Bibliothek als Videodateien in einem Ordner deiner Wahl, in der besten vorhandenen Qualität. Filme landen in Movies, Serien in Shows.",
-      "button": "Alles herunterladen",
-      "moreOptions": "Weitere Optionen",
-      "confirmTitle": "Alles herunterladen?",
-      "confirmBody_one": "{{count}} Datei, insgesamt {{size}}, wird in {{folder}} gespeichert.",
-      "confirmBody_other": "{{count}} Dateien, insgesamt {{size}}, werden in {{folder}} gespeichert.",
-      "confirm": "Herunterladen",
-      "cancel": "Abbrechen"
-    },
     "offlineExportFormat": {
-      "label": "Dateiformat",
-      "help": "Format der Videodateien, die du herunterlädst. MKV behält alle Untertitelarten. MP4 läuft auf mehr Geräten, kann aber keine PGS-/ASS-Untertitel enthalten – solche Spuren werden ausgelassen.",
+      "label": "Format für Offline-Export",
+      "help": "Container, der beim Speichern von Medien auf deinem Gerät verwendet wird. MKV ist für alle Untertitelarten verlustfrei. MP4 läuft auf mehr Geräten, kann aber keine PGS-/ASS-Untertitel einbetten – solche Spuren werden dann ausgelassen.",
       "mkv": "MKV (empfohlen)",
       "mp4": "MP4",
       "mp4Warning": "MP4 kann keine PGS- oder ASS-Untertitel einbetten. SRT-/VTT-Untertitel werden in mov_text umgewandelt und bleiben erhalten."
@@ -975,7 +935,6 @@
       "playback": "Wiedergabe",
       "trailers": "Trailer",
       "downloads": "Downloads",
-      "offlineContent": "Offline-Inhalte verwalten",
       "transcoding": "Transkodierung",
       "metadata": "Metadaten",
       "performance": "Leistung",
@@ -992,7 +951,6 @@
       "playback": "Standardqualität und was während der Wiedergabe passiert.",
       "trailers": "Woher Trailer kommen und in welchen Sprachen sie geladen werden.",
       "downloads": "Wie Offline-Kopien auf deinem Gerät gespeichert werden.",
-      "offlineContent": "Was auf diesem Computer zum Offline-Ansehen gespeichert ist und wie viel Platz es belegt.",
       "transcoding": "In welche Qualitäten und Codecs deine Mediathek umgewandelt wird.",
       "metadata": "Woher die Daten zu Titeln und Artwork kommen.",
       "performance": "Hardwarebeschleunigung und Auslagerung der Verarbeitung.",
@@ -1464,15 +1422,12 @@
       "ffmpegLogs": "FFmpeg-Logs",
       "offlineDownloading": "Wird offline gespeichert",
       "offlineSavedOffline": "Offline gespeichert",
-      "exportDownloading": "Datei wird heruntergeladen",
-      "exportSaved": "Im Ordner gespeichert",
       "help": {
         "sourceIngest": "Wir teilen die Originaldatei in streamingfertige Blöcke auf, damit die Wiedergabe schnell startet.",
         "transcode": "Wir erstellen zusätzliche Qualitätsstufen, damit die Wiedergabe auch bei langsameren Verbindungen flüssig bleibt.",
         "tracks": "Wir bereiten Audio- und Untertitelspuren vor, damit Zuschauer Sprache und Untertitel wechseln können.",
         "job": "Dieser Schritt bereitet Mediendateien für Wiedergabe und Synchronisierung vor.",
-        "offlineDownloading": "Wir laden jeden Block, entschlüsseln ihn und führen alle Spuren zu einer einzigen Datei zusammen, die du offline abspielen kannst.",
-        "exportDownloading": "Wir laden die beste vorhandene Qualität, entschlüsseln sie und speichern eine Videodatei mit allen Spuren im gewählten Ordner."
+        "offlineDownloading": "Wir laden jeden Block, entschlüsseln ihn und führen alle Spuren zu einer einzigen Datei zusammen, die du offline abspielen kannst."
       }
     },
     "transcodePlan": "Transcode-Plan",

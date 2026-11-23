@@ -3,9 +3,7 @@ import { appendFileSync, existsSync, mkdirSync, readFileSync, rmSync, statSync, 
 import { hostname, release } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { createHash, randomUUID } from "node:crypto";
-import { readFile, stat } from "node:fs/promises";
-import { setTimeout as sleep } from "node:timers/promises";
+import { randomUUID } from "node:crypto";
 import {
   ApiError,
   approvePairing,
@@ -81,10 +79,9 @@ import { classifySignInError, retryAfterMinutes, signInErrorDetails, type SignIn
 import { classifyResendVerificationError, classifySignUpError, classifyVerifyEmailError } from "@space/shared/signUp";
 import { asksKeySavedBeforeSignOut, type SignedOutReason } from "@space/shared/keptLibraryKey";
 import { fetchLibrarySnapshot, publishLibrarySnapshot, type FetchedLibrarySnapshot } from "@space/library-db-runtime/snapshotTransport";
-import { deleteStorageObjects, downloadStorageObjectViaTunnel, uploadStorageObjectViaTunnel } from "@space/library-db-runtime/api";
+import { deleteStorageObjects, uploadStorageObjectViaTunnel } from "@space/library-db-runtime/api";
 import { decryptBase64ToBytes } from "@space/library-db-runtime/crypto";
 import { checkKeyAgainstAccount, makeAccountKey } from "./libraryKeyCheck";
-import { createParrotExportJobs } from "./exportJobs";
 import { checkKeptLibraryKey } from "@space/desktop-shell/library-kept-key";
 import { serveStorageUnitBase } from "@space/desktop-shell/storage-units";
 import { createPasswordResetActions } from "@space/desktop-shell/password-reset";
@@ -135,12 +132,6 @@ import {
   type ParrotManageTarget,
   type ParrotPlaylistEdit,
   type ParrotTrackPlacement,
-  createParrotChunkReads,
-  isParrotCoverCrop,
-  parrotCoverMime,
-  type ParrotCoverCopies,
-  type ParrotCoverCrop,
-  type ParrotImportLibraryAlbum,
 } from "@space/parrot-core";
 import { createSessionMetadata, metadataTicketsForBuild, NEUTRAL_USER_AGENT, refillLogLine, resolveMetadataUrl } from "@space/metadata-client";
 import { createFileKeyValueStorage } from "@space/metadata-client/fileStorage";
@@ -148,7 +139,6 @@ import { fetchSourceCredits } from "@space/metadata-client/credits";
 import { ticketKeysForBuild } from "@space/privacy-pass";
 import { SPACE_APP_HEADER } from "@space/shared/appScope";
 import { getAppUpdateRequired, onAppUpdateRequired, setClientIdentity } from "@space/shared/appVersion";
-import { logFailedApiCalls, recentFailedRequestIds } from "@space/shared/apiFailure";
 import { desktopClientIdentity } from "@space/desktop-shell/client-identity";
 import {
   applyParrotOps,
@@ -176,19 +166,13 @@ import {
   listParrotTracks,
   openParrotLibrary,
   makeParrotCoverCopies,
-  parrotCoverDecodable,
-  parrotCoverPreview,
-  parrotCoverProblem,
-  readParrotTrackInfo,
-  PARROT_COVER_MAX_BYTES,
   PARROT_APP_ID,
   PARROT_AUDIO_FORMATS,
   uploadParrotCover,
   publishParrotEdits,
-  clearParrotExportPartials,
-  exportParrotSongs,
-  listParrotExportSongs,
-  parrotExportFreeBytes,
+  listParrotLyricsFilesPending,
+  parrotLyricsFileStillCurrent,
+  writeParrotLyricsIntoFile,
   type ParrotLibraryDb,
 } from "@space/parrot-ingest";
 import {
@@ -198,12 +182,10 @@ import {
   type ParrotBillingResult,
   type ParrotCheckoutInput,
   type ParrotCreateKeyResult,
-  type ParrotCoverCutRequest,
   type ParrotImportAlbumSearch,
-  type ParrotImportAlbumMatch,
+  type ParrotImportMatchResult,
   type ParrotImportArtistPhoto,
-  type ParrotImportMatchedAlbum,
-  type ParrotImportPicture,
+  type ParrotImportSongSearch,
   type ParrotImportSelection,
   type ParrotImportStatus,
   type ParrotKeyResult,
@@ -237,12 +219,9 @@ import { requestFlatpakAutostart } from "./flatpakAutostart";
 import { createParrotPairingApprover } from "./pairingApprove";
 import { completeParrotKeyPairing, completeParrotPairedSignIn, type ParrotPairedSignInDeps } from "./pairedSignIn";
 import { createDesktopStreamSlots } from "./streamSlot";
-import { importCoverOf, PARROT_MUSIC_ID, searchParrotImportAlbums } from "./importSearch";
+import { importCoverOf, PARROT_MUSIC_ID, searchParrotImportAlbums, searchParrotImportSongs } from "./importSearch";
 import { importEnded, importStopError, restoreImportJobs, type StoredImportJob } from "./importJobs";
 import { createDesktopPairingClient, pairingRefusalOf, resolveDeviceName } from "@space/desktop-shell/pairing-main";
-import { SIBLING_SIGN_IN_ARG, armSiblingHiddenQuit, isSiblingSignInLaunch, type SiblingHiddenQuit } from "@space/desktop-shell/sibling-main";
-import { SIBLING_IPC, type SiblingSignInResult } from "@space/desktop-shell/sibling";
-import { createParrotSiblingHost, parrotSiblingAccount, setupStepAfterSiblingSignIn } from "./siblingSignIn";
 import { createDesktopUpdater } from "@space/desktop-shell/updater-main";
 // electron-updater is CommonJS (bundled here: Parrot ships no node_modules): read `autoUpdater` off the default import.
 import electronUpdater from "electron-updater";
@@ -250,7 +229,6 @@ import { pairingModeOf, type PairingMode, type PairingPollResult, type PairingSt
 import { createDesktopFeedbackSender, type DesktopFeedbackInput } from "@space/error-report/desktop-feedback";
 import { registerErrorReportsIpc } from "@space/error-report/desktop-main";
 import { createErrorLog } from "@space/error-report/error-log";
-import { rendererConsoleLine } from "./rendererConsole";
 import { createLibraryDbs } from "./libraryDbs";
 import { createLoudnessGate } from "./loudnessGate";
 import { createQuitGuard, createSaveChain, QUIT_SAVE_TIMEOUT_MS } from "./saveChain";
@@ -277,8 +255,7 @@ app.setPath("userData", process.env.SF_USER_DATA_PATH?.trim() || join(app.getPat
 const userDataDir = app.getPath("userData");
 mkdirSync(join(userDataDir, "logs"), { recursive: true });
 const logFile = join(userDataDir, "logs", "parrot-main.log");
-// The main log, cut back to nothing at start when it passed 5 MB: it holds no token, key or file content, only what
-// happened; the window's warnings and errors go in scrubbed (REL-LOG-06).
+// One log per start, kept small: it holds no token, key or file content, only what happened.
 if (existsSync(logFile) && statSync(logFile).size > 5 * 1024 * 1024) rmSync(logFile, { force: true });
 
 const log = (line: string) => {
@@ -291,9 +268,6 @@ const log = (line: string) => {
   }
 };
 const errorText = (error: unknown) => (error instanceof Error ? error.message : String(error));
-// REL-LOG-31: one line per failed API call of this process (the window reaches the API only through it), with the
-// server's request id so the server's line about it is found by one search. The main log only, never a report.
-logFailedApiCalls(({ status, code, requestId }) => log(`[api] call failed status=${status} code=${code} requestId=${requestId}`));
 // UX-SUP-05: the newest warning and error lines (scrubbed as recorded), sent only with feedback the user attaches it to.
 const errorLog = createErrorLog();
 /** A failure line: the main log, and the error log feedback can carry. */
@@ -364,15 +338,6 @@ const mainOutDir = dirname(fileURLToPath(import.meta.url));
 let mainWindow: BrowserWindow | null = null;
 let store: ParrotStore;
 
-// ACCT-PAIR-07: same-device sign-in with Badger (siblingSignIn.ts). `--sibling-sign-in`: Badger started this run only
-// to sign itself in; it opens no window and quits soon after answering.
-const siblingHiddenStart = isSiblingSignInLaunch(process.argv);
-let siblingHiddenQuit: SiblingHiddenQuit | null = null;
-const siblingHost = createParrotSiblingHost({ getApiBaseUrl: () => apiBaseUrl, dev: isDevBuild, log, onAnswered: () => siblingHiddenQuit?.answered() });
-app.on("will-quit", () => void siblingHost.close());
-/** Signed in: Badger on this computer can offer this account (the key is read when Badger asks). */
-const publishSiblingAccount = () => void siblingHost.setAccount(parrotSiblingAccount(store));
-
 /** REL-UPD-01: new versions install themselves, from `<api>/desktop/parrot/`; the setting lives in the store. */
 const updaterLogLine = (level: string) => (fields: Record<string, unknown>, message: string) =>
   log(`[updater] ${level === "info" ? "" : `${level}: `}${message} ${JSON.stringify(fields)}`);
@@ -440,9 +405,6 @@ const libraryDbs = createLibraryDbs<ParrotLibraryDb>((db) => db.close(), log);
 const setLibrary = (next: { db: ParrotLibraryDb; version: number | null } | null) => {
   library = next;
   libraryDbs.setCurrent(next?.db ?? null);
-  // OFFL-FILE-01: an export waits while no library is open (sign-out) and goes on once one is.
-  if (next) exportJobs.resume();
-  else exportJobs.pause();
 };
 /** Songs kept on this computer (PAR-OFFL-03): sealed under userData/offline, set up once the store is open. */
 const offlineDir = join(userDataDir, "offline");
@@ -450,56 +412,6 @@ let keptFiles: ParrotKeptFiles | null = null;
 let keeping: DesktopKeeping | null = null;
 let sessionChecked: Promise<void> | null = null;
 const importAbort = new AbortController();
-
-/** Reads one sealed chunk for an export: kept on this computer, else downloaded, retried a few times (OFFL-FILE-01). */
-const readSealedForExport = async (objectKey: string, signal: AbortSignal): Promise<Uint8Array> => {
-  const kept = await keptFiles?.readSealed(objectKey);
-  if (kept) return kept;
-  for (let attempt = 1; ; attempt++) {
-    signal.throwIfAborted();
-    try {
-      // `export` downloads stay allowed once the account is unpaid (#145).
-      return await downloadStorageObjectViaTunnel(store.token() ?? "", objectKey, { clientType: CLIENT_TYPE, purpose: "export" }, PARROT_APP_ID);
-    } catch (error) {
-      if (attempt >= 4) throw error;
-      log(`[export] chunk ${objectKey} download failed (try ${attempt}): ${errorText(error)}`);
-      await sleep(1000 * 2 ** attempt, undefined, { signal });
-    }
-  }
-};
-
-/** "Download everything" (OFFL-FILE-01, ACCT-EXPORT-01): the queue, kept in userData. */
-const exportJobs = createParrotExportJobs({
-  file: join(userDataDir, "export-jobs.json"),
-  userId: () => store?.user?.id ?? "",
-  db: () => library?.db ?? null,
-  listSongs: listParrotExportSongs,
-  pickFolder: async () => {
-    if (!mainWindow) return null;
-    const picked = await dialog.showOpenDialog(mainWindow, { properties: ["openDirectory", "createDirectory"] });
-    return picked.canceled ? null : (picked.filePaths[0] ?? null);
-  },
-  freeBytes: parrotExportFreeBytes,
-  run: ({ db, songs, dest, signal, onProgress, onSongDone }) =>
-    libraryDbs.hold(db, async () => {
-      // What an export stopped by a crash left half-written in that folder (OFFL-SAFE-01).
-      await clearParrotExportPartials(dest);
-      return exportParrotSongs({
-        db,
-        songs,
-        dest,
-        libraryKeyBase64: () => store.libraryKey() ?? "",
-        readSealed: readSealedForExport,
-        signal,
-        onProgress,
-        onSongDone,
-        log,
-      });
-    }),
-  emit: (jobs) => mainWindow?.webContents.send(PARROT_IPC.exportJobsEvent, jobs),
-  log,
-});
-
 /** The running scan or upload's own stop, for the Jobs panel's X (UX-JOBS-02); null while none runs. */
 let importRun: AbortController | null = null;
 
@@ -556,8 +468,6 @@ const closeLibrary = () => setLibrary(null);
 
 const resetToSignIn = (reason: SignedOutReason) => {
   void store.signOut(reason).catch((error: unknown) => fail(`[store] signed-out state not saved: ${errorText(error)}`));
-  // ACCT-PAIR-07: signed out, Badger on this computer is offered nothing.
-  void siblingHost.setAccount(null);
   closeLibrary();
   stopLookup();
   // A new account starts from a first check, which only records where the copies stand (PAR-COPY-01).
@@ -619,9 +529,6 @@ const readingChunkLoader = createParrotChunkLoader({
   maxBytes: 8 * 1024 * 1024,
   log,
 });
-
-/** The stored chunks the loopback server is reading now: a file's replaced chunks are removed only once free (PAR-FMT-01). */
-const chunkReads = createParrotChunkReads();
 
 /**
  * The file a song plays from, picked once when its address is asked for (the song starting, or the gapless player
@@ -708,7 +615,6 @@ const ensurePlayback = (): Promise<ParrotPlaybackServer> => {
     load: chunkLoader,
     loadForReading: readingChunkLoader,
     loadCover: (objectKey) => coverLoader.load(objectKey),
-    reads: chunkReads,
     log,
   }).then(
     (server) => (playback = server),
@@ -1189,8 +1095,7 @@ const editDetails = (target: unknown, cover: unknown): Promise<ParrotLibraryResu
       cover,
       db: opened,
       query: libraryQuery,
-      // PAR-META-22: an album's new cover is cut to the square the user framed, else its centre one.
-      makeCoverCopies: (bytes, crop) => albumCoverCopies({ bytes, mime: parrotCoverMime(bytes) ?? "" }, crop),
+      makeCoverCopies: (bytes) => makeParrotCoverCopies(bytes, log),
       storeCover: (bytes) =>
         uploadParrotCover({ token, libraryKeyBase64: key, bytes, clientType: CLIENT_TYPE, appId: PARROT_APP_ID, upload: uploadStorageObjectViaTunnel }),
       publish: (ops, build) => publishLibraryChange("edit", what, opened, ops, build, token, key),
@@ -1252,6 +1157,7 @@ const stopLookup = () => {
   autoLyricsStop?.abort();
   autoLyricsStop = null;
   lyricsPending.clear();
+  lyricsFilesStop?.abort();
   autoArtistPicturesStop?.abort();
   autoArtistPicturesStop = null;
   retryUnidentifiedStop?.abort();
@@ -1261,6 +1167,8 @@ const stopLookup = () => {
   autoAlbumCoversStop = null;
   autoCopyChangesStop?.abort();
   autoCopyChangesStop = null;
+  lyricsFilesStop = null;
+  lyricsFilesTried.clear();
   metadataStarted = null;
   void metadata.stop().catch((error: unknown) => fail(`[lookup] could not drop the tickets: ${errorText(error)}`));
 };
@@ -1344,6 +1252,7 @@ const autoLyrics = () => {
     autoLyricsStop = null;
     setBackgroundWork("lyrics", null);
     if ((autoLyricsAgain || lyricsPending.hasWanted()) && !stop.signal.aborted) autoLyrics();
+    else if (!stop.signal.aborted) lyricsIntoFiles();
   });
 };
 
@@ -1496,8 +1405,7 @@ const autoAlbumCovers = () => {
     query: () => currentLibraryQuery,
     lookup: async (albumId, size) => (await lookupClient()).musicCover(albumId, size),
     fromBase64: (base64) => new Uint8Array(Buffer.from(base64, "base64")),
-    // PAR-META-22: an album's cover is cut to its centre square.
-    makeCopies: (bytes) => albumCoverCopies({ bytes, mime: parrotCoverMime(bytes) ?? "" }, null),
+    makeCopies: (bytes) => makeParrotCoverCopies(bytes, log),
     store: (bytes) => uploadParrotCover({ token, libraryKeyBase64: key, bytes, clientType: CLIENT_TYPE, appId: PARROT_APP_ID, upload: uploadStorageObjectViaTunnel }),
     publish,
     asked: albumCoversAsked,
@@ -1685,6 +1593,92 @@ const retryUnidentified = () => {
 };
 
 /**
+ * PAR-LYR-01, PAR-META-04: found lyrics go into the song's own stored file too, for files that had none (the
+ * library's lyrics came from the lookup). Each file is read, tagged and stored again as new chunks of the same file;
+ * the change is published through the save chain, then the old chunks are removed (the new ones when the publish
+ * failed or the file changed meanwhile). A file is tried once per app session, so a failure never loops. One pass at
+ * a time; a request during a pass asks for another pass after it. Sign-out stops it.
+ */
+const lyricsFilesTried = new Set<string>();
+let lyricsFilesStop: AbortController | null = null;
+let lyricsFilesAgain = false;
+const lyricsIntoFiles = () => {
+  // An import publishes song after song: rewriting files meanwhile only races it. Its end reloads the library, which
+  // runs the lookup again and so this pass.
+  if (lyricsFilesStop || importStatus.running) {
+    lyricsFilesAgain = !importStatus.running;
+    return;
+  }
+  const token = store.token();
+  const key = store.libraryKey();
+  const user = store.user;
+  if (!token || !key || !user || !library) return;
+  const stop = new AbortController();
+  lyricsFilesStop = stop;
+  lyricsFilesAgain = false;
+  const removeObjects = async (keys: string[], what: string) => {
+    try {
+      await deleteStorageObjects(token, keys, PARROT_APP_ID);
+    } catch (error) {
+      fail(`[lyrics:file] could not remove the ${what} chunks: ${errorText(error)}`);
+    }
+  };
+  const writeOne = async (fileId: string) => {
+    if (!library) return;
+    const opened = library.db;
+    // Held across the download and upload: an import may replace the current library meanwhile.
+    const written = await libraryDbs.hold(opened, () => writeParrotLyricsIntoFile(opened, fileId, {
+      token,
+      userId: user.id,
+      libraryKeyBase64: key,
+      clientType: CLIENT_TYPE,
+      load: chunkLoader,
+      upload: defaultParrotImportTransport.upload,
+      openUploadSession: defaultParrotImportTransport.openUploadSession,
+      now: Date.now(),
+      newId: randomUUID,
+      log,
+      signal: stop.signal,
+    }));
+    if (written.kind === "skipped") {
+      log(`[lyrics:file] ${fileId}: left as it is (${written.reason})`);
+      return;
+    }
+    const build = (db: ParrotLibraryDb) => (parrotLyricsFileStillCurrent(db, fileId, written.oldObjectKeys) ? [written.op] : []);
+    const run = async () => {
+      if (stop.signal.aborted || !library) return false;
+      const ops = build(library.db);
+      if (ops.length === 0) return false;
+      return (await publishLibraryChange("lyrics:file", `file ${fileId}`, library.db, ops, build, token, key)).ok;
+    };
+    const published = await librarySaves.run(run).catch(() => false);
+    if (published && library && parrotLyricsFileStillCurrent(library.db, fileId, written.newObjectKeys)) {
+      log(`[lyrics:file] ${fileId}: lyrics written, ${written.sizeBytes} bytes`);
+      await removeObjects(written.oldObjectKeys, "old");
+    } else {
+      fail(`[lyrics:file] ${fileId}: not published, the new chunks are removed`);
+      await removeObjects(written.newObjectKeys, "new");
+    }
+  };
+  void (async () => {
+    while (!stop.signal.aborted && library) {
+      const fileId = listParrotLyricsFilesPending(library.db).find((id) => !lyricsFilesTried.has(id));
+      if (!fileId) break;
+      lyricsFilesTried.add(fileId);
+      try {
+        await writeOne(fileId);
+      } catch (error) {
+        if (!stop.signal.aborted) fail(`[lyrics:file] ${fileId}: could not write: ${errorText(error)}`);
+      }
+    }
+  })().finally(() => {
+    if (lyricsFilesStop !== stop) return;
+    lyricsFilesStop = null;
+    if (lyricsFilesAgain && !stop.signal.aborted) lyricsIntoFiles();
+  });
+};
+
+/**
  * PAR-LYR-05: asks our lyrics library for the words of a song whose file has none, keeps them in the library (the
  * same save chain as edits), and answers with what the Lyrics tab shows now. The song is pending from the call until
  * its answer is kept (PAR-LYR-06), also while it waits its turn behind other saves (the album card's "Fetch lyrics"
@@ -1714,6 +1708,7 @@ const fetchLyrics = (trackId: unknown): Promise<ParrotFetchLyricsResult> => {
       const published = await publishLibraryChange("lyrics", `song ${trackId}`, opened, [op], () => [op], token, key);
       if (!published.ok) return { ok: false, error: published.error };
     }
+    if (found.kind === "found") setTimeout(lyricsIntoFiles, 0);
     const lyrics = library ? getParrotLyrics(library.db, trackId) : null;
     return { ok: true, outcome: found.kind === "found" || found.kind === "present" ? "found" : "none", lyrics };
   };
@@ -1812,215 +1807,48 @@ const suggestEditCover = async (coverId: unknown): Promise<ParrotEditCover | nul
 
 /** The scan waiting in the confirm dialog (PAR-UP-05): only its files can be imported. */
 let pendingScan: ParrotImportScan | null = null;
-/** The library's albums every album's lookup weighs (PAR-META-03), read once per scan. */
-let pendingLibraryAlbums: Promise<ParrotImportLibraryAlbum[]> | null = null;
-/** The review's albums still looking up, by the review's album id: "Import as is" stops one (PAR-UP-08). */
-let pendingAlbumLookups = new Map<string, AbortController>();
-/**
- * The pictures the review can make an album's cover (PAR-UP-08): those built into the scanned files and the image
- * files the user picked, by id; the import takes the chosen one's bytes from here, never from the window.
- */
-let pendingPictures = new Map<string, ParrotCoverImage>();
-/** The picture id built into each scanned file already read, so a second look at an album reads no file again. */
-let pendingFilePictures = new Map<string, string | null>();
-
-/** Forgets everything the review of the waiting scan asked: its lookups are stopped. */
-const forgetImportReview = () => {
-  for (const lookup of pendingAlbumLookups.values()) lookup.abort();
-  pendingAlbumLookups = new Map();
-  pendingLibraryAlbums = null;
-  pendingPictures = new Map();
-  pendingFilePictures = new Map();
-  pendingArtistPhotos = new Map();
-  pendingCovers = new Map();
-};
+/** Its files' matches, asked once and kept until the scan is answered, so reopening the dialog asks nothing again. */
+let pendingMatches: Promise<ParrotImportMatchResult> | null = null;
 
 /**
- * PAR-UP-08 (Chris v3 approval, 2026-11-21): one album of the waiting scan looks itself up, on its own, as soon as the
- * review shows it from its files' tags: each of its files is matched (title, artist and length, the album tag as a
- * hint, through the session's anonymous lookup) and placed on the album it really is, with its full tracklist. Covers
- * are not waited for (#2509): the review asks each one afterwards (`importCover`). "Import as is" stops the lookup
- * (`stopImportAlbumMatch`): its answer is `stopped` and the album is imported from its tags. When the lookup can't be
- * reached (none configured: 501) every file is `lookup-failed`: the review keeps those as is, so it never stops the
- * import.
+ * PAR-UP-05 (Chris 2026-11-11): matches each file of the waiting scan on its own (title, artist and length, the album
+ * tag as a hint, through the session's anonymous lookup), a few at a time, groups the files by the album they really
+ * match with its full tracklist. Covers are not waited for (#2509): the review asks each one afterwards
+ * (`importCover`) and draws it as it comes. When the lookup can't be reached (none configured: 501) every file is
+ * `lookup-failed`: the review keeps those as is, so it never stops the import.
  */
-const matchImportAlbum = async (question: unknown): Promise<ParrotImportAlbumMatch> => {
+const matchImport = (): Promise<ParrotImportMatchResult> => {
   const scan = pendingScan;
-  const asked = (question ?? {}) as { id?: unknown; files?: unknown };
-  const id = typeof asked.id === "string" ? asked.id : "";
-  const files = new Set(Array.isArray(asked.files) ? asked.files.map(String) : []);
-  const entries = scan ? scan.entries.filter((entry) => files.has(entry.file)) : [];
-  if (!scan || !id || entries.length === 0) return { kind: "stopped" };
-  pendingAlbumLookups.get(id)?.abort();
-  const lookup = new AbortController();
-  pendingAlbumLookups.set(id, lookup);
-  // A stopped lookup answers no more questions: the matcher takes each as a failed one and finishes at once.
-  const stopped = new Promise<never>((_resolve, reject) =>
-    lookup.signal.addEventListener("abort", () => reject(new Error("stopped by Import as is")), { once: true })
-  );
-  stopped.catch(() => undefined);
-  const unlessStopped = <T>(ask: () => Promise<T>): Promise<T> => (lookup.signal.aborted ? stopped : Promise.race([ask(), stopped]));
-  try {
+  if (!scan) return Promise.resolve({ albums: [], unidentified: [] });
+  pendingMatches ??= (async () => {
     const client = await lookupClient().catch((error: unknown) => {
       fail(`[import] music lookup unavailable: ${errorText(error)}`);
       return null;
     });
-    if (!client) return { kind: "found", albums: [], unidentified: entries.map((entry) => ({ file: entry.file, reason: "lookup-failed" as const })) };
-    pendingLibraryAlbums ??= parrotImportLibraryAlbums(currentLibraryQuery);
-    const library = await pendingLibraryAlbums;
-    const matched = await matchParrotImport(entries, {
-      recordings: (q) => unlessStopped(() => client.musicRecordings(q)),
-      albums: (q) => unlessStopped(() => client.musicAlbums(q)),
+    if (!client) return { albums: [], unidentified: scan.entries.map((entry) => ({ file: entry.file, reason: "lookup-failed" as const })) };
+    const matched = await matchParrotImport(scan.entries, {
+      recordings: (question) => client.musicRecordings(question),
+      albums: (question) => client.musicAlbums(question),
       log,
       // PAR-META-03: the library's albums pull a song into their empty slots and keep their edition.
-      library,
+      library: await parrotImportLibraryAlbums(currentLibraryQuery),
     });
-    if (lookup.signal.aborted || pendingScan !== scan) {
-      log(`[import] match ${id}: stopped, ${entries.length} song(s) imported as is`);
-      return { kind: "stopped" };
-    }
-    const albums: ParrotImportMatchedAlbum[] = matched.albums.map((found) => ({ album: found.album, cover: null, tracklistKnown: found.tracklistKnown, files: found.files }));
+    const albums: ParrotImportMatchResult["albums"] = matched.albums.map((found) => ({ album: found.album, cover: null, tracklistKnown: found.tracklistKnown, files: found.files }));
     const unsure = albums.filter((found) => found.files.some((file) => !file.sure)).length;
-    log(`[import] match ${id}: ${albums.length} album(s) (${unsure} to check), ${matched.unidentified.length} as is of ${entries.length} song(s)`);
-    return { kind: "found", albums, unidentified: matched.unidentified };
-  } finally {
-    if (pendingAlbumLookups.get(id) === lookup) pendingAlbumLookups.delete(id);
-  }
-};
-
-/** PAR-UP-08 "Import as is": stops one album's lookup; what it already found is dropped. */
-const stopImportAlbumMatch = (id: unknown) => {
-  const lookup = typeof id === "string" ? pendingAlbumLookups.get(id) : undefined;
-  if (!lookup) return;
-  log(`[import] match ${String(id)}: Import as is`);
-  lookup.abort();
-};
-
-/** A picture kept for the review under its id, as the window shows it (PAR-UP-08); null when it can't be read. */
-const reviewPicture = (bytes: Uint8Array, mime: string, files: number): ParrotImportPicture | null => {
-  const preview = parrotCoverPreview(bytes);
-  if (!preview) return null;
-  const id = `picture:${createHash("sha256").update(bytes).digest("hex")}`;
-  pendingPictures.set(id, { bytes, mime });
-  return { id, data: `data:${preview.mime};base64,${Buffer.from(preview.bytes).toString("base64")}`, width: preview.width, height: preview.height, files };
+    log(`[import] match: ${albums.length} album(s) (${unsure} to check), ${matched.unidentified.length} unidentified of ${scan.entries.length} song(s)`);
+    return { albums, unidentified: matched.unidentified };
+  })();
+  return pendingMatches;
 };
 
 /**
- * PAR-UP-08: the different pictures built into an album's files, for its cover menu, each once with how many of the
- * files carry it. Only the waiting scan's files are read.
+ * PAR-META-04: the covers of the albums the confirmed songs were matched to, at the 1200 px size written into files
+ * (PAR-META-07), one album at a time. The import stores each on its album and embeds it in the light copies; a cover
+ * the lookup can't give is left out, and the album then takes the picture built into its files, if any.
  */
-const importAlbumPictures = async (files: unknown): Promise<ParrotImportPicture[]> => {
-  const scan = pendingScan;
-  if (!scan || !Array.isArray(files)) return [];
-  const scanned = new Set(scan.entries.map((entry) => entry.file));
-  const counts = new Map<string, number>();
-  const shown = new Map<string, ParrotImportPicture>();
-  for (const file of files.map(String).filter((file) => scanned.has(file))) {
-    let id = pendingFilePictures.get(file);
-    if (id === undefined) {
-      id = null;
-      try {
-        const { cover } = await readParrotTrackInfo(file);
-        if (cover && !parrotCoverProblem(cover)) {
-          const picture = reviewPicture(cover.bytes, cover.mime, 0);
-          if (picture) {
-            id = picture.id;
-            shown.set(id, picture);
-          }
-        }
-      } catch (error) {
-        fail(`[import] picture of ${file} not read: ${errorText(error)}`);
-      }
-      if (pendingScan !== scan) return [];
-      pendingFilePictures.set(file, id);
-    }
-    if (id) counts.set(id, (counts.get(id) ?? 0) + 1);
-  }
-  const pictures: ParrotImportPicture[] = [];
-  for (const [id, count] of counts) {
-    const picture = shown.get(id) ?? (pendingPictures.has(id) ? reviewPicture(pendingPictures.get(id)!.bytes, pendingPictures.get(id)!.mime, 0) : null);
-    if (picture) pictures.push({ ...picture, files: count });
-  }
-  log(`[import] pictures of ${files.length} file(s): ${pictures.length} different`);
-  return pictures;
-};
-
-/** PAR-UP-08 "Choose an image file…": an image the user picks for an album's cover, kept for the import. */
-const pickImportCoverImage = async (): Promise<ParrotImportPicture | null> => {
-  if (!pendingScan || !mainWindow) return null;
-  const picked = await dialog.showOpenDialog(mainWindow, {
-    properties: ["openFile"],
-    filters: [{ name: "Images", extensions: ["jpg", "jpeg", "png", "webp", "gif"] }],
-  });
-  const file = picked.canceled ? undefined : picked.filePaths[0];
-  if (!file) return null;
-  try {
-    const { size } = await stat(file);
-    if (size > PARROT_COVER_MAX_BYTES) {
-      fail(`[import] picked cover ${file} skipped: ${size} bytes, at most ${PARROT_COVER_MAX_BYTES}`);
-      return null;
-    }
-    const bytes = new Uint8Array(await readFile(file));
-    const picture = reviewPicture(bytes, parrotCoverMime(bytes) ?? "", 0);
-    log(`[import] picked cover ${file}: ${picture ? `${picture.width} × ${picture.height}` : "not a picture"}`);
-    return picture;
-  } catch (error) {
-    fail(`[import] picked cover ${file} not read: ${errorText(error)}`);
-    return null;
-  }
-};
-
-/**
- * PAR-META-22: a picture neither JPEG nor PNG (WebP, GIF) is cut to its square by the window, which decodes every
- * picture the app shows (Main 2026-11-21): it draws the square on a canvas (a GIF's first frame) and answers a JPEG,
- * or a PNG when the picture is see-through, at most 1200 px. Null when there is no window or it can't.
- */
-const coverCuts = new Map<string, (bytes: Uint8Array | null) => void>();
-const COVER_CUT_TIMEOUT_MS = 30_000;
-const cutCoverInWindow = (cover: ParrotCoverImage, crop: ParrotCoverCrop | null): Promise<Uint8Array | null> => {
-  const window = mainWindow;
-  if (!window || window.isDestroyed()) return Promise.resolve(null);
-  const id = randomUUID();
-  return new Promise((resolve) => {
-    const timer = setTimeout(() => answer(null), COVER_CUT_TIMEOUT_MS);
-    const answer = (bytes: Uint8Array | null) => {
-      clearTimeout(timer);
-      coverCuts.delete(id);
-      resolve(bytes);
-    };
-    coverCuts.set(id, answer);
-    const request: ParrotCoverCutRequest = { id, bytes: cover.bytes, mime: cover.mime, crop };
-    window.webContents.send(PARROT_IPC.coverCutEvent, request);
-  });
-};
-
-/**
- * PAR-META-22: the copies of an album cover, cut to its square, `crop` else the centre one, whatever its source (the
- * files, our music library, a picked image). Here for a JPEG or PNG; by the window for any other picture.
- */
-const albumCoverCopies = async (cover: ParrotCoverImage, crop: ParrotCoverCrop | null): Promise<ParrotCoverCopies | null> => {
-  if (parrotCoverDecodable(cover.bytes)) return makeParrotCoverCopies(cover.bytes, log, { square: true, crop });
-  const cut = await cutCoverInWindow(cover, crop);
-  if (!cut) {
-    fail(`[covers] ${cover.mime || "unknown"} picture: the window could not cut it to a square`);
-    return makeParrotCoverCopies(cover.bytes, log, { square: true, crop });
-  }
-  log(`[covers] ${cover.mime || "unknown"} picture cut to a square by the window: ${parrotCoverMime(cut)}, ${cut.length} bytes`);
-  return makeParrotCoverCopies(cut, log, { square: true });
-};
-
-/**
- * PAR-META-04: the covers of the albums the confirmed songs were matched to, at the 1200 px size (PAR-META-07), one
- * album at a time, and the pictures the review chose (PAR-UP-08). The import stores each on its album; a cover the
- * lookup can't give is left out, and the album then takes the picture built into its files, if any.
- */
-const importCovers = async (edits: ParrotImportEdit[], pictures: ReadonlyMap<string, ParrotCoverImage>): Promise<Map<string, ParrotCoverImage>> => {
+const importCovers = async (edits: ParrotImportEdit[]): Promise<Map<string, ParrotCoverImage>> => {
   const covers = new Map<string, ParrotCoverImage>();
-  for (const edit of edits) {
-    const picture = edit.coverPicture ? pictures.get(edit.coverPicture) : undefined;
-    if (picture) covers.set(edit.coverPicture!, picture);
-  }
-  const ids = [...new Set(edits.flatMap((edit) => (edit.coverId && !edit.coverPicture ? [edit.coverId] : [])))];
+  const ids = [...new Set(edits.flatMap((edit) => (edit.coverId ? [edit.coverId] : [])))];
   if (ids.length === 0) return covers;
   const client = await lookupClient().catch((error: unknown) => {
     fail(`[import] music lookup unavailable for covers: ${errorText(error)}`);
@@ -2038,11 +1866,10 @@ const importCovers = async (edits: ParrotImportEdit[], pictures: ReadonlyMap<str
   }
   return covers;
 };
-
 /**
- * PAR-UP-08 "Wrong album? Search": asks our music library for the albums matching what the user typed, with their
- * full tracklists; each cover is asked afterwards by the dialog (`importCover`). A failing lookup answers `failed`;
- * nothing changes in the review.
+ * PAR-UP-05 "Wrong album? Search" and "Add to album…": asks our music library for the albums matching what the user
+ * typed, with their full tracklists; each cover is asked afterwards by the dialog (`importCover`). A failing lookup
+ * answers `failed`; nothing changes in the review.
  */
 const searchImportAlbums = async (question: unknown): Promise<ParrotImportAlbumSearch> => {
   const asked = (question ?? {}) as { artist?: unknown; album?: unknown };
@@ -2053,6 +1880,25 @@ const searchImportAlbums = async (question: unknown): Promise<ParrotImportAlbumS
     return { kind: "found", results: await searchParrotImportAlbums(await lookupClient(), { artist, album }, log) };
   } catch (error) {
     fail(`[import] album search failed: ${errorText(error)}`);
+    return { kind: "failed" };
+  }
+};
+
+/**
+ * PAR-UP-05 "Identify": asks our music library for the song the user typed (artist and title, the album as a hint);
+ * each recording comes back on its album (asked once per album, for its full tracklist) with the track it is; covers
+ * follow through `importCover`. A failing lookup answers `failed`; the file stays unidentified.
+ */
+const searchImportSongs = async (question: unknown): Promise<ParrotImportSongSearch> => {
+  const asked = (question ?? {}) as { artist?: unknown; title?: unknown; album?: unknown };
+  const artist = String(asked.artist ?? "").trim();
+  const title = String(asked.title ?? "").trim();
+  const album = String(asked.album ?? "").trim();
+  if (!artist || !title) return { kind: "found", results: [] };
+  try {
+    return { kind: "found", results: await searchParrotImportSongs(await lookupClient(), { artist, title, album }, log) };
+  } catch (error) {
+    fail(`[import] song search failed: ${errorText(error)}`);
     return { kind: "failed" };
   }
 };
@@ -2096,7 +1942,9 @@ const importArtistPhoto = (artistId: unknown): Promise<ParrotImportArtistPhoto> 
 const scanImport = (folders: string[]): ParrotImportStatus => {
   if (importStatus.running) return importStatus;
   pendingScan = null;
-  forgetImportReview();
+  pendingMatches = null;
+  pendingArtistPhotos = new Map();
+  pendingCovers = new Map();
   startImportJob(folders);
   setImportStatus({ ...idleImport, running: true, phase: "scanning" });
   log(`[import] scan: ${folders.length} folder(s)`);
@@ -2139,7 +1987,9 @@ const cancelImport = (): ParrotImportStatus => {
   if (importStatus.phase !== "review") return importStatus;
   log(`[import] cancelled in the confirm dialog: ${pendingScan?.entries.length ?? 0} song(s) not uploaded`);
   pendingScan = null;
-  forgetImportReview();
+  pendingMatches = null;
+  pendingArtistPhotos = new Map();
+  pendingCovers = new Map();
   setImportStatus(idleImport);
   return importStatus;
 };
@@ -2155,11 +2005,11 @@ const confirmImport = (selection: ParrotImportSelection): ParrotImportStatus => 
     return importStatus;
   }
   pendingScan = null;
+  pendingMatches = null;
   // PAR-UP-06: the photos the review already fetched are the import's first answer for those artists.
   const reviewPhotos = pendingArtistPhotos;
-  // PAR-UP-08: the pictures the review could choose; the import takes the chosen ones from here.
-  const reviewPictures = pendingPictures;
-  forgetImportReview();
+  pendingArtistPhotos = new Map();
+  pendingCovers = new Map();
   // Only files the scan found: the window cannot name any other path.
   const scanned = new Map(scan.entries.map((entry) => [entry.file, entry]));
   const edits = new Map<string, ParrotImportEdit>();
@@ -2183,10 +2033,6 @@ const confirmImport = (selection: ParrotImportSelection): ParrotImportStatus => 
       albumMusicId: typeof item.albumMusicId === "string" && PARROT_MUSIC_ID.test(item.albumMusicId) ? item.albumMusicId : undefined,
       // The matched album's cover the review showed (PAR-META-04), fetched once per album before the upload.
       coverId: typeof item.coverId === "string" && PARROT_MUSIC_ID.test(item.coverId) ? item.coverId : undefined,
-      // PAR-UP-08: a picture the review chose instead (built into a scanned file, or picked); only one it was given.
-      coverPicture: typeof item.coverPicture === "string" && reviewPictures.has(item.coverPicture) ? item.coverPicture : undefined,
-      // PAR-META-22: the square of the chosen cover the user framed.
-      coverCrop: isParrotCoverCrop(item.coverCrop) ? { left: item.coverCrop.left, top: item.coverCrop.top, size: item.coverCrop.size } : undefined,
       unidentified: item.unidentified === true || undefined,
     };
     edits.set(entry.file, edit);
@@ -2213,20 +2059,15 @@ const confirmImport = (selection: ParrotImportSelection): ParrotImportStatus => 
   importRun = run;
   void (async () => {
     try {
-      const covers = await importCovers([...edits.values()], reviewPictures);
-      // PAR-FMT-01: songs are stored in parts only once the API turns it on for this account (`PARROT_SPLIT_ORIGINALS`).
-      const { splitOriginals = false } = await getLibraryMeta(token, PARROT_APP_ID);
+      const covers = await importCovers([...edits.values()]);
       const result = await importParrotFiles(files, {
         token,
         roots: folders,
         userId: user.id,
         libraryKeyBase64: key,
         clientType: CLIENT_TYPE,
-        splitOriginals,
         readInfo: parrotEditedReader(edits, undefined, covers),
         makeLightCopy: lightCopies.make,
-        // PAR-META-22: album covers cut to their square, a WebP or GIF by the window.
-        albumCoverCopies,
         lightCopyLongSongs,
         signal: AbortSignal.any([importAbort.signal, run.signal]),
         log,
@@ -2298,13 +2139,14 @@ const confirmImport = (selection: ParrotImportSelection): ParrotImportStatus => 
     } finally {
       if (importRun === run) importRun = null;
     }
-    // The lookups and the measured loudness wait for imports (PAR-LYR-01, PAR-META-15, PAR-PLAY-03): they run now,
-    // whatever the import's outcome.
+    // The lookups, the lyrics-into-file pass and the measured loudness wait for imports (PAR-LYR-01, PAR-META-15,
+    // PAR-PLAY-03): they run now, whatever the import's outcome.
     autoLyrics();
     for (const held of lyricsHolds) held.release();
     autoArtistPictures();
     retryUnidentified();
     autoAlbumCovers();
+    lyricsIntoFiles();
     void loudnessGate.resume().catch((error: unknown) => fail(`[loudness] could not keep the held songs: ${errorText(error)}`));
   })();
   return importStatus;
@@ -2624,7 +2466,6 @@ const registerIpc = () => {
     if (previous && previous.id !== session.user.id) resetToSignIn("signOut");
     await store.signIn({ id: session.user.id, email: session.user.email }, session.token);
     sessionChecked = Promise.resolve();
-    publishSiblingAccount();
     return { id: session.user.id, email: session.user.email };
   };
   ipcMain.handle(PARROT_IPC.signIn, async (_event, input: { email: string; password: string; twoFactorCode?: string }): Promise<ParrotSignInResult> => {
@@ -2780,7 +2621,6 @@ const registerIpc = () => {
     signIn: async (user, token) => {
       await store.signIn(user, token);
       sessionChecked = Promise.resolve();
-      publishSiblingAccount();
     },
     storeKey: storeLibraryKey,
     log,
@@ -2811,20 +2651,6 @@ const registerIpc = () => {
     }
   });
   ipcMain.handle(PARROT_IPC.pairingCancel, () => signInPairing.cancel());
-  // ACCT-PAIR-07: "Continue with your Badger account". Token and key stay here; the window learns only the key check.
-  ipcMain.handle(SIBLING_IPC.offer, () => siblingHost.offer());
-  ipcMain.handle(SIBLING_IPC.signIn, async (): Promise<SiblingSignInResult<ParrotPairedSignIn>> => {
-    const result = await siblingHost.signIn();
-    if (result.status !== "approved") return result;
-    const check = await completeParrotPairedSignIn(pairedSignInDeps, result);
-    const step = check === "verified" ? setupStepAfterSiblingSignIn(store.setup.step) : null;
-    if (step) {
-      await store.updateSetup({ step });
-      log(`[sibling] signed in through Badger with its key: setup goes on at ${step}`);
-    }
-    return { status: "approved", check };
-  });
-  ipcMain.handle(SIBLING_IPC.cancel, () => siblingHost.cancel());
   // UX-I18N-07: the account's one language, read right after a sign-in and saved when the user picks one while signed in.
   ipcMain.handle(PARROT_IPC.getAccountLanguage, async () => {
     const token = store.token();
@@ -2920,14 +2746,9 @@ const registerIpc = () => {
   });
   ipcMain.handle(PARROT_IPC.scanImport, (_event, folders: string[]) => scanImport(folders.map(String)));
   ipcMain.handle(PARROT_IPC.getImportScan, () => pendingScan);
-  ipcMain.handle(PARROT_IPC.matchImportAlbum, (_event, question: unknown) => matchImportAlbum(question));
-  ipcMain.handle(PARROT_IPC.stopImportAlbumMatch, (_event, id: unknown) => stopImportAlbumMatch(id));
+  ipcMain.handle(PARROT_IPC.matchImport, () => matchImport());
   ipcMain.handle(PARROT_IPC.searchImportAlbums, (_event, question: unknown) => searchImportAlbums(question));
-  ipcMain.handle(PARROT_IPC.importAlbumPictures, (_event, files: unknown) => importAlbumPictures(files));
-  ipcMain.handle(PARROT_IPC.pickImportCoverImage, () => pickImportCoverImage());
-  ipcMain.handle(PARROT_IPC.coverCut, (_event, id: unknown, bytes: unknown) => {
-    if (typeof id === "string") coverCuts.get(id)?.(bytes instanceof Uint8Array && bytes.length > 0 ? bytes : null);
-  });
+  ipcMain.handle(PARROT_IPC.searchImportSongs, (_event, question: unknown) => searchImportSongs(question));
   ipcMain.handle(PARROT_IPC.importArtistPhoto, (_event, artistId: unknown) => importArtistPhoto(artistId));
   ipcMain.handle(PARROT_IPC.importCover, (_event, albumId: unknown) => importCover(albumId));
   ipcMain.handle(PARROT_IPC.confirmImport, (_event, selection: ParrotImportSelection) =>
@@ -2937,11 +2758,6 @@ const registerIpc = () => {
   ipcMain.handle(PARROT_IPC.getImportStatus, () => importStatus);
   ipcMain.handle(PARROT_IPC.getImportJobs, () => accountImportJobs());
   ipcMain.handle(PARROT_IPC.dismissImportJob, (_event, id: unknown) => dismissImportJob(String(id)));
-  ipcMain.handle(PARROT_IPC.previewExport, () => exportJobs.preview());
-  ipcMain.handle(PARROT_IPC.exportMusic, () => exportJobs.start());
-  ipcMain.handle(PARROT_IPC.getExportJobs, () => exportJobs.list());
-  ipcMain.handle(PARROT_IPC.cancelExport, (_event, id: unknown) => exportJobs.cancel(String(id)));
-  ipcMain.handle(PARROT_IPC.dismissExportJob, (_event, id: unknown) => exportJobs.dismiss(String(id)));
   ipcMain.handle(PARROT_IPC.getBackgroundWork, () => [...backgroundWork.values()]);
   ipcMain.handle(PARROT_IPC.getLibrary, (_event, refresh: boolean) => (refresh || !library ? loadLibrary() : libraryResult()));
   ipcMain.handle(PARROT_IPC.wantLyrics, (_event, trackId: unknown) => wantLyrics(trackId));
@@ -2974,7 +2790,6 @@ const registerIpc = () => {
   ipcMain.handle(PARROT_IPC.getStreamState, () => streamSlots.state());
   ipcMain.handle(PARROT_IPC.getAppUpdateRequired, () => getAppUpdateRequired());
   ipcMain.handle(PARROT_IPC.getKept, () => keeping!.status());
-  ipcMain.handle(PARROT_IPC.getKeptSizes, () => keeping!.sizes());
   ipcMain.handle(PARROT_IPC.keepChoices, (_event, kind: unknown, id: unknown) => (isKeptKind(kind) && typeof id === "string" ? keeping!.choices(kind, id) : []));
   ipcMain.handle(PARROT_IPC.keep, (_event, kind: unknown, id: unknown, choice: unknown) => {
     if (!isKeptKind(kind) || typeof id !== "string") return keeping!.status();
@@ -2987,7 +2802,6 @@ const registerIpc = () => {
     errorLog,
     appVersion: app.getVersion(),
     platform: `${process.platform} ${release()}`,
-    requestIds: recentFailedRequestIds,
     send: sendFeedback,
     log,
     fail,
@@ -3057,9 +2871,8 @@ const createWindow = () => {
   // Hidden, not destroyed: the music plays in this window's renderer (PAR-PLAY-03).
   attachCloseToTray(mainWindow, { background: "hide", isQuitting: () => isQuitting, hasTray: () => appTray.active });
   mainWindow.webContents.on("console-message", (details) => {
-    const line = rendererConsoleLine(details.level, details.message);
-    if (!line) return;
-    log(line);
+    if (details.level !== "error" && details.level !== "warning") return;
+    log(`[renderer:${details.level}] ${details.message}`);
     errorLog.record(details.level === "error" ? "error" : "warn", "renderer", details.message);
   });
   installApplicationMenu();
@@ -3070,15 +2883,6 @@ const createWindow = () => {
 };
 
 app.on("second-instance", (_event, argv) => {
-  if (siblingHiddenStart) {
-    // ACCT-PAIR-07: this run has no window (it only answers Badger): the user's launch gets a full Parrot.
-    log("[sibling] Parrot launched during a hidden start: relaunching in full");
-    app.relaunch({ args: argv.slice(1).filter((arg) => arg !== SIBLING_SIGN_IN_ARG) });
-    app.exit(0);
-    return;
-  }
-  // Badger started Parrot to answer it while this one runs: this one already answers on the local channel.
-  if (isSiblingSignInLaunch(argv)) return log("[sibling] hidden start while Parrot runs: ignored");
   const providerReturn = findProviderReturn("parrot", argv);
   if (providerReturn !== null) return receiveProviderReturn(providerReturn, "second-instance");
   const paymentId = findPaymentReturn("parrot", argv);
@@ -3103,6 +2907,7 @@ const quitGuard = createQuitGuard({
     autoLyricsStop?.abort();
     autoArtistPicturesStop?.abort();
     retryUnidentifiedStop?.abort();
+    lyricsFilesStop?.abort();
     // The app looks gone at once; the music plays in the window (PAR-PLAY-03), so it is muted too.
     for (const window of BrowserWindow.getAllWindows()) {
       window.webContents.setAudioMuted(true);
@@ -3113,7 +2918,6 @@ const quitGuard = createQuitGuard({
     isQuitting = true;
     appTray.destroy();
     importAbort.abort();
-    exportJobs.pause();
     lightCopyAbort.abort();
     lightCopies.close();
     void streamSlots.release();
@@ -3136,17 +2940,6 @@ app.on("activate", () => {
 void app.whenReady().then(async () => {
   if (!primaryInstance) return;
   store = await openParrotStore({ dir: userDataDir, defaultSetup, log });
-  if (siblingHiddenStart) {
-    // ACCT-PAIR-07: started by Badger only to answer its sign-in: no window, no library, only the local channel.
-    const account = parrotSiblingAccount(store);
-    log(`[sibling] hidden start for Badger's sign-in ${JSON.stringify({ signedIn: Boolean(account) })}`);
-    if (!account) return app.quit();
-    siblingHiddenQuit = armSiblingHiddenQuit({ quit: () => app.quit(), log: (message) => log(`[sibling] ${message}`) });
-    await siblingHost.setAccount(account);
-    return;
-  }
-  // ACCT-PAIR-07: signed in, Badger on this computer can offer this account.
-  publishSiblingAccount();
   reapplyStartAtLoginAtLaunch({ platform: process.platform, setup: store.setup, applyStartAtLogin, fail });
   keptFiles = await createParrotKeptFiles({ dir: offlineDir, token: () => store.token() ?? "", clientType: CLIENT_TYPE, appId: PARROT_APP_ID, log });
   keeping = await createDesktopKeeping({

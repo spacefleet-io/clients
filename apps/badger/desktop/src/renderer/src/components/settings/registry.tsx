@@ -6,7 +6,6 @@ import {
   Database,
   Download,
   Film,
-  HardDrive,
   Info,
   MonitorSmartphone,
   Play,
@@ -23,7 +22,6 @@ export type SettingsSectionId =
   | "playback"
   | "trailers"
   | "downloads"
-  | "offlineContent"
   | "transcoding"
   | "metadata"
   | "performance"
@@ -54,7 +52,6 @@ const GeneralSection = lazy(() => import("./sections/GeneralSection"));
 const PlaybackSection = lazy(() => import("./sections/PlaybackSection"));
 const TrailersSection = lazy(() => import("./sections/TrailersSection"));
 const DownloadsSection = lazy(() => import("./sections/DownloadsSection"));
-const OfflineContentSection = lazy(() => import("./sections/OfflineContentSection"));
 const TranscodingSection = lazy(() => import("./sections/TranscodingSection"));
 const MetadataSection = lazy(() => import("./sections/MetadataSection"));
 const PerformanceSection = lazy(() => import("./sections/PerformanceSection"));
@@ -71,7 +68,6 @@ export const SETTINGS_SECTIONS: SettingsSectionDef[] = [
   { id: "playback", group: "player", icon: Play, Component: PlaybackSection },
   { id: "trailers", group: "player", icon: Clapperboard, Component: TrailersSection },
   { id: "downloads", group: "player", icon: Download, Component: DownloadsSection },
-  { id: "offlineContent", group: "player", icon: HardDrive, Component: OfflineContentSection },
   { id: "transcoding", group: "library", icon: Film, Component: TranscodingSection },
   { id: "metadata", group: "library", icon: Database, Component: MetadataSection },
   { id: "performance", group: "library", icon: Cpu, Component: PerformanceSection },
@@ -85,7 +81,7 @@ export const SETTINGS_SECTIONS: SettingsSectionDef[] = [
 ];
 
 export const SETTINGS_GROUPS: SettingsGroupDef[] = [
-  { id: "player", sections: ["general", "playback", "trailers", "downloads", "offlineContent"] },
+  { id: "player", sections: ["general", "playback", "trailers", "downloads"] },
   { id: "library", sections: ["transcoding", "metadata", "performance"] },
   { id: "account", sections: ["account", "profiles", "security", "devices", "connectedTools"] },
   { id: "system", sections: ["system", "about"] },

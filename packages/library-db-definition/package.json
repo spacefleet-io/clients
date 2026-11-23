@@ -30,8 +30,7 @@
     "./sqliteImage": "./src/sqliteImage.ts",
     "./compatibility": "./src/compatibility.ts",
     "./systemPlaylists": "./src/systemPlaylists.ts",
-    "./chunkLists": "./src/chunkLists.ts",
-    "./packedPlayback": "./src/packedPlayback.ts"
+    "./chunkLists": "./src/chunkLists.ts"
   },
   "dependencies": {
     "@noble/hashes": "^2.4.0",

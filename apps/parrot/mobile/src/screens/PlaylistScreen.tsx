@@ -34,7 +34,7 @@ export const PlaylistScreen = ({ route, navigation }: NativeStackScreenProps<Roo
   const version = library.status === "ready" ? library.version : -1;
   // A song added or taken out shows at once, before the server has the change (PAR-PL-03).
   const songs = useQuery(() => listPlaylistSongs(playlistId).catch(() => []), [playlistId, version, localChanges]);
-  const { play, queue, starting, error } = usePlay();
+  const { play, starting, error } = usePlay();
   const now = useNowPlaying();
   const skyScroll = useSkyScroll();
   // The title row brings its own top padding.
@@ -110,7 +110,7 @@ export const PlaylistScreen = ({ route, navigation }: NativeStackScreenProps<Roo
             unavailable={reach ? !reach.song(item.id) : false}
             accessibilityLabel={t("parrot.album.play", { title: item.title })}
             onPress={() => void play(list, index)}
-            onMore={() => editor.openSong({ id: item.id, title: item.title }, { playlistId, position: index }, { onAddToQueue: () => queue([item], "end") })}
+            onMore={() => editor.openSong({ id: item.id, title: item.title }, { playlistId, position: index })}
             moreLabel={`${t("parrot.player.more")}, ${item.title}`}
           />
         ))}
