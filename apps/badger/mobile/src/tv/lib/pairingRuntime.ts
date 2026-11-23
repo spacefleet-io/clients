@@ -4,7 +4,6 @@
  * Imported by the screens only; the logic modules stay free of native imports.
  */
 import { getApiBaseUrl } from "@space/shared/api";
-import { READ_OP_STREAM_VERSION } from "@space/library-db-definition/ops";
 import { decryptBase64ToBytes } from "../../lib/crypto";
 import { scopeLogger } from "@space/mobile-shell/logger";
 import { setLibraryKeyAcknowledged, setStoredLibraryKey } from "../../lib/onboarding";
@@ -24,7 +23,6 @@ export const TV_PAIRING_RUNTIME: PairingRuntimeOptions = {
   library: "badger",
   decrypt: decryptBase64ToBytes,
   logTag: TV_PAIRING_LOG_TAG,
-  readOpStreamVersion: READ_OP_STREAM_VERSION, // op-stream: read
 };
 
 const log = scopeLogger(TV_PAIRING_LOG_TAG);

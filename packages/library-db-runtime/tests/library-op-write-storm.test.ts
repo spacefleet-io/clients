@@ -26,7 +26,6 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, afterEach, beforeEach, describe, expect, it } from "bun:test";
-import { isV3MediaUpsert } from "@space/library-db-definition/ops";
 import {
   LibraryDb,
   decodeServerOps,
@@ -80,8 +79,8 @@ describe("issue #25 — one logical library change uploads one op, not one per w
       const upserts = serverOps.filter((entry) => entry.op.type === "media.upsert");
       // The surviving upsert must carry the FINAL state (replayable on its own).
       const last = upserts.at(-1)?.op;
-      expect(last?.type === "media.upsert" && isV3MediaUpsert(last)).toBe(true);
-      if (last?.type === "media.upsert" && isV3MediaUpsert(last)) {
+      expect(last?.type).toBe("media.upsert");
+      if (last?.type === "media.upsert") {
         log("result:last-upsert", {
           hasFiles: last.payload.details.hasFiles,
           formats: last.payload.details.formats?.length,

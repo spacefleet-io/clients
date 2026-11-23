@@ -53,7 +53,7 @@ type MobileSyncIndicatorProps = {
 
 /**
  * The library's update sign (LIB-SYNC-13): the same one-line pill as the offline sign (UX-NOTICE-02), on the tab bar's
- * top edge, so the saved library underneath stays usable while a sync runs. "Updating media library…" (with a percentage
+ * top edge, so the saved library underneath stays usable while a sync runs. "Updating library…" (with a percentage
  * once the pages are counted), then a quiet result that the store clears on its own; a failure stays, in the danger
  * colour, and a tap retries.
  */

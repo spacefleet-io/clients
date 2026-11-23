@@ -49,10 +49,6 @@ vi.mock("lucide-react-native", () =>
   )
 );
 vi.mock("@space/mobile-shell/i18n", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
-// The real rail (Discography's year row, UX-PHONE-09) without the barrel's native modules (reanimated).
-vi.mock("@space/mobile-shell/components", async () => ({
-  MobileRailScroll: (await vi.importActual<typeof import("../../../../packages/mobile-shell/src/components/mobile-rail")>("../../../../packages/mobile-shell/src/components/mobile-rail")).MobileRailScroll,
-}));
 vi.mock("../src/state/useQuery", () => ({
   useQuery: (load: () => unknown) => (String(load).includes("readArtistPicture") ? fake.picture : { loading: false, error: null, data: [] }),
 }));

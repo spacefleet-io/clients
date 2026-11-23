@@ -40,7 +40,7 @@ import {
   LibraryFormatTooNewError,
   currentLibrarySupport,
 } from "@space/library-db-definition/compatibility";
-import { OP_STREAM_VERSION, READ_OP_STREAM_VERSION } from "@space/library-db-definition/ops";
+import { OP_STREAM_VERSION } from "@space/library-db-definition/ops";
 import {
   desktopCoreMigrations,
   desktopIngestMigrations,
@@ -245,9 +245,8 @@ describe("op-stream version gate — assertLibraryCompatible (Part B)", () => {
     }
   });
 
-  // LIB-FMT-13: a build reads one op stream ahead of the one it writes, so "too new" starts above READ_OP_STREAM_VERSION.
-  it("opStreamVersion one above READ_OP_STREAM_VERSION throws LibraryFormatTooNewError with surface='op-stream'", () => {
-    const tooNew = READ_OP_STREAM_VERSION + 1;
+  it("opStreamVersion one above OP_STREAM_VERSION throws LibraryFormatTooNewError with surface='op-stream'", () => {
+    const tooNew = OP_STREAM_VERSION + 1;
     let caught: LibraryFormatTooNewError | undefined;
     try {
       assertLibraryCompatible({ opStreamVersion: tooNew }, DESKTOP_SUPPORT);
@@ -262,7 +261,7 @@ describe("op-stream version gate — assertLibraryCompatible (Part B)", () => {
       expect(caught).toBeInstanceOf(LibraryFormatTooNewError);
       expect(caught!.surface).toBe("op-stream");
       expect(caught!.observed).toBe(tooNew);
-      expect(caught!.supported).toBe(READ_OP_STREAM_VERSION);
+      expect(caught!.supported).toBe(OP_STREAM_VERSION);
     } catch (err) {
       dumpManifestSnapshot("opstream-too-new-failure", {
         capturedError: err,

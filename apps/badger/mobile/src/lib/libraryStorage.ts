@@ -27,10 +27,6 @@ export type PendingSync = {
   // this list. Absent on records written by older builds, whose snapshotPath
   // was the shared cache blob that persist() re-encrypts.
   chunkRefs?: string[];
-  // Every server change up to this version is in the snapshot (the phone's durable cursor when it was built). The
-  // PUT goes out on the server's version at send time while that version is <= this one (LIB-SYNC-14); absent on
-  // records written by older builds, which publish on `baseVersion` only.
-  coveredVersion?: number;
 };
 
 export type PendingOp = {

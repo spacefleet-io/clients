@@ -85,7 +85,6 @@ export const createBuilderConfig = ({ targetId, linuxFormats, updateFeedUrl = DE
     ...nativeLinuxPackageOptions({
       appDir,
       packageName: "spaceparrot",
-      productName: "Parrot",
       legacyName: "parrot",
       version: JSON.parse(readFileSync(join(appDir, "package.json"), "utf8")).version,
       mpv: false,
