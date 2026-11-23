@@ -1,8 +1,11 @@
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
-import { AlertCircle, BookCheck, Crop as CropIcon, Disc3, Eraser, FileAudio, GripVertical, ImageUp, Pencil, SearchX, WifiOff } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
+import { AlertCircle, BookCheck, Crop as CropIcon, Disc3, FileAudio, GripVertical, ImageUp, Pencil, SearchX, WifiOff } from "lucide-react";
 import {
   Button,
   Checkbox,
+  Dialog,
+  DialogContent,
+  DialogTitle,
   ImportReviewActions,
   ImportReviewBadge,
   ImportReviewBody,
@@ -21,21 +24,19 @@ import {
   Spinner,
 } from "@space/ui";
 import { ParrotCover } from "@space/ui/parrot";
-import { ParrotCoverFrameDialog, ParrotFramedCover as FramedCover, type ParrotCoverFrameLabels } from "@space/ui/parrot/cover-frame";
 import { ParrotPhotoCreditLine } from "@space/ui/parrot/library";
 import { ParrotEditSuggestList, suggestionName, type ParrotEditSuggest } from "@space/ui/parrot/manage";
 import { formatLocalizedStorage } from "@space/shared/format";
 import {
-  cleanParrotTitles,
   matchParrotImportTracks,
   mergeParrotEditSuggestions,
   parrotAlbumArtists,
   parrotAlbumKey,
+  parrotCoverCropOf,
+  parrotCoverSquare,
   parrotImportFromMatch,
   type ParrotCoverCrop,
   type ParrotEditSuggestion,
-  type ParrotTitleCleanupApplied,
-  type ParrotTitleCleanupRule,
 } from "@space/parrot-core";
 import type {
   ParrotImportAlbumMatch,
@@ -50,17 +51,6 @@ import type {
 } from "../../shared/ipc";
 import { editSuggestLabels } from "./editSuggest";
 import { countText, type Translate } from "./i18n";
-
-/** "Frame the cover" (PAR-META-22) in the window's language, for the import dialog and Edit details. */
-export const coverFrameLabels = (t: Translate): ParrotCoverFrameLabels => ({
-  title: t("import.frame.title"),
-  hint: t("import.frame.hint"),
-  preview: t("import.frame.preview"),
-  size: (picture) => t("import.frame.size", picture),
-  centre: t("import.frame.centre"),
-  cancel: t("import.frame.cancel"),
-  use: t("import.frame.use"),
-});
 
 type Props = { t: Translate; language: ParrotLanguage; scan: ParrotImportScan; onDone: () => void; suggest?: ParrotEditSuggest };
 
@@ -192,6 +182,40 @@ function useSearchCovers(answer: ParrotImportAlbumSearch | null) {
     const id = found.album.id;
     return found.cover || !id || !covers[id] ? found : { ...found, cover: covers[id] };
   };
+}
+
+/**
+ * A cover as the album gets it (PAR-META-22): the framed square of `src`, else its centre square; a disc when there
+ * is no picture. The framing is drawn from the picture's own size, so it is the same on the 500 px preview the review
+ * shows as on the stored cover.
+ */
+function FramedCover({ src, crop, className }: { src: string | null; crop: ParrotCoverCrop | null; className: string }) {
+  const [size, setSize] = useState<{ src: string; width: number; height: number } | null>(null);
+  if (!src) {
+    return (
+      <div className={`${className} flex items-center justify-center bg-muted`}>
+        <Disc3 className="h-1/2 w-1/2 text-muted-foreground" aria-hidden />
+      </div>
+    );
+  }
+  if (!crop) return <img src={src} alt="" className={`${className} object-cover`} />;
+  const known = size?.src === src ? size : null;
+  const square = known ? parrotCoverSquare(known.width, known.height, crop) : null;
+  return (
+    <div className={`${className} relative overflow-hidden`}>
+      <img
+        src={src}
+        alt=""
+        onLoad={(event) => setSize({ src, width: event.currentTarget.naturalWidth, height: event.currentTarget.naturalHeight })}
+        className="absolute max-w-none"
+        style={
+          known && square
+            ? { width: `${(known.width / square.side) * 100}%`, left: `${(-square.x / square.side) * 100}%`, top: `${(-square.y / square.side) * 100}%` }
+            : { visibility: "hidden" }
+        }
+      />
+    </div>
+  );
 }
 
 /** Where a card's names come from (PAR-UP-08): one badge per album card. */
@@ -375,6 +399,163 @@ function ArtistField({
 }
 
 /**
+ * "Frame the cover" (PAR-META-22, Chris 2026-11-21): the whole picture with the kept square on it, 1:1 and locked,
+ * the rest dimmed. Dragging inside the square moves it, dragging a corner resizes it (the opposite corner stays); the
+ * arrow keys move it too. The preview shows what the album gets. The framing is kept in shares of the picture.
+ */
+function CropEditor({
+  t,
+  src,
+  size: ownSize,
+  crop,
+  onCancel,
+  onUse,
+}: {
+  t: Translate;
+  src: string;
+  /** The picture's own size (the review shows a smaller copy); measured from `src` when unknown. */
+  size: { width: number; height: number } | null;
+  crop: ParrotCoverCrop | null;
+  onCancel: () => void;
+  onUse: (crop: ParrotCoverCrop | null) => void;
+}) {
+  const [measured, setMeasured] = useState<{ width: number; height: number } | null>(null);
+  const size = ownSize ?? measured;
+  const [square, setSquare] = useState<{ x: number; y: number; side: number } | null>(null);
+  const box = useRef<HTMLDivElement>(null);
+  const drag = useRef<{ mode: "move" | "nw" | "ne" | "sw" | "se"; from: { x: number; y: number }; start: { x: number; y: number; side: number } } | null>(null);
+
+  useEffect(() => {
+    if (size && !square) setSquare(parrotCoverSquare(size.width, size.height, crop));
+  }, [size, square, crop]);
+
+  const centre = size ? parrotCoverSquare(size.width, size.height) : null;
+  const centred = Boolean(square && centre && square.x === centre.x && square.y === centre.y && square.side === centre.side);
+  const toPicture = (clientX: number, clientY: number) => {
+    const rect = box.current!.getBoundingClientRect();
+    return { x: ((clientX - rect.left) / rect.width) * size!.width, y: ((clientY - rect.top) / rect.height) * size!.height };
+  };
+  const grab = (mode: "move" | "nw" | "ne" | "sw" | "se") => (event: ReactPointerEvent<HTMLElement>) => {
+    if (!size || !square) return;
+    event.preventDefault();
+    event.stopPropagation();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    drag.current = { mode, from: toPicture(event.clientX, event.clientY), start: square };
+  };
+  const follow = (event: ReactPointerEvent<HTMLElement>) => {
+    const held = drag.current;
+    if (!held || !size) return;
+    const at = toPicture(event.clientX, event.clientY);
+    const { start } = held;
+    if (held.mode === "move") {
+      const x = Math.round(Math.max(0, Math.min(size.width - start.side, start.x + at.x - held.from.x)));
+      const y = Math.round(Math.max(0, Math.min(size.height - start.side, start.y + at.y - held.from.y)));
+      setSquare({ x, y, side: start.side });
+      return;
+    }
+    const west = held.mode.endsWith("w");
+    const north = held.mode.startsWith("n");
+    const anchorX = west ? start.x + start.side : start.x;
+    const anchorY = north ? start.y + start.side : start.y;
+    const most = Math.min(west ? anchorX : size.width - anchorX, north ? anchorY : size.height - anchorY);
+    const least = Math.min(most, Math.max(32, Math.min(size.width, size.height) * 0.05));
+    const side = Math.round(Math.max(least, Math.min(most, Math.max(Math.abs(at.x - anchorX), Math.abs(at.y - anchorY)))));
+    setSquare({ x: west ? anchorX - side : anchorX, y: north ? anchorY - side : anchorY, side });
+  };
+  const nudge = (event: KeyboardEvent<HTMLElement>) => {
+    if (!size || !square) return;
+    const step = Math.max(1, Math.round(Math.min(size.width, size.height) * 0.02));
+    const by = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] }[event.key];
+    if (!by) return;
+    event.preventDefault();
+    setSquare({
+      x: Math.max(0, Math.min(size.width - square.side, square.x + by[0])),
+      y: Math.max(0, Math.min(size.height - square.side, square.y + by[1])),
+      side: square.side,
+    });
+  };
+  const pct = (value: number, of: number) => `${(value / of) * 100}%`;
+  const framed = size && square ? parrotCoverCropOf(size.width, size.height, square) : null;
+
+  // A dialog nested in the review's own: Radix keeps the pointer, focus and Escape on the top one (a plain overlay
+  // outside the review dialog gets no pointer events while that dialog is open).
+  return (
+    <Dialog open onOpenChange={(open) => !open && onCancel()}>
+      <DialogContent hideCloseButton aria-describedby={undefined} className="w-[760px] max-w-[calc(100vw-2rem)] gap-4 bg-popover p-5 text-sm" data-testid="import-frame">
+        <div>
+          <DialogTitle className="text-base">{t("import.frame.title")}</DialogTitle>
+          <div className="text-muted-foreground">{t("import.frame.hint")}</div>
+        </div>
+        <div className="flex flex-wrap items-start gap-5">
+          {size && square ? (
+            <div ref={box} className="relative min-w-0 flex-[1_1_420px] touch-none select-none overflow-hidden rounded-lg" style={{ aspectRatio: `${size.width} / ${size.height}` }}>
+              <img src={src} alt="" draggable={false} className="absolute inset-0 h-full w-full" />
+              <div
+                role="slider"
+                tabIndex={0}
+                aria-label={t("import.frame.title")}
+                aria-valuetext={t("import.frame.size", { width: size.width, height: size.height, side: square.side })}
+                className="absolute cursor-move border-2 border-white shadow-[0_0_0_9999px_rgba(0,0,0,0.6)] outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                style={{ left: pct(square.x, size.width), top: pct(square.y, size.height), width: pct(square.side, size.width), height: pct(square.side, size.height) }}
+                onPointerDown={grab("move")}
+                onPointerMove={follow}
+                onPointerUp={() => (drag.current = null)}
+                onPointerCancel={() => (drag.current = null)}
+                onKeyDown={nudge}
+                data-testid="import-frame-square"
+              >
+                <div className="absolute inset-x-0 top-1/3 h-px bg-white/35" />
+                <div className="absolute inset-x-0 top-2/3 h-px bg-white/35" />
+                <div className="absolute inset-y-0 left-1/3 w-px bg-white/35" />
+                <div className="absolute inset-y-0 left-2/3 w-px bg-white/35" />
+                {(
+                  [
+                    ["nw", "-left-1.5 -top-1.5 cursor-nwse-resize"],
+                    ["ne", "-right-1.5 -top-1.5 cursor-nesw-resize"],
+                    ["sw", "-bottom-1.5 -left-1.5 cursor-nesw-resize"],
+                    ["se", "-bottom-1.5 -right-1.5 cursor-nwse-resize"],
+                  ] as const
+                ).map(([mode, at]) => (
+                  <span key={mode} className={`absolute h-3 w-3 rounded-sm border border-black/40 bg-white ${at}`} onPointerDown={grab(mode)} data-testid={`import-frame-corner-${mode}`} />
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="flex min-h-48 flex-[1_1_420px] items-center justify-center">
+              <Spinner size="sm" />
+              {/* Measures the picture when its own size is not known (a cover of our music library). */}
+              <img src={src} alt="" className="hidden" onLoad={(event) => setMeasured({ width: event.currentTarget.naturalWidth, height: event.currentTarget.naturalHeight })} />
+            </div>
+          )}
+          <div className="w-36 shrink-0 space-y-2">
+            <div className="text-xs text-muted-foreground">{t("import.frame.preview")}</div>
+            <FramedCover src={src} crop={framed} className="aspect-square w-full rounded-lg shadow-lg" />
+            {size && square ? (
+              <div className="text-[11px] text-muted-foreground" data-testid="import-frame-size">
+                {t("import.frame.size", { width: size.width, height: size.height, side: square.side })}
+              </div>
+            ) : null}
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" disabled={centred || !centre} onClick={() => centre && setSquare(centre)} data-testid="import-frame-centre">
+            {t("import.frame.centre")}
+          </Button>
+          <div className="ml-auto flex gap-2">
+            <Button variant="ghost" onClick={onCancel} data-testid="import-frame-cancel">
+              {t("import.frame.cancel")}
+            </Button>
+            <Button disabled={!framed} onClick={() => onUse(centred ? null : framed)} data-testid="import-frame-use">
+              {t("import.frame.use")}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/**
  * "Here's what I found in your music folder" (PAR-UP-08, Chris's v3 approval 2026-11-21): the albums show at once as
  * the files' tags name them, and each looks itself up in our music library on its own, a few at a time. An album
  * still looking up has its own "Import as is", which stops only its lookup; one the lookup finds nothing for goes in as
@@ -387,30 +568,7 @@ function ArtistField({
  */
 export default function ImportReview({ t, language, scan, onDone, suggest }: Props) {
   const fileAlbums = useMemo(() => parrotFileAlbums(scan.entries), [scan]);
-  /** PAR-META-23: the clean-ups each file album proposes for its names, by its key, and the ones the user undid. */
-  const [undone, setUndone] = useState<Record<string, ReadonlySet<ParrotTitleCleanupRule>>>({});
-  const cleanups = useMemo(() => {
-    const tagged = new Map(scan.entries.map((entry) => [entry.file, entry]));
-    return new Map(
-      fileAlbums.map((album) => {
-        const input = { artist: album.artist, album: album.title, titles: album.files.map((file) => tagged.get(file)?.title ?? "") };
-        return [album.key, { proposed: cleanParrotTitles(input).applied, now: cleanParrotTitles(input, undone[album.key]) }] as const;
-      }),
-    );
-  }, [scan, fileAlbums, undone]);
-  /** The scan's songs as the review shows them: their tags, with their album's clean-ups applied. */
-  const entries = useMemo(() => {
-    const shown = new Map(scan.entries.map((entry) => [entry.file, entry]));
-    for (const album of fileAlbums) {
-      const now = cleanups.get(album.key)?.now;
-      if (!now) continue;
-      album.files.forEach((file, index) => {
-        const entry = shown.get(file);
-        if (entry) shown.set(file, { ...entry, title: now.titles[index] ?? entry.title, album: now.album === album.title ? entry.album : now.album });
-      });
-    }
-    return shown;
-  }, [scan, fileAlbums, cleanups]);
+  const entries = useMemo(() => new Map(scan.entries.map((entry) => [entry.file, entry])), [scan]);
   const rankOf = useMemo(() => new Map(fileAlbums.flatMap((album, rank) => album.files.map((file) => [file, rank] as const))), [fileAlbums]);
 
   const [lookups, setLookups] = useState<Record<string, Lookup>>(() => Object.fromEntries(fileAlbums.map((album) => [album.key, "searching" as const])));
@@ -500,7 +658,7 @@ export default function ImportReview({ t, language, scan, onDone, suggest }: Pro
       if (files.length === 0) return;
       const lookup = lookups[source.key] ?? "searching";
       const state = lookup === "searching" ? "searching" : lookup === "stopped" ? "asis" : lookup === "failed" ? "failed" : "notfound";
-      out.push({ kind: "file", key, rank, source: { ...source, title: cleanups.get(source.key)?.now.album ?? source.title }, files, state });
+      out.push({ kind: "file", key, rank, source, files, state });
     });
     const byAlbum = new Map<string, ParrotScanEntry[]>();
     for (const [file, place] of Object.entries(places)) {
@@ -516,7 +674,7 @@ export default function ImportReview({ t, language, scan, onDone, suggest }: Pro
       out.push({ kind: "library", key: `lib:${albumKey}`, rank: Math.min(...files.map((entry) => rankOf.get(entry.file) ?? 0)), found: albums[albumKey], files, state: "matched" });
     }
     return out.sort((a, b) => a.rank - b.rank || (a.kind === b.kind ? 0 : a.kind === "library" ? -1 : 1));
-  }, [fileAlbums, cleanups, order, places, entries, lookups, albums, rankOf]);
+  }, [fileAlbums, order, places, entries, lookups, albums, rankOf]);
 
   const cardOf = useMemo(() => new Map(cards.flatMap((card) => card.files.map((entry) => [entry.file, card] as const))), [cards]);
   /**
@@ -643,8 +801,7 @@ export default function ImportReview({ t, language, scan, onDone, suggest }: Pro
     };
   };
 
-  /** The ticked songs as the review shows them (PAR-META-23: their album's clean-ups applied). */
-  const importing = scan.entries.flatMap((entry) => (unticked.has(entry.file) ? [] : [entries.get(entry.file) ?? entry]));
+  const importing = scan.entries.filter((entry) => !unticked.has(entry.file));
   const importingBytes = importing.reduce((sum, entry) => sum + entry.size, 0);
 
   const setTicked = (files: string[], on: boolean) =>
@@ -1064,45 +1221,6 @@ export default function ImportReview({ t, language, scan, onDone, suggest }: Pro
     );
   };
 
-  const cleanupText = ({ rule, text, count }: ParrotTitleCleanupApplied) => {
-    if (rule === "full-album") return t("import.cleanup.album", { text });
-    const plural = new Intl.PluralRules(language).select(count) === "one" ? "one" : "other";
-    return t(`import.cleanup.${rule === "artist-prefix" ? "start" : "end"}.${plural}`, { text, n: count });
-  };
-
-  /** PAR-META-23: what the review took off a file album's names, each with its own Undo (and Redo once undone). */
-  const cleanupNotice = (card: Card) => {
-    if (card.kind !== "file") return null;
-    const albumKey = card.source.key;
-    const proposed = cleanups.get(albumKey)?.proposed ?? [];
-    if (proposed.length === 0) return null;
-    const skipped = undone[albumKey] ?? new Set<ParrotTitleCleanupRule>();
-    const toggle = (rule: ParrotTitleCleanupRule) => {
-      const next = new Set(skipped);
-      if (next.has(rule)) next.delete(rule);
-      else next.add(rule);
-      console.info(`[import-review] album ${JSON.stringify(card.source.title)}: clean-up ${rule} ${next.has(rule) ? "undone" : "redone"}`);
-      setUndone((previous) => ({ ...previous, [albumKey]: next }));
-    };
-    return (
-      <div className="space-y-1 rounded-lg border border-border/60 bg-muted/30 px-3 py-2" data-testid="import-cleanups">
-        <div className="text-[11px] font-medium uppercase tracking-[0.15em] text-muted-foreground">{t("import.cleanup.title")}</div>
-        {proposed.map((applied) => {
-          const off = skipped.has(applied.rule);
-          return (
-            <div key={applied.rule} className="flex items-center gap-3 text-sm" data-testid="import-cleanup" data-rule={applied.rule} data-undone={off ? "true" : undefined}>
-              <Eraser className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
-              <span className={`min-w-0 flex-1 ${off ? "text-muted-foreground line-through" : ""}`}>{cleanupText(applied)}</span>
-              <Button size="sm" variant="ghost" className="h-7 px-2.5 text-xs" onClick={() => toggle(applied.rule)} data-testid="import-cleanup-undo">
-                {t(off ? "import.cleanup.redo" : "import.cleanup.undo")}
-              </Button>
-            </div>
-          );
-        })}
-      </div>
-    );
-  };
-
   const searchingDetail = (card: Card) => (
     <div className="space-y-5" data-testid="import-album-detail" data-state="searching">
       <div className="flex gap-5">
@@ -1120,7 +1238,6 @@ export default function ImportReview({ t, language, scan, onDone, suggest }: Pro
         </div>
       </div>
       {strip(card)}
-      {cleanupNotice(card)}
       <div className="rounded-lg border border-border/60">
         {card.files.map((entry) => (
           <div key={entry.file} className="flex items-center gap-3 border-b border-border/30 px-3 py-2 text-sm last:border-b-0" data-testid="import-review-song" data-file={entry.file}>
@@ -1194,10 +1311,7 @@ export default function ImportReview({ t, language, scan, onDone, suggest }: Pro
             </div>
           </div>
         ) : (
-          <>
-            {strip(card)}
-            {cleanupNotice(card)}
-          </>
+          strip(card)
         )}
         {songsBox(card)}
         <AlbumSearch key={card.key} t={t} label={t("import.match.search")} artist={cardArtist(card)} album={cardTitle(card)} onChoose={(picked) => chooseAlbum(card, picked)} />
@@ -1331,10 +1445,9 @@ export default function ImportReview({ t, language, scan, onDone, suggest }: Pro
         </ImportReviewActions>
       </ImportReviewFooter>
       {framingCard && framingCover?.src ? (
-        <ParrotCoverFrameDialog
+        <CropEditor
           key={framingCard.key}
-          labels={coverFrameLabels(t)}
-          testId="import-frame"
+          t={t}
           src={framingCover.src}
           size={framingCover.picture ? { width: framingCover.picture.width, height: framingCover.picture.height } : null}
           crop={framingCover.crop}

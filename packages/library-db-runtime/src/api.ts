@@ -1,7 +1,6 @@
 import * as sdk from "@space/sdk";
 import {
   ApiError,
-  apiErrorFromResponse,
   onApiError,
   SPACE_APP_HEADER,
   unwrap,
@@ -244,7 +243,10 @@ export const putLibraryDbBinary = async (
     body: toBinaryBody(payload),
   });
 
-  if (!res.ok) throw await apiErrorFromResponse(res);
+  if (!res.ok) {
+    const errorPayload = (await res.json().catch(() => ({}))) as ApiErrorPayload;
+    throw new ApiError(res.status, errorPayload);
+  }
 
   const result = (await res.json()) as LibraryPutResult;
   return result;

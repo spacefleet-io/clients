@@ -234,42 +234,6 @@ describe("Parrot desktop import review: what the import stores", () => {
     expect(selection.get(guest.file)).toMatchObject({ title: "Duet", artist: "Guest Singer", albumArtist: "Somebody Known", number: 3 });
   });
 
-  // @req PAR-META-23
-  it("proposes the clean-ups of a file album's names, imports the cleaned names, and each one undoes on its own", async () => {
-    const songs = ["Chrome Horizon", "Wildfire", "Static Bloom"].map((name, index) =>
-      entry(`/music/yt/${index}.m4a`, { artist: "Neon Pulse AI", album: "Midnight Synthetic (Full Album)", title: `Neon Pulse AI - ${name} (Official Audio) | synthwave`, number: index + 1 }),
-    );
-    await show(scanOf(songs), () => ({ kind: "found", albums: [], unidentified: songs.map((song) => ({ file: song.file, reason: "no-match" as const })) }));
-    const rows = () => byTestId("import-cleanup").map((row) => [row.dataset.rule, row.textContent?.replace(/(Undo|Redo)$/u, ""), row.dataset.undone ?? null]);
-    expect(rows()).toEqual([
-      ["artist-prefix", 'Took "Neon Pulse AI - " off the start of 3 song names', null],
-      ["shared-suffix", 'Took "| synthwave" off the end of 3 song names', null],
-      ["video-tail", 'Took "(Official Audio)" off the end of 3 song names', null],
-      ["full-album", 'Took "(Full Album)" off the album name', null],
-    ]);
-    const titles = () => byTestId("import-song-title").map((input) => (input as HTMLInputElement).value);
-    expect(titles()).toEqual(["Chrome Horizon", "Wildfire", "Static Bloom"]);
-    expect((byTestId("import-field-album")[0] as HTMLInputElement).value).toBe("Midnight Synthetic");
-    expect(albumRow("Midnight Synthetic")).toBeTruthy();
-
-    // Undo the artist and the album name: only those come back; the other two stay off.
-    const undo = (rule: string) => click(byTestId("import-cleanup").find((row) => row.dataset.rule === rule)?.querySelector('[data-testid="import-cleanup-undo"]'));
-    await undo("artist-prefix");
-    await undo("full-album");
-    expect(titles()).toEqual(["Neon Pulse AI - Chrome Horizon", "Neon Pulse AI - Wildfire", "Neon Pulse AI - Static Bloom"]);
-    expect(rows().map(([rule, , off]) => [rule, off])).toEqual([["artist-prefix", "true"], ["shared-suffix", null], ["video-tail", null], ["full-album", "true"]]);
-
-    // Redo puts a clean-up back.
-    await undo("full-album");
-    expect((byTestId("import-field-album")[0] as HTMLInputElement).value).toBe("Midnight Synthetic");
-    const selection = await confirmImport();
-    expect(selection.map((item) => [item.title, item.album])).toEqual([
-      ["Neon Pulse AI - Chrome Horizon", "Midnight Synthetic"],
-      ["Neon Pulse AI - Wildfire", "Midnight Synthetic"],
-      ["Neon Pulse AI - Static Bloom", "Midnight Synthetic"],
-    ]);
-  });
-
   // @req PAR-META-22
   it("a picture picked from the cover menu goes with the album's songs by its id; the files' own picture asks nothing", async () => {
     const one = entry("/music/Tape/a.mp3", { artist: "Nobody Known", album: "Tape", title: "First", number: 1 });

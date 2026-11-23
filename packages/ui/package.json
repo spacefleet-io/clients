@@ -47,7 +47,6 @@
     "./badger/mascot.webp": "./src/badger/assets/mascot.webp",
     "./parrot": "./src/parrot/components.tsx",
     "./parrot/card-actions": "./src/parrot/card-actions.tsx",
-    "./parrot/cover-frame": "./src/parrot/cover-frame.tsx",
     "./parrot/library": "./src/parrot/library.tsx",
     "./parrot/library-toolbar": "./src/parrot/library-toolbar.tsx",
     "./parrot/manage": "./src/parrot/manage.tsx",
