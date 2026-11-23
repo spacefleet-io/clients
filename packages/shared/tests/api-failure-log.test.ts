@@ -9,15 +9,7 @@
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiError, apiRequest, getMe, putLibraryDbBinary, setApiBaseUrl } from "../src/api";
-import {
-  RECENT_FAILED_REQUEST_IDS_MAX,
-  apiErrorCode,
-  clearRecentFailedRequestIds,
-  libraryRefusalFields,
-  logFailedApiCalls,
-  recentFailedRequestIds,
-  type ApiFailureFields,
-} from "../src/apiFailure";
+import { apiErrorCode, libraryRefusalFields, logFailedApiCalls, type ApiFailureFields } from "../src/apiFailure";
 
 const SUITE = "api-failure-log";
 const log = (testId: string, phase: string, data?: unknown) =>
@@ -134,31 +126,5 @@ describe("a library refusal's log fields", () => {
       serverVersion: null,
       consecutive409: 0,
     });
-  });
-});
-
-describe("the request ids a feedback message carries (UX-SUP-07)", () => {
-  /** @req UX-SUP-07[badger-mobile,parrot] */
-  it("keeps the ids of the last failed answers, newest last, at most 5, never an answer without a server-made id", async () => {
-    const testId = "SHARED-API-FAILURE-003";
-    setApiBaseUrl("https://api.example.test");
-    clearRecentFailedRequestIds();
-    startCapture();
-    const ids = Array.from({ length: RECENT_FAILED_REQUEST_IDS_MAX + 2 }, (_, i) => `00000000-0000-4000-8000-00000000000${i}`);
-    for (const id of ids) {
-      fetchMock.mockResolvedValueOnce(answer(404, { error: "not_found" }, id));
-      await getMe("token").catch(() => undefined);
-    }
-    fetchMock.mockResolvedValueOnce(answer(401, { error: "unauthorized" }, null));
-    await getMe("token").catch(() => undefined);
-    fetchMock.mockResolvedValueOnce(answer(400, { error: "bad" }, "not-a-server-id"));
-    await getMe("token").catch(() => undefined);
-    const kept = recentFailedRequestIds();
-    log(testId, "kept", { kept, captured: captured.length });
-    expect(kept).toEqual(ids.slice(-RECENT_FAILED_REQUEST_IDS_MAX));
-    // A copy: changing it changes nothing kept.
-    kept.length = 0;
-    expect(recentFailedRequestIds()).toHaveLength(RECENT_FAILED_REQUEST_IDS_MAX);
-    clearRecentFailedRequestIds();
   });
 });

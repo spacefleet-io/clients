@@ -148,7 +148,7 @@ import { fetchSourceCredits } from "@space/metadata-client/credits";
 import { ticketKeysForBuild } from "@space/privacy-pass";
 import { SPACE_APP_HEADER } from "@space/shared/appScope";
 import { getAppUpdateRequired, onAppUpdateRequired, setClientIdentity } from "@space/shared/appVersion";
-import { logFailedApiCalls, recentFailedRequestIds } from "@space/shared/apiFailure";
+import { logFailedApiCalls } from "@space/shared/apiFailure";
 import { desktopClientIdentity } from "@space/desktop-shell/client-identity";
 import {
   applyParrotOps,
@@ -2987,7 +2987,6 @@ const registerIpc = () => {
     errorLog,
     appVersion: app.getVersion(),
     platform: `${process.platform} ${release()}`,
-    requestIds: recentFailedRequestIds,
     send: sendFeedback,
     log,
     fail,
