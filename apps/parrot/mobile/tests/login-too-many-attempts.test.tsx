@@ -70,7 +70,6 @@ vi.mock("../src/setup/pairing", () => ({
   createParrotPairingClient: vi.fn(),
   PARROT_PAIRING_LOG_TAG: "parrot.pairing",
 }));
-vi.mock("../src/screens/SiblingOffer", () => ({ SiblingOffer: () => null }));
 
 import { ApiError } from "@space/shared/api";
 import { LoginScreen } from "../src/screens/LoginScreen";

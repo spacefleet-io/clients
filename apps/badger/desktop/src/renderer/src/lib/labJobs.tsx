@@ -99,22 +99,6 @@ export const LabJobsProvider = ({ children }: { children: ReactNode; defer?: boo
   // matchedTo/posterPath/title once media loads.
   const jobs = useMemo(() => ingestJobsToLabJobs(rawRecords, media), [rawRecords, media]);
   const { activeJobs, completedJobs } = useMemo(() => splitLabJobsByCompletion(jobs), [jobs]);
-  // UX-HOME-05 diagnostics: failed jobs are left out of `activeJobs` (no Home overlay). Log their ids and
-  // media ids once per change so a stuck-looking title can be traced to its failed job. No titles or paths.
-  const failedJobsKey = useMemo(
-    () =>
-      jobs
-        .filter((job) => job.status === "failed")
-        .map((job) => `${job.id}@${job.matchedMediaId ?? "unmatched"}`)
-        .sort()
-        .join(","),
-    [jobs],
-  );
-  useEffect(() => {
-    if (!failedJobsKey) return;
-    const failed = failedJobsKey.split(",");
-    console.info("[lab-jobs] failed jobs kept off the active set", { count: failed.length, jobs: failed });
-  }, [failedJobsKey]);
   // A group is active iff one of its jobs can still make progress (queued,
   // running, interrupted awaiting requeue). The group's display status is a
   // label (failed wins over finished jobs, else the first job's status), so

@@ -26,35 +26,3 @@ export const parrotCoverThumbKey = (album: ParrotCoverKeys): string | null => al
 
 /** The two copies stored for an album: `thumb` is null when the large copy is already no wider than a thumbnail. */
 export type ParrotCoverCopies = { large: Uint8Array; thumb: Uint8Array | null };
-
-/**
- * PAR-META-22: the square of a picture an album cover keeps, in shares of the picture so it holds at any size of it
- * (the review frames the 500 px cover, the import cuts the 1200 px one): `left` of its width, `top` of its height,
- * `size` of its shorter side. Absent: the centre square.
- */
-export type ParrotCoverCrop = { left: number; top: number; size: number };
-
-/** The kept square in pixels of a `width` × `height` picture: the crop clamped inside it, or the centre square. */
-export const parrotCoverSquare = (width: number, height: number, crop?: ParrotCoverCrop | null): { x: number; y: number; side: number } => {
-  const shorter = Math.min(width, height);
-  const share = (value: unknown, fallback: number) => (typeof value === "number" && Number.isFinite(value) ? value : fallback);
-  const side = Math.max(1, Math.min(shorter, Math.round(share(crop?.size, 1) * shorter)));
-  const x = crop ? Math.round(share(crop.left, 0) * width) : Math.floor((width - side) / 2);
-  const y = crop ? Math.round(share(crop.top, 0) * height) : Math.floor((height - side) / 2);
-  return { x: Math.max(0, Math.min(width - side, x)), y: Math.max(0, Math.min(height - side, y)), side };
-};
-
-/** The crop that keeps `square` (pixels of a `width` × `height` picture), in shares (ParrotCoverCrop). */
-export const parrotCoverCropOf = (width: number, height: number, square: { x: number; y: number; side: number }): ParrotCoverCrop => ({
-  left: square.x / width,
-  top: square.y / height,
-  size: square.side / Math.min(width, height),
-});
-
-/** Whether a crop the window sent is one: three finite shares, the size above nothing. */
-export const isParrotCoverCrop = (value: unknown): value is ParrotCoverCrop => {
-  if (typeof value !== "object" || value === null) return false;
-  const { left, top, size } = value as Record<string, unknown>;
-  const share = (n: unknown) => typeof n === "number" && Number.isFinite(n) && n >= 0 && n <= 1;
-  return share(left) && share(top) && share(size) && (size as number) > 0;
-};

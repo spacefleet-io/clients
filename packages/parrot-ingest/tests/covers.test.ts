@@ -11,14 +11,14 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { encryptBytesToBytes } from "@space/library-db-runtime/crypto";
-import { PARROT_COVER_LARGE_WIDTH, PARROT_COVER_THUMB_WIDTH, parrotCoverMime, parrotCoverSquare } from "@space/parrot-core";
+import { PARROT_COVER_LARGE_WIDTH, PARROT_COVER_THUMB_WIDTH, parrotCoverMime } from "@space/parrot-core";
 import jpeg from "jpeg-js";
 import { PNG } from "pngjs";
 import {
   createParrotCoverLoader,
   makeParrotCoverCopies,
   parrotCoverProblem,
-  parrotWebpGifSize,
+  parrotWebpGifWidth,
   PARROT_COVER_KEEP_MAX_BYTES,
   PARROT_COVER_MAX_BYTES,
 } from "../src/covers";
@@ -235,30 +235,24 @@ describe("makeParrotCoverCopies", () => {
     expect(messages.some((m) => m.includes("could not be decoded") && m.includes("skipped"))).toBe(true);
   });
 
-  // Headers as the formats lay them out; only the fields the size is read from are filled in.
-  const gif = (width: number, height = 1) => new Uint8Array([...new TextEncoder().encode("GIF89a"), width & 0xff, width >> 8, height & 0xff, height >> 8, 0, 0, 0]);
-  const webp = (chunk: "VP8 " | "VP8L" | "VP8X", width: number, height = 1) => {
+  // Headers as the formats lay them out; only the fields the width is read from are filled in.
+  const gif = (width: number) => new Uint8Array([...new TextEncoder().encode("GIF89a"), width & 0xff, width >> 8, 1, 0, 0, 0, 0]);
+  const webp = (chunk: "VP8 " | "VP8L" | "VP8X", width: number) => {
     const bytes = new Uint8Array(40);
     bytes.set(new TextEncoder().encode(`RIFF....WEBP${chunk}`));
-    if (chunk === "VP8 ") bytes.set([width & 0xff, (width >> 8) & 0x3f, height & 0xff, (height >> 8) & 0x3f], 26);
-    if (chunk === "VP8L") {
-      const bits = (width - 1) + (height - 1) * 0x4000;
-      bytes.set([bits & 0xff, (bits >> 8) & 0xff, (bits >> 16) & 0xff, (bits >> 24) & 0xff], 21);
-    }
-    if (chunk === "VP8X") {
-      bytes.set([(width - 1) & 0xff, ((width - 1) >> 8) & 0xff, ((width - 1) >> 16) & 0xff], 24);
-      bytes.set([(height - 1) & 0xff, ((height - 1) >> 8) & 0xff, ((height - 1) >> 16) & 0xff], 27);
-    }
+    if (chunk === "VP8 ") bytes.set([width & 0xff, (width >> 8) & 0x3f], 26);
+    if (chunk === "VP8L") bytes.set([(width - 1) & 0xff, ((width - 1) >> 8) & 0x3f], 21);
+    if (chunk === "VP8X") bytes.set([(width - 1) & 0xff, ((width - 1) >> 8) & 0xff, ((width - 1) >> 16) & 0xff], 24);
     return bytes;
   };
 
-  it("reads a WebP's or GIF's size from its header", () => {
-    expect(parrotWebpGifSize(gif(640, 480))).toEqual({ width: 640, height: 480 });
-    expect(parrotWebpGifSize(webp("VP8 ", 1200, 675))).toEqual({ width: 1200, height: 675 });
-    expect(parrotWebpGifSize(webp("VP8L", 3000, 2000))).toEqual({ width: 3000, height: 2000 });
-    expect(parrotWebpGifSize(webp("VP8X", 1201, 900))).toEqual({ width: 1201, height: 900 });
-    expect(parrotWebpGifSize(new TextEncoder().encode("RIFF....WEBPVP8 "))).toBeNull();
-    expect(parrotWebpGifSize(JPEG)).toBeNull();
+  it("reads a WebP's or GIF's width from its header", () => {
+    expect(parrotWebpGifWidth(gif(640))).toBe(640);
+    expect(parrotWebpGifWidth(webp("VP8 ", 1200))).toBe(1200);
+    expect(parrotWebpGifWidth(webp("VP8L", 3000))).toBe(3000);
+    expect(parrotWebpGifWidth(webp("VP8X", 1201))).toBe(1201);
+    expect(parrotWebpGifWidth(new TextEncoder().encode("RIFF....WEBPVP8 "))).toBeNull();
+    expect(parrotWebpGifWidth(JPEG)).toBeNull();
   });
 
   it("keeps a WebP or GIF at most 1200 px wide as it is with no small copy, and skips a wider or unreadable one", () => {
@@ -271,70 +265,5 @@ describe("makeParrotCoverCopies", () => {
     }
     clog("skipped", messages);
     expect(messages.filter((m) => m.includes("skipped"))).toHaveLength(5);
-  });
-});
-
-// @req PAR-META-22
-describe("album covers are square", () => {
-  const clog = testLog("PARROT-INGEST-COVERS-003");
-  // A 1280 × 720 picture in three upright bands: red, green, blue.
-  const thirds = () => {
-    const width = 1280;
-    const height = 720;
-    const data = new Uint8Array(width * height * 4);
-    for (let y = 0; y < height; y++) {
-      for (let x = 0; x < width; x++) {
-        const band = Math.min(2, Math.floor((x * 3) / width));
-        data.set(band === 0 ? [220, 20, 20, 255] : band === 1 ? [20, 220, 20, 255] : [20, 20, 220, 255], (y * width + x) * 4);
-      }
-    }
-    return new Uint8Array(jpeg.encode({ width, height, data }, 92).data);
-  };
-  const decoded = (bytes: Uint8Array) => jpeg.decode(bytes, { useTArray: true });
-  const at = (image: { width: number; data: Uint8Array }, x: number, y: number) => Array.from(image.data.subarray((y * image.width + x) * 4, (y * image.width + x) * 4 + 3));
-  const near = (pixel: number[], rgb: number[]) => pixel.every((value, i) => Math.abs(value - rgb[i]!) < 24);
-
-  it("cuts a wide album cover to its centre square by default", () => {
-    const messages: string[] = [];
-    const copies = makeParrotCoverCopies(thirds(), (m) => messages.push(m), { square: true })!;
-    const large = decoded(copies.large);
-    const thumb = decoded(copies.thumb!);
-    clog("centre", { large: [large.width, large.height], thumb: [thumb.width, thumb.height], messages });
-    expect([large.width, large.height]).toEqual([720, 720]);
-    expect([thumb.width, thumb.height]).toEqual([500, 500]);
-    // The centre square (x 280–999) starts in the red band and ends in the blue one, green in the middle.
-    expect(near(at(large, 10, 360), [220, 20, 20])).toBe(true);
-    expect(near(at(large, 360, 360), [20, 220, 20])).toBe(true);
-    expect(near(at(large, 710, 360), [20, 20, 220])).toBe(true);
-    expect(messages.some((m) => m.includes("cut to the square 720 × 720 at 280,0"))).toBe(true);
-  });
-
-  it("cuts the square the user framed", () => {
-    const crop = { left: 40 / 1280, top: 100 / 720, size: 0.5 };
-    const messages: string[] = [];
-    const copies = makeParrotCoverCopies(thirds(), (m) => messages.push(m), { square: true, crop })!;
-    const large = decoded(copies.large);
-    clog("framed", { large: [large.width, large.height], thumb: copies.thumb, messages });
-    expect([large.width, large.height]).toEqual([360, 360]);
-    expect(copies.thumb).toBeNull();
-    // x 40–399, all inside the red band (0–426).
-    for (const [x, y] of [[5, 5], [180, 180], [354, 354]] as const) expect(near(at(large, x, y), [220, 20, 20])).toBe(true);
-    expect(messages.some((m) => m.includes("cut to the square 360 × 360 at 40,100"))).toBe(true);
-  });
-
-  it("keeps a square picture as it is, and a framing past the edge stays inside the picture", () => {
-    const square = new Uint8Array(jpeg.encode({ width: 600, height: 600, data: new Uint8Array(600 * 600 * 4).fill(128) }, 90).data);
-    const copies = makeParrotCoverCopies(square, undefined, { square: true })!;
-    expect(Buffer.from(copies.large).equals(Buffer.from(square))).toBe(true);
-    expect(parrotCoverSquare(1280, 720, { left: 0.9, top: 0.9, size: 0.5 })).toEqual({ x: 920, y: 360, side: 360 });
-    expect(parrotCoverSquare(1280, 720, { left: 0, top: 0, size: 3 })).toEqual({ x: 0, y: 0, side: 720 });
-    expect(parrotCoverSquare(720, 1280)).toEqual({ x: 0, y: 280, side: 720 });
-  });
-
-  it("keeps an artist photo's shape", () => {
-    const photo = new Uint8Array(jpeg.encode({ width: 1200, height: 675, data: new Uint8Array(1200 * 675 * 4).fill(90) }, 90).data);
-    const copies = makeParrotCoverCopies(photo)!;
-    const large = decoded(copies.large);
-    expect([large.width, large.height]).toEqual([1200, 675]);
   });
 });
