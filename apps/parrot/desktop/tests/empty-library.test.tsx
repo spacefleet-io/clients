@@ -12,7 +12,6 @@ import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 import { streamBridgeStub } from "./streamBridge";
-import { exportBridgeStub } from "./exportBridge";
 import type { ParrotLanguage, ParrotState } from "../src/shared/ipc";
 import Library from "../src/renderer/src/Library";
 import { PARROT_STRINGS, translator } from "../src/renderer/src/i18n";
@@ -66,7 +65,6 @@ describe("Parrot desktop empty library (PAR-EMPTY-01)", () => {
       configurable: true,
       value: {
         ...streamBridgeStub(),
-        ...exportBridgeStub(),
         getLibrary: vi.fn(async () => ({ ok: true, library: emptyLibrary })),
         getImportStatus: vi.fn(async () => idle),
         getImportScan: vi.fn(async () => null),

@@ -1,6 +1,6 @@
 // The signed-in state every screen reads: the session, the library key, and the open library.
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { AppState, Platform } from "react-native";
+import { AppState } from "react-native";
 import type { ShellAuthSession } from "@space/mobile-shell/services/auth";
 import { getLibraryMeta, logout } from "@space/shared/api";
 import { decryptBase64ToBytes } from "@space/mobile-shell/libraryEnvelope";
@@ -24,7 +24,6 @@ import { loadEvenVolume } from "../lib/evenVolume";
 import { scopeLogger } from "@space/mobile-shell/logger";
 import { profileStore } from "../lib/profiles";
 import { applyAccountLanguageFromServer, reconcileAfterSignIn, setupSettlesLanguage } from "../lib/accountLanguage";
-import { publishSiblingStatus } from "@space/mobile-shell/sibling";
 
 const log = scopeLogger("session");
 
@@ -42,7 +41,7 @@ type LibraryStatus = "idle" | "loading" | "ready" | "missing" | "error";
 /** Why the sign-in screen is showing again: the server rejected the saved session (it shows a short explanation). */
 export type SignInNotice = "sessionRejected" | null;
 
-export type SessionState = {
+type SessionState = {
   booting: boolean;
   session: ShellAuthSession | null;
   libraryKey: string | null;
@@ -259,15 +258,6 @@ export const SessionProvider = ({ children }: { children: React.ReactNode }) => 
     })();
   }, []);
 
-  // Badger on this phone offers "Continue with your Parrot account" only while Parrot can sign it in (ACCT-PAIR-07): a
-  // session and the library key it seals to Badger. The native status store gets the account, never the token or key.
-  const siblingUserId = session && libraryKey ? session.user.id : null;
-  const siblingEmail = session && libraryKey ? session.user.email : null;
-  useEffect(() => {
-    if (booting) return;
-    void publishSiblingStatus(siblingUserId && siblingEmail ? { email: siblingEmail, userId: siblingUserId } : null);
-  }, [booting, siblingUserId, siblingEmail]);
-
   /**
    * Forgets the session and the library on this phone; the API is told only when the token still works. The library
    * key goes too on a Sign out, but stays after a rejected session, remembered as that account's.
@@ -405,11 +395,10 @@ export const SessionProvider = ({ children }: { children: React.ReactNode }) => 
     });
   }, [session, libraryKey, checkKey, forgetLibraryKey]);
 
-  // The account's profiles (ACCT-PROF-01): the phone keeps its pick, like Badger's phone (UX-PROF-01); the TV asks
-  // "Who's listening?" at every start, like Badger TV (PAR-TV-02, UX-PROF-02). The list is read again each time the app
-  // comes back to the front, so a profile added, renamed or deleted on another device shows here.
+  // The account's profiles (ACCT-PROF-01): the phone keeps its pick, like Badger's phone (UX-PROF-01). The list is read
+  // again each time the app comes back to the front, so a profile added, renamed or deleted on another device shows here.
   useEffect(() => {
-    if (session) void profileStore.startSession({ userId: session.user.id, token: session.token, askEveryStart: Platform.isTV });
+    if (session) void profileStore.startSession({ userId: session.user.id, token: session.token, askEveryStart: false });
   }, [session]);
 
   const profilesUserId = session?.user.id ?? null;

@@ -367,10 +367,6 @@ class FakeShowLib(FakeLib):
         FakeLib.__init__(self, 1, movies)
         self.shows = shows
         self.eps = episodes  # show id -> [episode rows]
-        self.target = None  # the account's targetOpStreamVersion (LIB-FMT-13); None: not switched
-
-    def target_op_stream_version(self):
-        return self.target
 
     def list_media(self, kind):
         return list(self.movies) if kind == "movie" else list(self.shows) if kind == "tv" else []
@@ -456,25 +452,6 @@ class DeleteExportsOneTitle(unittest.TestCase):
         self.assertEqual(self._files(), {rel: t for rel, t in before.items() if rel not in gone})
         self.assertFalse(os.path.exists(os.path.join(self.root, "tvshows", "Dark (2017)", "Season 02")))
         self.assertNotIn("e3", [ids["episodeId"] for ids in export.load_index().values()])
-
-    def test_a_switched_account_deletes_an_episode_with_one_episode_delete_op(self):
-        # @req LIB-FMT-11[badger-kodi]
-        # @test-id kodi-v4-episode-delete-op
-        # @why op stream 4 has no playback in media.upsert: once switched, the add-on names the episode and its
-        #      files in one media.episode.delete instead of re-sending the show's details
-        self.ctx.lib.target = 4
-        details = {"episodes": [{"id": "e3", "seasonNumber": 2, "episodeNumber": 1}],
-                   "files": [{"id": "f-e3", "season": 2, "episode": 1}, {"id": "f-e1", "season": 1, "episode": 1}]}
-        self.ctx.lib.media_details = lambda media_id: details
-        with mock.patch.object(playback, "yes_no", return_value=True), \
-                mock.patch.object(playback.details_mod, "episode_storage_keys", return_value=["media/s1/e3"]), \
-                mock.patch.object(export, "remove_from_kodi", return_value=1), \
-                mock.patch.object(export, "export_library"):
-            ok = playback.delete_episode(self.ctx, "s1", "e3")
-        print("ops=%s" % self.ctx.lib.ops)
-        self.assertTrue(ok)
-        self.assertEqual(self.ctx.lib.ops, [("media.episode.delete", {
-            "mediaId": "s1", "episodeId": "e3", "seasonNumber": 2, "episodeNumber": 1, "fileIds": ["f-e3"]})])
 
     def test_the_last_episode_takes_its_show_folder(self):
         # @req INTG-KODI-02

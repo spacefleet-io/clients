@@ -5,10 +5,10 @@ import { scopeLogger } from "@space/mobile-shell/logger";
 import { ProfileAvatarImage } from "@space/mobile-shell/profile-avatar";
 import { UPDATE_FEATURES } from "@space/mobile-shell/profile-setup";
 import type { AppFeatureId } from "@space/shared/appFeatures";
-import { TvFocusable } from "@space/mobile-shell/tv/TvFocusable";
-import { useTvScale, useTvStyles } from "@space/mobile-shell/tv/tvScale";
-import { useTvMenuKeyHold } from "@space/mobile-shell/tv/useTvMenuKey";
-import type { TvViewInstance } from "@space/mobile-shell/tv/tvViewInstance";
+import { TvFocusable } from "../components/TvFocusable";
+import { useTvScale, useTvStyles } from "../lib/tvScale";
+import { useTvMenuKeyHold } from "../lib/useTvMenuKey";
+import type { TvViewInstance } from "../lib/tvViewInstance";
 import { TV_COLOR, TV_FONT, TV_RADII } from "../ui/tokens";
 
 const log = scopeLogger("tv.whats_new");

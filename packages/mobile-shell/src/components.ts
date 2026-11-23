@@ -3,13 +3,7 @@ export { MobileShellFrame } from "./components/mobile-shell-frame";
 export { MobileNoticeToast } from "./components/mobile-notice-toast";
 export { MobileFounderBadge, MobileFounderNotice, MobileFounderNoticeHost } from "./components/mobile-founder";
 export { MobileRenderBoundary, type MobileRenderBoundaryProps } from "./components/mobile-render-boundary";
-export { MobileTabBar, type MobileTabBarAction, type MobileTabBarLook, type MobileTabDefinition } from "./components/mobile-tab-bar";
-export {
-  MobileSearchOverlay,
-  type MobileSearchGroup,
-  type MobileSearchOverlayProps,
-  type MobileSearchRow,
-} from "./components/mobile-search-overlay";
+export { MobileTabBar, type MobileTabBarLook, type MobileTabDefinition } from "./components/mobile-tab-bar";
 export { MobileTabPager, type MobileTabPagerProps } from "./components/mobile-tab-pager";
 export { MobileScreen } from "./components/mobile-screen";
 export { default as MobileAppBackdrop } from "./components/mobile-app-backdrop";
@@ -55,16 +49,10 @@ export { MobileEmptyLibrary, MobileEmptyLibraryAction, type MobileEmptyLibrarySt
 export { MobileLibraryLoading } from "./components/mobile-library-loading";
 export { MobileSectionHeader } from "./components/mobile-section-header";
 export { MobilePosterCard } from "./components/mobile-poster-card";
-export { MobileRail, MobileRailScroll, type MobileRailProps, type MobileRailScrollProps } from "./components/mobile-rail";
+export { MobilePosterRow } from "./components/mobile-poster-row";
 export { MobileNoticeBanner } from "./components/mobile-notice-banner";
 export { MobileErrorReportsLink } from "./components/mobile-error-reports-link";
 export { MobileOfflineIndicator, formatPendingOpsLabel, type MobileOfflineVariant } from "./components/mobile-offline-indicator";
-export {
-  MobileSyncIndicator,
-  syncIndicatorCopy,
-  type MobileSyncIndicatorCopy,
-  type MobileSyncIndicatorState,
-} from "./components/mobile-sync-indicator";
 
 // UI primitives
 export { MobileButton } from "./components/mobile-button";
@@ -76,5 +64,4 @@ export { MobileFeedbackForm } from "./components/mobile-feedback-form";
 export { MobileCreditsPanel } from "./components/mobile-credits-panel";
 export { MobileOpenSourceNotice } from "./components/mobile-open-source-notice";
 export { MobilePasswordReset } from "./components/mobile-password-reset";
-export { MobileSignUp, MobileSignUpTermsNotice, type MobileSignUpStep } from "./components/mobile-sign-up";
 export { MobileNebula, type MobileNebulaSpot } from "./components/mobile-nebula";

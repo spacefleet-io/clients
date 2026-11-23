@@ -1,11 +1,10 @@
 import * as sdk from "@space/sdk";
-import { ApiError, apiErrorFromResponse, createSpaceClient, unwrap, type ApiErrorPayload } from "@space/sdk";
+import { ApiError, createSpaceClient, unwrap, type ApiErrorPayload } from "@space/sdk";
 import { createUserStorageTunnelClient, type StorageTunnelPurpose, type TunnelUploadSource } from "./storageTunnel";
 import type { StorageObjectCounting } from "./storageCounting";
 import { DEFAULT_SPACE_APP_ID, SPACE_APP_HEADER, type SpaceAppId } from "./appScope";
 import { clientIdentityHeaders } from "./appVersion";
 import { parseLibraryOpsResponse, type ChunkRefsSource, type LibraryOpsResponse } from "./contracts/library";
-import { postLibraryOp, type LibraryOpLineage, type LibraryWriterFormats } from "./libraryOpUpload";
 import type { AccountAccess, BillingPeriod } from "./accountAccess";
 import type { BillingStatus, PaidPlanId, PaymentOutcome, SubscriptionChangeOutcome } from "./billingCheckout";
 import type { CheckoutReturnApp } from "./checkoutReturn";
@@ -137,7 +136,10 @@ export const apiRequest = async <T>(
     body: options.body ? JSON.stringify(options.body) : undefined,
   });
 
-  if (!res.ok) throw await apiErrorFromResponse(res);
+  if (!res.ok) {
+    const payload = (await res.json().catch(() => ({}))) as ApiErrorPayload;
+    throw new ApiError(res.status, payload);
+  }
 
   if (res.status === 204) {
     return undefined as T;
@@ -148,17 +150,12 @@ export const apiRequest = async <T>(
 
 /**
  * `uiLanguage`: the account's language (emails, ACCT-EMAIL-01); the API keeps `en` when it is absent. `newsOptIn`: the
- * sign-up's unticked "send me SpaceFleet news" box (ACCT-NEWS-01), recorded as `signup:<clientType>`: `desktop` for the
- * computer apps, `mobile` for the phones (ACCT-AUTH-10).
+ * sign-up's unticked "send me SpaceFleet news" box (ACCT-NEWS-01), recorded as `signup:desktop`.
  */
-export const signup = (
-  email: string,
-  password: string,
-  uiLanguage?: AccountLanguage,
-  newsOptIn = false,
-  clientType: "desktop" | "mobile" = "desktop"
-): Promise<{ user: User }> =>
-  unwrap(sdk.signup({ ...scoped(), body: { email, password, newsOptIn, clientType, ...(uiLanguage ? { uiLanguage } : {}) } }));
+export const signup = (email: string, password: string, uiLanguage?: AccountLanguage, newsOptIn = false): Promise<{ user: User }> =>
+  unwrap(
+    sdk.signup({ ...scoped(), body: { email, password, newsOptIn, clientType: "desktop", ...(uiLanguage ? { uiLanguage } : {}) } })
+  );
 
 /** What the device calls itself in the account's device list (`deviceType`: desktop, tv, kodi, jellyfin or mobile). */
 export type LoginDevice = { deviceType?: string; deviceName?: string };
@@ -239,8 +236,8 @@ export const completeProviderSignIn = (
     })
   );
 
-export const verifyEmail = (email: string, code: string, device?: LoginDevice): Promise<{ token: string; user: User }> =>
-  unwrap(sdk.verifyEmail({ ...scoped(), body: { email, code, clientType: apiClientType, ...deviceFields(device) } }));
+export const verifyEmail = (email: string, code: string): Promise<{ token: string; user: User }> =>
+  unwrap(sdk.verifyEmail({ ...scoped(), body: { email, code, clientType: apiClientType } }));
 
 export const resendVerification = (email: string): Promise<{ ok: boolean }> =>
   unwrap(sdk.resendVerification({ ...scoped(), body: { email } }));
@@ -382,8 +379,6 @@ export type FeedbackInput = {
   platform?: string | null;
   deviceModel?: string | null;
   log?: string | null;
-  /** UX-SUP-07: the server's request ids of the app's last failed API calls (`recentFailedRequestIds`), ids only. */
-  requestIds?: string[] | null;
 };
 
 export const sendFeedback = (token: string, body: FeedbackInput): Promise<{ id: string }> =>
@@ -429,23 +424,6 @@ export const approvePairing = (
         ...(password !== undefined ? { password } : {}),
         ...(twoFactorCode !== undefined ? { twoFactorCode } : {}),
       },
-    })
-  );
-
-/**
- * Same-device sign-in (ACCT-PAIR-07): approves the sister app's request on this device with no key in the body; the
- * caller hands the sealed key to that app over the local channel, so the server never sees it.
- */
-export const approvePairingLocal = (
-  token: string,
-  requestId: string,
-  approverDeviceId?: string
-): Promise<{ ok: boolean; sessionId?: string }> =>
-  unwrap(
-    sdk.approvePairing({
-      ...scoped(token),
-      path: { requestId },
-      body: { localKey: true, ...(approverDeviceId ? { approverDeviceId } : {}) },
     })
   );
 
@@ -722,21 +700,6 @@ export type MusicAlbumsQuery = { artist: string; album: string; limit?: number; 
  */
 export type MusicCopyChanges = { version: string | null; changes: Array<{ version: string; albums: string[] }> };
 export type MusicLyricsQuery = { artist: string; title: string; album?: string; durationMs?: number; id?: string };
-/** A field of the edit dialog that autocompletes (PAR-META-18): a song's title, its artist, its album. */
-export type MusicSuggestField = "title" | "artist" | "album";
-/** `field`: the field being typed in; `text`: what is typed there; the other fields as they stand (context). */
-export type MusicSuggestQuery = { field: MusicSuggestField; text: string; title?: string; artist?: string; album?: string; limit?: number };
-/** One autocomplete result of `music_suggest` (PAR-META-18), ranked by how well it fits every field together. */
-export type MusicSuggestion = {
-  kind: "song" | "album" | "artist";
-  artist: MusicArtistRef;
-  /** For kind song: the album the song is on (original album first, PAR-META-13); for album: the album itself; null for artist. */
-  album: { id: string | null; title: string; year: number | null; kind: string | null; trackNumber: number | null; disc: number | null } | null;
-  /** kind song only. */
-  song: { id: string | null; title: string; durationMs: number | null } | null;
-  /** Which fields this result fits (the typed field always true). */
-  fits: { title: boolean; artist: boolean; album: boolean };
-};
 /** One movie, or one episode of a show: all a subtitle search carries (PLAY-SUBGET-14, never the user's file). */
 export type SubtitlesRequest =
   | { type: "movie"; id: number }
@@ -797,69 +760,14 @@ export type LibraryMeta = {
   snapshotHistory: Array<{ snapshotId: string; manifestKey: string; createdAt: string }>;
   /** The newest op since the snapshot only (the full ledger needs `opsHistory=all`, which no app asks for). */
   opsHistory: Array<{ opId: string; version: number; createdAt: string; size: number; objectKey: string }>;
-  /**
-   * Badger only: the op-stream version writers of this account declare (`writeOpStreamVersion` of
-   * @space/library-db-definition/ops): 4 once the account is switched (LIB-FMT-13), else 3. Absent from older servers
-   * and for Parrot.
-   */
-  targetOpStreamVersion?: number;
-  /**
-   * Parrot only: whether this account's imports store each song in parts (PAR-FMT-01, `PARROT_SPLIT_ORIGINALS` on the
-   * API). Absent from older servers and for Badger: store whole.
-   */
-  splitOriginals?: boolean;
 };
 
-/**
- * The scope of a library READ (meta, snapshot, ops). `readOpStreamVersion` is the highest op-stream version the caller
- * reads (`READ_OP_STREAM_VERSION`), sent as `x-library-op-stream-version`; a switched account answers 426
- * `app_update_required` to a read without it (LIB-FMT-13). Omitted = no header (Parrot, builds that read no v4).
- */
-const libraryReadScope = (token: string, appId: SpaceAppId, readOpStreamVersion: number | undefined) => {
-  const base = scoped(token, appId);
-  return readOpStreamVersion === undefined
-    ? base
-    : { ...base, headers: { ...base.headers, "x-library-op-stream-version": String(readOpStreamVersion) } };
-};
-
-export const getLibraryMeta = (
-  token: string,
-  appId: SpaceAppId = DEFAULT_SPACE_APP_ID,
-  readOpStreamVersion?: number
-): Promise<LibraryMeta> => unwrap(sdk.getLibraryMeta(libraryReadScope(token, appId, readOpStreamVersion)));
-
-/** The waits between tries of the key step's meta read: about 7 s in all, which covers one server copy restarting. */
-export const KEY_STEP_META_RETRY_DELAYS_MS: readonly number[] = [1_000, 2_000, 4_000];
-
-/**
- * `getLibraryMeta` for the library key step (STOR-GATEWAY-01). An update restarts the API and the storage gateway one
- * copy at a time, and a request that lands on a copy just going away gets a 502/503 or no answer at all. The key step
- * would read that as "the key cannot be checked" and show its error, so such a failure is tried again after each of
- * `delaysMs` first. Any other answer, a refused session (401/403) above all, is final at once.
- */
-export const getLibraryMetaForKeyStep = async (
-  token: string,
-  appId: SpaceAppId = DEFAULT_SPACE_APP_ID,
-  delaysMs: readonly number[] = KEY_STEP_META_RETRY_DELAYS_MS,
-  readOpStreamVersion?: number
-): Promise<LibraryMeta> => {
-  for (let attempt = 0; ; attempt++) {
-    try {
-      return await getLibraryMeta(token, appId, readOpStreamVersion);
-    } catch (error) {
-      const transient =
-        error instanceof ApiError ? error.status === 0 || error.status === 502 || error.status === 503 : error instanceof TypeError;
-      const delayMs = delaysMs[attempt];
-      if (!transient || delayMs === undefined) throw error;
-      await new Promise((resolve) => setTimeout(resolve, delayMs));
-    }
-  }
-};
+export const getLibraryMeta = (token: string, appId: SpaceAppId = DEFAULT_SPACE_APP_ID): Promise<LibraryMeta> =>
+  unwrap(sdk.getLibraryMeta(scoped(token, appId)));
 
 export const getLibraryDb = (
   token: string,
-  appId: SpaceAppId = DEFAULT_SPACE_APP_ID,
-  readOpStreamVersion?: number
+  appId: SpaceAppId = DEFAULT_SPACE_APP_ID
 ): Promise<{
   exists: boolean;
   version: number;
@@ -871,45 +779,58 @@ export const getLibraryDb = (
   blobEncoding: "binary";
   snapshotId: string | null;
   chunkSize: number | null;
-  /** As `LibraryMeta.targetOpStreamVersion`. */
-  targetOpStreamVersion?: number;
-}> => unwrap(sdk.getLibraryDb(libraryReadScope(token, appId, readOpStreamVersion)));
+}> => unwrap(sdk.getLibraryDb(scoped(token, appId)));
 
 export const getLibraryOps = async (
   token: string,
   sinceVersion: number,
-  appId: SpaceAppId = DEFAULT_SPACE_APP_ID,
-  readOpStreamVersion?: number
+  appId: SpaceAppId = DEFAULT_SPACE_APP_ID
 ): Promise<LibraryOpsResponse> => {
-  const raw = await unwrap(
-    sdk.getLibraryOps({ ...libraryReadScope(token, appId, readOpStreamVersion), query: { since: String(sinceVersion) } })
-  );
+  const raw = await unwrap(sdk.getLibraryOps({ ...scoped(token, appId), query: { since: String(sinceVersion) } }));
   return parseLibraryOpsResponse(raw);
 };
 
-export type { LibraryWriterFormats };
+/**
+ * The library storage and op-stream formats a client declares on every write.
+ * The caller supplies the values (`STORAGE_FORMAT_VERSION`, `OP_STREAM_VERSION`
+ * from `@space/library-db-definition`): shared cannot import the definition
+ * package without a dependency cycle. The server rejects a write that declares
+ * less than the library's stored version (LIB-FMT-05 downgrade protection).
+ */
+export type LibraryWriterFormats = { storageFormatVersion: number; opStreamVersion: number };
 
 export const putLibraryOp = (
   token: string,
   baseVersion: number,
   opId: string,
   payload: Uint8Array,
-  lineage?: LibraryOpLineage,
+  lineage?: { prevStateHash?: string | null; nextStateHash?: string | null },
   appId: SpaceAppId = DEFAULT_SPACE_APP_ID,
   // Formats this build writes (see `LibraryWriterFormats`).
   formats?: LibraryWriterFormats
-) =>
-  postLibraryOp(
-    { client: sdkClient, ...(token ? { auth: token } : {}), headers: { [SPACE_APP_HEADER]: appId } },
-    baseVersion,
-    opId,
-    payload,
-    lineage,
-    formats
+): Promise<{ version: number; snapshotVersion: number; stateHash: string | null; lastOpId: string | null }> =>
+  unwrap(
+    sdk.postLibraryOp({
+      client: sdkClient,
+      ...(token ? { auth: token } : {}),
+      headers: {
+        [SPACE_APP_HEADER]: appId,
+        "x-library-base-version": String(baseVersion),
+        "x-library-op-id": opId,
+        ...(lineage?.prevStateHash ? { "x-library-prev-state-hash": lineage.prevStateHash } : {}),
+        ...(lineage?.nextStateHash ? { "x-library-next-state-hash": lineage.nextStateHash } : {}),
+        ...(formats
+          ? {
+              "x-library-storage-format-version": String(formats.storageFormatVersion),
+              "x-library-op-stream-version": String(formats.opStreamVersion),
+            }
+          : {}),
+      },
+      // The generated type says Blob|File, but `bodySerializer: null` hands the bytes to fetch as-is, and
+      // `new Blob([typedArray])` throws on React Native; so pass the Uint8Array and cast.
+      body: toBinaryBody(payload) as unknown as Blob,
+    })
   );
-
-/** What the server answers once it has taken a library snapshot (the new library version and its stamps). */
-export type LibraryDbPutResult = { version: number; stateHash: string | null; lastOpId: string | null; snapshotVersion?: number };
 
 /**
  * Send a snapshot PUT to /library/db. The new JSON-body contract carries
@@ -939,7 +860,7 @@ export const putLibraryDb = (
   // Formats this build writes; omitted = the server assumes 1 and answers
   // 409 `library_format_downgrade` once the library is stamped higher.
   formats?: LibraryWriterFormats
-): Promise<LibraryDbPutResult> =>
+): Promise<{ version: number; stateHash: string | null; lastOpId: string | null; snapshotVersion?: number }> =>
   unwrap(
     sdk.putLibraryDb({
       ...scoped(token, appId),
@@ -1002,7 +923,10 @@ export const putLibraryDbBinary = async (
     body: toBinaryBody(payload),
   });
 
-  if (!res.ok) throw await apiErrorFromResponse(res);
+  if (!res.ok) {
+    const payload = (await res.json().catch(() => ({}))) as ApiErrorPayload;
+    throw new ApiError(res.status, payload);
+  }
 
   return res.json() as Promise<{ version: number; stateHash: string | null; lastOpId: string | null }>;
 };

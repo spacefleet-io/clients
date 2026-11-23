@@ -7,8 +7,7 @@
  *   copies (covers, artist photos, lyrics); the metadata service is asked only at import, by the paced background copy
  *   and when the user asks. Before this, playing a song never looked up called `fetchLyrics` (a metadata lookup) from
  *   the window; now it is handed to the paced pass (`wantLyrics`). The scan keeps every renderer lookup IPC inside the
- *   import review, the edit dialog (its fields' suggestions while the user types, PAR-META-18, and its Lyrics section)
- *   or the Lyrics tab's own button.
+ *   import review, the edit dialog or the Lyrics tab's own button.
  */
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
@@ -16,7 +15,6 @@ import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { streamBridgeStub } from "./streamBridge";
-import { exportBridgeStub } from "./exportBridge";
 import type { ParrotState } from "../src/shared/ipc";
 import Library from "../src/renderer/src/Library";
 import { translator } from "../src/renderer/src/i18n";
@@ -62,7 +60,7 @@ const library = {
 };
 
 /** Every bridge call that reaches the metadata service (main's `lookupClient()`). */
-const LOOKUP_IPC = ["fetchLyrics", "suggestEdit", "suggestEditCover", "importCover", "importArtistPhoto", "searchImportAlbums", "matchImportAlbum"] as const;
+const LOOKUP_IPC = ["fetchLyrics", "fetchMetadata", "importCover", "importArtistPhoto", "searchImportAlbums", "searchImportSongs", "matchImport"] as const;
 
 describe("[parrot desktop] display reads only the library's copies (PAR-COPY-01)", () => {
   let container: HTMLDivElement;
@@ -97,7 +95,6 @@ describe("[parrot desktop] display reads only the library's copies (PAR-COPY-01)
       configurable: true,
       value: {
         ...streamBridgeStub(),
-        ...exportBridgeStub(),
         ...spies,
         wantLyrics: vi.fn(async () => undefined),
         getLibrary: vi.fn(async () => ({ ok: true, library })),
@@ -172,7 +169,7 @@ describe("[parrot desktop] display reads only the library's copies (PAR-COPY-01)
       [...readFileSync(path, "utf8").matchAll(pattern)].map((match) => ({ file: relative(dir, path), ipc: match[1]!, at: match.index! }))
     );
     phase("scan", { files: files.length, found: found.map((f) => `${f.file}:${f.ipc}`) });
-    const allowedFiles = new Set(["ImportReview.tsx", "editLookups.ts", "editSuggest.ts"]);
+    const allowedFiles = new Set(["ImportReview.tsx", "editLookups.ts"]);
     const outside = found.filter((f) => !allowedFiles.has(f.file));
     // In the Library shell the only lookup is the Lyrics tab's "Fetch lyrics" / "Search again" button handler.
     const library = readFileSync(join(dir, "Library.tsx"), "utf8");

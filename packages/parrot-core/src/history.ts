@@ -2,7 +2,6 @@
 // The history stays on the device that played (PAR-HOME-02): it is never uploaded, never shared and never used to
 // suggest music (PAR-PROD-02). Immutable, like the queue, so React state, a store or a test hold it the same way.
 import { sortTracks } from "./catalog";
-import { sortParrotAlbums, type ParrotSortableAlbum } from "./librarySort";
 
 /** One album played on this device, newest first in `ListeningHistory.albums`. */
 export type HistoryAlbum = {
@@ -136,13 +135,6 @@ export const homeView = <A extends { id: string }, R extends { id: string; name:
     artists: artistsByPlays(history, artists).slice(0, limit),
   };
 };
-
-/**
- * Home's "Recently added" row (PAR-HOME-01), the same on every surface: the library's albums in its "Recently added"
- * order (`albums.created_at`, newest first, PAR-LOOK-01), whether or not anything was played.
- */
-export const homeRecentlyAdded = <A extends ParrotSortableAlbum>(albums: readonly A[], limit = HOME_ROW_LIMIT): A[] =>
-  sortParrotAlbums(albums, "recent").slice(0, limit);
 
 /**
  * The line under the album's name on Home's card (PAR-HOME-01), the same on every surface: "artist · year · N songs",

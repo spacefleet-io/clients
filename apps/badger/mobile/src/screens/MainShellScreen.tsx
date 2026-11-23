@@ -1,32 +1,27 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AppState, StyleSheet, View } from "react-native";
 import { useIsFocused } from "@react-navigation/native";
-import { Home, LibraryBig, ListVideo, Search, Settings } from "lucide-react-native";
+import { Home, LibraryBig, ListVideo, Settings } from "lucide-react-native";
 import {
   MobileShellFrame,
   MobileFounderNotice,
   MobileNoticeToast,
   MobileOfflineIndicator,
-  MobileSyncIndicator,
   SkyRegion,
   type MobileOfflineVariant,
-  type MobileTabBarAction,
   type MobileTabDefinition,
 } from "@space/mobile-shell/components";
 import { useTranslation } from "@space/mobile-shell/i18n";
 import { useNoticeQueue } from "@space/mobile-shell/notice-queue";
 import { founderWatch, useFounderWatch } from "@space/mobile-shell/founder";
 import { offlineNoticeEdge } from "@space/shared/offlineNotice";
-import { phoneSearchStrings } from "@space/shared/searchPaletteStrings";
 import { useAuth } from "../store/auth";
 import { checkForNewDevices, markDeviceSeen } from "../lib/pairing/deviceWatch";
 import { newDeviceKey, newDeviceMessage, subscribeNewDevice, type NewDeviceInfo } from "../lib/pairing/newDevice";
 import { useOpenDevices } from "../lib/pairing/useOpenDevices";
 import { useLibraryData, useLibraryStatus } from "../store/library";
-import { librarySyncProgress } from "../lib/librarySyncStatus";
 import { UnpaidAccessBanner } from "../components/UnpaidAccessBanner";
 import { PlaylistsPanel } from "../components/PlaylistsPanel";
-import { PhoneSearch } from "../components/PhoneSearch";
 import { HomeScreen } from "./HomeScreen";
 import { LibraryScreen } from "./LibraryScreen";
 import type { LibraryScope } from "../lib/libraryScreenState";
@@ -35,10 +30,9 @@ import { SettingsScreen } from "./SettingsScreen";
 
 /**
  * Primary sections, in Parrot's phone order (UX-PHONE-07, PAR-NAV-02): Home, Library, Playlists and Settings, as the
- * desktop's top bar (UX-TOP-01); Playlists is its own destination, not a Library tab. Between Library and Playlists
- * stands the Search button (UX-PHONE-12): it opens the search over the page and is not a page, so a swipe goes from
- * Library straight to Playlists. The bar wears the Badger design's look (UX-PHONE-06). Account & plan lives under
- * Settings (stack screen "Subscription"). Labels are keys, resolved at render so the tabs follow the UI language live.
+ * desktop's top bar (UX-TOP-01); Playlists is its own destination, not a Library tab. The bar wears the Badger design's
+ * look (UX-PHONE-06). Account & plan lives under Settings (stack screen "Subscription"). Labels are keys, resolved at
+ * render so the tabs follow the UI language live.
  */
 const TAB_DEFINITIONS = [
   { id: "home", labelKey: "nav.home", icon: Home },
@@ -69,7 +63,7 @@ export const MainShellScreen = () => {
     [t],
   );
   const { media } = useLibraryData();
-  const { loadStatus, reload, refresh, syncState } = useLibraryStatus();
+  const { loadStatus, reload } = useLibraryStatus();
   const isFocused = useIsFocused();
   const { token } = useAuth();
   const [activeTab, setActiveTab] = useState("home");
@@ -81,20 +75,6 @@ export const MainShellScreen = () => {
   }, []);
 
   const hasLibraryMedia = media.length > 0;
-  const [searchOpen, setSearchOpen] = useState(false);
-  const closeSearch = useCallback(() => setSearchOpen(false), []);
-  const searchAction = useMemo<MobileTabBarAction>(
-    () => ({
-      id: "search",
-      label: phoneSearchStrings("badger", i18n.language).button,
-      icon: Search,
-      after: "library",
-      // UX-LIBTAB-01: nothing to search in an empty library.
-      disabled: !hasLibraryMedia,
-      onPress: () => setSearchOpen(true),
-    }),
-    [hasLibraryMedia, i18n.language],
-  );
   // UX-NOTICE-02: offline is a normal state. It shows as a small sign on the tab bar while it lasts and is said once in
   // a passing notice; no banner and no line in the pages.
   const offlineVariant: MobileOfflineVariant | null = loadStatus.kind === "offline" ? loadStatus.reason : null;
@@ -170,22 +150,13 @@ export const MainShellScreen = () => {
       showBackdrop
       backdropPaused={!isFocused}
       tabBarLook="badger"
-      tabBarAction={searchAction}
       tabBarBadge={
         loadStatus.kind === "offline" ? (
           <MobileOfflineIndicator pendingOps={loadStatus.pendingOps} variant={loadStatus.reason} onRetry={reload} />
-        ) : syncState.kind === "idle" ? null : (
-          // LIB-SYNC-13: the library's update sign; a failed sync retries as a pull would.
-          <MobileSyncIndicator
-            state={syncState.kind === "syncing" ? { kind: "syncing", progress: librarySyncProgress(syncState) } : syncState}
-            onRetry={() => void refresh()}
-          />
-        )
+        ) : null
       }
       overlay={
-        <>
-        <PhoneSearch visible={searchOpen} onClose={closeSearch} />
-        {current?.kind === "device" ? (
+        current?.kind === "device" ? (
           <MobileNoticeToast
             testID="new-device-notice"
             title={newDeviceMessage(current.info)}
@@ -220,8 +191,7 @@ export const MainShellScreen = () => {
             }}
             onClose={() => notices.dismiss("closed")}
           />
-        ) : null}
-        </>
+        ) : null
       }
     >
       {(tabId) => (

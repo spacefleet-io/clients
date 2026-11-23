@@ -26,7 +26,7 @@ import React from "react";
 import { act, create, type ReactTestInstance, type ReactTestRenderer } from "react-test-renderer";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { MediaRow, PlaylistRow } from "@space/shared/libraryTypes";
-import { TV_LIBRARY_COLUMNS, TV_LIBRARY_GAP_X, TV_LIBRARY_GAP_Y, TV_SCREEN_X, tvHomeCardWidth, tvLibraryCardWidth } from "@space/mobile-shell/tv/layout";
+import { TV_LIBRARY_COLUMNS, TV_LIBRARY_GAP_X, TV_LIBRARY_GAP_Y, TV_SCREEN_X, tvHomeCardWidth, tvLibraryCardWidth } from "../lib/layout";
 import { homeRows, TvHomeScreen } from "./TvHomeScreen";
 import { nextLibrarySort, TvLibraryScreen } from "./TvLibraryScreen";
 import { TvPlaylistsScreen, tvPlaylistName, tvPlaylistOrder, tvPlaylistTitles } from "./TvPlaylistsScreen";
@@ -95,7 +95,7 @@ vi.mock("../../lib/appSettings", () => ({ useAppSettings: () => [ctl.settings, (
 vi.mock("../../lib/libraryScreenState", () => ({
   selectLibraryItems: ({ media, tab }: { media: readonly MediaRow[]; tab: string }) => media.filter((item) => item.type === tab),
 }));
-vi.mock("@space/mobile-shell/tv/TvFocusable", () => ({ TvFocusable: "TvFocusable", FOCUS_SCALE: 1.05 }));
+vi.mock("../components/TvFocusable", () => ({ TvFocusable: "TvFocusable", FOCUS_SCALE: 1.05 }));
 vi.mock("../components/TvPosterCard", () => ({ TvPosterCard: "TvPosterCard" }));
 vi.mock("../components/TvRail", () => ({ TvRail: "TvRail" }));
 vi.mock("../components/TvContinueHero", () => ({ TvContinueHero: "TvContinueHero" }));

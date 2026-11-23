@@ -1,16 +1,16 @@
 import React, { memo, useCallback, useRef, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
-import type { TvViewInstance } from "@space/mobile-shell/tv/tvViewInstance";
+import type { TvViewInstance } from "../lib/tvViewInstance";
 import { Check, Film, Tv } from "lucide-react-native";
 import type { MediaRow } from "@space/shared/libraryTypes";
 import { COMPLETED_PCT_THRESHOLD } from "@space/shared/playbackResume";
 import { useTranslation } from "@space/mobile-shell/i18n";
 import { POSTER_ASPECT, posterLabel, posterProgress } from "../../components/PosterCard";
 import { MediaArtwork } from "../../components/MediaArtwork";
-import { TvFocusable } from "@space/mobile-shell/tv/TvFocusable";
+import { TvFocusable } from "./TvFocusable";
 import { useFocusAfterScreenAppears } from "../lib/useFocusAfterScreenAppears";
 import { logImageError } from "../../lib/imageLog";
-import { useTvScale, useTvStyles } from "@space/mobile-shell/tv/tvScale";
+import { useTvScale, useTvStyles } from "../lib/tvScale";
 import { TV_COLOR, TV_FOCUS, TV_RADII, TV_SHADOW, TV_TYPE, tvFocusRing } from "../ui/tokens";
 
 /** Sizes in design dp (mockup px halved, scaled with the TV, UX-TV-13). Room between the poster and its title (mockup 14 px). */
