@@ -77,7 +77,6 @@ type NativeAudioPlayback = {
   setRepeatMode: (mode: AudioRepeatMode) => Promise<AudioPlaybackState>;
   canShowOutputSwitcher: () => Promise<boolean>;
   showOutputSwitcher: () => Promise<boolean>;
-  setKeepScreenOn: (enabled: boolean) => Promise<boolean>;
 };
 
 const native = NativeModules.AudioPlayback as NativeAudioPlayback | undefined;
@@ -119,9 +118,6 @@ export const AudioPlayback = {
   /** Opens the system's "play on" picker (Android's output switcher, the iPhone's AirPlay picker); resolves false
    * when none opened. */
   showOutputSwitcher: () => requireNative().showOutputSwitcher(),
-  /** Keeps the screen awake (no screensaver, no sleep) while the app shows and `enabled` holds; resolves false when it
-   * could not (no native module, no activity). */
-  setKeepScreenOn: (enabled: boolean) => (native ? native.setKeepScreenOn(enabled) : Promise.resolve(false)),
   /** Every player change (play, pause, track, buffering, error). Positions between changes come from `getState`. */
   onState: (listener: (state: AudioPlaybackState) => void): EmitterSubscription =>
     DeviceEventEmitter.addListener("AudioPlaybackState", listener),

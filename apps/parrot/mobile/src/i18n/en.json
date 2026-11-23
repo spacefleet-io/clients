@@ -4,17 +4,6 @@
     "collectionKey": "library key"
   },
   "parrot": {
-    "artist": {
-      "label": "Artist",
-      "latestRelease": "Latest release",
-      "discography": "Discography",
-      "allSongs": "All songs",
-      "album": "Album",
-      "single": "Single",
-      "ep": "EP",
-      "hoursMinutes": "{{hours}} h {{minutes}} min",
-      "minutes": "{{minutes}} min"
-    },
     "nav": {
       "back": "Back",
       "library": "Library",
@@ -57,10 +46,11 @@
         "artists": "Artists",
         "songs": "Songs"
       },
-      "more": "+{{count}} more",
-      "filterOn": "Filter, {{count}} on",
-      "searchGenres": "Search",
-      "noMatch": "No match"
+      "sort": {
+        "byArtist": "By artist",
+        "byName": "By name",
+        "byTitle": "By title"
+      }
     },
     "album": {
       "noPlayableFile": "This album has no playable file yet.",
@@ -79,6 +69,8 @@
       "error": "Playback error: {{error}}",
       "playingFromAlbum": "Playing from album",
       "close": "Close",
+      "goToAlbum": "Go to album",
+      "goToArtist": "Go to artist",
       "more": "More",
       "output": "Play on another device"
     },
@@ -101,16 +93,11 @@
     "setup": {
       "notificationsBody": "Parrot can tell you when the music you add from your computer is ready to play here."
     },
-    "tvSearch": {
-      "hint": "Results change with each letter. Press ▶ on the remote to move from the keys to the results.",
-      "space": "Space",
-      "delete": "Delete"
-    },
     "playlists": {
       "likedEmpty": "No liked songs yet"
     },
     "kept": {
-      "keep": "Save offline",
+      "keep": "Keep on this phone",
       "remove": "Remove from this phone",
       "line": "Kept on this phone · {{size}}",
       "chooseBody": "These songs are stored in more than one format. Pick the one to keep on this phone.",

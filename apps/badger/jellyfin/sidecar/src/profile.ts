@@ -2,7 +2,6 @@ import type { MediaDetails, MediaRow } from "@space/shared/libraryTypes";
 import { profileKeyPrefix, type ApiProfile, type ProfilesResponse } from "@space/shared/profiles";
 import { airDateToday, showEpisodeTotal, showWatchedPct } from "@space/shared/showProgress";
 import { mergeTrackPrefs, parseTrackPrefs, serializeTrackPrefs, TRACK_PREFS_KEY_PREFIX, type TrackPrefs, type TrackPrefsPatch } from "@space/shared/trackPrefs";
-import { clientIdentityHeaders } from "@space/shared/appVersion";
 
 /**
  * The one profile the Jellyfin plugin follows (INTG-PROF-01), and that profile's viewing keys.
@@ -24,12 +23,12 @@ export type ChosenProfile = { id: string; name: string; prefix: string };
 
 export const chosenProfileOf = (profile: ApiProfile): ChosenProfile => ({ id: profile.id, name: profile.name, prefix: profileKeyPrefix(profile) });
 
-/** `GET /profiles` with the device's session token (paired devices included). A refusal carries its body (`payload`). */
+/** `GET /profiles` with the device's session token (paired devices included). */
 export const fetchProfiles = async (apiUrl: string, token: string): Promise<ApiProfile[]> => {
-  const res = await fetch(`${apiUrl}/profiles`, { headers: { Authorization: `Bearer ${token}`, "x-space-app": "badger", ...clientIdentityHeaders() } });
+  const res = await fetch(`${apiUrl}/profiles`, { headers: { Authorization: `Bearer ${token}`, "x-space-app": "badger" } });
   const body = (await res.json().catch(() => null)) as Partial<ProfilesResponse> | null;
   if (!res.ok || !body || !Array.isArray(body.profiles)) {
-    throw Object.assign(new Error(`profiles_unavailable_${res.status}`), { status: res.status, payload: body });
+    throw Object.assign(new Error(`profiles_unavailable_${res.status}`), { status: res.status });
   }
   return body.profiles;
 };

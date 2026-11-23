@@ -31,7 +31,6 @@ const register = (tracks: PlayTrack[], album?: { title: string; cover?: ParrotCo
       albumId: track.albumId,
       artistId: track.artistId || undefined,
       cover: track.cover,
-      durationMs: track.durationMs,
     });
   }
   return queued;
@@ -40,17 +39,12 @@ const register = (tracks: PlayTrack[], album?: { title: string; cover?: ParrotCo
 /**
  * Plays a list of songs from one of them on, then opens the player: an album's songs (`album` given, with its cover
  * for the mini player and the player) or the library's songs (each with its own `albumTitle`). `starting` is the song
- * being started, `error` why it failed. The phone's player is the navigator's "Player" screen.
+ * being started, `error` why it failed.
  */
 export const usePlay = () => {
-  const navigation = useNavigation<NativeStackNavigationProp<RootStack>>();
-  return usePlayWith(() => navigation.navigate("Player"));
-};
-
-/** `usePlay` with the app's own way to open the player: the TV opens its Now playing page, with no navigator (PAR-TV-07). */
-export const usePlayWith = (openPlayer: () => void) => {
   const { t } = useTranslation();
   const { token, libraryKey } = useSignedIn();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStack>>();
   const [starting, setStarting] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -65,7 +59,7 @@ export const usePlayWith = (openPlayer: () => void) => {
     try {
       const queued = register(tracks, album);
       await playTracks({ token, libraryKey, albumTitle: album?.title, tracks: queued, startIndex: index, ...options });
-      if (options.openPlayer !== false) openPlayer();
+      if (options.openPlayer !== false) navigation.navigate("Player");
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       // Cancel at "Already playing on {device}. Play here instead?" (ACCT-STREAM-02): the music stays as it was.
@@ -79,23 +73,18 @@ export const usePlayWith = (openPlayer: () => void) => {
 
   /**
    * Play next ("next") or Add to queue ("end", PAR-CARD-01): adds the songs without stopping the one playing and
-   * without opening the player; an empty queue starts playing them. Resolves to how many songs were added (0: all were
-   * playing or up next already, PAR-CARD-02), null when nothing could be queued.
+   * without opening the player; an empty queue starts playing them.
    */
-  const queue = async (tracks: PlayTrack[], where: AudioQueueInsert, album?: { title: string; cover?: ParrotCoverKeys | null }): Promise<number | null> => {
+  const queue = async (tracks: PlayTrack[], where: AudioQueueInsert, album?: { title: string; cover?: ParrotCoverKeys | null }) => {
     setError(null);
     try {
       const queued = register(tracks, album);
-      return await queueTracks({ token, libraryKey, albumTitle: album?.title, tracks: queued, where });
+      await queueTracks({ token, libraryKey, albumTitle: album?.title, tracks: queued, where });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      if (message === "STREAM_CANCELLED") {
-        log.info("play.stream_cancelled", { where });
-        return null;
-      }
+      if (message === "STREAM_CANCELLED") return log.info("play.stream_cancelled", { where });
       log.warn("play.queue_failed", { message, where });
       setError(message === "NO_PLAYABLE_FILE" ? t("parrot.album.noPlayableFile") : t("parrot.album.playFailed", { error: message }));
-      return null;
     }
   };
 

@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
@@ -156,20 +156,14 @@ describe("electron-builder config", () => {
     const version = JSON.parse(readFileSync(join(import.meta.dirname, "..", "package.json"), "utf8")).version;
     const relations = { deb: linux.deb.fpm, rpm: linux.rpm.fpm, pacman: linux.pacman.fpm };
     console.info(`[package-targets] legacy relations ${JSON.stringify(relations)}`);
-    // REL-UPD-07: every native package also carries its root update helper and polkit action, last in fpm
-    const updateFiles = [
-      expect.stringMatching(/\/spacebadger-system-update=\/usr\/lib\/spacebadger\/system-update$/),
-      expect.stringMatching(/\/io\.spacefleet\.spacebadger\.update\.policy=\/usr\/share\/polkit-1\/actions\/io\.spacefleet\.spacebadger\.update\.policy$/),
-    ];
     expect(relations).toEqual({
-      deb: ["--conflicts", "badger (<< 1)", "--replaces", "badger (<< 1)", ...updateFiles],
+      deb: ["--conflicts", "badger (<< 1)", "--replaces", "badger (<< 1)"],
       rpm: [
         "--replaces", "badger < 1", "--provides", `badger = ${version}`, "--rpm-posttrans", expect.stringMatching(/rpm-posttrans\.sh$/),
         // no /usr/lib/.build-id links: Parrot ships the same Electron binaries, rpm would refuse both together
         "--rpm-rpmbuild-define", "_build_id_links none",
-        ...updateFiles,
       ],
-      pacman: ["--conflicts", "badger<1", "--replaces", "badger<1", "--provides", `badger=${version}`, ...updateFiles],
+      pacman: ["--conflicts", "badger<1", "--replaces", "badger<1", "--provides", `badger=${version}`],
     });
     const patterns = PACKAGE_TARGETS["linux-x64"].artifactPatterns;
     const built = ["Badger-1.2.3.AppImage", "Badger-1.2.3-amd64.deb", "Badger-1.2.3-x86_64.rpm", "Badger-1.2.3-x64.pacman", "latest-linux.yml"];
@@ -243,46 +237,17 @@ describe("electron-builder config", () => {
     expect(icns.subarray(0, 4).toString()).toBe("icns");
   });
 
-  // UX-THEME-04 (#3299): each desktop platform names its own icon and there is no top-level `icon`, or
-  // electron-builder draws the Linux icons from mac.icon (the navy tile). The tray / window icon stays a square PNG.
-  it("names each platform's own icon: a square >=256px tray PNG, one square PNG per hicolor size, a .ico for Windows", () => {
-    const appDir = join(__dirname, "..");
-    const pngSide = (path: string): number => {
-      const png = readFileSync(path);
-      expect(png.subarray(1, 4).toString(), path).toBe("PNG");
-      const width = png.readUInt32BE(16);
-      expect(png.readUInt32BE(20), path).toBe(width);
-      return width;
-    };
+  it("uses a square >=256px source icon for the exe/AppImage and the tray", () => {
     for (const targetId of ["linux-x64", "windows-x64"]) {
-      const cfg = config(targetId) as unknown as {
-        icon?: string;
-        linux: { icon: string };
-        win: { icon: string };
-        extraResources: Array<{ from: string; to: string }>;
-      };
-      expect(cfg.icon, targetId).toBeUndefined();
-
-      const tray = cfg.extraResources.find((entry) => entry.to === "icon.png")?.from;
-      expect(tray, targetId).toBe(join(appDir, "installer", "icon.png"));
-      const traySide = pngSide(tray!);
-      expect(traySide).toBeGreaterThanOrEqual(256);
-
-      const hicolor = readdirSync(join(appDir, cfg.linux.icon)).filter((name) => name.endsWith(".png"));
-      const sides = hicolor.map((name) => {
-        const side = pngSide(join(appDir, cfg.linux.icon, name));
-        expect(name).toBe(`${side}x${side}.png`);
-        return side;
-      });
-      expect(Math.max(...sides)).toBeGreaterThanOrEqual(256);
-
-      const ico = readFileSync(join(appDir, cfg.win.icon));
-      expect([...ico.subarray(0, 4)]).toEqual([0, 0, 1, 0]);
-      const icoSides = Array.from({ length: ico.readUInt16LE(4) }, (_, i) => ico[6 + i * 16] || 256);
-      expect(icoSides).toContain(256);
-      console.info(
-        `[package-targets.test] ${targetId} tray=${traySide}px linux=${cfg.linux.icon} [${sides.sort((a, b) => a - b).join(",")}] win=${cfg.win.icon} [${icoSides.join(",")}]`,
-      );
+      const cfg = config(targetId) as unknown as { icon: string; extraResources: Array<{ from: string; to: string }> };
+      const iconPath = join(__dirname, "..", cfg.icon);
+      const png = readFileSync(iconPath);
+      expect(png.subarray(1, 4).toString()).toBe("PNG");
+      const width = png.readUInt32BE(16);
+      const height = png.readUInt32BE(20);
+      expect(width).toBe(height);
+      expect(width).toBeGreaterThanOrEqual(256);
+      expect(cfg.extraResources.find((entry) => entry.to === "icon.png")?.from).toBe(iconPath);
     }
   });
 

@@ -6,8 +6,7 @@ import { useAuth } from "../store/auth";
 import { useLibrary } from "../store/library";
 import { createPhoneCompletionDeps, createPhonePairingClient, currentPhoneDeviceName, PHONE_PAIRING_LOG_TAG } from "../lib/phonePairing";
 import { IS_TV } from "../tv/lib/tvRuntime";
-import { TV_PAIRING_LOG_TAG, createRuntimeCompletionDeps, createRuntimePairingClient } from "../tv/lib/pairingRuntime";
-import { currentTvDeviceName } from "@space/mobile-shell/pairing-device";
+import { TV_PAIRING_LOG_TAG, createRuntimeCompletionDeps, createRuntimePairingClient, tvDeviceName } from "../tv/lib/pairingRuntime";
 
 /**
  * The key screen's "Get the key from another device" (ACCT-PAIR-01, PRIV-KEY-05): the phone or TV, already signed in
@@ -27,7 +26,7 @@ export const KeyFromAnotherDevice = () => {
         completePairing(IS_TV ? createRuntimeCompletionDeps(acknowledgeKey, true) : createPhoneCompletionDeps(acknowledgeKey, true), approved)
       }
       logTag={IS_TV ? TV_PAIRING_LOG_TAG : PHONE_PAIRING_LOG_TAG}
-      deviceName={IS_TV ? currentTvDeviceName() : currentPhoneDeviceName()}
+      deviceName={IS_TV ? tvDeviceName() : currentPhoneDeviceName()}
       app="badger"
       purpose="key"
       heading={<MobilePairingText tone="body">{t("phonePairing.keyTitle")}</MobilePairingText>}
