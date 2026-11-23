@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { AccountAccess } from "@space/shared/accountAccess";
-import en from "../../../../packages/mobile-shell/src/i18n/en.json";
-import fr from "../../../../packages/mobile-shell/src/i18n/fr.json";
-import { getUnpaidAccessInfo, isGenericPlayerFailure, playerFailureMessage, unpaidMessage } from "../src/lib/unpaidAccess";
+import en from "../src/i18n/en.json";
+import fr from "../src/i18n/fr.json";
+import { getUnpaidAccessInfo, isGenericPlayerFailure, playerFailureMessage, unpaidMessage } from "../src/unpaidAccess";
 
 const DAY = 24 * 60 * 60 * 1000;
 const NOW = Date.parse("2026-10-20T12:00:00Z");

@@ -161,6 +161,7 @@ describe("@req UX-SUP-05[badger-mobile] Badger phone Send feedback", () => {
       platform: "android 15",
       deviceModel: "Google Pixel 8",
       log: null,
+      requestIds: [],
     });
     expect(text(thanks)).toBe("Thank you! Your message has been sent.");
   });

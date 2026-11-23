@@ -6,7 +6,7 @@ import { directRenderOf, loadsOcrTwin } from "@space/mobile-mpv-playback/ocrTwin
 import { getCurrentLanguage, useTranslation } from "@space/mobile-shell/i18n";
 import { useLibraryActions } from "../store/library";
 import { useAuth } from "../store/auth";
-import { playerFailureMessage } from "../lib/unpaidAccess";
+import { playerFailureMessage } from "@space/mobile-shell/unpaid-access";
 import { getAppSettings } from "../lib/appSettings";
 import { theme } from "../theme/theme";
 import { usePlayerSession } from "./player/usePlayerSession";

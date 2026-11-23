@@ -14,7 +14,7 @@
   - Linux and Windows ship the same flat `deps/bin` (ffmpeg, ffprobe, mpv + libraries) built by `packages/media-deps`
   - runtime dependency materialization now prunes `better-sqlite3` source/build baggage so the packaged app only ships the native addon and runtime JS it actually needs
   - `app.asar` ships no source maps or `.d.cts`/`.d.mts` files and only the drizzle-orm directories the main process loads (`better-sqlite3`, `sqlite-core`, `sql`, `query-builders`, `cache`, and `pg-core` for one helper): `asarFileExcludes()` in `scripts/packaged-asar-lib.mjs` feeds `files`, `tests/packaged-asar.test.ts` proves with the installed drizzle-orm that no loaded file is excluded and every other dialect is, and the `verify` step fails the package if one slips back in. After a drizzle-orm upgrade that adds an import the test names the directory to add to `DRIZZLE_USED_DIRS`
-  - only the Electron locales the UI supports ship (`en-US`, `fr`, `nl`, `de`, `es`, `es-419`; `ELECTRON_LANGUAGES` in `scripts/packaged-locales-lib.mjs`, guarded by `tests/packaged-locales.test.ts` against `CLIENT_UI_LANGUAGES`): 49 of Electron's 55 `locales/*.pak` are pruned on Linux and Windows, and the `verify` step fails the package if an unused locale slips back in or a UI one is missing (without its pak, Chromium reports en-US to `app.getLocale()` and the first start cannot pick the system language; Spanish also ships `es-419`, which Chromium picks for every Spanish system outside Spain); Chromium falls back to en-US for other OS languages. macOS keeps `en.lproj`, `fr.lproj`, `nl.lproj`, `de.lproj`, `es.lproj` and `es_419.lproj` (`MAC_ELECTRON_LANGUAGES`, checked by `verify`: "en-US" keeps the bare `en.lproj` and drops `en_GB.lproj`, and those folders are the app's localizations to macOS)
+  - only the Electron locales the UI supports ship (`en-US`, `fr`, `nl`, `de`, `es`, `es-419`; `ELECTRON_LANGUAGES` in `packages/desktop-platform/packaging/packaged-locales-lib.mjs`, guarded by `tests/packaged-locales.test.ts` against `CLIENT_UI_LANGUAGES`): 49 of Electron's 55 `locales/*.pak` are pruned on Linux and Windows, and the `verify` step fails the package if an unused locale slips back in or a UI one is missing (without its pak, Chromium reports en-US to `app.getLocale()` and the first start cannot pick the system language; Spanish also ships `es-419`, which Chromium picks for every Spanish system outside Spain); Chromium falls back to en-US for other OS languages. macOS keeps `en.lproj`, `fr.lproj`, `nl.lproj`, `de.lproj`, `es.lproj` and `es_419.lproj` (`MAC_ELECTRON_LANGUAGES`, checked by `verify`: "en-US" keeps the bare `en.lproj` and drops `en_GB.lproj`, and those folders are the app's localizations to macOS)
 - `bun run --cwd apps/badger/desktop package:macos-arm64` / `package:macos-x64` (on a Mac): per arch a dmg (`Badger-<version>-<arch>.dmg`), the in-app update zip (`Badger-<version>-<arch>-mac.zip` + `.zip.blockmap`) and `latest-mac.yml` naming that zip (REL-MAC-03; CI merges the two arches' feeds with `bun scripts/installer-store.ts merge-mac-feeds`). Developer ID signed, notarized and stapled when the six `APPLE_*` variables are set (see "macOS code signing" below), ad-hoc signed otherwise
   - needs `vendor/deps/macos-<arch>` (`bin/{ffmpeg,ffprobe,sf-lifeline}`, `lib/`, `Badger Player.app`, `deps-manifest.json`, built by `packages/media-deps`)
   - `scripts/mac-after-pack.mjs` moves the mpv bundle to `Badger.app/Contents/Helpers/Badger Player.app` (checking its `CFBundleName` / `CFBundleDisplayName` read "Badger Player", REL-MAC-09), raises the app executable's minos from Electron's 13.0 to macOS 14.0 (`vtool`, Xcode command line tools; PLAT-DESK-02) and signs the app inside-out (Developer ID or ad-hoc). The unpacked app (`dist/mac-arm64/Badger.app` or `dist/mac/Badger.app`) is unregistered from Launch Services and deleted once the dmg and zip are built, so Spotlight never lists a build copy (REL-MAC-10); install the dmg to run it
@@ -79,7 +79,7 @@ Official Windows builds are signed with Azure Artifact Signing (REL-INST-03), pu
 Signed installers install on PCs with Smart App Control on (REL-WIN-03) and SmartScreen names the publisher.
 
 How it works: electron-builder's `win.azureSignOptions` and `win.signExts` (`electron-builder.config.mjs`, values
-from `scripts/windows-signing-lib.mjs`) sign `Badger.exe`, every `.exe`, `.dll` and `.node` in the app folder and
+from `packages/desktop-platform-windows/packaging/windows-signing-lib.mjs`) sign `Badger.exe`, every `.exe`, `.dll` and `.node` in the app folder and
 under `resources\` (runtime, ffmpeg, ffprobe, mpv and their FFmpeg DLLs), the uninstaller and the installer. It uses
 the `TrustedSigning` PowerShell module (`Invoke-TrustedSigning`, needs the .NET 8 SDK). Then the `signatures` step of
 `scripts/package.mjs` checks with `Get-AuthenticodeSignature` that the installer and every unpacked PE file are signed
@@ -106,7 +106,7 @@ What the build does with them:
 - anything set but a secret missing, or a malformed endpoint: the build fails;
 - the three secrets set: it signs, and any signing failure fails the build. Signing only runs on a Windows host.
 
-`WINDOWS_UPDATE_PUBLISHER_NAME` in `scripts/windows-signing-lib.mjs` sets the publisher the installed app requires on
+`WINDOWS_UPDATE_PUBLISHER_NAME` in `packages/desktop-platform-windows/packaging/windows-signing-lib.mjs` sets the publisher the installed app requires on
 Windows updates. While it is null the updater does not check the publisher.
 
 ## macOS code signing
@@ -114,10 +114,10 @@ Windows updates. While it is null the updater does not check the publisher.
 Official macOS dmgs are signed with the Developer ID of team `8766H6KW4V` and notarized by Apple (REL-MAC-02).
 
 How it works: `scripts/package.mjs` resolves the six `APPLE_*` variables (`resolveMacSigning` in
-`scripts/mac-signing-lib.mjs`) and, on a Mac, opens a throwaway keychain in a temp dir with the `.p12` and Apple's
+`packages/desktop-platform-macos/packaging/mac-signing-lib.mjs`) and, on a Mac, opens a throwaway keychain in a temp dir with the `.p12` and Apple's
 Developer ID G2 intermediate (`installer/DeveloperIDG2CA.cer`). electron-builder does not sign (`identity: null`): the
-`afterPack` hook `scripts/mac-after-pack.mjs` signs every Mach-O file and nested bundle inside-out with
-`--options runtime --timestamp --entitlements installer/entitlements.mac.plist`, then notarizes and staples the app.
+`afterPack` hook `scripts/mac-after-pack.mjs` (common half: `finishMacApp` in `packages/desktop-platform-macos/packaging/mac-after-pack-lib.mjs`) signs every Mach-O file and nested bundle inside-out with
+`--options runtime --timestamp --entitlements packages/desktop-platform-macos/packaging/entitlements.mac.plist`, then notarizes and staples the app.
 The `notarize` step signs, notarizes and staples the dmg and checks it with `stapler validate` and
 `spctl --assess --type open`. On exit the keychain, `.p12` and `.p8` are deleted.
 
@@ -175,10 +175,11 @@ imports) records one per launched app; `SF_E2E_TRACE=retain-on-failure` (CI defa
 tests' traces under `test-results/`, `on` keeps all, `off` (local default) disables it. New e2e files
 must import `test`/`expect` from `./_helpers/electronTest`, not `@playwright/test`.
 
-Every `electron.launch` in `tests/`, `e2e/` and `scripts/` passes `...TEST_KEYCHAIN_ARGS` from
-`scripts/test-keychain-args.mjs` (`--use-mock-keychain`) before the entrypoint, so safeStorage never opens the login
-keychain: on macOS a rebuilt, ad-hoc-signed Electron otherwise stops the run at a password prompt.
-`tests/test-keychain-args.test.ts` fails on a launch without it. On macOS, `scripts/run-headless.sh` (which wraps
+Every `electron.launch` in `tests/`, `e2e/` and `scripts/`, and the lane dev launcher `scripts/dev.mjs`, passes
+`...TEST_KEYCHAIN_ARGS` from `@space/desktop-shell/test-keychain-args` (`--use-mock-keychain`) before the entrypoint, so
+safeStorage never opens the login keychain: on macOS a rebuilt, ad-hoc-signed Electron otherwise stops the run at a
+password prompt. Parrot desktop does the same. `packages/desktop-shell/tests/test-keychain-args.test.ts` fails on a
+launch of either app without it, or on app source or packaging that carries it. On macOS, `scripts/run-headless.sh` (which wraps
 `test:integration:electron` and `test:e2e`) runs the suite under `caffeinate -d -i -u`, because with the display
 asleep mpv cannot start DisplayLink and playback never advances.
 

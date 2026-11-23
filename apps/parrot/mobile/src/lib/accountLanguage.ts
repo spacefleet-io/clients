@@ -8,7 +8,7 @@ import { getCurrentLanguage } from "@space/mobile-shell/i18n";
 import { askAccountLanguage } from "@space/mobile-shell/account-language-prompt";
 import { scopeLogger } from "@space/mobile-shell/logger";
 import { accountLanguageOf, reconcileAccountLanguage } from "@space/shared/accountLanguage";
-import { getMe, updateSettings } from "@space/shared/api";
+import { getMe, updateSettings, type User } from "@space/shared/api";
 import { isAccountLanguage, type AccountLanguage } from "@space/shared/i18n";
 import { setParrotLanguage } from "./i18n";
 
@@ -52,10 +52,13 @@ export const reconcileAfterSignIn = async (token: string): Promise<void> => {
   }
 };
 
-/** A restored session's `/auth/me`: the account's language wins over the phone's, so another device's change shows here. */
-export const applyAccountLanguageFromServer = async (token: string): Promise<void> => {
+/**
+ * A restored session's `/auth/me` answer (the session reads it, with the account's access): the account's language
+ * wins over the phone's, so another device's change shows here.
+ */
+export const applyAccountLanguage = async (user: Pick<User, "uiLanguage" | "preferences">): Promise<void> => {
   try {
-    const account = accountLanguageOf((await getMe(token)).user);
+    const account = accountLanguageOf(user);
     const shown = getCurrentLanguage();
     if (!account || account === shown) return;
     log.info("applied", { from: shown, to: account, source: "auth_me" });

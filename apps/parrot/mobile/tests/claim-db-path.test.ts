@@ -30,6 +30,8 @@ const state = vi.hoisted(() => ({
   written: new Set<string>(),
   reads: [] as string[],
   published: [] as Array<{ bytes: number; baseVersion: number }>,
+  /** Holds the publish while set (a slow upload). */
+  publishGate: null as Promise<void> | null,
 }));
 const log = (step: string, detail: unknown) => console.info(`[PARROT-MOBILE-CLAIM-DB-PATH-001] ${step}`, JSON.stringify(detail));
 
@@ -54,7 +56,9 @@ vi.mock("react-native-fs", () => ({
     CachesDirectoryPath: "/var/mobile/Containers/Data/Application/ABC/Library/Caches",
     mkdir: async () => undefined,
     writeFile: async () => undefined,
-    unlink: async () => undefined,
+    unlink: async (path: string) => {
+      state.written.delete(path);
+    },
     exists: async (path: string) => state.written.has(path),
     // The file exists only where the plugin wrote it; anywhere else the read fails as on the phone.
     readFile: async (path: string) => {
@@ -81,6 +85,7 @@ vi.mock("@space/shared/api", () => ({
 }));
 vi.mock("@space/library-db-definition/snapshotPublish", () => ({
   publishLibrarySnapshotWith: async (bytes: Uint8Array, baseVersion: number) => {
+    await state.publishGate;
     state.published.push({ bytes: bytes.length, baseVersion });
     return { version: 1 };
   },
@@ -93,6 +98,7 @@ describe("claiming a new account's key", () => {
     state.written = new Set();
     state.reads = [];
     state.published = [];
+    state.publishGate = null;
   });
 
   it("publishes the empty library from Library/LocalDatabase on the iPhone", async () => {
@@ -122,5 +128,26 @@ describe("claiming a new account's key", () => {
     log("android claim", { result, reads: state.reads, published: state.published });
     expect(result).toEqual({ version: 1 });
     expect(state.reads).toEqual(["/data/user/0/io.spacefleet.parrot/databases/parrot.claim.sqlite"]);
+  });
+
+  // @bugfix #3350 S15: a second tap on "Yes, I understand" started another claim, which deleted the first one's
+  // claim file under it (Badger's twin was fixed in #1075).
+  it("a second claim while one runs joins it instead of starting over on the same file", async () => {
+    state.os = "android";
+    state.tv = false;
+    const gate = Promise.withResolvers<void>();
+    state.publishGate = gate.promise;
+    const first = claimAccountKey("token", "key");
+    await vi.waitFor(() => expect(state.reads).toHaveLength(1));
+    const second = claimAccountKey("token", "key");
+    gate.resolve();
+    const results = await Promise.all([first, second]);
+    log("double claim", { results, reads: state.reads, published: state.published });
+    expect(results).toEqual([{ version: 1 }, { version: 1 }]);
+    expect(state.published).toHaveLength(1);
+    expect(state.reads).toHaveLength(1);
+    // Done: the next claim runs again.
+    await expect(claimAccountKey("token", "key")).resolves.toEqual({ version: 1 });
+    expect(state.published).toHaveLength(2);
   });
 });
