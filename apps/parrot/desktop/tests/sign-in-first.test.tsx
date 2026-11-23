@@ -162,40 +162,6 @@ describe("Parrot desktop: sign-in first, then setup", () => {
     expect(host.querySelector('[data-testid="pair-with-phone"]')).toBeNull();
   });
 
-  /** @req ACCT-PAIR-07 Badger signed in on this computer: "Continue with your Badger account" above the email form, one click. */
-  it("Badger signed in on this computer: one click signs Parrot in through the same-device card", async () => {
-    state = baseState({ setup: { ...baseState().setup, step: "libraryKey" } });
-    const sibling = {
-      offer: vi.fn(async () => ({ app: "badger" as const, email: "lane@example.test" })),
-      signIn: vi.fn(async () => {
-        state = { ...state, user: { id: "u1", email: "lane@example.test" }, hasLibraryKey: true };
-        return { status: "approved" as const, check: "verified" as const };
-      }),
-      cancel: vi.fn(async () => undefined),
-    };
-    Object.assign(window.parrot, { sibling });
-    await mount();
-    const card = host.querySelector('[data-testid="same-device-sign-in-card"]');
-    say("same-device card", card?.textContent);
-    expect(card?.textContent).toContain("Continue with your Badger account");
-    expect(host.querySelector('[data-testid="same-device-sign-in-icon"]')?.getAttribute("src")).toContain("badger-app-icon");
-    expect(card?.compareDocumentPosition(host.querySelector('[data-testid="signin-email"]')!)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
-    await act(async () => host.querySelector<HTMLButtonElement>('[data-testid="same-device-sign-in-continue"]')?.click());
-    await act(async () => undefined);
-    say("after continue", host.querySelector("[data-testid]")?.getAttribute("data-testid"));
-    expect(sibling.signIn).toHaveBeenCalledTimes(1);
-    expect(host.querySelector('[data-testid="sign-in"]')).toBeNull();
-  });
-
-  /** @req ACCT-PAIR-07 Badger not signed in (or not installed): no card. */
-  it("no signed-in Badger: no same-device card", async () => {
-    state = baseState({ setup: { ...baseState().setup, step: "libraryKey" } });
-    Object.assign(window.parrot, { sibling: { offer: async () => null, signIn: vi.fn(), cancel: vi.fn() } });
-    await mount();
-    expect(host.querySelector('[data-testid="signin-email"]')).not.toBeNull();
-    expect(host.querySelector('[data-testid="same-device-sign-in-card"]')).toBeNull();
-  });
-
   it("a signed-in computer still at the language sees it, step 0 with no step count", async () => {
     state = baseState({ user: { id: "u1", email: "a@b.c" } });
     await mount();

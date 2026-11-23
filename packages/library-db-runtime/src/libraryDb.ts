@@ -72,7 +72,6 @@ import {
 import { isProfileSettingsKey, mergeProfileSettingsOps, resetProfileSettingsValue } from "@space/shared/profileSettings";
 import { defaultEditionId, editionResumeValue } from "@space/shared/mediaEditions";
 import { isLocalizedTextKey } from "@space/shared/localizedTexts";
-import { LIBRARY_SYNC_STUCK_AFTER_409S, libraryRefusalFields } from "@space/shared/apiFailure";
 import { createOrm, MainSqliteDatabase, openDatabase } from "./db";
 import { abandonPreparedOffLoopWals, enableOffLoopWal, prepareOffLoopWal, registerOffLoopWal, releaseOffLoopWals } from "./walCheckpointer";
 import {
@@ -1350,8 +1349,6 @@ export class LibraryDb {
   private opsFlushCircuitOpen = false;
   private opsFlushCircuitCooldownTimer: ReturnType<typeof setTimeout> | null = null;
   private opsFlushQuotaExceeded = false;
-  /** LIB-SYNC-16: op uploads in a row the server refused with 409; reset by an accepted op. */
-  private opsFlushConsecutive409 = 0;
   private applyingRemoteOps = false;
   /** LIB-SYNC-10: system playlists whose items the heal moved onto the fixed id and still must re-send. */
   private healedSystemPlaylists = new Set<string>();
@@ -2327,10 +2324,6 @@ export class LibraryDb {
       }
       if (error instanceof ApiError && error.status === 409) {
         // Someone else created it between our meta check and upload; retry remote.
-        logger.info(
-          libraryRefusalFields(error, { baseVersion: resolveBootstrapBaseVersion(selection.meta), consecutive409: 1 }),
-          "bootstrap: server refused the first library upload (409) — opening the server's library instead"
-        );
         const remote = await getLibraryDb(token);
         if (!remote.exists || !remote.manifestKey) {
           throw new Error("LIBRARY_MISSING");
@@ -8463,7 +8456,7 @@ export class LibraryDb {
             this.writtenOpStreamVersion()
           );
           if (this.closed) {
-            logger.warn({ version: result.version }, "flushOps: instance closed during upload — leaving queue state to the reopened instance");
+            logger.warn({ opId: op.id, version: result.version }, "flushOps: instance closed during upload — leaving queue state to the reopened instance");
             break;
           }
           this.remoteVersion = result.version;
@@ -8475,7 +8468,6 @@ export class LibraryDb {
           this.pendingOps.shift();
           this.opsFlushConsecutiveFailures = 0;
           this.opsFlushBackoffMs = 2000;
-          this.opsFlushConsecutive409 = 0;
           flushedCount += 1;
           this.countOpsTowardSnapshot(result.snapshotVersion, [op], [encrypted.length]);
           await savePendingOps(this.pendingOps);
@@ -8490,19 +8482,18 @@ export class LibraryDb {
           this.opsFlushConsecutiveFailures += 1;
           if (error instanceof ApiError && error.status === 409) {
             this.opsFlushConsecutiveFailures = 0;
-            this.opsFlushConsecutive409 += 1;
-            // A 409 is routine (another device saved first), but a device stuck behind the server answers it on
-            // every flush: log why and how often, and at the LIB-SYNC-16 threshold say once that sync looks stuck.
-            // Logging only: the retry pace is unchanged here (LIB-SYNC-17 is pending on the desktop).
-            const fields = {
-              ...libraryRefusalFields(error, { baseVersion: this.remoteVersion, consecutive409: this.opsFlushConsecutive409 }),
-              pendingOps: this.pendingOps.length,
-            };
-            if (this.opsFlushConsecutive409 === LIBRARY_SYNC_STUCK_AFTER_409S) {
-              logger.warn(fields, "flushOps: server keeps refusing the op (409) — library sync looks stuck");
-            } else {
-              logger.info(fields, "flushOps: server refused the op (409) — syncing from the server before retrying");
-            }
+            // A 409 is routine (another device saved first), but a device stuck behind the server answers
+            // it on every flush: log the versions so a loop is visible, not silent.
+            logger.info(
+              {
+                opId: op.id,
+                baseVersion: this.remoteVersion,
+                conflict: error.message,
+                serverVersion: error.payload.version ?? null,
+                pendingOps: this.pendingOps.length,
+              },
+              "flushOps: server refused the op (409) — syncing from the server before retrying"
+            );
             await this.syncFromRemoteIfNewer().catch(() => undefined);
           } else if (
             error instanceof ApiError &&
@@ -8516,7 +8507,7 @@ export class LibraryDb {
             // the local copy and send the same op again declaring 4.
             this.opsFlushConsecutiveFailures = 0;
             logger.info(
-              { opStreamVersion: error.payload.opStreamVersion, requestId: error.requestId },
+              { opId: op.id, opStreamVersion: error.payload.opStreamVersion },
               "library.v4.convert: server says the account switched — converting before retrying the op"
             );
             this.adoptTargetOpStreamVersion({ targetOpStreamVersion: error.payload.opStreamVersion });
@@ -8524,14 +8515,15 @@ export class LibraryDb {
           } else if (error instanceof ApiError && error.status === 413) {
             this.opsFlushQuotaExceeded = true;
             logger.error(
-              { ...libraryRefusalFields(error, { baseVersion: this.remoteVersion, consecutive409: 0 }), pendingOps: this.pendingOps.length },
+              { opId: op.id, pendingOps: this.pendingOps.length, status: 413, error: error.message },
               "flushOps: server refused the op (413, quota exceeded) — ops stay queued, no retry until quota is freed"
             );
           } else {
             logger.warn(
               {
-                ...libraryRefusalFields(error, { baseVersion: this.remoteVersion, consecutive409: 0 }),
+                opId: op.id,
                 pendingOps: this.pendingOps.length,
+                status: error instanceof ApiError ? error.status : null,
                 consecutiveFailures: this.opsFlushConsecutiveFailures,
                 nextBackoffMs: Math.min(this.opsFlushBackoffMs, 30_000),
                 error: error instanceof Error ? error.message : String(error),
@@ -9254,14 +9246,8 @@ export class LibraryDb {
     // LIB-FMT-12: this device's unsent changes went above in the version it held; a switched account converts the
     // local copy now, before anything newer than the server's head is applied to it.
     this.adoptTargetOpStreamVersion(meta);
-    // A meta older than this device's base (read before this sync's own flushOps uploaded, or queued behind a
-    // newer one) describes a state the server has left: adopting its hash sent the next op with a stale
-    // prevStateHash at the current version, refused 409 lineage_conflict (2026-11-22). The flush already holds
-    // the hash the server acknowledged.
-    if (meta.version >= this.remoteVersion) {
-      this.stateHash = normalizeStateHash(meta.stateHash);
-      this.lastOpId = meta.lastOpId ?? this.lastOpId;
-    }
+    this.stateHash = normalizeStateHash(meta.stateHash);
+    this.lastOpId = meta.lastOpId ?? this.lastOpId;
     if (meta.version <= this.remoteVersion) {
       await this.publishConvertedCopy(meta);
       return { kind: "none" };
@@ -9378,7 +9364,7 @@ export class LibraryDb {
     } catch (error) {
       if (error instanceof ApiError && error.status === 409) {
         logger.info(
-          libraryRefusalFields(error, { baseVersion: meta.version, consecutive409: 1 }),
+          { baseVersion: meta.version, error: error.payload.error ?? null },
           "library.v4.convert: another device published first — keeping this converted copy"
         );
         // The loser's copy was built on a base that never comes back (as in flushPending's 409).
@@ -9846,10 +9832,11 @@ export class LibraryDb {
         // so the renderer kept scheduling more. It is a compaction snapshot:
         // the data it carries reached the server as ops (flushOps runs
         // first). Drop it; the next compaction builds a fresh one.
-        logger.warn(
-          libraryRefusalFields(error, { baseVersion: pending.baseVersion ?? null, consecutive409: 1 }),
-          "flushPending: pending snapshot base is stale (409) — discarding it"
-        );
+        logger.warn({
+          baseVersion: pending.baseVersion,
+          serverVersion: error.payload.version ?? null,
+          snapshotId: pending.snapshotId,
+        }, "flushPending: pending snapshot base is stale (409) — discarding it");
         this.pendingSync = null;
         await clearPending().catch(() => undefined);
       }

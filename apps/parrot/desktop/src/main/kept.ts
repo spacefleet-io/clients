@@ -8,8 +8,7 @@ import { createParrotKeeping, keptTrackIds, type KeptStatus, type ParrotKeeping 
 import { getParrotFile, parrotKeepLibrary, type ParrotKeptFiles, type ParrotLibraryDb } from "@space/parrot-ingest";
 import type { ParrotKeptSizes } from "../shared/ipc";
 
-/** The computer's Manage offline content removes whole kept items (`unkeep`), never single songs (`leaveOut`, phone only). */
-export type DesktopKeeping = Omit<ParrotKeeping, "keptFileId" | "notify" | "leaveOut"> & {
+export type DesktopKeeping = Omit<ParrotKeeping, "keptFileId" | "notify"> & {
   /** The kept file to play for a song file, when the song is kept here (it may be another copy than the one asked). */
   playableFileId(fileId: string): string;
   /** Whether the song plays from this computer (no connection used, so no copy to pick: PAR-PLAY-02). */

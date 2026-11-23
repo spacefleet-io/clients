@@ -41,9 +41,7 @@
     "./library-kept-key": "./src/libraryKeptKey.ts",
     "./storage-units": "./src/storageUnits.ts",
     "./password-reset": "./src/passwordReset.ts",
-    "./client-identity": "./src/clientIdentity.ts",
-    "./sibling": "./src/sibling/types.ts",
-    "./sibling-main": "./src/sibling/index.ts"
+    "./client-identity": "./src/clientIdentity.ts"
   },
   "devDependencies": {
     "typescript": "^6.0.3",
