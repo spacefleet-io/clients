@@ -38,7 +38,6 @@ import { NewsOptInRow } from "../components/NewsOptInRow";
 import { RIPPLE } from "../components/PosterCard";
 import { theme } from "../theme/theme";
 import { errorReportsOffered } from "@space/mobile-shell/error-reports-offered";
-import { SelfUpdateSettings } from "@space/mobile-self-update";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -295,14 +294,6 @@ export const SettingsScreen = memo(({ devicesRequest = 0 }: { devicesRequest?: n
           description={t("settings.downloads.manage.description")}
           onPress={() => navigation.navigate("Downloads")}
         />
-        <Divider />
-        {/* OFFL-MANAGE-01: what is kept on this phone, its size, remove one or all. */}
-        <LinkRow
-          testID="settings-offline-content"
-          title={t("offlineContent.entry")}
-          description={t("offlineContent.badger.entryDescription")}
-          onPress={() => navigation.navigate("OfflineContent")}
-        />
       </SettingsGroup>
 
       {/* REL-LOG-06: only in a build that can send reports; a build with no reporting address has no Privacy group (#2570). */}
@@ -420,9 +411,8 @@ export const SettingsScreen = memo(({ devicesRequest = 0 }: { devicesRequest?: n
 
       {/* UX-SET-03 then UX-SET-02: the GPL-3.0 line and the link to the source code, then the outside data sources,
           credited here out of the everyday screens under the panel's own About header row (closed by default), so the
-          group carries no second "About" title. REL-UPD-06: on a hand-installed APK, the version and its updates first. */}
+          group carries no second "About" title. */}
       <SettingsGroup>
-        <SelfUpdateSettings language={language} />
         <MobileOpenSourceNotice language={language} product="badger" openLinks />
         <MobileCreditsPanel language={language} product="badger" source={mobileCreditsSource} openLinks />
       </SettingsGroup>

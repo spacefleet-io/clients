@@ -25,7 +25,6 @@ import {
   type ApiProfile,
   type ProfilesResponse,
 } from "./profiles";
-import type { ProfileFeatures } from "./appFeatures";
 import { profileAvatarIdOf, type ProfileAvatarId } from "./profileAvatars";
 
 export const PROFILES_CACHE_KEY = (userId: string) => `sf_profiles:${userId}`;
@@ -95,11 +94,10 @@ export const reconcileActive = (
 };
 
 /**
- * Every profile carries its avatar id (ACCT-PROF-05) and its features (UX-SETUP-10): a list saved, or answered by an API,
- * from before the avatar pack holds only the palette colour, which maps to the matching avatar (`profileAvatarIdOf`), and
- * one from before the features holds none (`{}`).
+ * Every profile carries its avatar id (ACCT-PROF-05): a list saved, or answered by an API, from before the avatar pack
+ * holds only the palette colour, which maps to the matching avatar (`profileAvatarIdOf`).
  */
-const withAvatarId = (profile: ApiProfile): ApiProfile => ({ ...profile, avatarId: profileAvatarIdOf(profile), features: profile.features ?? {} });
+const withAvatarId = (profile: ApiProfile): ApiProfile => ({ ...profile, avatarId: profileAvatarIdOf(profile) });
 
 const parseCache = (raw: string | null): ProfilesResponse | null => {
   if (!raw) return null;
@@ -120,15 +118,8 @@ export type ProfileStoreDeps = {
   };
   api: {
     list: (token: string) => Promise<ProfilesResponse>;
-    create: (
-      token: string,
-      body: { name: string; avatarId?: ProfileAvatarId; features?: ProfileFeatures }
-    ) => Promise<ProfilesResponse & { profile: ApiProfile }>;
-    update: (
-      token: string,
-      id: string,
-      body: { name?: string; avatarId?: ProfileAvatarId; features?: ProfileFeatures }
-    ) => Promise<ProfilesResponse & { profile: ApiProfile }>;
+    create: (token: string, body: { name: string; avatarId?: ProfileAvatarId }) => Promise<ProfilesResponse & { profile: ApiProfile }>;
+    update: (token: string, id: string, body: { name?: string; avatarId?: ProfileAvatarId }) => Promise<ProfilesResponse & { profile: ApiProfile }>;
     remove: (token: string, id: string) => Promise<ProfilesResponse>;
   };
   applyScope: (profile: ApiProfile | null) => void;
@@ -370,11 +361,8 @@ export const createProfileStore = (deps: ProfileStoreDeps) => {
 
     canCreate: () => canCreateProfile(snapshot.profiles.length, snapshot.maxProfiles),
 
-    /**
-     * A new profile named `rawName`; without `avatarId` the API gives a random avatar no profile uses yet. An add form
-     * where the user picked the avatar sends `features: {avatars: "set"}`, so the new profile skips the setup step.
-     */
-    async createProfile(rawName: string, avatarId?: ProfileAvatarId, features?: ProfileFeatures) {
+    /** A new profile named `rawName`; without `avatarId` the API gives the first avatar no profile uses yet. */
+    async createProfile(rawName: string, avatarId?: ProfileAvatarId) {
       const session = requireSession();
       const name = normalizeProfileName(rawName);
       if (!name) throw new ProfileActionError(PROFILE_ERRORS.invalid);
@@ -383,11 +371,8 @@ export const createProfileStore = (deps: ProfileStoreDeps) => {
         throw new ProfileActionError(PROFILE_ERRORS.limit);
       }
       try {
-        const body: { name: string; avatarId?: ProfileAvatarId; features?: ProfileFeatures } = { name };
-        if (avatarId) body.avatarId = avatarId;
-        if (features) body.features = features;
-        const result = await deps.api.create(session.token, body);
-        deps.log("profiles.create", { profileId: result.profile.id, count: result.profiles.length, avatarId: avatarId ?? null, features: features ?? null });
+        const result = await deps.api.create(session.token, avatarId ? { name, avatarId } : { name });
+        deps.log("profiles.create", { profileId: result.profile.id, count: result.profiles.length, avatarId: avatarId ?? null });
         await applyList(session.userId, result, "create");
         return withAvatarId(result.profile);
       } catch (error) {
@@ -399,24 +384,20 @@ export const createProfileStore = (deps: ProfileStoreDeps) => {
       }
     },
 
-    /**
-     * Renames a profile, changes its avatar (ACCT-PROF-05) and/or records feature states (UX-SETUP-10, UX-UPDATE-01:
-     * merged per feature by the API); at least one of them.
-     */
-    async editProfile(profileId: string, change: { name?: string; avatarId?: ProfileAvatarId; features?: ProfileFeatures }) {
+    /** Renames a profile and/or changes its avatar (ACCT-PROF-05); at least one of the two. */
+    async editProfile(profileId: string, change: { name?: string; avatarId?: ProfileAvatarId }) {
       const session = requireSession();
-      const body: { name?: string; avatarId?: ProfileAvatarId; features?: ProfileFeatures } = {};
+      const body: { name?: string; avatarId?: ProfileAvatarId } = {};
       if (change.name !== undefined) {
         const name = normalizeProfileName(change.name);
         if (!name) throw new ProfileActionError(PROFILE_ERRORS.invalid);
         body.name = name;
       }
       if (change.avatarId !== undefined) body.avatarId = change.avatarId;
-      if (change.features !== undefined && Object.keys(change.features).length > 0) body.features = change.features;
-      if (body.name === undefined && body.avatarId === undefined && body.features === undefined) throw new ProfileActionError(PROFILE_ERRORS.invalid);
+      if (body.name === undefined && body.avatarId === undefined) throw new ProfileActionError(PROFILE_ERRORS.invalid);
       try {
         const result = await deps.api.update(session.token, profileId, body);
-        deps.log("profiles.edit", { profileId, fields: Object.keys(body), avatarId: body.avatarId ?? null, features: body.features ?? null });
+        deps.log("profiles.edit", { profileId, fields: Object.keys(body), avatarId: body.avatarId ?? null });
         await applyList(session.userId, result, "edit");
         return withAvatarId(result.profile);
       } catch (error) {

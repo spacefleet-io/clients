@@ -1,5 +1,5 @@
-// Parrot: the sign-in first, then the first setup (language, library key, your profile, notifications, error reports),
-// then the four tabs (Home, Library, Playlists, Settings) on the starry sky, and play.
+// Parrot: the sign-in first, then the first setup (language, library key, notifications, error reports), then the four
+// tabs (Home, Library, Playlists, Settings) on the starry sky, and play.
 import "./src/config";
 import React, { useEffect, useRef, useState } from "react";
 import { phoneSetupSignedOut, resolvePhoneSetupStep, type PhoneSetupProgress } from "@space/mobile-shell/setup";
@@ -12,9 +12,6 @@ import { createNavigationContainerRef, DarkTheme, NavigationContainer } from "@r
 import { createNativeStackNavigator, type NativeStackScreenProps } from "@react-navigation/native-stack";
 import { MobileProfilesScreen } from "@space/mobile-shell/profiles-screen";
 import type { ApiProfile } from "@space/shared/profiles";
-import { activeProfileNeedsSetup, useUpdateFeatures } from "@space/mobile-shell/profile-setup";
-import { ProfileSetupStep } from "@space/mobile-shell/profile-setup-step";
-import { WhatsNewModal } from "@space/mobile-shell/whats-new";
 import { parrotProfileMoves, profileStore, useProfiles } from "./src/lib/profiles";
 import { stopPlayback } from "./src/lib/playback";
 import { SessionProvider, useSession } from "./src/state/session";
@@ -29,24 +26,19 @@ import { HistoryProvider } from "./src/state/history";
 import { PlaylistEditorProvider } from "./src/state/playlistEditor";
 import { ManageProvider } from "./src/state/manage";
 import { PairDeviceScreen } from "./src/screens/PairDeviceScreen";
-import { DeleteAccountScreen } from "./src/screens/DeleteAccountScreen";
-import { OfflineContentScreen } from "./src/screens/OfflineContentScreen";
 import { NowPlayingBar } from "./src/screens/NowPlayingBar";
 import { SetupFlow } from "./src/setup/SetupFlow";
-import { profileSetupLog } from "./src/setup/ProfileSetupQuestion";
 import { setupStore } from "./src/lib/stores";
 import type { RootStack } from "./src/screens/routes";
 import { MobileShellThemeProvider } from "@space/mobile-shell/theme";
 import { AccountLanguagePromptHost } from "@space/mobile-shell/account-language-prompt";
 import { MobileRenderBoundary } from "@space/mobile-shell/render-boundary";
 import { MobileUpdateRequiredScreen, useAppUpdateRequired } from "@space/mobile-shell/update-required";
-import { SelfUpdateConsent, SelfUpdateDialog, startSelfUpdate } from "@space/mobile-self-update";
 import { MobileSkyLayer, MobileSkyScreenLayout, mobileNavigationTheme } from "@space/mobile-shell/components";
 import { colors, parrotShellTheme } from "./src/theme";
 import { PARROT_MASCOT } from "./src/brand";
 import { startI18n } from "./src/lib/i18n";
 import { PARROT_LINK_SCHEME } from "./src/lib/linkScheme";
-import { TvGates } from "./src/tv/TvGates";
 import { holdPairLink, onPairLink, takePairLink } from "./src/lib/pendingPairLink";
 
 // Started once at launch, before any screen reads a translated text (Settings may mount first, with a saved session).
@@ -126,8 +118,6 @@ const Library = ({ profile }: { profile: ApiProfile | null }) => {
             options={Platform.OS === "android" ? { presentation: "transparentModal", animation: "slide_from_bottom" } : { presentation: "modal" }}
           />
           <Stack.Screen name="PairDevice" component={PairDeviceScreen} />
-          <Stack.Screen name="DeleteAccount" component={DeleteAccountScreen} />
-          <Stack.Screen name="OfflineContent" component={OfflineContentScreen} />
           {/* The shared profile screen draws its own title ("Who's listening?") and its Done. */}
           <Stack.Screen name="Profiles" component={ProfilesRoute} />
         </Stack.Navigator>
@@ -159,8 +149,6 @@ const Gates = () => {
   const updateRequired = useAppUpdateRequired();
   useEffect(() => {
     void i18nStarted.finally(() => setI18nReady(true));
-    // REL-UPD-06: a hand-installed APK checks our repository for a newer Parrot (nothing in other builds).
-    void startSelfUpdate("parrot");
   }, []);
   // Google, Apple and Microsoft sign-in (ACCT-SIGNIN-05): the browser comes back through `parrot://auth/provider`, as
   // the link that started the app or one that arrives while it runs; the sign-in screen takes it, held until it mounts.
@@ -195,14 +183,12 @@ const Gates = () => {
     void setupStore.write(next);
   }, [booting, session, setup]);
   // The update screen covers everything once the texts can be read: sign-in, setup, the profile pick and the library.
-  if (updateRequired && i18nReady) return <MobileUpdateRequiredScreen app="parrot" />;
+  if (updateRequired && i18nReady) return <MobileUpdateRequiredScreen />;
   if (booting || !i18nReady || !setup) return <Spinner />;
   const saveSetup = async (next: PhoneSetupProgress) => {
     setSetup(next);
     await setupStore.write(next);
   };
-  // Android TV, Google TV, Fire TV and Apple TV (PAR-TV-01): the same app shows its TV screens.
-  if (Platform.isTV) return <TvGates setup={setup} save={saveSetup} spinner={<Spinner />} />;
   // The same flow as Badger's phone (UX-SETUP-08): the language first, then the sign-in, then the numbered steps; a
   // sign-out comes back to the sign-in.
   const step = setup.done ? null : resolvePhoneSetupStep(setup, { hasKey: !!libraryKey, signedIn: !!session });
@@ -231,16 +217,12 @@ const Gates = () => {
 /**
  * "Who's listening?" after the setup and the key, before the library (UX-PROF-01): the phone keeps the pick, so it
  * asks once per sign-in, or when the kept profile is gone. A switch stops the song of the profile before.
- * A profile picked here that has not set up its name and avatar gets "Your profile" alone, without a count
- * (UX-SETUP-10); one made before the avatars gets the "New in this update" window over the library (UX-UPDATE-01),
- * whose "Choose my avatar" opens the same step, Back returning to the window.
  */
 const ProfileGate = () => {
   const profiles = useProfiles();
   const active = profiles.profiles.find((profile) => profile.id === profiles.activeId) ?? null;
   const activeId = active?.id ?? null;
   const previous = useRef(activeId);
-  const updates = useUpdateFeatures(profiles.needsChoice ? null : active);
   useEffect(() => {
     if (previous.current && activeId && previous.current !== activeId) void stopPlayback();
     previous.current = activeId ?? previous.current;
@@ -258,34 +240,7 @@ const ProfileGate = () => {
       />
     );
   }
-  if (active && (updates.settingUp || activeProfileNeedsSetup(profiles))) {
-    // Next saves `features.avatars = "set"`: the store's new snapshot moves on to the library by itself.
-    return (
-      <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
-        <ProfileSetupStep
-          key={active.id}
-          profile={active}
-          onBack={updates.settingUp ? updates.back : undefined}
-          onDone={() => profileSetupLog("done", { profileId: active.id, fromWindow: !!updates.settingUp })}
-          log={profileSetupLog}
-        />
-      </SafeAreaView>
-    );
-  }
-  const feature = active ? updates.current : null;
-  return (
-    <>
-      <Library profile={active} />
-      {active && feature ? (
-        <WhatsNewModal
-          feature={feature}
-          profileName={active.name}
-          onChoose={() => updates.setUp(feature)}
-          onLater={() => void updates.later(feature)}
-        />
-      ) : null}
-    </>
-  );
+  return <Library profile={active} />;
 };
 
 // The shared mobile-shell pieces (sign-in mascot, feedback form) take Parrot's green from this theme.
@@ -305,9 +260,6 @@ const App = () => (
           </SessionProvider>
           {/* UX-I18N-07: "Which language do you want?" right after a sign-in whose account speaks another language. */}
           <AccountLanguagePromptHost />
-          {/* REL-UPD-06: "Keep Parrot up to date?" once on a hand install, then the update dialog. */}
-          <SelfUpdateConsent />
-          <SelfUpdateDialog />
         </MobileSkyLayer>
       </SafeAreaView>
     </SafeAreaProvider>

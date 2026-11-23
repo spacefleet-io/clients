@@ -190,17 +190,6 @@ export const hookFakes = {
       kit.slots[index]!.cleanup = effect();
     });
   },
-  useRef: (initial: unknown) => {
-    const slot = (kit.slots[kit.cursor++] ??= { value: { current: initial } });
-    return slot.value;
-  },
-  useMemo: (factory: () => unknown, deps?: readonly unknown[]) => {
-    const index = kit.cursor++;
-    const prev = kit.slots[index];
-    if (prev && deps && prev.deps && deps.every((dep, i) => Object.is(dep, prev.deps![i]))) return prev.value;
-    kit.slots[index] = { value: factory(), deps };
-    return kit.slots[index]!.value;
-  },
   /** The context's default: the sky under test sits in no `MobileSkyLayer` and no theme provider. */
   useContext: (context: { _currentValue: unknown }) => context._currentValue,
   /** The layer claim (`useClaimSkyLayer`) has no layer to claim here: nothing to run. */

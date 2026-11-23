@@ -90,12 +90,10 @@ vi.mock("@space/ui", () => ({
   DialogDescription: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
   DialogHeader: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
   DialogTitle: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
-  DialogClose: ({ children }: { children?: React.ReactNode }) => <button>{children}</button>,
-  useCloseLabel: () => "Close",
   toast: vi.fn(),
 }));
 
-vi.mock("lucide-react", () => ({ Loader2: () => <div data-testid="loader" />, X: () => <span /> }));
+vi.mock("lucide-react", () => ({ Loader2: () => <div data-testid="loader" /> }));
 
 vi.mock("@/lib/notify", async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
@@ -435,8 +433,6 @@ describe("MediaPlaybackController — click / OSC launch rendering (#25 P15)", (
     console.info(`${TAG} episode 1 ready: last engine render=${JSON.stringify(last)} hideLoading.calls=${hideLoadingMock.mock.calls.length}`);
     if (last?.episodeId !== "ep-1" || !last.isReadyToReveal || hideLoadingMock.mock.calls.length !== 1) dumpState("ep1-not-ready", container);
     expect(showLoadingMock).toHaveBeenCalledTimes(1);
-    // UX-WAIT-02 (Main 2026-11-19, PR #2993 review): the launch window says "Preparing playback", not the generic "Loading…".
-    expect(showLoadingMock).toHaveBeenCalledWith({ title: "player.launching", subtitle: "player.preparingPlayback" });
     expect(last?.episodeId).toBe("ep-1");
     expect(hideLoadingMock).toHaveBeenCalledTimes(1);
     expect(oscListeners.size, `${TAG} mpv message listeners subscribed`).toBeGreaterThan(0);

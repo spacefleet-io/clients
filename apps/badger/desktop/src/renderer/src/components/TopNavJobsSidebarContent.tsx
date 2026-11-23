@@ -40,7 +40,6 @@ import UnpaidUploadsNotice, { isSubscriptionUnpaidJobError } from "@/components/
 import QuotaUploadsNotice, { isUploadQuotaExceededJobError } from "@/components/QuotaUploadsNotice";
 import MediaImage from "@/components/MediaImage";
 import type { JobStatus } from "../../../shared/labQueueShared";
-import { offlineDiskSpaceJobMessage } from "@/lib/offlineDiskSpaceLabel";
 
 type JobFilter = DesktopJobFilter;
 
@@ -386,22 +385,20 @@ function CompletedJobRow({
   dismissing: ReadonlySet<string>;
   onDismiss: (id: string) => void;
 }) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { outputSummary, completedMeta } = buildCompletedLabJobPresentation(
     job,
     enableCodecSelection,
     t,
   );
   const isRemoving = dismissing.has(job.id);
-  // An offline save refused for lack of disk space says why, as the download prompt does (OFFL-SAFE-02).
-  const diskSpaceMessage = offlineDiskSpaceJobMessage(job.error, t, () => i18n.language);
 
   return (
     <DesktopCompletedJobRow
       removing={isRemoving}
       title={outputSummary || t("lab.queue.job")}
       filename={job.filename}
-      meta={diskSpaceMessage ?? completedMeta?.label}
+      meta={completedMeta?.label}
       badge={<LabStatusBadge status={job.status} error={job.error} />}
       action={
         <DesktopJobActionButton

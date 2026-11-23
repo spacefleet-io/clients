@@ -30,8 +30,6 @@ vi.mock("react-native", () => {
     StyleSheet: { create: <T>(styles: T): T => styles, hairlineWidth: 1, absoluteFillObject: {} },
     useWindowDimensions: () => ({ width: 390, height: 800 }),
     Alert: { alert: () => undefined },
-    // No native module linked: Settings' self-update block (REL-UPD-06) stays empty.
-    NativeModules: {},
     Platform: {
       OS: "android",
       Version: 35,

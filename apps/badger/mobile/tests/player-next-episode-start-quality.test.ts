@@ -94,7 +94,6 @@ vi.mock("../src/components/Screen", () => ({ Screen: (props: { children?: ReactN
 vi.mock("../src/components/PlayerCastPicker", () => ({ PlayerCastPicker: () => null }));
 // "Get subtitles" (PLAY-SUBGET) loads the metadata client and lucide icons (native modules, Flow sources): a stand-in.
 vi.mock("../src/screens/player/PlayerSubtitleFetch", () => ({ PlayerSubtitleFetch: () => null }));
-vi.mock("../src/screens/player/PlayerSubtitleFile", () => ({ PlayerSubtitleFile: () => null }));
 // The lock-screen poster (PLAY-OSMEDIA-01) reads the image through the keychain-held library key; no poster here.
 vi.mock("../src/lib/useMediaImage", () => ({ useMediaImage: () => null }));
 const library = { setPlaybackProgress: async () => undefined, setTrackPrefs: async () => undefined };

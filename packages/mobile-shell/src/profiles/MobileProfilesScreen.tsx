@@ -1,16 +1,19 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ChevronLeft, Plus } from "lucide-react-native";
+import { Check, ChevronLeft, Plus } from "lucide-react-native";
+import { PROFILE_AVATAR_IDS, type ProfileAvatarId } from "@space/shared/profileAvatars";
 import { PROFILE_NAME_MAX } from "@space/shared/profiles";
 import type { ProfileLibraryMoves, ProfileStore } from "@space/shared/profileStore";
 import { MobileButton } from "../components/mobile-button";
 import { useTranslation } from "../i18n";
 import { useMobileShellTheme, type MobileShellTheme } from "../theme";
-import { AvatarGrid } from "./AvatarGrid";
 import { ProfileAvatarImage, profileAvatarRadius } from "./ProfileAvatarImage";
 import { useProfilesFlow } from "./useProfilesFlow";
 
+/** The chooser's columns (mockup `mockup-avatar-picker.png`: one flat grid of the 22, four across). */
+export const AVATAR_CHOOSER_COLUMNS = 4;
+const GRID_GAP = 16;
 const TILE_AVATAR = 104;
 const PREVIEW_AVATAR = 128;
 
@@ -24,6 +27,53 @@ export type MobileProfilesScreenProps = {
   /** Opened from Settings: closes after a pick, and Done closes the manager it opened on. Null at the start gate. */
   onClose: (() => void) | null;
   log: (event: string, data: Record<string, unknown>) => void;
+};
+
+/**
+ * The phone's avatar grid (ACCT-PROF-05): the 22 avatars in pack order, four across, the chosen one ringed in the
+ * accent with a tick. Each cell reads as the avatar's name.
+ */
+const AvatarGrid = ({
+  value,
+  onChange,
+  styles,
+  theme,
+}: {
+  value: ProfileAvatarId;
+  onChange: (id: ProfileAvatarId) => void;
+  styles: ProfilesStyles;
+  theme: MobileShellTheme;
+}) => {
+  const { t } = useTranslation();
+  const [width, setWidth] = useState(0);
+  const cell = width > 0 ? Math.floor((width - GRID_GAP * (AVATAR_CHOOSER_COLUMNS - 1)) / AVATAR_CHOOSER_COLUMNS) : 0;
+  return (
+    <View testID="avatar-chooser" accessibilityRole="radiogroup" style={styles.grid} onLayout={(event) => setWidth(event.nativeEvent.layout.width)}>
+      {cell > 0
+        ? PROFILE_AVATAR_IDS.map((id) => {
+            const selected = id === value;
+            return (
+              <Pressable
+                key={id}
+                testID={`avatar-option-${id}`}
+                accessibilityRole="radio"
+                accessibilityState={{ selected, checked: selected }}
+                accessibilityLabel={t(`profiles.avatars.${id}`)}
+                onPress={() => onChange(id)}
+                style={[styles.gridCell, { width: cell, height: cell, borderRadius: profileAvatarRadius(cell) + 4 }, selected && styles.gridCellSelected]}
+              >
+                <ProfileAvatarImage avatarId={id} size={cell - 10} testID={`avatar-option-image-${id}`} />
+                {selected ? (
+                  <View style={styles.tick} testID="avatar-option-tick">
+                    <Check size={16} strokeWidth={3.5} color={theme.accentTextHex} />
+                  </View>
+                ) : null}
+              </Pressable>
+            );
+          })
+        : null}
+    </View>
+  );
 };
 
 /**
@@ -87,7 +137,7 @@ export const MobileProfilesScreen = ({ store, moves, startMode, audience, onClos
           style={styles.nameInput}
         />
         {error}
-        <AvatarGrid value={flow.draftAvatarId} onChange={flow.chooseAvatar} />
+        <AvatarGrid value={flow.draftAvatarId} onChange={flow.chooseAvatar} styles={styles} theme={theme} />
       </View>
     );
   } else if (mode.name === "confirmDelete") {
@@ -254,6 +304,20 @@ const createStyles = (theme: MobileShellTheme) =>
       borderRadius: 12,
       color: theme.colors.text,
       backgroundColor: theme.colors.surface,
+    },
+    grid: { flexDirection: "row", flexWrap: "wrap", gap: GRID_GAP, marginTop: 8 },
+    gridCell: { alignItems: "center", justifyContent: "center", borderWidth: 3, borderColor: "transparent" },
+    gridCellSelected: { borderColor: theme.colors.accent },
+    tick: {
+      position: "absolute",
+      top: -8,
+      right: -8,
+      width: 26,
+      height: 26,
+      borderRadius: 13,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: theme.colors.accent,
     },
     manageRow: { flexDirection: "row", alignItems: "center", gap: 12 },
     manageBody: { flex: 1, minWidth: 0, gap: 6 },

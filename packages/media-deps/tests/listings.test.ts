@@ -115,7 +115,7 @@ describe("@bugfix @regression-proof host libraries never ride in the linux-x64 b
       "libc.so.6", "libm.so.6", "ld-linux-x86-64.so.2", "libpthread.so.0", "libnss_files.so.2",
     ];
     expect(findBundledHostLibraries(hostStack, patterns)).toEqual(hostStack);
-    // libva stays bundled: drivers bind to the libva already loaded (it must be at least the host Mesa's libva).
+    // libva stays bundled: it is ahead of any VA driver's API version, and drivers bind to the libva already loaded.
     expect(findBundledHostLibraries(["libva.so.2", "libva-x11.so.2", "libva-drm.so.2", "libzimg.so.2", "libzstd.so.1"], patterns)).toEqual([]);
   });
 

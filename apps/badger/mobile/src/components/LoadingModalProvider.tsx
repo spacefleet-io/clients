@@ -1,8 +1,7 @@
 import React, { createContext, useCallback, useContext, useMemo, useState } from "react";
-import { Modal, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Modal, StyleSheet, Text, View } from "react-native";
 import { MobileRenderBoundary } from "@space/mobile-shell/render-boundary";
 import { theme } from "../theme/theme";
-import { LaunchingMascot } from "./LaunchingMascot";
 
 type LoadingModalOptions = {
   title: string;
@@ -64,10 +63,14 @@ export const LoadingModalProvider = ({ children }: { children: React.ReactNode }
         {/* UX-CRASH-01: a crash inside the loading card closes it; the window guard says why. */}
         <MobileRenderBoundary name="modal:loading" resetKey={state.token} onDismiss={() => hideLoading(state.token ?? undefined)}>
         <View style={styles.backdrop}>
-          <LaunchingMascot testID="loading-modal">
+          <View style={styles.card}>
             <Text style={styles.title}>{state.title}</Text>
             {state.subtitle ? <Text style={styles.subtitle}>{state.subtitle}</Text> : null}
-          </LaunchingMascot>
+            <View style={styles.spinnerRow}>
+              <ActivityIndicator color={theme.colors.text} />
+              <Text style={styles.spinnerText}>{state.title}</Text>
+            </View>
+          </View>
         </View>
         </MobileRenderBoundary>
       </Modal>
@@ -86,17 +89,36 @@ export const useLoadingModal = () => {
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
     backgroundColor: "rgba(0, 0, 0, 0.45)",
+  },
+  card: {
+    width: "80%",
+    maxWidth: 320,
+    borderRadius: 16,
+    backgroundColor: "rgba(0, 0, 0, 0.75)",
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.lg,
   },
   title: {
     color: theme.colors.text,
     fontSize: 16,
     fontWeight: "600",
-    textAlign: "center",
   },
   subtitle: {
+    marginTop: theme.spacing.xs,
     color: theme.colors.textMuted,
     fontSize: 13,
-    textAlign: "center",
+  },
+  spinnerRow: {
+    marginTop: theme.spacing.md,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.spacing.sm,
+  },
+  spinnerText: {
+    color: theme.colors.textMuted,
+    fontSize: 13,
   },
 });

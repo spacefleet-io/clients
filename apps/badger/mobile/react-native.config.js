@@ -1,13 +1,11 @@
 const path = require("path");
 // The Google-free Android build (SF_FOSS=1, PLAT-MOBILE-06) unlinks the libraries that pull in Google Play services.
-const { fossAutolinkExclusions, selfUpdateAutolink } = require("../../../packages/mobile-shell/foss.cjs");
+const { fossAutolinkExclusions } = require("../../../packages/mobile-shell/foss.cjs");
 
 // The Apple TV target's Podfile block runs autolinking with SB_APPLE_TV=1 (ios/Podfile). These modules stay out
 // of that app: a TV has no camera (QR scanning is the phone's job), no push, no WKWebView, no background
-// downloads, no Google Cast sender (the Cast SDK is iOS-only) and no file picker (PLAY-SUBGET-23), and their podspecs
-// ship no tvOS platform. The JS that reaches them never runs on a TV.
+// downloads and no Google Cast sender (the Cast SDK is iOS-only), and their podspecs ship no tvOS platform. The JS that reaches them never runs on a TV.
 const appleTvExcluded = [
-  "@react-native-documents/picker",
   "@react-native-firebase/app",
   "@react-native-firebase/messaging",
   "react-native-blob-util",
@@ -35,15 +33,9 @@ module.exports = {
     "@space/mobile-media-volume": {
       root: path.resolve(__dirname, "../../../packages/mobile-media-volume"),
     },
-    // Same-device sign-in with Parrot (ACCT-PAIR-07), shared with Parrot's phone app.
-    "@space/mobile-sibling": {
-      root: path.resolve(__dirname, "../../../packages/mobile-sibling"),
-    },
     ...(appleTv
       ? Object.fromEntries(appleTvExcluded.map((name) => [name, { platforms: { ios: null } }]))
       : {}),
     ...fossAutolinkExclusions(__dirname),
-    // The self-update (REL-UPD-06): linked in every Google-free build (SF_FOSS=1), never the Play build.
-    ...selfUpdateAutolink(),
   },
 };

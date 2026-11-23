@@ -4,7 +4,7 @@ import { useTranslation } from "@space/mobile-shell/i18n";
 import { theme } from "../../../theme/theme";
 import type { MediaTracksBlock } from "../../lib/detailsMedia";
 import { TV_RADIUS } from "../../lib/tvLook";
-import { useTvStyles } from "@space/mobile-shell/tv/tvScale";
+import { useTvStyles } from "../../lib/tvScale";
 
 type Props = {
   block: MediaTracksBlock | null;

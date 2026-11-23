@@ -492,24 +492,18 @@ export const matchParrotImport = async (questions: ParrotImportFileQuestion[], l
     else unidentified.push({ file: question.file, reason: answer.kind === "failed" ? "lookup-failed" : answer.kind === "no-names" ? "no-names" : "no-match" });
   }
 
-  // The albums in reach: those answered for any file, and the library's albums of the same artists with one of the
-  // files' titles. An answered album with an id is first asked by it (PAR-META-03): that answer is our copy's alone,
-  // so a compilation or DJ set a song sits on never falls to the slow, paced name search of an outside source
-  // (PAR-META-19). Only an album credited to the song's own artist is then also asked by name, which finds it in our
-  // copy and answers its other editions alongside; an album without an id and the library's are asked by name alone.
+  // The albums in reach, each asked once by name: those answered for any file (the album lookup answers their other
+  // editions alongside), and the library's albums of the same artists with one of the files' titles.
   const reach = new Map<string, ReachAlbum>();
   for (const [key, found] of whole) reach.set(key, { album: found.album, tracklistKnown: true });
   const official = new Map<string, boolean>();
-  const byId = new Map<string, MusicAlbumsQuery>();
-  const byName = new Map<string, MusicAlbumsQuery>();
-  const askByName = (artist: string, album: string) => byName.set(`${parrotComparableName(artist)}\u0000${parrotComparableName(album)}`, { artist, album, limit: 5 });
+  const queries = new Map<string, MusicAlbumsQuery>();
+  const askAlbum = (artist: string, album: string) => queries.set(`${parrotComparableName(artist)}\u0000${parrotComparableName(album)}`, { artist, album, limit: 5 });
   for (const file of files) {
     for (const { recording } of file.answers) {
       const key = parrotAlbumKey(recording.album);
       if (recording.album.official !== undefined) official.set(key, recording.album.official);
-      if (whole.has(key)) continue;
-      if (recording.album.id) byId.set(recording.album.id, { artist: recording.artist.name, album: recording.album.title, id: recording.album.id });
-      else askByName(recording.artist.name, recording.album.title);
+      if (!whole.has(key)) askAlbum(recording.artist.name, recording.album.title);
     }
   }
   const ownArtists = (file: AnsweredFile) => [file.question.artist, file.question.albumArtist ?? "", ...file.answers.map((answer) => answer.recording.artist.name)];
@@ -518,25 +512,16 @@ export const matchParrotImport = async (questions: ParrotImportFileQuestion[], l
   for (const owned of lookups.library ?? []) {
     if (!importArtists.has(parrotComparableName(owned.artist)) || !files.some((file) => parrotTrackByTitle(file.question.title, owned.tracklist))) continue;
     library.set(parrotAlbumKey({ id: owned.musicId, title: owned.title }), owned);
-    askByName(owned.artist, owned.title);
+    askAlbum(owned.artist, owned.title);
   }
-  const askAlbums = (queries: MusicAlbumsQuery[]) =>
-    inLanes(queries, lanes, async (query) => {
-      try {
-        const { results } = await lookups.albums(query);
-        for (const album of results) if (!reach.has(parrotAlbumKey(album))) reach.set(parrotAlbumKey(album), { album, tracklistKnown: true });
-        if (!query.id) return;
-        const artist = parrotComparableName(query.artist);
-        const credited = results.some((album) => [album.artist, ...(album.artists ?? [])].some((one) => parrotComparableName(one.name) === artist));
-        if (credited) askByName(query.artist, query.album);
-      } catch (error) {
-        log(`[import-match] album lookup failed for ${query.artist} / ${query.album}${query.id ? ` (${query.id})` : ""}: ${errorText(error)}`);
-      }
-    });
-  const libraryAndNameless = byName.size;
-  await askAlbums([...byId.values()]);
-  log(`[import-match] album lookups: ${byId.size} by id, then ${byName.size - libraryAndNameless} by name (the song's own artist's), ${libraryAndNameless} by name only`);
-  await askAlbums([...byName.values()]);
+  await inLanes([...queries.values()], lanes, async (query) => {
+    try {
+      const { results } = await lookups.albums(query);
+      for (const album of results) if (!reach.has(parrotAlbumKey(album))) reach.set(parrotAlbumKey(album), { album, tracklistKnown: true });
+    } catch (error) {
+      log(`[import-match] album lookup failed for ${query.artist} / ${query.album}: ${errorText(error)}`);
+    }
+  });
   const unknown = new Map<string, Answer[]>();
   for (const file of files) {
     for (const answer of file.answers) {

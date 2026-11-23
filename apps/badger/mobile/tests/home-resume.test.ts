@@ -52,7 +52,7 @@ vi.mock("@space/mobile-shell/components", async () => {
 vi.mock("@space/mobile-shell/i18n", () => ({ useTranslation: () => ({ t: (key: string) => key }), getCurrentLanguage: () => "fr" }));
 vi.mock("../src/store/library", () => ({
   useLibraryData: () => ({ media: [show] }),
-  useLibraryStatus: () => ({ settled: true, error: null, refresh: async () => undefined }),
+  useLibraryStatus: () => ({ loading: false, error: null, refresh: async () => undefined }),
   useLibraryActions: () => ({
     getMediaDetails: async () => ({
       ...show,
@@ -63,6 +63,8 @@ vi.mock("../src/store/library", () => ({
 }));
 vi.mock("../src/lib/resume", () => ({ getLastPlayedEpisodeId: async () => "e2" }));
 vi.mock("../src/components/PosterRail", () => ({ PosterRail: "PosterRail" }));
+vi.mock("../src/components/Panel", () => ({ Panel: "Panel" }));
+vi.mock("../src/components/Skeleton", () => ({ PosterRailSkeleton: "PosterRailSkeleton" }));
 vi.mock("../src/components/ContinueHero", () => ({ ContinueHero: "ContinueHero" }));
 vi.mock("../src/lib/homeRails", () => ({ homeRailEntries: () => [], selectHomeRails: () => [] }));
 vi.mock("../src/lib/phoneHome", () => ({ phoneHomeLayout: () => ({ hero: show, rails: [] }), seeAllTarget: () => ({ tab: "library", scope: "movies" }) }));

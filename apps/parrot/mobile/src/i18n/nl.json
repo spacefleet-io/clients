@@ -4,22 +4,9 @@
     "collectionKey": "bibliotheeksleutel"
   },
   "parrot": {
-    "artist": {
-      "label": "Artiest",
-      "latestRelease": "Nieuwste release",
-      "discography": "Discografie",
-      "allSongs": "Alle nummers",
-      "album": "Album",
-      "single": "Single",
-      "ep": "Ep",
-      "hoursMinutes": "{{hours}} u {{minutes}} min",
-      "minutes": "{{minutes}} min"
-    },
     "nav": {
       "back": "Terug",
       "library": "Bibliotheek",
-      "playlistsTab": "Playlists",
-      "settingsTab": "Opties",
       "settings": "Instellingen",
       "nowPlaying": "Speelt nu"
     },
@@ -40,7 +27,7 @@
       }
     },
     "library": {
-      "loading": "Bibliotheek wordt geladen…",
+      "opening": "Je bibliotheek wordt geopend…",
       "openFailed": "Je bibliotheek kon niet worden geopend ({{error}}).",
       "tryAgain": "Opnieuw proberen",
       "noAlbums": "Nog geen albums.",
@@ -57,10 +44,13 @@
         "artists": "Artiesten",
         "songs": "Nummers"
       },
-      "more": "+{{count}} meer",
-      "filterOn": "Filteren, {{count}} aan",
-      "searchGenres": "Zoeken",
-      "noMatch": "Geen resultaat"
+      "sort": {
+        "byArtist": "Op artiest",
+        "byName": "Op naam",
+        "byTitle": "Op titel"
+      },
+      "search": "Zoeken in je bibliotheek",
+      "closeSearch": "Zoeken sluiten"
     },
     "album": {
       "noPlayableFile": "Dit album heeft nog geen afspeelbaar bestand.",
@@ -79,6 +69,8 @@
       "error": "Afspeelfout: {{error}}",
       "playingFromAlbum": "Speelt af van album",
       "close": "Sluiten",
+      "goToAlbum": "Naar album",
+      "goToArtist": "Naar artiest",
       "more": "Meer",
       "output": "Afspelen op een ander apparaat"
     },
@@ -101,16 +93,11 @@
     "setup": {
       "notificationsBody": "Parrot kan je laten weten wanneer de muziek die je vanaf je computer toevoegt hier klaar is om af te spelen."
     },
-    "tvSearch": {
-      "hint": "De resultaten veranderen bij elke letter. Druk op ▶ op de afstandsbediening om van de toetsen naar de resultaten te gaan.",
-      "space": "Spatie",
-      "delete": "Wissen"
-    },
     "playlists": {
       "likedEmpty": "Nog geen favoriete nummers"
     },
     "kept": {
-      "keep": "Offline opslaan",
+      "keep": "Bewaren op deze telefoon",
       "remove": "Verwijderen van deze telefoon",
       "line": "Bewaard op deze telefoon · {{size}}",
       "chooseBody": "Deze nummers zijn in meer dan één formaat opgeslagen. Kies welke je op deze telefoon bewaart.",

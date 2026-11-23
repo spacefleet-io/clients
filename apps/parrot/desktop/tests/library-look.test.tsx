@@ -12,7 +12,6 @@ import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 import { streamBridgeStub } from "./streamBridge";
-import { exportBridgeStub } from "./exportBridge";
 import { profilesBridgeStub, stubProfile, type ProfilesBridgeStub } from "./profilesBridge";
 import type { ApiProfile } from "@space/shared/profiles";
 import { readFileSync } from "node:fs";
@@ -89,7 +88,6 @@ describe("Parrot desktop look", () => {
       configurable: true,
       value: {
         ...streamBridgeStub(),
-        ...exportBridgeStub(),
         ...profiles,
         signOut,
         getLibrary: vi.fn(async () => ({ ok: true, library })),
@@ -218,7 +216,7 @@ describe("Parrot desktop look", () => {
     });
     await press("profile-save");
     console.info(SUITE, "createProfile calls", JSON.stringify(profiles.createProfile.mock.calls));
-    expect(profiles.createProfile).toHaveBeenCalledWith({ name: "Robin", avatarId: "owl", features: { avatars: "set" } });
+    expect(profiles.createProfile).toHaveBeenCalledWith({ name: "Robin", avatarId: "owl" });
     expect(q("profile-row-p-2")[0].querySelector('[data-testid="profile-avatar"]')?.getAttribute("data-avatar")).toBe("owl");
   });
 
@@ -271,15 +269,11 @@ describe("Parrot desktop look", () => {
   });
 
   // @req PAR-LOOK-01
-  // @req PAR-LIB-06
-  it("opens on Library with its row of switch, quiet counts, Filter and Sort, no title or search, and the album grid", () => {
+  it("opens on Library with its counts and the album grid; no artist sidebar and no song table", () => {
+    const heading = container.querySelector('[data-testid="library-heading"]');
     const counts = q("library-counts")[0]?.textContent;
-    console.info(SUITE, "counts", counts, "tracks shown", q("library-track").length, "row", q("library-row")[0]?.textContent);
-    expect(container.querySelector('[data-testid="library-heading"]')).toBeNull();
-    expect(q("library-search")).toHaveLength(0);
-    expect(q("library-filter-button")).toHaveLength(1);
-    expect(q("library-sort-button")).toHaveLength(1);
-    expect(q("library-view-cycle")).toHaveLength(0);
+    console.info(SUITE, "heading", heading?.textContent, "counts", counts, "tracks shown", q("library-track").length);
+    expect(heading?.textContent).toBe("Library");
     expect(counts).toBe("2 albums · 3 songs · 1 artist");
     expect(container.querySelector('nav[aria-label="Artists"]')).toBeNull();
     expect(container.textContent).not.toContain("All artists");
@@ -294,29 +288,40 @@ describe("Parrot desktop look", () => {
   });
 
   // @req PAR-LOOK-01
-  // @req PAR-LIB-06
-  it("the Albums / Artists / Songs switch moves between the album grid, the artist grid and the song list", async () => {
+  it("the Albums / Artists / Songs chips switch between the album grid, the artist grid and the song list", async () => {
     const chips = ["library-chip-albums", "library-chip-artists", "library-chip-songs"].map((id) => q(id)[0] as HTMLButtonElement);
-    console.info(SUITE, "chips", chips.map((chip) => `${chip.textContent}:${chip.getAttribute("aria-selected")}`));
+    console.info(SUITE, "chips", chips.map((chip) => `${chip.textContent}:${chip.getAttribute("aria-pressed")}`));
     expect(chips.map((chip) => chip.textContent)).toEqual(["Albums", "Artists", "Songs"]);
-    expect(chips.map((chip) => chip.getAttribute("aria-selected"))).toEqual(["true", "false", "false"]);
+    expect(chips.map((chip) => chip.getAttribute("aria-pressed"))).toEqual(["true", "false", "false"]);
 
     await act(async () => chips[1].click());
     expect(q("library-album")).toHaveLength(0);
     expect([...q("library-artist")].map((tile) => tile.textContent)).toEqual(["Test Band2 albums · 3 songs"]);
 
     await act(async () => chips[2].click());
-    // Songs open sorted by Title (PAR-LIB-06).
-    expect([...q("library-track")].map((row) => row.querySelector(".font-medium")?.textContent)).toEqual(["Gale", "Harbour", "Lantern"]);
+    expect([...q("library-track")].map((row) => row.querySelector(".font-medium")?.textContent)).toEqual(["Harbour", "Lantern", "Gale"]);
   });
 
-  // @req PAR-LIB-06
-  it("the row pins under the top bar: sticky, flush with the top of the scrolling <main> (minus its 32px padding)", () => {
-    const row = q("library-toolbar")[0] as HTMLElement;
-    console.info(SUITE, "toolbar", row.className, row.style.top, row.getAttribute("data-pinned"));
-    expect(row.className).toContain("sticky");
-    expect(row.style.top).toBe("-32px");
-    expect(row.getAttribute("data-pinned")).toBe("false");
+  // @req PAR-LOOK-01
+  it("the search filters the shown list live, ignoring case and accents", async () => {
+    const search = q("library-search")[0] as HTMLInputElement;
+    expect(search.placeholder).toBe("Search your music");
+    const type = async (value: string) =>
+      act(async () => {
+        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(search, value);
+        search.dispatchEvent(new Event("input", { bubbles: true }));
+      });
+
+    await type("SÉCOND");
+    console.info(SUITE, "albums for SÉCOND", [...q("library-album")].map((tile) => tile.textContent));
+    expect(q("library-album")).toHaveLength(1);
+    await act(async () => (q("library-chip-songs")[0] as HTMLButtonElement).click());
+    await type("lant");
+    expect([...q("library-track")].map((row) => row.querySelector(".font-medium")?.textContent)).toEqual(["Lantern"]);
+    await type("nothing like this");
+    expect(q("library-no-match")[0]?.textContent).toBe("Nothing matches “nothing like this”.");
+    await type("");
+    expect(q("library-track")).toHaveLength(3);
   });
 
   // @req PAR-LOOK-01
@@ -353,7 +358,7 @@ describe("Parrot desktop look", () => {
     await act(async () => (q("library-album")[0] as HTMLButtonElement).click());
     expect(q("album-title")[0]?.textContent).toBe("First Light");
     await act(async () => (q("library-tab")[0] as HTMLButtonElement).click());
-    expect(q("library-toolbar")).toHaveLength(1);
+    expect(q("library-heading")[0]?.textContent).toBe("Library");
     expect(q("library-album")).toHaveLength(2);
   });
 

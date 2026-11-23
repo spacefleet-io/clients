@@ -16,7 +16,6 @@ const SOURCE_PACKAGES = [
   "@space/mobile-mpv-playback",
   "@space/mobile-media-proxy",
   "@space/mobile-media-volume",
-  "@space/mobile-self-update",
   "@space/metadata-client",
   "@space/privacy-pass",
   "@space/pairing-crypto",
@@ -27,7 +26,6 @@ const SOURCE_PACKAGES = [
   "@space/stream-slots",
   "@space/legal",
   "@space/profile-avatars",
-  "@space/ingest-core",
 ];
 
 function workspaceExportAliases(): { find: RegExp; replacement: string }[] {

@@ -16,7 +16,6 @@ import { MobileSkyLayer, MobileSkyModeProvider } from "@space/mobile-shell/compo
 import { MobileShellThemeProvider } from "@space/mobile-shell/theme";
 import { MobileRenderBoundary } from "@space/mobile-shell/render-boundary";
 import { AccountLanguagePromptHost } from "@space/mobile-shell/account-language-prompt";
-import { SelfUpdateConsent, SelfUpdateDialog, startSelfUpdate } from "@space/mobile-self-update";
 import { badgerShellTheme, theme } from "./src/theme/theme";
 
 // The sign-in screen's mascot, floated by the window crash screen too (UX-CRASH-01).
@@ -35,8 +34,6 @@ function App() {
     // The "Animated background" setting and the low-RAM flag load with it so the sky never flips after the first frame.
     void Promise.all([ensureI18n(), loadAppSettings(), loadLowRamDevice()]).finally(() => setI18nReady(true));
     void initApiConfig();
-    // REL-UPD-06: a hand-installed APK checks our repository for a newer Badger (nothing in other builds).
-    void startSelfUpdate("badger");
 
     const TextAny = Text as any;
     const TextInputAny = TextInput as any;
@@ -73,9 +70,6 @@ function App() {
                   </MobileSkyLayer>
                   {/* "Which language do you want?" right after a sign-in or pairing (UX-I18N-07). */}
                   <AccountLanguagePromptHost />
-                  {/* REL-UPD-06: "Keep Badger up to date?" once on a hand install, then the update dialog. */}
-                  <SelfUpdateConsent />
-                  <SelfUpdateDialog />
                 </GestureHandlerRootView>
               </LoadingModalProvider>
             </LibraryProvider>

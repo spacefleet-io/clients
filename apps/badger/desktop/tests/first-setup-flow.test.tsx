@@ -178,18 +178,6 @@ describe("fresh computer: two steps", () => {
     expect(checked("first-setup-option-on")).toBe("false");
   });
 
-  // @req UX-SETUP-08[badger-desktop]: an option's description that wraps (French "Ne pas la créer") keeps normal line
-  // spacing; the Label around it is `leading-none` (Chris 2026-11-18). One span serves the 5 languages.
-  it("@req UX-SETUP-08[badger-desktop] gives every option description normal line spacing", async () => {
-    await mountFlow(FRESH());
-    for (const value of ["on", "off"]) {
-      const description = container!.querySelector(`[data-testid="first-setup-option-${value}-description"]`);
-      console.info(P, "description", value, description?.className);
-      expect(description?.textContent).toBe(`firstSetup.steps.transcode.options.${value}.description`);
-      expect(description?.className).toContain("leading-normal");
-    }
-  });
-
   // @req UX-SETUP-08[badger-desktop]: the language button keeps the window's top-right spot on every step, out of the card.
   it("keeps the language button in the window's top-right on both steps, never inside the card", async () => {
     await mountFlow(FRESH());
@@ -206,18 +194,6 @@ describe("fresh computer: two steps", () => {
       expect(controls?.className, step).toContain("right-8");
       expect(container!.querySelector(`[data-testid="first-setup-step-${step}"]`)!.contains(menu), step).toBe(false);
     }
-  });
-
-  // @req UX-SETUP-08[badger-desktop]: a step with a bottom Back beside Next shows no Back link at the top (Chris 2026-11-18).
-  it("step 2 has one Back, at the bottom beside Finish, and no Back link at the top", async () => {
-    await mountFlow(FRESH());
-    await click("first-setup-next");
-    const backs = [...container!.querySelectorAll("button")].filter((button) => button.textContent?.trim() === "firstSetup.back");
-    const links = [...container!.querySelectorAll("a")].filter((link) => /back/i.test(link.textContent ?? ""));
-    console.info(`${P}:one-back backButtons=${backs.length} backLinks=${links.length}`);
-    expect(backs).toHaveLength(1);
-    expect(links).toHaveLength(0);
-    expect(backs[0]!.parentElement).toBe(container!.querySelector('[data-testid="first-setup-finish"]')!.parentElement);
   });
 
   it("step 2 of 2 asks the error-reports question with no recommendation, 'off' preselected, Finish enabled and no computer line", async () => {

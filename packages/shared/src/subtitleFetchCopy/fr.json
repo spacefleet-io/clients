@@ -24,17 +24,7 @@
     "tryAnother": "Essayer une autre version",
     "lookingAnother": "Recherche d'une autre version…",
     "replaced": "{name} remplacé par une autre version",
-    "noneLeft": "Plus d'autre version pour {name}",
-    "replaceFailed": "Impossible de remplacer {name}. Réessayez.",
-    "titlePrompt": "Quel film ou quelle série est-ce\u202f?",
-    "titleField": "Titre",
-    "titleSearch": "Rechercher",
-    "findingTitle": "Recherche de «\u202f{title}\u202f»…",
-    "noTitle": "Rien trouvé pour «\u202f{title}\u202f». Vérifiez le titre et réessayez.",
-    "otherTitle": "Chercher un autre titre",
-    "addFile": "Ajouter un fichier de sous-titres…",
-    "addingFile": "Ajout du fichier de sous-titres…",
-    "unreadableFile": "Ce fichier n'est pas un sous-titre lisible",
-    "fileFailed": "Impossible d'ajouter ce fichier de sous-titres. Réessayez."
+    "noneLeft": "Plus d'autre version de {name}",
+    "replaceFailed": "Impossible de remplacer {name}. Réessayez."
   }
 }

@@ -18,7 +18,8 @@ LISTEN OFFLINE
 
 JUST YOUR MUSIC
 • No ads.
-• Only you can see your library. Not even we can.
+• Your library and the music you add are encrypted on your device before they reach our servers.
+• To show covers and lyrics, Parrot asks our lookup service with a single-use anonymous ticket instead of your account: we can't tell who asked. The service sees what is looked up and your internet address, which we don't keep.
 • Parrot doesn't supply music: you listen to the music you add yourself.
 
 FREE TO START

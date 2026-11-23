@@ -184,32 +184,3 @@ export const detectSubtitleLanguageFromSamples = async (
     confidence: averageConfidence,
   };
 };
-
-const FILE_SAMPLE_CHARS = 200;
-const FILE_SAMPLE_LIMIT = 24;
-
-/**
- * The language of a whole subtitle file (SRT, WebVTT, ASS/SSA), such as one the user adds from disk (PLAY-SUBGET-23).
- * Its dialogue is cut into chunks that vote like ingest's samples, spread over the file; when they don't agree, the
- * dialogue is read as one text. One short reading of a whole file confuses close languages (English with Scots).
- */
-export const detectSubtitleFileLanguage = async (content: string): Promise<SubtitleLanguageDetection | null> => {
-  const raw = content.split(/\r?\n/);
-  const ass = raw.some((line) => /^\s*Dialogue\s*:/i.test(line));
-  const lines = (ass ? raw.flatMap((line) => /^\s*Dialogue\s*:(?:[^,]*,){9}(.*)$/i.exec(line)?.[1] ?? []) : raw)
-    .map(cleanSubtitleText)
-    .filter((line) => line.length > 0 && line !== "WEBVTT");
-  const chunks: string[] = [];
-  let chunk = "";
-  for (const line of lines) {
-    chunk = chunk ? `${chunk} ${line}` : line;
-    if (chunk.length >= FILE_SAMPLE_CHARS) {
-      chunks.push(chunk);
-      chunk = "";
-    }
-  }
-  if (chunk) chunks.push(chunk);
-  const step = Math.max(1, chunks.length / FILE_SAMPLE_LIMIT);
-  const samples = Array.from({ length: Math.min(chunks.length, FILE_SAMPLE_LIMIT) }, (_, i) => chunks[Math.floor(i * step)]);
-  return (await detectSubtitleLanguageFromSamples(samples)) ?? (await detectSubtitleLanguage(lines.join("\n")));
-};

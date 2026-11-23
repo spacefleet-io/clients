@@ -9,6 +9,7 @@ import { sha256 } from "@noble/hashes/sha2.js";
 
 /** Why the API sent the browser back without a code (`signinError`), plus `invalid_code` from the completion. */
 export const PROVIDER_SIGN_IN_ERRORS = [
+  "no_account",
   "email_unverified",
   "email_domain_disallowed",
   "account_deletion_pending",
@@ -19,6 +20,7 @@ export const PROVIDER_SIGN_IN_ERRORS = [
 export type ProviderSignInErrorCode = (typeof PROVIDER_SIGN_IN_ERRORS)[number];
 
 const KNOWN_ERRORS: Record<ProviderSignInErrorCode, true> = {
+  no_account: true,
   email_unverified: true,
   email_domain_disallowed: true,
   account_deletion_pending: true,

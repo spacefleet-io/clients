@@ -13,10 +13,6 @@
  * @req UX-PROF-01[badger-tv]
  * @req ACCT-PROF-01[badger-tv]
  * @req ACCT-PROF-02[badger-tv]
- * @req UX-SETUP-10[badger-tv]
- *
- * A profile added on the TV had its avatar picked in the form, so it is created with `features.avatars = "set"` and
- * never sees "Your profile" (UX-SETUP-10).
  *
  * The limits (Chris 2026-11-18, "I can't edit or add any new profiles"): a full account keeps "Add profile" in Manage
  * profiles, greyed, with the reason under it (a free account says paid plans have up to 5); the last profile cannot be
@@ -28,7 +24,6 @@ import React from "react";
 import { act, create, type ReactTestInstance, type ReactTestRenderer } from "react-test-renderer";
 import { describe, expect, it, vi } from "vitest";
 import { PROFILE_AVATAR_IDS, type ProfileAvatarId } from "@space/shared/profileAvatars";
-import type { ProfileFeatures } from "@space/shared/appFeatures";
 import type { ApiProfile } from "@space/shared/profiles";
 import type { ProfilesSnapshot } from "@space/shared/profileStore";
 
@@ -38,7 +33,7 @@ const ctl = vi.hoisted(() => ({
   route: { name: "Profiles", params: { mode: "pick" } as { mode?: "pick" | "manage" } },
   snapshot: null as unknown as ProfilesSnapshot,
   listeners: new Set<() => void>(),
-  created: [] as Array<{ name: string; avatarId?: string; features?: ProfileFeatures }>,
+  created: [] as Array<{ name: string; avatarId?: string }>,
   edited: [] as Array<{ id: string; change: Record<string, unknown> }>,
   refreshes: 0,
   /** Set: `canCreate()` keeps its first answer, as the React Compiler's cache of a call on the unchanging store. */
@@ -98,9 +93,9 @@ vi.mock("../../lib/profiles/profileStore", () => {
       deleteProfile: async (id: string) => {
         publish(ctl.snapshot.profiles.filter((p) => p.id !== id));
       },
-      createProfile: async (name: string, avatarId?: ProfileAvatarId, features?: ProfileFeatures) => {
-        ctl.created.push({ name, avatarId, features });
-        const made: ApiProfile = { id: `p-${ctl.snapshot.profiles.length}`, name, avatar: 0, avatarId: avatarId ?? "badger", createdAt: "2026-11-16T00:00:00.000Z", isMain: false, features: features ?? {} };
+      createProfile: async (name: string, avatarId?: ProfileAvatarId) => {
+        ctl.created.push({ name, avatarId });
+        const made: ApiProfile = { id: `p-${ctl.snapshot.profiles.length}`, name, avatar: 0, avatarId: avatarId ?? "badger", createdAt: "2026-11-16T00:00:00.000Z", isMain: false };
         publish([...ctl.snapshot.profiles, made]);
         return made;
       },
@@ -113,8 +108,7 @@ vi.mock("../../lib/profiles/profileStore", () => {
   };
 });
 
-import { TV_AVATAR_COLUMNS, TV_TILE_AVATAR } from "@space/mobile-shell/tv/TvProfiles";
-import { TvProfilesScreen } from "./TvProfilesScreen";
+import { TV_AVATAR_COLUMNS, TV_TILE_AVATAR, TvProfilesScreen } from "./TvProfilesScreen";
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
@@ -126,7 +120,6 @@ const profile = (id: string, name: string, avatarId: ProfileAvatarId, isMain = f
   avatarId,
   createdAt: "2026-11-01T00:00:00.000Z",
   isMain,
-  features: {},
 });
 
 const start = (profiles: ApiProfile[], mode: "pick" | "manage", maxProfiles = 5) => {
@@ -252,7 +245,7 @@ describe("TvProfilesScreen avatars (ACCT-PROF-05)", () => {
     expect(row.alignSelf).toBe("stretch");
   });
 
-  it("the Add profile tile opens the chooser on the first unused avatar and Save creates the profile with it, set up (UX-SETUP-10)", async () => {
+  it("the Add profile tile opens the chooser on the first unused avatar and Save creates the profile with it", async () => {
     const renderer = start([profile("p-main", "Chris", "badger", true)], "pick");
     console.info(TAG, "phase: Add profile tile");
     await press(renderer, "profile-add-tile");
@@ -261,7 +254,7 @@ describe("TvProfilesScreen avatars (ACCT-PROF-05)", () => {
     act(() => one(renderer, "profile-name-input").props.onChangeText("Robin"));
     await press(renderer, "profile-save");
     console.info(TAG, "created", JSON.stringify(ctl.created));
-    expect(ctl.created).toEqual([{ name: "Robin", avatarId: "parrot", features: { avatars: "set" } }]);
+    expect(ctl.created).toEqual([{ name: "Robin", avatarId: "parrot" }]);
     expect(avatarIn(one(renderer, "profile-tile-1")).props.source).toBe(sourceOf("parrot"));
   });
 

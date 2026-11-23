@@ -3,22 +3,19 @@ import { StyleSheet, TVFocusGuideView, View } from "react-native";
 import { ArrowDownUp, ChevronDown, Film, Tv } from "lucide-react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { MobileLibraryLoading, SkyCover } from "@space/mobile-shell/components";
+import { SkyCover } from "@space/mobile-shell/components";
 import { useTranslation } from "@space/mobile-shell/i18n";
 import { EMPTY_LIBRARY_FILTERS, LIBRARY_SORT_KEYS, type LibrarySortBy, type LibraryTab } from "@space/shared/libraryView";
-import { libraryContent } from "@space/shared/libraryContent";
 import { useAppSettings } from "../../lib/appSettings";
 import { selectLibraryItems } from "../../lib/libraryScreenState";
 import type { RootStackParamList } from "../../navigation/AppNavigator";
 import { useLibraryData, useLibraryStatus } from "../../store/library";
 import { TvEmptyLibrary } from "../components/TvEmptyLibrary";
 import { TvPosterGrid } from "../components/TvPosterGrid";
-import { TV_SCREEN_X } from "@space/mobile-shell/tv/layout";
-import { useTvScale, useTvStyles } from "@space/mobile-shell/tv/tvScale";
-import { TvChip, TvSegmented } from "@space/mobile-shell/tv/TvChip";
-import { TvBody } from "@space/mobile-shell/tv/TvText";
-
-const MASCOT = require("../../assets/mascot.webp");
+import { TV_SCREEN_X } from "../lib/layout";
+import { useTvScale, useTvStyles } from "../lib/tvScale";
+import { TvChip, TvSegmented } from "../ui/TvChip";
+import { TvBody } from "../ui/TvText";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -34,13 +31,12 @@ export const nextLibrarySort = (sortBy: LibrarySortBy): { sortBy: LibrarySortBy;
 /**
  * TV Library (UX-TV-09, mockup `tv-library`): the Movies / TV shows switch at the left and the sort chip at the right of
  * one line, then eight captioned posters across on the sky. No title, no count and no focused-title line. Playlists are
- * their own top-bar section (UX-TV-37). An empty library shows the freestanding Badger and "Check again" (UX-TV-18),
- * only once it is known to be empty; until then the app's opening screen says "Loading library" (UX-WAIT-04).
+ * their own top-bar section (UX-TV-37). An empty library shows the freestanding Badger and "Check again" (UX-TV-18).
  */
 export const TvLibraryScreen = memo(() => {
   const { t } = useTranslation();
   const { media } = useLibraryData();
-  const { settled, reload } = useLibraryStatus();
+  const { loading, reload } = useLibraryStatus();
   const navigation = useNavigation<Nav>();
   const [settings, updateSettings] = useAppSettings();
   const [tab, setTab] = useState<LibraryTab>("movie");
@@ -86,14 +82,8 @@ export const TvLibraryScreen = memo(() => {
     updateSettings({ libraryView: { ...settings.libraryView, [tab]: { ...prefs, ...next } } });
   }, [tab, prefs, settings.libraryView, updateSettings]);
 
-  const content = libraryContent({ itemCount: media.length, settled });
-  if (content === "loading") return <MobileLibraryLoading app="badger" source={MASCOT} label={t("nav.loadingLibrary")} size={180} />;
-  if (content === "empty") {
-    return (
-      <View style={styles.empty}>
-        <TvEmptyLibrary onCheckAgain={reload} />
-      </View>
-    );
+  if (media.length === 0) {
+    return <View style={styles.empty}>{loading ? null : <TvEmptyLibrary onCheckAgain={reload} />}</View>;
   }
 
   return (
