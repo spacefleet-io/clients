@@ -797,6 +797,8 @@ export type LibraryMeta = {
   snapshotHistory: Array<{ snapshotId: string; manifestKey: string; createdAt: string }>;
   /** The newest op since the snapshot only (the full ledger needs `opsHistory=all`, which no app asks for). */
   opsHistory: Array<{ opId: string; version: number; createdAt: string; size: number; objectKey: string }>;
+  /** The op-stream version stored for this library: a re-encrypted copy of it declares the same (PRIV-KEY-06). */
+  opStreamVersion: number;
   /**
    * Badger only: the op-stream version writers of this account declare (`writeOpStreamVersion` of
    * @space/library-db-definition/ops): 4 once the account is switched (LIB-FMT-13), else 3. Absent from older servers
@@ -837,6 +839,7 @@ export const KEY_STEP_META_RETRY_DELAYS_MS: readonly number[] = [1_000, 2_000, 4
  * would read that as "the key cannot be checked" and show its error, so such a failure is tried again after each of
  * `delaysMs` first. Any other answer, a refused session (401/403) above all, is final at once.
  */
+// tla: VaultKeys/SpinFailed
 export const getLibraryMetaForKeyStep = async (
   token: string,
   appId: SpaceAppId = DEFAULT_SPACE_APP_ID,
@@ -938,7 +941,10 @@ export const putLibraryDb = (
   chunkRefsSource?: ChunkRefsSource,
   // Formats this build writes; omitted = the server assumes 1 and answers
   // 409 `library_format_downgrade` once the library is stamped higher.
-  formats?: LibraryWriterFormats
+  formats?: LibraryWriterFormats,
+  // PRIV-KEY-06/10: the account probe this key was checked against before the publish (null: the account had none).
+  // The API answers 412 `key_probe_changed` when the account's probe is another one by then.
+  checkedKeyProbe?: string | null
 ): Promise<LibraryDbPutResult> =>
   unwrap(
     sdk.putLibraryDb({
@@ -956,6 +962,7 @@ export const putLibraryDb = (
         stateHash: stateHash ?? null,
         lastOpId: lastOpId ?? null,
         ...(formats ? { storageFormatVersion: formats.storageFormatVersion, opStreamVersion: formats.opStreamVersion } : {}),
+        ...(checkedKeyProbe !== undefined ? { checkedKeyProbe } : {}),
       },
     })
   );
@@ -1007,14 +1014,22 @@ export const putLibraryDbBinary = async (
   return res.json() as Promise<{ version: number; stateHash: string | null; lastOpId: string | null }>;
 };
 
+/** Another app's library, re-encrypted under the new key by the rotating device (PRIV-KEY-06). */
+export type RotationLibraryCopy = NonNullable<sdk.RotateLibraryKeyData["body"]["otherLibraries"]>[number];
+
+/**
+ * PRIV-KEY-06: rotates the key. `otherLibraries` carries every other app's library re-encrypted under the new key; an
+ * app with a library and no copy is refused (409 `library_not_reencrypted`), never emptied.
+ */
 export const rotateLibraryKey = (
   token: string,
   blobBase64: string,
   keyProbe: string,
   password: string,
-  twoFactorCode?: string
+  twoFactorCode?: string,
+  otherLibraries: RotationLibraryCopy[] = []
 ): Promise<{ version: number }> =>
-  unwrap(sdk.rotateLibraryKey({ ...scoped(token), body: { blobBase64, keyProbe, password, twoFactorCode } }));
+  unwrap(sdk.rotateLibraryKey({ ...scoped(token), body: { blobBase64, keyProbe, password, twoFactorCode, otherLibraries } }));
 
 export const resetLibrary = (token: string, password: string, twoFactorCode?: string): Promise<{ ok: boolean }> =>
   unwrap(sdk.resetLibrary({ ...scoped(token), body: { password, twoFactorCode } }));

@@ -126,10 +126,11 @@ export const TvSettingsSection = () => {
               onPress={() => {
                 log.info("sign_out", {});
                 setSigningOut(true);
-                signOut().catch((error: unknown) => {
-                  log.warn("sign_out.failed", { message: failure(error) });
-                  setSigningOut(false);
-                });
+                // With a library key on the TV, signOut resolves as soon as the key question shows (ACCT-DEV-03); the
+                // row must come back then, or Cancel leaves Sign out disabled (#3350 S49).
+                signOut()
+                  .catch((error: unknown) => log.warn("sign_out.failed", { message: failure(error) }))
+                  .finally(() => setSigningOut(false));
               }}
             />
           </TvRowList>

@@ -32,6 +32,7 @@ import {
 import { uploadEncryptedFile } from "./mediaIngest";
 import { deriveMediaMasterKey, setMediaMasterKey } from "./mediaCrypto";
 import { registerFileSystemIpc } from "./fileSystem";
+import { registerLibraryRotationIpc } from "./libraryRotationIpc";
 import { registerFfmpegIpc } from "./ffmpegIpc";
 import { FfmpegRuntimeBridge } from "./ffmpegRuntimeBridge";
 import { registerToolAccessIpc } from "./toolAccessIpc";
@@ -930,6 +931,7 @@ app.whenReady().then(async () => {
   } else {
     registerLibraryDbRuntimeProxy(ipcMain, () => mainWindow);
   }
+  registerLibraryRotationIpc(ipcMain);
   registerFileSystemIpc(ipcMain);
   toolAccessBridge = registerToolAccessIpc(ipcMain, () => mainWindow);
   handoffBridge = registerHandoffIpc(ipcMain, {

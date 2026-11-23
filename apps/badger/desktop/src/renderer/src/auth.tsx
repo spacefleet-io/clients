@@ -315,6 +315,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     void persistSessionToMain();
   }, [user]);
 
+  // tla: VaultKeys/SignIn
   const login = async (
     email: string,
     password: string,

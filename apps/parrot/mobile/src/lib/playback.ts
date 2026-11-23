@@ -28,6 +28,7 @@ import { chunkedFile, coverUri, keptCoverUri, trackFiles } from "./library";
 import { keptFileIdFor } from "./kept";
 import { activeProfileId } from "./activeProfile";
 import { acquireStream, releaseStream } from "./streamSlot";
+import { noteHelloPlay } from "@space/shared/dailyHello";
 import { getEvenVolume, subscribeEvenVolume } from "./evenVolume";
 
 let profileIdCache: { token: string; profileId: string } | null = null;
@@ -232,7 +233,11 @@ const queueItems = async (input: {
  * so the music stays as it was.
  */
 const ensureStream = async (token: string, streamed: boolean, items: AudioQueueItem[]) => {
-  if ((await acquireStream({ token, streamed })) !== "cancel") return;
+  if ((await acquireStream({ token, streamed })) !== "cancel") {
+    // OPS-BIZ-20: one play for the daily hello's tally (streamed or kept).
+    noteHelloPlay();
+    return;
+  }
   for (const item of items) if (item.key) openCopies.delete(item.key);
   throw new Error("STREAM_CANCELLED");
 };

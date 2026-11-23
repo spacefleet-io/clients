@@ -934,7 +934,13 @@
         "codeSent": "Te enviamos un código de verificación. Revisa tu correo o tu app de autenticación.",
         "errorInvalidPassword": "Contraseña incorrecta.",
         "errorTwoFactorInvalid": "El código de verificación no es válido.",
-        "errorGeneric": "No se pudo cambiar la clave. Vuelve a intentarlo."
+        "errorGeneric": "No se pudo cambiar la clave. Vuelve a intentarlo.",
+        "errorMediaReseal": "Pronto podrás sustituir la clave en mediatecas con canciones o vídeos guardados. No ha cambiado nada. Borrar la mediateca sigue funcionando.",
+        "errorNotReencrypted": "Tu mediateca de Parrot no se pudo volver a cifrar con la nueva clave desde aquí, así que no ha cambiado nada. Sustituye la clave desde los Ajustes de un ordenador que tenga tu clave actual.",
+        "errorUnreadable": "Tu clave actual no abre tu mediateca de Parrot, así que no ha cambiado nada.",
+        "errorNotSnapshotted": "Tu mediateca de Parrot tiene cambios que aún no se han guardado. Abre Parrot, deja que termine de sincronizar y vuelve a intentarlo. No ha cambiado nada.",
+        "errorReencryptFailed": "No se pudo volver a cifrar tu mediateca de Parrot con la nueva clave. No ha cambiado nada. Vuelve a intentarlo.",
+        "errorChanged": "Tu mediateca cambió mientras se sustituía la clave. No ha cambiado nada. Vuelve a intentarlo."
       },
       "reset": {
         "title": "Borrar los datos de la mediateca",

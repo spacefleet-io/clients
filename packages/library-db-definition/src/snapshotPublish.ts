@@ -47,6 +47,11 @@ export type LibrarySnapshotPublishDeps = {
     chunkSize: number;
     keyProbeBase64: string;
     chunkRefs: string[];
+    /**
+     * The account key probe the publisher checked its key against right before this PUT (null: the account had none),
+     * sent as `checkedKeyProbe` (PRIV-KEY-06/10). Set by the wrapper that checks; publishLibrarySnapshotWith never does.
+     */
+    checkedKeyProbe?: string | null;
   }) => Promise<{ version: number }>;
   log?: (event: string, payload: Record<string, unknown>) => void;
 };
@@ -100,4 +105,41 @@ export const publishLibrarySnapshotWith = async (
   });
   deps.log?.("library.snapshot.published", { baseVersion, version, bytes: image.length, sealed: sealed.length, chunks: chunks.length, ms: Date.now() - started });
   return { version, snapshotId, manifest };
+};
+
+/** Another app's library re-encrypted under a new key, ready for POST /library/recovery/rotate's `otherLibraries`. */
+export type RotationSnapshotCopy = {
+  baseVersion: number;
+  manifestBase64: string;
+  snapshotId: string;
+  chunkSize: number;
+  chunkRefs: string[];
+};
+
+/**
+ * PRIV-KEY-06: a key rotation re-encrypts every other app's library. The snapshot bytes the rotating device opened with
+ * the old key are sealed with the new key (`deps.seal`) and their chunks uploaded, exactly as a publish would, but the
+ * PUT is left to the rotation, which writes every library in one step: this returns what that request carries.
+ */
+export const reencryptLibrarySnapshotWith = async (
+  dbBytes: Uint8Array,
+  baseVersion: number,
+  deps: Omit<LibrarySnapshotPublishDeps, "putSnapshot">
+): Promise<RotationSnapshotCopy> => {
+  let copy: RotationSnapshotCopy | null = null;
+  await publishLibrarySnapshotWith(dbBytes, baseVersion, {
+    ...deps,
+    putSnapshot: async (put) => {
+      copy = {
+        baseVersion: put.baseVersion,
+        manifestBase64: put.manifestBase64,
+        snapshotId: put.snapshotId,
+        chunkSize: put.chunkSize,
+        chunkRefs: put.chunkRefs,
+      };
+      return { version: put.baseVersion };
+    },
+  });
+  if (!copy) throw new Error("LIBRARY_REENCRYPT_FAILED");
+  return copy;
 };

@@ -112,6 +112,20 @@ export class LibraryDb {
     return bridge.getLocalCacheBytes(keyBase64);
   }
 
+  /**
+   * PRIV-KEY-06: every other app's library (Parrot's) opened with the old key and re-encrypted under the new one, for
+   * the rotation's `otherLibraries`. Throws `ROTATION_REENCRYPT_<UNREADABLE|NOT_SNAPSHOTTED|FAILED>`: nothing rotated.
+   */
+  static async reencryptForRotation(token: string, oldKeyBase64: string, newKeyBase64: string) {
+    const bridge = getBridge();
+    if (!bridge.reencryptForRotation) {
+      throw new Error("ROTATION_REENCRYPT_FAILED");
+    }
+    const result = await bridge.reencryptForRotation({ token, oldKeyBase64, newKeyBase64 });
+    if (!result.ok) throw new Error(`ROTATION_REENCRYPT_${result.error.toUpperCase()}`);
+    return result.copies;
+  }
+
   static async hasLocalCache() {
     const bridge = getBridge();
     if (!bridge.hasLocalCache) {

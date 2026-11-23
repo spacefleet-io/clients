@@ -524,6 +524,13 @@
               "$ref": "#/components/schemas/LibraryOpEntry"
             }
           },
+          "stateHash": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The library's state hash at `version`, read with it (LIB-SYNC-19): a client that moves to `version` chains its next operation on this hash. Absent on a partial page of operations stored before operation hashes."
+          },
           "storageFormatVersion": {
             "type": "integer"
           },
@@ -672,6 +679,13 @@
               "string",
               "null"
             ]
+          },
+          "checkedKeyProbe": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The account key probe (`GET /library/db/meta` `keyProbe`) the client checked its key against before this publish; null when the account had none. A different account probe answers 412 `key_probe_changed`. Absent: not checked."
           },
           "storageFormatVersion": {
             "type": "integer",
@@ -3297,7 +3311,7 @@
           "Library"
         ],
         "summary": "Upload library snapshot",
-        "description": "Accepts an encrypted library snapshot manifest (binary) or legacy base64 payload. Use case: client pushes a new snapshot version after local changes. With `Content-Type: application/octet-stream` the body is the raw encrypted manifest and the metadata travels in `x-library-*` headers (`x-library-version`, `x-library-snapshot-id` and `x-library-chunk-size` are required; `x-library-chunk-refs` is a JSON array of chunk hashes). Any other request is JSON (`PutLibraryDbRequest`) with the manifest base64-encoded. A stale `expectedVersion` answers 409 `version_conflict` unless `force` is set. Storage-gateway failures are relayed with the gateway's status and error code.\n\nPersonal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.",
+        "description": "Accepts an encrypted library snapshot manifest (binary) or legacy base64 payload. Use case: client pushes a new snapshot version after local changes. With `Content-Type: application/octet-stream` the body is the raw encrypted manifest and the metadata travels in `x-library-*` headers (`x-library-version`, `x-library-snapshot-id` and `x-library-chunk-size` are required; `x-library-chunk-refs` is a JSON array of chunk hashes). Any other request is JSON (`PutLibraryDbRequest`) with the manifest base64-encoded. A stale `expectedVersion` answers 409 `version_conflict` unless `force` is set. A `checkedKeyProbe` that is no longer the account's key probe answers 412 `key_probe_changed`; a session an erase or a key rotation revoked meanwhile answers 401 `unauthorized`. Storage-gateway failures are relayed with the gateway's status and error code.\n\nPersonal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.",
         "security": [
           {
             "bearerAuth": []
@@ -3614,6 +3628,27 @@
               }
             }
           },
+          "412": {
+            "description": "The account's library key probe is no longer the `checkedKeyProbe` the client checked its key against.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "key_probe_changed"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
           "413": {
             "description": "The upload is too large. The `error` is the code the storage gateway answered with, relayed as is.",
             "content": {
@@ -3761,7 +3796,7 @@
           "Library"
         ],
         "summary": "Library operations since a version",
-        "description": "Returns the encrypted operations committed after version `since` (default 0), with their ciphertext inlined, and the observed format versions. `tooOld` is true when `since` predates the retained history. With `Accept: application/vnd.space.library-ops` the answer is binary instead (LIB-FMT-13): one frame per op, `u64be version | u32be length | ciphertext`, and the page's state in the `x-library-version`, `x-library-snapshot-version`, `x-library-too-old`, `x-library-has-more` (`1`/`0`), `x-library-storage-format-version`, `x-library-op-stream-version` and `x-library-target-op-stream-version` response headers.\n\nPersonal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.",
+        "description": "Returns the encrypted operations committed after version `since` (default 0), with their ciphertext inlined, and the observed format versions. `tooOld` is true when `since` predates the retained history. With `Accept: application/vnd.space.library-ops` the answer is binary instead (LIB-FMT-13): one frame per op, `u64be version | u32be length | ciphertext`, and the page's state in the `x-library-version`, `x-library-snapshot-version`, `x-library-too-old`, `x-library-has-more` (`1`/`0`), `x-library-storage-format-version`, `x-library-op-stream-version`, `x-library-target-op-stream-version` and `x-library-state-hash` (empty: the library has none; absent: unknown) response headers.\n\nPersonal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.",
         "security": [
           {
             "bearerAuth": []
@@ -4378,7 +4413,7 @@
           "Library"
         ],
         "summary": "Rotate library key",
-        "description": "Rotates the library encryption key after re-auth with 2FA. Use case: user suspects key compromise and re-encrypts the library. The body carries the re-encrypted snapshot (`blobBase64`) and its `keyProbe`; the stored snapshot is replaced and every session of the account is revoked.\n\nPersonal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.",
+        "description": "Rotates the library encryption key after re-auth with 2FA. Use case: user suspects key compromise and re-encrypts the library. The body carries the re-encrypted snapshot (`blobBase64`) and its `keyProbe`, plus `otherLibraries`: every other app's latest snapshot, opened by the rotating device with the old key and re-encrypted under the new one (chunks already uploaded), each with the version it was read at. In one step the caller's library and every other library are replaced by their copies under the new key and every session of the account is revoked; nothing is deleted. An app whose library changed since it was read answers 409 `version_conflict` with its `appId` (read again and retry); an app with a library and no copy answers 409 `library_not_reencrypted`; an account that stores media sealed with the key (songs, videos, covers) answers 409 `rotation_needs_media_reseal` until rotation re-seals media too. Nothing is written on a refusal.\n\nPersonal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.",
         "security": [
           {
             "bearerAuth": []
@@ -4420,6 +4455,70 @@
                       "null"
                     ],
                     "description": "Defaults to 4 MiB."
+                  },
+                  "baseVersion": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "The version of the caller's library the snapshot was built from. Omitted: the current version (no check)."
+                  },
+                  "otherLibraries": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "appId": {
+                          "type": "string",
+                          "description": "Another library app of the account (not the caller's)."
+                        },
+                        "baseVersion": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "description": "The version the rotating device read this library at."
+                        },
+                        "manifestBase64": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "Base64 of the manifest re-encrypted under the new key."
+                        },
+                        "snapshotId": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "chunkSize": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0
+                        },
+                        "chunkRefs": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "description": "The chunk hashes the manifest references (uploaded already)."
+                        },
+                        "chunkRefsSource": {
+                          "$ref": "#/components/schemas/LibraryChunkRefsSource"
+                        },
+                        "storageFormatVersion": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0
+                        },
+                        "opStreamVersion": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0
+                        }
+                      },
+                      "required": [
+                        "appId",
+                        "baseVersion",
+                        "manifestBase64",
+                        "snapshotId",
+                        "chunkSize",
+                        "chunkRefs",
+                        "storageFormatVersion",
+                        "opStreamVersion"
+                      ]
+                    },
+                    "description": "Every other app's library re-encrypted under the new key. Required for each app that has a library; omitted by builds from before 2026-11-23, which are refused (409 `library_not_reencrypted`) when another library exists."
                   }
                 },
                 "required": [
@@ -4537,37 +4636,95 @@
             }
           },
           "409": {
-            "description": "The library already uses a newer format than this client writes.",
+            "description": "The library already uses a newer format than this client writes, a library changed since it was read (`version_conflict`), another app's library came without its re-encrypted copy (`library_not_reencrypted`), or the account stores media sealed with the key (`rotation_needs_media_reseal`). Nothing is written.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "enum": [
-                        "library_format_downgrade"
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "error": {
+                          "type": "string",
+                          "enum": [
+                            "library_format_downgrade"
+                          ]
+                        },
+                        "surface": {
+                          "type": "string",
+                          "enum": [
+                            "storage",
+                            "op-stream"
+                          ]
+                        },
+                        "observed": {
+                          "type": "integer"
+                        },
+                        "stored": {
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "error",
+                        "surface",
+                        "observed",
+                        "stored"
                       ]
                     },
-                    "surface": {
-                      "type": "string",
-                      "enum": [
-                        "storage",
-                        "op-stream"
+                    {
+                      "type": "object",
+                      "properties": {
+                        "error": {
+                          "type": "string",
+                          "enum": [
+                            "version_conflict"
+                          ]
+                        },
+                        "version": {
+                          "type": "integer"
+                        },
+                        "appId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "error",
+                        "version",
+                        "appId"
                       ]
                     },
-                    "observed": {
-                      "type": "integer"
+                    {
+                      "type": "object",
+                      "properties": {
+                        "error": {
+                          "type": "string",
+                          "enum": [
+                            "library_not_reencrypted"
+                          ]
+                        },
+                        "appId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "error",
+                        "appId"
+                      ]
                     },
-                    "stored": {
-                      "type": "integer"
+                    {
+                      "type": "object",
+                      "properties": {
+                        "error": {
+                          "type": "string",
+                          "enum": [
+                            "rotation_needs_media_reseal"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "error"
+                      ]
                     }
-                  },
-                  "required": [
-                    "error",
-                    "surface",
-                    "observed",
-                    "stored"
                   ]
                 }
               }
@@ -4644,7 +4801,7 @@
           "Library"
         ],
         "summary": "Reset library storage",
-        "description": "Deletes all encrypted library data in the bucket and resets the metadata of every app's library (Badger and Parrot: one key per account, so a lost key locks them all). Use case: user lost the library key and wants a clean reset. Needs re-authentication (password, plus a two-factor code when two-factor is on). The account is emailed afterwards; sessions are kept.\n\nPersonal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.",
+        "description": "Deletes all encrypted library data in the bucket and resets the metadata of every app's library (Badger and Parrot: one key per account, so a lost key locks them all). Use case: user lost the library key and wants a clean reset. Needs re-authentication (password, plus a two-factor code when two-factor is on). Every other session of the account is signed out in the same step (`revoked: false`: this session is kept, to make the new key). The account is emailed afterwards.\n\nPersonal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.",
         "security": [
           {
             "bearerAuth": []
@@ -17399,6 +17556,93 @@
           },
           "429": {
             "description": "More than 10 messages in the last hour.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "rate_limited"
+                      ]
+                    },
+                    "retryAfterSeconds": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "error",
+                    "retryAfterSeconds"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/usage/hello": {
+      "post": {
+        "operationId": "sayDailyHello",
+        "tags": [
+          "Usage"
+        ],
+        "summary": "Daily hello of an app (anonymous)",
+        "description": "Sent once per local day by each app (OPS-BIZ-20). Adds one hello and the two tallies to today's totals (UTC) for the app, platform and version of the `x-space-client` header; nothing else is kept, no account, device or install id and no address. Needs no login and ignores any `Authorization` header. Never refused for an old app version. Limited to 20 per network address an hour (429).",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "plays": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Plays started on this device since its last hello. Above 2000 counts as 2000."
+                  },
+                  "screens": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Screens opened on this device since its last hello. Above 2000 counts as 2000."
+                  }
+                },
+                "required": [
+                  "plays",
+                  "screens"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Counted."
+          },
+          "400": {
+            "description": "The `x-space-client` header is missing or not valid, or the body is not valid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "invalid_client"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many attempts; wait `retryAfterSeconds` (also sent as the `Retry-After` header).",
             "content": {
               "application/json": {
                 "schema": {

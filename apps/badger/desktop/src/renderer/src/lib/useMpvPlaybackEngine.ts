@@ -156,6 +156,7 @@ import {
   runReportingLoadFailure,
 } from "@/lib/playbackLoadFailure";
 import { acquireDesktopStreamSlot, releaseDesktopStreamSlot } from "@/lib/streamSlot";
+import { noteHelloPlay } from "@space/shared/dailyHello";
 import { isQualityPreset, type QualityPreset } from "@/lib/config";
 import type { MediaFormat } from "@/lib/libraryDb";
 import { notify } from "@/lib/notify";
@@ -676,6 +677,8 @@ export const useMpvPlaybackEngine = ({
   const oscTrackPicksRef = useRef(new OscTrackPicks());
   const fileIdRef = useRef(fileId);
   fileIdRef.current = fileId;
+  // OPS-BIZ-20: the file whose play was tallied, so a reload of the same file (quality, seek) is not a new play.
+  const helloNotedFileRef = useRef<string | null>(null);
   // The media/episode progress is saved for right now: a poll tick started
   // for another target must not save (issue #25 NEW-resume-wrong-episode).
   const progressTargetRef = useRef<ProgressSaveTarget>({ mediaId: media.id, episodeId: episodeId ?? null });
@@ -1737,6 +1740,10 @@ export const useMpvPlaybackEngine = ({
       // Cancel closes the player quietly (lib/streamSlot.ts).
       if (isOfflineSource) void releaseDesktopStreamSlot();
       else if ((await acquireDesktopStreamSlot()) === "cancel") throw new Error(PLAYBACK_LOAD_STOPPED);
+      if (helloNotedFileRef.current !== fileIdRef.current) {
+        helloNotedFileRef.current = fileIdRef.current;
+        noteHelloPlay();
+      }
       let session: HlsSession;
       if (offlineSource) {
         session = offlineSource;
