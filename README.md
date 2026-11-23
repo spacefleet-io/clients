@@ -6,7 +6,7 @@ encrypted and keeps it private; these apps are how you reach it.
 
 | App | Version |
 | --- | --- |
-| badger-desktop | 0.1.43 |
+| badger-desktop | 0.1.45 |
 | badger-mobile | 0.0.1 |
 | badger-kodi | 0.2.0 |
 | badger-jellyfin | 0.2.0.0 |

@@ -6568,6 +6568,49 @@ export type SendFeedbackResponses = {
 
 export type SendFeedbackResponse = SendFeedbackResponses[keyof SendFeedbackResponses];
 
+export type SayDailyHelloData = {
+    body: {
+        /**
+         * Plays started on this device since its last hello. Above 2000 counts as 2000.
+         */
+        plays: number;
+        /**
+         * Screens opened on this device since its last hello. Above 2000 counts as 2000.
+         */
+        screens: number;
+    };
+    path?: never;
+    query?: never;
+    url: '/usage/hello';
+};
+
+export type SayDailyHelloErrors = {
+    /**
+     * The `x-space-client` header is missing or not valid, or the body is not valid.
+     */
+    400: {
+        error: 'invalid_client';
+    };
+    /**
+     * Too many attempts; wait `retryAfterSeconds` (also sent as the `Retry-After` header).
+     */
+    429: {
+        error: 'rate_limited';
+        retryAfterSeconds: number;
+    };
+};
+
+export type SayDailyHelloError = SayDailyHelloErrors[keyof SayDailyHelloErrors];
+
+export type SayDailyHelloResponses = {
+    /**
+     * Counted.
+     */
+    204: void;
+};
+
+export type SayDailyHelloResponse = SayDailyHelloResponses[keyof SayDailyHelloResponses];
+
 export type KeepEmailAddressData = {
     body?: never;
     path?: never;
