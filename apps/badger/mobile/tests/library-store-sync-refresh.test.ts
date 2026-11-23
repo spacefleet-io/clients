@@ -47,8 +47,6 @@ const makeFakeDb = () => ({
     fakeDbState.dataListeners.add(callback);
     return () => fakeDbState.dataListeners.delete(callback);
   },
-  onSyncProgress: () => () => undefined,
-  countLibraryContents: async () => ({ titles: fakeDbState.rows.length, episodes: 0 }),
   listMedia: async () => [...fakeDbState.rows],
   listPlaylists: async () => [],
   readTitleVariants: async () => new Map(),
@@ -67,8 +65,7 @@ const makeFakeDb = () => ({
   },
 });
 
-vi.mock("react-native", async () => ({
-  ...(await import("./setup/reactNativeMock")).reactNativeBase(),
+vi.mock("react-native", () => ({
   Platform: { OS: "android" },
   AppState: { currentState: "active", addEventListener: () => ({ remove: () => undefined }) },
 }));

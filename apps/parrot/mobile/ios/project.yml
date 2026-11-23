@@ -83,14 +83,11 @@ targets:
           PRODUCT_BUNDLE_IDENTIFIER: io.spacefleet.parrot.debug
           PARROT_DISPLAY_NAME: Parrot Dev
           PARROT_ALLOW_CLEARTEXT: YES
-          # ACCT-PAIR-07: same-device sign-in links (Info.plist); Debug talks to Debug, never to the TestFlight app.
-          SF_SIBLING_URL_SCHEME: parrot-dev
           SWIFT_OPTIMIZATION_LEVEL: "-Onone"
         Release:
           PRODUCT_BUNDLE_IDENTIFIER: io.spacefleet.parrot
           PARROT_DISPLAY_NAME: Parrot
           PARROT_ALLOW_CLEARTEXT: NO
-          SF_SIBLING_URL_SCHEME: parrot
     postCompileScripts:
       - name: Bundle React Native code and images
         inputFiles:
@@ -119,8 +116,8 @@ targets:
             /usr/libexec/PlistBuddy -c "Delete :NSAppTransportSecurity:NSAllowsLocalNetworking" "$INFO_PLIST" || true
           fi
   # Apple TV (PAR-TV-01): the same JS app (index.js registers "Parrot", the TV branch picks the TV screens) and the same
-  # AppDelegate on react-native-tvos. Built from its own ParrotTV scheme only: the Parrot scheme (iPhone TestFlight, UI
-  # tests) never builds it.
+  # AppDelegate on react-native-tvos. Built from its own ParrotTV scheme only: the Parrot scheme (TestFlight, UI tests)
+  # never builds it.
   ParrotTV:
     type: application
     platform: tvOS
@@ -182,16 +179,13 @@ targets:
             /usr/libexec/PlistBuddy -c "Set :NSAppTransportSecurity:NSAllowsArbitraryLoads true" "$INFO_PLIST"
             /usr/libexec/PlistBuddy -c "Delete :NSAppTransportSecurity:NSAllowsLocalNetworking" "$INFO_PLIST" || true
           fi
-  # Plain XCTests, no app host, no pods: the playback logic of the AudioPlayback pod (limiter, up-next order) and the
-  # same-device sign-in rules of the SiblingSignIn pod (ACCT-PAIR-07).
+  # The playback logic of the AudioPlayback pod (limiter, up-next order) as plain XCTests: no app host, no pods.
   ParrotTests:
     type: bundle.unit-test
     platform: iOS
     sources:
       - path: ../../../../packages/mobile-audio-playback/ios/AudioPlayback/Core
       - path: ../../../../packages/mobile-audio-playback/ios/Tests
-      - path: ../../../../packages/mobile-sibling/ios/SiblingSignIn/Core
-      - path: ../../../../packages/mobile-sibling/ios/Tests
     settings:
       base:
         CODE_SIGN_STYLE: Automatic
@@ -236,7 +230,7 @@ schemes:
       config: Debug
     archive:
       config: Release
-  # Apple TV app (PAR-TV-01). apple-testflight-build.sh archives and uploads it after the iPhone app (REL-MOB-04).
+  # Apple TV app (PAR-TV-01). Not in apple-testflight-build.sh's scheme list: no CI path archives or uploads it.
   ParrotTV:
     build:
       targets:

@@ -290,36 +290,6 @@
       "playlist": "Lista"
     }
   },
-  "offlineContent": {
-    "entry": "Gestionar el contenido sin conexión",
-    "title": "Contenido sin conexión",
-    "back": "Atrás",
-    "totalSuffix": "guardados sin conexión",
-    "unknownArtist": "Artista desconocido",
-    "removeAll": "Quitar todo",
-    "confirmCancel": "Cancelar",
-    "confirmRemove": "Quitar todo",
-    "removeFailed": "No se pudo quitar. Inténtalo de nuevo.",
-    "expand": "Mostrar u ocultar el contenido de {{name}}",
-    "remove": "Quitar {{name}} de este teléfono",
-    "season": "Temporada {{n}}",
-    "episodeNumber": "T{{season}} E{{episode}}",
-    "unknownTitle": "El título ya no está en la mediateca",
-    "unknownEpisode": "El episodio ya no está en la mediateca",
-    "unknown": "Ya no está en la mediateca",
-    "badger": {
-      "entryDescription": "Consulta lo que se conserva en este teléfono y libera espacio",
-      "confirmTitle": "¿Quitar todo lo que se conserva en este teléfono?",
-      "confirmBody": "Se eliminarán todas las películas y episodios descargados en este teléfono. Puedes volver a descargarlos más tarde.",
-      "empty": "No hay nada conservado en este teléfono. Toca Descargar en una película o un episodio para verlo sin conexión."
-    },
-    "parrot": {
-      "entryDescription": "Consulta lo que está guardado sin conexión en este teléfono y libera espacio",
-      "confirmTitle": "¿Quitar todo lo guardado sin conexión?",
-      "confirmBody": "Se quitarán todos los álbumes, playlists y canciones guardados sin conexión en este teléfono. Puedes volver a guardarlos sin conexión más tarde.",
-      "empty": "Todavía no hay nada guardado sin conexión en este teléfono. Toca Guardar sin conexión en un álbum, una playlist o una canción para escucharlo sin conexión."
-    }
-  },
   "downloads": {
     "title": "Descargas",
     "back": "Atrás",
@@ -1037,7 +1007,8 @@
   },
   "libraryFormat": {
     "title": "Actualización necesaria",
-    "body": "Esta mediateca se creó con una versión más reciente de Badger."
+    "body": "Esta mediateca se creó con una versión más reciente de Badger. Actualiza la aplicación para abrirla.",
+    "update": "Actualizar ahora"
   },
   "home": {
     "empty": {
@@ -1104,12 +1075,7 @@
       "added": "Fecha de adición",
       "release": "Año de estreno",
       "asc": "Ascendente",
-      "desc": "Descendente",
-      "title": "Ordenar por",
-      "by": "Campo",
-      "direction": "Orden",
-      "button": "Ordenar",
-      "done": "Listo"
+      "desc": "Descendente"
     },
     "row": {
       "runtimeMinutes": "{{minutes}} min",
@@ -1125,70 +1091,6 @@
     "poster": {
       "watched": "{{percent}} % visto",
       "downloaded": "descargado"
-    },
-    "filters": {
-      "clear": "Borrar filtros",
-      "genres": {
-        "title": "Géneros",
-        "search": "Buscar géneros…",
-        "empty": "Ningún género coincide con la búsqueda."
-      },
-      "actors": {
-        "title": "Actores",
-        "search": "Buscar actores…",
-        "empty": "Ningún actor coincide con la búsqueda."
-      },
-      "title": "Filtrar",
-      "clearShort": "Borrar",
-      "more": "+{{count}} más",
-      "reset": "Restablecer",
-      "apply": "Aplicar",
-      "qualities": {
-        "title": "Calidad",
-        "search": "Buscar calidades",
-        "empty": "No se encontró ninguna calidad"
-      },
-      "directors": {
-        "title": "Dirección",
-        "search": "Buscar directores",
-        "empty": "No se encontró ningún director"
-      },
-      "audioLanguages": {
-        "title": "Idioma del audio",
-        "search": "Buscar idiomas",
-        "empty": "No se encontró ningún idioma"
-      },
-      "subtitleLanguages": {
-        "title": "Idioma de los subtítulos",
-        "search": "Buscar idiomas",
-        "empty": "No se encontró ningún idioma"
-      },
-      "watchStates": {
-        "title": "Estado de visionado",
-        "search": "Buscar estados",
-        "empty": "No se encontró ningún estado"
-      },
-      "quality": {
-        "sd": "SD (480p o menos)"
-      },
-      "watchState": {
-        "unwatched": "Sin ver",
-        "in-progress": "En curso",
-        "watched": "Visto"
-      },
-      "undefinedLanguage": "Idioma desconocido",
-      "active_one": "Filtrar, {{count}} activo",
-      "active_other": "Filtrar, {{count}} activos",
-      "showOnly": "Mostrar solo"
-    },
-    "stats": {
-      "movie_one": "{{count}} película",
-      "movie_other": "{{count}} películas",
-      "movie_many": "{{count}} películas",
-      "series_one": "{{count}} serie",
-      "series_other": "{{count}} series",
-      "series_many": "{{count}} series",
-      "shownOf": "{{shown}} de {{total}}"
     }
   },
   "playlists": {
@@ -1235,22 +1137,6 @@
         "hint": "Tu mediateca guardada sigue en pantalla."
       },
       "close": "Cerrar aviso"
-    }
-  },
-  "sync": {
-    "indicator": {
-      "updating": "Actualizando la mediateca…",
-      "updatingProgress": "Actualizando la mediateca… {{percent}} %",
-      "savedStaysLabel": "Tu mediateca guardada sigue disponible",
-      "newEpisodes_one": "{{count}} episodio nuevo",
-      "newEpisodes_other": "{{count}} episodios nuevos",
-      "newTitles_one": "{{count}} título nuevo",
-      "newTitles_other": "{{count}} títulos nuevos",
-      "updated": "Mediateca actualizada",
-      "upToDate": "Al día",
-      "failed": "Error al actualizar",
-      "failedLabel": "Error al actualizar la mediateca — contenido guardado",
-      "retry": "Toca para reintentar."
     }
   },
   "shell": {
@@ -1395,40 +1281,6 @@
   },
   "appUpdate": {
     "title": "Actualiza {{app}} para seguir usándolo",
-    "tooOld": "Esta versión de {{app}} es demasiado antigua para conectarse.",
-    "how": {
-      "appstore": "Actualiza {{app}} en la App Store y vuelve a abrir la app.",
-      "testflight": "Instala la nueva versión de {{app}} desde TestFlight y vuelve a abrir la app.",
-      "play": "Actualiza {{app}} en Google Play y vuelve a abrir la app.",
-      "amazon": "Actualiza {{app}} en la Amazon Appstore y vuelve a abrir la app.",
-      "fdroid": "Actualiza {{app}} en F-Droid y vuelve a abrir la app.",
-      "obtainium": "Actualiza {{app}} en Obtainium y vuelve a abrir la app.",
-      "apk": "Descarga la nueva versión de {{app}}, instálala encima de esta y vuelve a abrir la app.",
-      "store": "Actualiza {{app}} en la tienda desde la que lo instalaste y vuelve a abrir la app.",
-      "unknown": "Instala la nueva versión desde donde obtuviste {{app}} y vuelve a abrir la app."
-    },
-    "open": {
-      "appstore": "Abrir la App Store",
-      "testflight": "Abrir TestFlight",
-      "play": "Abrir Google Play",
-      "amazon": "Abrir la Amazon Appstore",
-      "fdroid": "Abrir F-Droid",
-      "obtainium": "Abrir Obtainium",
-      "apk": "Descargar la nueva versión",
-      "store": "Abrir la tienda"
-    }
-  },
-  "sibling": {
-    "title": "Continuar con tu cuenta de {{other}}",
-    "body": "{{other}} tiene la sesión iniciada en este teléfono. No hay nada que escribir.",
-    "button": "Continuar como {{email}}",
-    "otherAccount": "Usar otra cuenta",
-    "waiting": "Esperando a {{other}}…",
-    "waitingNote": "Permítelo en {{other}} y luego vuelve.",
-    "cancel": "Cancelar",
-    "failure": "{{other}} no pudo iniciar tu sesión. Inicia sesión de otra forma.",
-    "askTitle": "¿Permitir que {{app}} use tu cuenta de SpaceFleet?",
-    "askBody": "{{app}} en este teléfono iniciará sesión como {{email}}, con su propia copia de la clave de tu mediateca. Puedes cerrar su sesión cuando quieras en Dispositivos.",
-    "allow": "Permitir"
+    "body": "Esta versión de {{app}} es demasiado antigua para conectarse. Instala la nueva versión desde donde obtuviste {{app}} y vuelve a abrir la app."
   }
 }

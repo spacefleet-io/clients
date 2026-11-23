@@ -9,7 +9,6 @@ import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
 import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.fabricEnabled
 import com.facebook.react.defaults.DefaultReactActivityDelegate
-import com.swmansion.rnscreens.fragment.restoration.RNScreensFragmentFactory
 
 class MainActivity : ReactActivity() {
 
@@ -31,11 +30,6 @@ class MainActivity : ReactActivity() {
     // Phones stay in portrait outside the player (the player switches to landscape itself). A TV keeps the
     // landscape screen it has, so the lock is set here for phones only rather than in the manifest.
     if (!television) requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-    // When Android recreates the activity (a font size or language change, or the system reclaiming it in the
-    // background), the fragment manager restores react-native-screens' fragments, which throw "Screen fragments should
-    // never be restored". The library's factory restores them as empty fragments that remove themselves, and React
-    // renders the screens again. It must be set before super.onCreate, which is where the restore happens.
-    supportFragmentManager.fragmentFactory = RNScreensFragmentFactory()
     super.onCreate(savedInstanceState)
     cast.onCreate()
   }

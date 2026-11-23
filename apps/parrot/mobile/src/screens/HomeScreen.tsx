@@ -4,13 +4,13 @@
 // scroll sideways. What it picks is `homeView` and `homeRecentlyAdded` from @space/parrot-core, the same on every
 // surface; the history is this phone's own.
 import React from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { FlatList, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Pause, Play, Shuffle } from "lucide-react-native";
 import { AudioPlayback, showsPause } from "@space/mobile-audio-playback";
 import { useTranslation } from "@space/mobile-shell/i18n";
-import { MobileLibraryLoading, MobileRail, SkyCover, useSkyScroll } from "@space/mobile-shell/components";
+import { MobileLibraryLoading, SkyCover, useSkyScroll } from "@space/mobile-shell/components";
 import { libraryContent } from "@space/shared/libraryContent";
 import { guardRenderItem } from "@space/mobile-shell/render-boundary";
 import {
@@ -89,10 +89,11 @@ export const HomeScreen = ({ onSeeAll }: { onSeeAll: (view: HomeSeeAll, sort?: P
   // While the card's album is queued the button follows the player: Pause while it plays, Resume where it stands.
   const button = jump ? homeJumpButton(jump.album.id, entry, now && player ? { ...now, positionMs: player.positionMs, playing: showsPause(player) } : null) : null;
   const waveTrack = button?.trackId ? songs.find((song) => song.id === button.trackId) : undefined;
-  // One sideways row of album tiles, shared by "Recently added" and "Recently played". A `MobileRail`, so a swipe
-  // on it scrolls the row and not the tab pager (UX-PHONE-09).
+  // One sideways row of album tiles, shared by "Recently added" and "Recently played".
   const albumRow = (rowAlbums: typeof albums) => (
-    <MobileRail
+    <FlatList
+      horizontal
+      showsHorizontalScrollIndicator={false}
       contentContainerStyle={styles.row}
       data={rowAlbums}
       keyExtractor={(album) => album.id}
@@ -183,7 +184,9 @@ export const HomeScreen = ({ onSeeAll }: { onSeeAll: (view: HomeSeeAll, sort?: P
 
       {view.artists.length > 0 ? (
         <Shelf title={t("shell.home.yourArtists")} onSeeAll={() => onSeeAll("artists")} testID="home-artists">
-          <MobileRail
+          <FlatList
+            horizontal
+            showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.row}
             data={view.artists}
             keyExtractor={(artist) => artist.id}

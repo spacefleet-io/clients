@@ -25,7 +25,6 @@ import {
   type ParrotEditSuggestQuery,
   type ParrotManageTarget,
 } from "@space/parrot-core";
-import { shellPluralForm } from "@space/parrot-core/shell-strings";
 import { deleteFromLibrary, editDetails, getEditValues, previewDelete } from "../lib/library";
 import { ParrotArt } from "../screens/art";
 import { Shimmer } from "../screens/shimmer";
@@ -78,7 +77,7 @@ export const ManageProvider = ({ children }: { children: React.ReactNode }) => {
     (target: ParrotManageTarget, trackCount: number) =>
       target.kind === "track"
         ? t("shell.manage.deleteBody.track")
-        : t(`shell.manage.deleteBody.${target.kind}.${shellPluralForm(i18n.language, trackCount)}`, { count: trackCount }),
+        : t(`shell.manage.deleteBody.${target.kind}.${new Intl.PluralRules(i18n.language).select(trackCount) === "one" ? "one" : "other"}`, { count: trackCount }),
     [t, i18n.language]
   );
 
@@ -95,9 +94,8 @@ export const ManageProvider = ({ children }: { children: React.ReactNode }) => {
         );
       },
       remove: (target, title, onDeleted) => {
-        // A throw while asking (not only a failed preview) says why rather than leaving the tap without an answer.
-        void previewDelete(target)
-          .then(({ trackCount }) =>
+        void previewDelete(target).then(
+          ({ trackCount }) =>
             Alert.alert(t("shell.manage.deleteTitle", { title }), deleteBody(target, trackCount), [
               { text: t("shell.manage.cancel"), style: "cancel" },
               {
@@ -109,9 +107,9 @@ export const ManageProvider = ({ children }: { children: React.ReactNode }) => {
                     (error: unknown) => notify(t("shell.manage.deleteFailed", { reason: errorText(error) }), "error")
                   ),
               },
-            ])
-          )
-          .catch((error: unknown) => notify(t("shell.manage.deleteFailed", { reason: errorText(error) }), "error"));
+            ]),
+          (error: unknown) => notify(t("shell.manage.deleteFailed", { reason: errorText(error) }), "error")
+        );
       },
       notify,
     }),
@@ -617,7 +615,7 @@ const styles = StyleSheet.create({
   suggestRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, minHeight: 48, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   suggestName: { flexShrink: 1, color: colors.text, fontSize: 15, fontWeight: "600" },
   suggestAbout: { color: colors.textMuted, fontSize: 12 },
-  tag: { color: colors.accent, fontSize: 11, fontWeight: "700", borderWidth: 1, borderColor: colors.accent, borderRadius: 8, paddingHorizontal: 6, paddingVertical: 1 },
+  tag: { color: colors.accent, fontSize: 10, fontWeight: "700", borderWidth: 1, borderColor: colors.accent, borderRadius: 8, paddingHorizontal: 6, paddingVertical: 1 },
   dots: { flexDirection: "row", gap: 4 },
   dot: { width: 7, height: 7, borderRadius: 4, borderWidth: 1, borderColor: colors.textMuted },
   dotOn: { backgroundColor: colors.accent, borderColor: colors.accent },

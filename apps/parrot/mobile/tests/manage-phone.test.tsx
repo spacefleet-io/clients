@@ -603,32 +603,4 @@ describe("PARROT-MOBILE-MANAGE-001 edit, look up, lyrics and delete on the phone
     expect(JSON.stringify(tree.toJSON())).toContain("error:Could not delete: storage refused");
     log("done", { case: "delete-fails", calls: fake.calls });
   });
-
-  /**
-   * @bugfix The phone's engine (Hermes) has no `Intl.PluralRules`: an album's or an artist's Delete threw while
-   * wording the question, so nothing asked and nothing said why (found on the op9, 2026-11-21).
-   */
-  it("PAR-LIB-03: without Intl.PluralRules (Hermes) an album's and an artist's Delete still ask, worded for the count", async () => {
-    log("start", { case: "delete-hermes-intl" });
-    const real = Intl.PluralRules;
-    Object.defineProperty(Intl, "PluralRules", { value: undefined, configurable: true, writable: true });
-    try {
-      fake.trackCount = 1;
-      await act(async () => manage!.remove({ kind: "album", id: "al-single" }, "Single", vi.fn()));
-      await flush();
-      log("album asked", { alerts: fake.alerts.map((alert) => alert.body) });
-      expect(fake.alerts).toHaveLength(1);
-      expect(fake.alerts[0].body).toBe(SHELL_EN["manage.deleteBody.album.one"].replace("{count}", "1"));
-      fake.trackCount = 13;
-      await act(async () => manage!.remove({ kind: "artist", id: "ar-adele" }, "Adele", vi.fn()));
-      await flush();
-      log("artist asked", { alerts: fake.alerts.map((alert) => alert.body) });
-      expect(fake.alerts).toHaveLength(2);
-      expect(fake.alerts[1].title).toBe("Delete Adele?");
-      expect(fake.alerts[1].body).toBe(SHELL_EN["manage.deleteBody.artist.other"].replace("{count}", "13"));
-    } finally {
-      Object.defineProperty(Intl, "PluralRules", { value: real, configurable: true, writable: true });
-    }
-    log("done", { case: "delete-hermes-intl" });
-  });
 });

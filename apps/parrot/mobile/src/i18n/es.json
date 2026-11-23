@@ -4,17 +4,6 @@
     "collectionKey": "clave de la biblioteca"
   },
   "parrot": {
-    "artist": {
-      "label": "Artista",
-      "latestRelease": "Último lanzamiento",
-      "discography": "Discografía",
-      "allSongs": "Todas las canciones",
-      "album": "Álbum",
-      "single": "Sencillo",
-      "ep": "EP",
-      "hoursMinutes": "{{hours}} h {{minutes}} min",
-      "minutes": "{{minutes}} min"
-    },
     "nav": {
       "back": "Atrás",
       "library": "Biblioteca",
@@ -57,10 +46,11 @@
         "artists": "Artistas",
         "songs": "Canciones"
       },
-      "more": "+{{count}} más",
-      "filterOn": "Filtrar, {{count}} activos",
-      "searchGenres": "Buscar",
-      "noMatch": "Sin resultados"
+      "sort": {
+        "byArtist": "Por artista",
+        "byName": "Por nombre",
+        "byTitle": "Por título"
+      }
     },
     "album": {
       "noPlayableFile": "Este álbum todavía no tiene ningún archivo reproducible.",
@@ -110,7 +100,7 @@
       "likedEmpty": "Todavía no hay canciones que te gusten"
     },
     "kept": {
-      "keep": "Guardar sin conexión",
+      "keep": "Conservar en este teléfono",
       "remove": "Quitar de este teléfono",
       "line": "Guardado en este teléfono · {{size}}",
       "chooseBody": "Estas canciones están guardadas en más de un formato. Elige cuál conservar en este teléfono.",

@@ -1,6 +1,5 @@
 // UX-SHEET-01: the one bottom sheet of the phone apps (Badger and Parrot). It rises over the whole app (tab bar
-// included) and reaches the bottom of the screen, under the system navigation bar, with its buttons kept clear of that
-// bar. The backdrop stays put and fades in as the sheet slides up, then fades out as it slides away, in step with a
+// included). The backdrop stays put and fades in as the sheet slides up, then fades out as it slides away, in step with a
 // drag. The handle row and the title under it (a 44 pt zone) drag the sheet down: past a distance or on a flick it
 // closes, otherwise it springs back. A list inside it (`MobileSheetScrollView`) hands a downward drag to the sheet while
 // it is scrolled to its top. Its rounded top corners are clear: what shows there is the dimmed screen behind it.
@@ -10,7 +9,6 @@ import {
   Easing,
   Keyboard,
   Modal,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -27,7 +25,6 @@ import {
   type ViewStyle,
 } from "react-native";
 import { Gesture, GestureDetector, GestureHandlerRootView } from "react-native-gesture-handler";
-import { SafeAreaInsetsContext, SafeAreaProvider } from "react-native-safe-area-context";
 import { useMobileShellTheme } from "../theme";
 import { MobileRenderBoundary } from "./mobile-render-boundary";
 import {
@@ -219,8 +216,6 @@ export const MobileBottomSheet = memo(
       >
         {/* Android: a Modal is its own window, so gestures inside it need their own root. */}
         <GestureHandlerRootView style={styles.root}>
-          {/* A Modal is its own window: measure the navigation bar there (the app's own window can stop above it). */}
-          <SafeAreaProvider>
           {/* UX-CRASH-01: a crash inside the sheet closes it; the window guard says why. */}
           <MobileRenderBoundary name="modal:sheet" onDismiss={() => close()}>
             <View
@@ -263,21 +258,9 @@ export const MobileBottomSheet = memo(
                   </View>
                 </GestureDetector>
                 <SheetContext.Provider value={context}>{children}</SheetContext.Provider>
-                {/* Android draws the sheet's window under the navigation bar (ModalWindows.kt): the sheet runs on to the
-                    bottom of the screen and its content stays clear of the bar. The keyboard, when up, already covers it. */}
-                {Platform.OS === "android" && keyboardOverlap === 0 ? (
-                  <SafeAreaInsetsContext.Consumer>
-                    {(insets) =>
-                      insets && insets.bottom > 0 ? (
-                        <View style={{ height: insets.bottom }} testID={testID ? `${testID}-nav-bar-room` : undefined} />
-                      ) : null
-                    }
-                  </SafeAreaInsetsContext.Consumer>
-                ) : null}
               </Animated.View>
             </View>
           </MobileRenderBoundary>
-          </SafeAreaProvider>
         </GestureHandlerRootView>
       </Modal>
     );
