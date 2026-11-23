@@ -2,17 +2,27 @@ import { z } from "zod";
 import { defineCommand } from "../helpers";
 
 // ---------------------------------------------------------------------------
-// Export = "Download everything" (ACCT-EXPORT-01, OFFL-FILE-01): the whole
-// library as plain video files the user keeps. There is no per-title export
-// (Chris 2026-11-21: a title's one offline action is "Save offline").
-// Separate from offline playback: the files land in a folder the user picked,
-// at the highest stored quality (OFFL-QUAL-01, never asked), laid out as
-// Movies/… and Shows/<Show>/Season NN/…, and the app does not track them (no
+// Export = plain video files the user keeps (OFFL-FILE-01 "Download file",
+// ACCT-EXPORT-01 "Download everything"). Separate from offline playback: an
+// exported file lands in a folder the user picked, at the highest stored
+// quality (OFFL-QUAL-01, never asked), and the app does not track it (no
 // `media_local_downloads` row, not listed under offline content).
+//
+// Scope: either `all: true` (every title of the library) or `mediaIds`,
+// optionally narrowed to `fileIds` (one episode).
 // ---------------------------------------------------------------------------
 
 export const exportContainerSchema = z.enum(["mkv", "mp4"]);
 export type ExportContainer = z.infer<typeof exportContainerSchema>;
+
+/** `flat`: straight into the picked folder. `library`: Movies/… and Shows/<Show>/Season NN/… */
+export const exportLayoutSchema = z.enum(["flat", "library"]);
+
+const exportScopeShape = {
+  all: z.boolean().optional(),
+  mediaIds: z.array(z.string().min(1)).optional(),
+  fileIds: z.array(z.string().min(1)).optional(),
+};
 
 const exportSkipReasonSchema = z.enum(["no-quality-available", "no-file"]);
 
@@ -28,6 +38,7 @@ const exportSkippedItemSchema = z.object({
 // ---------------------------------------------------------------------------
 
 export const badgerExportEstimatePayloadSchema = z.object({
+  ...exportScopeShape,
   destDir: z.string().min(1),
   container: exportContainerSchema,
 });
@@ -53,8 +64,10 @@ export const badgerExportEstimate = defineCommand({
 // ---------------------------------------------------------------------------
 
 export const badgerExportSubmitPayloadSchema = z.object({
+  ...exportScopeShape,
   destDir: z.string().min(1),
   container: exportContainerSchema,
+  layout: exportLayoutSchema,
 });
 
 const exportSubmittedJobSchema = z.object({

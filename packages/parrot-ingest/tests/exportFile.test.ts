@@ -4,7 +4,7 @@
  * @test-id PARROT-INGEST-EXPORT-FILE-001
  * @level unit (real ffmpeg-made files, split as the importer stores them, rebuilt, read back by ffprobe)
  */
-import { execFileSync, spawnSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "bun:test";
@@ -38,15 +38,7 @@ const tagsOf = (file: string): Record<string, string> => {
 const picturesOf = (file: string) =>
   execFileSync("ffprobe", ["-v", "error", "-select_streams", "v", "-show_entries", "stream=codec_name,width,height", "-of", "csv=p=0", file]).toString().trim();
 
-/**
- * The decoder's complaints over every audio frame. ffprobe decodes them for the frame entries; `ffmpeg -f null` would
- * need an audio writer, which the ffmpeg the apps ship (and CI runs) does not have.
- */
-const errorsOf = (file: string) => {
-  const run = spawnSync("ffprobe", ["-v", "error", "-select_streams", "a", "-show_entries", "frame=pts", "-of", "csv=p=0", file], { encoding: "utf8" });
-  if (run.status !== 0) throw new Error(`ffprobe exited ${run.status}: ${run.stderr}`);
-  return run.stderr.trim();
-};
+const errorsOf = (file: string) => execFileSync("ffmpeg", ["-v", "error", "-i", file, "-map", "0:a", "-f", "null", "-"], { stdio: ["ignore", "pipe", "pipe"] }).toString().trim();
 
 const flacPicture = (image: Uint8Array) => {
   const mime = latin1("image/jpeg");

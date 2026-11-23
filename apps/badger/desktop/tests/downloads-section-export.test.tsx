@@ -3,7 +3,7 @@
 /**
  * Settings → Downloads → "Download everything" (ACCT-EXPORT-01) and the file-format option folded under "More
  * options". The flow: pick a folder, estimate the whole library (count + total size + free space on that disk), confirm,
- * then submit it. The real `exportIpc` runs (contract schemas check both ways); only the preload
+ * then submit with the `library` layout. The real `exportIpc` runs (contract schemas check both ways); only the preload
  * bridge `window.sf.exportFiles` is faked.
  */
 import React, { act } from "react";
@@ -114,7 +114,7 @@ const render = async () => {
 };
 
 describe("DownloadsSection — Download everything (ACCT-EXPORT-01)", () => {
-  it("picks a folder, shows count + total size, then submits the whole library", async () => {
+  it("picks a folder, shows count + total size, then submits the whole library with the library layout", async () => {
     installBridge(
       { count: 3, totalBytes: 12 * GiB, freeBytesAvailable: 200 * GiB, sufficientSpace: true, skipped: [] },
       { submitted: [1, 2, 3].map((n) => ({ mediaId: `m${n}`, fileId: `f${n}`, jobId: `j${n}` })), skipped: [] },
@@ -127,7 +127,7 @@ describe("DownloadsSection — Download everything (ACCT-EXPORT-01)", () => {
     await click("settings-export-everything");
     console.log(`[${SUITE}] phase=estimated estimateCalls=${JSON.stringify(bridge.estimate.mock.calls)} toasts=${JSON.stringify(state.toasts)}`);
     expect(bridge.pickFolder).toHaveBeenCalledTimes(1);
-    expect(bridge.estimate).toHaveBeenCalledWith({ destDir: "/media/exports", container: "mkv" });
+    expect(bridge.estimate).toHaveBeenCalledWith({ all: true, destDir: "/media/exports", container: "mkv" });
     const body = byTestId("confirm-body")?.textContent ?? "";
     console.log(`[${SUITE}] phase=confirm body=${body}`);
     expect(body).toContain("settings.exportAll.confirmBody");
@@ -139,7 +139,7 @@ describe("DownloadsSection — Download everything (ACCT-EXPORT-01)", () => {
 
     await click("export-everything-confirm-button");
     console.log(`[${SUITE}] phase=submitted submitCalls=${JSON.stringify(bridge.submit.mock.calls)} toasts=${JSON.stringify(state.toasts)}`);
-    expect(bridge.submit).toHaveBeenCalledWith({ destDir: "/media/exports", container: "mkv" });
+    expect(bridge.submit).toHaveBeenCalledWith({ all: true, destDir: "/media/exports", container: "mkv", layout: "library" });
     expect(state.toasts).toEqual(['library.export.submittedToast {"count":3,"folder":"/media/exports"}']);
     expect(byTestId("export-everything-confirm")).toBeNull();
   });
@@ -186,6 +186,6 @@ describe("DownloadsSection — Download everything (ACCT-EXPORT-01)", () => {
     await click("settings-export-everything");
     await click("export-everything-confirm-button");
     console.log(`[${SUITE}] phase=mp4 submitCalls=${JSON.stringify(bridge.submit.mock.calls)}`);
-    expect(bridge.submit).toHaveBeenCalledWith({ destDir: "/media/exports", container: "mp4" });
+    expect(bridge.submit).toHaveBeenCalledWith({ all: true, destDir: "/media/exports", container: "mp4", layout: "library" });
   });
 });

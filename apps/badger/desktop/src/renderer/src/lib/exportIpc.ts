@@ -1,6 +1,6 @@
 /**
- * Renderer-side typed wrappers around the export IPC bridge (`window.sf.exportFiles`) for "Download everything"
- * (ACCT-EXPORT-01). Payloads are checked against the contract schema before
+ * Renderer-side typed wrappers around the export IPC bridge (`window.sf.exportFiles`): "Download file"
+ * (OFFL-FILE-01) and "Download everything" (ACCT-EXPORT-01). Payloads are checked against the contract schema before
  * they cross IPC and results are parsed back, like `offlineIpc.ts`. A folder must come from `pickExportFolder`: main
  * refuses any other (`errorCode: "dest_not_picked"`).
  */

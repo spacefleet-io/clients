@@ -161,13 +161,6 @@ export const setClientIdentity = (next: ClientIdentity | null) => {
 export const getClientIdentity = (): ClientIdentity | null => identity;
 
 /**
- * The environment variable through which an app hands its identity (the `x-space-client` value, `badger/desktop/0.2.3`)
- * to a helper process it starts, such as Badger desktop's local runtime, so that process's API calls state the same
- * build. Unset or malformed: the helper states nothing.
- */
-export const CLIENT_IDENTITY_ENV = "SF_CLIENT_IDENTITY";
-
-/**
  * A web player's identity (`badger/web/2026.1118.1915`): the version the website image was built with
  * (`VITE_SPACE_WEB_VERSION`, the built commit's time). Null when the build states none (a dev server) or a malformed
  * one, so such a page is never refused for its version.

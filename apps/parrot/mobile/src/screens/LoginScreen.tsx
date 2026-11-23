@@ -41,7 +41,6 @@ import { PARROT_LINK_SCHEME } from "../lib/linkScheme";
 import { PARROT_MASCOT } from "../brand";
 import { createParrotCompletionDeps, createParrotPairingClient, PARROT_PAIRING_LOG_TAG } from "../setup/pairing";
 import { completePairing } from "@space/mobile-shell/pairing";
-import { SiblingOffer } from "./SiblingOffer";
 import { currentPhoneDeviceName } from "@space/mobile-shell/pairing-device";
 import { MobilePairSignIn } from "@space/mobile-shell/pair-sign-in";
 
@@ -285,8 +284,6 @@ export const LoginScreen = ({ onPaired, onBack }: { onPaired?: () => Promise<voi
             {t(providerNotice.key, providerNotice.values)}
           </Text>
         ) : null}
-        {/* ACCT-PAIR-07: Badger signed in on this phone offers its account above the form; nothing when it is not. */}
-        <SiblingOffer onPaired={onPaired ?? (async () => undefined)} />
         <PasswordSignInForm email={email} setEmail={setEmail} onForgot={() => setResetOpen(true)} onUnverified={() => setMode("verify")} provider={providerStep} />
         {providerRows("login.provider.signInWith")}
         {/* A new email gets a free account through these rows, so the sign-up line sits under them (ACCT-AUTH-10). */}

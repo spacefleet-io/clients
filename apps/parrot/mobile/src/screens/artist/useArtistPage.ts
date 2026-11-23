@@ -102,8 +102,8 @@ export const useArtistPage = (artistId: string, name: string): ArtistPage => {
   const player: ParrotCardPlayer<ArtistSong> = {
     play: (list) => void play(list, 0, info),
     shuffle: (list) => void play(list, Math.floor(Math.random() * list.length), info, { shuffle: true }),
-    playNext: (list) => void queue(list, "next", info).then(editor.queued),
-    addToQueue: (list) => void queue(list, "end", info).then(editor.queued),
+    playNext: (list) => void queue(list, "next", info),
+    addToQueue: (list) => void queue(list, "end", info),
   };
   const allKept = albums.length > 0 && albums.every((album) => kept.entry("album", album.id));
   const toggleKeep = () => {
@@ -165,6 +165,6 @@ export const useArtistPage = (artistId: string, name: string): ArtistPage => {
     playNextAll: () => songs.length > 0 && player.playNext(songs),
     playFrom: (list, index) => void play(list, index, info),
     openAlbum: (album) => navigation.navigate("Album", { albumId: album.id, title: album.title, artistName: album.artistName, cover: album }),
-    openSong: (song) => editor.openSong({ id: song.id, title: song.title }, undefined, { onAddToQueue: () => queue([song], "end", info) }),
+    openSong: (song) => editor.openSong({ id: song.id, title: song.title }),
   };
 };

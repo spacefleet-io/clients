@@ -43,7 +43,7 @@ export default function DownloadsSection() {
       const destDir = await pickExportFolder();
       exportLog.info({ picked: destDir !== null, container }, "export_everything_folder_picked");
       if (!destDir) return;
-      const estimate = await callExportEstimate({ destDir, container });
+      const estimate = await callExportEstimate({ all: true, destDir, container });
       if (isExportIpcError(estimate)) {
         toast(exportErrorMessage(t, estimate, i18n.language));
         return;
@@ -69,10 +69,11 @@ export default function DownloadsSection() {
     if (!pending || busy) return;
     setBusy(true);
     try {
-      const result = await callExportSubmit({ destDir: pending.destDir, container });
+      const result = await callExportSubmit({ all: true, destDir: pending.destDir, container, layout: "library" });
       const outcome = exportOutcomeFromResult(t, result, pending.destDir, i18n.language);
       exportLog.info({ outcome: outcome.kind }, "export_everything_submitted");
-      toast(exportOutcomeToast(t, outcome));
+      const message = exportOutcomeToast(t, outcome);
+      if (message) toast(message);
       if (outcome.kind === "submitted") setPending(null);
     } catch (err) {
       exportLog.warn({ error: String(err) }, "export_everything_submit_failed");

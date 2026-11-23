@@ -1,9 +1,11 @@
 // ---------------------------------------------------------------------------
 // Where an exported Badger title lands inside the folder the user picked
-// ("Download everything", ACCT-EXPORT-01, OFFL-FILE-01):
-//   Movies/<Title (Year)>.<ext>
-//   Shows/<Show>/Season NN/<Show - SxxEyy - Title>.<ext>
-// (the layout Plex, Jellyfin and Kodi read without setup).
+// (OFFL-FILE-01 "Download file", ACCT-EXPORT-01 "Download everything").
+//
+//   flat     "Download file": straight into the picked folder.
+//   library  "Download everything": Movies/<Title (Year)>.<ext>,
+//            Shows/<Show>/Season NN/<Show - SxxEyy - Title>.<ext>
+//            (the layout Plex, Jellyfin and Kodi read without setup).
 //
 // Pure (no fs) so the runtime (the writer) and the renderer (previews) share it.
 // ---------------------------------------------------------------------------
@@ -14,6 +16,8 @@ import {
   type BuildOfflineFilenameInput,
 } from "./offlineFilename";
 
+export type ExportLayout = "flat" | "library";
+
 export type ExportPath = {
   /** Folders under the picked folder, outermost first; each already safe. */
   dirs: string[];
@@ -21,7 +25,7 @@ export type ExportPath = {
   filename: string;
 };
 
-/** Top folder names. Fixed English words, like the media-server layouts they follow. */
+/** Folder names of the "library" layout. Fixed English words, like the media-server layouts they follow. */
 export const EXPORT_MOVIES_FOLDER = "Movies";
 export const EXPORT_SHOWS_FOLDER = "Shows";
 
@@ -35,8 +39,9 @@ export const sanitizeExportFolderName = (raw: string): string => {
   return base.length > 0 ? base : "untitled";
 };
 
-export const buildExportPath = (input: BuildOfflineFilenameInput): ExportPath => {
+export const buildExportPath = (input: BuildOfflineFilenameInput, layout: ExportLayout): ExportPath => {
   const filename = sanitizeOfflineFilename(buildOfflineFilename(input));
+  if (layout === "flat") return { dirs: [], filename };
   if (input.kind === "movie") return { dirs: [EXPORT_MOVIES_FOLDER], filename };
   return {
     dirs: [

@@ -13695,53 +13695,6 @@
                         "status": {
                           "type": "string",
                           "enum": [
-                            "approved"
-                          ]
-                        },
-                        "token": {
-                          "type": "string",
-                          "description": "Session token of the new device."
-                        },
-                        "user": {
-                          "type": "object",
-                          "properties": {
-                            "id": {
-                              "type": "string"
-                            },
-                            "email": {
-                              "type": "string"
-                            }
-                          },
-                          "required": [
-                            "id",
-                            "email"
-                          ]
-                        },
-                        "localKey": {
-                          "type": "boolean",
-                          "enum": [
-                            true
-                          ]
-                        },
-                        "clientType": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "status",
-                        "token",
-                        "user",
-                        "localKey",
-                        "clientType"
-                      ],
-                      "description": "Approved by the sister app on the same device (ACCT-PAIR-07, approve with `localKey`): the sealed key reaches the device from that app directly and never passes through the server, so only the token is here."
-                    },
-                    {
-                      "type": "object",
-                      "properties": {
-                        "status": {
-                          "type": "string",
-                          "enum": [
                             "key_approved"
                           ]
                         },
@@ -14132,7 +14085,7 @@
           "Pairing"
         ],
         "summary": "Approve a pairing request with a sealed library key",
-        "description": "Body `{ sealedKey: { v:1, epk, iv, ct }, approverDeviceId?, password? }`. `password` is the account password, sent by approvers with no device unlock of their own (the TV app, whose session client type ends in `-tv`, e.g. `badger-tv`: for it the password is required, a missing one is 401 `invalid_password`): checked before anything is approved, wrong answers are 401 `invalid_password` (the request stays pending) and are limited to 10 per minute per account (429 `rate_limited`). Any signed-in Badger or Parrot app may approve a request of any app on the same account; nothing filters by app (ACCT-PAIR-05). Creates a new session for the approver's account (clientType `<app>-<deviceType>` with the requesting app, e.g. `parrot-desktop`; device name/type stored), parks the sealed key for the new device and pushes 'New device added' to the account's other push devices (except `approverDeviceId`). Same-device sign-in (ACCT-PAIR-07): a signed-in Badger approving Parrot's sign-in on the same computer or phone (or the reverse) sends `{ localKey: true }` and no `sealedKey`, then hands the sealed key to that app itself, so the server never holds it, not even sealed; the poll answers `{ status: approved, token, user, localKey: true, clientType }`. Allowed only when the request is the sister app's sign-in (not a key request) on the approving session's own device type; otherwise 403 `pairing_local_key_refused` and nothing is approved. Sending both `localKey` and `sealedKey` is 400 `invalid_request`. 410 `pairing_expired`, 409 `pairing_already_used`, 404 `pairing_not_found`. Allowed on unpaid accounts (browse access).\n\nPersonal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.",
+        "description": "Body `{ sealedKey: { v:1, epk, iv, ct }, approverDeviceId?, password? }`. `password` is the account password, sent by approvers with no device unlock of their own (the TV app, whose session client type ends in `-tv`, e.g. `badger-tv`: for it the password is required, a missing one is 401 `invalid_password`): checked before anything is approved, wrong answers are 401 `invalid_password` (the request stays pending) and are limited to 10 per minute per account (429 `rate_limited`). Any signed-in Badger or Parrot app may approve a request of any app on the same account; nothing filters by app (ACCT-PAIR-05). Creates a new session for the approver's account (clientType `<app>-<deviceType>` with the requesting app, e.g. `parrot-desktop`; device name/type stored), parks the sealed key for the new device and pushes 'New device added' to the account's other push devices (except `approverDeviceId`). 410 `pairing_expired`, 409 `pairing_already_used`, 404 `pairing_not_found`. Allowed on unpaid accounts (browse access).\n\nPersonal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.",
         "security": [
           {
             "bearerAuth": []
@@ -14157,15 +14110,8 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "localKey": {
-                    "type": "boolean",
-                    "enum": [
-                      true
-                    ],
-                    "description": "Same-device sign-in (ACCT-PAIR-07): approve with no key; the approving app hands the sealed key to its sister app on this device itself. Replaces `sealedKey`."
-                  },
                   "sealedKey": {
-                    "description": "Required unless `localKey`: a sealed key `{ v: 1, epk, iv, ct }` with base64 fields; otherwise 400 `invalid_sealed_key`.",
+                    "description": "Required: a sealed key `{ v: 1, epk, iv, ct }` with base64 fields; otherwise 400 `invalid_sealed_key`.",
                     "example": {
                       "v": 1,
                       "epk": "…",
@@ -14220,7 +14166,7 @@
             }
           },
           "400": {
-            "description": "The sealed key is missing or malformed, or sent together with `localKey`.",
+            "description": "The sealed key is missing or malformed.",
             "content": {
               "application/json": {
                 "schema": {
@@ -14273,7 +14219,7 @@
             }
           },
           "403": {
-            "description": "The account is blocked or deleted, a personal token was used, or (`localKey`) the request is not the sister app's sign-in on this device type.",
+            "description": "The account is blocked or scheduled for deletion, or a personal token was used on a route that needs a login session.",
             "content": {
               "application/json": {
                 "schema": {
@@ -14284,8 +14230,7 @@
                       "enum": [
                         "account_blocked",
                         "account_deleted",
-                        "personal_token_not_allowed",
-                        "pairing_local_key_refused"
+                        "personal_token_not_allowed"
                       ]
                     }
                   },
@@ -17206,7 +17151,7 @@
           "Feedback"
         ],
         "summary": "Send feedback",
-        "description": "Sends a feedback message from an app's \"Send feedback\" entry (UX-SUP-05); it lands in the admin dashboard's Feedback inbox with the account that sent it. `message` is trimmed, 1 to 4000 characters. `log` is the app's error log, sent only when the user ticked the box, at most 200 KB. Never put a title or a file name in it. `requestIds` are the server's `x-request-id` values of the app's last failed API calls (UX-SUP-07), at most 10 UUIDs. A wrong field answers 400 `invalid_feedback` naming it. At most 10 messages an hour per account: beyond, 429 `rate_limited` with `retryAfterSeconds`.\n\nPersonal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.",
+        "description": "Sends a feedback message from an app's \"Send feedback\" entry (UX-SUP-05); it lands in the admin dashboard's Feedback inbox with the account that sent it. `message` is trimmed, 1 to 4000 characters. `log` is the app's error log, sent only when the user ticked the box, at most 200 KB. Never put a title or a file name in it. A wrong field answers 400 `invalid_feedback` naming it. At most 10 messages an hour per account: beyond, 429 `rate_limited` with `retryAfterSeconds`.\n\nPersonal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.",
         "security": [
           {
             "bearerAuth": []
@@ -17262,16 +17207,6 @@
                       "null"
                     ],
                     "description": "The app's error log, only when the user chose to attach it. 200 KB at most."
-                  },
-                  "requestIds": {
-                    "type": [
-                      "array",
-                      "null"
-                    ],
-                    "items": {
-                      "type": "string"
-                    },
-                    "description": "UX-SUP-07: the `x-request-id` of each of the app's last failed API calls (answers of 400 or more), newest last; at most 10 UUIDs. Ids only: never a URL, a body or an address."
                   }
                 },
                 "required": [
@@ -17324,8 +17259,7 @@
                             "appVersion",
                             "platform",
                             "deviceModel",
-                            "log",
-                            "requestIds"
+                            "log"
                           ]
                         }
                       },

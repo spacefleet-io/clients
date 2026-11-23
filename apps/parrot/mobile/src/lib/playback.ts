@@ -18,7 +18,6 @@ import {
   createParrotCopyPicker,
   parrotEvenVolumeLimits,
   parrotQueueGainsDb,
-  notYetQueued,
   pickPlayableFile,
   type ParrotCoverKeys,
   type TrackFileRow,
@@ -267,24 +266,19 @@ export const playTracks = async (input: {
 
 /**
  * Adds `tracks` to the queue without stopping the song playing (PAR-CARD-01): "next" right after it (Play next), "end"
- * after the last song (Add to queue). A song is in Up next at most once (PAR-CARD-02): the songs the player is playing
- * or holds up next are left out. Resolves to how many songs were added; 0 means they were all there already.
+ * after the last song (Add to queue).
  */
 export const queueTracks = async (input: { token: string; libraryKey: string; albumTitle?: string; tracks: QueueTrack[]; where: AudioQueueInsert }) => {
-  const [now, upNext] = await Promise.all([AudioPlayback.getState(), AudioPlayback.getUpNext()]);
-  const fresh = notYetQueued([now.mediaId, ...upNext], input.tracks, (track) => track.id);
-  console.log("parrot.queue.add", JSON.stringify({ where: input.where, asked: input.tracks.length, added: fresh.length, playing: now.mediaId, upNext: upNext.length }));
-  if (fresh.length === 0) return 0;
   // A queue with songs added is no longer one album in order: every song plays at its track value.
-  const tracks = [...queuedTracks, ...fresh];
+  const tracks = [...queuedTracks, ...input.tracks];
   const gains = parrotQueueGainsDb(tracks, true, getEvenVolume());
-  const { items, streamed } = await queueItems({ ...input, tracks: fresh, startIndex: 0, playsNow: false, gains });
+  const { items, streamed } = await queueItems({ ...input, startIndex: 0, playsNow: false, gains });
   await ensureStream(input.token, streamed, items);
   queuedTracks = tracks;
   queueMixed = true;
-  await AudioPlayback.addItems(items, input.where);
+  const state = await AudioPlayback.addItems(items, input.where);
   await AudioPlayback.setGains(gains).catch(() => undefined);
-  return fresh.length;
+  return state;
 };
 
 /** Shuffle on or off (the player screen): an album in order switches between album and track values with it. */
