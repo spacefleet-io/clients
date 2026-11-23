@@ -23,7 +23,7 @@ type DesktopStartupCardProps = {
   mascotAlt?: string;
   mascotGlowClassName?: string;
   /**
-   * `card` (setup and onboarding steps, UX-SETUP-08): the phone's look, the mascot about half over the card's top
+   * `card` (setup and onboarding steps, UX-SETUP-08): the phone's look, a large mascot about half over the card's top
    * border with a soft disc of the app's colour behind it, and the card's top padded so nothing sits under it.
    * `above`: the sign-in screens' small mascot floating apart above the card, as on the phone's sign-in.
    */
@@ -80,12 +80,11 @@ export const DesktopStartupCard = ({
   return (
     <div className={wrapperClassName}>
       {mascotSrc && onCard ? (
-        // The phone's look (`MobileSetupMascot`): the mascot is about 15% of the card's width (64 to 96 px, Chris
-        // 2026-11-19: two thirds of the first fifth) and its lower 45% overlaps the card. In a short window it is at most
-        // 12% of the window's height, so the step still fits the smallest window. Its glow is the phone's disc of the
-        // app's colour at 16% plus the drop shadow.
+        // The phone's proportions (`MobileSetupMascot`): the mascot is about a fifth of the card's width (96 to 144 px)
+        // and its lower 45% overlaps the card. In a short window it is at most 17% of the window's height, so the step
+        // still fits the smallest window. Its glow is the phone's disc of the app's colour at 16% plus the drop shadow.
         <div
-          className="pointer-events-none absolute left-1/2 top-0 z-10 aspect-square w-[clamp(4rem,min(15%,12vh),6rem)] -translate-x-1/2 -translate-y-[55%]"
+          className="pointer-events-none absolute left-1/2 top-0 z-10 aspect-square w-[clamp(6rem,min(22%,17vh),9rem)] -translate-x-1/2 -translate-y-[55%]"
           data-testid="startup-card-mascot"
         >
           <div className="absolute inset-[8%] rounded-full bg-primary opacity-[0.16]" />
@@ -101,9 +100,8 @@ export const DesktopStartupCard = ({
       ) : null}
       <Card className="w-full border-border/70 bg-card/80 backdrop-blur-md">
         {/* Under an on-card mascot the header starts below its overlap (45% of its width) plus 12 px; a padding
-            percentage is of the card's width, so it follows the mascot's size: 6.75% is 45% of its 15%, 5.4vh 45% of
-            its 12vh cap, and 2.55rem and 3.45rem 45% of its 4rem and 6rem bounds plus 0.75rem. */}
-        <CardHeader className={`space-y-2 text-center ${onCard ? "pt-[clamp(2.55rem,calc(min(6.75%,5.4vh)_+_0.75rem),3.45rem)]" : "pt-8"}`}>
+            percentage is of the card's width, so it follows the mascot's size, and 7.65vh is 45% of its 17vh cap. */}
+        <CardHeader className={`space-y-2 text-center ${onCard ? "pt-[clamp(3.5rem,calc(min(9.9%,7.65vh)_+_0.75rem),4.75rem)]" : "pt-8"}`}>
           {progress && progress.total > 0 ? (
             <StepBar {...progress} />
           ) : eyebrow ? (

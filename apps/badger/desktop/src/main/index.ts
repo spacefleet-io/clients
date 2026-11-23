@@ -52,10 +52,7 @@ import {
 import { scopeLogger } from "./logger";
 import { isAllowedExternalUrl } from "@space/desktop-shell/externalUrl";
 import { registerSessionIpc } from "./sessionIpc";
-import { createBadgerSiblingHost, registerSiblingIpc, siblingAccountOf } from "./siblingSignIn";
-import { SIBLING_SIGN_IN_ARG, armSiblingHiddenQuit, isSiblingSignInLaunch, type SiblingHiddenQuit } from "@space/desktop-shell/sibling-main";
 import { setClientIdentity } from "@space/shared/appVersion";
-import { logFailedApiCalls } from "@space/shared/apiFailure";
 import { CLIENT_IDENTITY_CHANNEL, desktopClientIdentity } from "@space/desktop-shell/client-identity";
 import { serveStorageUnitBase } from "@space/desktop-shell/storage-units";
 import { PROVIDER_RETURN_IPC } from "../shared/providerReturn";
@@ -133,8 +130,6 @@ getDesktopPlatform().shell.prepareApp(app, { appUserModelId: "io.spacefleet.badg
 // handing over to the user's Badger (PLAT-DESK-12).
 app.setPath("userData", appIdentity.userDataDir);
 
-/** ACCT-PAIR-07: started by Parrot (`--sibling-sign-in`) only to sign it in: no window, quits soon after. */
-const siblingHiddenStart = isSiblingSignInLaunch(process.argv);
 // Single-instance lock: a second launch of the binary must not race the first
 // instance's runtime/library state. The first instance keeps the lock; later
 // instances receive a "second-instance" event and exit. Tests can dispatch
@@ -146,18 +141,6 @@ if (!gotSingleInstanceLock) {
   app.quit();
 } else {
   app.on("second-instance", (_event, argv) => {
-    if (siblingHiddenStart) {
-      // ACCT-PAIR-07: this run has no window (it only answers Parrot): the user's launch gets a full Badger.
-      logger.info({}, "sibling: Badger launched during a hidden start: relaunching in full");
-      app.relaunch({ args: argv.slice(1).filter((arg) => arg !== SIBLING_SIGN_IN_ARG) });
-      app.exit(0);
-      return;
-    }
-    if (isSiblingSignInLaunch(argv)) {
-      // Parrot started Badger to answer it while this one runs: this one already answers on the local channel.
-      logger.info({}, "sibling: hidden start while Badger runs: ignored");
-      return;
-    }
     handleSecondInstance({
       showMainWindow: () => showMainWindow(),
       requestQuit: () => {
@@ -294,28 +277,11 @@ const desiredRuntimePort = (() => {
   const match = url.match(/:(\d+)/);
   return match ? match[1] : undefined;
 })();
-// REL-CD-29: every API call of this build (main process and window alike) says which build is calling, so an outdated
-// one is told to update (and a Linux build says how it was installed). Set before any call; the preload reads the same
-// identity synchronously.
-const clientIdentity = desktopClientIdentity({
-  app: "badger",
-  version: app.getVersion(),
-  packaged: app.isPackaged,
-  os: process.platform,
-  env: process.env,
-});
-setClientIdentity(clientIdentity);
-// REL-LOG-31: one local line per failed API call of this process, with the server's request id (never reported).
-logFailedApiCalls((fields) => logger.warn({ event: "api_call_failed", ...fields }, "api: call failed"));
-ipcMain.on(CLIENT_IDENTITY_CHANNEL, (event) => {
-  event.returnValue = clientIdentity;
-});
 // F7 (ultimate stress, issue #25): SF_TRANSCODE_DIR / SF_BADGER_OFFLINE_DIR are
 // resolved from userData HERE, before the guardian below is built and started,
 // so the first runtime and every respawn share one transcode dir (they used to
 // be set inside window creation, after the first guardian.start()).
-// REL-CD-29: the runtime's API calls state this build too (the identity set above).
-const runtimeSpawnEnv = buildRuntimeSpawnEnv(process.env, app.getPath("userData"), desiredRuntimePort, clientIdentity);
+const runtimeSpawnEnv = buildRuntimeSpawnEnv(process.env, app.getPath("userData"), desiredRuntimePort);
 guardianLogger.info({
   userData: app.getPath("userData"),
   devBuild: isDesktopDevBuild(currentDesktopBuildEnv()),
@@ -464,6 +430,21 @@ ipcMain.handle(RUNTIME_OWNER_SECRET_IPC_CHANNEL, createOwnerSecretIpcHandler({
 // #25: device-local settings (this computer only, never synced to the account).
 const deviceSettings = registerDeviceSettingsIpc();
 
+// REL-CD-29: every API call of this build (main process and window alike) says which build is calling, so an outdated
+// one is told to update (and a Linux build says how it was installed). Set before any call; the preload reads the same
+// identity synchronously.
+const clientIdentity = desktopClientIdentity({
+  app: "badger",
+  version: app.getVersion(),
+  packaged: app.isPackaged,
+  os: process.platform,
+  env: process.env,
+});
+setClientIdentity(clientIdentity);
+ipcMain.on(CLIENT_IDENTITY_CHANNEL, (event) => {
+  event.returnValue = clientIdentity;
+});
+
 // STOR-UNIT-01: storage figures follow this computer's file manager (1024 on Windows and KDE, 1000 elsewhere); the
 // preload reads the base synchronously so the window sets it before its first render.
 serveStorageUnitBase(ipcMain, {
@@ -477,12 +458,7 @@ serveStorageUnitBase(ipcMain, {
 // Its async safeStorage decrypt (`sessionStore.load()`) runs once the app is
 // ready and must finish before the first window exists: the preload reads the
 // session over a synchronous IPC (ACCT-AUTH-08).
-// ACCT-PAIR-07: same-device sign-in with Parrot (siblingSignIn.ts). The session's changes publish or withdraw this
-// account for Parrot on this computer.
-let siblingHiddenQuit: SiblingHiddenQuit | null = null;
-const siblingHost = createBadgerSiblingHost({ onAnswered: () => siblingHiddenQuit?.answered() });
-app.on("will-quit", () => void siblingHost.close());
-const sessionStore = registerSessionIpc({ onReplace: (entries) => void siblingHost.setAccount(siblingAccountOf(entries)) });
+const sessionStore = registerSessionIpc();
 let sessionStoreLoaded = false;
 
 // Runtime Jobs v2 IPC bridge — gated by the renderer feature flag
@@ -622,6 +598,7 @@ const createWindow = (options: { show?: boolean } = {}) => {
   const show = options.show !== false;
   const appRoot = app.getAppPath();
   const devServerUrl = process.env.VITE_DEV_SERVER_URL ?? process.env.SF_DEV_SERVER_URL;
+  const isDev = Boolean(devServerUrl);
   if (!process.env.SF_APP_ROOT) {
     process.env.SF_APP_ROOT = appRoot;
   }
@@ -727,25 +704,8 @@ app.whenReady().then(async () => {
   electronSession.defaultSession.webRequest.onBeforeSendHeaders({ urls: ["*://*/lookup"] }, (details, callback) => {
     callback({ requestHeaders: details.method === "POST" ? { ...details.requestHeaders, "User-Agent": NEUTRAL_USER_AGENT } : details.requestHeaders });
   });
-  if (siblingHiddenStart) {
-    // ACCT-PAIR-07: started by Parrot only to answer its sign-in: no window, no runtime, only the local channel.
-    initializeApiBaseUrl();
-    await sessionStore.load();
-    sessionStoreLoaded = true;
-    const account = siblingAccountOf(sessionStore.read());
-    logger.info({ signedIn: Boolean(account) }, "sibling: hidden start for Parrot's sign-in");
-    if (!account) {
-      app.quit();
-      return;
-    }
-    siblingHiddenQuit = armSiblingHiddenQuit({ quit: () => app.quit(), log: (message) => logger.info(message) });
-    await siblingHost.setAccount(account);
-    return;
-  }
   const sessionLoaded = sessionStore.load().then(() => {
     sessionStoreLoaded = true;
-    // ACCT-PAIR-07: signed in, Parrot on this computer can offer this account; signed out, nothing is published.
-    void siblingHost.setAccount(siblingAccountOf(sessionStore.read()));
   });
   // Skip the guardian when an external runtime is provided (e.g., e2e tests),
   // or when using direct SQLite mode (no runtime needed).
@@ -788,6 +748,27 @@ app.whenReady().then(async () => {
     },
     onSignedUrlRequest: (increment) => {
       playbackRuntimeBridge.recordSignedUrlRequest(increment);
+    },
+    // Offline-mode (Phase 2): resolve a downloaded file's on-disk path from the
+    // device-local media_local_downloads table. Read lazily via
+    // getActiveLibraryDb() so it always reflects the currently-open library
+    // (the DB activates after login/onboarding, after this server is built).
+    // @bugfix offline-playback-ignored-local-file
+    resolveOfflineFile: ({ fileId, mediaId }) => {
+      const db = getActiveLibraryDb();
+      if (!db) return null;
+      try {
+        const rows = db.listLocalDownloads(mediaId ? [mediaId] : undefined);
+        const row = rows.find((r) => r.fileId === fileId);
+        if (!row) return null;
+        return { localPath: row.localPath, container: row.container };
+      } catch (err) {
+        logger.warn(
+          { error: err instanceof Error ? err.message : String(err), fileId },
+          "resolveOfflineFile failed",
+        );
+        return null;
+      }
     },
   });
   await playbackServer.start();
@@ -943,7 +924,6 @@ app.whenReady().then(async () => {
     },
   });
   registerPairingIpc();
-  registerSiblingIpc(siblingHost);
   // In-app updates (REL-UPD-01), from `<api>/desktop/badger/`. `getWindow` is resolved lazily so a recreated window
   // still receives update events. The renderer arms the background check by pushing its `autoUpdate` setting (ON by
   // default) once it has loaded.
@@ -954,8 +934,6 @@ app.whenReady().then(async () => {
     getApiBaseUrl,
     getPlatformId: () => getDesktopPlatform().id,
     logger: scopeLogger("updater"),
-    // REL-UPD-07: a .deb/.rpm/.pacman copy updates through /usr/lib/spacebadger/system-update.
-    linuxPackageName: "spacebadger",
     // The windows close instead of going to the tray; `before-quit` still asks about work in progress.
     onQuitForUpdate: () => {
       isQuitting = true;

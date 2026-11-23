@@ -154,7 +154,7 @@ const readApiError = (
   return { status, code, retryAfterSeconds, method };
 };
 
-export const mapApiError = (error: unknown): ApprovePairingError => {
+const mapApiError = (error: unknown): ApprovePairingError => {
   if (error instanceof ApprovePairingError) return error;
   const { status, code, retryAfterSeconds, method } = readApiError(error);
   if (code === "pairing_not_found") return new ApprovePairingError("not_found");
@@ -178,7 +178,7 @@ const isExpired = (request: PairingRequestInfo, now: number) => {
 
 /** Turns a typed code (any case, with or without the dash) or a pasted QR link into the waiting device's request. */
 export const lookupPairingRequest = async (
-  deps: Pick<ApprovePairingDeps, "lookup" | "now" | "log">,
+  deps: ApprovePairingDeps,
   token: string,
   input: string,
 ): Promise<LookedUpPairingRequest> => {

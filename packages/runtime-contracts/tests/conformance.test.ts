@@ -104,7 +104,6 @@ import {
   badgerOfflineListLocal,
   badgerOfflineReconcile,
 } from "../src/badger/offline";
-import { badgerExportEstimate, badgerExportSubmit } from "../src/badger/export";
 import { badgerPreviewsGetStatus } from "../src/badger/previews";
 
 /**
@@ -167,9 +166,6 @@ const ALL_BADGER_CONTRACTS: CommandContract[] = [
   badgerOfflineDeleteLocal,
   badgerOfflineListLocal,
   badgerOfflineReconcile,
-  // export to plain files (OFFL-FILE-01 / ACCT-EXPORT-01)
-  badgerExportEstimate,
-  badgerExportSubmit,
   // seek-bar previews (MPV-PREV-06)
   badgerPreviewsGetStatus,
 ];
@@ -227,10 +223,6 @@ const RUNTIME_HANDLED_COMMANDS = new Set([
   "badger.offline.delete_local",
   "badger.offline.list_local",
   "badger.offline.reconcile",
-  // export to plain files (OFFL-FILE-01 / ACCT-EXPORT-01). Routed through
-  // executeV2BadgerIngestCommand in apps/runtime/src/modules/index.ts.
-  "badger.export.estimate",
-  "badger.export.submit",
   // seek-bar previews (MPV-PREV-06). Routed in executeModuleCommand
   // (apps/runtime/src/modules/index.ts), next to the catch-up pass it reads.
   "badger.previews.get_status",
