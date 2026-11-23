@@ -28,7 +28,7 @@
     "./metro": "./metro.cjs"
   },
   "peerDependencies": {
-    "@sentry/react-native": "^8.35.0",
+    "@sentry/react-native": "^8.36.0",
     "react": "^19.3.1"
   },
   "peerDependenciesMeta": {
@@ -41,7 +41,7 @@
   },
   "devDependencies": {
     "@sentry/node": "^11.12.0",
-    "@sentry/react-native": "^8.35.0",
+    "@sentry/react-native": "^8.36.0",
     "@sentry/electron": "^8.4.0",
     "vitest": "^5.1.0",
     "react": "^19.3.1"

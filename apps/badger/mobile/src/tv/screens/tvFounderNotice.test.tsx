@@ -79,7 +79,7 @@ vi.mock("@space/mobile-shell/i18n", () => ({
   useTranslation: () => ({ t: (key: string) => key, i18n: { language: state.language } }),
   translate: (key: string) => key,
 }));
-vi.mock("../../components/UnpaidAccessBanner", () => ({ UnpaidAccessBanner: () => null }));
+vi.mock("@space/mobile-shell/unpaid-access-banner", () => ({ UnpaidAccessBanner: () => null }));
 vi.mock("../../lib/pairing/deviceWatch", () => ({ checkForNewDevices: () => undefined, markDeviceSeen: async () => undefined }));
 vi.mock("../../store/auth", () => ({ useAuth: () => ({ token: "tv-tok" }) }));
 vi.mock("../../store/library", () => ({

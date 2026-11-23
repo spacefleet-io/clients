@@ -178,7 +178,10 @@ export const putLibraryDb = (
   // The publishing app's own change-type version (LIB-FMT-09): Badger's
   // `OP_STREAM_VERSION`, Parrot's `PARROT_OP_STREAM_VERSION`. This transport is
   // shared by both apps, so it cannot know which vocabulary the snapshot holds.
-  opStreamVersion: number
+  opStreamVersion: number,
+  // PRIV-KEY-06/10: the account probe assertAccountLibraryKey checked this key against (null: none). The API refuses
+  // the publish (412 `key_probe_changed`) when the account's probe is another one by then.
+  checkedKeyProbe: string | null
 ) =>
   unwrap(
     sdk.putLibraryDb({
@@ -201,6 +204,7 @@ export const putLibraryDb = (
         // publishing app's.
         storageFormatVersion: STORAGE_FORMAT_VERSION,
         opStreamVersion,
+        checkedKeyProbe,
       },
     })
   );

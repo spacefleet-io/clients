@@ -8,7 +8,7 @@
 //
 // --test-build (`package:windows-test`, as Badger): a dev-key TEST package for runs against a development-key stack,
 // never a release: renderer built with VITE_SF_DEV_TICKET_KEY=1, version marked `-devkey`, and a Windows build may be
-// unsigned (Badger's scripts/test-build-lib.mjs). A release Windows build without the signing secrets still fails.
+// unsigned (packages/desktop-platform/packaging/test-build-lib.mjs). A release Windows build without the signing secrets still fails.
 //
 // The in-app updater's feed (REL-UPD-01) is baked into app-update.yml: https://api.spacefleet.io/desktop/parrot, or
 // SF_UPDATE_FEED_URL when set (electron-builder.config.mjs). electron-builder writes latest-linux.yml / latest.yml (+ the
@@ -47,9 +47,9 @@ import {
   openSigningKeychain,
   removeAppCopy,
   resolveMacSigning,
-} from "../../../badger/desktop/scripts/mac-signing-lib.mjs";
-import { listAsarEntries } from "../../../badger/desktop/scripts/packaged-asar-lib.mjs";
-import { checkPackagedLocales } from "../../../badger/desktop/scripts/packaged-locales-lib.mjs";
+} from "../../../../packages/desktop-platform-macos/packaging/mac-signing-lib.mjs";
+import { listAsarEntries } from "../../../../packages/desktop-platform/packaging/asar-entries.mjs";
+import { checkPackagedLocales } from "../../../../packages/desktop-platform/packaging/packaged-locales-lib.mjs";
 import {
   assertWindowsSigningHost,
   authenticodeCheckScript,
@@ -58,8 +58,8 @@ import {
   resolveWindowsSigning,
   windowsSigningLogLine,
   windowsUpdatePublisherFor,
-} from "../../../badger/desktop/scripts/windows-signing-lib.mjs";
-import { TEST_BUILD_ENV, TEST_BUILD_FLAG, packageBuildEnv } from "../../../badger/desktop/scripts/test-build-lib.mjs";
+} from "../../../../packages/desktop-platform-windows/packaging/windows-signing-lib.mjs";
+import { TEST_BUILD_ENV, TEST_BUILD_FLAG, packageBuildEnv } from "../../../../packages/desktop-platform/packaging/test-build-lib.mjs";
 import { LINUX_TOOL_PACKAGES, missingLinuxPackageTools } from "../../../../packages/desktop-platform-linux/packaging/linux-packages.mjs";
 import { PACKAGING_UMASK } from "../../../../packages/desktop-platform-linux/packaging/file-modes.mjs";
 import { checkParrotAsarEntries, linuxArtifactPatterns, resolveLinuxFormats, resolvePackageTarget } from "./package-targets.mjs";

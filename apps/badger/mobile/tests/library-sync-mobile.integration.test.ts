@@ -205,6 +205,7 @@ describe("SSE stream exists:false handling", () => {
       chunkSize: null,
       snapshotHistory: [],
       opsHistory: [],
+      opStreamVersion: 3,
     };
 
     console.info(

@@ -7,6 +7,7 @@
 export type SignedOutReason = "signOut" | "sessionRejected";
 
 /** A rejected session is not a sign-out: the library key stays on the device so signing in again opens the library. */
+// tla: VaultKeys/SpinRefused
 export const keyAfterSignedOut = (reason: SignedOutReason): "keep" | "clear" =>
   reason === "sessionRejected" ? "keep" : "clear";
 

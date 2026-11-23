@@ -104,7 +104,7 @@ vi.mock("../src/store/library", () => ({
 vi.mock("../src/lib/pairing/deviceWatch", () => ({ checkForNewDevices: async () => undefined, markDeviceSeen: async () => undefined }));
 vi.mock("../src/lib/pairing/newDevice", () => ({ newDeviceKey: () => "", newDeviceMessage: () => "", subscribeNewDevice: () => () => undefined }));
 vi.mock("../src/lib/pairing/useOpenDevices", () => ({ useOpenDevices: () => ({ devicesRequest: null, openDevices: () => undefined }) }));
-vi.mock("../src/components/UnpaidAccessBanner", () => ({ UnpaidAccessBanner: () => null }));
+vi.mock("@space/mobile-shell/unpaid-access-banner", () => ({ UnpaidAccessBanner: () => null }));
 vi.mock("../src/screens/HomeScreen", () => ({
   HomeScreen: (props: { onSeeAll: (target: SeeAllTarget) => void }) => {
     shell.onSeeAll = props.onSeeAll;
