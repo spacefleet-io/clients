@@ -29,8 +29,6 @@ import { HistoryProvider } from "./src/state/history";
 import { PlaylistEditorProvider } from "./src/state/playlistEditor";
 import { ManageProvider } from "./src/state/manage";
 import { PairDeviceScreen } from "./src/screens/PairDeviceScreen";
-import { DeleteAccountScreen } from "./src/screens/DeleteAccountScreen";
-import { OfflineContentScreen } from "./src/screens/OfflineContentScreen";
 import { NowPlayingBar } from "./src/screens/NowPlayingBar";
 import { SetupFlow } from "./src/setup/SetupFlow";
 import { profileSetupLog } from "./src/setup/ProfileSetupQuestion";
@@ -46,7 +44,6 @@ import { colors, parrotShellTheme } from "./src/theme";
 import { PARROT_MASCOT } from "./src/brand";
 import { startI18n } from "./src/lib/i18n";
 import { PARROT_LINK_SCHEME } from "./src/lib/linkScheme";
-import { TvGates } from "./src/tv/TvGates";
 import { holdPairLink, onPairLink, takePairLink } from "./src/lib/pendingPairLink";
 
 // Started once at launch, before any screen reads a translated text (Settings may mount first, with a saved session).
@@ -126,8 +123,6 @@ const Library = ({ profile }: { profile: ApiProfile | null }) => {
             options={Platform.OS === "android" ? { presentation: "transparentModal", animation: "slide_from_bottom" } : { presentation: "modal" }}
           />
           <Stack.Screen name="PairDevice" component={PairDeviceScreen} />
-          <Stack.Screen name="DeleteAccount" component={DeleteAccountScreen} />
-          <Stack.Screen name="OfflineContent" component={OfflineContentScreen} />
           {/* The shared profile screen draws its own title ("Who's listening?") and its Done. */}
           <Stack.Screen name="Profiles" component={ProfilesRoute} />
         </Stack.Navigator>
@@ -195,14 +190,12 @@ const Gates = () => {
     void setupStore.write(next);
   }, [booting, session, setup]);
   // The update screen covers everything once the texts can be read: sign-in, setup, the profile pick and the library.
-  if (updateRequired && i18nReady) return <MobileUpdateRequiredScreen app="parrot" />;
+  if (updateRequired && i18nReady) return <MobileUpdateRequiredScreen />;
   if (booting || !i18nReady || !setup) return <Spinner />;
   const saveSetup = async (next: PhoneSetupProgress) => {
     setSetup(next);
     await setupStore.write(next);
   };
-  // Android TV, Google TV, Fire TV and Apple TV (PAR-TV-01): the same app shows its TV screens.
-  if (Platform.isTV) return <TvGates setup={setup} save={saveSetup} spinner={<Spinner />} />;
   // The same flow as Badger's phone (UX-SETUP-08): the language first, then the sign-in, then the numbered steps; a
   // sign-out comes back to the sign-in.
   const step = setup.done ? null : resolvePhoneSetupStep(setup, { hasKey: !!libraryKey, signedIn: !!session });

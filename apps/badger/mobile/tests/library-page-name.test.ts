@@ -43,20 +43,13 @@ vi.mock("react-native", () => {
 // real i18next instance and the real en/fr files stay, only the hook is bound to them directly.
 vi.mock("@space/mobile-shell/i18n", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@space/mobile-shell/i18n")>();
-  return { ...actual, useTranslation: () => ({ t: actual.translate, i18n: { language: actual.getCurrentLanguage() } }) };
+  return { ...actual, useTranslation: () => ({ t: actual.translate }) };
 });
 vi.mock("@react-navigation/native", () => ({ useNavigation: () => ({ navigate: () => undefined }), useIsFocused: () => true }));
 vi.mock("lucide-react-native", () => {
   const icon = () => null;
-  return { Home: icon, LibraryBig: icon, Settings: icon, Film: icon, ListVideo: icon, ArrowDownWideNarrow: icon, Search: icon, Tv: icon, X: icon, ListFilter: icon, ArrowDownUp: icon, SlidersHorizontal: icon };
+  return { Home: icon, LibraryBig: icon, Settings: icon, Film: icon, ListVideo: icon, ArrowDownWideNarrow: icon, Search: icon, Tv: icon, X: icon };
 });
-vi.mock("react-native-svg", () => ({ default: "Svg", Defs: "Defs", LinearGradient: "LinearGradient", Rect: "Rect", Stop: "Stop" }));
-// The shared sheet's drags load gesture-handler's native code; the library header renders without it.
-vi.mock("@space/mobile-shell/bottom-sheet", () => ({
-  MobileBottomSheet: () => null,
-  MobileSheetScrollView: "ScrollView",
-  useMobileSheetClose: () => (after?: () => void) => after?.(),
-}));
 vi.mock("@space/mobile-shell/components", () => {
   const passthrough = (props: { children?: ReactNode }) => createElement("Region", null, props.children);
   return {
@@ -78,7 +71,7 @@ vi.mock("@space/mobile-shell/theme", async (importOriginal) => {
 vi.mock("../src/store/auth", () => ({ useAuth: () => ({ token: null }) }));
 vi.mock("../src/store/library", () => ({
   useLibraryData: () => ({ media: [] }),
-  useLibraryStatus: () => ({ loadStatus: { kind: "ready" }, syncState: { kind: "idle" }, loading: false, error: null, reload: () => undefined, refresh: () => undefined }),
+  useLibraryStatus: () => ({ loadStatus: { kind: "ready" }, loading: false, error: null, reload: () => undefined, refresh: () => undefined }),
   useLibraryActions: () => ({ getLibraryExtras: async () => null }),
 }));
 vi.mock("../src/lib/pairing/deviceWatch", () => ({ checkForNewDevices: async () => undefined, markDeviceSeen: async () => undefined }));
@@ -92,9 +85,8 @@ vi.mock("../src/screens/HomeScreen", () => ({ HomeScreen: () => null }));
 vi.mock("../src/screens/SettingsScreen", () => ({ SettingsScreen: () => null }));
 vi.mock("../src/components/PosterGrid", () => ({ PosterGrid: () => null }));
 vi.mock("../src/components/PlaylistsPanel", () => ({ PlaylistsPanel: () => null }));
-// The phone Search overlay (UX-PHONE-12) pulls react-native-fs and the real shell components, which plain node cannot load.
-vi.mock("../src/components/PhoneSearch", () => ({ PhoneSearch: () => null }));
 vi.mock("../src/components/IconButton", () => ({ IconButton: () => null }));
+vi.mock("../src/components/LibraryFilterSheet", () => ({ LibraryFilterSheet: () => null }));
 vi.mock("../src/components/PosterCard", () => ({ RIPPLE: {} }));
 vi.mock("../src/components/usePickerSheet", () => ({ usePickerSheet: () => ({ visible: false }) }));
 vi.mock("../src/lib/usePullToRefresh", () => ({ usePullToRefresh: () => ({}) }));

@@ -4,22 +4,9 @@
     "collectionKey": "clave de la biblioteca"
   },
   "parrot": {
-    "artist": {
-      "label": "Artista",
-      "latestRelease": "Último lanzamiento",
-      "discography": "Discografía",
-      "allSongs": "Todas las canciones",
-      "album": "Álbum",
-      "single": "Sencillo",
-      "ep": "EP",
-      "hoursMinutes": "{{hours}} h {{minutes}} min",
-      "minutes": "{{minutes}} min"
-    },
     "nav": {
       "back": "Atrás",
       "library": "Biblioteca",
-      "playlistsTab": "Playlists",
-      "settingsTab": "Ajustes",
       "settings": "Ajustes",
       "nowPlaying": "Sonando ahora"
     },
@@ -57,10 +44,13 @@
         "artists": "Artistas",
         "songs": "Canciones"
       },
-      "more": "+{{count}} más",
-      "filterOn": "Filtrar, {{count}} activos",
-      "searchGenres": "Buscar",
-      "noMatch": "Sin resultados"
+      "sort": {
+        "byArtist": "Por artista",
+        "byName": "Por nombre",
+        "byTitle": "Por título"
+      },
+      "search": "Busca en tu biblioteca",
+      "closeSearch": "Cerrar la búsqueda"
     },
     "album": {
       "noPlayableFile": "Este álbum todavía no tiene ningún archivo reproducible.",
@@ -79,6 +69,8 @@
       "error": "Error de reproducción: {{error}}",
       "playingFromAlbum": "Reproduciendo del álbum",
       "close": "Cerrar",
+      "goToAlbum": "Ir al álbum",
+      "goToArtist": "Ir al artista",
       "more": "Más",
       "output": "Reproducir en otro dispositivo"
     },
@@ -101,16 +93,11 @@
     "setup": {
       "notificationsBody": "Parrot puede avisarte cuando la música que añades desde tu computadora esté lista para reproducirse aquí."
     },
-    "tvSearch": {
-      "hint": "Los resultados cambian con cada letra. Presiona ▶ en el control remoto para pasar de las teclas a los resultados.",
-      "space": "Espacio",
-      "delete": "Borrar"
-    },
     "playlists": {
       "likedEmpty": "Todavía no hay canciones que te gusten"
     },
     "kept": {
-      "keep": "Guardar sin conexión",
+      "keep": "Conservar en este teléfono",
       "remove": "Quitar de este teléfono",
       "line": "Guardado en este teléfono · {{size}}",
       "chooseBody": "Estas canciones están guardadas en más de un formato. Elige cuál conservar en este teléfono.",

@@ -1,5 +1,3 @@
-import { PRODUCTION_API_BASE_URL } from "@space/shared/productionApi";
-
 export type ApiHostState = {
   apiBaseUrl: string;
   customApiBaseUrl: string | null;
@@ -29,7 +27,7 @@ export const createInMemoryPlatformBridge = (input?: {
   appVersion?: string;
   defaultApiBaseUrl?: string;
 }): DesktopPlatformBridge => {
-  const apiDefault = normalize(input?.defaultApiBaseUrl ?? PRODUCTION_API_BASE_URL);
+  const apiDefault = normalize(input?.defaultApiBaseUrl ?? "https://api.spacebadger.io");
 
   const apiListeners = new Set<(state: ApiHostState) => void>();
 

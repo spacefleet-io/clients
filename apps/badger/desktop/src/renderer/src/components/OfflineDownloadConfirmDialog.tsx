@@ -11,8 +11,8 @@ import {
   toast,
 } from "@space/ui";
 import { AlertTriangle, Download, Loader2 } from "lucide-react";
+import { formatLocalizedStorage, formatLocalizedStorageUsage } from "@space/shared/format";
 import { mediaSizeLabel } from "@/lib/sizeLabel";
-import { neededAndFree } from "@/lib/offlineDiskSpaceLabel";
 import type { ClientConfig } from "@/lib/config";
 import type { MediaDetails } from "@/lib/libraryDb";
 import {
@@ -39,6 +39,21 @@ export type OfflineDownloadConfirmDialogProps = {
   /** Optional callback when submission succeeds. The parent can refresh the
    *  offline-state hydration here. */
   onSubmitted?: (result: { submittedJobIds: string[] }) => void;
+};
+
+/**
+ * The space a download needs against the space free, ordered as the bytes are (STOR-UNIT-01) and written in the
+ * interface language (STOR-UNIT-02); an unknown side is "?".
+ */
+const neededAndFree = (requiredBytes: number | null | undefined, freeBytes: number | null | undefined, locale: string) => {
+  if (requiredBytes == null || freeBytes == null) {
+    return {
+      required: requiredBytes == null ? "?" : formatLocalizedStorage(requiredBytes, locale),
+      free: freeBytes == null ? "?" : formatLocalizedStorage(freeBytes, locale),
+    };
+  }
+  const { used, limit } = formatLocalizedStorageUsage(requiredBytes, freeBytes, locale);
+  return { required: used, free: limit };
 };
 
 const scopeSubtitleKey = (scope: OfflineScope): string => {

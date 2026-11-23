@@ -1,7 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Button, LanguageMenu, Spinner } from "@space/ui";
 import { Flag } from "@space/ui/flag";
-import { MASCOT_GLOW } from "@space/ui/floating-mascot";
 import { CLIENT_UI_LANGUAGES, isClientUiLanguage } from "@space/shared/i18n";
 import {
   ChoiceList,
@@ -27,7 +26,7 @@ import { pickLanguage } from "./accountLanguage";
 import { applyErrorReports } from "./errorReports";
 import type { ParrotStringKey, Translate } from "./i18n";
 import { useSignOutWithKeyCheck } from "./SignOutKeyCheck";
-import { ParrotProfileSetupStep, useParrotCurrentProfile, useParrotDesktopProfileStore } from "./profiles";
+import { PARROT_MASCOT_GLOW, ParrotProfileSetupStep, useParrotCurrentProfile, useParrotDesktopProfileStore } from "./profiles";
 
 type Props = { t: Translate; state: ParrotState; onState: (state: ParrotState) => void };
 
@@ -384,7 +383,7 @@ export default function Setup({ t, state, onState }: Props) {
           )}
           description={onKeyStep && keyMode === "enter" ? t("key.explain") : undefined}
           mascotSrc={mascotUrl}
-          mascotGlowClassName={MASCOT_GLOW.parrot}
+          mascotGlowClassName={PARROT_MASCOT_GLOW}
           maxWidthClassName="max-w-xl"
           contentClassName={onKeyStep ? "pt-0 pb-5" : undefined}
         >

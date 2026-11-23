@@ -2,9 +2,9 @@
  * The menus that open under the library row's Sort, Genres and Actors buttons (UX-LIB-01), shared by the Badger desktop
  * app and the web player (REL-FAM-02). Each app keeps when a menu is open; these draw what is inside it.
  */
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { ArrowDown, ArrowUp, X } from "lucide-react";
-import { LibraryModalSection, LibraryPills, type LibraryPill } from "../library-row";
+import { Button } from "../button";
 import { Input } from "../input";
 import { cn } from "../utils";
 
@@ -114,75 +114,7 @@ export function BadgerMultiSelect({
   );
 }
 
-/** Up to this many choices a Filter list is plain chips; past it (Actors, Directors in a big library) a search narrows them. */
-export const FILTER_CHIP_LIMIT = 15;
-
-/**
- * UX-LIB-01: one list of the Filter panel, drawn as Parrot's are — chips that are on while picked. A short list
- * (watch state, a small library's genres) shows every chip; a long one shows a search, its picked chips, and the
- * first FILTER_CHIP_LIMIT matches, then a "+N more" chip that shows the rest in place. Nothing scrolls inside the
- * panel, which scrolls as one.
- */
-export function BadgerFilterPicker({
-  searchPlaceholder,
-  emptyText,
-  moreLabel,
-  options,
-  selected,
-  onChange,
-}: {
-  searchPlaceholder: string;
-  emptyText: string;
-  /** The "+N more" chip's words, given N. */
-  moreLabel: (count: number) => string;
-  options: BadgerMultiSelectOption[];
-  selected: readonly string[];
-  onChange: (next: string[]) => void;
-}) {
-  const [query, setQuery] = useState("");
-  const [expanded, setExpanded] = useState(false);
-  // "+N more" vanishes as it is pressed: the focus moves on to the first chip it revealed (else it falls to the panel).
-  const [focusChip, setFocusChip] = useState<number | null>(null);
-  const chipsRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (focusChip === null) return;
-    chipsRef.current?.querySelectorAll("button")[focusChip]?.focus();
-    setFocusChip(null);
-  }, [focusChip]);
-  const searchable = options.length > FILTER_CHIP_LIMIT;
-  const selectedSet = new Set(selected);
-  const q = normalize(query);
-  const picked = searchable ? options.filter((option) => selectedSet.has(option.value)) : [];
-  const matches = searchable ? options.filter((option) => !selectedSet.has(option.value) && (!q || normalize(option.label).includes(q))) : options;
-  const visible = expanded ? matches : matches.slice(0, FILTER_CHIP_LIMIT);
-  const hidden = matches.length - visible.length;
-  const toggle = (value: string) => onChange(selectedSet.has(value) ? selected.filter((entry) => entry !== value) : [...selected, value]);
-  const pills: LibraryPill[] = [...picked, ...visible].map((option) => ({ id: option.value, label: option.label, on: selectedSet.has(option.value), onClick: () => toggle(option.value) }));
-  if (hidden > 0)
-    pills.push({
-      id: "__more",
-      label: moreLabel(hidden),
-      onClick: () => {
-        setExpanded(true);
-        setFocusChip(pills.length - 1);
-      },
-      testId: "library-filter-more",
-    });
-  return (
-    <div className="space-y-2">
-      {searchable ? <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={searchPlaceholder} aria-label={searchPlaceholder} /> : null}
-      {pills.length === 0 ? (
-        <div className="text-xs text-muted-foreground">{emptyText}</div>
-      ) : (
-        <div ref={chipsRef}>
-          <LibraryPills pills={pills} />
-        </div>
-      )}
-    </div>
-  );
-}
-
-/** The Sort panel: which field (added, name, release) and which direction; labels arrive translated, colours are the theme's. */
+/** The Sort menu: which field (added, name, release) and which direction; labels arrive translated. */
 export function BadgerSortMenu<T extends string>({
   byLabel,
   directionLabel,
@@ -205,14 +137,37 @@ export function BadgerSortMenu<T extends string>({
 }) {
   return (
     <>
-      <LibraryModalSection label={byLabel}>
-        <LibraryPills pills={options.map((option) => ({ id: option.value, label: option.label, on: value === option.value, onClick: () => onChange(option.value), testId: `library-sort-${option.value}` }))} />
-      </LibraryModalSection>
-      <LibraryModalSection label={directionLabel}>
-        <LibraryPills
-          pills={[{ id: "direction", label: directionText, onClick: onToggleDirection, testId: "library-sort-direction", icon: direction === "asc" ? <ArrowUp aria-hidden /> : <ArrowDown aria-hidden /> }]}
-        />
-      </LibraryModalSection>
+      <div className="text-xs font-semibold uppercase tracking-[0.2em] text-[#8b949e]">{byLabel}</div>
+      <div className="mt-2 flex flex-wrap gap-2">
+        {options.map((option) => (
+          <Button
+            key={option.value}
+            type="button"
+            size="sm"
+            variant={value === option.value ? "default" : "secondary"}
+            aria-pressed={value === option.value}
+            data-testid={`library-sort-${option.value}`}
+            className={value === option.value ? "bg-[#ffaa54] text-[#0d1117] hover:bg-[#ff9b30]" : "border border-[#30363d] bg-[#161b22] text-white hover:border-[#ffaa54]/60"}
+            onClick={() => onChange(option.value)}
+          >
+            {option.label}
+          </Button>
+        ))}
+      </div>
+      <div className="mt-3 text-xs font-semibold uppercase tracking-[0.2em] text-[#8b949e]">{directionLabel}</div>
+      <div className="mt-2">
+        <Button
+          type="button"
+          size="sm"
+          variant="secondary"
+          data-testid="library-sort-direction"
+          className="border border-[#30363d] bg-[#161b22] text-white hover:border-[#ffaa54]/60"
+          onClick={onToggleDirection}
+        >
+          {direction === "asc" ? <ArrowUp className="mr-2 h-4 w-4" /> : <ArrowDown className="mr-2 h-4 w-4" />}
+          {directionText}
+        </Button>
+      </div>
     </>
   );
 }

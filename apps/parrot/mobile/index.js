@@ -38,5 +38,3 @@ const App = require('./App').default;
 const { name: appName } = require('./app.json');
 
 AppRegistry.registerComponent(appName, () => App);
-// Same-device sign-in (ACCT-PAIR-07): the approval activity's own root, "Let Badger use your SpaceFleet account?".
-AppRegistry.registerComponent('SiblingApproval', () => require('./src/screens/SiblingApprovalRoot').SiblingApprovalRoot);

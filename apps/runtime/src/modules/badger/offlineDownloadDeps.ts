@@ -11,41 +11,10 @@
  * `globalThis`-keyed slot.
  */
 
-import { promises as fs, statfsSync } from "node:fs";
-import { dirname } from "node:path";
 import { decryptMediaObject } from "@space/media-crypto";
 import type { StorageTraffic } from "@space/shared/storageTunnel";
 import type { OfflineTrafficSource } from "./offlineTrafficGate";
 import { createAuthWaiter } from "./steps/authWait";
-
-/** Room kept free on the disk beyond a download's own size (OFFL-SAFE-02), the same margin as the uploads. */
-export const FREE_DISK_SAFETY_MARGIN_BYTES = 100 * 1024 * 1024;
-
-/**
- * Free bytes on the disk holding `dir` (OFFL-SAFE-02). `statfs` needs an existing directory, so a dir not created yet
- * is measured at its nearest existing parent. 0 when nothing can be measured.
- */
-export const freeDiskBytesAt = async (dir: string): Promise<number> => {
-  let candidate = dir;
-  for (;;) {
-    try {
-      await fs.access(candidate);
-      break;
-    } catch {
-      const parent = dirname(candidate);
-      if (parent === candidate) break;
-      candidate = parent;
-    }
-  }
-  try {
-    const stat = statfsSync(candidate);
-    const free = Number(stat.bavail) * Number(stat.bsize);
-    return Number.isFinite(free) && free > 0 ? free : 0;
-  } catch (err) {
-    console.warn(`[badger.offline] statfs failed for ${candidate}:`, err instanceof Error ? err.message : err);
-    return 0;
-  }
-};
 
 /**
  * Dependency surface for the offline-download step handler + the five
@@ -92,15 +61,7 @@ export interface BadgerOfflineDeps {
   resolveOfflineDir(libraryId: string): string;
   /** Optional ffmpeg binary override; falls back to PATH lookup. */
   resolveFfmpegPath?(): string | undefined;
-  /**
-   * Free bytes on the disk holding `dir` (OFFL-SAFE-02). The step checks it before fetching anything. Omitted = the
-   * real `statfs` of `dir` (or its nearest existing parent); tests inject a number.
-   */
-  freeDiskBytes?(dir: string): Promise<number>;
-  /**
-   * Record the saved title in `media_local_downloads` once every piece and the item manifest are in place.
-   * `schemaVersion` 2 = sealed pieces (OFFL-FILE-03); a row for the same file is replaced.
-   */
+  /** Insert one row into `media_local_downloads` after atomic rename. */
   registerLocalDownload(input: {
     id: string;
     fileId: string;
@@ -112,7 +73,6 @@ export interface BadgerOfflineDeps {
     totalBytes: number;
     downloadedAt: string;
     runtimeJobId: string | null;
-    schemaVersion?: number;
   }): Promise<{ inserted: number }>;
 }
 
