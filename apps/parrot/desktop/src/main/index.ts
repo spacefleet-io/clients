@@ -148,7 +148,6 @@ import { fetchSourceCredits } from "@space/metadata-client/credits";
 import { ticketKeysForBuild } from "@space/privacy-pass";
 import { SPACE_APP_HEADER } from "@space/shared/appScope";
 import { getAppUpdateRequired, onAppUpdateRequired, setClientIdentity } from "@space/shared/appVersion";
-import { logFailedApiCalls, recentFailedRequestIds } from "@space/shared/apiFailure";
 import { desktopClientIdentity } from "@space/desktop-shell/client-identity";
 import {
   applyParrotOps,
@@ -250,7 +249,6 @@ import { pairingModeOf, type PairingMode, type PairingPollResult, type PairingSt
 import { createDesktopFeedbackSender, type DesktopFeedbackInput } from "@space/error-report/desktop-feedback";
 import { registerErrorReportsIpc } from "@space/error-report/desktop-main";
 import { createErrorLog } from "@space/error-report/error-log";
-import { rendererConsoleLine } from "./rendererConsole";
 import { createLibraryDbs } from "./libraryDbs";
 import { createLoudnessGate } from "./loudnessGate";
 import { createQuitGuard, createSaveChain, QUIT_SAVE_TIMEOUT_MS } from "./saveChain";
@@ -277,8 +275,7 @@ app.setPath("userData", process.env.SF_USER_DATA_PATH?.trim() || join(app.getPat
 const userDataDir = app.getPath("userData");
 mkdirSync(join(userDataDir, "logs"), { recursive: true });
 const logFile = join(userDataDir, "logs", "parrot-main.log");
-// The main log, cut back to nothing at start when it passed 5 MB: it holds no token, key or file content, only what
-// happened; the window's warnings and errors go in scrubbed (REL-LOG-06).
+// One log per start, kept small: it holds no token, key or file content, only what happened.
 if (existsSync(logFile) && statSync(logFile).size > 5 * 1024 * 1024) rmSync(logFile, { force: true });
 
 const log = (line: string) => {
@@ -291,9 +288,6 @@ const log = (line: string) => {
   }
 };
 const errorText = (error: unknown) => (error instanceof Error ? error.message : String(error));
-// REL-LOG-31: one line per failed API call of this process (the window reaches the API only through it), with the
-// server's request id so the server's line about it is found by one search. The main log only, never a report.
-logFailedApiCalls(({ status, code, requestId }) => log(`[api] call failed status=${status} code=${code} requestId=${requestId}`));
 // UX-SUP-05: the newest warning and error lines (scrubbed as recorded), sent only with feedback the user attaches it to.
 const errorLog = createErrorLog();
 /** A failure line: the main log, and the error log feedback can carry. */
@@ -2987,7 +2981,6 @@ const registerIpc = () => {
     errorLog,
     appVersion: app.getVersion(),
     platform: `${process.platform} ${release()}`,
-    requestIds: recentFailedRequestIds,
     send: sendFeedback,
     log,
     fail,
@@ -3057,9 +3050,8 @@ const createWindow = () => {
   // Hidden, not destroyed: the music plays in this window's renderer (PAR-PLAY-03).
   attachCloseToTray(mainWindow, { background: "hide", isQuitting: () => isQuitting, hasTray: () => appTray.active });
   mainWindow.webContents.on("console-message", (details) => {
-    const line = rendererConsoleLine(details.level, details.message);
-    if (!line) return;
-    log(line);
+    if (details.level !== "error" && details.level !== "warning") return;
+    log(`[renderer:${details.level}] ${details.message}`);
     errorLog.record(details.level === "error" ? "error" : "warn", "renderer", details.message);
   });
   installApplicationMenu();

@@ -37,7 +37,6 @@
     "./libraryOps": "./src/libraryOps.ts",
     "./libraryEnvelope": "./src/libraryEnvelope.ts",
     "./logger": "./src/logger.ts",
-    "./apiFailureLog": "./src/apiFailureLog.ts",
     "./errorReporting": "./src/errorReporting.ts",
     "./error-reports-offered": "./src/errorReportsOffered.ts",
     "./pairing": "./src/pairing/index.ts",

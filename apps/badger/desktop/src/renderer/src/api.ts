@@ -9,7 +9,6 @@ import {
   setApiClientType,
 } from "@space/shared/api";
 import { setClientIdentity, setLibraryReadOpStreamVersion } from "@space/shared/appVersion";
-import { logFailedApiCalls } from "@space/shared/apiFailure";
 import { DEFAULT_SPACE_APP_ID } from "@space/shared/appScope";
 import { READ_OP_STREAM_VERSION } from "@space/library-db-definition/ops";
 import type { MetadataSkipMarkersResult, TitleType } from "@space/shared/api";
@@ -25,8 +24,6 @@ const DESKTOP_CLIENT_TYPE = "badger-desktop";
 setApiClientType(DESKTOP_CLIENT_TYPE);
 // REL-CD-29: the window states the same build main does (read once by the preload).
 setClientIdentity(typeof window === "undefined" ? null : (window.sf?.clientIdentity ?? null));
-// REL-LOG-31: the window's own failed API calls (sign-in, account pages) get a console line with the server's request id.
-logFailedApiCalls((fields) => console.warn("[api] call failed", JSON.stringify(fields)));
 // LIB-FMT-13: a 426 for the account's switch to an op stream this build reads is not "please update".
 setLibraryReadOpStreamVersion(READ_OP_STREAM_VERSION); // op-stream: read
 // REL-CD-29 / LIB-FMT-13: a "please update" refusal the runtime's own API call got (library sync, uploads) is raised

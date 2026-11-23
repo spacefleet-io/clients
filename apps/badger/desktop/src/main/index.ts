@@ -55,7 +55,6 @@ import { registerSessionIpc } from "./sessionIpc";
 import { createBadgerSiblingHost, registerSiblingIpc, siblingAccountOf } from "./siblingSignIn";
 import { SIBLING_SIGN_IN_ARG, armSiblingHiddenQuit, isSiblingSignInLaunch, type SiblingHiddenQuit } from "@space/desktop-shell/sibling-main";
 import { setClientIdentity } from "@space/shared/appVersion";
-import { logFailedApiCalls } from "@space/shared/apiFailure";
 import { CLIENT_IDENTITY_CHANNEL, desktopClientIdentity } from "@space/desktop-shell/client-identity";
 import { serveStorageUnitBase } from "@space/desktop-shell/storage-units";
 import { PROVIDER_RETURN_IPC } from "../shared/providerReturn";
@@ -294,28 +293,11 @@ const desiredRuntimePort = (() => {
   const match = url.match(/:(\d+)/);
   return match ? match[1] : undefined;
 })();
-// REL-CD-29: every API call of this build (main process and window alike) says which build is calling, so an outdated
-// one is told to update (and a Linux build says how it was installed). Set before any call; the preload reads the same
-// identity synchronously.
-const clientIdentity = desktopClientIdentity({
-  app: "badger",
-  version: app.getVersion(),
-  packaged: app.isPackaged,
-  os: process.platform,
-  env: process.env,
-});
-setClientIdentity(clientIdentity);
-// REL-LOG-31: one local line per failed API call of this process, with the server's request id (never reported).
-logFailedApiCalls((fields) => logger.warn({ event: "api_call_failed", ...fields }, "api: call failed"));
-ipcMain.on(CLIENT_IDENTITY_CHANNEL, (event) => {
-  event.returnValue = clientIdentity;
-});
 // F7 (ultimate stress, issue #25): SF_TRANSCODE_DIR / SF_BADGER_OFFLINE_DIR are
 // resolved from userData HERE, before the guardian below is built and started,
 // so the first runtime and every respawn share one transcode dir (they used to
 // be set inside window creation, after the first guardian.start()).
-// REL-CD-29: the runtime's API calls state this build too (the identity set above).
-const runtimeSpawnEnv = buildRuntimeSpawnEnv(process.env, app.getPath("userData"), desiredRuntimePort, clientIdentity);
+const runtimeSpawnEnv = buildRuntimeSpawnEnv(process.env, app.getPath("userData"), desiredRuntimePort);
 guardianLogger.info({
   userData: app.getPath("userData"),
   devBuild: isDesktopDevBuild(currentDesktopBuildEnv()),
@@ -463,6 +445,21 @@ ipcMain.handle(RUNTIME_OWNER_SECRET_IPC_CHANNEL, createOwnerSecretIpcHandler({
 
 // #25: device-local settings (this computer only, never synced to the account).
 const deviceSettings = registerDeviceSettingsIpc();
+
+// REL-CD-29: every API call of this build (main process and window alike) says which build is calling, so an outdated
+// one is told to update (and a Linux build says how it was installed). Set before any call; the preload reads the same
+// identity synchronously.
+const clientIdentity = desktopClientIdentity({
+  app: "badger",
+  version: app.getVersion(),
+  packaged: app.isPackaged,
+  os: process.platform,
+  env: process.env,
+});
+setClientIdentity(clientIdentity);
+ipcMain.on(CLIENT_IDENTITY_CHANNEL, (event) => {
+  event.returnValue = clientIdentity;
+});
 
 // STOR-UNIT-01: storage figures follow this computer's file manager (1024 on Windows and KDE, 1000 elsewhere); the
 // preload reads the base synchronously so the window sets it before its first render.
