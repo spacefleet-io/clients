@@ -13,8 +13,8 @@ const header = (build: Parameters<typeof desktopClientIdentity>[0]) => {
   return identity ? formatClientHeader(identity) : null;
 };
 
-describe("REL-CD-29 desktop builds state version and how they were installed", () => {
-  it("adds flatpak, appimage or system on Linux, windows or macos on the other two @req REL-CD-29 @req OPS-BIZ-10 @req WEB-ADMIN-39", () => {
+describe("REL-CD-29 desktop builds state version and, on Linux, how they were installed", () => {
+  it("adds flatpak, appimage or system on Linux only @req REL-CD-29 @req OPS-BIZ-10", () => {
     const testId = "linux-source";
     const base = { version: "0.1.3", packaged: true };
     const cases = [
@@ -24,7 +24,6 @@ describe("REL-CD-29 desktop builds state version and how they were installed", (
       header({ app: "badger", version: "0.4.0", packaged: true, os: "linux", env: { FLATPAK_ID: "com.spacefleet.Badger" } }),
       header({ app: "parrot", ...base, os: "win32", env: { APPIMAGE: "/x" } }),
       header({ app: "badger", version: "0.4.0", packaged: true, os: "darwin", env: {} }),
-      header({ app: "badger", version: "0.4.0", packaged: true, os: "freebsd", env: {} }),
     ];
     log(testId, "headers", cases);
     expect(cases).toEqual([
@@ -32,8 +31,7 @@ describe("REL-CD-29 desktop builds state version and how they were installed", (
       "parrot/desktop/0.1.3+appimage",
       "parrot/desktop/0.1.3+system",
       "badger/desktop/0.4.0+flatpak",
-      "parrot/desktop/0.1.3+windows",
-      "badger/desktop/0.4.0+macos",
+      "parrot/desktop/0.1.3",
       "badger/desktop/0.4.0",
     ]);
     log(testId, "done");

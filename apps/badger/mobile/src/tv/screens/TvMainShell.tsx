@@ -17,19 +17,21 @@ import {
 import { useAuth } from "../../store/auth";
 import { useLibraryData, useLibraryStatus } from "../../store/library";
 import { theme } from "../../theme/theme";
-import { TvFocusable } from "@space/mobile-shell/tv/TvFocusable";
+import { TvFocusable } from "../components/TvFocusable";
 import { TvOfflineNotice } from "../components/TvOfflineNotice";
-import { TV_SAFE_MARGIN_X, TV_SAFE_MARGIN_Y } from "@space/mobile-shell/tv/layout";
-import { useTvScale, useTvStyles } from "@space/mobile-shell/tv/tvScale";
-import { setCurrentTvSection, subscribeTvSectionRequest, type TvSectionId } from "@space/mobile-shell/tv/tvSection";
-import { TvSky } from "@space/mobile-shell/tv/TvSky";
-import { BadgerTvTopBar } from "../ui/BadgerTvTopBar";
+import { TV_SAFE_MARGIN_X, TV_SAFE_MARGIN_Y } from "../lib/layout";
+import { useTvScale, useTvStyles } from "../lib/tvScale";
+import { setCurrentTvSection, subscribeTvSectionRequest, type TvSectionId } from "../lib/tvSection";
+import { TvSky } from "../ui/TvSky";
+import { TvTopBar } from "../ui/TvTopBar";
 import { TvHomeScreen } from "./TvHomeScreen";
 import { TvLibraryScreen } from "./TvLibraryScreen";
 import { TvPlaylistsScreen } from "./TvPlaylistsScreen";
 import { TvSearchScreen } from "./TvSearchScreen";
 import { TvSettingsScreen } from "./TvSettingsScreen";
-import { useTvMenuKeyHold } from "@space/mobile-shell/tv/useTvMenuKey";
+import { useTvMenuKeyHold } from "../lib/useTvMenuKey";
+
+export { TV_BROWSE_TABS, TV_SETTINGS_TAB } from "../ui/TvTopBar";
 
 const DISABLED_WITHOUT_MEDIA: readonly TvSectionId[] = ["library", "playlists"];
 
@@ -114,7 +116,7 @@ export const TvMainShell = () => {
   return (
     <TvSky active={isFocused}>
       <View style={styles.shell}>
-        <BadgerTvTopBar
+        <TvTopBar
           active={activeTab}
           onSelect={setActiveTab}
           disabledTabs={hasLibraryMedia ? undefined : DISABLED_WITHOUT_MEDIA}

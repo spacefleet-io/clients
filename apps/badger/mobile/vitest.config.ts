@@ -27,7 +27,6 @@ const SOURCE_PACKAGES = [
   "@space/stream-slots",
   "@space/legal",
   "@space/profile-avatars",
-  "@space/ingest-core",
 ];
 
 function workspaceExportAliases(): { find: RegExp; replacement: string }[] {

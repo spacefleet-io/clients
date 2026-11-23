@@ -114,9 +114,8 @@ describe.skipIf(!lua)("sf-select.lua subtitle menu has an Off row (#25 Orchard: 
     expect(runScenario("label-garbage").menu?.items, "malformed / empty labels keep the default").toEqual(["○ Off", "● French"]);
   });
 
-  // Chris 2026-11-18 (#2988): the subtitles button always opens the menu, so a title with no subtitle track gets Off alone.
-  it("no subtitle track: the menu opens with Off alone, the current row", () => {
-    expect(runScenario("no-tracks").menu).toEqual({ prompt: "Select a subtitle:", items: ["● Off"], default_item: 1 });
+  it("no subtitle track: no menu at all (Off alone is not offered)", () => {
+    expect(runScenario("no-tracks").menu).toBeUndefined();
   });
 
   // @bugfix badger-menu-headers-english @regression-proof

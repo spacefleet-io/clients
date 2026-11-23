@@ -28,8 +28,6 @@ internal object PlaybackSetup {
     onTraffic: ((String) -> Unit)? = null,
     /** Each object the tunnel downloaded for the player: its size and download time (see [StorageTunnelClient]). */
     onDownloaded: ((Long, Long) -> Unit)? = null,
-    /** Each load report the tunnel hears from its silo (STOR-BW-01): the proxy loads nothing ahead while it is high. */
-    onTrafficReport: ((TrafficReport) -> Unit)? = null,
   ): ChunkFetcher {
     val kind = config.getString("clientKind") ?: "storage-tunnel"
     // One spool per proxy, shared by the tunnel and the offline store: large objects (subtitle sidecars) are
@@ -73,7 +71,6 @@ internal object PlaybackSetup {
           profileId = profileId,
           spool = spool,
           onTraffic = onTraffic,
-          onTrafficReport = onTrafficReport,
           onDownloaded = onDownloaded,
         )
         // Downloaded objects are served from disk first; everything else (not

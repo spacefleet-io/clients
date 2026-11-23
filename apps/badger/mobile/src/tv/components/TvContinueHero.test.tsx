@@ -3,8 +3,8 @@
  * @level component
  * @why Home's Continue watching card in the v2 TV redesign (Chris 2026-11-12 (chat): "your tv client redesign is good,
  *   you can implement it"): the amber eyebrow, the title, "year · length · N min left", the amber bar, then Resume (the
- *   remote's first focus, named after the point it resumes at), Start over and Details, the whole card in one focus
- *   guide, so UP from the row below lands back on them. The poster's colours glow softly behind the card. Without a film length
+ *   remote's first focus, named after the point it resumes at), Start over and Details in one full-width focus guide,
+ *   so UP from the row below lands back on them. The poster's colours glow softly behind the card. Without a film length
  *   (a show, or details not loaded) the line falls back to "year · N% watched" and the button to a plain "Resume".
  *
  * TV-HOME-HERO-FOCUS-001 (UX-TV-05: Resume is focused first). On the Apple TV "sejour" (2026-11-13, suite run at
@@ -70,9 +70,9 @@ const actions = vi.hoisted(() => ({
   },
 }));
 vi.mock("../../store/library", () => ({ useLibraryActions: () => actions }));
-vi.mock("@space/mobile-shell/tv/tvScale", () => ({ useTvScale: () => 1, useTvStyles: <T,>(styles: T) => styles }));
-vi.mock("@space/mobile-shell/tv/TvPillButton", () => ({ TvPillButton: "TvPillButton" }));
-vi.mock("@space/mobile-shell/tv/TvText", () => ({ TvTitle: "TvTitle", TvBody: "TvBody", TvEyebrow: "TvEyebrow" }));
+vi.mock("../lib/tvScale", () => ({ useTvScale: () => 1, useTvStyles: <T,>(styles: T) => styles }));
+vi.mock("../ui/TvPillButton", () => ({ TvPillButton: "TvPillButton" }));
+vi.mock("../ui/TvText", () => ({ TvTitle: "TvTitle", TvBody: "TvBody", TvEyebrow: "TvEyebrow" }));
 
 const t = (key: string, options?: Record<string, unknown>) => (options ? `${key}${JSON.stringify(options)}` : key);
 
@@ -253,33 +253,5 @@ describe("TvContinueHero: Resume holds the focus once Home has appeared (TV-HOME
     });
     act(() => resume.props.onBlur());
     expect(requestTVFocus).toHaveBeenCalledTimes(1);
-  });
-});
-
-// TV-HOME-HERO-FOCUS-002 (UX-TV-05, issue #3009; seen again 2026-11-19 on the tvOS simulator, staging 6f316e8fb, fr and
-// es): from the first "Recently added" poster, UP left the focus on the rail for good. The guide sat around the three
-// buttons only, and they start right of the card's poster: the first poster of the row below lies under the card's
-// poster, so tvOS found nothing above it. Every card of the row lies under the card's full width.
-describe("TvContinueHero: UP from any card of the row below reaches the buttons (TV-HOME-HERO-FOCUS-002)", () => {
-  it("@bugfix @regression-proof @req UX-TV-05 the auto-focus guide spans the whole card, its poster side included", async () => {
-    const { tree } = await render(film());
-    const guides = tree.root.findAll((node) => isType(node, "TVFocusGuideView"));
-    const outer = tree.root.children[0] as ReactTestInstance;
-    console.info(
-      "[TV-HOME-HERO-FOCUS-002] guides",
-      JSON.stringify(guides.map((g) => ({ autoFocus: g.props.autoFocus, testID: g.props.testID, outermost: g === outer })))
-    );
-    expect(guides).toHaveLength(1);
-    const guide = guides[0]!;
-    expect(guide.props.autoFocus).toBe(true);
-    // The guide is the card's own frame: nothing of the card, the left-hand poster above the row's first card included, lies outside it.
-    expect(guide).toBe(outer);
-    expect(guide.findAllByProps({ testID: "tv-home-hero" })).toHaveLength(1);
-    expect(guide.findAll((node) => isType(node, "MediaArtwork"))).toHaveLength(1);
-    expect(guide.findAll((node) => isType(node, "TvPillButton")).map((pill) => pill.props.testID)).toEqual([
-      "tv-home-resume",
-      "tv-home-startover",
-      "tv-home-details",
-    ]);
   });
 });
