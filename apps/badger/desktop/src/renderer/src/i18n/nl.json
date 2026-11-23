@@ -934,7 +934,13 @@
         "errorTwoFactorInvalid": "De verificatiecode is ongeldig.",
         "submit": "Sleutel vervangen",
         "working": "Vervangen…",
-        "errorGeneric": "De sleutel kon niet worden vervangen. Probeer het opnieuw."
+        "errorGeneric": "De sleutel kon niet worden vervangen. Probeer het opnieuw.",
+        "errorMediaReseal": "Het vervangen van de sleutel komt binnenkort voor mediatheken met opgeslagen nummers of video's. Er is niets veranderd. Je mediatheek wissen werkt nog steeds.",
+        "errorNotReencrypted": "Je Parrot-mediatheek kon hier niet opnieuw worden vergrendeld met de nieuwe sleutel, dus er is niets veranderd. Vervang de sleutel via Instellingen op een computer die je huidige sleutel heeft.",
+        "errorUnreadable": "Je huidige sleutel opent je Parrot-mediatheek niet, dus er is niets veranderd.",
+        "errorNotSnapshotted": "Je Parrot-mediatheek heeft wijzigingen die nog niet zijn opgeslagen. Open Parrot, laat het klaar synchroniseren en probeer het dan opnieuw. Er is niets veranderd.",
+        "errorReencryptFailed": "Je Parrot-mediatheek kon niet opnieuw worden vergrendeld met de nieuwe sleutel. Er is niets veranderd. Probeer het opnieuw.",
+        "errorChanged": "Je mediatheek is veranderd terwijl de sleutel werd vervangen. Er is niets veranderd. Probeer het opnieuw."
       },
       "reset": {
         "title": "Gegevens van de mediatheek wissen",

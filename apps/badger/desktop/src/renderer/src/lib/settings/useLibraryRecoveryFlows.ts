@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ApiError, reauthSession, resetLibrary, rotateLibraryKey } from "@/api";
+import { ApiError, reauthSession, resetLibrary } from "@/api";
+import { LibraryDb } from "@/lib/libraryDb";
+import { rotateWithOtherLibraries, rotationRefusalText } from "@/lib/rotationRefusal";
 import { useAuth, useHasPassword } from "../../auth";
 import { useLibraryActions } from "@/lib/libraryContext";
 import { encryptBytesToBase64 } from "@/lib/crypto";
@@ -171,14 +173,27 @@ export function useLibraryRecoveryFlows() {
       const rawBytes = await exportLocalDb();
       const blobBase64 = await encryptBytesToBase64(recoveryKey.keyBase64, rawBytes);
       const keyProbe = await buildKeyProbe(recoveryKey.keyBase64);
-      await rotateLibraryKey(token, blobBase64, keyProbe, recoveryPassword, recoveryCode || undefined);
+      // PRIV-KEY-06: Parrot's library is re-encrypted with this computer's current key, never emptied; without the
+      // key here none is sent and the server refuses the rotation if Parrot has a library.
+      const oldKey = await getStoredLibraryKey();
+      await rotateWithOtherLibraries({
+        token,
+        blobBase64,
+        keyProbe,
+        password: recoveryPassword,
+        twoFactorCode: recoveryCode || undefined,
+        reencrypt: () => (oldKey ? LibraryDb.reencryptForRotation(token, oldKey, recoveryKey.keyBase64) : Promise.resolve([])),
+      });
       await clearLibraryKey();
       await storeLibraryKey(recoveryKey.keyBase64, recoveryKey.words);
       setRecoveryOpen(false);
       // The rotation signs every session out (revokeAllSessions); keep the new key just stored.
       await logout("sessionRejected");
     } catch (err) {
-      if (err instanceof ApiError) {
+      const refusal = rotationRefusalText(t, err);
+      if (refusal) {
+        setRecoveryError(refusal);
+      } else if (err instanceof ApiError) {
         if (err.payload.error === "invalid_password") {
           setRecoveryError(t("settings.recovery.rotate.errorInvalidPassword"));
         } else if (err.payload.error === "two_factor_required") {

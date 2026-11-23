@@ -216,6 +216,10 @@ export type PutLibraryDbRequest = {
     lastOpId?: string | null;
     keyProbe?: string | null;
     /**
+     * The account key probe (`GET /library/db/meta` `keyProbe`) the client checked its key against before this publish; null when the account had none. A different account probe answers 412 `key_probe_changed`. Absent: not checked.
+     */
+    checkedKeyProbe?: string | null;
+    /**
      * Library storage format the client writes; lower than the stored one answers 409 `library_format_downgrade`.
      */
     storageFormatVersion?: number;
@@ -1299,6 +1303,12 @@ export type PutLibraryDbErrors = {
         error: 'upload_quota_exceeded';
     } | Error;
     /**
+     * The account's library key probe is no longer the `checkedKeyProbe` the client checked its key against.
+     */
+    412: {
+        error: 'key_probe_changed';
+    };
+    /**
      * The upload is too large. The `error` is the code the storage gateway answered with, relayed as is.
      */
     413: Error;
@@ -1594,6 +1604,36 @@ export type RotateLibraryKeyData = {
          * Defaults to 4 MiB.
          */
         chunkSize?: number | null;
+        /**
+         * The version of the caller's library the snapshot was built from. Omitted: the current version (no check).
+         */
+        baseVersion?: number;
+        /**
+         * Every other app's library re-encrypted under the new key. Required for each app that has a library; omitted by builds from before 2026-11-23, which are refused (409 `library_not_reencrypted`) when another library exists.
+         */
+        otherLibraries?: Array<{
+            /**
+             * Another library app of the account (not the caller's).
+             */
+            appId: string;
+            /**
+             * The version the rotating device read this library at.
+             */
+            baseVersion: number;
+            /**
+             * Base64 of the manifest re-encrypted under the new key.
+             */
+            manifestBase64: string;
+            snapshotId: string;
+            chunkSize: number;
+            /**
+             * The chunk hashes the manifest references (uploaded already).
+             */
+            chunkRefs: Array<string>;
+            chunkRefsSource?: LibraryChunkRefsSource;
+            storageFormatVersion: number;
+            opStreamVersion: number;
+        }>;
     };
     headers: {
         /**
@@ -1627,13 +1667,22 @@ export type RotateLibraryKeyErrors = {
         error: 'account_blocked' | 'account_deleted' | 'personal_token_not_allowed';
     };
     /**
-     * The library already uses a newer format than this client writes.
+     * The library already uses a newer format than this client writes, a library changed since it was read (`version_conflict`), another app's library came without its re-encrypted copy (`library_not_reencrypted`), or the account stores media sealed with the key (`rotation_needs_media_reseal`). Nothing is written.
      */
     409: {
         error: 'library_format_downgrade';
         surface: 'storage' | 'op-stream';
         observed: number;
         stored: number;
+    } | {
+        error: 'version_conflict';
+        version: number;
+        appId: string;
+    } | {
+        error: 'library_not_reencrypted';
+        appId: string;
+    } | {
+        error: 'rotation_needs_media_reseal';
     };
     /**
      * Too many attempts; wait `retryAfterSeconds` (also sent as the `Retry-After` header).
@@ -6567,6 +6616,49 @@ export type SendFeedbackResponses = {
 };
 
 export type SendFeedbackResponse = SendFeedbackResponses[keyof SendFeedbackResponses];
+
+export type SayDailyHelloData = {
+    body: {
+        /**
+         * Plays started on this device since its last hello. Above 2000 counts as 2000.
+         */
+        plays: number;
+        /**
+         * Screens opened on this device since its last hello. Above 2000 counts as 2000.
+         */
+        screens: number;
+    };
+    path?: never;
+    query?: never;
+    url: '/usage/hello';
+};
+
+export type SayDailyHelloErrors = {
+    /**
+     * The `x-space-client` header is missing or not valid, or the body is not valid.
+     */
+    400: {
+        error: 'invalid_client';
+    };
+    /**
+     * Too many attempts; wait `retryAfterSeconds` (also sent as the `Retry-After` header).
+     */
+    429: {
+        error: 'rate_limited';
+        retryAfterSeconds: number;
+    };
+};
+
+export type SayDailyHelloError = SayDailyHelloErrors[keyof SayDailyHelloErrors];
+
+export type SayDailyHelloResponses = {
+    /**
+     * Counted.
+     */
+    204: void;
+};
+
+export type SayDailyHelloResponse = SayDailyHelloResponses[keyof SayDailyHelloResponses];
 
 export type KeepEmailAddressData = {
     body?: never;
