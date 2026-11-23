@@ -4,11 +4,11 @@
 //   SF_UPDATE_FEED_URL  electron-updater generic feed base URL baked into
 //                       app-update.yml (default https://api.spacefleet.io/desktop/badger)
 //   SF_PACKAGE_TEST_BUILD "1" only for `package.mjs --test-build`: the version gets the `-devkey`
-//                       test-build mark (scripts/test-build-lib.mjs, META-ANON-06)
+//                       test-build mark (packages/desktop-platform/packaging/test-build-lib.mjs, META-ANON-06)
 // Nothing here inspects the host OS, so Linux cross-builds the Windows installer
 // (a dev-key test build only: a release Windows build must be signed) and a Windows host builds the same output.
 // Windows signing (Azure Artifact Signing, REL-INST-03) comes from the AZURE_* environment variables
-// (scripts/windows-signing-lib.mjs) and runs on a Windows host only. macOS dmgs
+// (packages/desktop-platform-windows/packaging/windows-signing-lib.mjs) and runs on a Windows host only. macOS dmgs
 // need the host's codesign + hdiutil (scripts/mac-after-pack.mjs).
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
@@ -17,9 +17,9 @@ import { MAC_MINIMUM_SYSTEM_VERSION, resolvePackageTarget, stageDirFor } from ".
 import { asarFileExcludes } from "./scripts/packaged-asar-lib.mjs";
 import { LINUX_FORMATS, nativeLinuxPackageOptions } from "../../../packages/desktop-platform-linux/packaging/linux-packages.mjs";
 import { linuxAfterInstallScript, withLinuxModes } from "../../../packages/desktop-platform-linux/packaging/file-modes.mjs";
-import { ELECTRON_LANGUAGES } from "./scripts/packaged-locales-lib.mjs";
-import { TEST_BUILD_ENV, testBuildVersion } from "./scripts/test-build-lib.mjs";
-import { resolveWindowsSigning, windowsSigningBuilderOptions, windowsUpdatePublisherFor } from "./scripts/windows-signing-lib.mjs";
+import { ELECTRON_LANGUAGES } from "../../../packages/desktop-platform/packaging/packaged-locales-lib.mjs";
+import { TEST_BUILD_ENV, testBuildVersion } from "../../../packages/desktop-platform/packaging/test-build-lib.mjs";
+import { resolveWindowsSigning, windowsSigningBuilderOptions, windowsUpdatePublisherFor } from "../../../packages/desktop-platform-windows/packaging/windows-signing-lib.mjs";
 
 const appDir = import.meta.dirname;
 const repoRoot = resolve(appDir, "..", "..", "..");
@@ -82,7 +82,7 @@ export const createBuilderConfig = ({ targetId, updateFeedUrl = DEFAULT_UPDATE_F
     electronVersion: "45.3.2",
     npmRebuild: false,
     asarUnpack: ["**/*.node"],
-    // Only the locales the UI supports (en, fr, nl, de); see scripts/packaged-locales-lib.mjs.
+    // Only the locales the UI supports (en, fr, nl, de); see packages/desktop-platform/packaging/packaged-locales-lib.mjs.
     electronLanguages: ELECTRON_LANGUAGES,
     // No source maps, no unused drizzle-orm dialects: see scripts/packaged-asar-lib.mjs.
     files: ["out/**", "node_modules/**", "package.json", ...asarFileExcludes()],

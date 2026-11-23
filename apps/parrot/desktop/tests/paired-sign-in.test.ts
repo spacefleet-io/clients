@@ -16,7 +16,7 @@ const makeDeps = (patch: Partial<ParrotPairedSignInDeps> = {}) => {
   const calls: string[] = [];
   const deps: ParrotPairedSignInDeps = {
     previousUserId: () => null,
-    forgetPreviousAccount: vi.fn(() => void calls.push("forget")),
+    forgetPreviousAccount: vi.fn(async () => void calls.push("forget")),
     verifyKey: vi.fn(async () => {
       calls.push("verify");
       return { ok: true as const };
@@ -48,6 +48,25 @@ describe("Parrot desktop paired sign-in (main)", () => {
   it("forgets the previous account when another one signs in", async () => {
     const { deps, calls } = makeDeps({ previousUserId: () => "u0" });
     await completeParrotPairedSignIn(deps, handOver);
+    expect(calls).toEqual(["verify", "forget", "signIn", "storeKey"]);
+  });
+
+  // @req PAR-PL-05 the previous account's queued saves finish before the new account signs in
+  it("waits for the previous account to be saved and forgotten before signing the new one in", async () => {
+    const saved = Promise.withResolvers<void>();
+    const { deps, calls } = makeDeps({
+      previousUserId: () => "u0",
+      forgetPreviousAccount: vi.fn(async () => {
+        await saved.promise;
+        calls.push("forget");
+      }),
+    });
+    const done = completeParrotPairedSignIn(deps, handOver);
+    await vi.waitFor(() => expect(deps.forgetPreviousAccount).toHaveBeenCalled());
+    expect(deps.signIn).not.toHaveBeenCalled();
+    expect(calls).toEqual(["verify"]);
+    saved.resolve();
+    await done;
     expect(calls).toEqual(["verify", "forget", "signIn", "storeKey"]);
   });
 

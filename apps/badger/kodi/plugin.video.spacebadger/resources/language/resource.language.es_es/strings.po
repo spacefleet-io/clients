@@ -24,3 +24,12 @@ msgstr "Cancelar"
 msgctxt "#30163"
 msgid "I saved it, sign out"
 msgstr "Ya la guardé, cerrar sesión"
+
+# PRIV-PAIR-01: the check code while pairing
+msgctxt "#30113"
+msgid "Code to check"
+msgstr "Código de verificación"
+
+msgctxt "#30114"
+msgid "Compare it with your other device. Approve only if both show the same six digits."
+msgstr "Compáralo con tu otro dispositivo. Aprueba solo si ambos muestran los mismos seis dígitos."

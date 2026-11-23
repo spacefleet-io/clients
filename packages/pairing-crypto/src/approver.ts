@@ -8,10 +8,25 @@
  * The API checks the password before approving; a wrong one leaves the request pending. The computer offers no
  * password check of its own to Electron, so the account password is the proof of ownership (ACCT-PAIR-02).
  *
+ * PRIV-PAIR-01 (sf-pair-v2): between the lookup and the approval, `runPairingCheck` sends this app's random number,
+ * reads the device's, checks it opens the device's commitment and returns the 6-digit check code both screens show.
+ * The dialog asks "Does <device> show 123 456?" (skipped when the scanned QR link carried the matching fingerprint);
+ * only after yes is the key sealed. A request without a commitment is refused (PRIV-PAIR-04), and a computer whose key
+ * no longer opens the account's key probe sends nothing (PRIV-PAIR-02).
+ *
  * Pure logic with injected side effects so the flow is unit-testable; the dialog is `PairDeviceDialog` in
  * `@space/desktop-shell/components`.
  */
 import { DEFAULT_SPACE_APP_ID, normalizeSpaceAppId, type SpaceAppId } from "@space/shared/appScope";
+import {
+  PAIRING_V1_REQUESTS_ACCEPTED,
+  commitmentOpens,
+  fingerprintFromLink,
+  fingerprintMatches,
+  isPairingBlob32,
+  newPairingNonce,
+  pairingCheckCode,
+} from "./checkCode";
 import { sealLibraryKey, type SealedKey } from "./seal";
 import { parsePairQrPayload } from "./shortCode";
 
@@ -25,6 +40,9 @@ export type PairingRequestInfo = {
   deviceType: string;
   deviceName: string;
   publicKey: string;
+  /** PRIV-PAIR-01: 2 when the device committed to its key; an older API or app sends none (refused, PRIV-PAIR-04). */
+  protocol?: 1 | 2;
+  commitment?: string | null;
   expiresAt: string;
 };
 
@@ -36,19 +54,47 @@ export type PairingPurpose = "sign_in" | "key";
 export type PairingRequestView = Pick<PairingRequestInfo, "requestId" | "deviceType" | "deviceName" | "expiresAt"> & {
   app: SpaceAppId;
   purpose: PairingPurpose;
+  /** PRIV-PAIR-01: once `runPairingCheck` ran, the code the window asks the user to compare. */
+  check?: PairingCheck;
 };
 
 /** A request as `lookupPairingRequest` hands it on: its asking app is always known. */
 export type LookedUpPairingRequest = PairingRequestInfo & { app: SpaceAppId };
 
-export const pairingRequestView = (request: PairingRequestInfo): PairingRequestView => ({
+export const pairingRequestView = (request: PairingRequestInfo & { check?: PairingCheck }): PairingRequestView => ({
   requestId: request.requestId,
   app: normalizeSpaceAppId(request.app) ?? DEFAULT_SPACE_APP_ID,
   purpose: request.purpose === "key" ? "key" : "sign_in",
   deviceType: request.deviceType,
   deviceName: request.deviceName,
   expiresAt: request.expiresAt,
+  ...(request.check ? { check: request.check } : {}),
 });
+
+/**
+ * PRIV-PAIR-02, for `ApprovePairingDeps.keyOpensAccount`: true when the key opens the account's key probe, false when
+ * it does not (the account has another key now), null without a verdict (the probe could not be read, or the account
+ * has none yet).
+ */
+export const keyOpensProbe = async (
+  libraryKey: string,
+  readKeyProbe: () => Promise<string | null | undefined>,
+  decryptProbe: (keyBase64: string, probe: string) => Promise<unknown>,
+): Promise<boolean | null> => {
+  let probe: string | null | undefined;
+  try {
+    probe = await readKeyProbe();
+  } catch {
+    return null;
+  }
+  if (!probe) return null;
+  try {
+    await decryptProbe(libraryKey, probe);
+    return true;
+  } catch {
+    return false;
+  }
+};
 
 /**
  * What proves the approver owns the account (ACCT-PAIR-02): the account password, or, for an account without one
@@ -69,6 +115,16 @@ export type ApprovePairingDeps = {
   ) => Promise<{ ok: boolean; sessionId?: string }>;
   deny: (token: string, requestId: string) => Promise<{ ok: boolean }>;
   getLibraryKey: () => Promise<string | null>;
+  /**
+   * PRIV-PAIR-02: does this key open the account's current key probe? `false` (the account has another key now, e.g.
+   * after a rotation elsewhere) stops the approval before anything is sent; `null` (no verdict: no connection, or an
+   * account without a probe) lets it go on, as the receiving device checks the key again.
+   */
+  keyOpensAccount: (token: string, libraryKey: string) => Promise<boolean | null>;
+  /** PRIV-PAIR-01: `POST /pairing/requests/{id}/connect`. */
+  connect: (token: string, requestId: string, approverNonce: string) => Promise<unknown>;
+  /** PRIV-PAIR-01: `GET /pairing/requests/{id}/reveal`, long-polled (`wait`) by the implementation. */
+  readReveal: (token: string, requestId: string) => Promise<{ status: string; requesterNonce?: string }>;
   now: () => number;
   log?: (message: string, extra?: Record<string, unknown>) => void;
 };
@@ -89,6 +145,12 @@ export type ApprovePairingErrorKind =
   | "signed_out"
   | "network"
   | "bad_request"
+  /** PRIV-PAIR-04: the asking device runs a version from before the check; it must be updated. */
+  | "update_required"
+  /** PRIV-PAIR-02: this device's key no longer opens the account (another key since); it cannot send it. */
+  | "stale_key"
+  /** PRIV-PAIR-01: the device's revealed number does not open its commitment: someone in between, nothing sent. */
+  | "check_failed"
   | "unknown";
 
 export class ApprovePairingError extends Error {
@@ -158,6 +220,7 @@ export const mapApiError = (error: unknown): ApprovePairingError => {
   if (error instanceof ApprovePairingError) return error;
   const { status, code, retryAfterSeconds, method } = readApiError(error);
   if (code === "pairing_not_found") return new ApprovePairingError("not_found");
+  if (code === "pairing_check_unsupported") return new ApprovePairingError("update_required");
   if (code === "pairing_expired" || status === 410) return new ApprovePairingError("expired");
   if (code === "pairing_already_used" || status === 409) return new ApprovePairingError("already_used");
   if (code === "invalid_password") return new ApprovePairingError("wrong_password");
@@ -176,11 +239,17 @@ const isExpired = (request: PairingRequestInfo, now: number) => {
   return Number.isFinite(at) && at <= now;
 };
 
-/** Turns a typed code (any case, with or without the dash) or a pasted QR link into the waiting device's request. */
+/**
+ * Turns a typed code (any case, with or without the dash) or a pasted QR link into the waiting device's request.
+ * A request without a commitment is refused (`update_required`, PRIV-PAIR-04) unless `acceptV1`: only the same-device
+ * sign-in (ACCT-PAIR-07) passes it, since its sealed key goes back over the local channel and never reaches the server.
+ */
+// tla: PairingV2/ALookup
 export const lookupPairingRequest = async (
   deps: Pick<ApprovePairingDeps, "lookup" | "now" | "log">,
   token: string,
   input: string,
+  options: { acceptV1?: boolean } = {},
 ): Promise<LookedUpPairingRequest> => {
   const code = parsePairQrPayload(input);
   if (!code) throw new ApprovePairingError("invalid_code");
@@ -194,24 +263,114 @@ export const lookupPairingRequest = async (
   }
   if (isExpired(request, deps.now())) throw new ApprovePairingError("expired");
   const app = normalizeSpaceAppId(request.app) ?? DEFAULT_SPACE_APP_ID;
-  deps.log?.("pairing approve: lookup ok", { requestId: request.requestId, app, deviceType: request.deviceType });
+  const v2 = isPairingBlob32(request.commitment);
+  if (!v2 && !PAIRING_V1_REQUESTS_ACCEPTED && !options.acceptV1) {
+    deps.log?.("pairing approve: request without the check refused", { app, deviceType: request.deviceType, protocol: request.protocol ?? null });
+    throw new ApprovePairingError("update_required");
+  }
+  deps.log?.("pairing approve: lookup ok", { requestId: request.requestId, app, deviceType: request.deviceType, v2 });
   return { ...request, app };
 };
 
+/** PRIV-PAIR-01: the check code both screens show, and whether the scanned QR link already proved the device. */
+export type PairingCheck = {
+  /** Six digits, e.g. "067383"; show it with `formatCheckCode`. */
+  code: string;
+  /** The QR link the camera read carried this request's commitment fingerprint: no comparison needed. */
+  confirmedByQr: boolean;
+};
+
+export type CheckedPairingRequest = LookedUpPairingRequest & { check: PairingCheck };
+
+/** How often the reveal is read again when the API answers at once (no long poll). */
+const REVEAL_RETRY_MS = 1_000;
+
+const sleepMs = (ms: number): Promise<void> => {
+  const { promise, resolve } = Promise.withResolvers<void>();
+  setTimeout(resolve, ms);
+  return promise;
+};
+
+/** What `runPairingCheck` uses, so an approver with its own approve call (the phones) passes just these. */
+export type PairingCheckDeps = Pick<ApprovePairingDeps, "getLibraryKey" | "keyOpensAccount" | "connect" | "readReveal" | "now" | "log">;
+
 /**
- * Approves a looked-up device with the account password, or with a code for an account without one. Nothing is read,
- * sealed or sent without a password (a code proof may be empty: that first call asks the API for the code); the key is
- * sealed to this request only (the request id is bound into the box), so the blob is useless elsewhere.
+ * PRIV-PAIR-02 then PRIV-PAIR-01, after the user picked the request and before anything is sealed: refuses when this
+ * device's key no longer opens the account, sends this app's random number, waits for the device's, checks it opens the
+ * commitment and computes the check code. `scannedLink` is the QR link the camera read (null when typed): its
+ * fingerprint, written by the device itself, makes the comparison unnecessary.
  */
+// tla: PairingV2/AConnect
+// tla: PairingV2/ARead
+export const runPairingCheck = async (
+  deps: PairingCheckDeps,
+  token: string,
+  request: LookedUpPairingRequest,
+  scannedLink: string | null = null,
+  sleep: (ms: number) => Promise<void> = sleepMs,
+): Promise<CheckedPairingRequest> => {
+  const commitment = request.commitment;
+  if (!isPairingBlob32(commitment)) throw new ApprovePairingError("update_required");
+  if (isExpired(request, deps.now())) throw new ApprovePairingError("expired");
+
+  const libraryKey = await deps.getLibraryKey();
+  if (!libraryKey) throw new ApprovePairingError("no_library_key");
+  const opens = await deps.keyOpensAccount(token, libraryKey.trim()).catch(() => null);
+  if (opens === false) {
+    deps.log?.("pairing approve: this device's key no longer opens the account", { requestId: request.requestId });
+    throw new ApprovePairingError("stale_key");
+  }
+
+  const approverNonce = newPairingNonce();
+  try {
+    await deps.connect(token, request.requestId, approverNonce);
+  } catch (error) {
+    const mapped = mapApiError(error);
+    deps.log?.("pairing approve: connect failed", { requestId: request.requestId, kind: mapped.kind });
+    throw mapped;
+  }
+
+  let requesterNonce: string | null = null;
+  while (requesterNonce === null) {
+    if (isExpired(request, deps.now())) throw new ApprovePairingError("expired");
+    let state: { status: string; requesterNonce?: string };
+    try {
+      state = await deps.readReveal(token, request.requestId);
+    } catch (error) {
+      throw mapApiError(error);
+    }
+    if (state.status === "denied" || state.status === "consumed" || state.status === "approved") throw new ApprovePairingError("already_used");
+    if (state.status === "expired") throw new ApprovePairingError("expired");
+    if (typeof state.requesterNonce === "string") requesterNonce = state.requesterNonce;
+    else await sleep(REVEAL_RETRY_MS);
+  }
+  if (!commitmentOpens(commitment, request.publicKey, requesterNonce)) {
+    deps.log?.("pairing approve: the device's number does not open its commitment", { requestId: request.requestId });
+    throw new ApprovePairingError("check_failed");
+  }
+  const code = pairingCheckCode({ publicKey: request.publicKey, commitment, approverNonce, requesterNonce });
+  const confirmedByQr = scannedLink !== null && fingerprintMatches(fingerprintFromLink(scannedLink), commitment);
+  deps.log?.("pairing approve: check ready", { requestId: request.requestId, confirmedByQr });
+  return { ...request, check: { code, confirmedByQr } };
+};
+
+/**
+ * Approves a checked device (`runPairingCheck`, after the user confirmed the code) with the account password, or with a
+ * code for an account without one. Nothing is read, sealed or sent without a password (a code proof may be empty: that
+ * first call asks the API for the code); the key is sealed to this request only (the request id is bound into the box),
+ * so the blob is useless elsewhere.
+ */
+// tla: PairingV2/ASeal
 export const approvePairingRequest = async (
   deps: ApprovePairingDeps,
   token: string,
-  request: PairingRequestInfo,
+  request: CheckedPairingRequest,
   proof: ApprovePairingProof,
 ): Promise<{ sessionId: string | null }> => {
   const password = typeof proof === "string" ? proof : undefined;
   const twoFactorCode = typeof proof === "string" ? undefined : proof.code.trim();
   if (password !== undefined && !password) throw new ApprovePairingError("password_missing");
+  if (!request.check && !PAIRING_V1_REQUESTS_ACCEPTED) throw new ApprovePairingError("update_required");
   if (isExpired(request, deps.now())) throw new ApprovePairingError("expired");
 
   const libraryKey = await deps.getLibraryKey();

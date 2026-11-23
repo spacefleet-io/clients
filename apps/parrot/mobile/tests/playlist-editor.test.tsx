@@ -47,7 +47,9 @@ vi.mock("react-native", async () => {
   const host = (name: string) => (props: Record<string, unknown>) => react.createElement(name, props, props.children as React.ReactNode);
   return {
     Alert: { alert: (title: string, body: string, buttons: AlertButton[]) => void fake.alerts.push({ title, body, buttons }) },
-    KeyboardAvoidingView: host("KeyboardAvoidingView"),
+    // The dialog keeps above the keyboard through the shared KeyboardAvoidingForm (an Android 16 phone here).
+    Keyboard: { addListener: () => ({ remove: () => undefined }) },
+    Platform: { OS: "android", Version: 36 },
     // A closed Modal draws nothing, as on the phone.
     Modal: (props: { visible: boolean; children?: React.ReactNode }) => (props.visible ? react.createElement("Modal", props, props.children) : null),
     Pressable: host("Pressable"),

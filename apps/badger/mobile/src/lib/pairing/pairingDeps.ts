@@ -3,6 +3,7 @@ import { approvePairing, approvePairingLocal, denyPairing, lookupPairing } from 
 import { getOrCreateDeviceId } from "../../native/pushHandler";
 import { getStoredLibraryKey } from "../onboarding";
 import { requireDeviceUnlock } from "@space/mobile-shell/pairing-approve/deviceUnlock";
+import { pairingCheckDeps } from "@space/mobile-shell/pairing-approve/checkDeps";
 import type { PairingDeps } from "@space/mobile-shell/pairing-approve";
 import type { SiblingApproveDeps } from "@space/pairing-crypto";
 
@@ -21,6 +22,8 @@ export const pairingDeps: PairingDeps = {
   getLibraryKey: getStoredLibraryKey,
   requireUnlock: Platform.isTV ? null : requireDeviceUnlock,
   now: () => Date.now(),
+  // sf-pair-v2 (PRIV-PAIR-01, PRIV-PAIR-02): the key probe check and the random-number exchange.
+  ...pairingCheckDeps("badger"),
 };
 
 /**

@@ -38,12 +38,18 @@ describe("the startup card's mascot", () => {
     expect(html).not.toContain("-translate-y-[120%]");
   });
 
-  it("DESKTOP-SHELL-STARTUP-MASCOT-002: a sign-in screen keeps the small mascot floating apart above the card", () => {
+  it("DESKTOP-SHELL-STARTUP-MASCOT-002: a sign-in screen keeps the small mascot floating apart above the card, in its own room", () => {
     const html = render({ mascotPlacement: "above" });
     console.info(LOG, "DESKTOP-SHELL-STARTUP-MASCOT-002", html.length);
     expect(html).not.toContain('data-testid="startup-card-mascot"');
-    expect(html).toContain("-translate-y-[120%]");
-    expect(html).toContain("h-20 w-20");
+    const mascot = html.slice(html.indexOf("<div"), html.indexOf('data-testid="startup-card"'));
+    console.info(LOG, "DESKTOP-SHELL-STARTUP-MASCOT-002 mascot markup", mascot);
+    expect(mascot).toContain('data-testid="startup-card-mascot-above"');
+    expect(mascot).toContain("h-20 w-20");
+    // In the flow above the card, not lifted out of it: a card taller than the window used to push an absolutely placed
+    // mascot under Badger's top bar (2026-11-23).
+    expect(mascot).toContain("mx-auto mb-4");
+    expect(html).not.toContain("absolute left-1/2 top-0 -translate-x-1/2");
     expect(html).not.toContain("pt-[clamp(");
     expect(html).toContain("pt-8");
   });

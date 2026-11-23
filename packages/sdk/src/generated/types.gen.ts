@@ -161,6 +161,10 @@ export type LibraryOps = {
      */
     tooOld: boolean;
     ops: Array<LibraryOpEntry>;
+    /**
+     * The library's state hash at `version`, read with it (LIB-SYNC-19): a client that moves to `version` chains its next operation on this hash. Absent on a partial page of operations stored before operation hashes.
+     */
+    stateHash?: string | null;
     storageFormatVersion: number;
     opStreamVersion: number;
     /**
@@ -216,6 +220,10 @@ export type PutLibraryDbRequest = {
     lastOpId?: string | null;
     keyProbe?: string | null;
     /**
+     * The account key probe (`GET /library/db/meta` `keyProbe`) the client checked its key against before this publish; null when the account had none. A different account probe answers 412 `key_probe_changed`. Absent: not checked.
+     */
+    checkedKeyProbe?: string | null;
+    /**
      * Library storage format the client writes; lower than the stored one answers 409 `library_format_downgrade`.
      */
     storageFormatVersion?: number;
@@ -234,6 +242,57 @@ export type LibraryOpPutResult = {
     snapshotVersion: number;
     stateHash: string | null;
     lastOpId: string | null;
+};
+
+export type MediaResealRun = {
+    id: string;
+    status: 'open' | 'switched' | 'abandoned';
+    createdAt: string;
+    switchedAt: string | null;
+    abandonedAt: string | null;
+};
+
+export type MediaResealProgress = {
+    run: MediaResealRun;
+    /**
+     * Other uploads of the account the switch waits for (STOR-RESEAL-08); 0 once the run is not open.
+     */
+    uploadsInFlight: number;
+    /**
+     * When "Switch now" (cancel those uploads) opens: 24 h after the run, every copy made, first waited on them (STOR-RESEAL-10). Null while not waiting.
+     */
+    switchNowAt: string | null;
+    /**
+     * Live media objects of the account (copies excluded).
+     */
+    totalFiles: number;
+    totalBytes: number;
+    /**
+     * Of them, those with a stored copy or a `kept` mark.
+     */
+    doneFiles: number;
+    doneBytes: number;
+    /**
+     * Objects marked kept: the old key cannot open them, they stay as they are.
+     */
+    keptFiles: number;
+    pendingFiles: number;
+    pendingBytes: number;
+    /**
+     * One page of the objects still waiting for a copy, by key order.
+     */
+    pending: Array<{
+        key: string;
+        sizeBytes: number;
+        role: string | null;
+        objectNamespace: string | null;
+        contentType: string | null;
+        app: string | null;
+    }>;
+    /**
+     * Pass as `after` for the next page; null on the last page.
+     */
+    nextAfter: string | null;
 };
 
 export type P2pPeer = {
@@ -1043,6 +1102,37 @@ export type GetReadinessResponses = {
 
 export type GetReadinessResponse = GetReadinessResponses[keyof GetReadinessResponses];
 
+export type GetDependenciesData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/deps';
+};
+
+export type GetDependenciesErrors = {
+    /**
+     * A dependency does not answer.
+     */
+    503: {
+        ok: boolean;
+        dependency?: string;
+    };
+};
+
+export type GetDependenciesError = GetDependenciesErrors[keyof GetDependenciesErrors];
+
+export type GetDependenciesResponses = {
+    /**
+     * Every dependency answers.
+     */
+    200: {
+        ok: boolean;
+        dependency?: string;
+    };
+};
+
+export type GetDependenciesResponse = GetDependenciesResponses[keyof GetDependenciesResponses];
+
 export type GetSystemContractData = {
     body?: never;
     path?: never;
@@ -1298,6 +1388,12 @@ export type PutLibraryDbErrors = {
     } | {
         error: 'upload_quota_exceeded';
     } | Error;
+    /**
+     * The account's library key probe is no longer the `checkedKeyProbe` the client checked its key against.
+     */
+    412: {
+        error: 'key_probe_changed';
+    };
     /**
      * The upload is too large. The `error` is the code the storage gateway answered with, relayed as is.
      */
@@ -1568,6 +1664,44 @@ export type StreamLibraryEventsResponses = {
     200: unknown;
 };
 
+export type GetLibraryKeyRotationReadinessData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/library/recovery/rotate';
+};
+
+export type GetLibraryKeyRotationReadinessErrors = {
+    /**
+     * Missing or unknown token.
+     */
+    401: {
+        error: 'unauthorized';
+    };
+    /**
+     * The account is blocked or scheduled for deletion, or a personal token was used on a route that needs a login session.
+     */
+    403: {
+        error: 'account_blocked' | 'account_deleted' | 'personal_token_not_allowed';
+    };
+};
+
+export type GetLibraryKeyRotationReadinessError = GetLibraryKeyRotationReadinessErrors[keyof GetLibraryKeyRotationReadinessErrors];
+
+export type GetLibraryKeyRotationReadinessResponses = {
+    /**
+     * Whether a rotation needs the media re-sealed first.
+     */
+    200: {
+        /**
+         * True: a rotation without a media re-seal run is refused (409 `rotation_needs_media_reseal`).
+         */
+        needsMediaReseal: boolean;
+    };
+};
+
+export type GetLibraryKeyRotationReadinessResponse = GetLibraryKeyRotationReadinessResponses[keyof GetLibraryKeyRotationReadinessResponses];
+
 export type RotateLibraryKeyData = {
     body: {
         /**
@@ -1579,21 +1713,58 @@ export type RotateLibraryKeyData = {
          */
         twoFactorCode?: string | null;
         /**
-         * Base64 of the re-encrypted snapshot manifest. Must not be empty.
+         * Base64 of the caller's library manifest sealed under the new key, as `PUT /library/db` sends it.
          */
-        blobBase64: string;
+        manifestBase64: string;
         /**
          * Key probe of the new key. Must not be empty.
          */
         keyProbe: string;
+        snapshotId: string;
+        chunkSize: number;
         /**
-         * Generated when omitted.
+         * Hashes of the encrypted chunks the manifest references (uploaded already). A manifest references at least one; a whole library sent as one blob is no manifest and is refused (400).
          */
-        snapshotId?: string;
+        chunkRefs: Array<string>;
+        chunkRefsSource?: LibraryChunkRefsSource;
         /**
-         * Defaults to 4 MiB.
+         * Storage format the caller's library is written in; never inferred. Lower than the stored one answers 409 `library_format_downgrade`.
          */
-        chunkSize?: number | null;
+        storageFormatVersion: number;
+        /**
+         * Op stream the caller's library is written in; never inferred. Lower than the stored one answers 409 `library_format_downgrade`.
+         */
+        opStreamVersion: number;
+        /**
+         * The version of the caller's library the snapshot was built from. Omitted: the current version (no check).
+         */
+        baseVersion?: number;
+        /**
+         * Every other app's library re-encrypted under the new key. Required for each app that has a library; omitted by builds from before 2026-11-23, which are refused (409 `library_not_reencrypted`) when another library exists.
+         */
+        otherLibraries?: Array<{
+            /**
+             * Another library app of the account (not the caller's).
+             */
+            appId: string;
+            /**
+             * The version the rotating device read this library at.
+             */
+            baseVersion: number;
+            /**
+             * Base64 of the manifest re-encrypted under the new key.
+             */
+            manifestBase64: string;
+            snapshotId: string;
+            chunkSize: number;
+            /**
+             * The chunk hashes the manifest references (uploaded already).
+             */
+            chunkRefs: Array<string>;
+            chunkRefsSource?: LibraryChunkRefsSource;
+            storageFormatVersion: number;
+            opStreamVersion: number;
+        }>;
     };
     headers: {
         /**
@@ -1627,13 +1798,22 @@ export type RotateLibraryKeyErrors = {
         error: 'account_blocked' | 'account_deleted' | 'personal_token_not_allowed';
     };
     /**
-     * The library already uses a newer format than this client writes.
+     * The library already uses a newer format than this client writes, a library changed since it was read (`version_conflict`), another app's library came without its re-encrypted copy (`library_not_reencrypted`), or the account stores media sealed with the key (`rotation_needs_media_reseal`). Nothing is written.
      */
     409: {
         error: 'library_format_downgrade';
         surface: 'storage' | 'op-stream';
         observed: number;
         stored: number;
+    } | {
+        error: 'version_conflict';
+        version: number;
+        appId: string;
+    } | {
+        error: 'library_not_reencrypted';
+        appId: string;
+    } | {
+        error: 'rotation_needs_media_reseal';
     };
     /**
      * Too many attempts; wait `retryAfterSeconds` (also sent as the `Retry-After` header).
@@ -1746,6 +1926,205 @@ export type ResetLibraryResponses = {
 };
 
 export type ResetLibraryResponse = ResetLibraryResponses[keyof ResetLibraryResponses];
+
+export type OpenMediaResealRunData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/library/media-reseal/runs';
+};
+
+export type OpenMediaResealRunErrors = {
+    /**
+     * Missing or unknown token.
+     */
+    401: {
+        error: 'unauthorized';
+    };
+    /**
+     * The account is blocked or scheduled for deletion, or a personal token was used on a route that needs a login session.
+     */
+    403: {
+        error: 'account_blocked' | 'account_deleted' | 'personal_token_not_allowed';
+    };
+    /**
+     * The run could not be read or opened.
+     */
+    503: {
+        error: 'media_reseal_unavailable';
+    };
+};
+
+export type OpenMediaResealRunError = OpenMediaResealRunErrors[keyof OpenMediaResealRunErrors];
+
+export type OpenMediaResealRunResponses = {
+    /**
+     * The open run; `created` is false when it was already open.
+     */
+    200: {
+        run: MediaResealRun;
+        created: boolean;
+    };
+};
+
+export type OpenMediaResealRunResponse = OpenMediaResealRunResponses[keyof OpenMediaResealRunResponses];
+
+export type GetMediaResealRunData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: {
+        /**
+         * `nextAfter` of the previous page.
+         */
+        after?: string;
+        /**
+         * Page size, 200 when absent, at most 500.
+         */
+        limit?: number;
+    };
+    url: '/library/media-reseal/runs/{id}';
+};
+
+export type GetMediaResealRunErrors = {
+    /**
+     * Missing or unknown token.
+     */
+    401: {
+        error: 'unauthorized';
+    };
+    /**
+     * The account is blocked or scheduled for deletion, or a personal token was used on a route that needs a login session.
+     */
+    403: {
+        error: 'account_blocked' | 'account_deleted' | 'personal_token_not_allowed';
+    };
+    /**
+     * No reseal run with this id on the account.
+     */
+    404: {
+        error: 'reseal_run_not_found';
+    };
+    /**
+     * The progress could not be read.
+     */
+    503: {
+        error: 'media_reseal_unavailable';
+    };
+};
+
+export type GetMediaResealRunError = GetMediaResealRunErrors[keyof GetMediaResealRunErrors];
+
+export type GetMediaResealRunResponses = {
+    /**
+     * The run's progress.
+     */
+    200: MediaResealProgress;
+};
+
+export type GetMediaResealRunResponse = GetMediaResealRunResponses[keyof GetMediaResealRunResponses];
+
+export type MarkMediaResealKeptData = {
+    body: {
+        keys: Array<string>;
+    };
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/library/media-reseal/runs/{id}/kept';
+};
+
+export type MarkMediaResealKeptErrors = {
+    /**
+     * Missing or unknown token.
+     */
+    401: {
+        error: 'unauthorized';
+    };
+    /**
+     * The account is blocked or scheduled for deletion, or a personal token was used on a route that needs a login session.
+     */
+    403: {
+        error: 'account_blocked' | 'account_deleted' | 'personal_token_not_allowed';
+    };
+    /**
+     * No reseal run with this id on the account.
+     */
+    404: {
+        error: 'reseal_run_not_found';
+    };
+    /**
+     * The run is no longer open.
+     */
+    409: {
+        error: 'reseal_run_not_open';
+    };
+    /**
+     * The marks could not be saved.
+     */
+    503: {
+        error: 'media_reseal_unavailable';
+    };
+};
+
+export type MarkMediaResealKeptError = MarkMediaResealKeptErrors[keyof MarkMediaResealKeptErrors];
+
+export type MarkMediaResealKeptResponses = {
+    /**
+     * How many objects were marked.
+     */
+    200: {
+        kept: number;
+    };
+};
+
+export type MarkMediaResealKeptResponse = MarkMediaResealKeptResponses[keyof MarkMediaResealKeptResponses];
+
+export type AbandonMediaResealRunData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/library/media-reseal/runs/{id}/abandon';
+};
+
+export type AbandonMediaResealRunErrors = {
+    /**
+     * Missing or unknown token.
+     */
+    401: {
+        error: 'unauthorized';
+    };
+    /**
+     * The account is blocked or scheduled for deletion, or a personal token was used on a route that needs a login session.
+     */
+    403: {
+        error: 'account_blocked' | 'account_deleted' | 'personal_token_not_allowed';
+    };
+    /**
+     * The run could not be closed.
+     */
+    503: {
+        error: 'media_reseal_unavailable';
+    };
+};
+
+export type AbandonMediaResealRunError = AbandonMediaResealRunErrors[keyof AbandonMediaResealRunErrors];
+
+export type AbandonMediaResealRunResponses = {
+    /**
+     * The run is closed.
+     */
+    200: {
+        abandoned: boolean;
+        purgeQueued: number;
+    };
+};
+
+export type AbandonMediaResealRunResponse = AbandonMediaResealRunResponses[keyof AbandonMediaResealRunResponses];
 
 export type RegisterP2pPeerData = {
     body: {
@@ -2524,13 +2903,17 @@ export type DeleteStorageObjectsResponses = {
      */
     200: {
         /**
-         * Number of keys deleted.
+         * Number of sent keys whose live record of this user the call removed (STOR-QUOTA-09); 0 when the records could not be read.
          */
         deleted: number;
         /**
          * Quota bytes given back; absent when no key was sent.
          */
         reclaimedBytes?: number;
+        /**
+         * Sent keys with no live record of this user (a key not in its stored form, already deleted, or not this user's): passed to the silo but not counted as deleted. Absent when every key was recorded.
+         */
+        unrecordedKeys?: Array<string>;
     };
 };
 
@@ -4968,6 +5351,10 @@ export type CreatePairingRequestData = {
          * Required: the device's raw X25519 public key, base64 (32 bytes); otherwise 400 `invalid_public_key`.
          */
         publicKey?: string;
+        /**
+         * Pairing check v2 (PRIV-PAIR-01): `SHA-256("sf-pair-v2|commit" ‖ publicKey ‖ requesterNonce)`, base64 (32 bytes); malformed is 400 `invalid_commitment`. Sending apps refuse a request without it (PRIV-PAIR-04).
+         */
+        commitment?: string;
     };
     headers?: {
         /**
@@ -4985,7 +5372,7 @@ export type CreatePairingRequestErrors = {
      * The request was refused.
      */
     400: {
-        error: 'invalid_request' | 'invalid_app_scope' | 'invalid_device_type' | 'invalid_device_name' | 'invalid_public_key';
+        error: 'invalid_request' | 'invalid_app_scope' | 'invalid_device_type' | 'invalid_device_name' | 'invalid_public_key' | 'invalid_commitment';
     };
     /**
      * Too many requests; wait `retryAfterSeconds` (also sent as the `Retry-After` header).
@@ -5030,6 +5417,10 @@ export type CreatePairingKeyRequestData = {
          * Required: the device's raw X25519 public key, base64 (32 bytes); otherwise 400 `invalid_public_key`.
          */
         publicKey?: string;
+        /**
+         * Pairing check v2 (PRIV-PAIR-01): `SHA-256("sf-pair-v2|commit" ‖ publicKey ‖ requesterNonce)`, base64 (32 bytes); malformed is 400 `invalid_commitment`. Sending apps refuse a request without it (PRIV-PAIR-04).
+         */
+        commitment?: string;
     };
     headers?: {
         /**
@@ -5047,7 +5438,7 @@ export type CreatePairingKeyRequestErrors = {
      * The request was refused.
      */
     400: {
-        error: 'invalid_request' | 'invalid_app_scope' | 'invalid_device_type' | 'invalid_device_name' | 'invalid_public_key';
+        error: 'invalid_request' | 'invalid_app_scope' | 'invalid_device_type' | 'invalid_device_name' | 'invalid_public_key' | 'invalid_commitment';
     };
     /**
      * Missing or unknown token.
@@ -5089,6 +5480,50 @@ export type CreatePairingKeyRequestResponses = {
 };
 
 export type CreatePairingKeyRequestResponse = CreatePairingKeyRequestResponses[keyof CreatePairingKeyRequestResponses];
+
+export type CancelPairingRequestData = {
+    body?: never;
+    path: {
+        /**
+         * Request id (UUID).
+         */
+        requestId: string;
+    };
+    query?: {
+        /**
+         * Required: the request's `pollSecret`.
+         */
+        pollSecret?: string;
+    };
+    url: '/pairing/requests/{requestId}';
+};
+
+export type CancelPairingRequestErrors = {
+    /**
+     * Unknown, expired or already used request or code.
+     */
+    404: {
+        error: 'pairing_not_found';
+    };
+    /**
+     * Too many requests; wait `retryAfterSeconds` (also sent as the `Retry-After` header).
+     */
+    429: {
+        error: 'rate_limited';
+        retryAfterSeconds: number;
+    };
+};
+
+export type CancelPairingRequestError = CancelPairingRequestErrors[keyof CancelPairingRequestErrors];
+
+export type CancelPairingRequestResponses = {
+    /**
+     * Deleted.
+     */
+    200: Ok;
+};
+
+export type CancelPairingRequestResponse = CancelPairingRequestResponses[keyof CancelPairingRequestResponses];
 
 export type GetPairingRequestData = {
     body?: never;
@@ -5153,6 +5588,9 @@ export type GetPairingRequestResponses = {
      */
     200: {
         status: 'pending' | 'expired' | 'denied' | 'consumed';
+    } | {
+        status: 'pending';
+        approverNonce: string;
     } | {
         status: 'approved';
         /**
@@ -5269,6 +5707,14 @@ export type LookupPairingResponses = {
          * The new device's X25519 public key, base64.
          */
         publicKey: string;
+        /**
+         * 2: the request carries a `commitment` (PRIV-PAIR-01); 1: an older app made it, and sending apps refuse it (PRIV-PAIR-04).
+         */
+        protocol: 1 | 2;
+        /**
+         * The receiving device's commitment, base64; null for protocol 1.
+         */
+        commitment: string | null;
         expiresAt: string;
     };
 };
@@ -5335,10 +5781,10 @@ export type ApprovePairingErrors = {
         error: 'pairing_not_found';
     };
     /**
-     * The request was already approved, denied or used.
+     * The request was already approved, denied or used, or (protocol 2) the check exchange is not finished: `connect` by this account and the device's `reveal` come first.
      */
     409: {
-        error: 'pairing_already_used';
+        error: 'pairing_already_used' | 'pairing_check_pending';
     };
     /**
      * The request expired.
@@ -5431,6 +5877,205 @@ export type DenyPairingResponses = {
 };
 
 export type DenyPairingResponse = DenyPairingResponses[keyof DenyPairingResponses];
+
+export type ConnectPairingData = {
+    body: {
+        /**
+         * Required: 32 random bytes, base64; malformed is 400 `invalid_nonce`.
+         */
+        approverNonce?: string;
+    };
+    path: {
+        /**
+         * Request id (UUID).
+         */
+        requestId: string;
+    };
+    query?: never;
+    url: '/pairing/requests/{requestId}/connect';
+};
+
+export type ConnectPairingErrors = {
+    /**
+     * The number is missing or malformed.
+     */
+    400: {
+        error: 'invalid_nonce';
+    };
+    /**
+     * Missing or unknown token.
+     */
+    401: {
+        error: 'unauthorized';
+    };
+    /**
+     * The account is blocked or scheduled for deletion, or a personal token was used on a route that needs a login session.
+     */
+    403: {
+        error: 'account_blocked' | 'account_deleted' | 'personal_token_not_allowed';
+    };
+    /**
+     * Unknown, expired or already used request or code.
+     */
+    404: {
+        error: 'pairing_not_found';
+    };
+    /**
+     * Another app connected first, the request is no longer pending, or it is protocol 1.
+     */
+    409: {
+        error: 'pairing_already_used' | 'pairing_check_unsupported';
+    };
+    /**
+     * The request expired.
+     */
+    410: {
+        error: 'pairing_expired';
+    };
+    /**
+     * Too many requests; wait `retryAfterSeconds` (also sent as the `Retry-After` header).
+     */
+    429: {
+        error: 'rate_limited';
+        retryAfterSeconds: number;
+    };
+};
+
+export type ConnectPairingError = ConnectPairingErrors[keyof ConnectPairingErrors];
+
+export type ConnectPairingResponses = {
+    /**
+     * Connected.
+     */
+    200: Ok;
+};
+
+export type ConnectPairingResponse = ConnectPairingResponses[keyof ConnectPairingResponses];
+
+export type GetPairingRevealData = {
+    body?: never;
+    path: {
+        /**
+         * Request id (UUID).
+         */
+        requestId: string;
+    };
+    query?: {
+        /**
+         * Seconds to wait for the number (at most 25).
+         */
+        wait?: string;
+    };
+    url: '/pairing/requests/{requestId}/reveal';
+};
+
+export type GetPairingRevealErrors = {
+    /**
+     * Missing or unknown token.
+     */
+    401: {
+        error: 'unauthorized';
+    };
+    /**
+     * The account is blocked or scheduled for deletion, or a personal token was used on a route that needs a login session.
+     */
+    403: {
+        error: 'account_blocked' | 'account_deleted' | 'personal_token_not_allowed';
+    };
+    /**
+     * Unknown, expired or already used request or code.
+     */
+    404: {
+        error: 'pairing_not_found';
+    };
+    /**
+     * Too many requests; wait `retryAfterSeconds` (also sent as the `Retry-After` header).
+     */
+    429: {
+        error: 'rate_limited';
+        retryAfterSeconds: number;
+    };
+};
+
+export type GetPairingRevealError = GetPairingRevealErrors[keyof GetPairingRevealErrors];
+
+export type GetPairingRevealResponses = {
+    /**
+     * The state of the request and, once revealed, the device's number.
+     */
+    200: {
+        status: 'pending' | 'approved' | 'expired' | 'denied' | 'consumed';
+        requesterNonce?: string;
+    };
+};
+
+export type GetPairingRevealResponse = GetPairingRevealResponses[keyof GetPairingRevealResponses];
+
+export type RevealPairingData = {
+    body: {
+        /**
+         * Required: the request's `pollSecret`; wrong or missing answers 404.
+         */
+        pollSecret?: string;
+        /**
+         * Required: the number committed to, base64 (32 bytes); malformed is 400 `invalid_nonce`.
+         */
+        requesterNonce?: string;
+    };
+    path: {
+        /**
+         * Request id (UUID).
+         */
+        requestId: string;
+    };
+    query?: never;
+    url: '/pairing/requests/{requestId}/reveal';
+};
+
+export type RevealPairingErrors = {
+    /**
+     * The number is malformed or does not open the commitment.
+     */
+    400: {
+        error: 'invalid_nonce' | 'pairing_commitment_mismatch';
+    };
+    /**
+     * Unknown, expired or already used request or code.
+     */
+    404: {
+        error: 'pairing_not_found';
+    };
+    /**
+     * No app connected yet, another number was revealed, the request is no longer pending, or it is protocol 1.
+     */
+    409: {
+        error: 'pairing_check_pending' | 'pairing_already_used' | 'pairing_check_unsupported';
+    };
+    /**
+     * The request expired.
+     */
+    410: {
+        error: 'pairing_expired';
+    };
+    /**
+     * Too many requests; wait `retryAfterSeconds` (also sent as the `Retry-After` header).
+     */
+    429: {
+        error: 'rate_limited';
+        retryAfterSeconds: number;
+    };
+};
+
+export type RevealPairingError = RevealPairingErrors[keyof RevealPairingErrors];
+
+export type RevealPairingResponses = {
+    /**
+     * Revealed.
+     */
+    200: Ok;
+};
+
+export type RevealPairingResponse = RevealPairingResponses[keyof RevealPairingResponses];
 
 export type SubmitAbuseReportData = {
     body: {
@@ -6567,6 +7212,49 @@ export type SendFeedbackResponses = {
 };
 
 export type SendFeedbackResponse = SendFeedbackResponses[keyof SendFeedbackResponses];
+
+export type SayDailyHelloData = {
+    body: {
+        /**
+         * Plays started on this device since its last hello. Above 2000 counts as 2000.
+         */
+        plays: number;
+        /**
+         * Screens opened on this device since its last hello. Above 2000 counts as 2000.
+         */
+        screens: number;
+    };
+    path?: never;
+    query?: never;
+    url: '/usage/hello';
+};
+
+export type SayDailyHelloErrors = {
+    /**
+     * The `x-space-client` header is missing or not valid, or the body is not valid.
+     */
+    400: {
+        error: 'invalid_client';
+    };
+    /**
+     * Too many attempts; wait `retryAfterSeconds` (also sent as the `Retry-After` header).
+     */
+    429: {
+        error: 'rate_limited';
+        retryAfterSeconds: number;
+    };
+};
+
+export type SayDailyHelloError = SayDailyHelloErrors[keyof SayDailyHelloErrors];
+
+export type SayDailyHelloResponses = {
+    /**
+     * Counted.
+     */
+    204: void;
+};
+
+export type SayDailyHelloResponse = SayDailyHelloResponses[keyof SayDailyHelloResponses];
 
 export type KeepEmailAddressData = {
     body?: never;

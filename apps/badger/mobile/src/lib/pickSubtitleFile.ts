@@ -15,7 +15,6 @@ const MAX_SUBTITLE_FILE_BYTES = 10 * 1024 * 1024;
  */
 export const pickSubtitleFile = async (): Promise<{ name: string; content: string } | null> => {
   if (Platform.isTV) throw new Error("pick_subtitle_file.tv");
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const picker = require("@react-native-documents/picker") as typeof DocumentPicker;
   let picked: DocumentPickerResponse | undefined;
   try {

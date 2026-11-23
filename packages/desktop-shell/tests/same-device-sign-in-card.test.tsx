@@ -76,6 +76,10 @@ describe("SameDeviceSignIn", () => {
     const email = byTestId("same-device-sign-in-email");
     expect(email?.className).toContain("truncate");
     expect(byTestId("same-device-sign-in-continue")?.className).toContain("whitespace-nowrap");
+    // The card and its button may shrink below the email's width (`min-w-0`), so a long email truncates instead of
+    // widening Badger's sign-in grid past its panel (2026-11-23). The geometry itself is checked in the desktop e2e.
+    expect(byTestId("same-device-sign-in-card")?.className).toContain("min-w-0");
+    expect(byTestId("same-device-sign-in-continue")?.className).toContain("min-w-0");
   });
 
   it("shows nothing while the sister app is not signed in", async () => {

@@ -529,6 +529,8 @@ export class BadgerLibraryDbService {
     return promise;
   }
 
+  // tla: LibrarySync/SyncStart
+  // tla: LibrarySync/SyncApply
   private async runRemoteSync(request: SyncRequest): Promise<boolean> {
     let meta = request.meta;
     for (let attempt = 1; attempt <= SYNC_PREPARE_ATTEMPTS; attempt += 1) {

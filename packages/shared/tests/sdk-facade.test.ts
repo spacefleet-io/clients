@@ -10,6 +10,7 @@ import {
   listDevices,
   login,
   revokeDevice,
+  sendFeedback,
   setApiBaseUrl,
 } from "../src/api";
 
@@ -31,6 +32,18 @@ afterEach(() => {
 });
 
 describe("@space/shared/api account calls reach the SDK client", () => {
+  it("sendFeedback posts with the token, scoped to the sending app (Badger by default)", async () => {
+    fetchMock.mockImplementation(async () => Response.json({ id: "f1" }, { status: 201 }));
+    const body = { message: "hi", app: "parrot-desktop" as const };
+    expect(await sendFeedback("tok", body, "parrot")).toEqual({ id: "f1" });
+    expect(lastRequest().url).toBe("https://api.test/api/feedback");
+    expect(lastRequest().headers.get("authorization")).toBe("Bearer tok");
+    expect(lastRequest().headers.get("x-space-app")).toBe("parrot");
+
+    await sendFeedback("tok", { ...body, app: "badger-mobile" });
+    expect(lastRequest().headers.get("x-space-app")).toBe("badger");
+  });
+
   /** @req DEV-API-02[badger-desktop,badger-mobile,badger-tv] */
   it("login is the SDK's POST /auth/login, built as a Request with the app scope", async () => {
     fetchMock.mockImplementation(async () => Response.json({ token: "t", user: { id: "u1" } }));

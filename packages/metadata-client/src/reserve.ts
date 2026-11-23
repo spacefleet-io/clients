@@ -14,11 +14,11 @@ import {
   type PinnedTicketKey,
   type TicketCrypto,
 } from "@space/privacy-pass";
+import { parseRetryAfterSeconds } from "@space/shared/retryAfter";
 import {
   MAX_TIMER_MS,
   defaultRandom,
   defaultTimers,
-  parseRetryAfterSeconds,
   type FetchLike,
   type KeyValueStorage,
   type RandomFn,

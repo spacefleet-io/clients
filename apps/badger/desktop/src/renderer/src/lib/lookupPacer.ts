@@ -12,7 +12,8 @@
  *   throws `MetadataUnavailableError` as before.
  * Any other request (the API's ticket issuance) passes through untouched.
  */
-import { parseRetryAfterSeconds, type FetchLike } from "@space/metadata-client";
+import type { FetchLike } from "@space/metadata-client";
+import { parseRetryAfterSeconds } from "@space/shared/retryAfter";
 
 export type LookupPacerOptions = {
   concurrency?: number;

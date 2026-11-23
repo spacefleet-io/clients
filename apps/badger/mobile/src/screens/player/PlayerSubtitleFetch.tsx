@@ -40,7 +40,6 @@ export const PlayerSubtitleFetch = memo(
         cancelled = true;
       };
       // Read once per open; `online` is only logged.
-      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [mediaId, episodeId]);
 
     // Android Back closes the panel (and resumes) before it can close the player: the later listener runs first.

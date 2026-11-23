@@ -6,7 +6,7 @@
 // The Mac keeps no credentials (REL-MOB-03, REL-CD-10): scripts/package.mjs imports the .p12 into a throwaway
 // keychain for the one build, writes the App Store Connect API key to a temporary file, and removes both when it ends.
 // scripts/mac-after-pack.mjs signs every Mach-O file and bundle with the identity found there (hardened runtime,
-// secure timestamp, installer/entitlements.mac.plist), then notarizes the .app and staples its ticket
+// secure timestamp, entitlements.mac.plist next to this file), then notarizes the .app and staples its ticket
 // (notarizeApp): electron-builder builds the in-app-update zip (`<Product>-<version>-<arch>-mac.zip`, listed in
 // latest-mac.yml) and the dmg from that stapled app, so the feed's sha512 is the notarized zip's. package.mjs then
 // signs the dmg, notarizes it, staples the ticket and checks both the dmg and the zipped app with spctl.

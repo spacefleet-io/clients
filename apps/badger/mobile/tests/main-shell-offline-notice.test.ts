@@ -91,7 +91,7 @@ vi.mock("../src/lib/pairing/deviceWatch", () => ({
   checkForNewDevices: async () => [],
   markDeviceSeen: async () => undefined,
 }));
-vi.mock("../src/components/UnpaidAccessBanner", () => ({ UnpaidAccessBanner: () => null }));
+vi.mock("@space/mobile-shell/unpaid-access-banner", () => ({ UnpaidAccessBanner: () => null }));
 vi.mock("../src/screens/HomeScreen", () => ({ HomeScreen: () => createElement("HomeScreen") }));
 vi.mock("../src/screens/LibraryScreen", () => ({ LibraryScreen: () => null }));
 // The Playlists tab (#2220) renders this panel; the real one pulls react-native modules this stand-in shell cannot load.

@@ -1,0 +1,21 @@
+/* The mascot's slow float (`.animate-float`): 6 s up by 10 px and back, looped. `FloatingMascot`, the desktops'
+   startup cards and the website heroes use it; with reduced motion the mascot stays still. */
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-float {
+    animation: none;
+  }
+}

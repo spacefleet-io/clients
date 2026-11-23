@@ -11,5 +11,9 @@ export default defineConfig({
   test: {
     exclude: [...configDefaults.exclude, "e2e/**", "e2e-update/**"],
     setupFiles: ["./tests/webAudio.setup.ts"],
+    // A file's first test pays its React Compiler transform: over the 5 s default on a loaded CI runner
+    // (stream-slot in run 47476, demo-extras in 47526, then the rest of the file cascades). No test asserts on
+    // wall time; same budget as badger desktop.
+    testTimeout: 15_000,
   },
 });

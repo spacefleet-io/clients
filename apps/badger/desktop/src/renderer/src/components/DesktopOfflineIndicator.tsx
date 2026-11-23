@@ -24,6 +24,9 @@ import {
   useLibraryActions,
   useLibraryShell,
 } from "@/lib/libraryContext";
+import { rendererLogger } from "@/logger";
+
+const offlineLog = rendererLogger.child({ scope: "desktop-offline-notice" });
 
 export type DesktopOfflineSource = "network" | "library" | "sync";
 
@@ -117,7 +120,7 @@ export function DesktopOfflineNotice() {
     const edge = offlineNoticeEdge(lastVariant.current, variant);
     lastVariant.current = variant;
     if (!edge) return;
-    console.info(`[desktop-offline-notice] ${edge.kind}${edge.kind === "show" ? ` source=${lastSource.current}` : ""}`);
+    offlineLog.info(`[desktop-offline-notice] ${edge.kind}${edge.kind === "show" ? ` source=${lastSource.current}` : ""}`);
     toast.dismiss(OFFLINE_TOAST_ID);
     if (edge.kind === "withdraw" || !lastSource.current) return;
     const keys = TOAST_KEYS[lastSource.current];

@@ -149,6 +149,29 @@ describe("Parrot UpdateReadyNotice", () => {
   });
 
   // @req REL-UPD-01
+  it("a downloaded update without a version still reads as a sentence, not an empty name", async () => {
+    const testId = "ready-no-version";
+    const bridge = makeBridge(mainState({ phase: "downloaded", version: null, progress: 100 }));
+    install(bridge);
+    await mount(<UpdateReadyNotice t={t} />);
+    dump(testId, bridge);
+    const notice = q("update-ready-notice");
+    expect(notice).not.toBeNull();
+    expect(notice!.textContent).toContain(t("update.ready.bodyCurrent"));
+    expect(notice!.textContent).not.toContain("Parrot  is ready");
+  });
+
+  // @req REL-UPD-01
+  it("stays out of the way of a mandatory update (the blocking screen handles it)", async () => {
+    const testId = "ready-mandatory";
+    const bridge = makeBridge(mainState({ phase: "downloaded", version: "3.0.0", progress: 100, mandatory: true }));
+    install(bridge);
+    await mount(<UpdateReadyNotice t={t} />);
+    dump(testId, bridge);
+    expect(q("update-ready-notice")).toBeNull();
+  });
+
+  // @req REL-UPD-01
   it("renders nothing without a bridge (browser build)", async () => {
     const testId = "ready-no-bridge";
     await mount(<UpdateReadyNotice t={t} />);

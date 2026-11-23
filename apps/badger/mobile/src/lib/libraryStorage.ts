@@ -123,6 +123,8 @@ export const getDbPath = () => snapshotDbFile();
 export const getCacheBlobPath = () => cacheBlobFile();
 /** The pending snapshot's own file. */
 export const getPendingSnapshotPath = () => pendingSnapshotFile();
+/** PRIV-KEY-13: the snapshot a key rotation seals under the new key; never the pending snapshot's file. */
+export const getRotationSnapshotPath = () => `${libraryDir()}/rotation.snapshot`;
 
 export const loadCache = async (): Promise<LibraryCache | null> => {
   const cache = await readJson<LibraryCache>(cacheFile());

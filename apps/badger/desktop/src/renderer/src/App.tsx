@@ -10,6 +10,7 @@ import { LoadingScreen } from "./components/LoadingScreen";
 import UpdateReadyNotice from "./components/UpdateReadyNotice";
 import { useUpdater } from "./lib/useUpdater";
 import { SystemUpdatePrompt } from "@space/desktop-shell/updater-system-prompt";
+import { DailyHello } from "./components/DailyHello";
 
 const Login = lazy(() => import("./pages/Login"));
 const Signup = lazy(() => import("./pages/Signup"));
@@ -65,6 +66,7 @@ function AppContent() {
     <CloseLabelProvider label={t("common.close")}>
       <AppRouter>
         <AppRoutes />
+        <DailyHello />
       </AppRouter>
       {mustUpdate ? (
         <Suspense fallback={null}>

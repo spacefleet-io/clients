@@ -934,7 +934,12 @@
         "codeSent": "We sent a verification code. Check your email or authenticator.",
         "errorInvalidPassword": "Incorrect password.",
         "errorTwoFactorInvalid": "Verification code is invalid.",
-        "errorGeneric": "Could not rotate the key. Please try again."
+        "errorGeneric": "Could not rotate the key. Please try again.",
+        "errorNotReencrypted": "Your Parrot library could not be re-locked with the new key from here, so nothing changed. Replace the key from Settings on a computer that has your current key.",
+        "errorUnreadable": "Your current key does not open your Parrot library, so nothing changed.",
+        "errorNotSnapshotted": "Your Parrot library has changes that are not saved yet. Open Parrot, let it finish syncing, then try again. Nothing changed.",
+        "errorReencryptFailed": "Could not re-lock your Parrot library with the new key. Nothing changed. Please try again.",
+        "errorChanged": "Your library changed while the key was being replaced. Nothing changed. Please try again."
       },
       "reset": {
         "title": "Erase library data",

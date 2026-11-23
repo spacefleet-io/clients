@@ -27,6 +27,7 @@ export type KeptLibraryKeyDeps = {
 
 const errorText = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
+// tla: VaultKeys/Start
 export const checkKeptLibraryKey = async (keyBase64: string, deps: KeptLibraryKeyDeps): Promise<KeptLibraryKeyVerdict> => {
   const log = deps.log ?? (() => undefined);
   let probe: string | null;

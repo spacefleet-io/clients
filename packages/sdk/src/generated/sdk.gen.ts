@@ -2,7 +2,7 @@
 
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { ApprovePairingData, ApprovePairingErrors, ApprovePairingResponses, AssignMediaPlacementData, AssignMediaPlacementErrors, AssignMediaPlacementResponses, BootstrapAdminData, BootstrapAdminErrors, BootstrapAdminResponses, BootstrapStatusData, BootstrapStatusResponses, CancelScheduledDeletionData, CancelScheduledDeletionErrors, CancelScheduledDeletionResponses, ChangeEmailAddressData, ChangeEmailAddressErrors, ChangeEmailAddressResponses, ChangePasswordData, ChangePasswordErrors, ChangePasswordResponses, CompleteProviderSignInData, CompleteProviderSignInErrors, CompleteProviderSignInResponses, CompleteStancerPaymentData, CompleteStancerPaymentErrors, CompleteStancerPaymentResponses, ConfirmChangeEmailAddressData, ConfirmChangeEmailAddressErrors, ConfirmChangeEmailAddressResponses, ConfirmEmailTwoFactorEnableData, ConfirmEmailTwoFactorEnableErrors, ConfirmEmailTwoFactorEnableResponses, ConfirmKeepEmailAddressData, ConfirmKeepEmailAddressErrors, ConfirmKeepEmailAddressResponses, ConfirmNewsData, ConfirmNewsErrors, ConfirmNewsResponses, ConfirmPasswordResetData, ConfirmPasswordResetErrors, ConfirmPasswordResetResponses, ConfirmTotpData, ConfirmTotpErrors, ConfirmTotpResponses, CreateCheckoutSessionData, CreateCheckoutSessionErrors, CreateCheckoutSessionResponses, CreatePairingKeyRequestData, CreatePairingKeyRequestErrors, CreatePairingKeyRequestResponses, CreatePairingRequestData, CreatePairingRequestErrors, CreatePairingRequestResponses, CreateProfileData, CreateProfileErrors, CreateProfileResponses, CreateTokenData, CreateTokenErrors, CreateTokenResponses, DeleteAccountData, DeleteAccountErrors, DeleteAccountResponses, DeleteProfileData, DeleteProfileErrors, DeleteProfileResponses, DeleteStorageObjectsData, DeleteStorageObjectsErrors, DeleteStorageObjectsResponses, DenyPairingData, DenyPairingErrors, DenyPairingResponses, DisableTwoFactorData, DisableTwoFactorErrors, DisableTwoFactorResponses, DownloadInvoicePdfData, DownloadInvoicePdfErrors, DownloadInvoicePdfResponses, FinishGuaranteeFreeData, FinishGuaranteeFreeErrors, FinishGuaranteeFreeResponses, GetAccountOverQuotaTitlesData, GetAccountOverQuotaTitlesErrors, GetAccountOverQuotaTitlesResponses, GetAccountSettingsData, GetAccountSettingsErrors, GetAccountSettingsResponses, GetAccountStorageData, GetAccountStorageErrors, GetAccountStorageResponses, GetBillingAddressData, GetBillingAddressErrors, GetBillingAddressResponses, GetBillingStatusData, GetBillingStatusErrors, GetBillingStatusResponses, GetDeletionOptionsData, GetDeletionOptionsErrors, GetDeletionOptionsResponses, GetFounderStatusData, GetFounderStatusErrors, GetFounderStatusResponses, GetGuaranteeData, GetGuaranteeErrors, GetGuaranteeResponses, GetHealthData, GetHealthResponses, GetLibraryDbData, GetLibraryDbErrors, GetLibraryDbResponses, GetLibraryMetaData, GetLibraryMetaErrors, GetLibraryMetaResponses, GetLibraryOpsData, GetLibraryOpsErrors, GetLibraryOpsResponses, GetMeData, GetMeErrors, GetMeResponses, GetMetadataTicketKeyData, GetMetadataTicketKeyErrors, GetMetadataTicketKeyResponses, GetNewsPreferencesData, GetNewsPreferencesErrors, GetNewsPreferencesResponses, GetOpenApiDocumentData, GetOpenApiDocumentResponses, GetPairingRequestData, GetPairingRequestErrors, GetPairingRequestResponses, GetReadinessData, GetReadinessErrors, GetReadinessResponses, GetSponsorshipsData, GetSponsorshipsErrors, GetSponsorshipsResponses, GetStoragePlacementData, GetStoragePlacementErrors, GetStoragePlacementResponses, GetStorageQuotaStatusData, GetStorageQuotaStatusErrors, GetStorageQuotaStatusResponses, GetSubscriptionData, GetSubscriptionErrors, GetSubscriptionResponses, GetSystemContractData, GetSystemContractResponses, HeadStorageObjectsData, HeadStorageObjectsErrors, HeadStorageObjectsResponses, HeartbeatPlaybackStreamData, HeartbeatPlaybackStreamErrors, HeartbeatPlaybackStreamResponses, IssueMetadataTicketsData, IssueMetadataTicketsErrors, IssueMetadataTicketsResponses, KeepEmailAddressData, KeepEmailAddressErrors, KeepEmailAddressResponses, ListDevicesData, ListDevicesErrors, ListDevicesResponses, ListInvoicesData, ListInvoicesErrors, ListInvoicesResponses, ListP2pPeersData, ListP2pPeersErrors, ListP2pPeersResponses, ListProfilesData, ListProfilesErrors, ListProfilesResponses, ListSignInProvidersData, ListSignInProvidersResponses, ListStorageObjectsByAppData, ListStorageObjectsByAppErrors, ListStorageObjectsByAppResponses, ListStorageObjectsData, ListStorageObjectsErrors, ListStorageObjectsResponses, ListTokenScopesData, ListTokenScopesErrors, ListTokenScopesResponses, ListTokensData, ListTokensErrors, ListTokensResponses, LoginData, LoginErrors, LoginResponses, LogoutData, LogoutErrors, LogoutResponses, LookupPairingData, LookupPairingErrors, LookupPairingResponses, MarkFounderNoticeSeenData, MarkFounderNoticeSeenErrors, MarkFounderNoticeSeenResponses, MoveDownWithGuaranteeData, MoveDownWithGuaranteeErrors, MoveDownWithGuaranteeResponses, PostLibraryOpData, PostLibraryOpErrors, PostLibraryOpResponses, PreviewSubscriptionChangeData, PreviewSubscriptionChangeErrors, PreviewSubscriptionChangeResponses, PutBillingAddressData, PutBillingAddressErrors, PutBillingAddressResponses, PutLibraryDbData, PutLibraryDbErrors, PutLibraryDbResponses, ReauthSessionData, ReauthSessionErrors, ReauthSessionResponses, ReconcileStorageQuotaData, ReconcileStorageQuotaErrors, ReconcileStorageQuotaResponses, RegisterP2pPeerData, RegisterP2pPeerErrors, RegisterP2pPeerResponses, RegisterPushDeviceData, RegisterPushDeviceErrors, RegisterPushDeviceResponses, RequestEmailTwoFactorEnableData, RequestEmailTwoFactorEnableErrors, RequestEmailTwoFactorEnableResponses, RequestGuaranteeFreeData, RequestGuaranteeFreeErrors, RequestGuaranteeFreeResponses, RequestPasswordResetData, RequestPasswordResetErrors, RequestPasswordResetResponses, ResendVerificationData, ResendVerificationErrors, ResendVerificationResponses, ResetLibraryData, ResetLibraryErrors, ResetLibraryResponses, ResolveMediaPlacementsData, ResolveMediaPlacementsErrors, ResolveMediaPlacementsResponses, ResubscribeNewsData, ResubscribeNewsErrors, ResubscribeNewsResponses, RevokeDeviceData, RevokeDeviceErrors, RevokeDeviceResponses, RevokeOtherDevicesData, RevokeOtherDevicesErrors, RevokeOtherDevicesResponses, RevokeTokenData, RevokeTokenErrors, RevokeTokenResponses, RotateLibraryKeyData, RotateLibraryKeyErrors, RotateLibraryKeyResponses, SendFeedbackData, SendFeedbackErrors, SendFeedbackResponses, SendP2pRelayMessageData, SendP2pRelayMessageErrors, SendP2pRelayMessageResponses, SetNewsLanguageData, SetNewsLanguageErrors, SetNewsLanguageResponses, SetupTotpData, SetupTotpErrors, SetupTotpResponses, SignupData, SignupErrors, SignupResponses, StartPlaybackStreamData, StartPlaybackStreamErrors, StartPlaybackStreamResponses, StartProviderSignInData, StartProviderSignInErrors, StartProviderSignInResponses, StopPlaybackStreamData, StopPlaybackStreamErrors, StopPlaybackStreamResponses, StreamLibraryEventsData, StreamLibraryEventsErrors, StreamLibraryEventsResponses, StreamP2pRelayData, StreamP2pRelayErrors, StreamP2pRelayResponses, SubmitAbuseAppealData, SubmitAbuseAppealErrors, SubmitAbuseAppealResponses, SubmitAbuseReportData, SubmitAbuseReportErrors, SubmitAbuseReportResponses, SubscribeNewsData, SubscribeNewsErrors, SubscribeNewsResponses, UnregisterPushDeviceData, UnregisterPushDeviceErrors, UnregisterPushDeviceResponses, UnsubscribeNewsData, UnsubscribeNewsErrors, UnsubscribeNewsResponses, UpdateAccountSettingsData, UpdateAccountSettingsErrors, UpdateAccountSettingsResponses, UpdateProfileData, UpdateProfileErrors, UpdateProfileResponses, UpdateSubscriptionData, UpdateSubscriptionErrors, UpdateSubscriptionResponses, VerifyEmailData, VerifyEmailErrors, VerifyEmailResponses } from './types.gen';
+import type { AbandonMediaResealRunData, AbandonMediaResealRunErrors, AbandonMediaResealRunResponses, ApprovePairingData, ApprovePairingErrors, ApprovePairingResponses, AssignMediaPlacementData, AssignMediaPlacementErrors, AssignMediaPlacementResponses, BootstrapAdminData, BootstrapAdminErrors, BootstrapAdminResponses, BootstrapStatusData, BootstrapStatusResponses, CancelPairingRequestData, CancelPairingRequestErrors, CancelPairingRequestResponses, CancelScheduledDeletionData, CancelScheduledDeletionErrors, CancelScheduledDeletionResponses, ChangeEmailAddressData, ChangeEmailAddressErrors, ChangeEmailAddressResponses, ChangePasswordData, ChangePasswordErrors, ChangePasswordResponses, CompleteProviderSignInData, CompleteProviderSignInErrors, CompleteProviderSignInResponses, CompleteStancerPaymentData, CompleteStancerPaymentErrors, CompleteStancerPaymentResponses, ConfirmChangeEmailAddressData, ConfirmChangeEmailAddressErrors, ConfirmChangeEmailAddressResponses, ConfirmEmailTwoFactorEnableData, ConfirmEmailTwoFactorEnableErrors, ConfirmEmailTwoFactorEnableResponses, ConfirmKeepEmailAddressData, ConfirmKeepEmailAddressErrors, ConfirmKeepEmailAddressResponses, ConfirmNewsData, ConfirmNewsErrors, ConfirmNewsResponses, ConfirmPasswordResetData, ConfirmPasswordResetErrors, ConfirmPasswordResetResponses, ConfirmTotpData, ConfirmTotpErrors, ConfirmTotpResponses, ConnectPairingData, ConnectPairingErrors, ConnectPairingResponses, CreateCheckoutSessionData, CreateCheckoutSessionErrors, CreateCheckoutSessionResponses, CreatePairingKeyRequestData, CreatePairingKeyRequestErrors, CreatePairingKeyRequestResponses, CreatePairingRequestData, CreatePairingRequestErrors, CreatePairingRequestResponses, CreateProfileData, CreateProfileErrors, CreateProfileResponses, CreateTokenData, CreateTokenErrors, CreateTokenResponses, DeleteAccountData, DeleteAccountErrors, DeleteAccountResponses, DeleteProfileData, DeleteProfileErrors, DeleteProfileResponses, DeleteStorageObjectsData, DeleteStorageObjectsErrors, DeleteStorageObjectsResponses, DenyPairingData, DenyPairingErrors, DenyPairingResponses, DisableTwoFactorData, DisableTwoFactorErrors, DisableTwoFactorResponses, DownloadInvoicePdfData, DownloadInvoicePdfErrors, DownloadInvoicePdfResponses, FinishGuaranteeFreeData, FinishGuaranteeFreeErrors, FinishGuaranteeFreeResponses, GetAccountOverQuotaTitlesData, GetAccountOverQuotaTitlesErrors, GetAccountOverQuotaTitlesResponses, GetAccountSettingsData, GetAccountSettingsErrors, GetAccountSettingsResponses, GetAccountStorageData, GetAccountStorageErrors, GetAccountStorageResponses, GetBillingAddressData, GetBillingAddressErrors, GetBillingAddressResponses, GetBillingStatusData, GetBillingStatusErrors, GetBillingStatusResponses, GetDeletionOptionsData, GetDeletionOptionsErrors, GetDeletionOptionsResponses, GetDependenciesData, GetDependenciesErrors, GetDependenciesResponses, GetFounderStatusData, GetFounderStatusErrors, GetFounderStatusResponses, GetGuaranteeData, GetGuaranteeErrors, GetGuaranteeResponses, GetHealthData, GetHealthResponses, GetLibraryDbData, GetLibraryDbErrors, GetLibraryDbResponses, GetLibraryKeyRotationReadinessData, GetLibraryKeyRotationReadinessErrors, GetLibraryKeyRotationReadinessResponses, GetLibraryMetaData, GetLibraryMetaErrors, GetLibraryMetaResponses, GetLibraryOpsData, GetLibraryOpsErrors, GetLibraryOpsResponses, GetMeData, GetMediaResealRunData, GetMediaResealRunErrors, GetMediaResealRunResponses, GetMeErrors, GetMeResponses, GetMetadataTicketKeyData, GetMetadataTicketKeyErrors, GetMetadataTicketKeyResponses, GetNewsPreferencesData, GetNewsPreferencesErrors, GetNewsPreferencesResponses, GetOpenApiDocumentData, GetOpenApiDocumentResponses, GetPairingRequestData, GetPairingRequestErrors, GetPairingRequestResponses, GetPairingRevealData, GetPairingRevealErrors, GetPairingRevealResponses, GetReadinessData, GetReadinessErrors, GetReadinessResponses, GetSponsorshipsData, GetSponsorshipsErrors, GetSponsorshipsResponses, GetStoragePlacementData, GetStoragePlacementErrors, GetStoragePlacementResponses, GetStorageQuotaStatusData, GetStorageQuotaStatusErrors, GetStorageQuotaStatusResponses, GetSubscriptionData, GetSubscriptionErrors, GetSubscriptionResponses, GetSystemContractData, GetSystemContractResponses, HeadStorageObjectsData, HeadStorageObjectsErrors, HeadStorageObjectsResponses, HeartbeatPlaybackStreamData, HeartbeatPlaybackStreamErrors, HeartbeatPlaybackStreamResponses, IssueMetadataTicketsData, IssueMetadataTicketsErrors, IssueMetadataTicketsResponses, KeepEmailAddressData, KeepEmailAddressErrors, KeepEmailAddressResponses, ListDevicesData, ListDevicesErrors, ListDevicesResponses, ListInvoicesData, ListInvoicesErrors, ListInvoicesResponses, ListP2pPeersData, ListP2pPeersErrors, ListP2pPeersResponses, ListProfilesData, ListProfilesErrors, ListProfilesResponses, ListSignInProvidersData, ListSignInProvidersResponses, ListStorageObjectsByAppData, ListStorageObjectsByAppErrors, ListStorageObjectsByAppResponses, ListStorageObjectsData, ListStorageObjectsErrors, ListStorageObjectsResponses, ListTokenScopesData, ListTokenScopesErrors, ListTokenScopesResponses, ListTokensData, ListTokensErrors, ListTokensResponses, LoginData, LoginErrors, LoginResponses, LogoutData, LogoutErrors, LogoutResponses, LookupPairingData, LookupPairingErrors, LookupPairingResponses, MarkFounderNoticeSeenData, MarkFounderNoticeSeenErrors, MarkFounderNoticeSeenResponses, MarkMediaResealKeptData, MarkMediaResealKeptErrors, MarkMediaResealKeptResponses, MoveDownWithGuaranteeData, MoveDownWithGuaranteeErrors, MoveDownWithGuaranteeResponses, OpenMediaResealRunData, OpenMediaResealRunErrors, OpenMediaResealRunResponses, PostLibraryOpData, PostLibraryOpErrors, PostLibraryOpResponses, PreviewSubscriptionChangeData, PreviewSubscriptionChangeErrors, PreviewSubscriptionChangeResponses, PutBillingAddressData, PutBillingAddressErrors, PutBillingAddressResponses, PutLibraryDbData, PutLibraryDbErrors, PutLibraryDbResponses, ReauthSessionData, ReauthSessionErrors, ReauthSessionResponses, ReconcileStorageQuotaData, ReconcileStorageQuotaErrors, ReconcileStorageQuotaResponses, RegisterP2pPeerData, RegisterP2pPeerErrors, RegisterP2pPeerResponses, RegisterPushDeviceData, RegisterPushDeviceErrors, RegisterPushDeviceResponses, RequestEmailTwoFactorEnableData, RequestEmailTwoFactorEnableErrors, RequestEmailTwoFactorEnableResponses, RequestGuaranteeFreeData, RequestGuaranteeFreeErrors, RequestGuaranteeFreeResponses, RequestPasswordResetData, RequestPasswordResetErrors, RequestPasswordResetResponses, ResendVerificationData, ResendVerificationErrors, ResendVerificationResponses, ResetLibraryData, ResetLibraryErrors, ResetLibraryResponses, ResolveMediaPlacementsData, ResolveMediaPlacementsErrors, ResolveMediaPlacementsResponses, ResubscribeNewsData, ResubscribeNewsErrors, ResubscribeNewsResponses, RevealPairingData, RevealPairingErrors, RevealPairingResponses, RevokeDeviceData, RevokeDeviceErrors, RevokeDeviceResponses, RevokeOtherDevicesData, RevokeOtherDevicesErrors, RevokeOtherDevicesResponses, RevokeTokenData, RevokeTokenErrors, RevokeTokenResponses, RotateLibraryKeyData, RotateLibraryKeyErrors, RotateLibraryKeyResponses, SayDailyHelloData, SayDailyHelloErrors, SayDailyHelloResponses, SendFeedbackData, SendFeedbackErrors, SendFeedbackResponses, SendP2pRelayMessageData, SendP2pRelayMessageErrors, SendP2pRelayMessageResponses, SetNewsLanguageData, SetNewsLanguageErrors, SetNewsLanguageResponses, SetupTotpData, SetupTotpErrors, SetupTotpResponses, SignupData, SignupErrors, SignupResponses, StartPlaybackStreamData, StartPlaybackStreamErrors, StartPlaybackStreamResponses, StartProviderSignInData, StartProviderSignInErrors, StartProviderSignInResponses, StopPlaybackStreamData, StopPlaybackStreamErrors, StopPlaybackStreamResponses, StreamLibraryEventsData, StreamLibraryEventsErrors, StreamLibraryEventsResponses, StreamP2pRelayData, StreamP2pRelayErrors, StreamP2pRelayResponses, SubmitAbuseAppealData, SubmitAbuseAppealErrors, SubmitAbuseAppealResponses, SubmitAbuseReportData, SubmitAbuseReportErrors, SubmitAbuseReportResponses, SubscribeNewsData, SubscribeNewsErrors, SubscribeNewsResponses, UnregisterPushDeviceData, UnregisterPushDeviceErrors, UnregisterPushDeviceResponses, UnsubscribeNewsData, UnsubscribeNewsErrors, UnsubscribeNewsResponses, UpdateAccountSettingsData, UpdateAccountSettingsErrors, UpdateAccountSettingsResponses, UpdateProfileData, UpdateProfileErrors, UpdateProfileResponses, UpdateSubscriptionData, UpdateSubscriptionErrors, UpdateSubscriptionResponses, VerifyEmailData, VerifyEmailErrors, VerifyEmailResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -31,6 +31,13 @@ export const getHealth = <ThrowOnError extends boolean = false>(options?: Option
  * Whether this copy of the API can serve right now: 503 while it starts (schema pass not finished), as soon as it drains after SIGTERM, and while its database does not answer. Load balancers and the container health check use it; `/health` stays the liveness check.
  */
 export const getReadiness = <ThrowOnError extends boolean = false>(options?: Options<GetReadinessData, ThrowOnError>): RequestResult<GetReadinessResponses, GetReadinessErrors, ThrowOnError> => (options?.client ?? client).get<GetReadinessResponses, GetReadinessErrors, ThrowOnError>({ url: '/ready', ...options });
+
+/**
+ * Dependencies probe
+ *
+ * Whether this copy reaches every dependency it uses: Postgres and Redis. 503 names the first one that does not answer. Unlike `/ready`, Redis counts here; monitoring watches it, load balancers do not.
+ */
+export const getDependencies = <ThrowOnError extends boolean = false>(options?: Options<GetDependenciesData, ThrowOnError>): RequestResult<GetDependenciesResponses, GetDependenciesErrors, ThrowOnError> => (options?.client ?? client).get<GetDependenciesResponses, GetDependenciesErrors, ThrowOnError>({ url: '/deps', ...options });
 
 /**
  * API contract
@@ -75,7 +82,7 @@ export const getLibraryDb = <ThrowOnError extends boolean = false>(options: Opti
 /**
  * Upload library snapshot
  *
- * Accepts an encrypted library snapshot manifest (binary) or legacy base64 payload. Use case: client pushes a new snapshot version after local changes. With `Content-Type: application/octet-stream` the body is the raw encrypted manifest and the metadata travels in `x-library-*` headers (`x-library-version`, `x-library-snapshot-id` and `x-library-chunk-size` are required; `x-library-chunk-refs` is a JSON array of chunk hashes). Any other request is JSON (`PutLibraryDbRequest`) with the manifest base64-encoded. A stale `expectedVersion` answers 409 `version_conflict` unless `force` is set. Storage-gateway failures are relayed with the gateway's status and error code.
+ * Accepts an encrypted library snapshot manifest (binary) or legacy base64 payload. Use case: client pushes a new snapshot version after local changes. With `Content-Type: application/octet-stream` the body is the raw encrypted manifest and the metadata travels in `x-library-*` headers (`x-library-version`, `x-library-snapshot-id` and `x-library-chunk-size` are required; `x-library-chunk-refs` is a JSON array of chunk hashes). Any other request is JSON (`PutLibraryDbRequest`) with the manifest base64-encoded. A stale `expectedVersion` answers 409 `version_conflict` unless `force` is set. A `checkedKeyProbe` that is no longer the account's key probe answers 412 `key_probe_changed`; a session an erase or a key rotation revoked meanwhile answers 401 `unauthorized`. Storage-gateway failures are relayed with the gateway's status and error code.
  *
  * Personal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.
  */
@@ -92,7 +99,7 @@ export const putLibraryDb = <ThrowOnError extends boolean = false>(options: Opti
 /**
  * Library operations since a version
  *
- * Returns the encrypted operations committed after version `since` (default 0), with their ciphertext inlined, and the observed format versions. `tooOld` is true when `since` predates the retained history. With `Accept: application/vnd.space.library-ops` the answer is binary instead (LIB-FMT-13): one frame per op, `u64be version | u32be length | ciphertext`, and the page's state in the `x-library-version`, `x-library-snapshot-version`, `x-library-too-old`, `x-library-has-more` (`1`/`0`), `x-library-storage-format-version`, `x-library-op-stream-version` and `x-library-target-op-stream-version` response headers.
+ * Returns the encrypted operations committed after version `since` (default 0), with their ciphertext inlined, and the observed format versions. `tooOld` is true when `since` predates the retained history. With `Accept: application/vnd.space.library-ops` the answer is binary instead (LIB-FMT-13): one frame per op, `u64be version | u32be length | ciphertext`, and the page's state in the `x-library-version`, `x-library-snapshot-version`, `x-library-too-old`, `x-library-has-more` (`1`/`0`), `x-library-storage-format-version`, `x-library-op-stream-version`, `x-library-target-op-stream-version` and `x-library-state-hash` (empty: the library has none; absent: unknown) response headers.
  *
  * Personal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.
  */
@@ -134,9 +141,22 @@ export const streamLibraryEvents = <ThrowOnError extends boolean = false>(option
 });
 
 /**
+ * Can the library key be rotated
+ *
+ * Tells whether `POST /library/recovery/rotate` would refuse this account with 409 `rotation_needs_media_reseal`: `needsMediaReseal` is true while the account stores objects sealed with the key outside the library snapshots (songs, covers, videos, subtitles, previews). Use case: a client offers a key change exactly when the server accepts it (ACCT-KEYCHG-04) and hides it otherwise. Read-only; it answers for the whole account, every app.
+ *
+ * Personal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.
+ */
+export const getLibraryKeyRotationReadiness = <ThrowOnError extends boolean = false>(options?: Options<GetLibraryKeyRotationReadinessData, ThrowOnError>): RequestResult<GetLibraryKeyRotationReadinessResponses, GetLibraryKeyRotationReadinessErrors, ThrowOnError> => (options?.client ?? client).get<GetLibraryKeyRotationReadinessResponses, GetLibraryKeyRotationReadinessErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/library/recovery/rotate',
+    ...options
+});
+
+/**
  * Rotate library key
  *
- * Rotates the library encryption key after re-auth with 2FA. Use case: user suspects key compromise and re-encrypts the library. The body carries the re-encrypted snapshot (`blobBase64`) and its `keyProbe`; the stored snapshot is replaced and every session of the account is revoked.
+ * Rotates the library encryption key after re-auth with 2FA. Use case: user suspects key compromise and re-encrypts the library. The body carries the caller's library as a snapshot under the new key (`manifestBase64`, its `chunkRefs` uploaded already, as `PUT /library/db` sends it) with the storage format and op stream it is written in, and the new key's `keyProbe`, plus `otherLibraries`: every other app's latest snapshot, opened by the rotating device with the old key and re-encrypted under the new one (chunks already uploaded), each with the version it was read at. In one step the caller's library and every other library are replaced by their copies under the new key and every session of the account is revoked; nothing is deleted. A declared format below the stored one answers 409 `library_format_downgrade`. An app whose library changed since it was read answers 409 `version_conflict` with its `appId` (read again and retry); an app with a library and no copy answers 409 `library_not_reencrypted`; an account that stores media sealed with the key (songs, videos, covers) answers 409 `rotation_needs_media_reseal` until rotation re-seals media too. Nothing is written on a refusal.
  *
  * Personal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.
  */
@@ -153,7 +173,7 @@ export const rotateLibraryKey = <ThrowOnError extends boolean = false>(options: 
 /**
  * Reset library storage
  *
- * Deletes all encrypted library data in the bucket and resets the metadata of every app's library (Badger and Parrot: one key per account, so a lost key locks them all). Use case: user lost the library key and wants a clean reset. Needs re-authentication (password, plus a two-factor code when two-factor is on). The account is emailed afterwards; sessions are kept.
+ * Deletes all encrypted library data in the bucket and resets the metadata of every app's library (Badger and Parrot: one key per account, so a lost key locks them all). Use case: user lost the library key and wants a clean reset. Needs re-authentication (password, plus a two-factor code when two-factor is on). Every other session of the account is signed out in the same step (`revoked: false`: this session is kept, to make the new key). The account is emailed afterwards.
  *
  * Personal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.
  */
@@ -165,6 +185,62 @@ export const resetLibrary = <ThrowOnError extends boolean = false>(options: Opti
         'Content-Type': 'application/json',
         ...options.headers
     }
+});
+
+/**
+ * Open or resume a media reseal run
+ *
+ * STOR-RESEAL-02: starts re-sealing the account's media under its next media library key, or answers the run already open (one per account), so a device that stopped (closed, crashed, offline) resumes where the account stands. Use case: a device asked to change the media library key opens the run, then uploads a copy of each pending object with `resealRunId` and `resealOf`.
+ *
+ * Personal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.
+ */
+export const openMediaResealRun = <ThrowOnError extends boolean = false>(options?: Options<OpenMediaResealRunData, ThrowOnError>): RequestResult<OpenMediaResealRunResponses, OpenMediaResealRunErrors, ThrowOnError> => (options?.client ?? client).post<OpenMediaResealRunResponses, OpenMediaResealRunErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/library/media-reseal/runs',
+    ...options
+});
+
+/**
+ * Progress of a media reseal run
+ *
+ * STOR-RESEAL-02: files and bytes to re-seal and done, and one page of the objects still waiting for a copy. Use case: the device shows progress and an estimate, and plans its next copies from `pending`.
+ *
+ * Personal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.
+ */
+export const getMediaResealRun = <ThrowOnError extends boolean = false>(options: Options<GetMediaResealRunData, ThrowOnError>): RequestResult<GetMediaResealRunResponses, GetMediaResealRunErrors, ThrowOnError> => (options.client ?? client).get<GetMediaResealRunResponses, GetMediaResealRunErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/library/media-reseal/runs/{id}',
+    ...options
+});
+
+/**
+ * Mark media objects the old key cannot open
+ *
+ * STOR-RESEAL-05: objects the current key cannot open (damaged, or sealed under a key the account no longer has) cannot be re-sealed: marked kept, they stay as they are and count as done. Only live media objects of the account are marked.
+ *
+ * Personal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.
+ */
+export const markMediaResealKept = <ThrowOnError extends boolean = false>(options: Options<MarkMediaResealKeptData, ThrowOnError>): RequestResult<MarkMediaResealKeptResponses, MarkMediaResealKeptErrors, ThrowOnError> => (options.client ?? client).post<MarkMediaResealKeptResponses, MarkMediaResealKeptErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/library/media-reseal/runs/{id}/kept',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Abandon a media reseal run
+ *
+ * STOR-RESEAL-07: ends an open run without changing the key: its copies are deleted and removed from their silo, and the account keeps its media under the current key. Use case: the user cancels the key change. Abandoning a run that is no longer open changes nothing.
+ *
+ * Personal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.
+ */
+export const abandonMediaResealRun = <ThrowOnError extends boolean = false>(options: Options<AbandonMediaResealRunData, ThrowOnError>): RequestResult<AbandonMediaResealRunResponses, AbandonMediaResealRunErrors, ThrowOnError> => (options.client ?? client).post<AbandonMediaResealRunResponses, AbandonMediaResealRunErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/library/media-reseal/runs/{id}/abandon',
+    ...options
 });
 
 /**
@@ -1058,6 +1134,13 @@ export const createPairingKeyRequest = <ThrowOnError extends boolean = false>(op
 });
 
 /**
+ * Cancel a pairing request (no auth, pollSecret)
+ *
+ * The receiving device's Cancel (PRIV-PAIR-03): query `pollSecret`; the request is deleted at once, with the session an approved, uncollected sign-in was waiting with. Wrong secret or unknown id: 404. Limited like polls.
+ */
+export const cancelPairingRequest = <ThrowOnError extends boolean = false>(options: Options<CancelPairingRequestData, ThrowOnError>): RequestResult<CancelPairingRequestResponses, CancelPairingRequestErrors, ThrowOnError> => (options.client ?? client).delete<CancelPairingRequestResponses, CancelPairingRequestErrors, ThrowOnError>({ url: '/pairing/requests/{requestId}', ...options });
+
+/**
  * Poll a pairing request (no auth, pollSecret)
  *
  * Query `pollSecret` (constant-time compared; wrong secret and unknown id both answer 404 `pairing_not_found`), optional `wait` seconds (≤ 25) to long-poll. Answers `{ status: pending | expired | denied | consumed }` or, exactly once, `{ status: approved, token, user, sealedKey, clientType }`; the sealed key is erased from the server in the same transaction. The server never holds the library key in clear: `sealedKey` is an X25519 + HKDF-SHA256 + AES-256-GCM box only the new device can open (PRIV-KEY-05). The answer carries `Cache-Control: no-store`. Limited to 20 polls per network address a minute (OPS-LIMIT-02): 429 `rate_limited` with `Retry-After`; long-poll with `wait` to stay well under it.
@@ -1105,6 +1188,50 @@ export const denyPairing = <ThrowOnError extends boolean = false>(options: Optio
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/pairing/requests/{requestId}/deny',
     ...options
+});
+
+/**
+ * Send the approving app's number (pairing check v2)
+ *
+ * PRIV-PAIR-01, the sending app's first step after `GET /pairing/lookup` on a protocol 2 request: body `{ approverNonce }` (32 random bytes, base64; malformed is 400 `invalid_nonce`). The first account to connect owns the request from then on: lookup, approve and deny answer 404 to any other. Sending the same number again answers 200; another number is 409 `pairing_already_used`. A protocol 1 request is 409 `pairing_check_unsupported`. Limited like approve (30 a minute per account).
+ *
+ * Personal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.
+ */
+export const connectPairing = <ThrowOnError extends boolean = false>(options: Options<ConnectPairingData, ThrowOnError>): RequestResult<ConnectPairingResponses, ConnectPairingErrors, ThrowOnError> => (options.client ?? client).post<ConnectPairingResponses, ConnectPairingErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/pairing/requests/{requestId}/connect',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Read the receiving device's number (connected approver)
+ *
+ * PRIV-PAIR-01, the sending app after `connect`: answers `{ status, requesterNonce? }`, the number once the device revealed it. The sending app checks it opens the commitment and shows the check code. Optional `wait` seconds (≤ 25) to long-poll. Only the account that connected sees it (any other: 404). Answers carry `Cache-Control: no-store`; limited like polls (20 a minute per address).
+ *
+ * Personal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.
+ */
+export const getPairingReveal = <ThrowOnError extends boolean = false>(options: Options<GetPairingRevealData, ThrowOnError>): RequestResult<GetPairingRevealResponses, GetPairingRevealErrors, ThrowOnError> => (options.client ?? client).get<GetPairingRevealResponses, GetPairingRevealErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/pairing/requests/{requestId}/reveal',
+    ...options
+});
+
+/**
+ * Reveal the receiving device's number (no auth, pollSecret)
+ *
+ * PRIV-PAIR-01, the receiving device's step once its poll shows `approverNonce`: body `{ pollSecret, requesterNonce }`. The number must open the commitment sent with the request (400 `pairing_commitment_mismatch`); before any app connected it is 409 `pairing_check_pending`. Sending the same number again answers 200. Limited like polls (20 a minute per address).
+ */
+export const revealPairing = <ThrowOnError extends boolean = false>(options: Options<RevealPairingData, ThrowOnError>): RequestResult<RevealPairingResponses, RevealPairingErrors, ThrowOnError> => (options.client ?? client).post<RevealPairingResponses, RevealPairingErrors, ThrowOnError>({
+    url: '/pairing/requests/{requestId}/reveal',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
 });
 
 /**
@@ -1411,6 +1538,20 @@ export const unregisterPushDevice = <ThrowOnError extends boolean = false>(optio
 export const sendFeedback = <ThrowOnError extends boolean = false>(options: Options<SendFeedbackData, ThrowOnError>): RequestResult<SendFeedbackResponses, SendFeedbackErrors, ThrowOnError> => (options.client ?? client).post<SendFeedbackResponses, SendFeedbackErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/feedback',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Daily hello of an app (anonymous)
+ *
+ * Sent once per local day by each app (OPS-BIZ-20). Adds one hello and the two tallies to today's totals (UTC) for the app, platform and version of the `x-space-client` header; nothing else is kept, no account, device or install id and no address. Needs no login and ignores any `Authorization` header. Never refused for an old app version. Limited to 20 per network address an hour (429).
+ */
+export const sayDailyHello = <ThrowOnError extends boolean = false>(options: Options<SayDailyHelloData, ThrowOnError>): RequestResult<SayDailyHelloResponses, SayDailyHelloErrors, ThrowOnError> => (options.client ?? client).post<SayDailyHelloResponses, SayDailyHelloErrors, ThrowOnError>({
+    url: '/usage/hello',
     ...options,
     headers: {
         'Content-Type': 'application/json',

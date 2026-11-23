@@ -38,7 +38,8 @@ const log = (phase: string, data?: unknown) =>
 // ---------------------------------------------------------------------------
 // Fake API
 // ---------------------------------------------------------------------------
-type FakeOp = { version: number; opId: string; payloadCiphertext: string; createdAt: string };
+/** `stateHash`: the library's hash after this op (the API's `next_state_hash`). */
+type FakeOp = { version: number; opId: string; payloadCiphertext: string; createdAt: string; stateHash: string | null };
 type HeldCall = { label: string; release: () => void };
 
 const fake = {
@@ -60,6 +61,10 @@ const fake = {
   holdGetOps: 0,
   // Max ops per getLibraryOps page (0 = unpaged), like the API's `hasMore` paging.
   opsPageSize: 0,
+  // LIB-SYNC-19: the ops page names the hash at its version (false: an API from before that field).
+  opsPageHash: true,
+  // Runs once at the next GET /library/db/meta, before it answers (another device saving in between).
+  beforeMeta: null as (() => Promise<void>) | null,
   // Versions with no op row (a hole in the history): like the API, ops asked across one are tooOld.
   lostOpVersions: new Set<number>(),
   held: [] as HeldCall[],
@@ -85,6 +90,8 @@ const fake = {
     this.holdAfterCommit = 0;
     this.holdGetOps = 0;
     this.opsPageSize = 0;
+    this.opsPageHash = true;
+    this.beforeMeta = null;
     this.lostOpVersions = new Set();
     this.held = [];
     this.calls = [];
@@ -185,6 +192,9 @@ afterAll(() => {
 mock.module("../src/api", () => ({
   ...originalApi,
   getLibraryMeta: async () => {
+    const beforeMeta = fake.beforeMeta;
+    fake.beforeMeta = null;
+    if (beforeMeta) await beforeMeta();
     const meta = fake.meta();
     fake.metaBytes += Buffer.byteLength(JSON.stringify(meta));
     fake.calls.push(`getLibraryMeta -> v=${fake.version}`);
@@ -219,12 +229,15 @@ mock.module("../src/api", () => ({
     const pageOps = fake.opsPageSize > 0 ? ops.slice(0, fake.opsPageSize) : ops;
     const hasMore = pageOps.length < ops.length;
     fake.calls.push(`getLibraryOps since=${since} -> ${tooOld ? "tooOld" : `[${ops.map((op) => op.version).join(",")}]`}`);
+    const pageVersion = pageOps.length && hasMore ? pageOps[pageOps.length - 1]!.version : fake.version;
+    const pageHash = pageOps.length && hasMore ? pageOps[pageOps.length - 1]!.stateHash : fake.stateHash;
     return {
-      version: pageOps.length && hasMore ? pageOps[pageOps.length - 1]!.version : fake.version,
+      version: pageVersion,
       snapshotVersion: fake.snapshotVersion,
       tooOld,
       ops: pageOps.map((op) => ({ ...op, objectKey: `library/ops/${op.opId}`, size: Buffer.from(op.payloadCiphertext, "base64").length })),
       hasMore,
+      ...(fake.opsPageHash ? { stateHash: pageHash } : {}),
       storageFormatVersion: 1,
       opStreamVersion: 1,
     };
@@ -264,6 +277,7 @@ mock.module("../src/api", () => ({
       opId,
       payloadCiphertext: Buffer.from(payload).toString("base64"),
       createdAt: new Date().toISOString(),
+      stateHash: fake.stateHash,
     });
     fake.calls.push(`${label} -> committed v=${fake.version}`);
     const result = { version: fake.version, snapshotVersion: fake.snapshotVersion, stateHash: fake.stateHash, lastOpId: opId };
@@ -339,6 +353,8 @@ let root = "";
 type Internals = {
   version: number;
   remoteVersion: number;
+  /** The hash the next op chains on (`x-library-prev-state-hash`). */
+  stateHash: string | null;
   opsFlushInFlight: boolean;
   pendingOps: Array<{ type: string; payload: { progressPct?: number } }>;
   /** Non-progress ops since the last snapshot (LIB-SYNC-07) and their ciphertext bytes (LIB-SYNC-12). */
@@ -457,6 +473,7 @@ const pushRemoteProgress = async (mediaId: string, progressPct: number) => {
     opId: op.id,
     payloadCiphertext: Buffer.from(encrypted).toString("base64"),
     createdAt: op.createdAt,
+    stateHash: fake.stateHash,
   });
   fake.calls.push(`remote device committed media.progress=${progressPct} v=${fake.version}`);
 };
@@ -954,6 +971,44 @@ describe("LIB-SYNC-07 — viewing progress never causes a full save of the libra
     db.close();
   }, 60_000);
 
+  // F1 of the library sync model (tools/verify/library-sync, cfg finding_f1): the full copy is this device's copy, so
+  // publishing it on top of a meta version this device has not synced to drops the other device's change from every
+  // copy a new reader downloads.
+  // @req LIB-SYNC-20[runtime]
+  it("LIB-SYNC-20: a change another device saves between the flush and the compaction meta read keeps the full copy back", async () => {
+    const { db, mediaId } = await bootstrapWithMovie();
+    const counted = internalsOf(db).opsSinceSnapshot.count;
+    const publishedAtStart = snapshotsPublished();
+    for (let i = 0; i < SNAPSHOT_THRESHOLD - 1 - counted; i += 1) db.setSetting(`ui.pref.${i}`, String(i));
+    await flushUntilDrained(db);
+    expect(snapshotsPublished() - publishedAtStart).toBe(0);
+
+    fake.beforeMeta = () => pushRemoteProgress(mediaId, 77);
+    db.setSetting("ui.pref.threshold", "reached");
+    await flushUntilDrained(db);
+    const remoteOp = fake.ops.at(-1)!;
+    const measured = {
+      remoteOpVersion: remoteOp.version,
+      deviceRemoteVersion: internalsOf(db).remoteVersion,
+      snapshotsPublished: snapshotsPublished() - publishedAtStart,
+      serverSnapshotVersion: fake.snapshotVersion,
+      lastCalls: fake.calls.slice(-6),
+    };
+    log("measure:LIB-SYNC-20 remote op between flush and compaction meta", measured);
+    expect(measured.deviceRemoteVersion).toBe(remoteOp.version - 1);
+    expect(measured.snapshotsPublished).toBe(0);
+    expect(measured.serverSnapshotVersion).toBeLessThan(remoteOp.version);
+
+    // Once the sync brought the change in, the next flush publishes the full copy, holding it.
+    await db.applyPreparedRemoteSync(await db.prepareRemoteSync(null));
+    expect(progressOf(db, mediaId)).toBe(77);
+    db.setSetting("ui.pref.after-sync", "x");
+    await flushUntilDrained(db);
+    expect(snapshotsPublished() - publishedAtStart).toBe(1);
+    expect(fake.snapshotVersion).toBeGreaterThan(remoteOp.version);
+    db.close();
+  }, 60_000);
+
   const TAIL_BYTES = 16 * 1024 * 1024; // SNAPSHOT_TAIL_BYTES_THRESHOLD in library-db-definition/opClass.ts
 
   // @req LIB-SYNC-12[badger-desktop]
@@ -1000,7 +1055,13 @@ describe("LIB-SYNC-07 — viewing progress never causes a full save of the libra
     fake.version += 1;
     fake.stateHash = `remote-device-${fake.version}`;
     fake.lastOpId = op.id;
-    fake.ops.push({ version: fake.version, opId: op.id, payloadCiphertext: Buffer.from(encrypted).toString("base64"), createdAt: op.createdAt });
+    fake.ops.push({
+      version: fake.version,
+      opId: op.id,
+      payloadCiphertext: Buffer.from(encrypted).toString("base64"),
+      createdAt: op.createdAt,
+      stateHash: fake.stateHash,
+    });
     await pushRemoteProgress(mediaId, 12); // progress-class: never counts
     const outcome = await db.applyPreparedRemoteSync(await db.prepareRemoteSync(null));
     const after = internalsOf(db).opsSinceSnapshot;
@@ -1117,6 +1178,65 @@ describe("stale meta must not roll the lineage hash back (lineage_conflict loop,
     await waitFor("progress 30 uploaded", () => drained(db), 15_000);
     const uploadCalls = fake.calls.slice(callsBefore).filter((call) => call.startsWith("putLibraryOp"));
     log("upload calls", uploadCalls);
+    expect(uploadCalls.some((call) => call.endsWith("409 lineage"))).toBe(false);
+    expect(await serverProgress(mediaId)).toBe(30);
+    db.close();
+  }, 30_000);
+});
+
+// @req LIB-SYNC-19[runtime]
+describe("LIB-SYNC-19 — a sync leaves the device holding the hash of the version it moved to (finding F2)", () => {
+  // LibrarySync.tla finding F2: prepareRemoteSync read meta (version v, hash H(v)), another device's op landed, the
+  // ops fetch returned up to v+1, and applyRemoteOps moved to v+1 keeping H(v). The next op went out as
+  // (base v+1, prev H(v)) and was refused 409 lineage_conflict.
+  const raceSync = async (db: Db, mediaId: string) => {
+    await pushRemoteProgress(mediaId, 20);
+    const meta = fake.meta();
+    log("phase:sync with meta at v, its ops fetch held while another device commits v+1", { metaVersion: meta.version });
+    fake.holdGetOps = 1;
+    const syncing = db.syncFromRemoteIfNewer(meta);
+    await waitFor("ops fetch in flight and held", () => fake.held.length === 1);
+    await pushRemoteProgress(mediaId, 25);
+    fake.releaseAllHeld();
+    await syncing;
+    dumpState("after-race-sync", db, mediaId);
+    return meta;
+  };
+
+  const nextSaveCalls = async (db: Db, mediaId: string) => {
+    const callsBefore = fake.calls.length;
+    db.setProgress(mediaId, 30);
+    await waitFor("progress 30 uploaded", () => drained(db), 15_000);
+    const uploadCalls = fake.calls.slice(callsBefore).filter((call) => call.startsWith("putLibraryOp"));
+    log("upload calls", uploadCalls);
+    return uploadCalls;
+  };
+
+  it("@bugfix @regression-proof an op landing between the meta read and the ops read: the next save is never refused lineage_conflict", async () => {
+    const { db, mediaId } = await bootstrapWithMovie();
+    db.setProgress(mediaId, 10);
+    await waitFor("progress 10 uploaded", () => drained(db));
+    await raceSync(db, mediaId);
+    expect(internalsOf(db).remoteVersion).toBe(fake.version);
+    expect(internalsOf(db).stateHash).toBe(fake.stateHash);
+    expect(progressOf(db, mediaId)).toBe(25);
+    const uploadCalls = await nextSaveCalls(db, mediaId);
+    expect(uploadCalls.some((call) => call.endsWith("409 lineage"))).toBe(false);
+    expect(uploadCalls.length).toBe(1);
+    expect(await serverProgress(mediaId)).toBe(30);
+    db.close();
+  }, 30_000);
+
+  it("against an API from before the page hash, the sync stops at the meta's version and keeps its hash", async () => {
+    const { db, mediaId } = await bootstrapWithMovie();
+    db.setProgress(mediaId, 10);
+    await waitFor("progress 10 uploaded", () => drained(db));
+    fake.opsPageHash = false;
+    const meta = await raceSync(db, mediaId);
+    expect(internalsOf(db).remoteVersion).toBe(meta.version);
+    expect(internalsOf(db).stateHash).toBe(meta.stateHash);
+    expect(progressOf(db, mediaId)).toBe(20);
+    const uploadCalls = await nextSaveCalls(db, mediaId);
     expect(uploadCalls.some((call) => call.endsWith("409 lineage"))).toBe(false);
     expect(await serverProgress(mediaId)).toBe(30);
     db.close();

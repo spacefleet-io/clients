@@ -5,8 +5,7 @@
  * one-shots); one ipc listener each tripped Node's MaxListenersExceededWarning
  * (> 10) even though every subscriber unsubscribed correctly.
  */
-// Listener args are `any` to match Electron's `IpcRenderer.on` signature.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- listener args match Electron's `IpcRenderer.on` signature
 type IpcListener = (event: unknown, ...args: any[]) => void;
 type IpcLike = {
   on(channel: string, listener: IpcListener): unknown;

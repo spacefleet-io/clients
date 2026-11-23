@@ -5,12 +5,15 @@
  * @req PAR-TV-02[parrot-tv]
  * @req PAR-TV-10[parrot-tv]
  * @req PAR-TV-12[parrot-tv]
+ * @req ACCT-UNPAID-03[parrot-tv]
  * @why The Parrot TV app is the phone app showing its TV screens (PAR-TV-01): on a TV the start goes language, the
  *   sign-in by pairing (the family's TV sign-in with Parrot's pairing, the phone's password form behind "Use email and
  *   password instead"), the key only after a password sign-in, then "Who's listening?" at every start, then the TV shell
  *   with the top bar, where Back on a tab other than Home returns Home (PAR-TV-10). The TV screens are the shared
  *   mobile-shell ones and are tried on a TV; this pins Parrot's order and wiring, and the packaging (launcher entry,
- *   banner, phone-only portrait lock, the separate ParrotTV target and scheme) that makes the same app a TV app.
+ *   banner, phone-only portrait lock, the separate ParrotTV target and scheme) that makes the same app a TV app. An
+ *   unpaid account sees the shared unpaid notice (wipe date, playback stopped, no pay pointer) under the top bar on
+ *   every section, sized for the TV (ACCT-UNPAID-03, Chris 2026-11-23).
  * @covers apps/parrot/mobile/src/tv/TvGates.tsx
  * @covers apps/parrot/mobile/src/tv/TvMainShell.tsx
  * @covers apps/parrot/mobile/src/tv/tvPages.tsx
@@ -27,6 +30,7 @@ import type { TvPages } from "../src/tv/tvPages";
 const h = vi.hoisted(() => ({
   session: null as { token: string; user: { id: string } } | null,
   libraryKey: null as string | null,
+  access: null as { state: string; wipeAt: string | null } | null,
   profiles: { status: "ready", needsChoice: false, profiles: [] as { id: string }[], activeId: null as string | null },
   backHandlers: [] as Array<() => boolean>,
   menuHolds: [] as Array<[string, boolean]>,
@@ -43,6 +47,7 @@ const h = vi.hoisted(() => ({
 
 vi.mock("react-native", () => ({
   Platform: { OS: "android", isTV: true },
+  useWindowDimensions: () => ({ width: 1920, height: 1080 }),
   StyleSheet: { create: <T,>(styles: T) => styles, absoluteFill: {} },
   View: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
   BackHandler: {
@@ -59,6 +64,7 @@ vi.mock("@space/mobile-shell/tv/TvProfiles", () => ({ TvProfilesView: (_: unknow
 vi.mock("@space/mobile-shell/tv/TvSignIn", () => ({ TvSignInScreen: (_: unknown) => null }));
 vi.mock("../src/tv/TvPlayerSky", () => ({ TvPlayerSky: ({ children }: { children?: React.ReactNode }) => <>{children}</> }));
 vi.mock("@space/mobile-shell/tv/TvTopBar", () => ({ TvTopBar: (_: unknown) => null }));
+vi.mock("@space/mobile-shell/unpaid-access-banner", () => ({ UnpaidAccessBanner: (_: unknown) => null }));
 vi.mock("@space/mobile-shell/tv/useTvMenuKey", () => ({
   useTvMenuKeyHold: (reason: string, active: boolean) => void h.menuHolds.push([reason, active]),
 }));
@@ -67,7 +73,9 @@ vi.mock("../src/lib/playback", () => ({ stopPlayback: async () => void (h.stops 
 vi.mock("../src/lib/profiles", () => ({ parrotProfileMoves: { name: "moves" }, profileStore: { name: "store" }, useProfiles: () => h.profiles }));
 vi.mock("../src/screens/LibraryKeyScreen", () => ({ LibraryKeyScreen: () => null }));
 vi.mock("../src/screens/LoginScreen", () => ({ LoginScreen: () => null }));
-vi.mock("../src/state/session", () => ({ useSession: () => ({ session: h.session, libraryKey: h.libraryKey }) }));
+vi.mock("../src/state/session", () => ({
+  useSession: () => ({ session: h.session, libraryKey: h.libraryKey, access: h.access }),
+}));
 vi.mock("../src/tv/useTvPairing", () => ({ useTvPairing: () => ({ state: { status: "idle" }, restart: () => undefined }) }));
 vi.mock("@space/mobile-shell/render-boundary", () => ({ MobileRenderBoundary: ({ children }: { children?: React.ReactNode }) => <>{children}</> }));
 vi.mock("../src/tv/useTvRemoteKeys", () => ({ useTvRemoteKeys: () => void (h.remoteKeys += 1) }));
@@ -114,6 +122,7 @@ import { TvLanguageView } from "@space/mobile-shell/tv/TvLanguage";
 import { TvProfilesView } from "@space/mobile-shell/tv/TvProfiles";
 import { TvSignInScreen } from "@space/mobile-shell/tv/TvSignIn";
 import { TvTopBar } from "@space/mobile-shell/tv/TvTopBar";
+import { UnpaidAccessBanner } from "@space/mobile-shell/unpaid-access-banner";
 import { LibraryKeyScreen } from "../src/screens/LibraryKeyScreen";
 import { LoginScreen } from "../src/screens/LoginScreen";
 import { TvGates, tvStartScreen } from "../src/tv/TvGates";
@@ -156,6 +165,7 @@ const shown = (type: React.ElementType) =>
 
 beforeEach(() => {
   h.session = null;
+  h.access = null;
   h.libraryKey = null;
   h.profiles = { status: "ready", needsChoice: false, profiles: [], activeId: null };
   h.backHandlers = [];
@@ -343,6 +353,19 @@ describe("@req PAR-TV-10[parrot-tv] Parrot TV shell: the top bar, the page stack
     await act(async () => view.onClose!());
     expect(has(TvProfilesView)).toBe(false);
     expect(has(TvHomeSection)).toBe(true);
+  });
+});
+
+describe("@req ACCT-UNPAID-03[parrot-tv] Parrot TV: the unpaid notice", () => {
+  it("shows the account's access under the top bar, sized for the TV, whatever section is open", async () => {
+    h.access = { state: "unpaid", wipeAt: "2027-01-22T00:00:00.000Z" };
+    await mount(<TvMainShell />);
+    const banner = props(UnpaidAccessBanner);
+    console.info(`${SUITE} unpaid`, JSON.stringify(banner));
+    expect(banner.access).toEqual(h.access);
+    expect(banner.scale).toBeGreaterThan(0);
+    await act(async () => void props(TvTopBar).onSelect("settings"));
+    expect(props(UnpaidAccessBanner).access).toEqual(h.access);
   });
 });
 

@@ -18,17 +18,18 @@
 //
 // Load noise: CI runs ~300 test files in 11 parallel forks on a shared
 // runner, so the OS can deschedule this thread for tens of ms no matter what
-// it runs (staging CI job 29750 saw 46 ms / 80 ms after the fix landed). Each
-// case therefore takes the BEST of TRIALS measurements against the unchanged
-// 20 ms budget. A blocking decrypt fails every trial (the sync fan-out blocked
-// 38–72 ms on each run), so the best trial still catches it, while a
-// one-off scheduler stall cannot fail the test alone. Every trial also logs
-// an idle baseline (same window, no work) so a failure shows whether the
-// runner itself was stalling.
+// it runs (staging CI job 29750 saw 46 ms / 80 ms; run 32773 failed the old
+// absolute 20 ms bound, issue #2399). So the bound is relative (issue #3350
+// C6): every trial also runs the pre-fix synchronous decrypt of the same
+// objects on the main loop, in the same run on the same loaded runner, and
+// the best pool-decrypt delay must stay under MAX_DELAY_RATIO of the median
+// blocking delay. A blocking implementation stalls as long as the reference
+// (ratio ~1) and fails; the pool measures ~0.05-0.15 of it on a dev machine,
+// and runner load slows both sides alike. The absolute 20 ms budget lives in
+// the non-gating perf lane (media-decrypt-loop-budget.perf.test.ts).
 import crypto from "node:crypto";
-import { monitorEventLoopDelay } from "node:perf_hooks";
-import { setTimeout as sleep } from "node:timers/promises";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { formatMs, measureIdleLoopDelayMs, measureLoopDelayMs, median } from "./_helpers/loopDelay";
 import {
   decryptMediaObject,
   deriveMediaMasterKey,
@@ -42,7 +43,7 @@ import {
 
 const OBJECT_BYTES = 8 * 1024 * 1024;
 const SEEK_FANOUT = 8;
-const MAX_LOOP_DELAY_MS = 20;
+const MAX_DELAY_RATIO = 0.5;
 const TRIALS = 7;
 
 const masterKey = deriveMediaMasterKey(crypto.randomBytes(32));
@@ -62,38 +63,31 @@ const referenceDecrypt = (payload: Buffer) => {
   return decrypted.subarray(6, 6 + decrypted.readUInt32LE(0));
 };
 
-// Real timers on purpose: monitorEventLoopDelay samples the real event loop
-// against the platform clock, which fake timers cannot drive.
-const measureLoopDelayMs = async (work: () => Promise<unknown>) => {
-  const histogram = monitorEventLoopDelay({ resolution: 1 });
-  histogram.enable();
-  // Let the histogram's timer arm before the work starts.
-  await sleep(5);
-  await work();
-  await sleep(5);
-  histogram.disable();
-  return histogram.max / 1e6;
-};
+type TrialReport = { label: string; delaysMs: number[]; blockingMs: number[]; idleMs: number[]; bestMs: number; blockingMedianMs: number };
+type Trial = { work: () => Promise<unknown>; blocking: () => void };
 
-type TrialReport = { label: string; delaysMs: number[]; idleMs: number[]; bestMs: number };
-
-// Runs `trial` TRIALS times, each preceded by an idle-baseline measurement,
-// and returns the best (lowest) max loop delay plus the full log.
-const measureBestOfTrials = async (label: string, prepare: () => () => Promise<unknown>): Promise<TrialReport> => {
+// Runs a trial TRIALS times. Each one measures an idle window, the pool
+// decrypt (`work`) and the synchronous reference decrypt of the same objects
+// (`blocking`), and the report keeps the best pool delay and the median
+// blocking delay of the run, plus the full log.
+const measureBestOfTrials = async (label: string, prepare: () => Trial): Promise<TrialReport> => {
   const delaysMs: number[] = [];
+  const blockingMs: number[] = [];
   const idleMs: number[] = [];
   for (let i = 0; i < TRIALS; i += 1) {
     // Prepare outside the window: inputs are copied fresh each trial because
     // decryptMediaObject takes ownership of (and may detach) its input.
-    const work = prepare();
-    idleMs.push(await measureLoopDelayMs(() => sleep(1)));
+    const { work, blocking } = prepare();
+    idleMs.push(await measureIdleLoopDelayMs());
     delaysMs.push(await measureLoopDelayMs(work));
+    blockingMs.push(await measureLoopDelayMs(blocking));
   }
-  const report = { label, delaysMs, idleMs, bestMs: Math.min(...delaysMs) };
+  const report = { label, delaysMs, blockingMs, idleMs, bestMs: Math.min(...delaysMs), blockingMedianMs: median(blockingMs) };
   console.info(
-    `[media-decrypt-event-loop] ${label}: best max loop delay ${report.bestMs.toFixed(1)} ms; ` +
-      `trials [${delaysMs.map((ms) => ms.toFixed(1)).join(", ")}] ms; ` +
-      `idle baseline [${idleMs.map((ms) => ms.toFixed(1)).join(", ")}] ms`,
+    `[media-decrypt-event-loop] ${label}: best max loop delay ${report.bestMs.toFixed(1)} ms ` +
+      `vs blocking reference median ${report.blockingMedianMs.toFixed(1)} ms ` +
+      `(ratio ${(report.bestMs / report.blockingMedianMs).toFixed(2)}, max ${MAX_DELAY_RATIO}); ` +
+      `trials ${formatMs(delaysMs)}; blocking ${formatMs(blockingMs)}; idle baseline ${formatMs(idleMs)}`,
   );
   return report;
 };
@@ -148,34 +142,40 @@ describe("media object decrypt keeps the main event loop free (@bugfix @regressi
     expect(view.equals(payload)).toBe(true);
   });
 
-  it(`keeps event-loop delay below ${MAX_LOOP_DELAY_MS} ms while decrypting an 8 MB object`, async () => {
+  it(`stalls the main loop under ${MAX_DELAY_RATIO} of the blocking decrypt's delay while decrypting an 8 MB object`, async () => {
     // Warm the pool so the measurement is steady-state.
     await decryptMediaObject(Buffer.from(payload));
     const results: Buffer[] = [];
     const report = await measureBestOfTrials("single 8 MB object", () => {
       const input = Buffer.from(payload);
-      return async () => {
-        results.push((await decryptMediaObject(input)).plaintext);
+      return {
+        work: async () => {
+          results.push((await decryptMediaObject(input)).plaintext);
+        },
+        blocking: () => referenceDecrypt(payload),
       };
     });
     expect(results).toHaveLength(TRIALS);
     expect(results.every((result) => result.equals(plaintext))).toBe(true);
-    expect(report.bestMs).toBeLessThan(MAX_LOOP_DELAY_MS);
+    expect(report.bestMs).toBeLessThan(report.blockingMedianMs * MAX_DELAY_RATIO);
   });
 
-  it(`keeps event-loop delay below ${MAX_LOOP_DELAY_MS} ms during a seek fan-out of ${SEEK_FANOUT} × 8 MB objects`, async () => {
+  it(`stalls the main loop under ${MAX_DELAY_RATIO} of the blocking decrypt's delay during a seek fan-out of ${SEEK_FANOUT} × 8 MB objects`, async () => {
     const encrypted = Array.from({ length: SEEK_FANOUT }, () => encryptMediaObject(plaintext, 32 * 1024));
     await decryptMediaObject(Buffer.from(payload));
     const results: Buffer[] = [];
     const report = await measureBestOfTrials(`${SEEK_FANOUT} × 8 MB seek fan-out`, () => {
       const inputs = encrypted.map((item) => Buffer.from(item));
-      return async () => {
-        const decrypted = await Promise.all(inputs.map((item) => decryptMediaObject(item)));
-        results.push(...decrypted.map((result) => result.plaintext));
+      return {
+        work: async () => {
+          const decrypted = await Promise.all(inputs.map((item) => decryptMediaObject(item)));
+          results.push(...decrypted.map((result) => result.plaintext));
+        },
+        blocking: () => encrypted.forEach((item) => referenceDecrypt(item)),
       };
     });
     expect(results).toHaveLength(TRIALS * SEEK_FANOUT);
     expect(results.every((result) => result.equals(plaintext))).toBe(true);
-    expect(report.bestMs).toBeLessThan(MAX_LOOP_DELAY_MS);
+    expect(report.bestMs).toBeLessThan(report.blockingMedianMs * MAX_DELAY_RATIO);
   });
 });

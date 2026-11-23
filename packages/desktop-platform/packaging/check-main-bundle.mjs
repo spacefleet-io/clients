@@ -1,12 +1,14 @@
 import { existsSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join, resolve } from "node:path";
 
 import { findUnbundledWorkspaceImports } from "./check-main-bundle-lib.mjs";
 
-// Optional argument: the desktop app directory to check. Defaults to the app
-// this script lives in.
-const appDir = process.argv[2] ? resolve(process.argv[2]) : join(dirname(fileURLToPath(import.meta.url)), "..");
+// Required argument: the desktop app directory to check (both apps' `check:main-bundle` pass `.`).
+if (!process.argv[2]) {
+  console.error("usage: node check-main-bundle.mjs <desktop app dir>");
+  process.exit(2);
+}
+const appDir = resolve(process.argv[2]);
 const outDir = join(appDir, "out");
 const bundleDirs = [join(outDir, "main"), join(outDir, "preload")];
 

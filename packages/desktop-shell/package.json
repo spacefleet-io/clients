@@ -43,7 +43,8 @@
     "./password-reset": "./src/passwordReset.ts",
     "./client-identity": "./src/clientIdentity.ts",
     "./sibling": "./src/sibling/types.ts",
-    "./sibling-main": "./src/sibling/index.ts"
+    "./sibling-main": "./src/sibling/index.ts",
+    "./test-keychain-args": "./src/testKeychainArgs.mjs"
   },
   "devDependencies": {
     "typescript": "^6.0.3",

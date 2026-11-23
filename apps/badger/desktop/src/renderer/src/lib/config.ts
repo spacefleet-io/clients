@@ -11,6 +11,7 @@ import {
   type QualityPreset,
 } from "../../../shared/quality";
 import { coerceLaneCap, coerceWatchedDirectories, type WatchedDirectory } from "../../../shared/deviceCapacity";
+import { rendererLogger } from "@/logger";
 
 export type SkipMode = "auto" | "manual";
 export type { QualityPreset, CodecPreset };
@@ -310,7 +311,7 @@ export function loadClientConfig(): ClientConfig {
   const config = normalizeClientConfig(stored);
   if (stored && typeof stored === "object" && "metadataAccess" in stored) {
     // META-DIRECT-03 migration: persist the config without the removed own-key setting (and its key), once.
-    console.info("[config] dropped the removed own-key setting (META-DIRECT-03)");
+    rendererLogger.child({ scope: "config" }).info("[config] dropped the removed own-key setting (META-DIRECT-03)");
     writeJson(CONFIG_KEY, config);
   }
   return config;

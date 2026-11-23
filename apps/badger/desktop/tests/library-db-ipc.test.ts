@@ -2,19 +2,29 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const openMock = vi.hoisted(() => vi.fn());
 const openLocalMock = vi.hoisted(() => vi.fn());
-const getLocalCacheBytesMock = vi.hoisted(() => vi.fn());
+const sealLocalCacheForRotationMock = vi.hoisted(() => vi.fn());
 const hasLocalCacheMock = vi.hoisted(() => vi.fn());
 const clearLocalCacheMock = vi.hoisted(() => vi.fn());
 const loggerInfoMock = vi.hoisted(() => vi.fn());
 const loggerWarnMock = vi.hoisted(() => vi.fn());
 const loggerErrorMock = vi.hoisted(() => vi.fn());
 const fetchMock = vi.hoisted(() => vi.fn());
+/** What `LibraryDb.sealLocalCacheForRotation` answers (PRIV-KEY-13). */
+const SEALED = {
+  manifestBase64: "bWFuaWZlc3Q=",
+  snapshotId: "own-1",
+  chunkSize: 4194304,
+  chunkRefs: ["c0ffee01"],
+  chunkRefsSource: { client: "desktop-runtime", refsVersion: 1 },
+  storageFormatVersion: 2,
+  opStreamVersion: 3,
+};
 
 vi.mock("@space/library-db-runtime", () => ({
   LibraryDb: {
     open: (...args: unknown[]) => openMock(...args),
     openLocal: (...args: unknown[]) => openLocalMock(...args),
-    getLocalCacheBytes: (...args: unknown[]) => getLocalCacheBytesMock(...args),
+    sealLocalCacheForRotation: (...args: unknown[]) => sealLocalCacheForRotationMock(...args),
     hasLocalCache: (...args: unknown[]) => hasLocalCacheMock(...args),
     clearLocalCache: (...args: unknown[]) => clearLocalCacheMock(...args),
   },
@@ -67,7 +77,7 @@ const dumpLibraryDbIpcSnapshot = (
     handlers?: string[];
     openMockCalls?: unknown;
     openLocalMockCalls?: unknown;
-    getLocalCacheBytesCalls?: unknown;
+    sealLocalCacheForRotationCalls?: unknown;
     hasLocalCacheCalls?: unknown;
     clearLocalCacheCalls?: unknown;
     fetchMockCalls?: unknown;
@@ -114,8 +124,8 @@ const dumpLibraryDbIpcSnapshot = (
     if (ctx.openLocalMockCalls !== undefined) {
       console.error(`openLocalMock.calls:\n${JSON.stringify(ctx.openLocalMockCalls, jsonReplacer, 2)}`);
     }
-    if (ctx.getLocalCacheBytesCalls !== undefined) {
-      console.error(`getLocalCacheBytesMock.calls:\n${JSON.stringify(ctx.getLocalCacheBytesCalls, jsonReplacer, 2)}`);
+    if (ctx.sealLocalCacheForRotationCalls !== undefined) {
+      console.error(`sealLocalCacheForRotationMock.calls:\n${JSON.stringify(ctx.sealLocalCacheForRotationCalls, jsonReplacer, 2)}`);
     }
     if (ctx.hasLocalCacheCalls !== undefined) {
       console.error(`hasLocalCacheMock.calls:\n${JSON.stringify(ctx.hasLocalCacheCalls, jsonReplacer, 2)}`);
@@ -188,7 +198,7 @@ describe("libraryDbIpc integration", () => {
     resetLibraryDbIpcForTests();
     openMock.mockReset();
     openLocalMock.mockReset();
-    getLocalCacheBytesMock.mockReset();
+    sealLocalCacheForRotationMock.mockReset();
     hasLocalCacheMock.mockReset();
     clearLocalCacheMock.mockReset();
     loggerInfoMock.mockReset();
@@ -364,7 +374,7 @@ describe("libraryDbIpc integration", () => {
     const { ipc, handlers } = createIpcHarness();
     const { win } = createWindowHarness();
 
-    getLocalCacheBytesMock.mockResolvedValue(new Uint8Array([1, 2, 3]));
+    sealLocalCacheForRotationMock.mockResolvedValue(SEALED);
     hasLocalCacheMock.mockResolvedValue(true);
     openLocalMock.mockResolvedValue({
       close: vi.fn(),
@@ -396,22 +406,22 @@ describe("libraryDbIpc integration", () => {
       throw err;
     }
 
-    console.info(`[${SUITE}:${label}] invoking sf-library-db-get-local-cache-bytes arg=abc`);
-    const bytes = await handlers.get("sf-library-db-get-local-cache-bytes")?.(null, "abc");
+    console.info(`[${SUITE}:${label}] invoking sf-library-db-seal-local-cache-for-rotation`);
+    const sealed = await handlers.get("sf-library-db-seal-local-cache-for-rotation")?.(null, { token: "token", newKeyBase64: "new" });
     console.info(
-      `[${SUITE}:${label}] bytes received: ${bytes instanceof Uint8Array ? `<Uint8Array bytes=${bytes.byteLength}>` : typeof bytes} getLocalCacheBytesMock.calls=${getLocalCacheBytesMock.mock.calls.length}`
+      `[${SUITE}:${label}] sealed received: ${JSON.stringify(sealed)} sealLocalCacheForRotationMock.calls=${sealLocalCacheForRotationMock.mock.calls.length}`
     );
     try {
-      expect(bytes).toEqual(new Uint8Array([1, 2, 3]));
-      expect(getLocalCacheBytesMock).toHaveBeenCalledWith("abc");
+      expect(sealed).toEqual(SEALED);
+      expect(sealLocalCacheForRotationMock).toHaveBeenCalledWith("token", "new");
     } catch (err) {
       dumpLibraryDbIpcSnapshot(label, {
-        channel: "sf-library-db-get-local-cache-bytes",
-        args: "abc",
-        result: bytes,
-        expected: new Uint8Array([1, 2, 3]),
-        actual: bytes,
-        getLocalCacheBytesCalls: getLocalCacheBytesMock.mock.calls,
+        channel: "sf-library-db-seal-local-cache-for-rotation",
+        args: { token: "token", newKeyBase64: "new" },
+        result: sealed,
+        expected: SEALED,
+        actual: sealed,
+        sealLocalCacheForRotationCalls: sealLocalCacheForRotationMock.mock.calls,
         error: err,
       });
       throw err;

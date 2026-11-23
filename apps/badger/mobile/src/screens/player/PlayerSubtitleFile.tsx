@@ -82,7 +82,6 @@ export const PlayerSubtitleFile = memo(
         left = true;
       };
       // One pick per open.
-      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [mediaId, episodeId]);
 
     // The new subtitle is on: the line stays a moment, then playback resumes (as "added" in Get subtitles).
