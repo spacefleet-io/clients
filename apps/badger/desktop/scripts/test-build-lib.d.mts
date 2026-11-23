@@ -1,5 +1,4 @@
 export declare const TEST_BUILD_FLAG: "--test-build";
-export declare const TEST_BUILD_VERSION_SUFFIX: "-devkey";
 export declare const TEST_BUILD_ENV: "SF_PACKAGE_TEST_BUILD";
 
 export declare const testBuildVersion: (version: string) => string;
