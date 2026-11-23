@@ -28,7 +28,7 @@ const makeWorld = () => {
   const vault = new Map<string, Uint8Array>();
   const library = new Map<string, HealableMedia>();
   const sourceDetails = new Map<number, HealSourceDetails>();
-  const calls = { exists: [] as string[][], details: [] as string[], images: [] as string[], stores: 0, replaces: [] as ArtworkRefChange[][] };
+  const calls = { exists: [] as string[][], details: [] as string[], images: [] as string[], stores: 0, replaces: [] as ArtworkRefChange[][], discards: [] as string[][] };
   let gatewayDown = false;
   let uploads = 0;
 
@@ -86,7 +86,7 @@ const makeWorld = () => {
     replaceRefs: async (mediaId, changes) => {
       calls.replaces.push(changes);
       const media = library.get(mediaId);
-      if (!media) return 0;
+      if (!media) return { applied: 0, unapplied: changes.map((change) => ({ ...change })) };
       let applied = 0;
       for (const change of changes) {
         if (change.target === "mediaPoster" && media.posterPath === change.path) (media.posterPath = change.value), applied++;
@@ -103,7 +103,11 @@ const makeWorld = () => {
           }
         }
       }
-      return applied;
+      return { applied, unapplied: [] };
+    },
+    discard: async (keys) => {
+      calls.discards.push(keys);
+      for (const key of keys) vault.delete(key);
     },
     log: (event, detail) => console.log(`[${ID}] log ${event}`, JSON.stringify(detail)),
     sleep: async () => undefined,
@@ -223,6 +227,30 @@ describe("artwork self-heal (STOR-PLACE-09)", () => {
     phase("state", { reported, calls: world.calls });
     expect(reported).toBeNull();
     expect(world.calls.images).toEqual([]);
+  });
+
+  // @bugfix @regression-proof STOR-PLACE-10 (2026-11-23 release smoke: backdrop 7cb5e60b, stored again for a title being
+  // deleted, stayed on the account): the title is deleted while its picture is being stored again.
+  it("a picture stored again for a title deleted meanwhile is discarded, not left on the account", async () => {
+    const world = makeWorld();
+    world.vault.delete("assets/orchard-backdrop.txt");
+    const store = world.deps.store;
+    const healer = createArtworkHealer({
+      ...world.deps,
+      store: async (image, slot) => {
+        const value = await store(image, slot);
+        phase("delete the title while its picture uploads", { value });
+        world.library.delete("m-orchard");
+        return value;
+      },
+    });
+    const reported = await healer.reportMissing(ref("assets/orchard-backdrop.txt"));
+    phase("state", { reported, calls: world.calls, vault: [...world.vault.keys()] });
+    expect(reported).toBeNull();
+    expect(world.calls.stores).toBe(1);
+    expect(world.calls.discards).toEqual([["assets/healed-1.txt"]]);
+    expect(world.vault.has("assets/healed-1.txt")).toBe(false);
+    expect(healer.healedRef(ref("assets/orchard-backdrop.txt"))).toBeNull();
   });
 
   it("is rate limited per rolling minute", async () => {

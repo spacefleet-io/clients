@@ -75,15 +75,3 @@ export const defaultRandom: RandomFn = () => {
   if (typeof crypto?.getRandomValues === "function") return crypto.getRandomValues(new Uint32Array(1))[0]! / 0x1_0000_0000;
   return Math.random();
 };
-
-const MAX_RETRY_AFTER_SECONDS = 31_536_000;
-
-/** Parses a Retry-After header (delta seconds or HTTP date) into whole seconds >= 0; undefined when absent or unreadable. */
-export function parseRetryAfterSeconds(header: string | null | undefined, nowMs: number): number | undefined {
-  if (!header) return undefined;
-  const value = header.trim();
-  if (/^\d+$/u.test(value)) return Math.min(Number(value), MAX_RETRY_AFTER_SECONDS);
-  const at = Date.parse(value);
-  if (Number.isNaN(at)) return undefined;
-  return Math.min(Math.max(0, Math.ceil((at - nowMs) / 1000)), MAX_RETRY_AFTER_SECONDS);
-}

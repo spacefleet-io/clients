@@ -9,15 +9,15 @@
  * into out/main and out/preload, never resolved from node_modules at runtime.
  */
 import { spawnSync } from "node:child_process";
-import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { findUnbundledWorkspaceImports } from "../scripts/check-main-bundle-lib.mjs";
+import { findUnbundledWorkspaceImports } from "../../../../packages/desktop-platform/packaging/check-main-bundle-lib.mjs";
 
 const APP_DIR = join(__dirname, "..");
-const SCRIPTS_DIR = join(APP_DIR, "scripts");
+const CHECK_MAIN_BUNDLE = join(APP_DIR, "../../../packages/desktop-platform/packaging/check-main-bundle.mjs");
 
 const tempDirs: string[] = [];
 const makeTempDir = () => {
@@ -75,16 +75,12 @@ describe("findUnbundledWorkspaceImports", () => {
 describe("check-main-bundle CLI", () => {
   const runCli = (outFiles: Record<string, string>) => {
     const root = makeTempDir();
-    mkdirSync(join(root, "scripts"));
-    for (const name of ["check-main-bundle.mjs", "check-main-bundle-lib.mjs"]) {
-      copyFileSync(join(SCRIPTS_DIR, name), join(root, "scripts", name));
-    }
     for (const [rel, body] of Object.entries(outFiles)) {
       const file = join(root, "out", rel);
       mkdirSync(join(file, ".."), { recursive: true });
       writeFileSync(file, body);
     }
-    return spawnSync(process.execPath, [join(root, "scripts", "check-main-bundle.mjs")], { encoding: "utf8" });
+    return spawnSync(process.execPath, [CHECK_MAIN_BUNDLE, root], { encoding: "utf8" });
   };
 
   it("fails when out/main still imports a workspace package", () => {

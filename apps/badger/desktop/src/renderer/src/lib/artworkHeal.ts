@@ -5,7 +5,7 @@
  * download to it, the library context runs the background sweep.
  */
 import { createArtworkHealer, type ArtworkHealer, type ArtworkRefChange } from "@space/library-db-definition/artworkHeal";
-import { headStorageObjects } from "@/api";
+import { deleteStorageObjects, headStorageObjects } from "@/api";
 import { uploadEncryptedAssetBytes } from "@/lib/assets";
 import { getStoredLibraryKey } from "@/lib/onboarding";
 import { getTitleDetailsForLibrary } from "@/lib/metadata";
@@ -56,7 +56,15 @@ export const createDesktopArtworkHealer = ({
       if (!key) throw new Error("KEY_REQUIRED");
       return uploadEncryptedAssetBytes(token, key, image.bytes, image.contentType);
     },
-    replaceRefs: async (mediaId, changes) => (await db.applyArtworkCopies(mediaId, changes)).applied,
+    replaceRefs: async (mediaId, changes) => {
+      const result = await db.applyArtworkCopies(mediaId, changes);
+      const unapplied = result.unapplied.flatMap((copy) =>
+        copy.value === null ? [] : [{ target: copy.target, id: copy.id, path: copy.path, value: copy.value }]
+      );
+      return { applied: result.applied, unapplied };
+    },
+    // STOR-PLACE-10: a picture stored again for a title deleted meanwhile is deleted at once.
+    discard: (keys) => deleteStorageObjects(token, keys),
     onHealed,
     log: (event, detail) => healLog.info(detail, event),
   });

@@ -1,9 +1,9 @@
 /**
- * ACCT-PAIR-01 / ACCT-PAIR-02 / PRIV-KEY-05: Parrot desktop approves another device (a browser on the Parrot web
- * player, a phone, a computer) with the shared approver core (`@space/pairing-crypto`), run here in main: the session
- * token and the library key never leave main. The window only gets the device's name and type, its expiry, the
- * request id and, on failure, an error kind. The new device's public key stays here, keyed by the request id, so the
- * key is sealed only for a request this window looked up.
+ * ACCT-PAIR-01 / ACCT-PAIR-02 / PRIV-KEY-05 / PRIV-PAIR-01: Parrot desktop approves another device (a browser on the
+ * Parrot web player, a phone, a computer) with the shared approver core (`@space/pairing-crypto`), run here in main: the
+ * session token and the library key never leave main. The window only gets the device's name and type, its expiry, the
+ * request id, the check code to compare and, on failure, an error kind. The new device's public key and the check stay
+ * here, keyed by the request id, so the key is sealed only for a request this window looked up and checked.
  */
 import {
   ApprovePairingError,
@@ -12,10 +12,11 @@ import {
   denyPairingRequest,
   lookupPairingRequest,
   pairingRequestView,
+  runPairingCheck,
   type ApprovePairingDeps,
   type ApprovePairingProof,
   type ApprovePairingResult,
-  type PairingRequestInfo,
+  type CheckedPairingRequest,
   type PairingRequestView,
 } from "@space/pairing-crypto";
 
@@ -36,7 +37,7 @@ const proofFromIpc = (proof: unknown): ApprovePairingProof => {
 export const createParrotPairingApprover = (options: {
   token: () => string | null;
   libraryKey: () => string | null;
-  api: Pick<ApprovePairingDeps, "lookup" | "approve" | "deny">;
+  api: Pick<ApprovePairingDeps, "lookup" | "approve" | "deny" | "connect" | "readReveal" | "keyOpensAccount">;
   now?: () => number;
   log: (line: string) => void;
 }): ParrotPairingApprover => {
@@ -46,8 +47,8 @@ export const createParrotPairingApprover = (options: {
     now: options.now ?? (() => Date.now()),
     log: (message, extra) => options.log(`[pairing] ${message}${extra ? ` ${JSON.stringify(extra)}` : ""}`),
   };
-  /** Requests this window looked up, by id: the public key the library key may be sealed to. */
-  const looked = new Map<string, PairingRequestInfo>();
+  /** Requests this window looked up and checked, by id: the public key the library key may be sealed to. */
+  const looked = new Map<string, CheckedPairingRequest>();
 
   const token = () => {
     const value = options.token();
@@ -70,8 +71,10 @@ export const createParrotPairingApprover = (options: {
         "lookup",
         await approvePairingResult(async () => {
           const request = await lookupPairingRequest(deps, token(), String(code ?? ""));
-          looked.set(request.requestId, request);
-          return pairingRequestView(request);
+          // PRIV-PAIR-01: typed code, so the window shows the check code to compare.
+          const checked = await runPairingCheck(deps, token(), request);
+          looked.set(checked.requestId, checked);
+          return pairingRequestView(checked);
         }),
       ),
     approve: async (requestId, proof) =>

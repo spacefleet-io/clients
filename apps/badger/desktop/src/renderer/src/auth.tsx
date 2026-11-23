@@ -315,6 +315,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     void persistSessionToMain();
   }, [user]);
 
+  // tla: VaultKeys/SignIn
   const login = async (
     email: string,
     password: string,
@@ -387,6 +388,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     if (running) {
       logoutLog.info({ reason }, "logout joins the one in progress");
       return running;
+    }
+    // A late refusal of the session a finished sign-out already ended (a probe still holding the revoked token): this
+    // window holds no session, so there is nothing to sign out. Running again would reset the storage with no user to
+    // scope the kept key by and drop it (PRIV-KEY-13: the computer that rotated the key came back asking for it).
+    if (localStorage.getItem(TOKEN_KEY) === null) {
+      logoutLog.info({ reason }, "logout skipped: already signed out");
+      return Promise.resolve();
     }
     const run = runLogout(reason).finally(() => {
       logoutInFlight.current = null;

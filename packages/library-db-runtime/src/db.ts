@@ -26,11 +26,9 @@ export const setSqliteModules = (modules: { Database: any; drizzle: any }) => {
 const ensureLoaded = () => {
   if (_Database) return;
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     _Database = localRequire("bun:sqlite").Database;
     _drizzle = localRequire("drizzle-orm/bun-sqlite").drizzle;
   } catch {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     _Database = localRequire("better-sqlite3");
     _drizzle = localRequire("drizzle-orm/better-sqlite3").drizzle;
   }

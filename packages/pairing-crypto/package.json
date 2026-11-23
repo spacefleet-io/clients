@@ -9,7 +9,8 @@
     "typecheck": "bunx tsc --noEmit -p tsconfig.json"
   },
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./testing": "./src/testing.ts"
   },
   "dependencies": {
     "@noble/ciphers": "^2.0.0",

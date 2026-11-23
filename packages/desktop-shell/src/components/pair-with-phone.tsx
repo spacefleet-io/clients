@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { shortCodeGroups } from "@space/pairing-crypto";
+import { formatCheckCode, shortCodeGroups } from "@space/pairing-crypto";
 import { Button } from "@space/ui";
 import type { ClientUiLanguage } from "@space/shared/i18n";
 import { RATE_LIMIT_DEFAULT_MINUTES, signInErrorText } from "@space/shared/signInError";
@@ -85,6 +85,8 @@ export default function PairWithPhone<A = PairingHandOver>({
 }: Props<A>) {
   const t = pairWithPhoneText(language);
   const [phase, setPhase] = useState<Phase>({ kind: "starting" });
+  // PRIV-PAIR-01: the six digits both screens show once the approving app connected; null until then.
+  const [checkCode, setCheckCode] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
   // Bumped on every new code and on unmount; a stale poll or start result checks it before touching state.
   const generation = useRef(0);
@@ -100,6 +102,7 @@ export default function PairWithPhone<A = PairingHandOver>({
   const startNewCode = useCallback(async () => {
     const mine = ++generation.current;
     setPhase({ kind: "starting" });
+    setCheckCode(null);
     let result: PairingStartResult;
     try {
       result = await (mode === "key" ? actionsRef.current.start({ mode: "key" }) : actionsRef.current.start());
@@ -168,6 +171,7 @@ export default function PairWithPhone<A = PairingHandOver>({
       logRef.current.info("pairing poll", { requestId: request.requestId, status: poll.status });
       switch (poll.status) {
         case "pending":
+          if (poll.checkCode) setCheckCode(poll.checkCode);
           return false;
         case "expired":
           setPhase({ kind: "expired" });
@@ -237,6 +241,15 @@ export default function PairWithPhone<A = PairingHandOver>({
               <span className="ml-3">{shortCodeGroups(request.shortCode)[1]}</span>
             </span>
           </div>
+          {checkCode ? (
+            <div className="grid gap-1 rounded-lg border p-3" data-testid="pair-check">
+              <span className="text-xs text-muted-foreground">{t("checkLabel")}</span>
+              <span className="font-mono text-3xl font-semibold tracking-[0.2em]" data-testid="pair-check-code">
+                {formatCheckCode(checkCode)}
+              </span>
+              <span className="text-xs text-muted-foreground">{t("checkHint")}</span>
+            </div>
+          ) : null}
           <p className="text-sm text-muted-foreground" data-testid="pair-countdown">
             {t("expiresIn", { time: formatCountdown(remainingMs) })}
           </p>

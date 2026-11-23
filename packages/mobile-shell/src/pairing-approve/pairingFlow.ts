@@ -1,14 +1,25 @@
 /**
- * Phone side of device pairing (ACCT-PAIR-01, ACCT-PAIR-02; contract v1, PRIV-KEY-05).
+ * Phone side of device pairing (ACCT-PAIR-01, ACCT-PAIR-02; contract sf-pair-v2, PRIV-KEY-05, PRIV-PAIR-01..04).
  *
- * The phone is the approver: it resolves a short code to a waiting device, shows who is asking,
- * asks for the phone's own unlock, seals the library key to the new device's public key and
- * posts only the sealed blob. The API never sees the key in clear.
+ * The phone is the approver: it resolves a short code to a waiting device, checks with it that no one sits in between
+ * (the six-digit check code both screens show, PRIV-PAIR-01), shows who is asking, asks for the phone's own unlock,
+ * seals the library key to the new device's public key and posts only the sealed blob. The API never sees the key in
+ * clear, and cannot swap in its own public key without the codes differing.
  *
  * Pure logic with injected side effects so the whole flow is unit-testable without native modules.
  */
 
-import { parsePairQrPayload, sealLibraryKey, type SealedKey } from "@space/pairing-crypto";
+import {
+  ApprovePairingError,
+  isPairingBlob32,
+  PAIRING_V1_REQUESTS_ACCEPTED,
+  parsePairQrPayload,
+  runPairingCheck,
+  sealLibraryKey,
+  type ApprovePairingErrorKind,
+  type PairingCheck,
+  type SealedKey,
+} from "@space/pairing-crypto";
 import { DEFAULT_SPACE_APP_ID, normalizeSpaceAppId, SPACE_APP_NAMES } from "@space/shared/appScope";
 import { RATE_LIMIT_DEFAULT_MINUTES, retryAfterSecondsToMinutes, TOO_MANY_ATTEMPTS_KEY } from "@space/shared/signInError";
 import { translate } from "../i18n";
@@ -26,6 +37,12 @@ export type PairingRequestInfo = {
   deviceName: string;
   publicKey: string;
   expiresAt: string;
+  /** PRIV-PAIR-01: 2 once the device sends a commitment; none from a device built before the check. */
+  protocol?: 1 | 2;
+  /** SHA-256 commitment to the device's public key and its random number (base64), sf-pair-v2. */
+  commitment?: string | null;
+  /** Set by `checkDevice`: the code to compare, and whether the scanned QR already proved the device. */
+  check?: PairingCheck;
 };
 
 export type PairingDeps = {
@@ -51,6 +68,15 @@ export type PairingDeps = {
    */
   requireUnlock: (() => Promise<void>) | null;
   now: () => number;
+  /**
+   * PRIV-PAIR-02: does this key open the account's current key probe? `false` stops before anything is sent;
+   * `null` (no verdict) goes on, as the receiving device checks the key again.
+   */
+  keyOpensAccount: (token: string, libraryKey: string) => Promise<boolean | null>;
+  /** PRIV-PAIR-01: `POST /pairing/requests/{id}/connect`. */
+  connect: (token: string, requestId: string, approverNonce: string) => Promise<unknown>;
+  /** PRIV-PAIR-01: `GET /pairing/requests/{id}/reveal`, long-polled. */
+  readReveal: (token: string, requestId: string) => Promise<{ status: string; requesterNonce?: string }>;
 };
 
 export type PairingErrorKind =
@@ -71,6 +97,12 @@ export type PairingErrorKind =
   | "signed_out"
   | "network"
   | "bad_request"
+  /** PRIV-PAIR-04: the asking device runs a version from before the check; it must be updated. */
+  | "update_required"
+  /** PRIV-PAIR-02: this device's key no longer opens the account (another key since a rotation). */
+  | "stale_key"
+  /** PRIV-PAIR-01: the device's number does not open its commitment; nothing sent. */
+  | "check_failed"
   | "unknown";
 
 /** How a TV approver proves it is the account owner (ACCT-PAIR-02): the password, or a code when the account has none. */
@@ -171,7 +203,10 @@ const isExpired = (request: PairingRequestInfo, now: number) => {
   return Number.isFinite(at) && at <= now;
 };
 
-/** Turns a typed or scanned code into the waiting device's request. */
+/**
+ * Turns a typed or scanned code into the waiting device's request. A request without a commitment (a device built
+ * before the check) is refused with `update_required` (PRIV-PAIR-04): its public key could be the server's own.
+ */
 export const lookupDevice = async (
   deps: PairingDeps,
   token: string,
@@ -194,6 +229,10 @@ export const lookupDevice = async (
     log.warn("lookup.expired_client_side", { requestId: request.requestId });
     throw new PairingFlowError("expired");
   }
+  if (!isPairingBlob32(request.commitment) && !PAIRING_V1_REQUESTS_ACCEPTED) {
+    log.warn("lookup.update_required", { app: request.app, deviceType: request.deviceType, protocol: request.protocol ?? null });
+    throw new PairingFlowError("update_required");
+  }
   log.warn("lookup.ok", {
     requestId: request.requestId,
     app: request.app,
@@ -203,8 +242,49 @@ export const lookupDevice = async (
   return request;
 };
 
+const FLOW_KIND_OF: Partial<Record<ApprovePairingErrorKind, PairingErrorKind>> = {
+  wrong_code: "code_invalid",
+  password_missing: "unlock_cancelled",
+};
+
+/** An error of the shared check as this flow's, keeping a 429's wait. */
+const toFlowError = (error: unknown): PairingFlowError => {
+  if (error instanceof PairingFlowError) return error;
+  if (!(error instanceof ApprovePairingError)) return mapApiError(error);
+  const kind = FLOW_KIND_OF[error.kind] ?? (error.kind as PairingErrorKind);
+  return new PairingFlowError(kind, retryAfterSecondsToMinutes(error.retryAfterSeconds));
+};
+
 /**
- * Approves a looked-up device. Order matters (ACCT-PAIR-02): the key is only read and sealed after
+ * PRIV-PAIR-02 then PRIV-PAIR-01, right after the lookup and before the question is asked: refuses when this device's
+ * key no longer opens the account, exchanges the random numbers with the waiting device and works out the six-digit
+ * code both screens then show. `scannedLink` is what the camera read (null when typed): its fingerprint, written by the
+ * device itself, makes the comparison unnecessary.
+ */
+export const checkDevice = async (
+  deps: PairingDeps,
+  token: string,
+  request: PairingRequestInfo,
+  scannedLink: string | null = null,
+): Promise<PairingRequestInfo & { check: PairingCheck }> => {
+  const app = normalizeSpaceAppId(request.app) ?? DEFAULT_SPACE_APP_ID;
+  try {
+    const checked = await runPairingCheck(
+      { ...deps, log: (message, extra) => log.warn(message, extra) },
+      token,
+      { ...request, app, purpose: request.purpose === "key" ? "key" : undefined },
+      scannedLink,
+    );
+    return { ...request, check: checked.check };
+  } catch (error) {
+    const mapped = toFlowError(error);
+    log.warn("check.failed", { kind: mapped.kind });
+    throw mapped;
+  }
+};
+
+/**
+ * Approves a checked device (`checkDevice`, after the user confirmed the code). Order matters (ACCT-PAIR-02): the key is only read and sealed after
  * the phone has been unlocked, and nothing is sent when unlock is refused or cancelled. A TV has no unlock:
  * it must pass a `proof`, the account password, which travels with the approval and is checked by the API before
  * the request is approved (a wrong one leaves the request pending, so the caller may ask again). An account without
@@ -217,6 +297,7 @@ export const approveDevice = async (
   request: PairingRequestInfo,
   proof?: ApprovalProof,
 ): Promise<{ sessionId: string | null }> => {
+  if (!request.check && !PAIRING_V1_REQUESTS_ACCEPTED) throw new PairingFlowError("update_required");
   if (isExpired(request, deps.now())) throw new PairingFlowError("expired");
 
   const libraryKey = await deps.getLibraryKey();

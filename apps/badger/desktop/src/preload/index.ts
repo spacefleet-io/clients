@@ -863,7 +863,7 @@ const clientIdentity = (() => {
 })();
 
 contextBridge.exposeInMainWorld("sf", {
-  version: "0.1.43",
+  version: "0.1.53",
   clientIdentity,
   // REL-CD-29: a "please update" refusal the runtime got on its own API call, forwarded by main.
   onAppUpdateRequired: (callback: (refusal: { status: number; payload: Record<string, unknown> }) => void) => {
@@ -1047,8 +1047,11 @@ contextBridge.exposeInMainWorld("sf", {
   libraryDb: {
     open: (payload: { token: string; keyBase64: string; userId: string }) => ipcRenderer.invoke("sf-library-db-open", payload),
     openLocal: (payload: { token: string; keyBase64: string; userId: string }) => ipcRenderer.invoke("sf-library-db-open-local", payload),
-    getLocalCacheBytes: (keyBase64?: string) =>
-      ipcRenderer.invoke("sf-library-db-get-local-cache-bytes", keyBase64),
+    sealLocalCacheForRotation: (payload: { token: string; newKeyBase64: string }) =>
+      ipcRenderer.invoke("sf-library-db-seal-local-cache-for-rotation", payload),
+    // PRIV-KEY-06: a key rotation re-encrypts every other app's library first (main/libraryRotationIpc.ts).
+    reencryptForRotation: (payload: { token: string; oldKeyBase64: string; newKeyBase64: string }) =>
+      ipcRenderer.invoke("sf-library-db-reencrypt-for-rotation", payload),
     hasLocalCache: () => ipcRenderer.invoke("sf-library-db-has-local-cache"),
     clearLocalCache: () => ipcRenderer.invoke("sf-library-db-clear-local-cache"),
     // ACCT-SQUAD-02 / UX-PROF-01: "Who's watching?" may answer before the library opens, when the generic call is

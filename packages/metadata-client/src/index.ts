@@ -61,5 +61,5 @@ export type {
 } from "./titleVariants";
 export { DEFAULT_METADATA_URL, DEV_METADATA_URL, metadataTicketsForBuild, metadataUrlForApi, resolveMetadataUrl } from "./metadataUrl";
 export type { MetadataUrlEnv } from "./metadataUrl";
-export { MAX_TIMER_MS, defaultRandom, defaultTimers, parseRetryAfterSeconds } from "./types";
+export { MAX_TIMER_MS, defaultRandom, defaultTimers } from "./types";
 export type { AbortSignalLike, FetchInit, FetchLike, FetchResponse, KeyValueStorage, RandomFn, Timers } from "./types";

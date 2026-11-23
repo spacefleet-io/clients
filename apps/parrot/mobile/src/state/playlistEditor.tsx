@@ -7,10 +7,11 @@
 // library. Keeping an album, a playlist or a song (PAR-OFFL-01) asks first which copy to keep when the songs have more
 // than one besides the light copy (PAR-OFFL-02).
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { Alert, KeyboardAvoidingView, Modal, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { Alert, Modal, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { ArrowDownToLine, CircleCheck, Disc3, FileAudio, Heart, HeartOff, ListEnd, ListMusic, ListPlus, ListX, MicVocal, Pencil, Plus, Trash2, X } from "lucide-react-native";
 import crypto from "react-native-quick-crypto";
 import { useTranslation } from "@space/mobile-shell/i18n";
+import { KeyboardAvoidingForm } from "@space/mobile-shell/keyboard";
 import { MobileBottomSheet, MobileSheetScrollView } from "@space/mobile-shell/bottom-sheet";
 import { MobileNoticeBanner } from "@space/mobile-shell/components";
 import { MobileRenderBoundary } from "@space/mobile-shell/render-boundary";
@@ -484,7 +485,7 @@ const NameDialog = ({ dialog, onClose, onSubmit }: { dialog: Extract<Dialog, { k
     <Modal visible={dialog !== null} transparent animationType="fade" onRequestClose={onClose}>
       {/* UX-CRASH-01: a crash inside the name dialog closes it; the window guard says why. */}
       <MobileRenderBoundary name="modal:playlist-name" onDismiss={onClose}>
-      <KeyboardAvoidingView behavior="padding" style={styles.dialogScrim}>
+      <KeyboardAvoidingForm style={styles.dialogScrim}>
         <View style={styles.dialog} testID="playlist-name-dialog">
           <Text style={styles.sheetTitle}>{rename ? t("shell.playlists.renameTitle") : t("shell.playlists.newTitle")}</Text>
           <TextInput
@@ -516,7 +517,7 @@ const NameDialog = ({ dialog, onClose, onSubmit }: { dialog: Extract<Dialog, { k
             </Pressable>
           </View>
         </View>
-      </KeyboardAvoidingView>
+      </KeyboardAvoidingForm>
       </MobileRenderBoundary>
     </Modal>
   );

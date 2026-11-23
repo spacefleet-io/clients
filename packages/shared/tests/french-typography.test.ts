@@ -1,5 +1,5 @@
 /**
- * @req UX-I18N-15[badger-desktop,badger-mobile,badger-tv,badger-web-player]
+ * @req UX-I18N-15[badger-desktop]
  *
  * App French copy puts a narrow no-break space (U+202F) before `: ; ? ! %` and inside `« »` (Main 2026-11-19, PR #2988
  * review). The shared pattern every app test uses, run on the shared subtitle copy and on Badger desktop's strings.
@@ -15,7 +15,7 @@ const desktopFr: unknown = JSON.parse(
   readFileSync(new URL("../../../apps/badger/desktop/src/renderer/src/i18n/fr.json", import.meta.url), "utf8"),
 );
 
-describe("French typography @req UX-I18N-15", () => {
+describe("French typography (UX-I18N-15)", () => {
   it("flags a plain or U+00A0 space, a glued sign and a doubled U+202F", () => {
     for (const bad of ["Mettre à jour ?", "ici : la", "ici\u00a0: la", "« source »", "{percent} %", "{percent}%", "ici: la", "ici\u202f\u202f: la"]) {
       expect(FRENCH_SPACING.test(bad), bad).toBe(true);

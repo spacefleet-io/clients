@@ -25,7 +25,6 @@ export const PlayerCastPicker = ({ onClose, onTarget }: Props) => {
     // As on the title page: iOS starts discovery only on request (also when it asks for Local Network access).
     void CastContext.getDiscoveryManager().startDiscovery().catch(() => undefined);
     sheet.open();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Closed by its backdrop, Back or a drag (the shared sheet reports it once slid out): hand back to the player.

@@ -524,6 +524,13 @@
               "$ref": "#/components/schemas/LibraryOpEntry"
             }
           },
+          "stateHash": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The library's state hash at `version`, read with it (LIB-SYNC-19): a client that moves to `version` chains its next operation on this hash. Absent on a partial page of operations stored before operation hashes."
+          },
           "storageFormatVersion": {
             "type": "integer"
           },
@@ -673,6 +680,13 @@
               "null"
             ]
           },
+          "checkedKeyProbe": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The account key probe (`GET /library/db/meta` `keyProbe`) the client checked its key against before this publish; null when the account had none. A different account probe answers 412 `key_probe_changed`. Absent: not checked."
+          },
           "storageFormatVersion": {
             "type": "integer",
             "exclusiveMinimum": 0,
@@ -726,6 +740,164 @@
           "snapshotVersion",
           "stateHash",
           "lastOpId"
+        ]
+      },
+      "MediaResealRun": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "open",
+              "switched",
+              "abandoned"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-10-19T12:00:00.000Z"
+          },
+          "switchedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "example": "2026-10-19T12:00:00.000Z"
+          },
+          "abandonedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "example": "2026-10-19T12:00:00.000Z"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "createdAt",
+          "switchedAt",
+          "abandonedAt"
+        ]
+      },
+      "MediaResealProgress": {
+        "type": "object",
+        "properties": {
+          "run": {
+            "$ref": "#/components/schemas/MediaResealRun"
+          },
+          "uploadsInFlight": {
+            "type": "integer",
+            "description": "Other uploads of the account the switch waits for (STOR-RESEAL-08); 0 once the run is not open."
+          },
+          "switchNowAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "example": "2026-10-19T12:00:00.000Z",
+            "description": "When \"Switch now\" (cancel those uploads) opens: 24 h after the run, every copy made, first waited on them (STOR-RESEAL-10). Null while not waiting."
+          },
+          "totalFiles": {
+            "type": "integer",
+            "description": "Live media objects of the account (copies excluded)."
+          },
+          "totalBytes": {
+            "type": "integer"
+          },
+          "doneFiles": {
+            "type": "integer",
+            "description": "Of them, those with a stored copy or a `kept` mark."
+          },
+          "doneBytes": {
+            "type": "integer"
+          },
+          "keptFiles": {
+            "type": "integer",
+            "description": "Objects marked kept: the old key cannot open them, they stay as they are."
+          },
+          "pendingFiles": {
+            "type": "integer"
+          },
+          "pendingBytes": {
+            "type": "integer"
+          },
+          "pending": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string"
+                },
+                "sizeBytes": {
+                  "type": "integer"
+                },
+                "role": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "objectNamespace": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "contentType": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "app": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "key",
+                "sizeBytes",
+                "role",
+                "objectNamespace",
+                "contentType",
+                "app"
+              ]
+            },
+            "description": "One page of the objects still waiting for a copy, by key order."
+          },
+          "nextAfter": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Pass as `after` for the next page; null on the last page."
+          }
+        },
+        "required": [
+          "run",
+          "uploadsInFlight",
+          "switchNowAt",
+          "totalFiles",
+          "totalBytes",
+          "doneFiles",
+          "doneBytes",
+          "keptFiles",
+          "pendingFiles",
+          "pendingBytes",
+          "pending",
+          "nextAfter"
         ]
       },
       "P2pPeer": {
@@ -2882,6 +3054,60 @@
         }
       }
     },
+    "/deps": {
+      "get": {
+        "operationId": "getDependencies",
+        "tags": [
+          "System"
+        ],
+        "summary": "Dependencies probe",
+        "description": "Whether this copy reaches every dependency it uses: Postgres and Redis. 503 names the first one that does not answer. Unlike `/ready`, Redis counts here; monitoring watches it, load balancers do not.",
+        "responses": {
+          "200": {
+            "description": "Every dependency answers.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    },
+                    "dependency": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "ok"
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "A dependency does not answer.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    },
+                    "dependency": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "ok"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/system/contract": {
       "get": {
         "operationId": "getSystemContract",
@@ -3297,7 +3523,7 @@
           "Library"
         ],
         "summary": "Upload library snapshot",
-        "description": "Accepts an encrypted library snapshot manifest (binary) or legacy base64 payload. Use case: client pushes a new snapshot version after local changes. With `Content-Type: application/octet-stream` the body is the raw encrypted manifest and the metadata travels in `x-library-*` headers (`x-library-version`, `x-library-snapshot-id` and `x-library-chunk-size` are required; `x-library-chunk-refs` is a JSON array of chunk hashes). Any other request is JSON (`PutLibraryDbRequest`) with the manifest base64-encoded. A stale `expectedVersion` answers 409 `version_conflict` unless `force` is set. Storage-gateway failures are relayed with the gateway's status and error code.\n\nPersonal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.",
+        "description": "Accepts an encrypted library snapshot manifest (binary) or legacy base64 payload. Use case: client pushes a new snapshot version after local changes. With `Content-Type: application/octet-stream` the body is the raw encrypted manifest and the metadata travels in `x-library-*` headers (`x-library-version`, `x-library-snapshot-id` and `x-library-chunk-size` are required; `x-library-chunk-refs` is a JSON array of chunk hashes). Any other request is JSON (`PutLibraryDbRequest`) with the manifest base64-encoded. A stale `expectedVersion` answers 409 `version_conflict` unless `force` is set. A `checkedKeyProbe` that is no longer the account's key probe answers 412 `key_probe_changed`; a session an erase or a key rotation revoked meanwhile answers 401 `unauthorized`. Storage-gateway failures are relayed with the gateway's status and error code.\n\nPersonal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.",
         "security": [
           {
             "bearerAuth": []
@@ -3614,6 +3840,27 @@
               }
             }
           },
+          "412": {
+            "description": "The account's library key probe is no longer the `checkedKeyProbe` the client checked its key against.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "key_probe_changed"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
           "413": {
             "description": "The upload is too large. The `error` is the code the storage gateway answered with, relayed as is.",
             "content": {
@@ -3761,7 +4008,7 @@
           "Library"
         ],
         "summary": "Library operations since a version",
-        "description": "Returns the encrypted operations committed after version `since` (default 0), with their ciphertext inlined, and the observed format versions. `tooOld` is true when `since` predates the retained history. With `Accept: application/vnd.space.library-ops` the answer is binary instead (LIB-FMT-13): one frame per op, `u64be version | u32be length | ciphertext`, and the page's state in the `x-library-version`, `x-library-snapshot-version`, `x-library-too-old`, `x-library-has-more` (`1`/`0`), `x-library-storage-format-version`, `x-library-op-stream-version` and `x-library-target-op-stream-version` response headers.\n\nPersonal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.",
+        "description": "Returns the encrypted operations committed after version `since` (default 0), with their ciphertext inlined, and the observed format versions. `tooOld` is true when `since` predates the retained history. With `Accept: application/vnd.space.library-ops` the answer is binary instead (LIB-FMT-13): one frame per op, `u64be version | u32be length | ciphertext`, and the page's state in the `x-library-version`, `x-library-snapshot-version`, `x-library-too-old`, `x-library-has-more` (`1`/`0`), `x-library-storage-format-version`, `x-library-op-stream-version`, `x-library-target-op-stream-version` and `x-library-state-hash` (empty: the library has none; absent: unknown) response headers.\n\nPersonal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.",
         "security": [
           {
             "bearerAuth": []
@@ -4372,13 +4619,91 @@
       }
     },
     "/library/recovery/rotate": {
+      "get": {
+        "operationId": "getLibraryKeyRotationReadiness",
+        "tags": [
+          "Library"
+        ],
+        "summary": "Can the library key be rotated",
+        "description": "Tells whether `POST /library/recovery/rotate` would refuse this account with 409 `rotation_needs_media_reseal`: `needsMediaReseal` is true while the account stores objects sealed with the key outside the library snapshots (songs, covers, videos, subtitles, previews). Use case: a client offers a key change exactly when the server accepts it (ACCT-KEYCHG-04) and hides it otherwise. Read-only; it answers for the whole account, every app.\n\nPersonal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Whether a rotation needs the media re-sealed first.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "needsMediaReseal": {
+                      "type": "boolean",
+                      "description": "True: a rotation without a media re-seal run is refused (409 `rotation_needs_media_reseal`)."
+                    }
+                  },
+                  "required": [
+                    "needsMediaReseal"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or unknown token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "unauthorized"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The account is blocked or scheduled for deletion, or a personal token was used on a route that needs a login session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "account_blocked",
+                        "account_deleted",
+                        "personal_token_not_allowed"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
       "post": {
         "operationId": "rotateLibraryKey",
         "tags": [
           "Library"
         ],
         "summary": "Rotate library key",
-        "description": "Rotates the library encryption key after re-auth with 2FA. Use case: user suspects key compromise and re-encrypts the library. The body carries the re-encrypted snapshot (`blobBase64`) and its `keyProbe`; the stored snapshot is replaced and every session of the account is revoked.\n\nPersonal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.",
+        "description": "Rotates the library encryption key after re-auth with 2FA. Use case: user suspects key compromise and re-encrypts the library. The body carries the caller's library as a snapshot under the new key (`manifestBase64`, its `chunkRefs` uploaded already, as `PUT /library/db` sends it) with the storage format and op stream it is written in, and the new key's `keyProbe`, plus `otherLibraries`: every other app's latest snapshot, opened by the rotating device with the old key and re-encrypted under the new one (chunks already uploaded), each with the version it was read at. In one step the caller's library and every other library are replaced by their copies under the new key and every session of the account is revoked; nothing is deleted. A declared format below the stored one answers 409 `library_format_downgrade`. An app whose library changed since it was read answers 409 `version_conflict` with its `appId` (read again and retry); an app with a library and no copy answers 409 `library_not_reencrypted`; an account that stores media sealed with the key (songs, videos, covers) answers 409 `rotation_needs_media_reseal` until rotation re-seals media too. Nothing is written on a refusal.\n\nPersonal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.",
         "security": [
           {
             "bearerAuth": []
@@ -4402,9 +4727,10 @@
                     ],
                     "description": "Required when two-factor is on."
                   },
-                  "blobBase64": {
+                  "manifestBase64": {
                     "type": "string",
-                    "description": "Base64 of the re-encrypted snapshot manifest. Must not be empty."
+                    "minLength": 1,
+                    "description": "Base64 of the caller's library manifest sealed under the new key, as `PUT /library/db` sends it."
                   },
                   "keyProbe": {
                     "type": "string",
@@ -4412,19 +4738,109 @@
                   },
                   "snapshotId": {
                     "type": "string",
-                    "description": "Generated when omitted."
+                    "minLength": 1
                   },
                   "chunkSize": {
-                    "type": [
-                      "number",
-                      "null"
-                    ],
-                    "description": "Defaults to 4 MiB."
+                    "type": "integer",
+                    "exclusiveMinimum": 0
+                  },
+                  "chunkRefs": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 128,
+                      "pattern": "^[a-fA-F0-9]+$"
+                    },
+                    "minItems": 1,
+                    "description": "Hashes of the encrypted chunks the manifest references (uploaded already). A manifest references at least one; a whole library sent as one blob is no manifest and is refused (400)."
+                  },
+                  "chunkRefsSource": {
+                    "$ref": "#/components/schemas/LibraryChunkRefsSource"
+                  },
+                  "storageFormatVersion": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "description": "Storage format the caller's library is written in; never inferred. Lower than the stored one answers 409 `library_format_downgrade`."
+                  },
+                  "opStreamVersion": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "description": "Op stream the caller's library is written in; never inferred. Lower than the stored one answers 409 `library_format_downgrade`."
+                  },
+                  "baseVersion": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "The version of the caller's library the snapshot was built from. Omitted: the current version (no check)."
+                  },
+                  "otherLibraries": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "appId": {
+                          "type": "string",
+                          "description": "Another library app of the account (not the caller's)."
+                        },
+                        "baseVersion": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "description": "The version the rotating device read this library at."
+                        },
+                        "manifestBase64": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "Base64 of the manifest re-encrypted under the new key."
+                        },
+                        "snapshotId": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "chunkSize": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0
+                        },
+                        "chunkRefs": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "description": "The chunk hashes the manifest references (uploaded already)."
+                        },
+                        "chunkRefsSource": {
+                          "$ref": "#/components/schemas/LibraryChunkRefsSource"
+                        },
+                        "storageFormatVersion": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0
+                        },
+                        "opStreamVersion": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0
+                        }
+                      },
+                      "required": [
+                        "appId",
+                        "baseVersion",
+                        "manifestBase64",
+                        "snapshotId",
+                        "chunkSize",
+                        "chunkRefs",
+                        "storageFormatVersion",
+                        "opStreamVersion"
+                      ]
+                    },
+                    "description": "Every other app's library re-encrypted under the new key. Required for each app that has a library; omitted by builds from before 2026-11-23, which are refused (409 `library_not_reencrypted`) when another library exists."
                   }
                 },
                 "required": [
-                  "blobBase64",
-                  "keyProbe"
+                  "manifestBase64",
+                  "keyProbe",
+                  "snapshotId",
+                  "chunkSize",
+                  "chunkRefs",
+                  "storageFormatVersion",
+                  "opStreamVersion"
                 ]
               }
             }
@@ -4537,37 +4953,95 @@
             }
           },
           "409": {
-            "description": "The library already uses a newer format than this client writes.",
+            "description": "The library already uses a newer format than this client writes, a library changed since it was read (`version_conflict`), another app's library came without its re-encrypted copy (`library_not_reencrypted`), or the account stores media sealed with the key (`rotation_needs_media_reseal`). Nothing is written.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "enum": [
-                        "library_format_downgrade"
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "error": {
+                          "type": "string",
+                          "enum": [
+                            "library_format_downgrade"
+                          ]
+                        },
+                        "surface": {
+                          "type": "string",
+                          "enum": [
+                            "storage",
+                            "op-stream"
+                          ]
+                        },
+                        "observed": {
+                          "type": "integer"
+                        },
+                        "stored": {
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "error",
+                        "surface",
+                        "observed",
+                        "stored"
                       ]
                     },
-                    "surface": {
-                      "type": "string",
-                      "enum": [
-                        "storage",
-                        "op-stream"
+                    {
+                      "type": "object",
+                      "properties": {
+                        "error": {
+                          "type": "string",
+                          "enum": [
+                            "version_conflict"
+                          ]
+                        },
+                        "version": {
+                          "type": "integer"
+                        },
+                        "appId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "error",
+                        "version",
+                        "appId"
                       ]
                     },
-                    "observed": {
-                      "type": "integer"
+                    {
+                      "type": "object",
+                      "properties": {
+                        "error": {
+                          "type": "string",
+                          "enum": [
+                            "library_not_reencrypted"
+                          ]
+                        },
+                        "appId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "error",
+                        "appId"
+                      ]
                     },
-                    "stored": {
-                      "type": "integer"
+                    {
+                      "type": "object",
+                      "properties": {
+                        "error": {
+                          "type": "string",
+                          "enum": [
+                            "rotation_needs_media_reseal"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "error"
+                      ]
                     }
-                  },
-                  "required": [
-                    "error",
-                    "surface",
-                    "observed",
-                    "stored"
                   ]
                 }
               }
@@ -4644,7 +5118,7 @@
           "Library"
         ],
         "summary": "Reset library storage",
-        "description": "Deletes all encrypted library data in the bucket and resets the metadata of every app's library (Badger and Parrot: one key per account, so a lost key locks them all). Use case: user lost the library key and wants a clean reset. Needs re-authentication (password, plus a two-factor code when two-factor is on). The account is emailed afterwards; sessions are kept.\n\nPersonal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.",
+        "description": "Deletes all encrypted library data in the bucket and resets the metadata of every app's library (Badger and Parrot: one key per account, so a lost key locks them all). Use case: user lost the library key and wants a clean reset. Needs re-authentication (password, plus a two-factor code when two-factor is on). Every other session of the account is signed out in the same step (`revoked: false`: this session is kept, to make the new key). The account is emailed afterwards.\n\nPersonal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.",
         "security": [
           {
             "bearerAuth": []
@@ -4884,6 +5358,548 @@
             }
           }
         ]
+      }
+    },
+    "/library/media-reseal/runs": {
+      "post": {
+        "operationId": "openMediaResealRun",
+        "tags": [
+          "Library"
+        ],
+        "summary": "Open or resume a media reseal run",
+        "description": "STOR-RESEAL-02: starts re-sealing the account's media under its next media library key, or answers the run already open (one per account), so a device that stopped (closed, crashed, offline) resumes where the account stands. Use case: a device asked to change the media library key opens the run, then uploads a copy of each pending object with `resealRunId` and `resealOf`.\n\nPersonal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The open run; `created` is false when it was already open.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "run": {
+                      "$ref": "#/components/schemas/MediaResealRun"
+                    },
+                    "created": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "run",
+                    "created"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or unknown token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "unauthorized"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The account is blocked or scheduled for deletion, or a personal token was used on a route that needs a login session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "account_blocked",
+                        "account_deleted",
+                        "personal_token_not_allowed"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The run could not be read or opened.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "media_reseal_unavailable"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/library/media-reseal/runs/{id}": {
+      "get": {
+        "operationId": "getMediaResealRun",
+        "tags": [
+          "Library"
+        ],
+        "summary": "Progress of a media reseal run",
+        "description": "STOR-RESEAL-02: files and bytes to re-seal and done, and one page of the objects still waiting for a copy. Use case: the device shows progress and an estimate, and plans its next copies from `pending`.\n\nPersonal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "`nextAfter` of the previous page."
+            },
+            "required": false,
+            "description": "`nextAfter` of the previous page.",
+            "name": "after",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500,
+              "description": "Page size, 200 when absent, at most 500."
+            },
+            "required": false,
+            "description": "Page size, 200 when absent, at most 500.",
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The run's progress.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MediaResealProgress"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or unknown token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "unauthorized"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The account is blocked or scheduled for deletion, or a personal token was used on a route that needs a login session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "account_blocked",
+                        "account_deleted",
+                        "personal_token_not_allowed"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No reseal run with this id on the account.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "reseal_run_not_found"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The progress could not be read.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "media_reseal_unavailable"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/library/media-reseal/runs/{id}/kept": {
+      "post": {
+        "operationId": "markMediaResealKept",
+        "tags": [
+          "Library"
+        ],
+        "summary": "Mark media objects the old key cannot open",
+        "description": "STOR-RESEAL-05: objects the current key cannot open (damaged, or sealed under a key the account no longer has) cannot be re-sealed: marked kept, they stay as they are and count as done. Only live media objects of the account are marked.\n\nPersonal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "keys": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "minItems": 1,
+                    "maxItems": 500
+                  }
+                },
+                "required": [
+                  "keys"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "How many objects were marked.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "kept": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "kept"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or unknown token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "unauthorized"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The account is blocked or scheduled for deletion, or a personal token was used on a route that needs a login session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "account_blocked",
+                        "account_deleted",
+                        "personal_token_not_allowed"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No reseal run with this id on the account.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "reseal_run_not_found"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The run is no longer open.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "reseal_run_not_open"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The marks could not be saved.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "media_reseal_unavailable"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/library/media-reseal/runs/{id}/abandon": {
+      "post": {
+        "operationId": "abandonMediaResealRun",
+        "tags": [
+          "Library"
+        ],
+        "summary": "Abandon a media reseal run",
+        "description": "STOR-RESEAL-07: ends an open run without changing the key: its copies are deleted and removed from their silo, and the account keeps its media under the current key. Use case: the user cancels the key change. Abandoning a run that is no longer open changes nothing.\n\nPersonal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The run is closed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "abandoned": {
+                      "type": "boolean"
+                    },
+                    "purgeQueued": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "abandoned",
+                    "purgeQueued"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or unknown token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "unauthorized"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The account is blocked or scheduled for deletion, or a personal token was used on a route that needs a login session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "account_blocked",
+                        "account_deleted",
+                        "personal_token_not_allowed"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The run could not be closed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "media_reseal_unavailable"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/p2p/discovery/register": {
@@ -6892,11 +7908,18 @@
                   "properties": {
                     "deleted": {
                       "type": "integer",
-                      "description": "Number of keys deleted."
+                      "description": "Number of sent keys whose live record of this user the call removed (STOR-QUOTA-09); 0 when the records could not be read."
                     },
                     "reclaimedBytes": {
                       "type": "number",
                       "description": "Quota bytes given back; absent when no key was sent."
+                    },
+                    "unrecordedKeys": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "Sent keys with no live record of this user (a key not in its stored form, already deleted, or not this user's): passed to the silo but not counted as deleted. Absent when every key was recorded."
                     }
                   },
                   "required": [
@@ -13297,6 +14320,10 @@
                   "publicKey": {
                     "type": "string",
                     "description": "Required: the device's raw X25519 public key, base64 (32 bytes); otherwise 400 `invalid_public_key`."
+                  },
+                  "commitment": {
+                    "type": "string",
+                    "description": "Pairing check v2 (PRIV-PAIR-01): `SHA-256(\"sf-pair-v2|commit\" ‖ publicKey ‖ requesterNonce)`, base64 (32 bytes); malformed is 400 `invalid_commitment`. Sending apps refuse a request without it (PRIV-PAIR-04)."
                   }
                 }
               }
@@ -13357,7 +14384,8 @@
                         "invalid_app_scope",
                         "invalid_device_type",
                         "invalid_device_name",
-                        "invalid_public_key"
+                        "invalid_public_key",
+                        "invalid_commitment"
                       ]
                     }
                   },
@@ -13439,6 +14467,10 @@
                   "publicKey": {
                     "type": "string",
                     "description": "Required: the device's raw X25519 public key, base64 (32 bytes); otherwise 400 `invalid_public_key`."
+                  },
+                  "commitment": {
+                    "type": "string",
+                    "description": "Pairing check v2 (PRIV-PAIR-01): `SHA-256(\"sf-pair-v2|commit\" ‖ publicKey ‖ requesterNonce)`, base64 (32 bytes); malformed is 400 `invalid_commitment`. Sending apps refuse a request without it (PRIV-PAIR-04)."
                   }
                 }
               }
@@ -13499,7 +14531,8 @@
                         "invalid_app_scope",
                         "invalid_device_type",
                         "invalid_device_name",
-                        "invalid_public_key"
+                        "invalid_public_key",
+                        "invalid_commitment"
                       ]
                     }
                   },
@@ -13645,6 +14678,25 @@
                       "required": [
                         "status"
                       ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "pending"
+                          ]
+                        },
+                        "approverNonce": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "status",
+                        "approverNonce"
+                      ],
+                      "description": "Pairing check v2 (PRIV-PAIR-01): a sending app connected with its number; reveal yours (`POST /pairing/requests/{requestId}/reveal`) and show the check code."
                     },
                     {
                       "type": "object",
@@ -13886,6 +14938,94 @@
             }
           }
         }
+      },
+      "delete": {
+        "operationId": "cancelPairingRequest",
+        "tags": [
+          "Pairing"
+        ],
+        "summary": "Cancel a pairing request (no auth, pollSecret)",
+        "description": "The receiving device's Cancel (PRIV-PAIR-03): query `pollSecret`; the request is deleted at once, with the session an approved, uncollected sign-in was waiting with. Wrong secret or unknown id: 404. Limited like polls.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Request id (UUID)."
+            },
+            "required": true,
+            "description": "Request id (UUID).",
+            "name": "requestId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Required: the request's `pollSecret`."
+            },
+            "required": false,
+            "description": "Required: the request's `pollSecret`.",
+            "name": "pollSecret",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deleted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown, expired or already used request or code.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "pairing_not_found"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests; wait `retryAfterSeconds` (also sent as the `Retry-After` header).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "rate_limited"
+                      ]
+                    },
+                    "retryAfterSeconds": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "error",
+                    "retryAfterSeconds"
+                  ]
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/pairing/lookup": {
@@ -13950,6 +15090,30 @@
                       "type": "string",
                       "description": "The new device's X25519 public key, base64."
                     },
+                    "protocol": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                          "enum": [
+                            1
+                          ]
+                        },
+                        {
+                          "type": "number",
+                          "enum": [
+                            2
+                          ]
+                        }
+                      ],
+                      "description": "2: the request carries a `commitment` (PRIV-PAIR-01); 1: an older app made it, and sending apps refuse it (PRIV-PAIR-04)."
+                    },
+                    "commitment": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "The receiving device's commitment, base64; null for protocol 1."
+                    },
                     "expiresAt": {
                       "type": "string",
                       "format": "date-time",
@@ -13963,6 +15127,8 @@
                     "deviceType",
                     "deviceName",
                     "publicKey",
+                    "protocol",
+                    "commitment",
                     "expiresAt"
                   ]
                 }
@@ -14318,7 +15484,7 @@
             }
           },
           "409": {
-            "description": "The request was already approved, denied or used.",
+            "description": "The request was already approved, denied or used, or (protocol 2) the check exchange is not finished: `connect` by this account and the device's `reveal` come first.",
             "content": {
               "application/json": {
                 "schema": {
@@ -14327,7 +15493,8 @@
                     "error": {
                       "type": "string",
                       "enum": [
-                        "pairing_already_used"
+                        "pairing_already_used",
+                        "pairing_check_pending"
                       ]
                     }
                   },
@@ -14520,6 +15687,536 @@
                       "type": "string",
                       "enum": [
                         "pairing_expired"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests; wait `retryAfterSeconds` (also sent as the `Retry-After` header).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "rate_limited"
+                      ]
+                    },
+                    "retryAfterSeconds": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "error",
+                    "retryAfterSeconds"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/pairing/requests/{requestId}/connect": {
+      "post": {
+        "operationId": "connectPairing",
+        "tags": [
+          "Pairing"
+        ],
+        "summary": "Send the approving app's number (pairing check v2)",
+        "description": "PRIV-PAIR-01, the sending app's first step after `GET /pairing/lookup` on a protocol 2 request: body `{ approverNonce }` (32 random bytes, base64; malformed is 400 `invalid_nonce`). The first account to connect owns the request from then on: lookup, approve and deny answer 404 to any other. Sending the same number again answers 200; another number is 409 `pairing_already_used`. A protocol 1 request is 409 `pairing_check_unsupported`. Limited like approve (30 a minute per account).\n\nPersonal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Request id (UUID)."
+            },
+            "required": true,
+            "description": "Request id (UUID).",
+            "name": "requestId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "approverNonce": {
+                    "type": "string",
+                    "description": "Required: 32 random bytes, base64; malformed is 400 `invalid_nonce`."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Connected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The number is missing or malformed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "invalid_nonce"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or unknown token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "unauthorized"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The account is blocked or scheduled for deletion, or a personal token was used on a route that needs a login session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "account_blocked",
+                        "account_deleted",
+                        "personal_token_not_allowed"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown, expired or already used request or code.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "pairing_not_found"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Another app connected first, the request is no longer pending, or it is protocol 1.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "pairing_already_used",
+                        "pairing_check_unsupported"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "The request expired.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "pairing_expired"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests; wait `retryAfterSeconds` (also sent as the `Retry-After` header).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "rate_limited"
+                      ]
+                    },
+                    "retryAfterSeconds": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "error",
+                    "retryAfterSeconds"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/pairing/requests/{requestId}/reveal": {
+      "post": {
+        "operationId": "revealPairing",
+        "tags": [
+          "Pairing"
+        ],
+        "summary": "Reveal the receiving device's number (no auth, pollSecret)",
+        "description": "PRIV-PAIR-01, the receiving device's step once its poll shows `approverNonce`: body `{ pollSecret, requesterNonce }`. The number must open the commitment sent with the request (400 `pairing_commitment_mismatch`); before any app connected it is 409 `pairing_check_pending`. Sending the same number again answers 200. Limited like polls (20 a minute per address).",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Request id (UUID)."
+            },
+            "required": true,
+            "description": "Request id (UUID).",
+            "name": "requestId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "pollSecret": {
+                    "type": "string",
+                    "description": "Required: the request's `pollSecret`; wrong or missing answers 404."
+                  },
+                  "requesterNonce": {
+                    "type": "string",
+                    "description": "Required: the number committed to, base64 (32 bytes); malformed is 400 `invalid_nonce`."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Revealed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The number is malformed or does not open the commitment.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "invalid_nonce",
+                        "pairing_commitment_mismatch"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown, expired or already used request or code.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "pairing_not_found"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "No app connected yet, another number was revealed, the request is no longer pending, or it is protocol 1.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "pairing_check_pending",
+                        "pairing_already_used",
+                        "pairing_check_unsupported"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "The request expired.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "pairing_expired"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests; wait `retryAfterSeconds` (also sent as the `Retry-After` header).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "rate_limited"
+                      ]
+                    },
+                    "retryAfterSeconds": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "error",
+                    "retryAfterSeconds"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "operationId": "getPairingReveal",
+        "tags": [
+          "Pairing"
+        ],
+        "summary": "Read the receiving device's number (connected approver)",
+        "description": "PRIV-PAIR-01, the sending app after `connect`: answers `{ status, requesterNonce? }`, the number once the device revealed it. The sending app checks it opens the commitment and shows the check code. Optional `wait` seconds (≤ 25) to long-poll. Only the account that connected sees it (any other: 404). Answers carry `Cache-Control: no-store`; limited like polls (20 a minute per address).\n\nPersonal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Request id (UUID)."
+            },
+            "required": true,
+            "description": "Request id (UUID).",
+            "name": "requestId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Seconds to wait for the number (at most 25)."
+            },
+            "required": false,
+            "description": "Seconds to wait for the number (at most 25).",
+            "name": "wait",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The state of the request and, once revealed, the device's number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "pending",
+                        "approved",
+                        "expired",
+                        "denied",
+                        "consumed"
+                      ]
+                    },
+                    "requesterNonce": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "status"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or unknown token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "unauthorized"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The account is blocked or scheduled for deletion, or a personal token was used on a route that needs a login session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "account_blocked",
+                        "account_deleted",
+                        "personal_token_not_allowed"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown, expired or already used request or code.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "pairing_not_found"
                       ]
                     }
                   },
@@ -17399,6 +19096,93 @@
           },
           "429": {
             "description": "More than 10 messages in the last hour.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "rate_limited"
+                      ]
+                    },
+                    "retryAfterSeconds": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "error",
+                    "retryAfterSeconds"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/usage/hello": {
+      "post": {
+        "operationId": "sayDailyHello",
+        "tags": [
+          "Usage"
+        ],
+        "summary": "Daily hello of an app (anonymous)",
+        "description": "Sent once per local day by each app (OPS-BIZ-20). Adds one hello and the two tallies to today's totals (UTC) for the app, platform and version of the `x-space-client` header; nothing else is kept, no account, device or install id and no address. Needs no login and ignores any `Authorization` header. Never refused for an old app version. Limited to 20 per network address an hour (429).",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "plays": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Plays started on this device since its last hello. Above 2000 counts as 2000."
+                  },
+                  "screens": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Screens opened on this device since its last hello. Above 2000 counts as 2000."
+                  }
+                },
+                "required": [
+                  "plays",
+                  "screens"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Counted."
+          },
+          "400": {
+            "description": "The `x-space-client` header is missing or not valid, or the body is not valid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "invalid_client"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many attempts; wait `retryAfterSeconds` (also sent as the `Retry-After` header).",
             "content": {
               "application/json": {
                 "schema": {

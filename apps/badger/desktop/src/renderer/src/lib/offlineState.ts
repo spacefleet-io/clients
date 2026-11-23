@@ -224,7 +224,7 @@ export const useOfflineStateByMediaId = (
     // store.version is intentionally included alongside store.byFileId so
     // a forced refresh — which would currently always also swap byFileId —
     // is also covered if we ever switch to an in-place mutation strategy.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- store.version is deliberate (see above)
   }, [media, store.byFileId, store.version]);
 };
 

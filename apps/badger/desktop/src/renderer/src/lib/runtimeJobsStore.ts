@@ -282,7 +282,7 @@ const maybeRefreshOfflineOnDownloadComplete = (
   if (!job || job.kind !== "download") return;
   // Loud-by-design diagnostic — offline completion bugs are otherwise invisible
   // from logs (add logs when missing context).
-  // eslint-disable-next-line no-console
+  // eslint-disable-next-line no-console -- loud by design (see above)
   console.info(
     "[offline-refresh] download job succeeded → re-hydrating offline state",
     { jobId: job.jobId, mediaId: job.mediaId ?? null },

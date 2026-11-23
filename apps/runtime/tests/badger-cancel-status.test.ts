@@ -478,27 +478,4 @@ describe("badger cancel_job status mapping invariant", () => {
       }
     }
   );
-
-  // -------------------------------------------------------------------------
-  // Async runIngestJob AbortSignal catch-branch path
-  // The catch at badger.ts:1644 checks controller.signal.aborted — if true,
-  // sets status to "cancelled"; otherwise sets status to "failed".
-  // This case is exercised by the uploading/transcoding cancel tests above via
-  // the real async code path: the stalled processMediaJob throws on abort,
-  // the catch fires, signal.aborted is true, and status becomes "cancelled".
-  //
-  // A dedicated focused unit test would require injecting a seam into the
-  // private runIngestJob method or exposing the AbortController. That seam
-  // does not currently exist.
-  // TODO(@known-gap): needs source seam — see plan W1-C
-  // ---------------------------------------------------------------------------
-
-  it.skip(
-    "runIngestJob catch-branch: AbortSignal abort yields cancelled not failed (needs source seam)",
-    async () => {
-      // Requires direct access to the private AbortController or a public
-      // injection point for the catch-branch. The transcoding/uploading tests
-      // above already cover this path indirectly through the real async flow.
-    }
-  );
 });

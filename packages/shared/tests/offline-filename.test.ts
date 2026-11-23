@@ -271,9 +271,7 @@ describe("sanitizeOfflineFilename", () => {
 
   it("handles non-string input defensively", () => {
     console.info(`[offline-filename:non-string] undefined/number inputs -> "untitled"`);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const gotUndefined = sanitizeOfflineFilename(undefined as any);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const gotNumber = sanitizeOfflineFilename(123 as any);
     try {
       expect(gotUndefined).toBe("untitled");

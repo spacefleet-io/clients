@@ -120,6 +120,9 @@ const requestScope = new AsyncLocalStorage<{ requestId: string }>();
 /** Runs `fn` (a request's handlers) with `requestId` on every line it writes. */
 export const runWithRequestId = <T>(requestId: string, fn: () => T): T => requestScope.run({ requestId }, fn);
 
+/** The id of the request being served, or undefined outside one; the server error reports tag it (REL-LOG-28). */
+export const currentRequestId = (): string | undefined => requestScope.getStore()?.requestId;
+
 // A fresh object per line: pino merges the line's own fields into what `mixin` returns, so handing it the store
 // itself would leave every line's fields on the request and on each later line it writes.
 const mixin = (): object => {

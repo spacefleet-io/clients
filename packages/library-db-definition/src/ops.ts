@@ -632,6 +632,18 @@ const V3_PLAYBACK_KEYS = ["formats", "audioTracks", "subtitles", "subtitleTracks
 export const isV3MediaUpsert = (op: MediaUpsertOp | MediaUpsertV4Op): op is MediaUpsertOp =>
   V3_PLAYBACK_KEYS.some((key) => Reflect.get(op.payload.details, key) !== undefined);
 
+/**
+ * Ops whose metadata / playback / templates statements a receiver always runs, in op order, after the batch's core
+ * statements (LIB-SYNC-22). They hold no core clock to check: the version-4 playback and episode ops carry their own
+ * (LIB-SYNC-08), and a `media.delete` must clear every file the title has rows in, or its playback rows outlive it.
+ * `media.upsert` is the one other op reaching those files; its rows go on only while the core row kept its clock.
+ */
+export const isSecondaryOnlyOp = (op: LibraryOp) =>
+  op.type === "media.delete" ||
+  op.type === "media.file.playback.set" ||
+  op.type === "media.file.playback.delete" ||
+  op.type === "media.episode.delete";
+
 /** An old `media.upsert` as change types 4 (vault v4 plan §1.1; vectors: `test-vectors/chunk-lists.json` `translations`). */
 export type TranslatedMediaUpsert = {
   upsert: MediaUpsertV4Op;

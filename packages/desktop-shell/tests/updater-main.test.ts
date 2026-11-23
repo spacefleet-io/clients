@@ -13,6 +13,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createDesktopUpdater,
   SYSTEM_RELAUNCH_DELAY_MS,
+  SYSTEM_UPDATE_HOLD_MS,
   type AutoUpdaterLike,
   type DesktopUpdaterOptions,
   type UpdaterWindow,
@@ -292,7 +293,7 @@ describe("createDesktopUpdater — Linux copies the package manager installed (R
     await checked(h, "pacman-auto", () => {
       expect(h.loadAutoUpdater).not.toHaveBeenCalled();
       expect(h.fetchSpy).toHaveBeenCalledTimes(1);
-      expect(h.fetchSpy.mock.calls[0]?.[0]).toBe("https://api.example.com/desktop/badger/release-status?currentVersion=0.1.5&platform=linux");
+      expect(h.fetchSpy.mock.calls[0]?.[0]).toBe("https://api.example.com/desktop/badger/release-status?currentVersion=0.1.5&platform=linux&channel=pacman");
       expect(h.sent.map((e) => e.kind)).toEqual(["checking", "update-available"]);
       expect(state).toMatchObject({
         phase: "available",
@@ -386,6 +387,61 @@ describe("createDesktopUpdater — Linux copies the package manager installed (R
     await checked(h, `pacman-failure-${code}`, () => {
       expect(state).toMatchObject({ phase: "error", failure, manualCommand: command });
       expect(state.failureDetail).toContain("would also upgrade: glibc");
+    });
+  });
+
+  // @bugfix @regression-proof Chris 2026-11-23: Parrot 0.1.39 (pacman) was offered 0.1.40 while the Arch repository
+  // still listed 0.1.39. The API answers per install channel, so the client must say which one it is.
+  // @req REL-UPD-07[badger-desktop,parrot] release-status is asked for the version this copy's own repository serves
+  it.each<[string, Parameters<typeof fakeProbe>[0]]>([
+    ["pacman", { env: { DISPLAY: ":0" }, files: [HELPER], path: ["pacman", "pkexec"], owners: { pacman: "spacebadger\n" } }],
+    ["deb", { env: { DISPLAY: ":0" }, files: [HELPER], path: ["dpkg-query", "pkexec"], owners: { "dpkg-query": `spacebadger: ${HELPER}\n` } }],
+    ["rpm", { env: { DISPLAY: ":0" }, files: [HELPER], path: ["rpm", "dnf", "pkexec"], owners: { rpm: "spacebadger" } }],
+    ["flatpak", { env: { FLATPAK_ID: "io.spacefleet.Badger", DISPLAY: ":0" }, path: ["pkexec"] }],
+  ])("%s copy: release-status carries its install channel", async (channel, probeSetup) => {
+    vi.stubEnv("APPIMAGE", "");
+    const { probe } = fakeProbe(probeSetup);
+    const h = makeHarness({ platform: "linux", version: "0.1.5", probe, fetchAnswer: LATEST_0_1_9 });
+    h.register();
+    await settle();
+    await h.invoke(UPDATER_CHANNELS.check);
+    const url = new URL(String(h.fetchSpy.mock.calls[0]?.[0]));
+    console.log(`[updater-main:release-channel:${channel}] ${url.href}`);
+    await checked(h, `release-channel-${channel}`, () => {
+      expect(url.searchParams.get("platform")).toBe("linux");
+      expect(url.searchParams.get("channel")).toBe(channel);
+    });
+  });
+
+  // @bugfix @regression-proof Chris 2026-11-23: the repository did not have the offered version yet ("notNewer"). The
+  // version must not come back at every check in a loop: it is held back for an hour, then offered again.
+  // @req REL-UPD-07[badger-desktop,parrot] after "not in the repository yet" the same version is not offered again for an hour
+  it("helper exit 10 (repository not ready): the same version is not offered again for an hour, then is", async () => {
+    vi.stubEnv("APPIMAGE", "");
+    const { probe, run } = pacmanInstall({ code: 10, stderr: "[system-update] the repository has no newer spacebadger yet\n" });
+    const h = makeHarness({ platform: "linux", version: "0.1.5", probe, fetchAnswer: LATEST_0_1_9 });
+    h.register();
+    await settle();
+    expect(await h.invoke(UPDATER_CHANNELS.check)).toEqual({ status: "available", version: "0.1.9" });
+    expect(await h.invoke(UPDATER_CHANNELS.download)).toEqual({ ok: false, message: "notNewer" });
+    const failed = (await h.invoke(UPDATER_CHANNELS.state)) as UpdaterState;
+    console.log(`[updater-main:hold:after-failure] ${JSON.stringify({ phase: failed.phase, failure: failed.failure })}`);
+
+    vi.advanceTimersByTime(SYSTEM_UPDATE_HOLD_MS - 60_000);
+    const during = await h.invoke(UPDATER_CHANNELS.check);
+    const duringState = (await h.invoke(UPDATER_CHANNELS.state)) as UpdaterState;
+    console.log(`[updater-main:hold:59min] ${JSON.stringify(during)} phase=${duringState.phase}`);
+
+    vi.advanceTimersByTime(120_000);
+    const after = await h.invoke(UPDATER_CHANNELS.check);
+    console.log(`[updater-main:hold:61min] ${JSON.stringify(after)}`);
+    await checked(h, "hold-not-newer", () => {
+      expect(failed).toMatchObject({ phase: "error", failure: "notNewer" });
+      expect(during).toEqual({ status: "up-to-date" });
+      expect(duringState.phase).not.toBe("available");
+      expect(h.sent.filter((e) => e.kind === "update-available")).toHaveLength(2);
+      expect(after).toEqual({ status: "available", version: "0.1.9" });
+      expect(run.mock.calls.filter(([command]) => command === "pkexec")).toHaveLength(1);
     });
   });
 

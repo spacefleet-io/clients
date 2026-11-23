@@ -57,6 +57,7 @@
     "./parrot/screens": "./src/parrot/screens.tsx",
     "./styles/badger-dark.css": "./src/styles/badger-dark.css",
     "./styles/fleet-fonts.css": "./src/styles/fleet-fonts.css",
+    "./styles/float.css": "./src/styles/float.css",
     "./styles/parrot-dark.css": "./src/styles/parrot-dark.css",
     "./styles/space-palette.css": "./src/styles/space-palette.css",
     "./styles/theme.css": "./src/styles/theme.css"

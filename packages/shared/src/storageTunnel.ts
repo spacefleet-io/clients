@@ -40,10 +40,12 @@ export type TunnelGatewayFrame = Record<string, unknown>;
 /**
  * Why a tunnel session is opened (#145 unpaid access). The gateway/API refuse
  * `playback` and `upload` for an unpaid account (402 `subscription_unpaid`) but
- * allow `export` (offline downloads, exports to standard files) and `library`
- * (library data sync, artwork/images) at free QoS. Omitted = `playback`.
+ * allow `export` (offline downloads, exports to standard files), `library`
+ * (library data sync, artwork/images) and `reseal` (downloads the media and
+ * uploads only re-sealed copies during a media library key change,
+ * STOR-RESEAL-03) at free QoS. Omitted = `playback`.
  */
-export type StorageTunnelPurpose = "playback" | "export" | "upload" | "library";
+export type StorageTunnelPurpose = "playback" | "export" | "upload" | "library" | "reseal";
 
 /** The highest quality an account's plan may play while its silo is saturated (PLAY-QUAL-07). */
 export type StorageQualityCap = "480p" | "1080p";
@@ -503,9 +505,12 @@ export const streamUploadFrames = async (input: {
   const payloadBytes = input.byteLength;
   let offset = input.startOffset ?? 0;
   let seq = 0;
+  // The first refused frame (STOR-UPLOAD-07): kept here because a frame that settles while the loop waits on another one
+  // leaves `inFlight` before the next race, so the race alone would never see its rejection.
+  let failure: { error: unknown } | null = null;
 
-  while (offset < payloadBytes || inFlight.size > 0) {
-    while (offset < payloadBytes && inFlight.size < input.uploadWindow) {
+  while ((offset < payloadBytes && !failure) || inFlight.size > 0) {
+    while (offset < payloadBytes && !failure && inFlight.size < input.uploadWindow) {
       const currentSeq = seq;
       const range = { offset, length: Math.min(payloadBytes, offset + input.chunkSize) - offset };
       offset += input.chunkSize;
@@ -515,6 +520,9 @@ export const streamUploadFrames = async (input: {
         .sendChunk(range, currentSeq)
         .then((ack) => {
           assertUploadAckFrame(ack);
+        })
+        .catch((error: unknown) => {
+          failure ??= { error };
         })
         .finally(() => {
           inFlight.delete(op);
@@ -527,6 +535,7 @@ export const streamUploadFrames = async (input: {
       await Promise.race(inFlight);
     }
   }
+  if (failure) throw (failure as { error: unknown }).error;
 };
 
 export const normalizeBaseUrl = (value: string) => value.trim().replace(/\/+$/, "");
@@ -2153,7 +2162,6 @@ export const createUserStorageTunnelClient = (input: {
           purpose,
           ...(profileId ? { profileId } : {}),
         }),
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         signal: controller.signal as any,
       });
       const session = await readSessionResponse(res, baseUrl);

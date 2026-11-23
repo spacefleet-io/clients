@@ -808,6 +808,11 @@
       "scanInstead": "Escanear el código"
     },
     "looking": "Buscando el código…",
+    "checking": "Esperando al dispositivo…",
+    "check": {
+      "question": "¿Muestra {{name}} este código?",
+      "hint": "Aprueba solo si las dos pantallas muestran los mismos seis dígitos. Si no, recházalo."
+    },
     "confirm": {
       "asked": "Un dispositivo ({{type}}) llamado \"{{name}}\" ha pedido unirse a tu cuenta.",
       "unlockNotice": "Se te pedirá que desbloquees el teléfono. Al aprobarlo, el dispositivo inicia sesión y recibe la clave de tu mediateca.",
@@ -843,7 +848,10 @@
       "bad_request": "Ese dispositivo ha enviado algo que no podemos usar. Pídele un código nuevo.",
       "unknown": "Algo ha fallado y el dispositivo no se ha añadido. Vuelve a intentarlo.",
       "code_required": "Escribe el código para confirmar que eres tú.",
-      "code_invalid": "Ese código es incorrecto o ha caducado, así que no se ha compartido nada. Inténtalo de nuevo."
+      "code_invalid": "Ese código es incorrecto o ha caducado, así que no se ha compartido nada. Inténtalo de nuevo.",
+      "update_required": "Ese dispositivo usa una versión antigua. Actualízalo y vuelve a intentarlo.",
+      "stale_key": "Este dispositivo no tiene la clave actual de tu cuenta, así que no puede enviarla.",
+      "check_failed": "No se pudieron comprobar los códigos y no se compartió nada. Pide un código nuevo en el otro dispositivo."
     },
     "unlock": {
       "title": "Desbloquea para añadir un dispositivo",
@@ -884,6 +892,10 @@
     "step2": "2. Ve a Ajustes y luego a Vincular un dispositivo.",
     "step3": "3. Escanea este código o escribe el código de abajo.",
     "codeLabel": "O escribe este código",
+    "check": {
+      "label": "Código de verificación",
+      "hint": "Compáralo con tu otro dispositivo. Aprueba solo si ambos muestran los mismos seis dígitos."
+    },
     "expiresIn": "Este código caduca en {{time}}. Aparecerá uno nuevo automáticamente.",
     "deviceName": "Este teléfono aparece como \"{{name}}\".",
     "qrAccessibility": "Código QR para vincular este teléfono",
@@ -1032,7 +1044,11 @@
       "confirmRequired": "Confirma que has guardado la nueva clave.",
       "passwordRequired": "La contraseña es obligatoria.",
       "notReady": "La mediateca no está lista.",
-      "rotate": "No se pudo cambiar la clave. Revisa tu contraseña o tu código."
+      "rotate": "No se pudo cambiar la clave. Revisa tu contraseña o tu código.",
+      "notReencrypted": "La mediateca de otra app no se pudo pasar a la nueva clave. No ha cambiado nada. Cambia la clave desde un dispositivo que tenga la clave actual.",
+      "unreadable": "La clave de este teléfono no abre la mediateca de otra app. No ha cambiado nada. Cambia la clave desde un dispositivo que tenga la clave actual.",
+      "notSnapshotted": "La mediateca de otra app todavía se está guardando. No ha cambiado nada. Abre esa app, deja que se sincronice y vuelve a intentarlo.",
+      "changed": "Una mediateca cambió durante el cambio de clave. No ha cambiado nada. Vuelve a intentarlo."
     }
   },
   "libraryFormat": {

@@ -79,7 +79,7 @@ export default function SignIn({ t, state, onState }: Props) {
   );
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-8 pt-32">
+    <div className="flex min-h-screen items-center justify-center p-8">
       <DesktopStartupControls>
         <LanguageMenu
           current={language}

@@ -23,6 +23,7 @@ import { resolveResumeCandidateSeconds } from "@space/shared/playbackResume";
 import type { SkipMarkerLike } from "../../lib/playback/skipMarkers";
 import { getViewingScope } from "../../lib/profiles/activeViewingScope";
 import { acquireStream, onStreamTakenOver, streamSlots } from "../../lib/playback/streamSlot";
+import { noteHelloPlay } from "@space/shared/dailyHello";
 
 const APP_ID = "badger";
 
@@ -263,6 +264,8 @@ export const usePlayerSession = (mediaId: string, episodeId: string | null): Pla
         if (tokenRef) live().hideLoading(tokenRef);
         return;
       }
+      // OPS-BIZ-20: one play for the hello's tally, streamed or downloaded.
+      noteHelloPlay();
 
       let url: string;
       const generation = ++proxyGeneration;

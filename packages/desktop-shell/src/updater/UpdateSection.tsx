@@ -14,7 +14,7 @@
  * The app passes its own updater controls (`useDesktopUpdater` over its preload bridge) and its own setting, since
  * Badger keeps the switch in the window's settings and Parrot in the main process.
  */
-import { AlertTriangle, CheckCircle2, Download, Info, Loader2, RefreshCw, RotateCw } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Clock, Download, Info, Loader2, RefreshCw, RotateCw } from "lucide-react";
 import { Button, Switch } from "@space/ui";
 import type { UpdateChannel, UpdaterPhase } from "./types";
 import type { DesktopUpdaterControls } from "./useUpdater";
@@ -90,6 +90,8 @@ export function DesktopUpdateSection({ controls, language, appName, autoUpdate }
         : system
           ? `${text("available", { version })} ${text("systemNoPasswordDialog")}`
           : text("available", { version });
+  // REL-UPD-07: the package manager did not have the offered version yet: "on its way", not a failure.
+  const pending = system && phase === "error" && state.failure === "notNewer";
   const status =
     phase === "checking"
       ? text("checking")
@@ -113,20 +115,22 @@ export function DesktopUpdateSection({ controls, language, appName, autoUpdate }
   const manual =
     state.manualCommand !== null &&
     ((state.channel === "flatpak" && phase === "available") ||
-      (system && ((phase === "available" && !state.canInstall) || (phase === "error" && state.failure !== null))));
+      (system && ((phase === "available" && !state.canInstall) || (phase === "error" && state.failure !== null && !pending))));
 
   const StatusIcon =
     busy
       ? Loader2
-      : phase === "error"
-        ? AlertTriangle
-        : phase === "available" || phase === "downloaded" || phase === "installed"
-          ? Download
-          : phase === "idle" && state.lastCheckedAt !== null
-            ? CheckCircle2
-            : Info;
+      : pending
+        ? Clock
+        : phase === "error"
+          ? AlertTriangle
+          : phase === "available" || phase === "downloaded" || phase === "installed"
+            ? Download
+            : phase === "idle" && state.lastCheckedAt !== null
+              ? CheckCircle2
+              : Info;
   const statusTone =
-    phase === "error"
+    phase === "error" && !pending
       ? "text-destructive"
       : phase === "available" || phase === "downloaded" || phase === "installed"
         ? "text-primary"

@@ -4,11 +4,12 @@ import { Button, Input, SectionHeader } from "../components/ui";
 import { Screen } from "../components/Screen";
 import { useAuth } from "../store/auth";
 import { useLibrary } from "../store/library";
-import { ApiError, rotateLibraryKey } from "@space/shared/api";
+import { ApiError } from "@space/shared/api";
+import { rotateWithParrotLibrary, rotationRefusal, type RotationRefusal } from "../lib/rotationCopies";
 import { encryptBytesToBase64 } from "../lib/crypto";
 import { generateLibraryKeyWords, type NewLibraryKey } from "@space/shared/libraryKeyWords";
 import { LibraryKeyWordsGrid } from "@space/mobile-shell/libraryKeyWords";
-import { setStoredLibraryKey } from "../lib/onboarding";
+import { getStoredLibraryKey, setStoredLibraryKey } from "../lib/onboarding";
 import { useTranslation } from "@space/mobile-shell/i18n";
 import { theme } from "../theme/theme";
 
@@ -17,14 +18,16 @@ export const ResetKeyScreen = () => {
   const { token, user } = useAuth();
   // ACCT-AUTH-04: an account without a password is asked a code instead (the first try emails one).
   const hasPassword = user?.hasPassword !== false;
-  const { exportBytes, reload } = useLibrary();
+  const { sealForRotation, reload } = useLibrary();
   const [fresh, setFresh] = useState<NewLibraryKey | null>(null);
   const newKey = fresh?.keyBase64 ?? null;
   const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
   const [confirmed, setConfirmed] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<"confirmRequired" | "passwordRequired" | "notReady" | "rotate" | "codeSent" | null>(null);
+  const [error, setError] = useState<
+    "confirmRequired" | "passwordRequired" | "notReady" | "rotate" | "codeSent" | RotationRefusal | null
+  >(null);
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
@@ -43,28 +46,39 @@ export const ResetKeyScreen = () => {
       setError("passwordRequired");
       return;
     }
-    const bytes = await exportBytes();
-    if (!bytes) {
-      setError("notReady");
-      return;
-    }
     setBusy(true);
     try {
-      const blobBase64 = await encryptBytesToBase64(newKey, bytes);
+      // PRIV-KEY-13: this library as a snapshot under the new key (chunks uploaded), declaring its formats.
+      const library = await sealForRotation(newKey);
+      if (!library) {
+        setError("notReady");
+        return;
+      }
       const probeBytes = new Uint8Array(32);
       global.crypto.getRandomValues(probeBytes);
       const keyProbe = await encryptBytesToBase64(newKey, probeBytes);
-      await rotateLibraryKey(token, blobBase64, keyProbe, hasPassword ? password : "", code || undefined);
+      // PRIV-KEY-06: Parrot's library is re-encrypted with this phone's current key, never emptied.
+      await rotateWithParrotLibrary({
+        token,
+        oldKey: await getStoredLibraryKey(),
+        newKey,
+        library,
+        keyProbe,
+        password: hasPassword ? password : "",
+        twoFactorCode: code || undefined,
+      });
       await setStoredLibraryKey(newKey);
       setSuccess(true);
       reload();
     } catch (err) {
       // Without a password the first try emails a code (or asks the authenticator's): say where to type it.
-      setError(!hasPassword && err instanceof ApiError && err.payload?.error === "two_factor_required" ? "codeSent" : "rotate");
+      const refused = rotationRefusal(err);
+      if (refused) setError(refused);
+      else setError(!hasPassword && err instanceof ApiError && err.payload?.error === "two_factor_required" ? "codeSent" : "rotate");
     } finally {
       setBusy(false);
     }
-  }, [code, confirmed, exportBytes, hasPassword, newKey, password, reload, token]);
+  }, [code, confirmed, sealForRotation, hasPassword, newKey, password, reload, token]);
 
   return (
     <Screen>

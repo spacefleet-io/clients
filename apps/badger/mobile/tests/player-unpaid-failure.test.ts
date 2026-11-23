@@ -15,7 +15,7 @@ import { translate } from "@space/mobile-shell/i18n";
 import en from "../../../../packages/mobile-shell/src/i18n/en.json";
 import { usePlayerSession, type PlayerSession } from "../src/screens/player/usePlayerSession";
 import { setViewingScope } from "../src/lib/profiles/activeViewingScope";
-import { playerFailureMessage } from "../src/lib/unpaidAccess";
+import { playerFailureMessage } from "@space/mobile-shell/unpaid-access";
 
 const ctl = vi.hoisted(() => ({ downloaded: false, startProxyFails: false }));
 

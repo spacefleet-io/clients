@@ -86,7 +86,6 @@ function renderHook<P, T>(
   // reactive state. We do this by directly importing and calling the hook
   // function in a minimal harness built with React's internal scheduler.
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const noop = () => {};
   return {
     result,

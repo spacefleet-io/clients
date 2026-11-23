@@ -190,7 +190,7 @@ describe("runtime api client", () => {
     fetchMock.mockResolvedValueOnce(jsonResponse({ version: 21, stateHash: "state-21", lastOpId: "op-21" }));
 
     // The op-stream version is the caller's (here an app at 7), never a constant of this transport (LIB-FMT-09).
-    const result = await putLibraryDb("token-5", 20, "bWFuaWZlc3Q=", "snapshot-21", 4194304, "probe", true, "state-20", "op-20", "badger", ["c1", "c2"], { client: "desktop", refsVersion: 1 }, 7);
+    const result = await putLibraryDb("token-5", 20, "bWFuaWZlc3Q=", "snapshot-21", 4194304, "probe", true, "state-20", "op-20", "badger", ["c1", "c2"], { client: "desktop", refsVersion: 1 }, 7, "checked-probe");
 
     expect(result.version).toBe(21);
     const request = sdkRequestAt(0);
@@ -215,6 +215,7 @@ describe("runtime api client", () => {
     });
     expect(typeof body.storageFormatVersion).toBe("number");
     expect(body.opStreamVersion).toBe(7);
+    expect(body.checkedKeyProbe).toBe("checked-probe");
   });
 
   it("uploads encrypted snapshot manifest bytes with binary headers", async () => {

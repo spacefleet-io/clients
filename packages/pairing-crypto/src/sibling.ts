@@ -68,7 +68,8 @@ export const checkSiblingRequest = (request: PairingRequestInfo, expect: Sibling
 };
 
 const lookupChecked = async (deps: SiblingApproveDeps, token: string, code: string, expect: SiblingExpectation) => {
-  const request = await lookupPairingRequest(deps, token, code);
+  // The sealed key goes back over the local channel and never reaches the server (PRIV-PAIR-04 exception).
+  const request = await lookupPairingRequest(deps, token, code, { acceptV1: true });
   const refusal = checkSiblingRequest(request, expect);
   if (refusal) {
     deps.log?.("sibling sign-in: request refused", { requestId: request.requestId, refusal, app: request.app, deviceType: request.deviceType });

@@ -16,7 +16,7 @@
  * @req PAR-META-20[parrot]
  * @req PAR-META-22[parrot]
  */
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { createRoot, type Root } from "react-dom/client";
 import { act } from "react";
@@ -93,6 +93,9 @@ const METEORA_SONG: MusicSuggestion = {
 };
 const METEORA_ALBUM: MusicSuggestion = { ...METEORA_SONG, kind: "album", album: { ...METEORA_SONG.album!, trackNumber: null, disc: null }, song: null, fits: { title: false, artist: true, album: true } };
 
+/** Lets `ms` pass: on the fake clock when the suite runs on one, else for real. */
+const wait = (ms: number) => (vi.isFakeTimers() ? vi.advanceTimersByTimeAsync(ms) : new Promise((r) => setTimeout(r, ms)));
+
 /** A suggest whose lookup answers only when the test says so. */
 const fakeSuggest = (answer: MusicSuggestion[] | Error) => {
   const pending: Array<() => void> = [];
@@ -111,7 +114,7 @@ const fakeSuggest = (answer: MusicSuggestion[] | Error) => {
   const answerAll = async () => {
     await act(async () => {
       for (const go of pending.splice(0)) go();
-      await new Promise((r) => setTimeout(r, 0));
+      await wait(0);
     });
   };
   return { suggest, asked, cover, answerAll };
@@ -176,9 +179,13 @@ const key = async (field: string, name: string) => {
   });
 };
 /** Past the pause after the last keystroke, so the lookup is asked. */
-const pause = () => act(async () => new Promise((r) => setTimeout(r, 300)));
+const pause = () => act(async () => void (await wait(300)));
 
 describe("[parrot] edit panel: connected autocomplete (PAR-META-18)", () => {
+  // The lookup waits for a pause after the last keystroke (a real setTimeout). On the fake clock a slow runner can
+  // never let that pause pass between a keystroke and the check that nothing was asked yet.
+  beforeEach(() => void vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] }));
+  afterEach(() => void vi.useRealTimers());
   it("@req PAR-META-18 typing mete in Album: library at once, Still asking…, then Meteora fits all three fields", async () => {
     const fake = fakeSuggest([METEORA_SONG, METEORA_ALBUM]);
     const get = await open({ suggest: fake.suggest, initial: NUMB });
@@ -322,7 +329,7 @@ describe("[parrot] edit panel: connected autocomplete (PAR-META-18)", () => {
     expect(first.querySelector<HTMLElement>('[data-testid="manage-suggest-dots"]')?.dataset.fits).toBe("11");
     expect(get("manage-changed-cover")).toBeNull();
     await act(async () => first.click());
-    await act(async () => new Promise((r) => setTimeout(r, 0)));
+    await act(async () => void (await wait(0)));
     expect([input("title").value, input("artist").value, input("year").value]).toEqual(["Meteora", "Linkin Park", "2003"]);
     expect(fake.cover).toHaveBeenCalledWith("rg-meteora");
     expect(get("manage-changed-cover")).not.toBeNull();

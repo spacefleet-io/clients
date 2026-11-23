@@ -658,7 +658,7 @@ export default function MediaDetailsDialog({ selectedId, onClose }: MediaDetails
 
   useEffect(() => {
     refreshSelected();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reload only when the title or playlists change, not on each new refreshSelected
   }, [selectedId, playlists]);
 
   // The open trailer and the trailer menu reset only when the page moves to another title or closes. A library refresh
@@ -1300,7 +1300,7 @@ export default function MediaDetailsDialog({ selectedId, onClose }: MediaDetails
   // not part of the inputs.
   const offlineCounts = useMemo(
     () => computeOfflineLocalCountsForDetails(selectedDetails),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the version forces a re-compute when the offline store mutates (see above)
     [selectedDetails, offlineStateSnapshot.version],
   );
   const playablePresence = useMemo(

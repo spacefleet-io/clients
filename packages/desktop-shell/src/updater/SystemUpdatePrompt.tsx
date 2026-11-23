@@ -7,12 +7,14 @@
  *  - Later: hides the modal for a day (per app and version, kept in localStorage); the next check after that asks again.
  *  - Then: progress; success → "Badger 0.1.9 is installed. Restarting Badger…" while the main process relaunches the
  *    app on its own (no click); failure → the reason and the command to run by hand, with a copy button. Without
- *    pkexec or a display (minimal window manager, headless) only the command is shown.
+ *    pkexec or a display (minimal window manager, headless) only the command is shown. When the package manager finds
+ *    nothing newer (its repository does not list the version yet), it is no failure: "A new version is on its way.
+ *    We'll offer it when it's ready." with Close, and the main process does not offer that version again for an hour.
  * Flatpak copies update through `flatpak update`: the modal only says so, with the command.
  * Turning automatic updates off in Settings (REL-UPD-01) turns the modal off; Settings › About keeps the same steps.
  */
 import { useState } from "react";
-import { AlertTriangle, Check, Copy, Download, Loader2, RotateCw } from "lucide-react";
+import { AlertTriangle, Check, Clock, Copy, Download, Loader2, RotateCw } from "lucide-react";
 import { Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@space/ui";
 import { systemFailureKey, updateSectionText, type UpdateSectionStringKey } from "./strings";
 import type { DesktopUpdaterControls } from "./useUpdater";
@@ -79,7 +81,9 @@ export function ManualUpdateCommand({ command, text }: { command: string; text: 
 }
 
 /** What the prompt shows for this state, before snooze and dismissals; null = nothing. */
-export const systemPromptView = (state: UpdaterState): "ask" | "manual" | "flatpak" | "installing" | "installed" | "failed" | null => {
+export const systemPromptView = (
+  state: UpdaterState,
+): "ask" | "manual" | "flatpak" | "installing" | "installed" | "pending" | "failed" | null => {
   if (state.mandatory || !state.autoUpdate) return null;
   if (state.channel === "flatpak") return state.phase === "available" ? "flatpak" : null;
   if (state.channel !== "system") return null;
@@ -91,7 +95,7 @@ export const systemPromptView = (state: UpdaterState): "ask" | "manual" | "flatp
     case "installed":
       return "installed";
     case "error":
-      return state.failure ? "failed" : null;
+      return state.failure === "notNewer" ? "pending" : state.failure ? "failed" : null;
     default:
       return null;
   }
@@ -137,7 +141,8 @@ export function SystemUpdatePrompt({ controls, language, appName, blocked = fals
             : view === "installed"
               ? text("installed")
               : text(systemFailureKey(state.failure));
-  const Icon = view === "installing" ? Loader2 : view === "failed" ? AlertTriangle : view === "installed" ? RotateCw : Download;
+  const Icon =
+    view === "installing" ? Loader2 : view === "failed" ? AlertTriangle : view === "installed" ? RotateCw : view === "pending" ? Clock : Download;
   const showCommand = (view === "manual" || view === "flatpak" || view === "failed") && state.manualCommand;
 
   return (

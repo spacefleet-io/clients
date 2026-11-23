@@ -38,7 +38,7 @@ vi.mock("@/api", async (importOriginal) => ({
   getSettings: vi.fn(async () => ({ twoFactorEnabled: false, twoFactorMethod: null })),
 }));
 vi.mock("@/lib/libraryContext", () => ({
-  useLibraryActions: () => ({ exportLocalDb: vi.fn(), clearLocalCache: vi.fn() }),
+  useLibraryActions: () => ({ sealLibraryForRotation: vi.fn(), clearLocalCache: vi.fn() }),
 }));
 // `t` must be referentially stable: effects depend on it.
 const i18n = vi.hoisted(() => ({ t: (key: string) => key }));
