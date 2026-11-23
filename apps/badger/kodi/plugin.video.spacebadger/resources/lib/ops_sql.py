@@ -1,37 +1,19 @@
 # -*- coding: utf-8 -*-
-"""Python port of packages/library-db-definition/src/ops.ts (writers declare op stream 3, readers read up to 4).
+"""Python port of packages/library-db-definition/src/ops.ts (OP_STREAM_VERSION 3).
 
-``build_op_statements(op, id_gen, packed=False)`` returns the ordered ``[(sql, params), ...]`` that the TypeScript
+``build_op_statements(op, id_gen)`` returns the ordered ``[(sql, params), ...]`` that the TypeScript
 ``buildOpStatements`` would run, flattened across its groups (the addon keeps ONE combined SQLite, so
 group routing is irrelevant). Order inside a group is preserved; groups are emitted core, metadata,
 playback, ingest, templates, matching the TS ``finalize`` order.
 
-``packed`` says the DB holds the v4 playback layout (LIB-FMT-12: ``media_chunk_lists`` + ``media_file_playback``).
-In it an old ``media.upsert`` (one carrying playback keys) is translated (``translate_v3_media_upsert``) and never
-replayed as-is; the v4 playback ops refuse an old layout (PlaybackLayoutError).
-
-An unknown op type raises UnknownOpTypeError: the caller stops the sync and asks for an add-on update (LIB-FMT-13),
-never skips it, since a skipped op would leave the library silently wrong.
+An unknown op type raises UnknownOpTypeError; the caller logs and skips it (v0 policy).
 """
 import json
 
-import chunk_lists
-from legacy_format import LEGACY_CATALOG_ID_SOURCE, catalog_id, neutral_media_details
+from legacy_format import LEGACY_CATALOG_ID_SOURCE, catalog_id
 
 OP_STREAM_VERSION = 3
-# LIB-FMT-11: highest op stream this build reads; sent as x-library-op-stream-version on library reads, never
-# declared on a write (writers declare OP_STREAM_VERSION until the account is switched, see write_op_stream_version).
-READ_OP_STREAM_VERSION = 4
 MIN_SUPPORTED_OP_STREAM_VERSION = 1
-
-
-def write_op_stream_version(target_op_stream_version):
-    """LIB-FMT-13 writeOpStreamVersion: 4 only once the account is switched (meta targetOpStreamVersion >= 4), else 3."""
-    try:
-        return 4 if int(target_op_stream_version or 0) >= 4 else OP_STREAM_VERSION
-    except (TypeError, ValueError):
-        return OP_STREAM_VERSION
-
 
 # The source a catalog id row is written under (library-db-definition/src/catalogId.ts); readers also accept the
 # source older libraries used.
@@ -44,24 +26,6 @@ TERMINAL_INGEST_STATUSES = ("completed", "failed", "cancelled")
 
 class UnknownOpTypeError(Exception):
     pass
-
-
-class LibraryOpShapeError(ValueError):
-    """An op whose payload mixes shapes (a media.upsert whose tracks carry packed ``chunkList``s)."""
-
-    def __init__(self, message):
-        ValueError.__init__(self, "LIBRARY_OP_SHAPE: " + message)
-
-
-class PlaybackLayoutError(RuntimeError):
-    """A v4 playback op met a DB still in the old per-chunk layout (the layout step has not run)."""
-
-    def __init__(self, message):
-        RuntimeError.__init__(self, "PLAYBACK_LAYOUT: " + message)
-
-
-V4_OP_TYPES = ("media.file.playback.set", "media.file.playback.delete", "media.episode.delete")
-PLAYBACK_KEYS = ("formats", "audioTracks", "subtitles", "subtitleTracks", "chapters")
 
 
 def _js_str(value):
@@ -312,7 +276,7 @@ def _append_media_playback(b, details, new_id):
                sub.get("createdAt") or details.get("updatedAt")])
 
 
-def _append_media_delete(b, media_id, packed):
+def _append_media_delete(b, media_id):
     p = [media_id]
     b.add("core", "DELETE FROM media_external_ids WHERE media_id = ?;", p)
     b.add("core", "DELETE FROM media_genres WHERE media_id = ?;", p)
@@ -325,11 +289,6 @@ def _append_media_delete(b, media_id, packed):
     b.add("metadata", "DELETE FROM media_skip_markers WHERE media_id = ?;", p)
     b.add("metadata", "DELETE FROM media_file_desired_formats WHERE media_id = ?;", p)
     b.add("metadata", "DELETE FROM media_files WHERE media_id = ?;", p)
-    if packed:
-        # LIB-FMT-12: the packed lists and per-file clocks of the title (once this copy ran the layout step).
-        b.add("playback", "DELETE FROM media_chunk_lists WHERE owner_id IN (SELECT id FROM media_formats WHERE media_id = ?);", p)
-        b.add("playback", "DELETE FROM media_chunk_lists WHERE owner_id IN (SELECT id FROM media_audio_tracks WHERE media_id = ?);", p)
-        b.add("playback", "DELETE FROM media_file_playback WHERE media_id = ?;", p)
     b.add("playback", "DELETE FROM media_format_chunks WHERE format_id IN (SELECT id FROM media_formats WHERE media_id = ?);", p)
     b.add("playback", "DELETE FROM media_chapters WHERE format_id IN (SELECT id FROM media_formats WHERE media_id = ?);", p)
     b.add("playback", "DELETE FROM media_formats WHERE media_id = ?;", p)
@@ -342,240 +301,10 @@ def _append_media_delete(b, media_id, packed):
     b.add("templates", "DELETE FROM media_skip_analysis WHERE media_id = ?;", p)
 
 
-# --- op stream 4 (LIB-FMT-11): playback per file, packed chunk lists ------------------------------------------------
-
-_FILE_FORMATS = "SELECT id FROM media_formats WHERE media_id = ? AND file_id IS ?"
-_FILE_TRACKS = "SELECT id FROM media_audio_tracks WHERE media_id = ? AND file_id IS ?"
-_CLOCK_GUARD = "EXISTS (SELECT 1 FROM media_file_playback WHERE media_id = ? AND file_id = ? AND updated_at = ?)"
-_GUARDED_LIST_INSERT = chunk_lists.INSERT_SQL.replace("VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);",
-                                                      "SELECT ?, ?, ?, ?, ?, ?, ?, ?, ? WHERE %s;" % _CLOCK_GUARD)
-
-
-def _packed_list(op_type, json_list):
-    """A ``chunkList`` JSON object, refused (LIB-OPS-01) unless it decodes whole: never stored half-readable."""
-    try:
-        packed = chunk_lists.chunk_list_from_json(json_list)
-        chunk_lists.unpack_chunk_list(packed)
-    except (chunk_lists.ChunkListFormatError, TypeError, ValueError, KeyError) as exc:
-        raise LibraryOpShapeError("%s: bad chunkList: %s" % (op_type, exc))
-    return packed
-
-
-def _append_file_playback_clear(b, media_id, file_id, guard_sql, guard_params):
-    """Deletes one file's chunk lists and chapters (rows themselves are left to the caller)."""
-    scope = [media_id, file_id]
-    b.add("playback", "DELETE FROM media_chunk_lists WHERE (owner_id IN (%s) OR owner_id IN (%s))%s;"
-          % (_FILE_FORMATS, _FILE_TRACKS, guard_sql), scope + scope + guard_params)
-    b.add("playback", "DELETE FROM media_chapters WHERE format_id IN (%s)%s;" % (_FILE_FORMATS, guard_sql), scope + guard_params)
-
-
-def _subtitle_insert(b, media_id, file_id, sub, created_at, twin_aware, where_sql, where_params):
-    cols = "id, media_id, file_id, episode_id, language, label, object_key, format, is_default, source, created_at"
-    params = [sub.get("id"), media_id, file_id, sub.get("episodeId"), sub.get("language"), sub.get("label"),
-              sub.get("objectKey"), sub.get("format"), _flag(sub.get("isDefault")), sub.get("source"), created_at]
-    if twin_aware:
-        cols += ", derived_from_subtitle_id"
-        params.append(sub.get("derivedFromSubtitleId"))
-    b.add("playback", "INSERT OR REPLACE INTO media_subtitles (%s) SELECT %s WHERE %s;"
-          % (cols, ", ".join("?" for _ in params), where_sql), params + where_params)
-
-
-def _append_file_playback_set(b, p):
-    """media.file.playback.set: replaces one file's playback when its clock is not older than the stored one (an
-    equal clock applies: the later arrival wins a tie, LIB-SYNC-08)."""
-    op_type = "media.file.playback.set"
-    media_id = p["mediaId"]
-    file_id = p.get("fileId")
-    updated_at = p["updatedAt"]
-    clock = [media_id, file_id or "", updated_at]
-    formats = p.get("formats") or []
-    tracks = p.get("audioTracks") or []
-    subtitles = p.get("subtitles") or []
-    chapters = p.get("chapters") or []
-    for row in formats + tracks + subtitles:
-        if row.get("fileId") != file_id:
-            raise LibraryOpShapeError("%s: row %s names file %s, not %s" % (op_type, row.get("id"), row.get("fileId"), file_id))
-    format_ids = set(fmt.get("id") for fmt in formats)
-    for chapter in chapters:
-        if chapter.get("formatId") not in format_ids:
-            raise LibraryOpShapeError("%s: chapter %s names format %s outside this file"
-                                      % (op_type, chapter.get("id"), chapter.get("formatId")))
-    packed_formats = [(fmt, _packed_list(op_type, fmt.get("chunkList"))) for fmt in formats]
-    packed_tracks = [(track, _packed_list(op_type, track.get("chunkList"))) for track in tracks]
-
-    b.add("playback", """INSERT INTO media_file_playback (media_id, file_id, updated_at) VALUES (?, ?, ?)
-     ON CONFLICT(media_id, file_id) DO UPDATE SET updated_at = excluded.updated_at
-     WHERE excluded.updated_at >= media_file_playback.updated_at;""", clock)
-    _append_file_playback_clear(b, media_id, file_id, " AND " + _CLOCK_GUARD, clock)
-    for fmt in formats:
-        if "previewSheets" not in fmt:
-            previews_sql = ("(SELECT preview_sheets FROM media_formats WHERE media_id = ? AND (id = ? OR (file_id = ? AND quality = ?)) "
-                            "ORDER BY id = ? DESC LIMIT 1)")
-            previews_params = [media_id, fmt.get("id"), fmt.get("fileId"), fmt.get("quality"), fmt.get("id")]
-        else:
-            previews_sql = "?"
-            previews_params = [json.dumps(fmt["previewSheets"], separators=(",", ":")) if fmt["previewSheets"] else None]
-        b.add("playback", """INSERT OR REPLACE INTO media_formats (
-        id, media_id, file_id, quality, codec, codec_string, bitrate_kbps, init_key, init_size, duration_seconds, total_size, size_mb, is_source,
-        preview_sheets
-      ) SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, %s WHERE %s;""" % (previews_sql, _CLOCK_GUARD),
-              [fmt.get("id"), media_id, file_id, fmt.get("quality"), fmt.get("codec"), fmt.get("codecString"),
-               fmt.get("bitrateKbps"), fmt.get("initKey"), fmt.get("initSize"), fmt.get("durationSeconds"),
-               fmt.get("totalSize"), fmt.get("sizeMb"), _flag(fmt.get("isSource"))] + previews_params + clock)
-    keep = [fmt.get("id") for fmt in formats]
-    not_kept = " AND id NOT IN (%s)" % ", ".join("?" for _ in keep) if keep else ""
-    b.add("playback", "DELETE FROM media_formats WHERE media_id = ? AND file_id IS ?%s AND %s;" % (not_kept, _CLOCK_GUARD),
-          [media_id, file_id] + keep + clock)
-    for fmt, packed in packed_formats:
-        b.add("playback", _GUARDED_LIST_INSERT,
-              chunk_lists.insert_params(fmt.get("id"), chunk_lists.OWNER_KIND_FORMAT, packed, updated_at) + clock)
-    b.add("playback", "DELETE FROM media_audio_tracks WHERE media_id = ? AND file_id IS ? AND %s;" % _CLOCK_GUARD, [media_id, file_id] + clock)
-    for track in tracks:
-        b.add("playback", """INSERT OR REPLACE INTO media_audio_tracks (
-        id, media_id, file_id, episode_id, language, label, is_default, source, codec, codec_string, init_key, init_size, duration_seconds, total_size, created_at
-      ) SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? WHERE %s;""" % _CLOCK_GUARD,
-              [track.get("id"), media_id, file_id, track.get("episodeId"), track.get("language"), track.get("label"),
-               _flag(track.get("isDefault")), track.get("source"), track.get("codec"), track.get("codecString"), track.get("initKey"),
-               track.get("initSize"), track.get("durationSeconds"), track.get("totalSize"), updated_at] + clock)
-    for track, packed in packed_tracks:
-        b.add("playback", _GUARDED_LIST_INSERT,
-              chunk_lists.insert_params(track.get("id"), chunk_lists.OWNER_KIND_AUDIO_TRACK, packed, updated_at) + clock)
-    b.add("playback", "DELETE FROM media_subtitles WHERE media_id = ? AND file_id IS ? AND %s;" % _CLOCK_GUARD, [media_id, file_id] + clock)
-    twin_aware = any("derivedFromSubtitleId" in sub for sub in subtitles)
-    for sub in subtitles:
-        _subtitle_insert(b, media_id, file_id, sub, sub.get("createdAt") or updated_at, twin_aware, _CLOCK_GUARD, clock)
-    for chapter in chapters:
-        b.add("playback", "INSERT OR REPLACE INTO media_chapters (id, format_id, title, start_seconds) SELECT ?, ?, ?, ? WHERE %s;" % _CLOCK_GUARD,
-              [chapter.get("id"), chapter.get("formatId"), chapter.get("title"), chapter.get("startSeconds")] + clock)
-
-
-def _append_file_playback_delete(b, media_id, file_id):
-    """media.file.playback.delete: drops one file's playback, its offline copy and its clock (no clock check)."""
-    scope = [media_id, file_id]
-    _append_file_playback_clear(b, media_id, file_id, "", [])
-    b.add("playback", "DELETE FROM media_formats WHERE media_id = ? AND file_id IS ?;", scope)
-    b.add("playback", "DELETE FROM media_audio_tracks WHERE media_id = ? AND file_id IS ?;", scope)
-    b.add("playback", "DELETE FROM media_subtitles WHERE media_id = ? AND file_id IS ?;", scope)
-    b.add("playback", "DELETE FROM media_local_downloads WHERE file_id = ?;", [file_id])
-    b.add("playback", "DELETE FROM media_file_playback WHERE media_id = ? AND file_id = ?;", [media_id, file_id or ""])
-
-
-def _append_episode_delete(b, p):
-    """media.episode.delete: one episode of a show and only its rows, in every group (LIB-FMT-11). Its files are the
-    ones the writer names plus any file still filed under its (season, episode)."""
-    media_id = p["mediaId"]
-    episode_id = p.get("episodeId")
-    file_ids = list(p.get("fileIds") or [])
-    slot = [media_id, p.get("seasonNumber"), p.get("episodeNumber")]
-    episode_files = "media_id = ? AND (id IN (%s) OR (season = ? AND episode = ?))" % ", ".join("?" for _ in file_ids)
-    episode_file_params = [media_id] + file_ids + slot[1:]
-    b.add("metadata", "DELETE FROM media_episodes WHERE media_id = ? AND season_number = ? AND episode_number = ?;", slot)
-    if episode_id is not None:
-        b.add("metadata", "DELETE FROM media_skip_markers WHERE media_id = ? AND episode_id = ?;", [media_id, episode_id])
-    b.add("metadata", "DELETE FROM media_file_desired_formats WHERE file_id IN (SELECT id FROM media_files WHERE %s);"
-          % episode_files, episode_file_params)
-    b.add("metadata", "DELETE FROM media_files WHERE %s;" % episode_files, episode_file_params)
-    b.add("metadata", "DELETE FROM media_editions WHERE media_id = ? AND season = ? AND episode = ?;", slot)
-    for file_id in file_ids:
-        _append_file_playback_delete(b, media_id, file_id)
-    if episode_id is not None:
-        scope = [media_id, episode_id]
-        b.add("playback", "DELETE FROM media_chunk_lists WHERE owner_id IN "
-                          "(SELECT id FROM media_audio_tracks WHERE media_id = ? AND episode_id = ?);", scope)
-        b.add("playback", "DELETE FROM media_audio_tracks WHERE media_id = ? AND episode_id = ?;", scope)
-        b.add("playback", "DELETE FROM media_subtitles WHERE media_id = ? AND episode_id = ?;", scope)
-
-
-def _append_v3_prune(b, prune):
-    """A translated old media.upsert drops the files its details no longer name, unless their clock is newer. Rows
-    that name no file belong to the no-file set, never pruned here."""
-    media_id = prune["mediaId"]
-    updated_at = prune["updatedAt"]
-    keep = list(prune.get("keepFileIds") or [])
-    not_kept = " AND file_id NOT IN (%s)" % ", ".join("?" for _ in keep) if keep else ""
-
-    def rows(table):
-        return ("SELECT id FROM %s WHERE media_id = ? AND file_id IS NOT NULL%s AND NOT EXISTS "
-                "(SELECT 1 FROM media_file_playback c WHERE c.media_id = ? AND c.file_id = %s.file_id AND c.updated_at > ?)"
-                % (table, not_kept, table))
-    params = [media_id] + keep + [media_id, updated_at]
-    b.add("playback", "DELETE FROM media_chunk_lists WHERE owner_id IN (%s) OR owner_id IN (%s);"
-          % (rows("media_formats"), rows("media_audio_tracks")), params + params)
-    b.add("playback", "DELETE FROM media_chapters WHERE format_id IN (%s);" % rows("media_formats"), params)
-    for table in ("media_formats", "media_audio_tracks", "media_subtitles"):
-        b.add("playback", "DELETE FROM %s WHERE id IN (%s);" % (table, rows(table)), params)
-    b.add("playback", "DELETE FROM media_file_playback WHERE media_id = ? AND file_id <> ''%s AND updated_at <= ?;" % not_kept,
-          [media_id] + keep + [updated_at])
-
-
-def is_v3_media_upsert(op):
-    """An old media.upsert: its details still carry playback keys (it is translated, never an error)."""
-    details = (op.get("payload") or {}).get("details") or {}
-    return op.get("type") == "media.upsert" and any(key in details for key in PLAYBACK_KEYS)
-
-
-def translate_v3_media_upsert(op):
-    """translateV3MediaUpsert (ops.ts; vectors: test-vectors/chunk-lists.json `translations`): an old media.upsert as
-    one v4 upsert (no playback), one media.file.playback.set per file and a prune.
-
-    Files: ``details.files[]`` ids first, then other file ids named by formats, audio tracks and subtitles in
-    first-seen order, then the no-file group (always emitted). Every set carries the details' ``updatedAt`` as its
-    clock. Chapters follow their format's file; a chapter whose format is absent is dropped.
-    """
-    details = neutral_media_details(op["payload"]["details"])
-    formats = details.get("formats") or []
-    tracks = details.get("audioTracks") or []
-    subs = details.get("subtitles")
-    if subs is None:
-        subs = details.get("subtitleTracks")
-    subs = subs or []
-    chapters = details.get("chapters") or []
-
-    order = []
-    for fid in ([f.get("id") for f in details.get("files") or []] + [fmt.get("fileId") for fmt in formats]
-                + [t.get("fileId") for t in tracks] + [s.get("fileId") for s in subs]):
-        if fid and fid not in order:
-            order.append(fid)
-
-    def packed(owner):
-        out = dict((k, v) for k, v in owner.items() if k != "chunks")
-        out["chunkList"] = chunk_lists.chunk_list_to_json(chunk_lists.pack_chunk_list(owner.get("chunks") or []))
-        return out
-
-    format_file = dict((fmt.get("id"), fmt.get("fileId")) for fmt in formats)
-    sets = [{
-        "id": "%s:playback:%s" % (op.get("id"), fid or ""),
-        "type": "media.file.playback.set",
-        "createdAt": op.get("createdAt"),
-        "payload": {
-            "mediaId": details["id"], "fileId": fid, "updatedAt": details.get("updatedAt"),
-            "formats": [packed(fmt) for fmt in formats if fmt.get("fileId") == fid],
-            "audioTracks": [packed(t) for t in tracks if t.get("fileId") == fid],
-            "subtitles": [s for s in subs if s.get("fileId") == fid],
-            "chapters": [c for c in chapters if c.get("formatId") in format_file and format_file[c.get("formatId")] == fid],
-        },
-    } for fid in order + [None]]
-    core = dict((k, v) for k, v in details.items() if k not in PLAYBACK_KEYS)
-    return {
-        "upsert": {"id": "%s:upsert" % op.get("id"), "type": "media.upsert", "createdAt": op.get("createdAt"),
-                   "payload": {"details": core}},
-        "playbackSets": sets,
-        "prune": {"mediaId": details["id"], "updatedAt": details.get("updatedAt"), "keepFileIds": order},
-    }
-
-
-def _append_v4_media_upsert(b, details, id_gen):
-    _append_media_core(b, details, id_gen)
-    _append_media_metadata(b, details, id_gen)
-    b.add("templates", "DELETE FROM media_skip_analysis WHERE media_id = ?;", [details["id"]])
-
-
-def build_op_statements(op, id_gen, packed=False):
+def build_op_statements(op, id_gen):
     b = _Builders()
     kind = op.get("type")
     p = op.get("payload") or {}
-    if kind in V4_OP_TYPES and not packed:
-        raise PlaybackLayoutError("%s %s needs the packed playback layout" % (kind, op.get("id")))
     if kind == "playlist.create":
         system = SYSTEM_PLAYLISTS.get(p.get("slug"))
         if system:
@@ -595,33 +324,14 @@ def build_op_statements(op, id_gen, packed=False):
               [p.get("id"), p.get("playlistId"), p.get("mediaId"), p.get("addedAt"), p.get("playlistId"), p.get("mediaId")])
     elif kind == "playlist.item.remove":
         b.add("core", "DELETE FROM playlist_items WHERE playlist_id = ? AND media_id = ?;", [p.get("playlistId"), p.get("mediaId")])
-    elif kind == "media.upsert" and any("chunkList" in row for key in ("formats", "audioTracks")
-                                        for row in (p.get("details") or {}).get(key) or [] if isinstance(row, dict)):
-        raise LibraryOpShapeError("media.upsert %s: formats/audioTracks carry a packed chunkList; a version-4 upsert "
-                                  "carries no playback" % op.get("id"))
-    elif kind == "media.upsert" and packed and is_v3_media_upsert(op):
-        t = translate_v3_media_upsert(op)
-        _append_v4_media_upsert(b, t["upsert"]["payload"]["details"], id_gen)
-        _append_v3_prune(b, t["prune"])
-        for s in t["playbackSets"]:
-            _append_file_playback_set(b, s["payload"])
-    elif kind == "media.upsert" and packed:
-        # A v1-v2 op with no playback key has this shape too: its old catalog keys are read (neutralMediaDetails).
-        _append_v4_media_upsert(b, neutral_media_details(p["details"]), id_gen)
     elif kind == "media.upsert":
         details = p["details"]
         _append_media_core(b, details, id_gen)
         _append_media_metadata(b, details, id_gen)
         _append_media_playback(b, details, id_gen)
         b.add("templates", "DELETE FROM media_skip_analysis WHERE media_id = ?;", [details["id"]])
-    elif kind == "media.file.playback.set":
-        _append_file_playback_set(b, p)
-    elif kind == "media.file.playback.delete":
-        _append_file_playback_delete(b, p["mediaId"], p.get("fileId"))
-    elif kind == "media.episode.delete":
-        _append_episode_delete(b, p)
     elif kind == "media.delete":
-        _append_media_delete(b, p.get("mediaId"), packed)
+        _append_media_delete(b, p.get("mediaId"))
     elif kind == "media.progress":
         # Progress has its own clock, the row's last_watched_at: an older progress op is ignored, an equal one
         # applies. updated_at is the clock of the media's details and is left alone (LIB-SYNC-08).

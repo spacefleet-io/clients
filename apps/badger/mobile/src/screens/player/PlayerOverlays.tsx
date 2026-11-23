@@ -7,10 +7,9 @@ import { formatClock } from "@space/shared/format";
 import type { PillAction } from "../../lib/playback/skipMarkers";
 import { useMediaImage } from "../../lib/useMediaImage";
 import { IS_TV } from "../../tv/lib/tvRuntime";
-import { TvFocusable } from "@space/mobile-shell/tv/TvFocusable";
-import { useTvScale } from "@space/mobile-shell/tv/tvScale";
-import { scaleStyleSheet } from "@space/shared/uiScale";
-import { LaunchingMascot } from "../../components/LaunchingMascot";
+import { TvFocusable } from "../../tv/components/TvFocusable";
+import { useTvScale } from "../../tv/lib/tvScale";
+import { scaleStyleSheet } from "@space/mobile-mpv-playback/uiScale";
 
 const TARGET = 48;
 
@@ -42,24 +41,18 @@ const PlayerButton = ({ primary = false, children, ...rest }: PlayerButtonProps)
   );
 };
 
-/**
- * Centered wait shown before the first frame, while rebuffering and while seeking; `slow` adds the 30 s hint
- * (PLAY-ABR-03). Until the first frame (`launching`) it is the hovering badger of the launch screens (UX-WAIT-02);
- * afterwards a plain spinner over the picture.
- */
-export const PlayerSpinner = ({ slow = false, launching = false }: { slow?: boolean; launching?: boolean }) => {
+/** Centered spinner shown before the first frame, while rebuffering and while seeking; `slow` adds the 30 s hint (PLAY-ABR-03). */
+export const PlayerSpinner = ({ slow = false }: { slow?: boolean }) => {
   const { t } = useTranslation();
   const styles = useOverlayStyles();
-  const slowHint = slow ? (
-    <Text style={styles.slowHint} testID="player-loading-slow">
-      {t("player.loadingSlow")}
-    </Text>
-  ) : null;
-  if (launching) return <LaunchingMascot testID="player-loading">{slowHint}</LaunchingMascot>;
   return (
     <View style={styles.spinnerWrap} pointerEvents="none" testID="player-loading">
       <ActivityIndicator size="large" color="#fff" />
-      {slowHint}
+      {slow ? (
+        <Text style={styles.slowHint} testID="player-loading-slow">
+          {t("player.loadingSlow")}
+        </Text>
+      ) : null}
     </View>
   );
 };

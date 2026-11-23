@@ -67,8 +67,8 @@ describe("shared profile screens", () => {
     expect(screen.getByTestId("profile-tile-add").textContent).toContain("Add profile");
   });
 
-  /** @req ACCT-PROF-05 @req UX-SETUP-10 */
-  it("@req UX-SETUP-10 Add profile opens the chooser on the first unused avatar; the picked avatar is sent with the new profile, marked set up", async () => {
+  /** @req ACCT-PROF-05 */
+  it("Add profile opens the chooser on the first unused avatar; the picked avatar is sent with the new profile", async () => {
     const { deps, sent, store } = await setup([profile("p1", "Chris", 5, "badger", true)]);
     render(<WhoIsWatchingPanel {...deps} />);
     fireEvent.click(screen.getByTestId("profile-tile-add"));
@@ -84,8 +84,7 @@ describe("shared profile screens", () => {
     await act(async () => {
       fireEvent.submit(screen.getByTestId("profile-edit"));
     });
-    // The avatar was picked here, so the new profile skips the "Your profile" step.
-    expect(sent.create).toEqual([{ name: "Léo", avatarId: "dino", features: { avatars: "set" } }]);
+    expect(sent.create).toEqual([{ name: "Léo", avatarId: "dino" }]);
     expect(store.getSnapshot().profiles.find((p) => p.name === "Léo")?.avatarId).toBe("dino");
     // Saving an added profile goes back to the tiles.
     expect(screen.getByTestId("profile-tile-p-2")).toBeTruthy();

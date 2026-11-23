@@ -1,23 +1,21 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Button, LanguageMenu, Spinner } from "@space/ui";
 import { Flag } from "@space/ui/flag";
-import { MASCOT_GLOW } from "@space/ui/floating-mascot";
+import { FloatingMascot } from "@space/ui/floating-mascot";
 import { CLIENT_UI_LANGUAGES, isClientUiLanguage } from "@space/shared/i18n";
 import {
   ChoiceList,
   DesktopStartupCard,
   DesktopStartupControls,
   ErrorReportsLink,
-  LIBRARY_KEY_STEP_FIT,
   LibraryKeyStep,
   libraryKeyStepText,
   type LibraryKeyEraseOutcome,
   type LibraryKeyTyped,
 } from "@space/desktop-shell/components";
 import mascotUrl from "@space/parrot-core/mascot.webp";
-import { needsProfileSetupStep } from "@space/desktop-shell/profile-setup";
 import {
-  parrotSetupSteps,
+  PARROT_SETUP_STEPS,
   type ParrotPairedSignIn,
   type ParrotSetupState,
   type ParrotSetupStep,
@@ -27,33 +25,17 @@ import { pickLanguage } from "./accountLanguage";
 import { applyErrorReports } from "./errorReports";
 import type { ParrotStringKey, Translate } from "./i18n";
 import { useSignOutWithKeyCheck } from "./SignOutKeyCheck";
-import { ParrotProfileSetupStep, useParrotCurrentProfile, useParrotDesktopProfileStore } from "./profiles";
 
 type Props = { t: Translate; state: ParrotState; onState: (state: ParrotState) => void };
 
 /**
- * UX-SETUP-06 on a computer: one question per screen, "step N of M", Back and Next, the recommended answer
+ * UX-SETUP-06 on a computer: five screens, one question each, "step N of M", Back and Next, the recommended answer
  * preselected. Sign-in comes before, on its own screen (SignIn.tsx). Every Next saves the answer and the next step in
- * main, so a quit resumes here (UX-SETUP-07). "Your profile" (UX-SETUP-10) follows the key while the main profile
- * owes it; it saves to the profile, not to main.
+ * main, so a quit resumes here (UX-SETUP-07).
  */
 export default function Setup({ t, state, onState }: Props) {
   const { setup } = state;
-  // UX-SETUP-10: the account's profiles, read once signed in (main holds the token).
-  const profileStore = useParrotDesktopProfileStore(
-    state.user?.id ?? "anonymous",
-    state.user && typeof window.parrot?.listProfiles === "function" ? window.parrot : null
-  );
-  const { ready: profilesReady, profile: setupProfile } = useParrotCurrentProfile(profileStore);
-  const [profileAnswered, setProfileAnswered] = useState(false);
-  // Counted while the list is still on its way, so the count does not grow once it is in; dropped when not owed.
-  // SF_PROFILE_SETUP=off (test harnesses): never asked.
-  const withProfile =
-    !!profileStore &&
-    window.parrot?.profileSetupOff !== true &&
-    (!profilesReady || profileAnswered || (!!setupProfile && needsProfileSetupStep(setupProfile)));
-  const steps = parrotSetupSteps(withProfile);
-  const index = steps.indexOf(setup.step);
+  const index = PARROT_SETUP_STEPS.indexOf(setup.step);
   const [draft, setDraft] = useState<ParrotSetupState>(setup);
   const [busy, setBusy] = useState(false);
   // UX-KEY-01, the shared key step Badger desktop shows too: an account with no key yet is shown a new one ("show"),
@@ -74,17 +56,9 @@ export default function Setup({ t, state, onState }: Props) {
       setBusy(false);
     }
   };
-  const back = index > 0 ? () => go(steps[index - 1]!) : undefined;
-  const nextStep = steps[index + 1];
+  const back = index > 0 ? () => go(PARROT_SETUP_STEPS[index - 1]!) : undefined;
+  const nextStep = PARROT_SETUP_STEPS[index + 1];
   const next = (patch: Partial<ParrotSetupState>) => (nextStep ? go(nextStep, patch) : undefined);
-
-  // A run resumed on "Your profile" (or a list that turned out not to owe it): setup moves on to the folders.
-  const skipProfile = setup.step === "profile" && !withProfile && !busy;
-  useEffect(() => {
-    if (!skipProfile) return;
-    console.info(`[parrot:setup] "Your profile" not owed (profile ${setupProfile?.id ?? "none"}): on to the folders`);
-    void go("folders");
-  }, [skipProfile]);
 
   // A new key, or the account's, once main has the key step's answer.
   const askKeyMode = async () => {
@@ -108,7 +82,7 @@ export default function Setup({ t, state, onState }: Props) {
   // The key is the account's (typed, written down, or from another device): main keeps it, setup moves on.
   const keyAccepted = async () => {
     onState(await window.parrot.getState());
-    await go(steps[steps.indexOf("libraryKey") + 1]!);
+    await go("folders");
   };
   const submitKey = async (keyBase64: string) => {
     setKeyError(null);
@@ -181,14 +155,7 @@ export default function Setup({ t, state, onState }: Props) {
         </Button>
       );
       body = (
-        // A short window (800x560): the account line sits closer and slimmer, so the key step fits with its mascot.
-        <div
-          className={
-            onKeyStep
-              ? "space-y-3 [@media(max-height:640px)]:space-y-2 [@media(max-height:640px)]:[&_[data-testid=setup-sign-out]]:h-7"
-              : "space-y-4"
-          }
-        >
+        <div className={onKeyStep ? "space-y-3" : "space-y-4"}>
           <AccountLine t={t} state={state} onState={onState} />
           {state.hasLibraryKey ? (
             <p data-testid="key-ready">{t("key.ready")}</p>
@@ -304,49 +271,8 @@ export default function Setup({ t, state, onState }: Props) {
   }
 
   // Language is step 0 and shows no count; the numbered steps start at the key (UX-SETUP-08).
-  const numbered: readonly ParrotSetupStep[] = steps.filter((step) => step !== "language");
+  const numbered: readonly ParrotSetupStep[] = PARROT_SETUP_STEPS.filter((step) => step !== "language");
   const current = numbered.indexOf(setup.step) + 1;
-
-  const languageMenu = (
-    <LanguageMenu
-      current={setup.language}
-      languages={CLIENT_UI_LANGUAGES}
-      ariaLabel={t("language.title")}
-      onSelect={(language) => {
-        if (!isClientUiLanguage(language)) return;
-        // The same pick as the language step's list: the screen speaks it at once, the account keeps it (UX-I18N-07).
-        setDraft({ ...draft, language });
-        void pickLanguage(window.parrot, language).then(onState);
-      }}
-    />
-  );
-
-  // UX-SETUP-10: "Your profile" is the shared step's own card (name, the round avatar grid, Back and Next). A short
-  // window gets less room around it, as the key step does, so it fits 800x560 with its mascot (UX-SETUP-08).
-  if (setup.step === "profile") {
-    return (
-      <div
-        className="flex min-h-screen items-center justify-center p-8 pt-32 [@media(min-height:641px)_and_(max-height:700px)]:pb-4 [@media(min-height:641px)_and_(max-height:700px)]:pt-16 [@media(max-height:640px)]:pb-1 [@media(max-height:640px)]:pt-14"
-        data-testid="setup-profile"
-      >
-        <DesktopStartupControls>{languageMenu}</DesktopStartupControls>
-        {profileStore && setupProfile && withProfile ? (
-          <ParrotProfileSetupStep
-            store={profileStore}
-            profile={setupProfile}
-            language={setup.language}
-            t={t}
-            progress={{ current, total: numbered.length }}
-            onBack={back}
-            onSaving={() => setProfileAnswered(true)}
-            onDone={() => go("folders")}
-          />
-        ) : (
-          <Spinner />
-        )}
-      </div>
-    );
-  }
 
   const answerOf = (step: ParrotSetupStep): Partial<ParrotSetupState> =>
     step === "language"
@@ -357,21 +283,40 @@ export default function Setup({ t, state, onState }: Props) {
           ? { startAtLogin: draft.startAtLogin }
           : {};
 
-  // The fleet's startup card with the Parrot mascot on it (UX-THEME-02, UX-SETUP-08), the same card Badger's first setup uses.
-  // The key step (the shared LibraryKeyStep, Badger's too) is the tallest: with the shared tighter spacing it fits the
-  // default and the smallest window (1240x780, 800x560) with no scrolling, its mascot on the card like every step's.
-  // A short window gets less room around the cards, so the 5 languages show whole at 800x560 too.
+  // The fleet's startup card with the floating Parrot mascot (UX-THEME-02), the same card Badger's first setup uses.
+  // The key step (the shared LibraryKeyStep, Badger's too) is the tallest: it fits the default and the smallest window
+  // (1240x780, 800x560) with no scrolling, so its mascot is smaller and sits in the flow, and its spacing is tighter.
   return (
     <div
       className={
         onKeyStep
-          ? "flex min-h-screen items-center justify-center p-8 pt-32 [@media(min-height:641px)_and_(max-height:700px)]:pb-4 [@media(min-height:641px)_and_(max-height:700px)]:pt-16 [@media(max-height:640px)]:pb-1 [@media(max-height:640px)]:pt-14"
-          : "flex min-h-screen items-center justify-center p-8 pt-32 [@media(max-height:700px)]:pb-4 [@media(max-height:700px)]:pt-16"
+          ? "flex min-h-screen flex-col items-center justify-center px-8 py-3 [@media(max-height:640px)]:py-1"
+          : "flex min-h-screen items-center justify-center p-8 pt-32"
       }
     >
       {/* UX-SETUP-08: the language button keeps the window's top-right spot on every setup step, as on sign-in. */}
-      <DesktopStartupControls>{languageMenu}</DesktopStartupControls>
-      <div className={onKeyStep ? `w-full max-w-xl ${LIBRARY_KEY_STEP_FIT}` : "w-full max-w-xl"} data-testid={`setup-${setup.step}`}>
+      <DesktopStartupControls>
+        <LanguageMenu
+          current={setup.language}
+          languages={CLIENT_UI_LANGUAGES}
+          ariaLabel={t("language.title")}
+          onSelect={(language) => {
+            if (!isClientUiLanguage(language)) return;
+            // The same pick as the language step's list: the screen speaks it at once, the account keeps it (UX-I18N-07).
+            setDraft({ ...draft, language });
+            void pickLanguage(window.parrot, language).then(onState);
+          }}
+        />
+      </DesktopStartupControls>
+      {onKeyStep ? (
+        <FloatingMascot
+          src={mascotUrl}
+          glowClassName={PARROT_MASCOT_GLOW}
+          className="mb-1 h-14 w-14 [@media(max-height:640px)]:h-8 [@media(max-height:640px)]:w-8"
+          testId="setup-key-mascot"
+        />
+      ) : null}
+      <div className={onKeyStep ? `w-full max-w-xl ${KEY_STEP_FIT}` : "w-full max-w-xl"} data-testid={`setup-${setup.step}`}>
         <DesktopStartupCard
           progress={current > 0 ? { current, total: numbered.length, label: t("stepOf", { n: current, m: numbered.length }), testId: "setup-progress" } : undefined}
           // UX-KEY-01: typing a key in and being shown a new one never share a title.
@@ -383,10 +328,10 @@ export default function Setup({ t, state, onState }: Props) {
               : (`${setup.step}.title` as ParrotStringKey),
           )}
           description={onKeyStep && keyMode === "enter" ? t("key.explain") : undefined}
-          mascotSrc={mascotUrl}
-          mascotGlowClassName={MASCOT_GLOW.parrot}
+          mascotSrc={onKeyStep ? null : mascotUrl}
+          mascotGlowClassName={PARROT_MASCOT_GLOW}
           maxWidthClassName="max-w-xl"
-          contentClassName={onKeyStep ? "pt-0 pb-5" : undefined}
+          contentClassName={onKeyStep ? "pt-2 pb-5" : undefined}
         >
           <div className={onKeyStep ? "space-y-3" : "space-y-6"}>
             {body}
@@ -468,3 +413,26 @@ const keyPairLog = {
   warn: (message: string, extra?: Record<string, unknown>) => console.warn(`[parrot:key-pairing] ${message}`, extra ?? ""),
   error: (message: string, extra?: Record<string, unknown>) => console.error(`[parrot:key-pairing] ${message}`, extra ?? ""),
 };
+
+const PARROT_MASCOT_GLOW = "drop-shadow-[0_0_30px_rgba(64,221,143,0.3)]";
+
+/**
+ * The key step's tighter spacing, set from here on the shared card and LibraryKeyStep (their own spacing is Badger's
+ * full-height page): a smaller card header, 32px word boxes, closer rows and a slimmer other-device card. In a short
+ * window (Parrot's 560px minimum) the line under the title goes too, with a smaller mascot and other-device icon; the title and the step say what to do.
+ */
+const KEY_STEP_FIT = [
+  "[&_div:has(>[data-testid=setup-step-bar])]:pt-5",
+  "[&_div:has(>[data-testid=setup-step-bar])]:pb-3",
+  "[&_[data-testid=setup-step-bar]]:space-y-2",
+  "[&_[data-testid=setup-step-bar]]:pb-1",
+  "[@media(max-height:700px)]:[&_h3+p]:hidden",
+  "[&_legend]:mb-1",
+  "[&_[data-testid=library-key-box]]:h-8",
+  "[&_div:has(>form)]:space-y-2.5",
+  "[&_form]:gap-2.5",
+  "[&_[data-testid=key-from-another-device]]:py-2",
+  "[@media(max-height:640px)]:[&_div:has(>[data-testid=setup-step-bar])]:pt-3",
+  "[@media(max-height:640px)]:[&_[data-testid=key-from-another-device]>span:first-child]:h-9",
+  "[@media(max-height:640px)]:[&_[data-testid=key-from-another-device]>span:first-child]:w-9",
+].join(" ");

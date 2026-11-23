@@ -11,7 +11,6 @@ import { Button, CardFooter, Label, RadioGroup, RadioGroupItem } from "@space/ui
 import { DesktopStartupCard, DesktopStartupControls, DesktopStartupPage } from "@space/desktop-shell/components";
 import SetupLanguageMenu from "@/components/SetupLanguageMenu";
 import mascotWebp from "@/assets/mascot.webp";
-import { SETUP_CARD_FIT, SETUP_PAGE_FIT } from "@/components/setupFit";
 import { rendererLogger } from "@/logger";
 import { hasHardwareEncoder } from "@space/shared/transcodeHardware";
 import {
@@ -82,9 +81,7 @@ export default function FirstSetup({ device, steps, onDone, stepOffset = 0 }: Fi
     <div data-testid="first-setup">
       <DesktopStartupPage
         nebula="badger"
-        // UX-SETUP-08: the German and Spanish transcoding steps, the longest, fit 1440x900 and 1200x600 with no
-        // scrolling: the card body starts right under the header's padding, with closer rows and options.
-        mainClassName={SETUP_PAGE_FIT}
+        mainClassName="pb-12 pt-32"
         controls={
           <DesktopStartupControls>
             <SetupLanguageMenu />
@@ -125,10 +122,10 @@ export default function FirstSetup({ device, steps, onDone, stepOffset = 0 }: Fi
           }
           mascotSrc={mascotWebp}
           mascotAlt={t("brand.mascotAlt")}
-          maxWidthClassName={SETUP_CARD_FIT}
-          contentClassName="space-y-4 pb-6 pt-0 [@media(max-height:700px)]:pb-4"
+          maxWidthClassName="max-w-2xl"
+          contentClassName="space-y-5"
           footer={
-            <CardFooter className="justify-between gap-3 [@media(max-height:700px)]:pb-4">
+            <CardFooter className="justify-between gap-3">
               {index > 0 && !locked ? (
                 <Button
                   variant="outline"
@@ -156,10 +153,9 @@ export default function FirstSetup({ device, steps, onDone, stepOffset = 0 }: Fi
             </CardFooter>
           }
         >
-          <div className="space-y-4 text-sm [@media(max-height:700px)]:space-y-2.5" data-testid={`first-setup-step-${step.id}`}>
+          <div className="space-y-5 text-sm" data-testid={`first-setup-step-${step.id}`}>
             {hardware ? (
-              // UX-SETUP-08: the smallest window (1200x600) leaves the hardware line out; the recommendation under it says why.
-              <p className="rounded-md border border-border bg-muted/40 px-3 py-2 [@media(max-height:640px)]:hidden" data-testid="first-setup-computer">
+              <p className="rounded-md border border-border bg-muted/40 px-3 py-2" data-testid="first-setup-computer">
                 {t("firstSetup.computer", {
                   cpu: describeCpuModel(hardware.cpuModel) ?? t("firstSetup.cpuUnknown"),
                   cores: hardware.cores,
@@ -188,10 +184,10 @@ export default function FirstSetup({ device, steps, onDone, stepOffset = 0 }: Fi
                 return (
                   <div
                     key={value}
-                    className="flex items-start gap-3 rounded-md border border-border px-3 py-2.5 has-[[data-state=checked]]:border-primary [@media(max-height:700px)]:py-2"
+                    className="flex items-start gap-3 rounded-md border border-border px-3 py-3 has-[[data-state=checked]]:border-primary"
                   >
                     <RadioGroupItem value={value} id={id} className="mt-0.5" data-testid={`first-setup-option-${value}`} />
-                    <Label htmlFor={id} className="grid cursor-pointer gap-1 font-normal [@media(max-height:700px)]:gap-0.5">
+                    <Label htmlFor={id} className="grid cursor-pointer gap-1 font-normal">
                       <span className="font-medium">
                         {t(`${ns}.options.${value}.label`)}
                         {value === recommended ? (
@@ -201,10 +197,7 @@ export default function FirstSetup({ device, steps, onDone, stepOffset = 0 }: Fi
                         ) : null}
                       </span>
                       {i18n.exists(`${ns}.options.${value}.description`) ? (
-                        // The Label is `leading-none`; a description that wraps (French "Ne pas la créer") gets normal line spacing back.
-                        <span className="leading-normal text-muted-foreground" data-testid={`first-setup-option-${value}-description`}>
-                          {t(`${ns}.options.${value}.description`)}
-                        </span>
+                        <span className="text-muted-foreground">{t(`${ns}.options.${value}.description`)}</span>
                       ) : null}
                     </Label>
                   </div>

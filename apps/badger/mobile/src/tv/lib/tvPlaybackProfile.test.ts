@@ -95,7 +95,6 @@ const profile = (id: string, minute: number, isMain: boolean): ApiProfile => ({
   avatarId: "fox" as const,
   createdAt: `2026-10-22T09:${String(minute).padStart(2, "0")}:00.000Z`,
   isMain,
-  features: {},
 });
 
 /** One TV start (`askEveryStart: true`), wired to the real viewing scope the player reads. */

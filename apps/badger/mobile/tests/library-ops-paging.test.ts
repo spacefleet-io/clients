@@ -4,18 +4,12 @@
  * @bugfix
  * @regression-proof
  * @req LIB-SYNC-06
- * @req LIB-SYNC-11
  *
- * Why this exists (#663): the API pages a long op tail (`hasMore`; `version` of a partial page is its last op).
- * Mobile applied the first page and stopped, so a phone far behind caught up one page per *trigger* (an SSE event,
- * an app foreground) and sat on a stale library in between. A sync must walk every page in the same run; a page that
- * turns `tooOld` falls back to the snapshot like any other `tooOld`.
- *
- * LIB-SYNC-11 (2026-11-21, Chris's Pixel showed "Offline" and no library changes): a tail of 30 media.upsert ops of a
- * long show (1-1.7 MB each) was collected into one 40 MB batch before anything was applied, so a failed read lost
- * the whole catch-up and every retry started over from the same cursor. Each page is now applied and the cursor
- * moved before the next page is asked for: a sync that fails mid-tail keeps the pages it applied and the next one
- * resumes after them.
+ * Why this exists (#663): the API pages a long op tail (1000 ops per response, `hasMore`; `version` of a partial
+ * page is its last op). Mobile applied the first page and stopped, so a phone far behind caught up 1000 ops per
+ * *trigger* (an SSE event, an app foreground) and sat on a stale library in between. A sync must walk every page
+ * in the same run, apply them as one batch, and only then move the cursor; a page that turns `tooOld` falls back to
+ * the snapshot like any other `tooOld`.
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type * as SharedApi from "@space/shared/api";
@@ -27,11 +21,10 @@ const TAG = "[library-ops-paging]";
 const log = (phase: string, data?: unknown) =>
   console.info(`${TAG} ${phase}${data === undefined ? "" : ` ${JSON.stringify(data)}`}`);
 
-vi.mock("react-native", async () => ({ ...(await import("./setup/reactNativeMock")).reactNativeBase(), Platform: { OS: "ios" } }));
+vi.mock("react-native", () => ({ Platform: { OS: "ios" } }));
 vi.mock("react-native-fs", async () => ({ default: (await import("./library-db-fixture")).fakeRnfs }));
 vi.mock("react-native-sqlite-storage", () => ({ default: { enablePromise: () => undefined } }));
 vi.mock("react-native-quick-crypto", async () => (await import("./library-db-fixture")).quickCryptoMock());
-vi.mock("../src/lib/library/opsPage", async (importOriginal) => (await import("./library-db-fixture")).opsPageMock(await importOriginal()));
 vi.mock("@space/shared/api", async (importOriginal) =>
   (await import("./library-db-fixture")).sharedApiMock(await importOriginal<typeof SharedApi>())
 );
@@ -79,7 +72,7 @@ describe("an op tail longer than one page is walked in one sync", () => {
     }
   });
 
-  it("@bugfix every op of every page is applied, one page at a time", async () => {
+  it("@bugfix every op of every page is applied", async () => {
     log("phase:start 5 ops, pages of 2");
     setServer({ version: 8, snapshotVersion: 1, ops: settingOps(4, 8) });
     seedSplitCache({ version: 3 });
@@ -92,43 +85,7 @@ describe("an op tail longer than one page is walked in one sync", () => {
       const batches = applied.mock.calls.map(([ops]) => ops.map((op) => op.id));
       log("state", { opsSince: fx.opsSince, batches });
       expect(fx.opsSince).toEqual([3, 5, 7]);
-      expect(batches, "one batch per page, in version order").toEqual([["op-4", "op-5"], ["op-6", "op-7"], ["op-8"]]);
-    } finally {
-      await db.close();
-    }
-  });
-
-  it("@bugfix @regression-proof LIB-SYNC-11 a sync that fails mid-tail keeps the pages it applied; the next one resumes", async () => {
-    log("phase:start 7 ops, pages of 2, the third page's read breaks");
-    setServer({ version: 10, snapshotVersion: 1, ops: settingOps(4, 10) });
-    seedSplitCache({ version: 3 });
-    fx.opsPageSize = 2;
-    fx.opsFailFrom = 7;
-    const db = (await LibraryDb.open("token", "key")) as unknown as LibraryDbSeam;
-    const applied = vi.spyOn(db, "applyLibraryOps");
-    try {
-      const failure = await db.syncFromRemoteIfNewer(fx.meta ?? undefined).then(
-        () => null,
-        (error: unknown) => error
-      );
-      await settle(db);
-      log("after the broken read", { failure: String(failure), opsSince: fx.opsSince, remoteVersion: db.remoteVersion, cache: readCacheJson() });
-      expect(String(failure)).toContain("Network request failed");
-      expect(fx.opsSince).toEqual([3, 5, 7]);
-      expect(db.remoteVersion, "the two pages read before the failure stay applied").toBe(7);
-      expect(readCacheJson()?.version, "and their cursor is saved").toBe(7);
-
-      fx.opsFailFrom = null;
-      fx.opsSince = [];
-      const changed = await db.syncFromRemoteIfNewer(fx.meta ?? undefined);
-      await settle(db);
-      const batches = applied.mock.calls.map(([ops]) => ops.map((op) => op.id));
-      log("after the retry", { changed, opsSince: fx.opsSince, remoteVersion: db.remoteVersion, batches });
-      expect(fx.opsSince, "the retry starts after the last applied page, not from the old cursor").toEqual([7, 9]);
-      expect(db.remoteVersion).toBe(10);
-      expect(readCacheJson()?.version).toBe(10);
-      expect(batches.flat(), "no op is applied twice").toEqual(["op-4", "op-5", "op-6", "op-7", "op-8", "op-9", "op-10"]);
-      expect(changed).toBe(true);
+      expect(batches, "one batch, every page's ops in version order").toEqual([["op-4", "op-5", "op-6", "op-7", "op-8"]]);
     } finally {
       await db.close();
     }

@@ -17,12 +17,9 @@ import { defaultMobileShellTheme } from "../../../../packages/mobile-shell/src/t
 
 const MIN_PT = 11;
 const repo = path.resolve(__dirname, "../../../..");
-/**
- * Phone source: the phone app and the shared mobile shell. TV screens are badger-tv / parrot-tv, not phone: Badger's
- * own `src/tv` and the family TV kit in `@space/mobile-shell/tv`.
- */
+/** Phone source: the phone app (TV screens live in `src/tv` and are badger-tv) and the shared mobile shell. */
 const roots = ["apps/badger/mobile/src", "packages/mobile-shell/src"];
-const tvDirs = ["apps/badger/mobile/src/tv", "packages/mobile-shell/src/tv"];
+const tvDir = "apps/badger/mobile/src/tv";
 
 const sourceFiles = (): string[] => {
   const out: string[] = [];
@@ -30,7 +27,7 @@ const sourceFiles = (): string[] => {
     for (const entry of readdirSync(path.join(repo, dir), { withFileTypes: true })) {
       const rel = `${dir}/${entry.name}`;
       if (entry.isDirectory()) {
-        if (!tvDirs.includes(rel)) walk(rel);
+        if (rel !== tvDir) walk(rel);
       } else if (/\.tsx?$/.test(entry.name) && !/\.(test\.tsx?|d\.ts)$/.test(entry.name)) {
         out.push(rel);
       }

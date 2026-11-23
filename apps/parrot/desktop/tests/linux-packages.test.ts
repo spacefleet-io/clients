@@ -27,20 +27,14 @@ describe("Parrot Linux packages (PLAT-DESK-01)", () => {
     const version = JSON.parse(readFileSync(join(import.meta.dirname, "..", "package.json"), "utf8")).version;
     const relations = { deb: config.deb.fpm, rpm: config.rpm.fpm, pacman: config.pacman.fpm };
     log("legacy relations", relations);
-    // REL-UPD-07: every native package also carries its root update helper and polkit action, last in fpm
-    const updateFiles = [
-      expect.stringMatching(/\/spaceparrot-system-update=\/usr\/lib\/spaceparrot\/system-update$/),
-      expect.stringMatching(/\/io\.spacefleet\.spaceparrot\.update\.policy=\/usr\/share\/polkit-1\/actions\/io\.spacefleet\.spaceparrot\.update\.policy$/),
-    ];
     expect(relations).toEqual({
-      deb: ["--conflicts", "parrot (<< 1)", "--replaces", "parrot (<< 1)", ...updateFiles],
+      deb: ["--conflicts", "parrot (<< 1)", "--replaces", "parrot (<< 1)"],
       rpm: [
         "--replaces", "parrot < 1", "--provides", `parrot = ${version}`, "--rpm-posttrans", expect.stringMatching(/rpm-posttrans\.sh$/),
         // no /usr/lib/.build-id links: Badger ships the same Electron binaries, rpm would refuse both together
         "--rpm-rpmbuild-define", "_build_id_links none",
-        ...updateFiles,
       ],
-      pacman: ["--conflicts", "parrot<1", "--replaces", "parrot<1", "--provides", `parrot=${version}`, ...updateFiles],
+      pacman: ["--conflicts", "parrot<1", "--replaces", "parrot<1", "--provides", `parrot=${version}`],
     });
     expect(resolveLinuxFormats("AppImage,pacman")).toEqual(["AppImage", "pacman"]);
     expect(() => resolveLinuxFormats("snap")).toThrow(/unknown Linux package format/);

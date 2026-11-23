@@ -125,7 +125,6 @@ type Options = {
   unavailableReason?: string | null;
   getMore?: () => void;
   tryAnother?: (track: SubtitleTrack) => void;
-  addFile?: () => void;
 };
 
 const mount = async (options: Options) => {
@@ -155,9 +154,6 @@ const mount = async (options: Options) => {
               unavailableReason: options.unavailableReason ?? null,
               onPress: options.tryAnother,
             }
-          : null,
-        addSubtitleFile: options.addFile
-          ? { title: "Add a subtitle file…", unavailableReason: options.unavailableReason ?? null, onPress: options.addFile }
           : null,
       }),
     );
@@ -196,29 +192,6 @@ describe("the subtitles button with no subtitle (PLAY-SUBGET-24)", () => {
     expect(getMore).not.toHaveBeenCalled();
     expect(sheetOpen()).toBe(true);
     expect(byTestId("player-subtitle-option-get-more")).toHaveLength(1);
-  });
-
-  /** @req PLAY-SUBGET-24[badger-mobile] @req PLAY-SUBGET-23[badger-mobile] */
-  it("phone: the menu lists Off, Get more subtitles…, Add a subtitle file…; the file row closes the menu and opens the picker", async () => {
-    const getMore = vi.fn();
-    const addFile = vi.fn();
-    await mount({ tv: false, subtitleTracks: [], getMore, addFile });
-    await pressSubtitlesButton();
-    const known = ["player-subtitle-option-off", "player-subtitle-option-get-more", "player-subtitle-option-add-file"];
-    const rowIds = renderer!.root
-      .findAll((node) => typeof node.type === "string" && known.includes(String(node.props.testID)))
-      .map((node) => node.props.testID as string)
-      .filter((id, index, all) => all.indexOf(id) === index);
-    log("phone, no tracks: rows", rowIds);
-    expect(rowIds).toEqual(known);
-    expect(texts()).toContain("Add a subtitle file…");
-    const [row] = byTestId("player-subtitle-option-add-file");
-    await act(async () => {
-      row!.props.onPress();
-    });
-    log("after add-file press", { addFileCalls: addFile.mock.calls.length, getMoreCalls: getMore.mock.calls.length });
-    expect(addFile).toHaveBeenCalledTimes(1);
-    expect(getMore).not.toHaveBeenCalled();
   });
 
   /** @req PLAY-SUBGET-24[badger-mobile] @req PLAY-SUBGET-12[badger-mobile] */

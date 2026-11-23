@@ -25,7 +25,7 @@ const libraryKeyBase64 = libraryKey.toString("base64");
 const phase = (test: string, message: string, data?: unknown) =>
   console.info(`[${test}] ${message}${data === undefined ? "" : ` ${JSON.stringify(data)}`}`);
 
-const profile = (id: string, name: string, isMain: boolean, createdAt: string): ApiProfile => ({ id, name, avatar: 0, avatarId: "raccoon" as const, createdAt, isMain, features: {} });
+const profile = (id: string, name: string, isMain: boolean, createdAt: string): ApiProfile => ({ id, name, avatar: 0, avatarId: "raccoon" as const, createdAt, isMain });
 const MAIN = profile("main-id", "Chris", true, "2026-01-01T00:00:00.000Z");
 const KID = profile("kid-id", "Kid", false, "2026-02-01T00:00:00.000Z");
 

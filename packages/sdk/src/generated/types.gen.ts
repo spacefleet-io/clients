@@ -70,14 +70,6 @@ export type LibraryMeta = {
     opsHistory: Array<LibraryOpEntry>;
     storageFormatVersion: number;
     opStreamVersion: number;
-    /**
-     * Badger library only: the op stream the account's writers move to, 4 once the account is switched (LIB-FMT-13), else 3.
-     */
-    targetOpStreamVersion?: number;
-    /**
-     * Parrot library only: whether this account's imports store each song in parts (a header, the sound in pieces, its tags in their own object; PAR-FMT-01). Off (whole files) until every Parrot channel carries the build that reads that format.
-     */
-    splitOriginals?: boolean;
 };
 
 export type LibraryChunkRefsSource = {
@@ -109,28 +101,6 @@ export type LibraryOpEntry = {
     payloadCiphertext?: string;
 };
 
-export type LibraryOpStreamUpdateRequired = {
-    error: 'app_update_required';
-    app: string;
-    platform: string;
-    /**
-     * The calling build's version from `x-space-client`; empty without it.
-     */
-    version: string;
-    /**
-     * The version floor for that app and platform; empty when none is set.
-     */
-    minVersion: string;
-    /**
-     * `library_op_stream`: the library is switched to op stream 4 (LIB-FMT-13). `library_schema`: a newer Parrot build saved the account's library at a schema this build cannot open (API-VER-01).
-     */
-    reason: 'library_op_stream' | 'library_schema';
-    /**
-     * With `library_op_stream`: the op stream version the library needs (4).
-     */
-    opStreamVersion?: number;
-};
-
 export type LibraryBlobPointer = {
     exists: boolean;
     version: number;
@@ -147,10 +117,6 @@ export type LibraryBlobPointer = {
     chunkSize: number | null;
     storageFormatVersion: number;
     opStreamVersion: number;
-    /**
-     * Badger library only: the op stream the account's writers move to, 4 once the account is switched (LIB-FMT-13), else 3.
-     */
-    targetOpStreamVersion?: number;
 };
 
 export type LibraryOps = {
@@ -163,10 +129,6 @@ export type LibraryOps = {
     ops: Array<LibraryOpEntry>;
     storageFormatVersion: number;
     opStreamVersion: number;
-    /**
-     * Badger library only: the op stream the account's writers move to, 4 once the account is switched (LIB-FMT-13), else 3.
-     */
-    targetOpStreamVersion?: number;
     /**
      * Operator notice, absent in the common case.
      */
@@ -732,12 +694,6 @@ export type Profile = {
      * True on the oldest profile of the account, whose viewing data uses the library's unprefixed storage.
      */
     isMain: boolean;
-    /**
-     * App features this profile has set up (`set`) or put off from the "New in this update" window (`later`), by feature id (avatars); a feature not listed is not set up yet.
-     */
-    features: {
-        avatars?: 'set' | 'later';
-    };
 };
 
 export type ProfileChange = {
@@ -1092,10 +1048,6 @@ export type GetLibraryMetaData = {
     body?: never;
     headers: {
         /**
-         * The op stream version the client reads; defaults to 1. On an account switched to op stream 4, below 4 answers 426.
-         */
-        'x-library-op-stream-version'?: string;
-        /**
          * SpaceFleet app the request belongs to (library: badger or parrot; storage and p2p: badger or parrot).
          */
         'x-space-app': 'badger' | 'parrot';
@@ -1130,10 +1082,6 @@ export type GetLibraryMetaErrors = {
         error: 'account_blocked' | 'account_deleted' | 'personal_token_not_allowed';
     };
     /**
-     * The app must update: the account's library is switched to op stream 4 and the request does not declare it (`x-library-op-stream-version`, LIB-FMT-13), or a newer Parrot build saved the account's music library at a schema this build cannot open (API-VER-01).
-     */
-    426: LibraryOpStreamUpdateRequired;
-    /**
      * The storage gateway could not tell whether a snapshot exists; keep the local library and retry.
      */
     503: {
@@ -1155,10 +1103,6 @@ export type GetLibraryMetaResponse = GetLibraryMetaResponses[keyof GetLibraryMet
 export type GetLibraryDbData = {
     body?: never;
     headers: {
-        /**
-         * The op stream version the client reads; defaults to 1. On an account switched to op stream 4, below 4 answers 426.
-         */
-        'x-library-op-stream-version'?: string;
         /**
          * SpaceFleet app the request belongs to (library: badger or parrot; storage and p2p: badger or parrot).
          */
@@ -1188,10 +1132,6 @@ export type GetLibraryDbErrors = {
     403: {
         error: 'account_blocked' | 'account_deleted' | 'personal_token_not_allowed';
     };
-    /**
-     * The app must update: the account's library is switched to op stream 4 and the request does not declare it (`x-library-op-stream-version`, LIB-FMT-13), or a newer Parrot build saved the account's music library at a schema this build cannot open (API-VER-01).
-     */
-    426: LibraryOpStreamUpdateRequired;
     /**
      * The storage gateway could not tell whether a snapshot exists; keep the local library and retry.
      */
@@ -1279,7 +1219,7 @@ export type PutLibraryDbErrors = {
      */
     404: Error;
     /**
-     * The version is stale, the publish would downgrade the library format, it declares op stream 4 before the account is switched (`op_stream_not_switched`, LIB-FMT-13), or the upload quota is exceeded.
+     * The version is stale, the publish would downgrade the library format, or the upload quota is exceeded.
      */
     409: {
         error: 'version_conflict';
@@ -1289,12 +1229,6 @@ export type PutLibraryDbErrors = {
         surface: 'storage' | 'op-stream';
         observed: number;
         stored: number;
-    } | {
-        error: 'op_stream_not_switched';
-        /**
-         * The op stream version the write declared.
-         */
-        observed: number;
     } | {
         error: 'upload_quota_exceeded';
     } | Error;
@@ -1306,10 +1240,6 @@ export type PutLibraryDbErrors = {
      * A gateway answered 415. The `error` is the code the storage gateway answered with, relayed as is.
      */
     415: Error;
-    /**
-     * The app must update: the account's library is switched to op stream 4 and the request does not declare it (`x-library-op-stream-version`, LIB-FMT-13), or a newer Parrot build saved the account's music library at a schema this build cannot open (API-VER-01).
-     */
-    426: LibraryOpStreamUpdateRequired;
     /**
      * Too many requests. The `error` is the code the storage gateway answered with, relayed as is.
      */
@@ -1353,10 +1283,6 @@ export type GetLibraryOpsData = {
     body?: never;
     headers: {
         /**
-         * The op stream version the client reads; defaults to 1. On an account switched to op stream 4, below 4 answers 426.
-         */
-        'x-library-op-stream-version'?: string;
-        /**
          * SpaceFleet app the request belongs to (library: badger or parrot; storage and p2p: badger or parrot).
          */
         'x-space-app': 'badger' | 'parrot';
@@ -1391,10 +1317,6 @@ export type GetLibraryOpsErrors = {
         error: 'account_blocked' | 'account_deleted' | 'personal_token_not_allowed';
     };
     /**
-     * The app must update: the account's library is switched to op stream 4 and the request does not declare it (`x-library-op-stream-version`, LIB-FMT-13), or a newer Parrot build saved the account's music library at a schema this build cannot open (API-VER-01).
-     */
-    426: LibraryOpStreamUpdateRequired;
-    /**
      * The stored operations do not match the contract.
      */
     500: {
@@ -1428,10 +1350,6 @@ export type PostLibraryOpData = {
          */
         'x-library-storage-format-version'?: string;
         /**
-         * The op stream the writer uses; defaults to 1. Below 4 is refused on an account switched to op stream 4 (426) and once the library holds op stream 4 (409); 4 before the switch answers 409 `op_stream_not_switched`.
-         */
-        'x-library-op-stream-version'?: string;
-        /**
          * SpaceFleet app the request belongs to (library: badger or parrot; storage and p2p: badger or parrot).
          */
         'x-space-app': 'badger' | 'parrot';
@@ -1461,7 +1379,7 @@ export type PostLibraryOpErrors = {
         error: 'account_blocked' | 'account_deleted' | 'personal_token_not_allowed';
     };
     /**
-     * The version or the state lineage is stale, the op declares an older format than the library's, or it declares op stream 4 before the account is switched (`op_stream_not_switched`, LIB-FMT-13).
+     * The version or the state lineage is stale.
      */
     409: {
         error: 'version_conflict';
@@ -1474,17 +1392,7 @@ export type PostLibraryOpErrors = {
         surface: string;
         observed: number;
         stored: number;
-    } | {
-        error: 'op_stream_not_switched';
-        /**
-         * The op stream version the write declared.
-         */
-        observed: number;
     };
-    /**
-     * The app must update: the account's library is switched to op stream 4 and the request does not declare it (`x-library-op-stream-version`, LIB-FMT-13), or a newer Parrot build saved the account's music library at a schema this build cannot open (API-VER-01).
-     */
-    426: LibraryOpStreamUpdateRequired;
     /**
      * The operation could not be stored.
      */
@@ -1508,10 +1416,6 @@ export type StreamLibraryEventsData = {
     body?: never;
     headers: {
         /**
-         * The op stream version the client reads; defaults to 1. On an account switched to op stream 4, below 4 answers 426.
-         */
-        'x-library-op-stream-version'?: string;
-        /**
          * SpaceFleet app the request belongs to (library: badger or parrot; storage and p2p: badger or parrot).
          */
         'x-space-app': 'badger' | 'parrot';
@@ -1526,10 +1430,6 @@ export type StreamLibraryEventsData = {
          * App id, for clients that cannot set the `x-space-app` header.
          */
         app?: string;
-        /**
-         * The op stream version the client reads, for clients that cannot set `x-library-op-stream-version` (LIB-FMT-13).
-         */
-        opStream?: string;
     };
     url: '/library/db/stream';
 };
@@ -1553,10 +1453,6 @@ export type StreamLibraryEventsErrors = {
     403: {
         error: 'account_blocked' | 'account_deleted' | 'personal_token_not_allowed';
     };
-    /**
-     * The app must update: the account's library is switched to op stream 4 and the request does not declare it (`x-library-op-stream-version`, LIB-FMT-13), or a newer Parrot build saved the account's music library at a schema this build cannot open (API-VER-01).
-     */
-    426: LibraryOpStreamUpdateRequired;
 };
 
 export type StreamLibraryEventsError = StreamLibraryEventsErrors[keyof StreamLibraryEventsErrors];
@@ -4456,12 +4352,6 @@ export type CreateProfileData = {
          * Palette index, an integer from 0 to 7; sets the avatar matching that colour. For apps released before the avatar pack: ignored when `avatarId` is sent.
          */
         avatar?: number;
-        /**
-         * App features this profile has set up (`set`) or put off from the "New in this update" window (`later`), by feature id (avatars); a feature not listed is not set up yet.
-         */
-        features?: {
-            avatars?: 'set' | 'later';
-        };
     };
     path?: never;
     query?: never;
@@ -4470,7 +4360,7 @@ export type CreateProfileData = {
 
 export type CreateProfileErrors = {
     /**
-     * The name is not 1 to 40 characters after trimming, the avatar is not an integer from 0 to 7, the avatarId is not one of the pack, a feature id or state is unknown, or the body does not match the schema.
+     * The name is not 1 to 40 characters after trimming, the avatar is not an integer from 0 to 7, the avatarId is not one of the pack, or the body does not match the schema.
      */
     400: {
         error: 'invalid_profile' | 'invalid_request';
@@ -4570,12 +4460,6 @@ export type UpdateProfileData = {
          * Palette index, an integer from 0 to 7; sets the avatar matching that colour. For apps released before the avatar pack: ignored when `avatarId` is sent.
          */
         avatar?: number;
-        /**
-         * App features this profile has set up (`set`) or put off from the "New in this update" window (`later`), by feature id (avatars); a feature not listed is not set up yet.
-         */
-        features?: {
-            avatars?: 'set' | 'later';
-        };
     };
     path: {
         /**
@@ -4589,7 +4473,7 @@ export type UpdateProfileData = {
 
 export type UpdateProfileErrors = {
     /**
-     * The name is not 1 to 40 characters after trimming, the avatar is not an integer from 0 to 7, the avatarId is not one of the pack, a feature id or state is unknown, or the body does not match the schema.
+     * The name is not 1 to 40 characters after trimming, the avatar is not an integer from 0 to 7, the avatarId is not one of the pack, or the body does not match the schema.
      */
     400: {
         error: 'invalid_profile' | 'invalid_request';
@@ -5166,18 +5050,6 @@ export type GetPairingRequestResponses = {
         sealedKey: SealedKey;
         clientType: string;
     } | {
-        status: 'approved';
-        /**
-         * Session token of the new device.
-         */
-        token: string;
-        user: {
-            id: string;
-            email: string;
-        };
-        localKey: true;
-        clientType: string;
-    } | {
         status: 'key_approved';
         user: {
             id: string;
@@ -5278,11 +5150,7 @@ export type LookupPairingResponse = LookupPairingResponses[keyof LookupPairingRe
 export type ApprovePairingData = {
     body: {
         /**
-         * Same-device sign-in (ACCT-PAIR-07): approve with no key; the approving app hands the sealed key to its sister app on this device itself. Replaces `sealedKey`.
-         */
-        localKey?: true;
-        /**
-         * Required unless `localKey`: a sealed key `{ v: 1, epk, iv, ct }` with base64 fields; otherwise 400 `invalid_sealed_key`.
+         * Required: a sealed key `{ v: 1, epk, iv, ct }` with base64 fields; otherwise 400 `invalid_sealed_key`.
          */
         sealedKey?: unknown;
         /**
@@ -5310,7 +5178,7 @@ export type ApprovePairingData = {
 
 export type ApprovePairingErrors = {
     /**
-     * The sealed key is missing or malformed, or sent together with `localKey`.
+     * The sealed key is missing or malformed.
      */
     400: {
         error: 'invalid_request' | 'invalid_sealed_key';
@@ -5323,10 +5191,10 @@ export type ApprovePairingErrors = {
         method?: 'email' | 'totp';
     };
     /**
-     * The account is blocked or deleted, a personal token was used, or (`localKey`) the request is not the sister app's sign-in on this device type.
+     * The account is blocked or scheduled for deletion, or a personal token was used on a route that needs a login session.
      */
     403: {
-        error: 'account_blocked' | 'account_deleted' | 'personal_token_not_allowed' | 'pairing_local_key_refused';
+        error: 'account_blocked' | 'account_deleted' | 'personal_token_not_allowed';
     };
     /**
      * Unknown, expired or already used request or code.
@@ -6514,10 +6382,6 @@ export type SendFeedbackData = {
          * The app's error log, only when the user chose to attach it. 200 KB at most.
          */
         log?: string | null;
-        /**
-         * UX-SUP-07: the `x-request-id` of each of the app's last failed API calls (answers of 400 or more), newest last; at most 10 UUIDs. Ids only: never a URL, a body or an address.
-         */
-        requestIds?: Array<string> | null;
     };
     path?: never;
     query?: never;
@@ -6530,7 +6394,7 @@ export type SendFeedbackErrors = {
      */
     400: {
         error: 'invalid_feedback';
-        field: 'message' | 'app' | 'appVersion' | 'platform' | 'deviceModel' | 'log' | 'requestIds';
+        field: 'message' | 'app' | 'appVersion' | 'platform' | 'deviceModel' | 'log';
     } | {
         error: 'invalid_request';
     };

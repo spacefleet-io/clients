@@ -10,10 +10,8 @@ import UIKit
 final class AudioPlaybackModule: RCTEventEmitter {
   static let stateEvent = "AudioPlaybackState"
 
-  #if os(iOS)
   /// The AirPlay picker `showOutputSwitcher` opens, kept (invisible) in the key window.
   private static var routePicker: AVRoutePickerView?
-  #endif
 
   override init() {
     super.init(disabledObservation: ())
@@ -161,25 +159,16 @@ final class AudioPlaybackModule: RCTEventEmitter {
     stateAfter(resolve) { $0.setRepeatMode(mode) }
   }
 
-  /// The iPhone always has the system's AirPlay picker (speaker, AirPlay and Bluetooth devices). tvOS has no
-  /// `AVRoutePickerView`: the Apple TV picks its audio output in its own Settings (PAR-TV-11).
+  /// The iPhone always has the system's AirPlay picker (speaker, AirPlay and Bluetooth devices).
   @objc(canShowOutputSwitcher:reject:)
   func canShowOutputSwitcher(_ resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
-    #if os(iOS)
     resolve(true)
-    #else
-    resolve(false)
-    #endif
   }
 
   /// Opens the system's AirPlay picker, as a tap on an `AVRoutePickerView` does (the view sits invisible in the key
   /// window, and its button is pressed for the user). Resolves false when no window or button was found.
   @objc(showOutputSwitcher:reject:)
   func showOutputSwitcher(_ resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
-    #if os(tvOS)
-    AudioLog.info("audio.output_switcher shown=false reason=tvos")
-    resolve(false)
-    #else
     DispatchQueue.main.async {
       let window = UIApplication.shared.connectedScenes
         .compactMap { $0 as? UIWindowScene }
@@ -204,35 +193,6 @@ final class AudioPlaybackModule: RCTEventEmitter {
       button.sendActions(for: .touchUpInside)
       let outputs = AVAudioSession.sharedInstance().currentRoute.outputs.map { $0.portType.rawValue }
       AudioLog.info("audio.output_switcher shown=true outputs=\(outputs)")
-      resolve(true)
-    }
-    #endif
-  }
-
-  /// What JS last asked for. The idle timer is put back each time the app becomes active while it is still wanted, so a
-  /// trip through the background never leaves the screen free to sleep under Now playing (Badger's `MpvControl` does the
-  /// same for films). In the background the system ignores it: the TV's screensaver starts as usual.
-  private static var keepScreenOnWanted = false
-  private static var keepScreenOnObserver: NSObjectProtocol?
-
-  /// Keeps the screen awake (no screensaver, no sleep) while `enabled`: Parrot TV's Now playing and lyrics (PAR-TV-12).
-  @objc(setKeepScreenOn:resolve:reject:)
-  func setKeepScreenOn(_ enabled: Bool, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
-    DispatchQueue.main.async {
-      let previous = UIApplication.shared.isIdleTimerDisabled
-      Self.keepScreenOnWanted = enabled
-      UIApplication.shared.isIdleTimerDisabled = enabled
-      AudioLog.info("audio.keep_awake enabled=\(enabled) previous=\(previous)")
-      if Self.keepScreenOnObserver == nil {
-        Self.keepScreenOnObserver = NotificationCenter.default.addObserver(
-          forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main
-        ) { _ in
-          if Self.keepScreenOnWanted && !UIApplication.shared.isIdleTimerDisabled {
-            AudioLog.info("audio.keep_awake restored=true")
-            UIApplication.shared.isIdleTimerDisabled = true
-          }
-        }
-      }
       resolve(true)
     }
   }

@@ -1,22 +1,18 @@
-import { homeAlbumDetail, type HistoryAlbum, type ListeningHistory, type ParrotAlbumSort } from "@space/parrot-core";
+import { homeAlbumDetail, type HistoryAlbum, type ListeningHistory } from "@space/parrot-core";
 import type { ParrotLibraryTrack } from "@space/parrot-ingest";
 import type { ParrotCardControls } from "@space/ui/parrot/card-actions";
 import { ParrotAlbumTile } from "@space/ui/parrot/library";
 import { ParrotHome } from "@space/ui/parrot/screens";
 import { EmptyLibrary } from "@space/ui";
 import mascotUrl from "@space/parrot-core/mascot.webp";
-import type { LibraryContent } from "@space/shared/libraryContent";
 import type { ParrotDesktopAlbum, ParrotDesktopArtist, ParrotLanguage } from "../../shared/ipc";
 import { countText, type Translate } from "./i18n";
-import { LibraryLoading } from "./LoadingMascot";
 
 type HomeProps = {
   t: Translate;
   language: ParrotLanguage;
   albums: ParrotDesktopAlbum[];
   artists: ParrotDesktopArtist[];
-  /** What the library holds (UX-WAIT-04): its songs, nothing yet known (the loading screen), or nothing (the empty library). */
-  content: LibraryContent;
   tracks: ParrotLibraryTrack[];
   history: ListeningHistory;
   playingTrack: ParrotLibraryTrack | undefined;
@@ -29,8 +25,7 @@ type HomeProps = {
   onOpenArtist: (id: string) => void;
   /** Plays the album: from the history's song and position when there is one, else from its first song. */
   onPlayAlbum: (albumId: string, entry: HistoryAlbum | null, shuffle: boolean) => void;
-  /** Opens the library's album or artist list; "Recently added"'s "See all" asks for that album order (PAR-HOME-01). */
-  onSeeAll: (view: "albums" | "artists", sort?: ParrotAlbumSort) => void;
+  onSeeAll: (view: "albums" | "artists") => void;
   /** Each card's Play and "..." menu (PAR-CARD-01). */
   albumControls?: (album: ParrotDesktopAlbum) => ParrotCardControls;
   artistControls?: (artist: ParrotDesktopArtist) => ParrotCardControls;
@@ -71,7 +66,6 @@ export default function Home({
   language,
   albums,
   artists,
-  content,
   tracks,
   history,
   playingTrack,
@@ -90,8 +84,7 @@ export default function Home({
   onAddMusic,
   onAddFolder,
 }: HomeProps) {
-  if (content === "loading") return <LibraryLoading label={t("library.loading")} />;
-  if (content === "empty") return <EmptyMusicLibrary t={t} onAddMusic={onAddMusic} onAddFolder={onAddFolder} />;
+  if (tracks.length === 0) return <EmptyMusicLibrary t={t} onAddMusic={onAddMusic} onAddFolder={onAddFolder} />;
   return (
     <ParrotHome
       history={history}
@@ -107,7 +100,6 @@ export default function Home({
         play: t("player.play"),
         pause: t("player.pause"),
         shuffle: t("home.shuffle"),
-        recentlyAdded: t("home.recentlyAdded"),
         recentlyPlayed: t("home.recentlyPlayed"),
         albums: t("library.albums"),
         yourArtists: t("home.yourArtists"),

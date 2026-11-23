@@ -326,7 +326,7 @@ describe("the artwork copy: the one place the phone spends tickets on pictures (
           applied.push({ mediaId, copies });
           const title = titles[mediaId]!;
           title.slots = title.slots.filter((slot) => !copies.some((c) => c.target === slot.target && c.id === slot.id));
-          return { applied: copies.length, skipped: 0, unapplied: [] };
+          return { applied: copies.length, skipped: 0 };
         },
       },
     };

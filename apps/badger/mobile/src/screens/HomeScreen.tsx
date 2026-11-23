@@ -4,14 +4,15 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Download } from "lucide-react-native";
 import type { MediaRow } from "@space/shared/libraryTypes";
-import { MobileEmptyLibrary, MobileEmptyLibraryAction, MobileLibraryLoading, useSkyScroll } from "@space/mobile-shell/components";
+import { MobileEmptyLibrary, MobileEmptyLibraryAction, useSkyScroll } from "@space/mobile-shell/components";
 import { getCurrentLanguage, useTranslation } from "@space/mobile-shell/i18n";
 import { useLibraryActions, useLibraryData, useLibraryStatus } from "../store/library";
 import { getLastPlayedEpisodeId } from "../lib/resume";
 import { continuePlayerParams } from "../tv/lib/continueStart";
 import { RootStackParamList } from "../navigation/AppNavigator";
 import { PosterRail } from "../components/PosterRail";
-import { libraryContent } from "@space/shared/libraryContent";
+import { Panel } from "../components/Panel";
+import { PosterRailSkeleton } from "../components/Skeleton";
 import { ContinueHero } from "../components/ContinueHero";
 import { homeRailEntries, selectHomeRails, type HomeRailId } from "../lib/homeRails";
 import { phoneHomeLayout, seeAllTarget, type SeeAllTarget } from "../lib/phoneHome";
@@ -33,13 +34,12 @@ type HomeScreenProps = {
 /**
  * Home tab (UX-PHONE-01): no page title (the tab bar names the page), the latest started title as a hero card, then
  * rows of posters (recently added, movies, TV shows, favorites) with "See all". Empty: the computer's empty library on
- * the phone (UX-EMPTY-01, UX-PHONE-03), whose one button opens the download page of Badger for computer — only once the
- * library is known to be empty; until then the app's opening screen says "Loading library" (UX-WAIT-04).
+ * the phone (UX-EMPTY-01, UX-PHONE-03), whose one button opens the download page of Badger for computer.
  */
 export const HomeScreen = memo(({ onSeeAll }: HomeScreenProps) => {
   const { t } = useTranslation();
   const { media } = useLibraryData();
-  const { settled, error, refresh } = useLibraryStatus();
+  const { loading, error, refresh } = useLibraryStatus();
   const navigation = useNavigation<Nav>();
   const { getMediaDetails } = useLibraryActions();
   const favoriteIds = useFavoriteIds();
@@ -75,12 +75,20 @@ export const HomeScreen = memo(({ onSeeAll }: HomeScreenProps) => {
     />
   );
 
-  const content = libraryContent({ itemCount: media.length, settled });
-  if (content === "loading") {
-    return <MobileLibraryLoading app="badger" source={MASCOT} label={t("nav.loadingLibrary")} />;
+  if (media.length === 0 && loading) {
+    return (
+      <View style={styles.skeletonWrap}>
+        <Panel>
+          <PosterRailSkeleton cardWidth={RAIL_CARD_WIDTH} />
+        </Panel>
+        <Panel>
+          <PosterRailSkeleton cardWidth={RAIL_CARD_WIDTH} />
+        </Panel>
+      </View>
+    );
   }
 
-  if (content === "empty") {
+  if (media.length === 0) {
     return (
       <ScrollView contentContainerStyle={styles.emptyScroll} refreshControl={refreshControl} {...skyScroll}>
         <MobileEmptyLibrary
@@ -136,5 +144,6 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   content: { paddingTop: 12, paddingBottom: 24, gap: 24 },
   error: { fontSize: 12, color: theme.colors.danger },
+  skeletonWrap: { paddingTop: 48, gap: 24 },
   emptyScroll: { flexGrow: 1, justifyContent: "center", paddingHorizontal: 16, paddingTop: 16, paddingBottom: 24 },
 });

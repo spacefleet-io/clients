@@ -11,7 +11,6 @@ import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { streamBridgeStub } from "./streamBridge";
-import { exportBridgeStub } from "./exportBridge";
 import type { ParrotListedTrack } from "@space/parrot-core";
 import type { ParrotState } from "../src/shared/ipc";
 import Library from "../src/renderer/src/Library";
@@ -94,7 +93,6 @@ describe("Parrot desktop album page: missing songs", () => {
       configurable: true,
       value: {
         ...streamBridgeStub(),
-        ...exportBridgeStub(),
         getLibrary: vi.fn(async () => ({ ok: true, library })),
         getImportStatus: vi.fn(async () => ({ running: false, phase: "idle", done: 0, total: 0, imported: 0, skipped: 0, failed: 0 })),
         getImportScan: vi.fn(async () => null),
@@ -176,11 +174,19 @@ describe("Parrot desktop album page: missing songs", () => {
     expect(q("library-missing-track")).toHaveLength(0);
   });
 
-  it("missing songs are not in the Songs list", async () => {
+  it("missing songs are not in the Songs list or its search", async () => {
     await click(q("library-chip-songs")[0]);
     console.info(SUITE, "phase: songs list", titles("library-track"));
-    expect(titles("library-track")).toEqual(["Gale", "Harbour", "Lantern"]);
+    expect(titles("library-track")).toEqual(["Harbour", "Lantern", "Gale"]);
     expect(q("library-missing-track")).toHaveLength(0);
+    const search = q("library-search")[0] as HTMLInputElement;
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(search, "prelude");
+      search.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    console.info(SUITE, "phase: search prelude", titles("library-track"), q("library-no-match")[0]?.textContent);
+    expect(q("library-track")).toHaveLength(0);
+    expect(q("library-no-match")[0]?.textContent).toBe("Nothing matches “prelude”.");
   });
 
   it("the artist page shows only the albums the user owns", async () => {

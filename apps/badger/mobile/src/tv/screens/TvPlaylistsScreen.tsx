@@ -8,10 +8,10 @@ import type { MediaRow, PlaylistRow } from "@space/shared/libraryTypes";
 import type { RootStackParamList } from "../../navigation/AppNavigator";
 import { useLibraryActions, useLibraryData } from "../../store/library";
 import { TvPosterGrid } from "../components/TvPosterGrid";
-import { TV_SCREEN_X } from "@space/mobile-shell/tv/layout";
-import { useTvStyles } from "@space/mobile-shell/tv/tvScale";
-import { TvChip } from "@space/mobile-shell/tv/TvChip";
-import { TvBody } from "@space/mobile-shell/tv/TvText";
+import { TV_SCREEN_X } from "../lib/layout";
+import { useTvStyles } from "../lib/tvScale";
+import { TvChip } from "../ui/TvChip";
+import { TvBody } from "../ui/TvText";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type Translate = (key: string, options?: Record<string, unknown>) => string;

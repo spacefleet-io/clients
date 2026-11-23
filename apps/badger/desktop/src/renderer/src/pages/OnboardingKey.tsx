@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Navigate, useNavigate } from "react-router-dom";
+import PublicTopNav from "../components/PublicTopNav";
 import { useAuth } from "../auth";
 import ReauthPasswordField from "@/components/ReauthPasswordField";
-import { ApiError, getLibraryMetaForKeyStep, resetLibrary, rotateLibraryKey } from "@/api";
+import { ApiError, getLibraryMeta, resetLibrary, rotateLibraryKey } from "@/api";
 import {
   acknowledgeLibraryKey,
   clearLibraryKey,
@@ -32,22 +33,19 @@ import {
   DesktopStartupCard,
   DesktopStartupControls,
   DesktopStartupPage,
-  LIBRARY_KEY_STEP_FIT,
   LibraryKeyStep,
   libraryKeyEraseOutcomeOf,
   libraryKeyStepText,
   type LibraryKeyEraseOutcome,
   type LibraryKeyTyped,
 } from "@space/desktop-shell/components";
-import mascotWebp from "@/assets/mascot.webp";
 import { verifyPairedKey, type ApprovedPairing, type PairedKeyCheck } from "@/lib/pairedSignIn";
 import { pairedKeyCheckDeps } from "@/lib/pairedSignInDeps";
 import { rendererLogger } from "@/logger";
 import { loadFirstSetup } from "../components/firstSetupSteps";
 import SetupLanguageMenu from "@/components/SetupLanguageMenu";
 import { useProfiles } from "@/lib/profileStore";
-import { needsProfileSetupStep } from "@space/desktop-shell/profile-setup";
-import { noteSetupRun, titleQuestionExpected } from "@/lib/titleLanguageSetup";
+import { noteSetupRunCountsTitle, titleQuestionExpected } from "@/lib/titleLanguageSetup";
 
 const log = rendererLogger.child({ scope: "onboarding.key" });
 
@@ -69,13 +67,11 @@ export default function OnboardingKey() {
   const [promptReason, setPromptReason] = useState<"invalid" | "remote" | "missing" | null>(null);
   // UX-SETUP-08: during this computer's first setup the key is "Step 1 of M", M counting the questions after it.
   const [setupStepsAfterKey, setSetupStepsAfterKey] = useState(0);
-  // UX-SETUP-10 / ACCT-PROF-03: a new profile is asked "Your profile" right after the key ("Step 2 of M"), then a
-  // profile created since the title question exists is asked it.
+  // ACCT-PROF-03: a profile created since the title question exists is asked it right after the key ("Step 2 of M").
   const profiles = useProfiles();
   const keyProfile =
     profiles.profiles.find((profile) => profile.id === profiles.activeId) ??
     (profiles.profiles.length === 1 ? profiles.profiles[0] : undefined);
-  const profileStepAfterKey = window.sf?.profileSetupOff !== true && needsProfileSetupStep(keyProfile) ? 1 : 0;
   const titleStepAfterKey = titleQuestionExpected(keyProfile) ? 1 : 0;
   const [enterError, setEnterError] = useState<string | null>(null);
   const [generateError, setGenerateError] = useState<string | null>(null);
@@ -133,7 +129,7 @@ export default function OnboardingKey() {
         if (token) {
           try {
             step("existingKey.meta.start");
-            const meta = await getLibraryMetaForKeyStep(token);
+            const meta = await getLibraryMeta(token);
             step("existingKey.meta.done", { remoteExists: meta.exists, hasKeyProbe: Boolean(meta.keyProbe) });
             if (meta.exists) {
               if (meta.keyProbe) {
@@ -213,7 +209,7 @@ export default function OnboardingKey() {
       let decision: OnboardingRemoteDecision;
       try {
         step("meta.start");
-        const meta = await getLibraryMetaForKeyStep(token);
+        const meta = await getLibraryMeta(token);
         step("meta.done", { remoteExists: meta.exists, bootstrapRequired: meta.bootstrapRequired });
         decision = deriveNoStoredKeyDecision(meta);
       } catch (err) {
@@ -284,7 +280,7 @@ export default function OnboardingKey() {
       cancelled = true;
     };
   }, []);
-  const setupTotal = 1 + profileStepAfterKey + titleStepAfterKey + setupStepsAfterKey;
+  const setupTotal = 1 + titleStepAfterKey + setupStepsAfterKey;
   const setupProgress =
     setupTotal > 1
       ? {
@@ -295,13 +291,10 @@ export default function OnboardingKey() {
         }
       : undefined;
   useEffect(() => {
-    if (profileStepAfterKey === 0 && titleStepAfterKey === 0) return;
-    log.info(
-      { total: setupTotal, profileStep: profileStepAfterKey === 1, titleStep: titleStepAfterKey === 1 },
-      "[onboarding.key] the profile questions follow the key in this setup"
-    );
-    noteSetupRun({ total: setupTotal, profileStep: profileStepAfterKey === 1, titleStep: titleStepAfterKey === 1 });
-  }, [profileStepAfterKey, titleStepAfterKey, setupTotal]);
+    if (titleStepAfterKey === 0) return;
+    log.info({ total: setupTotal }, "[onboarding.key] the title question is step 2 of this setup");
+    noteSetupRunCountsTitle(setupTotal);
+  }, [titleStepAfterKey, setupTotal]);
 
   if (!user) {
     return <Navigate to="/login" replace />;
@@ -309,7 +302,7 @@ export default function OnboardingKey() {
 
   if (loadingKey) {
     return (
-      <DesktopStartupPage nebula="badger">
+      <DesktopStartupPage nebula="badger" topNav={<PublicTopNav />}>
         <div className="grid min-h-full w-full place-items-center">
           <div className="text-sm text-muted-foreground">{t("onboarding.key.loading")}</div>
         </div>
@@ -330,7 +323,7 @@ export default function OnboardingKey() {
       const step = (name: string, extra?: Record<string, unknown>) =>
         log.info({ step: name, elapsedMs: Date.now() - startedAt, ...extra }, "continueNext step");
       step("meta.start");
-      const meta = token ? await getLibraryMetaForKeyStep(token).catch(() => null) : null;
+      const meta = token ? await getLibraryMeta(token).catch(() => null) : null;
       step("meta.done", { exists: meta?.exists ?? null });
       if (token && !meta?.exists) {
         step("activate.start");
@@ -435,7 +428,7 @@ export default function OnboardingKey() {
     setEnterError(null);
     try {
       // Lightweight validation: ensure the API has a DB and that we can decrypt it later.
-      const meta = await getLibraryMetaForKeyStep(token);
+      const meta = await getLibraryMeta(token);
       // The account's key probe decides first (PRIV-KEY-01: one key per account, the probe is the account's): with
       // no Badger library yet, a key made in Parrot is still the only right one, and a wrong key here would encrypt
       // Badger's library under it and split the apps for good. WebCrypto rejects a wrong key with a bare
@@ -561,7 +554,7 @@ export default function OnboardingKey() {
 
   if (mode === "generate" && !libraryKey) {
     return (
-      <DesktopStartupPage nebula="badger">
+      <DesktopStartupPage nebula="badger" topNav={<PublicTopNav />}>
         <div className="grid min-h-full w-full place-items-center">
           <div className="text-sm text-muted-foreground">{t("onboarding.key.errorLoad")}</div>
         </div>
@@ -572,29 +565,30 @@ export default function OnboardingKey() {
   return (
     <DesktopStartupPage
       nebula="badger"
+      topNav={<PublicTopNav />}
       // UX-SETUP-08: the language button keeps the window's top-right spot on every setup step, never inside the card.
       controls={
         <DesktopStartupControls>
           <SetupLanguageMenu />
         </DesktopStartupControls>
       }
-      // UX-SETUP-08: framed like the other setup steps (no top bar, the mascot on the card); the shared tighter
-      // spacing and less room around the card in a short window fit the smallest window (1200x600) with no scrolling.
-      mainClassName="pb-8 pt-32 [@media(max-height:700px)]:pb-4 [@media(max-height:700px)]:pt-16"
+      mainClassName="items-start py-10"
     >
-        <div className={`w-full max-w-2xl ${LIBRARY_KEY_STEP_FIT}`}>
+        <div className="mx-auto max-w-2xl space-y-6">
+          {/* UX-KEY-01: entering a key and being shown a new one never look alike; one headline says which it is. */}
+          <header className="space-y-2">
+            <h1 className="text-2xl font-bold tracking-tight">
+              {mode === "enter" ? t("onboarding.key.enterTitle") : t("onboarding.key.title")}
+            </h1>
+          </header>
+
           {/* UX-KEY-01: the step itself is the one Parrot desktop shows too; the page only frames it and does the calls.
-              Entering a key and being shown a new one never look alike; the card's title says which it is. The enter
-              screen says one sentence, the card's; no banner above it, whatever brought the user here. */}
+              The enter screen says one sentence, the card's; no banner above it, whatever brought the user here. */}
           <DesktopStartupCard
             maxWidthClassName="max-w-2xl"
             progress={setupProgress}
-            title={mode === "enter" ? t("onboarding.key.enterTitle") : t("onboarding.key.title")}
-            titleAs="h1"
             description={mode === "enter" ? t("onboarding.key.enterSubtitle") : undefined}
-            mascotSrc={mascotWebp}
-            mascotAlt={t("brand.mascotAlt")}
-            contentClassName="pt-0 pb-5"
+            contentClassName={mode === "enter" ? undefined : "space-y-4 pb-8 pt-4"}
           >
             {mode === "enter" ? (
               <LibraryKeyStep

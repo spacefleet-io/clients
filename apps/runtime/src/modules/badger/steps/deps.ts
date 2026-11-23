@@ -98,9 +98,8 @@ export interface TranscodeResult extends ExtractResult {
  *
  * Unlike `TranscodeInput`, there is no `inputPath` on disk. The source media
  * is reconstructed from already-uploaded DASH segments in object storage:
- * the runtime downloads + decrypts the source format's chunks (in list
- * order: `media_format_chunks.order_index`, or the packed list once
- * converted, LIB-FMT-11), stages them to a temp dir, and
+ * the runtime downloads + decrypts the source format's chunks (in order
+ * from `media_format_chunks.order_index`), stages them to a temp dir, and
  * feeds the staged manifest to ffmpeg. This avoids the streaming-stdin
  * complexity called out in the plan's risk register (DASH segments are
  * fragmented mp4 — concatenating via stdin sometimes trips ffmpeg).

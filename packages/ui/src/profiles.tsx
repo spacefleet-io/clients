@@ -76,66 +76,30 @@ export function ProfileAvatar({
 }
 
 /**
- * The avatar chooser (ACCT-PROF-05): the whole pack as one flat grid, no categories and no upload. Each tile is named
- * for screen readers ("Fox"). `tiles` (the manager): four columns of rounded squares, the picked one with an accent
- * ring and a tick. `round` (the "Your profile" step, UX-SETUP-10): rows of round avatars, the picked one with a thick
- * accent ring and no tick, as drawn for the phones; 52px, 44px with closer rows in a window 640px high or less, so the step
- * fits the smallest window (UX-SETUP-08); on a narrow phone browser the six columns shrink to the card's width.
+ * The avatar chooser (ACCT-PROF-05): the whole pack as one flat grid of four columns, no categories and no upload;
+ * the picked one has an accent ring and a tick. Each tile is named for screen readers ("Fox").
  */
-export function AvatarChooser({
-  value,
-  onChange,
-  t,
-  variant = "tiles",
-  disabled,
-}: {
-  value: ProfileAvatarId;
-  onChange: (id: ProfileAvatarId) => void;
-  t: ProfilesText;
-  variant?: "tiles" | "round";
-  disabled?: boolean;
-}) {
-  const round = variant === "round";
+export function AvatarChooser({ value, onChange, t }: { value: ProfileAvatarId; onChange: (id: ProfileAvatarId) => void; t: ProfilesText }) {
   return (
-    <ul
-      aria-label={t("profiles.chooseAvatar")}
-      className={
-        round
-          ? "grid grid-cols-6 justify-items-center gap-2.5 sm:grid-cols-11 sm:gap-3.5 [@media(max-height:640px)]:gap-2.5"
-          : "grid grid-cols-4 gap-3"
-      }
-      data-testid="avatar-chooser"
-      data-variant={variant}
-    >
+    <ul aria-label={t("profiles.chooseAvatar")} className="grid grid-cols-4 gap-3" data-testid="avatar-chooser">
       {PROFILE_AVATAR_IDS.map((id) => {
         const picked = id === value;
         return (
-          <li key={id} className={round ? "flex w-full justify-center" : undefined}>
+          <li key={id}>
             <button
               type="button"
               aria-pressed={picked}
               aria-label={t(`profiles.avatars.${id}`)}
               title={t(`profiles.avatars.${id}`)}
               data-testid={`avatar-option-${id}`}
-              disabled={disabled}
               onClick={() => onChange(id)}
               className={cn(
-                "relative block outline-none transition focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed",
-                round ? "aspect-square w-full max-w-13 rounded-full [@media(max-height:640px)]:max-w-11" : "w-full rounded-2xl",
-                picked
-                  ? round
-                    ? "ring-4 ring-primary ring-offset-[3px] ring-offset-card focus-visible:ring-4 focus-visible:ring-primary"
-                    : "ring-[3px] ring-primary ring-offset-2 ring-offset-background"
-                  : "hover:opacity-90",
+                "relative block w-full rounded-2xl outline-none transition focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                picked ? "ring-[3px] ring-primary ring-offset-2 ring-offset-background" : "hover:opacity-90",
               )}
             >
-              <img
-                src={PROFILE_AVATAR_URLS[id].large}
-                alt=""
-                draggable={false}
-                className={cn("aspect-square w-full select-none object-cover", round ? "rounded-full" : "rounded-2xl")}
-              />
-              {picked && !round && (
+              <img src={PROFILE_AVATAR_URLS[id].large} alt="" draggable={false} className="aspect-square w-full select-none rounded-2xl object-cover" />
+              {picked && (
                 <span aria-hidden className="absolute -right-2 -top-2 grid h-6 w-6 place-items-center rounded-full bg-primary text-primary-foreground shadow">
                   <Check className="h-4 w-4" strokeWidth={3} />
                 </span>
@@ -224,8 +188,7 @@ export const useProfilesManager = ({ store, deleteProfile, log, startWith }: Omi
         await store.editProfile(editing.profileId, { name: draftName, avatarId: draftAvatarId });
         log("profiles.manager.edited", { profileId: editing.profileId, avatarId: draftAvatarId });
       } else {
-        // The user picked the avatar here, so the profile never gets the avatars setup step or update window (UX-SETUP-10).
-        const created = await store.createProfile(draftName, draftAvatarId, { avatars: "set" });
+        const created = await store.createProfile(draftName, draftAvatarId);
         log("profiles.manager.created", { profileId: created.id, avatarId: draftAvatarId, count: store.getSnapshot().profiles.length });
       }
       setMode({ name: "list" });

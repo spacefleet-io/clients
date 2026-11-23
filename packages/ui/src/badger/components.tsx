@@ -1,9 +1,8 @@
 /**
  * Badger's home and library pieces shared by the desktop renderer and the web player (REL-FAM-02), drawn from the
  * approved design (`badger-design-web/screens/desktop-{home,library,empty}.html`): the "Continue watching" hero card,
- * the row head, the poster grid and card, the library row's Badger controls (the row itself is the shared `LibraryRow`
- * in `../library-row`), the top-bar icon button and the empty library. Texts arrive already translated and posters as
- * elements, so each app keeps its own string
+ * the row head, the poster grid and card, the slim library row (segmented toggle + search), the top-bar icon button
+ * and the empty library. Texts arrive already translated and posters as elements, so each app keeps its own string
  * table and its own way of loading pictures.
  */
 import type { ReactNode } from "react";
@@ -12,12 +11,11 @@ import { Button } from "../button";
 import { GuardedItems } from "../render-boundary";
 import { UNAVAILABLE_CLASS } from "../unavailable";
 import { cn } from "../utils";
-import { easedMask } from "../eased-mask";
 import { pillGhost, pillPrimary } from "../empty-library";
 
 export { BadgerMenuPanel, BadgerMultiSelect, BadgerSortMenu, type BadgerMultiSelectOption } from "./library-menus";
 export { BadgerLibraryList, type BadgerLibraryListRow } from "./library-list";
-export { BadgerLibraryControls, libraryFacetSections, type BadgerLibraryControlsLabels, type BadgerLibraryFacetSection, type FilterListLabels } from "./library-toolbar";
+export { BadgerLibraryControls, BadgerLibraryModal, BadgerLibraryModalButtons, BadgerLibraryModalSection, BadgerViewCycleButton, libraryFacetSections, type BadgerLibraryControlsLabels, type BadgerLibraryFacetSection, type FilterListLabels } from "./library-toolbar";
 export { BadgerPlaylistsView, type BadgerPlaylistEntry, type BadgerPlaylistsLabels } from "./playlists";
 
 /** Seconds → "1h 18m" or "52m", the runtime in a title's meta line. */
@@ -54,13 +52,6 @@ type ContinueWatchingHeroProps = {
   testId?: string;
 };
 
-/**
- * The glow's left side fades in from nothing over 60% of its width (UX-HOME-04). The glow box sits on the card's right,
- * so on any card wider than it its left edge crossed the card, and `blur()` softens that edge only into a band.
- */
-const HERO_GLOW_MASK = easedMask("to right", 0, 60);
-const heroGlowMaskStyle = { maskImage: HERO_GLOW_MASK, WebkitMaskImage: HERO_GLOW_MASK };
-
 /** The first thing on Home: the title the viewer was last watching, with Resume and Details (UX-HOME-01). */
 export function BadgerContinueHero({ eyebrow, title, meta, progressPct, poster, glowSrc, resumeLabel, detailsLabel, onResume, onDetails, testId = "continue-hero" }: ContinueWatchingHeroProps) {
   return (
@@ -69,14 +60,7 @@ export function BadgerContinueHero({ eyebrow, title, meta, progressPct, poster, 
       data-testid={testId}
     >
       {glowSrc ? (
-        <img
-          src={glowSrc}
-          alt=""
-          aria-hidden
-          className="pointer-events-none absolute -right-20 -top-[120px] h-[560px] w-[760px] object-cover opacity-35 blur-[60px] saturate-[1.3]"
-          style={heroGlowMaskStyle}
-          data-testid={`${testId}-glow`}
-        />
+        <img src={glowSrc} alt="" aria-hidden className="pointer-events-none absolute -right-20 -top-[120px] h-[560px] w-[760px] object-cover opacity-35 blur-[60px] saturate-[1.3]" />
       ) : null}
       <div className="relative flex items-center gap-7">
         <div className="relative aspect-[2/3] w-[150px] flex-none overflow-hidden rounded-lg bg-muted shadow-[0_12px_28px_rgba(0,0,0,0.4)]">{poster}</div>
@@ -175,6 +159,85 @@ export function BadgerPosterCard({ title, meta, poster, watched = false, progres
       </button>
       {overlay}
     </li>
+  );
+}
+
+type SegmentOption<T extends string> = { id: T; label: string; icon?: ReactNode; testId?: string };
+
+/** The small Movies / TV shows / Playlists switch at the start of the library row (UX-LIB-01). */
+export function BadgerSegmented<T extends string>({ options, value, onChange, ariaLabel, testId = "library-toggle" }: { options: SegmentOption<T>[]; value: T; onChange: (id: T) => void; ariaLabel: string; testId?: string }) {
+  return (
+    <div className="flex gap-1 rounded-[11px] border border-[hsl(var(--border)/0.5)] bg-[hsl(var(--card)/0.8)] p-[3px]" role="tablist" aria-label={ariaLabel} data-testid={testId}>
+      {options.map((option) => {
+        const on = option.id === value;
+        return (
+          <button
+            key={option.id}
+            type="button"
+            role="tab"
+            aria-selected={on}
+            className={cn(
+              "flex h-8 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-3.5 text-[13px] font-bold transition",
+              on ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground",
+            )}
+            onClick={() => onChange(option.id)}
+            data-testid={option.testId}
+          >
+            {option.icon}
+            {option.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/** The library's search box: 320 × 38 with a magnifier. */
+export function BadgerSearchField({ value, onChange, placeholder, testId = "library-search" }: { value: string; onChange: (value: string) => void; placeholder: string; testId?: string }) {
+  return (
+    <label className="flex h-[38px] w-[320px] items-center gap-2.5 rounded-[10px] border border-border bg-[hsl(var(--background)/0.6)] px-3 text-muted-foreground focus-within:border-primary focus-within:shadow-[0_0_0_3px_hsl(var(--primary)/0.2)]">
+      <Search className="h-4 w-4 flex-none" aria-hidden />
+      <input
+        type="search"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={placeholder}
+        aria-label={placeholder}
+        className="h-full min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
+        data-testid={testId}
+      />
+    </label>
+  );
+}
+
+/** The one slim row above the library grid: toggle, search, then sort / filters / view pushed right (UX-LIB-01). */
+export function BadgerLibraryRow({ toggle, search, trailing, testId = "library-row" }: { toggle: ReactNode; search: ReactNode; trailing?: ReactNode; testId?: string }) {
+  return (
+    <div className="flex flex-wrap items-center gap-3" data-testid={testId}>
+      {toggle}
+      {search}
+      <div className="ml-auto flex items-center gap-2">{trailing}</div>
+    </div>
+  );
+}
+
+/** The row's 38px select button (Sort, Genres, Actors); filled in the accent while a filter is on (UX-LIB-01). */
+export function BadgerSelectButton({ label, icon, count = 0, active = false, disabled = false, onClick, testId }: { label: string; icon?: ReactNode; count?: number; active?: boolean; disabled?: boolean; onClick: () => void; testId?: string }) {
+  return (
+    <button
+      type="button"
+      className={cn(
+        "inline-flex h-[38px] items-center gap-2 whitespace-nowrap rounded-[10px] border px-3.5 text-sm font-semibold transition disabled:pointer-events-none disabled:opacity-50 [&_svg]:h-4 [&_svg]:w-4",
+        active ? "border-primary bg-primary text-primary-foreground hover:bg-primary/90" : "border-border bg-secondary/50 text-foreground hover:border-primary/60 hover:bg-secondary",
+      )}
+      onClick={onClick}
+      disabled={disabled}
+      data-testid={testId}
+    >
+      {icon}
+      {label}
+      {count ? ` · ${count}` : ""}
+    </button>
   );
 }
 

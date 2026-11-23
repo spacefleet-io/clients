@@ -37,9 +37,6 @@ vi.mock("@space/mobile-shell/i18n", () => ({
 }));
 vi.mock("@space/mobile-shell/setup-step", () => ({ MobileChoiceList: "MobileChoiceList" }));
 vi.mock("@space/mobile-shell/flag", () => ({ MobileFlag: "MobileFlag" }));
-// The self-update block (REL-UPD-06) pulls in the real render boundary and its star sky, whose react-native-svg
-// require()s the untransformed react-native entry (Flow) past the mock, so it stands in as a tag like the other parts.
-vi.mock("@space/mobile-self-update", () => ({ SelfUpdateSettings: "SelfUpdateSettings" }));
 vi.mock("@space/mobile-shell/logger", () => ({ readErrorLog: async () => "", scopeLogger: () => ({ info: () => undefined, warn: () => undefined }) }));
 vi.mock("../src/lib/accountLanguage", () => ({ pickSignedInLanguage: async () => undefined }));
 vi.mock("../src/lib/errorReports", () => ({ getErrorReportsSetting: () => ({ errorReports: false }), setErrorReports: async () => undefined, subscribeErrorReportsSetting: () => () => undefined }));

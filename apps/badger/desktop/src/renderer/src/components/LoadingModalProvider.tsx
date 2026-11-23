@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useMemo, useState } from "react
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@space/ui";
-import { LaunchingLoader } from "./LaunchingLoader";
+import { Loader2 } from "lucide-react";
 
 type LoadingModalOptions = {
   title: string;
@@ -73,15 +73,19 @@ export const LoadingModalProvider = ({ children }: { children: ReactNode }) => {
     <LoadingModalContext.Provider value={value}>
       {children}
       <Dialog open={state.open} onOpenChange={(open) => !open && hideLoading(state.token ?? undefined)}>
-        <DialogContent className="max-w-sm border-none bg-transparent p-0 shadow-none" data-testid="loading-modal" hideCloseButton>
+        <DialogContent className="max-w-sm border-none bg-transparent p-0 shadow-none" data-testid="loading-modal">
           <DialogHeader className="sr-only">
             <DialogTitle>{state.title}</DialogTitle>
             <DialogDescription>{state.subtitle ?? state.title}</DialogDescription>
           </DialogHeader>
-          <LaunchingLoader title={state.title}>
-            {progressValue === null ? <div className="text-white/80">{state.subtitle ?? t("app.loading")}</div> : null}
+          <div className="w-full rounded-2xl bg-black/70 p-5 text-sm text-white shadow-xl">
+            <div className="text-base font-semibold">{state.title}</div>
+            <div className="mt-4 flex items-center gap-3 text-white/80">
+              <Loader2 className="h-5 w-5 animate-spin" />
+              {progressValue === null ? <span>{state.subtitle ?? t("app.loading")}</span> : null}
+            </div>
             {progressValue !== null ? (
-              <div className="w-full space-y-1.5">
+              <div className="mt-3 space-y-1.5">
                 <div className="flex items-center justify-between text-xs text-white/60">
                   <span>{t("player.preparingPlayback")}</span>
                   <span>{progressValue}%</span>
@@ -94,7 +98,7 @@ export const LoadingModalProvider = ({ children }: { children: ReactNode }) => {
                 </div>
               </div>
             ) : null}
-          </LaunchingLoader>
+          </div>
         </DialogContent>
       </Dialog>
     </LoadingModalContext.Provider>

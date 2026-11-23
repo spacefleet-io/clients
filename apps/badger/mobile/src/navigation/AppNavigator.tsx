@@ -12,11 +12,6 @@ import { OnboardingKeyScreen } from "../screens/OnboardingKeyScreen";
 import { ErrorReportsScreen } from "../screens/ErrorReportsScreen";
 import { TitleLanguageScreen } from "../setup/TitleLanguageQuestion";
 import { useTitleLanguageQuestion } from "../lib/titleLanguageQuestion";
-import { ProfileSetupScreen } from "../setup/ProfileSetupQuestion";
-import { useBadgerUpdateFeatures, useProfileSetupQuestion } from "../lib/profileSetupQuestion";
-import { WhatsNewModal } from "@space/mobile-shell/whats-new";
-import { TvWhatsNewWindow } from "../tv/screens/TvWhatsNewWindow";
-import type { AppFeatureId } from "@space/shared/appFeatures";
 import { BadgerSetupFlow } from "../setup/BadgerSetupFlow";
 import { usePhoneSetup } from "../setup/phoneSetupStore";
 import { resolvePhoneSetupStep } from "@space/mobile-shell/setup";
@@ -41,7 +36,6 @@ import { parseLegacyPairLink, parsePairLink } from "@space/pairing-crypto";
 import { handOffProviderReturn } from "@space/mobile-shell/provider-sign-in";
 import { BADGER_LINK_SCHEME } from "../lib/linkScheme";
 import { DownloadsScreen } from "../screens/DownloadsScreen";
-import { OfflineContentScreen } from "../screens/OfflineContentScreen";
 import { useDownloadsBootstrap } from "../lib/downloads/useDownloadsBootstrap";
 import { useAccountLanguageSync } from "../lib/useAccountLanguageSync";
 import { SubscriptionScreen } from "../screens/SubscriptionScreen";
@@ -66,8 +60,8 @@ import { TvProfilesScreen } from "../tv/screens/TvProfilesScreen";
 import { ProfilesScreen } from "../screens/ProfilesScreen";
 import { useProfileSession } from "../lib/profiles/useProfileSession";
 import { IS_TV, routeAvailable } from "../tv/lib/tvRuntime";
-import { stackHasScreenToPop } from "@space/mobile-shell/tv/menuKey";
-import { setTvMenuKeyHold } from "@space/mobile-shell/tv/useTvMenuKey";
+import { stackHasScreenToPop } from "../tv/lib/menuKey";
+import { setTvMenuKeyHold } from "../tv/lib/useTvMenuKey";
 const log = scopeLogger("pairing.link");
 
 const ScreenSuspenseFallback = () => (
@@ -136,7 +130,6 @@ const SubscriptionScreenLazy = withSuspense(SubscriptionScreen, "SubscriptionScr
 const DeleteAccountScreenLazy = withSuspense(DeleteAccountScreen, "DeleteAccountScreen");
 const ResetKeyScreenLazy = withSuspense(ResetKeyScreen, "ResetKeyScreen");
 const DownloadsScreenLazy = withSuspense(DownloadsScreen, "DownloadsScreen");
-const OfflineContentScreenLazy = withSuspense(OfflineContentScreen, "OfflineContentScreen");
 
 export const navigationRef = createNavigationContainerRef<RootStackParamList>();
 
@@ -155,8 +148,6 @@ export type RootStackParamList = {
   OnboardingReports: undefined;
   /** "How should titles appear?" on its own, right after a profile that never answered is picked (ACCT-PROF-03). */
   TitleLanguage: undefined;
-  /** "Your profile" on its own (UX-SETUP-10), or opened from the update window's "Choose my avatar" (UX-UPDATE-01). */
-  ProfileSetup: undefined;
   Main: undefined;
   MediaDetails: { mediaId: string };
   /** `remoteStart`: opened by "Play on TV" from the phone (UX-TV-02): start there, no resume prompt, apply those tracks. */
@@ -181,8 +172,6 @@ export type RootStackParamList = {
   /** `code` comes from the pairing link (ACCT-PAIR-06); absent when opened from Settings. */
   PairDevice: { code?: string };
   Downloads: undefined;
-  /** Phone only: Settings › "Manage offline content" (OFFL-MANAGE-01). */
-  OfflineContent: undefined;
   /** "Who's watching?" at start (UX-PROF-01/02): the gate before the app opens. */
   Profiles: undefined;
   /** The same screen opened from Settings: switch profile (`pick`) or add / rename / delete (`manage`). */
@@ -210,10 +199,6 @@ export const AppNavigator = () => {
   const updateRequired = useAppUpdateRequired();
   // ACCT-PROF-03: a profile created since the question exists that never answered it.
   const titleLanguageQuestion = useTitleLanguageQuestion();
-  // UX-SETUP-10: the profile picked never set up its name and avatar.
-  const profileSetupQuestion = useProfileSetupQuestion();
-  // UX-UPDATE-01: an older profile's "New in this update" windows (the resolver shows them once every gate is passed).
-  const updates = useBadgerUpdateFeatures(!!user && profileGate === "ready");
 
   const screen = resolveNavigatorScreen({
     updateRequired: updateRequired !== null,
@@ -238,9 +223,6 @@ export const AppNavigator = () => {
           },
     tvLanguagePending: IS_TV && tvSetup !== null && tvLanguagePending(tvSetup),
     titleLanguageQuestion,
-    profileSetupQuestion,
-    updateSetUp: updates.settingUp !== null,
-    updateWindow: updates.current !== null,
   });
   // TV: reachable for "Play on TV" from the phone while signed in and the library is open (UX-TV-02).
   usePlayOnTvReceiver(IS_TV && screen === "main");
@@ -282,7 +264,7 @@ export const AppNavigator = () => {
     if (updateRequired) {
       return (
         <SafeAreaView style={styles.safeArea}>
-          <MobileUpdateRequiredScreen app="badger" />
+          <MobileUpdateRequiredScreen />
         </SafeAreaView>
       );
     }
@@ -349,8 +331,6 @@ export const AppNavigator = () => {
           <Stack.Screen name="OnboardingReports" component={ErrorReportsScreen} />
         ) : screen === "title-language" ? (
           <Stack.Screen name="TitleLanguage" component={TitleLanguageScreen} />
-        ) : screen === "profile-setup" ? (
-          <Stack.Screen name="ProfileSetup">{() => <ProfileSetupScreen onBack={updates.settingUp ? updates.back : undefined} />}</Stack.Screen>
         ) : screen === "profiles" ? (
           <Stack.Screen name="Profiles" component={IS_TV ? TvProfilesScreen : ProfilesScreen} />
         ) : (
@@ -382,40 +362,13 @@ export const AppNavigator = () => {
             {/* TV: no camera, the approver types the code and proves the account password (ACCT-PAIR-02). */}
             <Stack.Screen name="PairDevice" component={IS_TV ? TvApprovePairingScreen : PairDeviceScreen} />
             {routeAvailable("Downloads") ? <Stack.Screen name="Downloads" component={DownloadsScreenLazy} /> : null}
-            {routeAvailable("OfflineContent") ? <Stack.Screen name="OfflineContent" component={OfflineContentScreenLazy} /> : null}
             <Stack.Screen name="SwitchProfile" component={IS_TV ? TvProfilesScreen : ProfilesScreen} />
           </>
         )}
       </Stack.Navigator>
-      {screen === "whats-new" && updates.current && updates.profile ? (
-        <UpdateWindow feature={updates.current} profileName={updates.profile.name} onChoose={updates.setUp} onLater={updates.later} />
-      ) : null}
     </NavigationContainer>
   );
 };
-
-/**
- * "New in this update" (UX-UPDATE-01) over the app, which stays mounted and dimmed underneath: the phone's window
- * (`phone-modal.png`), the TV's own (`TvWhatsNewWindow`, which draws its scrim and keeps the remote in its card).
- */
-const UpdateWindow = ({
-  feature,
-  profileName,
-  onChoose,
-  onLater,
-}: {
-  feature: AppFeatureId;
-  profileName: string;
-  onChoose: (feature: AppFeatureId) => void;
-  onLater: (feature: AppFeatureId) => Promise<void>;
-}) =>
-  IS_TV ? (
-    <View style={StyleSheet.absoluteFill}>
-      <TvWhatsNewWindow feature={feature} profileName={profileName} onChoose={() => onChoose(feature)} onLater={() => void onLater(feature)} />
-    </View>
-  ) : (
-    <WhatsNewModal feature={feature} profileName={profileName} onChoose={() => onChoose(feature)} onLater={() => void onLater(feature)} />
-  );
 
 const styles = StyleSheet.create({
   safeArea: {

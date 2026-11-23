@@ -2,8 +2,6 @@
  * @test-id PARROT-MOBILE-EMPTY-TAB-001
  * @level unit
  * @req UX-LIBTAB-01[parrot]
- * @req UX-PHONE-12[parrot]
- * @req UX-WAIT-04[parrot]
  * @why Chris, 2026-11-16: "when a user's library is empty we decided that the library page couldn't be opened but on
  *   parrot it currently can, it should be the same behaviour on both apps. also the button should be greyed out so it
  *   doesn't look like a bug". The real MainScreen with the real shared tab bar and pager: while the account has no
@@ -13,8 +11,7 @@
  *   also be greyed out and unaccissible": the Playlists tab follows the Library tab. Chris, 2026-11-18, on a test phone: "I can't
  *   click the library and playlists buttons on the bottom menu, but they are not greyed out at all so it's very
  *   confusing and looks like a bug": greyed out is the idle colour at half opacity (as on desktop and TV), never the
- *   theme's slightly darker dim colour. Chris, 2026-11-18: the empty library shows before the library has loaded:
- *   while the album list of the open library version is not read yet, the tabs stay open (UX-WAIT-04).
+ *   theme's slightly darker dim colour.
  */
 import { createElement } from "react";
 import { act, create, type ReactTestInstance, type ReactTestRenderer } from "react-test-renderer";
@@ -25,8 +22,6 @@ const log = (step: string, detail: unknown) => console.info(`[PARROT-MOBILE-EMPT
 const state = vi.hoisted(() => ({
   library: { status: "ready", version: 1 } as { status: string; version: number },
   albums: [] as unknown[] | null,
-  /** Whether the album list was read for the library version open now (the real hook's `answered`). */
-  answered: true,
   seeAll: null as null | ((view: "albums" | "artists") => void),
 }));
 
@@ -51,13 +46,13 @@ vi.mock("react-native", () => {
     useWindowDimensions: () => ({ width: 390, height: 844 }),
   };
 });
-vi.mock("lucide-react-native", () => Object.fromEntries(["House", "LibraryBig", "ListMusic", "Search", "Settings"].map((name) => [name, `Icon:${name}`])));
+vi.mock("lucide-react-native", () => Object.fromEntries(["House", "LibraryBig", "ListMusic", "Settings"].map((name) => [name, `Icon:${name}`])));
 vi.mock("react-native-safe-area-context", () => ({ useSafeAreaInsets: () => ({ top: 24, bottom: 0, left: 0, right: 0 }) }));
 vi.mock("@space/mobile-shell/theme", () => ({
   UNAVAILABLE_LOOK: { opacity: 0.4 },
   useMobileShellTheme: () => ({ colors: { accent: "#40dd8f", textMuted: "#b6bace", textDim: "#555" }, font: { family: { sans: "Inter" } } }),
 }));
-vi.mock("@space/mobile-shell/i18n", () => ({ useTranslation: () => ({ t: (key: string) => key, i18n: { language: "en" } }) }));
+vi.mock("@space/mobile-shell/i18n", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 vi.mock("@space/mobile-shell/components", async () => ({
   MobileTabPager: (await vi.importActual<typeof import("../../../../packages/mobile-shell/src/components/mobile-tab-pager")>(
     "../../../../packages/mobile-shell/src/components/mobile-tab-pager"
@@ -76,12 +71,9 @@ vi.mock("../src/screens/LibraryScreen", () => ({ LibraryScreen: "LibraryScreen" 
 vi.mock("../src/screens/PlaylistsView", () => ({ PlaylistsView: "PlaylistsView" }));
 vi.mock("../src/screens/SettingsScreen", () => ({ SettingsScreen: "SettingsScreen" }));
 vi.mock("../src/screens/NowPlayingBar", () => ({ NowPlayingBar: "NowPlayingBar" }));
-vi.mock("../src/screens/PhoneSearch", () => ({ PhoneSearch: "PhoneSearch" }));
 vi.mock("../src/state/session", () => ({ useSession: () => ({ library: state.library }) }));
 // The albums the library's current version holds (the real hook reruns `listAlbums` on each new version).
-vi.mock("../src/state/useQuery", () => ({
-  useQuery: () => ({ data: state.library.status === "ready" ? state.albums : null, error: null, loading: !state.answered, answered: state.answered }),
-}));
+vi.mock("../src/state/useQuery", () => ({ useQuery: () => ({ data: state.library.status === "ready" ? state.albums : null, error: null, loading: false }) }));
 vi.mock("../src/lib/library", () => ({ listAlbums: async () => state.albums }));
 
 import { MainScreen } from "../src/screens/MainScreen";
@@ -124,11 +116,6 @@ describe("PARROT-MOBILE-EMPTY-TAB-001 the phone's Library tab while the library 
     const tree = await render();
     expect(navTab(tree).seen).toEqual({ disabled: true, a11yDisabled: true, greyed: true });
     expect(navTab(tree, "playlists").seen).toEqual({ disabled: true, a11yDisabled: true, greyed: true });
-    // The bar's Search button (UX-PHONE-12) has nothing to search: greyed out and disabled with them.
-    const search = hosts(tree.root, (node) => node.props.testID === "tab-search")[0]!;
-    log("search button", { disabled: search.props.disabled, a11y: search.props.accessibilityState });
-    expect(search.props.disabled).toBe(true);
-    expect(search.props.accessibilityState?.disabled).toBe(true);
     await act(async () => state.seeAll?.("albums"));
     // Two open pages, Home and Settings: the second page swiped to is Settings, never the Library or Playlists.
     await act(async () => pagerPages(tree).props.onMomentumScrollEnd({ nativeEvent: { contentOffset: { x: 0 } } }));
@@ -154,18 +141,6 @@ describe("PARROT-MOBILE-EMPTY-TAB-001 the phone's Library tab while the library 
     const tree = await render();
     expect(navTab(tree).seen).toEqual({ disabled: false, a11yDisabled: false, greyed: false });
     expect(navTab(tree, "playlists").seen).toEqual({ disabled: false, a11yDisabled: false, greyed: false });
-  });
-
-  it("@req UX-WAIT-04 opened but its albums not read yet: the tabs stay open (not known empty)", async () => {
-    state.library = { status: "ready", version: 1 };
-    state.albums = [];
-    state.answered = false;
-    const tree = await render();
-    const seen = { library: navTab(tree).seen, playlists: navTab(tree, "playlists").seen };
-    state.answered = true;
-    log("ready, unanswered", seen);
-    expect(seen.library).toEqual({ disabled: false, a11yDisabled: false, greyed: false });
-    expect(seen.playlists).toEqual({ disabled: false, a11yDisabled: false, greyed: false });
   });
 
   it.each(["library", "playlists"] as const)("the first album lands: the %s tab opens, with no restart", async (id) => {

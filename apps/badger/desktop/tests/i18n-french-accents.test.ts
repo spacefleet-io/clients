@@ -122,7 +122,7 @@ describe("desktop French translation file", () => {
     const flat = flatten(fr);
     console.info(`${LOG} signup.errors.emailExists=${flat["signup.errors.emailExists"]}`);
     expect(flat["authApiHost.error"]).toBe("Impossible d'enregistrer l'hôte API. Vérifiez la valeur et réessayez.");
-    expect(flat["signup.haveAccountPrompt"]).toBe("Vous avez déjà un compte\u202f?");
+    expect(flat["signup.haveAccountPrompt"]).toBe("Vous avez déjà un compte ?");
     expect(flat["signup.errors.emailExists"]).toBe("Cet email est déjà enregistré.");
     expect(flat["verifyEmail.errors.invalidCode"]).toBe("Code de vérification invalide. Réessayez.");
   });

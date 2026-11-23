@@ -14,58 +14,20 @@
     "customBadge": "Custom",
     "useDefault": "Use default",
     "save": "Save",
-    "saving": "Saving…",
+    "saving": "Saving...",
     "error": "Could not save API host. Check the value and try again."
-  },
-  "signup": {
-    "title": "Create account",
-    "subtitle": "You'll need to verify your email before signing in.",
-    "emailLabel": "Email",
-    "passwordLabel": "Password",
-    "confirmLabel": "Repeat password",
-    "button": "Create account",
-    "creating": "Creating…",
-    "haveAccountPrompt": "Already have an account?",
-    "signIn": "Sign in",
-    "errors": {
-      "passwordLength": "Password must be at least 8 characters.",
-      "passwordMismatch": "Passwords do not match.",
-      "emailExists": "This email is already registered.",
-      "emailDomainDisallowed": "This email domain is not allowed. Please use a different email provider.",
-      "generic": "Signup failed. Try again."
-    }
-  },
-  "verifyEmail": {
-    "title": "Verify your email",
-    "subtitle": "We sent a verification code to your email. Enter it here to finish signing up.",
-    "codeLabel": "Verification code",
-    "codePlaceholder": "123456",
-    "submit": "Verify email",
-    "verifying": "Verifying…",
-    "resend": "Resend verification code",
-    "sending": "Sending…",
-    "backToSignIn": "Back to sign in",
-    "sent": "Verification code sent. Check your inbox.",
-    "errors": {
-      "invalidCode": "Invalid verification code. Try again.",
-      "emailNotFound": "No account found for this email.",
-      "sendFailed": "Could not send verification code.",
-      "generic": "Could not verify your email."
-    }
   },
   "login": {
     "title": "Sign in",
     "withAccount": "Sign in with your SpaceFleet account",
-    "noAccountPrompt": "Don't have an account?",
-    "createAccount": "Create account",
     "emailLabel": "Email",
     "passwordLabel": "Password",
     "twoFactorLabel": "Verification code",
     "twoFactorPlaceholder": "123456",
     "button": "Sign in",
-    "signingIn": "Signing in…",
+    "signingIn": "Signing in...",
     "resend": "Resend code",
-    "resending": "Resending…",
+    "resending": "Resending...",
     "infoEmail": "We sent a verification code to your email.",
     "infoTotp": "Enter the code from your authenticator app.",
     "resendSuccess": "A new verification code was sent.",
@@ -80,12 +42,12 @@
       "passwordLabel": "New password",
       "passwordConfirmLabel": "Confirm new password",
       "request": "Send code",
-      "requesting": "Sending…",
+      "requesting": "Sending...",
       "submit": "Update password",
-      "submitting": "Updating…",
+      "submitting": "Updating...",
       "cancel": "Cancel",
       "resend": "Resend code",
-      "resending": "Resending…",
+      "resending": "Resending...",
       "noticeSent": "If the email exists, we sent a verification code.",
       "noticeResent": "We sent another verification code.",
       "noticeComplete": "Password updated. Please sign in again.",
@@ -101,11 +63,11 @@
     },
     "provider": {
       "signInWith": "Sign in with {{provider}}",
-      "signUpWith": "Sign up with {{provider}}",
       "or": "or",
       "continueInBrowser": "Finish signing in in your browser. You'll come back here once you're done.",
       "errorStart": "Could not start the sign-in. Please try again.",
       "errors": {
+        "no_account": "No SpaceFleet account uses this email address. Create one in Badger or Parrot on a computer, then sign in here.",
         "email_unverified": "This account's email address is not confirmed. Confirm it with the provider, or sign in with your email and password.",
         "email_domain_disallowed": "Accounts with this email address cannot be created.",
         "account_deletion_pending": "This account is scheduled for deletion.",
@@ -133,7 +95,7 @@
       "message": "Too much traffic on the server holding this title: quality is limited to {{quality}} until traffic eases.",
       "keepWatching": "Keep watching"
     },
-    "loading": "Preparing playback…",
+    "loading": "Preparing playback...",
     "loadingSlow": "Still loading… this is taking longer than usual.",
     "controls": {
       "closePlayer": "Close player",
@@ -290,36 +252,6 @@
       "playlist": "Playlist"
     }
   },
-  "offlineContent": {
-    "entry": "Manage offline content",
-    "title": "Offline content",
-    "back": "Back",
-    "totalSuffix": "saved offline",
-    "unknownArtist": "Unknown artist",
-    "removeAll": "Remove all",
-    "confirmCancel": "Cancel",
-    "confirmRemove": "Remove all",
-    "removeFailed": "Couldn't remove it. Try again.",
-    "expand": "Show or hide what is inside {{name}}",
-    "remove": "Remove {{name}} from this phone",
-    "season": "Season {{n}}",
-    "episodeNumber": "S{{season}} E{{episode}}",
-    "unknownTitle": "Title no longer in the media library",
-    "unknownEpisode": "Episode no longer in the media library",
-    "unknown": "No longer in the media library",
-    "badger": {
-      "entryDescription": "See what is kept on this phone and free up space",
-      "confirmTitle": "Remove everything kept on this phone?",
-      "confirmBody": "Every film and episode downloaded to this phone is deleted. You can download them again later.",
-      "empty": "Nothing is kept on this phone. Tap Download on a film or an episode to watch it without a connection."
-    },
-    "parrot": {
-      "entryDescription": "See what is saved offline on this phone and free up space",
-      "confirmTitle": "Remove everything saved offline?",
-      "confirmBody": "Every album, playlist and song saved offline on this phone is removed. You can save them offline again later.",
-      "empty": "Nothing is saved offline on this phone yet. Tap Save offline on an album, a playlist or a song to listen without a connection."
-    }
-  },
   "downloads": {
     "title": "Downloads",
     "back": "Back",
@@ -441,7 +373,7 @@
     "pickerTitle": "Play on",
     "thisPhone": "This phone",
     "thisPhoneHint": "Play in the app",
-    "searching": "Looking for Cast devices on your Wi-Fi…",
+    "searching": "Looking for Cast devices on your Wi-Fi...",
     "noDevices": "No Cast device found. The phone and the device must be on the same Wi-Fi.",
     "deviceHint": "Google Cast",
     "airplay": "AirPlay",
@@ -449,8 +381,8 @@
     "airplayActive": "Play on {{name}}",
     "screenTitle": "Casting",
     "castingTo": "Casting to {{name}}",
-    "preparing": "Preparing the stream…",
-    "connecting": "Connecting to {{name}}…",
+    "preparing": "Preparing the stream...",
+    "connecting": "Connecting to {{name}}...",
     "keepWifi": "Keep this phone on the same Wi-Fi until the end: it sends the film to the device.",
     "play": "Play",
     "pause": "Pause",
@@ -494,8 +426,8 @@
     "library": "Library",
     "playlists": "Playlists",
     "settings": "Settings",
-    "loading": "Loading…",
-    "loadingLibrary": "Loading library…",
+    "loading": "Loading...",
+    "loadingLibrary": "Loading media library...",
     "updateRequired": "Update Required",
     "unavailable": "Badger is unavailable: {{issue}}. Please update your app.",
     "screenLoadFailed": "Could not load screen",
@@ -704,7 +636,7 @@
       "currentPassword": "Current password",
       "newPassword": "New password",
       "change": "Change password",
-      "changing": "Changing…",
+      "changing": "Changing...",
       "success": "Password changed.",
       "codeLabel": "Verification code",
       "errors": {
@@ -718,12 +650,12 @@
       "set": {
         "title": "Set a password",
         "button": "Set password",
-        "setting": "Setting…"
+        "setting": "Setting..."
       }
     },
     "devices": {
       "title": "Your devices",
-      "loading": "Loading…",
+      "loading": "Loading...",
       "empty": "No signed-in devices found.",
       "summary_one": "{{count}} device signed in",
       "summary_other": "{{count}} devices signed in",
@@ -798,7 +730,7 @@
       "web": "Web browser"
     },
     "scan": {
-      "cameraStarting": "Starting the camera…",
+      "cameraStarting": "Starting the camera...",
       "cameraDenied": "The camera isn't allowed. Allow camera access for this app in your phone's settings, or type the code instead.",
       "pointCamera": "Point the camera at the code on the other device's screen.",
       "codeLabel": "Code shown on the other device",
@@ -807,14 +739,14 @@
       "typeInstead": "Type the code instead",
       "scanInstead": "Scan the code instead"
     },
-    "looking": "Looking up the code…",
+    "looking": "Looking up the code...",
     "confirm": {
       "asked": "{{type}} named \"{{name}}\" asked to join your account.",
       "unlockNotice": "You'll be asked to unlock your phone. Approving signs it in and gives it your media library key.",
       "approve": "Approve",
       "deny": "Deny"
     },
-    "approving": "Waiting for you to unlock your phone…",
+    "approving": "Waiting for you to unlock your phone...",
     "done": {
       "added": "{{name}} was added.",
       "notAdded": "{{name}} was not added.",
@@ -886,13 +818,13 @@
     "expiresIn": "This code expires in {{time}}. A new one appears by itself.",
     "deviceName": "This phone shows up as \"{{name}}\".",
     "qrAccessibility": "QR code to pair this phone",
-    "starting": "Getting a pairing code…",
-    "completing": "Approved. Signing in…",
+    "starting": "Getting a pairing code...",
+    "completing": "Approved. Signing in...",
     "keyLink": "Get the key from another device",
     "keyCard": "Use any Badger or Parrot app you're signed in to, on any device or profile of this account.",
     "keyTitle": "Get your media library key from another device that is signed in to this account.",
     "typeKey": "Type the key instead",
-    "completingKey": "Approved. Opening your media library…",
+    "completingKey": "Approved. Opening your media library...",
     "tryAgain": "Get a new code",
     "denied": "The other app declined this phone. Get a new code to try again.",
     "errors": {
@@ -904,12 +836,12 @@
   },
   "tvPairing": {
     "signIn": {
-      "title": "Sign in to {{app}}",
-      "subtitle": "On your phone or computer, open {{app}} → Settings → Pair a device, then scan the code or type it in.",
+      "title": "Sign in to Badger",
+      "subtitle": "On your phone or computer, open Badger → Settings → Pair a device, then scan the code or type it in.",
       "codeLabel": "Or type this code",
       "qrAccessibility": "QR code to pair this TV",
-      "starting": "Getting a pairing code…",
-      "completing": "Approved. Signing in…",
+      "starting": "Getting a pairing code...",
+      "completing": "Approved. Signing in...",
       "usePassword": "Use email and password instead",
       "useCode": "Use a pairing code instead",
       "tryAgain": "Get a new code",
@@ -919,7 +851,7 @@
       },
       "errors": {
         "title": "This TV could not be paired",
-        "unreachable": "We couldn't reach {{app}}. Check this TV's connection and get a new code.",
+        "unreachable": "We couldn't reach Badger. Check this TV's connection and get a new code.",
         "failed": "Something went wrong while pairing. Get a new code to try again.",
         "key_unreadable": "The approval reached this TV but its media library key could not be read. Get a new code and approve it again.",
         "key_mismatch": "The media library key that was sent does not open this account's media library. Nothing was saved on this TV. Get a new code and approve it again from an app that has your media library."
@@ -939,7 +871,7 @@
       "back": "Back",
       "warning": "Only approve a code shown on a screen in front of you. Someone who sends you a code can get access to your whole media library.",
       "passwordNotice": "You'll be asked for your account password. Approving signs the device in and gives it your media library key.",
-      "approving": "Checking your password and sending the key…",
+      "approving": "Checking your password and sending the key...",
       "addedDetail": "It is signing in now. You can sign it out any time from your device list.",
       "password": {
         "title": "Enter your account password",
@@ -947,7 +879,7 @@
         "label": "Account password"
       },
       "codeNotice": "You'll be asked for a code to confirm it's you. Approving signs the device in and gives it your media library key.",
-      "approvingCode": "Checking and sending the key…",
+      "approvingCode": "Checking and sending the key...",
       "code": {
         "title": "Enter the code",
         "detailEmail": "We emailed you a code. Type it to confirm it's you before your media library is shared with another device.",
@@ -998,7 +930,7 @@
     "decline": "Do not send"
   },
   "onboarding": {
-    "loading": "Loading media library setup…",
+    "loading": "Loading media library setup...",
     "enterTitle": "Enter your media library key",
     "showTitle": "Your media library key",
     "subtitle": "This key encrypts your private media library data. Keep it safe.",
@@ -1025,8 +957,8 @@
     "confirm": "Confirm",
     "confirmed": "Confirmed",
     "rotate": "Rotate key",
-    "rotating": "Rotating…",
-    "success": "Key rotated. Reloading media library…",
+    "rotating": "Rotating...",
+    "success": "Key rotated. Reloading media library...",
     "errors": {
       "confirmRequired": "Confirm that you saved the new key.",
       "passwordRequired": "Password required.",
@@ -1036,7 +968,8 @@
   },
   "libraryFormat": {
     "title": "Update required",
-    "body": "This media library was created by a newer version of Badger."
+    "body": "This media library was created by a newer version of Badger. Update the app to open it.",
+    "update": "Update Now"
   },
   "home": {
     "empty": {
@@ -1092,7 +1025,7 @@
       "actors": "Actors",
       "allActors": "All actors",
       "actorSearch": "Search actors",
-      "actorsLoading": "Loading actors…",
+      "actorsLoading": "Loading actors...",
       "actorsNone": "No actors found",
       "downloadedOnly": "Downloaded only",
       "downloadedOnlyHint": "Only titles saved on this phone."
@@ -1102,12 +1035,7 @@
       "added": "Date added",
       "release": "Release year",
       "asc": "Ascending",
-      "desc": "Descending",
-      "title": "Sort by",
-      "by": "Field",
-      "direction": "Direction",
-      "button": "Sort",
-      "done": "Done"
+      "desc": "Descending"
     },
     "row": {
       "runtimeMinutes": "{{minutes}} min",
@@ -1123,70 +1051,6 @@
     "poster": {
       "watched": "{{percent}}% watched",
       "downloaded": "downloaded"
-    },
-    "filters": {
-      "clear": "Clear filters",
-      "genres": {
-        "title": "Genres",
-        "search": "Search genres…",
-        "empty": "No genres match this search."
-      },
-      "actors": {
-        "title": "Actors",
-        "search": "Search actors…",
-        "empty": "No actors match this search."
-      },
-      "title": "Filter",
-      "clearShort": "Clear",
-      "more": "+{{count}} more",
-      "reset": "Reset",
-      "apply": "Apply",
-      "qualities": {
-        "title": "Quality",
-        "search": "Search qualities",
-        "empty": "No quality found"
-      },
-      "directors": {
-        "title": "Director",
-        "search": "Search directors",
-        "empty": "No director found"
-      },
-      "audioLanguages": {
-        "title": "Audio language",
-        "search": "Search languages",
-        "empty": "No language found"
-      },
-      "subtitleLanguages": {
-        "title": "Subtitle language",
-        "search": "Search languages",
-        "empty": "No language found"
-      },
-      "watchStates": {
-        "title": "Watch state",
-        "search": "Search states",
-        "empty": "No state found"
-      },
-      "quality": {
-        "sd": "SD (480p or less)"
-      },
-      "watchState": {
-        "unwatched": "Unwatched",
-        "in-progress": "In progress",
-        "watched": "Watched"
-      },
-      "undefinedLanguage": "Unknown language",
-      "active_one": "Filter, {{count}} on",
-      "active_other": "Filter, {{count}} on",
-      "showOnly": "Show only"
-    },
-    "stats": {
-      "movie_one": "{{count}} movie",
-      "movie_other": "{{count}} movies",
-      "movie_many": "{{count}} movies",
-      "series_one": "{{count}} show",
-      "series_other": "{{count}} shows",
-      "series_many": "{{count}} shows",
-      "shownOf": "{{shown}} of {{total}}"
     }
   },
   "playlists": {
@@ -1232,22 +1096,6 @@
         "hint": "Your saved media library stays on screen."
       },
       "close": "Dismiss notice"
-    }
-  },
-  "sync": {
-    "indicator": {
-      "updating": "Updating media library…",
-      "updatingProgress": "Updating media library… {{percent}}%",
-      "savedStaysLabel": "Your saved media library stays available",
-      "newEpisodes_one": "{{count}} new episode",
-      "newEpisodes_other": "{{count}} new episodes",
-      "newTitles_one": "{{count}} new title",
-      "newTitles_other": "{{count}} new titles",
-      "updated": "Media library updated",
-      "upToDate": "Up to date",
-      "failed": "Update failed",
-      "failedLabel": "Media library update failed — saved content",
-      "retry": "Tap to retry."
     }
   },
   "shell": {
@@ -1320,7 +1168,7 @@
     "attachLog": "Attach the app's error log",
     "attachLogHint": "Helps us find a problem. It contains no titles or file names.",
     "send": "Send",
-    "sending": "Sending…",
+    "sending": "Sending...",
     "sent": "Thank you! Your message has been sent.",
     "back": "Back",
     "errors": {
@@ -1385,47 +1233,13 @@
     "codeSent": "We sent a verification code. Check your email or authenticator.",
     "cancel": "Cancel",
     "submit": "Erase everything and start over",
-    "working": "Erasing…",
+    "working": "Erasing...",
     "errorInvalidPassword": "Incorrect password.",
     "errorTwoFactorInvalid": "Verification code is invalid.",
     "errorGeneric": "Could not reset the $t(keyStepWords.collection) right now. Please try again."
   },
   "appUpdate": {
     "title": "Update {{app}} to keep using it",
-    "tooOld": "This version of {{app}} is too old to connect.",
-    "how": {
-      "appstore": "Update {{app}} in the App Store, then open it again.",
-      "testflight": "Install the new version of {{app}} from TestFlight, then open it again.",
-      "play": "Update {{app}} on Google Play, then open it again.",
-      "amazon": "Update {{app}} in the Amazon Appstore, then open it again.",
-      "fdroid": "Update {{app}} in F-Droid, then open it again.",
-      "obtainium": "Update {{app}} in Obtainium, then open it again.",
-      "apk": "Download the new version of {{app}} and install it over this one, then open it again.",
-      "store": "Update {{app}} in the store you installed it from, then open it again.",
-      "unknown": "Install the new version from where you got {{app}}, then open it again."
-    },
-    "open": {
-      "appstore": "Open the App Store",
-      "testflight": "Open TestFlight",
-      "play": "Open Google Play",
-      "amazon": "Open the Amazon Appstore",
-      "fdroid": "Open F-Droid",
-      "obtainium": "Open Obtainium",
-      "apk": "Download the new version",
-      "store": "Open the store"
-    }
-  },
-  "sibling": {
-    "title": "Continue with your {{other}} account",
-    "body": "{{other}} is signed in on this phone. Nothing to type.",
-    "button": "Continue as {{email}}",
-    "otherAccount": "Use another account",
-    "waiting": "Waiting for {{other}}…",
-    "waitingNote": "Allow it in {{other}}, then come back.",
-    "cancel": "Cancel",
-    "failure": "{{other}} could not sign you in. Sign in another way.",
-    "askTitle": "Let {{app}} use your SpaceFleet account?",
-    "askBody": "{{app}} on this phone will be signed in as {{email}}, with its own copy of your media library key. You can sign it out at any time in Devices.",
-    "allow": "Allow"
+    "body": "This version of {{app}} is too old to connect. Install the new version from where you got {{app}}, then open it again."
   }
 }

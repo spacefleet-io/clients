@@ -63,11 +63,6 @@ vi.mock("@space/shared/api", async () => ({
   ApiError: (await vi.importActual<typeof SharedApi>("@space/shared/api")).ApiError,
   requestPasswordReset: (...a: unknown[]) => h.requestPasswordReset(...a),
   confirmPasswordReset: vi.fn(),
-  // The screen's import chain reaches the profile store (#3594), which binds these at load; never called here.
-  listProfiles: vi.fn(),
-  createProfile: vi.fn(),
-  updateProfile: vi.fn(),
-  deleteProfile: vi.fn(),
 }));
 vi.mock("../src/lib/apiConfig", () => ({ getStoredApiHost: async () => null, serverPickerAllowed: () => false, setStoredApiHost: vi.fn() }));
 vi.mock("../src/store/auth", () => ({ useAuth: () => ({ login: h.login }) }));
@@ -76,7 +71,8 @@ vi.mock("../src/lib/uiLanguage", () => ({ chooseUiLanguage: vi.fn(), ensureI18n:
 vi.mock("../src/tv/lib/tvRuntime", () => ({ IS_TV: false }));
 // The sign-in sends the device's name (ACCT-DEV-01); its native lookups are not under test here.
 vi.mock("../src/lib/phonePairing", () => ({ currentPhoneDeviceName: () => "Badger (phone)" }));
-vi.mock("../src/setup/BadgerSetupFlow", () => ({ SignInSetupBack: () => null }));
+vi.mock("../src/tv/lib/pairingRuntime", () => ({ tvDeviceName: () => "TV" }));
+vi.mock("../src/setup/BadgerSetupFlow", () => ({ SetupStepBar: () => null }));
 
 import { ApiError } from "@space/shared/api";
 import { LoginScreen } from "../src/screens/LoginScreen";
