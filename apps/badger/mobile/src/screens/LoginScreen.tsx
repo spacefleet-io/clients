@@ -15,8 +15,6 @@ import {
   MobileOrDivider,
   MobilePhoneSignInCard,
   MobileProviderSignInRows,
-  MobileSignUp,
-  MobileSignUpTermsNotice,
   type MobileSignInProviderId,
 } from "@space/mobile-shell/components";
 import { useMobileProviderSignIn, type ProviderSignInNotice } from "@space/mobile-shell/provider-sign-in";
@@ -36,12 +34,9 @@ import { useAuth } from "../store/auth";
 import { scopeLogger } from "@space/mobile-shell/logger";
 import { chooseUiLanguage, ensureI18n } from "../lib/uiLanguage";
 import { IS_TV } from "../tv/lib/tvRuntime";
-import { TV_PAIRING_DEVICE_TYPE } from "@space/mobile-shell/tv/pairingClient";
-import { currentTvDeviceName } from "@space/mobile-shell/pairing-device";
-import { createPhoneCompletionDeps, createPhonePairingClient, currentPhoneDeviceName } from "../lib/phonePairing";
-import { completePairing } from "@space/mobile-shell/pairing";
-import { MobileSiblingOffer } from "@space/mobile-shell/sibling-ui";
-import { markPhoneSetupPaired } from "../setup/phoneSetupStore";
+import { TV_PAIRING_DEVICE_TYPE } from "../tv/lib/pairingClient";
+import { tvDeviceName } from "../tv/lib/pairingRuntime";
+import { currentPhoneDeviceName } from "../lib/phonePairing";
 import { SignInSetupBack } from "../setup/BadgerSetupFlow";
 import { BADGER_LINK_SCHEME } from "../lib/linkScheme";
 
@@ -52,8 +47,7 @@ export const PHONE_MASCOT_SIZE = 48;
 
 const PROVIDER_NAMES: Record<MobileSignInProviderId, string> = { google: "Google", apple: "Apple", microsoft: "Microsoft" };
 
-// Phones sign in and create free accounts; the TV only signs in (its "use password" path renders this screen without the
-// create-account link). No price and no payment on either (ACCT-AUTH-10, ACCT-PAY-02).
+// The phone and TV apps only sign in: accounts are created on the website or in a desktop app (ACCT-AUTH-10).
 export const LoginScreen = () => {
   const theme = useMobileShellTheme();
   const { login, setSession } = useAuth();
@@ -103,8 +97,6 @@ const AuthScreenInner = ({
   const [info, setInfo] = useState<string | null>(null);
   // The minutes the "too many attempts" sentence names, from the last refused request (ACCT-AUTH-11).
   const [errorValues, setErrorValues] = useState(() => signInErrorValues(null));
-  // Phone only (ACCT-AUTH-10): the sign-up form, or its email code step (also opened by a sign-in whose email is unverified).
-  const [mode, setMode] = useState<"signin" | "signup" | "verify">("signin");
 
   // Reset modal
   const [resetOpen, setResetOpen] = useState(false);
@@ -145,8 +137,6 @@ const AuthScreenInner = ({
   const showProviderNotice = useCallback((notice: ProviderSignInNotice | null) => {
     setError(null);
     setInfo(null);
-    // A provider sign-in started from the sign-up form comes back here, where its notice and second step show.
-    if (notice) setMode("signin");
     if (notice?.kind === "error") {
       setErrorValues(notice.values ?? signInErrorValues(null));
       setError(notice.key);
@@ -180,7 +170,7 @@ const AuthScreenInner = ({
         email.trim(),
         password,
         needsTwoFactor ? twoFactor.trim() : undefined,
-        IS_TV ? { deviceType: TV_PAIRING_DEVICE_TYPE, deviceName: currentTvDeviceName() } : { deviceType: "mobile", deviceName: currentPhoneDeviceName() },
+        IS_TV ? { deviceType: TV_PAIRING_DEVICE_TYPE, deviceName: tvDeviceName() } : { deviceType: "mobile", deviceName: currentPhoneDeviceName() },
       );
     } catch (err) {
       const failure = classifySignInError(err);
@@ -190,9 +180,6 @@ const AuthScreenInner = ({
         setNeedsTwoFactor(true);
         const method = err.payload.method === "totp" ? "totp" : "email";
         setInfo(method === "totp" ? "login.infoTotp" : "login.infoEmail");
-      } else if (failure === "emailNotVerified" && !IS_TV) {
-        // ACCT-AUTH-10: the account exists but its email was never verified: the code step, as on the desktop.
-        setMode("verify");
       } else {
         setErrorValues(signInErrorValues(err));
         setError(signInErrorMessageKey(failure));
@@ -269,59 +256,9 @@ const AuthScreenInner = ({
     />
   );
 
-  const providerRows = (labelKey: "login.provider.signInWith" | "login.provider.signUpWith") =>
-    !IS_TV && providerSignIn.providers.length > 0 ? (
-      <>
-        <MobileOrDivider label={t("login.provider.or")} testID="provider-sign-in-divider" />
-        <MobileProviderSignInRows
-          providers={providerSignIn.providers}
-          busy={providerSignIn.busy}
-          label={(provider) => t(labelKey, { provider: PROVIDER_NAMES[provider] })}
-          onSelect={(provider) => void providerSignIn.start(provider)}
-        />
-      </>
-    ) : null;
-
-  if (!IS_TV && mode !== "signin") {
-    return (
-      <MobileStartupPage controls={controls} footer={<SignInSetupBack />}>
-        <MobileAuthBrand iconSource={MASCOT} size={PHONE_MASCOT_SIZE} />
-        <MobileSignUp
-          key={mode}
-          initialEmail={email.trim()}
-          initialStep={mode === "verify" ? "verify" : "form"}
-          language={lang}
-          uiLanguage={isMobileUiLanguage(lang) ? lang : undefined}
-          device={{ deviceType: "mobile", deviceName: currentPhoneDeviceName() }}
-          onSignedIn={setSession}
-          onSignIn={(typed) => {
-            if (typed) setEmail(typed);
-            setError(null);
-            setInfo(null);
-            setMode("signin");
-          }}
-          providerRows={providerRows("login.provider.signUpWith")}
-        />
-      </MobileStartupPage>
-    );
-  }
-
   return (
     <MobileStartupPage controls={controls} footer={<SignInSetupBack />}>
       <MobileAuthBrand iconSource={MASCOT} subtitle={t("login.withAccount").toUpperCase()} size={IS_TV ? undefined : PHONE_MASCOT_SIZE} />
-      {/* ACCT-PAIR-07: Parrot signed in on this phone → "Continue with your Parrot account", above the form. */}
-      <MobileSiblingOffer
-        app="badger"
-        enabled={!IS_TV}
-        createClient={() => createPhonePairingClient()}
-        complete={async (approved) => {
-          const completion = await completePairing(createPhoneCompletionDeps(setSession), approved);
-          // The sister app brought the key, as a pairing does: the setup's key screen does not apply (UX-SETUP-03).
-          if (completion.ok) await markPhoneSetupPaired();
-          return completion;
-        }}
-        logTag="phone.sibling"
-      />
 
       {error ? (
         <View style={[styles.notice, styles.errorNotice]}>
@@ -334,7 +271,7 @@ const AuthScreenInner = ({
         </View>
       ) : null}
 
-      {/* ---- SIGN IN (phone and TV; the phone also links to creating an account, ACCT-AUTH-10) ---- */}
+      {/* ---- SIGN IN (the only mode: no sign-up on phone and TV, ACCT-AUTH-10) ---- */}
       <View style={styles.fieldStack}>
         <MobileAuthInput testID="login-email" icon={Mail} value={email} onChangeText={setEmail} placeholder={t("login.emailLabel")} keyboardType="email-address" textContentType="emailAddress" autoComplete="email" returnKeyType="next" onSubmitEditing={() => passwordRef.current?.focus()} />
         <MobileAuthInput testID="login-password" icon={Lock} value={password} onChangeText={setPassword} placeholder={t("login.passwordLabel")} secureTextEntry textContentType="password" autoComplete="current-password" inputRef={passwordRef} {...(needsTwoFactor ? { returnKeyType: "next" as const, onSubmitEditing: () => twoFactorRef.current?.focus() } : { returnKeyType: "done" as const, onSubmitEditing: () => void handleLogin() })} />
@@ -360,26 +297,18 @@ const AuthScreenInner = ({
         />
       </View>
 
-      {/* ---- GOOGLE, APPLE, MICROSOFT (phone only, ACCT-SIGNIN-05): an "or" line under the form, its button and "Forgot password?" (which belongs to the password sign-in), then only the providers the server offers. A new email gets a free account, so the sign-up line sits under them (ACCT-AUTH-10). ---- */}
-      {providerRows("login.provider.signInWith")}
-      {!IS_TV && providerSignIn.providers.length > 0 ? <MobileSignUpTermsNotice language={lang} testID="provider-terms-notice" /> : null}
-
-      {/* ---- CREATE AN ACCOUNT (phone only, ACCT-AUTH-10): a free account; no price, no payment ---- */}
-      {IS_TV ? null : (
-        <View style={styles.prompts}>
-          <MobileAuthLink
-            label={`${t("login.noAccountPrompt")} ${t("login.createAccount")}`.toUpperCase()}
-            color={theme.colors.accent}
-            style={styles.promptText}
-            onPress={() => {
-              setError(null);
-              setInfo(null);
-              setMode("signup");
-            }}
-            testID="login-create-account"
+      {/* ---- GOOGLE, APPLE, MICROSOFT (phone only, ACCT-SIGNIN-05): an "or" line under the form, its button and "Forgot password?" (which belongs to the password sign-in), then only the providers the server offers ---- */}
+      {!IS_TV && providerSignIn.providers.length > 0 ? (
+        <>
+          <MobileOrDivider label={t("login.provider.or")} testID="provider-sign-in-divider" />
+          <MobileProviderSignInRows
+            providers={providerSignIn.providers}
+            busy={providerSignIn.busy}
+            label={(provider) => t("login.provider.signInWith", { provider: PROVIDER_NAMES[provider] })}
+            onSelect={(provider) => void providerSignIn.start(provider)}
           />
-        </View>
-      )}
+        </>
+      ) : null}
 
       {/* ---- QR SIGN-IN (phone; UX-PHONE-05, ACCT-SIGNIN-04): the form first, the card opening the code screen under it ---- */}
       {IS_TV ? null : <MobilePhoneSignInCard onPress={onQrSignIn} />}

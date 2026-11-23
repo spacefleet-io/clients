@@ -17,47 +17,9 @@
     "saving": "Guardando…",
     "error": "No se pudo guardar el host de la API. Revisa el valor y vuelve a intentarlo."
   },
-  "signup": {
-    "title": "Crear cuenta",
-    "subtitle": "Tendrás que verificar tu correo antes de iniciar sesión.",
-    "emailLabel": "Correo electrónico",
-    "passwordLabel": "Contraseña",
-    "confirmLabel": "Repite la contraseña",
-    "button": "Crear cuenta",
-    "creating": "Creando…",
-    "haveAccountPrompt": "¿Ya tienes cuenta?",
-    "signIn": "Iniciar sesión",
-    "errors": {
-      "passwordLength": "La contraseña debe tener al menos 8 caracteres.",
-      "passwordMismatch": "Las contraseñas no coinciden.",
-      "emailExists": "Este correo ya está registrado.",
-      "emailDomainDisallowed": "Este dominio de correo no está permitido. Usa otro proveedor de correo.",
-      "generic": "No se pudo crear la cuenta. Vuelve a intentarlo."
-    }
-  },
-  "verifyEmail": {
-    "title": "Verifica tu correo",
-    "subtitle": "Te enviamos un código de verificación por correo. Introdúcelo aquí para terminar el registro.",
-    "codeLabel": "Código de verificación",
-    "codePlaceholder": "123456",
-    "submit": "Verificar correo",
-    "verifying": "Verificando…",
-    "resend": "Reenviar código de verificación",
-    "sending": "Enviando…",
-    "backToSignIn": "Volver a iniciar sesión",
-    "sent": "Código de verificación enviado. Revisa tu bandeja de entrada.",
-    "errors": {
-      "invalidCode": "Código de verificación no válido. Vuelve a intentarlo.",
-      "emailNotFound": "No hay ninguna cuenta con este correo.",
-      "sendFailed": "No se pudo enviar el código de verificación.",
-      "generic": "No se pudo verificar tu correo."
-    }
-  },
   "login": {
     "title": "Iniciar sesión",
     "withAccount": "Inicia sesión con tu cuenta de SpaceFleet",
-    "noAccountPrompt": "¿No tienes cuenta?",
-    "createAccount": "Crear cuenta",
     "emailLabel": "Correo electrónico",
     "passwordLabel": "Contraseña",
     "twoFactorLabel": "Código de verificación",
@@ -101,11 +63,11 @@
     },
     "provider": {
       "signInWith": "Iniciar sesión con {{provider}}",
-      "signUpWith": "Registrarse con {{provider}}",
       "or": "o",
       "continueInBrowser": "Termina de iniciar sesión en tu navegador. Después volverás aquí.",
       "errorStart": "No se pudo iniciar el inicio de sesión. Vuelve a intentarlo.",
       "errors": {
+        "no_account": "Ninguna cuenta de SpaceFleet usa este correo. Crea una en Badger o Parrot desde un ordenador y luego inicia sesión aquí.",
         "email_unverified": "El correo de esta cuenta no está confirmado. Confírmalo con el proveedor o inicia sesión con tu correo y contraseña.",
         "email_domain_disallowed": "No se pueden crear cuentas con este correo.",
         "account_deletion_pending": "La eliminación de esta cuenta está programada.",
@@ -290,36 +252,6 @@
       "playlist": "Lista"
     }
   },
-  "offlineContent": {
-    "entry": "Gestionar el contenido sin conexión",
-    "title": "Contenido sin conexión",
-    "back": "Atrás",
-    "totalSuffix": "guardados sin conexión",
-    "unknownArtist": "Artista desconocido",
-    "removeAll": "Quitar todo",
-    "confirmCancel": "Cancelar",
-    "confirmRemove": "Quitar todo",
-    "removeFailed": "No se pudo quitar. Inténtalo de nuevo.",
-    "expand": "Mostrar u ocultar el contenido de {{name}}",
-    "remove": "Quitar {{name}} de este teléfono",
-    "season": "Temporada {{n}}",
-    "episodeNumber": "T{{season}} E{{episode}}",
-    "unknownTitle": "El título ya no está en la mediateca",
-    "unknownEpisode": "El episodio ya no está en la mediateca",
-    "unknown": "Ya no está en la mediateca",
-    "badger": {
-      "entryDescription": "Consulta lo que se conserva en este teléfono y libera espacio",
-      "confirmTitle": "¿Quitar todo lo que se conserva en este teléfono?",
-      "confirmBody": "Se eliminarán todas las películas y episodios descargados en este teléfono. Puedes volver a descargarlos más tarde.",
-      "empty": "No hay nada conservado en este teléfono. Toca Descargar en una película o un episodio para verlo sin conexión."
-    },
-    "parrot": {
-      "entryDescription": "Consulta lo que está guardado sin conexión en este teléfono y libera espacio",
-      "confirmTitle": "¿Quitar todo lo guardado sin conexión?",
-      "confirmBody": "Se quitarán todos los álbumes, playlists y canciones guardados sin conexión en este teléfono. Puedes volver a guardarlos sin conexión más tarde.",
-      "empty": "Todavía no hay nada guardado sin conexión en este teléfono. Toca Guardar sin conexión en un álbum, una playlist o una canción para escucharlo sin conexión."
-    }
-  },
   "downloads": {
     "title": "Descargas",
     "back": "Atrás",
@@ -495,7 +427,7 @@
     "playlists": "Listas",
     "settings": "Ajustes",
     "loading": "Cargando…",
-    "loadingLibrary": "Cargando la biblioteca…",
+    "loadingLibrary": "Cargando la mediateca…",
     "updateRequired": "Actualización necesaria",
     "unavailable": "Badger no está disponible: {{issue}}. Actualiza la aplicación.",
     "screenLoadFailed": "No se pudo cargar la pantalla",
@@ -905,8 +837,8 @@
   },
   "tvPairing": {
     "signIn": {
-      "title": "Inicia sesión en {{app}}",
-      "subtitle": "En tu teléfono o computadora, abre {{app}} → Ajustes → Vincular un dispositivo y escanea el código o escríbelo.",
+      "title": "Inicia sesión en Badger",
+      "subtitle": "En tu teléfono o computadora, abre Badger → Ajustes → Vincular un dispositivo y escanea el código o escríbelo.",
       "codeLabel": "O escribe este código",
       "qrAccessibility": "Código QR para vincular esta TV",
       "starting": "Obteniendo un código de vinculación…",
@@ -920,7 +852,7 @@
       },
       "errors": {
         "title": "No se pudo vincular esta TV",
-        "unreachable": "No pudimos conectar con {{app}}. Revisa la conexión de esta TV y obtén un código nuevo.",
+        "unreachable": "No pudimos conectar con Badger. Revisa la conexión de esta TV y obtén un código nuevo.",
         "failed": "Algo ha fallado durante la vinculación. Obtén un código nuevo para volver a intentarlo.",
         "key_unreadable": "La aprobación llegó a esta TV, pero no se pudo leer la clave de la mediateca. Obtén un código nuevo y vuelve a aprobarlo.",
         "key_mismatch": "La clave de la mediateca enviada no abre la mediateca de esta cuenta. No se ha guardado nada en esta TV. Obtén un código nuevo y vuelve a aprobarlo desde una aplicación que tenga tu mediateca."
@@ -1037,7 +969,8 @@
   },
   "libraryFormat": {
     "title": "Actualización necesaria",
-    "body": "Esta mediateca se creó con una versión más reciente de Badger."
+    "body": "Esta mediateca se creó con una versión más reciente de Badger. Actualiza la aplicación para abrirla.",
+    "update": "Actualizar ahora"
   },
   "home": {
     "empty": {
@@ -1104,12 +1037,7 @@
       "added": "Fecha de adición",
       "release": "Año de estreno",
       "asc": "Ascendente",
-      "desc": "Descendente",
-      "title": "Ordenar por",
-      "by": "Campo",
-      "direction": "Orden",
-      "button": "Ordenar",
-      "done": "Listo"
+      "desc": "Descendente"
     },
     "row": {
       "runtimeMinutes": "{{minutes}} min",
@@ -1125,70 +1053,6 @@
     "poster": {
       "watched": "{{percent}} % visto",
       "downloaded": "descargado"
-    },
-    "filters": {
-      "clear": "Borrar filtros",
-      "genres": {
-        "title": "Géneros",
-        "search": "Buscar géneros…",
-        "empty": "Ningún género coincide con la búsqueda."
-      },
-      "actors": {
-        "title": "Actores",
-        "search": "Buscar actores…",
-        "empty": "Ningún actor coincide con la búsqueda."
-      },
-      "title": "Filtrar",
-      "clearShort": "Borrar",
-      "more": "+{{count}} más",
-      "reset": "Restablecer",
-      "apply": "Aplicar",
-      "qualities": {
-        "title": "Calidad",
-        "search": "Buscar calidades",
-        "empty": "No se encontró ninguna calidad"
-      },
-      "directors": {
-        "title": "Dirección",
-        "search": "Buscar directores",
-        "empty": "No se encontró ningún director"
-      },
-      "audioLanguages": {
-        "title": "Idioma del audio",
-        "search": "Buscar idiomas",
-        "empty": "No se encontró ningún idioma"
-      },
-      "subtitleLanguages": {
-        "title": "Idioma de los subtítulos",
-        "search": "Buscar idiomas",
-        "empty": "No se encontró ningún idioma"
-      },
-      "watchStates": {
-        "title": "Estado de visionado",
-        "search": "Buscar estados",
-        "empty": "No se encontró ningún estado"
-      },
-      "quality": {
-        "sd": "SD (480p o menos)"
-      },
-      "watchState": {
-        "unwatched": "Sin ver",
-        "in-progress": "En curso",
-        "watched": "Visto"
-      },
-      "undefinedLanguage": "Idioma desconocido",
-      "active_one": "Filtrar, {{count}} activo",
-      "active_other": "Filtrar, {{count}} activos",
-      "showOnly": "Mostrar solo"
-    },
-    "stats": {
-      "movie_one": "{{count}} película",
-      "movie_other": "{{count}} películas",
-      "movie_many": "{{count}} películas",
-      "series_one": "{{count}} serie",
-      "series_other": "{{count}} series",
-      "series_many": "{{count}} series",
-      "shownOf": "{{shown}} de {{total}}"
     }
   },
   "playlists": {
@@ -1235,22 +1099,6 @@
         "hint": "Tu mediateca guardada sigue en pantalla."
       },
       "close": "Cerrar aviso"
-    }
-  },
-  "sync": {
-    "indicator": {
-      "updating": "Actualizando la mediateca…",
-      "updatingProgress": "Actualizando la mediateca… {{percent}} %",
-      "savedStaysLabel": "Tu mediateca guardada sigue disponible",
-      "newEpisodes_one": "{{count}} episodio nuevo",
-      "newEpisodes_other": "{{count}} episodios nuevos",
-      "newTitles_one": "{{count}} título nuevo",
-      "newTitles_other": "{{count}} títulos nuevos",
-      "updated": "Mediateca actualizada",
-      "upToDate": "Al día",
-      "failed": "Error al actualizar",
-      "failedLabel": "Error al actualizar la mediateca — contenido guardado",
-      "retry": "Toca para reintentar."
     }
   },
   "shell": {
@@ -1395,40 +1243,6 @@
   },
   "appUpdate": {
     "title": "Actualiza {{app}} para seguir usándolo",
-    "tooOld": "Esta versión de {{app}} es demasiado antigua para conectarse.",
-    "how": {
-      "appstore": "Actualiza {{app}} en la App Store y vuelve a abrir la app.",
-      "testflight": "Instala la nueva versión de {{app}} desde TestFlight y vuelve a abrir la app.",
-      "play": "Actualiza {{app}} en Google Play y vuelve a abrir la app.",
-      "amazon": "Actualiza {{app}} en la Amazon Appstore y vuelve a abrir la app.",
-      "fdroid": "Actualiza {{app}} en F-Droid y vuelve a abrir la app.",
-      "obtainium": "Actualiza {{app}} en Obtainium y vuelve a abrir la app.",
-      "apk": "Descarga la nueva versión de {{app}}, instálala encima de esta y vuelve a abrir la app.",
-      "store": "Actualiza {{app}} en la tienda desde la que lo instalaste y vuelve a abrir la app.",
-      "unknown": "Instala la nueva versión desde donde obtuviste {{app}} y vuelve a abrir la app."
-    },
-    "open": {
-      "appstore": "Abrir la App Store",
-      "testflight": "Abrir TestFlight",
-      "play": "Abrir Google Play",
-      "amazon": "Abrir la Amazon Appstore",
-      "fdroid": "Abrir F-Droid",
-      "obtainium": "Abrir Obtainium",
-      "apk": "Descargar la nueva versión",
-      "store": "Abrir la tienda"
-    }
-  },
-  "sibling": {
-    "title": "Continuar con tu cuenta de {{other}}",
-    "body": "{{other}} tiene la sesión iniciada en este teléfono. No hay nada que escribir.",
-    "button": "Continuar como {{email}}",
-    "otherAccount": "Usar otra cuenta",
-    "waiting": "Esperando a {{other}}…",
-    "waitingNote": "Permítelo en {{other}} y luego vuelve.",
-    "cancel": "Cancelar",
-    "failure": "{{other}} no pudo iniciar tu sesión. Inicia sesión de otra forma.",
-    "askTitle": "¿Permitir que {{app}} use tu cuenta de SpaceFleet?",
-    "askBody": "{{app}} en este teléfono iniciará sesión como {{email}}, con su propia copia de la clave de tu mediateca. Puedes cerrar su sesión cuando quieras en Dispositivos.",
-    "allow": "Permitir"
+    "body": "Esta versión de {{app}} es demasiado antigua para conectarse. Instala la nueva versión desde donde obtuviste {{app}} y vuelve a abrir la app."
   }
 }

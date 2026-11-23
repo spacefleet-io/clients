@@ -23,7 +23,6 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "no
 import { randomBytes } from "node:crypto";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import * as realLogger from "../src/logger";
 import { afterAll, afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 import type { LibraryOp } from "@space/shared/libraryOps";
 import * as realApi from "../src/api";
@@ -64,9 +63,6 @@ const fake = {
   lostOpVersions: new Set<number>(),
   held: [] as HeldCall[],
   calls: [] as string[],
-  // LIB-SYNC-16: number of upcoming putLibraryOp calls the server refuses (409 version_conflict with a request id).
-  refuseOps: 0,
-  refusals: 0,
   // Bytes of every GET /library/db/meta answer served, as JSON (LIB-STORE-05 measurement).
   metaBytes: 0,
   publishes: [] as Array<{ snapshotId: string; chunkRefs: string[]; chunkRefsSource?: { client: string; refsVersion: number } }>,
@@ -89,8 +85,6 @@ const fake = {
     this.held = [];
     this.calls = [];
     this.metaBytes = 0;
-    this.refuseOps = 0;
-    this.refusals = 0;
     this.publishes = [];
   },
   async hold(label: string) {
@@ -144,35 +138,6 @@ const fake = {
 };
 
 const versionConflict = () => new realApi.ApiError(409, { error: "version_conflict", version: fake.version });
-const REFUSAL_REQUEST_ID = "9b1f0c2e-4a5d-4c6e-8f70-112233445566";
-
-// LIB-SYNC-16: every info/warn/error line LibraryDb writes, captured (and still written) so a test can read the fields.
-type LoggedLine = { level: "info" | "warn" | "error"; scope: string; fields: Record<string, unknown>; msg: string };
-const loggedLines: LoggedLine[] = [];
-const originalLogger = { ...realLogger };
-afterAll(() => {
-  mock.module("../src/logger", () => originalLogger);
-});
-mock.module("../src/logger", () => ({
-  ...originalLogger,
-  scopeLogger: (scope: string) => {
-    const child = originalLogger.scopeLogger(scope);
-    return new Proxy(child, {
-      get(target, property, receiver) {
-        if (property === "info" || property === "warn" || property === "error") {
-          return (fields: unknown, msg?: string) => {
-            if (fields && typeof fields === "object") {
-              loggedLines.push({ level: property, scope, fields: fields as Record<string, unknown>, msg: msg ?? "" });
-            }
-            return (target[property] as (fields: unknown, msg?: string) => void)(fields, msg);
-          };
-        }
-        const value = Reflect.get(target, property, receiver);
-        return typeof value === "function" ? value.bind(target) : value;
-      },
-    });
-  },
-}));
 
 // mock.module is process-global in a bun test run: snapshot the REAL exports
 // now (before the mock patches the live bindings) and put them back in
@@ -223,7 +188,7 @@ mock.module("../src/api", () => ({
       version: pageOps.length && hasMore ? pageOps[pageOps.length - 1]!.version : fake.version,
       snapshotVersion: fake.snapshotVersion,
       tooOld,
-      ops: pageOps.map((op) => ({ ...op, objectKey: `library/ops/${op.opId}`, size: Buffer.from(op.payloadCiphertext, "base64").length })),
+      ops: pageOps.map((op) => ({ ...op, objectKey: `library/ops/${op.opId}`, size: 0 })),
       hasMore,
       storageFormatVersion: 1,
       opStreamVersion: 1,
@@ -240,12 +205,6 @@ mock.module("../src/api", () => ({
     if (fake.holdBeforeCommit > 0) {
       fake.holdBeforeCommit -= 1;
       await fake.hold(`${label} (before commit)`);
-    }
-    if (fake.refuseOps > 0) {
-      fake.refuseOps -= 1;
-      fake.refusals += 1;
-      fake.calls.push(`${label} -> 409 refused (#${fake.refusals})`);
-      throw new realApi.ApiError(409, { error: "version_conflict", version: fake.version }, REFUSAL_REQUEST_ID);
     }
     if (baseVersion !== fake.version) {
       fake.calls.push(`${label} -> 409 current=${fake.version}`);
@@ -341,10 +300,8 @@ type Internals = {
   remoteVersion: number;
   opsFlushInFlight: boolean;
   pendingOps: Array<{ type: string; payload: { progressPct?: number } }>;
-  /** Non-progress ops since the last snapshot (LIB-SYNC-07) and their ciphertext bytes (LIB-SYNC-12). */
-  opsSinceSnapshot: { snapshotVersion: number; count: number; bytes: number; bytesThreshold: number };
-  /** LIB-SYNC-16: op uploads in a row the server refused with 409. */
-  opsFlushConsecutive409: number;
+  /** Non-progress ops since the last snapshot (LIB-SYNC-07). */
+  opsSinceSnapshot: { snapshotVersion: number; count: number };
 };
 const internalsOf = (db: Db) => {
   const internals = db as unknown as Internals; // test-only peek at private sync state
@@ -953,172 +910,4 @@ describe("LIB-SYNC-07 — viewing progress never causes a full save of the libra
     expect(crossed.snapshotsPublished).toBe(1);
     db.close();
   }, 60_000);
-
-  const TAIL_BYTES = 16 * 1024 * 1024; // SNAPSHOT_TAIL_BYTES_THRESHOLD in library-db-definition/opClass.ts
-
-  // @req LIB-SYNC-12[badger-desktop]
-  // @req LIB-SYNC-12[runtime]
-  it("LIB-SYNC-12: ~1 MiB structural ops publish a snapshot on the op that takes the tail past 16 MiB, far below 250 ops", async () => {
-    const { db } = await bootstrapWithMovie();
-    const publishedAtStart = snapshotsPublished();
-    const bytesAtStart = internalsOf(db).opsSinceSnapshot.bytes;
-    const sizes: number[] = [];
-    // One key rewritten: the tail grows by every value while the snapshot holds only the last one.
-    while (snapshotsPublished() === publishedAtStart && sizes.length < 40) {
-      db.setSetting("ui.big", randomBytes(1024 * 1024).toString("base64"));
-      await flushUntilDrained(db);
-      sizes.push(Buffer.from(fake.ops.at(-1)!.payloadCiphertext, "base64").length);
-    }
-    const tailBytes = bytesAtStart + sizes.reduce((sum, size) => sum + size, 0);
-    const measured = {
-      ops: sizes.length,
-      tailBytes,
-      counted: internalsOf(db).opsSinceSnapshot,
-      snapshotsPublished: snapshotsPublished() - publishedAtStart,
-    };
-    log("measure:LIB-SYNC-12 tail bytes", measured);
-    expect(measured.snapshotsPublished).toBe(1);
-    expect(measured.ops).toBeLessThan(SNAPSHOT_THRESHOLD);
-    expect(measured.counted.bytes).toBe(tailBytes);
-    expect(tailBytes).toBeGreaterThanOrEqual(TAIL_BYTES);
-    expect(tailBytes - sizes.at(-1)!, "not one op earlier").toBeLessThan(TAIL_BYTES);
-    db.close();
-  }, 120_000);
-
-  // @req LIB-SYNC-12[badger-desktop]
-  // @req LIB-SYNC-12[runtime]
-  it("LIB-SYNC-12: pulled ops count the ciphertext sizes the server lists", async () => {
-    const { db, mediaId } = await bootstrapWithMovie();
-    const before = internalsOf(db).opsSinceSnapshot;
-    const op = {
-      id: randomBytes(16).toString("hex"),
-      type: "setting.set",
-      createdAt: new Date().toISOString(),
-      payload: { key: "ui.remote", value: "x".repeat(10_000), updatedAt: new Date().toISOString() },
-    } as LibraryOp;
-    const encrypted = await encryptBytesToBytes(KEY, new TextEncoder().encode(JSON.stringify(op)));
-    fake.version += 1;
-    fake.stateHash = `remote-device-${fake.version}`;
-    fake.lastOpId = op.id;
-    fake.ops.push({ version: fake.version, opId: op.id, payloadCiphertext: Buffer.from(encrypted).toString("base64"), createdAt: op.createdAt });
-    await pushRemoteProgress(mediaId, 12); // progress-class: never counts
-    const outcome = await db.applyPreparedRemoteSync(await db.prepareRemoteSync(null));
-    const after = internalsOf(db).opsSinceSnapshot;
-    log("measure:LIB-SYNC-12 pulled", { outcome, before, after, opBytes: encrypted.length });
-    expect(outcome).toBe(true);
-    expect(after.count - before.count).toBe(1);
-    expect(after.bytes - before.bytes).toBe(encrypted.length);
-    db.close();
-  }, 30_000);
-
-  // @req LIB-SYNC-12[badger-desktop]
-  // @req LIB-SYNC-12[runtime]
-  it("LIB-SYNC-12: a snapshot larger than the tail it would replace is not published; the byte threshold rises to its size", async () => {
-    const { db } = await bootstrapWithMovie();
-    const compactable = db as unknown as { maybeCompactAfterOps(): Promise<void> };
-    const publishedAtStart = snapshotsPublished();
-    // Due by bytes alone with a tail smaller than any snapshot of this library.
-    internalsOf(db).opsSinceSnapshot = { snapshotVersion: fake.snapshotVersion, count: 1, bytes: 10, bytesThreshold: 5 };
-    await compactable.maybeCompactAfterOps();
-    const first = { ...internalsOf(db).opsSinceSnapshot };
-    const metaCallsAfterFirst = metaCalls();
-    internalsOf(db).opsSinceSnapshot = { ...first, bytes: 11 };
-    await compactable.maybeCompactAfterOps();
-    log("measure:LIB-SYNC-12 larger than the tail", { first, snapshotsPublished: snapshotsPublished() - publishedAtStart });
-    expect(snapshotsPublished() - publishedAtStart).toBe(0);
-    expect(first.bytesThreshold, "raised to the snapshot's size").toBeGreaterThan(10);
-    expect(metaCalls() - metaCallsAfterFirst, "below the raised threshold the server is not asked").toBe(0);
-    db.close();
-  }, 30_000);
-});
-
-describe("LIB-SYNC-16 — a refused library upload says why, and a run of refusals is flagged once", () => {
-  /**
-   * @req LIB-SYNC-16[badger-desktop]
-   * @req REL-LOG-31[badger-desktop]
-   * Pre-fix: the 409 line held only the op id and the message, so a device stuck behind the server looked like an
-   * ordinary race and could not be joined to the server's line about the refusal.
-   */
-  it("each 409 logs code, request id, versions and the streak; the 5th warns once; the retry pace is unchanged", async () => {
-    const { db } = await bootstrapWithMovie();
-    const internals = db as unknown as { flushOps: () => Promise<void> } & Internals;
-    loggedLines.length = 0;
-    fake.refuseOps = 100;
-    log("phase:refuse queue a structural write the server will refuse");
-    await db.addMediaFromCatalog({ ...MOVIE, id: 25_016, title: "LIB-SYNC-16 Refused Movie" });
-    await waitFor("first refusal", () => fake.refusals >= 1 && !internals.opsFlushInFlight);
-    // A sync or a new write calls flushOps again at once; drive those calls directly.
-    while (fake.refusals < 5) {
-      await internals.flushOps();
-      await waitFor(`refusal ${fake.refusals}`, () => !internals.opsFlushInFlight);
-    }
-    const refusalLines = loggedLines.filter((line) => line.fields.status === 409 && line.scope === "library-sync");
-    log("phase:after-5-refusals", { refusals: fake.refusals, lines: refusalLines });
-    expect(refusalLines.map((line) => line.fields.consecutive409)).toEqual([1, 2, 3, 4, 5]);
-    const stuck = refusalLines[4]!;
-    expect(stuck.level).toBe("warn");
-    expect(stuck.fields).toMatchObject({
-      code: "version_conflict",
-      requestId: REFUSAL_REQUEST_ID,
-      baseVersion: fake.version,
-      serverVersion: fake.version,
-      consecutive409: 5,
-    });
-    expect(refusalLines.slice(0, 4).every((line) => line.level === "info")).toBe(true);
-    const pendingIds = (internals.pendingOps as unknown as Array<{ id: string }>).map((op) => op.id);
-    const written = JSON.stringify(refusalLines);
-    for (const id of [...fake.ops.map((op) => op.opId), ...pendingIds]) expect(written).not.toContain(id);
-    if (fake.stateHash) expect(written).not.toContain(fake.stateHash);
-
-    log("phase:keeps-pace the desktop retries at its usual pace (logging only); past the 5th the line is info again");
-    await internals.flushOps();
-    await waitFor("refusal 6", () => fake.refusals >= 6 && !internals.opsFlushInFlight);
-    const sixth = loggedLines.find((line) => line.fields.status === 409 && line.fields.consecutive409 === 6);
-    expect(sixth?.level, "the stuck warning is written once per streak").toBe("info");
-
-    log("phase:accepted an accepted op ends the streak");
-    fake.refuseOps = 0;
-    await internals.flushOps();
-    await waitFor("refused op accepted", () => drained(db));
-    log("phase:done", fake.dump());
-    expect(internals.opsFlushConsecutive409).toBe(0);
-    db.close();
-  }, 30_000);
-});
-
-describe("stale meta must not roll the lineage hash back (lineage_conflict loop, 2026-11-22)", () => {
-  // Prod 2026-11-22 20:19Z on: Chris's desktop runtime got 409 lineage_conflict about every 32 s with
-  // baseVersion == the server's version. The renderer's 30 s fallback poll reads meta, then asks for a sync
-  // with it; the sync's own flushOps uploads a queued progress op first (server version N, hash H(N)), then
-  // prepareRemoteSync adopted the poll's older meta hash H(N-1) while keeping remoteVersion N. The next op went
-  // out as (base N, prev H(N-1)) and the server refused it.
-  it("@bugfix @regression-proof a sync given a meta older than its own just-flushed op keeps the acknowledged hash", async () => {
-    const { db, mediaId } = await bootstrapWithMovie();
-    db.setProgress(mediaId, 10);
-    await waitFor("progress 10 uploaded", () => drained(db));
-
-    log("phase:poll reads meta, then a progress save is queued before the sync runs");
-    const polledMeta = fake.meta();
-    LibraryDb.progressOpsFlushDelayMs = 60_000;
-    db.setProgress(mediaId, 20);
-    expect(internalsOf(db).pendingOps.length).toBe(1);
-
-    log("phase:sync with the polled (now older) meta — its flushOps uploads progress 20 first", { polledVersion: polledMeta.version });
-    const changed = await db.syncFromRemoteIfNewer(polledMeta);
-    dumpState("after-stale-meta-sync", db, mediaId);
-    expect(changed).toBe(false);
-    expect(internalsOf(db).remoteVersion).toBe(fake.version);
-    expect(fake.version).toBe(polledMeta.version + 1);
-
-    log("phase:next save must upload on the first try, no lineage_conflict");
-    LibraryDb.progressOpsFlushDelayMs = 0;
-    const callsBefore = fake.calls.length;
-    db.setProgress(mediaId, 30);
-    await waitFor("progress 30 uploaded", () => drained(db), 15_000);
-    const uploadCalls = fake.calls.slice(callsBefore).filter((call) => call.startsWith("putLibraryOp"));
-    log("upload calls", uploadCalls);
-    expect(uploadCalls.some((call) => call.endsWith("409 lineage"))).toBe(false);
-    expect(await serverProgress(mediaId)).toBe(30);
-    db.close();
-  }, 30_000);
 });

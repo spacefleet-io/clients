@@ -39,7 +39,7 @@ import {
   type SubtitleGetMoreRow,
   type SubtitleTryAnotherRow,
 } from "../trackRows";
-import { scaleStyle, scaleStyleSheet } from "@space/shared/uiScale";
+import { scaleStyle, scaleStyleSheet } from "../uiScale";
 import type { AudioTrack, Chapter, MpvTrack, PlaybackSnapshot, PlaybackState, SubtitleTrack, VideoFormat } from "../types";
 import { SeekPreviewPicture } from "./SeekPreviewPicture";
 import Svg, { Circle, Line, Path, Rect } from "react-native-svg";

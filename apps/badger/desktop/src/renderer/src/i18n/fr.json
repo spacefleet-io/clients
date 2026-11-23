@@ -93,6 +93,7 @@
       "continueInBrowser": "Terminez la connexion dans votre navigateur. Badger revient ensuite au premier plan.",
       "errorStart": "Impossible de lancer la connexion. Veuillez réessayer.",
       "errors": {
+        "no_account": "Aucun compte SpaceFleet n'utilise encore cette adresse e-mail.",
         "email_unverified": "L'adresse e-mail de ce compte n'est pas confirmée. Confirmez-la auprès du fournisseur, ou connectez-vous avec votre e-mail et votre mot de passe.",
         "email_domain_disallowed": "Impossible de créer un compte avec cette adresse e-mail.",
         "account_deletion_pending": "La suppression de ce compte est programmée.",
@@ -199,19 +200,6 @@
     "openingImport": "Ouverture de l'import de médias…"
   },
   "library": {
-    "export": {
-      "submittedToast_one": "Enregistrement de {{count}} fichier dans {{folder}}",
-      "submittedToast_other": "Enregistrement de {{count}} fichiers dans {{folder}}",
-      "errors": {
-        "insufficient_disk_space": "Pas assez d'espace libre dans ce dossier\u202f: {{required}} nécessaires, {{free}} libres.",
-        "not_authenticated": "Reconnectez-vous pour télécharger des fichiers.",
-        "library_db_not_open": "Votre bibliothèque n'est pas encore ouverte. Réessayez dans un instant.",
-        "dest_not_writable": "Impossible d'enregistrer dans ce dossier. Choisissez-en un autre.",
-        "dest_not_picked": "Choisissez à nouveau le dossier.",
-        "nothing_to_export": "Rien à télécharger pour l'instant.",
-        "generic": "Échec du téléchargement\u202f: {{reason}}"
-      }
-    },
     "showDelisting": {
       "title": "Épisodes retirés du catalogue",
       "description": "Le catalogue ne référence plus ces épisodes de {{show}}. Voulez-vous les retirer de votre bibliothèque\u202f?",
@@ -244,15 +232,7 @@
     "manageKey": "Gérer la clé de bibliothèque",
     "browseTitle": "Parcourir",
     "browseSubtitle": "Les médias sans fichier sont grisés mais leurs métadonnées restent visibles.",
-    "stats": {
-      "movie_one": "{{count}} film",
-      "movie_other": "{{count}} films",
-      "movie_many": "{{count}} films",
-      "tv_one": "{{count}} série",
-      "tv_other": "{{count}} séries",
-      "tv_many": "{{count}} séries",
-      "shownOf": "{{shown}} sur {{total}}"
-    },
+    "searchPlaceholder": "Rechercher des titres…",
     "sort": {
       "title": "Trier par",
       "by": "Champ",
@@ -285,41 +265,47 @@
       "clear": "Effacer les filtres",
       "genres": {
         "title": "Genres",
+        "placeholder": "Choisissez des genres pour affiner.",
         "search": "Rechercher un genre…",
         "empty": "Aucun genre ne correspond."
       },
       "actors": {
         "title": "Acteurs",
+        "placeholder": "Choisissez des acteurs pour affiner.",
         "search": "Rechercher un acteur…",
         "empty": "Aucun acteur ne correspond."
       },
       "title": "Filtrer",
       "clearShort": "Effacer",
-      "more": "+{{count}} de plus",
       "reset": "Réinitialiser",
       "apply": "Appliquer",
       "qualities": {
         "title": "Qualité",
+        "placeholder": "Toutes les qualités",
         "search": "Rechercher une qualité",
         "empty": "Aucune qualité trouvée"
       },
       "directors": {
         "title": "Réalisation",
+        "placeholder": "Tous les réalisateurs",
         "search": "Rechercher un réalisateur",
         "empty": "Aucun réalisateur trouvé"
       },
       "audioLanguages": {
         "title": "Langue audio",
+        "placeholder": "Toutes les langues audio",
         "search": "Rechercher une langue",
         "empty": "Aucune langue trouvée"
       },
       "subtitleLanguages": {
         "title": "Langue des sous-titres",
+        "placeholder": "Toutes les langues de sous-titres",
         "search": "Rechercher une langue",
         "empty": "Aucune langue trouvée"
       },
       "watchStates": {
         "title": "État de visionnage",
+        "placeholder": "Tous les états",
         "search": "Rechercher un état",
         "empty": "Aucun état trouvé"
       },
@@ -407,7 +393,7 @@
       "compact": "Masquer les manquants",
       "subtitle": "Afficher uniquement les contenus lisibles."
     },
-    "loading": "Chargement de la bibliothèque…",
+    "loading": "Chargement de la médiathèque…",
     "syncing": "Synchronisation de la bibliothèque…",
     "offline": {
       "indicator": "Hors ligne",
@@ -650,6 +636,8 @@
     }
   },
   "playlists": {
+    "title": "Playlists",
+    "subtitle": "Créez des playlists pour retrouver vos contenus facilement.",
     "manageTitle": "Vos playlists",
     "manageSubtitle": "Les favoris sont toujours disponibles. Le reste est à vous.",
     "newPlaceholder": "Nom de la nouvelle playlist",
@@ -711,36 +699,9 @@
         "original": "Originale"
       }
     },
-    "offlineContent": {
-      "total": "Gardé sur cet ordinateur",
-      "empty": "Rien n’est gardé sur cet ordinateur pour regarder hors ligne. Utilisez «\u202fConserver hors ligne\u202f» sur un film, une saison ou un épisode pour le garder ici.",
-      "remove": "Retirer {{name}} de cet ordinateur",
-      "removeAll": "Tout retirer",
-      "expand": "Afficher ou masquer le contenu de {{name}}",
-      "confirmTitle": "Tout retirer du hors ligne\u202f?",
-      "confirmBody": "Tous les films et épisodes gardés sur cet ordinateur en sont supprimés et l’espace est libéré tout de suite. Ils restent dans votre bibliothèque et se lisent depuis votre serveur une fois en ligne.",
-      "confirmCancel": "Annuler",
-      "confirmRemove": "Tout retirer",
-      "season": "Saison {{n}}",
-      "episodeNumber": "S{{season}} · É{{episode}}",
-      "unknownTitle": "Un titre qui n’est plus dans votre bibliothèque",
-      "unknownEpisode": "Épisode",
-      "removeFailed": "Impossible de le retirer de cet ordinateur. Réessayez."
-    },
-    "exportAll": {
-      "title": "Tout télécharger",
-      "help": "Enregistrez toute votre bibliothèque en fichiers vidéo dans le dossier de votre choix, à la meilleure qualité disponible. Les films vont dans Movies, les séries dans Shows.",
-      "button": "Tout télécharger",
-      "moreOptions": "Plus d'options",
-      "confirmTitle": "Tout télécharger\u202f?",
-      "confirmBody_one": "{{count}} fichier, {{size}} au total, sera enregistré dans {{folder}}.",
-      "confirmBody_other": "{{count}} fichiers, {{size}} au total, seront enregistrés dans {{folder}}.",
-      "confirm": "Télécharger",
-      "cancel": "Annuler"
-    },
     "offlineExportFormat": {
-      "label": "Format de fichier",
-      "help": "Format des fichiers vidéo que vous téléchargez. Le MKV garde tous les types de sous-titres. Le MP4 se lit sur plus d'appareils mais ne peut pas contenir les sous-titres PGS ni ASS — ces pistes sont alors laissées de côté.",
+      "label": "Format d'export hors ligne",
+      "help": "Conteneur utilisé pour les fichiers enregistrés sur cet appareil. Le MKV est sans perte pour tous les types de sous-titres. Le MP4 est plus portable mais ne peut pas intégrer les sous-titres PGS ni ASS — ces pistes sont alors ignorées.",
       "mkv": "MKV (recommandé)",
       "mp4": "MP4",
       "mp4Warning": "Le MP4 ne peut pas intégrer les sous-titres PGS ni ASS. Les sous-titres SRT et VTT sont convertis en mov_text et conservés."
@@ -975,7 +936,6 @@
       "playback": "Lecture",
       "trailers": "Bandes-annonces",
       "downloads": "Téléchargements",
-      "offlineContent": "Gérer le contenu hors ligne",
       "transcoding": "Transcodage",
       "metadata": "Métadonnées",
       "performance": "Performances",
@@ -992,7 +952,6 @@
       "playback": "Qualité par défaut et comportement pendant la lecture.",
       "trailers": "Source des bandes-annonces et langues à récupérer.",
       "downloads": "Format d’enregistrement des copies hors ligne.",
-      "offlineContent": "Ce qui est gardé sur cet ordinateur pour regarder hors ligne, et la place que cela prend.",
       "transcoding": "Qualités et codecs de traitement de votre bibliothèque.",
       "metadata": "Origine des titres et des visuels.",
       "performance": "Accélération matérielle et délestage du traitement.",
@@ -1464,13 +1423,10 @@
       "ffmpegLogs": "Logs FFmpeg",
       "offlineDownloading": "Téléchargement hors ligne",
       "offlineSavedOffline": "Disponible hors ligne",
-      "exportDownloading": "Téléchargement du fichier",
-      "exportSaved": "Enregistré dans le dossier",
       "help": {
         "sourceIngest": "On découpe le fichier original en morceaux prêts pour le streaming afin de démarrer la lecture rapidement.",
         "transcode": "On crée des qualités supplémentaires pour garder une lecture fluide sur les connexions lentes.",
         "tracks": "On prépare les pistes audio et sous-titres pour pouvoir changer la langue et les sous-titres.",
-        "exportDownloading": "On récupère la meilleure qualité disponible, on la déchiffre, puis on écrit un seul fichier vidéo avec toutes les pistes dans le dossier choisi.",
         "offlineDownloading": "On télécharge chaque morceau, on le déchiffre, puis on assemble toutes les pistes dans un seul fichier lisible hors ligne.",
         "job": "Cette étape prépare les fichiers média pour la lecture et la synchronisation."
       }

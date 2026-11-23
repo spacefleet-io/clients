@@ -33,6 +33,7 @@ vi.mock("react-native", () => ({
 vi.mock("@space/mobile-shell/pairing", () => ({ createPairingCompletionDeps: () => ({}) }));
 vi.mock("../src/lib/crypto", () => ({ decryptBase64ToBytes: () => new Uint8Array() }));
 vi.mock("../src/lib/onboarding", () => ({ setLibraryKeyAcknowledged: async () => undefined, setStoredLibraryKey: async () => undefined }));
+vi.mock("../src/tv/lib/pairingRuntime", () => ({ tvDeviceName: () => "TV model" }));
 vi.mock("lucide-react-native", () => ({ ArrowRight: "Icon", ChevronRight: "Icon", Lock: "Icon", Mail: "Icon", QrCode: "Icon" }));
 vi.mock("@react-navigation/native", () => ({ useNavigation: () => ({ navigate: vi.fn() }) }));
 vi.mock("@space/mobile-shell/components", () => {
@@ -69,11 +70,6 @@ vi.mock("@space/shared/api", async () => ({
   ApiError: (await vi.importActual<typeof SharedApi>("@space/shared/api")).ApiError,
   requestPasswordReset: (...a: unknown[]) => h.requestPasswordReset(...a),
   confirmPasswordReset: vi.fn(),
-  // The screen's import chain reaches the profile store (#3594), which binds these at load; never called here.
-  listProfiles: vi.fn(),
-  createProfile: vi.fn(),
-  updateProfile: vi.fn(),
-  deleteProfile: vi.fn(),
 }));
 vi.mock("../src/lib/apiConfig", () => ({ getStoredApiHost: async () => null, serverPickerAllowed: () => false, setStoredApiHost: vi.fn() }));
 vi.mock("../src/store/auth", () => ({ useAuth: () => ({ login: h.login }) }));

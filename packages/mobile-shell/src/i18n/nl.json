@@ -17,47 +17,9 @@
     "saving": "Opslaan…",
     "error": "De API-host kon niet worden opgeslagen. Controleer de waarde en probeer het opnieuw."
   },
-  "signup": {
-    "title": "Account aanmaken",
-    "subtitle": "Je moet je e-mail bevestigen voordat je kunt inloggen.",
-    "emailLabel": "E-mail",
-    "passwordLabel": "Wachtwoord",
-    "confirmLabel": "Herhaal wachtwoord",
-    "button": "Account aanmaken",
-    "creating": "Aanmaken…",
-    "haveAccountPrompt": "Heb je al een account?",
-    "signIn": "Inloggen",
-    "errors": {
-      "passwordLength": "Je wachtwoord moet minstens 8 tekens hebben.",
-      "passwordMismatch": "De wachtwoorden komen niet overeen.",
-      "emailExists": "Dit e-mailadres is al geregistreerd.",
-      "emailDomainDisallowed": "Dit e-maildomein is niet toegestaan. Gebruik een andere e-mailprovider.",
-      "generic": "Registreren mislukt. Probeer het opnieuw."
-    }
-  },
-  "verifyEmail": {
-    "title": "Bevestig je e-mail",
-    "subtitle": "We hebben een verificatiecode naar je e-mail gestuurd. Vul hem hier in om je registratie af te ronden.",
-    "codeLabel": "Verificatiecode",
-    "codePlaceholder": "123456",
-    "submit": "E-mail bevestigen",
-    "verifying": "Bevestigen…",
-    "resend": "Verificatiecode opnieuw sturen",
-    "sending": "Versturen…",
-    "backToSignIn": "Terug naar inloggen",
-    "sent": "Verificatiecode verstuurd. Kijk in je inbox.",
-    "errors": {
-      "invalidCode": "Ongeldige verificatiecode. Probeer het opnieuw.",
-      "emailNotFound": "Geen account gevonden voor dit e-mailadres.",
-      "sendFailed": "Kan de verificatiecode niet versturen.",
-      "generic": "Kan je e-mail niet bevestigen."
-    }
-  },
   "login": {
     "title": "Inloggen",
     "withAccount": "Log in met je SpaceFleet-account",
-    "noAccountPrompt": "Nog geen account?",
-    "createAccount": "Account aanmaken",
     "emailLabel": "E-mail",
     "passwordLabel": "Wachtwoord",
     "twoFactorLabel": "Verificatiecode",
@@ -101,11 +63,11 @@
     },
     "provider": {
       "signInWith": "Inloggen met {{provider}}",
-      "signUpWith": "Registreren met {{provider}}",
       "or": "of",
       "continueInBrowser": "Rond het inloggen af in je browser. Daarna kom je hier terug.",
       "errorStart": "Inloggen kon niet starten. Probeer het opnieuw.",
       "errors": {
+        "no_account": "Er is geen SpaceFleet-account met dit e-mailadres. Maak er een aan in Badger of Parrot op een computer en log dan hier in.",
         "email_unverified": "Het e-mailadres van dit account is niet bevestigd. Bevestig het bij de aanbieder, of log in met je e-mailadres en wachtwoord.",
         "email_domain_disallowed": "Met dit e-mailadres kan geen account worden aangemaakt.",
         "account_deletion_pending": "Dit account wordt binnenkort verwijderd.",
@@ -290,36 +252,6 @@
       "playlist": "Afspeellijst"
     }
   },
-  "offlineContent": {
-    "entry": "Offline inhoud beheren",
-    "title": "Offline inhoud",
-    "back": "Terug",
-    "totalSuffix": "offline opgeslagen",
-    "unknownArtist": "Onbekende artiest",
-    "removeAll": "Alles verwijderen",
-    "confirmCancel": "Annuleren",
-    "confirmRemove": "Alles verwijderen",
-    "removeFailed": "Verwijderen is niet gelukt. Probeer het opnieuw.",
-    "expand": "Inhoud van {{name}} tonen of verbergen",
-    "remove": "{{name}} van deze telefoon verwijderen",
-    "season": "Seizoen {{n}}",
-    "episodeNumber": "S{{season}} A{{episode}}",
-    "unknownTitle": "Titel staat niet meer in de mediatheek",
-    "unknownEpisode": "Aflevering staat niet meer in de mediatheek",
-    "unknown": "Staat niet meer in de mediatheek",
-    "badger": {
-      "entryDescription": "Bekijk wat er op deze telefoon wordt bewaard en maak ruimte vrij",
-      "confirmTitle": "Alles verwijderen wat op deze telefoon wordt bewaard?",
-      "confirmBody": "Alle films en afleveringen die op deze telefoon zijn gedownload, worden verwijderd. Je kunt ze later opnieuw downloaden.",
-      "empty": "Er wordt niets op deze telefoon bewaard. Tik op Downloaden bij een film of aflevering om die zonder verbinding te bekijken."
-    },
-    "parrot": {
-      "entryDescription": "Bekijk wat er offline op deze telefoon is opgeslagen en maak ruimte vrij",
-      "confirmTitle": "Alles verwijderen wat offline is opgeslagen?",
-      "confirmBody": "Alle albums, playlists en nummers die offline op deze telefoon zijn opgeslagen, worden verwijderd. Je kunt ze later opnieuw offline opslaan.",
-      "empty": "Er staat nog niets offline op deze telefoon. Tik op Offline opslaan bij een album, playlist of nummer om het zonder verbinding te beluisteren."
-    }
-  },
   "downloads": {
     "title": "Downloads",
     "back": "Terug",
@@ -495,7 +427,7 @@
     "playlists": "Afspeellijsten",
     "settings": "Instellingen",
     "loading": "Laden…",
-    "loadingLibrary": "Bibliotheek wordt geladen…",
+    "loadingLibrary": "Mediatheek laden…",
     "updateRequired": "Update vereist",
     "unavailable": "Badger is niet beschikbaar: {{issue}}. Werk je app bij.",
     "screenLoadFailed": "Het scherm kon niet worden geladen",
@@ -904,8 +836,8 @@
   },
   "tvPairing": {
     "signIn": {
-      "title": "Inloggen bij {{app}}",
-      "subtitle": "Open op je telefoon of computer {{app}} → Instellingen → Apparaat koppelen en scan dan de code of typ hem in.",
+      "title": "Inloggen bij Badger",
+      "subtitle": "Open op je telefoon of computer Badger → Instellingen → Apparaat koppelen en scan dan de code of typ hem in.",
       "codeLabel": "Of typ deze code in",
       "qrAccessibility": "QR-code om deze tv te koppelen",
       "starting": "Koppelcode ophalen…",
@@ -919,7 +851,7 @@
       },
       "errors": {
         "title": "Deze tv kon niet worden gekoppeld",
-        "unreachable": "We konden {{app}} niet bereiken. Controleer de verbinding van deze tv en haal een nieuwe code op.",
+        "unreachable": "We konden Badger niet bereiken. Controleer de verbinding van deze tv en haal een nieuwe code op.",
         "failed": "Er ging iets mis bij het koppelen. Haal een nieuwe code op om het opnieuw te proberen.",
         "key_unreadable": "De goedkeuring is bij deze tv aangekomen, maar de mediatheeksleutel kon niet worden gelezen. Haal een nieuwe code op en keur hem opnieuw goed.",
         "key_mismatch": "De verstuurde mediatheeksleutel opent de mediatheek van dit account niet. Er is niets opgeslagen op deze tv. Haal een nieuwe code op en keur hem opnieuw goed via een app die je mediatheek heeft."
@@ -1036,7 +968,8 @@
   },
   "libraryFormat": {
     "title": "Update vereist",
-    "body": "Deze mediatheek is gemaakt met een nieuwere versie van Badger."
+    "body": "Deze mediatheek is gemaakt met een nieuwere versie van Badger. Werk de app bij om hem te openen.",
+    "update": "Nu bijwerken"
   },
   "home": {
     "empty": {
@@ -1102,12 +1035,7 @@
       "added": "Datum toegevoegd",
       "release": "Jaar van uitgave",
       "asc": "Oplopend",
-      "desc": "Aflopend",
-      "title": "Sorteren op",
-      "by": "Veld",
-      "direction": "Volgorde",
-      "button": "Sorteren",
-      "done": "Klaar"
+      "desc": "Aflopend"
     },
     "row": {
       "runtimeMinutes": "{{minutes}} min",
@@ -1123,70 +1051,6 @@
     "poster": {
       "watched": "{{percent}}% bekeken",
       "downloaded": "gedownload"
-    },
-    "filters": {
-      "clear": "Filters wissen",
-      "genres": {
-        "title": "Genres",
-        "search": "Genres zoeken…",
-        "empty": "Geen genres gevonden voor deze zoekopdracht."
-      },
-      "actors": {
-        "title": "Acteurs",
-        "search": "Acteurs zoeken…",
-        "empty": "Geen acteurs gevonden voor deze zoekopdracht."
-      },
-      "title": "Filteren",
-      "clearShort": "Wissen",
-      "more": "+{{count}} meer",
-      "reset": "Resetten",
-      "apply": "Toepassen",
-      "qualities": {
-        "title": "Kwaliteit",
-        "search": "Kwaliteit zoeken",
-        "empty": "Geen kwaliteit gevonden"
-      },
-      "directors": {
-        "title": "Regie",
-        "search": "Regisseur zoeken",
-        "empty": "Geen regisseur gevonden"
-      },
-      "audioLanguages": {
-        "title": "Audiotaal",
-        "search": "Taal zoeken",
-        "empty": "Geen taal gevonden"
-      },
-      "subtitleLanguages": {
-        "title": "Ondertiteltaal",
-        "search": "Taal zoeken",
-        "empty": "Geen taal gevonden"
-      },
-      "watchStates": {
-        "title": "Kijkstatus",
-        "search": "Status zoeken",
-        "empty": "Geen status gevonden"
-      },
-      "quality": {
-        "sd": "SD (480p of lager)"
-      },
-      "watchState": {
-        "unwatched": "Niet bekeken",
-        "in-progress": "Bezig",
-        "watched": "Bekeken"
-      },
-      "undefinedLanguage": "Onbekende taal",
-      "active_one": "Filteren, {{count}} aan",
-      "active_other": "Filteren, {{count}} aan",
-      "showOnly": "Alleen tonen"
-    },
-    "stats": {
-      "movie_one": "{{count}} film",
-      "movie_other": "{{count}} films",
-      "movie_many": "{{count}} films",
-      "series_one": "{{count}} serie",
-      "series_other": "{{count}} series",
-      "series_many": "{{count}} series",
-      "shownOf": "{{shown}} van {{total}}"
     }
   },
   "playlists": {
@@ -1232,22 +1096,6 @@
         "hint": "Je opgeslagen mediatheek blijft zichtbaar."
       },
       "close": "Melding sluiten"
-    }
-  },
-  "sync": {
-    "indicator": {
-      "updating": "Mediatheek bijwerken…",
-      "updatingProgress": "Mediatheek bijwerken… {{percent}}%",
-      "savedStaysLabel": "Je opgeslagen mediatheek blijft beschikbaar",
-      "newEpisodes_one": "{{count}} nieuwe aflevering",
-      "newEpisodes_other": "{{count}} nieuwe afleveringen",
-      "newTitles_one": "{{count}} nieuwe titel",
-      "newTitles_other": "{{count}} nieuwe titels",
-      "updated": "Mediatheek bijgewerkt",
-      "upToDate": "Bijgewerkt",
-      "failed": "Bijwerken mislukt",
-      "failedLabel": "Bijwerken van de mediatheek mislukt — opgeslagen inhoud",
-      "retry": "Tik om opnieuw te proberen."
     }
   },
   "shell": {
@@ -1392,40 +1240,6 @@
   },
   "appUpdate": {
     "title": "Werk {{app}} bij om verder te gaan",
-    "tooOld": "Deze versie van {{app}} is te oud om verbinding te maken.",
-    "how": {
-      "appstore": "Werk {{app}} bij in de App Store en open de app daarna opnieuw.",
-      "testflight": "Installeer de nieuwe versie van {{app}} via TestFlight en open de app daarna opnieuw.",
-      "play": "Werk {{app}} bij via Google Play en open de app daarna opnieuw.",
-      "amazon": "Werk {{app}} bij in de Amazon Appstore en open de app daarna opnieuw.",
-      "fdroid": "Werk {{app}} bij in F-Droid en open de app daarna opnieuw.",
-      "obtainium": "Werk {{app}} bij in Obtainium en open de app daarna opnieuw.",
-      "apk": "Download de nieuwe versie van {{app}}, installeer die over deze heen en open de app daarna opnieuw.",
-      "store": "Werk {{app}} bij in de winkel waarmee je de app hebt geïnstalleerd en open hem daarna opnieuw.",
-      "unknown": "Installeer de nieuwe versie vanaf waar je {{app}} hebt gekregen en open de app daarna opnieuw."
-    },
-    "open": {
-      "appstore": "App Store openen",
-      "testflight": "TestFlight openen",
-      "play": "Google Play openen",
-      "amazon": "Amazon Appstore openen",
-      "fdroid": "F-Droid openen",
-      "obtainium": "Obtainium openen",
-      "apk": "Nieuwe versie downloaden",
-      "store": "Winkel openen"
-    }
-  },
-  "sibling": {
-    "title": "Doorgaan met je {{other}}-account",
-    "body": "{{other}} is ingelogd op deze telefoon. Je hoeft niets in te typen.",
-    "button": "Doorgaan als {{email}}",
-    "otherAccount": "Een ander account gebruiken",
-    "waiting": "Wachten op {{other}}…",
-    "waitingNote": "Sta het toe in {{other}} en kom dan terug.",
-    "cancel": "Annuleren",
-    "failure": "{{other}} kon je niet inloggen. Log op een andere manier in.",
-    "askTitle": "{{app}} je SpaceFleet-account laten gebruiken?",
-    "askBody": "{{app}} op deze telefoon wordt ingelogd als {{email}}, met een eigen kopie van je mediatheeksleutel. Je kunt het altijd uitloggen bij Apparaten.",
-    "allow": "Toestaan"
+    "body": "Deze versie van {{app}} is te oud om verbinding te maken. Installeer de nieuwe versie vanaf waar je {{app}} hebt gekregen en open de app daarna opnieuw."
   }
 }

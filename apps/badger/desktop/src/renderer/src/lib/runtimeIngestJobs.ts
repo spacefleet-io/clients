@@ -198,8 +198,7 @@ const toLabJob = (
   // Offline-download metadata snapshot. Only consulted for download jobs —
   // source/format jobs never carry `manifest.filenameInputs`, so `fi` stays
   // undefined and every fallback below is inert (ingest labels unchanged).
-  // Export jobs ("Download everything", ACCT-EXPORT-01) carry the same manifest snapshot.
-  const fi = rec.kind === "download" || rec.kind === "export" ? payload.manifest?.filenameInputs : undefined;
+  const fi = rec.kind === "download" ? payload.manifest?.filenameInputs : undefined;
   const manifestLabel = offlineManifestLabel(fi);
   // Stamp wins for new jobs (payload.filename); manifest covers completed/legacy
   // jobs whose persisted payload predates the stamp; UUID is the last resort.
@@ -223,9 +222,7 @@ const toLabJob = (
       ? "transcode"
       : rec.kind === "download"
         ? "download"
-        : rec.kind === "export"
-          ? "export"
-          : "source";
+        : "source";
   const codec = payload.hints?.codec ?? "h264";
   const selectedFormats =
     rec.kind === "format" && rec.variant
@@ -420,7 +417,7 @@ export const buildIngestJobGroups = (
     // show/movie title from the manifest snapshot instead of dropping to the
     // group's UUID id.
     const dlFi =
-      firstRaw?.kind === "download" || firstRaw?.kind === "export" ? payload.manifest?.filenameInputs : undefined;
+      firstRaw?.kind === "download" ? payload.manifest?.filenameInputs : undefined;
     const dlTitle =
       dlFi?.kind === "episode" ? dlFi.showTitle : dlFi?.kind === "movie" ? dlFi.title : undefined;
     const title =

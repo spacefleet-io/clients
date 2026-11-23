@@ -2,7 +2,7 @@
 /**
  * @test-id BADGER-DESKTOP-LOADING-MASCOT-001
  * @level unit
- * @req UX-WAIT-02[badger-desktop] UX-WAIT-04[badger-desktop]
+ * @req UX-WAIT-02[badger-desktop]
  * @why Chris 2026-11-11: the loading screens Badger shows while it opens get the hovering badger ABOVE the loading text,
  *   and the text itself stays exactly as it was (same key, same place). Covers the full-screen wait (account, app,
  *   profiles) and the library's own "Loading library…" wait.
@@ -80,11 +80,14 @@ describe("Badger desktop loading screens: hovering badger above the unchanged te
     expect(authenticated).toContain('<LoadingScreen label={t("app.loading")} />');
   });
 
-  it("the library page's wait is Home's: the badger above library.loading, in the middle of the window below the top bar", () => {
+  it("the library's own wait puts the mascot right above the unchanged library.loading text", () => {
     const library = source("pages/Library.tsx");
-    say("Library.tsx wait", library.match(/libraryState === "loading" \? \([\s\S]{0,200}/)?.[0]);
-    expect(library).toContain('import { LibraryLoading } from "@/components/LoadingScreen";');
-    expect(library).toMatch(/libraryState === "loading" \? \(\s*\/\/[^\n]*\n\s*<LibraryLoading label=\{t\("library\.loading"\)\} \/>/);
-    expect(library).not.toContain("<MascotLoader");
+    const mascotAt = library.indexOf('<MascotLoader app="badger" src={mascotUrl} size={120} />');
+    const textAt = library.indexOf('<div className="text-sm text-[#8b949e]">{t("library.loading")}</div>');
+    say("Library.tsx offsets", { mascotAt, textAt });
+    expect(mascotAt).toBeGreaterThan(-1);
+    expect(textAt).toBeGreaterThan(mascotAt);
+    // Nothing between the mascot line and the text line.
+    expect(library.slice(mascotAt, textAt).trim().split("\n")).toHaveLength(1);
   });
 });

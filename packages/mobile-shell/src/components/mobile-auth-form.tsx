@@ -156,11 +156,10 @@ type MobileAuthLinkProps = {
   onPress: () => void;
   color: string;
   style?: React.ComponentProps<typeof Text>["style"];
-  testID?: string;
 };
 
 /** A text link under the form ("Forgot password?"). On TV it carries the remote's ring in the text colour (UX-TV-16). */
-export const MobileAuthLink = ({ label, onPress, color, style, testID }: MobileAuthLinkProps) => {
+export const MobileAuthLink = ({ label, onPress, color, style }: MobileAuthLinkProps) => {
   const theme = useMobileShellTheme();
   const tv = Platform.isTV === true;
   const [focused, setFocused] = useState(false);
@@ -170,7 +169,6 @@ export const MobileAuthLink = ({ label, onPress, color, style, testID }: MobileA
       onFocus={tv ? () => setFocused(true) : undefined}
       onBlur={tv ? () => setFocused(false) : undefined}
       onPress={onPress}
-      testID={testID}
     >
       <Text style={[style, { color: tv && focused ? theme.colors.text : color }]}>{label}</Text>
     </Pressable>
