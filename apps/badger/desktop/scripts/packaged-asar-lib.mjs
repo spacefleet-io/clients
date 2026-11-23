@@ -5,7 +5,7 @@
 // excludes below drop the rest; `checkPackagedAsarEntries` re-checks the built
 // asar and tests/packaged-asar.test.ts proves the excludes never remove a file
 // the main process loads.
-import { readdirSync, readFileSync } from "node:fs";
+import { readdirSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname } from "node:path";
 
@@ -73,26 +73,4 @@ export const checkPackagedAsarEntries = (entries) => {
   });
   const present = new Set(normalized);
   return { unexpected, missing: REQUIRED_ASAR_ENTRIES.filter((entry) => !present.has(entry)) };
-};
-
-/**
- * Every file path inside an asar archive. Reads only the JSON header: the file is a
- * Chromium pickle (u32 size, u32 header size, u32 json length, u32 json length, json).
- * @param {string} asarPath
- * @returns {string[]}
- */
-export const listAsarEntries = (asarPath) => {
-  const buffer = readFileSync(asarPath);
-  const jsonLength = buffer.readUInt32LE(12);
-  const header = JSON.parse(buffer.subarray(16, 16 + jsonLength).toString("utf8"));
-  const entries = [];
-  const walk = (node, prefix) => {
-    for (const [name, child] of Object.entries(node.files ?? {})) {
-      const path = `${prefix}/${name}`;
-      if (child.files) walk(child, path);
-      else entries.push(path.slice(1));
-    }
-  };
-  walk(header, "");
-  return entries;
 };

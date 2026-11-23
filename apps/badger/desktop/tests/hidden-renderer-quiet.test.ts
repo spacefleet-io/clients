@@ -333,6 +333,33 @@ describe("engine setProgress while hidden (@bugfix @regression-proof issue #25 P
     expect(lib.stateWrites().map((c) => c.args)).toEqual([["m2", 41, null, null]]);
   });
 
+  // @bugfix @regression-proof alert audit #3356 A17: LIBRARY_NOT_READY reached Bugsink as an unhandled rejection
+  // (badger-desktop 0.1.20, 2026-11-20) when playback unmounted after the library closed.
+  it("a replayed save the closed library refuses is logged, never an unhandled rejection", async () => {
+    const unhandled: unknown[] = [];
+    const onUnhandled = (reason: unknown) => unhandled.push(reason);
+    process.on("unhandledRejection", onUnhandled);
+    try {
+      const lib = fakeLibrary();
+      let libraryOpen = true;
+      const deferred = createHiddenDeferredProgress(async (...args) => {
+        if (!libraryOpen) throw new Error("LIBRARY_NOT_READY");
+        return lib.setProgress(...args);
+      });
+      const detach = deferred.attach();
+      __setAppWindowHiddenForTests({ hidden: true, atMs: T0, reason: "external-mpv-hide" });
+      await deferred.setProgress("m3", 50, null, null);
+      libraryOpen = false;
+      detach();
+      // No delay: one macrotask turn is when Node reports a rejection nobody handled.
+      await new Promise((resolveTurn) => setImmediate(resolveTurn));
+      expect(unhandled).toEqual([]);
+      expect(lib.stateWrites()).toHaveLength(0);
+    } finally {
+      process.off("unhandledRejection", onUnhandled);
+    }
+  });
+
   it("LibraryProvider's setProgress persists without state writes when deferUi is set; the playback engine gets the wrapper", () => {
     const src = readFileSync(resolve(__dirname, "../src/renderer/src/lib/libraryContext.tsx"), "utf8");
     const start = src.indexOf("const setProgress = useCallback(");

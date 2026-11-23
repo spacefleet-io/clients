@@ -19,7 +19,9 @@ import { exportBridgeStub } from "./exportBridge";
 import {
   bytesToBase64,
   generateDeviceKeyPair,
+  newPairingNonce,
   openSealedKey,
+  pairingCommitment,
   type DeviceKeyPair,
   type PairingRequestInfo,
   type SealedKey,
@@ -61,6 +63,9 @@ describe("@req ACCT-PAIR-01 @req ACCT-PAIR-02 Parrot desktop approves a new devi
   let windowSaw: unknown[];
   let approver: ParrotPairingApprover;
   let request: PairingRequestInfo;
+  /** PRIV-PAIR-01: the browser's secret number, revealed once main connected. */
+  let browserNonce: string;
+  let connected: string | null;
 
   const flush = async () => {
     await act(async () => {
@@ -96,12 +101,16 @@ describe("@req ACCT-PAIR-01 @req ACCT-PAIR-02 Parrot desktop approves a new devi
     sealed = null;
     mainLog = [];
     windowSaw = [];
+    browserNonce = newPairingNonce();
+    connected = null;
     request = {
       requestId: "req-web",
       app: "parrot",
       deviceType: "web",
       deviceName: "Firefox on Linux",
       publicKey: browser.publicKey,
+      protocol: 2,
+      commitment: pairingCommitment(browser.publicKey, browserNonce),
       expiresAt: new Date(Date.now() + 300_000).toISOString(),
     };
     approver = createParrotPairingApprover({
@@ -124,6 +133,12 @@ describe("@req ACCT-PAIR-01 @req ACCT-PAIR-02 Parrot desktop approves a new devi
           requestState = "denied";
           return { ok: true };
         }),
+        keyOpensAccount: vi.fn(async () => true),
+        connect: vi.fn(async (_token: string, _id: string, nonce: string) => {
+          connected = nonce;
+          return { ok: true };
+        }),
+        readReveal: vi.fn(async () => (connected ? { status: "pending", requesterNonce: browserNonce } : { status: "pending" })),
       },
       log: (line) => mainLog.push(line),
     });

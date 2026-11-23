@@ -1031,7 +1031,11 @@
       "confirmRequired": "Confirm that you saved the new key.",
       "passwordRequired": "Password required.",
       "notReady": "Media library is not ready.",
-      "rotate": "Unable to rotate key. Check your password/code."
+      "rotate": "Unable to rotate key. Check your password/code.",
+      "notReencrypted": "Another app's library could not be moved to the new key. Nothing changed. Rotate from a device that holds the current key.",
+      "unreadable": "This phone's key can't open another app's library. Nothing changed. Rotate from a device that holds the current key.",
+      "notSnapshotted": "Another app's library is still saving. Nothing changed. Open that app, let it sync, then try again.",
+      "changed": "A library changed while rotating. Nothing changed. Try again."
     }
   },
   "libraryFormat": {

@@ -6,7 +6,7 @@ import { directRenderOf, loadsOcrTwin } from "@space/mobile-mpv-playback/ocrTwin
 import { getCurrentLanguage, useTranslation } from "@space/mobile-shell/i18n";
 import { useLibraryActions } from "../store/library";
 import { useAuth } from "../store/auth";
-import { playerFailureMessage } from "../lib/unpaidAccess";
+import { playerFailureMessage } from "@space/mobile-shell/unpaid-access";
 import { getAppSettings } from "../lib/appSettings";
 import { theme } from "../theme/theme";
 import { usePlayerSession } from "./player/usePlayerSession";
@@ -341,12 +341,10 @@ const PlayerScreenInner = ({
   // Only the first load uses these (rule 1: the first frame is the Settings rung); later switches go through MpvControl.
   const startOptions = useMemo(
     () => (playing ? buildStartOptions({ startSeconds: start!.seconds }) : null),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [playing, start],
   );
   const startSource = useMemo(
     () => (playing && session.playUrl && qualityRef.current?.currentId ? rungMasterUrl(session.playUrl, qualityRef.current.currentId) : null),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [playing, start],
   );
 

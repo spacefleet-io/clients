@@ -11,6 +11,7 @@ import { isClientUiLanguage } from "@space/shared";
 import { needsTitleFallback, TITLE_FALLBACK_LANGUAGE } from "@space/shared/titleLanguage";
 import { createDetailsTexts, detailsEpisodes, detailsOverview, type DetailsTextItem, type LocalizedTextLibrary } from "@space/metadata-client";
 import type { LibraryDb } from "@/lib/libraryDb";
+import { rendererLogger } from "@/logger";
 
 // Every the catalog lookup goes through the SpaceFleet metadata service (META-DIRECT-03: the desktop never calls
 // the catalog itself; the user's own-key mode was removed).
@@ -50,7 +51,10 @@ export const setDesktopTextsLibrary = (db: Pick<LibraryDb, "getSetting" | "setSe
 const detailsTexts = createDetailsTexts({
   details: (type, id, language) => getMetadataDetails("", type, id, language),
   library: () => textsLibrary,
-  onError: (stage, error) => console.warn(`[metadata] texts.library.${stage}.failed`, error),
+  onError: (stage, error) =>
+    rendererLogger
+      .child({ scope: "metadata" })
+      .warn({ error: error instanceof Error ? error.message : String(error) }, `[metadata] texts.library.${stage}.failed`),
 });
 
 // Every episode's name and synopsis of one show in one language, for `useLocalizedEpisodes` (LIB-LANG-01/02).

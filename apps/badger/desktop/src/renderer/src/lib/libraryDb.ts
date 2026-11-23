@@ -1,4 +1,4 @@
-import type { LibraryMeta, TitleDetails } from "@/api";
+import type { LibraryMeta, RotationOwnLibrary, TitleDetails } from "@/api";
 import type {
   LibrarySnapshot,
   MediaCastDraft,
@@ -104,12 +104,27 @@ export class LibraryDb {
     return new LibraryDb(response.handle);
   }
 
-  static async getLocalCacheBytes(keyBase64?: string) {
+  /** PRIV-KEY-13: onboarding's "recover from this device": the local cache sealed under the new key, or null. */
+  static async sealLocalCacheForRotation(token: string, newKeyBase64: string) {
     const bridge = getBridge();
-    if (!bridge.getLocalCacheBytes) {
+    if (!bridge.sealLocalCacheForRotation) {
       throw new Error("LIBRARY_DB_CACHE_MISSING");
     }
-    return bridge.getLocalCacheBytes(keyBase64);
+    return bridge.sealLocalCacheForRotation({ token, newKeyBase64 });
+  }
+
+  /**
+   * PRIV-KEY-06: every other app's library (Parrot's) opened with the old key and re-encrypted under the new one, for
+   * the rotation's `otherLibraries`. Throws `ROTATION_REENCRYPT_<UNREADABLE|NOT_SNAPSHOTTED|FAILED>`: nothing rotated.
+   */
+  static async reencryptForRotation(token: string, oldKeyBase64: string, newKeyBase64: string) {
+    const bridge = getBridge();
+    if (!bridge.reencryptForRotation) {
+      throw new Error("ROTATION_REENCRYPT_FAILED");
+    }
+    const result = await bridge.reencryptForRotation({ token, oldKeyBase64, newKeyBase64 });
+    if (!result.ok) throw new Error(`ROTATION_REENCRYPT_${result.error.toUpperCase()}`);
+    return result.copies;
   }
 
   static async hasLocalCache() {
@@ -170,8 +185,9 @@ export class LibraryDb {
     return call<DatasetStatus>(this.handle, "getDatasetStatus");
   }
 
-  exportBytes() {
-    return call<Uint8Array>(this.handle, "exportBytes");
+  /** PRIV-KEY-13: this library as a snapshot under the new key (chunks uploaded), declaring its formats. */
+  sealForRotation(newKeyBase64: string) {
+    return call<RotationOwnLibrary>(this.handle, "sealForRotation", [newKeyBase64]);
   }
 
   setSyncEnabled(enabled: boolean) {

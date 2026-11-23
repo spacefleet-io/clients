@@ -1032,7 +1032,11 @@
       "confirmRequired": "Confirma que has guardado la nueva clave.",
       "passwordRequired": "La contraseña es obligatoria.",
       "notReady": "La mediateca no está lista.",
-      "rotate": "No se pudo cambiar la clave. Revisa tu contraseña o tu código."
+      "rotate": "No se pudo cambiar la clave. Revisa tu contraseña o tu código.",
+      "notReencrypted": "La mediateca de otra app no se pudo pasar a la nueva clave. No ha cambiado nada. Cambia la clave desde un dispositivo que tenga la clave actual.",
+      "unreadable": "La clave de este teléfono no abre la mediateca de otra app. No ha cambiado nada. Cambia la clave desde un dispositivo que tenga la clave actual.",
+      "notSnapshotted": "La mediateca de otra app todavía se está guardando. No ha cambiado nada. Abre esa app, deja que se sincronice y vuelve a intentarlo.",
+      "changed": "Una mediateca cambió durante el cambio de clave. No ha cambiado nada. Vuelve a intentarlo."
     }
   },
   "libraryFormat": {

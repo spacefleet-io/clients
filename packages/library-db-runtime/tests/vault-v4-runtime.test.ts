@@ -267,12 +267,18 @@ const waitFor = async (label: string, predicate: () => boolean, timeoutMs = 10_0
   }
 };
 
+type TestSqlite = { prepare(sql: string): { all(...params: unknown[]): unknown[]; run(...params: unknown[]): unknown } };
 const internals = (db: Db) =>
   db as unknown as {
     pendingOps: unknown[];
     opsFlushInFlight: boolean;
-    playbackSqlite: { prepare(sql: string): { all(...params: unknown[]): unknown[] } };
+    syncEnabled: boolean;
+    secondaryOpsInFlight: Promise<void> | null;
+    coreSqlite: TestSqlite;
+    metadataSqlite: TestSqlite;
+    playbackSqlite: TestSqlite;
     uploadSnapshot(meta: LibraryMeta): Promise<void>;
+    ensurePublishableState(stage: "ops" | "snapshot" | "pending-snapshot"): Promise<boolean>;
   };
 const drained = (db: Db) => internals(db).pendingOps.length === 0 && !internals(db).opsFlushInFlight;
 
@@ -675,5 +681,146 @@ describe("vault v4 runtime (LIB-FMT-11/12/13)", () => {
     expect(db.isPackedPlaybackLayout()).toBe(true);
     expect(db.getTargetOpStreamVersion()).toBe(4);
     db.close();
+  }, 60_000);
+
+  /**
+   * @bugfix @regression-proof LIB-SYNC-22 (Badger delete leak, 2026-11-23 release smoke)
+   * A device that applied another device's `media.delete` kept the title's metadata/playback/templates rows: only
+   * `media.upsert` and the version-4 playback ops reached those files, and compaction kept a `media.file.playback.set`
+   * of a title deleted later in the same batch. With the title gone from `media_items` the rows were orphans; once the
+   * device deleted its last title, the publish guard (`semantic_orphaned_playback_rows`) quarantined sync, so that
+   * delete never reached the server and the title came back on every other device.
+   * @req LIB-SYNC-22[runtime]
+   */
+  const secondaryRows = (db: Db, mediaId: string) => {
+    const one = (sqlite: { prepare(sql: string): { all(...params: unknown[]): unknown[] } }, table: string, column = "media_id") =>
+      sqlite.prepare(`SELECT COUNT(1) AS c FROM ${table} WHERE ${column} = ?`).all(mediaId)[0] as { c: number };
+    const rows = {
+      media_items: one(internals(db).coreSqlite, "media_items", "id").c,
+      media_files: one(internals(db).metadataSqlite, "media_files").c,
+      media_formats: one(internals(db).playbackSqlite, "media_formats").c,
+      media_audio_tracks: one(internals(db).playbackSqlite, "media_audio_tracks").c,
+      media_file_playback: one(internals(db).playbackSqlite, "media_file_playback").c,
+      chunk_lists: (playbackRows(db, "SELECT owner_id FROM media_chunk_lists") as unknown[]).length,
+    };
+    return rows;
+  };
+  const secondaryDone = (db: Db) => internals(db).secondaryOpsInFlight === null;
+  const addPlayableFilm = async (db: Db, catalogId: number, name: string) => {
+    const id = await db.addMediaFromCatalog(catalogTitle(catalogId, "movie", name));
+    const file = await db.linkFileToMedia(id, `/videos/${name}.mp4`);
+    await db.addMediaFormat(id, file, "360p", "h264", 1, [{ key: `${PLACEMENT}/${randomUUID()}`, sizeBytes: 500 }], 700, { initKey: `${PLACEMENT}/${name}-init`, initSize: 10, durationSeconds: 6, totalSize: 510 });
+    await db.addAudioTrackWithChunks({ mediaId: id, fileId: file, season: null, episode: null, language: "en", label: "English", codec: "aac", initKey: `${PLACEMENT}/${name}-audio-init`, initSize: 10, durationSeconds: 6, totalSize: 110, chunks: [{ key: `${PLACEMENT}/${randomUUID()}`, sizeBytes: 100 }] });
+    await db.markMediaPlayable(id);
+    return id;
+  };
+  /** Device A on a switched, empty library and a fresh device B on the same account. */
+  const twoDevicesOnEmptyV4Library = async () => {
+    const { db: a } = await seedV3Library();
+    fake.target = 4;
+    await syncOnce(a);
+    for (const media of a.getSnapshot().media as Array<{ id: string }>) await a.deleteMedia(media.id);
+    await waitFor("a drained", () => drained(a));
+    await internals(a).uploadSnapshot(fake.meta());
+    useFreshRoot();
+    const b = await LibraryDb.open(TOKEN, KEY);
+    b.setSyncEnabled(true);
+    await syncOnce(b);
+    await waitFor("b secondary applied", () => secondaryDone(b));
+    log("two-devices:ready", { version: fake.version, snapshotVersion: fake.snapshotVersion, bMedia: (b.getSnapshot().media as unknown[]).length });
+    return { a, b };
+  };
+  /** B deletes `mediaId` (its last title) and must send the delete and stay in sync. */
+  const expectLastDeleteReachesServer = async (b: Db, mediaId: string, label: string) => {
+    const opsBefore = fake.ops.length;
+    await b.deleteMedia(mediaId);
+    await waitFor(`${label}: b drained after delete`, () => drained(b) || !internals(b).syncEnabled, 10_000).catch((error) =>
+      log(`${label}:not-drained`, String(error))
+    );
+    const sent = (await decodedOps(opsBefore)).map((entry) => entry.op);
+    log(`${label}:sent`, { sent: sent.map((op) => op.type), syncEnabled: internals(b).syncEnabled, pending: internals(b).pendingOps.length, orphans: {
+      formats: playbackRows(b, "SELECT media_id FROM media_formats"),
+      audio: playbackRows(b, "SELECT media_id FROM media_audio_tracks"),
+      filePlayback: playbackRows(b, "SELECT media_id FROM media_file_playback"),
+    } });
+    expect(internals(b).syncEnabled).toBe(true);
+    expect(sent.some((op) => op.type === "media.delete" && op.payload.mediaId === mediaId)).toBe(true);
+    expect(playbackRows(b, "SELECT media_id FROM media_formats")).toEqual([]);
+    expect(playbackRows(b, "SELECT media_id FROM media_audio_tracks")).toEqual([]);
+  };
+
+  it("@bugfix a remote add + delete in one batch leaves no playback rows, and the device's last delete still reaches the server", async () => {
+    const { a, b } = await twoDevicesOnEmptyV4Library();
+    const opsBefore = fake.ops.length;
+    const remoteId = await addPlayableFilm(a, 72_001, "remote");
+    await waitFor("a drained after add", () => drained(a));
+    await a.deleteMedia(remoteId);
+    await waitFor("a drained after delete", () => drained(a));
+    log("batch:ops", (await decodedOps(opsBefore)).map((entry) => entry.op.type));
+
+    await syncOnce(b);
+    await waitFor("b secondary applied", () => secondaryDone(b));
+    const after = secondaryRows(b, remoteId);
+    log("batch:b-after", { after, chunkListOwners: playbackRows(b, "SELECT owner_id FROM media_chunk_lists") });
+    expect(after).toEqual({ media_items: 0, media_files: 0, media_formats: 0, media_audio_tracks: 0, media_file_playback: 0, chunk_lists: 0 });
+
+    const ownId = await addPlayableFilm(b, 72_002, "own");
+    await waitFor("b drained after add", () => drained(b));
+    await expectLastDeleteReachesServer(b, ownId, "batch");
+    a.close();
+    b.close();
+  }, 60_000);
+
+  it("@bugfix a remote delete arriving on its own removes the title's metadata and playback rows", async () => {
+    const { a, b } = await twoDevicesOnEmptyV4Library();
+    const remoteId = await addPlayableFilm(a, 72_003, "kept-then-deleted");
+    await waitFor("a drained after add", () => drained(a));
+    await syncOnce(b);
+    await waitFor("b secondary applied (add)", () => secondaryDone(b));
+    const before = secondaryRows(b, remoteId);
+    log("alone:b-before", before);
+    expect(before.media_items).toBe(1);
+    expect(before.media_formats).toBeGreaterThan(0);
+
+    await a.deleteMedia(remoteId);
+    await waitFor("a drained after delete", () => drained(a));
+    await syncOnce(b);
+    await waitFor("b secondary applied (delete)", () => secondaryDone(b));
+    const after = secondaryRows(b, remoteId);
+    log("alone:b-after", after);
+    expect(after).toEqual({ media_items: 0, media_files: 0, media_formats: 0, media_audio_tracks: 0, media_file_playback: 0, chunk_lists: 0 });
+    a.close();
+    b.close();
+  }, 60_000);
+
+  it("@bugfix a device already holding orphaned playback rows still sends the delete of its last title", async () => {
+    const { a, b } = await twoDevicesOnEmptyV4Library();
+    // The state a 0.1.44–0.1.46 device is left in: a title gone from media_items with its playback rows still there.
+    const ghostId = await addPlayableFilm(b, 72_004, "ghost");
+    const ownId = await addPlayableFilm(b, 72_005, "own");
+    await waitFor("b drained after adds", () => drained(b));
+    internals(b).coreSqlite.prepare("DELETE FROM media_items WHERE id = ?").run(ghostId);
+    log("legacy:b-orphans", secondaryRows(b, ghostId));
+    expect(secondaryRows(b, ghostId).media_formats).toBeGreaterThan(0);
+
+    await expectLastDeleteReachesServer(b, ownId, "legacy");
+    expect(secondaryRows(b, ghostId)).toEqual({ media_items: 0, media_files: 0, media_formats: 0, media_audio_tracks: 0, media_file_playback: 0, chunk_lists: 0 });
+    a.close();
+    b.close();
+  }, 60_000);
+
+  it("the publish guard still quarantines playback rows without titles when this device deleted nothing", async () => {
+    const { a, b } = await twoDevicesOnEmptyV4Library();
+    const id = await addPlayableFilm(b, 72_006, "wiped");
+    await waitFor("b drained after add", () => drained(b));
+    // A core file that lost its rows (not a delete of this device): the guard must keep refusing to publish.
+    internals(b).coreSqlite.prepare("DELETE FROM media_items WHERE id = ?").run(id);
+    const publishable = await internals(b).ensurePublishableState("ops");
+    log("guard:result", { publishable, syncEnabled: internals(b).syncEnabled, rows: secondaryRows(b, id) });
+    expect(publishable).toBe(false);
+    expect(internals(b).syncEnabled).toBe(false);
+    expect(secondaryRows(b, id).media_formats).toBeGreaterThan(0);
+    a.close();
+    b.close();
   }, 60_000);
 });

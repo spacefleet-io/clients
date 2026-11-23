@@ -11,6 +11,7 @@ import {
   type LibraryDbPutResult,
   type LibraryMeta,
   type LibraryWriterFormats,
+  type RotationOwnLibrary,
   TitleDetails,
 } from "@space/shared/api";
 import { isLibraryOpStreamSwitch, requireLibraryUpdate } from "@space/shared/appVersion";
@@ -75,7 +76,6 @@ import {
   fetchManifestChunks,
   decryptFileToDb,
   hashDbFile,
-  exportDbBytes,
   createKeyProbe,
   createSnapshotId,
   encryptDbToBinaryFile,
@@ -92,6 +92,7 @@ import {
 } from "@space/shared/playbackResume";
 import {
   buildOpStatements,
+  isSecondaryOnlyOp,
   isV3MediaUpsert,
   OP_STREAM_VERSION,
   playbackFileKey,
@@ -139,6 +140,7 @@ import {
 import { leaveWalForExport } from "./library/leaveWal";
 import {
   clearCache,
+  getRotationSnapshotPath,
   clearPending,
   clearCacheOwner,
   clearPendingOps,
@@ -264,13 +266,6 @@ const isVersion4Op = (op: LibraryOp) =>
   op.type === "media.file.playback.delete" ||
   op.type === "media.episode.delete" ||
   (op.type === "media.upsert" && !isV3MediaUpsert(op));
-
-/**
- * Version-4 ops whose rows live only in the metadata / playback files. They carry their own clock guards
- * (LIB-SYNC-08), so the secondary apply runs them all, in op order, beside the upserts the core row holds.
- */
-const isSecondaryOnlyOp = (op: LibraryOp) =>
-  op.type === "media.file.playback.set" || op.type === "media.file.playback.delete" || op.type === "media.episode.delete";
 
 export class QuotaExceededError extends Error {
   constructor(message = "Storage quota exceeded") {
@@ -1062,6 +1057,13 @@ export class LibraryDb {
       // (Continue pressed twice during onboarding, #1074) removed library.snapshot.sqlite under this one's
       // copy, and both then failed reading it for encryption with ENOENT.
       return await withSnapshotLock(async () => {
+        // PRIV-KEY-01/06: a first library goes out under the account's key only. The probe checked here rides the PUT
+        // (`checkedKeyProbe`): the API refuses it when another device made the account's key in between.
+        const checkedKeyProbe = selection.meta.keyProbe ?? null;
+        if (checkedKeyProbe && !(await decryptBase64ToBytes(keyBase64, checkedKeyProbe).then(() => true, () => false))) {
+          console.warn("library.snapshot.key_mismatch", JSON.stringify({ where: "create" }));
+          throw new Error("KEY_MISMATCH");
+        }
         const keyProbe = await createKeyProbe(keyBase64);
         await ensureLibraryDir();
         const snapshotDb = await buildCombinedSnapshotDb();
@@ -1090,7 +1092,8 @@ export class LibraryDb {
           chunkIndex.chunks.map((entry) => entry.hash),
           MOBILE_CHUNK_REFS_SOURCE,
           // A new library is never switched yet: it writes the op stream this build starts on (LIB-FMT-13).
-          { storageFormatVersion: MOBILE_LIBRARY_SUPPORT.storageFormatVersion, opStreamVersion: OP_STREAM_VERSION }
+          { storageFormatVersion: MOBILE_LIBRARY_SUPPORT.storageFormatVersion, opStreamVersion: OP_STREAM_VERSION },
+          checkedKeyProbe
         );
         await saveCache({
           version: created.version,
@@ -2374,7 +2377,8 @@ export class LibraryDb {
           );
           for (const row of rows) coreClocks.set(String(row.id), String(row.updated_at));
         }
-        // Version-4 playback/episode ops carry their own clock guards and go on in op order beside them.
+        // Version-4 playback/episode ops carry their own clock guards and go on in op order beside them; so does a
+        // `media.delete`, which clears the title's metadata and playback rows (LIB-SYNC-22).
         const upsertsHeldByCore = opsWithStatements.filter(
           ({ op }) =>
             isSecondaryOnlyOp(op) ||
@@ -2657,7 +2661,9 @@ export class LibraryDb {
         undefined,
         publish.chunkRefs,
         publish.chunkRefsSource,
-        this.writerFormats()
+        this.writerFormats(),
+        // PRIV-KEY-06/10: the probe assertKeyOpensAccount checked; a failed meta read checked nothing (no field).
+        meta ? meta.keyProbe ?? null : undefined
       );
     const baseVersion = this.snapshotBaseVersion(pending, meta?.version ?? null, publish.where);
     try {
@@ -3929,13 +3935,36 @@ export class LibraryDb {
     };
   }
 
-  async exportBytes() {
+  /**
+   * PRIV-KEY-13: this library sealed under the new key for a rotation exactly as `uploadSnapshot` publishes it (chunks
+   * uploaded, a manifest naming them), with the formats this device writes; the rotation writes the manifest.
+   */
+  async sealForRotation(newKeyBase64: string): Promise<RotationOwnLibrary> {
+    await ensureLibraryDir();
     return await withSnapshotLock(async () => {
       const snapshotDb = await this.buildSnapshotDb();
-      const bytes = await exportDbBytes(getSnapshotDbPath());
-      await snapshotDb.close();
-      await removeSnapshotDbFile();
-      return bytes;
+      const snapshotPath = getRotationSnapshotPath();
+      try {
+        await encryptDbToBinaryFile(getSnapshotDbPath(), newKeyBase64, snapshotPath);
+        const dbHash = await hashDbFile(getSnapshotDbPath());
+        const chunkIndex = await buildChunkIndexFromFile(snapshotPath);
+        await uploadChunksFromFile(this.token, snapshotPath, chunkIndex.chunks);
+        const snapshotId = createSnapshotId();
+        const manifest = buildManifest(snapshotId, dbHash, chunkIndex.chunks);
+        const manifestPayload = await encryptBytesToBytes(newKeyBase64, encodeUtf8(JSON.stringify(manifest)));
+        return {
+          manifestBase64: Buffer.from(manifestPayload).toString("base64"),
+          snapshotId,
+          chunkSize: CHUNK_SIZE_BYTES,
+          chunkRefs: chunkIndex.chunks.map((entry) => entry.hash),
+          chunkRefsSource: MOBILE_CHUNK_REFS_SOURCE,
+          ...this.writerFormats(),
+        };
+      } finally {
+        await snapshotDb.close();
+        await removeSnapshotDbFile();
+        await RNFS.unlink(snapshotPath).catch(() => undefined);
+      }
     });
   }
 

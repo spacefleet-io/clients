@@ -155,7 +155,6 @@ export const checkProgressFault = (
   ) {
     state.ffmpegAborted = true;
     const msg = `sf_fault: ffmpeg aborted at ${faultKillFfmpegAtPct}% via SF_FAULT_KILL_FFMPEG_AT_PCT (jobId=${jobIdForLog})`;
-    // eslint-disable-next-line no-console
     console.log(msg);
     controller?.abort(new Error(msg));
     return true;
@@ -168,7 +167,6 @@ export const checkProgressFault = (
     progress >= faultProcessExitAfterPct
   ) {
     state.processExitFired = true;
-    // eslint-disable-next-line no-console
     console.log(
       `sf_fault: process.exit(137) at ${faultProcessExitAfterPct}% via SF_FAULT_PROCESS_EXIT_AFTER_PCT (jobId=${jobIdForLog}, stage=${stage})`
     );
@@ -2200,7 +2198,6 @@ export class BadgerModule {
             progress >= faultProcessExitAfterPct
           ) {
             faultProcessExitFired = true;
-            // eslint-disable-next-line no-console
             console.log(
               `sf_fault: process.exit(137) at ${faultProcessExitAfterPct}% via SF_FAULT_PROCESS_EXIT_AFTER_PCT`
             );

@@ -4,7 +4,7 @@
  * back button, the album and artist page header and the song list. Texts come in already translated, so each app keeps
  * its own string table.
  */
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Loader2, Play } from "lucide-react";
 import { formatDuration, type ParrotAlbumRow } from "@space/parrot-core";
 import { BackButton } from "../button";
@@ -351,9 +351,39 @@ const SONG_LIST_COLUMNS = {
   albumActions: "grid-cols-[2.5rem_minmax(0,1fr)_auto] @lg:grid-cols-[2.5rem_minmax(0,2fr)_minmax(0,1.4fr)_minmax(0,1.4fr)_4rem_auto]",
 };
 
+/** Rows a song list draws at first, and adds each time its end comes near (#3350 C4). */
+const SONG_LIST_PAGE = 200;
+
+/**
+ * How many of `total` rows to draw: a first page, then the next each time the list's end comes within a screen of
+ * its scrolling box, as Badger's library does, so a 10,000-song library does not draw 10,000 rows. Where nothing
+ * can watch the end (no IntersectionObserver: unit tests), every row is drawn.
+ */
+function useGrowingRowCount(total: number) {
+  const [count, setCount] = useState(SONG_LIST_PAGE);
+  const [end, setEnd] = useState<HTMLElement | null>(null);
+  const canWatch = typeof IntersectionObserver !== "undefined";
+  useEffect(() => {
+    if (!end || !canWatch) return;
+    let root: HTMLElement | null = end.parentElement;
+    while (root && !/(auto|scroll)/.test(getComputedStyle(root).overflowY)) root = root.parentElement;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) setCount((shown) => shown + SONG_LIST_PAGE);
+      },
+      { root, rootMargin: "100% 0px" }
+    );
+    observer.observe(end);
+    return () => observer.disconnect();
+  }, [end, canWatch]);
+  return { shown: canWatch ? Math.min(count, total) : total, endRef: setEnd };
+}
+
 /** Songs one per row: play button (equaliser while playing), title, artist, album (in the Songs list), length. */
 export function ParrotSongList<T extends ParrotSongListTrack>({ tracks, playingId, playing, showAlbum, labels, onPlay, actions, unavailable, rows, links, testId = "library-tracks", rowTestId = "library-track" }: ParrotSongListProps<T>) {
   const columns = SONG_LIST_COLUMNS[showAlbum ? (actions ? "albumActions" : "album") : actions ? "actions" : "plain"];
+  const allRows = rows ?? tracks.map((track, index): ParrotAlbumRow<T> => ({ kind: "owned", track, index }));
+  const { shown, endRef } = useGrowingRowCount(allRows.length);
   return (
     <div className="@container text-sm">
       <div className={cn("grid gap-x-3", columns)}>
@@ -366,7 +396,7 @@ export function ParrotSongList<T extends ParrotSongListTrack>({ tracks, playingI
           {actions && <span className="hidden @lg:block" />}
         </div>
         <ol className="col-span-full grid grid-cols-subgrid" data-testid={testId}>
-          {(rows ?? tracks.map((track, index): ParrotAlbumRow<T> => ({ kind: "owned", track, index }))).map((row) => {
+          {allRows.slice(0, shown).map((row) => {
             if (row.kind === "missing") {
               const { listed } = row;
               // Like Badger's missing episodes: greyed, no play button, no actions; never in the play queue.
@@ -454,6 +484,8 @@ export function ParrotSongList<T extends ParrotSongListTrack>({ tracks, playingI
             </RenderBoundary>
             );
           })}
+          {/* A new element at each page, so the watch starts again even when the end is still near. */}
+          {shown < allRows.length && <li key={`end:${shown}`} ref={endRef} className="col-span-full h-px" aria-hidden data-testid={`${testId}-more`} />}
         </ol>
       </div>
     </div>

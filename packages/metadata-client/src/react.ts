@@ -55,7 +55,6 @@ export function useLocalizedOverview(
     };
     // `stored` and `fetchOverview` are left out on purpose: a library sync rewriting the same synopsis, or a new
     // closure each render, must not ask again. `canFetch` re-runs it when signing in makes asking possible.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [title?.id, type, catalogId, language, canFetch, cache]);
 
   return overview;
@@ -112,7 +111,6 @@ export function useLocalizedEpisodes(
     };
     // `fetchEpisodes` is left out on purpose: a new closure each render must not ask again. `canFetch` re-runs it
     // when signing in makes asking possible.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [show?.id, tvId, language, canFetch, cache, episodeSignature]);
 
   return episodes;

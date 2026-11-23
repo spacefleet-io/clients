@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<!-- REL-MAC-02: hardened-runtime exceptions for Developer ID signed builds (scripts/mac-signing-lib.mjs).
+<!-- REL-MAC-02: hardened-runtime exceptions for Developer ID signed builds (mac-signing-lib.mjs, next to this file).
      JIT for V8 (Electron) and JavaScriptCore (the bun-compiled runtime); library validation off so
      the app loads the deps bundle's dylibs and native .node modules. -->
 <plist version="1.0">

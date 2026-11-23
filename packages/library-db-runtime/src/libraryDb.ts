@@ -33,6 +33,8 @@ import {
   fetchManifestWithRetry,
   hashBytes,
   syncDebug,
+  sealLibrarySnapshot,
+  type RotationOwnLibrary,
   uploadChunks,
   type LibrarySnapshotManifest,
 } from "./snapshotTransport";
@@ -125,6 +127,7 @@ import { PACKED_PLAYBACK_DDL } from "@space/library-db-definition/packedPlayback
 import { artworkStorageKey, collectMediaDeleteKeys, collectMediaStorageKeys } from "@space/library-db-definition/mediaDetails";
 import {
   buildOpStatements,
+  isSecondaryOnlyOp,
   isV3MediaUpsert,
   OP_STREAM_VERSION,
   playbackFileKey,
@@ -298,12 +301,8 @@ const isVersion4Op = (op: LibraryOp) =>
   op.type === "media.episode.delete" ||
   (op.type === "media.upsert" && !isV3MediaUpsert(op));
 
-/** Ops whose statements reach the metadata/playback/templates files (applied after core, LIB-SYNC-08). */
-const isPlaybackBearingOp = (op: LibraryOp) =>
-  op.type === "media.upsert" ||
-  op.type === "media.file.playback.set" ||
-  op.type === "media.file.playback.delete" ||
-  op.type === "media.episode.delete";
+/** Ops whose statements reach the metadata/playback/templates files (applied after core, LIB-SYNC-08, LIB-SYNC-22). */
+const isPlaybackBearingOp = (op: LibraryOp) => op.type === "media.upsert" || isSecondaryOnlyOp(op);
 
 /**
  * Largest plaintext op this writer sends after the switch (vault v4 plan §1.1: every op ≤ 1 MiB of ciphertext;
@@ -983,7 +982,17 @@ type ScopedViewingReads = {
  */
 export type PreparedRemoteSync =
   | { kind: "none" }
-  | { kind: "ops"; meta: LibraryMeta; fromVersion: number; toVersion: number; ops: LibraryOp[]; opSizes: number[] }
+  | {
+      kind: "ops";
+      meta: LibraryMeta;
+      fromVersion: number;
+      toVersion: number;
+      /** LIB-SYNC-19: the server's state hash at `toVersion` and the last op id up to it */
+      stateHash: string | null;
+      lastOpId: string | null;
+      ops: LibraryOp[];
+      opSizes: number[];
+    }
   | {
       kind: "snapshot";
       meta: LibraryMeta;
@@ -1788,6 +1797,8 @@ export class LibraryDb {
    * LIB-FMT-12: adopt the account's switch from a meta read; a switched account converts this device's playback
    * group in place (never by downloading the library again). Synchronous, so no other library call interleaves.
    */
+  // tla: LibrarySync/CompactMeta
+  // tla: LibrarySync/SyncMeta
   private adoptTargetOpStreamVersion(meta: unknown) {
     const target = metaTargetOpStreamVersion(meta);
     // The switch is one-way (LIB-FMT-13): a meta without the field (an older server copy mid-update) never undoes it.
@@ -1803,6 +1814,7 @@ export class LibraryDb {
    * The op-stream version this library's writes are in (LIB-FMT-13): 4 only once the account is switched AND this
    * device's playback group is converted; a version-3 layout writes version 3, whatever the switch.
    */
+  // tla: LibrarySync/FlushBuild
   private writtenOpStreamVersion() {
     return this.packedPlayback ? writeOpStreamVersion(this.targetOpStreamVersion) : OP_STREAM_VERSION;
   }
@@ -1974,7 +1986,14 @@ export class LibraryDb {
       const hasPlayableRows = Number(formatsRow?.c ?? 0) > 0 || Number(audioRow?.c ?? 0) > 0;
 
       if (hasPlayableRows && !hasMediaRows) {
-        throw new Error("semantic_orphaned_playback_rows");
+        // LIB-SYNC-22: a device that applied another device's delete before the fix kept that title's playback rows.
+        // Once it deletes its own last title the library is empty for a reason this device can name (the deletes it
+        // is about to send), so the leftovers are cleared and the deletes go out. Without such a delete the empty
+        // core is unexplained (a lost or replaced core file) and publishing stays blocked.
+        const ownDeletes = this.pendingOps.filter((op) => op.type === "media.delete").length;
+        if (ownDeletes === 0) throw new Error("semantic_orphaned_playback_rows");
+        const pruned = this.pruneOrphanedSecondaryRows();
+        logger.warn({ stage, ownDeletes, pruned }, "library.publish.orphaned_rows_pruned");
       }
 
       return true;
@@ -2016,6 +2035,7 @@ export class LibraryDb {
    * `library/<server>/<userId>/`, never in another account's. Without `account` the flat `library/` dir is used
    * (single-account embedders, tests); the desktop runtime always passes it.
    */
+  // tla: VaultKeys/PutFails
   static async open(token: string, keyBase64: string, account?: LibraryAccount): Promise<LibraryDb> {
     const openStartedAt = performance.now();
     const selection = await pickBlob(token, account ? libraryOwnerFor(account) : null);
@@ -2265,7 +2285,7 @@ export class LibraryDb {
     try {
       // The account's probe may come from Parrot (or a key saved after an erase): a first Badger library must be
       // published under that key, never under another one (PRIV-KEY-01).
-      await assertAccountLibraryKey(token, keyBase64, undefined, selection.meta);
+      const checkedKeyProbe = await assertAccountLibraryKey(token, keyBase64, undefined, selection.meta);
       const encrypted = await encryptSnapshotBytes(keyBase64, rawBytes);
       const snapshotId = randomUUID();
       const manifest = buildManifest(snapshotId, encrypted, rawBytes);
@@ -2292,7 +2312,8 @@ export class LibraryDb {
         DESKTOP_CHUNK_REFS_SOURCE,
         // An empty library holds no playback rows: it is as valid in op stream 4 as in 3, so it declares what the
         // account's writers declare (a switched account refuses a version-3 write, LIB-FMT-13).
-        writeOpStreamVersion(targetOpStreamVersion)
+        writeOpStreamVersion(targetOpStreamVersion),
+        checkedKeyProbe
       );
       markBootstrap("putLibraryDb");
       await saveCache({
@@ -2616,6 +2637,35 @@ export class LibraryDb {
     return this.buildCombinedExportBytes();
   }
 
+  /**
+   * PRIV-KEY-13: this library sealed under the new key for the rotation, as a snapshot (chunks uploaded), declaring
+   * the op stream its writes are in.
+   */
+  async sealForRotation(newKeyBase64: string): Promise<RotationOwnLibrary> {
+    const sealed = await sealLibrarySnapshot(this.token, newKeyBase64, this.buildCombinedExportBytes());
+    return { ...sealed, opStreamVersion: this.writtenOpStreamVersion() };
+  }
+
+  /**
+   * PRIV-KEY-13: the local cache (no library open: onboarding's "recover from this device") sealed under the new key.
+   * Its op stream is what its playback file's layout holds: a converted (packed) file is version 4, else 3.
+   */
+  static async sealLocalCacheForRotation(token: string, newKeyBase64: string): Promise<RotationOwnLibrary | null> {
+    const rawBytes = await LibraryDb.getLocalCacheBytes();
+    if (!rawBytes) return null;
+    let opStreamVersion = OP_STREAM_VERSION;
+    if (existsSync(getPlaybackDbPath())) {
+      const playback = openDatabase(getPlaybackDbPath());
+      try {
+        const userVersion = Number(playback.prepare("PRAGMA user_version;").get()?.user_version ?? 0);
+        if (userVersion >= PACKED_PLAYBACK_LAYOUT_VERSION) opStreamVersion = READ_OP_STREAM_VERSION;
+      } finally {
+        playback.close();
+      }
+    }
+    return { ...(await sealLibrarySnapshot(token, newKeyBase64, rawBytes)), opStreamVersion };
+  }
+
   setSyncEnabled(enabled: boolean) {
     this.syncEnabled = enabled;
     if (enabled) this.resendHealedSystemPlaylists();
@@ -2655,6 +2705,7 @@ export class LibraryDb {
     if (this.pendingOps.length > 0) this.scheduleOpsFlush(2000);
   }
 
+  // tla: LibrarySync/TimerFlush
   private scheduleOpsFlush(delayMs = 250) {
     if (this.closed) return;
     if (this.opsFlushInFlight) return;
@@ -2691,6 +2742,7 @@ export class LibraryDb {
     return this.queueOps([op]);
   }
 
+  // tla: LibrarySync/Edit
   private async queueOps(ops: LibraryOp[]) {
     if (!this.syncEnabled || this.applyingRemoteOps || !ops.length) return;
     const op = ops[ops.length - 1]!;
@@ -8275,6 +8327,38 @@ export class LibraryDb {
   }
 
   /**
+   * LIB-SYNC-22: clears the metadata / playback / templates rows of every title `media_items` no longer holds, with
+   * the statements a `media.delete` runs (so the list of tables stays in one place). Returns the titles cleared.
+   */
+  private pruneOrphanedSecondaryRows(): number {
+    const ids = new Set(this.collectMediaIdsWithSecondaryData());
+    try {
+      for (const row of this.playbackSqlite.prepare("SELECT DISTINCT media_id FROM media_file_playback;").all() as Array<{ media_id?: string }>) {
+        if (row.media_id) ids.add(String(row.media_id));
+      }
+    } catch {
+      // Version-3 layout: no media_file_playback table.
+    }
+    const inCore = this.coreSqlite.prepare("SELECT 1 FROM media_items WHERE id = ?;");
+    const orphans = [...ids].filter((id) => !inCore.get(id));
+    if (orphans.length === 0) return 0;
+    const packedPlayback = this.packedPlayback;
+    const statements = orphans.map((mediaId) =>
+      buildOpStatements({ id: randomUUID(), type: "media.delete", createdAt: nowIso(), payload: { mediaId } }, () => randomUUID(), { packedPlayback })
+    );
+    this.metadataSqlite.transaction(() => {
+      for (const entry of statements) this.executeOpStatementGroups(entry, ["metadata"]);
+    })();
+    this.playbackSqlite.transaction(() => {
+      for (const entry of statements) this.executeOpStatementGroups(entry, ["playback"]);
+    })();
+    this.templatesSqlite.transaction(() => {
+      for (const entry of statements) this.executeOpStatementGroups(entry, ["templates"]);
+    })();
+    return orphans.length;
+  }
+
+  /**
    * Profile settings merge field by field (ACCT-SQUAD-03, same as phone/TV): the batch's `setting.set` ops of a
    * profile settings key are folded with this device's own row into one op before the ordinary apply.
    */
@@ -8346,10 +8430,11 @@ export class LibraryDb {
     // details. Its metadata/playback/templates statements live in other files
     // (no cross-file guard in SQL), so apply them only for upserts whose
     // `updated_at` the core row now carries. Version-4 playback ops carry their own clock (`media_file_playback`)
-    // in their statements and always run, in stream order with the upserts.
+    // in their statements and always run, in stream order with the upserts; so does a `media.delete`, which clears
+    // the title's rows in every file (LIB-SYNC-22: without it they outlived the title and quarantined publishing).
     const coreRowClock = this.sqliteForGroup("core").prepare("SELECT updated_at FROM media_items WHERE id = ?");
     const secondaryOps = opsWithStatements.filter(({ op }) => {
-      if (op.type !== "media.upsert") return isPlaybackBearingOp(op);
+      if (op.type !== "media.upsert") return isSecondaryOnlyOp(op);
       const row = coreRowClock.get(op.payload.details.id) as { updated_at?: string } | undefined;
       return row?.updated_at === op.payload.details.updatedAt;
     });
@@ -8428,6 +8513,10 @@ export class LibraryDb {
    * drain never ended and the sync never got to fetch. Ops left over go to
    * the normal debounced flush.
    */
+  // tla: LibrarySync/FlushBuild
+  // tla: LibrarySync/FlushRecv
+  // tla: LibrarySync/FlushDone
+  // tla: LibrarySync/FlushAfter409
   private async flushOps(maxOps = Number.POSITIVE_INFINITY) {
     if (this.closed || !this.syncEnabled || this.opsFlushInFlight) return;
     if (!this.pendingOps.length) return;
@@ -8607,6 +8696,8 @@ export class LibraryDb {
     saveOpsSinceSnapshot(this.opsSinceSnapshot);
   }
 
+  // tla: LibrarySync/CompactMeta
+  // tla: LibrarySync/CompactSkip
   private async maybeCompactAfterOps() {
     // LIB-STORE-05: below the thresholds nothing is asked of the server, so a
     // progress-only flush (which never counts, LIB-SYNC-07) costs no meta GET.
@@ -8617,6 +8708,10 @@ export class LibraryDb {
     if (!meta?.exists) return;
     this.adoptTargetOpStreamVersion(meta);
     if (counted.snapshotVersion !== meta.snapshotVersion) return;
+    // LIB-SYNC-20: the full copy is this device's copy. Another device saved since this flush, so meta.version holds a
+    // change this copy lacks: publishing on top of it would leave that change out of every copy a new reader gets.
+    // The next flush after the sync that brings it in tries again.
+    if (meta.version !== this.remoteVersion) return;
     const latestSnapshotMs = getLatestSnapshotMs(meta.snapshotHistory);
     if (latestSnapshotMs && Date.now() - latestSnapshotMs < SNAPSHOT_MIN_INTERVAL_MS) {
       return;
@@ -8635,10 +8730,12 @@ export class LibraryDb {
    * the snapshot is due by tail bytes alone (LIB-SYNC-12): a snapshot larger than the tail it replaces is not
    * published, and the byte threshold rises to its size instead.
    */
+  // tla: VaultKeys/Republish
+  // tla: LibrarySync/CompactPut
   private async uploadSnapshot(meta: LibraryMeta, maxBytes?: number) {
     const expectedVersion = meta.version;
     if (!(await this.ensurePublishableState("snapshot"))) return;
-    await assertAccountLibraryKey(this.token, this.keyBase64, undefined, meta);
+    const checkedKeyProbe = await assertAccountLibraryKey(this.token, this.keyBase64, undefined, meta);
     const opStreamVersion = this.writtenOpStreamVersion();
     const rawBytes = this.buildCombinedExportBytes();
     const encrypted = await encryptSnapshotBytes(this.keyBase64, rawBytes);
@@ -8691,7 +8788,8 @@ export class LibraryDb {
       undefined,
       pending.chunkRefs,
       DESKTOP_CHUNK_REFS_SOURCE,
-      opStreamVersion
+      opStreamVersion,
+      checkedKeyProbe
     );
     this.remoteVersion = result.version;
     this.stateHash = normalizeStateHash(result.stateHash ?? pending.stateHash ?? null);
@@ -9222,6 +9320,7 @@ export class LibraryDb {
     };
   }
 
+  // tla: LibrarySync/FlushAfter409
   async syncFromRemoteIfNewer(metaOverride?: LibraryMeta | null) {
     const prepared = await this.prepareRemoteSync(metaOverride);
     if (prepared.kind === "none") return false;
@@ -9236,6 +9335,9 @@ export class LibraryDb {
    * the gate for minutes and every read and write queued behind it. Pair
    * with `applyPreparedRemoteSync`, which the runtime runs inside the gate.
    */
+  // tla: LibrarySync/SyncFlush
+  // tla: LibrarySync/SyncMeta
+  // tla: LibrarySync/SyncFetch
   async prepareRemoteSync(metaOverride?: LibraryMeta | null): Promise<PreparedRemoteSync> {
     if (this.closed || !this.syncEnabled) {
       return { kind: "none" };
@@ -9288,7 +9390,7 @@ export class LibraryDb {
     // The server pages a long op tail (`hasMore`): `version` of a partial page
     // is its last op, the next page starts there. Collect every page before
     // applying so the version/state hash adopted below match what was applied.
-    const entries = [...opsResult.ops];
+    let entries = [...opsResult.ops];
     let toVersion = opsResult.version;
     while (opsResult.hasMore && opsResult.ops.length > 0) {
       opsResult = await getLibraryOps(this.token, toVersion);
@@ -9302,6 +9404,21 @@ export class LibraryDb {
       entries.push(...opsResult.ops);
       toVersion = opsResult.version;
     }
+    // LIB-SYNC-19: the device moves to `toVersion` with the hash AT `toVersion`, never meta's: another device's op
+    // can land between the meta read and the ops read, and chaining on meta's older hash had the next op refused
+    // 409 lineage_conflict. The last page names that hash; a server from before the field names none, and the
+    // device then stops at the version its meta named, whose hash it read (the rest comes with the next sync).
+    let toStateHash: string | null;
+    if (opsResult.stateHash !== undefined) {
+      toStateHash = normalizeStateHash(opsResult.stateHash);
+    } else {
+      if (toVersion > meta.version) {
+        entries = entries.filter((entry) => entry.version <= meta.version);
+        toVersion = meta.version;
+      }
+      toStateHash = normalizeStateHash(meta.stateHash);
+    }
+    const toLastOpId = entries.at(-1)?.opId ?? meta.lastOpId ?? null;
 
     const ops: LibraryOp[] = [];
     const CONCURRENCY = 4;
@@ -9324,7 +9441,16 @@ export class LibraryDb {
       );
       ops.push(...results);
     }
-    return { kind: "ops", meta, fromVersion, toVersion, ops, opSizes: entries.map((entry) => entry.size) };
+    return {
+      kind: "ops",
+      meta,
+      fromVersion,
+      toVersion,
+      stateHash: toStateHash,
+      lastOpId: toLastOpId,
+      ops,
+      opSizes: entries.map((entry) => entry.size),
+    };
   }
 
   /**
@@ -9334,6 +9460,7 @@ export class LibraryDb {
    * fetched ops/snapshot no longer start at this instance's base, so the
    * caller must run the full `syncFromRemoteIfNewer` instead.
    */
+  // tla: LibrarySync/SyncApply
   async applyPreparedRemoteSync(prepared: PreparedRemoteSync): Promise<boolean | "stale"> {
     if (prepared.kind === "none") return false;
     if (this.closed) return false;
@@ -9360,6 +9487,7 @@ export class LibraryDb {
    * unsent, so the copy holds exactly the server's library. Two devices racing are serialised by the base-version
    * check (LIB-SYNC-01): the loser's 409 leaves its converted copy in place, never downloads the winner's.
    */
+  // tla: LibrarySync/SyncPublish
   private async publishConvertedCopy(meta: LibraryMeta) {
     if (!this.packedPlayback || this.targetOpStreamVersion < 4 || (meta.opStreamVersion ?? 0) >= 4) return;
     if (this.closed || this.pendingOps.length > 0 || this.remoteVersion !== meta.version) return;
@@ -9392,6 +9520,7 @@ export class LibraryDb {
     }
   }
 
+  // tla: LibrarySync/SyncApply
   private async applyRemoteOps(prepared: Extract<PreparedRemoteSync, { kind: "ops" }>): Promise<boolean> {
     const { meta, ops } = prepared;
     // Rebase local, not-yet-acknowledged writes on top of the remote ops.
@@ -9417,8 +9546,8 @@ export class LibraryDb {
     if (!this.pendingOps.length) {
       this.version = Math.max(this.version, prepared.toVersion);
     }
-    this.stateHash = normalizeStateHash(meta.stateHash);
-    this.lastOpId = meta.lastOpId ?? this.lastOpId;
+    this.stateHash = prepared.stateHash;
+    this.lastOpId = prepared.lastOpId ?? this.lastOpId;
     await saveCache({
       version: Math.max(this.version, this.remoteVersion),
       dbPath: getCacheDbPath(),
@@ -9792,7 +9921,7 @@ export class LibraryDb {
       if (!recordedRefs) {
         logger.warn({ snapshotId: pending.snapshotId }, "flushPending: pre-#143 pending snapshot has no recorded chunkRefs — publishing without a chunkRefs source");
       }
-      await assertAccountLibraryKey(this.token, this.keyBase64);
+      const checkedKeyProbe = await assertAccountLibraryKey(this.token, this.keyBase64);
       await uploadChunks(this.token, pendingChunks);
       const result = await putLibraryDb(
         this.token,
@@ -9807,7 +9936,8 @@ export class LibraryDb {
         undefined,
         fileHashes,
         recordedRefs ? DESKTOP_CHUNK_REFS_SOURCE : undefined,
-        pending.opStreamVersion ?? OP_STREAM_VERSION
+        pending.opStreamVersion ?? OP_STREAM_VERSION,
+        checkedKeyProbe
       );
       // Like flushOps: an instance closed during the upload (runtime re-open,
       // clearLocalCache) must not rewrite cache.json / pending files the new

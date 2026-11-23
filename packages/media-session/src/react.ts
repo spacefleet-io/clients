@@ -95,7 +95,6 @@ export const useMediaSession = (
   useEffect(() => {
     session.current?.update({ status, info, positionS, durationS, rate, canNext, canPrevious, canSeek });
     // `info` is rebuilt every render; its fields are the real dependency.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, info?.title, info?.artist, info?.album, info?.artworkUrl, positionS, durationS, rate, canNext, canPrevious, canSeek]);
 };
 

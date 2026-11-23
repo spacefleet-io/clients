@@ -1031,7 +1031,11 @@
       "confirmRequired": "Bevestig dat je de nieuwe sleutel hebt bewaard.",
       "passwordRequired": "Wachtwoord is verplicht.",
       "notReady": "De mediatheek is nog niet klaar.",
-      "rotate": "De sleutel kon niet worden vernieuwd. Controleer je wachtwoord en code."
+      "rotate": "De sleutel kon niet worden vernieuwd. Controleer je wachtwoord en code.",
+      "notReencrypted": "De mediatheek van een andere app kon niet naar de nieuwe sleutel. Er is niets veranderd. Vernieuw vanaf een apparaat met de huidige sleutel.",
+      "unreadable": "De sleutel van deze telefoon opent de mediatheek van een andere app niet. Er is niets veranderd. Vernieuw vanaf een apparaat met de huidige sleutel.",
+      "notSnapshotted": "De mediatheek van een andere app wordt nog opgeslagen. Er is niets veranderd. Open die app, laat hem synchroniseren en probeer het opnieuw.",
+      "changed": "Een mediatheek veranderde tijdens het vernieuwen. Er is niets veranderd. Probeer het opnieuw."
     }
   },
   "libraryFormat": {

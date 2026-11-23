@@ -76,7 +76,7 @@ export class PlaybackRuntimeBridge {
   async prepareSession(payload: Record<string, unknown>) {
     if (!this.client) return null;
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- the IPC payload is untyped here; the runtime command validates it
       const result = await this.client.sendCommand(badgerPlaybackPrepareStream, payload as any);
       const sessionId =
         typeof result?.sessionId === "string" && result.sessionId.trim().length > 0
@@ -103,7 +103,7 @@ export class PlaybackRuntimeBridge {
   async mirrorRelease(payload: Record<string, unknown>) {
     if (!this.client) return;
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- the IPC payload is untyped here; the runtime command validates it
       await this.client.sendCommand(badgerPlaybackReleaseStream, payload as any);
     } catch (error) {
       this.logger?.warn(

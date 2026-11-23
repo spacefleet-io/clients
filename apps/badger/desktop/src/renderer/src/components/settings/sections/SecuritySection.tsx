@@ -17,6 +17,8 @@ import {
 } from "@/api";
 import { useAuth, useHasPassword } from "@/auth";
 import { Button, Input, Label } from "@space/ui";
+import { keyChangeOffered } from "@space/shared/keyChange";
+import { useKeyRotationReadiness } from "@space/shared/useKeyRotationReadiness";
 import { tooManyAttemptsText } from "@space/shared/signInError";
 import { useLibraryRecoveryFlows } from "@/lib/settings/useLibraryRecoveryFlows";
 import { SettingHint, SettingPanel } from "../kit";
@@ -55,6 +57,8 @@ export default function SecuritySection() {
   const hasPassword = useHasPassword();
   const [searchParams, setSearchParams] = useSearchParams();
   const { setShowKeyOpen } = recovery;
+  // ACCT-KEYCHG-04: the key-change card shows exactly when the server would accept the change.
+  const keyChange = keyChangeOffered(useKeyRotationReadiness(token));
 
   // ACCT-DEV-03: "Show my key" in the sign-out question lands here with `showKey=1`; open the show-key dialog once and
   // drop the param so a reload or Back does not open it again.
@@ -434,7 +438,7 @@ export default function SecuritySection() {
           <div className="font-semibold">{t("settings.recovery.title")}</div>
           <SettingHint>{t("settings.recovery.subtitle")}</SettingHint>
         </div>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <div className={keyChange ? "mt-4 grid gap-3 sm:grid-cols-2" : "mt-4 grid gap-3"}>
           <div className="rounded-xl border border-border p-4">
             <div className="space-y-1">
               <div className="font-semibold">{t("settings.recovery.show.title")}</div>
@@ -446,18 +450,21 @@ export default function SecuritySection() {
               </Button>
             </div>
           </div>
-          <div className="rounded-xl border border-border p-4">
-            <div className="space-y-1">
-              <div className="font-semibold">{t("settings.recovery.rotate.title")}</div>
-              <SettingHint>{t("settings.recovery.rotate.subtitle")}</SettingHint>
+          {/* ACCT-KEYCHG-04: no key-change entry while the account's media could not be re-sealed. */}
+          {keyChange ? (
+            <div className="rounded-xl border border-border p-4" data-testid="settings-key-change">
+              <div className="space-y-1">
+                <div className="font-semibold">{t("settings.recovery.rotate.title")}</div>
+                <SettingHint>{t("settings.recovery.rotate.subtitle")}</SettingHint>
+              </div>
+              <div className="pt-3">
+                <Button type="button" variant="secondary" onClick={() => recovery.setRecoveryOpen(true)}>
+                  <RotateCwIcon className="mr-2 h-4 w-4" />
+                  {t("settings.recovery.rotate.button")}
+                </Button>
+              </div>
             </div>
-            <div className="pt-3">
-              <Button type="button" variant="secondary" onClick={() => recovery.setRecoveryOpen(true)}>
-                <RotateCwIcon className="mr-2 h-4 w-4" />
-                {t("settings.recovery.rotate.button")}
-              </Button>
-            </div>
-          </div>
+          ) : null}
         </div>
       </SettingPanel>
 

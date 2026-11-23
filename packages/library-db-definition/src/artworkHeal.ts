@@ -80,8 +80,13 @@ export type ArtworkHealerDeps = {
   fetchImage(kind: ArtworkHealKind, path: string): Promise<FetchedArtwork | null>;
   /** Encrypts and uploads the image under a new key; returns the new library reference. */
   store(image: FetchedArtwork, slot: ArtworkHealSlot): Promise<string>;
-  /** Writes the swaps (compare-and-set); returns how many were applied. */
-  replaceRefs(mediaId: string, changes: ArtworkRefChange[]): Promise<number>;
+  /** Writes the swaps (compare-and-set); returns how many were applied and the changes that were not. */
+  replaceRefs(mediaId: string, changes: ArtworkRefChange[]): Promise<{ applied: number; unapplied: ArtworkRefChange[] }>;
+  /**
+   * Deletes uploads whose swap was not applied (STOR-PLACE-10: the title was deleted, or the slot changed, while the
+   * picture was uploading), so they do not wait for the leftover clean-up. A failure is only logged.
+   */
+  discard?(keys: string[]): Promise<unknown>;
   onHealed?(mediaId: string, changes: ArtworkRefChange[]): void;
   log?: ArtworkHealLog;
   now?(): number;
@@ -298,15 +303,27 @@ export const createArtworkHealer = (deps: ArtworkHealerDeps): ArtworkHealer => {
       }
     }
     if (changes.length === 0) return result;
-    const applied = await deps.replaceRefs(mediaId, changes);
-    log("artworkHeal.applied", { mediaId, applied, changes: changes.length });
-    for (const change of changes) {
+    const { applied, unapplied } = await deps.replaceRefs(mediaId, changes);
+    log("artworkHeal.applied", { mediaId, applied, changes: changes.length, unapplied: unapplied.length });
+    const discardKeys = [...new Set(unapplied.map((change) => artworkStorageKey(change.value)).filter((key): key is string => key !== null))];
+    if (discardKeys.length > 0 && deps.discard) {
+      try {
+        await deps.discard(discardKeys);
+        log("artworkHeal.discarded", { mediaId, keys: discardKeys.length });
+      } catch (error) {
+        log("artworkHeal.discard_failed", { mediaId, keys: discardKeys.length, error: errorText(error) });
+      }
+    }
+    // By value: the library may answer across a process boundary with copies of the changes it was given.
+    const notSwapped = new Set(unapplied.map((change) => `${change.target}:${change.id}:${change.value}`));
+    const swapped = changes.filter((change) => !notSwapped.has(`${change.target}:${change.id}:${change.value}`));
+    for (const change of swapped) {
       const key = artworkStorageKey(change.path);
       if (!key) continue;
       healed.set(key, change.value);
       result.set(key, change.value);
     }
-    deps.onHealed?.(mediaId, changes);
+    if (swapped.length > 0) deps.onHealed?.(mediaId, swapped);
     return result;
   };
 

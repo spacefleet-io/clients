@@ -158,12 +158,14 @@ describe("relaunch after a system update (REL-UPD-07)", () => {
     const driver = join(dir, "driver.mts");
     const moduleUrl = pathToFileURL(resolve(__dirname, "../src/updater/systemPackage.ts")).href;
     // The "app" arms the relaunch, says so, and exits when the test closes its stdin. The "new binary" is a shell that
-    // writes into `marker` whether the app's pid was still alive when it started, so no timing is guessed.
+    // writes into `marker` whether the app's pid was still alive when it started, so no timing is guessed. An app that
+    // has exited but that this test (its parent) has not reaped yet is a zombie: `kill -0` still answers for it, so a
+    // zombie counts as gone (on a busy runner the reap comes after the new binary starts).
     writeFileSync(
       driver,
       [
         `import { nodeSystemProbe } from ${JSON.stringify(moduleUrl)};`,
-        `nodeSystemProbe.relaunchAfterExit("/bin/sh", ["-c", 'if kill -0 "$1" 2>/dev/null; then echo alive; else echo gone; fi > "$2.tmp" && mv "$2.tmp" "$2"', "sh", String(process.pid), ${JSON.stringify(marker)}]);`,
+        `nodeSystemProbe.relaunchAfterExit("/bin/sh", ["-c", 'if kill -0 "$1" 2>/dev/null && ! grep -q "^State:.Z" "/proc/$1/status" 2>/dev/null; then echo alive; else echo gone; fi > "$2.tmp" && mv "$2.tmp" "$2"', "sh", String(process.pid), ${JSON.stringify(marker)}]);`,
         `process.stdout.write("armed\\n");`,
         `process.stdin.resume();`,
         `process.stdin.on("end", () => process.exit(0));`,

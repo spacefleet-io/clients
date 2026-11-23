@@ -1032,7 +1032,11 @@
       "confirmRequired": "Confirmez que vous avez enregistré la nouvelle clé.",
       "passwordRequired": "Mot de passe requis.",
       "notReady": "La médiathèque n'est pas prête.",
-      "rotate": "Impossible de renouveler la clé. Vérifiez votre mot de passe et votre code."
+      "rotate": "Impossible de renouveler la clé. Vérifiez votre mot de passe et votre code.",
+      "notReencrypted": "La médiathèque d'une autre app n'a pas pu passer à la nouvelle clé. Rien n'a changé. Renouvelez depuis un appareil qui a la clé actuelle.",
+      "unreadable": "La clé de ce téléphone n'ouvre pas la médiathèque d'une autre app. Rien n'a changé. Renouvelez depuis un appareil qui a la clé actuelle.",
+      "notSnapshotted": "La médiathèque d'une autre app est encore en cours d'enregistrement. Rien n'a changé. Ouvrez cette app, laissez-la se synchroniser, puis réessayez.",
+      "changed": "Une médiathèque a changé pendant le renouvellement. Rien n'a changé. Réessayez."
     }
   },
   "libraryFormat": {

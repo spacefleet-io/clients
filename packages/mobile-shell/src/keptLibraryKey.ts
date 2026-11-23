@@ -55,6 +55,7 @@ export type KeptLibraryKeyCheckDeps = {
 };
 
 /** Fetches the account's meta and judges `key` against it. */
+// tla: VaultKeys/Start
 export const checkKeptLibraryKey = async (key: string, deps: KeptLibraryKeyCheckDeps): Promise<KeptLibraryKeyVerdict> => {
   let meta: KeptKeyMeta | null = null;
   try {

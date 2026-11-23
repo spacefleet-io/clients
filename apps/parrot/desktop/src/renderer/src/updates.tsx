@@ -4,7 +4,8 @@
  * downloads in the background; a downloaded version installs the next time Parrot closes.
  *  - `ParrotUpdateSection`: Settings › About & updates, the shared `DesktopUpdateSection` (REL-UPD-05, the section
  *    Badger shows too) over `window.parrot.updater`, with the automatic-updates switch saved in main.
- *  - `UpdateReadyNotice`: on every screen, once a version has downloaded, a small card offers "Restart now".
+ *  - `UpdateReadyNotice`: on every screen, once a version has downloaded, a small card offers "Restart now". A mandatory
+ *    update has its own blocking screen (`UpdateRequiredGate`), so the card stays out of its way, as in Badger.
  *  - `ParrotSystemUpdatePrompt`: a copy from SpaceFleet's .deb/.rpm/.pacman packages asks before updating through the
  *    package manager (REL-UPD-07, the shared `SystemUpdatePrompt`); a Flatpak copy shows `flatpak update`.
  */
@@ -42,7 +43,7 @@ export function UpdateReadyNotice({ t }: { t: Translate }) {
   const { state, install } = useParrotUpdater();
   // Boxed so a downloaded update without a version can be dismissed too.
   const [dismissed, setDismissed] = useState<{ version: string | null } | null>(null);
-  if (state.phase !== "downloaded" || (dismissed !== null && dismissed.version === state.version)) return null;
+  if (state.mandatory || state.phase !== "downloaded" || (dismissed !== null && dismissed.version === state.version)) return null;
   return (
     <div
       role="status"
@@ -53,7 +54,7 @@ export function UpdateReadyNotice({ t }: { t: Translate }) {
         <Download className="mt-0.5 size-5 shrink-0 text-primary" aria-hidden />
         <div className="space-y-1">
           <div className="font-semibold">{t("update.ready.title")}</div>
-          <p className="text-sm text-muted-foreground">{t("update.ready.body", { version: state.version ?? "" })}</p>
+          <p className="text-sm text-muted-foreground">{state.version ? t("update.ready.body", { version: state.version }) : t("update.ready.bodyCurrent")}</p>
         </div>
       </div>
       <div className="flex justify-end gap-2">

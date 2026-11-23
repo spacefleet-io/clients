@@ -1031,7 +1031,11 @@
       "confirmRequired": "Bestätige, dass du den neuen Schlüssel gespeichert hast.",
       "passwordRequired": "Passwort erforderlich.",
       "notReady": "Die Mediathek ist nicht bereit.",
-      "rotate": "Der Schlüssel konnte nicht erneuert werden. Prüfe dein Passwort bzw. deinen Code."
+      "rotate": "Der Schlüssel konnte nicht erneuert werden. Prüfe dein Passwort bzw. deinen Code.",
+      "notReencrypted": "Die Mediathek einer anderen App konnte nicht auf den neuen Schlüssel umgestellt werden. Nichts wurde geändert. Erneuere ihn auf einem Gerät mit dem aktuellen Schlüssel.",
+      "unreadable": "Der Schlüssel dieses Telefons öffnet die Mediathek einer anderen App nicht. Nichts wurde geändert. Erneuere ihn auf einem Gerät mit dem aktuellen Schlüssel.",
+      "notSnapshotted": "Die Mediathek einer anderen App wird noch gespeichert. Nichts wurde geändert. Öffne diese App, lass sie synchronisieren und versuch es dann nochmal.",
+      "changed": "Eine Mediathek hat sich beim Erneuern geändert. Nichts wurde geändert. Versuch es nochmal."
     }
   },
   "libraryFormat": {

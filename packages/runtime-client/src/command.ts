@@ -1,5 +1,6 @@
 import type { CommandContract, InferPayload, InferResult } from "@space/runtime-contracts/helpers";
 import { runtimeCommandResponseSchema } from "@space/runtime-contracts/envelope";
+import { decodeWireBytes, encodeWireBytes } from "@space/runtime-contracts/wireBytes";
 import { RuntimeCommandFailedError } from "./errors";
 import type { RuntimeFetch } from "./fetch";
 import type { RuntimeSessionHandle } from "./session";
@@ -34,7 +35,8 @@ export const createRuntimeCommandClient = (config: RuntimeCommandClientConfig) =
         requestId,
         module: contract.module,
         command: contract.name,
-        payload,
+        // RT-CMD-05: bytes travel tagged; plain JSON would turn them into an index-keyed object.
+        payload: encodeWireBytes(payload),
       }),
     });
     return { response, requestId };
@@ -109,7 +111,7 @@ export const createRuntimeCommandClient = (config: RuntimeCommandClientConfig) =
         }
 
         // Validate result against contract schema
-        const resultParse = contract.resultSchema.safeParse(envelope.result);
+        const resultParse = contract.resultSchema.safeParse(decodeWireBytes(envelope.result));
         if (!resultParse.success) {
           const issues = resultParse.error.issues
             .map((i) =>

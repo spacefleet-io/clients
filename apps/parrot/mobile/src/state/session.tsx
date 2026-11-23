@@ -2,7 +2,8 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { AppState, Platform } from "react-native";
 import type { ShellAuthSession } from "@space/mobile-shell/services/auth";
-import { getLibraryMeta, logout } from "@space/shared/api";
+import type { AccountAccess } from "@space/shared/accountAccess";
+import { getLibraryMeta, getMe, logout, type User } from "@space/shared/api";
 import { decryptBase64ToBytes } from "@space/mobile-shell/libraryEnvelope";
 import {
   checkKeptLibraryKey,
@@ -23,7 +24,7 @@ import { stopPlayback } from "../lib/playback";
 import { loadEvenVolume } from "../lib/evenVolume";
 import { scopeLogger } from "@space/mobile-shell/logger";
 import { profileStore } from "../lib/profiles";
-import { applyAccountLanguageFromServer, reconcileAfterSignIn, setupSettlesLanguage } from "../lib/accountLanguage";
+import { applyAccountLanguage, reconcileAfterSignIn, setupSettlesLanguage } from "../lib/accountLanguage";
 import { publishSiblingStatus } from "@space/mobile-shell/sibling";
 
 const log = scopeLogger("session");
@@ -47,6 +48,11 @@ export type SessionState = {
   session: ShellAuthSession | null;
   libraryKey: string | null;
   library: { status: LibraryStatus; error: string | null; version: number };
+  /**
+   * The signed-in account's access from its last `/auth/me` read (ACCT-UNPAID-03): an unpaid account shows the shared
+   * notice with its wipe date. `null` while signed out or before the first answer.
+   */
+  access: AccountAccess | null;
   /**
    * Counts changes written into the open library before the server has them, or undone after a failed save
    * (PAR-PL-03): the playlist screens read it again on each, so a change shows at once.
@@ -95,6 +101,7 @@ export const SessionProvider = ({ children }: { children: React.ReactNode }) => 
   const [libraryKey, setLibraryKey] = useState<string | null>(null);
   const [library, setLibrary] = useState<SessionState["library"]>({ status: "idle", error: null, version: 0 });
   const [signInNotice, setSignInNotice] = useState<SignInNotice>(null);
+  const [access, setAccess] = useState<AccountAccess | null>(null);
   const [localChanges, setLocalChanges] = useState(0);
   useEffect(() => onLibraryChanged(() => setLocalChanges((count) => count + 1)), []);
 
@@ -421,23 +428,40 @@ export const SessionProvider = ({ children }: { children: React.ReactNode }) => 
     return () => subscription.remove();
   }, [profilesUserId]);
 
-  // UX-I18N-07: the account's one language wins while signed in. A restored session reads it at start and each time the
-  // app comes back to the front, so a change made on another device shows here; a fresh sign-in already reconciled it.
-  // While the first setup still has to ask (UX-SETUP-08), the account's language is not shown over the one picked there.
+  // One `/auth/me` read at start, after a sign-in and each time the app comes back to the front brings:
+  // - the account's access (ACCT-UNPAID-03): an unpaid account sees the shared notice with its wipe date above the main
+  //   screens; signed out, or before the first answer, nothing is known and nothing shows;
+  // - UX-I18N-07: the account's one language, so a change made on another device shows here. A fresh sign-in already
+  //   reconciled it, and while the first setup still has to ask (UX-SETUP-08) it is not shown over the one picked there.
   const sessionToken = session?.token ?? null;
   const reconciledToken = useRef<string | null>(null);
   useEffect(() => {
+    setAccess(null);
     if (!sessionToken) return;
-    const refresh = async () => {
-      if (await languageLeftToSetup()) return;
-      await applyAccountLanguageFromServer(sessionToken);
+    let live = true;
+    const refresh = async (language: boolean) => {
+      let user: User;
+      try {
+        user = (await getMe(sessionToken)).user;
+      } catch (error) {
+        log.warn("account.refresh_failed", { message: error instanceof Error ? error.message : String(error) });
+        return;
+      }
+      if (!live) return;
+      setAccess(user.access ?? null);
+      log.info("account.access", { state: user.access?.state ?? null });
+      if (!language || (await languageLeftToSetup())) return;
+      await applyAccountLanguage(user);
     };
-    if (reconciledToken.current !== sessionToken) void refresh();
+    void refresh(reconciledToken.current !== sessionToken);
     reconciledToken.current = null;
     const subscription = AppState.addEventListener("change", (status) => {
-      if (status === "active") void refresh();
+      if (status === "active") void refresh(true);
     });
-    return () => subscription.remove();
+    return () => {
+      live = false;
+      subscription.remove();
+    };
   }, [sessionToken]);
 
   // Even out volume (PAR-PLAY-03): kept on this phone per account; signed out it is off.
@@ -464,6 +488,7 @@ export const SessionProvider = ({ children }: { children: React.ReactNode }) => 
       libraryKey,
       localChanges,
       library,
+      access,
       signInNotice,
       signIn: async (next) => {
         await sessionStore.write(next);
@@ -500,7 +525,7 @@ export const SessionProvider = ({ children }: { children: React.ReactNode }) => 
         await clearLocal("signOut");
       },
     }),
-    [booting, session, libraryKey, library, localChanges, signInNotice, load, clearLocal, changeLibrary, wantLyrics]
+    [booting, session, libraryKey, library, access, localChanges, signInNotice, load, clearLocal, changeLibrary, wantLyrics]
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

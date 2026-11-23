@@ -208,6 +208,22 @@ describe("privacy policy", () => {
     }
   });
 
+  // @req PRIV-SRV-02[api] @req OPS-BIZ-20[api]
+  it("names the daily app hello and the daily usage counts: no id, no address, totals only, under 3 never shown", () => {
+    const facts: Record<LegalLanguage, string[]> = {
+      en: ["once a day, each SpaceBadger and SpaceParrot app tells our servers that it ran", "no device or installation identifier", "we keep no internet address with it", "syncs, stream starts, uploads and sign-ins", "totals below 3 are never shown"],
+      fr: ["une fois par jour, chaque application SpaceBadger et SpaceParrot indique à nos serveurs qu'elle a fonctionné", "ni identifiant d'appareil ou d'installation", "nous ne gardons aucune adresse internet avec", "un total inférieur à 3 n'est jamais affiché"],
+      de: ["Einmal am Tag meldet jede SpaceBadger- und SpaceParrot-App", "keine Geräte- oder Installationskennung", "wir speichern dazu keine Internetadresse", "Summen unter 3 werden nie angezeigt"],
+      es: ["una vez al día, cada app SpaceBadger y SpaceParrot indica", "ningún identificador de dispositivo o de instalación", "no guardamos ninguna dirección de internet", "los totales inferiores a 3 nunca se muestran"],
+      nl: ["één keer per dag laat elke SpaceBadger- en SpaceParrot-app", "geen apparaat- of installatie-ID", "we bewaren er geen internetadres bij", "totalen onder 3 worden nooit getoond"],
+    };
+    for (const lang of LEGAL_LANGUAGES) {
+      const privacy = pageText(LEGAL_CONTENT[lang], "privacy");
+      for (const fact of facts[lang]) expect(privacy, lang).toContain(fact);
+      console.info(`[legal:usage-counts] ${lang}: ${facts[lang].length} fact(s) present`);
+    }
+  });
+
   // @req WEB-LEGAL-03[web] @req WEB-LEGAL-09[web]
   // @req REL-LOG-06[badger-desktop,badger-mobile,badger-tv]
   it("names opt-in error reports: what one holds and never holds, our own Bugsink server, and the 90-day limit", () => {

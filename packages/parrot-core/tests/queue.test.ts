@@ -16,12 +16,16 @@ import {
   jumpTo,
   nextRepeatMode,
   playNext,
+  PREVIOUS_RESTART_S,
+  previousAction,
   removeEntry,
   setRepeat,
   setShuffle,
   startQueue,
+  transportState,
   upcoming,
   type PlayQueue,
+  type PreviousAction,
 } from "../src/queue";
 
 const tracksOf = (queue: PlayQueue<string>) => queue.entries.map((entry) => entry.track);
@@ -55,6 +59,39 @@ describe("startQueue / advance / goBack", () => {
   it("an empty queue plays nothing", () => {
     expect(advance(emptyQueue<string>(), "skip")).toBeNull();
     expect(now(startQueue([], 0))).toBeNull();
+  });
+});
+
+describe("previousAction / transportState (PAR-PLAY-09)", () => {
+  const wentTo = (action: PreviousAction<string>) => (action.kind === "go" ? now(action.queue) : "restart");
+
+  // @req PAR-PLAY-09
+  it("past the first 3 s Previous restarts the song; within them it plays the song before", () => {
+    const queue = startQueue(["a", "b", "c"], 1);
+    console.info("[queue] previous", { at3: wentTo(previousAction(queue, 3)), at3_01: wentTo(previousAction(queue, 3.01)) });
+    expect(PREVIOUS_RESTART_S).toBe(3);
+    expect(wentTo(previousAction(queue, 0))).toBe("a");
+    expect(wentTo(previousAction(queue, 3))).toBe("a");
+    expect(wentTo(previousAction(queue, 3.01))).toBe("restart");
+    expect(wentTo(previousAction(queue, 95))).toBe("restart");
+  });
+
+  // @req PAR-PLAY-09
+  it("with no song before it Previous restarts the song; repeat all wraps to the last", () => {
+    const first = startQueue(["a", "b", "c"], 0);
+    expect(wentTo(previousAction(first, 1))).toBe("restart");
+    expect(wentTo(previousAction(setRepeat(first, "all"), 1))).toBe("c");
+    expect(wentTo(previousAction(setRepeat(startQueue(["a"], 0), "all"), 1))).toBe("restart");
+  });
+
+  // @req PAR-PLAY-09
+  it("Previous is offered whenever a song is loaded, Next while a song follows (or repeat all)", () => {
+    expect(transportState(emptyQueue<string>())).toEqual({ canPrevious: false, canNext: false });
+    expect(transportState(startQueue(["a", "b"], 0))).toEqual({ canPrevious: true, canNext: true });
+    const last = startQueue(["a", "b"], 1);
+    expect(transportState(last)).toEqual({ canPrevious: true, canNext: false });
+    expect(transportState(setRepeat(last, "all"))).toEqual({ canPrevious: true, canNext: true });
+    expect(transportState(setRepeat(last, "one"))).toEqual({ canPrevious: true, canNext: false });
   });
 });
 

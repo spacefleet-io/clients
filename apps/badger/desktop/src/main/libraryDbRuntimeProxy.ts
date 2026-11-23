@@ -1154,9 +1154,13 @@ export const registerLibraryDbRuntimeProxy = (
     return { applied: true };
   });
 
-  ipc.handle("sf-library-db-get-local-cache-bytes", async () => {
-    // Not available via runtime proxy — return empty
-    return new Uint8Array(0);
+  ipc.handle("sf-library-db-seal-local-cache-for-rotation", async (_event, payload: { newKeyBase64: string }) => {
+    // The onboarding "recover from this computer" rotates with this computer's library sealed under the new key
+    // (PRIV-KEY-13). The runtime holds the files; the library it has open is this computer's copy. None open: null.
+    if (!dbOpen || !client) return null;
+    return await sendSurvivingRestart("sealForRotation", () =>
+      client!.sendCommand(badgerDbCall, { method: "sealForRotation", args: [payload.newKeyBase64] }),
+    );
   });
 
   ipc.handle("sf-library-db-has-local-cache", async () => {

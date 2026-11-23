@@ -28,7 +28,9 @@ export type PairWithPhoneStringKey =
   | "keyTitle"
   | "keyInstructions"
   | "keyWaiting"
-  | "typeKeyInstead";
+  | "typeKeyInstead"
+  | "checkLabel"
+  | "checkHint";
 
 /**
  * The screen's text in the five client languages (UX-I18N-01), shared by Badger desktop and Parrot desktop so neither
@@ -62,6 +64,8 @@ export const pairWithPhoneStrings: Record<ClientUiLanguage, Record<PairWithPhone
       "On a phone or computer already signed in to this account, open Badger or Parrot → Settings → Pair a device, then scan this code.",
     keyWaiting: "Waiting for your other device…",
     typeKeyInstead: "Type the key instead",
+    checkLabel: "Code to check",
+    checkHint: "Compare it with your other device. Approve only if both show the same six digits.",
   },
   fr: {
     title: "Se connecter avec un autre appareil",
@@ -91,6 +95,8 @@ export const pairWithPhoneStrings: Record<ClientUiLanguage, Record<PairWithPhone
       "Sur un téléphone ou un ordinateur déjà connecté à ce compte, ouvrez Badger ou Parrot → Réglages → Associer un appareil, puis scannez ce code.",
     keyWaiting: "En attente de votre autre appareil…",
     typeKeyInstead: "Saisir la clé à la place",
+    checkLabel: "Code à vérifier",
+    checkHint: "Comparez-le avec votre autre appareil. N’approuvez que si les deux affichent les mêmes six chiffres.",
   },
   nl: {
     title: "Inloggen met een ander apparaat",
@@ -119,6 +125,8 @@ export const pairWithPhoneStrings: Record<ClientUiLanguage, Record<PairWithPhone
       "Open op een telefoon of computer die al is ingelogd op dit account Badger of Parrot → Instellingen → Apparaat koppelen en scan dan deze code.",
     keyWaiting: "Wachten op je andere apparaat…",
     typeKeyInstead: "Liever de sleutel typen",
+    checkLabel: "Controlecode",
+    checkHint: "Vergelijk hem met je andere apparaat. Keur alleen goed als beide dezelfde zes cijfers tonen.",
   },
   de: {
     title: "Mit einem anderen Gerät anmelden",
@@ -148,6 +156,8 @@ export const pairWithPhoneStrings: Record<ClientUiLanguage, Record<PairWithPhone
       "Öffne auf einem Handy oder Computer, der schon bei diesem Konto angemeldet ist, Badger oder Parrot → Einstellungen → Gerät koppeln und scanne dann diesen Code.",
     keyWaiting: "Warten auf dein anderes Gerät…",
     typeKeyInstead: "Stattdessen den Schlüssel eingeben",
+    checkLabel: "Prüfcode",
+    checkHint: "Vergleiche ihn mit deinem anderen Gerät. Bestätige nur, wenn beide dieselben sechs Ziffern zeigen.",
   },
   es: {
     title: "Inicia sesión con otro dispositivo",
@@ -177,6 +187,8 @@ export const pairWithPhoneStrings: Record<ClientUiLanguage, Record<PairWithPhone
       "En un teléfono o una computadora que ya tenga la sesión iniciada en esta cuenta, abre Badger o Parrot → Ajustes → Vincular un dispositivo y escanea este código.",
     keyWaiting: "Esperando a tu otro dispositivo…",
     typeKeyInstead: "Escribir la clave",
+    checkLabel: "Código de verificación",
+    checkHint: "Compáralo con tu otro dispositivo. Aprueba solo si ambos muestran los mismos seis dígitos.",
   },
 };
 

@@ -503,9 +503,12 @@ export const streamUploadFrames = async (input: {
   const payloadBytes = input.byteLength;
   let offset = input.startOffset ?? 0;
   let seq = 0;
+  // The first refused frame (STOR-UPLOAD-07): kept here because a frame that settles while the loop waits on another one
+  // leaves `inFlight` before the next race, so the race alone would never see its rejection.
+  let failure: { error: unknown } | null = null;
 
-  while (offset < payloadBytes || inFlight.size > 0) {
-    while (offset < payloadBytes && inFlight.size < input.uploadWindow) {
+  while ((offset < payloadBytes && !failure) || inFlight.size > 0) {
+    while (offset < payloadBytes && !failure && inFlight.size < input.uploadWindow) {
       const currentSeq = seq;
       const range = { offset, length: Math.min(payloadBytes, offset + input.chunkSize) - offset };
       offset += input.chunkSize;
@@ -515,6 +518,9 @@ export const streamUploadFrames = async (input: {
         .sendChunk(range, currentSeq)
         .then((ack) => {
           assertUploadAckFrame(ack);
+        })
+        .catch((error: unknown) => {
+          failure ??= { error };
         })
         .finally(() => {
           inFlight.delete(op);
@@ -527,6 +533,7 @@ export const streamUploadFrames = async (input: {
       await Promise.race(inFlight);
     }
   }
+  if (failure) throw (failure as { error: unknown }).error;
 };
 
 export const normalizeBaseUrl = (value: string) => value.trim().replace(/\/+$/, "");
@@ -2153,7 +2160,6 @@ export const createUserStorageTunnelClient = (input: {
           purpose,
           ...(profileId ? { profileId } : {}),
         }),
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         signal: controller.signal as any,
       });
       const session = await readSessionResponse(res, baseUrl);

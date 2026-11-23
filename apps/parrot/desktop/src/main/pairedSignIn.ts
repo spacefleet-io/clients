@@ -13,8 +13,8 @@ import type { ParrotKeyResult, ParrotUser } from "../shared/ipc";
 export type ParrotPairedSignInDeps = {
   /** The account this computer was signed in to before, if any. */
   previousUserId: () => string | null;
-  /** A different account takes over: forget the old one's session, key, library and covers. */
-  forgetPreviousAccount: () => void;
+  /** A different account takes over: save its queued edits, then forget its session, key, library and covers. */
+  forgetPreviousAccount: () => Promise<void>;
   /** Whether `key` opens the account's library (Parrot's, else Badger's), checked with `token`; stores nothing. */
   verifyKey: (token: string, key: string) => Promise<ParrotKeyResult>;
   signIn: (user: ParrotUser, token: string) => Promise<void>;
@@ -33,7 +33,7 @@ export const completeParrotPairedSignIn = async (deps: ParrotPairedSignInDeps, h
   const previous = deps.previousUserId();
   if (previous && previous !== user.id) {
     deps.log(`[pairing] another account signs in (was ${previous}); forgetting the previous one`);
-    deps.forgetPreviousAccount();
+    await deps.forgetPreviousAccount();
   }
   // The session first: the key is kept per signed-in user.
   await deps.signIn(user, handOver.token);

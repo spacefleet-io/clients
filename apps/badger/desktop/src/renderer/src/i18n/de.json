@@ -934,7 +934,12 @@
         "errorTwoFactorInvalid": "Der Bestätigungscode ist ungültig.",
         "submit": "Schlüssel ersetzen",
         "working": "Wird ersetzt …",
-        "errorGeneric": "Der Schlüssel konnte nicht ersetzt werden. Versuch es noch mal."
+        "errorGeneric": "Der Schlüssel konnte nicht ersetzt werden. Versuch es noch mal.",
+        "errorNotReencrypted": "Deine Parrot-Mediathek konnte von hier aus nicht mit dem neuen Schlüssel neu gesperrt werden, also wurde nichts geändert. Ersetze den Schlüssel in den Einstellungen eines Computers, der deinen aktuellen Schlüssel hat.",
+        "errorUnreadable": "Dein aktueller Schlüssel öffnet deine Parrot-Mediathek nicht, also wurde nichts geändert.",
+        "errorNotSnapshotted": "Deine Parrot-Mediathek hat noch nicht gespeicherte Änderungen. Öffne Parrot, lass es fertig synchronisieren und versuch es dann noch mal. Es wurde nichts geändert.",
+        "errorReencryptFailed": "Deine Parrot-Mediathek konnte nicht mit dem neuen Schlüssel neu gesperrt werden. Es wurde nichts geändert. Versuch es noch mal.",
+        "errorChanged": "Deine Mediathek hat sich geändert, während der Schlüssel ersetzt wurde. Es wurde nichts geändert. Versuch es noch mal."
       },
       "reset": {
         "title": "Mediathek-Daten löschen",

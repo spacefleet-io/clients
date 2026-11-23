@@ -7,7 +7,6 @@ import { base64ToBytes, bytesToBase64 } from "./storage";
 // react-native-quick-crypto expects the legacy `Buffer` type (without
 // the generic parameter added in Node 22). This helper bridges the gap
 // by round-tripping through `unknown`.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const buf = (data: any) => Buffer.from(data) as unknown as Buffer;
 
 const IV_LENGTH = 12;

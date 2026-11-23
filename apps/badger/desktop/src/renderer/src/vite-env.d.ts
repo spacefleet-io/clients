@@ -197,7 +197,16 @@ interface Window {
     libraryDb?: {
       open?: (payload: { token: string; keyBase64: string; userId: string }) => Promise<{ handle: string }>;
       openLocal?: (payload: { token: string; keyBase64: string; userId: string }) => Promise<{ handle: string }>;
-      getLocalCacheBytes?: (keyBase64?: string) => Promise<Uint8Array | null>;
+      /** PRIV-KEY-13: the local cache sealed under the new key for a rotation, or null when there is none. */
+      sealLocalCacheForRotation?: (payload: {
+        token: string;
+        newKeyBase64: string;
+      }) => Promise<import("@space/shared/api").RotationOwnLibrary | null>;
+      /** PRIV-KEY-06: every other app's library re-encrypted under the new key, or why one could not be. */
+      reencryptForRotation?: (payload: { token: string; oldKeyBase64: string; newKeyBase64: string }) => Promise<
+        | { ok: true; copies: import("@space/shared/api").RotationLibraryCopy[] }
+        | { ok: false; error: "unreadable" | "not_snapshotted" | "failed"; message: string }
+      >;
       hasLocalCache?: () => Promise<boolean>;
       clearLocalCache?: () => Promise<void>;
       /** ACCT-SQUAD-02: the chosen profile; kept by main and applied to every library it opens until sign-out. */

@@ -148,6 +148,24 @@ describe("PairWithPhone", () => {
     expect(text()).toContain("Your other device declined this device.");
   });
 
+  it("@req PRIV-PAIR-01 shows the six-digit code to compare once the other device connected, and keeps it while waiting", async () => {
+    console.info("[pair-with-phone-check] start");
+    pairing.start.mockResolvedValue(request(150_000));
+    pairing.poll
+      .mockResolvedValueOnce({ ok: true, status: "pending" })
+      .mockResolvedValueOnce({ ok: true, status: "pending", checkCode: "067383" })
+      .mockResolvedValue({ ok: true, status: "pending" });
+    await mount();
+    await flush(2_000);
+    expect(container.querySelector("[data-testid='pair-check']")).toBeNull();
+    await flush(2_000);
+    console.info("[pair-with-phone-check] code shown", container.querySelector("[data-testid='pair-check-code']")?.textContent);
+    expect(container.querySelector("[data-testid='pair-check-code']")?.textContent).toBe("067 383");
+    expect(text()).toContain(pairWithPhoneStrings.en.checkHint);
+    await flush(2_000);
+    expect(container.querySelector("[data-testid='pair-check-code']")?.textContent).toBe("067 383");
+  });
+
   it("@req ACCT-PAIR-01 keeps the email and password sign-in one click away", async () => {
     pairing.start.mockResolvedValue(request(150_000));
     pairing.poll.mockResolvedValue({ ok: true, status: "pending" });

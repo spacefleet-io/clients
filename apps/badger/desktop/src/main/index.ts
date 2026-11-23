@@ -32,6 +32,7 @@ import {
 import { uploadEncryptedFile } from "./mediaIngest";
 import { deriveMediaMasterKey, setMediaMasterKey } from "./mediaCrypto";
 import { registerFileSystemIpc } from "./fileSystem";
+import { registerLibraryRotationIpc } from "./libraryRotationIpc";
 import { registerFfmpegIpc } from "./ffmpegIpc";
 import { FfmpegRuntimeBridge } from "./ffmpegRuntimeBridge";
 import { registerToolAccessIpc } from "./toolAccessIpc";
@@ -75,6 +76,7 @@ import {
   buildTrayActions,
   createAppTray,
   MAIN_SHELL_STRINGS,
+  protocolClientArgs,
   registerTrayTestIpc,
   resolveTrayIconPath,
   revealWindow,
@@ -90,10 +92,10 @@ import { sendNotification, type NotifyInput } from "./notifications";
 import { handleSecondInstance } from "./secondInstanceHandler";
 import { createProviderReturnMailbox } from "@space/shared/providerSignIn";
 import {
+  BADGER_PROTOCOL_SCHEME,
   decideLaunchVisibility,
   findBadgerLink,
   paymentReturnOf,
-  protocolClientArgs,
   providerReturnOf,
   shouldShowOnActivate,
 } from "./protocolLink";
@@ -230,7 +232,7 @@ if (process.env.SF_E2E === "1") {
   // Tests must not rewrite the machine's `badger:` handler; they pass the link in argv instead.
   console.info("[handoff] SF_E2E=1: badger:// protocol registration skipped");
 } else {
-  const protocolArgs = protocolClientArgs({
+  const protocolArgs = protocolClientArgs(BADGER_PROTOCOL_SCHEME, {
     defaultApp: Boolean(process.defaultApp),
     execPath: process.execPath,
     argv: process.argv,
@@ -930,6 +932,7 @@ app.whenReady().then(async () => {
   } else {
     registerLibraryDbRuntimeProxy(ipcMain, () => mainWindow);
   }
+  registerLibraryRotationIpc(ipcMain);
   registerFileSystemIpc(ipcMain);
   toolAccessBridge = registerToolAccessIpc(ipcMain, () => mainWindow);
   handoffBridge = registerHandoffIpc(ipcMain, {

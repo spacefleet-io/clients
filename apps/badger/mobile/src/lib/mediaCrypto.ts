@@ -26,10 +26,8 @@ const MEDIA_MASTER_INFO = Buffer.from(SFV1_MASTER_INFO);
 // parameter that Node 22+ adds. This helper bridges the gap.
 // react-native-quick-crypto expects the legacy `Buffer` type (without
 // the generic parameter added in Node 22). This helper bridges the gap.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const buf = (data: any) => Buffer.from(data) as unknown as Buffer;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let cachedMasterKey: any = null;
 
 const hkdfSha256 = (
@@ -39,9 +37,7 @@ const hkdfSha256 = (
   length: number,
 ) => {
   const prk = crypto.createHmac("sha256", buf(salt)).update(buf(ikm)).digest();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let prev: any = Buffer.alloc(0);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let output: any = Buffer.alloc(0);
   let counter = 1;
   while (output.length < length) {
@@ -102,7 +98,6 @@ export const decryptMediaObject = (payload: Uint8Array) => {
   );
   const tag = buffer.subarray(buffer.length - TAG_BYTES);
   const key = deriveObjectKey(cachedMasterKey, salt);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const decipher: any = crypto.createDecipheriv("aes-256-gcm", buf(key), buf(nonce));
   decipher.setAAD(buf(MAGIC));
   decipher.setAuthTag(buf(tag));
@@ -141,7 +136,6 @@ export const encryptMediaObject = (plaintext: Uint8Array): Uint8Array => {
   header.writeUInt16LE(padLen, 4);
   const body = Buffer.concat([header, Buffer.from(plaintext), Buffer.from(crypto.randomBytes(padLen))]);
   const key = deriveObjectKey(cachedMasterKey, buf(salt));
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const cipher: any = crypto.createCipheriv("aes-256-gcm", buf(key), buf(nonce));
   cipher.setAAD(buf(MAGIC));
   const ciphertext = Buffer.concat([cipher.update(buf(body)), cipher.final()]);

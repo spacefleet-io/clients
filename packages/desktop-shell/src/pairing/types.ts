@@ -36,7 +36,8 @@ export type PairingHandOver = { token: string; user: PairingUser; libraryKey: st
  * the hand-over; Parrot keeps the token and key in main and only tells the window whether the key opened the library.
  */
 export type PairingPoll<A = PairingHandOver> =
-  | { status: "pending" }
+  /** `checkCode`: six digits, once the approving app connected (PRIV-PAIR-01); both screens show the same ones. */
+  | { status: "pending"; checkCode?: string }
   | { status: "expired" }
   | { status: "denied" }
   | ({ status: "approved" } & A)

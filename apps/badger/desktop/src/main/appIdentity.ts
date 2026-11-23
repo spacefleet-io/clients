@@ -12,6 +12,7 @@
  * on every OS (lanes, e2e).
  */
 import type { DesktopPlatform } from "@space/desktop-platform";
+import { resolveUserDataDir } from "@space/desktop-shell/main-shell";
 
 export const APP_NAMES = { productName: "Badger", legacyName: "Badger" } as const;
 export const LEGACY_USER_DATA_DIR = ["@sf", "desktop"];
@@ -29,6 +30,6 @@ export const resolveAppIdentity = (
   });
   return {
     name: platform.shell.appName(APP_NAMES),
-    userDataDir: env.SF_USER_DATA_PATH?.trim() || (devBuild ? `${releaseDir}-dev` : releaseDir),
+    userDataDir: resolveUserDataDir({ releaseDir, env, devBuild }),
   };
 };

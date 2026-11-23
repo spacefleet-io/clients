@@ -3,7 +3,8 @@ import { useTranslation } from "react-i18next";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth";
 import ReauthPasswordField from "@/components/ReauthPasswordField";
-import { ApiError, getLibraryMetaForKeyStep, resetLibrary, rotateLibraryKey } from "@/api";
+import { ApiError, getLibraryMetaForKeyStep, resetLibrary } from "@/api";
+import { rotateWithOtherLibraries, rotationRefusalText } from "@/lib/rotationRefusal";
 import {
   acknowledgeLibraryKey,
   clearLibraryKey,
@@ -15,7 +16,7 @@ import { isDecryptFailureMessage, useLibraryActions, useLibraryShell } from "@/l
 import { LibraryDb } from "@/lib/libraryDb";
 import { loadClientConfig, saveClientConfig } from "@/lib/config";
 import { decryptBase64ToBytes, encryptBytesToBase64 } from "@/lib/crypto";
-import { deriveNoStoredKeyDecision, deriveOnboardingRemoteDecision } from "@/lib/onboardingKeyDecision";
+import { deriveNoStoredKeyDecision, deriveOnboardingRemoteDecision, deriveStoredKeyDecision } from "@/lib/onboardingKeyDecision";
 import type { OnboardingRemoteDecision } from "@/lib/onboardingKeyDecision";
 import { generateLibraryKeyWords, libraryKeyWordsText, type NewLibraryKey } from "@space/shared/libraryKeyWords";
 import { LibraryKeyWordsGrid } from "@space/ui/library-key-words";
@@ -27,6 +28,8 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Checkbox } from "@space/ui";
 import { Check, Copy, RotateCcw } from "lucide-react";
 import { isClientUiLanguage } from "@space/shared";
+import { keyRecoveryOffered } from "@space/shared/keyChange";
+import { useKeyRotationReadiness } from "@space/shared/useKeyRotationReadiness";
 import { tooManyAttemptsText } from "@space/shared/signInError";
 import {
   DesktopStartupCard,
@@ -81,6 +84,8 @@ export default function OnboardingKey() {
   const [generateError, setGenerateError] = useState<string | null>(null);
   const [savingKey, setSavingKey] = useState(false);
   const [localCacheAvailable, setLocalCacheAvailable] = useState(false);
+  // ACCT-KEYCHG-04: recovering with a new key cannot re-seal media sealed with the lost key; offered only without media.
+  const recoveryOffered = keyRecoveryOffered(useKeyRotationReadiness(token));
   const [recoverOpen, setRecoverOpen] = useState(false);
   const [recoverKey, setRecoverKey] = useState<NewLibraryKey | null>(null);
   const [recoverConfirmed, setRecoverConfirmed] = useState(false);
@@ -118,6 +123,8 @@ export default function OnboardingKey() {
     const startedAt = Date.now();
     const step = (name: string, extra?: Record<string, unknown>) =>
       log.info({ step: name, elapsedMs: Date.now() - startedAt, cancelled, ...extra }, "key load step");
+    // tla: VaultKeys/SpinAnswered
+    // tla: VaultKeys/ManageKey
     const load = async () => {
       setLoadingKey(true);
       step("start", { hasToken: Boolean(token), libraryError: Boolean(libraryError) });
@@ -135,15 +142,17 @@ export default function OnboardingKey() {
             step("existingKey.meta.start");
             const meta = await getLibraryMetaForKeyStep(token);
             step("existingKey.meta.done", { remoteExists: meta.exists, hasKeyProbe: Boolean(meta.keyProbe) });
-            if (meta.exists) {
-              if (meta.keyProbe) {
-                await decryptBase64ToBytes(existingKey, meta.keyProbe);
+            // PRIV-KEY-08: a probe is checked even when this app has no library yet; never new words over it.
+            const stored = deriveStoredKeyDecision(meta);
+            if (stored.kind === "verify") {
+              if (stored.by === "probe") {
+                await decryptBase64ToBytes(existingKey, meta.keyProbe!);
               } else {
                 if (!user) throw new Error("LIBRARY_USER_MISSING");
                 const testDb = await LibraryDb.open(token, existingKey, user.id);
                 testDb.close();
               }
-              step("existingKey.verified");
+              step("existingKey.verified", { by: stored.by });
               await syncActiveMediaKey(existingKey);
               step("existingKey.syncMediaKey.done");
               await acknowledgeLibraryKey();
@@ -152,25 +161,18 @@ export default function OnboardingKey() {
               navigate("/", { replace: true });
               return;
             }
-            if (!meta.exists) {
-              const decision = deriveOnboardingRemoteDecision({
-                existingKey: false,
-                libraryError: false,
-                remoteExists: meta.exists,
-                bootstrapRequired: meta.bootstrapRequired,
-              });
-              if (decision.mode === "generate") {
-                await startGenerateFlow();
-              } else {
-                setMode(decision.mode);
-                setPromptReason(decision.promptReason);
-                setLibraryKey(null);
-                setGenerateError(null);
-                setEnterError(null);
-              }
-              setLoadingKey(false);
-              return;
+            const { decision } = stored;
+            if (decision.mode === "generate") {
+              await startGenerateFlow();
+            } else {
+              setMode(decision.mode);
+              setPromptReason(decision.promptReason);
+              setLibraryKey(null);
+              setGenerateError(null);
+              setEnterError(null);
             }
+            setLoadingKey(false);
+            return;
           } catch (err) {
             if (err instanceof ApiError && err.status === 401) {
               await logout("sessionRejected");
@@ -321,6 +323,7 @@ export default function OnboardingKey() {
     return <Navigate to="/home" replace />;
   }
 
+  // tla: VaultKeys/Continue
   const continueNext = () => {
     if (!libraryKey || savingKey) return;
     setSavingKey(true);
@@ -430,6 +433,7 @@ export default function OnboardingKey() {
   };
 
   /** The step's Continue: the step keeps the typed words and shows "Validating…" until this settles. */
+  // tla: VaultKeys/Enter
   const submitEnteredKey = async ({ keyBase64, words }: LibraryKeyTyped) => {
     if (!token) return;
     setEnterError(null);
@@ -498,14 +502,23 @@ export default function OnboardingKey() {
     setRecoverError(null);
     setRecoverNotice(null);
     try {
-      const rawBytes = await LibraryDb.getLocalCacheBytes();
-      if (!rawBytes) {
+      // PRIV-KEY-13: this computer's library as a snapshot under the new key, declaring its formats.
+      const library = await LibraryDb.sealLocalCacheForRotation(token, recoverKey.keyBase64);
+      if (!library) {
         setRecoverError(t("onboarding.recovery.errorNoLocal"));
         return;
       }
-      const blobBase64 = await encryptBytesToBase64(recoverKey.keyBase64, rawBytes);
       const keyProbe = await buildKeyProbe(recoverKey.keyBase64);
-      await rotateLibraryKey(token, blobBase64, keyProbe, recoverPassword, recoverCode || undefined);
+      // PRIV-KEY-06: this screen has no old key to open Parrot's library with, so it sends none: the server refuses
+      // the rotation (`library_not_reencrypted`, nothing changed) when Parrot has a library, and never empties it.
+      await rotateWithOtherLibraries({
+        token,
+        library,
+        keyProbe,
+        password: recoverPassword,
+        twoFactorCode: recoverCode || undefined,
+        reencrypt: () => Promise.resolve([]),
+      });
       await storeLibraryKey(recoverKey.keyBase64, recoverKey.words);
       await syncActiveMediaKey(recoverKey.keyBase64);
       await acknowledgeLibraryKey();
@@ -518,7 +531,10 @@ export default function OnboardingKey() {
         setRecoverError(actionableMessage);
         return;
       }
-      if (err instanceof ApiError) {
+      const refusal = rotationRefusalText(t, err);
+      if (refusal) {
+        setRecoverError(refusal);
+      } else if (err instanceof ApiError) {
         if (err.payload.error === "invalid_password") {
           setRecoverError(t("onboarding.recovery.errorInvalidPassword"));
         } else if (err.payload.error === "two_factor_required") {
@@ -620,7 +636,9 @@ export default function OnboardingKey() {
                 onErase={eraseLibrary}
                 hasPassword={hasPassword}
                 secondary={
-                  localCacheAvailable ? (
+                  // ACCT-KEYCHG-04: recovering from local data is a key change that works only while the account stores
+                  // no media; erase stays offered either way.
+                  recoveryOffered && localCacheAvailable ? (
                     <Button type="button" variant="secondary" className="gap-2" onClick={() => setRecoverOpen(true)}>
                       <RotateCcw className="h-4 w-4" />
                       <span>{t("onboarding.recovery.button")}</span>
