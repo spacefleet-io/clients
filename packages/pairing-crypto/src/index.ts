@@ -37,8 +37,6 @@ export {
   lookupPairingRequest,
   pairingRequestView,
 } from "./approver";
-export { approveSiblingRequest, checkSiblingAccount, checkSiblingRequest, refuseSiblingRequest, siblingAppOf } from "./sibling";
-export type { SiblingAccount, SiblingApproveDeps, SiblingApproved, SiblingExpectation, SiblingRefusal } from "./sibling";
 export type {
   ApprovePairingDeps,
   ApprovePairingProof,
