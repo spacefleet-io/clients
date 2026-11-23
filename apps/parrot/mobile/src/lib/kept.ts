@@ -7,7 +7,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   createParrotKeeping,
-  keptTrackIds,
   type KeepCopyChoice,
   type KeepLibrary,
   type KeptKind,
@@ -34,7 +33,6 @@ import {
 import { translate } from "@space/mobile-shell/i18n";
 import { scopeLogger } from "@space/mobile-shell/logger";
 import { fileForDownload, readKeepLibrary, setLibraryCopyKept } from "./library";
-import { parrotOfflineTrackIds, type OfflineManageRow } from "@space/shared/offlineManage";
 
 const logger = scopeLogger("kept");
 const log = (line: string) => logger.info(line);
@@ -164,52 +162,6 @@ export const keptLibraryLoaded = async (): Promise<void> => {
 export const keepItem = async (kind: KeptKind, id: string, choice: string | null) => publish(await (await ready()).keep(kind, id, choice));
 
 export const unkeepItem = async (kind: KeptKind, id: string) => publish(await (await ready()).unkeep(kind, id));
-
-/** Settings › Manage offline content › Remove all (OFFL-MANAGE-01): every kept item is unkept, so its songs leave the phone. */
-export const unkeepAll = async (): Promise<void> => {
-  const created = await ready();
-  for (const entry of created.status().entries) publish(await created.unkeep(entry.kind, entry.id));
-};
-
-/** One kept album, playlist or song with the songs it holds on the phone and the file kept for each. */
-export type KeptItemSongs = { kind: KeptKind; id: string; songs: Array<{ trackId: string; fileId: string }> };
-
-/**
- * Each kept item with its songs on the phone (OFFL-MANAGE-01), songs left out by hand excluded: the screen groups them
- * into artists › albums › songs and playlists › songs. A song two kept items share is listed under both.
- */
-export const keptSongs = (): KeptItemSongs[] => {
-  const fileOf = new Map(current.songs.map((song) => [song.trackId, song.fileId]));
-  return current.entries.map((entry) => ({
-    kind: entry.kind,
-    id: entry.id,
-    songs: library
-      ? [...new Set(keptTrackIds(library, entry))].flatMap((trackId) => {
-          const fileId = fileOf.get(trackId);
-          return fileId ? [{ trackId, fileId }] : [];
-        })
-      : [],
-  }));
-};
-
-/**
- * Manage offline content's bin on a song, an album, an artist or a playlist row (OFFL-MANAGE-01). A song's bin leaves
- * that song out of the library's kept albums and songs, or of one kept playlist; an album's, an artist's or a playlist's
- * bin also stops keeping the albums or the playlist outright, so songs that cannot play (never on the phone, so not
- * under the row) do not keep the item saved. A file another kept item still holds stays on the phone.
- */
-export const removeKeptRow = async (row: OfflineManageRow) => {
-  const trackIds = parrotOfflineTrackIds(row);
-  const from = row.playlistId ? { playlist: row.playlistId } : ("library" as const);
-  const whole: Array<{ kind: "album" | "playlist"; id: string }> =
-    row.kind === "playlist" || row.kind === "album"
-      ? [{ kind: row.kind, id: row.id }]
-      : row.kind === "artist"
-        ? row.children.filter((child) => child.kind === "album").map((album) => ({ kind: "album" as const, id: album.id }))
-        : [];
-  log(`[kept] bin ${row.key}: ${trackIds.length} song(s), ${whole.length} whole item(s) from ${row.playlistId ? `playlist ${row.playlistId}` : "the library"}`);
-  publish(await (await ready()).leaveOut(trackIds, from, whole));
-};
 
 /** The copies to ask about (PAR-OFFL-02); two or more is a real choice. */
 export const keepChoices = async (kind: KeptKind, id: string): Promise<KeepCopyChoice[]> => (await ready()).choices(kind, id);

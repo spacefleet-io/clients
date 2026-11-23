@@ -8,7 +8,6 @@ type _MpvResponse = import("@space/mpv-protocol").MpvResponse;
 type _MpvExternalMessage = import("@space/mpv-protocol").MpvExternalMessage;
 type _OscActionFile = import("@space/mpv-protocol").OscActionFile;
 type _SubtitleEntry = import("@space/mpv-protocol").SubtitleEntry;
-type _SiblingSignInActions = import("@space/desktop-shell/sibling").SiblingSignInActions;
 type _DeviceTranscodeSettings = import("../../shared/transcodeDefault").DeviceTranscodeSettings;
 type _DeviceUploadsDuringPlaybackSettings = import("../../shared/uploadPlaybackDefault").DeviceUploadsDuringPlaybackSettings;
 type _UploadsDuringPlayback = import("../../shared/uploadPlaybackDefault").UploadsDuringPlayback;
@@ -216,8 +215,6 @@ interface Window {
       cancel: () => Promise<void>;
       deviceName: () => Promise<string>;
     };
-    /** ACCT-PAIR-07: the same-device sign-in card's bridge (Parrot signed in on this computer). */
-    sibling?: _SiblingSignInActions;
     apiHost?: {
       get?: () => Promise<{
         apiBaseUrl: string;
