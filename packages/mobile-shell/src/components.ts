@@ -55,16 +55,10 @@ export { MobileEmptyLibrary, MobileEmptyLibraryAction, type MobileEmptyLibrarySt
 export { MobileLibraryLoading } from "./components/mobile-library-loading";
 export { MobileSectionHeader } from "./components/mobile-section-header";
 export { MobilePosterCard } from "./components/mobile-poster-card";
-export { MobileRail, MobileRailScroll, type MobileRailProps, type MobileRailScrollProps } from "./components/mobile-rail";
+export { MobilePosterRow } from "./components/mobile-poster-row";
 export { MobileNoticeBanner } from "./components/mobile-notice-banner";
 export { MobileErrorReportsLink } from "./components/mobile-error-reports-link";
 export { MobileOfflineIndicator, formatPendingOpsLabel, type MobileOfflineVariant } from "./components/mobile-offline-indicator";
-export {
-  MobileSyncIndicator,
-  syncIndicatorCopy,
-  type MobileSyncIndicatorCopy,
-  type MobileSyncIndicatorState,
-} from "./components/mobile-sync-indicator";
 
 // UI primitives
 export { MobileButton } from "./components/mobile-button";

@@ -1,41 +1,29 @@
 import {
-  ApiError,
+  apiRequest,
   completeProviderSignIn as sharedCompleteProviderSignIn,
   getApiBaseUrl,
-  getLibraryMeta as sharedGetLibraryMeta,
-  getLibraryMetaForKeyStep as sharedGetLibraryMetaForKeyStep,
   login as sharedLogin,
   setApiBaseUrl,
   setApiClientType,
 } from "@space/shared/api";
-import { setClientIdentity, setLibraryReadOpStreamVersion } from "@space/shared/appVersion";
-import { logFailedApiCalls } from "@space/shared/apiFailure";
-import { DEFAULT_SPACE_APP_ID } from "@space/shared/appScope";
-import { READ_OP_STREAM_VERSION } from "@space/library-db-definition/ops";
-import type { MetadataSkipMarkersResult, TitleType } from "@space/shared/api";
+import { setClientIdentity } from "@space/shared/appVersion";
+import type {
+  MetadataSkipMarkersResult,
+  TitleDetails,
+  TitleType,
+  TitleSearchResult,
+  Trailer,
+} from "@space/shared/api";
 import type { createUserStorageTunnelClient, StorageTunnelPurpose } from "@space/shared/storageTunnel";
 import type { StorageObjectCounting } from "@space/shared/storageCounting";
 import { resolveInitialApiBaseUrl } from "./lib/apiBaseUrl";
 import { metadataClient } from "./lib/metadataTickets";
 
 setApiBaseUrl(resolveInitialApiBaseUrl(import.meta.env));
-// `<app>-<deviceType>` as Parrot's `parrot-desktop`: only such a session may hand the library key to the sister app on
-// this computer (ACCT-PAIR-07); the Devices list already reads it as a computer.
-const DESKTOP_CLIENT_TYPE = "badger-desktop";
+const DESKTOP_CLIENT_TYPE = "client-web";
 setApiClientType(DESKTOP_CLIENT_TYPE);
 // REL-CD-29: the window states the same build main does (read once by the preload).
 setClientIdentity(typeof window === "undefined" ? null : (window.sf?.clientIdentity ?? null));
-// REL-LOG-31: the window's own failed API calls (sign-in, account pages) get a console line with the server's request id.
-logFailedApiCalls((fields) => console.warn("[api] call failed", JSON.stringify(fields)));
-// LIB-FMT-13: a 426 for the account's switch to an op stream this build reads is not "please update".
-setLibraryReadOpStreamVersion(READ_OP_STREAM_VERSION); // op-stream: read
-// REL-CD-29 / LIB-FMT-13: a "please update" refusal the runtime's own API call got (library sync, uploads) is raised
-// again here as the API gave it, so this window's update gate (the `appVersion` latch every `ApiError` feeds) shows it.
-if (typeof window !== "undefined") {
-  window.sf?.onAppUpdateRequired?.((refusal) => {
-    void new ApiError(refusal.status, refusal.payload);
-  });
-}
 
 // Same alias @space/shared/api uses; type-only, so it does not pull the module in.
 type UserStorageTunnelClient = ReturnType<typeof createUserStorageTunnelClient>;
@@ -174,15 +162,5 @@ export const completeProviderSignIn = async (code: string, clientVerifier: strin
     ...(deviceName ? { deviceName } : {}),
   });
 };
-
-/**
- * LIB-FMT-13: this window's library reads state the op stream this build reads, so a switched account answers them
- * instead of refusing with "please update". These named exports win over the shared ones re-exported below.
- */
-export const getLibraryMeta = (token: string) =>
-  sharedGetLibraryMeta(token, DEFAULT_SPACE_APP_ID, READ_OP_STREAM_VERSION); // op-stream: read
-
-export const getLibraryMetaForKeyStep = (token: string) =>
-  sharedGetLibraryMetaForKeyStep(token, DEFAULT_SPACE_APP_ID, undefined, READ_OP_STREAM_VERSION); // op-stream: read
 
 export * from "@space/shared/api";

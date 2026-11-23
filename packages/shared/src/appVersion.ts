@@ -15,11 +15,8 @@ export const APP_UPDATE_REQUIRED = "app_update_required";
 /** The HTTP status of that answer (426 Upgrade Required). */
 export const APP_UPDATE_REQUIRED_STATUS = 426;
 
-/**
- * Where an app runs. A minimum is set per app and per platform, because each store ships updates at its own pace.
- * `kodi` and `jellyfin` are Badger's Kodi add-on and Jellyfin plugin (`badger/kodi/<ver>`), each on its own repository.
- */
-export const CLIENT_PLATFORMS = ["desktop", "android", "ios", "android-tv", "tvos", "web", "kodi", "jellyfin"] as const;
+/** Where an app runs. A minimum is set per app and per platform, because each store ships updates at its own pace. */
+export const CLIENT_PLATFORMS = ["desktop", "android", "ios", "android-tv", "tvos", "web"] as const;
 
 export type ClientPlatform = (typeof CLIENT_PLATFORMS)[number];
 
@@ -86,24 +83,7 @@ export type AppUpdateRequiredPayload = {
   platform: ClientPlatform;
   version: string;
   minVersion: string;
-  /**
-   * Why, when it is not the version floor: `library_op_stream` = the account's library moved to an op stream this
-   * build does not declare, or holds an op type it does not know (LIB-FMT-13), whatever its version. Another app's
-   * library states its own reason through {@link requireLibraryUpdate}.
-   */
-  reason?: string;
-  /** With `reason: "library_op_stream"`: the op stream version the library needs. */
-  opStreamVersion?: number;
 };
-
-/** The 426 `reason` of a library switched to an op stream the calling build does not declare (LIB-FMT-13). */
-export const LIBRARY_OP_STREAM_REASON = "library_op_stream";
-
-/**
- * Why a Parrot build must update for the account's music library (PAR-FMT-01, API-VER-01): the library file is at a
- * newer schema than the build knows, or the account stores songs split in parts and the build predates that format.
- */
-export const LIBRARY_SCHEMA_REASON = "library_schema";
 
 /** True when an API error is the "please update" refusal. */
 export const isAppUpdateRequired = (error: unknown): error is ApiError =>
@@ -161,13 +141,6 @@ export const setClientIdentity = (next: ClientIdentity | null) => {
 export const getClientIdentity = (): ClientIdentity | null => identity;
 
 /**
- * The environment variable through which an app hands its identity (the `x-space-client` value, `badger/desktop/0.2.3`)
- * to a helper process it starts, such as Badger desktop's local runtime, so that process's API calls state the same
- * build. Unset or malformed: the helper states nothing.
- */
-export const CLIENT_IDENTITY_ENV = "SF_CLIENT_IDENTITY";
-
-/**
  * A web player's identity (`badger/web/2026.1118.1915`): the version the website image was built with
  * (`VITE_SPACE_WEB_VERSION`, the built commit's time). Null when the build states none (a dev server) or a malformed
  * one, so such a page is never refused for its version.
@@ -178,64 +151,17 @@ export const webClientIdentity = (app: SpaceAppId, version: unknown): ClientIden
 /** The identity header for a hand-written `fetch` to the API (never to a third party); empty while no identity is set. */
 export { spaceClientHeaders as clientIdentityHeaders };
 
-let libraryReadOpStreamVersion: number | null = null;
-
-/**
- * Called once at app start-up by a build that reads the library's op stream (`READ_OP_STREAM_VERSION`, which this
- * package cannot import): a 426 `library_op_stream` asking for an op stream at or below it is then not a "please
- * update" for this build but the switch of LIB-FMT-13, so it is not latched; the writer re-reads the library's
- * `targetOpStreamVersion` and retries ({@link isLibraryOpStreamSwitch}).
- */
-export const setLibraryReadOpStreamVersion = (version: number | null) => {
-  libraryReadOpStreamVersion = version;
-};
-
-/**
- * True when the API refused a call because the account's library was switched to an op stream this build already
- * reads (LIB-FMT-13): re-read the library meta and retry declaring the new op stream, instead of asking to update.
- */
-export const isLibraryOpStreamSwitch = (error: unknown): boolean => {
-  if (!isAppUpdateRequired(error) || libraryReadOpStreamVersion === null) return false;
-  const { reason, opStreamVersion } = error.payload ?? {};
-  return (
-    reason === LIBRARY_OP_STREAM_REASON &&
-    typeof opStreamVersion === "number" &&
-    opStreamVersion <= libraryReadOpStreamVersion
-  );
-};
-
 let updateRequired: AppUpdateRequiredPayload | null = null;
 const updateListeners = new Set<(payload: AppUpdateRequiredPayload) => void>();
 
-const latchUpdateRequired = (payload: AppUpdateRequiredPayload) => {
+onApiError((error) => {
+  const payload = appUpdateRequiredFrom(error);
   // The first refusal is kept as is: later ones say the same, and a stable value is what React's external-store
   // subscribers (`useSyncExternalStore`) require.
-  if (updateRequired) return;
+  if (!payload || updateRequired) return;
   updateRequired = payload;
   for (const listener of updateListeners) listener(payload);
-};
-
-onApiError((error) => {
-  if (isLibraryOpStreamSwitch(error)) return;
-  const payload = appUpdateRequiredFrom(error);
-  if (payload) latchUpdateRequired(payload);
 });
-
-/**
- * The library holds a change this build cannot apply (LIB-FMT-13: an op type it does not know): the sync stopped with
- * nothing applied, and the app asks for an update exactly as for the API's 426 `library_op_stream`. No server answer
- * carries it, so the payload states this build's own identity. `reason` names what the library needs (another app's
- * library passes its own).
- */
-export const requireLibraryUpdate = (reason: string = LIBRARY_OP_STREAM_REASON) =>
-  latchUpdateRequired({
-    error: APP_UPDATE_REQUIRED,
-    app: identity?.app ?? "badger",
-    platform: identity?.platform ?? "desktop",
-    version: identity?.version ?? "",
-    minVersion: "",
-    reason,
-  });
 
 /** The refusal this process got, or null while the API has not refused it. Once refused, it stays refused. */
 export const getAppUpdateRequired = (): AppUpdateRequiredPayload | null => updateRequired;
@@ -256,6 +182,5 @@ export const onAppUpdateRequired = (listener: (payload: AppUpdateRequiredPayload
 export const __resetAppVersionStateForTests = () => {
   setClientIdentity(null);
   updateRequired = null;
-  libraryReadOpStreamVersion = null;
   updateListeners.clear();
 };

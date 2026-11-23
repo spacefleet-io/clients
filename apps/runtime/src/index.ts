@@ -51,17 +51,12 @@ import { armShutdownWatchdog } from "./core/shutdownWatchdog";
 import { uploadPlaybackGate } from "@space/content-core/storageTransport";
 import { encodePlaybackGate } from "@space/ffmpeg/playbackGate";
 import { bindEncodeGateToPlaybackLease } from "./core/encodePlaybackBinding";
-import { applyClientIdentityFromEnv } from "./clientIdentity";
 
 // The compiled runtime cannot resolve bun's drizzle adapter through the library-db loader's createRequire.
 // Imported only under Bun: vitest (Node) imports this entry and has no bun:sqlite.
 if (typeof Bun !== "undefined") {
   (await import("@space/library-db-runtime/bunSqlite")).registerBunSqlite();
 }
-
-// Before any API call: the runtime's calls state the desktop build that started it (REL-CD-29).
-const clientIdentity = applyClientIdentityFromEnv(process.env);
-console.log(`[runtime] client identity ${clientIdentity ? `${clientIdentity.app}/${clientIdentity.platform}/${clientIdentity.version}` : "none"}`);
 
 const app = createApp();
 const config = getRuntimeConfig();

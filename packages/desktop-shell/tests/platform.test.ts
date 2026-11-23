@@ -20,13 +20,6 @@ describe("desktop platform bridge in-memory adapter", () => {
     });
   });
 
-  // @bugfix: with no default given the bridge fell back to https://api.spacebadger.io, a name with no DNS record (NXDOMAIN).
-  it("falls back to the production API when no default is given", async () => {
-    const state = await createInMemoryPlatformBridge().apiHost.get();
-    console.info(`[platform-bridge:fallback] apiHost state=${JSON.stringify(state)}`);
-    expect(state).toMatchObject({ apiBaseUrl: "https://api.spacefleet.io", defaultApiBaseUrl: "https://api.spacefleet.io" });
-  });
-
   it("persists and notifies host updates", async () => {
     console.info("[platform-bridge:setup] creating bridge with defaults");
     const bridge = createInMemoryPlatformBridge();

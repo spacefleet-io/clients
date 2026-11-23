@@ -4,17 +4,6 @@
     "collectionKey": "bibliotheeksleutel"
   },
   "parrot": {
-    "artist": {
-      "label": "Artiest",
-      "latestRelease": "Nieuwste release",
-      "discography": "Discografie",
-      "allSongs": "Alle nummers",
-      "album": "Album",
-      "single": "Single",
-      "ep": "Ep",
-      "hoursMinutes": "{{hours}} u {{minutes}} min",
-      "minutes": "{{minutes}} min"
-    },
     "nav": {
       "back": "Terug",
       "library": "Bibliotheek",
@@ -57,10 +46,11 @@
         "artists": "Artiesten",
         "songs": "Nummers"
       },
-      "more": "+{{count}} meer",
-      "filterOn": "Filteren, {{count}} aan",
-      "searchGenres": "Zoeken",
-      "noMatch": "Geen resultaat"
+      "sort": {
+        "byArtist": "Op artiest",
+        "byName": "Op naam",
+        "byTitle": "Op titel"
+      }
     },
     "album": {
       "noPlayableFile": "Dit album heeft nog geen afspeelbaar bestand.",
@@ -79,6 +69,8 @@
       "error": "Afspeelfout: {{error}}",
       "playingFromAlbum": "Speelt af van album",
       "close": "Sluiten",
+      "goToAlbum": "Naar album",
+      "goToArtist": "Naar artiest",
       "more": "Meer",
       "output": "Afspelen op een ander apparaat"
     },
@@ -110,7 +102,7 @@
       "likedEmpty": "Nog geen favoriete nummers"
     },
     "kept": {
-      "keep": "Offline opslaan",
+      "keep": "Bewaren op deze telefoon",
       "remove": "Verwijderen van deze telefoon",
       "line": "Bewaard op deze telefoon · {{size}}",
       "chooseBody": "Deze nummers zijn in meer dan één formaat opgeslagen. Kies welke je op deze telefoon bewaart.",
