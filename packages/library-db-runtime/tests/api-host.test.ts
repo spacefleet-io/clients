@@ -47,8 +47,6 @@ describe("runtime api host", () => {
   it("defaults to production API when no override is set", () => {
     console.info(`[api-host:default] no override set`);
     try {
-      // @bugfix: the default was https://api.spacebadger.io, a name with no DNS record (NXDOMAIN); production is api.spacefleet.io.
-      expect(getDefaultApiBaseUrl()).toBe("https://api.spacefleet.io");
       expect(getApiBaseUrl()).toBe(getDefaultApiBaseUrl());
       expect(getCustomApiBaseUrl()).toBeNull();
       console.info(`[api-host:default] resolved=${getApiBaseUrl()} custom=null OK`);

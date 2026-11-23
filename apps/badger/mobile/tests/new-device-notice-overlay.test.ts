@@ -63,7 +63,7 @@ vi.mock("@space/mobile-shell/components", () => {
 vi.mock("../src/store/auth", () => ({ useAuth: () => ({ token: null }) }));
 vi.mock("../src/store/library", () => ({
   useLibraryData: () => ({ media: [] }),
-  useLibraryStatus: () => ({ loadStatus: { kind: "ready" }, syncState: { kind: "idle" }, reload: () => undefined }),
+  useLibraryStatus: () => ({ loadStatus: { kind: "ready" }, reload: () => undefined }),
 }));
 vi.mock("../src/lib/pairing/deviceWatch", () => ({
   checkForNewDevices: async () => [],

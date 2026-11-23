@@ -3,8 +3,6 @@
  * the now-playing page, Account and Settings. Shared by Parrot desktop and the web player (REL-FAM-02); each app spreads
  * them into its own language tables.
  */
-import { pluralCategory } from "@space/shared/pluralRules";
-
 export const SHELL_EN = {
   "nav.home": "Home",
   "nav.notifications": "Notifications",
@@ -223,7 +221,6 @@ export const SHELL_EN = {
   "card.shuffle": "Shuffle",
   "card.playNext": "Play next",
   "card.addToQueue": "Add to queue",
-  "card.alreadyInUpNext": "Already in Up next",
   "card.goToAlbum": "Go to album",
   "card.goToArtist": "Go to artist",
   "card.addToPlaylist": "Add to playlist",
@@ -453,7 +450,6 @@ export const SHELL_FR: ShellStrings = {
   "card.shuffle": "Lecture aléatoire",
   "card.playNext": "Lire ensuite",
   "card.addToQueue": "Ajouter à la file d'attente",
-  "card.alreadyInUpNext": "Déjà dans À suivre",
   "card.goToAlbum": "Aller à l'album",
   "card.goToArtist": "Aller à l'artiste",
   "card.addToPlaylist": "Ajouter à une playlist",
@@ -679,7 +675,6 @@ export const SHELL_NL: ShellStrings = {
   "card.shuffle": "Willekeurig afspelen",
   "card.playNext": "Hierna afspelen",
   "card.addToQueue": "Aan wachtrij toevoegen",
-  "card.alreadyInUpNext": "Staat al in Hierna",
   "card.goToAlbum": "Naar album",
   "card.goToArtist": "Naar artiest",
   "card.addToPlaylist": "Aan afspeellijst toevoegen",
@@ -905,7 +900,6 @@ export const SHELL_DE: ShellStrings = {
   "card.shuffle": "Zufallswiedergabe",
   "card.playNext": "Als Nächstes abspielen",
   "card.addToQueue": "Zur Warteschlange hinzufügen",
-  "card.alreadyInUpNext": "Bereits in „Als Nächstes“",
   "card.goToAlbum": "Zum Album",
   "card.goToArtist": "Zum Künstler",
   "card.addToPlaylist": "Zu Playlist hinzufügen",
@@ -1131,7 +1125,6 @@ export const SHELL_ES: ShellStrings = {
   "card.shuffle": "Aleatorio",
   "card.playNext": "Reproducir a continuación",
   "card.addToQueue": "Añadir a la cola",
-  "card.alreadyInUpNext": "Ya está en A continuación",
   "card.goToAlbum": "Ir al álbum",
   "card.goToArtist": "Ir al artista",
   "card.addToPlaylist": "Añadir a una playlist",
@@ -1142,8 +1135,6 @@ export const SHELL_ES: ShellStrings = {
   "kept.cancel": "Cancelar",
 };
 
-/** Whether `n` takes `language`'s "one" or "other" text, also where the engine has no `Intl.PluralRules` (Hermes). */
-export const shellPluralForm = (language: string, n: number): "one" | "other" => (pluralCategory(language, n) === "one" ? "one" : "other");
-
 /** The shell key of "N albums / songs / artists" in `language`'s plural form (`{n}` is the count). */
-export const shellCountKey = (language: string, kind: "album" | "song" | "artist", n: number) => `library.count.${kind}.${shellPluralForm(language, n)}` as const;
+export const shellCountKey = (language: string, kind: "album" | "song" | "artist", n: number) =>
+  `library.count.${kind}.${new Intl.PluralRules(language).select(n) === "one" ? "one" : "other"}` as const;

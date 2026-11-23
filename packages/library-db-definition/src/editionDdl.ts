@@ -58,9 +58,7 @@ export type SqlStatement = readonly [sql: string, params: unknown[]];
  * that carries `editions` replaces the title's edition rows; one from a client that predates editions leaves them and
  * files each of its files under its unit's unnamed edition, created when missing.
  */
-export const mediaFilesAndEditionsStatements = (
-  details: Pick<MediaDetails, "id" | "updatedAt" | "files" | "editions">
-): SqlStatement[] => {
+export const mediaFilesAndEditionsStatements = (details: MediaDetails): SqlStatement[] => {
   const mediaId = details.id;
   const statements: SqlStatement[] = [];
   const editionIds = new Set<string>();

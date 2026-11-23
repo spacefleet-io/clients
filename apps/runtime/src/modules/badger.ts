@@ -18,8 +18,7 @@ import { badgerMediaDelete } from "@space/runtime-contracts/badger/media";
 import crypto from "node:crypto";
 import { existsSync, promises as fsPromises } from "node:fs";
 import { loadJobStateSync } from "@space/content-core";
-import { dirname as pathDirname, join as joinPath } from "node:path";
-import { deleteOfflinePieceItem, offlinePieceItemPath } from "@space/library-db-runtime/offlinePieceStore";
+import { join as joinPath } from "node:path";
 import { isValidPlacementId, parseMediaPlacementIdFromObjectKey } from "@space/shared/storagePlacement";
 import { collectMediaKeysInUse } from "@space/library-db-definition/mediaDetails";
 import {
@@ -38,7 +37,6 @@ import { processBadgerMediaJob } from "./badgerIngest";
 import { runtimeJobsStore } from "../core/jobs/store";
 import { BadgerLibraryDbService, type LibraryClosedListener } from "./badgerLibraryDb";
 import { LibraryFormatTooNewError } from "@space/library-db-runtime";
-import { onAppUpdateRefusal } from "@space/library-db-runtime/api";
 import { configureMediaIngestRuntime } from "@space/ingest-core/mediaProcessor";
 import { backgroundEncodePriority } from "@space/ffmpeg/resourcePolicy";
 import {
@@ -436,11 +434,6 @@ type BadgerModuleDependencies = {
   countUnfinishedEngineJobs?: () => Promise<number>;
   /** Called after an open library is closed (sign-out, cache clear, shutdown): grants made against it end. */
   onLibraryClosed?: LibraryClosedListener;
-  /**
-   * Called once a library DB opened: `online` from `badger.db.open` (remote pull done), `local` from
-   * `badger.db.open_local` (no network). The runtime checks the offline copies then (OFFL-SAFE-01, OFFL-MIGR-01).
-   */
-  onLibraryOpened?: (mode: "online" | "local") => void;
   /** Called when `getActiveIngestUserId()` changes (RT-JOBS-07): the job engine wakes the new account's parked jobs. */
   onSessionChanged?: () => void;
 };
@@ -519,7 +512,6 @@ export class BadgerModule {
     requests: 0,
   };
   private eventPublisher: BadgerModuleEventPublisher | null = null;
-  private stopAppUpdateRefusals: (() => void) | null = null;
   private activeIngestTasks = new Map<string, AbortController>();
   private lastIngestEventAt = new Map<string, number>();
   /**
@@ -545,7 +537,6 @@ export class BadgerModule {
   // ops (replan_qualities) can stamp jobs on a sync-populated library.
   private backendUserId: string | null = null;
   private readonly onSessionChanged: () => void;
-  private readonly onLibraryOpened: (mode: "online" | "local") => void;
   /**
    * Module-level cache of the most recently set library key. Set by
    * `setLibraryKey` and consumed as a fallback by `getActiveLibraryKey` and as
@@ -570,7 +561,6 @@ export class BadgerModule {
     this.processMediaJob = deps.processMediaJob ?? processBadgerMediaJob;
     this.countUnfinishedEngineJobs = deps.countUnfinishedEngineJobs ?? (async () => 0);
     this.onSessionChanged = deps.onSessionChanged ?? (() => {});
-    this.onLibraryOpened = deps.onLibraryOpened ?? (() => {});
     if (deps.onLibraryClosed) this.libraryDbService.setClosedListener(deps.onLibraryClosed);
   }
 
@@ -792,12 +782,6 @@ export class BadgerModule {
 
   setEventPublisher(publisher: BadgerModuleEventPublisher | null) {
     this.eventPublisher = publisher;
-    // REL-CD-29 / LIB-FMT-13: a "please update" refusal the runtime's own API calls get (library sync, uploads) reaches
-    // the desktop, which owns the update gate; without it the library stalled with no word to the user.
-    this.stopAppUpdateRefusals?.();
-    this.stopAppUpdateRefusals = publisher
-      ? onAppUpdateRefusal((refusal) => this.publishAsyncEvent("badger.library", "badger.app.update_required", refusal))
-      : null;
     this.libraryDbService.setEventPublisher(
       publisher
         ? (channel, event, payload) => this.publishAsyncEvent(channel, event, payload)
@@ -2636,7 +2620,6 @@ export class BadgerModule {
     this.attachSessionCredentials(token, keyBase64, account, "badger.db.open");
     try {
       const result = await this.libraryDbService.open(token, keyBase64, account);
-      this.onLibraryOpened("online");
       return {
         response: { requestId: request.requestId, ok: true, result, error: null },
         event: { channel: "library", event: "library.db_opened", payload: result },
@@ -2664,7 +2647,6 @@ export class BadgerModule {
       // Offline open: on-disk only, no remote pull. Never reaches the backend,
       // so it succeeds even when the API/storage is unreachable.
       const result = await this.libraryDbService.openLocal(token, keyBase64, account);
-      this.onLibraryOpened("local");
       return {
         response: { requestId: request.requestId, ok: true, result, error: null },
         event: { channel: "library", event: "library.db_opened", payload: result },
@@ -2822,17 +2804,10 @@ export class BadgerModule {
           );
           for (const row of localRows) {
             try {
-              // A pieces item (OFFL-FILE-03) sits at `<root>/items/<hash>.json`: drop it and the pieces no other
-              // item lists. An old plain file (schema 1) is the file itself.
-              const pieceRoot = pathDirname(pathDirname(row.localPath));
-              if (row.schemaVersion >= 2 && offlinePieceItemPath(pieceRoot, row.fileId) === row.localPath) {
-                await deleteOfflinePieceItem(pieceRoot, row.fileId);
-              } else {
-                await fsPromises.rm(row.localPath, { force: true });
-              }
+              await fsPromises.rm(row.localPath, { force: true });
             } catch (rmErr) {
               console.warn(
-                `[badger.media.delete] failed to remove offline copy ${row.localPath}:`,
+                `[badger.media.delete] failed to unlink offline file ${row.localPath}:`,
                 rmErr instanceof Error ? rmErr.message : rmErr
               );
             }
