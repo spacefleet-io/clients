@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, type RefObject } from "react";
 import { BackHandler, Platform, StyleSheet, useTVEventHandler, View } from "react-native";
-import type { TvViewInstance } from "@space/mobile-shell/tv/tvViewInstance";
+import type { TvViewInstance } from "../lib/tvViewInstance";
 import { MpvControl, type PlayerControlsHandle } from "@space/mobile-mpv-playback";
 import {
   HOLD_MAX_MS,
@@ -29,7 +29,7 @@ import {
   type ScrubResult,
   type TouchScrub,
 } from "../lib/touchScrub";
-import { tvEventControl } from "@space/mobile-shell/tv/useTvMenuKey";
+import { tvEventControl } from "../lib/useTvMenuKey";
 
 /** Touch-scrub steps are logged at most this often (a pan sends ~60 events a second); begin / end / commit always. */
 const SCRUB_STEP_LOG_MS = 150;

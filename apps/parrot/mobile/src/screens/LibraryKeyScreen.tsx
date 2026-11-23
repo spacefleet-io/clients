@@ -7,7 +7,7 @@
 // the same shared one between the 2 apps".
 import React, { useCallback, useEffect, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { getLibraryMetaForKeyStep, resetLibrary } from "@space/shared/api";
+import { getLibraryMeta, resetLibrary } from "@space/shared/api";
 import { checkLibraryKey } from "@space/mobile-shell/libraryKey";
 import { generateLibraryKeyWords, type LibraryKeyInput } from "@space/shared/libraryKeyWords";
 import { isClientUiLanguage } from "@space/shared/i18n";
@@ -63,7 +63,7 @@ export const useLibraryKeyEntry = () => {
   useEffect(() => {
     if (!token) return;
     let cancelled = false;
-    void getLibraryMetaForKeyStep(token, "parrot").then(
+    void getLibraryMeta(token, "parrot").then(
       (meta) => {
         if (cancelled) return;
         log.info("library_key.start", { hasKeyProbe: Boolean(meta.keyProbe) });
@@ -90,7 +90,7 @@ export const useLibraryKeyEntry = () => {
     setError(null);
     setBusy(true);
     try {
-      const meta = await getLibraryMetaForKeyStep(token, "parrot");
+      const meta = await getLibraryMeta(token, "parrot");
       const result = await checkLibraryKey(input.keyBase64, meta.keyProbe, decryptBase64ToBytes);
       if (result === "ok") {
         await saveLibraryKey(input.keyBase64);
@@ -128,7 +128,7 @@ export const useLibraryKeyEntry = () => {
       setMode("enter");
     };
     try {
-      const meta = await getLibraryMetaForKeyStep(token, "parrot");
+      const meta = await getLibraryMeta(token, "parrot");
       if (meta.keyProbe) {
         madeElsewhere();
         return false;
@@ -140,7 +140,7 @@ export const useLibraryKeyEntry = () => {
         } catch (claimErr) {
           log.warn("library_key.claim_failed", { message: claimErr instanceof Error ? claimErr.message : String(claimErr) });
           // Another device may have made the account's key first (the PUT over version 0 then fails): ask for it.
-          const after = await getLibraryMetaForKeyStep(token, "parrot").catch(() => null);
+          const after = await getLibraryMeta(token, "parrot").catch(() => null);
           if (after?.keyProbe) {
             madeElsewhere();
             return false;

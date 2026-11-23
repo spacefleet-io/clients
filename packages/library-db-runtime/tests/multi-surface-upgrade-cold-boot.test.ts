@@ -45,7 +45,7 @@ import {
   currentLibrarySupport,
   LibraryFormatTooNewError,
 } from "@space/library-db-definition/compatibility";
-import { OP_STREAM_VERSION, READ_OP_STREAM_VERSION } from "@space/library-db-definition/ops";
+import { OP_STREAM_VERSION } from "@space/library-db-definition/ops";
 import type { SqliteDb } from "@space/library-db-definition/migrations";
 
 // ---------------------------------------------------------------------------
@@ -242,7 +242,7 @@ describe("multi-surface-upgrade cold-boot scenario", () => {
     );
     try {
       expect(support.groupSchemaVersions.core).toBe(1);
-      expect(support.opStreamVersion).toBe(READ_OP_STREAM_VERSION);
+      expect(support.opStreamVersion).toBe(OP_STREAM_VERSION);
     } catch (err) {
       dumpUpgradeSnapshot("declared-support-failure", {
         capturedError: err,
@@ -418,7 +418,7 @@ describe("multi-surface-upgrade cold-boot scenario", () => {
 
         // And the build's "what op-stream version do we declare" question can
         // be answered safely now, AFTER schema is at the right version. The
-        // declared opStreamVersion is the build's read version `READ_OP_STREAM_VERSION` (LIB-FMT-13) —
+        // declared opStreamVersion is the build's `OP_STREAM_VERSION` —
         // unchanged from the constant, because the constant IS the build's
         // declaration.
         const support = currentLibrarySupport({
@@ -428,7 +428,7 @@ describe("multi-surface-upgrade cold-boot scenario", () => {
           `[multi-surface-upgrade-cold-boot:ordering] support.opStreamVersion=${support.opStreamVersion} ` +
             `support.groupSchemaVersions.core=${support.groupSchemaVersions.core}`,
         );
-        expect(support.opStreamVersion).toBe(READ_OP_STREAM_VERSION);
+        expect(support.opStreamVersion).toBe(OP_STREAM_VERSION);
         expect(support.groupSchemaVersions.core).toBe(1);
       } catch (err) {
         dumpUpgradeSnapshot("ordering-failure", {

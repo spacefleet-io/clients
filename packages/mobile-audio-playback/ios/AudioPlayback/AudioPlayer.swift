@@ -636,13 +636,8 @@ final class AudioPlayer: NSObject {
     let optionsValue = (info[AVAudioSessionInterruptionOptionKey] as? NSNumber)?.uintValue ?? 0
     // The reason key replaces the deprecated "was suspended" key; reason 1 is `.appWasSuspended` (a began delivered
     // late, once the app was back: no interruption is going on), compared raw because that case is deprecated too.
-    // tvOS has no reason key (PAR-TV-01): every began there is a live interruption.
-    #if os(iOS)
-      let reason = (info[AVAudioSessionInterruptionReasonKey] as? NSNumber)?.uintValue ?? 0
-      let wasSuspended = reason == 1
-    #else
-      let wasSuspended = false
-    #endif
+    let reason = (info[AVAudioSessionInterruptionReasonKey] as? NSNumber)?.uintValue ?? 0
+    let wasSuspended = reason == 1
     DispatchQueue.main.async { [self] in
       switch AVAudioSession.InterruptionType(rawValue: typeValue) {
       case .began:

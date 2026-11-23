@@ -83,11 +83,6 @@ vi.mock("@space/shared/api", async () => ({
   ApiError: (await vi.importActual<typeof SharedApi>("@space/shared/api")).ApiError,
   requestPasswordReset: vi.fn(),
   confirmPasswordReset: vi.fn(),
-  // The screen's import chain reaches the profile store (#3594), which binds these at load; never called here.
-  listProfiles: vi.fn(),
-  createProfile: vi.fn(),
-  updateProfile: vi.fn(),
-  deleteProfile: vi.fn(),
   listSignInProviders: (...a: unknown[]) => h.listSignInProviders(...a),
   startProviderSignIn: (...a: unknown[]) => h.startProviderSignIn(...a),
   completeProviderSignIn: (...a: unknown[]) => h.completeProviderSignIn(...a),
@@ -108,6 +103,7 @@ vi.mock("../src/tv/lib/tvRuntime", () => ({
   },
 }));
 vi.mock("../src/lib/phonePairing", () => ({ currentPhoneDeviceName: () => "Badger (Pixel 8)" }));
+vi.mock("../src/tv/lib/pairingRuntime", () => ({ tvDeviceName: () => "TV" }));
 vi.mock("../src/setup/BadgerSetupFlow", () => ({ SignInSetupBack: () => null }));
 
 import { ApiError } from "@space/shared/api";

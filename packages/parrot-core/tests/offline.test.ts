@@ -9,7 +9,6 @@
  * @req PAR-OFFL-02[parrot]
  * @req PAR-OFFL-03[parrot]
  * @req PAR-OFFL-04[parrot]
- * @req OFFL-MANAGE-01[parrot]
  */
 import { describe, expect, it } from "bun:test";
 import type { TrackFileRow } from "../src/catalog";
@@ -21,15 +20,12 @@ import {
   keepEntry,
   keptEntryBytes,
   keptEntryProgress,
-  keptTrackIds,
-  leaveOutSongs,
   offlineReach,
   parseKeptState,
   pickKeptFile,
   planKept,
   unkeepEntry,
   type KeepLibrary,
-  type KeptEntry,
 } from "../src/offline";
 
 const file = (id: string, trackId: string, over: Partial<TrackFileRow> = {}): TrackFileRow => ({
@@ -188,74 +184,5 @@ describe("matching the device to the kept list (PAR-OFFL-01)", () => {
     const plan = planKept(state, makeLibrary({}, {}, files), new Set(["old"]));
     expect(plan.songs.size).toBe(0);
     expect(plan.remove).toEqual(["old"]);
-  });
-});
-
-describe("removing single songs on Manage offline content (OFFL-MANAGE-01)", () => {
-  const library = makeLibrary(
-    { a1: ["t1", "t2", "t3"], a2: ["t4"] },
-    { p1: ["t2", "t4"] },
-    ["t1", "t2", "t3", "t4", "t5"].map((trackId) => mp3(`f-${trackId}`, trackId))
-  );
-  const kept = (entries: Array<[KeptEntry["kind"], string]>) =>
-    entries.reduce((state, [kind, id], index) => keepEntry(state, kind, id, null, index + 1), EMPTY_KEPT_STATE);
-  const onDevice = new Set(["f-t1", "f-t2", "f-t3", "f-t4", "f-t5"]);
-
-  it("leaves a song out of its kept album, keeps the album, and deletes only that file", () => {
-    const state = leaveOutSongs(kept([["album", "a1"]]), library, ["t1"], "library");
-    const plan = planKept(state, library, new Set(["f-t1", "f-t2", "f-t3"]));
-    log("album less t1", { state, remove: plan.remove, songs: plan.songs });
-    expect(state.entries).toEqual([{ kind: "album", id: "a1", choice: null, keptAt: 1, except: ["t1"] }]);
-    expect(plan.remove).toEqual(["f-t1"]);
-    expect([...plan.songs.keys()].sort()).toEqual(["t2", "t3"]);
-    expect(keptTrackIds(library, state.entries[0])).toEqual(["t2", "t3"]);
-  });
-
-  it("stops keeping an album once every song is left out, and drops songs kept on their own", () => {
-    const state = leaveOutSongs(kept([["album", "a1"], ["song", "t5"], ["song", "t4"]]), library, ["t1", "t2", "t3", "t5"], "library");
-    log("artist removed", state);
-    expect(state.entries).toEqual([{ kind: "song", id: "t4", choice: null, keptAt: 3 }]);
-  });
-
-  it("keeps a song a kept playlist still holds when it is removed from the library", () => {
-    const state = leaveOutSongs(kept([["album", "a1"], ["playlist", "p1"]]), library, ["t2"], "library");
-    const plan = planKept(state, library, onDevice);
-    log("t2 removed from library", { state, remove: plan.remove });
-    expect(plan.songs.has("t2")).toBe(true);
-    expect(plan.remove).not.toContain("f-t2");
-    expect(state.entries.find((entry) => entry.kind === "playlist")?.except).toBeUndefined();
-  });
-
-  it("removes a song from one playlist only, leaving the album that holds it", () => {
-    const state = leaveOutSongs(kept([["album", "a2"], ["playlist", "p1"]]), library, ["t2", "t4"], { playlist: "p1" });
-    const plan = planKept(state, library, onDevice);
-    log("playlist emptied", { state, remove: plan.remove });
-    expect(state.entries).toEqual([{ kind: "album", id: "a2", choice: null, keptAt: 1 }]);
-    expect([...plan.songs.keys()]).toEqual(["t4"]);
-    expect(plan.remove.sort()).toEqual(["f-t1", "f-t2", "f-t3", "f-t5"]);
-  });
-
-  it("stops keeping a whole album or playlist outright, songs the bin did not list included", () => {
-    // Say t3 of a1 and t4 of p1 cannot play: the album row's bin then lists t1 and t2 only, the playlist row's t2 only.
-    const songsOnly = leaveOutSongs(kept([["album", "a1"]]), library, ["t1", "t2"], "library");
-    const album = leaveOutSongs(kept([["album", "a1"], ["playlist", "p1"]]), library, ["t1", "t2"], "library", [{ kind: "album", id: "a1" }]);
-    const playlist = leaveOutSongs(kept([["album", "a1"], ["playlist", "p1"]]), library, ["t2"], { playlist: "p1" }, [{ kind: "playlist", id: "p1" }]);
-    log("whole", { songsOnly, album, playlist });
-    expect(songsOnly.entries).toEqual([{ kind: "album", id: "a1", choice: null, keptAt: 1, except: ["t1", "t2"] }]);
-    expect(album.entries).toEqual([{ kind: "playlist", id: "p1", choice: null, keptAt: 2 }]);
-    expect(playlist.entries).toEqual([{ kind: "album", id: "a1", choice: null, keptAt: 1 }]);
-    // A playlist named whole from the library is out of scope and stays kept.
-    expect(leaveOutSongs(kept([["playlist", "p1"]]), library, [], "library", [{ kind: "playlist", id: "p1" }]).entries).toHaveLength(1);
-  });
-
-  it("reads back a stored except list and drops a damaged one", () => {
-    const raw = JSON.stringify({
-      version: 1,
-      entries: [
-        { kind: "album", id: "a1", choice: null, keptAt: 1, except: ["t1"] },
-        { kind: "album", id: "a2", choice: null, keptAt: 2, except: [3] },
-      ],
-    });
-    expect(parseKeptState(raw).entries).toEqual([{ kind: "album", id: "a1", choice: null, keptAt: 1, except: ["t1"] }]);
   });
 });

@@ -3,8 +3,8 @@ import { BackHandler, Platform, StyleSheet, Text, TVFocusGuideView, View } from 
 import { useTranslation } from "@space/mobile-shell/i18n";
 import { QrCode } from "@space/mobile-shell/pairing-qr";
 import { theme } from "../../../theme/theme";
-import { TvFocusable } from "@space/mobile-shell/tv/TvFocusable";
-import { useTvScale, useTvStyles } from "@space/mobile-shell/tv/tvScale";
+import { TvFocusable } from "../TvFocusable";
+import { useTvScale, useTvStyles } from "../../lib/tvScale";
 import { youtubeWatchUrl } from "../../../lib/youtubeWatchUrl";
 
 /**

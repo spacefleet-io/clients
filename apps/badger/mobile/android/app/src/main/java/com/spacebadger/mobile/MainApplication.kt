@@ -32,6 +32,5 @@ class MainApplication : Application(), ReactApplication {
     ReactFontManager.getInstance().addCustomFont(this, "Inter", R.font.inter)
     ReactFontManager.getInstance().addCustomFont(this, "Space Grotesk", R.font.space_grotesk)
     loadReactNative(this)
-    ModalWindows.install(reactHost)
   }
 }

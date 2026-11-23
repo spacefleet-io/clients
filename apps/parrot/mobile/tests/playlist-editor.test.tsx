@@ -9,12 +9,6 @@
  *   the server has it) and a change that could not be saved goes back on screen with "Your playlist change was not
  *   saved". The real PlaylistEditorProvider is mounted against a mocked React Native; the session's save writes the
  *   edit into a fake open library, tells the screens, then waits on a publish the test settles, as lib/saveEdits does.
- *   Every sheet is the shared bottom sheet (UX-SHEET-01, whose tap outside, Back and drag all report `onClose`, tested
- *   by MOBILE-SHELL-BOTTOM-SHEET-001): Chris, 2026-11-21, the Now playing "…" was a system alert that nothing closed;
- *   it is now this song sheet, headed by the title and the artist, with Go to album and Go to artist.
- * @req UX-SHEET-01[parrot]
- * @req PAR-NAV-05[parrot]
- * @req PAR-OFFL-01[parrot]
  * @covers apps/parrot/mobile/src/state/playlistEditor.tsx
  */
 import React from "react";
@@ -39,7 +33,6 @@ const fake = vi.hoisted(() => ({
   /** The interface language the mocked i18n reports; French reads the French shell strings. */
   language: "en" as "en" | "fr",
   keepChoices: [] as KeepCopyChoice[],
-  keeps: [] as string[],
 }));
 
 vi.mock("react-native", async () => {
@@ -60,7 +53,7 @@ vi.mock("react-native", async () => {
 });
 vi.mock("lucide-react-native", () =>
   Object.fromEntries(
-    ["ArrowDownToLine", "CircleCheck", "Disc3", "FileAudio", "Heart", "HeartOff", "ListEnd", "ListMusic", "ListPlus", "ListX", "MicVocal", "Pencil", "Plus", "Sparkles", "Trash2", "X"].map((name) => [name, () => null])
+    ["ArrowDownToLine", "CircleCheck", "FileAudio", "Heart", "HeartOff", "ListMusic", "ListPlus", "ListX", "Pencil", "Plus", "Sparkles", "Trash2", "X"].map((name) => [name, () => null])
   )
 );
 vi.mock("react-native-quick-crypto", () => ({ default: { randomUUID: () => `uuid-${(fake.uuid += 1)}` } }));
@@ -76,20 +69,8 @@ vi.mock("@space/mobile-shell/i18n", () => ({
 }));
 vi.mock("@space/mobile-shell/components", () => ({ MobileNoticeBanner: ({ message, tone }: { message: string; tone: string }) => `${tone}:${message}` }));
 vi.mock("@space/mobile-shell/render-boundary", () => ({ MobileRenderBoundary: ({ children }: { children: React.ReactNode }) => children }));
-// The shared sheet: drawn only while shown; its tap outside, Back and drag all end in `onClose` (MOBILE-SHELL-BOTTOM-SHEET-001).
-vi.mock("@space/mobile-shell/bottom-sheet", async () => {
-  const react = await vi.importActual<typeof import("react")>("react");
-  return {
-    MobileBottomSheet: (props: { visible: boolean; children?: React.ReactNode }) => (props.visible ? react.createElement("MobileBottomSheet", props, props.children) : null),
-    MobileSheetScrollView: (props: { children?: React.ReactNode }) => react.createElement("ScrollView", props, props.children),
-  };
-});
-vi.mock("../src/theme", () => ({ colors: { textMuted: "#888", accent: "#0f0", danger: "danger" }, spacing: { xs: 2, sm: 4, md: 8, lg: 16 } }));
-vi.mock("../src/lib/kept", () => ({
-  keepChoices: async () => fake.keepChoices,
-  keepItem: async (kind: string, id: string) => void fake.keeps.push(`keep:${kind}:${id}`),
-  unkeepItem: async () => undefined,
-}));
+vi.mock("../src/theme", () => ({ colors: { textMuted: "#888", accent: "#0f0" }, spacing: { xs: 2, sm: 4, md: 8, lg: 16 } }));
+vi.mock("../src/lib/kept", () => ({ keepChoices: async () => fake.keepChoices, keepItem: async () => undefined, unkeepItem: async () => undefined }));
 vi.mock("../src/screens/kept", () => ({ useKept: () => ({ entry: () => null, holdsSong: () => false, state: () => "off" }) }));
 vi.mock("../src/state/manage", () => ({ useManage: () => ({ edit: () => undefined, remove: () => undefined }) }));
 vi.mock("../src/lib/library", () => ({
@@ -185,7 +166,7 @@ const settle = async (error?: Error) => {
 const named = (name: string) => fake.playlists.find((playlist) => playlist.name === name);
 
 beforeEach(async () => {
-  Object.assign(fake, { playlists: [], localChanges: 0, publishes: [], alerts: [], uuid: 0, language: "en", keepChoices: [], keeps: [] });
+  Object.assign(fake, { playlists: [], localChanges: 0, publishes: [], alerts: [], uuid: 0, language: "en", keepChoices: [] });
   fake.listeners.clear();
   editor = null;
   await act(async () => {
@@ -332,107 +313,5 @@ describe("the phone's playlist editing", () => {
     const en = await details("en");
     expect(fr).toEqual(["parrot.library.songs · 3,2 Go", "parrot.library.songs · 800 Mo"]);
     expect(en).toEqual(["parrot.library.songs · 3.2 GB", "parrot.library.songs · 800 MB"]);
-  });
-
-  it("[@bugfix player menu] opens the Now playing song sheet: title and artist, the song row's actions with Go to album and Go to artist, closed by Back or a tap outside", async () => {
-    const went: string[] = [];
-    const links = { onGoToAlbum: () => void went.push("album"), onGoToArtist: () => void went.push("artist") };
-    const open = () => run(() => ed().openSong({ id: NOOK.id, title: NOOK.title, artist: "Nova" }, undefined, links));
-    const sheet = () => tree.root.findAll((node) => String(node.type) === "MobileBottomSheet" && node.props.visible);
-    const rows = () => sheet()[0]!.findAll((node) => typeof node.type === "string" && typeof node.props.testID === "string" && node.props.accessibilityRole === "button").map((node) => node.props.testID as string);
-
-    await open();
-    const header = ["song-sheet-title", "song-sheet-artist"].map((id) => one(id).findAll(() => true).flatMap((node) => node.children).filter((c) => typeof c === "string"));
-    log("player-sheet", { header, rows: rows() });
-    expect(header).toEqual([[NOOK.title], ["Nova"]]);
-    // The song row's order, with the way to the album and the artist where the card puts them (before Add to playlist).
-    expect(rows()).toEqual(["song-like", "song-go-to-album", "song-go-to-artist", "song-add-to", "song-keep", "song-edit", "song-delete"]);
-    expect(fake.alerts).toEqual([]);
-
-    // Back, a tap outside and a drag down all close the shared sheet through its onClose.
-    await act(async () => sheet()[0]!.props.onClose());
-    expect(sheet()).toHaveLength(0);
-    expect(byTestId("song-sheet")).toHaveLength(0);
-
-    await open();
-    await press(one("song-go-to-album"));
-    expect(sheet()).toHaveLength(0);
-    await open();
-    await press(one("song-go-to-artist"));
-    expect(went).toEqual(["album", "artist"]);
-
-    // Save offline (PAR-OFFL-01) keeps the song itself.
-    await open();
-    await press(one("song-keep"));
-    log("kept", { keeps: fake.keeps });
-    expect(sheet()).toHaveLength(0);
-    expect(fake.keeps).toEqual([`keep:song:${NOOK.id}`]);
-
-    // Add to playlist goes on to the picker in the same sheet.
-    await open();
-    await press(one("song-add-to"));
-    expect(byTestId("playlist-picker")).toHaveLength(1);
-
-    // A song row's sheet (no links) has neither Go to row.
-    await run(() => ed().openSong(FABLE));
-    expect(byTestId("song-go-to-album")).toHaveLength(0);
-    expect(byTestId("song-go-to-artist")).toHaveLength(0);
-    expect(byTestId("song-sheet-artist")).toHaveLength(0);
-  });
-
-  it("@req PAR-CARD-02[parrot] a song row's sheet adds the song to Up next; a song already there is not added again and the notice says so", async () => {
-    // The fake player's Up next, as `queueTracks` answers: how many songs it added (0: already playing or up next).
-    const upNext: string[] = [];
-    const onAddToQueue = async () => {
-      if (upNext.includes(NOOK.id)) return 0;
-      upNext.push(NOOK.id);
-      return 1;
-    };
-    const open = () => run(() => ed().openSong(NOOK, undefined, { onAddToQueue }));
-    await open();
-    const sheet = tree.root.findAll((node) => String(node.type) === "MobileBottomSheet" && node.props.visible)[0]!;
-    const rows = sheet.findAll((node) => typeof node.type === "string" && typeof node.props.testID === "string" && node.props.accessibilityRole === "button").map((node) => node.props.testID as string);
-    log("queue-sheet", { rows });
-    // Add to queue comes first after the heart, where a card lists it before the go-to and playlist rows.
-    expect(rows.slice(0, 3)).toEqual(["song-like", "song-add-to-queue", "song-add-to"]);
-    expect(labels("song-add-to-queue")).toEqual([SHELL_EN["card.addToQueue"]]);
-    await press(one("song-add-to-queue"));
-    log("queued-once", { upNext, notice: notice() });
-    expect(byTestId("song-sheet")).toHaveLength(0);
-    expect(upNext).toEqual([NOOK.id]);
-    expect(notice()).toEqual([]);
-
-    await open();
-    await press(one("song-add-to-queue"));
-    log("queued-twice", { upNext, notice: notice() });
-    expect(upNext).toEqual([NOOK.id]);
-    expect(notice()).toEqual(["info:Already in Up next"]);
-
-    // In French the row and the notice read the shared strings.
-    fake.language = "fr";
-    await open();
-    expect(labels("song-add-to-queue")).toEqual([SHELL_FR["card.addToQueue"]]);
-    await press(one("song-add-to-queue"));
-    expect(notice()).toEqual([`info:${SHELL_FR["card.alreadyInUpNext"]}`]);
-
-    // A sheet opened without a queue (the Now playing song's) has no Add to queue.
-    await run(() => ed().openSong(FABLE));
-    expect(byTestId("song-add-to-queue")).toHaveLength(0);
-  });
-
-  it("draws a page's actions sheet with its destructive row last, and closes it on Back", async () => {
-    let deleted = 0;
-    const actions = [{ id: "delete", label: "Delete", icon: () => null, destructive: true, onSelect: () => void (deleted += 1), testID: "artist-menu-delete" }];
-    await run(() => ed().openActions("Nova", actions, "artist-menu"));
-    const label = one("artist-menu-delete").findAll((node) => String(node.type) === "Text")[0]!;
-    log("actions", { style: label.props.style });
-    expect(JSON.stringify(label.props.style)).toContain("danger");
-    expect(byTestId("artist-menu")).toHaveLength(1);
-    await act(async () => one("artist-menu").props.onClose());
-    expect(byTestId("artist-menu")).toHaveLength(0);
-    await run(() => ed().openActions("Nova", actions, "artist-menu"));
-    await press(one("artist-menu-delete"));
-    expect(deleted).toBe(1);
-    expect(byTestId("artist-menu")).toHaveLength(0);
   });
 });
