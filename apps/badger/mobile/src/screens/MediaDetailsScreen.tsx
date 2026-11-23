@@ -26,7 +26,7 @@ import YoutubePlayer from "react-native-youtube-iframe";
 import { getCurrentLanguage, useTranslation } from "@space/mobile-shell/i18n";
 import { MobileRenderBoundary } from "@space/mobile-shell/render-boundary";
 import { MobileSheetScrollView, useMobileDismissPan } from "@space/mobile-shell/bottom-sheet";
-import { MobileRailScroll, MobileSkyLayer } from "@space/mobile-shell/components";
+import { MobileSkyLayer } from "@space/mobile-shell/components";
 import type { MediaDetails, MediaEpisode } from "@space/shared/libraryTypes";
 import { subtitleFetchCopy } from "@space/shared/subtitleFetch";
 import { crewLines as toCrewLines } from "@space/shared/libraryCrew";
@@ -595,7 +595,12 @@ export const MediaDetailsScreen = () => {
 
               {isTv && detailsTab === "episodes" ? (
                 <View style={[styles.sectionBlock, styles.sectionBlockSpacious]}>
-                  <MobileRailScroll style={styles.seasonsScroll} contentContainerStyle={styles.seasonsRow}>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    style={styles.seasonsScroll}
+                    contentContainerStyle={styles.seasonsRow}
+                  >
                     {details.seasons.map((season) => {
                       const available = uploadedSeasonNumbers.has(season.seasonNumber);
                       return (
@@ -631,7 +636,7 @@ export const MediaDetailsScreen = () => {
                         </Pressable>
                       );
                     })}
-                  </MobileRailScroll>
+                  </ScrollView>
 
                   <View style={styles.episodesList}>
                     {filteredEpisodes.map((episode) => {
@@ -676,7 +681,11 @@ export const MediaDetailsScreen = () => {
                   {details.cast.length > 0 ? (
                     <View style={[styles.sectionBlock, styles.sectionBlockSpacious]}>
                       <Text style={styles.sectionTitle}>{t("details.cast").toUpperCase()}</Text>
-                      <MobileRailScroll contentContainerStyle={styles.castRow}>
+                      <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={styles.castRow}
+                      >
                         {details.cast.slice(0, 16).map((member) => (
                           <CastAvatar
                             key={member.id}
@@ -684,7 +693,7 @@ export const MediaDetailsScreen = () => {
                             name={member.name}
                           />
                         ))}
-                      </MobileRailScroll>
+                      </ScrollView>
                     </View>
                   ) : null}
                 </>

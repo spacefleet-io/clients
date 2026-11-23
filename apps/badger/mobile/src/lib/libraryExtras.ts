@@ -1,6 +1,6 @@
 /**
  * Per-title facts the media library list needs but `MediaRow` does not carry: the cast (actor filter), the season
- * count (TV details rows), the runtime (movie details rows) and the Filter sheet's facets (UX-LIB-03). They live in the metadata / playback databases, which
+ * count (TV details rows) and the runtime (movie details rows). They live in the metadata / playback databases, which
  * open after the core one, so the library screen loads them lazily and shows the plain list meanwhile.
  */
 export type LibraryExtras = {
@@ -11,22 +11,13 @@ export type LibraryExtras = {
   seasonsByMediaId: Map<string, number>;
   /** Longest known format duration, in whole minutes. */
   runtimeMinutesByMediaId: Map<string, number>;
-  /**
-   * UX-LIB-03: each title's raw facet values (format qualities, directors, audio and subtitle languages); the screen
-   * adds its watch state and turns them into facet keys with `libraryFacetValues`.
-   */
-  facetsByMediaId: Map<string, LibraryFacetRaw>;
 };
-
-/** A title's raw facet values; a track with no language is null (shown as "Unknown language"), as on the web player. */
-export type LibraryFacetRaw = Record<"qualities" | "directors" | "audioLanguages" | "subtitleLanguages", Array<string | null>>;
 
 export const EMPTY_LIBRARY_EXTRAS: LibraryExtras = {
   castByMediaId: new Map(),
   actorNames: [],
   seasonsByMediaId: new Map(),
   runtimeMinutesByMediaId: new Map(),
-  facetsByMediaId: new Map(),
 };
 
 /**
@@ -39,16 +30,12 @@ export const SEASON_COUNT_SQL =
 type CastRow = { media_id: string; name: string };
 type SeasonCountRow = { media_id: string; seasons: number };
 type DurationRow = { media_id: string; duration_seconds: number };
-/** One facet value of one title (a format's quality, a director's name, a track's language). */
-type FacetRow = { media_id: string; value: string | null };
-export type LibraryFacetRows = Record<keyof LibraryFacetRaw, readonly FacetRow[]>;
 
 /** Folds the three raw query results into `LibraryExtras`. Kept pure so it is testable without a database. */
 export const buildLibraryExtras = (
   castRows: readonly CastRow[],
   seasonRows: readonly SeasonCountRow[],
   durationRows: readonly DurationRow[],
-  facetRows: LibraryFacetRows = { qualities: [], directors: [], audioLanguages: [], subtitleLanguages: [] },
 ): LibraryExtras => {
   const castByMediaId = new Map<string, Set<string>>();
   const displayNames = new Map<string, string>();
@@ -77,17 +64,6 @@ export const buildLibraryExtras = (
     const minutes = Math.round(Number(row.duration_seconds) / 60);
     if (Number.isFinite(minutes) && minutes > 0) runtimeMinutesByMediaId.set(row.media_id, minutes);
   }
-  const facetsByMediaId = new Map<string, LibraryFacetRaw>();
-  for (const facet of ["qualities", "directors", "audioLanguages", "subtitleLanguages"] as const) {
-    for (const row of facetRows[facet]) {
-      let raw = facetsByMediaId.get(row.media_id);
-      if (!raw) {
-        raw = { qualities: [], directors: [], audioLanguages: [], subtitleLanguages: [] };
-        facetsByMediaId.set(row.media_id, raw);
-      }
-      raw[facet].push(row.value);
-    }
-  }
   return {
     castByMediaId,
     actorNames: Array.from(displayNames.entries())
@@ -95,7 +71,6 @@ export const buildLibraryExtras = (
       .map(([, name]) => name),
     seasonsByMediaId,
     runtimeMinutesByMediaId,
-    facetsByMediaId,
   };
 };
 

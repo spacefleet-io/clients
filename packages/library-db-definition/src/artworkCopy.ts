@@ -8,7 +8,6 @@
  * stores it under a random name. The copy runs after the match, off its critical path; a failed or skipped image
  * keeps its catalog path and is retried on the next run (next refresh, restore, or opening the title).
  */
-import { artworkStorageKey } from "./mediaDetails";
 
 export type ArtworkKind = "poster" | "backdrop" | "profile" | "still";
 
@@ -20,11 +19,7 @@ export type ArtworkSlot = { target: ArtworkTarget; id: string; path: string };
 /** The copy for a slot: an asset key, or null when the metadata service says the image does not exist. */
 export type ArtworkCopy = ArtworkSlot & { value: string | null };
 
-/**
- * `unapplied`: the copies whose slot was not swapped (the title, season, episode or person is gone, or the slot no
- * longer holds the path the copy was made from). Their stored picture is referenced by nothing.
- */
-export type ArtworkApplyResult = { applied: number; skipped: number; unapplied: ArtworkCopy[] };
+export type ArtworkApplyResult = { applied: number; skipped: number };
 
 export type ArtworkUploadOutcome =
   | { status: "ok"; key: string }
@@ -46,8 +41,6 @@ export type ArtworkCopyResult = {
   missing: number;
   failed: number;
   applied: number;
-  /** Uploaded pictures deleted again because their slot was not swapped (`discard`). */
-  discarded: number;
   /** Stopped before the end: the ticket reserve is empty or at the floor the copy must leave for lookups. */
   stoppedForTickets: boolean;
   /** Stopped before the end: the metadata service kept saying "slow down" (`ARTWORK_COPY_RATE_LIMIT_MAX_RETRIES`). */
@@ -87,7 +80,6 @@ export const copyMediaArtwork = async ({
   upload,
   canSpend,
   shouldYield,
-  discard,
   concurrency = ARTWORK_COPY_CONCURRENCY,
   applyBatch = ARTWORK_COPY_APPLY_BATCH,
   sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)),
@@ -99,12 +91,6 @@ export const copyMediaArtwork = async ({
   canSpend?: () => boolean | Promise<boolean>;
   /** Checked before each picture; true stops the run (the pictures in flight finish and are saved). */
   shouldYield?: () => boolean;
-  /**
-   * Deletes stored pictures from the user's storage (`/storage/delete`). Called with the keys of uploaded copies the
-   * library did not take, most often because the title was deleted while its pictures were uploading: nothing
-   * references them, so they would count against the user's storage until the leftover clean-up (STOR-PLACE-10).
-   */
-  discard?: (keys: string[]) => Promise<unknown>;
   concurrency?: number;
   applyBatch?: number;
   /** The wait after a rate limit (tests pass a fake clock). */
@@ -118,7 +104,6 @@ export const copyMediaArtwork = async ({
     missing: 0,
     failed: 0,
     applied: 0,
-    discarded: 0,
     stoppedForTickets: false,
     stoppedForRateLimit: false,
     yielded: false,
@@ -134,14 +119,6 @@ export const copyMediaArtwork = async ({
     writing = writing.then(async () => {
       const applied = await store.applyArtworkCopies(mediaId, batch);
       result.applied += applied.applied;
-      const keys = [...new Set(applied.unapplied.map((copy) => artworkStorageKey(copy.value)).filter((key): key is string => key !== null))];
-      if (keys.length === 0 || !discard) return;
-      try {
-        await discard(keys);
-        result.discarded += keys.length;
-      } catch {
-        // Left to the leftover clean-up (STOR-PLACE-06): the copy itself is done.
-      }
     });
     return writing;
   };
@@ -372,15 +349,10 @@ export const listDetailsArtworkSlots = (details: ArtworkDetails): ArtworkSlot[] 
 
 /**
  * `applyArtworkCopies` over a details object: returns a new object with each copy swapped in while its slot still
- * holds the path the copy was made from (compare-and-set: an edit made meanwhile wins), the count applied and the
- * copies that were not.
+ * holds the path the copy was made from (compare-and-set: an edit made meanwhile wins), and the count applied.
  */
-export const applyArtworkCopiesToDetails = <T extends ArtworkDetails>(
-  details: T,
-  copies: ArtworkCopy[]
-): { details: T; applied: number; unapplied: ArtworkCopy[] } => {
+export const applyArtworkCopiesToDetails = <T extends ArtworkDetails>(details: T, copies: ArtworkCopy[]): { details: T; applied: number } => {
   let applied = 0;
-  const unapplied: ArtworkCopy[] = [];
   const next: T = {
     ...details,
     seasons: details.seasons?.map((season) => ({ ...season })),
@@ -389,25 +361,24 @@ export const applyArtworkCopiesToDetails = <T extends ArtworkDetails>(
     episodes: details.episodes?.map((episode) => ({ ...episode })),
   };
   for (const copy of copies) {
-    let hit = false;
     switch (copy.target) {
       case "mediaPoster":
         if (copy.id === next.id && next.posterPath === copy.path) {
           next.posterPath = copy.value;
-          hit = true;
+          applied += 1;
         }
         break;
       case "mediaBackdrop":
         if (copy.id === next.id && next.backdropPath === copy.path) {
           next.backdropPath = copy.value;
-          hit = true;
+          applied += 1;
         }
         break;
       case "seasonPoster": {
         const season = next.seasons?.find((row) => row.id === copy.id && row.posterPath === copy.path);
         if (season) {
           season.posterPath = copy.value;
-          hit = true;
+          applied += 1;
         }
         break;
       }
@@ -415,26 +386,26 @@ export const applyArtworkCopiesToDetails = <T extends ArtworkDetails>(
         const episode = next.episodes?.find((row) => row.id === copy.id && row.stillPath === copy.path);
         if (episode) {
           episode.stillPath = copy.value;
-          hit = true;
+          applied += 1;
         }
         break;
       }
       case "personProfile": {
         // One person may be listed in several roles, cast and crew: every row of that person takes the copy, or the
         // crew row written last puts the provider path back on the shared `people` row (META-ART-01 notes).
+        let hit = false;
         for (const member of [...(next.cast ?? []), ...(next.crew ?? [])]) {
           if (member.personId === copy.id && member.profilePath === copy.path) {
             member.profilePath = copy.value;
             hit = true;
           }
         }
+        if (hit) applied += 1;
         break;
       }
     }
-    if (hit) applied += 1;
-    else unapplied.push(copy);
   }
-  return { details: next, applied, unapplied };
+  return { details: next, applied };
 };
 
 /**
@@ -455,10 +426,10 @@ export const createDetailsArtworkStore = <T extends ArtworkDetails>({
   },
   async applyArtworkCopies(mediaId, copies) {
     const details = await read(mediaId);
-    if (!details) return { applied: 0, skipped: copies.length, unapplied: copies };
+    if (!details) return { applied: 0, skipped: copies.length };
     const result = applyArtworkCopiesToDetails(details, copies);
     if (result.applied > 0) await write(mediaId, result.details);
-    return { applied: result.applied, skipped: result.unapplied.length, unapplied: result.unapplied };
+    return { applied: result.applied, skipped: copies.length - result.applied };
   },
 });
 

@@ -44,6 +44,7 @@ type Result = {
   after?: string;
   escape?: string;
   bound?: boolean;
+  fetch_on_open?: string[][];
   default_text?: string;
   cursor?: number;
   terminated?: number;

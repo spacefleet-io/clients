@@ -37,13 +37,6 @@ RCT_EXTERN_METHOD(setBufferCap
                   : (RCTPromiseResolveBlock)resolve reject
                   : (RCTPromiseRejectBlock)reject)
 
-RCT_EXTERN_METHOD(setNeighbours
-                  : (NSString *)current next
-                  : (NSString *)next previous
-                  : (NSString *)previous resolve
-                  : (RCTPromiseResolveBlock)resolve reject
-                  : (RCTPromiseRejectBlock)reject)
-
 RCT_EXTERN_METHOD(stopProxy
                   : (RCTPromiseResolveBlock)resolve reject
                   : (RCTPromiseRejectBlock)reject)

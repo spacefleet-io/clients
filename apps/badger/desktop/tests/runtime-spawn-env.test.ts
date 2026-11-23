@@ -37,7 +37,7 @@ const dump = (label: string, value: unknown) => {
 describe("[@bugfix][@regression-proof] runtime spawn env carries the userData transcode dir from the FIRST spawn", () => {
   it("defaults SF_TRANSCODE_DIR to <userData>/transcode in the spawn env and in process.env (single source)", () => {
     const processEnv: NodeJS.ProcessEnv = { PATH: "/usr/bin" };
-    const spawnEnv = buildRuntimeSpawnEnv(processEnv, USER_DATA, undefined, null);
+    const spawnEnv = buildRuntimeSpawnEnv(processEnv, USER_DATA, undefined);
     console.info(`[runtime-spawn-env:default] spawn=${spawnEnv.SF_TRANSCODE_DIR} process=${processEnv.SF_TRANSCODE_DIR}`);
     try {
       expect(spawnEnv.SF_TRANSCODE_DIR).toBe(join(USER_DATA, "transcode"));
@@ -52,8 +52,8 @@ describe("[@bugfix][@regression-proof] runtime spawn env carries the userData tr
 
   it("two spawn envs (first spawn + respawn) agree on the transcode dir", () => {
     const processEnv: NodeJS.ProcessEnv = {};
-    const first = buildRuntimeSpawnEnv(processEnv, USER_DATA, "3020", null);
-    const respawn = buildRuntimeSpawnEnv(processEnv, USER_DATA, "3020", null);
+    const first = buildRuntimeSpawnEnv(processEnv, USER_DATA, "3020");
+    const respawn = buildRuntimeSpawnEnv(processEnv, USER_DATA, "3020");
     expect(first.SF_TRANSCODE_DIR).toBe(respawn.SF_TRANSCODE_DIR);
     expect(first.SF_TRANSCODE_DIR).toBe(join(USER_DATA, "transcode"));
   });
@@ -75,7 +75,7 @@ describe("[@bugfix][@regression-proof] runtime spawn env carries the userData tr
   });
 
   it("forwards the derived PORT and drops undefined env values", () => {
-    const spawnEnv = buildRuntimeSpawnEnv({ KEEP: "1", DROP: undefined }, USER_DATA, "46659", null);
+    const spawnEnv = buildRuntimeSpawnEnv({ KEEP: "1", DROP: undefined }, USER_DATA, "46659");
     expect(spawnEnv.PORT).toBe("46659");
     expect(spawnEnv.KEEP).toBe("1");
     expect("DROP" in spawnEnv).toBe(false);
@@ -104,23 +104,5 @@ describe("[@bugfix][@regression-proof] desktop main resolves the transcode dir B
       .filter(({ text }) => /process\.env\.SF_(TRANSCODE_DIR|BADGER_OFFLINE_DIR)\s*=[^=]/.test(text));
     console.info(`[runtime-spawn-env:no-late-assign] assignments=${JSON.stringify(assignments)}`);
     expect(assignments).toEqual([]);
-  });
-});
-
-describe("REL-CD-29 the runtime states the desktop build that started it", () => {
-  it("@req REL-CD-29[badger-desktop] @req REL-LOG-28[api] hands the build's x-space-client value to the runtime, and none for an unpackaged run", () => {
-    const identified = buildRuntimeSpawnEnv({ PATH: "/usr/bin" }, USER_DATA, undefined, { app: "badger", platform: "desktop", version: "0.2.3+appimage" });
-    const unpackaged = buildRuntimeSpawnEnv({ PATH: "/usr/bin", SF_CLIENT_IDENTITY: "badger/desktop/9.9.9" }, USER_DATA, undefined, null);
-    console.info(`[runtime-spawn-env:identity] identified=${identified.SF_CLIENT_IDENTITY} unpackaged=${unpackaged.SF_CLIENT_IDENTITY ?? "none"}`);
-    expect(identified.SF_CLIENT_IDENTITY).toBe("badger/desktop/0.2.3+appimage");
-    expect("SF_CLIENT_IDENTITY" in unpackaged).toBe(false);
-  });
-
-  it("@req REL-CD-29 sets the identity before the runtime spawn env is built", () => {
-    const identityIdx = indexSource.indexOf("setClientIdentity(clientIdentity)");
-    const builderIdx = indexSource.indexOf("buildRuntimeSpawnEnv(process.env");
-    console.info(`[runtime-spawn-env:identity-order] identityIdx=${identityIdx} builderIdx=${builderIdx}`);
-    expect(identityIdx).toBeGreaterThan(-1);
-    expect(identityIdx).toBeLessThan(builderIdx);
   });
 });

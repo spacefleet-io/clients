@@ -13,7 +13,7 @@
  * @covers apps/parrot/desktop/src/renderer/src/loudness.ts
  */
 import { afterEach, describe, expect, it } from "vitest";
-import { createParrotChunkReads, type ParrotChunkRef } from "@space/parrot-core";
+import type { ParrotChunkRef } from "@space/parrot-core";
 import type { ParrotLibraryFile, ParrotLibraryTrack } from "@space/parrot-ingest";
 import { startParrotPlaybackServer, type ParrotPlaybackServer } from "../src/main/playbackServer";
 import { startLoudnessPass } from "../src/renderer/src/loudness";
@@ -59,7 +59,6 @@ describe("the loudness pass reads songs beside the player, not through it", () =
         return chunkOf(chunk);
       },
       loadCover: async () => null,
-      reads: createParrotChunkReads(),
       log: (line) => lines.push(line),
     });
     const url = server.readUrlFor(file.id);
@@ -95,7 +94,6 @@ describe("the loudness pass reads songs beside the player, not through it", () =
         return chunkOf(chunk);
       },
       loadCover: async () => null,
-      reads: createParrotChunkReads(),
       log: () => undefined,
     });
     const playbackAsked: string[] = [];
@@ -138,48 +136,5 @@ describe("the loudness pass reads songs beside the player, not through it", () =
     expect(decodedBytes).toEqual([SIZE]);
     expect(read).toEqual(["c0", "c1", "c2", "c3"]);
     expect(played).toEqual([]);
-  });
-
-  // @req PAR-LYR-07
-  it("holds a file's chunks until the reading of it ends, so a step replacing them meanwhile waits", async () => {
-    // 2026-11-21 (Daft Punk import): lyrics:file removed a song's old chunks while the loudness pass was reading them,
-    // and the pass failed with `download_source_missing`. That pass is gone (PAR-FMT-01); a step that replaces a file's
-    // chunks (a file stored whole split later) waits on the same hold (`reads.free`) before removing the old ones.
-    const reads = createParrotChunkReads();
-    const oldKeys = chunks.map((chunk) => chunk.objectKey);
-    const { promise: lastAsked, resolve: onLastAsked } = Promise.withResolvers<void>();
-    const { promise: gate, resolve: openGate } = Promise.withResolvers<void>();
-    server = await startParrotPlaybackServer({
-      findFile: (id) => (id === file.id ? file : null),
-      load: async (chunk) => chunkOf(chunk),
-      loadForReading: async (chunk) => {
-        if (chunk.objectKey === "c3") {
-          onLastAsked();
-          await gate;
-        }
-        return chunkOf(chunk);
-      },
-      loadCover: async () => null,
-      reads,
-      log: (line) => log("server", line),
-    });
-    const reading = fetch(server.readUrlFor(file.id)).then(async (res) => new Uint8Array(await res.arrayBuffer()));
-    await lastAsked;
-    log("phase: the pass is mid-file, a replacing step waits for the old chunks");
-    const removed: string[][] = [];
-    const removal = reads.free(oldKeys, 10_000).then((free) => {
-      log("old chunks free", free);
-      removed.push(oldKeys);
-    });
-    // The hold itself is the signal: the old chunks read as busy, and nothing was removed.
-    expect(await reads.free(oldKeys, 0)).toBe(false);
-    log("removed while the read runs", removed);
-    expect(removed).toEqual([]);
-    openGate();
-    expect(await reading).toEqual(stored);
-    await removal;
-    log("removed after the read ended", removed);
-    expect(removed).toEqual([oldKeys]);
-    expect(await reads.free(oldKeys, 0)).toBe(true);
   });
 });

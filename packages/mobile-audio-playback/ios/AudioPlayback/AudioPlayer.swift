@@ -32,8 +32,6 @@ final class AudioPlayer: NSObject {
 
   private var player = AVQueuePlayer()
   private var playerObservations: [NSKeyValueObservation] = []
-  /// Calls `syncUpcoming` every second while playing, so the upcoming item is made once the playing song is loaded far enough.
-  private var upcomingTicker: Any?
   private var queue = PlayQueue<AudioQueueEntry>()
   private var random = SystemRandomNumberGenerator()
   private var nextUid = 0
@@ -55,8 +53,6 @@ final class AudioPlayer: NSObject {
   private var upcomingLoading: Int?
   /// An upcoming entry that could not be loaded, with its error: it fails when its turn comes, as on Android.
   private var upcomingFailure: (uid: Int, error: String)?
-  /// The upcoming entry waiting for the playing song to load far enough (`UpcomingGate`), so the wait logs once.
-  private var upcomingWaiting: Int?
   private var itemObservations: [ObjectIdentifier: [NSKeyValueObservation]] = [:]
   private var lastSignature: [String: AnyHashable]?
   private var setUp = false
@@ -250,8 +246,6 @@ final class AudioPlayer: NSObject {
     let entry = queue.currentItem
     let next = queue.nextForNavigation
     let nextKey = next >= 0 ? queue.items[next].key : nil
-    let previous = queue.previousForNavigation
-    let previousKey = previous >= 0 ? queue.items[previous].key : nil
     return [
       "state": stateName,
       "playing": isPlaying,
@@ -264,7 +258,6 @@ final class AudioPlayer: NSObject {
       "count": queue.count,
       "key": Self.orNull(entry?.key),
       "nextKey": Self.orNull(nextKey),
-      "previousKey": Self.orNull(previousKey),
       "mediaId": Self.orNull(entry?.id),
       "error": Self.orNull(errorName),
       "shuffle": queue.shuffle,
@@ -394,45 +387,22 @@ final class AudioPlayer: NSObject {
   }
 
   /// Keeps the `AVQueuePlayer`'s second item on the entry that plays when the current song ends (shuffle, repeat), so
-  /// the step is gapless; called after every change of order, repeat or queue, and every second while playing. The
-  /// item is made only once the playing song is loaded far enough ahead (`UpcomingGate`, PAR-PLAY-07): making it opens
-  /// its stream, which must not take the connection from the playing song.
+  /// the step is gapless; called after every change of order, repeat or queue.
   private func syncUpcoming() {
     guard let current = currentItem, !ended, errorName == nil else { return }
     let next = queue.nextWhenEnded
     let desired = next >= 0 ? queue.items[next] : nil
     if let upcoming, upcoming.uid == desired?.uid { return }
     if upcomingLoading != nil, upcomingLoading == desired?.uid { return }
-    // A failed upcoming entry fails when its turn comes (`itemEnded`); the every-second call does not load it again.
-    if let failure = upcomingFailure, failure.uid == desired?.uid { return }
     if let upcoming {
       AudioLog.info("audio.upcoming.drop uid=\(upcoming.uid)")
       player.remove(upcoming.item)
       forget(upcoming.item)
       self.upcoming = nil
     }
+    upcomingLoading = desired?.uid
     upcomingFailure = nil
-    guard let desired else {
-      upcomingLoading = nil
-      return
-    }
-    let ranges = current.loadedTimeRanges.map { range -> (start: Double, end: Double) in
-      let r = range.timeRangeValue
-      return (r.start.seconds, r.end.seconds)
-    }
-    let position = current.currentTime().seconds
-    guard UpcomingGate.ready(ranges: ranges, positionSeconds: position, durationSeconds: current.duration.seconds) else {
-      upcomingLoading = nil
-      if upcomingWaiting != desired.uid {
-        upcomingWaiting = desired.uid
-        AudioLog.info(
-          "audio.upcoming.wait uid=\(desired.uid) position_s=\(String(format: "%.1f", position)) "
-            + "loaded_end_s=\(String(format: "%.1f", ranges.map(\.end).max() ?? 0))")
-      }
-      return
-    }
-    upcomingWaiting = nil
-    upcomingLoading = desired.uid
+    guard let desired else { return }
     let token = generation
     makeItem(desired) { [weak self] result in
       guard let self, token == self.generation, self.upcomingLoading == desired.uid else { return }
@@ -461,7 +431,6 @@ final class AudioPlayer: NSObject {
     upcoming = nil
     upcomingLoading = nil
     upcomingFailure = nil
-    upcomingWaiting = nil
   }
 
   private func observe(_ item: AVPlayerItem) {
@@ -595,9 +564,6 @@ final class AudioPlayer: NSObject {
 
   private func observePlayer() {
     player.actionAtItemEnd = .advance
-    upcomingTicker = player.addPeriodicTimeObserver(forInterval: CMTime(value: 1, timescale: 1), queue: .main) { [weak self] _ in
-      self?.syncUpcoming()
-    }
     playerObservations = [
       player.observe(\.timeControlStatus, options: [.new]) { [weak self] _, _ in
         DispatchQueue.main.async { self?.emit() }
@@ -636,13 +602,8 @@ final class AudioPlayer: NSObject {
     let optionsValue = (info[AVAudioSessionInterruptionOptionKey] as? NSNumber)?.uintValue ?? 0
     // The reason key replaces the deprecated "was suspended" key; reason 1 is `.appWasSuspended` (a began delivered
     // late, once the app was back: no interruption is going on), compared raw because that case is deprecated too.
-    // tvOS has no reason key (PAR-TV-01): every began there is a live interruption.
-    #if os(iOS)
-      let reason = (info[AVAudioSessionInterruptionReasonKey] as? NSNumber)?.uintValue ?? 0
-      let wasSuspended = reason == 1
-    #else
-      let wasSuspended = false
-    #endif
+    let reason = (info[AVAudioSessionInterruptionReasonKey] as? NSNumber)?.uintValue ?? 0
+    let wasSuspended = reason == 1
     DispatchQueue.main.async { [self] in
       switch AVAudioSession.InterruptionType(rawValue: typeValue) {
       case .began:
@@ -696,8 +657,6 @@ final class AudioPlayer: NSObject {
       generation += 1
       tearDownItems()
       playerObservations = []
-      if let ticker = upcomingTicker { player.removeTimeObserver(ticker) }
-      upcomingTicker = nil
       player = AVQueuePlayer()
       applyVolume()
       observePlayer()

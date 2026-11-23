@@ -7,8 +7,6 @@ import os from "os";
 import { runFfmpeg, runFfprobe } from "@space/ffmpeg";
 import type { MpvCommand, MpvExternalMessage, MpvResponse, OscActionFile, SubtitleEntry } from "@space/mpv-protocol";
 import type { PairingStartOptions } from "@space/desktop-shell/pairing";
-import type { BadgerExportEstimatePayload, BadgerExportSubmitPayload } from "@space/runtime-contracts/badger/export";
-import { SIBLING_IPC } from "@space/desktop-shell/sibling";
 import { scopeLogger } from "../main/logger";
 import type { AppWindowVisibility as AppWindowVisibilityState } from "../main/appWindowVisibility";
 import { initTestIpcRecorder } from "./testIpcRecorder";
@@ -863,14 +861,8 @@ const clientIdentity = (() => {
 })();
 
 contextBridge.exposeInMainWorld("sf", {
-  version: "0.1.43",
+  version: "0.1.13",
   clientIdentity,
-  // REL-CD-29: a "please update" refusal the runtime got on its own API call, forwarded by main.
-  onAppUpdateRequired: (callback: (refusal: { status: number; payload: Record<string, unknown> }) => void) => {
-    const handler = (_event: unknown, refusal: { status: number; payload: Record<string, unknown> }) => callback(refusal);
-    ipcRenderer.on("sf-app-update-required", handler);
-    return () => ipcRenderer.removeListener("sf-app-update-required", handler);
-  },
   // STOR-UNIT-01: the storage unit base main worked out (1000 or 1024), set by the renderer before its first render.
   storageUnitBase: readStorageUnitBase(ipcRenderer),
   // Test seam: lets the renderer install its perf probe (ultimate stress suite).
@@ -930,14 +922,22 @@ contextBridge.exposeInMainWorld("sf", {
     return () => ipcRenderer.removeListener("sf-playback-saturation", handler);
   },
   reportPlaybackStopped: (): Promise<void> => ipcRenderer.invoke("sf-playback-saturation-stop"),
-  // Offline playback (OFFL-FILE-03): an HLS session over the pieces saved on this device. `manifestPath` is the
-  // localPath of the runtime's list_local entry; main checks it sits in the offline dir. Release with
-  // releasePlaybackHlsSession. Works with the backend/runtime unreachable.
-  createPlaybackOfflineHlsSession: (payload: {
+  // Offline-mode (Phase 2): open a range-served session over a single
+  // locally-downloaded file. Main resolves the on-disk path from the
+  // device-local media_local_downloads table by fileId — no path crosses the
+  // bridge. Works with the backend/runtime unreachable.
+  // @bugfix offline-playback-ignored-local-file
+  createPlaybackOfflineSession: (payload: {
     fileId: string;
-    manifestPath: string;
-  }): Promise<{ id: string; url: string; subtitleKeys: string[] }> =>
-    ipcRenderer.invoke("sf-playback-offline-hls-create", payload),
+    mediaId?: string | null;
+    /** Trusted on-disk path from the runtime's list_local; main validates it is
+     *  under the offline dir before serving. Lets main serve without DB access
+     *  (the library DB is runtime-owned in the default proxy mode). */
+    localPath?: string;
+  }): Promise<{ id: string; url: string; totalSize: number }> =>
+    ipcRenderer.invoke("sf-playback-offline-create", payload),
+  releasePlaybackOfflineSession: (sessionId: string) =>
+    ipcRenderer.invoke("sf-playback-offline-release", sessionId),
   // Pre-warm chunks at the resume offset BEFORE launching mpv. The proxy
   // fetches init segments + the segment at startSeconds via the tunnel and
   // caches them, so mpv's first read latency is microseconds instead of
@@ -1215,11 +1215,6 @@ contextBridge.exposeInMainWorld("sf", {
     reconcile: (payload: { mediaIds?: string[] } = {}) =>
       ipcRenderer.invoke("sf-badger-offline-reconcile", payload),
   },
-  exportFiles: {
-    pickFolder: () => ipcRenderer.invoke("sf-pick-export-folder"),
-    estimate: (payload: BadgerExportEstimatePayload) => ipcRenderer.invoke("sf-badger-export-estimate", payload),
-    submit: (payload: BadgerExportSubmitPayload) => ipcRenderer.invoke("sf-badger-export-submit", payload),
-  },
   storageGc: {
     run: (payload: { dryRun?: boolean } = {}) =>
       ipcRenderer.invoke("sf-badger-storage-gc", payload),
@@ -1231,12 +1226,6 @@ contextBridge.exposeInMainWorld("sf", {
     cancel: () => ipcRenderer.invoke("sf-pairing-cancel"),
     /** What this computer calls itself in the account's device list (ACCT-DEV-01). */
     deviceName: () => ipcRenderer.invoke("sf-pairing-device-name"),
-  },
-  /** ACCT-PAIR-07: "Continue with your Parrot account" when Parrot is signed in on this computer. */
-  sibling: {
-    offer: () => ipcRenderer.invoke(SIBLING_IPC.offer),
-    signIn: () => ipcRenderer.invoke(SIBLING_IPC.signIn),
-    cancel: () => ipcRenderer.invoke(SIBLING_IPC.cancel),
   },
   apiHost: {
     get: () => ipcRenderer.invoke("sf-api-base-url-get"),

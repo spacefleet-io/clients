@@ -22,7 +22,6 @@ import type {
   SubtitleTrack,
 } from "@space/shared/libraryTypes";
 import { parsePreviewSheets, previewSheetKeys } from "@space/shared/previewSheets";
-import { ChunkListFormatError, type ChunkListKeyMode, type ChunkRef, unpackChunkList } from "./chunkLists";
 import { CATALOG_ID_SOURCES_SQL } from "./legacyFormat";
 import type { LibraryDbGroup } from "./manifest";
 
@@ -48,20 +47,10 @@ export type MediaDetailsQueryName =
   | "chapters"
   | "editions"
   | "fileEditions"
-  | "fileSizes"
-  | "chunkLists";
+  | "fileSizes";
 
-/**
- * Reads of tables or columns a library from an older layout may not have yet; they read as no rows there.
- * `chunkLists`: `media_chunk_lists` exists only once the playback group is converted (LIB-FMT-11/13).
- */
-const OPTIONAL_QUERIES: ReadonlySet<MediaDetailsQueryName> = new Set([
-  "crew",
-  "editions",
-  "fileEditions",
-  "fileSizes",
-  "chunkLists",
-]);
+/** Reads of tables or columns a library from an older layout may not have yet; they read as no rows there. */
+const OPTIONAL_QUERIES: ReadonlySet<MediaDetailsQueryName> = new Set(["crew", "editions", "fileEditions", "fileSizes"]);
 
 export type MediaDetailsQuery = {
   name: MediaDetailsQueryName;
@@ -178,63 +167,21 @@ export const mediaDetailsQueries = (mediaId: string, options: { chunks?: boolean
       "playback",
       "SELECT * FROM media_audio_chunks WHERE track_id IN (SELECT id FROM media_audio_tracks WHERE media_id = ?) ORDER BY order_index ASC;"
     ),
-    // LIB-FMT-11: the packed lists of the title's formats and tracks (converted playback group only).
-    {
-      name: "chunkLists",
-      group: "playback",
-      sql: `SELECT * FROM media_chunk_lists WHERE owner_id IN (
-        SELECT id FROM media_formats WHERE media_id = ? UNION SELECT id FROM media_audio_tracks WHERE media_id = ?
-      );`,
-      params: [mediaId, mediaId],
-    },
   ];
 };
 
 const strOrNull = (value: unknown) => (value === null || value === undefined || value === "" ? null : String(value));
 const numOrNull = (value: unknown) => (value === null || value === undefined ? null : Number(value));
 
+type Chunk = { key: string; sizeBytes: number | null; startSeconds: number | null };
+
 const groupChunks = (rows: Row[] | undefined, ownerColumn: string) => {
-  const byOwner = new Map<string, ChunkRef[]>();
+  const byOwner = new Map<string, Chunk[]>();
   for (const row of rows ?? []) {
     const owner = String(row[ownerColumn]);
     const list = byOwner.get(owner) ?? [];
     list.push({ key: String(row.chunk_key), sizeBytes: numOrNull(row.size_bytes), startSeconds: numOrNull(row.start_seconds) });
     byOwner.set(owner, list);
-  }
-  return byOwner;
-};
-
-/** A BLOB column as bytes, whatever the driver hands back (Uint8Array / Buffer, ArrayBuffer, or a number array). */
-const blobBytes = (value: unknown, column: string): Uint8Array => {
-  if (value instanceof Uint8Array) return value;
-  if (value instanceof ArrayBuffer) return new Uint8Array(value);
-  if (Array.isArray(value)) return Uint8Array.from(value);
-  throw new ChunkListFormatError(`media_chunk_lists.${column} is not a blob`);
-};
-
-/**
- * Each owner's chunks from its packed `media_chunk_lists` row (LIB-FMT-11). A list that does not decode throws
- * (LIB-OPS-01: never shown as an empty list).
- */
-const unpackChunkLists = (rows: Row[] | undefined) => {
-  const byOwner = new Map<string, ChunkRef[]>();
-  for (const row of rows ?? []) {
-    const keyMode = Number(row.key_mode);
-    if (keyMode !== 0 && keyMode !== 1 && keyMode !== 2) {
-      throw new ChunkListFormatError(`unknown key_mode ${keyMode} for owner ${String(row.owner_id)}`);
-    }
-    const mode: ChunkListKeyMode = keyMode;
-    byOwner.set(
-      String(row.owner_id),
-      unpackChunkList({
-        placementId: String(row.placement_id),
-        keyMode: mode,
-        keyData: blobBytes(row.key_data, "key_data"),
-        count: Number(row.count),
-        sizes: blobBytes(row.sizes, "sizes"),
-        starts: row.starts === null || row.starts === undefined ? null : blobBytes(row.starts, "starts"),
-      })
-    );
   }
   return byOwner;
 };
@@ -287,8 +234,6 @@ export const assembleMediaDetails = (mediaId: string, rows: MediaDetailsRows): M
     createdAt: String(row.created_at),
     updatedAt: String(row.updated_at),
   }));
-  // LIB-FMT-11: an owner's packed list wins over leftover per-chunk rows (a conversion cut short leaves both).
-  const packedChunks = unpackChunkLists(rows.chunkLists);
   const formatChunks = groupChunks(rows.formatChunks, "format_id");
   const formats: MediaFormat[] = (rows.formats ?? []).map((row) => {
     // Seek-bar previews (MPV-PREV-01), on the source format only. Left out when absent or malformed, never `null`: a
@@ -307,7 +252,7 @@ export const assembleMediaDetails = (mediaId: string, rows: MediaDetailsRows): M
       initSize: numOrNull(row.init_size),
       durationSeconds: numOrNull(row.duration_seconds),
       totalSize: numOrNull(row.total_size),
-      chunks: packedChunks.get(String(row.id)) ?? formatChunks.get(String(row.id)) ?? [],
+      chunks: formatChunks.get(String(row.id)) ?? [],
       ...(previewSheets ? { previewSheets } : {}),
     };
   });
@@ -327,7 +272,7 @@ export const assembleMediaDetails = (mediaId: string, rows: MediaDetailsRows): M
     initSize: numOrNull(row.init_size),
     durationSeconds: numOrNull(row.duration_seconds),
     totalSize: numOrNull(row.total_size),
-    chunks: packedChunks.get(String(row.id)) ?? audioChunks.get(String(row.id)) ?? [],
+    chunks: audioChunks.get(String(row.id)) ?? [],
   }));
   const subtitles = (rows.subtitles ?? []) as unknown as SubtitleTrack[];
   const episodes = (rows.episodes ?? []) as unknown as MediaEpisode[];
@@ -480,8 +425,8 @@ export const artworkStorageKey = (value: string | null | undefined): string | nu
 /**
  * STOR-PLACE-08: every storage piece a title in the library uses, for the leftover clean-up (STOR-PLACE-06): what
  * `collectMediaStorageKeys` lists (video and audio pieces, seek-bar previews, subtitles) plus its artwork (poster,
- * backdrop, season posters, episode stills, cast and crew photos). Deduplicated. A delete uses
- * `collectMediaDeleteKeys`: a person's photo is shared by every title they appear in.
+ * backdrop, season posters, episode stills, cast and crew photos). Deduplicated. A delete keeps using
+ * `collectMediaStorageKeys`: a person's photo is shared by every title they appear in.
  */
 export const collectMediaKeysInUse = (
   details: Pick<MediaDetails, "formats" | "audioTracks" | "subtitleTracks" | "posterPath" | "backdropPath"> &
@@ -499,22 +444,4 @@ export const collectMediaKeysInUse = (
   for (const season of details.seasons ?? []) addArtwork(season.posterPath);
   for (const episode of details.episodes ?? []) addArtwork(episode.stillPath);
   return [...keys];
-};
-
-/**
- * STOR-PLACE-10: the storage pieces a title delete removes: everything `collectMediaKeysInUse` lists, its own artwork
- * included, except the photo of a person another title of the library still lists in its cast or crew
- * (`personInOtherTitle`), since every title of that person shows the same stored photo (META-ART-01).
- */
-export const collectMediaDeleteKeys = (
-  details: Pick<MediaDetails, "formats" | "audioTracks" | "subtitleTracks" | "posterPath" | "backdropPath"> &
-    Partial<Pick<MediaDetails, "cast" | "crew" | "seasons" | "episodes">>,
-  personInOtherTitle: (personId: string) => boolean
-): string[] => {
-  const kept = new Set<string>();
-  for (const member of [...(details.cast ?? []), ...(details.crew ?? [])]) {
-    const key = artworkStorageKey(member.profilePath);
-    if (key && personInOtherTitle(member.personId)) kept.add(key);
-  }
-  return collectMediaKeysInUse(details).filter((key) => !kept.has(key));
 };

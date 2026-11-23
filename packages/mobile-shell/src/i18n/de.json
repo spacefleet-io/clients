@@ -17,47 +17,9 @@
     "saving": "Wird gespeichert…",
     "error": "Der API-Host konnte nicht gespeichert werden. Prüfe den Wert und versuch es nochmal."
   },
-  "signup": {
-    "title": "Konto erstellen",
-    "subtitle": "Du musst deine E-Mail-Adresse bestätigen, bevor du dich anmelden kannst.",
-    "emailLabel": "E-Mail",
-    "passwordLabel": "Passwort",
-    "confirmLabel": "Passwort wiederholen",
-    "button": "Konto erstellen",
-    "creating": "Wird erstellt…",
-    "haveAccountPrompt": "Du hast schon ein Konto?",
-    "signIn": "Anmelden",
-    "errors": {
-      "passwordLength": "Das Passwort muss mindestens 8 Zeichen lang sein.",
-      "passwordMismatch": "Die Passwörter stimmen nicht überein.",
-      "emailExists": "Diese E-Mail-Adresse ist bereits registriert.",
-      "emailDomainDisallowed": "Diese E-Mail-Domain ist nicht erlaubt. Bitte nutze einen anderen E-Mail-Anbieter.",
-      "generic": "Registrierung fehlgeschlagen. Versuch es noch einmal."
-    }
-  },
-  "verifyEmail": {
-    "title": "Bestätige deine E-Mail-Adresse",
-    "subtitle": "Wir haben dir einen Bestätigungscode per E-Mail geschickt. Gib ihn hier ein, um die Registrierung abzuschließen.",
-    "codeLabel": "Bestätigungscode",
-    "codePlaceholder": "123456",
-    "submit": "E-Mail bestätigen",
-    "verifying": "Wird bestätigt…",
-    "resend": "Bestätigungscode erneut senden",
-    "sending": "Wird gesendet…",
-    "backToSignIn": "Zurück zur Anmeldung",
-    "sent": "Bestätigungscode gesendet. Schau in deinen Posteingang.",
-    "errors": {
-      "invalidCode": "Ungültiger Bestätigungscode. Versuch es noch einmal.",
-      "emailNotFound": "Für diese E-Mail-Adresse wurde kein Konto gefunden.",
-      "sendFailed": "Der Bestätigungscode konnte nicht gesendet werden.",
-      "generic": "Deine E-Mail-Adresse konnte nicht bestätigt werden."
-    }
-  },
   "login": {
     "title": "Anmelden",
     "withAccount": "Melde dich mit deinem SpaceFleet-Konto an",
-    "noAccountPrompt": "Noch kein Konto?",
-    "createAccount": "Konto erstellen",
     "emailLabel": "E-Mail",
     "passwordLabel": "Passwort",
     "twoFactorLabel": "Bestätigungscode",
@@ -101,11 +63,11 @@
     },
     "provider": {
       "signInWith": "Mit {{provider}} anmelden",
-      "signUpWith": "Mit {{provider}} registrieren",
       "or": "oder",
       "continueInBrowser": "Schließe die Anmeldung in deinem Browser ab. Danach kommst du hierher zurück.",
       "errorStart": "Die Anmeldung konnte nicht gestartet werden. Bitte versuch es noch einmal.",
       "errors": {
+        "no_account": "Kein SpaceFleet-Konto nutzt diese E-Mail-Adresse. Erstell eins in Badger oder Parrot auf einem Computer und melde dich dann hier an.",
         "email_unverified": "Die E-Mail-Adresse dieses Kontos ist nicht bestätigt. Bestätige sie beim Anbieter oder melde dich mit E-Mail und Passwort an.",
         "email_domain_disallowed": "Mit dieser E-Mail-Adresse kann kein Konto erstellt werden.",
         "account_deletion_pending": "Die Löschung dieses Kontos ist geplant.",
@@ -290,36 +252,6 @@
       "playlist": "Playlist"
     }
   },
-  "offlineContent": {
-    "entry": "Offline-Inhalte verwalten",
-    "title": "Offline-Inhalte",
-    "back": "Zurück",
-    "totalSuffix": "offline gespeichert",
-    "unknownArtist": "Unbekannter Künstler",
-    "removeAll": "Alles entfernen",
-    "confirmCancel": "Abbrechen",
-    "confirmRemove": "Alles entfernen",
-    "removeFailed": "Konnte nicht entfernt werden. Versuch es noch einmal.",
-    "expand": "Inhalt von {{name}} ein- oder ausblenden",
-    "remove": "{{name}} von diesem Telefon entfernen",
-    "season": "Staffel {{n}}",
-    "episodeNumber": "S{{season}} F{{episode}}",
-    "unknownTitle": "Titel nicht mehr in der Mediathek",
-    "unknownEpisode": "Folge nicht mehr in der Mediathek",
-    "unknown": "Nicht mehr in der Mediathek",
-    "badger": {
-      "entryDescription": "Sieh nach, was auf diesem Telefon behalten wird, und schaffe Platz",
-      "confirmTitle": "Alles entfernen, was auf diesem Telefon behalten wird?",
-      "confirmBody": "Alle auf dieses Telefon heruntergeladenen Filme und Folgen werden gelöscht. Du kannst sie später wieder herunterladen.",
-      "empty": "Auf diesem Telefon wird nichts behalten. Tippe bei einem Film oder einer Folge auf Herunterladen, um sie ohne Verbindung anzusehen."
-    },
-    "parrot": {
-      "entryDescription": "Sieh nach, was auf diesem Telefon offline gespeichert ist, und schaffe Platz",
-      "confirmTitle": "Alles offline Gespeicherte entfernen?",
-      "confirmBody": "Alle Alben, Playlists und Songs, die auf diesem Telefon offline gespeichert sind, werden entfernt. Du kannst sie später wieder offline speichern.",
-      "empty": "Auf diesem Telefon ist noch nichts offline gespeichert. Tippe bei einem Album, einer Playlist oder einem Song auf Offline speichern, um sie ohne Verbindung zu hören."
-    }
-  },
   "downloads": {
     "title": "Downloads",
     "back": "Zurück",
@@ -495,7 +427,7 @@
     "playlists": "Playlists",
     "settings": "Einstellungen",
     "loading": "Wird geladen…",
-    "loadingLibrary": "Bibliothek wird geladen…",
+    "loadingLibrary": "Mediathek wird geladen…",
     "updateRequired": "Update erforderlich",
     "unavailable": "Badger ist nicht verfügbar: {{issue}}. Bitte aktualisiere deine App.",
     "screenLoadFailed": "Der Bildschirm konnte nicht geladen werden",
@@ -904,8 +836,8 @@
   },
   "tvPairing": {
     "signIn": {
-      "title": "Bei {{app}} anmelden",
-      "subtitle": "Öffne auf deinem Handy oder Computer {{app}} → Einstellungen → Gerät koppeln und scanne dann den Code oder gib ihn ein.",
+      "title": "Bei Badger anmelden",
+      "subtitle": "Öffne auf deinem Handy oder Computer Badger → Einstellungen → Gerät koppeln und scanne dann den Code oder gib ihn ein.",
       "codeLabel": "Oder gib diesen Code ein",
       "qrAccessibility": "QR-Code zum Koppeln dieses Fernsehers",
       "starting": "Kopplungscode wird abgerufen…",
@@ -919,7 +851,7 @@
       },
       "errors": {
         "title": "Dieser Fernseher konnte nicht gekoppelt werden",
-        "unreachable": "Wir konnten {{app}} nicht erreichen. Prüfe die Verbindung dieses Fernsehers und hol dir einen neuen Code.",
+        "unreachable": "Wir konnten Badger nicht erreichen. Prüfe die Verbindung dieses Fernsehers und hol dir einen neuen Code.",
         "failed": "Beim Koppeln ist etwas schiefgelaufen. Hol dir einen neuen Code, um es nochmal zu versuchen.",
         "key_unreadable": "Die Genehmigung ist bei diesem Fernseher angekommen, aber der Mediathek-Schlüssel konnte nicht gelesen werden. Hol dir einen neuen Code und genehmige ihn erneut.",
         "key_mismatch": "Der gesendete Mediathek-Schlüssel öffnet die Mediathek dieses Kontos nicht. Auf diesem Fernseher wurde nichts gespeichert. Hol dir einen neuen Code und genehmige ihn erneut in einer App, die deine Mediathek hat."
@@ -1036,7 +968,8 @@
   },
   "libraryFormat": {
     "title": "Update erforderlich",
-    "body": "Diese Mediathek wurde mit einer neueren Version von Badger erstellt."
+    "body": "Diese Mediathek wurde mit einer neueren Version von Badger erstellt. Aktualisiere die App, um sie zu öffnen.",
+    "update": "Jetzt aktualisieren"
   },
   "home": {
     "empty": {
@@ -1102,12 +1035,7 @@
       "added": "Hinzugefügt am",
       "release": "Erscheinungsjahr",
       "asc": "Aufsteigend",
-      "desc": "Absteigend",
-      "title": "Sortieren nach",
-      "by": "Feld",
-      "direction": "Reihenfolge",
-      "button": "Sortieren",
-      "done": "Fertig"
+      "desc": "Absteigend"
     },
     "row": {
       "runtimeMinutes": "{{minutes}} Min.",
@@ -1123,70 +1051,6 @@
     "poster": {
       "watched": "{{percent}}% gesehen",
       "downloaded": "heruntergeladen"
-    },
-    "filters": {
-      "clear": "Filter zurücksetzen",
-      "genres": {
-        "title": "Genres",
-        "search": "Genres suchen…",
-        "empty": "Keine Genres passen zu dieser Suche."
-      },
-      "actors": {
-        "title": "Darsteller",
-        "search": "Darsteller suchen…",
-        "empty": "Keine Darsteller passen zu dieser Suche."
-      },
-      "title": "Filtern",
-      "clearShort": "Löschen",
-      "more": "+{{count}} weitere",
-      "reset": "Zurücksetzen",
-      "apply": "Anwenden",
-      "qualities": {
-        "title": "Qualität",
-        "search": "Qualität suchen",
-        "empty": "Keine Qualität gefunden"
-      },
-      "directors": {
-        "title": "Regie",
-        "search": "Regie suchen",
-        "empty": "Keine Regie gefunden"
-      },
-      "audioLanguages": {
-        "title": "Audiosprache",
-        "search": "Sprache suchen",
-        "empty": "Keine Sprache gefunden"
-      },
-      "subtitleLanguages": {
-        "title": "Untertitelsprache",
-        "search": "Sprache suchen",
-        "empty": "Keine Sprache gefunden"
-      },
-      "watchStates": {
-        "title": "Wiedergabestatus",
-        "search": "Status suchen",
-        "empty": "Kein Status gefunden"
-      },
-      "quality": {
-        "sd": "SD (480p oder weniger)"
-      },
-      "watchState": {
-        "unwatched": "Nicht angesehen",
-        "in-progress": "Angefangen",
-        "watched": "Angesehen"
-      },
-      "undefinedLanguage": "Unbekannte Sprache",
-      "active_one": "Filtern, {{count}} aktiv",
-      "active_other": "Filtern, {{count}} aktiv",
-      "showOnly": "Nur anzeigen"
-    },
-    "stats": {
-      "movie_one": "{{count}} Film",
-      "movie_other": "{{count}} Filme",
-      "movie_many": "{{count}} Filme",
-      "series_one": "{{count}} Serie",
-      "series_other": "{{count}} Serien",
-      "series_many": "{{count}} Serien",
-      "shownOf": "{{shown}} von {{total}}"
     }
   },
   "playlists": {
@@ -1232,22 +1096,6 @@
         "hint": "Deine gespeicherte Mediathek bleibt sichtbar."
       },
       "close": "Hinweis schließen"
-    }
-  },
-  "sync": {
-    "indicator": {
-      "updating": "Mediathek wird aktualisiert…",
-      "updatingProgress": "Mediathek wird aktualisiert… {{percent}} %",
-      "savedStaysLabel": "Deine gespeicherte Mediathek bleibt verfügbar",
-      "newEpisodes_one": "{{count}} neue Folge",
-      "newEpisodes_other": "{{count}} neue Folgen",
-      "newTitles_one": "{{count}} neuer Titel",
-      "newTitles_other": "{{count}} neue Titel",
-      "updated": "Mediathek aktualisiert",
-      "upToDate": "Aktuell",
-      "failed": "Aktualisierung fehlgeschlagen",
-      "failedLabel": "Aktualisierung der Mediathek fehlgeschlagen — gespeicherte Inhalte",
-      "retry": "Zum Wiederholen tippen."
     }
   },
   "shell": {
@@ -1392,40 +1240,6 @@
   },
   "appUpdate": {
     "title": "Aktualisiere {{app}}, um es weiter zu nutzen",
-    "tooOld": "Diese {{app}}-Version ist zu alt, um sich zu verbinden.",
-    "how": {
-      "appstore": "Aktualisiere {{app}} im App Store und öffne die App dann erneut.",
-      "testflight": "Installiere die neue Version von {{app}} über TestFlight und öffne die App dann erneut.",
-      "play": "Aktualisiere {{app}} bei Google Play und öffne die App dann erneut.",
-      "amazon": "Aktualisiere {{app}} im Amazon Appstore und öffne die App dann erneut.",
-      "fdroid": "Aktualisiere {{app}} in F-Droid und öffne die App dann erneut.",
-      "obtainium": "Aktualisiere {{app}} in Obtainium und öffne die App dann erneut.",
-      "apk": "Lade die neue Version von {{app}} herunter, installiere sie über diese und öffne die App dann erneut.",
-      "store": "Aktualisiere {{app}} in dem Store, aus dem du die App installiert hast, und öffne sie dann erneut.",
-      "unknown": "Installiere die neue Version von dort, woher du {{app}} hast, und öffne die App dann erneut."
-    },
-    "open": {
-      "appstore": "App Store öffnen",
-      "testflight": "TestFlight öffnen",
-      "play": "Google Play öffnen",
-      "amazon": "Amazon Appstore öffnen",
-      "fdroid": "F-Droid öffnen",
-      "obtainium": "Obtainium öffnen",
-      "apk": "Neue Version herunterladen",
-      "store": "Store öffnen"
-    }
-  },
-  "sibling": {
-    "title": "Weiter mit deinem {{other}}-Konto",
-    "body": "{{other}} ist auf diesem Handy angemeldet. Du musst nichts eingeben.",
-    "button": "Weiter als {{email}}",
-    "otherAccount": "Anderes Konto verwenden",
-    "waiting": "Warte auf {{other}}…",
-    "waitingNote": "Erlaube es in {{other}} und komm dann zurück.",
-    "cancel": "Abbrechen",
-    "failure": "{{other}} konnte dich nicht anmelden. Melde dich anders an.",
-    "askTitle": "{{app}} dein SpaceFleet-Konto verwenden lassen?",
-    "askBody": "{{app}} auf diesem Handy wird als {{email}} angemeldet, mit einer eigenen Kopie deines Mediathek-Schlüssels. Du kannst es jederzeit unter Geräte abmelden.",
-    "allow": "Erlauben"
+    "body": "Diese {{app}}-Version ist zu alt, um sich zu verbinden. Installiere die neue Version von dort, woher du {{app}} hast, und öffne die App dann erneut."
   }
 }

@@ -9,7 +9,6 @@ import { AppRouter } from "./lib/AppRouter";
 import { LoadingScreen } from "./components/LoadingScreen";
 import UpdateReadyNotice from "./components/UpdateReadyNotice";
 import { useUpdater } from "./lib/useUpdater";
-import { SystemUpdatePrompt } from "@space/desktop-shell/updater-system-prompt";
 
 const Login = lazy(() => import("./pages/Login"));
 const Signup = lazy(() => import("./pages/Signup"));
@@ -54,12 +53,11 @@ export default function App() {
 }
 
 function AppContent() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   // REL-CD-29: this build is too old (the API refused it, or release-status reported it below the minimum); the update
   // prompt covers every screen, signed out included.
   const updateRequired = useSyncExternalStore(onAppUpdateRequired, getAppUpdateRequired);
-  const updater = useUpdater();
-  const serverMandatory = updater.state.mandatory;
+  const serverMandatory = useUpdater().state.mandatory;
   const mustUpdate = updateRequired !== null || serverMandatory;
   return (
     <CloseLabelProvider label={t("common.close")}>
@@ -72,8 +70,6 @@ function AppContent() {
         </Suspense>
       ) : null}
       <UpdateReadyNotice blocked={mustUpdate} />
-      {/* REL-UPD-07: a copy from SpaceFleet's .deb/.rpm/.pacman packages asks before updating through the package manager. */}
-      <SystemUpdatePrompt controls={updater} language={i18n.language} appName="Badger" blocked={mustUpdate} />
     </CloseLabelProvider>
   );
 }

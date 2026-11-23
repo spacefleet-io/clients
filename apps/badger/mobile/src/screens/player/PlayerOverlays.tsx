@@ -7,9 +7,9 @@ import { formatClock } from "@space/shared/format";
 import type { PillAction } from "../../lib/playback/skipMarkers";
 import { useMediaImage } from "../../lib/useMediaImage";
 import { IS_TV } from "../../tv/lib/tvRuntime";
-import { TvFocusable } from "@space/mobile-shell/tv/TvFocusable";
-import { useTvScale } from "@space/mobile-shell/tv/tvScale";
-import { scaleStyleSheet } from "@space/shared/uiScale";
+import { TvFocusable } from "../../tv/components/TvFocusable";
+import { useTvScale } from "../../tv/lib/tvScale";
+import { scaleStyleSheet } from "@space/mobile-mpv-playback/uiScale";
 import { LaunchingMascot } from "../../components/LaunchingMascot";
 
 const TARGET = 48;
