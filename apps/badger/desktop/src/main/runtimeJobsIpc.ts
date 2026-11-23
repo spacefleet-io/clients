@@ -415,9 +415,9 @@ export const registerRuntimeJobsIpc = (config: {
   );
 
   // ---------------------------------------------------------------------
-  // Export bridges ("Download everything", ACCT-EXPORT-01, OFFL-FILE-01):
-  // the whole library as plain files into a folder the user picked. Only a
-  // folder picked in `sf-pick-export-folder` is accepted.
+  // Export bridges (OFFL-FILE-01 "Download file", ACCT-EXPORT-01 "Download
+  // everything"): plain files into a folder the user picked. Only a folder
+  // picked in `sf-pick-export-folder` is accepted.
   // ---------------------------------------------------------------------
 
   const exportFolderRefused = {
@@ -433,7 +433,7 @@ export const registerRuntimeJobsIpc = (config: {
     try {
       return await c.sendCommand(badgerExportEstimate, payload);
     } catch (err) {
-      log.warn({ error: String(err), container: payload.container }, "badger_export_estimate_failed");
+      log.warn({ error: String(err), all: payload.all ?? false, mediaIds: payload.mediaIds?.length ?? 0 }, "badger_export_estimate_failed");
       return toRendererError(err);
     }
   });
@@ -444,7 +444,10 @@ export const registerRuntimeJobsIpc = (config: {
     try {
       return await c.sendCommand(badgerExportSubmit, payload);
     } catch (err) {
-      log.warn({ error: String(err), container: payload.container }, "badger_export_submit_failed");
+      log.warn(
+        { error: String(err), all: payload.all ?? false, mediaIds: payload.mediaIds?.length ?? 0, layout: payload.layout },
+        "badger_export_submit_failed",
+      );
       return toRendererError(err);
     }
   });

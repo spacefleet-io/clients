@@ -61,14 +61,16 @@ import { pickSettingsFormat } from "@/lib/mpvPlaybackSelection";
 import { Input } from "@space/ui";
 import { Label } from "@space/ui";
 import { isOcrTwin } from "@space/shared/subtitleTwins";
-import { CheckCircle2, ChevronRight, Download, DownloadCloud, Heart, ImagePlus, ListPlus, Pencil, PlayCircle, Plus, RotateCcw, Save, Trash2, X, MoreHorizontal, Loader2 } from "lucide-react";
+import { CheckCircle2, ChevronRight, Download, DownloadCloud, FileDown, Heart, ImagePlus, ListPlus, Pencil, PlayCircle, Plus, RotateCcw, Save, Trash2, X, MoreHorizontal, Loader2 } from "lucide-react";
 import { MediaCastDraft, MediaDetails, MediaEpisodeDraft, MediaFormat, MediaSeasonDraft } from "@/lib/libraryDb";
 import { ESTIMATE_MB_BYTES, mediaSizeLabel } from "@/lib/sizeLabel";
 import OfflineBadge, { RemoveOfflineIcon } from "@/components/OfflineBadge";
 import {
+  inScopeFileIds,
   resolveButtonState,
   type OfflineScope,
 } from "@/lib/offlineEstimator";
+import { exportOutcomeToast, exportTitleFiles } from "@/lib/exportFlow";
 import {
   computeOfflineLocalCountsForDetails,
   refreshOfflineStateForMedia,
@@ -781,6 +783,23 @@ export default function MediaDetailsDialog({ selectedId, onClose }: MediaDetails
   const handleDeleteMedia = async () => {
     if (!selectedDetails) return;
     setDeleteTarget({ id: selectedDetails.id, title: selectedDetails.title });
+  };
+
+  // "Download file" (OFFL-FILE-01): plain files in a folder the user picks, at the highest stored quality. The
+  // runtime runs one export job per file; the jobs sidebar shows the progress.
+  const exportAvailable = typeof window !== "undefined" && Boolean(window.sf?.exportFiles?.pickFolder);
+  const handleExportFile = async (scope: OfflineScope) => {
+    if (!selectedDetails) return;
+    const fileIds = scope.kind === "episode" ? [...inScopeFileIds(selectedDetails, scope)] : undefined;
+    const outcome = await exportTitleFiles({
+      t,
+      locale: i18n.language,
+      mediaId: selectedDetails.id,
+      fileIds,
+      container: clientConfig.offlineExportFormat ?? "mkv",
+    });
+    const message = exportOutcomeToast(t, outcome);
+    if (message) toast(message);
   };
 
   // ------------------------------------------------------------------
@@ -2122,6 +2141,20 @@ export default function MediaDetailsDialog({ selectedId, onClose }: MediaDetails
                                   </button>
                                 );
                               })()}
+                              {exportAvailable ? (
+                                <button
+                                  type="button"
+                                  data-testid="export-file-menu-item"
+                                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-muted/50 transition text-left"
+                                  onClick={() => {
+                                    setMoreMenuOpen(false);
+                                    void handleExportFile(selectedDetails.type === "tv" ? { kind: "show" } : { kind: "movie" });
+                                  }}
+                                >
+                                  <FileDown className="h-4 w-4" />
+                                  {t(selectedDetails.type === "tv" ? "library.export.menuItemShow" : "library.export.menuItem")}
+                                </button>
+                              ) : null}
                               <div className="my-1 h-px bg-border/50" />
                               <button
                                 className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-destructive hover:bg-destructive/10 transition text-left"
@@ -2758,6 +2791,28 @@ export default function MediaDetailsDialog({ selectedId, onClose }: MediaDetails
                                                     </div>
                                                   );
                                                 })()}
+                                                {exportAvailable ? (
+                                                  <Button
+                                                    type="button"
+                                                    size="sm"
+                                                    variant="secondary"
+                                                    data-testid={`export-episode-button-${episode.id}`}
+                                                    className="h-9 w-9 p-0"
+                                                    aria-label={t("library.export.episodeButton")}
+                                                    title={t("library.export.episodeButton")}
+                                                    onClick={(event: React.MouseEvent<HTMLButtonElement>) => {
+                                                      event.stopPropagation();
+                                                      void handleExportFile({
+                                                        kind: "episode",
+                                                        episodeId: episode.id,
+                                                        seasonNumber: episode.seasonNumber,
+                                                        episodeNumber: episode.episodeNumber,
+                                                      });
+                                                    }}
+                                                  >
+                                                    <FileDown className="h-4 w-4" />
+                                                  </Button>
+                                                ) : null}
                                               </>
                                             ) : null
                                         }

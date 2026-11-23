@@ -5,7 +5,7 @@
  * @req PAR-LIB-03[parrot]
  * @req UX-A11Y-05[parrot]
  * @why Chris, 2026-11-21 (chat, morning review): of the three artist page drafts he picked A (the photo edge to edge, the
- *   ARTIST chip, the name and counts over the fade, a big Play, round Shuffle / Save offline / Play next / More),
+ *   ARTIST chip, the name and counts over the fade, a big Play, round Shuffle / Keep on this phone / Play next / More),
  *   with no Overview tab ("no point next to Albums and Songs"): two tabs, Albums first and open, and the Albums tab is
  *   draft B's discography timeline (newest first, each release with its own Play, a row of years to jump down a long
  *   one) instead of a two-column grid. Delete is only in the More sheet, last and red, and asks first. The screen is
@@ -225,7 +225,7 @@ describe("PARROT-MOBILE-ARTIST-PAGE-001 the Albums tab is the discography timeli
 });
 
 describe("PARROT-MOBILE-ARTIST-PAGE-001 Delete is only in the More sheet", () => {
-  it("shows Shuffle, Save offline, Play next and More under Play, nothing that deletes, and the sheet ends with Delete in red, which asks", () => {
+  it("shows Shuffle, Keep on this phone, Play next and More under Play, nothing that deletes, and the sheet ends with Delete in red, which asks", () => {
     library(2);
     const page = render("Radiohead");
     const round = all(page, (el) => typeof el.props?.testID === "string" && /^artist-(shuffle|keep|unkeep|play-next|more)$/.test(el.props.testID as string));

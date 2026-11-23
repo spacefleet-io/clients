@@ -4,8 +4,7 @@ import { contextBridge, ipcRenderer, webUtils } from "electron";
 import { createErrorReportsBridge } from "@space/error-report/desktop";
 import { createUpdaterBridge } from "@space/desktop-shell/updater-preload";
 import { readStorageUnitBase } from "@space/desktop-shell/storage-units";
-import { SIBLING_IPC } from "@space/desktop-shell/sibling";
-import { PARROT_IPC, type ParrotBackgroundWork, type ParrotBridge, type ParrotCoverCutRequest, type ParrotExportJob, type ParrotImportJob, type ParrotImportStatus } from "../shared/ipc";
+import { PARROT_IPC, type ParrotBackgroundWork, type ParrotBridge, type ParrotImportJob, type ParrotImportStatus } from "../shared/ipc";
 import type { ParrotLibraryPatch } from "../shared/libraryPatch";
 import type { KeptStatus } from "@space/parrot-core";
 import type { StreamSlotGateState } from "@space/stream-slots";
@@ -47,11 +46,6 @@ const bridge: ParrotBridge = {
     poll: (requestId) => ipcRenderer.invoke(PARROT_IPC.pairingPoll, requestId),
     cancel: () => ipcRenderer.invoke(PARROT_IPC.pairingCancel),
   },
-  sibling: {
-    offer: () => ipcRenderer.invoke(SIBLING_IPC.offer),
-    signIn: () => ipcRenderer.invoke(SIBLING_IPC.signIn),
-    cancel: () => ipcRenderer.invoke(SIBLING_IPC.cancel),
-  },
   signOut: () => ipcRenderer.invoke(PARROT_IPC.signOut),
   setLibraryKey: (keyBase64) => ipcRenderer.invoke(PARROT_IPC.setLibraryKey, keyBase64),
   createLibraryKey: () => ipcRenderer.invoke(PARROT_IPC.createLibraryKey),
@@ -61,17 +55,9 @@ const bridge: ParrotBridge = {
   getPathForFile: (file) => webUtils.getPathForFile(file),
   scanImport: (folders) => ipcRenderer.invoke(PARROT_IPC.scanImport, folders),
   getImportScan: () => ipcRenderer.invoke(PARROT_IPC.getImportScan),
-  matchImportAlbum: (question) => ipcRenderer.invoke(PARROT_IPC.matchImportAlbum, question),
-  stopImportAlbumMatch: (id) => ipcRenderer.invoke(PARROT_IPC.stopImportAlbumMatch, id),
+  matchImport: () => ipcRenderer.invoke(PARROT_IPC.matchImport),
   searchImportAlbums: (question) => ipcRenderer.invoke(PARROT_IPC.searchImportAlbums, question),
-  importAlbumPictures: (files) => ipcRenderer.invoke(PARROT_IPC.importAlbumPictures, files),
-  pickImportCoverImage: () => ipcRenderer.invoke(PARROT_IPC.pickImportCoverImage),
-  onCoverCut: (listener) => {
-    const handler = (_event: Electron.IpcRendererEvent, request: ParrotCoverCutRequest) => listener(request);
-    ipcRenderer.on(PARROT_IPC.coverCutEvent, handler);
-    return () => ipcRenderer.off(PARROT_IPC.coverCutEvent, handler);
-  },
-  coverCut: (id, bytes) => ipcRenderer.invoke(PARROT_IPC.coverCut, id, bytes),
+  searchImportSongs: (question) => ipcRenderer.invoke(PARROT_IPC.searchImportSongs, question),
   importArtistPhoto: (artistId) => ipcRenderer.invoke(PARROT_IPC.importArtistPhoto, artistId),
   importCover: (albumId) => ipcRenderer.invoke(PARROT_IPC.importCover, albumId),
   confirmImport: (selection) => ipcRenderer.invoke(PARROT_IPC.confirmImport, selection),
@@ -89,16 +75,6 @@ const bridge: ParrotBridge = {
     return () => ipcRenderer.off(PARROT_IPC.importJobsEvent, handler);
   },
   dismissImportJob: (id) => ipcRenderer.invoke(PARROT_IPC.dismissImportJob, id),
-  previewExport: () => ipcRenderer.invoke(PARROT_IPC.previewExport),
-  exportMusic: () => ipcRenderer.invoke(PARROT_IPC.exportMusic),
-  getExportJobs: () => ipcRenderer.invoke(PARROT_IPC.getExportJobs),
-  onExportJobs: (listener) => {
-    const handler = (_event: Electron.IpcRendererEvent, jobs: ParrotExportJob[]) => listener(jobs);
-    ipcRenderer.on(PARROT_IPC.exportJobsEvent, handler);
-    return () => ipcRenderer.off(PARROT_IPC.exportJobsEvent, handler);
-  },
-  cancelExport: (id) => ipcRenderer.invoke(PARROT_IPC.cancelExport, id),
-  dismissExportJob: (id) => ipcRenderer.invoke(PARROT_IPC.dismissExportJob, id),
   getBackgroundWork: () => ipcRenderer.invoke(PARROT_IPC.getBackgroundWork),
   onBackgroundWork: (listener) => {
     const handler = (_event: Electron.IpcRendererEvent, work: ParrotBackgroundWork[]) => listener(work);

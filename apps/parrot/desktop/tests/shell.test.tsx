@@ -12,7 +12,6 @@ import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { streamBridgeStub } from "./streamBridge";
-import { exportBridgeStub } from "./exportBridge";
 import type { ParrotState } from "../src/shared/ipc";
 import Library from "../src/renderer/src/Library";
 import { translator } from "../src/renderer/src/i18n";
@@ -89,7 +88,6 @@ describe("Parrot desktop shell", () => {
       configurable: true,
       value: {
         ...streamBridgeStub(),
-        ...exportBridgeStub(),
         getLibrary: vi.fn(async () => ({ ok: true, library })),
         getImportStatus: vi.fn(async () => ({ running: false, phase: "idle", done: 0, total: 0, imported: 0, skipped: 0, failed: 0 })),
         getImportScan: vi.fn(async () => null),

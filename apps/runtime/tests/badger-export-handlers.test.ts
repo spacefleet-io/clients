@@ -1,9 +1,8 @@
 /**
- * `badger.export.estimate` / `badger.export.submit`: "Download everything" (ACCT-EXPORT-01, OFFL-FILE-01,
- * OFFL-QUAL-01, OFFL-SAFE-02).
+ * `badger.export.estimate` / `badger.export.submit` (OFFL-FILE-01, ACCT-EXPORT-01, OFFL-QUAL-01, OFFL-SAFE-02).
  *
- * Export = the whole library as plain files in a folder the user picked, at the highest stored quality, never
- * tracked by the app: the handlers submit one `kind: "export"` job per file and never touch `media_local_downloads`.
+ * Export = plain files in a folder the user picked, at the highest stored quality, never tracked by the app: the
+ * handlers submit one `kind: "export"` job per file and never touch `media_local_downloads`.
  */
 
 import { mkdtempSync, rmSync } from "node:fs";
@@ -121,7 +120,7 @@ afterEach(() => {
 
 describe("badger.export.estimate", () => {
   it("counts every file of the whole library at its highest quality and reads free space on the picked folder's disk", async () => {
-    const result = await createBadgerExportEstimateHandler(makeDeps())({ destDir, container: "mkv" });
+    const result = await createBadgerExportEstimateHandler(makeDeps())({ all: true, destDir, container: "mkv" });
     log("estimate-all", result);
     // movie: 1080p video (100 + 2*3000) + 2 audio (2*210) + 2 subs (2*10KiB); show: 2 × 720p (100 + 2*1000).
     const movieBytes = 100 + 6000 + 420 + 2 * 10 * 1024;
@@ -134,20 +133,20 @@ describe("badger.export.estimate", () => {
 
   it("reports not enough space when the files plus the safety margin do not fit (OFFL-SAFE-02)", async () => {
     freeBytes = 1000;
-    const result = await createBadgerExportEstimateHandler(makeDeps())({ destDir, container: "mkv" });
+    const result = await createBadgerExportEstimateHandler(makeDeps())({ mediaIds: [MOVIE.id], destDir, container: "mkv" });
     log("estimate-small-disk", result);
     expect(result.sufficientSpace).toBe(false);
   });
 });
 
 describe("badger.export.submit", () => {
-  it("the film: one export job at the highest stored quality into the picked folder, never tracked", async () => {
+  it("one movie: one export job at the highest stored quality, flat into the picked folder, never tracked", async () => {
     const deps = makeDeps();
-    const result = await createBadgerExportSubmitHandler(deps)({ destDir, container: "mkv" });
+    const result = await createBadgerExportSubmitHandler(deps)({ mediaIds: [MOVIE.id], destDir, container: "mkv", layout: "flat" });
     log("submit-movie", { result, jobs: submitted.map((j) => ({ kind: j.kind, payload: j.payload })) });
-    expect("submitted" in result && result.submitted).toHaveLength(3);
-    const job = submitted.find((j) => exportPayload(j).fileId === "movie-file");
-    if (!job) throw new Error("no job for movie-file");
+    expect("submitted" in result && result.submitted).toHaveLength(1);
+    expect(submitted).toHaveLength(1);
+    const job = submitted[0];
     const payload = exportPayload(job);
     expect(job.kind).toBe("export");
     expect(job.lane).toBe("upload");
@@ -156,46 +155,48 @@ describe("badger.export.submit", () => {
     expect(payload.manifest.audioTracks.map((t) => t.trackId)).toEqual(["a-en", "a-fr"]);
     expect(payload.manifest.subtitles.map((s) => s.subtitleId)).toEqual(["s-en", "s-ja"]);
     expect(payload.destDir).toBe(destDir);
-    expect(payload).not.toHaveProperty("layout");
+    expect(payload.layout).toBe("flat");
     expect(payload.filename).toBe("Lattice (1999)");
     expect(JSON.stringify(job.payload)).not.toContain("tok");
     expect(deps.libraryDb.listLocalDownloads).not.toHaveBeenCalled();
   });
 
   it("MP4 keeps only the subtitles MP4 can hold (srt/vtt)", async () => {
-    await createBadgerExportSubmitHandler(makeDeps())({ destDir, container: "mp4" });
-    const payload = exportPayload(submitted.find((j) => exportPayload(j).fileId === "movie-file") ?? submitted[0]);
+    await createBadgerExportSubmitHandler(makeDeps())({ mediaIds: [MOVIE.id], destDir, container: "mp4", layout: "flat" });
+    const payload = exportPayload(submitted[0]);
     log("submit-mp4", payload.manifest.subtitles);
     expect(payload.manifest.subtitles.map((s) => s.subtitleId)).toEqual(["s-en"]);
     expect(payload.skippedSubsForContainer).toEqual(["jpn"]);
   });
 
-  it("an episode carries its show, season and episode for the Shows/<Show>/Season NN/ layout", async () => {
-    await createBadgerExportSubmitHandler(makeDeps())({ destDir, container: "mkv" });
+  it("one episode: only the picked file of the show", async () => {
+    await createBadgerExportSubmitHandler(makeDeps())({ mediaIds: [SHOW.id], fileIds: ["ep-2"], destDir, container: "mkv", layout: "flat" });
     log("submit-episode", submitted.map((j) => j.payload));
-    const payload = exportPayload(submitted.find((j) => exportPayload(j).fileId === "ep-2") ?? submitted[0]);
+    expect(submitted).toHaveLength(1);
+    const payload = exportPayload(submitted[0]);
     expect(payload.fileId).toBe("ep-2");
     expect(payload.manifest.filenameInputs).toEqual({ kind: "episode", showTitle: "Dr.Who", seasonNumber: 1, episodeNumber: 2, episodeTitle: "The End of the World" });
     expect(payload.hints).toEqual({ season: 1, episode: 2 });
   });
 
-  it("every file of every title", async () => {
-    const result = await createBadgerExportSubmitHandler(makeDeps())({ destDir, container: "mkv" });
+  it("download everything: every file of every title, library layout", async () => {
+    const result = await createBadgerExportSubmitHandler(makeDeps())({ all: true, destDir, container: "mkv", layout: "library" });
     log("submit-all", { result, files: submitted.map((j) => exportPayload(j).fileId) });
     expect(submitted.map((j) => exportPayload(j).fileId).sort()).toEqual(["ep-1", "ep-2", "movie-file"]);
+    expect(submitted.every((j) => exportPayload(j).layout === "library")).toBe(true);
     expect("skipped" in result && result.skipped).toEqual([{ mediaId: EMPTY.id, reason: "no-file" }]);
   });
 
   it("refuses when the picked folder's disk is too small, submits nothing", async () => {
     freeBytes = 1000;
-    const result = await createBadgerExportSubmitHandler(makeDeps())({ destDir, container: "mkv" });
+    const result = await createBadgerExportSubmitHandler(makeDeps())({ all: true, destDir, container: "mkv", layout: "library" });
     log("submit-small-disk", result);
     expect(result).toMatchObject({ errorCode: "insufficient_disk_space", freeBytes: 1000 });
     expect(submitted).toHaveLength(0);
   });
 
   it("refuses a folder it cannot write to", async () => {
-    const result = await createBadgerExportSubmitHandler(makeDeps())({ destDir: joinPath(destDir, "missing"), container: "mkv" });
+    const result = await createBadgerExportSubmitHandler(makeDeps())({ mediaIds: [MOVIE.id], destDir: joinPath(destDir, "missing"), container: "mkv", layout: "flat" });
     log("submit-missing-dir", result);
     expect(result).toEqual({ errorCode: "dest_not_writable" });
     expect(submitted).toHaveLength(0);
@@ -203,7 +204,7 @@ describe("badger.export.submit", () => {
 
   it("refuses when signed out", async () => {
     token = null;
-    const result = await createBadgerExportSubmitHandler(makeDeps())({ destDir, container: "mkv" });
+    const result = await createBadgerExportSubmitHandler(makeDeps())({ mediaIds: [MOVIE.id], destDir, container: "mkv", layout: "flat" });
     log("submit-signed-out", result);
     expect(result).toEqual({ errorCode: "not_authenticated" });
   });

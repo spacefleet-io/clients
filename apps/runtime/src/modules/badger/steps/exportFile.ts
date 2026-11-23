@@ -1,6 +1,6 @@
 /**
- * Step: export_file — the only step of a `kind: "export"` job (ACCT-EXPORT-01 "Download everything", OFFL-FILE-01).
- * Fetches the stored pieces of one file at the quality the submit picked (the highest),
+ * Step: export_file — the only step of a `kind: "export"` job (OFFL-FILE-01 "Download file", ACCT-EXPORT-01
+ * "Download everything"). Fetches the stored pieces of one file at the quality the submit picked (the highest),
  * decrypts them, muxes one plain MKV/MP4 with every audio and subtitle track, and moves it into the folder the user
  * picked under a name nobody holds (OFFL-FILE-02, #618: compared without letter case, never overwrites).
  *
@@ -15,7 +15,7 @@
  */
 
 import { promises as fs } from "node:fs";
-import { dirname, join as joinPath } from "node:path";
+import { join as joinPath } from "node:path";
 import { runFfmpeg } from "@space/ffmpeg";
 import { buildExportPath } from "@space/shared/exportLayout";
 import { placeExportFile } from "@space/shared/exportPlacement";
@@ -47,6 +47,7 @@ const readPayload = (raw: unknown): ExportJobPayload => {
   const p = (raw ?? {}) as Partial<ExportJobPayload>;
   if (!p.fileId || !p.mediaId) throw new Error("STEP_EXPORT_MISSING_FILE");
   if (p.container !== "mkv" && p.container !== "mp4") throw new Error(`STEP_EXPORT_INVALID_CONTAINER:${String(p.container)}`);
+  if (p.layout !== "flat" && p.layout !== "library") throw new Error(`STEP_EXPORT_INVALID_LAYOUT:${String(p.layout)}`);
   if (!p.destDir) throw new Error("STEP_EXPORT_MISSING_DEST_DIR");
   if (!p.manifest || p.manifest.videoChunks.length === 0) throw new Error("STEP_EXPORT_NO_VIDEO_CHUNKS");
   return p as ExportJobPayload;
@@ -138,11 +139,11 @@ export const exportFileStepHandler: StepHandler = async (stepCtx) => {
     return encrypted;
   };
 
-  const target = buildExportPath({ ...manifest.filenameInputs, container });
+  const target = buildExportPath({ ...manifest.filenameInputs, container }, payload.layout);
   const finalDir = joinPath(payload.destDir, ...target.dirs);
   const stagingDir = joinPath(finalDir, `.sf-export-${jobId}`);
   console.info(
-    `[export_file] start job=${jobId} mediaId=${payload.mediaId} fileId=${payload.fileId} quality=${payload.quality} container=${container} finalDir=${finalDir} name=${JSON.stringify(target.filename)} videoChunks=${manifest.videoChunks.length} audioTracks=${manifest.audioTracks.length} subs=${manifest.subtitles.length} expectedBytes=${payload.expectedBytes}`,
+    `[export_file] start job=${jobId} mediaId=${payload.mediaId} fileId=${payload.fileId} quality=${payload.quality} container=${container} layout=${payload.layout} finalDir=${finalDir} name=${JSON.stringify(target.filename)} videoChunks=${manifest.videoChunks.length} audioTracks=${manifest.audioTracks.length} subs=${manifest.subtitles.length} expectedBytes=${payload.expectedBytes}`,
   );
 
   const expected = Math.max(1, payload.expectedBytes);
@@ -167,10 +168,9 @@ export const exportFileStepHandler: StepHandler = async (stepCtx) => {
     ...[...chunks].sort((a, b) => a.orderIndex - b.orderIndex).map((c) => c.key),
   ];
 
-  // `firstCreated` is the top layout folder this job made (e.g. `Movies/`), or undefined when it already existed.
-  const firstCreated = await fs.mkdir(finalDir, { recursive: true });
+  await fs.mkdir(finalDir, { recursive: true });
   await fs.rm(stagingDir, { recursive: true, force: true });
-  await fs.mkdir(stagingDir, { recursive: true });
+  await fs.mkdir(stagingDir);
   try {
     report(1, "Downloading video", "downloading");
     const videoPath = joinPath(stagingDir, "video.mp4");
@@ -243,25 +243,6 @@ export const exportFileStepHandler: StepHandler = async (stepCtx) => {
     await fs.rm(stagingDir, { recursive: true, force: true }).catch((rmErr: unknown) => {
       console.warn(`[export_file] staging cleanup failed ${stagingDir}:`, rmErr instanceof Error ? rmErr.message : rmErr);
     });
-    await removeEmptyCreatedDirs(finalDir, firstCreated, jobId);
     throw err;
-  }
-};
-
-/**
- * Removes the layout folders this job created (from `finalDir` up to `firstCreated`), only while they are empty:
- * a folder that holds anything (another export, the user's files) stops the walk. Folders that existed before stay.
- */
-const removeEmptyCreatedDirs = async (finalDir: string, firstCreated: string | undefined, jobId: string) => {
-  if (!firstCreated) return;
-  for (let dir = finalDir; dir.startsWith(firstCreated); dir = dirname(dir)) {
-    try {
-      await fs.rmdir(dir);
-      console.info(`[export_file] job=${jobId} removed empty folder ${dir}`);
-    } catch (err) {
-      console.info(`[export_file] job=${jobId} kept folder ${dir}: ${err instanceof Error ? err.message : String(err)}`);
-      return;
-    }
-    if (dir === firstCreated) return;
   }
 };

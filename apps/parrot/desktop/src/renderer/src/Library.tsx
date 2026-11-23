@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Bell, Download, House, LibraryBig, ListEnd, ListMusic, Loader2, Pencil, Play, Search, Settings, Shuffle, Trash2 } from "lucide-react";
+import { Bell, Download, House, LibraryBig, ListMusic, Loader2, Pencil, Play, Search, Settings, Shuffle, Trash2 } from "lucide-react";
 import { DesktopAppTopNav, DesktopNotificationTray, desktopTopNavIconActionClassName, desktopTopNavItemClassName, NotificationTrayContent } from "@space/desktop-shell/components";
 import { createNotificationStore, useNotificationStore } from "@space/desktop-shell/services/notifications";
 import { useOnline } from "@space/desktop-shell/hooks";
@@ -13,7 +13,6 @@ import { BadgerIconButton, badgerTopBarIcons } from "@space/ui/badger";
 import { LibraryLoading } from "./LoadingMascot";
 import { libraryContent } from "@space/shared/libraryContent";
 import { ImportJobList, ImportJobs, importErrorPart, useImportJobs } from "./ImportJobs";
-import { useExportNotifications, type ExportNotify } from "./ExportJobs";
 import { MediaDetailTabs } from "@space/ui/badger/media-detail";
 import { keyedNotification, shownNotification } from "./notificationText";
 import {
@@ -55,7 +54,6 @@ import {
   parrotEditTarget,
   parseHistory,
   playlistEntries,
-  newToUpNext,
   playNext,
   recordPlay,
   recordPosition,
@@ -87,7 +85,7 @@ import Home, { EmptyMusicLibrary } from "./Home";
 import { countText, type ParrotStringKey, type Translate } from "./i18n";
 import { editLyricsLabels, useEditLyrics } from "./editLookups";
 import { editSuggestLabels, useEditSuggest } from "./editSuggest";
-import ImportReview, { coverFrameLabels } from "./ImportReview";
+import ImportReview from "./ImportReview";
 import Plans from "./Plans";
 import Player from "./Player";
 import { StreamSlotPrompt } from "./StreamSlotPrompt";
@@ -101,9 +99,6 @@ export { Feedback } from "./Feedback";
 export { waveBarsFor } from "@space/ui/parrot/screens";
 
 type Props = { t: Translate; state: ParrotState; onState: (state: ParrotState) => void };
-
-/** A queued song is the same song as another when the ids match: the library hands out fresh rows (PAR-CARD-02). */
-const songId = (track: ParrotLibraryTrack) => track.id;
 
 /** The library's lists (the chips). Playlists have their own top-bar tab (PAR-NAV-02). */
 type View = "albums" | "artists" | "songs";
@@ -471,18 +466,9 @@ export default function Library({ t, state, onState }: Props) {
   });
   const playlistName = playlistEditor.name;
   const like = (track: { id: string }) => playlistEditor.heart(track.id);
-  /** "Download everything" (Settings, OFFL-FILE-01) runs in the background: its end shows in the tray. */
-  const notifyExport: ExportNotify = (level, title, message) => notifications.push(keyedNotification(t, level, title, message));
-  useExportNotifications(language, notifyExport);
-  /**
-   * A song row's "Add to queue" (PAR-CARD-02), heart and "Add to playlist", plus edit (PAR-META-16) and delete outside a
-   * playlist (PAR-LIB-03) or remove inside one.
-   */
+  /** A song row's heart and "Add to playlist", plus edit (PAR-META-16) and delete outside a playlist (PAR-LIB-03) or remove inside one. */
   const songActions = (remove?: (track: ParrotLibraryTrack, index: number) => void) => (track: ParrotLibraryTrack, index: number) => (
     <>
-      <Button variant="ghost" size="icon" className="size-8 text-muted-foreground" aria-label={t("card.addToQueue")} title={t("card.addToQueue")} onClick={() => enqueue([track], "end")} data-testid="song-add-to-queue">
-        <ListEnd className="size-4" aria-hidden />
-      </Button>
       {playlistEditor.songActions(remove)(track, index)}
       {keepButton("song", track.id, "sm", "song-keep")}
       {!remove && (
@@ -587,15 +573,6 @@ export default function Library({ t, state, onState }: Props) {
     const first = currentEntry(next);
     setStartAt(start.startMs > 0 && first ? { key: first.key, ms: start.startMs } : null);
   };
-  /**
-   * Play next ("next") or Add to queue ("end"): a song is in Up next at most once (PAR-CARD-02), so the songs already
-   * playing or up next are left out, and when none is left the usual short notice says so.
-   */
-  const enqueue = (songs: ParrotLibraryTrack[], where: "next" | "end") => {
-    const add = where === "next" ? playNext : addToQueue;
-    if (songs.length > 0 && newToUpNext(queue, songs, songId).length === 0) toast.info(t("card.alreadyInUpNext"));
-    setQueue((current) => add(current, songs, songId));
-  };
   // A card's Play, Shuffle, Play next and Add to queue (PAR-CARD-01) on the same queue as the rest of the app.
   const cardPlayer: ParrotCardPlayer<ParrotLibraryTrack> = {
     play: (songs) => play(songs, 0, false),
@@ -603,8 +580,8 @@ export default function Library({ t, state, onState }: Props) {
       setStartAt(null);
       setQueue((current) => shuffleQueue(songs, current));
     },
-    playNext: (songs) => enqueue(songs, "next"),
-    addToQueue: (songs) => enqueue(songs, "end"),
+    playNext: (songs) => setQueue((current) => playNext(current, songs)),
+    addToQueue: (songs) => setQueue((current) => addToQueue(current, songs)),
   };
   const albumControls = (album: { id: string; artistId: string; title?: string; coverUrl?: string | null }, more: ParrotMenuItem[] = []) =>
     parrotCardControls(
@@ -1284,13 +1261,6 @@ export default function Library({ t, state, onState }: Props) {
         onOpenArtist={(id) => open({ kind: "artist", id })}
         onOpenAlbum={(id) => open({ kind: "album", id })}
         onOpenPlaylist={(id) => open({ kind: "playlist", id })}
-        addToQueue={{
-          label: t("card.addToQueue"),
-          onAdd: ({ id }) => {
-            const song = tracks.find((track) => track.id === id);
-            if (song) enqueue([song], "end");
-          },
-        }}
         renderCover={(albumId) => {
           const src = coverFor(albumId)?.coverUrl;
           return src ? <img src={src} alt="" className="size-full object-cover" /> : null;
@@ -1350,8 +1320,6 @@ export default function Library({ t, state, onState }: Props) {
             },
             coverHint: t("manage.coverHint"),
             coverPick: t("manage.coverPick"),
-            coverFrame: t("import.cover.frame"),
-            frame: coverFrameLabels(t),
           }}
           error={editError}
           busy={editBusy}
@@ -1362,7 +1330,7 @@ export default function Library({ t, state, onState }: Props) {
           onSubmit={(fields, cover) => void saveEdit(fields, cover)}
         />
       ) : null}
-      {importScan && importStatus?.phase === "review" ? <ImportReview t={t} language={language} scan={importScan} suggest={editSuggest} onDone={() => setImportScan(null)} /> : null}
+      {importScan && importStatus?.phase === "review" ? <ImportReview t={t} language={language} scan={importScan} onDone={() => setImportScan(null)} /> : null}
       <span className="hidden" data-testid="signed-in-user">
         {state.user?.email}
       </span>

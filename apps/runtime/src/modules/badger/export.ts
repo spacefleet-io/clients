@@ -1,11 +1,11 @@
 /**
- * `badger.export.estimate` / `badger.export.submit`: "Download everything" (ACCT-EXPORT-01, OFFL-FILE-01), the
- * whole library as plain video files the user keeps. No per-title export (Chris 2026-11-21).
+ * `badger.export.estimate` / `badger.export.submit`: plain video files the user keeps (OFFL-FILE-01 "Download
+ * file", ACCT-EXPORT-01 "Download everything").
  *
  * Separate from offline playback (`offlineDownload.ts`): an export goes to a folder the user picked, always at the
  * highest stored quality (OFFL-QUAL-01: never asked), and is not tracked by the app — no `media_local_downloads`
  * row, never listed as offline content. One `kind: "export"` engine job per file; the `export_file` step
- * (`steps/exportFile.ts`) fetches, decrypts, muxes and places it under Movies/… or Shows/<Show>/Season NN/….
+ * (`steps/exportFile.ts`) fetches, decrypts, muxes and places it.
  */
 
 import { constants as fsConstants, promises as fs, statfsSync } from "node:fs";
@@ -20,6 +20,7 @@ import type {
 } from "@space/runtime-contracts/badger/export";
 import { offlineQualityHeight } from "@space/shared/offlineQualityChoice";
 import { buildOfflineFilename } from "@space/shared/offlineFilename";
+import type { ExportLayout } from "@space/shared/exportLayout";
 import type { IngestJobRecord } from "@space/runtime-jobs";
 import type { EngineV2 } from "../../core/jobs/engineV2";
 import type { BadgerLibraryDbService } from "../badgerLibraryDb";
@@ -68,6 +69,7 @@ export interface ExportJobPayload {
   mediaId: string;
   quality: string;
   container: ExportContainer;
+  layout: ExportLayout;
   destDir: string;
   expectedBytes: number;
   manifest: ExportManifest;
@@ -124,7 +126,7 @@ type MediaDetails = {
   episodes: Array<{ seasonNumber: number; episodeNumber: number; name: string }>;
 };
 
-type ExportItem = { mediaId: string; payload: Omit<ExportJobPayload, "destDir"> };
+type ExportItem = { mediaId: string; payload: Omit<ExportJobPayload, "destDir" | "layout"> };
 
 const isMp4CompatibleSub = (raw: string | null): boolean => {
   const fmt = (raw ?? "").toLowerCase();
@@ -136,14 +138,18 @@ const pieces = (chunks: Array<{ key: string; sizeBytes: number | null }>): Expor
     .map((c, orderIndex) => ({ key: c.key, sizeBytes: Number(c.sizeBytes ?? 0), orderIndex }))
     .filter((c) => c.key.length > 0);
 
-/** One export per file of the library, each at its highest stored quality. */
+/** One export per file of the scope, each at its highest stored quality. */
 const collectItems = async (
   deps: BadgerExportHandlerDeps,
+  scope: { all?: boolean; mediaIds?: string[]; fileIds?: string[] },
   container: ExportContainer,
 ): Promise<{ items: ExportItem[]; skipped: SkippedItem[] }> => {
   const items: ExportItem[] = [];
   const skipped: SkippedItem[] = [];
-  const mediaIds = ((await deps.libraryDb.call("listMedia", [])) as Array<{ id: string }>).map((m) => String(m.id));
+  const mediaIds = scope.all
+    ? ((await deps.libraryDb.call("listMedia", [])) as Array<{ id: string }>).map((m) => String(m.id))
+    : (scope.mediaIds ?? []);
+  const fileFilter = scope.fileIds && scope.fileIds.length > 0 ? new Set(scope.fileIds) : null;
 
   for (const mediaId of mediaIds) {
     const details = (await deps.libraryDb.call("getMediaDetails", [mediaId])) as MediaDetails | null;
@@ -152,6 +158,7 @@ const collectItems = async (
       continue;
     }
     for (const file of details.files) {
+      if (fileFilter && !fileFilter.has(file.id)) continue;
       const best = details.formats
         .filter((f) => f.fileId === file.id && offlineQualityHeight(String(f.quality)) > 0)
         .reduce<MediaDetails["formats"][number] | null>(
@@ -276,9 +283,14 @@ const freeBytesOf = (deps: BadgerExportHandlerDeps, dir: string): number => {
 export const createBadgerExportEstimateHandler =
   (deps: BadgerExportHandlerDeps) =>
   async (payload: BadgerExportEstimatePayload): Promise<BadgerExportEstimateResult> => {
-    console.info("[badger.export.estimate] entry", { container: payload.container });
+    console.info("[badger.export.estimate] entry", {
+      all: payload.all ?? false,
+      mediaCount: payload.mediaIds?.length ?? 0,
+      fileCount: payload.fileIds?.length ?? 0,
+      container: payload.container,
+    });
     if (!deps.libraryDb.isOpen()) throw new Error("LIBRARY_DB_NOT_OPEN");
-    const { items, skipped } = await collectItems(deps, payload.container);
+    const { items, skipped } = await collectItems(deps, payload, payload.container);
     const totalBytes = items.reduce((sum, it) => sum + it.payload.expectedBytes, 0);
     const freeBytesAvailable = freeBytesOf(deps, payload.destDir);
     const result = {
@@ -295,7 +307,14 @@ export const createBadgerExportEstimateHandler =
 export const createBadgerExportSubmitHandler =
   (deps: BadgerExportHandlerDeps) =>
   async (payload: BadgerExportSubmitPayload): Promise<BadgerExportSubmitResult> => {
-    console.info("[badger.export.submit] entry", { container: payload.container, destDir: payload.destDir });
+    console.info("[badger.export.submit] entry", {
+      all: payload.all ?? false,
+      mediaCount: payload.mediaIds?.length ?? 0,
+      fileCount: payload.fileIds?.length ?? 0,
+      container: payload.container,
+      layout: payload.layout,
+      destDir: payload.destDir,
+    });
     if (!deps.resolveToken()) return { errorCode: "not_authenticated" };
     if (!deps.resolveLibraryKey() || !deps.libraryDb.isOpen()) return { errorCode: "library_db_not_open" };
     try {
@@ -305,7 +324,7 @@ export const createBadgerExportSubmitHandler =
       return { errorCode: "dest_not_writable" };
     }
 
-    const { items, skipped } = await collectItems(deps, payload.container);
+    const { items, skipped } = await collectItems(deps, payload, payload.container);
     if (items.length === 0) return { errorCode: "nothing_to_export" };
     const requiredBytes = items.reduce((sum, it) => sum + it.payload.expectedBytes, 0);
     const freeBytes = freeBytesOf(deps, payload.destDir);
@@ -318,7 +337,7 @@ export const createBadgerExportSubmitHandler =
     const submitted: Array<{ mediaId: string; fileId: string; jobId: string }> = [];
     for (const item of items) {
       const jobId = crypto.randomUUID();
-      const jobPayload: ExportJobPayload = { ...item.payload, destDir: payload.destDir };
+      const jobPayload: ExportJobPayload = { ...item.payload, destDir: payload.destDir, layout: payload.layout };
       const job: IngestJobRecord = {
         jobId,
         app: "badger",
