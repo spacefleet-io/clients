@@ -72,7 +72,6 @@
     "./storageTrafficStage": "./src/storageTrafficStage.ts",
     "./appScope": "./src/appScope.ts",
     "./appVersion": "./src/appVersion.ts",
-    "./apiFailure": "./src/apiFailure.ts",
     "./installSource": "./src/installSource.ts",
     "./personalToken": "./src/personalToken.ts",
     "./emailDomainPolicy": "./src/emailDomainPolicy.ts",

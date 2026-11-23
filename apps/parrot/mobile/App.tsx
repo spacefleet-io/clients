@@ -30,7 +30,6 @@ import { PlaylistEditorProvider } from "./src/state/playlistEditor";
 import { ManageProvider } from "./src/state/manage";
 import { PairDeviceScreen } from "./src/screens/PairDeviceScreen";
 import { DeleteAccountScreen } from "./src/screens/DeleteAccountScreen";
-import { OfflineContentScreen } from "./src/screens/OfflineContentScreen";
 import { NowPlayingBar } from "./src/screens/NowPlayingBar";
 import { SetupFlow } from "./src/setup/SetupFlow";
 import { profileSetupLog } from "./src/setup/ProfileSetupQuestion";
@@ -127,7 +126,6 @@ const Library = ({ profile }: { profile: ApiProfile | null }) => {
           />
           <Stack.Screen name="PairDevice" component={PairDeviceScreen} />
           <Stack.Screen name="DeleteAccount" component={DeleteAccountScreen} />
-          <Stack.Screen name="OfflineContent" component={OfflineContentScreen} />
           {/* The shared profile screen draws its own title ("Who's listening?") and its Done. */}
           <Stack.Screen name="Profiles" component={ProfilesRoute} />
         </Stack.Navigator>
