@@ -808,11 +808,6 @@
       "scanInstead": "Scan de code"
     },
     "looking": "Code opzoeken…",
-    "checking": "Wachten op het apparaat…",
-    "check": {
-      "question": "Toont {{name}} deze code?",
-      "hint": "Keur alleen goed als beide schermen dezelfde zes cijfers tonen. Anders weiger je."
-    },
     "confirm": {
       "asked": "{{type}} met de naam \"{{name}}\" wil zich bij je account voegen.",
       "unlockNotice": "Je moet je telefoon ontgrendelen. Als je goedkeurt, wordt het apparaat ingelogd en krijgt het je mediatheeksleutel.",
@@ -848,10 +843,7 @@
       "bad_request": "Dat apparaat stuurde iets wat we niet kunnen gebruiken. Vraag het om een nieuwe code.",
       "unknown": "Er ging iets mis en het apparaat is niet toegevoegd. Probeer het opnieuw.",
       "code_required": "Typ de code om te bevestigen dat jij het bent.",
-      "code_invalid": "Die code klopt niet of is verlopen, dus er is niets gedeeld. Probeer het opnieuw.",
-      "update_required": "Dat apparaat gebruikt een oudere versie. Werk het bij en probeer het opnieuw.",
-      "stale_key": "Dit apparaat heeft de huidige sleutel van je account niet en kan hem dus niet sturen.",
-      "check_failed": "De codes konden niet worden gecontroleerd, er is niets gedeeld. Vraag een nieuwe code op het andere apparaat."
+      "code_invalid": "Die code klopt niet of is verlopen, dus er is niets gedeeld. Probeer het opnieuw."
     },
     "unlock": {
       "title": "Ontgrendel om een apparaat toe te voegen",
@@ -891,10 +883,6 @@
     "step2": "2. Ga naar Instellingen en dan Apparaat koppelen.",
     "step3": "3. Scan deze code, of typ de code hieronder.",
     "codeLabel": "Of typ deze code",
-    "check": {
-      "label": "Controlecode",
-      "hint": "Vergelijk hem met je andere apparaat. Keur alleen goed als beide dezelfde zes cijfers tonen."
-    },
     "expiresIn": "Deze code verloopt over {{time}}. Er verschijnt vanzelf een nieuwe.",
     "deviceName": "Deze telefoon verschijnt als \"{{name}}\".",
     "qrAccessibility": "QR-code om deze telefoon te koppelen",

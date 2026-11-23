@@ -174,7 +174,7 @@ describe("PairWithPhone", () => {
     expect(onBack).toHaveBeenCalledTimes(1);
   });
 
-  it("@req ACCT-PAIR-01 @req PLAT-KEYDEV-01 in key mode asks main for a key-only code, says where to scan, and goes back to typing the key", async () => {
+  it("@req ACCT-PAIR-01 in key mode asks main for a key-only code, says where to scan, and goes back to typing the key", async () => {
     pairing.start.mockResolvedValue(request(150_000));
     pairing.poll.mockResolvedValue({ ok: true, status: "pending" });
     container = document.createElement("div");

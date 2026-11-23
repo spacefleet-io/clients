@@ -808,11 +808,6 @@
       "scanInstead": "Scanner le code à la place"
     },
     "looking": "Recherche du code…",
-    "checking": "En attente de l'appareil…",
-    "check": {
-      "question": "{{name}} affiche-t-il ce code ?",
-      "hint": "N'approuvez que si les deux écrans affichent les mêmes six chiffres. Sinon, refusez."
-    },
     "confirm": {
       "asked": "{{type}} nommé « {{name}} » demande à rejoindre votre compte.",
       "unlockNotice": "Il vous sera demandé de déverrouiller votre téléphone. Approuver le connecte et lui donne la clé de votre médiathèque.",
@@ -848,10 +843,7 @@
       "bad_request": "Cet appareil a envoyé quelque chose d'inutilisable. Demandez-lui un nouveau code.",
       "unknown": "Un problème est survenu et l'appareil n'a pas été ajouté. Réessayez.",
       "code_required": "Saisissez le code pour confirmer que c'est bien vous.",
-      "code_invalid": "Ce code est faux ou expiré, donc rien n'a été partagé. Réessayez.",
-      "update_required": "Cet appareil utilise une ancienne version. Mettez-le à jour, puis réessayez.",
-      "stale_key": "Cet appareil n'a pas la clé actuelle de votre compte, il ne peut donc pas l'envoyer.",
-      "check_failed": "Les codes n'ont pas pu être vérifiés, rien n'a été partagé. Demandez un nouveau code sur l'autre appareil."
+      "code_invalid": "Ce code est faux ou expiré, donc rien n'a été partagé. Réessayez."
     },
     "unlock": {
       "title": "Déverrouillez pour ajouter un appareil",
@@ -892,10 +884,6 @@
     "step2": "2. Allez dans Réglages, puis Associer un appareil.",
     "step3": "3. Scannez ce code, ou saisissez le code ci-dessous.",
     "codeLabel": "Ou saisissez ce code",
-    "check": {
-      "label": "Code à vérifier",
-      "hint": "Comparez-le avec votre autre appareil. N’approuvez que si les deux affichent les mêmes six chiffres."
-    },
     "expiresIn": "Ce code expire dans {{time}}. Un nouveau s'affiche tout seul.",
     "deviceName": "Ce téléphone apparaît sous le nom « {{name}} ».",
     "qrAccessibility": "QR code pour associer ce téléphone",

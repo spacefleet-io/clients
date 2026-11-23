@@ -38,19 +38,8 @@
         </control>
       </control>
       <control type="textbox" id="103">
-        <left>500</left><top>190</top><width>660</width><height>130</height>
+        <left>500</left><top>190</top><width>660</width><height>230</height>
         <font>font13</font><textcolor>FFE6E6E6</textcolor>
-        <label></label>
-      </control>
-      <!-- PRIV-PAIR-01: the six digits the approving phone shows too, empty until it connected. -->
-      <control type="label" id="105">
-        <left>500</left><top>325</top><width>660</width><height>36</height>
-        <font>font13</font><textcolor>FF9FB0C8</textcolor>
-        <label></label>
-      </control>
-      <control type="label" id="106">
-        <left>500</left><top>360</top><width>660</width><height>70</height>
-        <font>font45</font><textcolor>FFFFFFFF</textcolor>
         <label></label>
       </control>
       <control type="label" id="102">

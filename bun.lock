@@ -27,7 +27,7 @@
     },
     "apps/badger/desktop": {
       "name": "@space/badger-desktop",
-      "version": "0.1.55",
+      "version": "0.1.51",
       "dependencies": {
         "better-sqlite3": "^13.2.0",
         "drizzle-orm": "^0.45.3",
@@ -137,7 +137,6 @@
         "@noble/curves": "^2.0.0",
         "@noble/hashes": "^2.4.0",
         "@react-native-async-storage/async-storage": "^2.2.0",
-        "@react-native-community/netinfo": "^12.0.1",
         "@react-native-documents/picker": "^12.1.0",
         "@react-native-firebase/app": "^26.4.1",
         "@react-native-firebase/messaging": "^26.4.1",
@@ -231,7 +230,7 @@
     },
     "apps/parrot/desktop": {
       "name": "@space/parrot-desktop",
-      "version": "0.1.46",
+      "version": "0.1.44",
       "devDependencies": {
         "@playwright/test": "~1.65.1",
         "@rolldown/plugin-babel": "^0.3.1",
@@ -283,7 +282,6 @@
         "@noble/curves": "^2.0.0",
         "@noble/hashes": "^2.4.0",
         "@react-native-async-storage/async-storage": "^2.2.0",
-        "@react-native-community/netinfo": "^12.0.1",
         "@react-navigation/native": "^7.5.2",
         "@react-navigation/native-stack": "^7.21.1",
         "@scure/bip39": "^2.4.0",
@@ -1788,8 +1786,6 @@
     "@react-native-community/cli-tools": ["@react-native-community/cli-tools@20.2.0", "", { "dependencies": { "@vscode/sudo-prompt": "^9.0.0", "appdirsjs": "^1.2.4", "execa": "^5.0.0", "find-up": "^5.0.0", "launch-editor": "^2.9.1", "mime": "^2.4.1", "ora": "^5.4.1", "picocolors": "^1.1.1", "prompts": "^2.4.2", "semver": "^7.5.2" } }, "sha512-A5W2nqlTidPzGyXzS57jvHsMpQd8iOGSjePj4H318uMbhIdeIHQ5e59fNbdHahS62ISs+2p9s78sVHMbGVa1bg=="],
 
     "@react-native-community/cli-types": ["@react-native-community/cli-types@20.2.0", "", { "dependencies": { "joi": "^17.2.1" } }, "sha512-K60zY/ly8G9rGJQzZ+bFRyLEckAUzyF8Fu9a2Kw6JipCrOl7SiVRBVqjvOr/XnCRKuOpH8i9y7RVg07wkSGRBQ=="],
-
-    "@react-native-community/netinfo": ["@react-native-community/netinfo@12.0.1", "", { "peerDependencies": { "react": "*", "react-native": ">=0.59" } }, "sha512-P/3caXIvfYSJG8AWJVefukg+ZGRPs+M4Lp3pNJtgcTYoJxCjWrKQGNnCkj/Cz//zWa/avGed0i/wzm0T8vV2IQ=="],
 
     "@react-native-documents/picker": ["@react-native-documents/picker@12.1.0", "", { "peerDependencies": { "react": "*", "react-native": ">=0.79.0" } }, "sha512-+VcsjUSVSsH5VuxC6zhaXfGnaXbTsdMdBsih7aimGHr/Q+JDk2IO7pmhV/yaFDXMOsfB2uvo4s+HMUvTKpxvmQ=="],
 

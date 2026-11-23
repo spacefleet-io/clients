@@ -6,7 +6,7 @@
  */
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { PermissionsAndroid, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
-import { formatCheckCode, SHORT_CODE_LENGTH } from "@space/pairing-crypto";
+import { SHORT_CODE_LENGTH } from "@space/pairing-crypto";
 import { ShortCodeInput } from "../short-code";
 import { Camera, CameraType, qrScannerAvailable } from "./qrScanner";
 import { useTranslation } from "../i18n";
@@ -19,7 +19,6 @@ import {
   PairingFlowError,
   approvalQuestion,
   approveDevice,
-  checkDevice,
   denyDevice,
   deviceTypeLabel,
   lookupDevice,
@@ -41,7 +40,6 @@ export const PAIR_DEVICE_TEST_IDS = {
   tryAnother: "pair-device-try-another",
   done: "pair-device-done",
   back: "pair-device-back",
-  checkCode: "pair-device-check-code",
 } as const;
 
 export type PairDeviceScreenProps = {
@@ -65,8 +63,6 @@ export type PairDeviceScreenProps = {
 type Stage =
   | { kind: "scan" }
   | { kind: "looking" }
-  /** PRIV-PAIR-01: exchanging the random numbers with the waiting device. */
-  | { kind: "checking"; request: PairingRequestInfo }
   | { kind: "confirm"; request: PairingRequestInfo }
   | { kind: "approving"; request: PairingRequestInfo }
   | { kind: "done"; request: PairingRequestInfo; approved: boolean }
@@ -110,16 +106,13 @@ export const PairDeviceScreen = ({ token, deps, initialCode, onApproved, onClose
     };
   }, []);
 
-  /** `scanned`: the input is what the camera read, whose fingerprint can prove the device without comparing codes. */
   const lookup = useCallback(
-    async (input: string, scanned = false) => {
+    async (input: string) => {
       if (!token || busyRef.current) return;
       busyRef.current = true;
       setStage({ kind: "looking" });
       try {
-        const found = await lookupDevice(deps, token, input);
-        setStage({ kind: "checking", request: found });
-        const request = await checkDevice(deps, token, found, scanned ? input : null);
+        const request = await lookupDevice(deps, token, input);
         setStage({ kind: "confirm", request });
       } catch (error) {
         setStage({ kind: "error", error: toFlowError(error), request: null });
@@ -185,7 +178,7 @@ export const PairDeviceScreen = ({ token, deps, initialCode, onApproved, onClose
   const onScan = useCallback(
     (event: { nativeEvent: { codeStringValue: string } }) => {
       if (busyRef.current) return;
-      void lookup(event.nativeEvent.codeStringValue, true);
+      void lookup(event.nativeEvent.codeStringValue);
     },
     [lookup],
   );
@@ -261,13 +254,6 @@ export const PairDeviceScreen = ({ token, deps, initialCode, onApproved, onClose
             <Text style={[styles.body, muted]}>{t("pairing.looking")}</Text>
           </MobileCard>
         );
-      case "checking":
-        return (
-          <MobileCard>
-            <Text style={[styles.question, text]}>{approvalQuestion(stage.request)}</Text>
-            <Text style={[styles.body, muted]}>{t("pairing.checking")}</Text>
-          </MobileCard>
-        );
       case "confirm":
         return (
           <>
@@ -282,15 +268,6 @@ export const PairDeviceScreen = ({ token, deps, initialCode, onApproved, onClose
               <View style={[styles.warning, { borderColor: theme.colors.warning }]}>
                 <Text style={[styles.body, { color: theme.colors.warning }]}>{t("pairing.warning")}</Text>
               </View>
-              {stage.request.check && !stage.request.check.confirmedByQr ? (
-                <View style={[styles.warning, { borderColor: theme.colors.text }]}>
-                  <Text style={[styles.body, text]}>{t("pairing.check.question", { name: stage.request.deviceName })}</Text>
-                  <Text testID={PAIR_DEVICE_TEST_IDS.checkCode} style={[styles.checkCode, text]}>
-                    {formatCheckCode(stage.request.check.code)}
-                  </Text>
-                  <Text style={[styles.body, muted]}>{t("pairing.check.hint")}</Text>
-                </View>
-              ) : null}
               <Text style={[styles.body, muted]}>{t("pairing.confirm.unlockNotice")}</Text>
             </MobileCard>
             <MobileButtonFace
@@ -393,7 +370,6 @@ const styles = StyleSheet.create({
   body: { fontSize: 14, lineHeight: 20 },
   label: { fontSize: 14 },
   question: { fontSize: 20, fontWeight: "800" },
-  checkCode: { fontSize: 34, fontWeight: "800", letterSpacing: 4, textAlign: "center", fontVariant: ["tabular-nums"] },
   warning: { borderWidth: 1, borderRadius: 14, padding: 12 },
   codeInput: { marginVertical: 4 },
 });

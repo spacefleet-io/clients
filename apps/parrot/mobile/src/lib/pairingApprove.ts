@@ -5,7 +5,6 @@ import { approvePairing, approvePairingLocal, denyPairing, lookupPairing } from 
 import type { PairingDeps } from "@space/mobile-shell/pairing-approve";
 import type { SiblingApproveDeps } from "@space/pairing-crypto";
 import { requireDeviceUnlock } from "@space/mobile-shell/pairing-approve/deviceUnlock";
-import { pairingCheckDeps } from "@space/mobile-shell/pairing-approve/checkDeps";
 
 export const createParrotPairingDeps = (getLibraryKey: () => Promise<string | null>): PairingDeps => ({
   lookup: lookupPairing,
@@ -14,8 +13,6 @@ export const createParrotPairingDeps = (getLibraryKey: () => Promise<string | nu
   getLibraryKey,
   requireUnlock: requireDeviceUnlock,
   now: () => Date.now(),
-  // sf-pair-v2 (PRIV-PAIR-01, PRIV-PAIR-02): the key probe check and the random-number exchange.
-  ...pairingCheckDeps("parrot"),
 });
 
 /**

@@ -69,7 +69,6 @@ export type {
   CheckedPairingRequest,
   LookedUpPairingRequest,
   PairingCheck,
-  PairingCheckDeps,
   PairingPurpose,
   PairingRequestInfo,
   PairingRequestView,

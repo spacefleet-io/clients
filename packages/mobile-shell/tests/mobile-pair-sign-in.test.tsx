@@ -176,27 +176,6 @@ describe("MobilePairSignIn", () => {
     expect(codeTileSize(390, 6)).toEqual({ width: 44, height: 58, fontSize: 32 });
   });
 
-  /**
-   * @test-id PAIR-SIGN-IN-CHECK-001
-   * @req PRIV-PAIR-01
-   * @why Chris 2026-11-23 ("yes that'd be better"): once the approving app connected, the phone shows the six digits
-   *   to compare with it, under the code, in every language; before that, nothing extra.
-   */
-  it("[pair-sign-in-check] shows the check code under the code once the approving app connected", async () => {
-    const before = await mount(waiting);
-    expect(byId(before.tree, "pair-sign-in-check-code")).toHaveLength(0);
-    const { tree, texts } = await mount({ ...waiting, checkCode: "067383" });
-    console.info("[pair-sign-in-check] texts", texts());
-    expect(textOf(byId(tree, "pair-sign-in-check-code")[0]!)).toBe("067 383");
-    expect(texts()).toEqual(expect.arrayContaining(["phonePairing.check.label", "phonePairing.check.hint"]));
-    const root = resolve(__dirname, "..");
-    for (const lang of ["en", "fr", "de", "es", "nl"]) {
-      const strings = JSON.parse(readFileSync(resolve(root, `src/i18n/${lang}.json`), "utf8")) as { phonePairing: { check: Record<string, string> } };
-      expect(strings.phonePairing.check.label, lang).toBeTruthy();
-      expect(strings.phonePairing.check.hint, lang).toBeTruthy();
-    }
-  });
-
   // @bugfix @regression-proof Chris 2026-11-18: the approved page has no password link; Back returns to the form.
   it("[pair-sign-in-2] has no 'Sign in with email and password' link: Back and Android's Back return to the form", async () => {
     const { tree, texts, onBack } = await mount(waiting, "parrot");

@@ -5,7 +5,6 @@ export {
   PairingFlowError,
   approvalQuestion,
   approveDevice,
-  checkDevice,
   denyDevice,
   deviceTypeLabel,
   lookupDevice,

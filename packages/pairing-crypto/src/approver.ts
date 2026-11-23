@@ -291,9 +291,6 @@ const sleepMs = (ms: number): Promise<void> => {
   return promise;
 };
 
-/** What `runPairingCheck` uses, so an approver with its own approve call (the phones) passes just these. */
-export type PairingCheckDeps = Pick<ApprovePairingDeps, "getLibraryKey" | "keyOpensAccount" | "connect" | "readReveal" | "now" | "log">;
-
 /**
  * PRIV-PAIR-02 then PRIV-PAIR-01, after the user picked the request and before anything is sealed: refuses when this
  * device's key no longer opens the account, sends this app's random number, waits for the device's, checks it opens the
@@ -303,7 +300,7 @@ export type PairingCheckDeps = Pick<ApprovePairingDeps, "getLibraryKey" | "keyOp
 // tla: PairingV2/AConnect
 // tla: PairingV2/ARead
 export const runPairingCheck = async (
-  deps: PairingCheckDeps,
+  deps: ApprovePairingDeps,
   token: string,
   request: LookedUpPairingRequest,
   scannedLink: string | null = null,

@@ -24,12 +24,3 @@ msgstr "Annuleren"
 msgctxt "#30163"
 msgid "I saved it, sign out"
 msgstr "Bewaard, uitloggen"
-
-# PRIV-PAIR-01: the check code while pairing
-msgctxt "#30113"
-msgid "Code to check"
-msgstr "Controlecode"
-
-msgctxt "#30114"
-msgid "Compare it with your other device. Approve only if both show the same six digits."
-msgstr "Vergelijk hem met je andere apparaat. Keur alleen goed als beide dezelfde zes cijfers tonen."

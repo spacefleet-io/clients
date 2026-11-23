@@ -111,14 +111,6 @@ msgctxt "#30112"
 msgid "Code expires in %s"
 msgstr ""
 
-msgctxt "#30113"
-msgid "Code to check"
-msgstr ""
-
-msgctxt "#30114"
-msgid "Compare it with your other device. Approve only if both show the same six digits."
-msgstr ""
-
 msgctxt "#30120"
 msgid "Advanced"
 msgstr ""

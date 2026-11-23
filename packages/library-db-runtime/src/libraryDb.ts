@@ -2648,24 +2648,21 @@ export class LibraryDb {
 
   /**
    * PRIV-KEY-13: the local cache (no library open: onboarding's "recover from this device") sealed under the new key.
-   * Its op stream is what its playback file's layout holds: a file is packed only by the conversion for a switched
-   * account (target 4, `migratePlaybackDb`), so a packed file declares that target through `writeOpStreamVersion`
-   * (LIB-FMT-13), else 3.
+   * Its op stream is what its playback file's layout holds: a converted (packed) file is version 4, else 3.
    */
   static async sealLocalCacheForRotation(token: string, newKeyBase64: string): Promise<RotationOwnLibrary | null> {
     const rawBytes = await LibraryDb.getLocalCacheBytes();
     if (!rawBytes) return null;
-    let targetOpStreamVersion: number | null = null;
+    let opStreamVersion = OP_STREAM_VERSION;
     if (existsSync(getPlaybackDbPath())) {
       const playback = openDatabase(getPlaybackDbPath());
       try {
         const userVersion = Number(playback.prepare("PRAGMA user_version;").get()?.user_version ?? 0);
-        if (userVersion >= PACKED_PLAYBACK_LAYOUT_VERSION) targetOpStreamVersion = 4;
+        if (userVersion >= PACKED_PLAYBACK_LAYOUT_VERSION) opStreamVersion = READ_OP_STREAM_VERSION;
       } finally {
         playback.close();
       }
     }
-    const opStreamVersion = writeOpStreamVersion(targetOpStreamVersion);
     return { ...(await sealLibrarySnapshot(token, newKeyBase64, rawBytes)), opStreamVersion };
   }
 

@@ -6,16 +6,10 @@ polls GET /pairing/requests/:id?pollSecret=... -> on `approved` receives {token,
 unsealed with X25519 + HKDF-SHA256 + AES-256-GCM and MUST verify against the library's keyProbe before it is stored.
 Then the profile is picked (INTG-PROF-01, `finish_pairing`): only after that is anything stored.
 
-PRIV-PAIR-01 (sf-pair-v2): the request carries a commitment C = SHA-256("sf-pair-v2|commit" || pk || nR); once the
-approving phone connected (the poll carries its nonce nA), this Kodi reveals nR and shows six digits of
-SHA-256("sf-pair-v2|check" || pk || C || nA || nR), which the phone shows too. A server swapping keys cannot make both match.
-
 This module is pure logic (no Kodi imports) so the whole protocol is unit-tested against
-packages/pairing-crypto/tests/vectors.json and vectors-v2.json.
+packages/pairing-crypto/tests/vectors.json.
 """
 import base64
-import hashlib
-import os
 import re
 import time
 
@@ -27,10 +21,6 @@ from compat import log
 
 HKDF_INFO = b"sf-pair-v1"
 AAD_PREFIX = b"sf-pair-v1|"
-COMMIT_TAG = b"sf-pair-v2|commit"
-CHECK_TAG = b"sf-pair-v2|check"
-NONCE_BYTES = 32
-FINGERPRINT_BYTES = 16  # bytes of C the QR fragment carries (`#c=`), base64url without padding
 POLL_SECONDS = 2.0  # pause after a "pending" answer, before the next poll
 # The API holds a poll open up to this long (`?wait=`, capped at 25): one poll every ~27 s stays far under its
 # 20-per-minute limit per address (OPS-LIMIT-02). The read timeout outlasts the hold.
@@ -127,42 +117,6 @@ def verify_key_against_probe(library_key, meta):
         raise PairingError("The library key from your phone does not match this account's library. Nothing was saved.")
 
 
-# ------------------------------------------------------------------ check code (PRIV-PAIR-01, same as @space/pairing-crypto)
-def pairing_commitment(public_key, requester_nonce):
-    return hashlib.sha256(COMMIT_TAG + public_key + requester_nonce).digest()
-
-
-def pairing_check_code(public_key, commitment, approver_nonce, requester_nonce):
-    """Six digits: the digest's first 4 bytes, big-endian, modulo 1 000 000, zero-padded."""
-    digest = hashlib.sha256(CHECK_TAG + public_key + commitment + approver_nonce + requester_nonce).digest()
-    return "%06d" % (int.from_bytes(digest[:4], "big") % 1000000)
-
-
-def format_check_code(code):
-    """Shown as "067 383" on both screens."""
-    return "%s %s" % (code[:3], code[3:])
-
-
-def commitment_fingerprint(commitment):
-    return base64.urlsafe_b64encode(commitment[:FINGERPRINT_BYTES]).decode("ascii").rstrip("=")
-
-
-def with_commitment_fingerprint(link, commitment):
-    """The QR link with its fragment replaced by `#c=<fingerprint>`. This Kodi adds it: one from the server proves nothing."""
-    return "%s#c=%s" % (link.split("#")[0], commitment_fingerprint(commitment))
-
-
-def _nonce32(text):
-    """A 32-byte value sent as standard base64, or None when malformed."""
-    if not isinstance(text, str) or not re.match(r"^[A-Za-z0-9+/]{43}=$", text):
-        return None
-    try:
-        value = base64.b64decode(text)
-    except (ValueError, TypeError):
-        return None
-    return value if len(value) == NONCE_BYTES else None
-
-
 # ------------------------------------------------------------------ session
 class PairingSession(object):
     """One pairing attempt. `api` is an unauthenticated ApiClient."""
@@ -172,11 +126,6 @@ class PairingSession(object):
         self.device_name = device_name
         self.clock = clock
         self.private, self.public = x25519.generate_keypair()
-        self.requester_nonce = os.urandom(NONCE_BYTES)
-        self.commitment = pairing_commitment(self.public, self.requester_nonce)
-        self.check_code = None
-        # PRIV-PAIR-01: the first approver nonce a poll carried, pinned before the reveal is sent.
-        self.approver_nonce = None
         self.request_id = None
         self.poll_secret = None
         self.short_code = None
@@ -185,13 +134,12 @@ class PairingSession(object):
 
     def start(self):
         body = {"deviceType": DEVICE_TYPE, "deviceName": self.device_name[:80],
-                "publicKey": base64.b64encode(self.public).decode("ascii"),
-                "commitment": base64.b64encode(self.commitment).decode("ascii")}
+                "publicKey": base64.b64encode(self.public).decode("ascii")}
         res = self.api.request_json("POST", "/pairing/requests", body, expect=(200, 201))
         self.request_id = res["requestId"]
         self.poll_secret = res["pollSecret"]
         self.short_code = normalize_short_code(res["shortCode"]) or res["shortCode"]
-        self.qr_payload = with_commitment_fingerprint(res["qrPayload"], self.commitment)
+        self.qr_payload = res["qrPayload"]
         self.expires_at_epoch = _parse_iso(res.get("expiresAt")) or self.clock() + 300
         log("pairing: request %s created, code %s, expires in %.0fs" % (self.request_id, self.short_code, self.seconds_left()))
         return self
@@ -200,47 +148,19 @@ class PairingSession(object):
         return max(0.0, (self.expires_at_epoch or 0) - self.clock())
 
     def poll(self):
-        """Long-polls the request; returns the status dict (`pending|expired|denied|approved|consumed`). Network
-        blips = pending. A pending answer with the phone's nonce makes this Kodi reveal its own once; from then on a
-        pending answer carries `checkCode`, the six digits to show."""
+        """Long-polls the request; returns the raw status dict (`pending|expired|denied|approved|consumed`). Network
+        blips = pending."""
         try:
-            res = self.api.request_json(
+            return self.api.request_json(
                 "GET", "/pairing/requests/%s?pollSecret=%s&wait=%d" % (self.request_id, self.poll_secret, POLL_WAIT_SECONDS),
                 expect=(200,), timeout=POLL_HTTP_TIMEOUT)
         except ApiError as exc:
             if exc.status in (404, 410):
                 return {"status": "expired"}
             log("pairing: poll failed %s (will retry)" % exc, "warning")
-            return {"status": "pending"}
         except Exception as exc:  # noqa: BLE001 - offline blip: keep waiting
             log("pairing: poll error %s (will retry)" % exc, "warning")
-            return {"status": "pending"}
-        if res.get("status") != "pending":
-            return res
-        approver_nonce = _nonce32(res.get("approverNonce"))
-        if approver_nonce is not None and self.check_code is None:
-            if self.approver_nonce is None:
-                self.approver_nonce = approver_nonce
-            elif approver_nonce != self.approver_nonce:
-                log("pairing: approver number changed; ignored, the first one stays", "warning")
-            self._reveal()
-        return {"status": "pending", "checkCode": self.check_code} if self.check_code else {"status": "pending"}
-
-    def _reveal(self):
-        """PRIV-PAIR-01: reveal nR (the API accepts the same one again) and compute the code from the FIRST approver
-        nonce, pinned before the reveal is sent. A server that takes the reveal but fails the answer, then shows another
-        nonce, would know nR and could grind its new nonce until the code matches one it controls on the phone; a
-        retry on the next poll therefore keeps the pinned nonce."""
-        try:
-            self.api.request_json(
-                "POST", "/pairing/requests/%s/reveal" % self.request_id,
-                {"pollSecret": self.poll_secret, "requesterNonce": base64.b64encode(self.requester_nonce).decode("ascii")},
-                expect=(200, 204))
-        except Exception as exc:  # noqa: BLE001 - retried on the next poll
-            log("pairing: reveal failed (status %s)" % getattr(exc, "status", None), "warning")
-            return
-        self.check_code = pairing_check_code(self.public, self.commitment, self.approver_nonce, self.requester_nonce)
-        log("pairing: check code ready")
+        return {"status": "pending"}
 
     def complete(self, approved):
         """approved = the poll response with status approved. Returns {token,key,email,clientType,profiles}; verifies

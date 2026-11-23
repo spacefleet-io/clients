@@ -4,13 +4,12 @@ import { useNavigation } from "@react-navigation/native";
 import { useMobileShellTheme } from "@space/mobile-shell/theme";
 import { useTranslation } from "@space/mobile-shell/i18n";
 import { ShortCodeInput } from "@space/mobile-shell/short-code";
-import { formatCheckCode, SHORT_CODE_LENGTH } from "@space/pairing-crypto";
+import { SHORT_CODE_LENGTH } from "@space/pairing-crypto";
 import { pairingDeps } from "../../lib/pairing/pairingDeps";
 import {
   PairingFlowError,
   approvalQuestion,
   approveDevice,
-  checkDevice,
   denyDevice,
   lookupDevice,
   pairingErrorMessage,
@@ -26,8 +25,6 @@ import { useTvStyles } from "@space/mobile-shell/tv/tvScale";
 type Stage =
   | { name: "code"; error: string | null }
   | { name: "looking" }
-  /** PRIV-PAIR-01: exchanging the random numbers with the waiting device. */
-  | { name: "checking"; request: PairingRequestInfo }
   | { name: "confirm"; request: PairingRequestInfo }
   /**
    * The proof is being asked: the account password, or (an account without a password, ACCT-AUTH-04) the code the API
@@ -88,10 +85,7 @@ export const TvApprovePairingScreen = () => {
     if (!token) return;
     setStage({ name: "looking" });
     try {
-      const found = await lookupDevice(pairingDeps, token, code);
-      if (mounted.current) setStage({ name: "checking", request: found });
-      // A TV has no camera: the code is always typed, so both screens' six digits are compared.
-      const request = await checkDevice(pairingDeps, token, found);
+      const request = await lookupDevice(pairingDeps, token, code);
       if (mounted.current) setStage({ name: "confirm", request });
     } catch (error) {
       console.info("[tv.approve] lookup.failed", { kind: error instanceof PairingFlowError ? error.kind : "unknown" });
@@ -223,28 +217,12 @@ export const TvApprovePairingScreen = () => {
     );
   } else if (stage.name === "looking") {
     content = body(t("pairing.looking"));
-  } else if (stage.name === "checking") {
-    content = (
-      <>
-        {heading(approvalQuestion(stage.request))}
-        {body(t("pairing.checking"))}
-      </>
-    );
   } else if (stage.name === "confirm") {
     const { request } = stage;
     content = (
       <>
         {heading(approvalQuestion(request))}
         {body(t("tvPairing.approve.warning"))}
-        {request.check ? (
-          <>
-            {body(t("pairing.check.question", { name: request.deviceName }))}
-            <Text testID="tv-approve-check-code" style={[styles.checkCode, { color: theme.colors.text }]}>
-              {formatCheckCode(request.check.code)}
-            </Text>
-            {body(t("pairing.check.hint"))}
-          </>
-        ) : null}
         {body(hasPassword ? t("tvPairing.approve.passwordNotice") : t("tvPairing.approve.codeNotice"))}
         <View style={styles.actions}>
           <PairingButton
@@ -288,7 +266,6 @@ const baseStyles = StyleSheet.create({
   screen: { flex: 1, paddingHorizontal: 120, paddingVertical: 64, gap: 20, justifyContent: "center" },
   title: { fontSize: 40, fontWeight: "800" },
   body: { fontSize: 24, lineHeight: 34 },
-  checkCode: { fontSize: 56, fontWeight: "800", letterSpacing: 8, fontVariant: ["tabular-nums"] },
   input: { fontSize: 32, paddingVertical: 14, paddingHorizontal: 20, borderRadius: TV_RADIUS.button, maxWidth: 700, letterSpacing: 4 },
   actions: { flexDirection: "row", gap: 24, marginTop: 8 },
   code: { alignSelf: "flex-start" },

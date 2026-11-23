@@ -76,9 +76,6 @@ public sealed class SbPairing
     public string State { get; set; } = "pending";
     public string? ShortCode { get; set; }
     public string? QrPayload { get; set; }
-
-    /// <summary>PRIV-PAIR-01: six digits to compare with the approving app, once it connected; null before.</summary>
-    public string? CheckCode { get; set; }
     public string? ExpiresAt { get; set; }
     public string? DeviceName { get; set; }
     public string? Error { get; set; }

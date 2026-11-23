@@ -124,10 +124,6 @@ type Route =
    */
   | { kind: "settings"; section?: ParrotSettingsSection; addProfile?: boolean; visit?: number };
 
-/** The pages an empty library cannot show (UX-LIBTAB-01): the library, its playlists, and what opens from them. */
-const isLibraryRoute = (route: Route): boolean =>
-  route.kind === "library" || route.kind === "album" || route.kind === "artist" || route.kind === "playlists" || route.kind === "playlist";
-
 // #3350 C4: the two pages that show the playing position read it from the clock themselves.
 const ClockedHome = withPlayerClock(Home);
 const ClockedNowPlaying = withPlayerClock(ParrotNowPlaying);
@@ -368,16 +364,15 @@ export default function Library({ t, state, onState }: Props) {
   const content = libraryContent({ itemCount: tracks.length, settled: library !== null });
   // UX-LIBTAB-01: an empty library cannot be opened, nor its playlists. The Library and Playlists tabs are greyed out
   // once the opened library holds no song, and open again as soon as the first song lands (the library reloads on every
-  // change); a window left on either (its last song deleted) goes back to Home. The route is read when the update runs,
-  // not from this render: a page opened in between (Settings clicked in the frame the library emptied, release smoke of
-  // parrot-desktop-v0.1.44) stays open instead of being sent Home.
+  // change); a window left on either (its last song deleted) goes back to Home.
   const libraryClosed = content === "empty";
-  const onLibraryRoute = isLibraryRoute(route);
+  const onLibraryRoute =
+    route.kind === "library" || route.kind === "album" || route.kind === "artist" || route.kind === "playlists" || route.kind === "playlist";
   useEffect(() => {
     if (!libraryClosed || !onLibraryRoute) return;
     console.info("[parrot-nav] library empty: back to home", JSON.stringify({ from: route.kind }));
     setPrevious([]);
-    setRoute((current) => (isLibraryRoute(current) ? { kind: "home" } : current));
+    setRoute({ kind: "home" });
   }, [libraryClosed, onLibraryRoute, route.kind]);
   // PAR-LIB-06: the open tab's list as its sort and filters leave them.
   const likedSongIds = useMemo(() => new Set((library?.playlists ?? []).find((playlist) => isLikedPlaylist(playlist.id))?.trackIds ?? []), [library]);

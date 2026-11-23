@@ -10,14 +10,12 @@
  *   floating over the QR and "Use email and password instead" with a mail icon.
  *
  * @req ACCT-PAIR-01[badger-tv]
- * @req PRIV-PAIR-01[badger-tv]
  */
 import React from "react";
 import { act, create, type ReactTestInstance, type ReactTestRenderer } from "react-test-renderer";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { initI18n } from "@space/mobile-shell/i18n";
 import type { PairingState } from "@space/mobile-shell/pairing";
-import { formatCheckCode, pairingCheckCode } from "@space/pairing-crypto";
 
 const ctl = vi.hoisted(() => {
   // Metro turns `require("../../assets/mascot.webp")` into an image reference; plain node would parse the bytes as JS.
@@ -40,9 +38,6 @@ const ctl = vi.hoisted(() => {
     hasPassword: true,
     /** The codes the approver sent (account without a password), `null` for a call without one. */
     codesSent: [] as Array<string | null>,
-    /** sf-pair-v2: what the waiting device committed to, and the approver's number the TV sent on connect (PRIV-PAIR-01). */
-    device: null as { publicKey: string; commitment: string; requesterNonce: string } | null,
-    approverNonce: null as string | null,
   };
 });
 
@@ -96,11 +91,8 @@ vi.mock("../../lib/pairing/deviceWatch", () => ({
 }));
 vi.mock("../../lib/pairing/pairingDeps", async () => {
   const { ApiError } = await import("@space/shared/api");
-  const { generateDeviceKeyPair, pairingCommitment } = await import("@space/pairing-crypto");
+  const { generateDeviceKeyPair } = await import("@space/pairing-crypto");
   const publicKey = generateDeviceKeyPair().publicKey;
-  const requesterNonce = Buffer.alloc(32, 0x11).toString("base64");
-  const commitment = pairingCommitment(publicKey, requesterNonce);
-  ctl.device = { publicKey, commitment, requesterNonce };
   return {
     pairingDeps: {
       lookup: async () => ({
@@ -109,14 +101,7 @@ vi.mock("../../lib/pairing/pairingDeps", async () => {
         deviceName: "Living room Kodi",
         publicKey,
         expiresAt: new Date(Date.now() + 5 * 60_000).toISOString(),
-        protocol: 2,
-        commitment,
       }),
-      keyOpensAccount: async () => true,
-      connect: async (_token: string, _id: string, nonce: string) => {
-        ctl.approverNonce = nonce;
-      },
-      readReveal: async () => ({ status: "pending", requesterNonce }),
       // The API's side of the contract: the password is checked first; a wrong one leaves the request pending.
       // An account without a password: no code → 401 `two_factor_required` (an email code is sent), a wrong code →
       // 401 `two_factor_invalid`, both leaving the request pending.
@@ -435,11 +420,6 @@ describe("TV approver screen", () => {
     expect(allText()).toContain("Living room Kodi");
     expect(allText()).toContain("Only approve a code shown on a screen in front of you");
     expect(ctl.sent).toEqual([]);
-    // PRIV-PAIR-01: the six digits the waiting device shows too, worked out from both random numbers.
-    const device = ctl.device!;
-    const expected = pairingCheckCode({ ...device, approverNonce: ctl.approverNonce! });
-    console.info("[tv-screens:check]", { shown: one("tv-approve-check-code").props.children, expected });
-    expect(one("tv-approve-check-code").props.children).toBe(formatCheckCode(expected));
 
     await press("tv-approve-approve");
     // The password prompt is on screen; nothing has been sent yet and the field hides what is typed.

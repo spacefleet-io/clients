@@ -1617,29 +1617,6 @@ PODS:
     - google-cast-sdk
     - PromisesObjC
     - React
-  - react-native-netinfo (12.0.1):
-    - hermes-engine
-    - RCTRequired
-    - RCTTypeSafety
-    - React-bridging
-    - React-Core
-    - React-Core-prebuilt
-    - React-cxxstableapi
-    - React-debug
-    - React-Fabric
-    - React-featureflags
-    - React-graphics
-    - React-ImageManager
-    - React-jsi
-    - React-NativeModulesApple
-    - React-RCTFabric
-    - React-renderercss
-    - React-rendererdebug
-    - React-utils
-    - ReactCodegen
-    - ReactCommon/turbomodule/core
-    - ReactNativeDependencies
-    - Yoga
   - react-native-quick-base64 (3.0.1):
     - hermes-engine
     - RCTRequired
@@ -2710,7 +2687,6 @@ DEPENDENCIES:
   - "react-native-document-picker (from `../node_modules/@react-native-documents/picker`)"
   - react-native-get-random-values (from `../node_modules/react-native-get-random-values`)
   - react-native-google-cast (from `../node_modules/react-native-google-cast`)
-  - "react-native-netinfo (from `../node_modules/@react-native-community/netinfo`)"
   - react-native-quick-base64 (from `../node_modules/react-native-quick-base64`)
   - react-native-safe-area-context (from `../node_modules/react-native-safe-area-context`)
   - react-native-sqlite-storage (from `../node_modules/react-native-sqlite-storage`)
@@ -2897,8 +2873,6 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-get-random-values"
   react-native-google-cast:
     :path: "../node_modules/react-native-google-cast"
-  react-native-netinfo:
-    :path: "../node_modules/@react-native-community/netinfo"
   react-native-quick-base64:
     :path: "../node_modules/react-native-quick-base64"
   react-native-safe-area-context:
@@ -3082,7 +3056,6 @@ SPEC CHECKSUMS:
   react-native-document-picker: 50a726bc25bddb4816c4dd3726681a5f85e9c1ed
   react-native-get-random-values: 625b34d7f8a66d85c594071603f748d756bd90da
   react-native-google-cast: 7be68a5d0b7eeb95a5924c3ecef8d319ef6c0a44
-  react-native-netinfo: 687391ecedb199c6d67fbc46c87cbae3277de967
   react-native-quick-base64: 2be2ef19cf13f118e982b71a9c3108f16930fed8
   react-native-safe-area-context: 56700b839169ce88ffcec68c40447916fe512462
   react-native-sqlite-storage: 9ae90f5938fcc21983451c76aa6c670ec9e7bae4

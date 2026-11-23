@@ -6,7 +6,6 @@ import { RATE_LIMIT_DEFAULT_MINUTES, TOO_MANY_ATTEMPTS_KEY } from "@space/shared
 import { shortCodeGroups } from "@space/pairing-crypto";
 import { useTranslation } from "../i18n";
 import { scopeLogger } from "../logger";
-import { PairingCheckCode } from "../pairing/check-code";
 import { QrCode } from "../pairing-qr";
 import { formatCountdown, type PairingState } from "../pairing";
 import { useMobileShellTheme } from "../theme";
@@ -125,7 +124,6 @@ export const TvSignInView = ({ state, onRetry, onUsePassword, onLanguage }: TvSi
             {t("tvPairing.signIn.codeLabel")}
           </TvBody>
           <ShortCode code={waiting.request.shortCode} />
-          {waiting.checkCode ? <PairingCheckCode checkCode={waiting.checkCode} testID="tv-pairing-check-code" scale={1.4 * scale} /> : null}
           <View style={styles.timer}>
             <CodeLifeRing left={lifeLeft} />
             <TvBody muted style={styles.timerText} testID="tv-pairing-countdown">

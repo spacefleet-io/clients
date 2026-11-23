@@ -10,10 +10,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { AccountAccess, AccountOverQuota } from "@space/shared/accountAccess";
 import type { AccountOverQuotaTitles } from "@space/shared/api";
 import { OverQuotaBanner, REMOVED_SEEN_KEY } from "../src/renderer/src/components/OverQuotaBanner";
-// The titles dialog is a lazy chunk of the banner. Loaded cold inside a test, its module graph transform counted
-// against the 10 s waits below: on a loaded runner (run 47404, suite 401 s against ~220 s) the dialog rendered only
-// after the wait gave up. Imported here, it loads at collection and the banner's `lazy()` resolves from the cache.
-import "../src/renderer/src/components/OverQuotaTitlesDialog";
 import en from "../src/renderer/src/i18n/en.json";
 import fr from "../src/renderer/src/i18n/fr.json";
 
@@ -178,17 +174,6 @@ describe("OverQuotaBanner (ACCT-OVER-01/04)", () => {
       (byTestId(id) as HTMLElement).click();
     });
     await flush();
-  };
-
-  /** Waits for the banner the fetched titles show (the removed notice exists only once `GET /account/over-quota` answered). */
-  const shown = async () => {
-    await vi.waitFor(
-      async () => {
-        await flush();
-        expect(byTestId("over-quota-banner")).not.toBeNull();
-      },
-      { timeout: 10_000, interval: 20 }
-    );
   };
 
   /** Waits until the dialog has named the placements (the library walk is async). */
@@ -369,7 +354,6 @@ describe("OverQuotaBanner (ACCT-OVER-01/04)", () => {
       ],
     });
     await render();
-    await shown();
     try {
       expect(byTestId("over-quota-banner")?.getAttribute("data-phase")).toBe("removed");
       expect(byTestId("over-quota-message")?.textContent).toBe("2 titles were removed for exceeding your storage.");
@@ -402,7 +386,6 @@ describe("OverQuotaBanner (ACCT-OVER-01/04)", () => {
       ],
     });
     await render();
-    await shown();
     expect(byTestId("over-quota-message")?.textContent).toBe("2 titles were removed for exceeding your storage.");
   });
 

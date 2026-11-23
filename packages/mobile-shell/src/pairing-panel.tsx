@@ -9,7 +9,6 @@ import { RATE_LIMIT_DEFAULT_MINUTES, TOO_MANY_ATTEMPTS_KEY } from "@space/shared
 import { MobileAuthButton } from "./components/mobile-auth-form";
 import { useTranslation } from "./i18n";
 import { formatCountdown } from "./pairing/countdown";
-import { PairingCheckCode } from "./pairing/check-code";
 import type { PairingState } from "./pairing/controller";
 import { usePairing, type UsePairingOptions } from "./pairing-hook";
 import { QrCode } from "./pairing-qr";
@@ -81,7 +80,6 @@ export const MobilePairingPanelView = ({ state, restart, now, deviceName, headin
           <MobilePairingText tone="muted">{t("phonePairing.codeLabel")}</MobilePairingText>
           {/* ACCT-PAIR-01: two groups of 4 boxes, never a dash (Chris 2026-11-18). */}
           <ShortCodeTiles code={state.request.shortCode} testID={id("code")} />
-          {state.checkCode ? <PairingCheckCode checkCode={state.checkCode} testID={id("check-code") ?? "pairing-check-code"} /> : null}
           <MobilePairingText tone="muted">
             {t("phonePairing.expiresIn", { time: formatCountdown(Math.max(0, state.expiresAtMs - now)) })}
           </MobilePairingText>

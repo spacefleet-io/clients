@@ -88,27 +88,6 @@ describe("TV pairing controller", () => {
     expect(t.slept[0]).toBeGreaterThan(0);
   });
 
-  it("shows the check code once the approving app connected, once per code (PRIV-PAIR-01)", async () => {
-    /**
-     * @test-id TV-PAIR-CONTROLLER-CHECK-001
-     * @req PRIV-PAIR-01
-     * @why Chris 2026-11-23 ("yes that'd be better"): the device asking to sign in shows six digits the approving app
-     *   shows too; a server swapping keys gives two different codes. The screen must get the digits while waiting.
-     */
-    console.info("[tv-pairing-controller:phase] check-code");
-    const t = setup({
-      starts: [],
-      polls: [{ status: "pending" }, { status: "pending", checkCode: "067383" }, { status: "pending", checkCode: "067383" }, APPROVED],
-    });
-    t.script.starts.push(created(1, t.now() + 600_000));
-    t.controller.start();
-    await t.settle();
-    console.info("[tv-pairing-controller:state]", { phases: phases(t.states) });
-    expect(phases(t.states)).toEqual(["starting", "waiting", "waiting", "completing", "done"]);
-    expect(t.states[1]).not.toHaveProperty("checkCode");
-    expect(t.states[2]).toMatchObject({ phase: "waiting", checkCode: "067383", request: { requestId: "req-1" } });
-  });
-
   it("renews the code by itself when the API says it expired", async () => {
     const t = setup({ starts: [], polls: [{ status: "expired" }, { status: "pending" }] });
     t.script.starts.push(created(1, t.now() + 600_000), created(2, t.now() + 1_200_000));

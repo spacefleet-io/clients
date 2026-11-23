@@ -103,7 +103,7 @@ describe("MobilePairingPanel", () => {
     expect(render({ phase: "completing" }, () => undefined, "parrot", "key").lines.at(-1)?.text).toBe("phonePairing.completingKey");
   });
 
-  // @req ACCT-PAIR-01 @req PLAT-KEYDEV-01
+  // @req ACCT-PAIR-01
   it("[key-pair-panel-2] every phone and TV key screen offers 'Get the key from another device' with this panel", () => {
     const root = resolve(__dirname, "../../..");
     const read = (file: string) => readFileSync(resolve(root, file), "utf8");

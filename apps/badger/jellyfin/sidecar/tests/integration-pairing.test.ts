@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { base64ToBytes, commitmentFingerprint, commitmentOpens, generateDeviceKeyPair, newPairingNonce, pairingCheckCode, sealLibraryKey } from "@space/pairing-crypto";
+import { base64ToBytes, generateDeviceKeyPair, sealLibraryKey } from "@space/pairing-crypto";
 import { loadIntegrationConfig } from "../src/config";
 import { encryptLibraryEnvelope, parseLibraryKey, verifyKeyProbe } from "../src/mediaCrypto";
 import { PairingFlow, type PairingResult } from "../src/pairing";
@@ -13,31 +13,15 @@ import { handleIntegrationRequest, type IntegrationDeps, type IntegrationStatus 
 const libraryKey = crypto.randomBytes(32);
 const libraryKeyBase64 = libraryKey.toString("base64");
 
-/** In-memory stand-in for the api's pairing routes, protocol 2 (PRIV-PAIR-01): `approverNonce` set = an app connected. */
+/** In-memory stand-in for the api's pairing routes, following /tmp/sf-intg/pairing-contract.md. */
 const fakePairingApi = () => {
-  const state = {
-    requestId: "11111111-2222-4333-8444-555555555555",
-    pollSecret: "secret",
-    publicKey: "",
-    commitment: "",
-    approverNonce: null as string | null,
-    requesterNonce: null as string | null,
-    reveals: 0,
-    approved: false,
-    deviceName: "",
-    deviceType: "",
-    polls: 0,
-    lastWait: null as string | null,
-    /** A lying server: keeps the first reveal's number, answers 500, then shows this approver number from now on. */
-    swapNonceOnFirstReveal: null as string | null,
-  };
+  const state = { requestId: "11111111-2222-4333-8444-555555555555", pollSecret: "secret", publicKey: "", approved: false, deviceName: "", deviceType: "", polls: 0, lastWait: null as string | null };
   const fetchImpl = (async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
     const url = new URL(typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url);
     const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
     if (url.pathname === "/pairing/requests" && init?.method === "POST") {
-      const body = JSON.parse(String(init.body)) as { publicKey: string; deviceName: string; deviceType: string; commitment: string };
+      const body = JSON.parse(String(init.body)) as { publicKey: string; deviceName: string; deviceType: string };
       state.publicKey = body.publicKey;
-      state.commitment = body.commitment;
       state.deviceName = body.deviceName;
       state.deviceType = body.deviceType;
       return json({
@@ -49,27 +33,11 @@ const fakePairingApi = () => {
         expiresAt: new Date(Date.now() + 300_000).toISOString(),
       }, 201);
     }
-    if (url.pathname === `/pairing/requests/${state.requestId}/reveal` && init?.method === "POST") {
-      const body = JSON.parse(String(init.body)) as { pollSecret: string; requesterNonce: string };
-      state.reveals += 1;
-      if (body.pollSecret !== state.pollSecret) return json({ error: "pairing_not_found" }, 404);
-      if (!state.approverNonce) return json({ error: "pairing_check_pending" }, 409);
-      if (!commitmentOpens(state.commitment, state.publicKey, body.requesterNonce)) return json({ error: "pairing_commitment_mismatch" }, 400);
-      state.requesterNonce = body.requesterNonce;
-      if (state.swapNonceOnFirstReveal && state.reveals === 1) {
-        state.approverNonce = state.swapNonceOnFirstReveal;
-        return json({ error: "internal" }, 500);
-      }
-      return json({ ok: true });
-    }
     if (url.pathname === `/pairing/requests/${state.requestId}`) {
       state.polls += 1;
       state.lastWait = url.searchParams.get("wait");
       if (url.searchParams.get("pollSecret") !== state.pollSecret) return json({ error: "forbidden" }, 403);
-      if (!state.approved) {
-        const showNonce = state.approverNonce && (!state.requesterNonce || state.swapNonceOnFirstReveal);
-        return json(showNonce ? { status: "pending", approverNonce: state.approverNonce } : { status: "pending" });
-      }
+      if (!state.approved) return json({ status: "pending" });
       const sealed = sealLibraryKey({ devicePublicKey: state.publicKey, requestId: state.requestId, libraryKey: new Uint8Array(libraryKey) });
       return json({ status: "approved", token: "device-token", user: { id: "u1", email: "me@example.com" }, sealedKey: sealed, clientType: "badger-jellyfin" });
     }
@@ -96,8 +64,7 @@ describe("pairing flow (new-device side)", () => {
     const started = await flow.start({ apiUrl: "http://api.test/", deviceName: "Chris Jellyfin" });
     // @bugfix @regression-proof Chris 2026-11-18: no dash in the code the Jellyfin page shows.
     expect(started.shortCode).toBe("ABCDEFGH");
-    expect(started.qrPayload).toBe(`https://spacefleet.io/pair/badger?code=ABCDEFGH#c=${commitmentFingerprint(api.state.commitment)}`);
-    expect(started.checkCode).toBeNull();
+    expect(started.qrPayload).toBe("https://spacefleet.io/pair/badger?code=ABCDEFGH");
     expect(api.state.deviceType).toBe("jellyfin");
     expect(api.state.deviceName).toBe("Chris Jellyfin");
     expect(base64ToBytes(api.state.publicKey)).toHaveLength(32);
@@ -133,61 +100,6 @@ describe("pairing flow (new-device side)", () => {
     await flow.start({ apiUrl: "http://api.test", deviceName: "x" });
     now += 400_000;
     expect(flow.snapshot()?.state).toBe("expired");
-    flow.cancel();
-  });
-
-  /**
-   * @test-id JELLYFIN-PAIR-CHECK-001
-   * @req PRIV-PAIR-01 PRIV-PAIR-04
-   * @why Chris 2026-11-23 ("yes that'd be better"): the Jellyfin page is a receiving device; it must send a commitment,
-   *   reveal its number only once an approving app connected, and show the six digits that app shows.
-   */
-  it("@req PRIV-PAIR-01[badger-jellyfin] @req PRIV-PAIR-04[badger-jellyfin] commits, reveals once an app connected, and shows the same check code", async () => {
-    const api = fakePairingApi();
-    const flow = new PairingFlow({ log: () => undefined, deviceType: "jellyfin", fetchImpl: api.fetchImpl, pollIntervalMs: 10, onApproved: async () => "approved" });
-    await flow.start({ apiUrl: "http://api.test", deviceName: "x" });
-    expect(base64ToBytes(api.state.commitment)).toHaveLength(32);
-    await vi.waitFor(() => expect(api.state.polls).toBeGreaterThanOrEqual(2));
-    console.info("[jellyfin-pair-check] phase: no app yet", { reveals: api.state.reveals });
-    expect(api.state.reveals).toBe(0);
-    expect(flow.snapshot()?.checkCode).toBeNull();
-
-    api.state.approverNonce = newPairingNonce();
-    await vi.waitFor(() => expect(flow.snapshot()?.checkCode).toMatch(/^\d{6}$/));
-    // The approving app computes its code from what it read: the same digits.
-    const theirs = pairingCheckCode({ publicKey: api.state.publicKey, commitment: api.state.commitment, approverNonce: api.state.approverNonce, requesterNonce: api.state.requesterNonce! });
-    console.info("[jellyfin-pair-check] phase: revealed", { reveals: api.state.reveals, same: theirs === flow.snapshot()?.checkCode });
-    expect(flow.snapshot()?.checkCode).toBe(theirs);
-    const polls = api.state.polls;
-    await vi.waitFor(() => expect(api.state.polls).toBeGreaterThan(polls + 1));
-    expect(api.state.reveals).toBe(1);
-
-    api.state.approved = true;
-    await vi.waitFor(() => expect(flow.snapshot()?.state).toBe("approved"));
-  });
-
-  /**
-   * Found by the sf-pair-v2 TLA+ model: a server that keeps the reveal but answers 500, then shows another approver
-   * number, knows this service's number by then and could grind its new number until the code matches one it controls on
-   * the approving app. The code must stay the one built from the first number.
-   */
-  it("@req PRIV-PAIR-01[badger-jellyfin] a failed reveal does not let the server swap the approver number", async () => {
-    const api = fakePairingApi();
-    const logs: string[] = [];
-    const flow = new PairingFlow({ log: (message) => logs.push(message), deviceType: "jellyfin", fetchImpl: api.fetchImpl, pollIntervalMs: 10, onApproved: async () => "approved" });
-    await flow.start({ apiUrl: "http://api.test", deviceName: "x" });
-    const first = newPairingNonce();
-    const swapped = newPairingNonce();
-    api.state.swapNonceOnFirstReveal = swapped;
-    api.state.approverNonce = first;
-    await vi.waitFor(() => expect(flow.snapshot()?.checkCode).toMatch(/^\d{6}$/));
-    const codeFor = (approverNonce: string) =>
-      pairingCheckCode({ publicKey: api.state.publicKey, commitment: api.state.commitment, approverNonce, requesterNonce: api.state.requesterNonce! });
-    console.info("[jellyfin-pair-check] lying server", { reveals: api.state.reveals, shown: flow.snapshot()?.checkCode, first: codeFor(first), swapped: codeFor(swapped), logs });
-    expect(api.state.reveals).toBe(2);
-    expect(flow.snapshot()?.checkCode).toBe(codeFor(first));
-    expect(flow.snapshot()?.checkCode).not.toBe(codeFor(swapped));
-    expect(logs).toContain("pairing approver number changed; ignored, the first one stays");
     flow.cancel();
   });
 });
@@ -249,7 +161,7 @@ describe("sidecar routes", () => {
   });
 
   it("@req ACCT-PAIR-01[badger-jellyfin] pairing/start returns the code and pairing/status reports it", async () => {
-    const pairing = { state: "pending", requestId: "r", shortCode: "ABCDEFGH", qrPayload: "https://spacefleet.io/pair/badger?code=ABCDEFGH", checkCode: null, expiresAt: "2030-01-01T00:00:00Z", deviceName: "Jf", error: null } as const;
+    const pairing = { state: "pending", requestId: "r", shortCode: "ABCDEFGH", qrPayload: "https://spacefleet.io/pair/badger?code=ABCDEFGH", expiresAt: "2030-01-01T00:00:00Z", deviceName: "Jf", error: null } as const;
     const startPairing = vi.fn(async () => pairing);
     const handlers = deps({ startPairing, getStatus: () => status({ state: "needs_login", signedIn: false, pairing }), isLibraryReady: () => false });
     const start = await handleIntegrationRequest(new Request("http://127.0.0.1:8790/integration/v1/pairing/start", { method: "POST", body: JSON.stringify({ deviceName: "Jf" }) }), handlers);

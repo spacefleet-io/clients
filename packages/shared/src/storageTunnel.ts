@@ -40,12 +40,10 @@ export type TunnelGatewayFrame = Record<string, unknown>;
 /**
  * Why a tunnel session is opened (#145 unpaid access). The gateway/API refuse
  * `playback` and `upload` for an unpaid account (402 `subscription_unpaid`) but
- * allow `export` (offline downloads, exports to standard files), `library`
- * (library data sync, artwork/images) and `reseal` (downloads the media and
- * uploads only re-sealed copies during a media library key change,
- * STOR-RESEAL-03) at free QoS. Omitted = `playback`.
+ * allow `export` (offline downloads, exports to standard files) and `library`
+ * (library data sync, artwork/images) at free QoS. Omitted = `playback`.
  */
-export type StorageTunnelPurpose = "playback" | "export" | "upload" | "library" | "reseal";
+export type StorageTunnelPurpose = "playback" | "export" | "upload" | "library";
 
 /** The highest quality an account's plan may play while its silo is saturated (PLAY-QUAL-07). */
 export type StorageQualityCap = "480p" | "1080p";

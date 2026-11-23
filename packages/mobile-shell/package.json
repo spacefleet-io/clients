@@ -47,7 +47,6 @@
     "./sibling-ui": "./src/sibling/ui.ts",
     "./pairing-approve": "./src/pairing-approve/index.ts",
     "./pairing-approve/deviceUnlock": "./src/pairing-approve/deviceUnlock.ts",
-    "./pairing-approve/checkDeps": "./src/pairing-approve/checkDeps.ts",
     "./pairing-approve/PairDeviceScreen": "./src/pairing-approve/PairDeviceScreen.tsx",
     "./pair-sign-in": "./src/pair-sign-in.tsx",
     "./keyboard": "./src/keyboard.tsx",

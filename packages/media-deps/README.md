@@ -93,10 +93,6 @@ libxrender1 libexpat1 zlib1g libstdc++6 libgcc-s1 libasound2t64 libglib2.0-0t64 
 libfreetype6 libharfbuzz0b libfribidi0` (`libasound2 libglib2.0-0` before the 64-bit time_t transition: Ubuntu
 22.04, Debian 12). Every desktop has them; our CI images install them.
 
-The Linux and Android recipes stay on `ubuntu:22.04` (Chris, 2026-11-23, dependency audit #3378 D33). Moving to
-24.04 would raise the minimum host to glibc 2.39 and drop Ubuntu 22.04 and Debian 12 hosts. Revisit when 22.04
-reaches end of standard support in 2027.
-
 macOS: mpv is the executable of `Badger Player.app` (its own name, bundle id
 `io.spacefleet.badger-desktop.player` and icon in the Dock: MPV-MODEL-03); packaging moves the app to
 `Contents/Helpers/` and `lib/` to `Contents/Resources/deps/lib`. Every dylib has the install name `@rpath/<file>`

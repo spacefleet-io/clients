@@ -1,10 +1,9 @@
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { changeLanguage, initI18n, translate } from "../src/i18n";
-import { generateDeviceKeyPair, openSealedKey, pairingCheckCode, pairingCommitment } from "@space/pairing-crypto";
+import { generateDeviceKeyPair, openSealedKey } from "@space/pairing-crypto";
 import {
   approvalQuestion,
   approveDevice,
-  checkDevice,
   denyDevice,
   deviceTypeLabel,
   lookupDevice,
@@ -23,25 +22,14 @@ const NOW = Date.parse("2026-10-16T12:00:00Z");
 const libraryKeyBytes = Uint8Array.from({ length: 32 }, (_, i) => (i * 7 + 3) & 0xff);
 const libraryKey = Buffer.from(libraryKeyBytes).toString("base64");
 
-// sf-pair-v2 numbers of the waiting device (vectors-v2.json uses the same fills).
-const requesterNonce = Buffer.alloc(32, 0x11).toString("base64");
-
-/** A request as a v2 device sends it, already checked (`check`), so approve tests start where the screen does. */
-const makeRequest = (overrides: Partial<PairingRequestInfo> = {}): PairingRequestInfo => {
-  const publicKey = overrides.publicKey ?? generateDeviceKeyPair().publicKey;
-  return {
-    requestId: "req-1",
-    deviceType: "kodi",
-    deviceName: "Living room Kodi",
-    publicKey,
-    expiresAt: new Date(NOW + 5 * 60_000).toISOString(),
-    protocol: 2,
-    // A malformed key (the bad-key test) has no commitment of its own.
-    commitment: "commitment" in overrides ? overrides.commitment : pairingCommitment(publicKey, requesterNonce),
-    check: { code: "067383", confirmedByQr: false },
-    ...overrides,
-  };
-};
+const makeRequest = (overrides: Partial<PairingRequestInfo> = {}): PairingRequestInfo => ({
+  requestId: "req-1",
+  deviceType: "kodi",
+  deviceName: "Living room Kodi",
+  publicKey: generateDeviceKeyPair().publicKey,
+  expiresAt: new Date(NOW + 5 * 60_000).toISOString(),
+  ...overrides,
+});
 
 const makeDeps = (overrides: Partial<PairingDeps> = {}): PairingDeps => ({
   lookup: vi.fn(async () => makeRequest()),
@@ -50,9 +38,6 @@ const makeDeps = (overrides: Partial<PairingDeps> = {}): PairingDeps => ({
   getLibraryKey: vi.fn(async () => libraryKey),
   requireUnlock: vi.fn(async () => undefined),
   now: () => NOW,
-  keyOpensAccount: vi.fn(async () => true),
-  connect: vi.fn(async () => undefined),
-  readReveal: vi.fn(async () => ({ status: "pending", requesterNonce })),
   ...overrides,
 });
 
@@ -244,7 +229,7 @@ describe("pairing: approve", () => {
   // @req ACCT-PAIR-01
   it("refuses a malformed device public key instead of sending something broken", async () => {
     const deps = makeDeps();
-    await expect(approveDevice(deps, "tok", makeRequest({ publicKey: "not-a-key", commitment: null }))).rejects.toMatchObject({
+    await expect(approveDevice(deps, "tok", makeRequest({ publicKey: "not-a-key" }))).rejects.toMatchObject({
       kind: "bad_request",
     });
     expect(deps.approve).not.toHaveBeenCalled();
@@ -256,52 +241,6 @@ describe("pairing: approve", () => {
     await denyDevice(deps, "tok", makeRequest());
     expect(deps.deny).toHaveBeenCalledWith("tok", "req-1");
     expect(deps.approve).not.toHaveBeenCalled();
-  });
-});
-
-describe("pairing: check code (sf-pair-v2)", () => {
-  // @req PRIV-PAIR-01
-  it("[pair-mobile-check-1] exchanges the random numbers and works out the same six digits as the waiting device", async () => {
-    const T = "[pair-mobile-check-1]";
-    const pair = generateDeviceKeyPair();
-    let approverNonce = "";
-    const deps = makeDeps({
-      connect: vi.fn(async (_token: string, _id: string, nonce: string) => {
-        approverNonce = nonce;
-      }),
-    });
-    const found = makeRequest({ publicKey: pair.publicKey, check: undefined });
-    const checked = await checkDevice(deps, "tok", found);
-    const onDevice = pairingCheckCode({ publicKey: pair.publicKey, commitment: found.commitment!, approverNonce, requesterNonce });
-    console.info(T, "codes", { phone: checked.check.code, device: onDevice });
-    expect(checked.check).toEqual({ code: onDevice, confirmedByQr: false });
-    expect(deps.connect).toHaveBeenCalledWith("tok", "req-1", approverNonce);
-    expect(deps.approve).not.toHaveBeenCalled();
-  });
-
-  // @req PRIV-PAIR-01
-  it("[pair-mobile-check-2] refuses a device whose number does not open its commitment, sending nothing", async () => {
-    const deps = makeDeps({ readReveal: vi.fn(async () => ({ status: "pending", requesterNonce: Buffer.alloc(32, 0x33).toString("base64") })) });
-    await expect(checkDevice(deps, "tok", makeRequest({ check: undefined }))).rejects.toMatchObject({ kind: "check_failed" });
-    expect(deps.approve).not.toHaveBeenCalled();
-    expect(pairingErrorMessage("check_failed")).toMatch(/nothing was shared/);
-  });
-
-  // @req PRIV-PAIR-02
-  it("[pair-mobile-stale] does not connect when this phone's key no longer opens the account", async () => {
-    const deps = makeDeps({ keyOpensAccount: vi.fn(async () => false) });
-    await expect(checkDevice(deps, "tok", makeRequest({ check: undefined }))).rejects.toMatchObject({ kind: "stale_key" });
-    expect(deps.connect).not.toHaveBeenCalled();
-    expect(deps.approve).not.toHaveBeenCalled();
-  });
-
-  // @req PRIV-PAIR-04
-  it("[pair-mobile-v1] refuses a device from before the check: update it first", async () => {
-    const deps = makeDeps({ lookup: vi.fn(async () => makeRequest({ protocol: 1, commitment: null, check: undefined })) });
-    await expect(lookupDevice(deps, "tok", "ABCDEFGH")).rejects.toMatchObject({ kind: "update_required" });
-    await expect(approveDevice(deps, "tok", makeRequest({ check: undefined }))).rejects.toMatchObject({ kind: "update_required" });
-    expect(deps.approve).not.toHaveBeenCalled();
-    expect(pairingErrorMessage("update_required")).toMatch(/older version/);
   });
 });
 

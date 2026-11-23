@@ -1,16 +1,4 @@
-import {
-  bytesToBase64,
-  generateDeviceKeyPair,
-  isPairingBlob32,
-  isSealedKey,
-  newPairingNonce,
-  normalizeShortCode,
-  openSealedKey,
-  pairingCheckCode,
-  pairingCommitment,
-  withCommitmentFingerprint,
-  type SealedKey,
-} from "@space/pairing-crypto";
+import { bytesToBase64, generateDeviceKeyPair, isSealedKey, normalizeShortCode, openSealedKey, type SealedKey } from "@space/pairing-crypto";
 import { clientIdentityHeaders } from "@space/shared/appVersion";
 import { errorMessage } from "./errors";
 
@@ -18,10 +6,6 @@ import { errorMessage } from "./errors";
  * New-device side of the pairing contract (ACCT-PAIR-01, PRIV-KEY-05): the Jellyfin server asks for a code, the
  * user approves it with the phone app, and this service receives a session token plus the library key sealed
  * to a keypair that never leaves this process. The Jellyfin plugin only renders what `snapshot()` returns.
- *
- * PRIV-PAIR-01 (sf-pair-v2): the request carries a commitment to the public key and a secret number; once the
- * approving app connected (the poll carries its number), this service reveals its own and the page shows six digits
- * the approving app shows too, so a server swapping keys is caught.
  */
 /** `needs_profile`: approved, but the account has several profiles and nothing is stored until the owner picks one (INTG-PROF-01). */
 export type PairingState = "pending" | "approved" | "needs_profile" | "expired" | "denied" | "failed";
@@ -31,10 +15,8 @@ export type PairingSnapshot = {
   requestId: string;
   /** The plain 8 characters, "ABCDEFGH" (ACCT-PAIR-01: shown as 4 + 4 with a gap, never a dash). */
   shortCode: string;
-  /** What the phone's QR scanner reads, with `#c=<commitment fingerprint>` added here (PRIV-PAIR-01). */
+  /** What the phone's QR scanner reads. */
   qrPayload: string;
-  /** PRIV-PAIR-01: the six digits to compare with the approving app, once it connected; null before. */
-  checkCode: string | null;
   expiresAt: string;
   deviceName: string;
   error: string | null;
@@ -51,8 +33,7 @@ export type PairingResult = {
 
 type CreateResponse = { requestId: string; pollSecret: string; shortCode: string; qrPayload: string; expiresAt: string };
 type PollResponse =
-  | { status: "pending"; approverNonce?: string }
-  | { status: "expired" | "denied" | "consumed" }
+  | { status: "pending" | "expired" | "denied" | "consumed" }
   | { status: "approved"; token: string; user?: { id?: string; email?: string }; sealedKey: unknown; clientType?: string };
 
 type LogFn = (message: string, meta?: Record<string, unknown>) => void;
@@ -76,16 +57,6 @@ const asObject = (value: unknown): Record<string, unknown> | null => (value && t
 const POLL_WAIT_SECONDS = 25;
 /** A poll that has not answered 10 s after the hold is dropped and retried. */
 const POLL_TIMEOUT_MS = (POLL_WAIT_SECONDS + 10) * 1000;
-
-type PollInput = {
-  apiUrl: string;
-  pollSecret: string;
-  keys: { publicKey: string; privateKey: string };
-  requesterNonce: string;
-  commitment: string;
-  snapshot: PairingSnapshot;
-  abort: AbortController;
-};
 
 export class PairingFlow {
   private current: { snapshot: PairingSnapshot; abort: AbortController } | null = null;
@@ -128,13 +99,11 @@ export class PairingFlow {
   async start(input: { apiUrl: string; deviceName: string }): Promise<PairingSnapshot> {
     this.cancel();
     const keys = generateDeviceKeyPair();
-    const requesterNonce = newPairingNonce();
-    const commitment = pairingCommitment(keys.publicKey, requesterNonce);
     const apiUrl = input.apiUrl.replace(/\/+$/, "");
     const res = await this.fetchImpl(`${apiUrl}/pairing/requests`, {
       method: "POST",
       headers: { "content-type": "application/json", "x-space-app": "badger", ...clientIdentityHeaders() },
-      body: JSON.stringify({ deviceType: this.options.deviceType, deviceName: input.deviceName, publicKey: keys.publicKey, commitment }),
+      body: JSON.stringify({ deviceType: this.options.deviceType, deviceName: input.deviceName, publicKey: keys.publicKey }),
     });
     const body = asObject(await res.json().catch(() => null));
     if (!res.ok || !body || typeof body.requestId !== "string" || typeof body.pollSecret !== "string") {
@@ -147,8 +116,7 @@ export class PairingFlow {
       state: "pending",
       requestId: created.requestId,
       shortCode: normalizeShortCode(created.shortCode) ?? created.shortCode,
-      qrPayload: withCommitmentFingerprint(created.qrPayload, commitment),
-      checkCode: null,
+      qrPayload: created.qrPayload,
       expiresAt: created.expiresAt,
       deviceName: input.deviceName,
       error: null,
@@ -156,7 +124,7 @@ export class PairingFlow {
     const abort = new AbortController();
     this.current = { snapshot, abort };
     this.options.log("pairing started", { requestId: snapshot.requestId, expiresAt: snapshot.expiresAt, deviceName: input.deviceName });
-    void this.poll({ apiUrl, pollSecret: created.pollSecret, keys, requesterNonce, commitment, snapshot, abort });
+    void this.poll({ apiUrl, pollSecret: created.pollSecret, privateKey: keys.privateKey, snapshot, abort });
     return { ...snapshot };
   }
 
@@ -166,38 +134,8 @@ export class PairingFlow {
     }
   }
 
-  /**
-   * PRIV-PAIR-01: reveal this service's number (the API accepts the same one again) and compute the code from the FIRST
-   * approver number the polls carried (pinned by `poll` before the reveal is sent). A server that takes the reveal but
-   * fails the answer, then shows another approver number, would know this service's number and could grind its new
-   * number until the code matches one it controls on the approver; a retry therefore keeps the pinned number.
-   */
-  private async reveal(input: PollInput, approverNonce: string): Promise<string | null> {
-    const { apiUrl, pollSecret, keys, requesterNonce, commitment, snapshot, abort } = input;
-    try {
-      const res = await this.fetchImpl(`${apiUrl}/pairing/requests/${encodeURIComponent(snapshot.requestId)}/reveal`, {
-        method: "POST",
-        headers: { "content-type": "application/json", "x-space-app": "badger", ...clientIdentityHeaders() },
-        body: JSON.stringify({ pollSecret, requesterNonce }),
-        signal: AbortSignal.any([abort.signal, AbortSignal.timeout(POLL_TIMEOUT_MS)]),
-      });
-      if (!res.ok) {
-        this.options.log("pairing reveal failed", { requestId: snapshot.requestId, status: res.status });
-        return null;
-      }
-    } catch (error) {
-      if (!abort.signal.aborted) this.options.log("pairing reveal error", { requestId: snapshot.requestId, error: errorMessage(error) });
-      return null;
-    }
-    this.options.log("pairing check code ready", { requestId: snapshot.requestId });
-    return pairingCheckCode({ publicKey: keys.publicKey, commitment, approverNonce, requesterNonce });
-  }
-
-  private async poll(input: PollInput) {
-    const { apiUrl, pollSecret, keys, snapshot, abort } = input;
-    const privateKey = keys.privateKey;
-    let checkCode: string | null = null;
-    let pinnedApproverNonce: string | null = null;
+  private async poll(input: { apiUrl: string; pollSecret: string; privateKey: string; snapshot: PairingSnapshot; abort: AbortController }) {
+    const { apiUrl, pollSecret, privateKey, snapshot, abort } = input;
     const requestId = snapshot.requestId;
     while (!abort.signal.aborted) {
       if (Date.parse(snapshot.expiresAt) + 30_000 <= this.now()) {
@@ -216,14 +154,6 @@ export class PairingFlow {
           return;
         }
         if (res.ok && body) {
-          if (body.status === "pending" && !checkCode && isPairingBlob32(body.approverNonce)) {
-            pinnedApproverNonce ??= body.approverNonce;
-            if (body.approverNonce !== pinnedApproverNonce) {
-              this.options.log("pairing approver number changed; ignored, the first one stays", { requestId });
-            }
-            checkCode = await this.reveal(input, pinnedApproverNonce);
-            if (checkCode) this.update(snapshot, { checkCode });
-          }
           if (body.status === "approved") {
             await this.finish(apiUrl, privateKey, snapshot, body);
             return;

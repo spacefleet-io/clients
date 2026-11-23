@@ -24,12 +24,3 @@ msgstr "Abbrechen"
 msgctxt "#30163"
 msgid "I saved it, sign out"
 msgstr "Gespeichert, abmelden"
-
-# PRIV-PAIR-01: the check code while pairing
-msgctxt "#30113"
-msgid "Code to check"
-msgstr "Prüfcode"
-
-msgctxt "#30114"
-msgid "Compare it with your other device. Approve only if both show the same six digits."
-msgstr "Vergleiche ihn mit deinem anderen Gerät. Bestätige nur, wenn beide dieselben sechs Ziffern zeigen."

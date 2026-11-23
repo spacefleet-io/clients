@@ -808,11 +808,6 @@
       "scanInstead": "Code stattdessen scannen"
     },
     "looking": "Code wird gesucht…",
-    "checking": "Warte auf das Gerät…",
-    "check": {
-      "question": "Zeigt {{name}} diesen Code?",
-      "hint": "Bestätige nur, wenn beide Bildschirme dieselben sechs Ziffern zeigen. Sonst lehne ab."
-    },
     "confirm": {
       "asked": "{{type}} mit dem Namen \"{{name}}\" möchte deinem Konto beitreten.",
       "unlockNotice": "Du wirst aufgefordert, dein Handy zu entsperren. Mit der Genehmigung wird das Gerät angemeldet und erhält deinen Mediathek-Schlüssel.",
@@ -848,10 +843,7 @@
       "bad_request": "Das Gerät hat etwas gesendet, das wir nicht verwenden können. Frag es nach einem neuen Code.",
       "unknown": "Etwas ist schiefgelaufen und das Gerät wurde nicht hinzugefügt. Versuch es nochmal.",
       "code_required": "Gib den Code ein, um zu bestätigen, dass du es bist.",
-      "code_invalid": "Dieser Code ist falsch oder abgelaufen, daher wurde nichts geteilt. Versuch es noch einmal.",
-      "update_required": "Dieses Gerät nutzt eine ältere Version. Aktualisiere es und versuch es dann noch einmal.",
-      "stale_key": "Dieses Gerät hat nicht den aktuellen Schlüssel deines Kontos und kann ihn deshalb nicht senden.",
-      "check_failed": "Die Codes ließen sich nicht prüfen, es wurde nichts geteilt. Hol dir auf dem anderen Gerät einen neuen Code."
+      "code_invalid": "Dieser Code ist falsch oder abgelaufen, daher wurde nichts geteilt. Versuch es noch einmal."
     },
     "unlock": {
       "title": "Entsperren, um ein Gerät hinzuzufügen",
@@ -891,10 +883,6 @@
     "step2": "2. Geh zu Einstellungen und dann zu Gerät koppeln.",
     "step3": "3. Scanne diesen Code oder gib den Code unten ein.",
     "codeLabel": "Oder gib diesen Code ein",
-    "check": {
-      "label": "Prüfcode",
-      "hint": "Vergleiche ihn mit deinem anderen Gerät. Bestätige nur, wenn beide dieselben sechs Ziffern zeigen."
-    },
     "expiresIn": "Dieser Code läuft in {{time}} ab. Ein neuer erscheint von selbst.",
     "deviceName": "Dieses Handy erscheint als „{{name}}“.",
     "qrAccessibility": "QR-Code zum Koppeln dieses Handys",

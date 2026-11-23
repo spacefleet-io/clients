@@ -17,7 +17,6 @@ export const BADGER_MAIN_ENTRY_ALLOWED_LOCAL_IMPORTS = new Set([
   "./libraryDbIpc",
   "./libraryDbRuntimeProxy",
   "./libraryDbAccessor",
-  "./libraryRotationIpc",
   "./logger",
   "./mediaCrypto",
   "./mediaIngest",
