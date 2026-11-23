@@ -4,17 +4,6 @@
     "collectionKey": "clé de bibliothèque"
   },
   "parrot": {
-    "artist": {
-      "label": "Artiste",
-      "latestRelease": "Dernière sortie",
-      "discography": "Discographie",
-      "allSongs": "Tous les titres",
-      "album": "Album",
-      "single": "Single",
-      "ep": "EP",
-      "hoursMinutes": "{{hours}} h {{minutes}} min",
-      "minutes": "{{minutes}} min"
-    },
     "nav": {
       "back": "Retour",
       "library": "Bibliothèque",
@@ -57,10 +46,11 @@
         "artists": "Artistes",
         "songs": "Titres"
       },
-      "more": "+{{count}} de plus",
-      "filterOn": "Filtrer, {{count}} actif(s)",
-      "searchGenres": "Rechercher",
-      "noMatch": "Aucun résultat"
+      "sort": {
+        "byArtist": "Par artiste",
+        "byName": "Par nom",
+        "byTitle": "Par titre"
+      }
     },
     "album": {
       "noPlayableFile": "Cet album n'a pas encore de fichier lisible.",
@@ -110,7 +100,7 @@
       "likedEmpty": "Aucun titre liké pour l'instant"
     },
     "kept": {
-      "keep": "Conserver hors ligne",
+      "keep": "Garder sur ce téléphone",
       "remove": "Retirer de ce téléphone",
       "line": "Gardé sur ce téléphone · {{size}}",
       "chooseBody": "Ces morceaux sont stockés dans plusieurs formats. Choisissez celui à garder sur ce téléphone.",

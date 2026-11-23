@@ -55,13 +55,6 @@ const scanDirectory = (dir: string): ScannedFile[] => {
   return results;
 };
 
-let lastExportDirectory: string | undefined;
-const pickedExportFolders = new Set<string>();
-
-/** True for a folder the user picked in the export folder dialog this session. */
-export const isPickedExportFolder = (dir: unknown): dir is string =>
-  typeof dir === "string" && pickedExportFolders.has(dir);
-
 export const registerFileSystemIpc = (ipc: typeof ipcMain) => {
   ipc.handle("sf-fs-scan", async (_event, paths: string[]) => {
     const results: ScannedFile[] = [];
@@ -134,22 +127,5 @@ export const registerFileSystemIpc = (ipc: typeof ipcMain) => {
     lastDialogDirectory = dirname(path);
     const content = (await stat(path)).size > MAX_ADDED_SUBTITLE_BYTES ? "" : await readFile(path, "utf8");
     return { name: basename(path), content };
-  });
-
-  // "Download everything" (ACCT-EXPORT-01, OFFL-FILE-01): the folder the plain files go to; null
-  // when cancelled. Only a folder picked here this session is accepted by the export IPCs (`isPickedExportFolder`),
-  // so the renderer cannot make the runtime write anywhere else.
-  ipc.handle("sf-pick-export-folder", async () => {
-    const result = await dialog.showOpenDialog({
-      ...(lastExportDirectory ? { defaultPath: lastExportDirectory } : {}),
-      title: mainUiStrings().exportFolderTitle,
-      buttonLabel: mainUiStrings().exportFolderButton,
-      properties: ["openDirectory", "createDirectory"],
-    });
-    const [path] = result.filePaths;
-    if (result.canceled || !path) return null;
-    lastExportDirectory = path;
-    pickedExportFolders.add(path);
-    return path;
   });
 };

@@ -10,7 +10,7 @@
  * @why The phone's album page shows the design's Play, Shuffle, heart and "…" under the title. The "…" lists the
  *   album card's shared actions (parrot-core's `parrotCardActionList`) without Play and Shuffle, in the same order as
  *   the desktop and the web player (Edit among them, PAR-META-16; no separate fetch action any more, the edit dialog
- *   looks the album up itself, PAR-META-18), then Save offline and last Delete (PAR-LIB-03); no keep button is
+ *   looks the album up itself, PAR-META-18), then Keep on this phone and last Delete (PAR-LIB-03); no keep button is
  *   left beside the title. Play next
  *   and Add to queue reach the phone player's queue without starting the album over. The screen is called as a function against a mocked React Native; the native queue is tried on a
  *   device.

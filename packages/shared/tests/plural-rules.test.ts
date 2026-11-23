@@ -1,5 +1,5 @@
 /**
- * @req UX-I18N-01[badger-mobile,badger-tv]
+ * @req UX-I18N-01[mobile]
  * @req PAR-LIB-03[parrot]
  * @bugfix Hermes (phones, TVs) has no `Intl.PluralRules`: a Parrot phone's album/artist Delete threw while wording its
  * question, and i18next fell back to "1 is one, the rest other" (French "0 titres"). The client rules stand in.

@@ -188,8 +188,6 @@ export const uploadEncryptedFile = async (
     placementId?: string;
     /** How the object counts toward the allowance (STOR-USE-02). */
     counting?: StorageObjectCounting;
-    /** Storage key decided by the caller (a seed-derived chunk key, LIB-FMT-11); absent: a random key. */
-    objectKey?: string;
   } = {}
 ): Promise<{ key: string; sizeBytes: number; checksum: string }> => {
   const encryptBuffer = runtime.encryptMediaObject;
@@ -2016,12 +2014,6 @@ export interface UploadProducedMediaArgs {
    */
   placementId: string;
   /**
-   * Store each video/audio output's chunks under keys derived from one seed per output (LIB-FMT-11 key mode 2). The
-   * caller sets it only when the account's library is converted to change types 4; the seed then rides on
-   * `produced.videoFormats[].chunkKeySeed` / `audioTracks[].chunkKeySeed` for the library write.
-   */
-  seedChunkKeys?: boolean;
-  /**
    * Optional live store handle. When provided, this exact store + its
    * in-flight OutputState references are mutated. When omitted, the upload
    * step opens a fresh store from `job_state.json` on disk — the standard
@@ -2217,7 +2209,6 @@ export const uploadProducedMedia = async (
     onUploadProgress: emitUpload,
     onLog: args.onLog,
     placementId: args.placementId,
-    seedChunkKeys: args.seedChunkKeys === true,
     uploadFile: (filePath, options) => uploadEncryptedFile(args.token, filePath, options),
     headObjects: async (keys, options) => {
       // Unconfigured = cannot verify; finalize then re-uploads every resumed

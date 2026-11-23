@@ -7,7 +7,6 @@ import {
   MobileFounderNotice,
   MobileNoticeToast,
   MobileOfflineIndicator,
-  MobileSyncIndicator,
   SkyRegion,
   type MobileOfflineVariant,
   type MobileTabBarAction,
@@ -23,7 +22,6 @@ import { checkForNewDevices, markDeviceSeen } from "../lib/pairing/deviceWatch";
 import { newDeviceKey, newDeviceMessage, subscribeNewDevice, type NewDeviceInfo } from "../lib/pairing/newDevice";
 import { useOpenDevices } from "../lib/pairing/useOpenDevices";
 import { useLibraryData, useLibraryStatus } from "../store/library";
-import { librarySyncProgress } from "../lib/librarySyncStatus";
 import { UnpaidAccessBanner } from "../components/UnpaidAccessBanner";
 import { PlaylistsPanel } from "../components/PlaylistsPanel";
 import { PhoneSearch } from "../components/PhoneSearch";
@@ -69,7 +67,7 @@ export const MainShellScreen = () => {
     [t],
   );
   const { media } = useLibraryData();
-  const { loadStatus, reload, refresh, syncState } = useLibraryStatus();
+  const { loadStatus, reload } = useLibraryStatus();
   const isFocused = useIsFocused();
   const { token } = useAuth();
   const [activeTab, setActiveTab] = useState("home");
@@ -174,13 +172,7 @@ export const MainShellScreen = () => {
       tabBarBadge={
         loadStatus.kind === "offline" ? (
           <MobileOfflineIndicator pendingOps={loadStatus.pendingOps} variant={loadStatus.reason} onRetry={reload} />
-        ) : syncState.kind === "idle" ? null : (
-          // LIB-SYNC-13: the library's update sign; a failed sync retries as a pull would.
-          <MobileSyncIndicator
-            state={syncState.kind === "syncing" ? { kind: "syncing", progress: librarySyncProgress(syncState) } : syncState}
-            onRetry={() => void refresh()}
-          />
-        )
+        ) : null
       }
       overlay={
         <>

@@ -14,7 +14,7 @@ import type { ProfileFeatures } from "@space/shared/appFeatures";
 import type { ParrotImportEdit, ParrotImportScan, ParrotLibraryAlbum, ParrotLibraryArtist, ParrotLibraryTrack } from "@space/parrot-ingest";
 import type { KeepCopyChoice, KeptKind, KeptStatus, ParrotEditTarget, ParrotLyrics, ParrotManageTarget, ParrotPlaylist, ParrotPlaylistEdit } from "@space/parrot-core";
 import type { ParrotPhotoCredit } from "@space/parrot-library-db-definition";
-import type { ParrotCoverCrop, ParrotImportPlacedFile, ParrotImportUnidentifiedFile } from "@space/parrot-core";
+import type { ParrotImportPlacedFile, ParrotImportUnidentifiedFile } from "@space/parrot-core";
 import type { ParrotLibraryPatch } from "./libraryPatch";
 
 import type { ParrotEditCover, ParrotEditSuggestion, ParrotEditSuggestQuery, ParrotEditValues } from "@space/parrot-core";
@@ -23,15 +23,12 @@ export type { ParrotEditCover, ParrotEditValues } from "@space/parrot-core";
 export type { ParrotImportEdit, ParrotImportScan, ParrotScanEntry } from "@space/parrot-ingest";
 /** The songs the user ticked in the confirm dialog, with the names they confirmed (PAR-UP-05). */
 export type ParrotImportSelection = Array<ParrotImportEdit & { file: string }>;
-/** Settings › Manage offline content (OFFL-MANAGE-01): each kept item's song files, and the bytes each kept file takes here. */
-export type ParrotKeptSizes = { entries: Array<{ kind: KeptKind; id: string; fileIds: string[] }>; bytes: Record<string, number> };
 import type { BillingStatus, PaidPlanId, PaymentOutcome, SubscriptionChangeAnswer } from "@space/shared/billingCheckout";
 import type { MusicAlbum, MusicAlbumTrack, ScheduledPlanChange } from "@space/shared/api";
 import type { ApiProfile, ProfilesResponse } from "@space/shared/profiles";
 import type { BillingPeriod } from "@space/shared/storagePlans";
 import type { ApprovePairingProof, ApprovePairingResult, PairingRequestView } from "@space/pairing-crypto";
 import type { PairedKeyCheck, PairingPollResult, PairingStartOptions, PairingStartResult } from "@space/desktop-shell/pairing";
-import type { SiblingSignInActions } from "@space/desktop-shell/sibling";
 import type { StreamSlotAnswer, StreamSlotGateState } from "@space/stream-slots";
 import type { AppUpdateRequiredPayload } from "@space/shared/appVersion";
 import type { FounderStatusResponse } from "@space/shared/founder";
@@ -173,44 +170,6 @@ export type ParrotBackgroundWork = { kind: "lyrics" | "artistPhotos" | "covers";
 export const IMPORT_INTERRUPTED = "interrupted";
 
 /**
- * "Download everything" (OFFL-FILE-01, ACCT-EXPORT-01, Chris 2026-11-21): the whole library saved as plain audio
- * files into a folder the user picks. How many songs it would save and their size, for its confirm.
- */
-export type ParrotExportPreview = { songs: number; bytes: number };
-
-/**
- * One export in the Jobs panel. An export Parrot's closing cut short goes on at the next start (ACCT-EXPORT-01).
- * `error` is `EXPORT_NO_SPACE` (the disk filled up, OFFL-SAFE-02) or the reason as it came.
- */
-export type ParrotExportJob = {
-  id: string;
-  /** The folder the user picked. */
-  dest: string;
-  startedAt: number;
-  finishedAt: number | null;
-  phase: "queued" | "running" | "done" | "cancelled" | "failed";
-  doneSongs: number;
-  totalSongs: number;
-  doneBytes: number;
-  totalBytes: number;
-  /** The song being written now. */
-  current: string | null;
-  error: string | null;
-  /** Songs that could not be saved, with the reason; the others are in the folder. */
-  failures: Array<{ title: string; reason: string }>;
-};
-
-/** Why an export did not start: no folder picked, nothing to save, or not enough room on that disk (OFFL-SAFE-02). */
-export type ParrotExportStart =
-  | { ok: true; job: ParrotExportJob }
-  | { ok: false; reason: "no-folder" | "empty" | "no-library" }
-  | { ok: false; reason: "no-space"; neededBytes: number; freeBytes: number };
-
-export const EXPORT_NO_SPACE = "no-space";
-/** An export Parrot's closing cut short whose folder is gone at the next start (a memory stick taken out). */
-export const EXPORT_FOLDER_MISSING = "folder-missing";
-
-/**
  * An album as the window gets it: instead of the cover's storage keys, the addresses main serves the opened cover from
  * (PAR-META-04, the picture built into the music files), or null when the album has none (the drawn tile). `coverUrl`
  * is the large copy (album page, system media panel); `coverThumbUrl` the small one (tiles, now-playing bar), which is
@@ -259,26 +218,19 @@ export type ParrotEditSuggestResult = { ok: true; results: ParrotEditSuggestion[
 
 /** PAR-UP-05: an album of our music library with its 500 px cover as a data: URL (null when it has none). */
 export type ParrotImportFoundAlbum = { album: MusicAlbum; cover: string | null };
-/** An album the lookup placed files on, with its full tracklist and those files (`sure` false: "Check"). */
-export type ParrotImportMatchedAlbum = ParrotImportFoundAlbum & { tracklistKnown: boolean; files: ParrotImportPlacedFile[] };
 /**
- * PAR-UP-08: one album of the waiting scan looked up on its own. `albums` are the albums its files really match;
- * `unidentified` the files matching nothing (`lookup-failed` when the lookup could not be asked), imported as is.
- * `stopped`: "Import as is" stopped the lookup (or the scan was answered), the album is imported from its tags.
+ * PAR-UP-05: the waiting scan matched file by file. `albums` are the albums the files really match, each with its full
+ * tracklist and the files placed on its tracks (`sure` false: "Check"); `unidentified` are the files matching nothing
+ * (`lookup-failed` when the lookup could not be asked: those are kept as is unless the user picks otherwise).
  */
-export type ParrotImportAlbumMatch =
-  | { kind: "found"; albums: ParrotImportMatchedAlbum[]; unidentified: ParrotImportUnidentifiedFile[] }
-  | { kind: "stopped" };
-/** PAR-UP-08 "Wrong album? Search": the albums our music library found for what the user typed. */
+export type ParrotImportMatchResult = {
+  albums: Array<ParrotImportFoundAlbum & { tracklistKnown: boolean; files: ParrotImportPlacedFile[] }>;
+  unidentified: ParrotImportUnidentifiedFile[];
+};
+/** PAR-UP-05 "Wrong album? Search" and "Add to album…": the albums our music library found for what the user typed. */
 export type ParrotImportAlbumSearch = { kind: "found"; results: ParrotImportFoundAlbum[] } | { kind: "failed" };
-/**
- * PAR-UP-08: a picture the review can make an album's cover (built into the album's files, or an image file the user
- * picked): `id` names it in the confirm, `data` is what the window shows (a JPEG or PNG at most 500 px wide), `width`
- * and `height` the picture's own size, `files` how many of the album's files carry it.
- */
-export type ParrotImportPicture = { id: string; data: string; width: number; height: number; files: number };
-/** PAR-META-22: a cover main cannot decode (WebP, GIF), sent to the window to be cut to its square on a canvas. */
-export type ParrotCoverCutRequest = { id: string; bytes: Uint8Array; mime: string; crop: ParrotCoverCrop | null };
+/** PAR-UP-05 "Identify": the songs our music library found for what the user typed, each on its album. */
+export type ParrotImportSongSearch = { kind: "found"; results: Array<ParrotImportFoundAlbum & { track: MusicAlbumTrack }> } | { kind: "failed" };
 /** PAR-UP-06: a matched artist's photo as a data: URL (null when no source has one) and its credit (Commons photos only). */
 export type ParrotImportArtistPhoto = { photo: string | null; credit: ParrotPhotoCredit | null };
 
@@ -359,8 +311,6 @@ export type ParrotBridge = {
     poll(requestId: string): Promise<PairingPollResult<ParrotPairedSignIn>>;
     cancel(): Promise<void>;
   };
-  /** ACCT-PAIR-07: "Continue with your Badger account" when Badger is signed in on this computer; the key check only. */
-  sibling?: SiblingSignInActions<ParrotPairedSignIn>;
   signOut(): Promise<ParrotState>;
   /**
    * The key as base64 (typed words' `keyBase64`, or a new key once written down). Checked against the account; on an
@@ -389,23 +339,12 @@ export type ParrotBridge = {
   scanImport(folders: string[]): Promise<ParrotImportStatus>;
   /** The scan waiting for the user's answer, or null when none is. */
   getImportScan(): Promise<ParrotImportScan | null>;
-  /**
-   * PAR-UP-08: looks up one album of the waiting scan (`files`, named `id` by the review) on its own; answers
-   * `stopped` once stopImportAlbumMatch stopped it.
-   */
-  matchImportAlbum(question: { id: string; files: string[] }): Promise<ParrotImportAlbumMatch>;
-  /** PAR-UP-08 "Import as is": stops one album's lookup. */
-  stopImportAlbumMatch(id: string): Promise<void>;
+  /** Matches each file of the waiting scan on its own, grouped by the album it matches (kept until the scan is answered). */
+  matchImport(): Promise<ParrotImportMatchResult>;
   /** Searches our music library for an album to place songs on (a failure answers `failed`). */
   searchImportAlbums(question: { artist: string; album: string }): Promise<ParrotImportAlbumSearch>;
-  /** PAR-UP-08: the different pictures built into these files of the waiting scan, for an album's cover menu. */
-  importAlbumPictures(files: string[]): Promise<ParrotImportPicture[]>;
-  /** PAR-UP-08 "Choose an image file…": an image the user picks for an album's cover; null when none is picked. */
-  pickImportCoverImage(): Promise<ParrotImportPicture | null>;
-  /** PAR-META-22: main asks the window to cut a cover it cannot decode; the listener answers with coverCut. */
-  onCoverCut(listener: (request: ParrotCoverCutRequest) => void): () => void;
-  /** The cut cover (a JPEG, or a PNG when see-through), or null when the window could not draw it. */
-  coverCut(id: string, bytes: Uint8Array | null): Promise<void>;
+  /** Searches our music library for one song, each result on its album with its full tracklist ("Identify"). */
+  searchImportSongs(question: { artist: string; title: string; album: string }): Promise<ParrotImportSongSearch>;
   /** A matched artist's photo for the import review (PAR-UP-06), asked once per waiting scan; a failure answers none. */
   importArtistPhoto(artistId: string): Promise<ParrotImportArtistPhoto>;
   /** A searched album's 500 px cover as a data: URL (PAR-UP-05), asked once per waiting scan; none or a failure answers null. */
@@ -421,17 +360,6 @@ export type ParrotBridge = {
   onImportJobs(listener: (jobs: ParrotImportJob[]) => void): () => void;
   /** Removes a finished or failed import from the list; a running one stays. */
   dismissImportJob(id: string): Promise<ParrotImportJob[]>;
-  /** OFFL-FILE-01 / ACCT-EXPORT-01: how many songs "Download everything" would save, and their size. */
-  previewExport(): Promise<ParrotExportPreview>;
-  /** Asks for a folder, then saves the whole library there as plain audio files, in the background (Jobs panel). */
-  exportMusic(): Promise<ParrotExportStart>;
-  /** The signed-in account's exports, newest first. */
-  getExportJobs(): Promise<ParrotExportJob[]>;
-  onExportJobs(listener: (jobs: ParrotExportJob[]) => void): () => void;
-  /** Stops a running or waiting export: the songs already saved stay, nothing half-written is left. */
-  cancelExport(id: string): Promise<ParrotExportJob[]>;
-  /** Removes an ended export from the list (the files stay where they are). */
-  dismissExportJob(id: string): Promise<ParrotExportJob[]>;
   /** The background lookups running now, for the Jobs panel's quiet line (UX-JOBS-02); empty when none runs. */
   getBackgroundWork(): Promise<ParrotBackgroundWork[]>;
   onBackgroundWork(listener: (work: ParrotBackgroundWork[]) => void): () => void;
@@ -539,8 +467,6 @@ export type ParrotBridge = {
   denyPairing(requestId: string): Promise<ApprovePairingResult<null>>;
   /** PAR-OFFL-01/03: what is kept on this computer. */
   getKept(): Promise<KeptStatus>;
-  /** OFFL-MANAGE-01: each kept item's song files and the bytes each kept file takes on this computer. */
-  getKeptSizes(): Promise<ParrotKeptSizes>;
   /** The copies to ask about before keeping; two or more is a real choice to put to the user (PAR-OFFL-02). */
   keepChoices(kind: KeptKind, id: string): Promise<KeepCopyChoice[]>;
   keep(kind: KeptKind, id: string, choice: string | null): Promise<KeptStatus>;
@@ -583,13 +509,9 @@ export const PARROT_IPC = {
   pickFiles: "parrot:files:pick",
   scanImport: "parrot:import:scan",
   getImportScan: "parrot:import:scan-get",
-  matchImportAlbum: "parrot:import:match-album",
-  stopImportAlbumMatch: "parrot:import:match-album-stop",
+  matchImport: "parrot:import:match",
   searchImportAlbums: "parrot:import:search-albums",
-  importAlbumPictures: "parrot:import:album-pictures",
-  pickImportCoverImage: "parrot:import:cover-pick",
-  coverCutEvent: "parrot:covers:cut-event",
-  coverCut: "parrot:covers:cut",
+  searchImportSongs: "parrot:import:search-songs",
   importArtistPhoto: "parrot:import:artist-photo",
   importCover: "parrot:import:cover",
   confirmImport: "parrot:import:confirm",
@@ -599,12 +521,6 @@ export const PARROT_IPC = {
   getImportJobs: "parrot:import:jobs",
   importJobsEvent: "parrot:import:jobs-event",
   dismissImportJob: "parrot:import:jobs-dismiss",
-  previewExport: "parrot:export:preview",
-  exportMusic: "parrot:export:start",
-  getExportJobs: "parrot:export:jobs",
-  exportJobsEvent: "parrot:export:jobs-event",
-  cancelExport: "parrot:export:cancel",
-  dismissExportJob: "parrot:export:dismiss",
   getBackgroundWork: "parrot:background-work:get",
   backgroundWorkEvent: "parrot:background-work:event",
   getLibrary: "parrot:library:get",
@@ -652,7 +568,6 @@ export const PARROT_IPC = {
   providerTakeReturn: "parrot:provider-sign-in:take",
   providerReturnEvent: "parrot:provider-sign-in:return",
   getKept: "parrot:kept:get",
-  getKeptSizes: "parrot:kept:sizes",
   keepChoices: "parrot:kept:choices",
   keep: "parrot:kept:keep",
   unkeep: "parrot:kept:unkeep",

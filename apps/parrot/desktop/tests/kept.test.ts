@@ -1,7 +1,7 @@
 /**
  * @test-id PARROT-DESKTOP-KEPT-001
  * @level integration
- * @why "Save offline" (PAR-OFFL-01/02/03): keeping an album downloads its songs and reports "Kept · size",
+ * @why "Keep on this computer" (PAR-OFFL-01/02/03): keeping an album downloads its songs and reports "Kept · size",
  *   two stored formats make a real copy question and the chosen copy is the one fetched, a song later added to a kept
  *   album arrives on its own, removing the album deletes its files, the kept list survives a restart, a failed
  *   download stops quietly and the next library load resumes, and sign-out forgets everything. The keeping loop and
@@ -116,7 +116,7 @@ const setup = async () => {
   return { dir, db, one, two, albumId, store, changes, anyKept, open };
 };
 
-describe("save offline", () => {
+describe("keep on this computer", () => {
   it("keeps an album, reports its size, and plays the kept file", async () => {
     const t = await setup();
     const keeping = await t.open();
@@ -200,20 +200,5 @@ describe("save offline", () => {
     expect(keeping.status().entries).toEqual([]);
     expect(existsSync(join(t.dir, "kept.json"))).toBe(false);
     expect((await t.open()).status().entries).toEqual([]);
-  });
-
-  it("reports each kept item's song files and their kept bytes for Manage offline content (OFFL-MANAGE-01)", async () => {
-    const t = await setup();
-    const keeping = await t.open();
-    await keeping.keep("album", t.albumId, null);
-    await keeping.keep("song", t.one.trackId, null);
-    await keeping.reconcile();
-    const sizes = keeping.sizes();
-    dump("sizes with an album and one of its songs kept", sizes);
-    expect(sizes.entries).toEqual([
-      { kind: "album", id: t.albumId, fileIds: [t.one.fileId, t.two.fileId].sort() },
-      { kind: "song", id: t.one.trackId, fileIds: [t.one.fileId] },
-    ]);
-    expect(sizes.bytes).toEqual({ [t.one.fileId]: 4000, [t.two.fileId]: 5000 });
   });
 });

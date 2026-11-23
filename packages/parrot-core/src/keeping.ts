@@ -1,4 +1,4 @@
-// The keeping loop of "Save offline" (PAR-OFFL-01/02/03), one for every Parrot app that keeps songs
+// The keeping loop of "Keep on this phone / computer" (PAR-OFFL-01/02/03), one for every Parrot app that keeps songs
 // offline: the kept list (remembered per device), and the runs that make the device hold exactly the songs it names,
 // downloading what is missing and deleting what no kept item holds any more. The rules are ./offline's; each app gives
 // its own storage for the list (the desktop's kept.json, the phone's AsyncStorage) and its own kept files (the
@@ -14,7 +14,6 @@ import {
   keptTrackIds,
   parseKeptState,
   planKept,
-  leaveOutSongs,
   unkeepEntry,
   type KeepCopyChoice,
   type KeepLibrary,
@@ -102,15 +101,6 @@ export type ParrotKeeping = {
   status(): KeptStatus;
   keep(kind: KeptKind, id: string, choice: string | null): Promise<KeptStatus>;
   unkeep(kind: KeptKind, id: string): Promise<KeptStatus>;
-  /**
-   * Remove songs (OFFL-MANAGE-01): from the library's kept albums and songs, or from one kept playlist; the albums and
-   * playlists in `whole` stop being kept outright. Files another kept item still holds stay on the device.
-   */
-  leaveOut(
-    trackIds: readonly string[],
-    from: "library" | { playlist: string },
-    whole?: ReadonlyArray<{ kind: "album" | "playlist"; id: string }>
-  ): Promise<KeptStatus>;
   /** The copies to ask about; two or more is a real choice (PAR-OFFL-02). */
   choices(kind: KeptKind, id: string): KeepCopyChoice[];
   /**
@@ -245,20 +235,6 @@ export const createParrotKeeping = async (input: {
     unkeep: async (kind, id) => {
       await save(unkeepEntry(state, kind, id));
       log(`[kept] remove ${kind} ${id} from this device`);
-      void reconcile(true);
-      return status();
-    },
-    leaveOut: async (trackIds, from, whole = []) => {
-      const library = input.library();
-      if (!library) {
-        log(`[kept] leave out ${trackIds.length} song(s) skipped: no library open`);
-        return status();
-      }
-      const next = leaveOutSongs(state, library, trackIds, from, whole);
-      await save(next);
-      log(
-        `[kept] leave out ${trackIds.length} song(s) and ${whole.length} whole item(s) from ${from === "library" ? "the library" : `playlist ${from.playlist}`}: ${next.entries.length} kept item(s) left`
-      );
       void reconcile(true);
       return status();
     },

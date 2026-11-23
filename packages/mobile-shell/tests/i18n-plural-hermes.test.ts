@@ -1,5 +1,5 @@
 /**
- * @req UX-I18N-01[badger-mobile,badger-tv]
+ * @req UX-I18N-01[mobile]
  * @bugfix Hermes (phones, TVs) has no `Intl.PluralRules`, so i18next fell back to "1 is one, the rest other": French
  * said « 0 saisons ». `initI18n` now gives the engine the client languages' rules first.
  * @covers packages/mobile-shell/src/i18n/index.ts
