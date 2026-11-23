@@ -2548,29 +2548,6 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - SiblingSignIn (0.0.1):
-    - hermes-engine
-    - RCTRequired
-    - RCTTypeSafety
-    - React-bridging
-    - React-Core
-    - React-Core-prebuilt
-    - React-cxxstableapi
-    - React-debug
-    - React-Fabric
-    - React-featureflags
-    - React-graphics
-    - React-ImageManager
-    - React-jsi
-    - React-NativeModulesApple
-    - React-RCTFabric
-    - React-renderercss
-    - React-rendererdebug
-    - React-utils
-    - ReactCodegen
-    - ReactCommon/turbomodule/core
-    - ReactNativeDependencies
-    - Yoga
   - SocketRocket (0.7.1):
     - ReactNativeDependencies
   - SpaceMediaSession (0.0.1):
@@ -2716,7 +2693,6 @@ DEPENDENCIES:
   - "RNSentry (from `../node_modules/@sentry/react-native`)"
   - RNSVG (from `../node_modules/react-native-svg`)
   - RNWorklets (from `../node_modules/react-native-worklets`)
-  - SiblingSignIn (from `../../../../packages/mobile-sibling`)
   - SocketRocket (from `build/rndeps-facades/SocketRocket`)
   - "SpaceMediaSession (from `../node_modules/@space/mobile-media-session`)"
   - Yoga (from `build/rncore-facades/Yoga`)
@@ -2953,8 +2929,6 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-svg"
   RNWorklets:
     :path: "../node_modules/react-native-worklets"
-  SiblingSignIn:
-    :path: "../../../../packages/mobile-sibling"
   SocketRocket:
     :path: build/rndeps-facades/SocketRocket
   SpaceMediaSession:
@@ -3082,11 +3056,10 @@ SPEC CHECKSUMS:
   RNSentry: a666a08b436f44bde674b12c848322dfa8deabe5
   RNSVG: 0851af4352d2e692b44aada9dd7a1d361c18fcfc
   RNWorklets: 7ef1179b4af22f6fbc160d2a0e7e054d26cc5d26
-  SiblingSignIn: 130598cca268450f398db3cfe442f4291725087c
   SocketRocket: 9c5c51020fcd1d1d9a4c6d626d5efef98e15425c
   SpaceMediaSession: 85786a4d7b44e5ebb94ea36c2f201a80944515af
   Yoga: 506238f8e7575a3c20290b98402eabc8590f57cc
 
-PODFILE CHECKSUM: 6b53660283ae37a806955126416b35e7843301d2
+PODFILE CHECKSUM: 1fb6a98d33dc19da44364a337db6297b46d3fcfd
 
 COCOAPODS: 1.17.0

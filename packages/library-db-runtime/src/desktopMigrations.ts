@@ -24,7 +24,6 @@ import { MEDIA_CREW_DDL } from "@space/library-db-definition/crewDdl";
 import { editionsMigrationStatements } from "@space/library-db-definition/editionDdl";
 import { originalSizeMigrationStatements } from "@space/library-db-definition/originalSize";
 import { catalogSourceMigrationStatements } from "@space/library-db-definition/legacyFormat";
-import { convertPlaybackToPackedLayout } from "@space/library-db-definition/packedPlayback";
 
 export const desktopCoreMigrations: ReadonlyArray<LibraryMigration<SqliteDb>> = [
   {
@@ -101,30 +100,6 @@ export const desktopPlaybackMigrations: ReadonlyArray<LibraryMigration<SqliteDb>
       // twins only cost bytes. Indexes only: no column is touched (LIB-FMT-03).
       db.exec("DROP INDEX IF EXISTS media_format_chunks_format_id_idx;");
       db.exec("DROP INDEX IF EXISTS media_audio_chunks_track_id_idx;");
-    },
-  },
-];
-
-/**
- * The playback version at which the group holds packed chunk lists (LIB-FMT-11). A playback file at or above it is
- * converted; below it, every chunk list is still one row per chunk.
- */
-export const PACKED_PLAYBACK_LAYOUT_VERSION = 2;
-
-/**
- * The playback registry WITH the conversion step (LIB-FMT-12). Never run on an account that is not switched
- * (LIB-FMT-13): the step raises the playback group version, which a version-3 app cannot open (LIB-FMT-04). The
- * library runs it only when the account's `targetOpStreamVersion` is 4 or the file is already converted; the build's
- * declared support (`currentLibrarySupport`) folds this registry so a converted library opens.
- */
-export const desktopPlaybackMigrationsPacked: ReadonlyArray<LibraryMigration<SqliteDb>> = [
-  ...desktopPlaybackMigrations,
-  {
-    version: PACKED_PLAYBACK_LAYOUT_VERSION,
-    description: "packed_chunk_lists",
-    // Idempotent: on a file whose per-chunk tables are already empty it packs nothing.
-    up: (db) => {
-      convertPlaybackToPackedLayout(db, new Date().toISOString());
     },
   },
 ];

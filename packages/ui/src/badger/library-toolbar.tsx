@@ -1,15 +1,121 @@
-import { useState } from "react";
-import { BadgerFilterPicker, BadgerSortMenu, type BadgerMultiSelectOption } from "./library-menus";
-import { LibraryFilterButton, LibraryModal, LibraryModalButtons, LibraryModalSection, LibrarySortButton, LibraryViewCycleButton, type LibraryViewOption } from "../library-row";
-import { LIBRARY_FACETS, LIBRARY_WATCH_STATES, countLibraryFacetSelection, type LibraryFacet, type LibraryFacetSelection } from "@space/shared/libraryFacets";
+import { useState, type ReactNode } from "react";
+import { Filter, SortAsc } from "lucide-react";
+import { Button } from "../button";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "../dialog";
+import { BadgerSelectButton } from "./components";
+import { BadgerMultiSelect, BadgerSortMenu, type BadgerMultiSelectOption } from "./library-menus";
+import { LIBRARY_FACETS, countLibraryFacetSelection, type LibraryFacet, type LibraryFacetSelection } from "@space/shared/libraryFacets";
 import { formatMediaLanguageLabelForUi } from "@space/shared/mediaLanguageDisplay";
 
-export type FilterListLabels = { title: string; search: string; empty: string };
+/**
+ * UX-LIB-01: the library row's Filter / Sort modal. The body is the app's (filter lists, sort options); `footer`
+ * holds its buttons (Filter: Reset + Apply; Sort: Done).
+ */
+export function BadgerLibraryModal({
+  open,
+  onOpenChange,
+  title,
+  closeLabel,
+  children,
+  footer,
+  testId,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  title: string;
+  closeLabel: string;
+  children: ReactNode;
+  footer: ReactNode;
+  testId?: string;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md" closeLabel={closeLabel} data-testid={testId}>
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+        </DialogHeader>
+        {/* The Filter modal holds up to seven lists (UX-LIB-03): its body scrolls, the title and buttons stay put. */}
+        <div className="-mr-2 max-h-[65vh] space-y-5 overflow-y-auto pr-2">{children}</div>
+        <DialogFooter>{footer}</DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/** One labelled group inside a library modal (Genres, Actors, Sort by). */
+export function BadgerLibraryModalSection({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <section className="space-y-2">
+      <div className="text-[11px] font-black uppercase tracking-[0.14em] text-muted-foreground">{label}</div>
+      {children}
+    </section>
+  );
+}
+
+/** The modal footer's secondary and primary buttons. */
+export function BadgerLibraryModalButtons({
+  secondary,
+  primary,
+}: {
+  secondary?: { label: string; onClick: () => void; testId?: string };
+  primary: { label: string; onClick: () => void; testId?: string };
+}) {
+  return (
+    <>
+      {secondary ? (
+        <Button type="button" variant="ghost" onClick={secondary.onClick} data-testid={secondary.testId}>
+          {secondary.label}
+        </Button>
+      ) : null}
+      <Button type="button" onClick={primary.onClick} data-testid={primary.testId}>
+        {primary.label}
+      </Button>
+    </>
+  );
+}
+
+type ViewCycleOption<T extends string> = { id: T; label: string; icon: ReactNode };
+
+/**
+ * UX-LIB-01: one 38px button for the library view. Its icon shows the current view; a click moves to the next one
+ * (posters → compact → details → posters), which its tooltip names.
+ */
+export function BadgerViewCycleButton<T extends string>({
+  options,
+  value,
+  onChange,
+  nextLabel,
+  testId,
+}: {
+  options: ReadonlyArray<ViewCycleOption<T>>;
+  value: T;
+  onChange: (id: T) => void;
+  /** The tooltip for the next view, e.g. "Switch to Compact grid". */
+  nextLabel: (next: ViewCycleOption<T>) => string;
+  testId?: string;
+}) {
+  const index = Math.max(0, options.findIndex((option) => option.id === value));
+  const current = options[index]!;
+  const next = options[(index + 1) % options.length]!;
+  const label = nextLabel(next);
+  return (
+    <button
+      type="button"
+      data-testid={testId}
+      data-view={current.id}
+      aria-label={label}
+      title={label}
+      className="flex h-[38px] w-10 shrink-0 items-center justify-center rounded-[10px] border border-border bg-secondary/50 text-foreground transition hover:border-primary/60 hover:bg-secondary [&_svg]:h-4 [&_svg]:w-4"
+      onClick={() => onChange(next.id)}
+    >
+      {current.icon}
+    </button>
+  );
+}
+
+export type FilterListLabels = { title: string; placeholder: string; search: string; empty: string };
 
 const EMPTY_FACETS: LibraryFacetSelection = Object.freeze({});
-
-/** A list drawn from the library shows only with at least this many choices. */
-const MIN_CHOICES = 2;
 
 /** One extra Filter section: which facet it picks, its texts and the keys the library holds (with their labels). */
 export type BadgerLibraryFacetSection = { facet: LibraryFacet; labels: FilterListLabels; options: BadgerMultiSelectOption[] };
@@ -30,16 +136,13 @@ export type BadgerLibraryControlsLabels = {
   actors: FilterListLabels;
   /** The view button's tooltip, given the next view's label. */
   nextView: (label: string) => string;
-  /** The "+N more" chip of a long Filter list, given N. */
-  moreChoices: (count: number) => string;
 };
 
 /**
- * UX-LIB-01: the right-hand group of the shared library row (`LibraryRow`) in Badger, for the desktop app and the web
- * player — the Filter button (count badge, plus a "Clear" link while filters are on) opening the panel whose Genres /
- * Actors (and UX-LIB-03 quality, director, audio, subtitles and watch-state) draft Apply commits and Reset empties, a
- * Sort button opening the sort options with the asc/desc toggle, and the one view button that cycles the views. The
- * quiet counts sit on the row's left, after the switch (Chris 2026-11-20).
+ * UX-LIB-01: the library row's controls, shared by the desktop app and the web player — a Filter button (count badge,
+ * plus a "Clear" link while filters are on) opening a modal whose Genres / Actors (and UX-LIB-03 quality, director,
+ * audio, subtitles and watch-state) draft Apply commits and Reset empties,
+ * a Sort button opening the sort options with the asc/desc toggle, and the one view button that cycles the views.
  */
 export function BadgerLibraryControls<S extends string, V extends string>({
   labels,
@@ -77,7 +180,7 @@ export function BadgerLibraryControls<S extends string, V extends string>({
   onSortByChange: (value: S) => void;
   sortDirection: "asc" | "desc";
   onToggleSortDirection: () => void;
-  viewOptions: ReadonlyArray<LibraryViewOption<V>>;
+  viewOptions: ReadonlyArray<ViewCycleOption<V>>;
   view: V;
   onViewChange: (view: V) => void;
   disabled?: boolean;
@@ -100,24 +203,35 @@ export function BadgerLibraryControls<S extends string, V extends string>({
 
   return (
     <>
-      <LibraryFilterButton
+      <BadgerSelectButton
+        icon={<Filter />}
         label={labels.filter}
-        clearLabel={labels.clear}
         count={activeCount}
+        active={activeCount > 0}
         disabled={disabled}
-        onOpen={() => openFilters(true)}
-        onClear={() => onFiltersChange([], [], EMPTY_FACETS)}
+        onClick={() => openFilters(true)}
+        testId="library-filter-button"
       />
-      <LibrarySortButton label={labels.sort} disabled={disabled} onOpen={() => setSortOpen(true)} />
-      <LibraryViewCycleButton options={viewOptions} value={view} onChange={onViewChange} nextLabel={(next) => labels.nextView(next.label)} />
-      <LibraryModal
+      {activeCount > 0 ? (
+        <button
+          type="button"
+          className="shrink-0 text-xs font-semibold text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+          onClick={() => onFiltersChange([], [], EMPTY_FACETS)}
+          data-testid="library-filter-clear"
+        >
+          {labels.clear}
+        </button>
+      ) : null}
+      <BadgerSelectButton icon={<SortAsc />} label={labels.sort} disabled={disabled} onClick={() => setSortOpen(true)} testId="library-sort-button" />
+      <BadgerViewCycleButton options={viewOptions} value={view} onChange={onViewChange} nextLabel={(next) => labels.nextView(next.label)} testId="library-view-cycle" />
+      <BadgerLibraryModal
         open={filterOpen}
         onOpenChange={openFilters}
         title={labels.filter}
         closeLabel={labels.close}
         testId="library-filter-modal"
         footer={
-          <LibraryModalButtons
+          <BadgerLibraryModalButtons
             secondary={{
               label: labels.reset,
               onClick: () => {
@@ -138,37 +252,48 @@ export function BadgerLibraryControls<S extends string, V extends string>({
           />
         }
       >
-        {/* A list drawn from the library shows only with two or more choices (one choice filters nothing). */}
-        {genreOptions.length >= MIN_CHOICES ? (
-          <LibraryModalSection label={labels.genres.title} testId="library-filter-genres">
-            <BadgerFilterPicker searchPlaceholder={labels.genres.search} emptyText={labels.genres.empty} moreLabel={labels.moreChoices} options={genreOptions} selected={draftGenres} onChange={setDraftGenres} />
-          </LibraryModalSection>
-        ) : null}
-        {actorOptions.length >= MIN_CHOICES ? (
-          <LibraryModalSection label={labels.actors.title} testId="library-filter-actors">
-            <BadgerFilterPicker searchPlaceholder={labels.actors.search} emptyText={labels.actors.empty} moreLabel={labels.moreChoices} options={actorOptions} selected={draftActors} onChange={setDraftActors} />
-          </LibraryModalSection>
-        ) : null}
+        <BadgerLibraryModalSection label={labels.genres.title}>
+          <BadgerMultiSelect
+            placeholder={labels.genres.placeholder}
+            searchPlaceholder={labels.genres.search}
+            emptyText={labels.genres.empty}
+            options={genreOptions}
+            selected={draftGenres}
+            onChange={setDraftGenres}
+          />
+        </BadgerLibraryModalSection>
+        <BadgerLibraryModalSection label={labels.actors.title}>
+          <BadgerMultiSelect
+            placeholder={labels.actors.placeholder}
+            searchPlaceholder={labels.actors.search}
+            emptyText={labels.actors.empty}
+            options={actorOptions}
+            selected={draftActors}
+            onChange={setDraftActors}
+          />
+        </BadgerLibraryModalSection>
         {facetSections.map((section) => (
-          <LibraryModalSection key={section.facet} label={section.labels.title} testId={`library-filter-${section.facet}`}>
-            <BadgerFilterPicker
-              searchPlaceholder={section.labels.search}
-              emptyText={section.labels.empty}
-              moreLabel={labels.moreChoices}
-              options={section.options}
-              selected={draftFacets[section.facet] ?? []}
-              onChange={(next) => setDraftFacets((prev) => ({ ...prev, [section.facet]: next }))}
-            />
-          </LibraryModalSection>
+          <BadgerLibraryModalSection key={section.facet} label={section.labels.title}>
+            <div data-testid={`library-filter-${section.facet}`}>
+              <BadgerMultiSelect
+                placeholder={section.labels.placeholder}
+                searchPlaceholder={section.labels.search}
+                emptyText={section.labels.empty}
+                options={section.options}
+                selected={[...(draftFacets[section.facet] ?? [])]}
+                onChange={(next) => setDraftFacets((prev) => ({ ...prev, [section.facet]: next }))}
+              />
+            </div>
+          </BadgerLibraryModalSection>
         ))}
-      </LibraryModal>
-      <LibraryModal
+      </BadgerLibraryModal>
+      <BadgerLibraryModal
         open={sortOpen}
         onOpenChange={setSortOpen}
         title={labels.sortTitle}
         closeLabel={labels.close}
         testId="library-sort-modal"
-        footer={<LibraryModalButtons primary={{ label: labels.done, onClick: () => setSortOpen(false), testId: "library-sort-done" }} />}
+        footer={<BadgerLibraryModalButtons primary={{ label: labels.done, onClick: () => setSortOpen(false), testId: "library-sort-done" }} />}
       >
         <BadgerSortMenu
           byLabel={labels.sortBy}
@@ -180,7 +305,7 @@ export function BadgerLibraryControls<S extends string, V extends string>({
           directionText={labels.directionText}
           onToggleDirection={onToggleSortDirection}
         />
-      </LibraryModal>
+      </BadgerLibraryModal>
     </>
   );
 }
@@ -207,14 +332,14 @@ export function libraryFacetSections(
         return formatMediaLanguageLabelForUi(key, uiLanguage, undefinedLanguage);
     }
   };
-  // Watch state is a fixed set, offered whole; the other kinds come from the library and need two choices to filter.
-  return LIBRARY_FACETS.filter((facet) => facet === "watchStates" || options[facet].length >= MIN_CHOICES).map((facet) => ({
+  return LIBRARY_FACETS.filter((facet) => options[facet].length > 0).map((facet) => ({
     facet,
     labels: {
       title: t(`library.filters.${facet}.title`),
+      placeholder: t(`library.filters.${facet}.placeholder`),
       search: t(`library.filters.${facet}.search`),
       empty: t(`library.filters.${facet}.empty`),
     },
-    options: (facet === "watchStates" ? LIBRARY_WATCH_STATES : options[facet]).map((key) => ({ value: key, label: optionLabel(facet, key) })),
+    options: options[facet].map((key) => ({ value: key, label: optionLabel(facet, key) })),
   }));
 }

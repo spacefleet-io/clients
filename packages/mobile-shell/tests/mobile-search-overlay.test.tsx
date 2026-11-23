@@ -12,25 +12,18 @@ import React from "react";
 import { act, create, type ReactTestInstance, type ReactTestRenderer } from "react-test-renderer";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const focus = vi.hoisted(() => ({ calls: 0, blurs: 0 }));
-const device = vi.hoisted(() => ({ os: "android", keyboardUp: true }));
+const focus = vi.hoisted(() => ({ calls: 0 }));
 
 vi.mock("react-native", async () => {
   // vi.mock factories are hoisted above the static imports, so React is loaded inside the factory.
   const ReactModule = await import("react");
   const TextInput = ReactModule.forwardRef((props: Record<string, unknown>, ref) => {
-    ReactModule.useImperativeHandle(ref, () => ({ focus: () => void (focus.calls += 1), blur: () => void (focus.blurs += 1) }));
+    ReactModule.useImperativeHandle(ref, () => ({ focus: () => void (focus.calls += 1) }));
     return ReactModule.createElement("TextInput", props);
   });
   const Pressable = ({ style, children, ...props }: Record<string, unknown>) =>
     ReactModule.createElement("Pressable", { ...props, style: typeof style === "function" ? style({ pressed: false }) : style }, children as React.ReactNode);
   return {
-    Keyboard: { isVisible: () => device.keyboardUp },
-    Platform: {
-      get OS() {
-        return device.os;
-      },
-    },
     Modal: "Modal",
     Pressable,
     ScrollView: "ScrollView",
@@ -53,13 +46,7 @@ vi.mock("../src/theme", () => ({
 
 import { createFuzzyIndex } from "@space/shared/fuzzySearch";
 import { phoneSearchStrings } from "@space/shared/searchPaletteStrings";
-import {
-  MOBILE_SEARCH_KEYBOARD_ASKS,
-  MOBILE_SEARCH_KEYBOARD_FIRST_RETRY_MS,
-  MOBILE_SEARCH_KEYBOARD_RETRY_MS,
-  MOBILE_SEARCH_PER_GROUP,
-  MobileSearchOverlay,
-} from "../src/components/mobile-search-overlay";
+import { MOBILE_SEARCH_PER_GROUP, MobileSearchOverlay } from "../src/components/mobile-search-overlay";
 
 const log = (step: string, detail: unknown) => console.info(`[MOBILE-SEARCH-OVERLAY-001] ${step}`, JSON.stringify(detail));
 
@@ -82,14 +69,10 @@ beforeEach(() => {
   Reflect.set(globalThis, "IS_REACT_ACT_ENVIRONMENT", true);
   events.length = 0;
   focus.calls = 0;
-  focus.blurs = 0;
-  device.os = "android";
-  device.keyboardUp = true;
 });
 afterEach(async () => {
   await act(async () => renderer?.unmount());
   renderer = null;
-  vi.useRealTimers();
 });
 
 const render = async (visible = true) => {
@@ -100,11 +83,7 @@ const render = async (visible = true) => {
         onClose={() => events.push("close")}
         strings={strings}
         groups={groups}
-        describe={(item) =>
-          item.kind === "artist"
-            ? { key: item.name, title: item.name }
-            : { key: item.song.id, title: item.song.title, subtitle: item.song.artist, onLongPress: () => events.push(`hold:${item.song.id}`) }
-        }
+        describe={(item) => (item.kind === "artist" ? { key: item.name, title: item.name } : { key: item.song.id, title: item.song.title, subtitle: item.song.artist })}
         onSelect={(item, group) => events.push(`select:${group}:${item.kind === "artist" ? item.name : item.song.id}`)}
       />
     );
@@ -126,41 +105,14 @@ describe("MobileSearchOverlay (UX-PHONE-12)", () => {
     await act(async () => modal.props.onShow());
     const input = byId(tree, "search-overlay-input")[0]!;
     const layer = modal.findAll((node) => String(node.type) === "View")[0]!;
-    log("open", { focus: focus.calls, placeholder: input.props.placeholder, message: textOf(byId(tree, "search-overlay-message")[0]!), layer: layer.props.style });
+    log("open", { autoFocus: input.props.autoFocus, focus: focus.calls, placeholder: input.props.placeholder, message: textOf(byId(tree, "search-overlay-message")[0]!), layer: layer.props.style });
     expect(modal.props).toMatchObject({ visible: true, transparent: true });
+    expect(input.props.autoFocus).toBe(true);
     expect(focus.calls).toBe(1);
     expect(input.props.placeholder).toBe(strings.placeholder);
     expect(textOf(byId(tree, "search-overlay-message")[0]!)).toBe(strings.hint);
     expect(testIds(tree, "search-group-")).toEqual([]);
     expect(JSON.stringify(layer.props.style)).toContain('"paddingBottom":316');
-  });
-
-  // Chris, 2026-11-20: "When I click search and it opens (in both apps) the keyboard doesn't automatically open with
-  // it, I have to click the search input first." Android refuses a keyboard asked for before the card's window has
-  // focus, so the card asks again until the keyboard is up; iOS asks once (a re-ask would bounce its keyboard).
-  it("on Android asks for the keyboard again until it is up; on iOS asks once", async () => {
-    vi.useFakeTimers();
-    device.keyboardUp = false;
-    const android = await render();
-    await act(async () => android.root.findByType("Modal" as never).props.onShow());
-    await act(async () => void vi.advanceTimersByTime(MOBILE_SEARCH_KEYBOARD_FIRST_RETRY_MS));
-    log("android refused once", { focus: focus.calls, blurs: focus.blurs });
-    expect(focus).toMatchObject({ calls: 2, blurs: 1 });
-    device.keyboardUp = true;
-    await act(async () => void vi.advanceTimersByTime(MOBILE_SEARCH_KEYBOARD_RETRY_MS * MOBILE_SEARCH_KEYBOARD_ASKS));
-    log("android keyboard up", { focus: focus.calls, blurs: focus.blurs });
-    expect(focus).toMatchObject({ calls: 2, blurs: 1 });
-    await act(async () => android.unmount());
-
-    focus.calls = 0;
-    focus.blurs = 0;
-    device.os = "ios";
-    device.keyboardUp = false;
-    const ios = await render();
-    await act(async () => ios.root.findByType("Modal" as never).props.onShow());
-    await act(async () => void vi.advanceTimersByTime(MOBILE_SEARCH_KEYBOARD_RETRY_MS * MOBILE_SEARCH_KEYBOARD_ASKS));
-    log("ios", { focus: focus.calls, blurs: focus.blurs });
-    expect(focus).toMatchObject({ calls: 1, blurs: 0 });
   });
 
   it("answers as the user types, with a typo, in groups: the best five, then N more opens the rest", async () => {
@@ -199,20 +151,5 @@ describe("MobileSearchOverlay (UX-PHONE-12)", () => {
     await act(async () => byId(tree, "search-overlay-close")[0]!.props.onPress());
     log("events", events);
     expect(events).toEqual(["close", "select:artists:Nova", "close", "close"]);
-  });
-
-  // @req PAR-CARD-02[parrot]: a song result held down opens the song's sheet (with Add to queue); results without a
-  // hold action (artists here) only open on a tap.
-  it("a held result with a hold action closes the card and runs it; one without has none", async () => {
-    const tree = await render();
-    await type(tree, "linnet");
-    const song = byId(tree, "search-result-songs-0")[0]!;
-    const artist = byId(tree, "search-result-artists-0")[0]!;
-    log("hold-props", { song: song.props.accessibilityLabel, songHold: typeof song.props.onLongPress, artist: typeof artist.props.onLongPress });
-    expect(song.props.accessibilityLabel).toBe("Linnet Park, Nova");
-    expect(artist.props.onLongPress).toBeUndefined();
-    await act(async () => song.props.onLongPress());
-    log("events", events);
-    expect(events).toEqual(["close", "hold:s-lp"]);
   });
 });

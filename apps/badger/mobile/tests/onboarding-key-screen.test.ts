@@ -35,8 +35,7 @@ const ctl = vi.hoisted(() => ({
   opened: [] as string[],
 }));
 
-vi.mock("react-native", async () => ({
-  ...(await import("./setup/reactNativeMock")).reactNativeBase(),
+vi.mock("react-native", () => ({
   View: "View",
   Text: "Text",
   ScrollView: "ScrollView",
@@ -106,7 +105,7 @@ vi.mock("../src/lib/libraryDb", () => ({
   },
 }));
 vi.mock("@space/shared/api", () => ({
-  getLibraryMetaForKeyStep: async () => ({ ...ctl.meta }),
+  getLibraryMeta: async () => ({ ...ctl.meta }),
   resetLibrary: async (...args: unknown[]) => {
     ctl.reset.push(args);
     if (ctl.resetError) throw ctl.resetError;

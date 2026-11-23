@@ -21,8 +21,8 @@ import { getStorageUnitBase, setStorageUnitBase } from "@space/shared/format";
 import type { MediaDetails, MediaFormat } from "@space/shared/libraryTypes";
 import type { EpisodeResume } from "@space/shared/playbackResume";
 import { bumpLibraryRevision } from "../../lib/libraryRevision";
-import { setCurrentTvSection } from "@space/mobile-shell/tv/tvSection";
-import type * as TvSectionModule from "@space/mobile-shell/tv/tvSection";
+import { setCurrentTvSection } from "../lib/tvSection";
+import type * as TvSectionModule from "../lib/tvSection";
 import { TV_DETAILS_POSTER_WIDTH, TvMediaDetailsScreen } from "./TvMediaDetailsScreen";
 
 const DURATION = 13698;
@@ -155,14 +155,13 @@ vi.mock("../../lib/useMediaImage", () => ({
   useMediaImage: (path: string | null, kind: string) => (kind === "backdrop" && path ? ctl.backdropUrl : null),
 }));
 vi.mock("../../components/MediaArtwork", () => ({ MediaArtwork: () => null }));
-vi.mock("@space/mobile-shell/tv/TvFocusable", () => ({ TvFocusable: "TvFocusable", FOCUS_SCALE: 1.05 }));
+vi.mock("../components/TvFocusable", () => ({ TvFocusable: "TvFocusable", FOCUS_SCALE: 1.05 }));
 vi.mock("../components/TvListDialog", () => ({ TvListDialog: "TvListDialog" }));
 vi.mock("../components/TvPosterCard", () => ({ TvPosterCard: "TvPosterCard", tvPosterCardHeight: () => 132 }));
-vi.mock("../ui/BadgerTvTopBar", () => ({ BadgerTvTopBar: "TvTopBar" }));
-vi.mock("@space/mobile-shell/tv/TvTopBar", () => ({ TvTopBar: "TvTopBar", tvBrowseTabs: () => [], TV_SETTINGS_TAB: "settings" }));
-vi.mock("@space/mobile-shell/tv/TvSky", () => ({ TvSky: "TvSky" }));
-vi.mock("@space/mobile-shell/tv/TvRow", () => ({ TvRow: "TvRow", TvRowList: "TvRowList", TvToggle: "TvToggle" }));
-vi.mock("@space/mobile-shell/tv/tvSection", async (importOriginal) => {
+vi.mock("../ui/TvTopBar", () => ({ TvTopBar: "TvTopBar", TV_BROWSE_TABS: [], TV_SETTINGS_TAB: "settings" }));
+vi.mock("../ui/TvSky", () => ({ TvSky: "TvSky" }));
+vi.mock("../ui/TvRow", () => ({ TvRow: "TvRow", TvRowList: "TvRowList", TvToggle: "TvToggle" }));
+vi.mock("../lib/tvSection", async (importOriginal) => {
   const actual = await importOriginal<typeof TvSectionModule>();
   return {
     ...actual,

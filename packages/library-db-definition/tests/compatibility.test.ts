@@ -21,7 +21,7 @@ import {
   type ObservedLibraryVersions,
 } from "../src/compatibility";
 import { STORAGE_FORMAT_VERSION } from "../src/storageFormat";
-import { OP_STREAM_VERSION, READ_OP_STREAM_VERSION } from "../src/ops";
+import { OP_STREAM_VERSION } from "../src/ops";
 
 const SUITE = "compatibility";
 
@@ -702,9 +702,7 @@ describe("assertLibraryCompatible — surface-check order", () => {
 // ---------------------------------------------------------------------------
 
 describe("currentLibrarySupport — storageFormatVersion + opStreamVersion", () => {
-  console.info(
-    `[${SUITE}:currentLibrarySupport:setup] STORAGE_FORMAT_VERSION=${STORAGE_FORMAT_VERSION} OP_STREAM_VERSION=${OP_STREAM_VERSION} READ_OP_STREAM_VERSION=${READ_OP_STREAM_VERSION}`
-  );
+  console.info(`[${SUITE}:currentLibrarySupport:setup] STORAGE_FORMAT_VERSION=${STORAGE_FORMAT_VERSION} OP_STREAM_VERSION=${OP_STREAM_VERSION}`);
 
   it("storageFormatVersion equals the STORAGE_FORMAT_VERSION build constant", () => {
     const support = currentLibrarySupport({});
@@ -716,11 +714,10 @@ describe("currentLibrarySupport — storageFormatVersion + opStreamVersion", () 
     }
   });
 
-  // The version this build READS (it writes OP_STREAM_VERSION until the account switch, LIB-FMT-13).
-  it("opStreamVersion equals the READ_OP_STREAM_VERSION build constant", () => {
+  it("opStreamVersion equals the OP_STREAM_VERSION build constant", () => {
     const support = currentLibrarySupport({});
     try {
-      expect(support.opStreamVersion).toBe(READ_OP_STREAM_VERSION);
+      expect(support.opStreamVersion).toBe(OP_STREAM_VERSION);
     } catch (err) {
       dumpCompatSnapshot("op-stream-version-build-constant-drift", { support });
       throw err;
@@ -735,7 +732,7 @@ describe("currentLibrarySupport — storageFormatVersion + opStreamVersion", () 
     const withRegistries = currentLibrarySupport(registries);
     try {
       expect(withRegistries.storageFormatVersion).toBe(STORAGE_FORMAT_VERSION);
-      expect(withRegistries.opStreamVersion).toBe(READ_OP_STREAM_VERSION);
+      expect(withRegistries.opStreamVersion).toBe(OP_STREAM_VERSION);
     } catch (err) {
       dumpCompatSnapshot("constants-affected-by-registries", { support: withRegistries, registries });
       throw err;

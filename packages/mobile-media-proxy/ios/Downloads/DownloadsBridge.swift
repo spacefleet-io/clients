@@ -127,20 +127,6 @@ final class DownloadsBridge: RCTEventEmitter {
     }
   }
 
-  @objc(removeAll:reject:)
-  func removeAll(resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
-    run(resolve, reject) {
-      self.engine.removeAll()
-      return true
-    }
-  }
-
-  /// `{ items: [{ itemId, bytes, objectCount, savedAt }], totalBytes }`: complete downloads only (OFFL-MANAGE-01).
-  @objc(listItems:reject:)
-  func listItems(resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
-    run(resolve, reject) { self.engine.listItems().toJSONString() }
-  }
-
   @objc(resume:reject:)
   func resume(resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
     run(resolve, reject) {

@@ -10,11 +10,7 @@ pluginManagement {
 }
 plugins { id("com.facebook.react.settings") }
 apply from: new File(rootDir, "../../../../packages/mobile-shell/foss-autolinking.gradle")
-// The app's own CLI through node rather than the default `npx`: the npm F-Droid's build server installs (Debian's 9.2)
-// refuses package.json's `npm:` alias for react-native ("Invalid comparator").
-extensions.configure(com.facebook.react.ReactSettingsExtension){ ex ->
-    ex.autolinkLibrariesFromCommand(["node", "node_modules/@react-native-community/cli/build/bin.js", "config"])
-}
+extensions.configure(com.facebook.react.ReactSettingsExtension){ ex -> ex.autolinkLibrariesFromCommand() }
 rootProject.name = 'Parrot'
 include ':app'
 

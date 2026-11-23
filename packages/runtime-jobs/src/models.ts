@@ -99,7 +99,7 @@ export type RuntimeJobSchedulingCandidate = RuntimeJobRecord & {
 // Badger compat layer continues to use RuntimeJobRecord unchanged.
 // ---------------------------------------------------------------------------
 
-export type IngestJobKind = "source" | "format" | "download" | "export";
+export type IngestJobKind = "source" | "format" | "download";
 
 /**
  * Lane assignment for ingest scheduling. Distinct from RuntimeJobLane because

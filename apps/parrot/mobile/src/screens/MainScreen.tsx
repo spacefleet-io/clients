@@ -1,14 +1,12 @@
 // The phone's four tabs (PAR-NAV-02, PAR-LOOK-01): Home, Library, Playlists and Settings on the fleet's shared bottom
 // tab bar over Parrot's sky, with the floating mini player just above the bar while a song is queued. Home opens first
-// (PAR-HOME-01); its rows' "See all" open the Library tab on the album list (in "Recently added" order from that row) or
-// the artist list. While the library holds no
+// (PAR-HOME-01); its rows' "See all" open the Library tab on the album or the artist list. While the library holds no
 // album, the Library and Playlists tabs are greyed out and open nothing, as on Badger's phone (UX-LIBTAB-01). A swipe left or right
 // moves between the open tabs (UX-PHONE-09, the shared `MobileTabPager`). The tab pages have no page
 // title: the bar's selected tab names the page (PAR-NAV-04). The status-bar inset is applied here, once for every tab.
 // The bar's centre Search button, between Library and Playlists, is not a tab (UX-PHONE-12): it opens the search card
 // over the page, and a swipe goes from Library straight to Playlists.
 import React, { useCallback, useEffect, useState } from "react";
-import type { ParrotAlbumSort } from "@space/parrot-core";
 import { StyleSheet, View } from "react-native";
 import { useIsFocused } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -18,7 +16,7 @@ import { MobileTabBar, type MobileTabBarAction, type MobileTabDefinition } from 
 import { MobileFounderNoticeHost, MobileTabPager } from "@space/mobile-shell/components";
 import { useTranslation } from "@space/mobile-shell/i18n";
 import { HomeScreen } from "./HomeScreen";
-import { LibraryScreen, type LibraryRequest, type LibraryView } from "./LibraryScreen";
+import { LibraryScreen, type LibraryView } from "./LibraryScreen";
 import { PlaylistsView } from "./PlaylistsView";
 import { SettingsScreen } from "./SettingsScreen";
 import { NowPlayingBar } from "./NowPlayingBar";
@@ -51,7 +49,7 @@ export const MainScreen = ({ navigation }: NativeStackScreenProps<RootStack, "Ma
   const { t, i18n } = useTranslation();
   const insets = useSafeAreaInsets();
   const [tab, setTab] = useState<MainTab>("home");
-  const [libraryRequest, setLibraryRequest] = useState<LibraryRequest | null>(null);
+  const [libraryRequest, setLibraryRequest] = useState<{ view: LibraryView } | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const { library, session } = useSession();
   const isFocused = useIsFocused();
@@ -68,9 +66,9 @@ export const MainScreen = ({ navigation }: NativeStackScreenProps<RootStack, "Ma
   const tabs = MAIN_TABS.map((entry) => ({ ...entry, label: t(entry.label) }));
   const changeTab = useCallback((id: string) => setTab(id as MainTab), []);
   const seeAll = useCallback(
-    (view: LibraryView, albumSort?: ParrotAlbumSort) => {
+    (view: LibraryView) => {
       if (libraryClosed) return;
-      setLibraryRequest({ view, albumSort });
+      setLibraryRequest({ view });
       setTab("library");
     },
     [libraryClosed]

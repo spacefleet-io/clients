@@ -12,7 +12,6 @@ import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { streamBridgeStub } from "./streamBridge";
-import { exportBridgeStub } from "./exportBridge";
 import { applyPlaylistEditsLocally, PARROT_LIKED_PLAYLIST_ID, type ParrotPlaylist, type ParrotPlaylistEdit } from "@space/parrot-core";
 import type { ParrotLibrary, ParrotState } from "../src/shared/ipc";
 import Library from "../src/renderer/src/Library";
@@ -102,7 +101,6 @@ describe("Parrot desktop playlists", () => {
       configurable: true,
       value: {
         ...streamBridgeStub(),
-        ...exportBridgeStub(),
         getLibrary: vi.fn(async () => ({ ok: true, library: server })),
         getImportStatus: vi.fn(async () => ({ running: false, phase: "idle", done: 0, total: 0, imported: 0, skipped: 0, failed: 0 })),
         getImportScan: vi.fn(async () => null),
@@ -143,13 +141,11 @@ describe("Parrot desktop playlists", () => {
   });
 
   // @req PAR-PL-02
-  // @req PAR-NAV-06[parrot]
-  it("the Playlists tab lists the playlists under no title and a new playlist made there opens empty", async () => {
+  it("the Playlists tab lists the playlists and a new playlist made there opens empty", async () => {
     await mount();
     await click(q("playlists-tab")[0]);
     expect(q("playlists-tab")[0]!.getAttribute("aria-current")).toBe("page");
-    expect(q("playlists-page")).toHaveLength(1);
-    expect(q("playlists-heading")).toHaveLength(0);
+    expect(q("playlists-heading")[0]!.textContent).toBe("Playlists");
     console.log(SUITE, "tiles", tileNames());
     expect(tileNames()).toEqual(["Gym"]);
 
@@ -207,8 +203,7 @@ describe("Parrot desktop playlists", () => {
     await click(q("song-add-to-playlist")[0]);
     await click(q("add-to-playlist-new")[0]);
     await submitName("Calm");
-    // The Songs list opens by title (PAR-LIB-06), so its first row is Gale (t3).
-    expect(saved.at(-1)![0]).toMatchObject({ kind: "create", name: "Calm", trackIds: ["t3"] });
+    expect(saved.at(-1)![0]).toMatchObject({ kind: "create", name: "Calm", trackIds: ["t1"] });
     await click(q("playlists-tab")[0]);
     expect(tileNames()).toEqual(["Calm", "Gym"]);
   });

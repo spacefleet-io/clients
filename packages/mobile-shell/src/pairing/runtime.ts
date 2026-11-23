@@ -14,16 +14,14 @@ export type PairingRuntimeOptions = {
   decrypt: (keyBase64: string, payloadBase64: string) => Promise<unknown>;
   /** Log prefix of every pairing line, e.g. "tv.pairing". */
   logTag: string;
-  /** The op stream the app reads, declared on the key probe read: a switched account answers 426 without it (LIB-FMT-13). */
-  readOpStreamVersion?: number;
 };
 
 /** Does the library key the approver sent open this account's library? (Same probe the desktop app uses.) */
 export const createPairingKeyCheck =
-  ({ library, decrypt, logTag, readOpStreamVersion }: PairingRuntimeOptions) =>
+  ({ library, decrypt, logTag }: PairingRuntimeOptions) =>
   async (token: string, libraryKey: string): Promise<KeyCheck> => {
     const log = scopeLogger(logTag);
-    const meta = await getLibraryMeta(token, library, readOpStreamVersion).catch((error: unknown) => {
+    const meta = await getLibraryMeta(token, library).catch((error: unknown) => {
       log.warn("verify_key.meta_failed", { status: error instanceof ApiError ? error.status : null });
       return null;
     });
