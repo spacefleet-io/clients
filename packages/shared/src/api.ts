@@ -1,5 +1,5 @@
 import * as sdk from "@space/sdk";
-import { ApiError, apiErrorFromResponse, createSpaceClient, unwrap, type ApiErrorPayload } from "@space/sdk";
+import { ApiError, createSpaceClient, unwrap, type ApiErrorPayload } from "@space/sdk";
 import { createUserStorageTunnelClient, type StorageTunnelPurpose, type TunnelUploadSource } from "./storageTunnel";
 import type { StorageObjectCounting } from "./storageCounting";
 import { DEFAULT_SPACE_APP_ID, SPACE_APP_HEADER, type SpaceAppId } from "./appScope";
@@ -137,7 +137,10 @@ export const apiRequest = async <T>(
     body: options.body ? JSON.stringify(options.body) : undefined,
   });
 
-  if (!res.ok) throw await apiErrorFromResponse(res);
+  if (!res.ok) {
+    const payload = (await res.json().catch(() => ({}))) as ApiErrorPayload;
+    throw new ApiError(res.status, payload);
+  }
 
   if (res.status === 204) {
     return undefined as T;
@@ -382,8 +385,6 @@ export type FeedbackInput = {
   platform?: string | null;
   deviceModel?: string | null;
   log?: string | null;
-  /** UX-SUP-07: the server's request ids of the app's last failed API calls (`recentFailedRequestIds`), ids only. */
-  requestIds?: string[] | null;
 };
 
 export const sendFeedback = (token: string, body: FeedbackInput): Promise<{ id: string }> =>
@@ -429,23 +430,6 @@ export const approvePairing = (
         ...(password !== undefined ? { password } : {}),
         ...(twoFactorCode !== undefined ? { twoFactorCode } : {}),
       },
-    })
-  );
-
-/**
- * Same-device sign-in (ACCT-PAIR-07): approves the sister app's request on this device with no key in the body; the
- * caller hands the sealed key to that app over the local channel, so the server never sees it.
- */
-export const approvePairingLocal = (
-  token: string,
-  requestId: string,
-  approverDeviceId?: string
-): Promise<{ ok: boolean; sessionId?: string }> =>
-  unwrap(
-    sdk.approvePairing({
-      ...scoped(token),
-      path: { requestId },
-      body: { localKey: true, ...(approverDeviceId ? { approverDeviceId } : {}) },
     })
   );
 
@@ -1002,7 +986,10 @@ export const putLibraryDbBinary = async (
     body: toBinaryBody(payload),
   });
 
-  if (!res.ok) throw await apiErrorFromResponse(res);
+  if (!res.ok) {
+    const payload = (await res.json().catch(() => ({}))) as ApiErrorPayload;
+    throw new ApiError(res.status, payload);
+  }
 
   return res.json() as Promise<{ version: number; stateHash: string | null; lastOpId: string | null }>;
 };

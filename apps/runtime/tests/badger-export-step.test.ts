@@ -158,7 +158,6 @@ afterEach(() => {
 });
 
 describe("exportFileStepHandler", () => {
-  // @req OFFL-FILE-01[runtime] one plain file, every track inside, saved to the picked folder, never offline content
   it("writes one plain file into Movies/ of the picked folder with every audio and subtitle track, never registered offline", async () => {
     const { ctx, progress, outputs } = makeCtx(makeJob(payloadFor()));
     await exportFileStepHandler(ctx);
@@ -196,7 +195,6 @@ describe("exportFileStepHandler", () => {
     expect(runFfmpegMock.mock.calls[0]?.[0]).toContain("mov_text");
   });
 
-  // @req OFFL-FILE-02[runtime] a name differing only in letter case is the same file: never overwritten
   it("a file already there in another letter case is kept; the export gets a suffix (#618)", async () => {
     mkdirSync(joinPath(destDir, "Movies"));
     writeFileSync(joinPath(destDir, "Movies", "lattice (1999).MKV"), "theirs");
@@ -236,7 +234,6 @@ describe("exportFileStepHandler", () => {
     expect(files).toEqual(["Movies/"]);
   });
 
-  // @req OFFL-FILE-02[runtime] the final name is claimed in one step: two exports never overwrite each other
   it("two exports of the same title finishing together get two names", async () => {
     const a = makeCtx(makeJob(payloadFor(), "job-a"));
     const b = makeCtx(makeJob(payloadFor(), "job-b"));

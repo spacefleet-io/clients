@@ -8,7 +8,6 @@ import { runFfmpeg, runFfprobe } from "@space/ffmpeg";
 import type { MpvCommand, MpvExternalMessage, MpvResponse, OscActionFile, SubtitleEntry } from "@space/mpv-protocol";
 import type { PairingStartOptions } from "@space/desktop-shell/pairing";
 import type { BadgerExportEstimatePayload, BadgerExportSubmitPayload } from "@space/runtime-contracts/badger/export";
-import { SIBLING_IPC } from "@space/desktop-shell/sibling";
 import { scopeLogger } from "../main/logger";
 import type { AppWindowVisibility as AppWindowVisibilityState } from "../main/appWindowVisibility";
 import { initTestIpcRecorder } from "./testIpcRecorder";
@@ -863,7 +862,7 @@ const clientIdentity = (() => {
 })();
 
 contextBridge.exposeInMainWorld("sf", {
-  version: "0.1.43",
+  version: "0.1.38",
   clientIdentity,
   // REL-CD-29: a "please update" refusal the runtime got on its own API call, forwarded by main.
   onAppUpdateRequired: (callback: (refusal: { status: number; payload: Record<string, unknown> }) => void) => {
@@ -1231,12 +1230,6 @@ contextBridge.exposeInMainWorld("sf", {
     cancel: () => ipcRenderer.invoke("sf-pairing-cancel"),
     /** What this computer calls itself in the account's device list (ACCT-DEV-01). */
     deviceName: () => ipcRenderer.invoke("sf-pairing-device-name"),
-  },
-  /** ACCT-PAIR-07: "Continue with your Parrot account" when Parrot is signed in on this computer. */
-  sibling: {
-    offer: () => ipcRenderer.invoke(SIBLING_IPC.offer),
-    signIn: () => ipcRenderer.invoke(SIBLING_IPC.signIn),
-    cancel: () => ipcRenderer.invoke(SIBLING_IPC.cancel),
   },
   apiHost: {
     get: () => ipcRenderer.invoke("sf-api-base-url-get"),

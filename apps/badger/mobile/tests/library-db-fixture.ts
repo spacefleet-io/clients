@@ -81,8 +81,8 @@ export const fx = {
   /** The encrypted bytes of every op `putLibraryOp` received, in call order. */
   postedOps: [] as Uint8Array[],
   nextPutVersion: 0,
-  /** Make `putLibraryOp` (POST /library/db/ops) reject with an ApiError of this status + payload (+ the server's request id). */
-  putOpError: null as { status: number; payload: Record<string, unknown>; requestId?: string } | null,
+  /** Make `putLibraryOp` (POST /library/db/ops) reject with an ApiError of this status + payload. */
+  putOpError: null as { status: number; payload: Record<string, unknown> } | null,
   /** `putOpError` spares a write declaring at least this op stream (a switched account accepts 4, LIB-FMT-13). */
   putOpAcceptsOpStream: null as number | null,
   /** `putLibraryDb` (PUT /library/db, the snapshot publish) calls; rejects with `putDbError` when set. */
@@ -619,7 +619,7 @@ export const sharedApiMock = (actual: typeof SharedApi) => ({
     fx.postedOps.push(_payload);
     fx.declaredFormats.op.push(formats);
     const accepted = fx.putOpAcceptsOpStream !== null && (formats?.opStreamVersion ?? 0) >= fx.putOpAcceptsOpStream;
-    if (fx.putOpError && !accepted) throw new actual.ApiError(fx.putOpError.status, fx.putOpError.payload, fx.putOpError.requestId);
+    if (fx.putOpError && !accepted) throw new actual.ApiError(fx.putOpError.status, fx.putOpError.payload);
     return { version: fx.nextPutVersion, stateHash: null, lastOpId: null };
   },
   putLibraryDb: async (

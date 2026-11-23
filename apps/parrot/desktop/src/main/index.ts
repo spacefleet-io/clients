@@ -148,7 +148,6 @@ import { fetchSourceCredits } from "@space/metadata-client/credits";
 import { ticketKeysForBuild } from "@space/privacy-pass";
 import { SPACE_APP_HEADER } from "@space/shared/appScope";
 import { getAppUpdateRequired, onAppUpdateRequired, setClientIdentity } from "@space/shared/appVersion";
-import { logFailedApiCalls, recentFailedRequestIds } from "@space/shared/apiFailure";
 import { desktopClientIdentity } from "@space/desktop-shell/client-identity";
 import {
   applyParrotOps,
@@ -240,9 +239,6 @@ import { createDesktopStreamSlots } from "./streamSlot";
 import { importCoverOf, PARROT_MUSIC_ID, searchParrotImportAlbums } from "./importSearch";
 import { importEnded, importStopError, restoreImportJobs, type StoredImportJob } from "./importJobs";
 import { createDesktopPairingClient, pairingRefusalOf, resolveDeviceName } from "@space/desktop-shell/pairing-main";
-import { SIBLING_SIGN_IN_ARG, armSiblingHiddenQuit, isSiblingSignInLaunch, type SiblingHiddenQuit } from "@space/desktop-shell/sibling-main";
-import { SIBLING_IPC, type SiblingSignInResult } from "@space/desktop-shell/sibling";
-import { createParrotSiblingHost, parrotSiblingAccount, setupStepAfterSiblingSignIn } from "./siblingSignIn";
 import { createDesktopUpdater } from "@space/desktop-shell/updater-main";
 // electron-updater is CommonJS (bundled here: Parrot ships no node_modules): read `autoUpdater` off the default import.
 import electronUpdater from "electron-updater";
@@ -250,7 +246,6 @@ import { pairingModeOf, type PairingMode, type PairingPollResult, type PairingSt
 import { createDesktopFeedbackSender, type DesktopFeedbackInput } from "@space/error-report/desktop-feedback";
 import { registerErrorReportsIpc } from "@space/error-report/desktop-main";
 import { createErrorLog } from "@space/error-report/error-log";
-import { rendererConsoleLine } from "./rendererConsole";
 import { createLibraryDbs } from "./libraryDbs";
 import { createLoudnessGate } from "./loudnessGate";
 import { createQuitGuard, createSaveChain, QUIT_SAVE_TIMEOUT_MS } from "./saveChain";
@@ -277,8 +272,7 @@ app.setPath("userData", process.env.SF_USER_DATA_PATH?.trim() || join(app.getPat
 const userDataDir = app.getPath("userData");
 mkdirSync(join(userDataDir, "logs"), { recursive: true });
 const logFile = join(userDataDir, "logs", "parrot-main.log");
-// The main log, cut back to nothing at start when it passed 5 MB: it holds no token, key or file content, only what
-// happened; the window's warnings and errors go in scrubbed (REL-LOG-06).
+// One log per start, kept small: it holds no token, key or file content, only what happened.
 if (existsSync(logFile) && statSync(logFile).size > 5 * 1024 * 1024) rmSync(logFile, { force: true });
 
 const log = (line: string) => {
@@ -291,9 +285,6 @@ const log = (line: string) => {
   }
 };
 const errorText = (error: unknown) => (error instanceof Error ? error.message : String(error));
-// REL-LOG-31: one line per failed API call of this process (the window reaches the API only through it), with the
-// server's request id so the server's line about it is found by one search. The main log only, never a report.
-logFailedApiCalls(({ status, code, requestId }) => log(`[api] call failed status=${status} code=${code} requestId=${requestId}`));
 // UX-SUP-05: the newest warning and error lines (scrubbed as recorded), sent only with feedback the user attaches it to.
 const errorLog = createErrorLog();
 /** A failure line: the main log, and the error log feedback can carry. */
@@ -363,15 +354,6 @@ app.on("open-url", (event, url) => {
 const mainOutDir = dirname(fileURLToPath(import.meta.url));
 let mainWindow: BrowserWindow | null = null;
 let store: ParrotStore;
-
-// ACCT-PAIR-07: same-device sign-in with Badger (siblingSignIn.ts). `--sibling-sign-in`: Badger started this run only
-// to sign itself in; it opens no window and quits soon after answering.
-const siblingHiddenStart = isSiblingSignInLaunch(process.argv);
-let siblingHiddenQuit: SiblingHiddenQuit | null = null;
-const siblingHost = createParrotSiblingHost({ getApiBaseUrl: () => apiBaseUrl, dev: isDevBuild, log, onAnswered: () => siblingHiddenQuit?.answered() });
-app.on("will-quit", () => void siblingHost.close());
-/** Signed in: Badger on this computer can offer this account (the key is read when Badger asks). */
-const publishSiblingAccount = () => void siblingHost.setAccount(parrotSiblingAccount(store));
 
 /** REL-UPD-01: new versions install themselves, from `<api>/desktop/parrot/`; the setting lives in the store. */
 const updaterLogLine = (level: string) => (fields: Record<string, unknown>, message: string) =>
@@ -556,8 +538,6 @@ const closeLibrary = () => setLibrary(null);
 
 const resetToSignIn = (reason: SignedOutReason) => {
   void store.signOut(reason).catch((error: unknown) => fail(`[store] signed-out state not saved: ${errorText(error)}`));
-  // ACCT-PAIR-07: signed out, Badger on this computer is offered nothing.
-  void siblingHost.setAccount(null);
   closeLibrary();
   stopLookup();
   // A new account starts from a first check, which only records where the copies stand (PAR-COPY-01).
@@ -2624,7 +2604,6 @@ const registerIpc = () => {
     if (previous && previous.id !== session.user.id) resetToSignIn("signOut");
     await store.signIn({ id: session.user.id, email: session.user.email }, session.token);
     sessionChecked = Promise.resolve();
-    publishSiblingAccount();
     return { id: session.user.id, email: session.user.email };
   };
   ipcMain.handle(PARROT_IPC.signIn, async (_event, input: { email: string; password: string; twoFactorCode?: string }): Promise<ParrotSignInResult> => {
@@ -2780,7 +2759,6 @@ const registerIpc = () => {
     signIn: async (user, token) => {
       await store.signIn(user, token);
       sessionChecked = Promise.resolve();
-      publishSiblingAccount();
     },
     storeKey: storeLibraryKey,
     log,
@@ -2811,20 +2789,6 @@ const registerIpc = () => {
     }
   });
   ipcMain.handle(PARROT_IPC.pairingCancel, () => signInPairing.cancel());
-  // ACCT-PAIR-07: "Continue with your Badger account". Token and key stay here; the window learns only the key check.
-  ipcMain.handle(SIBLING_IPC.offer, () => siblingHost.offer());
-  ipcMain.handle(SIBLING_IPC.signIn, async (): Promise<SiblingSignInResult<ParrotPairedSignIn>> => {
-    const result = await siblingHost.signIn();
-    if (result.status !== "approved") return result;
-    const check = await completeParrotPairedSignIn(pairedSignInDeps, result);
-    const step = check === "verified" ? setupStepAfterSiblingSignIn(store.setup.step) : null;
-    if (step) {
-      await store.updateSetup({ step });
-      log(`[sibling] signed in through Badger with its key: setup goes on at ${step}`);
-    }
-    return { status: "approved", check };
-  });
-  ipcMain.handle(SIBLING_IPC.cancel, () => siblingHost.cancel());
   // UX-I18N-07: the account's one language, read right after a sign-in and saved when the user picks one while signed in.
   ipcMain.handle(PARROT_IPC.getAccountLanguage, async () => {
     const token = store.token();
@@ -2987,7 +2951,6 @@ const registerIpc = () => {
     errorLog,
     appVersion: app.getVersion(),
     platform: `${process.platform} ${release()}`,
-    requestIds: recentFailedRequestIds,
     send: sendFeedback,
     log,
     fail,
@@ -3057,9 +3020,8 @@ const createWindow = () => {
   // Hidden, not destroyed: the music plays in this window's renderer (PAR-PLAY-03).
   attachCloseToTray(mainWindow, { background: "hide", isQuitting: () => isQuitting, hasTray: () => appTray.active });
   mainWindow.webContents.on("console-message", (details) => {
-    const line = rendererConsoleLine(details.level, details.message);
-    if (!line) return;
-    log(line);
+    if (details.level !== "error" && details.level !== "warning") return;
+    log(`[renderer:${details.level}] ${details.message}`);
     errorLog.record(details.level === "error" ? "error" : "warn", "renderer", details.message);
   });
   installApplicationMenu();
@@ -3070,15 +3032,6 @@ const createWindow = () => {
 };
 
 app.on("second-instance", (_event, argv) => {
-  if (siblingHiddenStart) {
-    // ACCT-PAIR-07: this run has no window (it only answers Badger): the user's launch gets a full Parrot.
-    log("[sibling] Parrot launched during a hidden start: relaunching in full");
-    app.relaunch({ args: argv.slice(1).filter((arg) => arg !== SIBLING_SIGN_IN_ARG) });
-    app.exit(0);
-    return;
-  }
-  // Badger started Parrot to answer it while this one runs: this one already answers on the local channel.
-  if (isSiblingSignInLaunch(argv)) return log("[sibling] hidden start while Parrot runs: ignored");
   const providerReturn = findProviderReturn("parrot", argv);
   if (providerReturn !== null) return receiveProviderReturn(providerReturn, "second-instance");
   const paymentId = findPaymentReturn("parrot", argv);
@@ -3136,17 +3089,6 @@ app.on("activate", () => {
 void app.whenReady().then(async () => {
   if (!primaryInstance) return;
   store = await openParrotStore({ dir: userDataDir, defaultSetup, log });
-  if (siblingHiddenStart) {
-    // ACCT-PAIR-07: started by Badger only to answer its sign-in: no window, no library, only the local channel.
-    const account = parrotSiblingAccount(store);
-    log(`[sibling] hidden start for Badger's sign-in ${JSON.stringify({ signedIn: Boolean(account) })}`);
-    if (!account) return app.quit();
-    siblingHiddenQuit = armSiblingHiddenQuit({ quit: () => app.quit(), log: (message) => log(`[sibling] ${message}`) });
-    await siblingHost.setAccount(account);
-    return;
-  }
-  // ACCT-PAIR-07: signed in, Badger on this computer can offer this account.
-  publishSiblingAccount();
   reapplyStartAtLoginAtLaunch({ platform: process.platform, setup: store.setup, applyStartAtLogin, fail });
   keptFiles = await createParrotKeptFiles({ dir: offlineDir, token: () => store.token() ?? "", clientType: CLIENT_TYPE, appId: PARROT_APP_ID, log });
   keeping = await createDesktopKeeping({
