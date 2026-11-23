@@ -219,16 +219,11 @@ export const badgerOfflineListLocalPayloadSchema = z.object({
   mediaIds: z.array(z.string().min(1)).optional(),
 });
 
-// How a saved title is kept: "pieces" = the sealed storage objects + an item manifest (OFFL-FILE-03, `localPath` is
-// the manifest); "mkv" / "mp4" = a plain file saved by an older build, still waiting for its re-save (OFFL-MIGR-01).
-export const offlineLocalStorageSchema = z.enum(["pieces", "mkv", "mp4"]);
-export type OfflineLocalStorage = z.infer<typeof offlineLocalStorageSchema>;
-
 const offlineLocalEntrySchema = z.object({
   mediaId: z.string().min(1),
   fileId: z.string().min(1),
   quality: offlineQualitySchema,
-  container: offlineLocalStorageSchema,
+  container: offlineContainerSchema,
   totalBytes: z.number().int().min(0),
   downloadedAt: z.string().min(1),
   localPath: z.string().min(1),

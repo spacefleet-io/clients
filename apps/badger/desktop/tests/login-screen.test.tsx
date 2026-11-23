@@ -134,29 +134,4 @@ describe("Badger desktop sign-in screen", () => {
     expect(q("phone-sign-in-card")).toBeNull();
     expect(q("sign-in-divider")).toBeNull();
   });
-
-  /** @req ACCT-PAIR-07 Parrot signed in on this computer: "Continue with your Parrot account" above the email form. */
-  it("Parrot signed in on this computer: the same-device card sits above the email form", async () => {
-    const sibling = {
-      offer: vi.fn(async () => ({ app: "parrot", email: "lane@example.test" })),
-      signIn: vi.fn(async () => ({ status: "cancelled" })),
-      cancel: vi.fn(async () => undefined),
-    };
-    setSf({ pairing: {}, sibling });
-    renderLogin("sibling");
-    await act(async () => {
-      await Promise.resolve();
-    });
-    const card = q("same-device-sign-in-card");
-    console.info(`[${SUITE}:sibling] card=${card !== null} text=${card?.textContent ?? ""}`);
-    expect(card?.textContent).toContain("Continue with your Parrot account");
-    expect(q("same-device-sign-in-icon")?.getAttribute("src")).toContain("parrot-app-icon");
-    expect(card?.compareDocumentPosition(container.querySelector("#email")!)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
-  });
-
-  /** @req ACCT-PAIR-07 Without the bridge (an older preload) nothing is offered. */
-  it("without the sibling bridge there is no same-device card", () => {
-    renderLogin("no-sibling");
-    expect(q("same-device-sign-in-card")).toBeNull();
-  });
 });

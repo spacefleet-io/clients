@@ -2,7 +2,6 @@ import { promises as fs } from "node:fs";
 import type { ResumableJobStateStore, JobState, OutputState, SegmentEntry, SubtitleState } from "@space/content-core";
 import type { UploadSessionManager } from "@space/content-core/storageTransport";
 import { apportionDeclaredBytes, type StorageObjectCounting } from "@space/shared/storageCounting";
-import { chunkKeyFromSeed, newChunkKeySeed, verifiedChunkKeySeed } from "./chunkKeySeeds";
 
 export type ProducedVideoFormat = {
   quality: string;
@@ -13,8 +12,6 @@ export type ProducedVideoFormat = {
   durationSeconds: number | null;
   totalSize: number;
   chunks: Array<{ key: string; sizeBytes: number; startSeconds?: number | null }>;
-  /** Base64 seed every chunk key derives from (LIB-FMT-11 key mode 2), checked against `chunks`; absent: random keys. */
-  chunkKeySeed?: string | null;
   chapters?: Array<{ title: string; startSeconds: number }>;
 };
 
@@ -28,8 +25,6 @@ export type ProducedAudioTrack = {
   durationSeconds: number | null;
   totalSize: number;
   chunks: Array<{ key: string; sizeBytes: number; startSeconds?: number | null }>;
-  /** As {@link ProducedVideoFormat.chunkKeySeed}. */
-  chunkKeySeed?: string | null;
   isDefault?: boolean;
 };
 
@@ -78,11 +73,6 @@ type FinalizeMediaJobArgs = {
    * segments, subtitles) is uploaded under the same placementId.
    */
   placementId: string;
-  /**
-   * Give each video/audio output that has not uploaded anything yet a chunk key seed (LIB-FMT-11 key mode 2), so its
-   * chunks are stored under seed-derived keys. Only true once the account's library is converted to change types 4.
-   */
-  seedChunkKeys?: boolean;
   uploadFile: (
     filePath: string,
     options?: {
@@ -92,8 +82,6 @@ type FinalizeMediaJobArgs = {
       placementId?: string;
       /** How the object counts toward the allowance (STOR-USE-02). */
       counting?: StorageObjectCounting;
-      /** Storage key decided by the caller (a seed-derived chunk key); absent: a random key. */
-      objectKey?: string;
     }
   ) => Promise<UploadFileResult>;
   /**
@@ -102,33 +90,6 @@ type FinalizeMediaJobArgs = {
    * before the upload loop; any object not confirmed present is re-uploaded.
    */
   headObjects: (keys: string[], options?: { signal?: AbortSignal }) => Promise<Record<string, boolean>>;
-};
-
-/**
- * Seeds the outputs that may still choose how their chunks are named: no seed yet, nothing of the output uploaded and
- * no upload-ledger part. An output that already uploaded a chunk under a random key keeps random keys to the end, so a
- * list is all seeded or all random (key mode 2 needs every key i to be the seed's key i). The seed is persisted with the
- * state before the first upload, so a resumed job derives the same keys.
- */
-const assignChunkKeySeeds = (state: JobState<unknown>, onLog: ((line: string) => void) | undefined) => {
-  let seeded = 0;
-  let keptRandom = 0;
-  for (const output of state.outputs) {
-    if (output.chunkKeySeed || output.segments.length === 0) continue;
-    const segmentPaths = new Set(output.segments.map((segment) => segment.path));
-    const started =
-      output.segments.some((segment) => segment.uploaded || segment.key) ||
-      (output.completedParts ?? []).some((part) => part.path !== undefined && segmentPaths.has(part.path));
-    if (started) {
-      keptRandom += 1;
-      continue;
-    }
-    output.chunkKeySeed = newChunkKeySeed();
-    seeded += 1;
-  }
-  if (seeded > 0 || keptRandom > 0) {
-    onLog?.(`[upload] chunk keys: ${seeded} output(s) seeded, ${keptRandom} already started with random keys`);
-  }
 };
 
 /**
@@ -274,15 +235,6 @@ const buildProducedMedia = (
 
     const totalSize = (output.init?.sizeBytes ?? 0) + chunks.reduce((sum, entry) => sum + entry.sizeBytes, 0);
     const durationSeconds = output.durationSeconds ?? null;
-    const chunkKeySeed = verifiedChunkKeySeed(
-      output.chunkKeySeed,
-      chunks.map((chunk) => chunk.key)
-    );
-    if (output.chunkKeySeed && !chunkKeySeed) {
-      // Never expected: a seeded output whose keys are not the seed's. The list then travels as explicit keys.
-      console.warn(`[finalize] chunk key seed of output ${output.id} does not match its ${chunks.length} chunk key(s); keys stay explicit`);
-    }
-    const seedField = chunkKeySeed ? { chunkKeySeed } : {};
 
     if (output.kind === "video") {
       videoFormats.push({
@@ -294,7 +246,6 @@ const buildProducedMedia = (
         durationSeconds,
         totalSize,
         chunks,
-        ...seedField,
         chapters: output.chapters,
       });
       continue;
@@ -310,7 +261,6 @@ const buildProducedMedia = (
       durationSeconds,
       totalSize,
       chunks,
-      ...seedField,
       isDefault: audioTracks.length === 0,
     });
   }
@@ -397,14 +347,9 @@ export const finalizeMediaJob = async (args: FinalizeMediaJobArgs): Promise<Prod
     onUploadProgress,
     onLog,
     placementId,
-    seedChunkKeys,
     uploadFile,
     headObjects,
   } = args;
-
-  // Before the resume check flips missing objects back to pending: an output counts as started from what it really
-  // uploaded. Persisted by the pre-upload save below, before any chunk goes out.
-  if (seedChunkKeys && placementId) assignChunkKeySeeds(state, onLog);
 
   await verifyResumedUploads(state, subtitleStates, headObjects, signal, onLog);
 
@@ -496,14 +441,11 @@ export const finalizeMediaJob = async (args: FinalizeMediaJobArgs): Promise<Prod
       })());
     }
 
-    const seed = output.chunkKeySeed;
-    output.segments.forEach((segment, chunkIndex) => {
-      if (segment.uploaded) return;
+    for (const segment of output.segments) {
+      if (segment.uploaded) continue;
       const currentSegment = segment;
       const outputId = output.id;
       const pieceOutput = output;
-      // Seeded output: chunk i is stored under the seed's key i (LIB-FMT-11), the same key again on a re-upload.
-      const objectKey = seed ? chunkKeyFromSeed(seed, placementId, chunkIndex) : undefined;
       uploadPromises.push((async () => {
         throwIfAborted(signal);
         const uploaded = await uploadFile(currentSegment.path, {
@@ -512,7 +454,6 @@ export const finalizeMediaJob = async (args: FinalizeMediaJobArgs): Promise<Prod
           signal,
           placementId,
           counting: countingOf(pieceOutput, currentSegment),
-          ...(objectKey ? { objectKey } : {}),
         });
         currentSegment.key = uploaded.key;
         currentSegment.uploaded = true;
@@ -521,7 +462,7 @@ export const finalizeMediaJob = async (args: FinalizeMediaJobArgs): Promise<Prod
         uploadedBytes += uploaded.sizeBytes;
         bumpUploadProgress();
       })());
-    });
+    }
   }
 
   for (const subtitle of subtitleStates) {

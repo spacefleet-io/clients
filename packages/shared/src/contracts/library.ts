@@ -44,9 +44,6 @@ export const LibraryOpsResponseSchema = z.object({
   // version 1, which is the only format that has ever shipped.
   storageFormatVersion: z.number().int().positive().default(1),
   opStreamVersion: z.number().int().positive().default(1),
-  // The op stream the account's writers move to (LIB-FMT-13): 4 once the account is switched, else 3. Absent on a
-  // server from before the switch knob and on non-Badger libraries.
-  targetOpStreamVersion: z.number().int().positive().optional(),
   // Optional operator advisory (Part D4) — absent in the common case.
   migrationAdvisory: LibraryMigrationAdvisorySchema.optional(),
 });

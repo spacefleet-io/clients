@@ -7,8 +7,8 @@
  *   older layout by running the real migration list cut at that version (no checked-in binary), fill it with
  *   representative rows, then open it through the production opener (`openParrotLibrary`, the call
  *   `apps/parrot/desktop/src/main/index.ts` makes for both the server snapshot and the kept copy) and check it reaches
- *   the layout songs stored whole use (schema 10; a schema-11 file stays at 11, API-VER-01) with every row intact. A
- *   file from a NEWER build is refused with `ParrotLibraryTooNewError` and its bytes stay untouched.
+ *   the current layout with every row intact. A file from a NEWER build is refused with `ParrotLibraryTooNewError`
+ *   and its bytes stay untouched.
  * @covers packages/parrot-ingest/src/library.ts
  * @covers packages/parrot-ingest/src/kept.ts
  * @covers packages/parrot-library-db-definition/src/migrations.ts
@@ -24,7 +24,6 @@ import {
   PARROT_LEGACY_ID_COLUMNS,
   PARROT_LIBRARY_MIGRATIONS,
   PARROT_LIBRARY_SCHEMA_VERSION,
-  PARROT_LIBRARY_WHOLE_FILES_SCHEMA_VERSION,
   ParrotLibraryTooNewError,
 } from "@space/parrot-library-db-definition";
 import { openParrotLibraryCopy, saveParrotLibraryCopy } from "../src/kept";
@@ -128,8 +127,8 @@ const readEverything = (db: ParrotLibraryDb) => ({
 const sha = (bytes: Uint8Array) => createHash("sha256").update(bytes).digest("hex");
 
 describe("Parrot library across an app update", () => {
-  it("a version-7 library (the layout before this build) opens at the whole-file layout with every row kept", () => {
-    expect(PARROT_LIBRARY_WHOLE_FILES_SCHEMA_VERSION).toBeGreaterThan(7);
+  it("a version-7 library (the layout before this build) opens at the current layout with every row kept", () => {
+    expect(PARROT_LIBRARY_SCHEMA_VERSION).toBeGreaterThan(7);
     const old = libraryAtVersion(7);
     seedV1(old);
     seedV2toV7(old);
@@ -149,7 +148,7 @@ describe("Parrot library across an app update", () => {
     const after = { version: userVersion(db), albumColumns: columnsOf(db, "albums"), trackColumns: columnsOf(db, "tracks") };
     const state = readEverything(db);
     log("phase opened-by-new-build", { ...after, state });
-    expect(after.version).toBe(PARROT_LIBRARY_WHOLE_FILES_SCHEMA_VERSION);
+    expect(after.version).toBe(PARROT_LIBRARY_SCHEMA_VERSION);
     expect(after.albumColumns).toContain("tracklist");
     expect(after.trackColumns).toContain("unidentified");
 
@@ -173,7 +172,6 @@ describe("Parrot library across an app update", () => {
         artistId: "ar-lp",
         artistName: "Linnet Park",
         year: 2003,
-        genre: "Nu metal",
         trackCount: 1,
         coverObjectKey: "media/p1/cover-large",
         coverThumbObjectKey: "media/p1/cover-thumb",
@@ -223,14 +221,14 @@ describe("Parrot library across an app update", () => {
     // The upgraded file round-trips: what N+1 keeps (and publishes) opens again unchanged, with no further step.
     const again = openParrotLibrary(serializeParrotLibrary(db));
     log("phase reopen", { version: userVersion(again) });
-    expect(userVersion(again)).toBe(PARROT_LIBRARY_WHOLE_FILES_SCHEMA_VERSION);
+    expect(userVersion(again)).toBe(PARROT_LIBRARY_SCHEMA_VERSION);
     expect(readEverything(again)).toEqual(state);
     again.close();
     db.close();
   });
 
-  it("every older layout, from version 1 on, opens at the whole-file layout and keeps its songs; schema 11 stays 11", () => {
-    for (let version = 1; version <= PARROT_LIBRARY_SCHEMA_VERSION; version += 1) {
+  it("every older layout, from version 1 on, opens at the current layout and keeps its songs", () => {
+    for (let version = 1; version < PARROT_LIBRARY_SCHEMA_VERSION; version += 1) {
       const old = libraryAtVersion(version);
       seedV1(old);
       const db = openParrotLibrary(new Uint8Array(old.serialize()));
@@ -242,7 +240,7 @@ describe("Parrot library across an app update", () => {
         chunks: state.file?.chunks.length,
         settings: state.settings,
       });
-      expect(userVersion(db)).toBe(Math.max(version, PARROT_LIBRARY_WHOLE_FILES_SCHEMA_VERSION));
+      expect(userVersion(db)).toBe(PARROT_LIBRARY_SCHEMA_VERSION);
       expect(state.artists.map((a) => a.name)).toEqual(["Linnet Park"]);
       expect(state.albums.map((a) => [a.title, a.coverObjectKey])).toEqual([["Meltway", "media/p1/cover-large"]]);
       expect(state.tracks.map((t) => [t.title, t.number, t.durationMs])).toEqual([["Nook", 13, 187_000]]);
@@ -260,7 +258,7 @@ describe("Parrot library across an app update", () => {
     }
   });
 
-  it("the sealed offline copy an older build kept opens with the library key after the update and reaches the whole-file layout", async () => {
+  it("the sealed offline copy an older build kept opens with the library key after the update and reaches the current layout", async () => {
     const dir = await makeTempDir("upgrade-kept-copy");
     const key = randomBytes(32).toString("base64");
     const old = libraryAtVersion(7);
@@ -280,7 +278,7 @@ describe("Parrot library across an app update", () => {
     const db = openParrotLibrary(copy!.dbBytes);
     const state = readEverything(db);
     log("phase migrated-copy", { version: userVersion(db), tracks: state.tracks.length, playlists: state.playlists.length });
-    expect(userVersion(db)).toBe(PARROT_LIBRARY_WHOLE_FILES_SCHEMA_VERSION);
+    expect(userVersion(db)).toBe(PARROT_LIBRARY_SCHEMA_VERSION);
     expect(state.tracks.map((t) => t.title)).toEqual(["Nook"]);
     expect(state.playlists.find((p) => p.id === "pl-road")?.trackIds).toEqual(["t-nook"]);
     expect(state.lyrics?.plain).toBe("I left the porch light on for you");

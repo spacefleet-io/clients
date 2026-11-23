@@ -1,9 +1,8 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { parseFile, selectCover, type ICommonTagsResult, type ILyricsTag } from "music-metadata";
-import { parseLrc, splitTitleTrackNumber, toLrc } from "@space/parrot-core";
+import { parseLrc, toLrc } from "@space/parrot-core";
 import type { ParrotListedTrack } from "@space/parrot-library-db-definition";
-import type { ParrotCoverCrop } from "@space/parrot-core";
 import type { ParrotCoverImage } from "./covers";
 import { parrotAudioFormatFor, type ParrotAudioFormat } from "./formats";
 
@@ -27,8 +26,6 @@ export type ParrotTrackInfo = {
   format: ParrotAudioFormat;
   /** The picture built into the file (its front cover, else its first picture); the album's cover when it has none yet. */
   cover?: ParrotCoverImage | null;
-  /** PAR-META-22: the square of `cover` the user framed in the import review; absent, the centre square. */
-  coverCrop?: ParrotCoverCrop | null;
   /** The song's own lyrics (PAR-LYR-01): synced as LRC text, plain as text; null when the file and its `.lrc` hold none. */
   lyrics?: { synced: string | null; plain: string | null } | null;
   /** The file's own ReplayGain tags for even volume (PAR-PLAY-03); null when it has none and the app measures the song. */
@@ -236,9 +233,6 @@ export const readParrotTrackInfo = async (file: string, root?: string): Promise<
     clean(fromFolder?.artist) ??
     clean(fromGrandParent?.artist ?? fromGrandParent?.album) ??
     UNKNOWN_ARTIST;
-  const tagTitle = clean(common.title);
-  // A title tag's leading track number fills a missing track-number tag; the file name's comes after (PAR-META-21).
-  const titled = tagTitle ? splitTitleTrackNumber(tagTitle, common.track?.no) : { title: fromName.title, number: common.track?.no && common.track.no > 0 ? common.track.no : null };
   const seconds = stream.duration;
   return {
     file,
@@ -246,9 +240,9 @@ export const readParrotTrackInfo = async (file: string, root?: string): Promise<
     albumArtist: clean(common.albumartist) ?? artist,
     compilation,
     album: clean(common.album) ?? clean(fromName.album) ?? clean(fromFolder?.album) ?? UNKNOWN_ALBUM,
-    title: titled.title,
+    title: clean(common.title) ?? fromName.title,
     disc: common.disk?.no && common.disk.no > 0 ? common.disk.no : 1,
-    number: titled.number ?? fromName.number ?? 0,
+    number: common.track?.no && common.track.no > 0 ? common.track.no : (fromName.number ?? 0),
     year: common.year && common.year > 0 ? common.year : (fromFolder?.year ?? null),
     genre: clean(common.genre?.[0]),
     durationMs: typeof seconds === "number" && Number.isFinite(seconds) ? Math.round(seconds * 1000) : null,

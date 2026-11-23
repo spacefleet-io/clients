@@ -12,7 +12,6 @@ import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { streamBridgeStub } from "./streamBridge";
-import { exportBridgeStub } from "./exportBridge";
 import type { ParrotState } from "../src/shared/ipc";
 import Library from "../src/renderer/src/Library";
 import { translator } from "../src/renderer/src/i18n";
@@ -89,7 +88,6 @@ describe("Parrot desktop shell", () => {
       configurable: true,
       value: {
         ...streamBridgeStub(),
-        ...exportBridgeStub(),
         getLibrary: vi.fn(async () => ({ ok: true, library })),
         getImportStatus: vi.fn(async () => ({ running: false, phase: "idle", done: 0, total: 0, imported: 0, skipped: 0, failed: 0 })),
         getImportScan: vi.fn(async () => null),
@@ -150,9 +148,8 @@ describe("Parrot desktop shell", () => {
       "parrot.history.u1",
       JSON.stringify({ version: 1, albums: [{ albumId: "alb-1", trackId: "t2", positionMs: 78_000, playedAt: 1 }], artistPlays: { "art-1": 3 } })
     );
-    // The user last sorted the library by title with a filter that hides every album: See all must still open all of
-    // them in the row's order.
-    localStorage.setItem("parrot.libraryPrefs", JSON.stringify({ albums: { sort: "title", filters: { decade: 1950 } } }));
+    // The user last sorted the library by title: See all must still open it in the row's order.
+    localStorage.setItem("parrot.albumSort", "title");
     await mount();
     const rows = [...q("home")[0]!.querySelectorAll("section[data-testid]")].map((el) => el.getAttribute("data-testid"));
     const added = q("home-added")[0]!;
@@ -166,11 +163,11 @@ describe("Parrot desktop shell", () => {
     expect(q("home-recent")[0]?.textContent).toContain("Recently played");
     await click("home-added-see-all");
     const grid = q("library-album").map((el) => el.textContent);
-    console.info(SUITE, "see all: prefs", localStorage.getItem("parrot.libraryPrefs"), "grid", grid);
-    expect(q("library-filter-button")[0]?.textContent).toBe("Filter");
+    console.info(SUITE, "see all: sort", q("library-sort")[0]?.textContent, "grid", grid);
+    expect(q("library-sort")[0]?.textContent).toContain("Recently added");
     expect(grid[0]).toContain("Second Wind");
     expect(grid[1]).toContain("First Light");
-    expect(JSON.parse(localStorage.getItem("parrot.libraryPrefs") ?? "{}").albums).toEqual({ sort: "recent", filters: {} });
+    expect(localStorage.getItem("parrot.albumSort")).toBe("recent");
   });
 
   // @req PAR-HOME-01
@@ -261,13 +258,13 @@ describe("Parrot desktop shell", () => {
 
   // @req PAR-NAV-01
   // @req UX-SET-01
-  it("Settings has Badger's category rail: General (language, Refresh), Manage offline content, Help & feedback, About & updates (version, open source, credits), and Account (Plan, Pair a device)", async () => {
+  it("Settings has Badger's category rail: General (language, Refresh), Help & feedback, About & updates (version, open source, credits), and Account (Plan, Pair a device)", async () => {
     await mount();
     expect(q("nav-account")).toHaveLength(0);
     await click("nav-settings");
     const rail = Array.from(container.querySelectorAll('[data-testid^="settings-nav-"]')).map((el) => el.getAttribute("data-testid"));
     console.info(SUITE, "settings rail", rail);
-    expect(rail).toEqual(["settings-nav-general", "settings-nav-offline", "settings-nav-support", "settings-nav-about", "settings-nav-account"]);
+    expect(rail).toEqual(["settings-nav-general", "settings-nav-support", "settings-nav-about", "settings-nav-account"]);
     for (const id of ["library-language", "library-refresh"]) expect(q(id)).toHaveLength(1);
     await click("library-refresh");
     expect(window.parrot.getLibrary).toHaveBeenLastCalledWith(true);

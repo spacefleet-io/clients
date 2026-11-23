@@ -1,6 +1,5 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import type { ParrotCoverCrop } from "@space/parrot-core";
 import type { ParrotListedTrack } from "@space/parrot-library-db-definition";
 import type { ParrotCoverImage } from "./covers";
 import { findParrotAudioFiles } from "./formats";
@@ -28,9 +27,7 @@ export const parrotRootFinder = (roots: string[]) => {
  * matched release's album artist: it replaces the file's album-artist tag, so a song tagged "Various Artists" lands
  * under the album's real artist unless the match is itself a various-artists compilation. `coverId` names the matched
  * album's cover in the lookup (the album's opaque id); the import stores that cover on the album
- * (PAR-META-04). `coverPicture` instead names a picture the review got from the desktop (one built into a scanned
- * file, or an image file the user picked, PAR-UP-08); `coverCrop` is the square of that cover the user framed
- * (PAR-META-22). `unidentified`: the user kept the song as is, matched to nothing, so the library marks it to be
+ * (PAR-META-04). `unidentified`: the user kept the song as is, matched to nothing, so the library marks it to be
  * identified later.
  */
 export type ParrotImportEdit = {
@@ -46,8 +43,6 @@ export type ParrotImportEdit = {
   /** The matched album's id in the metadata (PAR-COPY-01): the copy-changes refresh and the cover pass find the album by it. */
   albumMusicId?: string | null;
   coverId?: string;
-  coverPicture?: string;
-  coverCrop?: ParrotCoverCrop;
   unidentified?: boolean;
 };
 
@@ -118,8 +113,6 @@ export const scanParrotImport = async (folders: string[], options: ParrotScanOpt
           title: info.title,
           disc: info.disc,
           number: info.number,
-          // PAR-UP-08: an album taken as is shows its file's year to edit.
-          year: info.year,
           durationMs: info.durationMs,
         };
       } catch (error) {
@@ -167,8 +160,7 @@ export const applyParrotImportEdit = (info: ParrotTrackInfo, edit: ParrotImportE
     year: edit.year ?? info.year,
     number: edit.number && edit.number > 0 ? edit.number : info.number,
     disc: edit.disc && edit.disc > 0 ? edit.disc : info.disc,
-    // PAR-META-22: the framing is the chosen cover's; without a chosen cover the file's picture takes its centre square.
-    ...(cover ? { cover, ...(edit.coverCrop ? { coverCrop: edit.coverCrop } : {}) } : {}),
+    ...(cover ? { cover } : {}),
     ...(edit.tracklist?.length ? { tracklist: edit.tracklist } : {}),
     ...(edit.albumMusicId ? { albumMusicId: edit.albumMusicId } : {}),
     ...(edit.unidentified ? { unidentified: true } : {}),
@@ -177,8 +169,7 @@ export const applyParrotImportEdit = (info: ParrotTrackInfo, edit: ParrotImportE
 
 /**
  * A `readInfo` for importParrotFiles that applies the confirmed edits (keyed by resolved path) on top of the tags;
- * `covers` holds the covers the edits chose, by their `coverPicture`, else their `coverId` (the matched albums' covers
- * fetched from the lookup).
+ * `covers` holds the matched albums' covers fetched from the lookup, by the edits' `coverId`.
  */
 export const parrotEditedReader =
   (
@@ -189,6 +180,5 @@ export const parrotEditedReader =
   async (file: string, root?: string): Promise<ParrotTrackInfo> => {
     const info = await readInfo(file, root);
     const edit = edits.get(path.resolve(file));
-    const coverKey = edit?.coverPicture ?? edit?.coverId;
-    return edit ? applyParrotImportEdit(info, edit, coverKey ? covers.get(coverKey) : null) : info;
+    return edit ? applyParrotImportEdit(info, edit, edit.coverId ? covers.get(edit.coverId) : null) : info;
   };
