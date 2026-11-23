@@ -5,7 +5,7 @@ import { needsTitleLanguageQuestion, type TitleLanguage } from "@space/shared/ti
 import { useLibraryActions, useLibraryShell } from "@/lib/libraryContext";
 import { loadClientConfig, saveClientConfig } from "@/lib/config";
 import { useProfiles } from "@/lib/profileStore";
-import { settleTitleQuestion, useSetupRunState } from "@/lib/titleLanguageSetup";
+import { settleTitleQuestion, titleQuestionStep, useSetupRunState } from "@/lib/titleLanguageSetup";
 import { rendererLogger } from "@/logger";
 import TitleLanguageQuestion from "./TitleLanguageQuestion";
 
@@ -21,8 +21,8 @@ export default function TitleLanguageGate({ children }: { children: ReactNode })
   const profiles = useProfiles();
   const { loading, error, datasetStatus } = useLibraryShell();
   const { getSharedSetting } = useLibraryActions();
-  // The step shown, read from the run's state so it follows the run (counted 3 once "Your profile" was answered).
-  const { titleStep } = useSetupRunState();
+  // Re-render when the setup run changes (the step shown).
+  useSetupRunState();
   const [answeredFor, setAnsweredFor] = useState<string | null>(null);
 
   const profile = profiles.profiles.find((candidate) => candidate.id === profiles.activeId) ?? null;
@@ -49,5 +49,5 @@ export default function TitleLanguageGate({ children }: { children: ReactNode })
     setAnsweredFor(profile.id);
     settleTitleQuestion(true);
   };
-  return <TitleLanguageQuestion step={titleStep} onAnswer={answer} />;
+  return <TitleLanguageQuestion step={titleQuestionStep()} onAnswer={answer} />;
 }

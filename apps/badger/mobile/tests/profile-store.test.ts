@@ -49,7 +49,6 @@ const profile = (id: string, minute: number, isMain = false): ApiProfile => ({
   avatarId: "fox" as const,
   createdAt: `2026-10-22T10:${String(minute).padStart(2, "0")}:00.000Z`,
   isMain,
-  features: {},
 });
 
 /** A fake API holding the account's profile list (oldest first, main = first), with a limit. */

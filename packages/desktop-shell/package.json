@@ -18,7 +18,6 @@
     "./services/notifications": "./src/services/notifications.ts",
     "./services/notify": "./src/services/notify.ts",
     "./components": "./src/components.ts",
-    "./profile-setup": "./src/profile-setup.ts",
     "./pages": "./src/pages.ts",
     "./guards": "./src/guards.ts",
     "./hooks": "./src/hooks/index.ts",
@@ -35,15 +34,12 @@
     "./updater-section": "./src/updater/UpdateSection.tsx",
     "./updater-required": "./src/updater/UpdateRequiredScreen.tsx",
     "./updater-strings": "./src/updater/strings.ts",
-    "./updater-system-prompt": "./src/updater/SystemUpdatePrompt.tsx",
     "./tour": "./src/tour/index.ts",
     "./library-key-erase": "./src/libraryKeyErase.ts",
     "./library-kept-key": "./src/libraryKeptKey.ts",
     "./storage-units": "./src/storageUnits.ts",
     "./password-reset": "./src/passwordReset.ts",
-    "./client-identity": "./src/clientIdentity.ts",
-    "./sibling": "./src/sibling/types.ts",
-    "./sibling-main": "./src/sibling/index.ts"
+    "./client-identity": "./src/clientIdentity.ts"
   },
   "devDependencies": {
     "typescript": "^6.0.3",

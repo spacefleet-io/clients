@@ -2,8 +2,7 @@
 // right, the floating mascot, "SIGN IN WITH YOUR ACCOUNT", Email and Password, the green "Sign in →" and
 // "FORGOT PASSWORD?" — over the starry sky (UX-SKY-01). It opens on that form (ACCT-SIGNIN-04); the shared highlighted
 // "Sign in with another device" card under it swaps the form for the pairing code any signed-in Badger or Parrot app
-// approves (ACCT-PAIR-01), and "Sign in with email and password" comes back. "Don't have an account? Create account"
-// opens the shared sign-up (a free account, then the emailed code; no price, no payment: ACCT-AUTH-10, ACCT-PAY-02).
+// approves (ACCT-PAIR-01), and "Sign in with email and password" comes back. Sign-in only: no sign-up (ACCT-AUTH-10).
 // The Google, Apple and Microsoft rows the server offers sit above an "or" line over the form (ACCT-SIGNIN-05).
 // A session the server rejected comes back here with a short explanation.
 import React, { useCallback, useState } from "react";
@@ -21,14 +20,12 @@ import {
   MobilePasswordReset,
   MobilePhoneSignInCard,
   MobileProviderSignInRows,
-  MobileSignUp,
-  MobileSignUpTermsNotice,
   MobileStartupPage,
 } from "@space/mobile-shell/components";
 import type { MobileSignInProviderId } from "@space/mobile-shell/components";
 import { getCurrentLanguage, isMobileUiLanguage, MOBILE_UI_LANGUAGES, useTranslation } from "@space/mobile-shell/i18n";
 import { useMobileShellTheme } from "@space/mobile-shell/theme";
-import { MobileSetupBackFooter } from "@space/mobile-shell/setup-step";
+import { MobileSetupHeader } from "@space/mobile-shell/setup-step";
 import { useMobileProviderSignIn } from "@space/mobile-shell/provider-sign-in";
 import type { ProviderSignInNotice } from "@space/mobile-shell/provider-sign-in";
 import { ApiError, login } from "@space/shared/api";
@@ -41,7 +38,6 @@ import { PARROT_LINK_SCHEME } from "../lib/linkScheme";
 import { PARROT_MASCOT } from "../brand";
 import { createParrotCompletionDeps, createParrotPairingClient, PARROT_PAIRING_LOG_TAG } from "../setup/pairing";
 import { completePairing } from "@space/mobile-shell/pairing";
-import { SiblingOffer } from "./SiblingOffer";
 import { currentPhoneDeviceName } from "@space/mobile-shell/pairing-device";
 import { MobilePairSignIn } from "@space/mobile-shell/pair-sign-in";
 
@@ -62,14 +58,11 @@ type ProviderStep = {
  */
 const PasswordSignInForm = ({
   onForgot,
-  onUnverified,
   email,
   setEmail,
   provider,
 }: {
   onForgot: () => void;
-  /** ACCT-AUTH-10: the account's email was never verified: the sign-up's code step, as on the desktop. */
-  onUnverified: () => void;
   email: string;
   setEmail: (value: string) => void;
   provider: ProviderStep;
@@ -108,8 +101,6 @@ const PasswordSignInForm = ({
       const failure = classifySignInError(err);
       if (failure === "twoFactorRequired" && err instanceof ApiError) {
         setNeedsCode(err.payload?.method === "totp" ? "totp" : "email");
-      } else if (failure === "emailNotVerified") {
-        onUnverified();
       } else {
         log.warn("login.failed", signInErrorDetails(err));
         setError(t(signInErrorMessageKey(failure), signInErrorValues(err)));
@@ -123,8 +114,8 @@ const PasswordSignInForm = ({
     <>
       {error ? <Text style={[styles.notice, { color: theme.colors.danger }]}>{error}</Text> : null}
       <View style={styles.fields}>
-        <MobileAuthInput testID="login-email" icon={Mail} value={email} onChangeText={setEmail} placeholder={t("login.emailLabel")} keyboardType="email-address" autoCapitalize="none" textContentType="emailAddress" autoComplete="email" />
-        <MobileAuthInput testID="login-password" icon={Lock} value={password} onChangeText={setPassword} placeholder={t("login.passwordLabel")} secureTextEntry textContentType="password" autoComplete="current-password" returnKeyType="done" onSubmitEditing={() => void submit()} />
+        <MobileAuthInput icon={Mail} value={email} onChangeText={setEmail} placeholder={t("login.emailLabel")} keyboardType="email-address" autoCapitalize="none" textContentType="emailAddress" autoComplete="email" />
+        <MobileAuthInput icon={Lock} value={password} onChangeText={setPassword} placeholder={t("login.passwordLabel")} secureTextEntry textContentType="password" autoComplete="current-password" returnKeyType="done" onSubmitEditing={() => void submit()} />
         {codeMethod ? (
           <MobileAuthInput
             testID="login-two-factor"
@@ -163,7 +154,7 @@ export const LoginScreen = ({ onPaired, onBack }: { onPaired?: () => Promise<voi
   const { t } = useTranslation();
   const theme = useMobileShellTheme();
   const { signIn } = useSession();
-  const [mode, setMode] = useState<"password" | "phone" | "signup" | "verify">("password");
+  const [mode, setMode] = useState<"password" | "phone">("password");
   const showForm = useCallback(() => setMode("password"), []);
   const [email, setEmail] = useState("");
   const [resetOpen, setResetOpen] = useState(false);
@@ -172,7 +163,7 @@ export const LoginScreen = ({ onPaired, onBack }: { onPaired?: () => Promise<voi
   const [lang, setLang] = useState(() => getCurrentLanguage());
 
   // Google, Apple, Microsoft (ACCT-SIGNIN-05): the browser comes back through parrot://auth/provider (App.tsx hands the
-  // link over, even while the pairing panel shows); a new email gets a free account, as on the website (ACCT-AUTH-10).
+  // link over, even while the pairing panel shows); a phone never creates an account, so `no_account` is said in words.
   const startProviderSession = useCallback(
     (token: string, user: User) => signIn({ token, user: { id: user.id, email: user.email, emailVerified: !!user.emailVerified } }),
     [signIn]
@@ -235,48 +226,10 @@ export const LoginScreen = ({ onPaired, onBack }: { onPaired?: () => Promise<voi
     );
   }
 
-  const providerRows = (labelKey: "login.provider.signInWith" | "login.provider.signUpWith") =>
-    providerSignIn.providers.length > 0 ? (
-      <>
-        <MobileOrDivider label={t("login.provider.or")} testID="provider-sign-in-divider" />
-        <MobileProviderSignInRows
-          providers={providerSignIn.providers}
-          busy={providerSignIn.busy}
-          label={(provider) => t(labelKey, { provider: PROVIDER_NAMES[provider] })}
-          onSelect={(provider) => void providerSignIn.start(provider)}
-        />
-      </>
-    ) : null;
-
-  if (mode === "signup" || mode === "verify") {
-    return (
-      <View style={{ flex: 1 }} testID="sign-in">
-        <MobileStartupPage controls={controls} footer={onBack ? <MobileSetupBackFooter onBack={onBack} /> : undefined}>
-          <MobileAuthBrand iconSource={PARROT_MASCOT} />
-          <MobileSignUp
-            key={mode}
-            initialEmail={email.trim()}
-            initialStep={mode === "verify" ? "verify" : "form"}
-            language={lang}
-            uiLanguage={isMobileUiLanguage(lang) ? lang : undefined}
-            device={{ deviceType: "mobile", deviceName: currentPhoneDeviceName("Parrot") }}
-            onSignedIn={startProviderSession}
-            onSignIn={(typed) => {
-              if (typed) setEmail(typed);
-              setInfo(null);
-              setProviderNotice(null);
-              setMode("password");
-            }}
-            providerRows={providerRows("login.provider.signUpWith")}
-          />
-        </MobileStartupPage>
-      </View>
-    );
-  }
-
   return (
     <View style={{ flex: 1 }} testID="sign-in">
-      <MobileStartupPage controls={controls} footer={onBack ? <MobileSetupBackFooter onBack={onBack} /> : undefined}>
+      <MobileStartupPage controls={controls}>
+        {onBack ? <MobileSetupHeader step={0} total={0} onBack={onBack} /> : null}
         <MobileAuthBrand iconSource={PARROT_MASCOT} subtitle={t("login.withAccount").toUpperCase()} />
         <SignInNoticeText />
         {info ? <Text style={[styles.notice, { color: theme.colors.accent }]}>{t(info)}</Text> : null}
@@ -285,23 +238,18 @@ export const LoginScreen = ({ onPaired, onBack }: { onPaired?: () => Promise<voi
             {t(providerNotice.key, providerNotice.values)}
           </Text>
         ) : null}
-        {/* ACCT-PAIR-07: Badger signed in on this phone offers its account above the form; nothing when it is not. */}
-        <SiblingOffer onPaired={onPaired ?? (async () => undefined)} />
-        <PasswordSignInForm email={email} setEmail={setEmail} onForgot={() => setResetOpen(true)} onUnverified={() => setMode("verify")} provider={providerStep} />
-        {providerRows("login.provider.signInWith")}
-        {/* A new email gets a free account through these rows, so the sign-up line sits under them (ACCT-AUTH-10). */}
-        {providerSignIn.providers.length > 0 ? <MobileSignUpTermsNotice language={lang} testID="provider-terms-notice" /> : null}
-        <MobileAuthLink
-          label={`${t("login.noAccountPrompt")} ${t("login.createAccount")}`.toUpperCase()}
-          color={theme.colors.accent}
-          style={styles.link}
-          onPress={() => {
-            setInfo(null);
-            setProviderNotice(null);
-            setMode("signup");
-          }}
-          testID="login-create-account"
-        />
+        <PasswordSignInForm email={email} setEmail={setEmail} onForgot={() => setResetOpen(true)} provider={providerStep} />
+        {providerSignIn.providers.length > 0 ? (
+          <>
+            <MobileOrDivider label={t("login.provider.or")} testID="provider-sign-in-divider" />
+            <MobileProviderSignInRows
+              providers={providerSignIn.providers}
+              busy={providerSignIn.busy}
+              label={(provider) => t("login.provider.signInWith", { provider: PROVIDER_NAMES[provider] })}
+              onSelect={(provider) => void providerSignIn.start(provider)}
+            />
+          </>
+        ) : null}
         <MobilePhoneSignInCard onPress={() => setMode("phone")} />
       </MobileStartupPage>
       {resetOpen ? (

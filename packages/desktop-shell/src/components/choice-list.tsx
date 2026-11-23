@@ -12,10 +12,7 @@ type Props<V extends string> = {
   ariaLabel: string;
   recommended?: V;
   recommendedLabel?: string;
-  /**
-   * Fixed list height; the list scrolls past it so a long list never pushes the screen (UX-SETUP-06). The rows are
-   * 42 px, so the default `max-h-64` shows the 5 languages whole, with no inner scroll (Chris 2026-11-18).
-   */
+  /** Fixed list height; the list scrolls past it so a long list never pushes the screen (UX-SETUP-06). */
   maxHeightClassName?: string;
 };
 
@@ -102,7 +99,7 @@ export function ChoiceList<V extends string>({
             role="option"
             aria-selected={selected}
             onClick={() => onChange(option.value)}
-            className={`flex cursor-pointer items-center gap-3 rounded-md border px-4 py-2 ${selected ? "border-primary bg-primary/10" : "border-border hover:bg-card"}`}
+            className={`flex cursor-pointer items-center gap-3 rounded-md border px-4 py-3 ${selected ? "border-primary bg-primary/10" : "border-border hover:bg-card"}`}
             data-testid={`setup-${name}-${option.value}`}
           >
             {option.lead}

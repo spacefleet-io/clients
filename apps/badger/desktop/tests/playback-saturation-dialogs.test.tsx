@@ -112,7 +112,7 @@ describe("saturated silo dialogs (STOR-BW-07, STOR-BW-08)", () => {
   it("speaks French and never mentions the soir", async () => {
     const render = await mount("fr", { refusals: 0, stops: 0, onUpgrade: vi.fn() });
     await render({ refusals: 0, stops: 1, onUpgrade: vi.fn() });
-    expect(dialog()?.textContent).toContain("Lecture arrêtée\u202f: trafic élevé");
+    expect(dialog()?.textContent).toContain("Lecture arrêtée : trafic élevé");
     expect(dialog()?.textContent?.toLowerCase()).not.toContain("soir");
     expect(button("Passer à une offre payante")).not.toBeNull();
     expect(button("Fermer")).not.toBeNull();
@@ -120,8 +120,8 @@ describe("saturated silo dialogs (STOR-BW-07, STOR-BW-08)", () => {
 
   it("carries the quality cap toast wording in both languages", () => {
     expect(en.player.capToast480p).toBe("Too much traffic right now: playing at up to 480p.");
-    expect(fr.player.capToast480p).toBe("Trop de trafic en ce moment\u202f: lecture en 480p maximum.");
+    expect(fr.player.capToast480p).toBe("Trop de trafic en ce moment : lecture en 480p maximum.");
     expect(en.player.capToast1080p).toBe("High traffic: your plan plays at up to 1080p right now.");
-    expect(fr.player.capToast1080p).toBe("Trafic élevé\u202f: votre offre lit en 1080p maximum pour le moment.");
+    expect(fr.player.capToast1080p).toBe("Trafic élevé : votre offre lit en 1080p maximum pour le moment.");
   });
 });

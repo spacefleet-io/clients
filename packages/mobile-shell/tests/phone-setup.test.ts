@@ -15,7 +15,6 @@ import { afterEach, describe, expect, it } from "vitest";
 import { errorReportsOffered, setErrorReportsOffered } from "../src/errorReportsOffered";
 import {
   INITIAL_PHONE_SETUP,
-  askProfileSetupInSetup,
   askTitleLanguageInSetup,
   createPhoneSetupStore,
   nextPhoneSetupStep,
@@ -160,62 +159,6 @@ describe("phone setup title language step (Badger phone only)", () => {
     expect(phoneSetupPosition(after)).toEqual({ step: 3, total: 4 });
     expect(previousPhoneSetupStep(after)).toBe("titleLanguage");
     expect(parsePhoneSetupProgress(JSON.stringify(after)).titleLanguageAnswered).toBe(true);
-  });
-});
-
-/**
- * "Your profile" (UX-SETUP-10): a numbered step after the key (and "Who's watching?"), before the title question,
- * while the profile picked has not set up its name and avatar; both phone apps.
- * @req UX-SETUP-10[badger-mobile] @req UX-SETUP-10[parrot] @req UX-SETUP-03[badger-mobile] @req UX-SETUP-06[parrot]
- */
-describe("phone setup profile step (both phone apps)", () => {
-  afterEach(() => {
-    askProfileSetupInSetup(() => false);
-    askTitleLanguageInSetup(() => false);
-  });
-  const TAG = "[MOBILE-SHELL-PHONE-SETUP-001 profile]";
-
-  it("comes right after the key, before the title question, numbered, while the profile picked has it pending", () => {
-    askProfileSetupInSetup(() => true);
-    askTitleLanguageInSetup(() => true);
-    console.info(TAG, "steps", phoneSetupSteps({ pairedKey: false }));
-    expect(phoneSetupSteps({ pairedKey: false })).toEqual(["language", "signIn", "libraryKey", "profileSetup", "titleLanguage", "notifications", "errorReports"]);
-    expect(phoneSetupPosition(at("profileSetup"))).toEqual({ step: 2, total: 5 });
-    expect(phoneSetupPosition(at("profileSetup", { pairedKey: true }))).toEqual({ step: 1, total: 4 });
-    expect(nextPhoneSetupStep(at("libraryKey"))).toBe("profileSetup");
-    expect(nextPhoneSetupStep(at("profileSetup"))).toBe("titleLanguage");
-    expect(previousPhoneSetupStep(at("titleLanguage"))).toBe("profileSetup");
-    expect(resolvePhoneSetupStep(at("libraryKey"), { hasKey: true, signedIn: true })).toBe("profileSetup");
-    expect(parsePhoneSetupProgress(JSON.stringify({ step: "profileSetup" })).step).toBe("profileSetup");
-  });
-
-  it("is Parrot's step 2 of 4 after the key (no title question there)", () => {
-    askProfileSetupInSetup(() => true);
-    expect(phoneSetupNumberedSteps({ pairedKey: false })).toEqual(["libraryKey", "profileSetup", "notifications", "errorReports"]);
-    expect(nextPhoneSetupStep(at("profileSetup"))).toBe("notifications");
-  });
-
-  it("is skipped for a profile already set up, even when saved at that step", () => {
-    askTitleLanguageInSetup(() => true);
-    expect(phoneSetupSteps({ pairedKey: false })).not.toContain("profileSetup");
-    console.info(TAG, "resolve skipped", resolvePhoneSetupStep(at("profileSetup"), { hasKey: true, signedIn: true }));
-    expect(resolvePhoneSetupStep(at("profileSetup"), { hasKey: true, signedIn: true })).toBe("titleLanguage");
-    askTitleLanguageInSetup(() => false);
-    expect(resolvePhoneSetupStep(at("profileSetup"), { hasKey: true, signedIn: true })).toBe("notifications");
-    expect(resolvePhoneSetupStep(at("profileSetup"), { hasKey: false, signedIn: true })).toBe("libraryKey");
-  });
-
-  it("keeps its place in the count once answered in this setup", async () => {
-    askProfileSetupInSetup(() => true);
-    const saved: PhoneSetupProgress[] = [];
-    expect(await phoneSetupMoves(at("profileSetup"), async (next) => void saved.push(next)).advance({ profileSetupAnswered: true })).toBe("notifications");
-    askProfileSetupInSetup(() => false);
-    const after = saved[0]!;
-    console.info(TAG, "after answer", JSON.stringify(after), phoneSetupPosition(after));
-    expect(after.step).toBe("notifications");
-    expect(phoneSetupPosition(after)).toEqual({ step: 3, total: 4 });
-    expect(previousPhoneSetupStep(after)).toBe("profileSetup");
-    expect(parsePhoneSetupProgress(JSON.stringify(after)).profileSetupAnswered).toBe(true);
   });
 });
 

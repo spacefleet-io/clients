@@ -73,7 +73,7 @@ const labels = {
   hint: "h",
   useDefault: "Use default",
   save: "Save",
-  saving: "Saving…",
+  saving: "Saving...",
   error: "e",
 };
 

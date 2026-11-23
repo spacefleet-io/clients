@@ -70,8 +70,8 @@ The bundle NEVER carries the host's C runtime or graphics stack (`hostLibraries`
 `recipes/linux-x64/target.ts`): glibc, GL/GLX/EGL (libglvnd), libdrm, gbm, Vulkan, Wayland, X11/xcb, and the
 runtime a GPU driver links (libstdc++, libgcc_s, expat, zlib). A GPU driver (mesa, NVIDIA) is loaded into mpv
 from the host, so a bundled copy of a library it shares would shadow the host's. `assemble.sh` skips them and
-fails the build if one slips in; `verify` fails with `host_libraries_bundled:`. libva stays bundled (drivers are
-dlopen'd from the host and bind to it; it must be at least the libva the host's Mesa was built against, see `src/sources.ts`).
+fails the build if one slips in; `verify` fails with `host_libraries_bundled:`. libva stays bundled (newer than
+any driver; drivers are dlopen'd from the host and bind to it).
 
 For size, what the app's own Electron loads is left to the host as well: every host that runs the app has it.
 That is the X11 client libraries (Electron NEEDS libX11, libxcb, libXext, libXfixes, libXrandr; they pull

@@ -8,8 +8,6 @@
 	<key>keychain-access-groups</key>
 	<array>
 		<string>$(AppIdentifierPrefix)$(PRODUCT_BUNDLE_IDENTIFIER)</string>
-		<!-- ACCT-PAIR-07: same-device sign-in (see the -Device entitlements). -->
-		<string>$(AppIdentifierPrefix)io.spacefleet.shared</string>
 	</array>
 </dict>
 </plist>

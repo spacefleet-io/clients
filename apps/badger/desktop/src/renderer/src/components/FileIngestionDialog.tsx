@@ -1478,20 +1478,18 @@ export default function FileIngestionDialog({ paths: initialPaths, pathsNonce, o
       );
     } catch (error) {
       const failure = searchFailureText(error);
-      const unavailable = failure.retryOnTickets;
+      const unavailable = failure.error === "ingestion.errors.metadataUnavailable";
       ingestLog.warn(
         {
           file: candidate.name,
           error: error instanceof Error ? `${error.name}: ${error.message}` : String(error),
           failure: failure.error,
-          hint: failure.hint,
-          ...(failure.values ? { values: failure.values } : {}),
           retryOnTickets: unavailable,
         },
         "title-search-failed"
       );
       setCandidates((prev) =>
-        prev.map((c) => c.id === candidate.id ? { ...c, status: "error", error: t(failure.error), errorHint: t(failure.hint, failure.values), searchUnavailable: unavailable } : c)
+        prev.map((c) => c.id === candidate.id ? { ...c, status: "error", error: t(failure.error), errorHint: t(failure.hint), searchUnavailable: unavailable } : c)
       );
     }
   };

@@ -12,7 +12,6 @@ import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 import { streamBridgeStub } from "./streamBridge";
-import { exportBridgeStub } from "./exportBridge";
 import type { ParrotLanguage, ParrotState } from "../src/shared/ipc";
 import Library from "../src/renderer/src/Library";
 import { PARROT_STRINGS, translator } from "../src/renderer/src/i18n";
@@ -66,7 +65,6 @@ describe("Parrot desktop empty library (PAR-EMPTY-01)", () => {
       configurable: true,
       value: {
         ...streamBridgeStub(),
-        ...exportBridgeStub(),
         getLibrary: vi.fn(async () => ({ ok: true, library: emptyLibrary })),
         getImportStatus: vi.fn(async () => idle),
         getImportScan: vi.fn(async () => null),
@@ -107,11 +105,10 @@ describe("Parrot desktop empty library (PAR-EMPTY-01)", () => {
     expect(screen?.textContent).toContain("Add your first album");
     expect(q("empty-library-mascot")[0]?.tagName).toBe("IMG");
     expect(q("empty-library-add-music")[0]?.textContent).toBe("Add music");
-    // Badger's look and size: the mascot sits in the same small box, with the same title scale and round buttons. The
-    // box and title are responsive since #3111 (UX-EMPTY-01): from 640 px, which every desktop window is, 222 px and 40 px.
+    // Badger's look and size: the mascot sits in the same small box, with the same title scale and round buttons.
     expect(q("empty-library-mascot")[0]?.className).toContain("h-[152px] w-[152px]");
-    expect(q("empty-library-mascot")[0]?.parentElement?.className.split(" ")).toEqual(expect.arrayContaining(["w-[148px]", "sm:h-[222px]"]));
-    expect(screen?.querySelector("h1")?.className.split(" ")).toContain("sm:text-[40px]");
+    expect(q("empty-library-mascot")[0]?.parentElement?.className).toContain("h-[222px] w-[148px]");
+    expect(screen?.querySelector("h1")?.className).toContain("text-[40px]");
     expect(q("empty-library-add-music")[0]?.className).toContain("rounded-full");
     expect(q("empty-library-add-folder")[0]?.textContent).toBe("Add a folder");
     expect([...screen!.querySelectorAll("li")].map((li) => li.firstElementChild?.nextElementSibling?.firstElementChild?.textContent)).toEqual([

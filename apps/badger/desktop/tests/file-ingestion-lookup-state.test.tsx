@@ -243,7 +243,6 @@ describe("FileIngestionDialog lookup states (INGS-IDENT-02)", () => {
       expect(searchFailureText(new MetadataLookupTimeoutError(METADATA_LOOKUP_TIMEOUT_MS))).toEqual({
         error: "ingestion.errors.searchTimedOut",
         hint: "ingestion.ui.searchTimedOutHint",
-        retryOnTickets: false,
       });
       vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
       const search = vi.mocked(searchTitles);

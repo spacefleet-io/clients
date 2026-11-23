@@ -54,7 +54,7 @@ export type ExternalPlaybackMetadataPayload = {
   chapters: Array<{ title: string; startSeconds: number; endSeconds: number | null; orderIndex: number }>;
   audio: Array<{ title?: string | null; label?: string | null; lang?: string | null }>;
   /** UI-language strings the OSC menus show (sf-select.lua: apply_labels_json). */
-  labels: { subtitlesOff: string; getMoreSubtitles: string; tryAnotherVersion?: string; addSubtitleFile?: string } & Partial<OscMenuPrompts>;
+  labels: { subtitlesOff: string; getMoreSubtitles: string; tryAnotherVersion?: string } & Partial<OscMenuPrompts>;
   playback: {
     markers: Array<{
       type: "intro" | "credits";
@@ -89,13 +89,11 @@ export const buildExternalPlaybackMetadataPayload = (params: {
   subtitlesOffLabel: string;
   /**
    * The subtitle menu's "Get more subtitles…" row (PLAY-SUBGET-02, shared copy `getMore`); empty or omitted hides
-   * the row (no catalog id and no title to search by, an offline copy playing).
+   * the row (offline, no catalog id, an offline copy playing).
    */
   getMoreSubtitlesLabel?: string;
   /** The subtitle menu's "Try another version" row (PLAY-SUBGET-07); non-empty only while a fetched subtitle is on. */
   tryAnotherVersionLabel?: string;
-  /** The subtitle menu's last row, "Add a subtitle file…" (PLAY-SUBGET-23); empty or omitted hides it. */
-  addSubtitleFileLabel?: string;
   /** Track-menu prompts in the UI language (`oscMenuPrompts(t)`); omitted, the OSC keeps its English ones. */
   menuPrompts?: OscMenuPrompts;
   skipMarkers: Array<{ type: "intro" | "credits"; startSeconds: number; endSeconds: number }>;
@@ -128,7 +126,6 @@ export const buildExternalPlaybackMetadataPayload = (params: {
       subtitlesOff: params.subtitlesOffLabel,
       getMoreSubtitles: params.getMoreSubtitlesLabel ?? "",
       tryAnotherVersion: params.tryAnotherVersionLabel ?? "",
-      addSubtitleFile: params.addSubtitleFileLabel ?? "",
       ...params.menuPrompts,
     },
     playback: {

@@ -2,14 +2,11 @@
  * @test-id MOBILE-LIB-FMT-V2-WRITER-001
  * @level unit
  * @req LIB-FMT-07
- * @req LIB-SYNC-14
- * @bugfix @regression-proof
  *
  * @why Storage format v2 compresses the plaintext BEFORE the AES-GCM envelope (a 3-byte frame header `00 5A 01`
  *   plus raw DEFLATE). The phone read v2 since #669; it must also write it, or every snapshot it publishes and
- *   every change it sends costs the full uncompressed size on the wire. A snapshot is built by the native module in
- *   one streaming pass (SnapshotCodecTest checks its bytes): reading the SQLite file into JS to frame it threw
- *   OutOfMemoryError and froze the UI 52 s on a 60 MB library, so the JS side must never read the database.
+ *   every change it sends costs the full uncompressed size on the wire. Snapshots go through the native
+ *   encryptor, so the framed bytes are staged in a temp file the native call reads, and the temp file is removed.
  *   Every change is framed, small ones included (a progress op is ~150 B).
  */
 import { describe, expect, it, vi } from "vitest";
@@ -22,8 +19,8 @@ const log = (phase: string, data?: unknown) =>
 
 const h = vi.hoisted(() => ({
   files: new Map<string, Uint8Array>(),
-  jsReads: [] as string[],
-  nativeCalls: [] as Array<{ dbPath: string; key: string; target: string }>,
+  nativeInputs: [] as Array<{ source: string; bytes: Uint8Array }>,
+  nativeFails: false,
   jsEncrypted: [] as Uint8Array[],
 }));
 
@@ -31,14 +28,7 @@ vi.mock("react-native", () => ({ Platform: { OS: "android" } }));
 vi.mock("react-native-quick-crypto", () => ({ default: {} }));
 vi.mock("react-native-fs", () => ({
   default: {
-    readFile: async (path: string) => {
-      h.jsReads.push(path);
-      return Buffer.from(h.files.get(path)!).toString("base64");
-    },
-    read: async (path: string) => {
-      h.jsReads.push(path);
-      return "";
-    },
+    readFile: async (path: string) => Buffer.from(h.files.get(path)!).toString("base64"),
     writeFile: async (path: string, data: string) => {
       h.files.set(path, new Uint8Array(Buffer.from(data, "base64")));
     },
@@ -48,12 +38,14 @@ vi.mock("react-native-fs", () => ({
   },
 }));
 vi.mock("../src/native/LibrarySync", () => ({
-  encryptSnapshotFile: async (dbPath: string, key: string, target: string) => {
-    h.nativeCalls.push({ dbPath, key, target });
-    h.files.set(target, new Uint8Array([0xee]));
-    return { dbBytes: h.files.get(dbPath)!.length, storedBytes: 1, compressed: true, ms: 1 };
+  encryptLibraryToBinaryFile: async (source: string, _key: string, target: string) => {
+    if (h.nativeFails) throw new Error("NATIVE_ENCRYPT_UNAVAILABLE");
+    const bytes = h.files.get(source)!;
+    h.nativeInputs.push({ source, bytes });
+    h.files.set(target, new Uint8Array([0xee, ...bytes]));
   },
-  decryptSnapshotFile: vi.fn(),
+  decryptLibraryFromBinaryFile: vi.fn(),
+  decryptLibraryFromFile: vi.fn(),
   onLibrarySyncProgress: () => ({ remove: () => undefined }),
   sha256File: vi.fn(),
 }));
@@ -79,17 +71,39 @@ const fakeSqlite = () => {
 };
 
 describe("mobile writes storage format v2 (LIB-FMT-07)", () => {
-  it("a snapshot is built by the native streaming codec; JS never reads the database", async () => {
+  it("a snapshot is compressed before the native encryptor sees it, and the staging file is removed", async () => {
     const db = fakeSqlite();
     h.files.set("/db", db);
     log("phase:snapshot", { dbBytes: db.length });
-    const result = await encryptDbToBinaryFile("/db", "key", "/out");
-    log("state:snapshot", { nativeCalls: h.nativeCalls, jsReads: h.jsReads, result });
-    expect(h.nativeCalls, "one native call, straight from the SQLite file").toEqual([{ dbPath: "/db", key: "key", target: "/out" }]);
-    expect(h.jsReads, "the database never crosses into JS").toEqual([]);
-    expect(h.jsEncrypted, "no JS encryption of the snapshot").toEqual([]);
-    expect([...h.files.keys()].sort(), "no staging file").toEqual(["/db", "/out"]);
-    expect(result.dbBytes).toBe(db.length);
+    await encryptDbToBinaryFile("/db", "key", "/out");
+    const input = h.nativeInputs[0];
+    log("state:snapshot", { nativeInputBytes: input?.bytes.length, files: [...h.files.keys()] });
+    expect(input, "the native encryptor ran").toBeDefined();
+    expect(isCompressedFrame(input!.bytes), "it was handed a compressed frame, not the SQLite file").toBe(true);
+    expect(input!.bytes.length).toBeLessThan(db.length / 2);
+    expect(Buffer.from(decodeCompressedFrame(input!.bytes, fflateCodec)).equals(Buffer.from(db)), "inflates back to the DB").toBe(true);
+    expect(h.files.has(input!.source), "the staging file is gone").toBe(false);
+    expect(h.files.has("/out"), "the encrypted target was written").toBe(true);
+    expect(h.files.get("/db"), "the source DB is untouched").toEqual(db);
+  });
+
+  it("the JS fallback encrypts the compressed frame too, and the staging file is still removed", async () => {
+    h.nativeFails = true;
+    h.jsEncrypted.length = 0;
+    h.nativeInputs.length = 0;
+    const db = fakeSqlite();
+    h.files.set("/db2", db);
+    log("phase:snapshot fallback");
+    try {
+      await encryptDbToBinaryFile("/db2", "key", "/out2");
+    } finally {
+      h.nativeFails = false;
+    }
+    const encrypted = h.jsEncrypted[0];
+    log("state:fallback", { encryptedBytes: encrypted?.length, files: [...h.files.keys()] });
+    expect(encrypted && isCompressedFrame(encrypted)).toBe(true);
+    expect(h.files.get("/out2")?.[0], "the fallback result is what lands in the target").toBe(0xee);
+    expect([...h.files.keys()].filter((path) => path.startsWith("/db2")), "no staging file left behind").toEqual(["/db2"]);
   });
 
   it("every change is framed then encrypted, a 150-byte progress op included", async () => {

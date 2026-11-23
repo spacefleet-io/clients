@@ -5,8 +5,8 @@
   "overview": "Your Badger library as Jellyfin libraries, with resume and watched sync.",
   "owner": "Badger",
   "category": "General",
-  "version": "0.2.0.0",
+  "version": "0.1.0.0",
   "targetAbi": "12.0.0.0",
-  "changelog": "0.2.0.0: reads library change types 4 (packed playback); asks to update the plugin when SpaceFleet moves ahead. 0.1.0.0: first v0: shortcut libraries, resume/watched sync, delete forwarding.",
-  "timestamp": "2026-11-21T00:00:00Z"
+  "changelog": "First v0: shortcut libraries, resume/watched sync, delete forwarding.",
+  "timestamp": "2026-10-16T00:00:00Z"
 }

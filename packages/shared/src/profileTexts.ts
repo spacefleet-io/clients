@@ -3,9 +3,7 @@
  * ACCT-PROF-02, UX-PROF-01; the avatar chooser, the names of the 22 avatars under `avatars.<id>` and the top-bar profile
  * menu, ACCT-PROF-05, UX-TOP-01), the same in every Badger and Parrot app (REL-FAM-02): each puts them into its i18next tree
  * at load as `profiles` (`withProfilesTexts`). Parrot asks "Who's listening?" (`whoIsListening`). `errors` holds the texts of
- * `profileErrorKey`. `setup` is the "Your profile" setup step (UX-SETUP-10) and `whatsNew` the "New in this update" window
- * (UX-UPDATE-01), one `whatsNew.<featureId>` per app feature (`./appFeatures`); apps draw `{{name}}` of
- * `whatsNew.avatars.text` in bold.
+ * `profileErrorKey`.
  */
 export type ProfilesTextLanguage = "en" | "fr" | "nl" | "de" | "es";
 
@@ -67,21 +65,6 @@ export const profilesTexts = {
       "ufo": "Saucer",
       "earth": "Earth"
     },
-    "setup": {
-      "title": "Your profile",
-      "lead": "How you appear on every app. You can change it later.",
-      "name": "Name",
-      "tvRename": "Rename on your phone or in Settings"
-    },
-    "whatsNew": {
-      "badge": "New in this update",
-      "avatars": {
-        "title": "Pick an avatar",
-        "text": "Profiles now have avatars, the same on every app. Choose one for {{name}}.",
-        "cta": "Choose my avatar"
-      },
-      "later": "Later"
-    },
     "errors": {
       "limit": "This account already has its {{max}} profiles.",
       "last": "An account always keeps at least one profile.",
@@ -92,8 +75,8 @@ export const profilesTexts = {
     }
   },
   fr: {
-    "whoIsWatching": "Qui regarde ?",
-    "whoIsListening": "Qui écoute ?",
+    "whoIsWatching": "Qui regarde ?",
+    "whoIsListening": "Qui écoute ?",
     "add": "Ajouter un profil",
     "manage": "Gérer les profils",
     "manageHint": "Ajouter, modifier ou supprimer les profils de ce compte.",
@@ -106,20 +89,20 @@ export const profilesTexts = {
     "namePlaceholder": "Nom",
     "save": "Enregistrer",
     "cancel": "Annuler",
-    "deleteTitle": "Supprimer {{name}} ?",
+    "deleteTitle": "Supprimer {{name}} ?",
     "deleteBody": "L'historique, les reprises de lecture, les playlists et les favoris de ce profil sont supprimés définitivement. La médiathèque reste telle quelle.",
     "deleteConfirm": "Supprimer le profil",
     "settingsGroup": "Profils",
     "switch": "Changer de profil",
-    "watchingAs": "Profil actuel : {{name}}",
-    "listeningAs": "Profil actuel : {{name}}",
+    "watchingAs": "Profil actuel : {{name}}",
+    "listeningAs": "Profil actuel : {{name}}",
     "deleteBodyListening": "L'historique d'écoute, les playlists et les titres aimés de ce profil sont supprimés définitivement. La bibliothèque musicale reste telle quelle.",
     "edit": "Modifier",
     "editA11y": "Modifier {{name}}",
     "editTitle": "Modifier le profil",
     "chooseAvatar": "Choisir un avatar",
     "changeAvatar": "Changer d'avatar",
-    "avatarLabel": "Avatar : {{name}}",
+    "avatarLabel": "Avatar : {{name}}",
     "menuA11y": "Menu du profil ({{name}})",
     "current": "Profil actuel",
     "limitFree": "Un compte gratuit a un seul profil. Les offres payantes en ont jusqu'à {{paidMax}}.",
@@ -147,21 +130,6 @@ export const profilesTexts = {
       "planet": "Planète",
       "ufo": "Soucoupe volante",
       "earth": "Terre"
-    },
-    "setup": {
-      "title": "Votre profil",
-      "lead": "Votre apparence dans toutes les apps. Vous pourrez la changer plus tard.",
-      "name": "Nom",
-      "tvRename": "Renommez-le sur votre téléphone ou dans Paramètres"
-    },
-    "whatsNew": {
-      "badge": "Nouveau dans cette mise à jour",
-      "avatars": {
-        "title": "Choisissez un avatar",
-        "text": "Les profils ont maintenant des avatars, les mêmes dans toutes les apps. Choisissez-en un pour {{name}}.",
-        "cta": "Choisir mon avatar"
-      },
-      "later": "Plus tard"
     },
     "errors": {
       "limit": "Ce compte a déjà ses {{max}} profils.",
@@ -229,21 +197,6 @@ export const profilesTexts = {
       "ufo": "Vliegende schotel",
       "earth": "Aarde"
     },
-    "setup": {
-      "title": "Je profiel",
-      "lead": "Zo zie je eruit in elke app. Je kunt het later wijzigen.",
-      "name": "Naam",
-      "tvRename": "Wijzig de naam op je telefoon of in Instellingen"
-    },
-    "whatsNew": {
-      "badge": "Nieuw in deze update",
-      "avatars": {
-        "title": "Kies een avatar",
-        "text": "Profielen hebben nu avatars, in elke app dezelfde. Kies er een voor {{name}}.",
-        "cta": "Mijn avatar kiezen"
-      },
-      "later": "Later"
-    },
     "errors": {
       "limit": "Dit account heeft al zijn {{max}} profielen.",
       "last": "Een account houdt altijd minstens één profiel.",
@@ -309,21 +262,6 @@ export const profilesTexts = {
       "planet": "Planet",
       "ufo": "Ufo",
       "earth": "Erde"
-    },
-    "setup": {
-      "title": "Dein Profil",
-      "lead": "So erscheinst du in jeder App. Du kannst es später ändern.",
-      "name": "Name",
-      "tvRename": "Benenne es auf deinem Handy oder in den Einstellungen um"
-    },
-    "whatsNew": {
-      "badge": "Neu in diesem Update",
-      "avatars": {
-        "title": "Wähle einen Avatar",
-        "text": "Profile haben jetzt Avatare, in jeder App dieselben. Wähle einen für {{name}}.",
-        "cta": "Meinen Avatar wählen"
-      },
-      "later": "Später"
     },
     "errors": {
       "limit": "Dieses Konto hat schon seine {{max}} Profile.",
@@ -391,21 +329,6 @@ export const profilesTexts = {
       "ufo": "Platillo volante",
       "earth": "Tierra"
     },
-    "setup": {
-      "title": "Tu perfil",
-      "lead": "Así apareces en todas las apps. Puedes cambiarlo más tarde.",
-      "name": "Nombre",
-      "tvRename": "Cámbiale el nombre en tu teléfono o en Ajustes"
-    },
-    "whatsNew": {
-      "badge": "Novedad de esta actualización",
-      "avatars": {
-        "title": "Elige un avatar",
-        "text": "Los perfiles ahora tienen avatares, los mismos en todas las apps. Elige uno para {{name}}.",
-        "cta": "Elegir mi avatar"
-      },
-      "later": "Más tarde"
-    },
     "errors": {
       "limit": "Esta cuenta ya tiene sus {{max}} perfiles.",
       "last": "Una cuenta siempre conserva al menos un perfil.",
@@ -425,7 +348,7 @@ export const withProfilesTexts = <T extends Record<string, unknown>>(translation
 
 /**
  * The `t` of the profile screens (`@space/ui/profiles`) for an app without i18next (Parrot desktop): resolves
- * `profiles.*` and nested keys (`profiles.errors.*`, `profiles.avatars.*`, `profiles.whatsNew.avatars.*`, …) in {@link profilesTexts} with `{{var}}` values. A music app (`listening`) says
+ * `profiles.*`, `profiles.errors.*` and `profiles.avatars.*` in {@link profilesTexts} with `{{var}}` values. A music app (`listening`) says
  * what a listening profile loses when deleted (`deleteBodyListening`), as Parrot's phone does.
  */
 export const profilesTranslator =
@@ -434,7 +357,7 @@ export const profilesTranslator =
     const path = key.replace(/^profiles\./, "").split(".");
     if (listening && path[0] === "deleteBody") path[0] = "deleteBodyListening";
     const texts = profilesTexts[language] as Record<string, unknown>;
-    const found = path.reduce<unknown>((node, part) => (node && typeof node === "object" ? (node as Record<string, unknown>)[part] : undefined), texts);
+    const found = path.length === 2 ? (texts[path[0]] as Record<string, string> | undefined)?.[path[1]] : texts[path[0]];
     if (typeof found !== "string") return key;
     return found.replace(/\{\{(\w+)\}\}/g, (_match, name: string) => String(values[name] ?? ""));
   };

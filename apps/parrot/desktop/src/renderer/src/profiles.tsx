@@ -7,17 +7,12 @@
  * a profile in the top bar's menu (UX-TOP-02) only changes which one is ticked; with no "Who's listening?" on this
  * computer, the main profile is the current one until another is picked.
  */
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ApiError } from "@space/shared/api";
-import type { ApiProfile } from "@space/shared/profiles";
 import { createProfileStore, type ProfileLibraryMoves, type ProfileStore } from "@space/shared/profileStore";
 import { profilesTranslator } from "@space/shared/profileTexts";
 import { ProfileMenu, ProfilesManager } from "@space/ui/profiles";
-import { MASCOT_GLOW } from "@space/ui/floating-mascot";
-import { ProfileSetupStep, UpdateFeaturesHost, needsProfileSetupStep, saveProfileSetup } from "@space/desktop-shell/profile-setup";
-import mascotUrl from "@space/parrot-core/mascot.webp";
 import type { ParrotBridge, ParrotLanguage, ParrotProfilesResult } from "../../shared/ipc";
-import type { Translate } from "./i18n";
 
 /** What the profiles need from `window.parrot`: main's calls with the session token. */
 export type ParrotProfilesBridge = Pick<ParrotBridge, "listProfiles" | "createProfile" | "updateProfile" | "deleteProfile">;
@@ -162,109 +157,5 @@ export function ProfilesSection({
         startWith={startWith}
       />
     </section>
-  );
-}
-
-/**
- * The profile this computer is on (the current one, else the main one) once the list is known; `ready` is true without
- * a store (a browser preview), so nothing waits on it.
- */
-export const useParrotCurrentProfile = (store: ProfileStore | null): { ready: boolean; profile: ApiProfile | null } => {
-  const subscribe = useCallback((listener: () => void) => (store ? store.subscribe(listener) : () => undefined), [store]);
-  const snapshot = useSyncExternalStore(subscribe, () => store?.getSnapshot() ?? null);
-  if (!snapshot) return { ready: true, profile: null };
-  if (snapshot.status !== "ready") return { ready: false, profile: null };
-  const profile =
-    snapshot.profiles.find((candidate) => candidate.id === snapshot.activeId) ??
-    snapshot.profiles.find((candidate) => candidate.isMain) ??
-    null;
-  return { ready: true, profile };
-};
-
-/** Setup's page around a profile screen: the card centred below the window's top-right controls. */
-const ParrotSetupFrame = ({ children }: { children: ReactNode }) => (
-  <div className="flex min-h-screen items-center justify-center p-8 pt-32">{children}</div>
-);
-
-/**
- * UX-SETUP-10: "Your profile" for `profile`, numbered (`progress`) in the first setup, alone otherwise. Next saves the
- * name, the avatar and `features.avatars = "set"` in one PATCH, then calls `onDone`.
- */
-export function ParrotProfileSetupStep({
-  store,
-  profile,
-  language,
-  t,
-  progress,
-  onBack,
-  onSaving,
-  onDone,
-}: {
-  store: ProfileStore;
-  profile: ApiProfile;
-  language: ParrotLanguage;
-  t: Translate;
-  progress?: { current: number; total: number };
-  onBack?: () => void;
-  /** Called before the save: the saved profile no longer owes the step, so a counted run must keep counting it. */
-  onSaving?: () => void;
-  onDone: () => void | Promise<void>;
-}) {
-  return (
-    <ProfileSetupStep
-      profile={profile}
-      t={profilesTranslator(language, { listening: true })}
-      progress={
-        progress
-          ? { ...progress, label: t("stepOf", { n: progress.current, m: progress.total }), testId: "setup-progress" }
-          : undefined
-      }
-      backLabel={t("back")}
-      nextLabel={progress && progress.current === progress.total ? t("finish") : t("next")}
-      mascotSrc={mascotUrl}
-      mascotGlowClassName={MASCOT_GLOW.parrot}
-      log={log}
-      onBack={onBack}
-      onNext={async (answer) => {
-        onSaving?.();
-        await saveProfileSetup(store, profile.id, answer);
-        log("profiles.setup.saved", { profileId: profile.id, avatarId: answer.avatarId, step: progress?.current ?? null });
-        await onDone();
-      }}
-    />
-  );
-}
-
-/**
- * In the library (UX-SETUP-10, UX-UPDATE-01): a profile still owing "Your profile" (made since the avatars, e.g. added
- * and picked later) sees it alone, over the library; a profile from before an update's feature sees its "New in this
- * update" window, whose button opens the same screen.
- */
-export function ParrotProfileSetupOverlays({ store, language, t }: { store: ProfileStore; language: ParrotLanguage; t: Translate }) {
-  const { profile } = useParrotCurrentProfile(store);
-  const [answeredFor, setAnsweredFor] = useState<string | null>(null);
-  // SF_PROFILE_SETUP=off: test harnesses keep both screens off the library.
-  if (window.parrot?.profileSetupOff === true) return null;
-  if (profile && answeredFor !== profile.id && needsProfileSetupStep(profile)) {
-    return (
-      <div className="fixed inset-0 z-[70] overflow-y-auto bg-background" data-testid="profile-setup-alone">
-        <ParrotSetupFrame>
-          <ParrotProfileSetupStep store={store} profile={profile} language={language} t={t} onDone={() => setAnsweredFor(profile.id)} />
-        </ParrotSetupFrame>
-      </div>
-    );
-  }
-  return (
-    <UpdateFeaturesHost
-      profile={profile}
-      store={store}
-      t={profilesTranslator(language, { listening: true })}
-      log={log}
-      backLabel={t("back")}
-      nextLabel={t("next")}
-      mascotSrc={mascotUrl}
-      mascotGlowClassName={MASCOT_GLOW.parrot}
-      frame={(screen) => <ParrotSetupFrame>{screen}</ParrotSetupFrame>}
-    />
   );
 }

@@ -65,7 +65,6 @@ vi.mock("../src/lib/metadata/runtime", () => ({
 vi.mock("../src/components/PlayerCastPicker", () => ({ PlayerCastPicker: "PlayerCastPicker" }));
 // "Get subtitles" (PLAY-SUBGET) loads the metadata client and lucide icons (native modules, Flow sources): a stand-in.
 vi.mock("../src/screens/player/PlayerSubtitleFetch", () => ({ PlayerSubtitleFetch: "PlayerSubtitleFetch" }));
-vi.mock("../src/screens/player/PlayerSubtitleFile", () => ({ PlayerSubtitleFile: "PlayerSubtitleFile" }));
 vi.mock("react-native", () => ({
   StyleSheet: { create: <T>(styles: T) => styles, absoluteFill: {} },
   View: "View",
@@ -132,8 +131,6 @@ vi.mock("@space/mobile-mpv-playback", () => ({
     },
   },
 }));
-// The badger of the launching wait (UX-WAIT-02) is its own component, tested in mobile-shell; here it is a stand-in.
-vi.mock("@space/mobile-shell/mascot-loader", () => ({ MobileMascotLoader: "MobileMascotLoader" }));
 vi.mock("@space/mobile-shell/i18n", () => {
   const t = (key: string) => key;
   return { useTranslation: () => ({ t, i18n: { language: metadata.language } }), getCurrentLanguage: () => metadata.language };
@@ -146,7 +143,7 @@ vi.mock("../src/store/auth", () => ({ useAuth: () => ({ user: null, token: metad
 // The phone player under test: the TV runtime is off and its remote is not mounted.
 vi.mock("../src/tv/lib/tvRuntime", () => ({ IS_TV: false }));
 vi.mock("../src/tv/components/TvPlayerRemote", () => ({ TvPlayerRemote: "TvPlayerRemote" }));
-vi.mock("@space/mobile-shell/tv/TvFocusable", () => ({ TvFocusable: "TvFocusable" }));
+vi.mock("../src/tv/components/TvFocusable", () => ({ TvFocusable: "TvFocusable" }));
 vi.mock("../src/store/library", () => {
   const library = {
     setPlaybackProgress: async (_mediaId: string, episodeId: string | null, pct: number, at: { positionSeconds: number }, final: boolean) => {

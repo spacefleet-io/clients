@@ -6,17 +6,12 @@
  * @req PAR-NAV-04[parrot]
  * @req UX-WAIT-02[parrot]
  * @req PAR-EMPTY-01[parrot]
- * @req UX-WAIT-04[parrot]
  * @why The phone opens on Home (PAR-NAV-02) and its Home is the desktop's (PAR-HOME-01): "Jump back in" on the album
- *   last played on this phone with "artist · year · N songs", Resume and Shuffle and the wave; "Recently played" newest
- *   first, then right under it "Recently added" (the library's albums newest added first, Chris 2026-11-20: under
- *   "Recently played", as on Badger's Home); "Your artists" most played first; each "See all" opening the
- *   library's album list (in "Recently added" order from that row) or artist list; and,
+ *   last played on this phone with "artist · year · N songs", Resume and Shuffle and the wave; "Recently played"
+ *   newest first; "Your artists" most played first; each "See all" opening the library's album or artist list; and,
  *   before anything is played, "Start listening" with Play over the library's albums. An empty or missing library shows
  *   the shared empty-library screen (PAR-EMPTY-01). Screens are called as functions against a mocked React Native,
  *   with translation keys standing for the texts. Home has no page title: the tab bar names the page (PAR-NAV-04).
- *   Chris, 2026-11-18: the empty library showed before the library had loaded; it waits for the album list of the
- *   open library, and until then Home shows the app's loading screen, "Loading library…" (UX-WAIT-04).
  */
 import React from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -27,8 +22,6 @@ const state = vi.hoisted(() => ({
   history: { version: 1, albums: [], artistPlays: {} } as ListeningHistory,
   played: [] as unknown[],
   libraryStatus: "ready" as string,
-  /** Whether the query answered for the library version open now (the real hook's `answered`). */
-  answered: true,
   /** The native player's state Home polls; null = nothing queued. */
   player: null as null | Record<string, unknown>,
   toggles: [] as string[],
@@ -54,19 +47,17 @@ vi.mock("react-native", () => ({
   View: "View",
 }));
 vi.mock("lucide-react-native", () =>
-  Object.fromEntries(["House", "LibraryBig", "ListMusic", "Search", "Settings", "Pause", "Play", "Shuffle"].map((name) => [name, `Icon:${name}`]))
+  Object.fromEntries(["House", "LibraryBig", "ListMusic", "Settings", "Pause", "Play", "Shuffle"].map((name) => [name, `Icon:${name}`]))
 );
 vi.mock("@react-navigation/native", () => ({ useNavigation: () => ({ navigate: () => undefined }), useIsFocused: () => true }));
 vi.mock("react-native-safe-area-context", () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) }));
-// The rails render as the list they wrap, so the rows below are found as FlatLists.
-vi.mock("@space/mobile-shell/components", () => ({ SkyCover: "SkyCover", useSkyScroll: () => ({}), MobileRail: "FlatList", MobileTabPager: "MobileTabPager", MobileFounderNoticeHost: "MobileFounderNoticeHost", MobileLibraryLoading: "MobileLibraryLoading" }));
+vi.mock("@space/mobile-shell/components", () => ({ SkyCover: "SkyCover", useSkyScroll: () => ({}), MobileTabPager: "MobileTabPager", MobileFounderNoticeHost: "MobileFounderNoticeHost" }));
 vi.mock("../src/screens/EmptyLibrary", () => ({ EmptyLibrary: "EmptyLibrary" }));
 vi.mock("@space/mobile-shell/render-boundary", () => ({ guardRenderItem: (_name: string, render: unknown) => render }));
 vi.mock("@space/mobile-shell/i18n", () => ({
   useTranslation: () => ({
     t: (key: string, options?: { count?: number; time?: string }) =>
       options?.time !== undefined ? `${key}@${options.time}` : options?.count === undefined ? key : `${key}#${options.count}`,
-    i18n: { language: "en" },
   }),
 }));
 vi.mock("@space/mobile-shell/tab-bar", () => ({ MobileTabBar: "MobileTabBar" }));
@@ -78,10 +69,10 @@ vi.mock("../src/screens/LibraryScreen", () => ({ LibraryScreen: "LibraryScreen" 
 vi.mock("../src/screens/PlaylistsView", () => ({ PlaylistsView: "PlaylistsView" }));
 vi.mock("../src/screens/SettingsScreen", () => ({ SettingsScreen: "SettingsScreen" }));
 vi.mock("../src/screens/NowPlayingBar", () => ({ NowPlayingBar: "NowPlayingBar" }));
-vi.mock("../src/screens/PhoneSearch", () => ({ PhoneSearch: "PhoneSearch" }));
 vi.mock("../src/state/session", () => ({ useSession: () => ({ library: { status: state.libraryStatus, error: null, version: 1 } }) }));
+vi.mock("@space/mobile-shell/mascot-loader", () => ({ MobileMascotLoader: "MobileMascotLoader" }));
 vi.mock("../src/brand", () => ({ PARROT_MASCOT: 9 }));
-vi.mock("../src/state/useQuery", () => ({ useQuery: () => ({ data: state.data, error: null, loading: !state.answered, answered: state.answered }) }));
+vi.mock("../src/state/useQuery", () => ({ useQuery: () => ({ data: state.data, error: null, loading: false }) }));
 vi.mock("../src/state/usePlay", () => ({
   usePlay: () => ({ play: async (...args: unknown[]) => void state.played.push(args), starting: null, error: null }),
 }));
@@ -200,32 +191,6 @@ describe("the phone's Home", () => {
   });
 
   // @req PAR-HOME-01
-  it("Recently added sits right under Recently played, newest added first, before or after any play; its See all asks for Albums sorted Recently added", () => {
-    state.data = { albums, artists, songs };
-    for (const history of [
-      { version: 1, albums: [], artistPlays: {} },
-      { version: 1, albums: [{ albumId: "alb-me", trackId: "t-nook", positionMs: 78_000, playedAt: 20 }], artistPlays: { "art-lp": 1 } },
-    ] as ListeningHistory[]) {
-      state.history = history;
-      const seeAll: unknown[][] = [];
-      const home = HomeScreen({ onSeeAll: (...args) => void seeAll.push(args) }) as unknown as Element;
-      const order = all(home, (el) => typeof el.props?.testID === "string" && el.props.testID.startsWith("home-") && !el.props.testID.endsWith("see-all")).map(
-        (el) => el.props.testID
-      );
-      const added = shelf(home, "home-added");
-      const list = all(added, (el) => el.type === "FlatList")[0]!;
-      const titles = (list.props.data as { title: string }[]).map((a) => a.title);
-      log("recently added", { played: history.albums.length, order, title: texts(added)[0], titles });
-      expect(order.indexOf("home-added")).toBeGreaterThan(-1);
-      expect(order.indexOf("home-added")).toBe(order.indexOf("home-albums") + 1);
-      expect(texts(added)[0]).toBe("shell.home.recentlyAdded");
-      expect(titles).toEqual(["The Turning Tied", "Hollow Signal", "Meltway"]);
-      (byTestId(added, "home-added-see-all")!.props.onPress as () => void)();
-      expect(seeAll).toEqual([["albums", "recent"]]);
-    }
-  });
-
-  // @req PAR-HOME-01
   // @bugfix @regression-proof Chris 2026-11-16: the card said "Resume 0:20" while Meltway was playing.
   it("while Meltway plays the card shows Pause and pauses it; paused, Resume names where the song stands and continues it", () => {
     nowPlayingTitles.set("t-nook", { title: "Nook", artist: "Linnet Park", album: "Meltway", albumId: "alb-me" });
@@ -288,29 +253,16 @@ describe("the phone's Home", () => {
     expect(missing.type).toBe("EmptyLibrary");
   });
 
-  it("@req UX-WAIT-04 while the library opens: the app's loading screen with \"Loading library…\", no spinner, no title", () => {
+  it("@req UX-WAIT-02 while the library opens: the nodding parrot at the top, with no title over it and no spinner", () => {
     state.libraryStatus = "loading";
     const home = HomeScreen({ onSeeAll: () => undefined }) as unknown as Element;
     state.libraryStatus = "ready";
-    log("loading", { type: home.type, props: home.props, spinners: all(home, (el) => el.type === "ActivityIndicator").length });
-    expect(home.type).toBe("MobileLibraryLoading");
-    expect(home.props).toMatchObject({ app: "parrot", source: 9, label: "parrot.library.loading" });
+    const mascot = all(home, (el) => el.type === "MobileMascotLoader");
+    log("loading", { mascot: mascot.map((el) => el.props), spinners: all(home, (el) => el.type === "ActivityIndicator").length });
+    expect(mascot).toHaveLength(1);
+    expect(mascot[0]!.props).toMatchObject({ app: "parrot", source: 9, size: 120 });
     expect(all(home, (el) => el.type === "ActivityIndicator")).toHaveLength(0);
     expect(all(home, (el) => el.props?.accessibilityRole === "header")).toHaveLength(0);
-  });
-
-  it("@req UX-WAIT-04 opened but its albums not read yet: the loading screen, never the empty library", () => {
-    state.answered = false;
-    state.data = null;
-    const unread = HomeScreen({ onSeeAll: () => undefined }) as unknown as Element;
-    // The answer of the library version before (a new version just opened): not a verdict on this one either.
-    state.data = { albums: [], artists: [], songs: [] };
-    const stale = HomeScreen({ onSeeAll: () => undefined }) as unknown as Element;
-    state.answered = true;
-    const read = HomeScreen({ onSeeAll: () => undefined }) as unknown as Element;
-    log("unanswered", { unread: unread.type, stale: stale.type, read: read.type });
-    expect(unread.type).toBe("MobileLibraryLoading");
-    expect(stale.type).toBe("MobileLibraryLoading");
-    expect(read.type).toBe("EmptyLibrary");
+    expect([home.props.children].flat().filter(Boolean).map((child) => (child as Element).type)).toEqual(["View"]);
   });
 });
