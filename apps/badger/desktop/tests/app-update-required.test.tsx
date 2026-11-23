@@ -139,9 +139,8 @@ describe("REL-CD-29 desktop: the build says its version", () => {
     }));
     log(testId, "cases", cases);
     expect(cases.map((c) => c.identity)).toEqual([
-      // WEB-ADMIN-39: a Windows build says so (`+windows`), so the admin accounts page can tell the computers apart.
-      { app: "badger", platform: "desktop", version: "0.4.0+windows" },
-      { app: "badger", platform: "desktop", version: "1.2.3-beta.1+windows" },
+      { app: "badger", platform: "desktop", version: "0.4.0" },
+      { app: "badger", platform: "desktop", version: "1.2.3-beta.1" },
       null,
       null,
     ]);
@@ -149,7 +148,7 @@ describe("REL-CD-29 desktop: the build says its version", () => {
     setClientIdentity(cases[0].identity);
     const headers = clientIdentityHeaders();
     log(testId, "headers", headers);
-    expect(headers).toEqual({ "x-space-client": "badger/desktop/0.4.0+windows" });
+    expect(headers).toEqual({ "x-space-client": "badger/desktop/0.4.0" });
     setClientIdentity(cases[2].identity);
     expect(clientIdentityHeaders()).toEqual({});
   });
@@ -227,35 +226,3 @@ describe("REL-CD-29 desktop: a refused build shows the update prompt", () => {
     expect(updater.check).toHaveBeenCalledTimes(1);
   });
 });
-
-describe("LIB-FMT-13 desktop: refusals the runtime got reach this window's update gate", () => {
-  /**
-   * @why The desktop's library sync runs in the runtime process, which has no screen: its "please update" refusal
-   *   comes over IPC (`sf-app-update-required`) and must latch this window's gate, while the account's switch to an
-   *   op stream this build reads (a 426 `library_op_stream` with `opStreamVersion` 4) must never latch it.
-   */
-  it("latches a forwarded refusal and never the op-stream switch @req LIB-FMT-13[badger-desktop]", async () => {
-    const testId = "runtime-forward";
-    let forward: ((refusal: { status: number; payload: Record<string, unknown> }) => void) | null = null;
-    const sf = { onAppUpdateRequired: vi.fn((callback: typeof forward) => { forward = callback; return () => undefined; }) };
-    vi.stubGlobal("sf", sf);
-    Object.assign(window, { sf });
-    vi.resetModules();
-    // Loaded after the window bridge is stubbed: the module registers its listener when it loads.
-    await import("@/api");
-    log(testId, "registered", { calls: sf.onAppUpdateRequired.mock.calls.length });
-    expect(forward).not.toBeNull();
-
-    const { ApiError: LoadedApiError } = await import("@space/sdk");
-    const { getAppUpdateRequired: latched } = await import("@space/shared/appVersion");
-    new LoadedApiError(426, { error: "app_update_required", reason: "library_op_stream", opStreamVersion: 4 });
-    log(testId, "after-switch-426", latched());
-    expect(latched()).toBeNull();
-
-    forward!({ status: 426, payload: refusalPayload });
-    log(testId, "after-forward", latched());
-    expect(latched()).toMatchObject({ platform: "desktop", minVersion: "0.5.0" });
-    vi.unstubAllGlobals();
-  });
-});
-

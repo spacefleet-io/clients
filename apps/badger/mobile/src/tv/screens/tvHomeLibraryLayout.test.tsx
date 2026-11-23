@@ -20,33 +20,22 @@
  * @req UX-TV-37[badger-tv]
  * @req UX-TV-13[badger-tv]
  * @req UX-TV-14[badger-tv]
- * @req UX-WAIT-04[badger-tv]
  */
 import React from "react";
 import { act, create, type ReactTestInstance, type ReactTestRenderer } from "react-test-renderer";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { MediaRow, PlaylistRow } from "@space/shared/libraryTypes";
-import { TV_LIBRARY_COLUMNS, TV_LIBRARY_GAP_X, TV_LIBRARY_GAP_Y, TV_SCREEN_X, tvHomeCardWidth, tvLibraryCardWidth } from "@space/mobile-shell/tv/layout";
+import { TV_LIBRARY_COLUMNS, TV_LIBRARY_GAP_X, TV_LIBRARY_GAP_Y, TV_SCREEN_X, tvHomeCardWidth, tvLibraryCardWidth } from "../lib/layout";
 import { homeRows, TvHomeScreen } from "./TvHomeScreen";
 import { nextLibrarySort, TvLibraryScreen } from "./TvLibraryScreen";
 import { TvPlaylistsScreen, tvPlaylistName, tvPlaylistOrder, tvPlaylistTitles } from "./TvPlaylistsScreen";
-
-vi.hoisted(() => {
-  // Metro turns `require("../../assets/mascot.webp")` (the loading screen's mascot) into an image reference; plain node
-  // would parse the bytes as JS.
-  const { extensions } = process.getBuiltinModule("node:module").createRequire(import.meta.url);
-  extensions[".webp"] = (m: { exports: unknown }) => {
-    m.exports = 1;
-  };
-});
 
 const ctl = vi.hoisted(() => ({
   media: [] as unknown[],
   playlists: [] as unknown[],
   playlistItems: {} as Record<string, string[]>,
   window: { width: 960, height: 540 },
-  /** The store has said what the library holds (UX-WAIT-04); false = still loading. */
-  settled: true,
+  loading: false,
   reload: (() => undefined) as () => void,
   navigate: (() => undefined) as (...args: unknown[]) => void,
   settings: { libraryView: { movie: { sortBy: "name", sortDirection: "asc" }, tv: { sortBy: "name", sortDirection: "asc" } } } as Record<string, unknown>,
@@ -76,7 +65,7 @@ vi.mock("lucide-react-native", () => ({
   ArrowDownUp: "SortIcon",
   ChevronDown: "ChevronDownIcon",
 }));
-vi.mock("@space/mobile-shell/components", () => ({ SkyCover: "SkyCover", MobileLibraryLoading: "MobileLibraryLoading", useSkyScroll: () => ({}) }));
+vi.mock("@space/mobile-shell/components", () => ({ SkyCover: "SkyCover", useSkyScroll: () => ({}) }));
 vi.mock("@space/mobile-shell/i18n", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 vi.mock("@react-navigation/native", () => ({ useNavigation: () => ({ navigate: (...args: unknown[]) => ctl.navigate(...args) }) }));
 /** One actions object for the whole run, as the real store gives: a new one per render would refetch forever. */
@@ -86,7 +75,7 @@ const libraryActions = vi.hoisted(() => ({
 }));
 vi.mock("../../store/library", () => ({
   useLibraryData: () => ({ media: ctl.media, playlists: ctl.playlists }),
-  useLibraryStatus: () => ({ settled: ctl.settled, error: ctl.error, loadStatus: ctl.loadStatus, reload: ctl.reload }),
+  useLibraryStatus: () => ({ loading: ctl.loading, error: ctl.error, loadStatus: ctl.loadStatus, reload: ctl.reload }),
   useLibraryActions: () => libraryActions,
 }));
 vi.mock("../../lib/resume", () => ({ getLastPlayedEpisodeId: async () => null }));
@@ -95,7 +84,7 @@ vi.mock("../../lib/appSettings", () => ({ useAppSettings: () => [ctl.settings, (
 vi.mock("../../lib/libraryScreenState", () => ({
   selectLibraryItems: ({ media, tab }: { media: readonly MediaRow[]; tab: string }) => media.filter((item) => item.type === tab),
 }));
-vi.mock("@space/mobile-shell/tv/TvFocusable", () => ({ TvFocusable: "TvFocusable", FOCUS_SCALE: 1.05 }));
+vi.mock("../components/TvFocusable", () => ({ TvFocusable: "TvFocusable", FOCUS_SCALE: 1.05 }));
 vi.mock("../components/TvPosterCard", () => ({ TvPosterCard: "TvPosterCard" }));
 vi.mock("../components/TvRail", () => ({ TvRail: "TvRail" }));
 vi.mock("../components/TvContinueHero", () => ({ TvContinueHero: "TvContinueHero" }));
@@ -153,7 +142,7 @@ const focusOrder = (node: ReactTestInstance) => node.findAll((n) => isType(n, "T
 const bands = (tree: ReactTestRenderer) => tree.root.findAll((n) => isType(n, "TVFocusGuideView"));
 
 beforeEach(() => {
-  ctl.settled = true;
+  ctl.loading = false;
   ctl.error = null;
   ctl.loadStatus = { kind: "ready" };
   ctl.playlists = [];
@@ -251,40 +240,16 @@ describe("TV empty library (TV-BADGER-HOME-LIBRARY-001)", () => {
   it.each([
     ["Home", () => <TvHomeScreen />],
     ["Library", () => <TvLibraryScreen />],
-  ])("@req UX-TV-18 %s shows the empty library once the load said so, whose Check again reloads", (_name, screen) => {
+  ])("@req UX-TV-18 %s shows the empty library, whose Check again reloads; nothing while the first load runs", (_name, screen) => {
     const tree = render(screen(), []);
     const empty = tree.root.findAll((node) => isType(node, "TvEmptyLibrary"));
     expect(empty).toHaveLength(1);
     expect(tree.root.findAll((node) => isType(node, "ScrollView") || isType(node, "FlatList"))).toHaveLength(0);
     empty[0].props.onCheckAgain();
     expect(ctl.reload).toHaveBeenCalledTimes(1);
-  });
-
-  // Chris 2026-11-18: the empty library showed before the library had loaded.
-  it.each([
-    ["Home", () => <TvHomeScreen />],
-    ["Library", () => <TvLibraryScreen />],
-  ])("@req UX-WAIT-04 %s shows the opening screen with Loading library, never the empty library, until the load says what it holds", (name, screen) => {
-    ctl.settled = false;
-    const tree = render(screen(), []);
-    const loading = tree.root.findAll((node) => isType(node, "MobileLibraryLoading"));
-    console.info(
-      `[UX-WAIT-04:tv:${name}]`,
-      JSON.stringify({ loading: loading.map((node) => node.props.label), empty: tree.root.findAll((node) => isType(node, "TvEmptyLibrary")).length }),
-    );
-    expect(tree.root.findAll((node) => isType(node, "TvEmptyLibrary"))).toHaveLength(0);
-    expect(loading).toHaveLength(1);
-    expect(loading[0].props).toMatchObject({ app: "badger", label: "nav.loadingLibrary", size: 180 });
-  });
-
-  it.each([
-    ["Home", () => <TvHomeScreen />],
-    ["Library", () => <TvLibraryScreen />],
-  ])("@req UX-WAIT-04 %s shows a saved library at once while the load still runs", (_name, screen) => {
-    ctl.settled = false;
-    const tree = render(screen());
-    expect(tree.root.findAll((node) => isType(node, "MobileLibraryLoading"))).toHaveLength(0);
-    expect(tree.root.findAll((node) => isType(node, "TvEmptyLibrary"))).toHaveLength(0);
+    ctl.loading = true;
+    const loading = render(screen(), []);
+    expect(loading.root.findAll((node) => isType(node, "TvEmptyLibrary"))).toHaveLength(0);
   });
 });
 

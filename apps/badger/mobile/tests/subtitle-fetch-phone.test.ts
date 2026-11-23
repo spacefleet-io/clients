@@ -9,22 +9,11 @@
  */
 import { describe, expect, it } from "vitest";
 import type { MediaDetails } from "@space/shared/libraryTypes";
-import {
-  ADDED_SUBTITLE_FILE_SOURCE,
-  fetchedSubtitleSource,
-  UnreadableSubtitleFileError,
-  type SubtitleFetchCandidate,
-  type SubtitleFetchEntry,
-} from "@space/shared/subtitleFetch";
-import { createSubtitleFetchFlow, tryAnotherSubtitleVersion, type SubtitleFetchFlowState, type SubtitleVersionStep } from "@space/shared/subtitleFetchFlow";
+import { fetchedSubtitleSource, type SubtitleFetchCandidate, type SubtitleFetchEntry } from "@space/shared/subtitleFetch";
+import { tryAnotherSubtitleVersion, type SubtitleVersionStep } from "@space/shared/subtitleFetchFlow";
 import { subtitlePickPatch } from "@space/shared/trackPrefs";
 import type { SubtitleTrack } from "@space/mobile-mpv-playback";
-import {
-  storeSubtitleFilePhone,
-  subtitleFetchPhoneInput,
-  subtitleTryAnotherPhoneInput,
-  type FetchedSubtitleTrack,
-} from "../src/lib/subtitleFetchStore";
+import { subtitleFetchPhoneInput, subtitleTryAnotherPhoneInput, type FetchedSubtitleTrack } from "../src/lib/subtitleFetchStore";
 import { fetchedSubtitleToPlayerTrack, replacePlayerSubtitle, withFetchedSubtitles } from "../src/lib/playback/fetchedSubtitles";
 
 const log = (label: string, value: unknown) => console.info(`BADGER-MOBILE-SUBGET ${label}: ${JSON.stringify(value)}`);
@@ -48,7 +37,6 @@ const setup = () => {
     client: {
       subtitles: async (request) => (calls.push(["search", request]), { results: [] }) as never,
       subtitleFile: async (fileId) => (calls.push(["download", fileId]), { format: "srt", content: "1\n" }) as never,
-      search: async (type, query) => (calls.push(["titleSearch", type, query]), { results: [], page: 1, totalPages: 0 }),
     },
     actions: {
       uploadSubtitleContent: async (mediaId, episodeId, content, format) => (calls.push(["upload", mediaId, episodeId, content, format]), "obj/fr.srt"),
@@ -70,12 +58,12 @@ describe("subtitleFetchPhoneInput", () => {
     expect(calls).toEqual([["search", { type: "movie", id: 45745 }]]);
   });
 
-  it("is null for a show without a catalog id when no episode is playing (nothing to search by)", () => {
+  it("is null for a title without a catalog id", () => {
     const input = subtitleFetchPhoneInput({
-      media: { ...sintel, type: "tv", catalogId: null } as MediaDetails,
+      media: { ...sintel, catalogId: null } as MediaDetails,
       episodeId: null,
       uiLanguage: "en",
-      client: { subtitles: async () => ({}) as never, subtitleFile: async () => ({}) as never, search: async () => ({}) as never },
+      client: { subtitles: async () => ({}) as never, subtitleFile: async () => ({}) as never },
       actions: { uploadSubtitleContent: async () => "", addSubtitleTrack: async () => "", setTrackPrefs: async () => {} },
     });
     expect(input).toBeNull();
@@ -99,120 +87,6 @@ describe("subtitleFetchPhoneInput", () => {
     expect(patch).not.toBeNull();
     expect(calls[3]).toEqual(["prefs", "media-sintel", patch]);
     expect(added).toEqual([{ id: "sub-new", language: "fr", label: "French", objectKey: "obj/fr.srt", format: "srt", source: "fetched:9" }]);
-  });
-});
-
-describe("Get more subtitles for a title without a catalog id (PLAY-SUBGET-24)", () => {
-  const untitled = { ...sintel, title: "Sintel", catalogId: null } as unknown as MediaDetails;
-  const setupTitle = (results: Array<{ id: number; title: string; year: string | null }>) => {
-    const calls: unknown[] = [];
-    const input = subtitleFetchPhoneInput({
-      media: untitled,
-      episodeId: null,
-      uiLanguage: "en",
-      client: {
-        subtitles: async (request) => (calls.push(["search", request]), { reachable: true, subtitles: [] }) as never,
-        subtitleFile: async () => ({}) as never,
-        search: async (type, query) => (calls.push(["titleSearch", type, query]), { results, page: 1, totalPages: 1 }) as never,
-      },
-      actions: { uploadSubtitleContent: async () => "", addSubtitleTrack: async () => "", setTrackPrefs: async () => {} },
-    });
-    const states: SubtitleFetchFlowState[] = [];
-    const flow = createSubtitleFetchFlow(() => input!, (state) => states.push(state));
-    return { input, calls, states, flow };
-  };
-
-  /** @req PLAY-SUBGET-24[badger-mobile,badger-tv] @req PLAY-SUBGET-14[badger-mobile,badger-tv] */
-  it("starts with the title step, then searches subtitles by the picked match's catalog id only", async () => {
-    const { input, calls, states, flow } = setupTitle([
-      { id: 45745, title: "Sintel", year: "2010" },
-      { id: 1, title: "Sintel Remake", year: null },
-    ]);
-    expect(input?.findTitle?.query).toBe("Sintel");
-    expect(input?.libraryFileName).toBe("Sintel (2010) [1080p].mkv");
-    await flow.start();
-    log("title step states", states);
-    expect(states.at(-1)).toEqual({
-      step: "title",
-      query: "Sintel",
-      matches: [
-        { catalogId: 45745, title: "Sintel", year: "2010" },
-        { catalogId: 1, title: "Sintel Remake", year: null },
-      ],
-    });
-    await flow.search({ catalogId: 45745, title: "Sintel", year: "2010" });
-    log("title search calls", calls);
-    expect(calls).toEqual([
-      ["titleSearch", "movie", "Sintel"],
-      ["search", { type: "movie", id: 45745 }],
-    ]);
-    // The file name is never sent anywhere (PLAY-SUBGET-14).
-    expect(JSON.stringify(calls)).not.toContain("1080p");
-    expect(states.at(-1)?.step).toBe("none");
-  });
-
-  /** @req PLAY-SUBGET-24[badger-mobile,badger-tv] */
-  it("a title the user types is looked up instead; nothing found keeps the title step with no matches", async () => {
-    const { calls, states, flow } = setupTitle([]);
-    await flow.findTitle("  Big Buck Bunny ");
-    log("typed title states", states);
-    expect(calls).toEqual([["titleSearch", "movie", "Big Buck Bunny"]]);
-    expect(states.at(-1)).toEqual({ step: "title", query: "Big Buck Bunny", matches: [] });
-  });
-});
-
-describe("Add a subtitle file on the phone (PLAY-SUBGET-23)", () => {
-  const srt = "1\n00:00:01,000 --> 00:00:03,000\nBonjour\n";
-  const setupFile = () => {
-    const calls: unknown[] = [];
-    const added: FetchedSubtitleTrack[] = [];
-    const params = {
-      media: sintel,
-      episodeId: null,
-      uiLanguage: "en",
-      actions: {
-        uploadSubtitleContent: async (mediaId: string, episodeId: string | null, content: string, format: string) => (
-          calls.push(["upload", mediaId, episodeId, content, format]), "obj/added.srt"
-        ),
-        addSubtitleTrack: async (track: unknown) => (calls.push(["addTrack", track]), "sub-added"),
-        setTrackPrefs: async (mediaId: string, patch: unknown) => void calls.push(["prefs", mediaId, patch]),
-      },
-      onTrackAdded: (track: FetchedSubtitleTrack) => added.push(track),
-    };
-    return { calls, added, params };
-  };
-
-  /** @req PLAY-SUBGET-23[badger-mobile] */
-  it("stores the file in the vault as an added-file track named after the file, hands it to the player and remembers it", async () => {
-    const { calls, added, params } = setupFile();
-    const stored = await storeSubtitleFilePhone({ name: "Sintel.fr.srt", content: srt }, params);
-    log("added file calls", calls);
-    expect(ADDED_SUBTITLE_FILE_SOURCE).toBe("added-file");
-    expect(stored).toEqual({ language: "und", label: "Sintel.fr", format: "srt", source: "added-file" });
-    expect(calls.slice(0, 2)).toEqual([
-      ["upload", "media-sintel", null, srt, "srt"],
-      ["addTrack", { mediaId: "media-sintel", episodeId: null, language: "und", label: "Sintel.fr", objectKey: "obj/added.srt", format: "srt", source: "added-file" }],
-    ]);
-    expect(added).toEqual([{ id: "sub-added", language: "und", label: "Sintel.fr", objectKey: "obj/added.srt", format: "srt", source: "added-file" }]);
-    // The player switches it on like a fetched one: it joins the menu after the session's own tracks.
-    const menu = withFetchedSubtitles([], [fetchedSubtitleToPlayerTrack(added[0]!)]);
-    log("menu after add", menu.map((track) => [track.id, track.label]));
-    expect(menu.map((track) => track.id)).toEqual(["sub-added"]);
-  });
-
-  /** @req PLAY-SUBGET-23[badger-mobile] */
-  it("refuses a file that isn't a subtitle it can read, and stores nothing", async () => {
-    const { calls, added, params } = setupFile();
-    for (const file of [
-      { name: "notes.txt", content: srt },
-      { name: "broken.srt", content: "just some text" },
-      { name: "movie.ass", content: "" },
-    ]) {
-      await expect(storeSubtitleFilePhone(file, params)).rejects.toBeInstanceOf(UnreadableSubtitleFileError);
-    }
-    log("unreadable calls", calls);
-    expect(calls).toEqual([]);
-    expect(added).toEqual([]);
   });
 });
 

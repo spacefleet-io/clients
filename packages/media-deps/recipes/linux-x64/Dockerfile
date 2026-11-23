@@ -86,7 +86,7 @@ RUN --mount=type=secret,id=forge_auth fetch-source libvpl "$SRC_LIBVPL_URL" "$SR
   && sed -i 's/^Libs\.private:.*/Libs.private: -lstdc++/' $PREFIX/lib/pkgconfig/vpl.pc
 
 # libva ships as SHARED libraries inside the bundle (VA-API drivers are dlopen'd from the host and bind to the
-# libva already loaded); at least the libva current Mesa is built against (src/sources.ts). libva-x11 gives mpv's vaapi hwdec an
+# libva already loaded); newer than any driver's required VA-API version. libva-x11 gives mpv's vaapi hwdec an
 # X11 display (x11egl). libdrm is built only to link against: at runtime it is the host's (HOST_LIBRARIES).
 ARG SRC_LIBDRM_URL
 ARG SRC_LIBDRM_SHA

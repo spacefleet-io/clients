@@ -430,7 +430,7 @@ export const LibraryKeyWordsInput = ({
   return (
     <View style={styles.wrap}>
       {label ? <Text style={[styles.label, tv && styles.labelTv, { color: theme.colors.textMuted }]}>{label}</Text> : null}
-      <View style={[styles.grid, tv && styles.gridInputTv]} testID="library-key-words-input">
+      <View style={styles.grid} testID="library-key-words-input">
         {boxes.map((word, i) => (
           <LibraryKeyBox
             key={i}
@@ -552,7 +552,7 @@ const styles = StyleSheet.create({
   grid: { flexDirection: "row", flexWrap: "wrap", rowGap: 10 },
   cell: { flexDirection: "row", alignItems: "center", gap: 6, paddingRight: 8 },
   number: { fontSize: 13, minWidth: 18, textAlign: "right" },
-  numberTv: { fontSize: 14, minWidth: 18 },
+  numberTv: { fontSize: 16, minWidth: 20 },
   // The word sits in the middle of its box, never cut: a fixed height, no vertical padding (Android adds its own to
   // a TextInput and pushed the text up), and room for the longest word in 2 columns (4 on TV). `height`, not
   // `minHeight`: an Android EditText grows to a multi-line paste ("1. floor\n2. bid\n…") and never shrinks back, which
@@ -567,22 +567,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 0,
   },
-  // TV: 28 dp boxes (56 px on a 1080p TV, as the desktop's `LIBRARY_KEY_STEP_FIT`) keep the 4x3 boxes, the mascot,
-  // the other-device card and the card's buttons inside 540 dp (UX-TV-17, UX-TV-33, UX-SETUP-08).
-  boxTv: { height: 28, borderRadius: 8, paddingHorizontal: 8 },
-  gridInputTv: { rowGap: 7 },
+  // TV: 48dp keeps the 4x3 boxes and the card's buttons inside 540dp (UX-TV-17, UX-TV-33).
+  boxTv: { height: 48, borderRadius: 12, paddingHorizontal: 8 },
   input: { fontSize: 16, textAlignVertical: "center", includeFontPadding: false },
   word: { fontSize: 16, fontWeight: "700" },
-  wordTv: { fontSize: 15 },
+  wordTv: { fontSize: 18 },
   label: { fontSize: 14 },
   labelTv: { fontSize: 22 },
   message: { fontSize: 14 },
   messageTv: { fontSize: 16 },
-  // TV's shown key (UX-TV-33): the mockup's pixels halved, its boxes as tight as the typed ones (UX-SETUP-08).
-  keyboxTv: { borderWidth: 0.75, borderRadius: 9, padding: 10, gap: 10 },
-  gridTv: { rowGap: 6 },
+  // TV's shown key (UX-TV-33): the mockup's pixels halved.
+  keyboxTv: { borderWidth: 0.75, borderRadius: 9, padding: 13, gap: 10 },
+  gridTv: { rowGap: 8 },
   cellTv: { paddingHorizontal: 4 },
-  wordBoxTv: { flexDirection: "row", alignItems: "center", gap: 8, height: 28, borderWidth: 0.75, borderRadius: 7, paddingHorizontal: 11 },
+  wordBoxTv: { flexDirection: "row", alignItems: "center", gap: 8, height: 35, borderWidth: 0.75, borderRadius: 7, paddingHorizontal: 11 },
   numberInTv: { fontSize: 11, minWidth: 12, fontVariant: ["tabular-nums"] },
   wordMonoTv: { flexShrink: 1, fontSize: 14, fontWeight: "600" },
 });

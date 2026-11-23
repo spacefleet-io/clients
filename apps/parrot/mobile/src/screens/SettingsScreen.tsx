@@ -1,9 +1,8 @@
 // Settings, the same rows as the desktop's Account and Settings pages (PAR-NAV-01): who is signed in, the plan (read
 // only: no payment on a phone, ACCT-PAY-02), pairing a device, who is listening (profiles, ACCT-PROF-01), the app's language,
 // Even out volume (off by default: songs play as recorded, PAR-PLAY-03), a message to the team (with the
-// error log when ticked), error reports, loading the library again, sign out (which stops the music and removes
-// the library and key from the phone) and delete the account (ACCT-DEL-01: a phone that creates accounts deletes them).
-// Feedback and error reports are the phone apps' shared basis (REL-FAM-03).
+// error log when ticked), error reports, loading the library again, and sign out (which stops the music and removes
+// the library and key from the phone). Feedback and error reports are the phone apps' shared basis (REL-FAM-03).
 import React, { useEffect, useState } from "react";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -35,7 +34,6 @@ import { useSignOut } from "../state/useSignOut";
 import { colors, spacing } from "../theme";
 import { Body, Button } from "./ui";
 import type { RootStack } from "./routes";
-import { SelfUpdateSettings } from "@space/mobile-self-update";
 
 const log = scopeLogger("settings");
 
@@ -219,13 +217,6 @@ export const SettingsScreen = () => {
           />
           <Body muted>{t("parrot.settings.pairDeviceDescription")}</Body>
         </View>
-        {/* ACCT-DEL-01: Settings > Account > Delete account, the same path as on Badger's phone. */}
-        <Button
-          testID="settings-delete-account"
-          label={t("settings.account.deleteAccount")}
-          tone="plain"
-          onPress={() => navigation.navigate("DeleteAccount")}
-        />
       </Section>
       <ProfilesSection onOpen={(mode) => navigation.navigate("Profiles", { mode })} />
       <Section title={t("parrot.settings.language")}>
@@ -261,20 +252,8 @@ export const SettingsScreen = () => {
             }
           }}
         />
-        {/* OFFL-MANAGE-01: what is kept on this phone, its size, remove one or all. */}
-        <View style={{ gap: spacing.xs }}>
-          <Button
-            testID="settings-offline-content"
-            label={t("offlineContent.entry")}
-            tone="plain"
-            onPress={() => navigation.navigate("OfflineContent")}
-          />
-          <Body muted>{t("offlineContent.parrot.entryDescription")}</Body>
-        </View>
         {errorReportsOffered() ? <ErrorReportsSwitch /> : null}
       </Section>
-      {/* REL-UPD-06: on a hand-installed APK, the version and its updates (nothing when a store manages the app). */}
-      <SelfUpdateSettings language={getCurrentLanguage()} />
       {/* Third-party code shipped in the app, with its licence (Apache-2.0 attribution of the ALAC decoder), then the outside
           data sources (UX-SET-02): the app's one credits place, opened by its own GPL-3.0 line and source link (UX-SET-03). */}
       <Section title={t("parrot.settings.openSource")}>

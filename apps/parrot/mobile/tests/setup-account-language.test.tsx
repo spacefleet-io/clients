@@ -36,8 +36,6 @@ vi.mock("react-native", () => ({
       return { remove: () => void (phone.appState = phone.appState.filter((other) => other !== listener)) };
     },
   },
-  // A phone: the session asks "Who's listening?" at every start only on a TV (PAR-TV-02).
-  Platform: { OS: "ios", isTV: false },
 }));
 vi.mock("@space/mobile-shell/i18n", () => ({
   getCurrentLanguage: () => phone.shown,
@@ -104,7 +102,6 @@ vi.mock("@space/mobile-shell/setup-step", () => ({ MobileSetupStep: () => null }
 vi.mock("react-native-safe-area-context", () => ({ SafeAreaView: ({ children }: { children?: React.ReactNode }) => <>{children}</> }));
 vi.mock("../src/lib/errorReports", () => ({ getErrorReportsSetting: () => ({ errorReports: false }), setErrorReports: async () => undefined }));
 vi.mock("../src/screens/LibraryKeyScreen", () => ({ ParrotLibraryKeyStep: () => null }));
-vi.mock("../src/setup/ProfileSetupQuestion", () => ({ ProfileSetupPhoneStep: () => null }));
 vi.mock("../src/state/useSignOut", () => ({ useSignOut: () => async () => undefined }));
 
 import { SessionProvider, useSession } from "../src/state/session";

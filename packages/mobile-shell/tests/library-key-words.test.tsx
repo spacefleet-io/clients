@@ -546,11 +546,10 @@ describe("LibraryKeyWordsInput", () => {
     console.info(SUITE, "tv focused box", JSON.stringify(style));
     expect(style.borderWidth).toBe(TV_FOCUS_RING_WIDTH);
     expect(style.borderColor).toBe("#f4a261");
-    expect(style.fontSize).toBe(15);
+    expect(style.fontSize).toBe(18);
     expect(flat(box(4).props.style).borderColor).toBe("#333");
     expect(cellWidths()).toEqual(["25%"]);
-    // 28 dp (56 px on a 1080p TV), so the key step fits under the mascot (UX-SETUP-08).
-    expect(style.height).toBe(28);
+    expect(style.height).toBe(48);
     expect(style.minHeight).toBeUndefined();
     expect(offered()).toHaveLength(0);
   });

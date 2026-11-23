@@ -56,18 +56,7 @@ vi.mock("@space/mobile-shell/i18n", () => ({
   useTranslation: () => ({ t: (k: string) => k }),
 }));
 // listSignInProviders: the provider rows (#2437) ask for the enabled providers on mount; none here.
-// listProfiles, createProfile, updateProfile, deleteProfile: the screen's import chain reaches the profile store (#3594),
-// which binds them at load; never called here.
-vi.mock("@space/shared/api", () => ({
-  ApiError: class extends Error {},
-  requestPasswordReset: vi.fn(),
-  confirmPasswordReset: vi.fn(),
-  listSignInProviders: async () => ({ providers: [] }),
-  listProfiles: vi.fn(),
-  createProfile: vi.fn(),
-  updateProfile: vi.fn(),
-  deleteProfile: vi.fn(),
-}));
+vi.mock("@space/shared/api", () => ({ ApiError: class extends Error {}, requestPasswordReset: vi.fn(), confirmPasswordReset: vi.fn(), listSignInProviders: async () => ({ providers: [] }) }));
 vi.mock("@space/shared/signInError", () => ({
   classifySignInError: vi.fn(),
   signInErrorDetails: vi.fn(),
@@ -82,7 +71,8 @@ vi.mock("@space/mobile-shell/logger", () => ({ scopeLogger: () => ({ info: () =>
 vi.mock("../src/lib/uiLanguage", () => ({ chooseUiLanguage: vi.fn(), ensureI18n: async () => undefined }));
 vi.mock("../src/tv/lib/tvRuntime", () => ({ IS_TV: false }));
 vi.mock("../src/lib/phonePairing", () => ({ currentPhoneDeviceName: () => "Badger (phone)" }));
-vi.mock("../src/setup/BadgerSetupFlow", () => ({ SignInSetupBack: () => null }));
+vi.mock("../src/tv/lib/pairingRuntime", () => ({ tvDeviceName: () => "TV" }));
+vi.mock("../src/setup/BadgerSetupFlow", () => ({ SetupStepBar: () => null }));
 
 import { LoginScreen } from "../src/screens/LoginScreen";
 

@@ -25,7 +25,6 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { MobileCreditsPanel, MobileOpenSourceNotice, useSkyScroll } from "@space/mobile-shell/components";
 import { isMobileUiLanguage, MOBILE_UI_LANGUAGES, useTranslation } from "@space/mobile-shell/i18n";
 import { MobileFlag } from "@space/mobile-shell/flag";
-import { SelfUpdateSettings } from "@space/mobile-self-update";
 import { founderBadgeText, useFounderStatus } from "@space/mobile-shell/founder";
 import { founderCopy } from "@space/shared/founder";
 import type { Session } from "@space/shared/api";
@@ -48,12 +47,12 @@ import type { RootStackParamList } from "../../navigation/AppNavigator";
 import { useAuth } from "../../store/auth";
 import { TvListDialog, type TvListDialogItem } from "../components/TvListDialog";
 import { rememberTvSettingsGroup, tvSettingsGroups, tvSettingsOpenGroup, type TvSettingsGroupId } from "../lib/tvSettingsGroups";
-import { focusDestination, type TvViewInstance } from "@space/mobile-shell/tv/tvViewInstance";
-import { useTvScale, useTvStyles } from "@space/mobile-shell/tv/tvScale";
-import { TvFocusable } from "@space/mobile-shell/tv/TvFocusable";
-import { TvSegmented } from "@space/mobile-shell/tv/TvChip";
-import { TvRow, TvRowList } from "@space/mobile-shell/tv/TvRow";
-import { TvBody, TvEyebrow, TvTitle } from "@space/mobile-shell/tv/TvText";
+import { focusDestination, type TvViewInstance } from "../lib/tvViewInstance";
+import { useTvScale, useTvStyles } from "../lib/tvScale";
+import { TvFocusable } from "../components/TvFocusable";
+import { TvSegmented } from "../ui/TvChip";
+import { TvRow, TvRowList } from "../ui/TvRow";
+import { TvBody, TvEyebrow, TvTitle } from "../ui/TvText";
 import { TV_COLOR, TV_RADII, TV_SPACE, TV_TYPE } from "../ui/tokens";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -555,11 +554,9 @@ const TvSettingsContent = ({ token, email }: { token: string; email: string | nu
       case "about":
         // UX-SET-03 then UX-SET-02: the GPL-3.0 line with the source code's address and QR code (no browser on a TV),
         // then the outside data sources, credited here out of the everyday screens under the panel's own header row
-        // (closed by default, opened with the remote's select). REL-UPD-06: on a hand-installed APK, the version and its
-        // updates first.
+        // (closed by default, opened with the remote's select).
         return (
           <View style={styles.about}>
-            <SelfUpdateSettings language={language} scale={scale} />
             <MobileOpenSourceNotice language={language} product="badger" openLinks={false} scale={scale} />
             <MobileCreditsPanel language={language} product="badger" source={mobileCreditsSource} openLinks={false} scale={scale} />
           </View>

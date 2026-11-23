@@ -1,8 +1,7 @@
 const { getDefaultConfig, mergeConfig } = require('@react-native/metro-config');
 const path = require('path');
 // The Google-free Android build (SF_FOSS=1, PLAT-MOBILE-06): the pairing screen's QR scanner is left out.
-// Outside it (Play, iOS), @space/mobile-self-update resolves to its stand-in (REL-UPD-06).
-const { withFossStubs, withSelfUpdate } = require('../../../packages/mobile-shell/foss.cjs');
+const { withFossStubs } = require('../../../packages/mobile-shell/foss.cjs');
 
 const repoRoot = path.resolve(__dirname, '../../..');
 const bunModules = path.resolve(repoRoot, 'node_modules/.bun');
@@ -17,7 +16,6 @@ const workspacePackages = {
   '@space/mobile-media-proxy': 'packages/mobile-media-proxy',
   '@space/mobile-audio-playback': 'packages/mobile-audio-playback',
   '@space/mobile-media-volume': 'packages/mobile-media-volume',
-  '@space/mobile-self-update': 'packages/mobile-self-update',
   '@space/error-report': 'packages/error-report',
   '@space/parrot-core': 'packages/parrot-core',
   '@space/parrot-library-db-definition': 'packages/parrot-library-db-definition',
@@ -51,7 +49,7 @@ const config = {
     extraNodeModules: Object.fromEntries(
       Object.entries(workspacePackages).map(([name, dir]) => [name, path.resolve(repoRoot, dir)])
     ),
-    resolveRequest: withSelfUpdate(withFossStubs((context, moduleName, platform) => {
+    resolveRequest: withFossStubs((context, moduleName, platform) => {
       // Shared packages import Node's crypto; on the phone it is react-native-quick-crypto.
       if (moduleName === 'node:crypto' || moduleName === 'crypto') {
         return context.resolveRequest(context, 'react-native-quick-crypto', platform);
@@ -62,7 +60,7 @@ const config = {
         return context.resolveRequest({ ...context, originModulePath: path.join(__dirname, 'index.js') }, moduleName, platform);
       }
       return context.resolveRequest(context, moduleName, platform);
-    })),
+    }),
     nodeModulesPaths: [path.resolve(__dirname, 'node_modules'), path.resolve(repoRoot, 'node_modules')],
   },
   // The inlined PARROT_API_BASE_URL, PARROT_METADATA_TICKETS and EXPO_PUBLIC_METADATA_URL (babel-plugin-api-base-url.js,

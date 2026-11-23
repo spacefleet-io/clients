@@ -247,7 +247,7 @@ describe("desktop profile screens", () => {
       await click("profile-add");
       await type("profile-name-input", "  Guest ");
       await click("profile-save");
-      expect(api.createProfile).toHaveBeenCalledWith("tok", { name: "Guest", avatarId: "parrot", features: { avatars: "set" } });
+      expect(api.createProfile).toHaveBeenCalledWith("tok", { name: "Guest", avatarId: "parrot" });
       expect(container.textContent).toContain("Guest");
 
       const renamed = { ...created, name: "Grandma" };
@@ -350,7 +350,7 @@ describe("desktop profile screens", () => {
       await type("profile-name-input", "Léo");
       await click("profile-save");
       dump("after add");
-      expect(api.createProfile).toHaveBeenCalledWith("tok", { name: "Léo", avatarId: "rocket", features: { avatars: "set" } });
+      expect(api.createProfile).toHaveBeenCalledWith("tok", { name: "Léo", avatarId: "rocket" });
       expect(byTestId("where")!.textContent).toBe("/settings?section=profiles");
       expect(byTestId(`profile-row-${created.id}`)?.querySelector("[data-avatar]")?.getAttribute("data-avatar")).toBe("rocket");
     } catch (error) {

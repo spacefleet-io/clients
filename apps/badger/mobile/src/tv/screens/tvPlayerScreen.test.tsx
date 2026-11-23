@@ -73,7 +73,6 @@ vi.mock("../../components/PlayerCastPicker", () => ({ PlayerCastPicker: "PlayerC
 // "Get subtitles" (PLAY-SUBGET) loads the metadata client and lucide icons (native modules, Flow sources): a stand-in.
 vi.mock("../../screens/player/PlayerSubtitleFetch", () => ({ PlayerSubtitleFetch: "PlayerSubtitleFetch" }));
 vi.mock("../../screens/player/PlayerSubtitleVersion", () => ({ PlayerSubtitleVersion: "PlayerSubtitleVersion" }));
-vi.mock("../../screens/player/PlayerSubtitleFile", () => ({ PlayerSubtitleFile: "PlayerSubtitleFile" }));
 vi.mock("react-native", async () => ({
   ...(await import("../../../tests/setup/reactNativeMock")).reactNativeBase(),
   StyleSheet: { create: <T,>(styles: T) => styles, absoluteFill: {} },
@@ -146,8 +145,6 @@ vi.mock("@space/mobile-mpv-playback", () => ({
     setKeepScreenOn: async () => undefined,
   },
 }));
-// The badger of the launching wait (UX-WAIT-02) is its own component, tested in mobile-shell; here it is a stand-in.
-vi.mock("@space/mobile-shell/mascot-loader", () => ({ MobileMascotLoader: "MobileMascotLoader" }));
 vi.mock("@space/mobile-shell/i18n", () => {
   const t = (key: string) => key;
   return { useTranslation: () => ({ t, i18n: { language: "en" } }), getCurrentLanguage: () => "en" };
@@ -163,7 +160,7 @@ vi.mock("../../store/auth", () => ({ useAuth: () => ({ user: null, refresh: asyn
 vi.mock("../../lib/metadata/runtime", () => ({ fetchEpisodes: async () => [] }));
 vi.mock("../lib/tvRuntime", () => ({ IS_TV: true }));
 vi.mock("../components/TvPlayerRemote", () => ({ TvPlayerRemote: "TvPlayerRemote" }));
-vi.mock("@space/mobile-shell/tv/TvFocusable", () => ({ TvFocusable: "TvFocusable" }));
+vi.mock("../components/TvFocusable", () => ({ TvFocusable: "TvFocusable" }));
 vi.mock("../../lib/playOnTv/playerLink", () => ({
   attachRemotePlayer: () => {
     fake.remoteAttached += 1;
@@ -845,29 +842,6 @@ describe("TV player: Get subtitles and Try another version in the player (PLAY-S
       ]);
       expect(picks).toEqual([[1, { reload: true }]]);
       expect(fake.paused.slice(pausedAt)).toEqual([true, false]);
-    } finally {
-      session.details = null;
-    }
-  });
-
-  /** @req PLAY-SUBGET-24[badger-tv] @req PLAY-SUBGET-23[badger-tv] */
-  it("with no subtitle track and no catalog id, the TV menu still offers Get more (title step), no Add a subtitle file and no Try another", async () => {
-    const session = fake.session as unknown as { details: unknown };
-    session.details = { ...sintel, catalogId: null };
-    try {
-      fake.snapshot = snap({ position: 30 });
-      const tree = await mount();
-      await advance(500);
-      const props = controls(tree);
-      const getMore = props.getMoreSubtitles as { title: string; unavailableReason: string | null } | null;
-      console.info(
-        `${LOG} SUBGET-24 tv no-catalog-id: tracks=${(props.subtitleTracks as SubtitleTrack[]).length} getMore=${JSON.stringify(getMore && getMore.title)} addFile=${JSON.stringify(props.addSubtitleFile ?? null)} tryAnother=${props.tryAnotherSubtitle === null}`,
-      );
-      expect(props.subtitleTracks).toEqual([]);
-      expect(getMore).not.toBeNull();
-      expect(getMore!.unavailableReason).toBeNull();
-      expect(props.addSubtitleFile ?? null).toBeNull();
-      expect(props.tryAnotherSubtitle).toBeNull();
     } finally {
       session.details = null;
     }

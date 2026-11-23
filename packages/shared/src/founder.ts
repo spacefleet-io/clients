@@ -46,7 +46,7 @@ export const FOUNDER_COPY: Record<AccountLanguage, FounderCopy> = {
     priceLabel: "Founder price, −30% for life",
   },
   fr: {
-    bannerTitle: "Remise fondateur reconnue.",
+    bannerTitle: "Ticket fondateur reconnu.",
     bannerBody: "Vos −30 % à vie s'appliquent à votre offre.",
     bannerDismiss: "J'ai compris",
     badge: "Fondateur",

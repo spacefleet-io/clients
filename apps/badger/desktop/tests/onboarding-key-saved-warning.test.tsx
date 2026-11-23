@@ -35,12 +35,13 @@ vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: mocks.t, i18n: { language: "en" } }),
 }));
 vi.mock("../src/renderer/src/auth", () => ({ useAuth: () => mocks.auth }));
+vi.mock("../src/renderer/src/components/PublicTopNav", () => ({ default: () => null }));
 vi.mock("../src/renderer/src/api", () => ({
   ApiError: class ApiError extends Error {
     status = 0;
   },
   // A brand-new account: the server never had a library, so the screen makes a key.
-  getLibraryMetaForKeyStep: vi.fn(async () => ({ exists: false, keyProbe: null, bootstrapRequired: true })),
+  getLibraryMeta: vi.fn(async () => ({ exists: false, keyProbe: null, bootstrapRequired: true })),
   resetLibrary: vi.fn(),
   rotateLibraryKey: vi.fn(),
 }));

@@ -12,7 +12,6 @@ import {
   User,
 } from "./api";
 import { resetClientStorage } from "@/lib/clientReset";
-import { logoutStep } from "@/lib/logoutStep";
 import { setMetadataUrlOverride, startMetadataTicketsAfterKeyStep, stopMetadataTickets } from "@/lib/metadataTickets";
 import { isLibraryKeyAcknowledged, onLibraryKeyAcknowledged } from "@/lib/onboarding";
 import { shouldClearSessionFromAuthError } from "@/authSession";
@@ -33,7 +32,6 @@ import { keyAfterSignedOut, type SignedOutReason } from "@space/shared/keptLibra
 import { DESKTOP_TOUR_STORAGE_KEYS } from "@space/desktop-shell/tour";
 
 const logoutFlushLog = rendererLogger.child({ scope: "logout-flush" });
-const logoutLog = rendererLogger.child({ scope: "logout" });
 const languageLog = rendererLogger.child({ scope: "account-language" });
 
 /**
@@ -338,24 +336,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     void persistSessionToMain();
   };
 
-  // One sign-out at a time (ACCT-DEV-01): run 38822's sign-out revoked the session, then the library sync's 401 with
-  // that revoked token started a second `logout("sessionRejected")` (handleForcedLogout) while the first still ran;
-  // both reset the local storage at once and neither finished. A logout while one runs joins it, with its reason.
-  const logoutInFlight = useRef<Promise<void> | null>(null);
-
-  const runLogout = async (reason: SignedOutReason) => {
+  const logout = async (reason: SignedOutReason) => {
     const key = keyAfterSignedOut(reason);
-    const startedAt = Date.now();
     rendererLogger.info({ scope: "auth", reason, key }, "logout");
     // Flush pending library writes BEFORE we tear down local state. Otherwise
     // writes made while logged in (e.g., newly added media) are lost when the
     // local SQLite cache is cleared by resetClientStorage below — the remote
     // API snapshot was never uploaded.
     await flushPendingLibraryWrites();
-    logoutLog.info({ reason, elapsedMs: Date.now() - startedAt }, "logout: pending library writes flushed");
     if (token) {
       await apiLogout(token).catch(() => undefined);
-      logoutLog.info({ reason, elapsedMs: Date.now() - startedAt }, "logout: session ended on the server");
     }
     // Drop the token from main's durable copy NOW, before the (slow) local reset:
     // a kill mid-logout must not bring the signed-out session back. The user blob
@@ -363,36 +353,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // key by it.
     localStorage.removeItem(TOKEN_KEY);
     // Stop the ticket schedule and drop the stored reserve: the next account starts with none of these tickets.
-    await logoutStep("stopMetadataTickets", stopMetadataTickets);
+    await stopMetadataTickets();
     await persistSessionToMain();
     window.dispatchEvent(new CustomEvent("sf:logout"));
-    // Bounded step by step inside (ACCT-DEV-01), so the library key is forgotten even when the cache clear hangs.
     await resetClientStorage({
       preserveLibraryKey: key === "keep",
       // UX-TOUR-02: the tour is once per computer, not once per sign-in.
       preserveLocalStorageKeys: ["sf-api-base-url", ...DESKTOP_TOUR_STORAGE_KEYS],
     });
-    logoutLog.info({ reason, elapsedMs: Date.now() - startedAt }, "logout: local storage reset");
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
     await persistSessionToMain();
     clearLastAuthenticatedRoute();
     setToken(null);
     setUser(null);
-    logoutLog.info({ reason, elapsedMs: Date.now() - startedAt }, "logout: signed out");
-  };
-
-  const logout = (reason: SignedOutReason): Promise<void> => {
-    const running = logoutInFlight.current;
-    if (running) {
-      logoutLog.info({ reason }, "logout joins the one in progress");
-      return running;
-    }
-    const run = runLogout(reason).finally(() => {
-      logoutInFlight.current = null;
-    });
-    logoutInFlight.current = run;
-    return run;
   };
 
   const value = useMemo(

@@ -27,7 +27,7 @@ vi.mock("@space/mobile-shell/mascot-loader", () => ({ MobileMascotLoader: () => 
 vi.mock("@space/mobile-shell/logger", () => ({ scopeLogger: () => ({ info: () => undefined, warn: () => undefined }) }));
 vi.mock("@space/mobile-shell/libraryEnvelope", () => ({ decryptBase64ToBytes: async () => new Uint8Array() }));
 vi.mock("@space/shared/api", () => ({
-  getLibraryMetaForKeyStep: async () => ({ exists: false, keyProbe: null }),
+  getLibraryMeta: async () => ({ exists: false, keyProbe: null }),
   resetLibrary: async () => undefined,
 }));
 vi.mock("../src/brand", () => ({ PARROT_MASCOT: 1 }));
@@ -37,7 +37,6 @@ vi.mock("../src/screens/PairingPanel", () => ({ KeyPairingPanel: () => null }));
 vi.mock("../src/lib/library", () => ({ claimAccountKey: async () => "kept" }));
 vi.mock("../src/lib/accountLanguage", () => ({ pickSignedInLanguage: async () => undefined, reconcileAfterSignIn: async () => undefined }));
 vi.mock("../src/lib/errorReports", () => ({ getErrorReportsSetting: () => ({ errorReports: false }), setErrorReports: async () => undefined }));
-vi.mock("../src/setup/ProfileSetupQuestion", () => ({ ProfileSetupPhoneStep: () => null }));
 
 import { SafeAreaView } from "react-native-safe-area-context";
 import { PhoneSetupFlow } from "@space/mobile-shell/setup-flow";

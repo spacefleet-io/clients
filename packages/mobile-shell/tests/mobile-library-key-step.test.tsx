@@ -96,9 +96,8 @@ describe("MobileLibraryKeyStep (MOBILE-SHELL-LIBRARY-KEY-STEP-001)", () => {
 
   it("phone: the mascot, no box focused for the remote, the main button starts the remote in show mode only", () => {
     const show = mount({ mode: "show", words: Array.from({ length: 12 }, (_, i) => `w${i + 1}`), canContinue: true });
-    console.info(SUITE, "phone show", JSON.stringify({ mascot: step(show).props.mascot ?? "default", preferred: step(show).props.nextPreferredFocus }));
-    // The step draws its mascot unless told not to (UX-SETUP-08).
-    expect(step(show).props.mascot).not.toBe(false);
+    console.info(SUITE, "phone show", JSON.stringify({ mascot: step(show).props.mascot, preferred: step(show).props.nextPreferredFocus }));
+    expect(step(show).props.mascot).toBe(true);
     // A phone never asks for a preferred focus: a key event (hardware keyboard) would otherwise ring the main button.
     expect(step(show).props.nextPreferredFocus).toBe(false);
     act(() => tree?.unmount());
@@ -108,14 +107,12 @@ describe("MobileLibraryKeyStep (MOBILE-SHELL-LIBRARY-KEY-STEP-001)", () => {
   });
 
   // @req UX-TV-33[badger-tv]
-  // @req UX-SETUP-08[badger-tv]
-  it("TV: the mascot over the card like every TV setup step, the remote starts on I've written it down (show) or box 1 (enter)", () => {
+  it("TV: no mascot so the 12 words fit 1080p, the remote starts on I've written it down (show) or box 1 (enter)", () => {
     platform.isTV = true;
     const show = mount({ mode: "show", words: Array.from({ length: 12 }, (_, i) => `w${i + 1}`), canContinue: true, onRegenerate: () => undefined });
     const props = step(show).props;
-    console.info(SUITE, "tv show", JSON.stringify({ mascot: props.mascot ?? "default", preferred: props.nextPreferredFocus }));
-    // Chris 2026-11-18 (relayed by Main): every TV setup step gets the phone's mascot, the key step included.
-    expect(props.mascot).not.toBe(false);
+    console.info(SUITE, "tv show", JSON.stringify({ mascot: props.mascot, preferred: props.nextPreferredFocus }));
+    expect(props.mascot).toBe(false);
     expect(props.nextPreferredFocus).toBe(true);
     // UX-TV-33: no "Generate a new key" and nothing under the card on a TV's shown key; the words are to be written down.
     console.info(SUITE, "tv show extras", JSON.stringify({ action: byType(show, "LibraryKeyWordsGrid")[0]!.props.action ?? null, afterCard: props.afterCard ?? null }));
@@ -134,13 +131,6 @@ describe("MobileLibraryKeyStep (MOBILE-SHELL-LIBRARY-KEY-STEP-001)", () => {
     expect(byId(enter, "key-lost-start-new-library")[0]!.props.style[1].borderColor).toBe("#fff");
     // Typing a key keeps the line under the card on TV too.
     expect(byId(enter, "key-lost-note")).toHaveLength(1);
-    act(() => tree?.unmount());
-    // UX-SETUP-08: the other-device card is its title alone on TV so the step fits 540 dp; a phone keeps its line.
-    const card = mount({ renderOtherDevice: () => null });
-    expect(byType(card, "MobilePhoneSignInCard")[0]!.props.compact).toBe(true);
-    platform.isTV = false;
-    act(() => tree?.unmount());
-    expect(byType(mount({ renderOtherDevice: () => null }), "MobilePhoneSignInCard")[0]!.props.compact).toBe(false);
   });
 
   it("enter mode: the boxes, Continue (the shared label) off until the key reads whole, Enter in the boxes continues", () => {

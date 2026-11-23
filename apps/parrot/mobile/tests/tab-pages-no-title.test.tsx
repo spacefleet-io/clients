@@ -36,7 +36,7 @@ vi.mock("react-native", () => {
   };
 });
 vi.mock("lucide-react-native", () =>
-  Object.fromEntries(["House", "LibraryBig", "ListMusic", "Search", "Settings", "Heart", "Plus"].map((name) => [name, `Icon:${name}`]))
+  Object.fromEntries(["House", "LibraryBig", "ListMusic", "Settings", "Heart", "Plus"].map((name) => [name, `Icon:${name}`]))
 );
 vi.mock("react-native-safe-area-context", () => ({ useSafeAreaInsets: () => ({ top: 24, bottom: 0, left: 0, right: 0 }) }));
 // The shared tab bar is rendered for real; its theme module is the one `@space/mobile-shell/theme` names.
@@ -48,9 +48,7 @@ vi.mock("../../../../packages/mobile-shell/src/components/mobile-sky-cover", () 
   SkyCover: ({ children, ...props }: { children?: unknown }) => createElement("SkyCover", props, children as never),
   useSkyScroll: () => ({}),
 }));
-vi.mock("@space/mobile-shell/i18n", () => ({
-  useTranslation: () => ({ t: (key: string, options?: { count?: number }) => (options?.count === undefined ? key : `${key}#${options.count}`), i18n: { language: "en" } }),
-}));
+vi.mock("@space/mobile-shell/i18n", () => ({ useTranslation: () => ({ t: (key: string, options?: { count?: number }) => (options?.count === undefined ? key : `${key}#${options.count}`) }) }));
 // The shared tab pager is rendered for real too.
 vi.mock("@space/mobile-shell/components", async () => ({
   SkyCover: "SkyCover",
@@ -71,7 +69,6 @@ vi.mock("../src/screens/LibraryScreen", () => ({ LibraryScreen: "LibraryScreen" 
 vi.mock("../src/screens/PlaylistsView", () => ({ PlaylistsView: "PlaylistsView" }));
 vi.mock("../src/screens/SettingsScreen", () => ({ SettingsScreen: "SettingsScreen" }));
 vi.mock("../src/screens/NowPlayingBar", () => ({ NowPlayingBar: "NowPlayingBar" }));
-vi.mock("../src/screens/PhoneSearch", () => ({ PhoneSearch: "PhoneSearch" }));
 vi.mock("../src/screens/ui", () => ({ Body: "Body" }));
 vi.mock("../src/screens/kept", () => ({ useOfflineReach: () => null }));
 vi.mock("../src/state/session", () => ({ useSession: () => ({ library: { status: "ready", version: 1 }, localChanges: 0, reloadLibrary: async () => undefined }) }));

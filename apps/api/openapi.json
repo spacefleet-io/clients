@@ -289,14 +289,6 @@
           },
           "opStreamVersion": {
             "type": "integer"
-          },
-          "targetOpStreamVersion": {
-            "type": "integer",
-            "description": "Badger library only: the op stream the account's writers move to, 4 once the account is switched (LIB-FMT-13), else 3."
-          },
-          "splitOriginals": {
-            "type": "boolean",
-            "description": "Parrot library only: whether this account's imports store each song in parts (a header, the sound in pieces, its tags in their own object; PAR-FMT-01). Off (whole files) until every Parrot channel carries the build that reads that format."
           }
         },
         "required": [
@@ -377,51 +369,6 @@
           "size"
         ]
       },
-      "LibraryOpStreamUpdateRequired": {
-        "type": "object",
-        "properties": {
-          "error": {
-            "type": "string",
-            "enum": [
-              "app_update_required"
-            ]
-          },
-          "app": {
-            "type": "string"
-          },
-          "platform": {
-            "type": "string"
-          },
-          "version": {
-            "type": "string",
-            "description": "The calling build's version from `x-space-client`; empty without it."
-          },
-          "minVersion": {
-            "type": "string",
-            "description": "The version floor for that app and platform; empty when none is set."
-          },
-          "reason": {
-            "type": "string",
-            "enum": [
-              "library_op_stream",
-              "library_schema"
-            ],
-            "description": "`library_op_stream`: the library is switched to op stream 4 (LIB-FMT-13). `library_schema`: a newer Parrot build saved the account's library at a schema this build cannot open (API-VER-01)."
-          },
-          "opStreamVersion": {
-            "type": "integer",
-            "description": "With `library_op_stream`: the op stream version the library needs (4)."
-          }
-        },
-        "required": [
-          "error",
-          "app",
-          "platform",
-          "version",
-          "minVersion",
-          "reason"
-        ]
-      },
       "LibraryBlobPointer": {
         "type": "object",
         "properties": {
@@ -484,10 +431,6 @@
           },
           "opStreamVersion": {
             "type": "integer"
-          },
-          "targetOpStreamVersion": {
-            "type": "integer",
-            "description": "Badger library only: the op stream the account's writers move to, 4 once the account is switched (LIB-FMT-13), else 3."
           }
         },
         "required": [
@@ -529,10 +472,6 @@
           },
           "opStreamVersion": {
             "type": "integer"
-          },
-          "targetOpStreamVersion": {
-            "type": "integer",
-            "description": "Badger library only: the op stream the account's writers move to, 4 once the account is switched (LIB-FMT-13), else 3."
           },
           "migrationAdvisory": {
             "type": "object",
@@ -2107,23 +2046,6 @@
           "isMain": {
             "type": "boolean",
             "description": "True on the oldest profile of the account, whose viewing data uses the library's unprefixed storage."
-          },
-          "features": {
-            "type": "object",
-            "properties": {
-              "avatars": {
-                "type": "string",
-                "enum": [
-                  "set",
-                  "later"
-                ]
-              }
-            },
-            "additionalProperties": false,
-            "description": "App features this profile has set up (`set`) or put off from the \"New in this update\" window (`later`), by feature id (avatars); a feature not listed is not set up yet.",
-            "example": {
-              "avatars": "set"
-            }
           }
         },
         "required": [
@@ -2132,8 +2054,7 @@
           "avatar",
           "avatarId",
           "createdAt",
-          "isMain",
-          "features"
+          "isMain"
         ]
       },
       "ProfileChange": {
@@ -3009,16 +2930,6 @@
             "in": "query"
           },
           {
-            "schema": {
-              "type": "string",
-              "description": "The op stream version the client reads; defaults to 1. On an account switched to op stream 4, below 4 answers 426."
-            },
-            "required": false,
-            "description": "The op stream version the client reads; defaults to 1. On an account switched to op stream 4, below 4 answers 426.",
-            "name": "x-library-op-stream-version",
-            "in": "header"
-          },
-          {
             "name": "x-space-app",
             "in": "header",
             "required": true,
@@ -3109,16 +3020,6 @@
               }
             }
           },
-          "426": {
-            "description": "The app must update: the account's library is switched to op stream 4 and the request does not declare it (`x-library-op-stream-version`, LIB-FMT-13), or a newer Parrot build saved the account's music library at a schema this build cannot open (API-VER-01).",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/LibraryOpStreamUpdateRequired"
-                }
-              }
-            }
-          },
           "503": {
             "description": "The storage gateway could not tell whether a snapshot exists; keep the local library and retry.",
             "content": {
@@ -3154,31 +3055,6 @@
         "security": [
           {
             "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "description": "The op stream version the client reads; defaults to 1. On an account switched to op stream 4, below 4 answers 426."
-            },
-            "required": false,
-            "description": "The op stream version the client reads; defaults to 1. On an account switched to op stream 4, below 4 answers 426.",
-            "name": "x-library-op-stream-version",
-            "in": "header"
-          },
-          {
-            "name": "x-space-app",
-            "in": "header",
-            "required": true,
-            "description": "SpaceFleet app the request belongs to (library: badger or parrot; storage and p2p: badger or parrot).",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "badger",
-                "parrot"
-              ]
-            }
           }
         ],
         "responses": {
@@ -3258,16 +3134,6 @@
               }
             }
           },
-          "426": {
-            "description": "The app must update: the account's library is switched to op stream 4 and the request does not declare it (`x-library-op-stream-version`, LIB-FMT-13), or a newer Parrot build saved the account's music library at a schema this build cannot open (API-VER-01).",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/LibraryOpStreamUpdateRequired"
-                }
-              }
-            }
-          },
           "503": {
             "description": "The storage gateway could not tell whether a snapshot exists; keep the local library and retry.",
             "content": {
@@ -3289,7 +3155,22 @@
               }
             }
           }
-        }
+        },
+        "parameters": [
+          {
+            "name": "x-space-app",
+            "in": "header",
+            "required": true,
+            "description": "SpaceFleet app the request belongs to (library: badger or parrot; storage and p2p: badger or parrot).",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "badger",
+                "parrot"
+              ]
+            }
+          }
+        ]
       },
       "put": {
         "operationId": "putLibraryDb",
@@ -3520,7 +3401,7 @@
             }
           },
           "409": {
-            "description": "The version is stale, the publish would downgrade the library format, it declares op stream 4 before the account is switched (`op_stream_not_switched`, LIB-FMT-13), or the upload quota is exceeded.",
+            "description": "The version is stale, the publish would downgrade the library format, or the upload quota is exceeded.",
             "content": {
               "application/json": {
                 "schema": {
@@ -3579,25 +3460,6 @@
                         "error": {
                           "type": "string",
                           "enum": [
-                            "op_stream_not_switched"
-                          ]
-                        },
-                        "observed": {
-                          "type": "integer",
-                          "description": "The op stream version the write declared."
-                        }
-                      },
-                      "required": [
-                        "error",
-                        "observed"
-                      ]
-                    },
-                    {
-                      "type": "object",
-                      "properties": {
-                        "error": {
-                          "type": "string",
-                          "enum": [
                             "upload_quota_exceeded"
                           ]
                         }
@@ -3630,16 +3492,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "426": {
-            "description": "The app must update: the account's library is switched to op stream 4 and the request does not declare it (`x-library-op-stream-version`, LIB-FMT-13), or a newer Parrot build saved the account's music library at a schema this build cannot open (API-VER-01).",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/LibraryOpStreamUpdateRequired"
                 }
               }
             }
@@ -3761,7 +3613,7 @@
           "Library"
         ],
         "summary": "Library operations since a version",
-        "description": "Returns the encrypted operations committed after version `since` (default 0), with their ciphertext inlined, and the observed format versions. `tooOld` is true when `since` predates the retained history. With `Accept: application/vnd.space.library-ops` the answer is binary instead (LIB-FMT-13): one frame per op, `u64be version | u32be length | ciphertext`, and the page's state in the `x-library-version`, `x-library-snapshot-version`, `x-library-too-old`, `x-library-has-more` (`1`/`0`), `x-library-storage-format-version`, `x-library-op-stream-version` and `x-library-target-op-stream-version` response headers.\n\nPersonal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.",
+        "description": "Returns the encrypted operations committed after version `since` (default 0), with their ciphertext inlined, and the observed format versions. `tooOld` is true when `since` predates the retained history.\n\nPersonal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.",
         "security": [
           {
             "bearerAuth": []
@@ -3777,16 +3629,6 @@
             "description": "A version number, 0 or more (default 0).",
             "name": "since",
             "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "description": "The op stream version the client reads; defaults to 1. On an account switched to op stream 4, below 4 answers 426."
-            },
-            "required": false,
-            "description": "The op stream version the client reads; defaults to 1. On an account switched to op stream 4, below 4 answers 426.",
-            "name": "x-library-op-stream-version",
-            "in": "header"
           },
           {
             "name": "x-space-app",
@@ -3809,12 +3651,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/LibraryOps"
-                }
-              },
-              "application/vnd.space.library-ops": {
-                "schema": {
-                  "type": "string",
-                  "format": "binary"
                 }
               }
             }
@@ -3882,16 +3718,6 @@
                   "required": [
                     "error"
                   ]
-                }
-              }
-            }
-          },
-          "426": {
-            "description": "The app must update: the account's library is switched to op stream 4 and the request does not declare it (`x-library-op-stream-version`, LIB-FMT-13), or a newer Parrot build saved the account's music library at a schema this build cannot open (API-VER-01).",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/LibraryOpStreamUpdateRequired"
                 }
               }
             }
@@ -3972,16 +3798,6 @@
             "required": false,
             "description": "The library format the writer uses; defaults to 1. A lower one than the library's is refused.",
             "name": "x-library-storage-format-version",
-            "in": "header"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "description": "The op stream the writer uses; defaults to 1. Below 4 is refused on an account switched to op stream 4 (426) and once the library holds op stream 4 (409); 4 before the switch answers 409 `op_stream_not_switched`."
-            },
-            "required": false,
-            "description": "The op stream the writer uses; defaults to 1. Below 4 is refused on an account switched to op stream 4 (426) and once the library holds op stream 4 (409); 4 before the switch answers 409 `op_stream_not_switched`.",
-            "name": "x-library-op-stream-version",
             "in": "header"
           },
           {
@@ -4092,7 +3908,7 @@
             }
           },
           "409": {
-            "description": "The version or the state lineage is stale, the op declares an older format than the library's, or it declares op stream 4 before the account is switched (`op_stream_not_switched`, LIB-FMT-13).",
+            "description": "The version or the state lineage is stale.",
             "content": {
               "application/json": {
                 "schema": {
@@ -4161,37 +3977,8 @@
                         "observed",
                         "stored"
                       ]
-                    },
-                    {
-                      "type": "object",
-                      "properties": {
-                        "error": {
-                          "type": "string",
-                          "enum": [
-                            "op_stream_not_switched"
-                          ]
-                        },
-                        "observed": {
-                          "type": "integer",
-                          "description": "The op stream version the write declared."
-                        }
-                      },
-                      "required": [
-                        "error",
-                        "observed"
-                      ]
                     }
                   ]
-                }
-              }
-            }
-          },
-          "426": {
-            "description": "The app must update: the account's library is switched to op stream 4 and the request does not declare it (`x-library-op-stream-version`, LIB-FMT-13), or a newer Parrot build saved the account's music library at a schema this build cannot open (API-VER-01).",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/LibraryOpStreamUpdateRequired"
                 }
               }
             }
@@ -4253,26 +4040,6 @@
             "description": "App id, for clients that cannot set the `x-space-app` header.",
             "name": "app",
             "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "description": "The op stream version the client reads, for clients that cannot set `x-library-op-stream-version` (LIB-FMT-13)."
-            },
-            "required": false,
-            "description": "The op stream version the client reads, for clients that cannot set `x-library-op-stream-version` (LIB-FMT-13).",
-            "name": "opStream",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "description": "The op stream version the client reads; defaults to 1. On an account switched to op stream 4, below 4 answers 426."
-            },
-            "required": false,
-            "description": "The op stream version the client reads; defaults to 1. On an account switched to op stream 4, below 4 answers 426.",
-            "name": "x-library-op-stream-version",
-            "in": "header"
           },
           {
             "name": "x-space-app",
@@ -4354,16 +4121,6 @@
                   "required": [
                     "error"
                   ]
-                }
-              }
-            }
-          },
-          "426": {
-            "description": "The app must update: the account's library is switched to op stream 4 and the request does not declare it (`x-library-op-stream-version`, LIB-FMT-13), or a newer Parrot build saved the account's music library at a schema this build cannot open (API-VER-01).",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/LibraryOpStreamUpdateRequired"
                 }
               }
             }
@@ -9587,7 +9344,7 @@
           "Auth"
         ],
         "summary": "Start a sign-in with a provider",
-        "description": "ACCT-SIGNIN-05: starts a sign-in with a Google, Apple or Microsoft account and returns the provider address to open in the system browser. The provider sends the browser back to the API, which sends it on to `returnTo` with `signinCode=<code>` (trade it with `POST /auth/provider/complete` within 5 minutes) or `signinError` (`email_unverified`; `email_domain_disallowed`; `account_deletion_pending`; `provider_failed`; `cancelled`). An email with no account gets a new free account on every surface, the phone included (ACCT-AUTH-10). The person has 10 minutes at the provider. `returnTo` is the website (`WEB_BASE_URL`'s origin), a loopback `http://127.0.0.1:<port>/…` address or an app scheme (`badger:`, `parrot:`, `spacebadger:`); anything else answers 400 `invalid_return_to`. A provider that is off answers 404 `provider_disabled`. Counts against the sign-in limit per network address (OPS-LIMIT-02).",
+        "description": "ACCT-SIGNIN-05: starts a sign-in with a Google, Apple or Microsoft account and returns the provider address to open in the system browser. The provider sends the browser back to the API, which sends it on to `returnTo` with `signinCode=<code>` (trade it with `POST /auth/provider/complete` within 5 minutes) or `signinError` (`no_account`: the phone and TV apps only sign in, ACCT-AUTH-10; `email_unverified`; `email_domain_disallowed`; `account_deletion_pending`; `provider_failed`; `cancelled`). The person has 10 minutes at the provider. `returnTo` is the website (`WEB_BASE_URL`'s origin), a loopback `http://127.0.0.1:<port>/…` address or an app scheme (`badger:`, `parrot:`, `spacebadger:`); anything else answers 400 `invalid_return_to`. A provider that is off answers 404 `provider_disabled`. Counts against the sign-in limit per network address (OPS-LIMIT-02).",
         "parameters": [
           {
             "schema": {
@@ -11880,7 +11637,7 @@
           "Profiles"
         ],
         "summary": "List profiles",
-        "description": "The account's profiles, oldest first; the oldest is the main profile (`isMain`). An account always has at least one: when it has none yet, this creates the main profile, named after the account's display name (else \"Profile 1\" in the account's language), with a random avatar. `features` holds the app features each profile has set up or put off (`{}` when none). `maxProfiles` is the plan's limit, as on `GET /auth/me`. Each profile's viewing data stays in the end-to-end encrypted library.\n\nPersonal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.",
+        "description": "The account's profiles, oldest first; the oldest is the main profile (`isMain`). An account always has at least one: when it has none yet, this creates the main profile, named after the account's display name (else \"Profile 1\" in the account's language), with the first avatar (`badger`). `maxProfiles` is the plan's limit, as on `GET /auth/me`. Each profile's viewing data stays in the end-to-end encrypted library.\n\nPersonal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.",
         "security": [
           {
             "bearerAuth": []
@@ -11949,7 +11706,7 @@
           "Profiles"
         ],
         "summary": "Create a profile",
-        "description": "Adds a profile to the account. Without `avatarId` (or `avatar`), a random avatar no profile uses yet is given (any random one when all are used). `features` sets the new profile's feature states: an add form where the user picked the avatar sends `{\"avatars\": \"set\"}`. Refused once the account holds `maxProfiles` profiles (5 on a paid plan, 1 on free).\n\nPersonal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.",
+        "description": "Adds a profile to the account. Without `avatarId` (or `avatar`), the first avatar of the pack no profile uses yet is given. Refused once the account holds `maxProfiles` profiles (5 on a paid plan, 1 on free).\n\nPersonal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.",
         "security": [
           {
             "bearerAuth": []
@@ -12000,23 +11757,6 @@
                     "type": "number",
                     "description": "Palette index, an integer from 0 to 7; sets the avatar matching that colour. For apps released before the avatar pack: ignored when `avatarId` is sent.",
                     "example": 2
-                  },
-                  "features": {
-                    "type": "object",
-                    "properties": {
-                      "avatars": {
-                        "type": "string",
-                        "enum": [
-                          "set",
-                          "later"
-                        ]
-                      }
-                    },
-                    "additionalProperties": false,
-                    "description": "App features this profile has set up (`set`) or put off from the \"New in this update\" window (`later`), by feature id (avatars); a feature not listed is not set up yet.",
-                    "example": {
-                      "avatars": "set"
-                    }
                   }
                 },
                 "required": [
@@ -12038,7 +11778,7 @@
             }
           },
           "400": {
-            "description": "The name is not 1 to 40 characters after trimming, the avatar is not an integer from 0 to 7, the avatarId is not one of the pack, a feature id or state is unknown, or the body does not match the schema.",
+            "description": "The name is not 1 to 40 characters after trimming, the avatar is not an integer from 0 to 7, the avatarId is not one of the pack, or the body does not match the schema.",
             "content": {
               "application/json": {
                 "schema": {
@@ -12133,8 +11873,8 @@
         "tags": [
           "Profiles"
         ],
-        "summary": "Rename a profile, change its avatar or record its feature states",
-        "description": "Changes the name, the avatar (`avatarId`, or `avatar` from apps released before the pack) and/or the feature states (`features`, merged per feature: a feature not sent keeps its state) of one of the account's profiles; at least one is required.\n\nPersonal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.",
+        "summary": "Rename a profile or change its avatar",
+        "description": "Changes the name and/or the avatar (`avatarId`, or `avatar` from apps released before the pack) of one of the account's profiles; at least one is required.\n\nPersonal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.",
         "security": [
           {
             "bearerAuth": []
@@ -12198,23 +11938,6 @@
                     "type": "number",
                     "description": "Palette index, an integer from 0 to 7; sets the avatar matching that colour. For apps released before the avatar pack: ignored when `avatarId` is sent.",
                     "example": 2
-                  },
-                  "features": {
-                    "type": "object",
-                    "properties": {
-                      "avatars": {
-                        "type": "string",
-                        "enum": [
-                          "set",
-                          "later"
-                        ]
-                      }
-                    },
-                    "additionalProperties": false,
-                    "description": "App features this profile has set up (`set`) or put off from the \"New in this update\" window (`later`), by feature id (avatars); a feature not listed is not set up yet.",
-                    "example": {
-                      "avatars": "set"
-                    }
                   }
                 }
               }
@@ -12233,7 +11956,7 @@
             }
           },
           "400": {
-            "description": "The name is not 1 to 40 characters after trimming, the avatar is not an integer from 0 to 7, the avatarId is not one of the pack, a feature id or state is unknown, or the body does not match the schema.",
+            "description": "The name is not 1 to 40 characters after trimming, the avatar is not an integer from 0 to 7, the avatarId is not one of the pack, or the body does not match the schema.",
             "content": {
               "application/json": {
                 "schema": {
@@ -12453,7 +12176,7 @@
           "Playback"
         ],
         "summary": "Start a stream",
-        "description": "Takes one of the profile's stream slots before playback starts: by default at most 1 stream per profile at a time in Badger, 2 in Parrot; an admin may set another number per account type or per account (ACCT-STREAM-07). At the limit the answer is 409 `stream_limit` naming the devices playing; the app asks \"Already playing on <device>. Play here instead?\" and, on yes, sends the same request with `takeover: true`, which ends the oldest stream(s). The same login session starting again replaces its own stream. A stream not heard from for 60 s no longer counts. Casting counts as the casting phone's stream (`kind: \"cast\"`); offline playback never asks.\n\nPersonal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.",
+        "description": "Takes one of the profile's stream slots before playback starts: at most 1 stream per profile at a time in Badger, 2 in Parrot. At the limit the answer is 409 `stream_limit` naming the devices playing; the app asks \"Already playing on <device>. Play here instead?\" and, on yes, sends the same request with `takeover: true`, which ends the oldest stream(s). The same login session starting again replaces its own stream. A stream not heard from for 60 s no longer counts. Casting counts as the casting phone's stream (`kind: \"cast\"`); offline playback never asks.\n\nPersonal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.",
         "security": [
           {
             "bearerAuth": []
@@ -13695,53 +13418,6 @@
                         "status": {
                           "type": "string",
                           "enum": [
-                            "approved"
-                          ]
-                        },
-                        "token": {
-                          "type": "string",
-                          "description": "Session token of the new device."
-                        },
-                        "user": {
-                          "type": "object",
-                          "properties": {
-                            "id": {
-                              "type": "string"
-                            },
-                            "email": {
-                              "type": "string"
-                            }
-                          },
-                          "required": [
-                            "id",
-                            "email"
-                          ]
-                        },
-                        "localKey": {
-                          "type": "boolean",
-                          "enum": [
-                            true
-                          ]
-                        },
-                        "clientType": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "status",
-                        "token",
-                        "user",
-                        "localKey",
-                        "clientType"
-                      ],
-                      "description": "Approved by the sister app on the same device (ACCT-PAIR-07, approve with `localKey`): the sealed key reaches the device from that app directly and never passes through the server, so only the token is here."
-                    },
-                    {
-                      "type": "object",
-                      "properties": {
-                        "status": {
-                          "type": "string",
-                          "enum": [
                             "key_approved"
                           ]
                         },
@@ -14132,7 +13808,7 @@
           "Pairing"
         ],
         "summary": "Approve a pairing request with a sealed library key",
-        "description": "Body `{ sealedKey: { v:1, epk, iv, ct }, approverDeviceId?, password? }`. `password` is the account password, sent by approvers with no device unlock of their own (the TV app, whose session client type ends in `-tv`, e.g. `badger-tv`: for it the password is required, a missing one is 401 `invalid_password`): checked before anything is approved, wrong answers are 401 `invalid_password` (the request stays pending) and are limited to 10 per minute per account (429 `rate_limited`). Any signed-in Badger or Parrot app may approve a request of any app on the same account; nothing filters by app (ACCT-PAIR-05). Creates a new session for the approver's account (clientType `<app>-<deviceType>` with the requesting app, e.g. `parrot-desktop`; device name/type stored), parks the sealed key for the new device and pushes 'New device added' to the account's other push devices (except `approverDeviceId`). Same-device sign-in (ACCT-PAIR-07): a signed-in Badger approving Parrot's sign-in on the same computer or phone (or the reverse) sends `{ localKey: true }` and no `sealedKey`, then hands the sealed key to that app itself, so the server never holds it, not even sealed; the poll answers `{ status: approved, token, user, localKey: true, clientType }`. Allowed only when the request is the sister app's sign-in (not a key request) on the approving session's own device type; otherwise 403 `pairing_local_key_refused` and nothing is approved. Sending both `localKey` and `sealedKey` is 400 `invalid_request`. 410 `pairing_expired`, 409 `pairing_already_used`, 404 `pairing_not_found`. Allowed on unpaid accounts (browse access).\n\nPersonal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.",
+        "description": "Body `{ sealedKey: { v:1, epk, iv, ct }, approverDeviceId?, password? }`. `password` is the account password, sent by approvers with no device unlock of their own (the TV app, whose session client type ends in `-tv`, e.g. `badger-tv`: for it the password is required, a missing one is 401 `invalid_password`): checked before anything is approved, wrong answers are 401 `invalid_password` (the request stays pending) and are limited to 10 per minute per account (429 `rate_limited`). Any signed-in Badger or Parrot app may approve a request of any app on the same account; nothing filters by app (ACCT-PAIR-05). Creates a new session for the approver's account (clientType `<app>-<deviceType>` with the requesting app, e.g. `parrot-desktop`; device name/type stored), parks the sealed key for the new device and pushes 'New device added' to the account's other push devices (except `approverDeviceId`). 410 `pairing_expired`, 409 `pairing_already_used`, 404 `pairing_not_found`. Allowed on unpaid accounts (browse access).\n\nPersonal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.",
         "security": [
           {
             "bearerAuth": []
@@ -14157,15 +13833,8 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "localKey": {
-                    "type": "boolean",
-                    "enum": [
-                      true
-                    ],
-                    "description": "Same-device sign-in (ACCT-PAIR-07): approve with no key; the approving app hands the sealed key to its sister app on this device itself. Replaces `sealedKey`."
-                  },
                   "sealedKey": {
-                    "description": "Required unless `localKey`: a sealed key `{ v: 1, epk, iv, ct }` with base64 fields; otherwise 400 `invalid_sealed_key`.",
+                    "description": "Required: a sealed key `{ v: 1, epk, iv, ct }` with base64 fields; otherwise 400 `invalid_sealed_key`.",
                     "example": {
                       "v": 1,
                       "epk": "…",
@@ -14220,7 +13889,7 @@
             }
           },
           "400": {
-            "description": "The sealed key is missing or malformed, or sent together with `localKey`.",
+            "description": "The sealed key is missing or malformed.",
             "content": {
               "application/json": {
                 "schema": {
@@ -14273,7 +13942,7 @@
             }
           },
           "403": {
-            "description": "The account is blocked or deleted, a personal token was used, or (`localKey`) the request is not the sister app's sign-in on this device type.",
+            "description": "The account is blocked or scheduled for deletion, or a personal token was used on a route that needs a login session.",
             "content": {
               "application/json": {
                 "schema": {
@@ -14284,8 +13953,7 @@
                       "enum": [
                         "account_blocked",
                         "account_deleted",
-                        "personal_token_not_allowed",
-                        "pairing_local_key_refused"
+                        "personal_token_not_allowed"
                       ]
                     }
                   },
@@ -17206,7 +16874,7 @@
           "Feedback"
         ],
         "summary": "Send feedback",
-        "description": "Sends a feedback message from an app's \"Send feedback\" entry (UX-SUP-05); it lands in the admin dashboard's Feedback inbox with the account that sent it. `message` is trimmed, 1 to 4000 characters. `log` is the app's error log, sent only when the user ticked the box, at most 200 KB. Never put a title or a file name in it. `requestIds` are the server's `x-request-id` values of the app's last failed API calls (UX-SUP-07), at most 10 UUIDs. A wrong field answers 400 `invalid_feedback` naming it. At most 10 messages an hour per account: beyond, 429 `rate_limited` with `retryAfterSeconds`.\n\nPersonal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.",
+        "description": "Sends a feedback message from an app's \"Send feedback\" entry (UX-SUP-05); it lands in the admin dashboard's Feedback inbox with the account that sent it. `message` is trimmed, 1 to 4000 characters. `log` is the app's error log, sent only when the user ticked the box, at most 200 KB. Never put a title or a file name in it. A wrong field answers 400 `invalid_feedback` naming it. At most 10 messages an hour per account: beyond, 429 `rate_limited` with `retryAfterSeconds`.\n\nPersonal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.",
         "security": [
           {
             "bearerAuth": []
@@ -17262,16 +16930,6 @@
                       "null"
                     ],
                     "description": "The app's error log, only when the user chose to attach it. 200 KB at most."
-                  },
-                  "requestIds": {
-                    "type": [
-                      "array",
-                      "null"
-                    ],
-                    "items": {
-                      "type": "string"
-                    },
-                    "description": "UX-SUP-07: the `x-request-id` of each of the app's last failed API calls (answers of 400 or more), newest last; at most 10 UUIDs. Ids only: never a URL, a body or an address."
                   }
                 },
                 "required": [
@@ -17324,8 +16982,7 @@
                             "appVersion",
                             "platform",
                             "deviceModel",
-                            "log",
-                            "requestIds"
+                            "log"
                           ]
                         }
                       },

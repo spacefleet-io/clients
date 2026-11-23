@@ -18,7 +18,6 @@ import React from "react";
 import { act, create, type ReactTestInstance, type ReactTestRenderer } from "react-test-renderer";
 import { describe, expect, it, vi } from "vitest";
 import { PROFILE_AVATAR_IDS, type ProfileAvatarId } from "@space/shared/profileAvatars";
-import type { ProfileFeatures } from "@space/shared/appFeatures";
 import type { ApiProfile } from "@space/shared/profiles";
 import type { ProfileLibraryMoves, ProfileStore, ProfilesSnapshot } from "@space/shared/profileStore";
 
@@ -78,7 +77,6 @@ const profile = (id: string, name: string, avatarId: ProfileAvatarId, avatar = 0
   name,
   avatar,
   avatarId,
-  features: {},
   createdAt: `2026-11-1${id.length}T00:00:00.000Z`,
   isMain: id === "p-main",
 });
@@ -96,7 +94,7 @@ const fakeStore = (profiles: ApiProfile[], maxProfiles = 5) => {
     listeners.forEach((listener) => listener());
   };
   const calls = {
-    created: [] as Array<{ name: string; avatarId?: ProfileAvatarId; features?: ProfileFeatures }>,
+    created: [] as Array<{ name: string; avatarId?: ProfileAvatarId }>,
     edited: [] as Array<{ id: string; change: { name?: string; avatarId?: ProfileAvatarId } }>,
     refreshes: 0,
     compilerCache: false,
@@ -121,8 +119,8 @@ const fakeStore = (profiles: ApiProfile[], maxProfiles = 5) => {
     refresh: async () => {
       calls.refreshes += 1;
     },
-    createProfile: async (name: string, avatarId?: ProfileAvatarId, features?: ProfileFeatures) => {
-      calls.created.push({ name, avatarId, features });
+    createProfile: async (name: string, avatarId?: ProfileAvatarId) => {
+      calls.created.push({ name, avatarId });
       const made = profile(`p-${snapshot.profiles.length}`, name, avatarId ?? "badger");
       publish([...snapshot.profiles, made]);
       return made;
@@ -216,7 +214,7 @@ describe("MobileProfilesScreen avatars (ACCT-PROF-05)", () => {
     expect(ids.some((id) => id.includes("rename"))).toBe(false);
   });
 
-  it("@req UX-SETUP-10 Add opens the chooser on the first unused avatar, and Save creates the profile with the one picked, marked set up", async () => {
+  it("Add opens the chooser on the first unused avatar, and Save creates the profile with the one picked", async () => {
     const events: string[] = [];
     const { store, calls } = fakeStore([profile("p-main", "Chris", "badger")]);
     const renderer = screen(store, "pick", events);
@@ -245,8 +243,7 @@ describe("MobileProfilesScreen avatars (ACCT-PROF-05)", () => {
     expect(one(renderer, "profile-avatar-preview").props.source).toBe(sourceOf("robot"));
     await press(renderer, "profile-save");
     console.info(TAG, "created", JSON.stringify(calls.created), "events", events.join(","));
-    // The avatar was picked here, so the new profile skips the "Your profile" step.
-    expect(calls.created).toEqual([{ name: "Sam", avatarId: "robot", features: { avatars: "set" } }]);
+    expect(calls.created).toEqual([{ name: "Sam", avatarId: "robot" }]);
     expect(events).toEqual(expect.arrayContaining(["add.start", "avatar.chosen", "created"]));
     const tile1 = one(renderer, "profile-tile-1");
     expect(avatarIn(tile1).props.source).toBe(sourceOf("robot"));

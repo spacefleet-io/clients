@@ -14,25 +14,9 @@
  * while the app is running, so never during playback. With the setting off the user checks, downloads and restarts by
  * hand from Settings.
  *
- * REL-UPD-07: a Linux copy installed by the system's package manager (.deb, .rpm, .pacman) or as a Flatpak never runs
- * electron-updater. It checks the same feed (`release-status`, on the same schedule and behind the same setting) and
- * the window asks the user in a modal; "Install now" opens the desktop's password dialog for the package's own update
- * helper (systemPackage.ts), which updates that one package, and the app then quits and starts its new version by
- * itself. A Flatpak is only told the `flatpak update` command.
- *
  * electron-updater only works inside a packaged app: every entry point short-circuits when `!app.isPackaged` (except
  * the E2E test mode) and answers "unsupported".
  */
-import { compareVersions } from "@space/shared/appVersion";
-import {
-  canAskPassword,
-  detectLinuxInstall,
-  manualCommand,
-  nodeSystemProbe,
-  runSystemUpdate,
-  type LinuxInstall,
-  type SystemProbe,
-} from "./systemPackage";
 import {
   AUTO_UPDATE_INTERVAL_MS,
   INITIAL_UPDATER_STATE,
@@ -54,14 +38,6 @@ export type UpdaterUpdateInfo = {
   releaseNotes?: string | ReadonlyArray<{ note?: string | null }> | null;
 };
 
-/** What electron-updater's `checkForUpdates` resolves to (the part read here). */
-export type UpdaterCheckForUpdatesResult = {
-  isUpdateAvailable: boolean;
-  updateInfo: UpdaterUpdateInfo;
-  /** With `autoDownload` on, the download the check started; electron-updater never awaits it. */
-  downloadPromise?: Promise<unknown> | null;
-} | null;
-
 /** The part of electron-updater's `AppUpdater` (`autoUpdater`) used here. */
 export type AutoUpdaterLike = {
   autoDownload: boolean;
@@ -70,7 +46,7 @@ export type AutoUpdaterLike = {
   disableDifferentialDownload: boolean;
   logger: unknown;
   setFeedURL: (options: { provider: "generic"; url: string }) => void;
-  checkForUpdates: () => Promise<UpdaterCheckForUpdatesResult>;
+  checkForUpdates: () => Promise<{ isUpdateAvailable: boolean; updateInfo: UpdaterUpdateInfo } | null>;
   downloadUpdate: () => Promise<unknown>;
   quitAndInstall: (isSilent?: boolean, isForceRunAfter?: boolean) => void;
   on(event: "checking-for-update" | "update-not-available", listener: () => void): unknown;
@@ -79,8 +55,7 @@ export type AutoUpdaterLike = {
   on(event: "error", listener: (err: Error) => void): unknown;
 };
 
-/** `quit`: the relaunch after a system-package update (REL-UPD-07) quits, and `relaunchAfterExit` starts the new binary. */
-export type UpdaterElectronApp = { isPackaged: boolean; getVersion: () => string; quit: () => void };
+export type UpdaterElectronApp = { isPackaged: boolean; getVersion: () => string };
 export type UpdaterIpcMain = { handle: (channel: string, listener: (event: unknown, ...args: any[]) => unknown) => void };
 /** The window events go to (Electron's `BrowserWindow`). */
 export type UpdaterWindow = { isDestroyed: () => boolean; webContents: { send: (channel: string, payload: UpdaterEvent) => void } };
@@ -108,10 +83,6 @@ export type DesktopUpdaterOptions = {
    * hide and stop the quit. Parrot also saves its queued edits here (PAR-PL-05).
    */
   onQuitForUpdate: () => void | Promise<void>;
-  /** The app's .deb/.rpm/.pacman package name (`spacebadger`, `spaceparrot`): its update helper is `/usr/lib/<name>/system-update`. */
-  linuxPackageName: string;
-  /** Test seam: the OS calls of systemPackage.ts. */
-  systemProbe?: SystemProbe;
 };
 
 export type DesktopUpdater = {
@@ -138,9 +109,6 @@ const isUpdaterTestMode = (): boolean => process.env.SF_UPDATER_TEST_MODE === "1
 /** Shortest cadence `SF_UPDATER_CHECK_INTERVAL_MS` may set. */
 const MIN_TEST_INTERVAL_MS = 1_000;
 
-/** REL-UPD-07: how long "installed, restarting" shows before the app quits and starts its new version. */
-export const SYSTEM_RELAUNCH_DELAY_MS = 1_500;
-
 /**
  * E2E hook (`SF_UPDATER_CHECK_INTERVAL_MS`, never set in a release): the automatic background check runs on this
  * cadence instead of every 6 hours, so the update e2e can watch the real timer fire in a packaged app. Anything but a
@@ -156,9 +124,9 @@ const autoCheckIntervalMs = (logger: UpdaterLogger): number => {
 };
 
 /**
- * REL-DIST-10: on Linux only the AppImage runs electron-updater (the AppImage runtime sets `APPIMAGE` to the file's
- * path). A copy installed from the SpaceFleet APT/DNF/pacman repositories or a Flatpak is updated through the system's
- * package manager (REL-UPD-07, `registerPackageManagerHandlers`).
+ * REL-DIST-10: on Linux only the AppImage updates itself (the AppImage runtime sets `APPIMAGE` to the file's path). A
+ * copy installed from the SpaceFleet APT/DNF repositories, the AUR or a Flatpak is updated by the system's package
+ * manager, so the in-app updater stays off there: no check, no prompt, electron-updater never built.
  */
 const isSystemPackagedLinux = (platformId: string): boolean =>
   platformId === "linux" && !process.env.APPIMAGE && !isUpdaterTestMode();
@@ -180,8 +148,6 @@ export const createDesktopUpdater = ({
   logger,
   onAutoUpdateChange,
   onQuitForUpdate,
-  linuxPackageName,
-  systemProbe = nodeSystemProbe,
 }: DesktopUpdaterOptions): DesktopUpdater => {
   let registered = false;
   let windowGetter: (() => UpdaterWindow | null) | null = null;
@@ -189,13 +155,8 @@ export const createDesktopUpdater = ({
   let autoEnabled = false;
   let autoTimer: ReturnType<typeof setInterval> | null = null;
   let state: UpdaterState = INITIAL_UPDATER_STATE;
-  /** REL-UPD-07: set once a package-manager or Flatpak install is detected; electron-updater is never built then. */
-  let packageInstall: Extract<LinuxInstall, { kind: "system" | "flatpak" }> | null = null;
-  /** Settles when the install type is known; the IPC handlers wait for it so the window never sees a half state. */
-  let ready: Promise<void> = Promise.resolve();
 
-  const canRun = (): boolean =>
-    (app.isPackaged || isUpdaterTestMode()) && (packageInstall !== null || !isSystemPackagedLinux(getPlatformId()));
+  const canRun = (): boolean => !isSystemPackagedLinux(getPlatformId()) && (app.isPackaged || isUpdaterTestMode());
   const feedUrl = (): string => `${getApiBaseUrl().replace(/\/+$/, "")}/desktop/${appId}`;
 
   const emit = (event: UpdaterEvent): void => {
@@ -204,52 +165,18 @@ export const createDesktopUpdater = ({
     if (win && !win.isDestroyed()) win.webContents.send(UPDATER_CHANNELS.event, event);
   };
 
-  /** API release-status for this build (throws when the API can't be reached or answers an error). */
-  const fetchReleaseStatus = async (): Promise<Partial<ReleaseStatus> | null> => {
-    const url = `${feedUrl()}/release-status?currentVersion=${encodeURIComponent(app.getVersion())}&platform=${getPlatformId()}`;
-    const response = await fetch(url);
-    if (!response.ok) throw new Error(`release-status answered HTTP ${response.status}`);
-    return (await response.json()) as Partial<ReleaseStatus> | null;
-  };
-
-  const emitMandatory = (status: Partial<ReleaseStatus> | null): void => {
-    if (status?.mandatory === true && typeof status.latestVersion === "string" && typeof status.minClientVersion === "string") {
-      emit({ kind: "mandatory-update", latestVersion: status.latestVersion, minClientVersion: status.minClientVersion });
-    }
-  };
-
   /** Best-effort mandatory-update signal from release-status, on top of electron-updater's own check. */
   const checkReleaseStatus = async (): Promise<void> => {
+    const url = `${feedUrl()}/release-status?currentVersion=${encodeURIComponent(app.getVersion())}&platform=${getPlatformId()}`;
     try {
-      emitMandatory(await fetchReleaseStatus());
+      const response = await fetch(url);
+      if (!response.ok) return;
+      const status = (await response.json()) as Partial<ReleaseStatus> | null;
+      if (status?.mandatory === true && typeof status.latestVersion === "string" && typeof status.minClientVersion === "string") {
+        emit({ kind: "mandatory-update", latestVersion: status.latestVersion, minClientVersion: status.minClientVersion });
+      }
     } catch (err) {
       logger.warn({ message: errorMessage(err) }, "release-status check failed");
-    }
-  };
-
-  /** REL-UPD-07: the check of a package-manager or Flatpak copy: release-status's latest version against this build. */
-  const checkPackageFeed = async (): Promise<UpdaterCheckResult> => {
-    if (state.phase === "installing" || state.phase === "installed") {
-      logger.info({ phase: state.phase, version: state.version }, "update check skipped — system update in progress or done");
-      return state.version ? { status: "available", version: state.version } : { status: "up-to-date" };
-    }
-    emit({ kind: "checking" });
-    try {
-      const status = await fetchReleaseStatus();
-      emitMandatory(status);
-      const latest = typeof status?.latestVersion === "string" && SEMVER_PATTERN.test(status.latestVersion) ? status.latestVersion : null;
-      const current = app.getVersion();
-      logger.info({ latest, current, channel: packageInstall?.kind }, "package update check");
-      if (latest && compareVersions(latest, current) > 0) {
-        emit({ kind: "update-available", version: latest, releaseNotes: null, checkedAt: Date.now() });
-        return { status: "available", version: latest };
-      }
-      emit({ kind: "update-not-available", checkedAt: Date.now() });
-      return { status: "up-to-date" };
-    } catch (err) {
-      logger.warn({ message: errorMessage(err) }, "package update check failed");
-      emit({ kind: "error", message: errorMessage(err) });
-      return { status: "error", message: errorMessage(err) };
     }
   };
 
@@ -261,23 +188,7 @@ export const createDesktopUpdater = ({
     au.autoInstallOnAppQuit = autoEnabled;
   };
 
-  /**
-   * With automatic updates on, `checkForUpdates` starts the download and hands back its promise unawaited. A failed
-   * download is already reported through the "error" event (logged, shown in Settings), so its rejection is caught
-   * here: left alone it reached the error reporter as an unhandled rejection (e.g. macOS Squirrel refusing an app
-   * started from a read-only volume, REL-UPD-05).
-   */
-  const settleAutoDownload = (result: UpdaterCheckForUpdatesResult): void => {
-    result?.downloadPromise?.catch((err: unknown) =>
-      logger.warn({ message: errorMessage(err) }, "automatic update download failed — reported through the updater's error event"),
-    );
-  };
-
   const backgroundCheck = (): void => {
-    if (packageInstall) {
-      void checkPackageFeed();
-      return;
-    }
     const au = updater;
     if (!au) return;
     // A finished download waits for the restart; checking again would only download it again.
@@ -287,9 +198,7 @@ export const createDesktopUpdater = ({
     }
     prepare(au);
     void checkReleaseStatus();
-    au.checkForUpdates()
-      .then(settleAutoDownload)
-      .catch((err: unknown) => logger.warn({ message: errorMessage(err) }, "scheduled update check failed"));
+    au.checkForUpdates().catch((err: unknown) => logger.warn({ message: errorMessage(err) }, "scheduled update check failed"));
   };
 
   const armAutoChecks = (): void => {
@@ -302,7 +211,7 @@ export const createDesktopUpdater = ({
       updater.autoInstallOnAppQuit = autoEnabled;
     }
     if (!autoEnabled || !canRun()) return;
-    if (!updater && !packageInstall) {
+    if (!updater) {
       logger.warn({ version: app.getVersion() }, "automatic update checks skipped — in-app updater unavailable");
       return;
     }
@@ -319,92 +228,6 @@ export const createDesktopUpdater = ({
     ipcMain.handle(UPDATER_CHANNELS.install, () => ({ ok: false }));
   };
 
-  let relaunching = false;
-  /**
-   * REL-UPD-07: after the package manager replaced this app's files, quit and start the new binary (same path, same
-   * arguments) once this process has exited. Runs once; the install IPC (Settings' "Restart {app}") reaches it too.
-   */
-  const relaunchAfterSystemUpdate = async (): Promise<void> => {
-    if (relaunching) return;
-    relaunching = true;
-    logger.info({ version: state.version, execPath: process.execPath }, "relaunch after system update");
-    try {
-      await onQuitForUpdate();
-    } catch (err) {
-      logger.warn({ message: errorMessage(err) }, "pre-quit step failed — relaunching anyway");
-    }
-    systemProbe.relaunchAfterExit(process.execPath, process.argv.slice(1));
-    app.quit();
-  };
-
-  /** REL-UPD-07: "Install" on a package-manager copy: the password dialog, then the package's own update helper. */
-  const installFromPackageManager = async (): Promise<{ ok: boolean; message?: string }> => {
-    const install = packageInstall;
-    if (install?.kind !== "system") return { ok: false, message: install ? "manual" : "unsupported" };
-    if (state.phase === "installing") return { ok: false, message: "busy" };
-    if (!state.canInstall) {
-      logger.info({ helper: install.helperPath }, "system update: no password dialog here (pkexec or display missing) — manual command only");
-      emit({ kind: "system-failed", failure: "noPasswordDialog", detail: null, manualCommand: manualCommand(install) });
-      return { ok: false, message: "noPasswordDialog" };
-    }
-    const version = state.version;
-    emit({ kind: "system-installing" });
-    logger.info({ helper: install.helperPath, manager: install.manager, from: app.getVersion(), to: version }, "system update: pkexec");
-    const outcome = await runSystemUpdate(install.helperPath, systemProbe);
-    logger.info({ outcome }, "system update finished");
-    switch (outcome.result) {
-      case "updated":
-        emit({ kind: "system-installed", version: version ?? outcome.after ?? "" });
-        // Chris 2026-11-21: the app restarts itself on the new version, no "Restart" click. The pause lets the modal
-        // say "installed, restarting" first.
-        setTimeout(() => void relaunchAfterSystemUpdate(), SYSTEM_RELAUNCH_DELAY_MS);
-        return { ok: true };
-      case "dismissed":
-        emit({ kind: "system-dismissed" });
-        return { ok: false, message: "dismissed" };
-      case "failed":
-        emit({
-          kind: "system-failed",
-          failure: outcome.failure,
-          detail: outcome.detail || null,
-          manualCommand: manualCommand(install, outcome.failure),
-        });
-        return { ok: false, message: outcome.failure };
-    }
-  };
-
-  /** REL-UPD-07: a Linux copy without electron-updater. Until the install type is known it reads as unsupported. */
-  const registerPackageManagerHandlers = (): void => {
-    state = { ...INITIAL_UPDATER_STATE, phase: "unsupported" };
-    ready = detectLinuxInstall(linuxPackageName, systemProbe)
-      .then((install) => {
-        if (install.kind !== "system" && install.kind !== "flatpak") {
-          logger.info({ install, version: app.getVersion() }, "in-app updates off — this Linux copy is not from SpaceFleet's packages");
-          return;
-        }
-        packageInstall = install;
-        const canInstall = install.kind === "system" && canAskPassword(systemProbe);
-        state = { ...state, phase: "idle", channel: install.kind, canInstall, manualCommand: manualCommand(install) };
-        logger.info({ install, canInstall, version: app.getVersion() }, "updates through the system's package manager");
-        armAutoChecks();
-      })
-      .catch((err: unknown) => logger.error({ message: errorMessage(err) }, "install type detection failed — in-app updates off"));
-    ipcMain.handle(UPDATER_CHANNELS.check, async (): Promise<UpdaterCheckResult> => {
-      await ready;
-      return packageInstall ? checkPackageFeed() : { status: "unsupported" };
-    });
-    ipcMain.handle(UPDATER_CHANNELS.download, async () => {
-      await ready;
-      return installFromPackageManager();
-    });
-    ipcMain.handle(UPDATER_CHANNELS.install, async (): Promise<{ ok: boolean }> => {
-      await ready;
-      if (state.phase !== "installed") return { ok: false };
-      await relaunchAfterSystemUpdate();
-      return { ok: true };
-    });
-  };
-
   const register = (getWindow: () => UpdaterWindow | null): void => {
     if (registered) return;
     registered = true;
@@ -416,13 +239,14 @@ export const createDesktopUpdater = ({
       return { ok: true };
     });
     // The installed version rides every snapshot, also when the updater is unavailable: Settings always shows it.
-    ipcMain.handle(UPDATER_CHANNELS.state, async (): Promise<UpdaterState> => {
-      await ready;
-      return { ...state, autoUpdate: autoEnabled, currentVersion: app.getVersion() };
-    });
+    ipcMain.handle(UPDATER_CHANNELS.state, (): UpdaterState => ({ ...state, autoUpdate: autoEnabled, currentVersion: app.getVersion() }));
 
     if (isSystemPackagedLinux(getPlatformId())) {
-      registerPackageManagerHandlers();
+      logger.info(
+        { version: app.getVersion(), packaged: app.isPackaged },
+        "in-app updater off — Linux copy not started from an AppImage; updates come through the system's package manager",
+      );
+      registerUnavailableHandlers();
       return;
     }
 
@@ -486,7 +310,6 @@ export const createDesktopUpdater = ({
       try {
         prepare(au);
         const result = await au.checkForUpdates();
-        settleAutoDownload(result);
         const found = result?.isUpdateAvailable ? result.updateInfo.version : null;
         return found ? { status: "available", version: found } : { status: "up-to-date" };
       } catch (err) {

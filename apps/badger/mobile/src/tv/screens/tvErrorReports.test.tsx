@@ -20,7 +20,6 @@ import { act, create, type ReactTestInstance, type ReactTestRenderer } from "rea
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { initI18n } from "@space/mobile-shell/i18n";
 import { ErrorReportsScreen } from "../../screens/ErrorReportsScreen";
-import { setupMascotOverlap, TV_SETUP_MASCOT_SIZE } from "@space/mobile-shell/setup-step";
 
 const ctl = vi.hoisted(() => {
   // Metro turns `require("../assets/mascot.webp")` into an image reference; plain node would parse the bytes as JS.
@@ -159,21 +158,6 @@ describe("TV error reports question", () => {
     expect(flat(one("error-reports-send").props.style).borderRadius).toBe(999);
   });
 
-  it("@req UX-SETUP-08[badger-tv] the setup mascot sits half over the panel's top border, the panel padded under it", () => {
-    const mascot = one("error-reports-mascot");
-    const panel = one("error-reports-panel");
-    const order = renderer!.root
-      .findAll((node) => typeof (node.type as unknown) === "string" && typeof node.props.testID === "string")
-      .map((node) => node.props.testID as string);
-    console.info("[TV-ERROR-REPORTS-001] mascot", { order, wrap: flat(mascot.props.style), panelTop: flat(panel.props.style).paddingTop });
-    // Outside the panel, drawn before it: its negative margin pulls the panel up under its lower part.
-    expect(order.indexOf("error-reports-mascot")).toBe(order.indexOf("error-reports-panel") - 1);
-    expect(panel.findAll((node) => node.props.testID === "error-reports-mascot")).toHaveLength(0);
-    expect(Number(flat(mascot.props.style).marginBottom)).toBeCloseTo(-setupMascotOverlap(TV_SETUP_MASCOT_SIZE));
-    expect(flat(mascot.props.style).height).toBe(TV_SETUP_MASCOT_SIZE);
-    expect(Number(flat(panel.props.style).paddingTop)).toBeGreaterThan(setupMascotOverlap(TV_SETUP_MASCOT_SIZE));
-  });
-
   it("@req UX-TV-35 the focused answer takes the amber ring outside its edge, with a gap", async () => {
     await act(async () => one("error-reports-send").props.onFocus());
     const focused = flat(one("error-reports-send").props.style);
@@ -209,23 +193,5 @@ describe("TV error reports as a numbered setup step", () => {
 
   it("@req UX-SETUP-08[badger-tv] after pairing (the key came with it) it is step 1 of 1", async () => {
     expect(await indicator(true)).toBe("STEP 1 OF 1");
-  });
-
-  it("@req UX-SETUP-08[badger-tv] the count and the bar sit inside the card at its top, above the title; the language button stays in the screen's corner", async () => {
-    ctl.progress = { step: "signIn", pairedKey: false };
-    await act(async () => {
-      renderer = create(<ErrorReportsScreen />);
-    });
-    const panel = one("error-reports-panel");
-    const inPanel = panel
-      .findAll((node) => typeof (node.type as unknown) === "string" && (typeof node.props.testID === "string" || node.props.accessibilityRole === "header"))
-      .map((node) => (node.props.accessibilityRole === "header" ? "title" : (node.props.testID as string)))
-      .filter((id) => id !== "error-reports-panel");
-    console.info("[TV-ERROR-REPORTS-001] panel order", inPanel);
-    // Approved `tv-step.png`: "STEP N OF M" at the card's top left, the bar under it (as on the desktop's card), then the title.
-    expect(inPanel.slice(0, 3)).toEqual(["setup-step-bar", "setup-step-indicator", "title"]);
-    expect(flat(one("setup-step-indicator").props.style).textAlign).toBeUndefined();
-    expect(panel.findAll((node) => node.props.testID === "setup-language-menu")).toHaveLength(0);
-    expect(one("setup-language-menu")).toBeTruthy();
   });
 });

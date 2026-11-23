@@ -330,22 +330,17 @@ export type SubtitleFetchTarget = {
 
 /**
  * What "Get subtitles" needs for a movie (`episodeId` null) or one episode: the search, the file name to rank
- * against, and the subtitles it already has (OCR twins are not tracks of their own). `catalogId` is the film or show
- * the user picked by title when the media has none (PLAY-SUBGET-24, `subtitleFetchNeedsTitle`). Null without a catalog ID.
+ * against, and the subtitles it already has (OCR twins are not tracks of their own). Null without a catalog ID.
  */
-export const subtitleFetchTarget = (
-  media: SubtitleFetchMedia,
-  episodeId: string | null,
-  catalogId: number | null = media.catalogId
-): SubtitleFetchTarget | null => {
-  if (catalogId == null) return null;
+export const subtitleFetchTarget = (media: SubtitleFetchMedia, episodeId: string | null): SubtitleFetchTarget | null => {
+  if (media.catalogId == null) return null;
   const existingTracks = media.subtitleTracks
     .filter((track) => (track.episodeId ?? null) === episodeId && !track.derivedFromSubtitleId)
     .map(({ language, label, source }) => ({ language, label, source }));
   if (!episodeId) {
     if (media.type === "tv") return null;
     return {
-      request: { type: "movie", id: catalogId },
+      request: { type: "movie", id: media.catalogId },
       libraryFileName: media.files[0]?.filename ?? null,
       existingTracks,
     };
@@ -354,117 +349,10 @@ export const subtitleFetchTarget = (
   if (!episode) return null;
   const file = media.files.find((item) => item.season === episode.seasonNumber && item.episode === episode.episodeNumber);
   return {
-    request: { type: "tv", id: catalogId, season: episode.seasonNumber, episode: episode.episodeNumber },
+    request: { type: "tv", id: media.catalogId, season: episode.seasonNumber, episode: episode.episodeNumber },
     libraryFileName: file?.filename ?? null,
     existingTracks,
   };
-};
-
-/** A film or show found by title, to search subtitles by when the media has no catalog id (PLAY-SUBGET-24). */
-export type SubtitleTitleMatch = { catalogId: number; title: string; year: string | null };
-
-/** How many title matches the user is shown; the metadata service's first page, best first. */
-export const SUBTITLE_TITLE_MATCH_LIMIT = 8;
-
-/**
- * The film or show search a subtitle search by title runs (the metadata service's anonymous title lookup, the same
- * one identification uses), or null when the media needs none: it has a catalog id, or it is a show and no episode with
- * season and episode numbers is playing. The query starts from the title the app shows, never the file name
- * (PLAY-SUBGET-14); the user can change it.
- */
-export const subtitleFetchNeedsTitle = (
-  media: SubtitleFetchMedia & { title: string },
-  episodeId: string | null
-): { type: "movie" | "tv"; query: string } | null => {
-  if (media.catalogId != null) return null;
-  if (media.type === "tv") {
-    if (!episodeId || !media.episodes.some((item) => item.id === episodeId)) return null;
-    return { type: "tv", query: media.title.trim() };
-  }
-  if (episodeId) return null;
-  return { type: "movie", query: media.title.trim() };
-};
-
-/** The metadata service's title search results as the matches the user picks from. */
-export const subtitleTitleMatches = (
-  results: ReadonlyArray<{ id: number; title: string; year: string | null }>
-): SubtitleTitleMatch[] =>
-  results.slice(0, SUBTITLE_TITLE_MATCH_LIMIT).map((result) => ({ catalogId: result.id, title: result.title, year: result.year }));
-
-/** "Alien (1979)", or the title alone without a year. */
-export const subtitleTitleMatchLabel = (match: SubtitleTitleMatch) => (match.year ? `${match.title} (${match.year})` : match.title);
-
-/**
- * The `source` of a subtitle the user added from a file (PLAY-SUBGET-23). Like a fetched subtitle it can be removed
- * (PLAY-SUBGET-20) but has no "Fix" (no site, no other version); subtitles that came with the video keep their own
- * sources and can never be removed.
- */
-export const ADDED_SUBTITLE_FILE_SOURCE = "added-file";
-
-/** A subtitle the user got (fetched or added from a file): it has a "Remove" button (PLAY-SUBGET-20, -23). */
-export const isRemovableSubtitleSource = (source: string | null | undefined) =>
-  isFetchedSubtitleSource(source) || source === ADDED_SUBTITLE_FILE_SOURCE;
-
-/** The text subtitle files "Add a subtitle file…" accepts (PLAY-SUBGET-23), for the file picker's filter. */
-export const SUBTITLE_FILE_EXTENSIONS = ["srt", "ass", "ssa", "vtt"] as const;
-
-/** The format of a subtitle file name ("srt", "ass", "ssa", "vtt"), or null when it isn't one of those. */
-export const subtitleFileFormat = (fileName: string): string | null => {
-  const extension = /\.([a-z0-9]+)$/i.exec(fileName.trim())?.[1]?.toLowerCase() ?? "";
-  return (SUBTITLE_FILE_EXTENSIONS as readonly string[]).includes(extension) ? extension : null;
-};
-
-// SRT cues are HH:MM:SS,mmm; WebVTT cues are MM:SS.mmm or HH:MM:SS.mmm.
-const SUBTITLE_CUE_TIMING = /(?:\d{1,2}:)?\d{1,2}:\d{2}[.,]\d{1,3}\s*-->\s*(?:\d{1,2}:)?\d{1,2}:\d{2}/;
-
-/** Whether `content` reads as a subtitle of `format`: timed cues for SRT and WebVTT, dialogue lines for ASS/SSA. */
-export const readableSubtitleText = (content: string, format: string) => {
-  const text = content.replace(/^\uFEFF/, "");
-  if (format === "ass" || format === "ssa") return /^\s*Dialogue\s*:/im.test(text);
-  if (format === "vtt" || format === "srt") return SUBTITLE_CUE_TIMING.test(text);
-  return false;
-};
-
-/** A picked file that is not a subtitle we can read: nothing was stored ("This file isn't a subtitle we can read"). */
-export class UnreadableSubtitleFileError extends Error {
-  constructor(fileName: string) {
-    super(`unreadable subtitle file: ${fileName}`);
-    this.name = "UnreadableSubtitleFileError";
-  }
-}
-
-export type StoreSubtitleFileDeps = Pick<StoreFetchedSubtitleDeps, "upload" | "addTrack" | "rememberChoice"> & {
-  uiLanguage: string;
-  /** The names the movie or episode's subtitles already have (a taken name gets a number, PLAY-SUBGET-18). */
-  takenLabels: Iterable<string | null | undefined>;
-  /** The language of the subtitle's text (the ingest's detection, `detectSubtitleLanguage`); null when unsure. */
-  detectLanguage: (text: string) => Promise<string | null>;
-};
-
-export type StoredSubtitleFile = { language: string; label: string; format: string; source: string };
-
-/**
- * "Add a subtitle file…" (PLAY-SUBGET-23): check the file reads as a subtitle → detect its language → encrypt and
- * store it → add the track named by its language in the app's language (or by the file name when the language can't
- * be told) → remember it as the title's subtitle (PLAY-SUBGET-19). Throws `UnreadableSubtitleFileError` before storing
- * anything when the file isn't a readable .srt, .ass, .ssa or .vtt.
- */
-export const storeSubtitleFile = async (
-  file: { name: string; content: string },
-  deps: StoreSubtitleFileDeps
-): Promise<StoredSubtitleFile> => {
-  const format = subtitleFileFormat(file.name);
-  if (!format || !readableSubtitleText(file.content, format)) throw new UnreadableSubtitleFileError(file.name);
-  const detected = await deps.detectLanguage(file.content).catch(() => null);
-  const language = detected ? subtitleLibraryLanguage(detected) : "und";
-  const stem = file.name.trim().replace(/^.*[\\/]/, "").replace(/\.[a-z0-9]+$/i, "").trim() || file.name;
-  const name = language === "und" ? stem : languageName(language, deps.uiLanguage);
-  const label = uniqueSubtitleTrackName(name, deps.takenLabels);
-  const objectKey = await deps.upload(file.content, format);
-  const stored = { language, label, format, source: ADDED_SUBTITLE_FILE_SOURCE };
-  await deps.addTrack({ ...stored, objectKey });
-  await deps.rememberChoice({ language, format });
-  return stored;
 };
 
 export type StoreFetchedSubtitleDeps = {

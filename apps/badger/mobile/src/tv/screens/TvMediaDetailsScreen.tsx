@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Linking, ScrollView, StyleSheet, Text, TVFocusGuideView, View } from "react-native";
-import { focusDestination, type TvViewInstance } from "@space/mobile-shell/tv/tvViewInstance";
+import { focusDestination, type TvViewInstance } from "../lib/tvViewInstance";
 import Svg, { Defs, Image as SvgImage, LinearGradient, Mask, Rect, Stop } from "react-native-svg";
 import { ChevronLeft, Clapperboard, Ellipsis, ListPlus, Play, RotateCw, Tag } from "lucide-react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
@@ -21,7 +21,7 @@ import { MediaArtwork } from "../../components/MediaArtwork";
 import type { RootStackParamList } from "../../navigation/AppNavigator";
 import { useLibraryActions, useLibraryData } from "../../store/library";
 import { theme } from "../../theme/theme";
-import { TvFocusable } from "@space/mobile-shell/tv/TvFocusable";
+import { TvFocusable } from "../components/TvFocusable";
 import { TvListDialog, type TvListDialogItem } from "../components/TvListDialog";
 import { TvPosterCard } from "../components/TvPosterCard";
 import { TvDetailsCast } from "../components/details/TvDetailsCast";
@@ -41,9 +41,9 @@ import {
   youtubeTrailer,
   type TvDetailsTab,
 } from "../lib/detailsMedia";
-import { currentTvSection, requestTvSection, tvBackLabelKey, type TvSectionId } from "@space/mobile-shell/tv/tvSection";
-import { useTvScale, useTvStyles } from "@space/mobile-shell/tv/tvScale";
-import { BadgerTvTopBar, TV_COLOR, TV_FONT, TV_RADII, TV_SPACE, TvIconButton, TvPillButton } from "../ui";
+import { currentTvSection, requestTvSection, tvBackLabelKey, type TvSectionId } from "../lib/tvSection";
+import { useTvScale, useTvStyles } from "../lib/tvScale";
+import { TV_COLOR, TV_FONT, TV_RADII, TV_SPACE, TvIconButton, TvPillButton, TvTopBar } from "../ui";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -473,7 +473,7 @@ export const TvMediaDetailsScreen = () => {
       {backdrop ? <TvDetailsBackdrop uri={backdrop} /> : null}
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {/* The shell's top bar, its tab the section the page was opened from: another tab goes back and opens that section. */}
-        <BadgerTvTopBar active={backSection} onSelect={openSection} />
+        <TvTopBar active={backSection} onSelect={openSection} />
         {/* An on-screen way back to the section the page was opened from (UX-TV-06), besides the remote's Back key.
             Full width, so UP from Play (which is not straight below it) lands on it. */}
         <TVFocusGuideView autoFocus style={styles.backRow}>

@@ -1,7 +1,7 @@
 Parrot est le lecteur de musique pour vos propres titres. Ajoutez vos albums depuis votre ordinateur, puis écoutez-les en streaming sur votre téléphone et votre ordinateur, où que vous soyez.
 
 TOUTE VOTRE MUSIQUE, PARTOUT
-• Envoyez votre musique avec l'application Parrot pour ordinateur (Windows, Mac, Linux) : MP3, FLAC, AAC, ALAC, OGG, Opus et WAV.
+• Envoyez votre musique avec l'application Parrot pour ordinateur (Windows, Mac, Linux) : MP3, FLAC, AAC, ALAC, OGG, Opus et WAV.
 • Les pochettes et les infos des titres s'ajoutent toutes seules.
 • Parcourez vos albums, artistes, titres et playlists, et retrouvez n'importe quel titre avec la recherche.
 • Votre bibliothèque, vos playlists et vos titres likés sont les mêmes sur tous vos appareils.
@@ -18,8 +18,9 @@ TOUTE VOTRE MUSIQUE, PARTOUT
 
 RIEN QUE VOTRE MUSIQUE
 • Aucune publicité.
-• Vous seul voyez votre bibliothèque. Nous non plus, nous n'y avons pas accès.
-• Parrot ne fournit pas de musique : vous écoutez celle que vous ajoutez vous-même.
+• Votre bibliothèque et la musique que vous ajoutez sont chiffrées sur votre appareil avant d'arriver sur nos serveurs.
+• Pour afficher pochettes et paroles, Parrot interroge notre service de recherche avec un ticket anonyme à usage unique au lieu de votre compte : nous ne pouvons pas savoir qui demande. Le service voit ce qui est recherché et votre adresse internet, que nous ne conservons pas.
+• Parrot ne fournit pas de musique : vous écoutez celle que vous ajoutez vous-même.
 
 GRATUIT POUR COMMENCER
 • Créez un compte SpaceFleet gratuit, avec 20 Go de stockage inclus.

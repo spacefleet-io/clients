@@ -46,10 +46,6 @@ export const tableGroups: Readonly<Record<string, LibraryDbGroup>> = Object.free
   // local-availability bookkeeping for badge hydration via
   // `badger.offline.list_local`.
   media_local_downloads: "playback",
-  // Vault v4 (LIB-FMT-11): packed chunk lists and the per-file playback clock. Created empty by the base DDL; filled
-  // only once the account is switched (`convertPlaybackToPackedLayout`, `media.file.playback.*`).
-  media_chunk_lists: "playback",
-  media_file_playback: "playback",
 
   // ingest — job state visible to both clients (mobile shows state without progress %)
   ingest_jobs: "ingest",

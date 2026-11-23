@@ -7,14 +7,11 @@
  * The TV keeps its own gates (UX-SETUP-04 is a separate rule) and never reads this store.
  */
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { askProfileSetupInSetup, askTitleLanguageInSetup, createPhoneSetupStore, INITIAL_PHONE_SETUP } from "@space/mobile-shell/setup";
+import { askTitleLanguageInSetup, createPhoneSetupStore, INITIAL_PHONE_SETUP } from "@space/mobile-shell/setup";
 import { createLivePhoneSetup } from "@space/mobile-shell/setup-live";
 import { loadAppSettings } from "../lib/appSettings";
-import { profileSetupAskedInSetup } from "../lib/profileSetupQuestion";
 import { titleLanguageAskedInSetup } from "../lib/titleLanguageQuestion";
 
-// "Your profile" while the profile picked has it pending (UX-SETUP-10), before the title question.
-askProfileSetupInSetup(profileSetupAskedInSetup);
 // Badger shows titles, so its setup asks how they appear (ACCT-PROF-03); Parrot's phone never does.
 askTitleLanguageInSetup(titleLanguageAskedInSetup);
 

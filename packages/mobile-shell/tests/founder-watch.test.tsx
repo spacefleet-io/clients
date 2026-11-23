@@ -300,7 +300,7 @@ describe("founder copy on the phone and TV", () => {
       body: "Your 30% for life is applied to your plan.",
       dismiss: "Got it",
     });
-    expect(fr.title).toBe("🎫 Remise fondateur reconnue.");
+    expect(fr.title).toBe("🎫 Ticket fondateur reconnu.");
     expect(fr.body).toContain("offre");
     for (const text of [en, fr].flatMap((copy) => Object.values(copy))) {
       expect(text).not.toMatch(/formule|300|7 days|7 jours/i);

@@ -8,7 +8,6 @@ import { useAuth } from "../auth";
 import { Button } from "@space/ui";
 import { Input } from "@space/ui";
 import { Label } from "@space/ui";
-import { MASCOT_GLOW } from "@space/ui/floating-mascot";
 import { DesktopStartupCard, DesktopStartupControls, DesktopStartupPage } from "@space/desktop-shell/components";
 import SetupLanguageMenu from "@/components/SetupLanguageMenu";
 import mascotWebp from "@/assets/mascot.webp";
@@ -97,8 +96,7 @@ export default function VerifyEmailPage() {
           description={t("verifyEmail.subtitle")}
           mascotSrc={mascotSrc}
           mascotAlt={t("brand.mascotAlt")}
-          mascotGlowClassName={MASCOT_GLOW.badger}
-          mascotPlacement="above"
+          mascotGlowClassName="drop-shadow-[0_0_30px_rgba(255,170,84,0.3)]"
           contentClassName="space-y-4 pb-8 pt-4"
         >
             {status === "verifying" ? (
