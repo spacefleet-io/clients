@@ -50,8 +50,6 @@ const setup = (script: Script, complete = vi.fn(async (_approved: unknown): Prom
       return next;
     }),
     cancel: vi.fn(),
-    // Same-device sign-in (ACCT-PAIR-07) has its own tests (sibling-controller.test.ts): never used here.
-    deliverLocalKey: vi.fn(() => false),
   };
   const controller = createPairingController({
     client,

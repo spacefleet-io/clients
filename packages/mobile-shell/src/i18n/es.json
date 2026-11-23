@@ -290,36 +290,6 @@
       "playlist": "Lista"
     }
   },
-  "offlineContent": {
-    "entry": "Gestionar el contenido sin conexión",
-    "title": "Contenido sin conexión",
-    "back": "Atrás",
-    "totalSuffix": "guardados sin conexión",
-    "unknownArtist": "Artista desconocido",
-    "removeAll": "Quitar todo",
-    "confirmCancel": "Cancelar",
-    "confirmRemove": "Quitar todo",
-    "removeFailed": "No se pudo quitar. Inténtalo de nuevo.",
-    "expand": "Mostrar u ocultar el contenido de {{name}}",
-    "remove": "Quitar {{name}} de este teléfono",
-    "season": "Temporada {{n}}",
-    "episodeNumber": "T{{season}} E{{episode}}",
-    "unknownTitle": "El título ya no está en la mediateca",
-    "unknownEpisode": "El episodio ya no está en la mediateca",
-    "unknown": "Ya no está en la mediateca",
-    "badger": {
-      "entryDescription": "Consulta lo que se conserva en este teléfono y libera espacio",
-      "confirmTitle": "¿Quitar todo lo que se conserva en este teléfono?",
-      "confirmBody": "Se eliminarán todas las películas y episodios descargados en este teléfono. Puedes volver a descargarlos más tarde.",
-      "empty": "No hay nada conservado en este teléfono. Toca Descargar en una película o un episodio para verlo sin conexión."
-    },
-    "parrot": {
-      "entryDescription": "Consulta lo que está guardado sin conexión en este teléfono y libera espacio",
-      "confirmTitle": "¿Quitar todo lo guardado sin conexión?",
-      "confirmBody": "Se quitarán todos los álbumes, playlists y canciones guardados sin conexión en este teléfono. Puedes volver a guardarlos sin conexión más tarde.",
-      "empty": "Todavía no hay nada guardado sin conexión en este teléfono. Toca Guardar sin conexión en un álbum, una playlist o una canción para escucharlo sin conexión."
-    }
-  },
   "downloads": {
     "title": "Descargas",
     "back": "Atrás",
@@ -1417,18 +1387,5 @@
       "apk": "Descargar la nueva versión",
       "store": "Abrir la tienda"
     }
-  },
-  "sibling": {
-    "title": "Continuar con tu cuenta de {{other}}",
-    "body": "{{other}} tiene la sesión iniciada en este teléfono. No hay nada que escribir.",
-    "button": "Continuar como {{email}}",
-    "otherAccount": "Usar otra cuenta",
-    "waiting": "Esperando a {{other}}…",
-    "waitingNote": "Permítelo en {{other}} y luego vuelve.",
-    "cancel": "Cancelar",
-    "failure": "{{other}} no pudo iniciar tu sesión. Inicia sesión de otra forma.",
-    "askTitle": "¿Permitir que {{app}} use tu cuenta de SpaceFleet?",
-    "askBody": "{{app}} en este teléfono iniciará sesión como {{email}}, con su propia copia de la clave de tu mediateca. Puedes cerrar su sesión cuando quieras en Dispositivos.",
-    "allow": "Permitir"
   }
 }
