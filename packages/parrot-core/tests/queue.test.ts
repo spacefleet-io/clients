@@ -73,12 +73,11 @@ describe("playNext / addToQueue / removeEntry / clearUpcoming", () => {
     expect(now(playNext(emptyQueue<string>(), ["a"]))).toBe("a");
   });
 
-  it("a song already played can be queued again: two entries; removing the played one keeps the other and the current song", () => {
-    let queue = addToQueue(startQueue(["a", "b"], 1), ["a"]);
-    expect(tracksOf(queue)).toEqual(["a", "b", "a"]);
-    const [played, current, again] = queue.entries;
-    queue = removeEntry(queue, played!.key);
-    expect(queue.entries.map((entry) => entry.key)).toEqual([current!.key, again!.key]);
+  it("the same song queued twice stays two entries; removing one keeps the other and the current song", () => {
+    let queue = addToQueue(startQueue(["a", "b"], 0), ["b"]);
+    const [, first, second] = queue.entries;
+    queue = removeEntry(queue, first!.key);
+    expect(queue.entries.map((entry) => entry.key)).toEqual([queue.entries[0]!.key, second!.key]);
     expect(removeEntry(queue, currentEntry(queue)!.key)).toBe(queue);
     const later = removeEntry(jumpTo(startQueue(["a", "b", "c"], 0), 2), startQueue(["a", "b", "c"], 0).entries[0]!.key);
     expect(now(later)).toBe("c");

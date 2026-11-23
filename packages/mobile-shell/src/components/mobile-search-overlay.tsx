@@ -4,7 +4,7 @@
 // matching (`@space/shared/fuzzySearch`: typos, accents, words in any order), in the app's groups (Badger: TV shows,
 // Movies, Episodes; Parrot: Artists, Albums, Songs). A group shows its best few; "N more" opens the rest of it.
 import React, { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
-import { Keyboard, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type TextInputInstance } from "react-native";
+import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type TextInputInstance } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Search, X } from "lucide-react-native";
 import { searchFuzzyGroups, type FuzzyIndex } from "@space/shared/fuzzySearch";
@@ -14,11 +14,8 @@ import { useMobileShellTheme } from "../theme";
 
 export type MobileSearchGroup<T> = { id: string; index: FuzzyIndex<T> };
 
-/**
- * What a result row says: its title, a second line (year, artist, show and episode number) and its picture. A row with
- * `onLongPress` (Parrot: a song's sheet, with Add to queue, PAR-CARD-02) runs it when held, once the overlay has closed.
- */
-export type MobileSearchRow = { key: string; title: string; subtitle?: string; art?: React.ReactNode; onLongPress?: () => void };
+/** What a result row says: its title, a second line (year, artist, show and episode number) and its picture. */
+export type MobileSearchRow = { key: string; title: string; subtitle?: string; art?: React.ReactNode };
 
 export type MobileSearchOverlayProps<T> = {
   visible: boolean;
@@ -37,26 +34,12 @@ export type MobileSearchOverlayProps<T> = {
 export const MOBILE_SEARCH_PER_GROUP = 5;
 export const MOBILE_SEARCH_GROUP_OPEN = 50;
 
-/**
- * Opening the card raises the keyboard with the caret in the field (UX-PHONE-12). On Android the Modal is its own
- * window and `onShow` comes a moment before that window has input focus; a keyboard asked for then is refused
- * ("showSoftInput ... is not served") and React Native skips any later `focus()` because the field already counts as
- * focused. So on Android the card asks on show, asks again (blur, then focus) `MOBILE_SEARCH_KEYBOARD_FIRST_RETRY_MS`
- * later, and then every `MOBILE_SEARCH_KEYBOARD_RETRY_MS` (long enough for a keyboard on its way up to report) until
- * the keyboard is up, `MOBILE_SEARCH_KEYBOARD_ASKS` asks at most. iOS asks once: its keyboard reports itself only
- * once it has slid up, so a re-ask there would drop and raise a keyboard already on its way.
- */
-export const MOBILE_SEARCH_KEYBOARD_FIRST_RETRY_MS = 100;
-export const MOBILE_SEARCH_KEYBOARD_RETRY_MS = 400;
-export const MOBILE_SEARCH_KEYBOARD_ASKS = 5;
-
 export const MobileSearchOverlay = <T,>({ visible, onClose, strings, groups, describe, onSelect, loading = false }: MobileSearchOverlayProps<T>) => {
   const theme = useMobileShellTheme();
   const insets = useSafeAreaInsets();
   const keyboard = useKeyboardInset(visible);
   const [query, setQuery] = useState("");
   const [opened, setOpened] = useState<string | null>(null);
-  const [shown, setShown] = useState(false);
   const input = useRef<TextInputInstance>(null);
   // Typing never waits for the search: React answers the field first and the results follow.
   const deferredQuery = useDeferredValue(query);
@@ -65,30 +48,7 @@ export const MobileSearchOverlay = <T,>({ visible, onClose, strings, groups, des
     if (visible) return;
     setQuery("");
     setOpened(null);
-    setShown(false);
   }, [visible]);
-
-  useEffect(() => {
-    if (!shown) return undefined;
-    const started = Date.now();
-    let asks = 1;
-    let timer: ReturnType<typeof setTimeout>;
-    const check = () => {
-      const up = Keyboard.isVisible();
-      if (up || asks >= MOBILE_SEARCH_KEYBOARD_ASKS) {
-        console.info("search-overlay.keyboard", JSON.stringify({ up, asks, ms: Date.now() - started }));
-        return;
-      }
-      asks += 1;
-      input.current?.blur();
-      input.current?.focus();
-      timer = setTimeout(check, MOBILE_SEARCH_KEYBOARD_RETRY_MS);
-    };
-    input.current?.focus();
-    if (Platform.OS !== "android") return undefined;
-    timer = setTimeout(check, MOBILE_SEARCH_KEYBOARD_FIRST_RETRY_MS);
-    return () => clearTimeout(timer);
-  }, [shown]);
 
   const results = useMemo(() => {
     if (!visible || deferredQuery.trim() === "") return [];
@@ -110,17 +70,12 @@ export const MobileSearchOverlay = <T,>({ visible, onClose, strings, groups, des
     onClose();
     onSelect(item, groupId);
   };
-  const hold = (row: MobileSearchRow, groupId: string, rank: number) => {
-    console.info("search-overlay.hold", JSON.stringify({ group: groupId, rank, length: query.length }));
-    onClose();
-    row.onLongPress?.();
-  };
 
   const trimmed = query.trim();
   const message = trimmed === "" ? strings.hint : loading && groups.length === 0 ? null : results.length === 0 && deferredQuery === query ? strings.empty : null;
 
   return (
-    <Modal visible={visible} transparent animationType="fade" statusBarTranslucent onRequestClose={close} onShow={() => setShown(true)}>
+    <Modal visible={visible} transparent animationType="fade" statusBarTranslucent onRequestClose={close} onShow={() => input.current?.focus()}>
       <View style={[styles.layer, { paddingTop: insets.top + 48, paddingBottom: Math.max(keyboard, insets.bottom) + 16 }]}>
         <Pressable style={styles.backdrop} onPress={close} accessibilityRole="button" accessibilityLabel={strings.close} testID="search-overlay-backdrop" />
         <View
@@ -132,7 +87,7 @@ export const MobileSearchOverlay = <T,>({ visible, onClose, strings, groups, des
             <TextInput
               ref={input}
               testID="search-overlay-input"
-              // No autoFocus: the card focuses the field itself once the Modal is shown (see MOBILE_SEARCH_KEYBOARD_ASKS).
+              autoFocus
               value={query}
               onChangeText={(text) => {
                 setQuery(text);
@@ -177,7 +132,6 @@ export const MobileSearchOverlay = <T,>({ visible, onClose, strings, groups, des
                         accessibilityRole="button"
                         accessibilityLabel={row.subtitle ? `${row.title}, ${row.subtitle}` : row.title}
                         onPress={() => select(hit.item, group.id, rank)}
-                        onLongPress={row.onLongPress ? () => hold(row, group.id, rank) : undefined}
                         style={({ pressed }) => [styles.row, pressed && { backgroundColor: theme.colors.surface }]}
                       >
                         {row.art !== undefined ? <View style={styles.art}>{row.art}</View> : null}

@@ -1,5 +1,4 @@
 import { join } from "node:path";
-import { CLIENT_IDENTITY_ENV, formatClientHeader, type ClientIdentity } from "@space/shared/appVersion";
 
 /**
  * Resolve the directories the runtime derives from Electron's userData and
@@ -46,15 +45,11 @@ export const applyUserDataDirDefaults = (
  * Environment handed to every runtime the guardian spawns (first spawn and
  * every respawn alike). Applies {@link applyUserDataDirDefaults} to `env`
  * first so the result and `process.env` agree on the data directories.
- * REL-CD-29: carries this build's identity in {@link CLIENT_IDENTITY_ENV}, so the
- * runtime's API calls state the same build; an unpackaged run (no identity)
- * hands none on, even one inherited from the shell.
  */
 export const buildRuntimeSpawnEnv = (
   env: NodeJS.ProcessEnv,
   userDataPath: string,
   runtimePort: string | undefined,
-  clientIdentity: ClientIdentity | null,
 ): Record<string, string> => {
   applyUserDataDirDefaults(env, userDataPath);
   return Object.fromEntries(
@@ -62,7 +57,6 @@ export const buildRuntimeSpawnEnv = (
       ...env,
       SF_USER_DATA_PATH: userDataPath,
       ...(runtimePort ? { PORT: runtimePort } : {}),
-      [CLIENT_IDENTITY_ENV]: clientIdentity ? formatClientHeader(clientIdentity) : undefined,
     }).filter((entry): entry is [string, string] => typeof entry[1] === "string"),
   );
 };

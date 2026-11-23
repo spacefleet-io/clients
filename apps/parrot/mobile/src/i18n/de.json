@@ -4,17 +4,6 @@
     "collectionKey": "Bibliotheksschlüssel"
   },
   "parrot": {
-    "artist": {
-      "label": "Künstler",
-      "latestRelease": "Neueste Veröffentlichung",
-      "discography": "Diskografie",
-      "allSongs": "Alle Titel",
-      "album": "Album",
-      "single": "Single",
-      "ep": "EP",
-      "hoursMinutes": "{{hours}} Std. {{minutes}} Min.",
-      "minutes": "{{minutes}} Min."
-    },
     "nav": {
       "back": "Zurück",
       "library": "Bibliothek",
@@ -57,10 +46,11 @@
         "artists": "Künstler",
         "songs": "Titel"
       },
-      "more": "+{{count}} weitere",
-      "filterOn": "Filtern, {{count}} aktiv",
-      "searchGenres": "Suchen",
-      "noMatch": "Kein Treffer"
+      "sort": {
+        "byArtist": "Nach Künstler",
+        "byName": "Nach Name",
+        "byTitle": "Nach Titel"
+      }
     },
     "album": {
       "noPlayableFile": "Dieses Album hat noch keine abspielbare Datei.",
@@ -79,6 +69,8 @@
       "error": "Wiedergabefehler: {{error}}",
       "playingFromAlbum": "Wiedergabe aus Album",
       "close": "Schließen",
+      "goToAlbum": "Zum Album",
+      "goToArtist": "Zum Künstler",
       "more": "Mehr",
       "output": "Auf einem anderen Gerät abspielen"
     },
@@ -101,16 +93,11 @@
     "setup": {
       "notificationsBody": "Parrot kann dir Bescheid geben, wenn die Musik, die du auf deinem Computer hinzufügst, hier abspielbereit ist."
     },
-    "tvSearch": {
-      "hint": "Die Ergebnisse ändern sich mit jedem Buchstaben. Drück ▶ auf der Fernbedienung, um von den Tasten zu den Ergebnissen zu wechseln.",
-      "space": "Leerzeichen",
-      "delete": "Löschen"
-    },
     "playlists": {
       "likedEmpty": "Noch keine Lieblingssongs"
     },
     "kept": {
-      "keep": "Offline speichern",
+      "keep": "Auf diesem Telefon behalten",
       "remove": "Von diesem Telefon entfernen",
       "line": "Auf diesem Telefon · {{size}}",
       "chooseBody": "Diese Titel sind in mehr als einem Format gespeichert. Wähle, welches auf diesem Telefon bleiben soll.",

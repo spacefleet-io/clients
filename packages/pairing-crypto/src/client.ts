@@ -9,8 +9,6 @@
  *   poll()   -> GET /pairing/requests/:id; on approval the sealed library key is opened here and
  *               {token, user, libraryKey} is handed to the caller.
  *   cancel() -> forget the keypair and abort any request in flight.
- *   deliverLocalKey() -> same-device sign-in (ACCT-PAIR-07): the sister app on this device approved with `localKey`
- *               and handed the sealed key over locally; the API's approval then carries only the token.
  *
  * The API returns the approved payload ONCE, so the opened result is kept in memory until
  * `cancel()` / the next `start()`: a caller that asks again (reload, retry) is not left with nothing.
@@ -51,9 +49,7 @@ type PollResponse =
   | { status: "expired" }
   | { status: "denied" }
   | { status: "consumed" }
-  | { status: "approved"; token: string; user: PairingUser; sealedKey: SealedKey; clientType?: string; localKey?: undefined }
-  /** ACCT-PAIR-07: approved by the sister app on this device, which hands the sealed key over locally. */
-  | { status: "approved"; token: string; user: PairingUser; localKey: true; clientType?: string; sealedKey?: undefined }
+  | { status: "approved"; token: string; user: PairingUser; sealedKey: SealedKey; clientType?: string }
   | { status: "key_approved"; user: PairingUser; sealedKey: SealedKey };
 
 export class PairingHttpError extends Error {
@@ -98,19 +94,12 @@ type ActiveRequest = {
   approved: Extract<PairingPoll, { status: "approved" }> | null;
   /** Key mode: the device's own session, handed back on approval. */
   sessionToken: string | null;
-  /** ACCT-PAIR-07: the library key the sister app handed over locally, opened. */
-  localKey: string | null;
-  /** ACCT-PAIR-07: the API's once-only answer, kept until the local key arrives. */
-  localApproval: { token: string; user: PairingUser } | null;
 };
 
 export type PairingClientCore = {
   start: () => Promise<PairingCreated>;
   poll: (requestId: string) => Promise<PairingPoll>;
   cancel: () => void;
-  /** Same-device sign-in (ACCT-PAIR-07): the key sealed for `requestId`, received from the sister app. False when it is
-   * not this request's or does not open with this device's key. */
-  deliverLocalKey: (requestId: string, sealed: SealedKey) => boolean;
 };
 
 export const clampDeviceName = (raw: string, fallback: string): string => (raw.trim() || fallback).slice(0, PAIRING_DEVICE_NAME_MAX);
@@ -179,7 +168,7 @@ export const createPairingClientCore = (deps: PairingClientCoreDeps): PairingCli
     );
     // A newer start() or a cancel() while this request was in flight wins: this one is no longer polled.
     if (mine === generation) {
-      active = { requestId: created.requestId, pollSecret: created.pollSecret, privateKey: keys.privateKey, approved: null, sessionToken, localKey: null, localApproval: null };
+      active = { requestId: created.requestId, pollSecret: created.pollSecret, privateKey: keys.privateKey, approved: null, sessionToken };
     }
     log("pairing request created", { requestId: created.requestId, expiresAt: created.expiresAt, deviceName });
     return {
@@ -195,8 +184,6 @@ export const createPairingClientCore = (deps: PairingClientCoreDeps): PairingCli
     const current = active;
     if (!current || current.requestId !== requestId) return { status: "expired" };
     if (current.approved) return current.approved;
-    // ACCT-PAIR-07: the API already answered; only the sister app's key is missing.
-    if (current.localApproval) return finishLocal(current);
     const mine = generation;
 
     let res: PollResponse;
@@ -232,15 +219,10 @@ export const createPairingClientCore = (deps: PairingClientCoreDeps): PairingCli
       forget();
       return { status: "expired" };
     }
-    if (res.status === "approved" && res.localKey) {
-      current.localApproval = { token: res.token, user: res.user };
-      log("pairing approved by the sister app; key comes locally", { requestId, keyHere: current.localKey !== null });
-      return finishLocal(current);
-    }
 
     let libraryKey: string;
     try {
-      libraryKey = bytesToBase64(openSealedKey({ devicePrivateKey: current.privateKey, requestId, sealed: res.sealedKey as SealedKey }));
+      libraryKey = bytesToBase64(openSealedKey({ devicePrivateKey: current.privateKey, requestId, sealed: res.sealedKey }));
     } catch (err) {
       log("pairing sealed key could not be opened", { requestId, message: err instanceof Error ? err.message : String(err) });
       forget();
@@ -264,34 +246,5 @@ export const createPairingClientCore = (deps: PairingClientCoreDeps): PairingCli
     return approved;
   };
 
-  const finishLocal = (current: ActiveRequest): PairingPoll => {
-    if (!current.localApproval || current.localKey === null) return { status: "pending" };
-    const approved: Extract<PairingPoll, { status: "approved" }> = {
-      status: "approved",
-      token: current.localApproval.token,
-      user: current.localApproval.user,
-      libraryKey: current.localKey,
-    };
-    current.approved = approved;
-    log("pairing approved", { requestId: current.requestId, userId: approved.user.id, localKey: true });
-    return approved;
-  };
-
-  const deliverLocalKey = (requestId: string, sealed: SealedKey): boolean => {
-    const current = active;
-    if (!current || current.requestId !== requestId) {
-      log("local key for a request this device is not waiting on", { requestId });
-      return false;
-    }
-    try {
-      current.localKey = bytesToBase64(openSealedKey({ devicePrivateKey: current.privateKey, requestId, sealed }));
-      log("local key received", { requestId });
-      return true;
-    } catch (err) {
-      log("local key could not be opened", { requestId, message: err instanceof Error ? err.message : String(err) });
-      return false;
-    }
-  };
-
-  return { start, poll, cancel: forget, deliverLocalKey };
+  return { start, poll, cancel: forget };
 };

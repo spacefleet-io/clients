@@ -36,12 +36,9 @@ import { useAuth } from "../store/auth";
 import { scopeLogger } from "@space/mobile-shell/logger";
 import { chooseUiLanguage, ensureI18n } from "../lib/uiLanguage";
 import { IS_TV } from "../tv/lib/tvRuntime";
-import { TV_PAIRING_DEVICE_TYPE } from "@space/mobile-shell/tv/pairingClient";
-import { currentTvDeviceName } from "@space/mobile-shell/pairing-device";
-import { createPhoneCompletionDeps, createPhonePairingClient, currentPhoneDeviceName } from "../lib/phonePairing";
-import { completePairing } from "@space/mobile-shell/pairing";
-import { MobileSiblingOffer } from "@space/mobile-shell/sibling-ui";
-import { markPhoneSetupPaired } from "../setup/phoneSetupStore";
+import { TV_PAIRING_DEVICE_TYPE } from "../tv/lib/pairingClient";
+import { tvDeviceName } from "../tv/lib/pairingRuntime";
+import { currentPhoneDeviceName } from "../lib/phonePairing";
 import { SignInSetupBack } from "../setup/BadgerSetupFlow";
 import { BADGER_LINK_SCHEME } from "../lib/linkScheme";
 
@@ -180,7 +177,7 @@ const AuthScreenInner = ({
         email.trim(),
         password,
         needsTwoFactor ? twoFactor.trim() : undefined,
-        IS_TV ? { deviceType: TV_PAIRING_DEVICE_TYPE, deviceName: currentTvDeviceName() } : { deviceType: "mobile", deviceName: currentPhoneDeviceName() },
+        IS_TV ? { deviceType: TV_PAIRING_DEVICE_TYPE, deviceName: tvDeviceName() } : { deviceType: "mobile", deviceName: currentPhoneDeviceName() },
       );
     } catch (err) {
       const failure = classifySignInError(err);
@@ -309,19 +306,6 @@ const AuthScreenInner = ({
   return (
     <MobileStartupPage controls={controls} footer={<SignInSetupBack />}>
       <MobileAuthBrand iconSource={MASCOT} subtitle={t("login.withAccount").toUpperCase()} size={IS_TV ? undefined : PHONE_MASCOT_SIZE} />
-      {/* ACCT-PAIR-07: Parrot signed in on this phone → "Continue with your Parrot account", above the form. */}
-      <MobileSiblingOffer
-        app="badger"
-        enabled={!IS_TV}
-        createClient={() => createPhonePairingClient()}
-        complete={async (approved) => {
-          const completion = await completePairing(createPhoneCompletionDeps(setSession), approved);
-          // The sister app brought the key, as a pairing does: the setup's key screen does not apply (UX-SETUP-03).
-          if (completion.ok) await markPhoneSetupPaired();
-          return completion;
-        }}
-        logTag="phone.sibling"
-      />
 
       {error ? (
         <View style={[styles.notice, styles.errorNotice]}>
