@@ -524,6 +524,13 @@
               "$ref": "#/components/schemas/LibraryOpEntry"
             }
           },
+          "stateHash": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The library's state hash at `version`, read with it (LIB-SYNC-19): a client that moves to `version` chains its next operation on this hash. Absent on a partial page of operations stored before operation hashes."
+          },
           "storageFormatVersion": {
             "type": "integer"
           },
@@ -3761,7 +3768,7 @@
           "Library"
         ],
         "summary": "Library operations since a version",
-        "description": "Returns the encrypted operations committed after version `since` (default 0), with their ciphertext inlined, and the observed format versions. `tooOld` is true when `since` predates the retained history. With `Accept: application/vnd.space.library-ops` the answer is binary instead (LIB-FMT-13): one frame per op, `u64be version | u32be length | ciphertext`, and the page's state in the `x-library-version`, `x-library-snapshot-version`, `x-library-too-old`, `x-library-has-more` (`1`/`0`), `x-library-storage-format-version`, `x-library-op-stream-version` and `x-library-target-op-stream-version` response headers.\n\nPersonal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.",
+        "description": "Returns the encrypted operations committed after version `since` (default 0), with their ciphertext inlined, and the observed format versions. `tooOld` is true when `since` predates the retained history. With `Accept: application/vnd.space.library-ops` the answer is binary instead (LIB-FMT-13): one frame per op, `u64be version | u32be length | ciphertext`, and the page's state in the `x-library-version`, `x-library-snapshot-version`, `x-library-too-old`, `x-library-has-more` (`1`/`0`), `x-library-storage-format-version`, `x-library-op-stream-version`, `x-library-target-op-stream-version` and `x-library-state-hash` (empty: the library has none; absent: unknown) response headers.\n\nPersonal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.",
         "security": [
           {
             "bearerAuth": []
@@ -17399,6 +17406,93 @@
           },
           "429": {
             "description": "More than 10 messages in the last hour.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "rate_limited"
+                      ]
+                    },
+                    "retryAfterSeconds": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "error",
+                    "retryAfterSeconds"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/usage/hello": {
+      "post": {
+        "operationId": "sayDailyHello",
+        "tags": [
+          "Usage"
+        ],
+        "summary": "Daily hello of an app (anonymous)",
+        "description": "Sent once per local day by each app (OPS-BIZ-20). Adds one hello and the two tallies to today's totals (UTC) for the app, platform and version of the `x-space-client` header; nothing else is kept, no account, device or install id and no address. Needs no login and ignores any `Authorization` header. Never refused for an old app version. Limited to 20 per network address an hour (429).",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "plays": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Plays started on this device since its last hello. Above 2000 counts as 2000."
+                  },
+                  "screens": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Screens opened on this device since its last hello. Above 2000 counts as 2000."
+                  }
+                },
+                "required": [
+                  "plays",
+                  "screens"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Counted."
+          },
+          "400": {
+            "description": "The `x-space-client` header is missing or not valid, or the body is not valid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "invalid_client"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many attempts; wait `retryAfterSeconds` (also sent as the `Retry-After` header).",
             "content": {
               "application/json": {
                 "schema": {

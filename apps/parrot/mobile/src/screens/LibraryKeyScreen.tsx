@@ -5,7 +5,7 @@
 // (`createLibraryKey`). The screen is the shared library key step (`MobileLibraryKeyStep`), in the setup's key step and
 // here (after a sign-out once setup is done). Chris 2026-11-12 (chat): "the setup step to enter/save the key should be
 // the same shared one between the 2 apps".
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { getLibraryMetaForKeyStep, resetLibrary } from "@space/shared/api";
 import { checkLibraryKey } from "@space/mobile-shell/libraryKey";
@@ -44,6 +44,8 @@ export const useLibraryKeyEntry = () => {
   const [newKey, setNewKey] = useState<{ words: string[]; keyBase64: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** A "Yes, I understand" is running: a second tap before `busy` disables the button does nothing (#3350 S15). */
+  const keeping = useRef(false);
 
   const setValue = (_text: string, result: LibraryKeyInput) => {
     setInput(result);
@@ -119,6 +121,18 @@ export const useLibraryKeyEntry = () => {
    * the other devices and this phone's own start check know it. True once the new key is saved.
    */
   const keepNewKey = async (): Promise<boolean> => {
+    if (keeping.current) {
+      log.info("library_key.keep_already_running");
+      return false;
+    }
+    keeping.current = true;
+    try {
+      return await keepNewKeyOnce();
+    } finally {
+      keeping.current = false;
+    }
+  };
+  const keepNewKeyOnce = async (): Promise<boolean> => {
     if (!token || !newKey) return false;
     setError(null);
     setBusy(true);

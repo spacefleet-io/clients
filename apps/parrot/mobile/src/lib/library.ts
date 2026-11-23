@@ -415,13 +415,28 @@ const phoneSnapshotDeps = (current: () => { token: string; libraryKey: string })
 const CLAIM_DB_NAME = "parrot.claim.sqlite";
 const claimFilePath = () => deviceDb(CLAIM_DB_NAME).path;
 
+/** The claim running now: every claim uses the one `parrot.claim.sqlite`, so a second one joins it (#3350 S15). */
+let claiming: Promise<{ version: number }> | null = null;
+
 /**
  * A new key made on this phone becomes the account's key (UX-KEY-01): an empty Parrot library is published with it
  * over version 0, which also writes the account's key probe, as the desktop apps do when they make the key. Until
  * then no other device can check a key against it, and this phone's own start check would find no probe and forget
- * the key. Rejects as the PUT does (409: another device made the account's library first).
+ * the key. Rejects as the PUT does (409: another device made the account's library first). A call while a claim runs
+ * (a second tap) waits for that claim instead of deleting its file under it.
  */
-export const claimAccountKey = async (token: string, libraryKey: string): Promise<{ version: number }> => {
+export const claimAccountKey = (token: string, libraryKey: string): Promise<{ version: number }> => {
+  if (claiming) {
+    log("parrot.library.claim.joined", {});
+    return claiming;
+  }
+  claiming = claimOnce(token, libraryKey).finally(() => {
+    claiming = null;
+  });
+  return claiming;
+};
+
+const claimOnce = async (token: string, libraryKey: string): Promise<{ version: number }> => {
   const removeClaimFile = async () => {
     for (const leftover of [claimFilePath(), `${claimFilePath()}-wal`, `${claimFilePath()}-shm`, `${claimFilePath()}-journal`]) {
       await RNFS.unlink(leftover).catch(() => undefined);
