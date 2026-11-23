@@ -94,6 +94,7 @@ import { StreamSlotPrompt } from "./StreamSlotPrompt";
 import { useSignOutWithKeyCheck } from "./SignOutKeyCheck";
 import PairDevice from "./PairDevice";
 import { startLoudnessPass } from "./loudness";
+import { useNoteScreen } from "./noteScreen";
 import { formatLocalizedStorage } from "@space/shared/format";
 import { useAppPlaybackMark } from "@space/ui/app-playback-mark";
 
@@ -147,6 +148,8 @@ export default function Library({ t, state, onState }: Props) {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [view, setView] = useState<View>("albums");
   const [route, setRoute] = useState<Route>({ kind: "home" });
+  // OPS-BIZ-20: each page the library opens (home, an album, an artist, settings…) counts as one opened screen.
+  useNoteScreen(JSON.stringify(route));
   const [previous, setPrevious] = useState<Route[]>([]);
   const [playing, setPlaying] = useState(false);
   const [clockMs, setClockMs] = useState(0);

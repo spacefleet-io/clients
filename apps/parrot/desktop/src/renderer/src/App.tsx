@@ -8,6 +8,18 @@ import Library from "./Library";
 import { LoadingMascot } from "./LoadingMascot";
 import { ParrotSystemUpdatePrompt, UpdateReadyNotice } from "./updates";
 import { UpdateRequiredGate } from "./UpdateRequiredGate";
+import { useNoteScreen } from "./noteScreen";
+
+const screenOf = (state: ParrotState) => {
+  const ready = state.setup.done && state.user && state.hasLibraryKey;
+  return !state.user
+    ? !state.setup.done && state.setup.step === "language"
+      ? "setup"
+      : "sign-in"
+    : ready
+      ? "library"
+      : "setup";
+};
 
 /**
  * UX-SETUP-08: a new computer first picks its language (setup step 0), then signs in on its own screen, then runs the
@@ -25,6 +37,8 @@ export default function App() {
     if (state) document.documentElement.lang = state.setup.language;
   }, [state]);
 
+  // OPS-BIZ-20: sign-in and setup count here; the library counts its own pages (Library.tsx).
+  useNoteScreen(state && screenOf(state) !== "library" ? screenOf(state) : null);
   if (!state) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -32,15 +46,7 @@ export default function App() {
       </div>
     );
   }
-  const ready = state.setup.done && state.user && state.hasLibraryKey;
-  const screen = !state.user
-    ? !state.setup.done && state.setup.step === "language"
-      ? "setup"
-      : "sign-in"
-    : ready
-      ? "library"
-      : "setup";
-  // UX-I18N-01: the corner close button of shared dialogs (sign-out key check) reads in Parrot's language.
+  const screen = screenOf(state);
   // UX-CRASH-01: a crashing screen blanks only itself; moving to the next screen clears the error; "Try again" reads
   // the app's state from main again and mounts the screen anew once it is in.
   return (
