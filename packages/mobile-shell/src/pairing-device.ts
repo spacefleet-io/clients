@@ -2,7 +2,6 @@
 // approver reads "<App> on <name> wants to sign in", so the name says which app asks and on which phone.
 import { Platform } from "react-native";
 import { clampDeviceName } from "@space/pairing-crypto";
-import { resolveTvDeviceName } from "./tv/pairingClient";
 
 export type PhonePairingAppName = "Badger" | "Parrot";
 
@@ -22,15 +21,3 @@ export const phoneModel = (): string | null => {
 
 /** This phone's pairing name for `app`. */
 export const currentPhoneDeviceName = (app: PhonePairingAppName): string => phoneDeviceName(app, phoneModel());
-
-/** This TV's pairing name ("Chromecast with Google TV", "Apple TV"), shared by Badger TV and Parrot TV (ACCT-PAIR-05). */
-export const currentTvDeviceName = (): string => {
-  const constants = Platform.constants as unknown as Record<string, unknown>;
-  const text = (key: string) => (typeof constants[key] === "string" ? (constants[key] as string) : null);
-  return resolveTvDeviceName({
-    manufacturer: text("Manufacturer"),
-    brand: text("Brand"),
-    model: text("Model"),
-    isTVOS: Platform.OS === "ios",
-  });
-};

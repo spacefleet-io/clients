@@ -7,7 +7,6 @@ import { scopeLogger } from "@space/mobile-shell/logger";
 import { forgetKnownSessions } from "../lib/pairing/deviceWatch";
 import { clearPlayStartWarm } from "../lib/playback/playStartCache";
 import { clearLibraryKey } from "../lib/onboarding";
-import { publishSiblingStatus } from "@space/mobile-shell/sibling";
 
 const log = scopeLogger("auth");
 
@@ -112,15 +111,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     void load();
   }, [load]);
-
-  // Parrot on this phone offers "Continue with your Badger account" only while a session is held here (ACCT-PAIR-07):
-  // the native status store gets the account (never the token) and loses it with the session.
-  const sessionUserId = token ? user?.id ?? null : null;
-  const sessionEmail = token ? user?.email ?? null : null;
-  useEffect(() => {
-    if (loading) return;
-    void publishSiblingStatus(sessionUserId && sessionEmail ? { email: sessionEmail, userId: sessionUserId } : null);
-  }, [loading, sessionUserId, sessionEmail]);
 
   const login = useCallback(
     async (email: string, password: string, code?: string, device?: LoginDevice) => {

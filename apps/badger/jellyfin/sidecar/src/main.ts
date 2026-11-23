@@ -10,7 +10,6 @@
 import { setLibraryTunnelMode } from "@space/library-db-runtime/api";
 import { registerBunSqlite } from "@space/library-db-runtime/bunSqlite";
 import { childLogger, createLogger } from "@space/logger";
-import { setClientIdentity } from "@space/shared/appVersion";
 import { loadIntegrationConfig } from "./config";
 import { IntegrationRuntime } from "./runtime";
 import { handleIntegrationRequest } from "./server";
@@ -32,10 +31,6 @@ if (process.argv.includes("--version")) {
   console.log(`badger-integration ${config.version} ${process.platform}-${process.arch}`);
   process.exit(0);
 }
-// REL-CD-29: every API call states `x-space-client: badger/jellyfin/<plugin version>` (the plugin passes its own
-// version as HEADLESS_VERSION), so the API can ask an outdated plugin to update. Importing the library runtime's api
-// module already declares the op stream this build reads (LIB-FMT-13, `x-library-op-stream-version` on reads).
-setClientIdentity({ app: "badger", platform: "jellyfin", version: config.version });
 const runtime = new IntegrationRuntime(config, log);
 const deps = runtime.buildDeps();
 

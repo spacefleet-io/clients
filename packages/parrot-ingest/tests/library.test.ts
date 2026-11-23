@@ -8,12 +8,7 @@
  * @covers packages/parrot-ingest/src/library.ts, packages/parrot-ingest/src/importer.ts: buildParrotTrackOps
  */
 import { describe, expect, it } from "bun:test";
-import {
-  createParrotOp,
-  PARROT_LIBRARY_SCHEMA_VERSION,
-  PARROT_LIBRARY_WHOLE_FILES_SCHEMA_VERSION,
-  type ParrotLibraryOp,
-} from "@space/parrot-library-db-definition";
+import { createParrotOp, PARROT_LIBRARY_SCHEMA_VERSION, type ParrotLibraryOp } from "@space/parrot-library-db-definition";
 import { parrotAudioFormatFor } from "../src/formats";
 import { parrotTrackIds, sha256Hex } from "../src/ids";
 import { buildParrotTrackOps } from "../src/importer";
@@ -74,12 +69,12 @@ const dumpDb = (db: ParrotLibraryDb) => {
 };
 
 describe("parrot library db", () => {
-  it("opens a new library at the whole-file schema with empty listings", () => {
+  it("opens a new library at the current schema with empty listings", () => {
     const db = openParrotLibrary(null);
     const version = db.prepare("PRAGMA user_version").get()?.user_version;
     const tables = db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name").all().map((row) => row.name);
     log("new library", { version, tables });
-    expect(version).toBe(PARROT_LIBRARY_WHOLE_FILES_SCHEMA_VERSION);
+    expect(version).toBe(PARROT_LIBRARY_SCHEMA_VERSION);
     expect(tables).toEqual(["albums", "artists", "lyrics", "playlist_tracks", "playlists", "settings", "track_file_chunks", "track_files", "tracks"]);
     expect(dumpDb(db)).toEqual({ artists: [], albums: [], tracks: [] });
     db.close();
@@ -107,8 +102,8 @@ describe("parrot library db", () => {
       },
     ]);
     expect(state.albums).toEqual([
-      { id: paperboat.ids.albumId, title: "Hollow Signal", artistId: nook.ids.artistId, artistName: "Linnet Park", year: 2000, genre: null, trackCount: 1, coverObjectKey: null, coverThumbObjectKey: null, addedAt: expect.any(Number), tracklist: null },
-      { id: nook.ids.albumId, title: "Meltway", artistId: nook.ids.artistId, artistName: "Linnet Park", year: 2003, genre: null, trackCount: 2, coverObjectKey: null, coverThumbObjectKey: null, addedAt: expect.any(Number), tracklist: null },
+      { id: paperboat.ids.albumId, title: "Hollow Signal", artistId: nook.ids.artistId, artistName: "Linnet Park", year: 2000, trackCount: 1, coverObjectKey: null, coverThumbObjectKey: null, addedAt: expect.any(Number), tracklist: null },
+      { id: nook.ids.albumId, title: "Meltway", artistId: nook.ids.artistId, artistName: "Linnet Park", year: 2003, trackCount: 2, coverObjectKey: null, coverThumbObjectKey: null, addedAt: expect.any(Number), tracklist: null },
     ]);
     expect(state.tracks.map((track) => [track.albumTitle, track.number, track.title])).toEqual([
       ["Hollow Signal", 3, "Paperboat"],
@@ -134,26 +129,11 @@ describe("parrot library db", () => {
       albumGainDb: null,
       albumPeak: null,
       unidentified: false,
-      year: 2003,
-      genre: null,
-      lossless: false,
-      hasLyrics: false,
     });
 
     const file = getParrotFile(db, paperboat.ids.fileId);
     log("paperboat file", file);
-    // Built without a split (stored whole): no header length, source size or tags object.
-    expect(file).toEqual({
-      id: paperboat.ids.fileId,
-      trackId: paperboat.ids.trackId,
-      mime: "audio/mpeg",
-      codec: "mp3",
-      sizeBytes: 2500,
-      headerBytes: null,
-      sourceSizeBytes: null,
-      tagsObjectKey: null,
-      chunks: paperboat.chunks,
-    });
+    expect(file).toEqual({ id: paperboat.ids.fileId, trackId: paperboat.ids.trackId, mime: "audio/mpeg", codec: "mp3", sizeBytes: 2500, chunks: paperboat.chunks });
     expect(hasParrotFile(db, forecast.ids.fileId)).toBe(true);
     expect(hasParrotFile(db, "tf-missing")).toBe(false);
     expect(getParrotFile(db, "tf-missing")).toBeNull();
@@ -225,35 +205,8 @@ describe("parrot library db", () => {
 
     const reopened = openParrotLibrary(bytes);
     expect(dumpDb(reopened)).toEqual(before);
-    expect(reopened.prepare("PRAGMA user_version").get()?.user_version).toBe(PARROT_LIBRARY_WHOLE_FILES_SCHEMA_VERSION);
+    expect(reopened.prepare("PRAGMA user_version").get()?.user_version).toBe(PARROT_LIBRARY_SCHEMA_VERSION);
     reopened.close();
-  });
-
-  // API-VER-01: songs stored whole keep the library at schema 10 (an account not switched to songs in parts stays
-  // readable by released apps); the first song stored in parts takes it to schema 11 in the same save.
-  it("@req PAR-FMT-01 stays at schema 10 for songs stored whole and moves to 11 with the first song in parts", () => {
-    const db = openParrotLibrary(null);
-    const version = () => db.prepare("PRAGMA user_version").get()?.user_version;
-    const nook = addSong(db, song({ title: "Nook", number: 13 }));
-    const afterWhole = version();
-    expect(getParrotFile(db, nook.ids.fileId)).toMatchObject({ headerBytes: null, sourceSizeBytes: null, tagsObjectKey: null });
-
-    const info = song({ title: "Fable", number: 7 });
-    const fileHash = sha256Hex("bytes of Fable");
-    const ids = parrotTrackIds({ ...info, fileHash });
-    const chunks = [
-      { idx: 0, objectKey: `${ids.fileId}/header`, plainOffset: 0, plainSize: 100 },
-      { idx: 1, objectKey: `${ids.fileId}/piece-1`, plainOffset: 100, plainSize: 400 },
-    ];
-    const split = { headerBytes: 100, sourceSizeBytes: 750, tagsObjectKey: `${ids.fileId}/tags` };
-    applyParrotOps(db, buildParrotTrackOps({ info, fileHash, sizeBytes: 500, chunks, split, now: 1_700_000_000_000 }));
-    const afterSplit = version();
-    log("schema across imports", { afterWhole, afterSplit });
-    expect(afterWhole).toBe(PARROT_LIBRARY_WHOLE_FILES_SCHEMA_VERSION);
-    expect(afterSplit).toBe(PARROT_LIBRARY_SCHEMA_VERSION);
-    expect(getParrotFile(db, ids.fileId)).toMatchObject(split);
-    expect(getParrotFile(db, nook.ids.fileId)).toMatchObject({ headerBytes: null, tagsObjectKey: null });
-    db.close();
   });
 
   it("rolls back the whole batch when one op fails", () => {

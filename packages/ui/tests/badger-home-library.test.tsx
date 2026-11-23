@@ -5,11 +5,11 @@ import {
   BadgerContinueHero,
   BadgerPosterCard,
   BadgerPosterGrid,
+  BadgerSegmented,
   formatBadgerRuntime,
 } from "../src/badger/components";
 import { MediaDetailPage } from "../src/badger/media-detail";
 import { EmptyLibrary } from "../src/empty-library";
-import { LibrarySegmented } from "../src/library-row";
 
 // The home and library pieces the Badger desktop renderer and web player will share (REL-FAM-02).
 describe("[badger] home and library pieces", () => {
@@ -100,7 +100,7 @@ describe("[badger] home and library pieces", () => {
 
   it("the segmented toggle marks the picked tab; the empty library has the bare mascot and three steps", () => {
     const seg = renderToStaticMarkup(
-      <LibrarySegmented ariaLabel="Kind" value="tv" onChange={() => undefined} options={[{ id: "movie", label: "Movies" }, { id: "tv", label: "TV shows" }]} />,
+      <BadgerSegmented ariaLabel="Kind" value="tv" onChange={() => undefined} options={[{ id: "movie", label: "Movies" }, { id: "tv", label: "TV shows" }]} />,
     );
     expect(seg).toContain('aria-selected="true"');
     expect(seg).toContain("h-8");

@@ -21,7 +21,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { ensureLibrarySchema, type SqliteDb } from "@space/library-db-definition/migrations";
-import { buildOpStatements, isV3MediaUpsert } from "@space/library-db-definition/ops";
+import { buildOpStatements } from "@space/library-db-definition/ops";
 import type { LibraryOp } from "@space/shared/libraryOps";
 import type { LibraryMeta } from "../src/api";
 import { LibraryDb } from "../src/libraryDb";
@@ -134,8 +134,8 @@ describe("OCR text twin rows (PLAY-TRACK-05)", () => {
       const upserts = ops.filter((op) => op.type === "media.upsert");
       const last = upserts[upserts.length - 1];
       console.info(`${TAG} pending=${ops.length} upserts=${upserts.length} lastType=${last?.type}`);
-      expect(last?.type === "media.upsert" && isV3MediaUpsert(last)).toBe(true);
-      if (last?.type !== "media.upsert" || !isV3MediaUpsert(last)) return;
+      expect(last?.type).toBe("media.upsert");
+      if (last?.type !== "media.upsert") return;
       const wireTwin = last.payload.details.subtitleTracks.find((track) => track.id === twin.id);
       expect(wireTwin?.derivedFromSubtitleId).toBe("pic-de");
 

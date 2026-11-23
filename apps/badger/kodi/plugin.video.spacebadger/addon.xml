@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<addon id="plugin.video.spacebadger" name="Badger" version="0.2.0" provider-name="Badger">
+<addon id="plugin.video.spacebadger" name="Badger" version="0.1.0" provider-name="Badger">
   <requires>
     <import addon="xbmc.python" version="3.0.0"/>
     <import addon="inputstream.adaptive" version="20.0.0"/>
@@ -23,7 +23,7 @@
     <platform>all</platform>
     <license>GPL-3.0-only</license>
     <website>https://spacebadger.io</website>
-    <news>0.2.0: reads library change types 4 (packed playback); asks to update when SpaceFleet moves ahead. 0.1.0: first working version (v0).</news>
+    <news>0.1.0: first working version (v0).</news>
     <assets>
       <icon>resources/icon.png</icon>
     </assets>

@@ -24,5 +24,3 @@ export * from "./TvTopBar";
 export * from "./TvAvatarGrid";
 export * from "./PairingButton";
 export * from "./TvSignIn";
-export * from "./TvProfiles";
-export * from "./TvLanguage";

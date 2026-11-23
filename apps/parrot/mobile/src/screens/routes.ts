@@ -15,6 +15,4 @@ export type RootStack = {
   Profiles: { mode: "pick" | "manage" };
   /** Settings → Delete account (ACCT-DEL-01/02/03). */
   DeleteAccount: undefined;
-  /** Settings → Manage offline content (OFFL-MANAGE-01). */
-  OfflineContent: undefined;
 };
