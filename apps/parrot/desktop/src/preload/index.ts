@@ -141,6 +141,7 @@ const bridge: ParrotBridge = {
   playbackUrl: (fileId) => ipcRenderer.invoke(PARROT_IPC.playbackUrl, fileId),
   measureUrl: (fileId) => ipcRenderer.invoke(PARROT_IPC.measureUrl, fileId),
   streamAcquire: (trackId) => ipcRenderer.invoke(PARROT_IPC.streamAcquire, trackId),
+  noteScreen: () => ipcRenderer.invoke(PARROT_IPC.noteScreen),
   streamAnswer: (answer) => ipcRenderer.invoke(PARROT_IPC.streamAnswer, answer),
   streamDismiss: () => ipcRenderer.invoke(PARROT_IPC.streamDismiss),
   streamRelease: () => ipcRenderer.invoke(PARROT_IPC.streamRelease),
