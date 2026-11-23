@@ -8,7 +8,7 @@
  * Why this exists: Chris opened Badger on his phone after a night of episode uploads from Badger desktop and saw the
  * old library with no sign that anything was loading; the new episodes arrived minutes later, silently (2026-11-21).
  * Every sync (cold start, back to the front, the live stream, pull-to-refresh) now goes through one tracker that the
- * tab bar's sign reads: "Updating media library…" with progress while ops arrive, then a short result, or the failure.
+ * tab bar's sign reads: "Updating library…" with progress while ops arrive, then a short result, or the failure.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {

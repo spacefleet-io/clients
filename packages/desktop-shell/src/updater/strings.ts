@@ -42,7 +42,6 @@ export type UpdateSectionStringKey =
   | "systemNotNewer"
   | "systemRepoMissing"
   | "systemNeedsSystemUpdate"
-  | "systemNetwork"
   | "systemPackageManager"
   | "systemNotAuthorized"
   | "systemNoPasswordDialog"
@@ -90,7 +89,6 @@ export const updateSectionStrings: Record<ClientUiLanguage, Record<UpdateSection
     systemNotNewer: "The package repository doesn't have the new version yet. Try again later.",
     systemRepoMissing: "The SpaceFleet package repository isn't set up on this computer.",
     systemNeedsSystemUpdate: "{app} needs newer system packages first. Update your whole system, then try again.",
-    systemNetwork: "Couldn't reach SpaceFleet's update server. Check your connection and try again.",
     systemPackageManager: "The package manager couldn't install the update.",
     systemNotAuthorized: "Your account isn't allowed to install updates.",
     systemNoPasswordDialog: "{app} can't open the system password window here.",
@@ -139,7 +137,6 @@ export const updateSectionStrings: Record<ClientUiLanguage, Record<UpdateSection
     systemRepoMissing: "Le dépôt de paquets SpaceFleet n'est pas configuré sur cet ordinateur.",
     systemNeedsSystemUpdate:
       "{app} a d'abord besoin de paquets système plus récents. Mettez tout le système à jour, puis réessayez.",
-    systemNetwork: "Impossible de joindre le serveur de mises à jour de SpaceFleet. Vérifiez votre connexion et réessayez.",
     systemPackageManager: "Le gestionnaire de paquets n'a pas pu installer la mise à jour.",
     systemNotAuthorized: "Votre compte n'a pas le droit d'installer des mises à jour.",
     systemNoPasswordDialog: "{app} ne peut pas ouvrir ici la fenêtre de mot de passe du système.",
@@ -186,7 +183,6 @@ export const updateSectionStrings: Record<ClientUiLanguage, Record<UpdateSection
     systemNotNewer: "De pakketbron heeft de nieuwe versie nog niet. Probeer het later opnieuw.",
     systemRepoMissing: "De SpaceFleet-pakketbron is niet ingesteld op deze computer.",
     systemNeedsSystemUpdate: "{app} heeft eerst nieuwere systeempakketten nodig. Werk je hele systeem bij en probeer het opnieuw.",
-    systemNetwork: "De updateserver van SpaceFleet is niet bereikbaar. Controleer je verbinding en probeer het opnieuw.",
     systemPackageManager: "De pakketbeheerder kon de update niet installeren.",
     systemNotAuthorized: "Je account mag geen updates installeren.",
     systemNoPasswordDialog: "{app} kan het wachtwoordvenster van het systeem hier niet openen.",
@@ -233,7 +229,6 @@ export const updateSectionStrings: Record<ClientUiLanguage, Record<UpdateSection
     systemNotNewer: "Die Paketquelle hat die neue Version noch nicht. Versuch es später noch einmal.",
     systemRepoMissing: "Die SpaceFleet-Paketquelle ist auf diesem Computer nicht eingerichtet.",
     systemNeedsSystemUpdate: "{app} braucht zuerst neuere Systempakete. Aktualisiere das ganze System und versuch es dann noch einmal.",
-    systemNetwork: "Der Update-Server von SpaceFleet ist nicht erreichbar. Prüf deine Verbindung und versuch es noch einmal.",
     systemPackageManager: "Die Paketverwaltung konnte das Update nicht installieren.",
     systemNotAuthorized: "Dein Konto darf keine Updates installieren.",
     systemNoPasswordDialog: "{app} kann das Passwortfenster des Systems hier nicht öffnen.",
@@ -280,7 +275,6 @@ export const updateSectionStrings: Record<ClientUiLanguage, Record<UpdateSection
     systemNotNewer: "El repositorio de paquetes aún no tiene la nueva versión. Inténtalo más tarde.",
     systemRepoMissing: "El repositorio de paquetes de SpaceFleet no está configurado en este ordenador.",
     systemNeedsSystemUpdate: "{app} necesita antes paquetes del sistema más recientes. Actualiza todo el sistema y vuelve a intentarlo.",
-    systemNetwork: "No se pudo conectar con el servidor de actualizaciones de SpaceFleet. Comprueba tu conexión y vuelve a intentarlo.",
     systemPackageManager: "El gestor de paquetes no pudo instalar la actualización.",
     systemNotAuthorized: "Tu cuenta no tiene permiso para instalar actualizaciones.",
     systemNoPasswordDialog: "{app} no puede abrir aquí la ventana de contraseña del sistema.",
@@ -321,8 +315,6 @@ export const systemFailureKey = (failure: SystemUpdateFailure | null): UpdateSec
       return "systemRepoMissing";
     case "needsSystemUpdate":
       return "systemNeedsSystemUpdate";
-    case "network":
-      return "systemNetwork";
     case "packageManager":
       return "systemPackageManager";
     case "notAuthorized":

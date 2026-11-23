@@ -102,30 +102,6 @@ describe("runSystemUpdate (REL-UPD-07)", () => {
     log("outcome", { code, outcome });
     expect(outcome).toMatchObject(expected);
   });
-
-  // Real package-manager output when SpaceFleet's repository can't be reached (DNS, refused, timeout); the cause may sit
-  // above the six lines kept as the detail.
-  it.each([
-    ["pacman refused", "error: failed retrieving file 'spacefleet.db' from 127.0.0.1:8080 : Failed to connect to 127.0.0.1 port 8080 after 0 ms: Couldn't connect to server"],
-    ["pacman DNS", "error: failed retrieving file 'spacefleet.db' from packages.spacefleet.io : Could not resolve host: packages.spacefleet.io"],
-    ["apt refused", "Err:1 http://127.0.0.1:8080/apt stable/main amd64 spaceparrot amd64 0.1.91\n  Could not connect to 127.0.0.1:8080 (127.0.0.1). - connect (111: Connection refused)"],
-    ["apt DNS", "Err:1 https://packages.spacefleet.io/apt stable InRelease\n  Temporary failure resolving 'packages.spacefleet.io'"],
-    ["dnf refused", ">>> Curl error (7): Could not connect to server for http://127.0.0.1:8080/rpm/repodata/repomd.xml"],
-    ["dnf timeout", ">>> Curl error (28): Timeout was reached for https://packages.spacefleet.io/rpm/repodata/repomd.xml"],
-    ["zypper DNS", "Download (curl) error for 'https://packages.spacefleet.io/rpm/repodata/repomd.xml':\nError code: Connection failed\nError message: Could not resolve host: packages.spacefleet.io"],
-  ])("exit 13, %s → network", async (_name, output) => {
-    const stderr = `${output}\nline\nline\nline\nline\nline\nline\n[system-update] could not update spaceparrot\n`;
-    const outcome = await runSystemUpdate(HELPER, probe({ answers: { pkexec: { code: 13, stderr } } }).p);
-    expect(outcome).toMatchObject({ result: "failed", failure: "network" });
-  });
-
-  it.each([
-    ["apt 404", "E: Failed to fetch https://packages.spacefleet.io/apt/pool/main/Parrot-0.1.91-amd64.deb  404  Not Found"],
-    ["pacman signature", 'error: spaceparrot: signature from "SpaceFleet" is invalid'],
-  ])("exit 13, %s → packageManager", async (_name, stderr) => {
-    const outcome = await runSystemUpdate(HELPER, probe({ answers: { pkexec: { code: 13, stderr } } }).p);
-    expect(outcome).toMatchObject({ result: "failed", failure: "packageManager" });
-  });
 });
 
 // @req REL-UPD-07[badger-desktop,parrot] without pkexec or a display the app shows the command to run by hand

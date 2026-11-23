@@ -257,13 +257,10 @@ const RETRANSCODE_STEPS = ["retranscode", "upload", "commit"] as const;
 // concurrency budget with ingest upload work, which is the right trade-off
 // per the plan §B-7.
 const OFFLINE_DOWNLOAD_STEPS = ["offline_download"] as const;
-// Exports (OFFL-FILE-01 / ACCT-EXPORT-01): one `export_file` step fetches, decrypts, muxes and places a plain file in
-// the folder the user picked. Network-heavy like offline saves, so the upload lane too.
-const EXPORT_STEPS = ["export_file"] as const;
 
 const stepLaneFor = (kind: string, jobLane: IngestJobLane): IngestJobLane => {
   if (kind === "upload") return "upload";
-  if (kind === "offline_download" || kind === "export_file") return "upload";
+  if (kind === "offline_download") return "upload";
   if (kind === "transcode" || kind === "retranscode") return "format";
   // probe/identify/extract/commit all share the source lane
   if (jobLane === "format") return "format";
@@ -337,8 +334,6 @@ const seedStepsForJob = (job: IngestJobRecord): StoredStepRecord[] => {
       ? SOURCE_STEPS
       : job.kind === "download"
       ? OFFLINE_DOWNLOAD_STEPS
-      : job.kind === "export"
-      ? EXPORT_STEPS
       : isRetranscodeJob(job)
       ? RETRANSCODE_STEPS
       : FORMAT_STEPS;
@@ -893,7 +888,6 @@ export function createEngineV2(config: EngineV2Config): EngineV2 {
           "upload",
           "commit",
           "offline_download",
-          "export_file",
         ]);
         if (KNOWN_BADGER_KINDS.has(nextStep.kind)) {
           console.warn(

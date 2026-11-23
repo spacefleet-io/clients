@@ -29,7 +29,6 @@ import {
   DesktopStartupPage,
   NoticeSurface,
   PairWithPhone,
-  SameDeviceSignIn,
   desktopAuthInputClassName,
   desktopAuthPromptActionClassName,
   pairWithPhoneText,
@@ -278,17 +277,6 @@ export default function Login() {
               />
             ) : null}
             {mode === "email" ? (
-            <div className="grid gap-4">
-            {/* ACCT-PAIR-07: Parrot signed in on this computer signs Badger in with one click, above the normal sign-in. */}
-            {window.sf?.sibling && !providerCode && !twoFactorRequired ? (
-              <SameDeviceSignIn
-                language={pairLanguage}
-                app="badger"
-                actions={window.sf.sibling}
-                onApproved={completePairing}
-                log={(message, extra) => log.info(extra ?? {}, message)}
-              />
-            ) : null}
             <form className="grid gap-4" onSubmit={onSubmit}>
               {systemIssue ? (
                 <NoticeSurface tone="info">
@@ -405,7 +393,6 @@ export default function Login() {
                 </>
               ) : null}
             </form>
-            </div>
             ) : null}
       </AuthCardLayout>
 

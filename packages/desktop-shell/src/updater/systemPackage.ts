@@ -157,14 +157,6 @@ const FAILURE_BY_EXIT: Record<number, SystemUpdateFailure> = {
   [PKEXEC_EXIT.notAuthorized]: "notAuthorized",
 };
 
-/**
- * The package manager's own words for "the repository's server could not be reached" (DNS, refused or failed
- * connection, timeout): libcurl's messages as pacman, dnf and zypper print them, and apt's. A 404 or a bad signature is
- * not a network failure.
- */
-const NETWORK_FAILURE =
-  /could(?: no|n'?)t (?:resolve|connect)|failed to connect|unable to connect|connection (?:refused|timed out|reset)|temporary failure (?:in name )?resolv|name or service not known|network is unreachable|no route to host|timeout was reached|operation too slow|curl error \((?:5|6|7|28|35|52|56)\)/i;
-
 /** Runs `pkexec <helper>` (nothing else on the command line) and reads its answer. */
 export const runSystemUpdate = async (helperPath: string, probe: SystemProbe): Promise<SystemUpdateOutcome> => {
   const { code, stdout, stderr } = await probe.run("pkexec", [helperPath]);
@@ -175,6 +167,5 @@ export const runSystemUpdate = async (helperPath: string, probe: SystemProbe): P
   }
   if (code === PKEXEC_EXIT.dismissed) return { result: "dismissed" };
   if (code === null) return { result: "failed", failure: "noPasswordDialog", detail };
-  if (code === SYSTEM_UPDATE_EXIT.packageManager && NETWORK_FAILURE.test(stderr)) return { result: "failed", failure: "network", detail };
   return { result: "failed", failure: FAILURE_BY_EXIT[code] ?? "other", detail: detail || `exit ${code}` };
 };

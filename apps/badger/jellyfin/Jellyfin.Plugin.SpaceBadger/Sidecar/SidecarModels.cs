@@ -29,20 +29,6 @@ public sealed class SbStatus
 
     /// <summary>INTG-PROF-01: why no profile is followed outside pairing: "deleted" (deleted elsewhere) or "choose" (a session from before profiles on an account with several); null otherwise.</summary>
     public string? ProfileNeeded { get; set; }
-
-    /// <summary>REL-CD-29 / LIB-FMT-13: set once the API refused this plugin (426) or the library is too new for it; the sidecar stopped syncing with nothing applied until the plugin is updated.</summary>
-    public SbUpdateRequired? UpdateRequired { get; set; }
-}
-
-public sealed class SbUpdateRequired
-{
-    /// <summary>"api_refused" (the API answered 426 app_update_required) or "library_format_too_new".</summary>
-    public string Reason { get; set; } = string.Empty;
-    public string? MinVersion { get; set; }
-    public string? At { get; set; }
-
-    /// <summary>The user-facing sentence, shown on the settings page and in the activity log.</summary>
-    public string Message { get; set; } = string.Empty;
 }
 
 public sealed class SbProfileRef

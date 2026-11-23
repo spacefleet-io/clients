@@ -86,7 +86,6 @@ vi.mock("react-native-sqlite-storage", async () => {
   };
 });
 vi.mock("react-native-quick-crypto", async () => (await import("./library-db-fixture")).quickCryptoMock());
-vi.mock("../src/lib/library/opsPage", async (importOriginal) => (await import("./library-db-fixture")).opsPageMock(await importOriginal()));
 vi.mock("@space/shared/api", async (importOriginal) =>
   (await import("./library-db-fixture")).sharedApiMock(await importOriginal<typeof SharedApi>())
 );

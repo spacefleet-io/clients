@@ -53,15 +53,11 @@ export type UpdaterEvent =
  */
 export type UpdateChannel = "self" | "system" | "flatpak";
 
-/**
- * Why a system-package update did not happen (systemPackage.ts maps the helper's and pkexec's exit codes; `network` is a
- * package-manager failure whose output shows SpaceFleet's repository could not be reached).
- */
+/** Why a system-package update did not happen (systemPackage.ts maps the helper's and pkexec's exit codes). */
 export type SystemUpdateFailure =
   | "notNewer"
   | "repoMissing"
   | "needsSystemUpdate"
-  | "network"
   | "packageManager"
   | "notAuthorized"
   | "noPasswordDialog"

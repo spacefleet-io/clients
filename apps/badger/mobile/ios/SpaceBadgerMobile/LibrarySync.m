@@ -18,18 +18,9 @@ RCT_EXTERN_METHOD(decryptSnapshotFile
                   : (RCTPromiseResolveBlock)resolve reject
                   : (RCTPromiseRejectBlock)reject)
 
-RCT_EXTERN_METHOD(openOpPayloadToFile
+RCT_EXTERN_METHOD(openOpPayload
                   : (NSString *)payloadBase64 keyBase64
-                  : (NSString *)keyBase64 targetPath
-                  : (NSString *)targetPath sliceBytes
-                  : (double)sliceBytes resolve
-                  : (RCTPromiseResolveBlock)resolve reject
-                  : (RCTPromiseRejectBlock)reject)
-
-RCT_EXTERN_METHOD(readTextSlice
-                  : (NSString *)path start
-                  : (double)start end
-                  : (double)end resolve
+                  : (NSString *)keyBase64 resolve
                   : (RCTPromiseResolveBlock)resolve reject
                   : (RCTPromiseRejectBlock)reject)
 
@@ -45,19 +36,6 @@ RCT_EXTERN_METHOD(buildUploadFrameBlob
                   : (double)length uploadId
                   : (NSString *)uploadId seq
                   : (double)seq resolve
-                  : (RCTPromiseResolveBlock)resolve reject
-                  : (RCTPromiseRejectBlock)reject)
-
-// Vault v4 (LibrarySyncV4.swift): one op-stream page fetched, decrypted and inflated natively; the one-time packing
-// of the playback database's chunk lists.
-RCT_EXTERN_METHOD(fetchOpsPage
-                  : (NSDictionary *)options resolve
-                  : (RCTPromiseResolveBlock)resolve reject
-                  : (RCTPromiseRejectBlock)reject)
-
-RCT_EXTERN_METHOD(convertChunkLists
-                  : (NSString *)playbackDbPath nowIso
-                  : (NSString *)nowIso resolve
                   : (RCTPromiseResolveBlock)resolve reject
                   : (RCTPromiseRejectBlock)reject)
 

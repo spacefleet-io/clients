@@ -199,23 +199,6 @@ describe("SystemUpdatePrompt (REL-UPD-07)", () => {
     });
   });
 
-  it.each([
-    ["en", "Couldn't reach SpaceFleet's update server. Check your connection and try again."],
-    ["fr", "Impossible de joindre le serveur de mises à jour de SpaceFleet. Vérifiez votre connexion et réessayez."],
-    ["nl", "De updateserver van SpaceFleet is niet bereikbaar. Controleer je verbinding en probeer het opnieuw."],
-    ["de", "Der Update-Server von SpaceFleet ist nicht erreichbar. Prüf deine Verbindung und versuch es noch einmal."],
-    ["es", "No se pudo conectar con el servidor de actualizaciones de SpaceFleet. Comprueba tu conexión y vuelve a intentarlo."],
-  ])("@req REL-UPD-07 a network failure says the server couldn't be reached (%s), with the details and the command", async (lang, sentence) => {
-    const detail = "error: failed retrieving file 'spacefleet.db' from packages.spacefleet.io : Could not resolve host";
-    const controls = makeControls(systemState({ phase: "error", failure: "network", failureDetail: detail, manualCommand: HELPER_COMMAND }));
-    await mount(prompt(controls, lang));
-    await checked(`network-${lang}`, controls, () => {
-      expect(q("system-update-prompt-message")?.textContent).toBe(sentence);
-      expect(q("system-update-prompt-detail")?.textContent).toContain("Could not resolve host");
-      expect(q("update-manual-command")?.textContent).toBe(HELPER_COMMAND);
-    });
-  });
-
   it("@req REL-UPD-07 without a password window: only the command, no Install", async () => {
     const controls = makeControls(systemState({ canInstall: false }));
     await mount(prompt(controls, "fr"));
