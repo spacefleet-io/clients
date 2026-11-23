@@ -6,7 +6,6 @@
  * @covers apps/parrot/desktop/src/renderer/src/coverArtwork.ts, apps/parrot/desktop/src/main/playbackServer.ts
  */
 import { afterEach, describe, expect, it } from "vitest";
-import { createParrotChunkReads } from "@space/parrot-core";
 import { planMediaSession } from "@space/media-session";
 import { createCoverArtwork } from "../src/renderer/src/coverArtwork";
 import { startParrotPlaybackServer, type ParrotPlaybackServer } from "../src/main/playbackServer";
@@ -33,7 +32,6 @@ describe("parrot desktop media panel artwork", () => {
         throw new Error("no chunk in this test");
       },
       loadCover: async (key) => (key === "assets/large" ? { bytes: LARGE, mime: "image/jpeg" } : key === "assets/other" ? { bytes: OTHER, mime: "image/png" } : null),
-      reads: createParrotChunkReads(),
       log: () => undefined,
     });
     const made: Blob[] = [];

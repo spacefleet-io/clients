@@ -24,21 +24,6 @@
 		E8809EED1122F1ED285DD293 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BBD28A893D8462BAB519F430 /* Foundation.framework */; };
 		DD0A1B2C3D4E5F6071829313 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = DD0A1B2C3D4E5F6071829312 /* InfoPlist.strings */; };
 		FDC848A4EE21812C1C95EE24 /* LibrarySync.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B5C /* LibrarySync.swift */; };
-		0B761F991FF184552493CE44 /* ChunkListCodec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95B517412578E9A5447DEEFA /* ChunkListCodec.swift */; };
-		0CB6DF8C5F82257489E1DC40 /* ChunkListConversion.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0398D73707342B2A93F18BED /* ChunkListConversion.swift */; };
-		55C6B42AF17CB94FEF3C93A0 /* LibraryOpsPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9160EB31A440B26351F389D6 /* LibraryOpsPage.swift */; };
-		7C30A92279C9EAEE096CCE5B /* LibrarySyncV4.swift in Sources */ = {isa = PBXBuildFile; fileRef = F02B4A3900B262D6D861BF05 /* LibrarySyncV4.swift */; };
-		8B4FD70D229CA9DAB74D14CA /* ChunkListCodec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95B517412578E9A5447DEEFA /* ChunkListCodec.swift */; };
-		35236BB976AE5E209AFC23DF /* ChunkListConversion.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0398D73707342B2A93F18BED /* ChunkListConversion.swift */; };
-		80422C555F4756A09AE64D1B /* LibraryOpsPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9160EB31A440B26351F389D6 /* LibraryOpsPage.swift */; };
-		7E69D7725257C66498912CC3 /* LibrarySyncV4.swift in Sources */ = {isa = PBXBuildFile; fileRef = F02B4A3900B262D6D861BF05 /* LibrarySyncV4.swift */; };
-		DE7C75E9D6B5D063B00E2FD2 /* ChunkListCodec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95B517412578E9A5447DEEFA /* ChunkListCodec.swift */; };
-		57EEE7F8A1999E11FE0B8421 /* ChunkListConversion.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0398D73707342B2A93F18BED /* ChunkListConversion.swift */; };
-		C02728743CDBFE42D96C8C80 /* LibraryOpsPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9160EB31A440B26351F389D6 /* LibraryOpsPage.swift */; };
-		0E45AB1703297ABB0866BF7B /* ChunkListCodecTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5844E8C7FFAF79D8B8D1A36C /* ChunkListCodecTests.swift */; };
-		BDC850E1171A08E54B44604D /* LibraryOpsPageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 172A2E84BBC813B6944EB56B /* LibraryOpsPageTests.swift */; };
-		A4E1C0B7D2F3485A9C6B7E10 /* LibraryOpsPageLaneTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4E1C0B7D2F3485A9C6B7E11 /* LibraryOpsPageLaneTests.swift */; };
-		EED53316D02A44A52F0D7873 /* ChunkListConversionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 787049EA6B400355B5B337F6 /* ChunkListConversionTests.swift */; };
 		A1DB02EFCCF061AF0F9B606F /* Inter-Light.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 72E88D91131413E7E497089C /* Inter-Light.ttf */; };
 		61ADA31E169510AC04466271 /* Inter-Light.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 72E88D91131413E7E497089C /* Inter-Light.ttf */; };
 		D41CC915153FD7F6EEE23C6F /* Inter-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 1EB04DEA72FD0A3484C5876B /* Inter-Regular.ttf */; };
@@ -97,15 +82,6 @@
 		86B49074676C1264A88BD1C0 /* SpaceBadgerTV.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SpaceBadgerTV.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A1B2C3D4E5F60718293A4B5C /* LibrarySync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LibrarySync.swift; path = SpaceBadgerMobile/LibrarySync.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F60718293A4B5E /* LibrarySync.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = LibrarySync.m; path = SpaceBadgerMobile/LibrarySync.m; sourceTree = "<group>"; };
-		95B517412578E9A5447DEEFA /* ChunkListCodec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ChunkListCodec.swift; path = SpaceBadgerMobile/ChunkListCodec.swift; sourceTree = "<group>"; };
-		0398D73707342B2A93F18BED /* ChunkListConversion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ChunkListConversion.swift; path = SpaceBadgerMobile/ChunkListConversion.swift; sourceTree = "<group>"; };
-		9160EB31A440B26351F389D6 /* LibraryOpsPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LibraryOpsPage.swift; path = SpaceBadgerMobile/LibraryOpsPage.swift; sourceTree = "<group>"; };
-		F02B4A3900B262D6D861BF05 /* LibrarySyncV4.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LibrarySyncV4.swift; path = SpaceBadgerMobile/LibrarySyncV4.swift; sourceTree = "<group>"; };
-		5844E8C7FFAF79D8B8D1A36C /* ChunkListCodecTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChunkListCodecTests.swift; sourceTree = "<group>"; };
-		172A2E84BBC813B6944EB56B /* LibraryOpsPageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryOpsPageTests.swift; sourceTree = "<group>"; };
-		A4E1C0B7D2F3485A9C6B7E11 /* LibraryOpsPageLaneTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryOpsPageLaneTests.swift; sourceTree = "<group>"; };
-		787049EA6B400355B5B337F6 /* ChunkListConversionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChunkListConversionTests.swift; sourceTree = "<group>"; };
-		BD4FCFFB884B0CAC582F6892 /* SpaceBadgerLibraryTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SpaceBadgerLibraryTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		BBD28A893D8462BAB519F430 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/AppleTVOS.platform/Developer/SDKs/AppleTVOS26.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 		EABB3299C84361A1A819A472 /* Pods-SpaceBadgerTV.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-SpaceBadgerTV.debug.xcconfig"; path = "Target Support Files/Pods-SpaceBadgerTV/Pods-SpaceBadgerTV.debug.xcconfig"; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
@@ -149,13 +125,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		845DDF5013E6A674452A02CA /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		ED1DF225E0AE14199522373D /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -182,27 +151,12 @@
 				761780EC2CA45674006654EE /* AppDelegate.swift */,
 				A1B2C3D4E5F60718293A4B5C /* LibrarySync.swift */,
 				A1B2C3D4E5F60718293A4B5E /* LibrarySync.m */,
-				95B517412578E9A5447DEEFA /* ChunkListCodec.swift */,
-				0398D73707342B2A93F18BED /* ChunkListConversion.swift */,
-				9160EB31A440B26351F389D6 /* LibraryOpsPage.swift */,
-				F02B4A3900B262D6D861BF05 /* LibrarySyncV4.swift */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */,
 				13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */,
 				DD0A1B2C3D4E5F6071829312 /* InfoPlist.strings */,
 			);
 			name = SpaceBadgerMobile;
-			sourceTree = "<group>";
-		};
-		60DB7969FB0350EC4D6B0E9A /* SpaceBadgerLibraryTests */ = {
-			isa = PBXGroup;
-			children = (
-				5844E8C7FFAF79D8B8D1A36C /* ChunkListCodecTests.swift */,
-				787049EA6B400355B5B337F6 /* ChunkListConversionTests.swift */,
-				172A2E84BBC813B6944EB56B /* LibraryOpsPageTests.swift */,
-				A4E1C0B7D2F3485A9C6B7E11 /* LibraryOpsPageLaneTests.swift */,
-			);
-			path = SpaceBadgerLibraryTests;
 			sourceTree = "<group>";
 		};
 		1788A0463DB6690BF1D05794 /* SpaceBadgerTVUITests */ = {
@@ -243,7 +197,6 @@
 				BBD78D7AC51CEA395F1C20DB /* Pods */,
 				BD7E00EB5ECD910D25C9B0B5 /* SpaceBadgerTV */,
 				1788A0463DB6690BF1D05794 /* SpaceBadgerTVUITests */,
-				60DB7969FB0350EC4D6B0E9A /* SpaceBadgerLibraryTests */,
 			);
 			indentWidth = 2;
 			sourceTree = "<group>";
@@ -256,7 +209,6 @@
 				13B07F961A680F5B00A75B9A /* SpaceBadgerMobile.app */,
 				86B49074676C1264A88BD1C0 /* SpaceBadgerTV.app */,
 				5793CD4E4E3C536EBEF7A51C /* SpaceBadgerTVUITests.xctest */,
-				BD4FCFFB884B0CAC582F6892 /* SpaceBadgerLibraryTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -329,22 +281,6 @@
 			productName = SpaceBadgerMobile;
 			productReference = 13B07F961A680F5B00A75B9A /* SpaceBadgerMobile.app */;
 			productType = "com.apple.product-type.application";
-		};
-		1C79998FDCC28DBB55131A44 /* SpaceBadgerLibraryTests */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 59CD5BB78BE347BE85DC1ED6 /* Build configuration list for PBXNativeTarget "SpaceBadgerLibraryTests" */;
-			buildPhases = (
-				8AC703213551CD0C2C01E156 /* Sources */,
-				845DDF5013E6A674452A02CA /* Frameworks */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			name = SpaceBadgerLibraryTests;
-			productName = SpaceBadgerLibraryTests;
-			productReference = BD4FCFFB884B0CAC582F6892 /* SpaceBadgerLibraryTests.xctest */;
-			productType = "com.apple.product-type.bundle.unit-test";
 		};
 		DA30771E4DD11CE87518BB4E /* SpaceBadgerTVUITests */ = {
 			isa = PBXNativeTarget;
@@ -419,7 +355,6 @@
 				13B07F861A680F5B00A75B9A /* SpaceBadgerMobile */,
 				F08858A1F9C735E64B116A62 /* SpaceBadgerTV */,
 				DA30771E4DD11CE87518BB4E /* SpaceBadgerTVUITests */,
-				1C79998FDCC28DBB55131A44 /* SpaceBadgerLibraryTests */,
 			);
 		};
 /* End PBXProject section */
@@ -704,10 +639,6 @@
 				761780ED2CA45674006654EE /* AppDelegate.swift in Sources */,
 				A1B2C3D4E5F60718293A4B5D /* LibrarySync.swift in Sources */,
 				A1B2C3D4E5F60718293A4B5F /* LibrarySync.m in Sources */,
-				0B761F991FF184552493CE44 /* ChunkListCodec.swift in Sources */,
-				0CB6DF8C5F82257489E1DC40 /* ChunkListConversion.swift in Sources */,
-				55C6B42AF17CB94FEF3C93A0 /* LibraryOpsPage.swift in Sources */,
-				7C30A92279C9EAEE096CCE5B /* LibrarySyncV4.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -726,24 +657,6 @@
 				2B6EFC1B27DBA5B1FF2B30BA /* AppDelegate.swift in Sources */,
 				FDC848A4EE21812C1C95EE24 /* LibrarySync.swift in Sources */,
 				CB1360AE074A8490092A1BE3 /* LibrarySync.m in Sources */,
-				8B4FD70D229CA9DAB74D14CA /* ChunkListCodec.swift in Sources */,
-				35236BB976AE5E209AFC23DF /* ChunkListConversion.swift in Sources */,
-				80422C555F4756A09AE64D1B /* LibraryOpsPage.swift in Sources */,
-				7E69D7725257C66498912CC3 /* LibrarySyncV4.swift in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		8AC703213551CD0C2C01E156 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				DE7C75E9D6B5D063B00E2FD2 /* ChunkListCodec.swift in Sources */,
-				57EEE7F8A1999E11FE0B8421 /* ChunkListConversion.swift in Sources */,
-				C02728743CDBFE42D96C8C80 /* LibraryOpsPage.swift in Sources */,
-				0E45AB1703297ABB0866BF7B /* ChunkListCodecTests.swift in Sources */,
-				EED53316D02A44A52F0D7873 /* ChunkListConversionTests.swift in Sources */,
-				BDC850E1171A08E54B44604D /* LibraryOpsPageTests.swift in Sources */,
-				A4E1C0B7D2F3485A9C6B7E10 /* LibraryOpsPageLaneTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -874,7 +787,6 @@
 				PRODUCT_NAME = SpaceBadgerMobile;
 				REACT_NATIVE_PATH = "${PODS_ROOT}/../../node_modules/react-native";
 				SB_ALLOW_CLEARTEXT = YES;
-				SF_SIBLING_URL_SCHEME = "spacebadger-dev";
 				SWIFT_ENABLE_EXPLICIT_MODULES = NO;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
@@ -909,7 +821,6 @@
 				PRODUCT_NAME = SpaceBadgerMobile;
 				REACT_NATIVE_PATH = "${PODS_ROOT}/../../node_modules/react-native";
 				SB_ALLOW_CLEARTEXT = NO;
-				SF_SIBLING_URL_SCHEME = spacebadger;
 				SWIFT_ENABLE_EXPLICIT_MODULES = NO;
 				SWIFT_VERSION = 5.0;
 				VERSIONING_SYSTEM = "apple-generic";
@@ -1123,38 +1034,6 @@
 			};
 			name = Release;
 		};
-		8F3FA5CC7C92BD781BF0285D /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
-				PRODUCT_BUNDLE_IDENTIFIER = com.spacebadger.mobile.librarytests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = iphoneos;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator appletvos appletvsimulator";
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2,3";
-				TVOS_DEPLOYMENT_TARGET = 15.1;
-			};
-			name = Debug;
-		};
-		CDD325FD760DD1109666BC98 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
-				PRODUCT_BUNDLE_IDENTIFIER = com.spacebadger.mobile.librarytests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = iphoneos;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator appletvos appletvsimulator";
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2,3";
-				TVOS_DEPLOYMENT_TARGET = 15.1;
-			};
-			name = Release;
-		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -1172,15 +1051,6 @@
 			buildConfigurations = (
 				13B07F941A680F5B00A75B9A /* Debug */,
 				13B07F951A680F5B00A75B9A /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		59CD5BB78BE347BE85DC1ED6 /* Build configuration list for PBXNativeTarget "SpaceBadgerLibraryTests" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				8F3FA5CC7C92BD781BF0285D /* Debug */,
-				CDD325FD760DD1109666BC98 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

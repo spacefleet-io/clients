@@ -27,8 +27,7 @@ import { isLibraryVersionPending } from "@/lib/runtimeIngestJobs";
 import { formatUploadSpeedLabel } from "@/lib/uploadSpeed";
 import { pageLibraryContent } from "@/lib/dashboardState";
 import { Button, RenderBoundary } from "@space/ui";
-import { BadgerLibraryControls, libraryFacetSections, BadgerPosterCard, BadgerPosterGrid } from "@space/ui/badger";
-import { LibraryRow, LibrarySegmented } from "@space/ui/library-row";
+import { BadgerLibraryControls, BadgerLibraryRow, libraryFacetSections, BadgerPosterCard, BadgerPosterGrid, BadgerSearchField, BadgerSegmented } from "@space/ui/badger";
 import { notifyWarning } from "@/lib/notify";
 import { useLoadingModal } from "@/components/LoadingModalProvider";
 import { LibraryLoading } from "@/components/LoadingScreen";
@@ -42,7 +41,7 @@ import {
   type LibraryFacetValues,
 } from "@space/shared/libraryFacets";
 import { getProgressBand, getVisibleProgressPct } from "@space/shared/progressBand";
-import { Check, Film, Heart, LayoutGrid, List, ListPlus, Loader2, PlusIcon, Rows3, Trash2, Tv } from "lucide-react";
+import { Check, Film, Heart, LayoutGrid, List, ListPlus, Loader2, PlusIcon, Rows3, Trash2, Tv, User } from "lucide-react";
 import MediaImage from "@/components/MediaImage";
 import OfflineBadge from "@/components/OfflineBadge";
 import PlayPosterOverlay from "@/components/PlayPosterOverlay";
@@ -55,6 +54,7 @@ import {
   LIBRARY_SORT_KEYS,
   LIBRARY_VIEW_MODES,
   filterLibraryItems,
+  libraryTitleMatches,
   sortLibraryItems,
   type LibraryTabPrefs,
   type LibraryViewMode,
@@ -100,6 +100,7 @@ export default function Library() {
   // Shared hover-Play plumbing (same as Home / Playlists poster grids).
   const { handlePlayMedia, pendingPlayId, playPending, playSpinnerVisible, playbackMount } =
     useInlinePlayback();
+  const [query, setQuery] = useState("");
   const [tab, setTab] = useState<Tab>("movie");
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedId = searchParams.get("media");
@@ -208,6 +209,10 @@ export default function Library() {
     if (slug === "favorites") return t("playlists.systemFavorites");
     return name;
   };
+
+  const q = query.trim().toLowerCase();
+  const activeFilterCount = selectedGenres.length + selectedActors.length;
+  const matchesQuery = (title: string) => libraryTitleMatches({ title }, q);
 
   const dedupedMedia = useMemo(() => dedupeMediaByIdentity(media), [media]);
   const deferredMedia = useDeferredValue(dedupedMedia);
@@ -334,15 +339,31 @@ export default function Library() {
     setSelectedActors((prev) => prev.filter((value) => allowed.has(value)));
   }, [actorOptions]);
 
-  // UX-LIB-01: the Filter panel's chips are plain words, as on the web and in Parrot.
-  const genreSelectOptions = useMemo(() => genreOptions.map((genre) => ({ value: genre.key, label: genre.name })), [genreOptions]);
+  const genreSelectOptions = useMemo(
+    () =>
+      genreOptions.map((genre) => ({
+        value: genre.key,
+        label: genre.name,
+        icon: <genre.Icon className="h-4 w-4 text-primary" />,
+      })),
+    [genreOptions]
+  );
+
+  const actorSelectOptions = useMemo(
+    () =>
+      actorOptions.map((actor) => ({
+        ...actor,
+        icon: <User className="h-4 w-4 text-primary" />,
+      })),
+    [actorOptions]
+  );
 
   const visibleMovies = useMemo(() => {
     if (tab !== "movie") return [];
     return sortLibraryItems(
       filterLibraryItems({
         items: movies,
-        query: "",
+        query: q,
         selectedGenres,
         selectedActors,
         castLookup,
@@ -351,13 +372,13 @@ export default function Library() {
       sortBy,
       sortDirection
     );
-  }, [movies, selectedGenres, selectedActors, sortBy, sortDirection, castLookup, selectedFacets, facetLookup, tab]);
+  }, [movies, q, selectedGenres, selectedActors, sortBy, sortDirection, castLookup, selectedFacets, facetLookup, tab]);
   const visibleTv = useMemo(() => {
     if (tab !== "tv") return [];
     return sortLibraryItems(
       filterLibraryItems({
         items: tv,
-        query: "",
+        query: q,
         selectedGenres,
         selectedActors,
         castLookup,
@@ -366,19 +387,7 @@ export default function Library() {
       sortBy,
       sortDirection
     );
-  }, [tv, selectedGenres, selectedActors, sortBy, sortDirection, castLookup, selectedFacets, facetLookup, tab]);
-  // UX-LIB-01 (Chris 2026-11-20): the row's quiet counts after the switch, as in Parrot: "24 movies · 12 shows", and
-  // "6 of 24 movies" for the open tab while the filters hide some.
-  const libraryStats = useMemo(() => {
-    if (tab !== "movie" && tab !== "tv") return [];
-    const total = tab === "movie" ? movies.length : tv.length;
-    const shown = tab === "movie" ? visibleMovies.length : visibleTv.length;
-    if (shown < total) return [{ n: shown, text: t("library.stats.shownOf", { shown, total: t(`library.stats.${tab}`, { count: total }) }) }];
-    return [
-      { n: movies.length, text: t("library.stats.movie", { count: movies.length }) },
-      { n: tv.length, text: t("library.stats.tv", { count: tv.length }) },
-    ];
-  }, [tab, movies.length, tv.length, visibleMovies.length, visibleTv.length, t]);
+  }, [tv, q, selectedGenres, selectedActors, sortBy, sortDirection, castLookup, selectedFacets, facetLookup, tab]);
 
   const PAGE_SIZE = 40;
 
@@ -427,19 +436,19 @@ export default function Library() {
     () => {
       if (tab !== "movie") return [];
       return ghostItems
-        .filter((item) => item.type === "movie")
+        .filter((item) => item.type === "movie" && matchesQuery(item.title))
         .map((item) => ({ ...item, id: `ghost-${item.id}`, __ghost: true as const }));
     },
-    [ghostItems, tab]
+    [ghostItems, q, tab]
   );
   const ghostTvItems = useMemo(
     () => {
       if (tab !== "tv") return [];
       return ghostItems
-        .filter((item) => item.type === "tv")
+        .filter((item) => item.type === "tv" && matchesQuery(item.title))
         .map((item) => ({ ...item, id: `ghost-${item.id}`, __ghost: true as const }));
     },
-    [ghostItems, tab]
+    [ghostItems, q, tab]
   );
   const movieGridItems = useMemo(
     () => mergeLibraryGridItems(ghostMovieItems, visibleMoviesSlice),
@@ -933,13 +942,9 @@ export default function Library() {
           />
         ) : null}
 
-        <LibraryRow
-          pinTop={64}
-          className="-mx-10 px-10"
-          logTag="badger-library"
-          counts={libraryStats}
-          switcher={
-            <LibrarySegmented<Tab>
+        <BadgerLibraryRow
+          toggle={
+            <BadgerSegmented<Tab>
               ariaLabel={t("nav.library")}
               value={tab}
               onChange={handleTabChange}
@@ -948,6 +953,11 @@ export default function Library() {
                 { id: "tv", label: t("library.tabs.tv"), icon: <Tv className="h-3.5 w-3.5" />, testId: "library-tab-tv" },
               ]}
             />
+          }
+          search={
+            tab === "movie" || tab === "tv" ? (
+              <BadgerSearchField value={query} onChange={setQuery} placeholder={t("library.searchPlaceholder")} />
+            ) : null
           }
           trailing={
             tab === "movie" || tab === "tv" ? (
@@ -967,19 +977,20 @@ export default function Library() {
                     close: t("common.close"),
                     genres: {
                       title: t("library.filters.genres.title"),
+                      placeholder: t("library.filters.genres.placeholder"),
                       search: t("library.filters.genres.search"),
                       empty: t("library.filters.genres.empty"),
                     },
                     actors: {
                       title: t("library.filters.actors.title"),
+                      placeholder: t("library.filters.actors.placeholder"),
                       search: t("library.filters.actors.search"),
                       empty: t("library.filters.actors.empty"),
                     },
                     nextView: (view) => t("library.view.next", { view }),
-                    moreChoices: (count) => t("library.filters.more", { count }),
                   }}
                   genreOptions={genreSelectOptions}
-                  actorOptions={actorOptions}
+                  actorOptions={actorSelectOptions}
                   genres={selectedGenres}
                   actors={selectedActors}
                   facetSections={facetSections}

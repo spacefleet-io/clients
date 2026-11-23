@@ -45,10 +45,8 @@ export default function UpdateAvailableModal({
 }: UpdateAvailableModalProps) {
   const { t } = useTranslation();
   const dismissible = typeof onDismiss === "function";
-  // A copy from SpaceFleet's .deb/.rpm/.pacman packages installs through the package manager (REL-UPD-07): its
-  // `installing`/`installed` read like the download's progress and finish, and "Restart now" relaunches it.
-  const downloading = state.phase === "downloading" || state.phase === "installing";
-  const downloaded = state.phase === "downloaded" || state.phase === "installed";
+  const downloading = state.phase === "downloading";
+  const downloaded = state.phase === "downloaded";
   const failed = state.phase === "error";
 
   const body = downloaded

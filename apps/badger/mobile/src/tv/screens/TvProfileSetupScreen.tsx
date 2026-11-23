@@ -16,11 +16,11 @@ import {
 import { profileAvatarIdOf, type ProfileAvatarId } from "@space/shared/profileAvatars";
 import { ProfileActionError, profileErrorKey } from "@space/shared/profileStore";
 import type { ApiProfile } from "@space/shared/profiles";
-import { TvAvatarGrid } from "@space/mobile-shell/tv/TvAvatarGrid";
-import { TvFocusable } from "@space/mobile-shell/tv/TvFocusable";
-import { useTvScale, useTvStyles } from "@space/mobile-shell/tv/tvScale";
-import { focusDestination, type TvViewInstance } from "@space/mobile-shell/tv/tvViewInstance";
-import { useTvMenuKeyHold } from "@space/mobile-shell/tv/useTvMenuKey";
+import { TvAvatarGrid } from "../components/TvAvatarGrid";
+import { TvFocusable } from "../components/TvFocusable";
+import { useTvScale, useTvStyles } from "../lib/tvScale";
+import { focusDestination, type TvViewInstance } from "../lib/tvViewInstance";
+import { useTvMenuKeyHold } from "../lib/useTvMenuKey";
 import { markTvProfileSetupAnswered } from "../lib/tvSetupStore";
 import { TV_COLOR, TV_FONT, TV_RADII } from "../ui/tokens";
 

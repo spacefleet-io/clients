@@ -3,29 +3,34 @@ import { Image, StyleSheet, TVFocusGuideView, View } from "react-native";
 import { Info, Play, RotateCcw } from "lucide-react-native";
 import { SkyCover } from "@space/mobile-shell/components";
 import { useTranslation } from "@space/mobile-shell/i18n";
-import { formatClock } from "@space/shared/format";
 import type { MediaRow } from "@space/shared/libraryTypes";
 import { unitDurationSeconds } from "../../lib/phoneHome";
 import { useMediaImage } from "../../lib/useMediaImage";
 import { MediaArtwork } from "../../components/MediaArtwork";
 import { useLibraryActions } from "../../store/library";
 import { minutesLeft, runtimeParts } from "../lib/detailsMedia";
-import type { TvViewInstance } from "@space/mobile-shell/tv/tvViewInstance";
+import type { TvViewInstance } from "../lib/tvViewInstance";
 import { useFocusAfterScreenAppears } from "../lib/useFocusAfterScreenAppears";
-import { useTvStyles } from "@space/mobile-shell/tv/tvScale";
-import { TvPillButton } from "@space/mobile-shell/tv/TvPillButton";
-import { TvBody, TvEyebrow, TvTitle } from "@space/mobile-shell/tv/TvText";
+import { useTvStyles } from "../lib/tvScale";
+import { TvPillButton } from "../ui/TvPillButton";
+import { TvBody, TvEyebrow, TvTitle } from "../ui/TvText";
 import { TV_COLOR, TV_SHADOW, TV_SPACE, tvCardStyle } from "../ui/tokens";
 
 export type TvHeroAction = "resume" | "startOver" | "details";
 
 type Translate = (key: string, options?: Record<string, unknown>) => string;
 
+const pad2 = (value: number) => String(value).padStart(2, "0");
+
 /** The point a film resumes at, as a clock: "41:12" under an hour, "1:02:05" past it; null when the length is unknown. */
 export const resumeClock = (progressPct: number, durationSeconds: number | null): string | null => {
   if (durationSeconds === null || durationSeconds <= 0) return null;
   const pct = Math.max(0, Math.min(100, progressPct));
-  return formatClock(Math.floor((durationSeconds * pct) / 100));
+  const total = Math.floor((durationSeconds * pct) / 100);
+  const hours = Math.floor(total / 3600);
+  const minutes = Math.floor((total % 3600) / 60);
+  const seconds = total % 60;
+  return hours > 0 ? `${hours}:${pad2(minutes)}:${pad2(seconds)}` : `${minutes}:${pad2(seconds)}`;
 };
 
 /**
@@ -60,11 +65,8 @@ export const heroText = (
 /**
  * Home's Continue watching card (UX-TV-05): the last title started, its poster's colours glowing softly behind the card,
  * then the amber eyebrow, the title, "year · length · N min left", the amber bar and Resume (the first focus, named after
- * the point it resumes at), Start over and Details. The whole card sits in a focus guide with `autoFocus`
- * (TV-HOME-HERO-FOCUS-002): tvOS only moves the focus to what lies in the pressed direction, and the buttons start right
- * of the card's poster, so a guide around the buttons alone left the first poster of the row below with nothing above
- * it and UP trapped there. Over the card's full width, UP from any card of the row lands back on its last focused
- * button (Resume at first). On tvOS, UIKit's own focus update when Home finishes appearing lands on the top tabs, so
+ * the point it resumes at), Start over and Details. The buttons sit in a full-width guide so UP from any card of the row
+ * below lands back on them. On tvOS, UIKit's own focus update when Home finishes appearing lands on the top tabs, so
  * Resume takes the focus back then, like the first poster card does without a hero (TV-HOME-HERO-FOCUS-001).
  */
 export const TvContinueHero = ({ item, onAction }: { item: MediaRow; onAction: (action: TvHeroAction, item: MediaRow) => void }) => {
@@ -100,46 +102,44 @@ export const TvContinueHero = ({ item, onAction }: { item: MediaRow; onAction: (
   };
 
   return (
-    <TVFocusGuideView autoFocus testID="tv-home-hero-focus-guide">
-      <SkyCover style={poster ? [styles.hero, styles.heroUnderGlow] : styles.hero} testID="tv-home-hero">
-        {poster ? (
-          <>
-            <Image source={{ uri: poster }} style={styles.glow} blurRadius={40} resizeMode="cover" accessible={false} testID="tv-home-hero-glow" />
-            <View style={styles.scrim} pointerEvents="none" testID="tv-home-hero-scrim" />
-          </>
-        ) : null}
-        <View style={styles.poster}>
-          <MediaArtwork path={item.posterPath ?? null} kind="poster" style={styles.posterImage} label={item.title} />
+    <SkyCover style={poster ? [styles.hero, styles.heroUnderGlow] : styles.hero} testID="tv-home-hero">
+      {poster ? (
+        <>
+          <Image source={{ uri: poster }} style={styles.glow} blurRadius={40} resizeMode="cover" accessible={false} testID="tv-home-hero-glow" />
+          <View style={styles.scrim} pointerEvents="none" testID="tv-home-hero-scrim" />
+        </>
+      ) : null}
+      <View style={styles.poster}>
+        <MediaArtwork path={item.posterPath ?? null} kind="poster" style={styles.posterImage} label={item.title} />
+      </View>
+      <View style={styles.text}>
+        <TvEyebrow>{t("home.sections.continueWatching")}</TvEyebrow>
+        <TvTitle size="hero" style={styles.title} numberOfLines={2}>
+          {item.title}
+        </TvTitle>
+        <TvBody muted style={styles.meta} testID="tv-home-hero-meta">
+          {meta}
+        </TvBody>
+        <View style={styles.track} accessibilityLabel={t("tvShell.home.percentWatched", { percent })}>
+          <View style={[styles.fill, { width: `${percent}%` }]} />
         </View>
-        <View style={styles.text}>
-          <TvEyebrow>{t("home.sections.continueWatching")}</TvEyebrow>
-          <TvTitle size="hero" style={styles.title} numberOfLines={2}>
-            {item.title}
-          </TvTitle>
-          <TvBody muted style={styles.meta} testID="tv-home-hero-meta">
-            {meta}
-          </TvBody>
-          <View style={styles.track} accessibilityLabel={t("tvShell.home.percentWatched", { percent })}>
-            <View style={[styles.fill, { width: `${percent}%` }]} />
-          </View>
-          <View style={styles.actions}>
-            <TvPillButton
-              ref={resumeRef}
-              variant="primary"
-              icon={Play}
-              filledIcon
-              label={resume}
-              hasTVPreferredFocus
-              onBlur={onResumeBlur}
-              onPress={press("resume")}
-              testID="tv-home-resume"
-            />
-            <TvPillButton icon={RotateCcw} label={t("tvShell.home.startOver")} onPress={press("startOver")} testID="tv-home-startover" />
-            <TvPillButton icon={Info} label={t("tvShell.home.details")} onPress={press("details")} testID="tv-home-details" />
-          </View>
-        </View>
-      </SkyCover>
-    </TVFocusGuideView>
+        <TVFocusGuideView autoFocus style={styles.actions}>
+          <TvPillButton
+            ref={resumeRef}
+            variant="primary"
+            icon={Play}
+            filledIcon
+            label={resume}
+            hasTVPreferredFocus
+            onBlur={onResumeBlur}
+            onPress={press("resume")}
+            testID="tv-home-resume"
+          />
+          <TvPillButton icon={RotateCcw} label={t("tvShell.home.startOver")} onPress={press("startOver")} testID="tv-home-startover" />
+          <TvPillButton icon={Info} label={t("tvShell.home.details")} onPress={press("details")} testID="tv-home-details" />
+        </TVFocusGuideView>
+      </View>
+    </SkyCover>
   );
 };
 

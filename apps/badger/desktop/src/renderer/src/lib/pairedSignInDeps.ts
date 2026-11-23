@@ -1,5 +1,5 @@
 import type { User } from "@space/shared/api";
-import { getLibraryMetaForKeyStep } from "@/api";
+import { getLibraryMeta } from "@/api";
 import { decryptBase64ToBytes } from "@/lib/crypto";
 import { LibraryDb } from "@/lib/libraryDb";
 import { isDecryptFailureMessage } from "@/lib/libraryContext";
@@ -8,7 +8,7 @@ import type { PairedKeyCheckDeps, PairedSignInDeps } from "./pairedSignIn";
 
 /** Production wiring for `verifyPairedKey`: the checks the manual key entry screen runs. */
 export const pairedKeyCheckDeps: PairedKeyCheckDeps = {
-  getLibraryMeta: (token) => getLibraryMetaForKeyStep(token),
+  getLibraryMeta,
   decryptProbe: decryptBase64ToBytes,
   openLibraryDb: async (token, key, userId) => {
     (await LibraryDb.open(token, key, userId)).close();

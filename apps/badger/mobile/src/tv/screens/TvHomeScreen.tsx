@@ -15,8 +15,8 @@ import { TvContinueHero, type TvHeroAction } from "../components/TvContinueHero"
 import { TvEmptyLibrary } from "../components/TvEmptyLibrary";
 import { TvRail } from "../components/TvRail";
 import { continuePlayerParams } from "../lib/continueStart";
-import { TV_SAFE_MARGIN_Y, TV_SCREEN_X, tvHomeCardWidth } from "@space/mobile-shell/tv/layout";
-import { useTvScale, useTvStyles } from "@space/mobile-shell/tv/tvScale";
+import { TV_SAFE_MARGIN_Y, TV_SCREEN_X, tvHomeCardWidth } from "../lib/layout";
+import { useTvScale, useTvStyles } from "../lib/tvScale";
 import { TV_COLOR } from "../ui/tokens";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;

@@ -13,8 +13,4 @@ export type RootStack = {
   PairDevice: { code?: string } | undefined;
   /** "Who's listening?" from Settings: `pick` switches, `manage` adds, edits and deletes (UX-PROF-01, ACCT-PROF-05). */
   Profiles: { mode: "pick" | "manage" };
-  /** Settings → Delete account (ACCT-DEL-01/02/03). */
-  DeleteAccount: undefined;
-  /** Settings → Manage offline content (OFFL-MANAGE-01). */
-  OfflineContent: undefined;
 };

@@ -2,17 +2,16 @@
 /**
  * @test-id PARROT-DESKTOP-EXTRAS-001
  * @level integration (real Library screen, shared sort button / "…" menu / "Also by" row, real translator; `window.parrot` mocked)
- * @why The approved demo (PAR-LOOK-01) shows three library pieces the desktop lacked: the Sort button at the end of the
- *   library's row, whose panel starts on "Recently added" (PAR-LIB-06), the album page's "…" after Play and Shuffle, and the "Also by <artist>" row of the
+ * @why The approved demo (PAR-LOOK-01) shows three library pieces the desktop lacked: the "Recently added" sort button
+ *   beside the library's search, the album page's "…" after Play and Shuffle, and the "Also by <artist>" row of the
  *   artist's other albums under the songs. The "…" holds the album's actions (Play next, Add to queue, Go to artist,
- *   Add to playlist, Edit details (whose panel holds the lookups), Save offline, Delete), each wired to the
+ *   Add to playlist, Edit details (whose panel holds the lookups), Keep on this computer, Delete), each wired to the
  *   app's existing handler.
  */
 import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { streamBridgeStub } from "./streamBridge";
-import { exportBridgeStub } from "./exportBridge";
 import type { ParrotLibrary, ParrotState } from "../src/shared/ipc";
 import Library from "../src/renderer/src/Library";
 import { translator } from "../src/renderer/src/i18n";
@@ -112,7 +111,6 @@ describe("Parrot desktop: the demo's sort button, album menu and Also by row", (
       configurable: true,
       value: {
         ...streamBridgeStub(),
-        ...exportBridgeStub(),
         getLibrary: vi.fn(async () => ({ ok: true, library })),
         getImportStatus: vi.fn(async () => ({ running: false, phase: "idle", done: 0, total: 0, imported: 0, skipped: 0, failed: 0 })),
         getImportScan: vi.fn(async () => null),
@@ -151,50 +149,36 @@ describe("Parrot desktop: the demo's sort button, album menu and Also by row", (
   });
 
   // @req PAR-LOOK-01[parrot]
-  // @req PAR-LIB-06[parrot]
-  it("sorts the album grid by Recently added from the Sort panel at the row's end, keeps another pick for next time, and Songs keeps its own", async () => {
+  it("sorts the album grid by Recently added beside the search, and keeps another pick for next time", async () => {
     await mount();
     await click(q("library-tab")[0]);
-    const button = q("library-sort-button")[0];
-    /** The Sort panel's choices, and the one marked picked. */
-    const panel = () => {
-      const pills = [...(q("library-sort-modal")[0]?.querySelectorAll<HTMLElement>("[aria-pressed]") ?? [])];
-      return { items: pills.map((pill) => pill.textContent), picked: pills.find((pill) => pill.getAttribute("aria-pressed") === "true")?.textContent };
-    };
+    const button = q("library-sort")[0];
     console.log(SUITE, "sort button", button?.textContent, "grid", titles());
-    expect(button?.textContent).toBe("Sort");
-    // At the end of the row, after the counts, as in the draft.
-    expect(button?.closest('[data-testid="library-row-actions"]')?.lastElementChild?.contains(button)).toBe(true);
-    expect(q("library-search")).toHaveLength(0);
+    expect(button?.textContent).toBe("Recently added");
+    // Beside the search field, as in the demo.
+    expect(button?.parentElement?.parentElement?.querySelector('[data-testid="library-search"]')).toBeTruthy();
     expect(titles()).toEqual(["Solo", "Meadow", "Zephyr", "Anchor"]);
 
     await click(button);
-    console.log(SUITE, "sort panel", panel());
-    expect(panel()).toEqual({ items: ["Recently added", "Recently played", "Title (A–Z)", "Artist (A–Z)", "Release year (newest first)"], picked: "Recently added" });
+    const items = [...(q("library-sort-list")[0]?.querySelectorAll("[role=menuitem]") ?? [])].map((item) => item.textContent);
+    console.log(SUITE, "sort items", items);
+    expect(items).toEqual(["Recently added", "Title", "Artist"]);
     await click(q("library-sort-title")[0]);
-    console.log(SUITE, "by title", titles(), "stored", localStorage.getItem("parrot.libraryPrefs"));
+    console.log(SUITE, "by title", titles(), "stored", localStorage.getItem("parrot.albumSort"));
     expect(titles()).toEqual(["Anchor", "Meadow", "Solo", "Zephyr"]);
-    expect(panel().picked).toBe("Title (A–Z)");
-    expect(JSON.parse(localStorage.getItem("parrot.libraryPrefs") ?? "{}").albums.sort).toBe("title");
-    await click(q("library-sort-done")[0]);
-    expect(q("library-sort-modal")).toHaveLength(0);
+    expect(q("library-sort")[0]?.textContent).toBe("Title");
+    expect(localStorage.getItem("parrot.albumSort")).toBe("title");
 
-    // Songs have their own orders, and picking one leaves the albums' as it was.
+    // Only the Albums list has an order to pick.
     await click(q("library-chip-songs")[0]);
-    await click(q("library-sort-button")[0]);
-    console.log(SUITE, "song sort panel", panel());
-    expect(panel()).toEqual({ items: ["Title (A–Z)", "Artist (A–Z)", "Album (A–Z)", "Release year (newest first)", "Longest first"], picked: "Title (A–Z)" });
-    await click(q("library-sort-duration")[0]);
-    expect(panel().picked).toBe("Longest first");
-    await click(q("library-sort-done")[0]);
+    expect(q("library-sort")).toHaveLength(0);
 
     act(() => root.unmount());
     container.remove();
     await mount();
     await click(q("library-tab")[0]);
-    await click(q("library-sort-button")[0]);
-    console.log(SUITE, "after restart", panel(), titles());
-    expect(panel().picked).toBe("Title (A–Z)");
+    console.log(SUITE, "after restart", q("library-sort")[0]?.textContent, titles());
+    expect(q("library-sort")[0]?.textContent).toBe("Title");
     expect(titles()).toEqual(["Anchor", "Meadow", "Solo", "Zephyr"]);
   });
 
@@ -217,15 +201,14 @@ describe("Parrot desktop: the demo's sort button, album menu and Also by row", (
     const labels = [...menuItems()].map((item) => item.textContent);
     console.log(SUITE, "album menu", labels);
     // The album card's list (PAR-CARD-01) without Play and Shuffle, its Edit details (PAR-META-18; the lookups live
-    // in the panel, PAR-META-20), then the page's own Save offline (its one offline action, OFFL-FILE-01) and Delete
-    // (PAR-LOOK-05); no "Download file" (Chris 2026-11-21: export is Settings' Download everything only).
+    // in the panel, PAR-META-20), then the page's own Keep and Delete (PAR-LOOK-05).
     expect(labels).toEqual([
       "Play next",
       "Add to queue",
       "Go to artist",
       "Add to playlist",
       "Edit details",
-      "Save offline",
+      "Keep on this computer",
       "Delete",
     ]);
 
