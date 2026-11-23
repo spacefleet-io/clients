@@ -3,7 +3,7 @@ import { AppState, type AppStateStatus } from "react-native";
 import type { MediaDetails, MediaRow, PlaylistRow } from "@space/shared/libraryTypes";
 import { ApiError, getApiBaseUrl, getSystemContract, getSystemContractIssue } from "@space/shared/api";
 import { libraryReadOpStreamVersion, readLibraryMeta } from "../lib/library/libraryReads";
-import type { LibraryMeta, SystemContract } from "@space/shared/api";
+import type { LibraryMeta, RotationOwnLibrary, SystemContract } from "@space/shared/api";
 import type { TrackPrefs, TrackPrefsPatch } from "@space/shared/trackPrefs";
 import { LibraryFormatTooNewError } from "@space/library-db-definition";
 import EventSource from "react-native-sse";
@@ -173,7 +173,8 @@ type LibraryActionsValue = {
   ) => Promise<void>;
   acknowledgeKey: () => Promise<void>;
   clearLibrary: () => Promise<void>;
-  exportBytes: () => Promise<Uint8Array | null>;
+  /** PRIV-KEY-13: this library sealed under the new key for a rotation, or null when none is open. */
+  sealForRotation: (newKeyBase64: string) => Promise<RotationOwnLibrary | null>;
   /** ACCT-PROF-02: the data moves of a profile deletion (`profileStore.deleteProfile`). */
   profileMoves: ProfileLibraryMoves;
 };
@@ -1697,10 +1698,13 @@ export const LibraryProvider = ({ children }: { children: React.ReactNode }) => 
     setDatasetStatus({ core: false, metadata: false, playback: false });
   }, [db]);
 
-  const exportBytes = useCallback(async () => {
-    if (!db) return null;
-    return await db.exportBytes();
-  }, [db]);
+  const sealForRotation = useCallback(
+    async (newKeyBase64: string) => {
+      if (!db) return null;
+      return await db.sealForRotation(newKeyBase64);
+    },
+    [db]
+  );
 
   // ACCT-PROF-02 data moves, run by the device that deletes a profile (the library is end-to-end encrypted, so no
   // server can do it). Each pulls the latest ops first, as deleteMedia does, so nothing written elsewhere is missed.
@@ -1832,7 +1836,7 @@ export const LibraryProvider = ({ children }: { children: React.ReactNode }) => 
       setPlaybackProgress,
       acknowledgeKey,
       clearLibrary,
-      exportBytes,
+      sealForRotation,
       profileMoves,
     }),
     [
@@ -1860,7 +1864,7 @@ export const LibraryProvider = ({ children }: { children: React.ReactNode }) => 
       setPlaybackProgress,
       acknowledgeKey,
       clearLibrary,
-      exportBytes,
+      sealForRotation,
       profileMoves,
     ],
   );

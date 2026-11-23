@@ -8,7 +8,7 @@
 import { join } from "node:path";
 
 import { linuxArtifactPatterns } from "../../../../packages/desktop-platform-linux/packaging/linux-packages.mjs";
-import { ELECTRON_LANGUAGES, LPROJ_EXTENSION, MAC_ELECTRON_LANGUAGES, PAK_EXTENSION } from "./packaged-locales-lib.mjs";
+import { ELECTRON_LANGUAGES, LPROJ_EXTENSION, MAC_ELECTRON_LANGUAGES, PAK_EXTENSION } from "../../../../packages/desktop-platform/packaging/packaged-locales-lib.mjs";
 
 /**
  * @typedef {{
@@ -37,11 +37,8 @@ const MAC_APP_BUNDLE = "Badger.app";
 /** Relative to <resources>/ (Contents/Resources): the mpv helper app the afterPack hook moves to Contents/Helpers. */
 export const MAC_PLAYER_HELPER = "../Helpers/Badger Player.app";
 
-/**
- * PLAT-DESK-02: the oldest macOS Badger runs on (Chris 2026-10-16). electron-builder writes it
- * as LSMinimumSystemVersion; the afterPack hook raises the app executable's LC_BUILD_VERSION minos to it.
- */
-export const MAC_MINIMUM_SYSTEM_VERSION = "14.0";
+/** PLAT-DESK-02: the oldest macOS the desktop apps run on (shared with Parrot). */
+export { MAC_MINIMUM_SYSTEM_VERSION } from "../../../../packages/desktop-platform-macos/packaging/mac-after-pack-lib.mjs";
 
 /**
  * @param {"arm64" | "x64"} arch
@@ -120,7 +117,7 @@ export const PACKAGE_TARGETS = {
       "app-update.yml",
     ],
     // Locale files electron-builder keeps (electronLanguages) and package.mjs re-checks,
-    // under <unpacked>/<subpath>; see scripts/packaged-locales-lib.mjs.
+    // under <unpacked>/<subpath>; see packages/desktop-platform/packaging/packaged-locales-lib.mjs.
     locales: { subpath: "locales", languages: ELECTRON_LANGUAGES, extension: PAK_EXTENSION },
     // Files electron-builder must produce for this target: one per Linux format (PLAT-DESK-01,
     // packages/desktop-platform-linux/packaging/linux-packages.mjs) and the update feed listing all of them.

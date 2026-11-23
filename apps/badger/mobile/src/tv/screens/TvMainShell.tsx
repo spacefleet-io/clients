@@ -5,7 +5,7 @@ import { SkyCover, SkyRegion } from "@space/mobile-shell/components";
 import { useTranslation } from "@space/mobile-shell/i18n";
 import { useNoticeQueue } from "@space/mobile-shell/notice-queue";
 import { founderNoticeText, founderWatch, useFounderWatch } from "@space/mobile-shell/founder";
-import { UnpaidAccessBanner } from "../../components/UnpaidAccessBanner";
+import { UnpaidAccessBanner } from "@space/mobile-shell/unpaid-access-banner";
 import { checkForNewDevices, markDeviceSeen } from "../../lib/pairing/deviceWatch";
 import {
   newDeviceKey,
@@ -44,7 +44,7 @@ export const TvMainShell = () => {
   const { media } = useLibraryData();
   const hasLibraryMedia = media.length > 0;
   const isFocused = useIsFocused();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const [activeTab, setActiveTab] = useState<TvSectionId>("home");
   // UX-LIBTAB-01: an empty library cannot be opened, nor its playlists, as on the phone; a request for either (a title
   // page's tab) lands on Home.
@@ -129,7 +129,7 @@ export const TvMainShell = () => {
         {/* ACCT-UNPAID-03: while the account is unpaid, every main screen says playback is stopped and when the files
             go. It only informs and is not focusable: nothing on the TV links to paying (ACCT-PAY-02). */}
         <View style={styles.unpaid}>
-          <UnpaidAccessBanner scale={scale} />
+          <UnpaidAccessBanner access={user?.access} scale={scale} />
         </View>
         <SkyRegion style={styles.content}>
           {activeTab === "home" ? (

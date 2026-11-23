@@ -17,6 +17,7 @@ import type { createUserStorageTunnelClient, StorageTunnelPurpose } from "@space
 import type { StorageObjectCounting } from "@space/shared/storageCounting";
 import { resolveInitialApiBaseUrl } from "./lib/apiBaseUrl";
 import { metadataClient } from "./lib/metadataTickets";
+import { rendererLogger } from "./logger";
 
 setApiBaseUrl(resolveInitialApiBaseUrl(import.meta.env));
 // `<app>-<deviceType>` as Parrot's `parrot-desktop`: only such a session may hand the library key to the sister app on
@@ -26,7 +27,7 @@ setApiClientType(DESKTOP_CLIENT_TYPE);
 // REL-CD-29: the window states the same build main does (read once by the preload).
 setClientIdentity(typeof window === "undefined" ? null : (window.sf?.clientIdentity ?? null));
 // REL-LOG-31: the window's own failed API calls (sign-in, account pages) get a console line with the server's request id.
-logFailedApiCalls((fields) => console.warn("[api] call failed", JSON.stringify(fields)));
+logFailedApiCalls((fields) => rendererLogger.child({ scope: "api" }).warn({ ...fields }, "[api] call failed"));
 // LIB-FMT-13: a 426 for the account's switch to an op stream this build reads is not "please update".
 setLibraryReadOpStreamVersion(READ_OP_STREAM_VERSION); // op-stream: read
 // REL-CD-29 / LIB-FMT-13: a "please update" refusal the runtime's own API call got (library sync, uploads) is raised

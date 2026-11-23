@@ -251,6 +251,7 @@ export default function Login() {
   return (
     <DesktopStartupPage nebula="badger"
       topNav={<PublicTopNav />}
+      mainClassName="py-12"
       controls={
         <DesktopStartupControls>
           <SetupLanguageMenu />

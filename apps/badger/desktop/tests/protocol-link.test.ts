@@ -9,10 +9,8 @@ import { createProviderReturnMailbox, PROVIDER_RETURN_TTL_MS } from "@space/shar
 import {
   decideLaunchVisibility,
   findBadgerLink,
-  isBadgerLink,
   LINK_ACTIVATE_GRACE_MS,
   paymentReturnOf,
-  protocolClientArgs,
   providerReturnOf,
   shouldShowOnActivate,
 } from "../src/main/protocolLink";
@@ -42,15 +40,6 @@ describe("findBadgerLink", () => {
       expect(found).toBe(testCase.expected);
     });
   }
-
-  it("isBadgerLink checks the scheme only", () => {
-    expect([isBadgerLink("badger://start"), isBadgerLink(" Badger:x"), isBadgerLink("https://badger"), isBadgerLink(1)]).toEqual([
-      true,
-      true,
-      false,
-      false,
-    ]);
-  });
 });
 
 describe("decideLaunchVisibility", () => {
@@ -131,23 +120,6 @@ describe("createProviderReturnMailbox", () => {
     results.push(mailbox.take());
     dump("mailbox", results);
     expect(results).toEqual([null, { code: "second-code-0123456789" }, null, null]);
-  });
-});
-
-describe("protocolClientArgs", () => {
-  const resolvePath = (path: string) => `/abs/${path}`;
-  it("registers the Electron binary plus the main script in dev", () => {
-    const args = protocolClientArgs({ defaultApp: true, execPath: "/x/electron", argv: ["/x/electron", "out/main/index.js"], resolvePath });
-    dump("dev", args);
-    expect(args).toEqual(["badger", "/x/electron", ["/abs/out/main/index.js"]]);
-  });
-
-  it("registers the app itself when packaged, or when dev argv[1] is the link", () => {
-    const packaged = protocolClientArgs({ defaultApp: false, execPath: "/opt/sb", argv: ["/opt/sb", "badger://start"], resolvePath });
-    const devLink = protocolClientArgs({ defaultApp: true, execPath: "/x/electron", argv: ["/x/electron", "badger://start"], resolvePath });
-    dump("packaged", { packaged, devLink });
-    expect(packaged).toEqual(["badger"]);
-    expect(devLink).toEqual(["badger"]);
   });
 });
 

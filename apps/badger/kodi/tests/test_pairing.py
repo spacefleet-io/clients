@@ -2,6 +2,8 @@
 
 @req ACCT-PAIR-01  device shows a code, polls, receives token + sealed key, verifies the keyProbe before storing
 @req PRIV-KEY-05   X25519 + HKDF-SHA256 + AES-256-GCM sealed key identical to the TS implementation
+@req PRIV-PAIR-01  sf-pair-v2: commitment in the request, `#c=` in the QR, reveal on the phone's nonce, same six digits
+@req PRIV-PAIR-04  the add-on makes its requests with the check (unfrozen for this change only)
 """
 import base64
 import json
@@ -164,6 +166,134 @@ class SessionFlow(unittest.TestCase):
         self.assertEqual(s.poll()["status"], "expired")
         s.api = Down()
         self.assertEqual(s.poll()["status"], "pending")
+
+
+V2_PATH = os.path.join(HERE, "..", "..", "..", "..", "packages", "pairing-crypto", "tests", "vectors-v2.json")
+with open(V2_PATH) as fh:
+    V2 = json.load(fh)
+
+
+class CheckCodeVector(unittest.TestCase):
+    """@test-id KODI-PAIR-CHECK-001 @req PRIV-PAIR-01
+    @why Chris 2026-11-23 ("yes that'd be better"): Kodi must compute the very digits the phone shows, from the vector
+    the TS package is tested against (written with node:crypto)."""
+
+    def test_vector(self):
+        pk, nr, na = b64(V2["publicKey"]), b64(V2["requesterNonce"]), b64(V2["approverNonce"])
+        commitment = pairing.pairing_commitment(pk, nr)
+        print("[kodi-pair-check] commitment", base64.b64encode(commitment).decode())
+        self.assertEqual(base64.b64encode(commitment).decode(), V2["commitment"])
+        self.assertEqual(pairing.commitment_fingerprint(commitment), V2["fingerprint"])
+        self.assertEqual(pairing.pairing_check_code(pk, commitment, na, nr), V2["checkCode"])
+        self.assertEqual(pairing.format_check_code("067383"), "067 383")
+        self.assertEqual(pairing.with_commitment_fingerprint("https://spacefleet.io/pair/badger?code=X#c=evil", commitment),
+                         "https://spacefleet.io/pair/badger?code=X#c=" + V2["fingerprint"])
+
+
+class FakeV2Api(object):
+    """A protocol-2 API: answers `pending`, then pending with the phone's nonce, then (after the reveal) pending."""
+    base_url = "http://fake"
+
+    def __init__(self, reveal_fails=0):
+        self.requests = []
+        self.created = None
+        self.revealed = None
+        self.reveal_fails = reveal_fails
+        self.polls = 0
+
+    def request_json(self, method, path, body=None, expect=(200,), timeout=30):
+        self.requests.append((method, path, body))
+        if method == "POST" and path == "/pairing/requests":
+            self.created = body
+            return {"requestId": "req-1", "pollSecret": "s3cret", "shortCode": "ABCDEFGH",
+                    "qrPayload": "https://spacefleet.io/pair/badger?code=ABCDEFGH", "expiresAt": "2026-10-16T12:05:00.000Z"}
+        if method == "POST" and path == "/pairing/requests/req-1/reveal":
+            if self.reveal_fails:
+                self.reveal_fails -= 1
+                raise ApiError(503, "down")
+            pk, nr = b64(self.created["publicKey"]), b64(body["requesterNonce"])
+            if base64.b64encode(pairing.pairing_commitment(pk, nr)).decode() != self.created["commitment"]:
+                raise ApiError(400, "pairing_commitment_mismatch")
+            self.revealed = body["requesterNonce"]
+            return {"ok": True}
+        self.polls += 1
+        if self.polls == 1 or self.revealed:
+            return {"status": "pending"}
+        return {"status": "pending", "approverNonce": V2["approverNonce"]}
+
+
+class CheckFlow(unittest.TestCase):
+    """@test-id KODI-PAIR-CHECK-002 @req PRIV-PAIR-01 @req PRIV-PAIR-04
+    @why the add-on is a receiver: it must send a commitment, put its fingerprint in the QR, reveal its number only
+    once the phone connected, and show the digits the phone computes from the same values."""
+
+    def test_commit_reveal_and_code(self):
+        api = FakeV2Api()
+        session = pairing.PairingSession(api, "Living room Kodi", clock=lambda: 1792152000.0).start()
+        created = api.created
+        commitment = b64(created["commitment"])
+        self.assertEqual(commitment, pairing.pairing_commitment(session.public, session.requester_nonce))
+        self.assertTrue(session.qr_payload.endswith("#c=" + pairing.commitment_fingerprint(commitment)))
+        print("[kodi-pair-check] phase: before the phone connects")
+        self.assertEqual(session.poll(), {"status": "pending"})
+        self.assertIsNone(api.revealed)
+        print("[kodi-pair-check] phase: phone connected")
+        answer = session.poll()
+        expected = pairing.pairing_check_code(session.public, commitment, b64(V2["approverNonce"]), session.requester_nonce)
+        self.assertEqual(answer, {"status": "pending", "checkCode": expected})
+        self.assertEqual(b64(api.revealed), session.requester_nonce)
+        # the code stays on screen; no second reveal
+        self.assertEqual(session.poll(), {"status": "pending", "checkCode": expected})
+        self.assertEqual(sum(1 for r in api.requests if r[1].endswith("/reveal")), 1)
+
+    def test_failed_reveal_is_retried_on_the_next_poll(self):
+        api = FakeV2Api(reveal_fails=1)
+        session = pairing.PairingSession(api, "Kodi", clock=lambda: 1792152000.0).start()
+        session.poll()
+        self.assertEqual(session.poll(), {"status": "pending"})
+        self.assertEqual(session.poll()["checkCode"], session.check_code)
+        self.assertIsNotNone(session.check_code)
+
+    def test_malformed_nonce_is_ignored(self):
+        api = FakeV2Api()
+        session = pairing.PairingSession(api, "Kodi", clock=lambda: 1792152000.0).start()
+        api.polls = 1
+        original = api.request_json
+        api.request_json = lambda m, p, b=None, expect=(200,), timeout=30: (
+            {"status": "pending", "approverNonce": "short"} if m == "GET" else original(m, p, b, expect, timeout))
+        self.assertEqual(session.poll(), {"status": "pending"})
+        self.assertIsNone(api.revealed)
+
+    def test_failed_reveal_does_not_let_the_server_swap_the_nonce(self):
+        """Found by the sf-pair-v2 TLA+ model: a server that keeps the reveal but fails the answer, then shows another
+        phone nonce, must not get a code built from that nonce (it knows nR by then and could grind it)."""
+        other = base64.b64encode(b"\x07" * 32).decode()
+        api = FakeV2Api()
+        original = api.request_json
+        state = {"reveals": 0, "shown": V2["approverNonce"]}
+
+        def lying(method, path, body=None, expect=(200,), timeout=30):
+            if method == "POST" and path.endswith("/reveal"):
+                state["reveals"] += 1
+                original(method, path, body, expect, timeout)  # the server keeps nR
+                if state["reveals"] == 1:
+                    state["shown"] = other
+                    raise ApiError(500, "internal")
+                return {"ok": True}
+            if method == "GET":
+                return {"status": "pending", "approverNonce": state["shown"]}
+            return original(method, path, body, expect, timeout)
+
+        api.request_json = lying
+        session = pairing.PairingSession(api, "Kodi", clock=lambda: 1792152000.0).start()
+        commitment = b64(api.created["commitment"])
+        self.assertEqual(session.poll(), {"status": "pending"})
+        answer = session.poll()
+        first = pairing.pairing_check_code(session.public, commitment, b64(V2["approverNonce"]), session.requester_nonce)
+        swapped = pairing.pairing_check_code(session.public, commitment, b64(other), session.requester_nonce)
+        print("[kodi-pair-check] lying server", {"reveals": state["reveals"], "answer": answer, "first": first, "swapped": swapped})
+        self.assertEqual(answer, {"status": "pending", "checkCode": first})
+        self.assertNotEqual(answer["checkCode"], swapped)
 
 
 class QrPng(unittest.TestCase):

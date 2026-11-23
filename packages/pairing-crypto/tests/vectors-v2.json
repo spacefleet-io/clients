@@ -1,0 +1,9 @@
+{
+  "description": "Pairing check v2 test vector (sf-pair-v2 commitment + check code). Generated with node:crypto, independent of the TS package.",
+  "publicKey": "HJ/Yj0VgbZMqgMcYJK4VHRXXPnfeOOjgAIUuYU+ucBk=",
+  "requesterNonce": "ERERERERERERERERERERERERERERERERERERERERERE=",
+  "approverNonce": "IiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiI=",
+  "commitment": "BFJ2uwuk9Jkh2j6DQ/oNgiZRFt2hEBfAXnJxFzX2Urk=",
+  "fingerprint": "BFJ2uwuk9Jkh2j6DQ_oNgg",
+  "checkCode": "067383"
+}

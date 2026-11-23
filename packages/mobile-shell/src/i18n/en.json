@@ -808,6 +808,11 @@
       "scanInstead": "Scan the code instead"
     },
     "looking": "Looking up the code…",
+    "checking": "Waiting for the device…",
+    "check": {
+      "question": "Does {{name}} show this code?",
+      "hint": "Approve only if both screens show the same six digits. If they differ, deny."
+    },
     "confirm": {
       "asked": "{{type}} named \"{{name}}\" asked to join your account.",
       "unlockNotice": "You'll be asked to unlock your phone. Approving signs it in and gives it your media library key.",
@@ -843,7 +848,10 @@
       "bad_request": "That device sent something we can't use. Ask it for a new code.",
       "unknown": "Something went wrong and the device was not added. Try again.",
       "code_required": "Type the code to confirm it's you.",
-      "code_invalid": "That code is wrong or expired, so nothing was shared. Try again."
+      "code_invalid": "That code is wrong or expired, so nothing was shared. Try again.",
+      "update_required": "That device runs an older version. Update it, then try again.",
+      "stale_key": "This device doesn't have your account's current key, so it can't send it.",
+      "check_failed": "The codes could not be checked, so nothing was shared. Get a new code on the other device."
     },
     "unlock": {
       "title": "Unlock to add a device",
@@ -883,6 +891,10 @@
     "step2": "2. Go to Settings, then Pair a device.",
     "step3": "3. Scan this code, or type the code below.",
     "codeLabel": "Or type this code",
+    "check": {
+      "label": "Code to check",
+      "hint": "Compare it with your other device. Approve only if both show the same six digits."
+    },
     "expiresIn": "This code expires in {{time}}. A new one appears by itself.",
     "deviceName": "This phone shows up as \"{{name}}\".",
     "qrAccessibility": "QR code to pair this phone",
@@ -1031,7 +1043,11 @@
       "confirmRequired": "Confirm that you saved the new key.",
       "passwordRequired": "Password required.",
       "notReady": "Media library is not ready.",
-      "rotate": "Unable to rotate key. Check your password/code."
+      "rotate": "Unable to rotate key. Check your password/code.",
+      "notReencrypted": "Another app's library could not be moved to the new key. Nothing changed. Rotate from a device that holds the current key.",
+      "unreadable": "This phone's key can't open another app's library. Nothing changed. Rotate from a device that holds the current key.",
+      "notSnapshotted": "Another app's library is still saving. Nothing changed. Open that app, let it sync, then try again.",
+      "changed": "A library changed while rotating. Nothing changed. Try again."
     }
   },
   "libraryFormat": {

@@ -1,5 +1,25 @@
 export { base64ToBytes, bytesToBase64, bytesToBase64Url } from "./base64";
 export {
+  CHECK_CODE_DIGITS,
+  PAIRING_CHECK_TAG,
+  PAIRING_COMMIT_TAG,
+  PAIRING_FINGERPRINT_BYTES,
+  PAIRING_NONCE_BYTES,
+  PAIRING_PROTOCOL_V2,
+  PAIRING_V1_REQUESTS_ACCEPTED,
+  commitmentFingerprint,
+  commitmentOpens,
+  fingerprintFromLink,
+  fingerprintMatches,
+  formatCheckCode,
+  isPairingBlob32,
+  newPairingNonce,
+  pairingCheckCode,
+  pairingCommitment,
+  withCommitmentFingerprint,
+} from "./checkCode";
+export type { CheckCodeInput } from "./checkCode";
+export {
   SHORT_CODE_ALPHABET,
   SHORT_CODE_LENGTH,
   buildPairLink,
@@ -34,8 +54,10 @@ export {
   approvePairingRequest,
   approvePairingResult,
   denyPairingRequest,
+  keyOpensProbe,
   lookupPairingRequest,
   pairingRequestView,
+  runPairingCheck,
 } from "./approver";
 export { approveSiblingRequest, checkSiblingAccount, checkSiblingRequest, refuseSiblingRequest, siblingAppOf } from "./sibling";
 export type { SiblingAccount, SiblingApproveDeps, SiblingApproved, SiblingExpectation, SiblingRefusal } from "./sibling";
@@ -44,7 +66,10 @@ export type {
   ApprovePairingProof,
   ApprovePairingErrorKind,
   ApprovePairingResult,
+  CheckedPairingRequest,
   LookedUpPairingRequest,
+  PairingCheck,
+  PairingCheckDeps,
   PairingPurpose,
   PairingRequestInfo,
   PairingRequestView,

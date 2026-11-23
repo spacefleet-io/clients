@@ -23,7 +23,6 @@ export const useQuery = <T>(load: () => Promise<T>, deps: unknown[]) => {
     return () => {
       live = false;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);
   const { answeredFor, ...query } = state;
   const answered =

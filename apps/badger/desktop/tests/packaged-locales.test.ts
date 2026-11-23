@@ -2,8 +2,8 @@ import { CLIENT_UI_LANGUAGES } from "@space/shared";
 import { describe, expect, it } from "vitest";
 
 import { createBuilderConfig } from "../electron-builder.config.mjs";
-import { SIGNED_WINDOWS_ENV } from "./_helpers/signedWindowsEnv";
-import { ELECTRON_LANGUAGES, LPROJ_EXTENSION, MAC_ELECTRON_LANGUAGES, checkPackagedLocales } from "../scripts/packaged-locales-lib.mjs";
+import { SIGNED_WINDOWS_ENV } from "../../../../packages/desktop-platform-windows/packaging/signedWindowsEnv";
+import { ELECTRON_LANGUAGES, LPROJ_EXTENSION, MAC_ELECTRON_LANGUAGES, checkPackagedLocales } from "../../../../packages/desktop-platform/packaging/packaged-locales-lib.mjs";
 
 // Electron's full locale set on Linux and Windows (55 .pak files, 8.5 MiB packed / 48 MiB installed on Windows).
 const ELECTRON_LOCALE_PAKS = [

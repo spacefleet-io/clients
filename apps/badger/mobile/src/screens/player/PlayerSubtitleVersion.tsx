@@ -57,7 +57,6 @@ export const PlayerSubtitleVersion = memo(
         cancelled = true;
       };
       // Read once per open; `online` is only logged.
-      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [mediaId, episodeId, track.id]);
 
     const input = useMemo(
@@ -108,7 +107,6 @@ export const PlayerSubtitleVersion = memo(
       });
       return () => abort.abort();
       // `online` going away mid-way lets the run end by itself (unavailable / failed).
-      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [input]);
 
     // The new subtitle is on: the line stays a moment, then playback resumes (as "added" in Get subtitles).

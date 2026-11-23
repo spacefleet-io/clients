@@ -19,7 +19,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { ensureElectronBinary } from "../../../../scripts/ensure-electron-binary.mjs";
 import { admitLaneOrExit, electronViteDevArgs, prepareLaneSilentLaunch, resolveDesktopDevEnv, runDevChild } from "../../../../scripts/desktop-dev-lane.mjs";
-import { TEST_KEYCHAIN_ARGS } from "./test-keychain-args.mjs";
+import { TEST_KEYCHAIN_ARGS } from "@space/desktop-shell/test-keychain-args";
 
 const baseEnv = { ...process.env };
 delete baseEnv.ELECTRON_RUN_AS_NODE;

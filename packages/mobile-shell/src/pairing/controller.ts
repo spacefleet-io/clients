@@ -15,7 +15,8 @@ export type PairingFailure = "rate_limited" | "unreachable" | "failed" | "key_un
 export type PairingState =
   | { phase: "idle" }
   | { phase: "starting" }
-  | { phase: "waiting"; request: PairingCreated; expiresAtMs: number; renewals: number }
+  /** `checkCode`: six digits once the approving app connected (PRIV-PAIR-01); the screen shows them to compare. */
+  | { phase: "waiting"; request: PairingCreated; expiresAtMs: number; renewals: number; checkCode?: string }
   | { phase: "completing" }
   | { phase: "denied" }
   /** `retryAfterMinutes` (whole minutes, at least 1) comes with `rate_limited`: "Try again in N minutes" (ACCT-AUTH-11). */
@@ -102,6 +103,7 @@ export const createPairingController = (deps: PairingControllerDeps): PairingCon
       const issuedAt = deps.now();
       let failures = 0;
       let renew = false;
+      let shownCheckCode: string | undefined;
       while (!signal.aborted && !renew) {
         if (deps.now() >= expiresAtMs) {
           renew = true;
@@ -127,6 +129,10 @@ export const createPairingController = (deps: PairingControllerDeps): PairingCon
 
         switch (result.status) {
           case "pending": {
+            if (result.checkCode && result.checkCode !== shownCheckCode) {
+              shownCheckCode = result.checkCode;
+              emit({ phase: "waiting", request, expiresAtMs, renewals, checkCode: result.checkCode });
+            }
             const elapsed = deps.now() - startedAt;
             if (elapsed < MIN_POLL_GAP_MS) await deps.sleep(MIN_POLL_GAP_MS - elapsed, signal);
             break;

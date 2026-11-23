@@ -370,8 +370,11 @@ export const registerLibraryDbIpc = (
     runOpen("sf-library-db-open-local", LibraryDb.openLocal, payload)
   );
 
-  ipc.handle("sf-library-db-get-local-cache-bytes", async (_event, keyBase64?: string) =>
-    LibraryDb.getLocalCacheBytes(keyBase64)
+  // PRIV-KEY-13: onboarding's "recover from this computer" rotates with the local cache sealed under the new key.
+  ipc.handle(
+    "sf-library-db-seal-local-cache-for-rotation",
+    async (_event, payload: { token: string; newKeyBase64: string }) =>
+      LibraryDb.sealLocalCacheForRotation(payload.token, payload.newKeyBase64)
   );
 
   ipc.handle("sf-library-db-has-local-cache", async () => LibraryDb.hasLocalCache());

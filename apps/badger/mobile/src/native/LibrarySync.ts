@@ -4,7 +4,6 @@ import RNFS from "react-native-fs";
 const { LibrarySync } = NativeModules;
 
 if (!LibrarySync) {
-  // eslint-disable-next-line no-console
   console.warn("LibrarySync native module is not available");
 }
 

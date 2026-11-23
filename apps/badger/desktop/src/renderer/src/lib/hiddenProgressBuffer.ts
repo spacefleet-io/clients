@@ -32,7 +32,14 @@ export const createHiddenDeferredProgress = (setProgress: LibrarySetProgress) =>
     const latest = [...pending.values()];
     pending.clear();
     deferredSaves = 0;
-    for (const args of latest) void setProgress(...args);
+    // On unmount the library may already be closed (signing out, switching libraries): its setProgress rejects with
+    // LIBRARY_NOT_READY, and that save is the only one lost. An uncaught rejection reached Bugsink (badger-desktop
+    // 0.1.20, 2026-11-20, alert audit #3356 A17).
+    for (const args of latest) {
+      setProgress(...args).catch((error: unknown) => {
+        log.warn({ err: error, reason }, "applying a progress saved while hidden failed");
+      });
+    }
   };
   return {
     setProgress: (...args: ProgressArgs): Promise<void> => {

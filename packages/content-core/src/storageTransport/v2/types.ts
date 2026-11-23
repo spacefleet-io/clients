@@ -32,6 +32,13 @@ export type StorageTunnelUploadOpenFrame = {
   role?: string;
   /** `source` only: the piece's share of the original file's size; the API counts at least 90% of the stored bytes. */
   declaredBytes?: number;
+  /**
+   * With `resealOf`: the upload is a copy re-sealed under the account's next media library key for this open re-seal run
+   * (STOR-RESEAL-03). It reserves nothing against the allowance and can store no more than `resealOf`'s bytes.
+   */
+  resealRunId?: string;
+  /** With `resealRunId`: the key of the live media object the upload copies. */
+  resealOf?: string;
 };
 
 export type StorageTunnelUploadDataFrame = {

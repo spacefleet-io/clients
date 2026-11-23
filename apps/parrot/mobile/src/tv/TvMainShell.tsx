@@ -14,10 +14,14 @@ import { TvTopBar } from "@space/mobile-shell/tv/TvTopBar";
 import { setCurrentTvSection, subscribeTvSectionRequest, type TvSectionId } from "@space/mobile-shell/tv/tvSection";
 import { useTvMenuKeyHold } from "@space/mobile-shell/tv/useTvMenuKey";
 import { TvFocusGuide } from "@space/mobile-shell/tv/TvFocusGuide";
+import { TV_SAFE_MARGIN_X } from "@space/mobile-shell/tv/layout";
+import { useTvScale } from "@space/mobile-shell/tv/tvScale";
+import { UnpaidAccessBanner } from "@space/mobile-shell/unpaid-access-banner";
 import type { TvViewInstance } from "@space/mobile-shell/tv/tvViewInstance";
 import type { ParrotAlbumSort } from "@space/parrot-core";
 import { PARROT_TV_ICON } from "../brand";
 import { parrotProfileMoves, profileStore } from "../lib/profiles";
+import { useSession } from "../state/session";
 import { TvAlbumPage } from "./TvAlbumPage";
 import { TvArtistPage } from "./TvArtistPage";
 import { TvHomeSection } from "./TvHomeSection";
@@ -77,6 +81,8 @@ const Page = ({ page, pop, shown }: { page: TvPage; pop: () => void; shown: bool
 };
 
 export const TvMainShell = () => {
+  const { access } = useSession();
+  const scale = useTvScale();
   const [active, setActive] = useState<TvSectionId>("home");
   // The album order Home's "See all" asked the Library for ("Recently added": newest first, PAR-HOME-01); null when the
   // Library tab is picked on the bar, which lists the albums by artist.
@@ -190,6 +196,11 @@ export const TvMainShell = () => {
             returns to the same card and scroll position. */}
         <View style={[styles.shell, fullScreen && styles.hidden]} testID="parrot-tv-shell">
           <TvTopBar brandIcon={PARROT_TV_ICON} playlistsIcon={ListMusic} active={active} onSelect={select} />
+          {/* ACCT-UNPAID-03: while the account is unpaid, every main screen says playback is stopped and when the files
+              go. It only informs and is not focusable: nothing on the TV links to paying (ACCT-PAY-02). */}
+          <View style={styles.unpaid}>
+            <UnpaidAccessBanner access={access} scale={scale} />
+          </View>
           <View style={styles.content}>
             {layers.map((layer) => (
               <TvFocusGuide
@@ -225,4 +236,5 @@ const styles = StyleSheet.create({
   shell: { flex: 1 },
   hidden: { display: "none" },
   content: { flex: 1 },
+  unpaid: { paddingHorizontal: TV_SAFE_MARGIN_X - 4 },
 });

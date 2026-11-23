@@ -1,4 +1,6 @@
 @import "tailwindcss";
+/* The mascot float, shared with every app. */
+@import "@space/ui/styles/float.css";
 @config "../../../tailwind.config.cjs";
 
 @layer base {
@@ -43,19 +45,6 @@
 
   #root {
     min-height: 100vh;
-  }
-
-  @keyframes float {
-    0%, 100% {
-      transform: translateY(0);
-    }
-    50% {
-      transform: translateY(-10px);
-    }
-  }
-
-  .animate-float {
-    animation: float 6s ease-in-out infinite;
   }
 
   a {

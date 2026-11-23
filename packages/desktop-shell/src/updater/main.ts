@@ -15,10 +15,11 @@
  * hand from Settings.
  *
  * REL-UPD-07: a Linux copy installed by the system's package manager (.deb, .rpm, .pacman) or as a Flatpak never runs
- * electron-updater. It checks the same feed (`release-status`, on the same schedule and behind the same setting) and
- * the window asks the user in a modal; "Install now" opens the desktop's password dialog for the package's own update
- * helper (systemPackage.ts), which updates that one package, and the app then quits and starts its new version by
- * itself. A Flatpak is only told the `flatpak update` command.
+ * electron-updater. It checks release-status on the same schedule and behind the same setting, naming its install
+ * channel (`pacman`, `deb`, `rpm`, `flatpak`) so the API answers with the version its own repository already serves,
+ * and the window asks the user in a modal; "Install now" opens the desktop's password dialog for the package's own
+ * update helper (systemPackage.ts), which updates that one package, and the app then quits and starts its new version
+ * by itself. A Flatpak is only told the `flatpak update` command.
  *
  * electron-updater only works inside a packaged app: every entry point short-circuits when `!app.isPackaged` (except
  * the E2E test mode) and answers "unsupported".
@@ -142,6 +143,14 @@ const MIN_TEST_INTERVAL_MS = 1_000;
 export const SYSTEM_RELAUNCH_DELAY_MS = 1_500;
 
 /**
+ * REL-UPD-07: after the package manager answered "nothing newer" for a version release-status offered (the
+ * repository's metadata not refreshed yet on this computer or a mirror), that version is not offered again for this
+ * long: the user sees "A new version is on its way" once, not the same failing offer at every check. One hour covers
+ * the metadata's 60-second cache and the 30-minute repository publish.
+ */
+export const SYSTEM_UPDATE_HOLD_MS = 60 * 60 * 1000;
+
+/**
  * E2E hook (`SF_UPDATER_CHECK_INTERVAL_MS`, never set in a release): the automatic background check runs on this
  * cadence instead of every 6 hours, so the update e2e can watch the real timer fire in a packaged app. Anything but a
  * whole number of at least 1000 ms keeps 6 hours.
@@ -191,6 +200,8 @@ export const createDesktopUpdater = ({
   let state: UpdaterState = INITIAL_UPDATER_STATE;
   /** REL-UPD-07: set once a package-manager or Flatpak install is detected; electron-updater is never built then. */
   let packageInstall: Extract<LinuxInstall, { kind: "system" | "flatpak" }> | null = null;
+  /** REL-UPD-07: a version the package manager could not find yet, not offered again until `until`. */
+  let heldBack: { version: string; until: number } | null = null;
   /** Settles when the install type is known; the IPC handlers wait for it so the window never sees a half state. */
   let ready: Promise<void> = Promise.resolve();
 
@@ -204,9 +215,21 @@ export const createDesktopUpdater = ({
     if (win && !win.isDestroyed()) win.webContents.send(UPDATER_CHANNELS.event, event);
   };
 
+  /**
+   * REL-UPD-07: release-status `channel`, how this Linux copy updates, so the API answers with the version its own
+   * repository serves (the feed announces a release up to 30 minutes before the repositories have it).
+   */
+  const releaseChannel = (): string | null => {
+    if (getPlatformId() !== "linux") return null;
+    if (!packageInstall) return "appimage";
+    if (packageInstall.kind === "flatpak") return "flatpak";
+    return packageInstall.manager === "pacman" ? "pacman" : packageInstall.manager === "apt" ? "deb" : "rpm";
+  };
+
   /** API release-status for this build (throws when the API can't be reached or answers an error). */
   const fetchReleaseStatus = async (): Promise<Partial<ReleaseStatus> | null> => {
-    const url = `${feedUrl()}/release-status?currentVersion=${encodeURIComponent(app.getVersion())}&platform=${getPlatformId()}`;
+    const channel = releaseChannel();
+    const url = `${feedUrl()}/release-status?currentVersion=${encodeURIComponent(app.getVersion())}&platform=${getPlatformId()}${channel ? `&channel=${channel}` : ""}`;
     const response = await fetch(url);
     if (!response.ok) throw new Error(`release-status answered HTTP ${response.status}`);
     return (await response.json()) as Partial<ReleaseStatus> | null;
@@ -239,7 +262,12 @@ export const createDesktopUpdater = ({
       emitMandatory(status);
       const latest = typeof status?.latestVersion === "string" && SEMVER_PATTERN.test(status.latestVersion) ? status.latestVersion : null;
       const current = app.getVersion();
-      logger.info({ latest, current, channel: packageInstall?.kind }, "package update check");
+      logger.info({ latest, current, channel: packageInstall?.kind, channelParam: releaseChannel(), heldBack }, "package update check");
+      if (latest && heldBack?.version === latest && Date.now() < heldBack.until) {
+        logger.info({ latest, until: new Date(heldBack.until).toISOString() }, "package update held back — the package manager did not have it yet");
+        emit({ kind: "update-not-available", checkedAt: Date.now() });
+        return { status: "up-to-date" };
+      }
       if (latest && compareVersions(latest, current) > 0) {
         emit({ kind: "update-available", version: latest, releaseNotes: null, checkedAt: Date.now() });
         return { status: "available", version: latest };
@@ -363,6 +391,12 @@ export const createDesktopUpdater = ({
         emit({ kind: "system-dismissed" });
         return { ok: false, message: "dismissed" };
       case "failed":
+        // The repository this computer reads does not list the offered version yet (a race with the publish or a
+        // mirror's cache): the modal says it is on its way, and the version is not offered again for an hour.
+        if (outcome.failure === "notNewer" && version) {
+          heldBack = { version, until: Date.now() + SYSTEM_UPDATE_HOLD_MS };
+          logger.info({ version, until: new Date(heldBack.until).toISOString() }, "system update: repository not ready — version held back");
+        }
         emit({
           kind: "system-failed",
           failure: outcome.failure,

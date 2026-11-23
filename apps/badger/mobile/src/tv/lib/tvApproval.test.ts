@@ -26,6 +26,16 @@ const request: PairingRequestInfo = {
   deviceName: "Living room Kodi",
   publicKey: device.publicKey,
   expiresAt: new Date(NOW + 5 * 60_000).toISOString(),
+  // Already checked (sf-pair-v2, PRIV-PAIR-01): these tests start where the TV's confirm step does.
+  protocol: 2,
+  check: { code: "067383", confirmedByQr: false },
+};
+
+/** The sf-pair-v2 calls, unused once a request is checked. */
+const checkDeps: Pick<PairingDeps, "keyOpensAccount" | "connect" | "readReveal"> = {
+  keyOpensAccount: vi.fn(async () => true),
+  connect: vi.fn(async () => undefined),
+  readReveal: vi.fn(async () => ({ status: "pending" })),
 };
 
 type FakeServer = { pending: boolean; calls: Array<{ password: string | undefined }>; opened: string[] };
@@ -48,6 +58,7 @@ const makeDeps = (accountPassword: string, overrides: Partial<PairingDeps> = {})
     getLibraryKey: vi.fn(async () => libraryKey),
     requireUnlock: null,
     now: () => NOW,
+    ...checkDeps,
     ...overrides,
   };
   return { deps, server };
@@ -152,6 +163,7 @@ const makeCodeDeps = (rightCode: string, method: "email" | "totp" = "email") => 
     getLibraryKey: vi.fn(async () => libraryKey),
     requireUnlock: null,
     now: () => NOW,
+    ...checkDeps,
   };
   return { deps, server };
 };

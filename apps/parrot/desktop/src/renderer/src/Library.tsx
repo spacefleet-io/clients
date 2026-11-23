@@ -11,6 +11,7 @@ import { RenderBoundary } from "@space/ui/render-boundary";
 import { Button, Notifications, toast } from "@space/ui";
 import { BadgerIconButton, badgerTopBarIcons } from "@space/ui/badger";
 import { LibraryLoading } from "./LoadingMascot";
+import { usePlayerClockStore, withPlayerClock } from "./playerClock";
 import { libraryContent } from "@space/shared/libraryContent";
 import { ImportJobList, ImportJobs, importErrorPart, useImportJobs } from "./ImportJobs";
 import { useExportNotifications, type ExportNotify } from "./ExportJobs";
@@ -94,6 +95,7 @@ import { StreamSlotPrompt } from "./StreamSlotPrompt";
 import { useSignOutWithKeyCheck } from "./SignOutKeyCheck";
 import PairDevice from "./PairDevice";
 import { startLoudnessPass } from "./loudness";
+import { useNoteScreen } from "./noteScreen";
 import { formatLocalizedStorage } from "@space/shared/format";
 import { useAppPlaybackMark } from "@space/ui/app-playback-mark";
 
@@ -122,6 +124,14 @@ type Route =
    */
   | { kind: "settings"; section?: ParrotSettingsSection; addProfile?: boolean; visit?: number };
 
+/** The pages an empty library cannot show (UX-LIBTAB-01): the library, its playlists, and what opens from them. */
+const isLibraryRoute = (route: Route): boolean =>
+  route.kind === "library" || route.kind === "album" || route.kind === "artist" || route.kind === "playlists" || route.kind === "playlist";
+
+// #3350 C4: the two pages that show the playing position read it from the clock themselves.
+const ClockedHome = withPlayerClock(Home);
+const ClockedNowPlaying = withPlayerClock(ParrotNowPlaying);
+
 /** The edit dialog's fields from a song's or an album's details (the album artist goes in the artist field). */
 /**
  * The signed-in app in the approved design (PAR-LOOK-01, PAR-NAV-01): the top bar with the Home, Library and
@@ -147,9 +157,12 @@ export default function Library({ t, state, onState }: Props) {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [view, setView] = useState<View>("albums");
   const [route, setRoute] = useState<Route>({ kind: "home" });
+  // OPS-BIZ-20: each page the library opens (home, an album, an artist, settings…) counts as one opened screen.
+  useNoteScreen(JSON.stringify(route));
   const [previous, setPrevious] = useState<Route[]>([]);
   const [playing, setPlaying] = useState(false);
-  const [clockMs, setClockMs] = useState(0);
+  // #3350 C4: the position lives outside this component's state, so a tick redraws only Home or Now playing.
+  const clock = usePlayerClockStore();
   const seekRef = useRef<((ms: number) => void) | null>(null);
   const toggleRef = useRef<(() => void) | null>(null);
   const [lyrics, setLyrics] = useState<{ trackId: string; lyrics: ParrotLyrics | null } | null>(null);
@@ -310,7 +323,8 @@ export default function Library({ t, state, onState }: Props) {
   );
 
   const keptSongs = useMemo(() => new Map((kept?.songs ?? []).map((song) => [song.trackId, song.onDevice])), [kept]);
-  const keptEntry = (kind: KeptKind, id: string) => kept?.entries.find((entry) => entry.kind === kind && entry.id === id);
+  const keptEntries = useMemo(() => new Map((kept?.entries ?? []).map((entry) => [`${entry.kind}:${entry.id}`, entry])), [kept]);
+  const keptEntry = (kind: KeptKind, id: string) => keptEntries.get(`${kind}:${id}`);
   const keepState = (kind: KeptKind, id: string): ParrotKeepState => {
     const entry = keptEntry(kind, id);
     if (entry) return entry.done < entry.total ? "downloading" : "kept";
@@ -354,15 +368,16 @@ export default function Library({ t, state, onState }: Props) {
   const content = libraryContent({ itemCount: tracks.length, settled: library !== null });
   // UX-LIBTAB-01: an empty library cannot be opened, nor its playlists. The Library and Playlists tabs are greyed out
   // once the opened library holds no song, and open again as soon as the first song lands (the library reloads on every
-  // change); a window left on either (its last song deleted) goes back to Home.
+  // change); a window left on either (its last song deleted) goes back to Home. The route is read when the update runs,
+  // not from this render: a page opened in between (Settings clicked in the frame the library emptied, release smoke of
+  // parrot-desktop-v0.1.44) stays open instead of being sent Home.
   const libraryClosed = content === "empty";
-  const onLibraryRoute =
-    route.kind === "library" || route.kind === "album" || route.kind === "artist" || route.kind === "playlists" || route.kind === "playlist";
+  const onLibraryRoute = isLibraryRoute(route);
   useEffect(() => {
     if (!libraryClosed || !onLibraryRoute) return;
     console.info("[parrot-nav] library empty: back to home", JSON.stringify({ from: route.kind }));
     setPrevious([]);
-    setRoute({ kind: "home" });
+    setRoute((current) => (isLibraryRoute(current) ? { kind: "home" } : current));
   }, [libraryClosed, onLibraryRoute, route.kind]);
   // PAR-LIB-06: the open tab's list as its sort and filters leave them.
   const likedSongIds = useMemo(() => new Set((library?.playlists ?? []).find((playlist) => isLikedPlaylist(playlist.id))?.trackIds ?? []), [library]);
@@ -442,9 +457,12 @@ export default function Library({ t, state, onState }: Props) {
       }
     );
   };
-  const coverFor = (albumId: string) => albums.find((album) => album.id === albumId);
+  const albumsById = useMemo(() => new Map((library?.albums ?? []).map((album) => [album.id, album])), [library]);
+  const coverFor = (albumId: string) => albumsById.get(albumId);
   const playlists = library?.playlists ?? [];
-  const playlistSongs = (playlist: ParrotPlaylist) => playlistEntries(playlist, tracks).map((entry) => entry.song);
+  const tracksById = useMemo(() => new Map(tracks.map((track) => [track.id, track])), [tracks]);
+  // A playlist's songs in its order; one no longer in the library is left out (as playlistEntries does).
+  const playlistSongs = (playlist: ParrotPlaylist) => playlist.trackIds.flatMap((id) => tracksById.get(id) ?? []);
   /** Shows the edits at once, saves them into the encrypted library (PAR-PL-03), and puts the playlists back if the save fails. */
   const playlistEditor = useParrotPlaylistEditor<ParrotLibraryTrack>({
     playlists,
@@ -634,19 +652,22 @@ export default function Library({ t, state, onState }: Props) {
 
   const playlistTiles = (list = playlists) => (
     <ParrotTileGrid testId="library-playlists">
-      {list.map((playlist) => (
-        <ParrotPlaylistTile
-          key={playlist.id}
-          id={playlist.id}
-          name={playlistName(playlist)}
-          liked={isLikedPlaylist(playlist.id)}
-          detail={countText(language, t, "song", playlistSongs(playlist).length)}
-          onOpen={() => open({ kind: "playlist", id: playlist.id })}
-          unavailable={reach ? !reach.playlist(playlistSongs(playlist).map((song) => song.id)) : false}
-          controls={playlistSongs(playlist).length > 0 ? playlistControls(playlist) : undefined}
-          testId="library-playlist"
-        />
-      ))}
+      {list.map((playlist) => {
+        const songs = playlistSongs(playlist);
+        return (
+          <ParrotPlaylistTile
+            key={playlist.id}
+            id={playlist.id}
+            name={playlistName(playlist)}
+            liked={isLikedPlaylist(playlist.id)}
+            detail={countText(language, t, "song", songs.length)}
+            onOpen={() => open({ kind: "playlist", id: playlist.id })}
+            unavailable={reach ? !reach.playlist(songs.map((song) => song.id)) : false}
+            controls={songs.length > 0 ? playlistControls(playlist) : undefined}
+            testId="library-playlist"
+          />
+        );
+      })}
       {playlistEditor.newTile}
     </ParrotTileGrid>
   );
@@ -792,7 +813,7 @@ export default function Library({ t, state, onState }: Props) {
     if (!library) return null;
     if (route.kind === "home") {
       return (
-        <Home
+        <ClockedHome
           t={t}
           language={language}
           albums={albums}
@@ -802,7 +823,7 @@ export default function Library({ t, state, onState }: Props) {
           history={history}
           playingTrack={playingTrack}
           playing={playing}
-          positionMs={clockMs}
+          clock={clock}
           onToggle={() => toggleRef.current?.()}
           onOpenAlbum={(id) => open({ kind: "album", id })}
           onOpenArtist={(id) => open({ kind: "artist", id })}
@@ -827,7 +848,7 @@ export default function Library({ t, state, onState }: Props) {
       if (!playingTrack) return null;
       const album = coverFor(playingTrack.albumId);
       return (
-        <ParrotNowPlaying
+        <ClockedNowPlaying
           like={like(playingTrack)}
           track={playingTrack}
           lyrics={lyrics?.trackId === playingTrack.id ? lyrics.lyrics : undefined}
@@ -841,7 +862,7 @@ export default function Library({ t, state, onState }: Props) {
               failed: t("nowPlaying.fetchLyricsFailed"),
             },
           }}
-          positionMs={clockMs}
+          clock={clock}
           onSeek={(ms) => seekRef.current?.(ms)}
           coverSrc={album?.coverUrl}
           coverFetching={albumCoverFetching(playingTrack.albumId)}
@@ -1227,8 +1248,8 @@ export default function Library({ t, state, onState }: Props) {
         startAt={startAt}
         onPosition={(track, ms) => saveHistory((current) => recordPosition(current, track, ms))}
         // The lyrics follow the exact time; elsewhere whole seconds are enough (Home's "Resume 1:18", PAR-HOME-01),
-        // and the window redraws once a second rather than at every tick.
-        onClock={route.kind === "nowPlaying" ? setClockMs : (ms) => setClockMs(ms - (ms % 1000))}
+        // and Home redraws once a second rather than at every tick (nothing else reads the clock).
+        onClock={route.kind === "nowPlaying" ? clock.write : (ms) => clock.write(ms - (ms % 1000))}
         seekRef={seekRef}
         toggleRef={toggleRef}
         coverFor={coverFor}

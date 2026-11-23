@@ -74,7 +74,6 @@ export const OfflineContentScreen = () => {
       cancelled = true;
     };
     // `completed` changes identity on every progress tick of a running download; the signature only when a file lands.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [signature, getMediaDetails]);
 
   const onRemove = useCallback((row: OfflineManageRow) => removeDownloads(fileIdsOf(row)), []);

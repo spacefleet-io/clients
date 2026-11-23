@@ -32,6 +32,7 @@ export type PairedSignInDeps = PairedKeyCheckDeps & {
 };
 
 /** Whether the key received from the phone opens this account's library. A brand-new account has nothing to check. */
+// tla: VaultKeys/Enter
 export const verifyPairedKey = async (
   deps: PairedKeyCheckDeps,
   token: string,

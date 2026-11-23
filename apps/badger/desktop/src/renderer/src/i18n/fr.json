@@ -934,7 +934,12 @@
         "codeSent": "Code envoyé. Vérifiez votre email ou votre application d'authentification.",
         "errorInvalidPassword": "Mot de passe incorrect.",
         "errorTwoFactorInvalid": "Code de vérification invalide.",
-        "errorGeneric": "Impossible de tourner la clé. Réessayez."
+        "errorGeneric": "Impossible de tourner la clé. Réessayez.",
+        "errorNotReencrypted": "Votre bibliothèque Parrot ne peut pas être reverrouillée avec la nouvelle clé depuis ici, donc rien n'a changé. Remplacez la clé depuis les Réglages d'un ordinateur qui a votre clé actuelle.",
+        "errorUnreadable": "Votre clé actuelle n'ouvre pas votre bibliothèque Parrot, donc rien n'a changé.",
+        "errorNotSnapshotted": "Votre bibliothèque Parrot a des changements pas encore enregistrés. Ouvrez Parrot, laissez-le finir de synchroniser, puis réessayez. Rien n'a changé.",
+        "errorReencryptFailed": "Impossible de reverrouiller votre bibliothèque Parrot avec la nouvelle clé. Rien n'a changé. Réessayez.",
+        "errorChanged": "Votre bibliothèque a changé pendant le remplacement de la clé. Rien n'a changé. Réessayez."
       },
       "reset": {
         "title": "Effacer les données",

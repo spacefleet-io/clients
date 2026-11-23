@@ -26,8 +26,9 @@ import type {
   TitleType,
   Trailer,
 } from "@space/shared/api";
+import { parseRetryAfterSeconds } from "@space/shared/retryAfter";
 import type { TicketShortage } from "./reserve";
-import { parseRetryAfterSeconds, type FetchLike, type FetchResponse } from "./types";
+import type { FetchLike, FetchResponse } from "./types";
 
 /**
  * The reserve holds no ticket and no refill is running that could bring one (or the one running ended without

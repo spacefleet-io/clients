@@ -4,6 +4,7 @@ import { requireAppScope, requireToken } from "../auth";
 import { isValidCommandResponse, parseCommandRequest } from "../validation";
 import { runtimeState } from "../runtime";
 import { executeModuleCommand, getModuleStateSummary, setModuleEventPublisher } from "../modules";
+import { decodeWireBytes, encodeWireBytes } from "@space/runtime-contracts/wireBytes";
 import { syncRuntimeJobsFromModuleCommand, syncRuntimeJobsFromModuleEvent } from "../core/jobs/adapters";
 import { publishAndDriveRuntimeJobsUpdate } from "../core/jobs/events";
 import { runtimeJobWorker } from "../core/jobs/worker";
@@ -142,7 +143,8 @@ export const registerModuleRoutes = (app: Hono) => {
     const commandStartedAt = Date.now();
     const settle = runtimeEventLoopMonitor.track(label);
     try {
-      const executed = await executeModuleCommand(req, {
+      // RT-CMD-05: tagged bytes in the payload become Uint8Arrays again before the module sees them.
+      const executed = await executeModuleCommand({ ...req, payload: decodeWireBytes(req.payload) }, {
         backendToken: session?.backendToken ?? null,
         userId: session?.userId ?? null,
       });
@@ -193,7 +195,10 @@ export const registerModuleRoutes = (app: Hono) => {
         500
       );
     }
-    runtimeState.setCachedResult(token, req.requestId, response);
+    // RT-CMD-05: bytes in the result travel tagged (plain JSON would send an index-keyed object); the remembered
+    // answer is the wire form, so a resend gets the same bytes.
+    const wire = encodeWireBytes(response);
+    runtimeState.setCachedResult(token, req.requestId, wire);
     const syncedJobs = syncRuntimeJobsFromModuleCommand(req, response);
     let syncedEventJobs: ReturnType<typeof syncRuntimeJobsFromModuleEvent> = [];
     if (response.ok && event) {
@@ -244,6 +249,6 @@ export const registerModuleRoutes = (app: Hono) => {
           : response.error.code === "quota_exceeded"
             ? 409
           : 400;
-    return c.json(response, status);
+    return c.json(wire, status);
   });
 };

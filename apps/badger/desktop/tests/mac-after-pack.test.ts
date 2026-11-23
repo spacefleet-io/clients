@@ -10,7 +10,8 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import afterPack, { depsProblems, PLAYER_HELPER_APP, signingOrder } from "../scripts/mac-after-pack.mjs";
+import { signingOrder } from "../../../../packages/desktop-platform-macos/packaging/mac-after-pack-lib.mjs";
+import afterPack, { depsProblems, PLAYER_HELPER_APP } from "../scripts/mac-after-pack.mjs";
 
 const tmpDirs: string[] = [];
 const makeTmp = () => {

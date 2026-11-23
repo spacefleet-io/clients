@@ -70,7 +70,6 @@ export const TvProfilesView = ({ store, moves, startMode, inApp, audience, onPic
   useEffect(() => {
     log("shown", { inApp, mode: startMode, audience, count: snapshot.profiles.length, maxProfiles: snapshot.maxProfiles });
     // Shown once per mount (the flow re-reads the list); the list itself re-renders through the store.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {

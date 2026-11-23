@@ -8,7 +8,17 @@ import React from "react";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
-import { bytesToBase64, generateDeviceKeyPair, openSealedKey, type DeviceKeyPair, type SealedKey } from "@space/pairing-crypto";
+import {
+  bytesToBase64,
+  formatCheckCode,
+  generateDeviceKeyPair,
+  newPairingNonce,
+  openSealedKey,
+  pairingCheckCode,
+  pairingCommitment,
+  type DeviceKeyPair,
+  type SealedKey,
+} from "@space/pairing-crypto";
 import { pairDeviceStrings } from "@space/desktop-shell/components";
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
@@ -43,7 +53,15 @@ vi.mock("@/logger", () => {
   return { rendererLogger: log };
 });
 vi.mock("@/lib/onboarding", () => ({ getStoredLibraryKey: vi.fn() }));
-vi.mock("@space/shared/api", () => ({ approvePairing: vi.fn(), denyPairing: vi.fn(), lookupPairing: vi.fn() }));
+vi.mock("@space/shared/api", () => ({
+  approvePairing: vi.fn(),
+  connectPairing: vi.fn(),
+  denyPairing: vi.fn(),
+  lookupPairing: vi.fn(),
+  readPairingReveal: vi.fn(),
+}));
+vi.mock("@/api", () => ({ getLibraryMeta: vi.fn() }));
+vi.mock("@/lib/crypto", () => ({ decryptBase64ToBytes: vi.fn() }));
 const account = vi.hoisted(() => ({ hasPassword: true }));
 vi.mock("@/auth", () => ({ useHasPassword: () => account.hasPassword }));
 
@@ -67,7 +85,13 @@ describe("PairDeviceDialog", () => {
     approve: Mock;
     deny: Mock;
     getLibraryKey: Mock;
+    keyOpensAccount: Mock;
+    connect: Mock;
+    readReveal: Mock;
   };
+  /** PRIV-PAIR-01: the TV's secret number, and the number this computer connected with. */
+  let tvNonce: string;
+  let connectedNonce: string | null;
   const onApproved = vi.fn();
 
   const text = () => container.textContent ?? "";
@@ -108,6 +132,8 @@ describe("PairDeviceDialog", () => {
     tv = generateDeviceKeyPair();
     state = "pending";
     sealedForTv = null;
+    tvNonce = newPairingNonce();
+    connectedNonce = null;
     deps = {
       lookup: vi.fn(async (_token: string, code: string) => {
         if (code !== "ABCDEFGH" || state !== "pending") throw apiError(404, "pairing_not_found");
@@ -116,6 +142,8 @@ describe("PairDeviceDialog", () => {
           deviceType: "tv",
           deviceName: "Salon",
           publicKey: tv.publicKey,
+          protocol: 2 as const,
+          commitment: pairingCommitment(tv.publicKey, tvNonce),
           expiresAt: new Date(Date.now() + 300_000).toISOString(),
         };
       }),
@@ -138,6 +166,13 @@ describe("PairDeviceDialog", () => {
         return { ok: true };
       }),
       getLibraryKey: vi.fn(async () => LIBRARY_KEY),
+      keyOpensAccount: vi.fn(async () => true),
+      connect: vi.fn(async (_token: string, _id: string, nonce: string) => {
+        connectedNonce = nonce;
+        return { ok: true };
+      }),
+      // The TV reveals its number once this computer connected.
+      readReveal: vi.fn(async () => (connectedNonce ? { status: "pending", requesterNonce: tvNonce } : { status: "pending" })),
       now: () => Date.now(),
     };
     container = document.createElement("div");
@@ -173,7 +208,8 @@ describe("PairDeviceDialog", () => {
     expect(question).toBe("Badger on Salon (TV) wants to sign in to your account.");
     expect(byTestId("pair-approve-warning")?.textContent).toBe(en["confirm.warning"]);
     expect(deps.approve).not.toHaveBeenCalled();
-    expect(deps.getLibraryKey).not.toHaveBeenCalled();
+    // PRIV-PAIR-02 reads the key to check it against the account, but nothing is sealed before the password.
+    expect(sealedForTv).toBeNull();
   });
 
   it("@req ACCT-PAIR-01 a signed-in device asking only for the key reads 'wants your media library key'", async () => {
@@ -242,6 +278,8 @@ describe("PairDeviceDialog", () => {
       deviceType: "tv",
       deviceName: "Salon",
       publicKey: tv.publicKey,
+      protocol: 2,
+      commitment: pairingCommitment(tv.publicKey, tvNonce),
       expiresAt: new Date(Date.now() + 1_000).toISOString(),
     });
     await enterCode();
@@ -255,10 +293,47 @@ describe("PairDeviceDialog", () => {
   it("@req ACCT-PAIR-01 says so when this computer has no library key to pass on", async () => {
     deps.getLibraryKey.mockResolvedValue(null);
     await enterCode();
-    await approveWith(ACCOUNT_PASSWORD);
 
+    // Found before the check: nothing is connected, sealed or sent.
+    expect(deps.connect).not.toHaveBeenCalled();
     expect(deps.approve).not.toHaveBeenCalled();
     expect(text()).toContain(en["errors.no_library_key"]);
+  });
+
+  it("@req PRIV-PAIR-01 [pair-approve-check] shows the same six digits as the TV before the password", async () => {
+    await enterCode();
+    const tvCode = pairingCheckCode({ publicKey: tv.publicKey, commitment: pairingCommitment(tv.publicKey, tvNonce), approverNonce: connectedNonce!, requesterNonce: tvNonce });
+    const shown = byTestId("pair-approve-check-code")?.textContent;
+    console.info("[pair-approve-check]", { shown, tvCode, question: byTestId("pair-approve-check")?.textContent });
+    expect(shown).toBe(formatCheckCode(tvCode));
+    expect(byTestId("pair-approve-check")?.textContent).toContain("Does Salon show this code?");
+    // The user says no: Decline kills the request and nothing is sealed.
+    await act(async () => byTestId<HTMLButtonElement>("pair-approve-deny")!.click());
+    expect(state).toBe("denied");
+    expect(sealedForTv).toBeNull();
+  });
+
+  it("@req PRIV-PAIR-02 [pair-approve-stale] a computer whose key the account no longer opens sends nothing", async () => {
+    deps.keyOpensAccount.mockResolvedValue(false);
+    await enterCode();
+    console.info("[pair-approve-stale]", text());
+    expect(text()).toContain(en["errors.stale_key"]);
+    expect(deps.connect).not.toHaveBeenCalled();
+    expect(deps.approve).not.toHaveBeenCalled();
+  });
+
+  it("@req PRIV-PAIR-04 [pair-approve-v1] a device from before the check is asked to update", async () => {
+    deps.lookup.mockResolvedValue({
+      requestId: "req-tv",
+      deviceType: "tv",
+      deviceName: "Salon",
+      publicKey: tv.publicKey,
+      expiresAt: new Date(Date.now() + 300_000).toISOString(),
+    });
+    await enterCode();
+    console.info("[pair-approve-v1]", text());
+    expect(text()).toContain(en["errors.update_required"]);
+    expect(deps.connect).not.toHaveBeenCalled();
   });
 
   it("@req ACCT-AUTH-04[badger-desktop] @req ACCT-PAIR-02 an account without a password approves with the emailed code", async () => {

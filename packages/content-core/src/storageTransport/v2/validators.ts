@@ -42,7 +42,9 @@ export const validateClientFrame = (frame: unknown): frame is StorageTunnelClien
         (frame.resumeId === undefined || isString(frame.resumeId)) &&
         (frame.replacesBytes === undefined || isNonNegativeInteger(frame.replacesBytes)) &&
         (frame.role === undefined || isString(frame.role)) &&
-        (frame.declaredBytes === undefined || isNonNegativeInteger(frame.declaredBytes))
+        (frame.declaredBytes === undefined || isNonNegativeInteger(frame.declaredBytes)) &&
+        (frame.resealRunId === undefined || isString(frame.resealRunId)) &&
+        (frame.resealOf === undefined || isString(frame.resealOf))
       );
     case "upload.data":
       return (

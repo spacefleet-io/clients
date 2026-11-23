@@ -29,7 +29,7 @@ import {
   macScratchDir,
   removeAppCopy,
   resolveMacSigning,
-} from "../scripts/mac-signing-lib.mjs";
+} from "../../../../packages/desktop-platform-macos/packaging/mac-signing-lib.mjs";
 
 const FULL_ENV = {
   APPLE_DEVID_P12_BASE64: "cDEy",
