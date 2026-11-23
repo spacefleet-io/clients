@@ -3,10 +3,7 @@
  * @level unit
  * @why Playback reads a stored song back by byte range from 1 MiB SFV1 chunks: each chunk sealed with
  *      @space/media-crypto must decrypt to exactly its plaintext, any range must reassemble to the same bytes as
- *      the original file, and seeks must not download the same chunk twice. PAR-PLAY-08: the chunks of one file share
- *      reused tunnel sessions (one when read in turn, at most PARROT_DOWNLOAD_LANES_PER_FILE when read ahead) instead
- *      of one session per chunk (2026-11-21: ~0.9 s per 1 MiB chunk, 13 s before a song started).
- * @bugfix @regression-proof
+ *      the original file, and seeks must not download the same chunk twice.
  * @covers packages/parrot-ingest/src/chunkReader.ts
  * @covers packages/parrot-core/src/fileRange.ts
  */
@@ -15,17 +12,17 @@ import { describe, expect, it } from "bun:test";
 import { encryptMediaObject, sealMediaObjectWithPadding } from "@space/media-crypto";
 import { TRACK_FILE_CHUNK_SIZE_BYTES, type TrackFileChunkRow } from "@space/parrot-library-db-definition";
 import { readParrotFileRange } from "@space/parrot-core";
-import { createParrotChunkLoader, PARROT_DOWNLOAD_LANES_PER_FILE } from "../src/chunkReader";
+import { createParrotChunkLoader } from "../src/chunkReader";
 import { PARROT_APP_ID } from "../src/importer";
 import { testLog } from "./helpers";
 
 const log = testLog("PARROT-INGEST-CHUNKREADER-001");
 const CHUNK = TRACK_FILE_CHUNK_SIZE_BYTES;
-/** The tunnel session opener's full signature carries SDK option types the fakes do not need. */
-type OpenSession = NonNullable<Parameters<typeof createParrotChunkLoader>[0]["openSession"]>;
+/** The tunnel download's full signature carries SDK option types the fakes do not need. */
+type ChunkDownload = NonNullable<Parameters<typeof createParrotChunkLoader>[0]["download"]>;
 const PROFILE_ID = "profile-main";
 
-/** A file sealed as chunks the way the importer stores it, plus a fake tunnel session opener that records its calls. */
+/** A file sealed as chunks the way the importer stores it, plus a fake tunnel download that records its calls. */
 const storeFile = (size: number) => {
   const key = randomBytes(32);
   const plain = new Uint8Array(randomBytes(size));
@@ -37,41 +34,28 @@ const storeFile = (size: number) => {
     objects.set(objectKey, new Uint8Array(sealMediaObjectWithPadding(part, key)));
     chunks.push({ idx, objectKey, plainOffset: offset, plainSize: part.length });
   }
-  const calls: Array<{ objectKey: string; session: number }> = [];
-  const opens: Array<{ token: string; options: unknown; appId: unknown }> = [];
-  let closed = 0;
+  const calls: Array<{ token: string; objectKey: string; options: unknown; appId: unknown }> = [];
   const pending: Array<() => void> = [];
   let gate = false;
-  const openSession = ((token: string, options: unknown, appId?: unknown) => {
-    opens.push({ token, options, appId });
-    const session = opens.length;
-    return {
-      download: async (objectKey: string) => {
-        calls.push({ objectKey, session });
-        if (gate) {
-          const { promise, resolve } = Promise.withResolvers<void>();
-          pending.push(resolve);
-          await promise;
-        }
-        const sealed = objects.get(objectKey);
-        if (!sealed) throw new Error(`no such object ${objectKey}`);
-        return sealed;
-      },
-      close: async () => {
-        closed += 1;
-      },
-    };
-  }) as unknown as OpenSession;
-  const dump = () => ({ size, chunks, calls: calls.map((call) => `${call.objectKey}@${call.session}`), opens: opens.length, closed });
+  const download = (async (token: string, objectKey: string, options?: unknown, appId?: unknown) => {
+    calls.push({ token, objectKey, options, appId });
+    if (gate) {
+      const { promise, resolve } = Promise.withResolvers<void>();
+      pending.push(resolve);
+      await promise;
+    }
+    const sealed = objects.get(objectKey);
+    if (!sealed) throw new Error(`no such object ${objectKey}`);
+    return sealed;
+  }) as unknown as ChunkDownload;
+  const dump = () => ({ size, chunks, calls: calls.map((call) => call.objectKey) });
   return {
     key,
     plain,
     objects,
     chunks,
     calls,
-    openSession,
-    opens,
-    closedCount: () => closed,
+    download,
     dump,
     holdDownloads: () => {
       gate = true;
@@ -90,19 +74,15 @@ const collect = async (iterator: AsyncGenerator<Uint8Array>) => {
 };
 
 describe("parrot chunk loader", () => {
-  // @req PAR-PLAY-08
-  // @req STOR-REUSE-02
-  it("downloads a file's chunks on one tunnel session opened with the token, client type and Parrot app id", async () => {
-    // 2026-11-21 (Daft Punk import): each 1 MiB chunk opened its own tunnel session (~0.9 s each), so a song whose
-    // index sits at its end took ~13 s to start. The chunks of one file now share a reused session.
-    const store = storeFile(5 * CHUNK + 777);
+  it("downloads with the token, client type and Parrot app id, and decrypts each chunk", async () => {
+    const store = storeFile(2 * CHUNK + 777);
     const messages: string[] = [];
     const load = createParrotChunkLoader({
       token: () => "token-1",
       profileId: async () => PROFILE_ID,
       libraryKeyBase64: () => store.key.toString("base64"),
       clientType: "parrot-desktop",
-      openSession: store.openSession,
+      download: store.download,
       log: (message) => messages.push(message),
     });
     for (const chunk of store.chunks) {
@@ -110,53 +90,18 @@ describe("parrot chunk loader", () => {
       log(`chunk ${chunk.idx}`, { plainSize: chunk.plainSize, got: plain.length });
       expect(Buffer.from(plain).equals(Buffer.from(store.plain.subarray(chunk.plainOffset, chunk.plainOffset + chunk.plainSize)))).toBe(true);
     }
-    log("sessions and downloads", store.dump());
+    log("download calls", store.calls);
     log("loader log", messages);
-    expect(store.opens).toEqual([
-      {
+    expect(store.calls).toEqual(
+      store.chunks.map((chunk) => ({
         token: "token-1",
-        options: { objectKey: store.chunks[0]!.objectKey, profileId: PROFILE_ID, clientType: "parrot-desktop" },
+        objectKey: chunk.objectKey,
+        options: { clientType: "parrot-desktop", profileId: PROFILE_ID },
         appId: PARROT_APP_ID,
-      },
-    ]);
-    expect(store.calls).toEqual(store.chunks.map((chunk) => ({ objectKey: chunk.objectKey, session: 1 })));
-    expect(messages[0]).toBe("[parrot-chunks] media/parrot-test: session 1 of 4");
-    expect(messages.filter((line) => line.includes(" bytes"))).toHaveLength(6);
-    load.clear();
-    expect(store.closedCount()).toBe(1);
-  });
-
-  // @req PAR-PLAY-08
-  it("reads a range ahead on at most PARROT_DOWNLOAD_LANES_PER_FILE sessions side by side", async () => {
-    const store = storeFile(12 * CHUNK + 5);
-    const load = createParrotChunkLoader({
-      token: () => "t",
-      profileId: async () => PROFILE_ID,
-      libraryKeyBase64: () => store.key.toString("base64"),
-      clientType: "parrot-desktop",
-      openSession: store.openSession,
-      log: (message) => log("loader", message),
-    });
-    let inFlight = 0;
-    let most = 0;
-    const counting = async (chunk: Parameters<typeof load>[0]) => {
-      inFlight += 1;
-      most = Math.max(most, inFlight);
-      try {
-        return await load(chunk);
-      } finally {
-        inFlight -= 1;
-      }
-    };
-    const got = await collect(readParrotFileRange(store.chunks, 0, store.plain.length - 1, counting, PARROT_DOWNLOAD_LANES_PER_FILE - 1));
-    log("parallel range", { ...store.dump(), most });
-    expect(got.equals(Buffer.from(store.plain))).toBe(true);
-    expect(most).toBe(PARROT_DOWNLOAD_LANES_PER_FILE);
-    expect(store.opens.length).toBeGreaterThan(1);
-    expect(store.opens.length).toBeLessThanOrEqual(PARROT_DOWNLOAD_LANES_PER_FILE);
-    expect(store.calls.map((call) => call.objectKey)).toEqual(store.chunks.map((chunk) => chunk.objectKey));
-    load.clear();
-    expect(store.closedCount()).toBe(store.opens.length);
+      }))
+    );
+    expect(messages).toHaveLength(3);
+    expect(messages[0]).toContain(`[parrot-chunks] ${store.chunks[0]!.objectKey} ${CHUNK} bytes`);
   });
 
   it("serves repeated reads from memory and shares a download in flight", async () => {
@@ -166,7 +111,7 @@ describe("parrot chunk loader", () => {
       profileId: async () => PROFILE_ID,
       libraryKeyBase64: () => store.key.toString("base64"),
       clientType: "parrot-desktop",
-      openSession: store.openSession,
+      download: store.download,
     });
     store.holdDownloads();
     const a = load(store.chunks[0]!);
@@ -189,7 +134,7 @@ describe("parrot chunk loader", () => {
       libraryKeyBase64: () => store.key.toString("base64"),
       clientType: "parrot-desktop",
       maxBytes: 2 * CHUNK,
-      openSession: store.openSession,
+      download: store.download,
     });
     const [c0, c1, c2] = store.chunks as [TrackFileChunkRow, TrackFileChunkRow, TrackFileChunkRow];
     await load(c0);
@@ -216,7 +161,7 @@ describe("parrot chunk loader", () => {
       profileId: async () => PROFILE_ID,
       libraryKeyBase64: () => store.key.toString("base64"),
       clientType: "parrot-desktop",
-      openSession: store.openSession,
+      download: store.download,
     });
     await expect(load(wrongSize)).rejects.toThrow(`chunk ${wrongSize.objectKey} decrypted to 1000 bytes, expected 999`);
     const wrongKey = createParrotChunkLoader({
@@ -224,7 +169,7 @@ describe("parrot chunk loader", () => {
       profileId: async () => PROFILE_ID,
       libraryKeyBase64: () => randomBytes(32).toString("base64"),
       clientType: "parrot-desktop",
-      openSession: store.openSession,
+      download: store.download,
     });
     await expect(wrongKey(store.chunks[0]!)).rejects.toThrow();
     // A failed download is not cached: the next read tries again.
@@ -243,7 +188,7 @@ describe("parrot chunk loader", () => {
       profileId: async () => PROFILE_ID,
       libraryKeyBase64: () => key.toString("base64"),
       clientType: "parrot-desktop",
-      openSession: (() => ({ download: async () => sealed, close: async () => undefined })) as unknown as OpenSession,
+      download: (async () => sealed) as unknown as ChunkDownload,
     });
     expect(Buffer.from(await load(chunk)).equals(plain)).toBe(true);
   });
@@ -268,7 +213,7 @@ describe("readParrotFileRange", () => {
       profileId: async () => PROFILE_ID,
       libraryKeyBase64: () => store.key.toString("base64"),
       clientType: "parrot-desktop",
-      openSession: store.openSession,
+      download: store.download,
     });
     const bytes = await collect(readParrotFileRange(store.chunks, start, end, load));
     const expected = Buffer.from(store.plain.subarray(start, end + 1));
@@ -286,7 +231,7 @@ describe("readParrotFileRange", () => {
       profileId: async () => PROFILE_ID,
       libraryKeyBase64: () => store.key.toString("base64"),
       clientType: "parrot-desktop",
-      openSession: store.openSession,
+      download: store.download,
     });
     const bytes = await collect(readParrotFileRange(store.chunks, 5000, 6000, load));
     expect(bytes.length).toBe(0);
@@ -300,7 +245,7 @@ describe("readParrotFileRange", () => {
       profileId: async () => PROFILE_ID,
       libraryKeyBase64: () => store.key.toString("base64"),
       clientType: "parrot-desktop",
-      openSession: store.openSession,
+      download: store.download,
     });
     const iterator = readParrotFileRange(store.chunks, 0, 3 * CHUNK - 1, load);
     const first = await iterator.next();
@@ -319,7 +264,7 @@ describe("readParrotFileRange", () => {
       profileId: async () => PROFILE_ID,
       libraryKeyBase64: () => store.key.toString("base64"),
       clientType: "parrot-desktop",
-      openSession: store.openSession,
+      download: store.download,
     });
     await expect(collect(readParrotFileRange(store.chunks, 0, 2 * CHUNK - 1, load))).rejects.toThrow(`no such object ${store.chunks[1]!.objectKey}`);
   });

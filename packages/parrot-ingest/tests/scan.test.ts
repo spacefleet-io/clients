@@ -111,21 +111,4 @@ describe("scanParrotImport", () => {
     // The lookup gave no cover: the file's own picture stays.
     expect((await parrotEditedReader(edits, readInfo, new Map())(nook, music)).cover).toEqual(builtIn);
   });
-
-  // @req PAR-UP-08 @req PAR-META-22
-  it("gives the song the picture the review chose, with the square the user framed on it", async () => {
-    const nook = path.join(music, "Linnet Park", "Meltway", "13 Nook.mp3");
-    const builtIn = { bytes: new Uint8Array([1, 2, 3]), mime: "image/png" };
-    const picked = { bytes: new Uint8Array([0x52, 0x49, 0x46, 0x46]), mime: "image/webp" };
-    const readInfo = async (file: string, root?: string) => ({ ...(await readParrotTrackInfo(file, root)), cover: builtIn });
-    const coverCrop = { left: 0.1, top: 0, size: 0.8 };
-    const edits = new Map([[nook, { artist: "", album: "Meltway", title: "Nook", coverId: "5c4c7b54-4a25-3d18-b1f1-7d3a9f8b4f0b", coverPicture: "picture:abc", coverCrop }]]);
-    const read = await parrotEditedReader(edits, readInfo, new Map([["picture:abc", picked]]))(nook, music);
-    expect(read.cover).toEqual(picked);
-    expect(read.coverCrop).toEqual(coverCrop);
-    // No chosen cover came: the file's own picture stays, at its centre square (the framing was the chosen cover's).
-    const fallback = await parrotEditedReader(edits, readInfo, new Map())(nook, music);
-    expect(fallback.cover).toEqual(builtIn);
-    expect(fallback.coverCrop).toBeUndefined();
-  });
 });

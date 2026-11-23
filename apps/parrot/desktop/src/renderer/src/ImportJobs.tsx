@@ -19,7 +19,6 @@ import { formatLocalizedStorage } from "@space/shared/format";
 import { IMPORT_INTERRUPTED, type ParrotBackgroundWork, type ParrotImportJob, type ParrotImportStatus, type ParrotLanguage } from "../../shared/ipc";
 import type { ParrotStringKey, Translate } from "./i18n";
 import type { NotificationPart } from "./notificationText";
-import { ExportJobList, exportJobMatches, useExportJobs } from "./ExportJobs";
 
 /**
  * Why an import or a file failed, as the user reads it: a publish other saves kept beating (the server's 409
@@ -159,12 +158,10 @@ export function ImportJobs({ t, language, onReview }: { t: Translate; language: 
 
   const list = jobs ?? [];
   const shown = list.filter((job) => importJobMatches(job, filter));
-  const exports = useExportJobs() ?? [];
-  const shownExports = exports.filter((job) => exportJobMatches(job, filter));
-  const activeCount = list.filter((job) => job.status.running).length + exports.filter((job) => job.phase === "running").length;
+  const activeCount = list.filter((job) => job.status.running).length;
 
   return (
-    <DesktopJobsSheet title={t("jobs.title")} subtitle={t("jobs.subtitle")} activeCount={activeCount} jobCount={list.length + exports.length} triggerClassName={desktopTopNavIconActionClassName} testId="nav-jobs">
+    <DesktopJobsSheet title={t("jobs.title")} subtitle={t("jobs.subtitle")} activeCount={activeCount} jobCount={list.length} triggerClassName={desktopTopNavIconActionClassName} testId="nav-jobs">
       <div className="flex flex-col gap-4 p-4" data-testid="import-jobs">
         {background.map((work) => (
           <DesktopJobsBackgroundLine key={work.kind} testId={`import-background-${work.kind}`}>
@@ -184,13 +181,10 @@ export function ImportJobs({ t, language, onReview }: { t: Translate; language: 
         />
         {jobs === null ? (
           <DesktopJobsLoadingSkeleton testId="import-jobs-loading" />
-        ) : shown.length === 0 && shownExports.length === 0 ? (
+        ) : shown.length === 0 ? (
           <DesktopJobsEmpty title={t("jobs.emptyTitle")} subtitle={t("jobs.emptySubtitle")} />
         ) : (
-          <>
-            {shownExports.length > 0 && <ExportJobList t={t} language={language} jobs={shownExports} />}
-            {shown.length > 0 && <ImportJobList t={t} language={language} jobs={shown} onReview={onReview} />}
-          </>
+          <ImportJobList t={t} language={language} jobs={shown} onReview={onReview} />
         )}
       </div>
     </DesktopJobsSheet>

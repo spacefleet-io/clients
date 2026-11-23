@@ -5,23 +5,16 @@
  * updates off too; with them on, a check that finds a version downloads it at once (main's `autoDownload`; asking
  * again here is deduplicated by electron-updater).
  *
- * A copy from SpaceFleet's .deb/.rpm/.pacman packages (channel `system`, REL-UPD-07) goes Check → Install (the
- * system's password window, then the package manager updates only this app) → the app restarts by itself (Restart
- * {app} stays as the button if it has not); a failure, or a desktop without a password window, shows the reason and
- * the command to run by hand. A Flatpak copy shows the `flatpak update` command. A check never installs on its own
- * there: Install is always the user's click.
- *
  * The app passes its own updater controls (`useDesktopUpdater` over its preload bridge) and its own setting, since
  * Badger keeps the switch in the window's settings and Parrot in the main process.
  */
 import { AlertTriangle, CheckCircle2, Download, Info, Loader2, RefreshCw, RotateCw } from "lucide-react";
 import { Button, Switch } from "@space/ui";
-import type { UpdateChannel, UpdaterPhase } from "./types";
+import type { UpdaterPhase } from "./types";
 import type { DesktopUpdaterControls } from "./useUpdater";
-import { systemFailureKey, updateErrorKey, updateSectionText, type UpdateSectionStringKey } from "./strings";
-import { ManualUpdateCommand } from "./SystemUpdatePrompt";
+import { updateErrorKey, updateSectionText, type UpdateSectionStringKey } from "./strings";
 
-export type UpdateSectionAction = "check" | "download" | "restart" | "install" | "restartApp";
+export type UpdateSectionAction = "check" | "download" | "restart";
 
 export type DesktopUpdateSectionProps = {
   controls: DesktopUpdaterControls;
@@ -33,22 +26,16 @@ export type DesktopUpdateSectionProps = {
   autoUpdate: { checked: boolean; onCheckedChange: (enabled: boolean) => void };
 };
 
-/** What the one button does in each phase; null = no button (no in-app updater, or only a command to run by hand). */
-export const updateSectionAction = (phase: UpdaterPhase, channel: UpdateChannel = "self", canInstall = true): UpdateSectionAction | null => {
-  if (phase === "unsupported") return null;
-  if (channel === "system") {
-    if (phase === "installed") return "restartApp";
-    if (phase === "installing") return "install";
-    if (phase === "available") return canInstall ? "install" : null;
-    return "check";
-  }
-  if (channel === "flatpak") return phase === "available" ? null : "check";
+/** What the one button does in each phase; null = no button (no in-app updater in this copy). */
+export const updateSectionAction = (phase: UpdaterPhase): UpdateSectionAction | null => {
   switch (phase) {
     case "downloaded":
       return "restart";
     case "available":
     case "downloading":
       return "download";
+    case "unsupported":
+      return null;
     default:
       return "check";
   }
@@ -64,13 +51,7 @@ export const formatCheckedAt = (at: number, language: string, now: number = Date
   }
 };
 
-const BUTTON_LABEL: Record<UpdateSectionAction, UpdateSectionStringKey> = {
-  check: "check",
-  download: "download",
-  restart: "restart",
-  install: "install",
-  restartApp: "restartApp",
-};
+const BUTTON_LABEL: Record<UpdateSectionAction, UpdateSectionStringKey> = { check: "check", download: "download", restart: "restart" };
 
 export function DesktopUpdateSection({ controls, language, appName, autoUpdate }: DesktopUpdateSectionProps) {
   const { state, supported, check, download, install } = controls;
@@ -78,71 +59,49 @@ export function DesktopUpdateSection({ controls, language, appName, autoUpdate }
   const text = (key: UpdateSectionStringKey, values: Parameters<typeof updateSectionText>[2] = {}) =>
     updateSectionText(language, key, { app: appName, ...values });
   const version = state.version ?? "";
-  const action = updateSectionAction(phase, state.channel, state.canInstall);
-  const busy = phase === "checking" || phase === "downloading" || phase === "installing";
-  const system = state.channel === "system";
+  const action = updateSectionAction(phase);
+  const busy = phase === "checking" || phase === "downloading";
 
-  const available =
-    state.channel === "flatpak"
-      ? text("flatpakHint", { version })
-      : system && state.canInstall
-        ? text("systemPrompt", { version })
-        : system
-          ? `${text("available", { version })} ${text("systemNoPasswordDialog")}`
-          : text("available", { version });
   const status =
     phase === "checking"
       ? text("checking")
       : phase === "available"
-        ? available
+        ? text("available", { version })
         : phase === "downloading"
           ? text("downloading", { version, percent: Math.round(state.progress) })
           : phase === "downloaded"
             ? text("ready", { version })
-            : phase === "installing"
-              ? text("installing", { version })
-              : phase === "installed"
-                ? text("installed", { version })
-                : phase === "error"
-                  ? text(system && state.failure ? systemFailureKey(state.failure) : updateErrorKey(state.errorMessage))
-                  : phase === "unsupported"
-                    ? text("unsupported")
-                    : state.lastCheckedAt !== null
-                      ? text("upToDate", { time: formatCheckedAt(state.lastCheckedAt, language) })
-                      : text("notChecked");
-  const manual =
-    state.manualCommand !== null &&
-    ((state.channel === "flatpak" && phase === "available") ||
-      (system && ((phase === "available" && !state.canInstall) || (phase === "error" && state.failure !== null))));
+            : phase === "error"
+              ? text(updateErrorKey(state.errorMessage))
+              : phase === "unsupported"
+                ? text("unsupported")
+                : state.lastCheckedAt !== null
+                  ? text("upToDate", { time: formatCheckedAt(state.lastCheckedAt, language) })
+                  : text("notChecked");
 
   const StatusIcon =
-    busy
+    phase === "checking" || phase === "downloading"
       ? Loader2
       : phase === "error"
         ? AlertTriangle
-        : phase === "available" || phase === "downloaded" || phase === "installed"
+        : phase === "available" || phase === "downloaded"
           ? Download
           : phase === "idle" && state.lastCheckedAt !== null
             ? CheckCircle2
             : Info;
   const statusTone =
-    phase === "error"
-      ? "text-destructive"
-      : phase === "available" || phase === "downloaded" || phase === "installed"
-        ? "text-primary"
-        : "text-muted-foreground";
+    phase === "error" ? "text-destructive" : phase === "available" || phase === "downloaded" ? "text-primary" : "text-muted-foreground";
 
   const onAction = (): void => {
-    if (action === "restart" || action === "restartApp") install();
-    else if (action === "download" || action === "install") void download();
+    if (action === "restart") install();
+    else if (action === "download") void download();
     else if (action === "check") {
-      // Automatic mode is already downloading what the check finds; asking here only shows it at once. A
-      // package-manager or Flatpak copy never installs without the user's click (REL-UPD-07).
-      void check().then((found) => (found === "available" && state.autoUpdate && state.channel === "self" ? download() : undefined));
+      // Automatic mode is already downloading what the check finds; asking here only shows it at once.
+      void check().then((found) => (found === "available" && state.autoUpdate ? download() : undefined));
     }
   };
 
-  const ActionIcon = action === "restart" || action === "restartApp" ? RotateCw : action === "download" || action === "install" ? Download : RefreshCw;
+  const ActionIcon = action === "restart" ? RotateCw : action === "download" ? Download : RefreshCw;
 
   return (
     <section data-testid="update-section" aria-label={text("title")} className="rounded-xl border border-border bg-card/60">
@@ -179,7 +138,6 @@ export function DesktopUpdateSection({ controls, language, appName, autoUpdate }
           <StatusIcon className={`mt-0.5 size-4 shrink-0 ${busy ? "animate-spin" : ""}`} aria-hidden />
           <span className="min-w-0 break-words">{status}</span>
         </p>
-        {manual ? <ManualUpdateCommand command={state.manualCommand ?? ""} text={(key) => text(key)} /> : null}
         {phase === "downloading" ? (
           <div
             role="progressbar"
@@ -197,9 +155,7 @@ export function DesktopUpdateSection({ controls, language, appName, autoUpdate }
         <div className="flex items-center justify-between gap-4 border-t border-border px-4 py-3">
           <div className="min-w-0 space-y-0.5">
             <div className="text-sm font-medium text-foreground">{text("autoLabel")}</div>
-            <div className="text-sm text-muted-foreground">
-              {text(system ? "autoHintSystem" : state.channel === "flatpak" ? "autoHintFlatpak" : "autoHint")}
-            </div>
+            <div className="text-sm text-muted-foreground">{text("autoHint")}</div>
           </div>
           <Switch
             aria-label={text("autoLabel")}
