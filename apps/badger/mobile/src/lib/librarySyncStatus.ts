@@ -6,10 +6,8 @@
  * single-flight already merges overlapping runs, so the tracker only counts its callers: one "updating" state from the
  * first run that finds the server newer until the last caller settles, then one result.
  * - Asking the server for its version is quiet: most checks find nothing new, and a sign on every return to the front
- *   would be noise. The sign appears once the server is newer (`start`): at once when it is a batch of versions ahead,
- *   after a failed sync, before a large page of ops (`fetch`) or for a snapshot restore, otherwise when the sync is
- *   still running after `LIBRARY_SYNC_SHOW_DELAY_MS`. A run the db starts on its own (a re-sync after a rejected
- *   publish) shows too, and ends with the db's `end`.
+ *   would be noise. The sign appears once the server is newer (`start`) and the sync is still running after
+ *   `LIBRARY_SYNC_SHOW_DELAY_MS`, or at once for a snapshot restore.
  * - The result passes on its own after `LIBRARY_SYNC_RESULT_MS`: the number of new titles / episodes, "updated" after a
  *   sync long enough to have shown its sign, "up to date" after a pull-to-refresh (the user asked), nothing otherwise.
  * - A failure stays until a sync works: the saved library is still usable, the sign says it may be behind.
@@ -21,11 +19,7 @@ export type LibrarySyncSource = "start" | "foreground" | "stream" | "pull";
 export type LibrarySyncProgressEvent =
   | { kind: "start"; fromVersion: number; toVersion: number }
   | { kind: "page"; version: number }
-  | { kind: "snapshot" }
-  /** A page of ops is about to be downloaded; `bytes` is the sum of its ops' sizes. */
-  | { kind: "fetch"; bytes: number }
-  /** The run that said `start` is over; `error` when it failed. */
-  | { kind: "end"; error: string | null };
+  | { kind: "snapshot" };
 
 export type LibrarySyncState =
   | { kind: "idle" }
@@ -50,17 +44,10 @@ export type LibrarySyncState =
 export type LibrarySyncCounts = { titles: number; episodes: number };
 
 /**
- * The sign waits this long after the server was found a version or two newer: a quick sync (another device's play
- * position, one new title) is done before it and passes unseen.
+ * The sign waits this long after the server was found newer: a quick sync (another device's play position, one new
+ * title) is done before it and passes unseen, a long one (a night of uploads) shows well within a second.
  */
 export const LIBRARY_SYNC_SHOW_DELAY_MS = 400;
-/** The server this many versions ahead or more is a batch (a night of uploads): the sign shows at once. */
-export const LIBRARY_SYNC_SHOW_AT_ONCE_VERSIONS = 3;
-/**
- * A page this large shows the sign before it is downloaded: one media.upsert op of a few MB held the JS thread for
- * ~11 s on op9, so the show timer could not fire. Another device's play position is a few KB.
- */
-export const LIBRARY_SYNC_SHOW_AT_ONCE_BYTES = 256 * 1024;
 export const LIBRARY_SYNC_RESULT_MS = 4_000;
 
 /** 0..1 while ops pages arrive; null when unknown (a snapshot restore, or not syncing). */
@@ -214,9 +201,8 @@ export const createLibrarySyncTracker = ({
           if (shown) set(run);
           return;
         }
-        // A run no caller tracks yet (the db's own re-sync after a rejected publish, which a caller may join) ends
-        // with the db's `end`.
-        if (active === 0) begin();
+        // A run no caller tracks (the db's own re-sync after a rejected publish) has no end to wait for: not shown.
+        if (active === 0) return;
         clearTimeout(resultTimer ?? undefined);
         resultTimer = null;
         run = {
@@ -227,25 +213,10 @@ export const createLibrarySyncTracker = ({
           doneVersion: event.fromVersion,
           phase: "ops",
         };
-        // A batch shows before its first page is asked for: reading a large page holds the JS thread for seconds, and
-        // a timer due during that hold would only fire once the first page is in. A sync after a failure shows at
-        // once too: the failed sign on screen must not outlive the retry.
-        if (event.toVersion - event.fromVersion >= LIBRARY_SYNC_SHOW_AT_ONCE_VERSIONS || state.kind === "failed") show();
-        else showTimer = setTimeout(show, LIBRARY_SYNC_SHOW_DELAY_MS);
-        return;
-      }
-      if (event.kind === "end") {
-        // A tracked caller settles when its own call returns (with its own error); only a run nobody tracks ends here.
-        if (active > 0 || !run) return;
-        if (event.error !== null) error = new Error(event.error);
-        void settle();
+        showTimer = setTimeout(show, LIBRARY_SYNC_SHOW_DELAY_MS);
         return;
       }
       if (!run) return;
-      if (event.kind === "fetch") {
-        if (event.bytes >= LIBRARY_SYNC_SHOW_AT_ONCE_BYTES) show();
-        return;
-      }
       if (event.kind === "page") {
         run = { ...run, doneVersion: Math.max(run.doneVersion, event.version) };
         if (shown) set(run);

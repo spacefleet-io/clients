@@ -10,11 +10,9 @@
  *   where it came from with Undo; an album pick also takes its cover. The Lyrics section shimmers while the words are
  *   on their way, shows the first lines once found, and says "No lyrics found" with "Search again" only after a
  *   lookup came back empty. A cover whose picture is still loading shimmers; the drawn picture means "no cover" only.
- *   A new album picture can be framed (PAR-META-22): the square moves, and Save sends that framing with the picture.
  * @req PAR-LYR-05[parrot]
  * @req PAR-META-18[parrot]
  * @req PAR-META-20[parrot]
- * @req PAR-META-22[parrot]
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -41,16 +39,6 @@ const labels = {
   field: { title: "Title", artist: "Artist", album: "Album", albumArtist: "Album artist", number: "Track", disc: "Disc", year: "Year", genre: "Genre", cover: "Cover" },
   coverHint: "Drop a picture",
   coverPick: "Choose…",
-  coverFrame: "Frame the cover…",
-  frame: {
-    title: "Frame the cover",
-    hint: "Drag the square",
-    preview: "On the album",
-    size: ({ width, height, side }: { width: number; height: number; side: number }) => `Picture ${width} × ${height}, kept ${side} × ${side}`,
-    centre: "Back to the centre",
-    cancel: "Cancel",
-    use: "Use this framing",
-  },
 };
 const lyricsLabels: ParrotEditLyricsLabels = {
   lyrics: "Lyrics",
@@ -131,7 +119,6 @@ const open = async (props: {
   initial?: ParrotEditFields;
   onSubmit?: (fields: ParrotEditFields, cover: ParrotCoverInput | null) => void;
   onOpenChange?: (open: boolean) => void;
-  initialCover?: ParrotCoverInput;
 }) => {
   Reflect.set(globalThis, "IS_REACT_ACT_ENVIRONMENT", true);
   const host = document.createElement("div");
@@ -152,7 +139,6 @@ const open = async (props: {
         lyrics={props.lyrics}
         lyricsLabels={lyricsLabels}
         onSubmit={props.onSubmit ?? (() => {})}
-        initialCover={props.initialCover}
       />
     )
   );
@@ -398,42 +384,5 @@ describe("[parrot] cover loading is not 'no cover'", () => {
     expect(loading).toContain('data-testid="parrot-cover-fetching"');
     expect(fetching).toContain('data-cover="fetching"');
     expect(fetching).toContain('data-testid="parrot-cover-fetching"');
-  });
-});
-
-describe("[parrot] edit panel: framing a new cover (PAR-META-22)", () => {
-  it("@req PAR-META-22 a new album picture can be framed: the square moves and Save sends that framing", async () => {
-    const saved: (ParrotCoverInput | null)[] = [];
-    const get = await open({
-      kind: "album",
-      initial: { title: "Chrome Horizon", artist: "Neon Pulse AI", year: 2025, genre: null },
-      initialCover: { kind: "url", url: "https://example.com/wide.jpg" },
-      onSubmit: (_fields, cover) => saved.push(cover),
-    });
-    expect(get("manage-cover-preview")!.dataset.framed).toBeUndefined();
-    await act(async () => get("manage-cover-frame")!.click());
-    expect(get("manage-frame")).not.toBeNull();
-    // jsdom loads no pictures: give the measuring image its size and fire its load.
-    const measuring = get("manage-frame")!.querySelector<HTMLImageElement>("img.hidden")!;
-    Object.defineProperty(measuring, "naturalWidth", { value: 1600 });
-    Object.defineProperty(measuring, "naturalHeight", { value: 900 });
-    await act(async () => measuring.dispatchEvent(new Event("load")));
-    expect(get("manage-frame-size")!.textContent).toBe("Picture 1600 × 900, kept 900 × 900");
-    expect((get("manage-frame-centre") as HTMLButtonElement).disabled).toBe(true);
-    // The arrow keys move the square by 2% of the picture's shorter side (18 px here), from the centre (350, 0).
-    await act(async () => get("manage-frame-square")!.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true })));
-    expect((get("manage-frame-centre") as HTMLButtonElement).disabled).toBe(false);
-    await act(async () => get("manage-frame-use")!.click());
-    expect(get("manage-frame")).toBeNull();
-    expect(get("manage-cover-preview")!.dataset.framed).toBe("true");
-    await act(async () => get("manage-edit-submit")!.click());
-    console.info(T, "saved cover", JSON.stringify(saved));
-    expect(saved).toEqual([{ kind: "url", url: "https://example.com/wide.jpg", crop: { left: 332 / 1600, top: 0, size: 1 } }]);
-  });
-
-  it("@req PAR-META-22 the frame button shows only for a new picture, not the album's current cover", async () => {
-    const get = await open({ kind: "album", initial: { title: "Chrome Horizon", artist: "Neon Pulse AI", year: 2025, genre: null } });
-    expect(get("manage-cover-pick")).not.toBeNull();
-    expect(get("manage-cover-frame")).toBeNull();
   });
 });

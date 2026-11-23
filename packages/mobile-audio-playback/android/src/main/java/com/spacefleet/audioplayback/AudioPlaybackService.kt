@@ -5,8 +5,6 @@ import android.content.Intent
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
-import androidx.media3.extractor.DefaultExtractorsFactory
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 
@@ -21,13 +19,9 @@ class AudioPlaybackService : MediaSessionService() {
 
     override fun onCreate() {
         super.onCreate()
-        // A raw AAC (ADTS) file has no index and no length, so ExoPlayer by default gives it no duration and cannot seek
-        // in it (the bar shows --:--). Estimating both from the average frame size, as browsers do, gives it a
-        // duration and seeking (PAR-FMT-01).
-        val extractors = DefaultExtractorsFactory().setConstantBitrateSeekingEnabled(true)
         // ParrotRenderersFactory adds Parrot's own Apple Lossless (ALAC) decoder, which Android lacks (PAR-FMT-01), and
         // plays each song at its own even-volume gain, switched sample-exactly between songs (PAR-PLAY-03 item 2).
-        val player = ExoPlayer.Builder(this, ParrotRenderersFactory(this), DefaultMediaSourceFactory(this, extractors))
+        val player = ExoPlayer.Builder(this, ParrotRenderersFactory(this))
             .setAudioAttributes(
                 AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MUSIC).build(),
                 /* handleAudioFocus= */ true,

@@ -6,7 +6,6 @@ import {
   parrotLibraryMigrationStatements,
   type ParrotLibraryOp,
 } from "@space/parrot-library-db-definition";
-import { parrotLibraryStatementsForOps } from "../src/librarySchema";
 import { parrotAlbumEditValues, parrotTrackEditValues, planParrotDelete, planParrotEdit, planParrotTrackLoudness, type ParrotLibraryQuery, type ParrotManageContext } from "../src/manage";
 import { albumPageRows } from "../src/missingTracks";
 
@@ -19,11 +18,8 @@ const ctx: ParrotManageContext = {
 };
 const meta = { id: "seed", createdAt: "2026-11-09T00:00:00.000Z" };
 
-/** Applies ops as every Parrot client does: a song stored in parts first takes the library to schema 11. */
 const apply = (db: Database, ops: readonly ParrotLibraryOp[]) =>
   db.transaction(() => {
-    const version = db.query<{ user_version: number }, []>("PRAGMA user_version").get()?.user_version ?? 0;
-    for (const sql of parrotLibraryStatementsForOps(version, ops)) db.run(sql);
     for (const op of ops)
       for (const statements of Object.values(buildParrotOpStatements(op)))
         for (const { sql, params } of statements ?? []) db.prepare(sql).run(...(params as never[]));
@@ -139,52 +135,6 @@ describe("planParrotDelete", () => {
     expect(plan.objectKeys).toEqual(expect.arrayContaining(["photo/guest", "photo/guest-thumb"]));
     const kept = await planParrotDelete(queryOf(db), { kind: "track", id: "paperboat" }, ctx);
     expect(kept.objectKeys.filter((k) => k.startsWith("photo/"))).toEqual([]);
-  });
-
-  it("@req PAR-FMT-01 deleting a song stored in parts frees its header, every piece and its tags object", async () => {
-    const db = seed();
-    apply(db, [
-      createParrotOp(
-        "track_file.upsert",
-        {
-          file: {
-            id: "tf-paperboat",
-            trackId: "paperboat",
-            codec: "aac",
-            container: "m4a",
-            mime: "audio/mp4",
-            lossless: false,
-            bitrateKbps: 256,
-            sampleRate: 44100,
-            sizeBytes: 300,
-            lightCopy: false,
-            createdAt: 1,
-            headerBytes: 100,
-            sourceSizeBytes: 13_000,
-            tagsObjectKey: "tf-paperboat/tags",
-          },
-          chunks: [
-            { idx: 0, objectKey: "tf-paperboat/header", plainOffset: 0, plainSize: 100 },
-            { idx: 1, objectKey: "tf-paperboat/piece-1", plainOffset: 100, plainSize: 100 },
-            { idx: 2, objectKey: "tf-paperboat/piece-2", plainOffset: 200, plainSize: 100 },
-          ],
-        },
-        meta
-      ),
-    ]);
-    const plan = await planParrotDelete(queryOf(db), { kind: "track", id: "paperboat" }, ctx);
-    console.log(T, "split song plan", plan.objectKeys);
-    expect(plan.objectKeys).toEqual([
-      "tf-paperboat/header",
-      "tf-paperboat/piece-1",
-      "tf-paperboat/piece-2",
-      "tf-paperboat/tags",
-      "cover/hybrid",
-      "cover/hybrid-thumb",
-    ]);
-    apply(db, plan.ops);
-    expect(db.prepare("SELECT COUNT(*) AS n FROM track_files WHERE id = 'tf-paperboat'").get()).toEqual({ n: 0 });
-    expect(db.prepare("SELECT COUNT(*) AS n FROM track_file_chunks WHERE track_file_id = 'tf-paperboat'").get()).toEqual({ n: 0 });
   });
 });
 

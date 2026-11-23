@@ -81,8 +81,7 @@ const makeFakeDb = () => {
   };
 };
 
-vi.mock("react-native", async () => ({
-  ...(await import("./setup/reactNativeMock")).reactNativeBase(),
+vi.mock("react-native", () => ({
   Platform: { OS: "ios" },
   AppState: { currentState: "active", addEventListener: () => ({ remove: () => undefined }) },
 }));

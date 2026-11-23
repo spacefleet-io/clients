@@ -4,10 +4,8 @@
  * @req LIB-SYNC-13[badger-mobile]
  * @why Chris 2026-11-21 (chat): after a night of episode uploads from Badger desktop the phone showed the old library
  *   with no sign that anything was loading. The tab bar now carries a small sign while the library updates:
- *   "Updating media library…" (with a percentage once the pages are counted), then a quiet result ("12 new episodes", "Up
- *   to date"), and a failure that stays in the danger colour and retries on tap. This pins every state's copy and wiring.
- *   The copy says "media library", never a bare "library" (UX-NAME-03; changed from "Updating library…" on
- *   fix/staging-red-tests, LIB-SYNC-13 updated with it).
+ *   "Updating library…" (with a percentage once the pages are counted), then a quiet result ("12 new episodes", "Up to
+ *   date"), and a failure that stays in the danger colour and retries on tap. This pins every state's copy and wiring.
  */
 import React from "react";
 import i18next from "i18next";
@@ -62,12 +60,12 @@ const render = (state: MobileSyncIndicatorState, onRetry = () => undefined) =>
 
 describe("syncIndicatorCopy: what each sync state says", () => {
   const cases: [string, MobileSyncIndicatorState, string, string][] = [
-    ["syncing, progress unknown", { kind: "syncing", progress: null }, "Updating media library…", "busy"],
-    ["syncing, pages counted", { kind: "syncing", progress: 0.426 }, "Updating media library… 43%", "busy"],
+    ["syncing, progress unknown", { kind: "syncing", progress: null }, "Updating library…", "busy"],
+    ["syncing, pages counted", { kind: "syncing", progress: 0.426 }, "Updating library… 43%", "busy"],
     ["new episodes", { kind: "done", changed: true, newTitles: 1, newEpisodes: 12 }, "12 new episodes", "quiet"],
     ["one new episode", { kind: "done", changed: true, newTitles: 0, newEpisodes: 1 }, "1 new episode", "quiet"],
     ["new titles only", { kind: "done", changed: true, newTitles: 3, newEpisodes: 0 }, "3 new titles", "quiet"],
-    ["changed, counts unknown", { kind: "done", changed: true, newTitles: null, newEpisodes: null }, "Media library updated", "quiet"],
+    ["changed, counts unknown", { kind: "done", changed: true, newTitles: null, newEpisodes: null }, "Library updated", "quiet"],
     ["nothing new", { kind: "done", changed: false, newTitles: 0, newEpisodes: 0 }, "Up to date", "quiet"],
     ["failed", { kind: "failed" }, "Update failed", "danger"],
   ];
@@ -82,7 +80,7 @@ describe("syncIndicatorCopy: what each sync state says", () => {
 
   it("the syncing label says the saved library stays usable; the failed one says how to retry", () => {
     expect(syncIndicatorCopy({ kind: "syncing", progress: null }, t).label).toBe(
-      "Updating media library… — Your saved media library stays available",
+      "Updating library… — Your saved media library stays available",
     );
     expect(syncIndicatorCopy({ kind: "failed" }, t).label).toBe("Media library update failed — saved content. Tap to retry.");
   });
@@ -114,7 +112,7 @@ describe("MobileSyncIndicator wiring", () => {
     const fragment = tree.props.children as React.ReactElement<{ children: React.ReactNode }>;
     const [icon, text] = React.Children.toArray(fragment.props.children) as React.ReactElement<{ children?: unknown }>[];
     expect(icon?.type).toBe(stubs.SpinnerStub);
-    expect(text?.props.children).toBe("Updating media library… 50%");
+    expect(text?.props.children).toBe("Updating library… 50%");
   });
 
   it("a failure is a button that retries", () => {

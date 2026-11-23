@@ -50,6 +50,6 @@ describe("packaged desktop main defaults NODE_ENV to production", () => {
 
 describe("dev / source runtime spawn env", () => {
   it("does not gain a NODE_ENV the parent did not have", () => {
-    expect("NODE_ENV" in buildRuntimeSpawnEnv({ PATH: "/usr/bin" }, "/u", undefined, null)).toBe(false);
+    expect("NODE_ENV" in buildRuntimeSpawnEnv({ PATH: "/usr/bin" }, "/u", undefined)).toBe(false);
   });
 });

@@ -52,7 +52,6 @@ import {
 import { QUALITY_ORDER, type QualityPreset } from "@space/ingest-core/quality";
 import { guessQualityLabel } from "@space/ingest-core/labQueueShared";
 import { parseFilename } from "@space/ingest-core/parseMediaFilename";
-import { verifiedChunkKeySeed } from "@space/ingest-core/chunkKeySeeds";
 import { isValidPlacementId } from "@space/shared/storagePlacement";
 import { PICTURE_SUBTITLE_FORMATS } from "@space/shared/libraryTypes";
 import { isTransientStorageTransportError } from "@space/shared/storageTunnel";
@@ -423,8 +422,6 @@ type PersistedOutputLike = {
   label?: string;
   chapters?: Array<{ title: string; startSeconds: number }>;
   encodingComplete?: boolean;
-  /** Seed of a seeded output's chunk keys (LIB-FMT-11); absent when its keys are random. */
-  chunkKeySeed?: string;
 };
 
 type PersistedSubtitleLike = {
@@ -514,11 +511,6 @@ export const recoverProducedMediaFromState = (
         typeof output.totalSize === "number"
           ? output.totalSize
           : initSize + segments.reduce((sum, segment) => sum + segment.sizeBytes, 0);
-      const chunkKeySeed = verifiedChunkKeySeed(
-        output.chunkKeySeed,
-        segments.map((segment) => segment.key)
-      );
-      const seedField = chunkKeySeed ? { chunkKeySeed } : {};
 
       if (output.kind === "video") {
         videoFormats.push({
@@ -530,7 +522,6 @@ export const recoverProducedMediaFromState = (
           durationSeconds: output.durationSeconds ?? null,
           totalSize,
           chunks: segments,
-          ...seedField,
           chapters: output.chapters,
         });
       } else {
@@ -544,7 +535,6 @@ export const recoverProducedMediaFromState = (
           durationSeconds: output.durationSeconds ?? null,
           totalSize,
           chunks: segments,
-          ...seedField,
           isDefault: audioTracks.length === 0,
         });
       }
@@ -625,18 +615,6 @@ export function buildBadgerStepDeps(
     // Test doubles without isOpen() are treated as always open.
     if (typeof libraryDb.isOpen !== "function") return true;
     return (await waitForReady("library db open", () => libraryDb.isOpen(), ctx)) === true;
-  };
-  /**
-   * Whether this upload stores chunks under seed-derived keys (LIB-FMT-11 key mode 2): only once the open library is
-   * converted to change types 4 (a switched account). Anything else, a closed DB or a test double without the method
-   * included, keeps today's random keys.
-   */
-  const shouldSeedChunkKeys = async (): Promise<boolean> => {
-    try {
-      return (await libraryDb.call("isPackedPlaybackLayout", [])) === true;
-    } catch {
-      return false;
-    }
   };
   // Seek-bar previews after the source commit (MPV-PREV-02). Their pending runs sit beside the job dirs (which the
   // succeeded-job cleanup removes while a run may still go on) and are re-queued at start (RT-LIFE-04).
@@ -1245,7 +1223,6 @@ export function buildBadgerStepDeps(
       const libraryKeyBase64 = uploadToken
         ? await awaitLibraryKey(waitCtx)
         : (resolveLibraryKey?.(input.userId) ?? null);
-      const seedChunkKeys = await shouldSeedChunkKeys();
       console.info(
         JSON.stringify({
           event: "badger.deps.upload.session_ready",
@@ -1255,7 +1232,6 @@ export function buildBadgerStepDeps(
           variant: input.variant ?? null,
           hasToken: Boolean(uploadToken),
           hasLibraryKey: Boolean(libraryKeyBase64),
-          seedChunkKeys,
         })
       );
       const result = await uploadProducedMediaFn!({
@@ -1266,7 +1242,6 @@ export function buildBadgerStepDeps(
         variant: input.variant,
         placementId: input.placementId,
         libraryKeyBase64,
-        ...(seedChunkKeys ? { seedChunkKeys } : {}),
         signal: input.signal,
         onProgress: (_stage, pct) => input.onProgress?.(pct),
         onLog: input.onLog,
@@ -1466,8 +1441,6 @@ export function buildBadgerStepDeps(
             durationSeconds: format.durationSeconds ?? null,
             totalSize: format.totalSize,
             isSource: isSourceRow,
-            // Seeded keys (LIB-FMT-11): the library stores the seed instead of every key once converted.
-            ...(format.chunkKeySeed ? { chunkKeySeed: format.chunkKeySeed } : {}),
           },
         ])) as string;
         formatIds.push(String(formatId));
@@ -1499,7 +1472,6 @@ export function buildBadgerStepDeps(
             totalSize: audio.totalSize,
             chunks: audio.chunks,
             isDefault: audio.isDefault ?? false,
-            ...(audio.chunkKeySeed ? { chunkKeySeed: audio.chunkKeySeed } : {}),
             source: "upload",
           },
         ]);
@@ -1663,7 +1635,6 @@ export function buildBadgerStepDeps(
           initSize: format.initSize,
           durationSeconds: format.durationSeconds ?? null,
           totalSize: format.totalSize,
-          ...(format.chunkKeySeed ? { chunkKeySeed: format.chunkKeySeed } : {}),
         },
       ])) as string;
       formatIds.push(String(formatId));

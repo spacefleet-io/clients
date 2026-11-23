@@ -290,36 +290,6 @@
       "playlist": "Afspeellijst"
     }
   },
-  "offlineContent": {
-    "entry": "Offline inhoud beheren",
-    "title": "Offline inhoud",
-    "back": "Terug",
-    "totalSuffix": "offline opgeslagen",
-    "unknownArtist": "Onbekende artiest",
-    "removeAll": "Alles verwijderen",
-    "confirmCancel": "Annuleren",
-    "confirmRemove": "Alles verwijderen",
-    "removeFailed": "Verwijderen is niet gelukt. Probeer het opnieuw.",
-    "expand": "Inhoud van {{name}} tonen of verbergen",
-    "remove": "{{name}} van deze telefoon verwijderen",
-    "season": "Seizoen {{n}}",
-    "episodeNumber": "S{{season}} A{{episode}}",
-    "unknownTitle": "Titel staat niet meer in de mediatheek",
-    "unknownEpisode": "Aflevering staat niet meer in de mediatheek",
-    "unknown": "Staat niet meer in de mediatheek",
-    "badger": {
-      "entryDescription": "Bekijk wat er op deze telefoon wordt bewaard en maak ruimte vrij",
-      "confirmTitle": "Alles verwijderen wat op deze telefoon wordt bewaard?",
-      "confirmBody": "Alle films en afleveringen die op deze telefoon zijn gedownload, worden verwijderd. Je kunt ze later opnieuw downloaden.",
-      "empty": "Er wordt niets op deze telefoon bewaard. Tik op Downloaden bij een film of aflevering om die zonder verbinding te bekijken."
-    },
-    "parrot": {
-      "entryDescription": "Bekijk wat er offline op deze telefoon is opgeslagen en maak ruimte vrij",
-      "confirmTitle": "Alles verwijderen wat offline is opgeslagen?",
-      "confirmBody": "Alle albums, playlists en nummers die offline op deze telefoon zijn opgeslagen, worden verwijderd. Je kunt ze later opnieuw offline opslaan.",
-      "empty": "Er staat nog niets offline op deze telefoon. Tik op Offline opslaan bij een album, playlist of nummer om het zonder verbinding te beluisteren."
-    }
-  },
   "downloads": {
     "title": "Downloads",
     "back": "Terug",
@@ -1036,7 +1006,8 @@
   },
   "libraryFormat": {
     "title": "Update vereist",
-    "body": "Deze mediatheek is gemaakt met een nieuwere versie van Badger."
+    "body": "Deze mediatheek is gemaakt met een nieuwere versie van Badger. Werk de app bij om hem te openen.",
+    "update": "Nu bijwerken"
   },
   "home": {
     "empty": {
@@ -1102,12 +1073,7 @@
       "added": "Datum toegevoegd",
       "release": "Jaar van uitgave",
       "asc": "Oplopend",
-      "desc": "Aflopend",
-      "title": "Sorteren op",
-      "by": "Veld",
-      "direction": "Volgorde",
-      "button": "Sorteren",
-      "done": "Klaar"
+      "desc": "Aflopend"
     },
     "row": {
       "runtimeMinutes": "{{minutes}} min",
@@ -1123,70 +1089,6 @@
     "poster": {
       "watched": "{{percent}}% bekeken",
       "downloaded": "gedownload"
-    },
-    "filters": {
-      "clear": "Filters wissen",
-      "genres": {
-        "title": "Genres",
-        "search": "Genres zoeken…",
-        "empty": "Geen genres gevonden voor deze zoekopdracht."
-      },
-      "actors": {
-        "title": "Acteurs",
-        "search": "Acteurs zoeken…",
-        "empty": "Geen acteurs gevonden voor deze zoekopdracht."
-      },
-      "title": "Filteren",
-      "clearShort": "Wissen",
-      "more": "+{{count}} meer",
-      "reset": "Resetten",
-      "apply": "Toepassen",
-      "qualities": {
-        "title": "Kwaliteit",
-        "search": "Kwaliteit zoeken",
-        "empty": "Geen kwaliteit gevonden"
-      },
-      "directors": {
-        "title": "Regie",
-        "search": "Regisseur zoeken",
-        "empty": "Geen regisseur gevonden"
-      },
-      "audioLanguages": {
-        "title": "Audiotaal",
-        "search": "Taal zoeken",
-        "empty": "Geen taal gevonden"
-      },
-      "subtitleLanguages": {
-        "title": "Ondertiteltaal",
-        "search": "Taal zoeken",
-        "empty": "Geen taal gevonden"
-      },
-      "watchStates": {
-        "title": "Kijkstatus",
-        "search": "Status zoeken",
-        "empty": "Geen status gevonden"
-      },
-      "quality": {
-        "sd": "SD (480p of lager)"
-      },
-      "watchState": {
-        "unwatched": "Niet bekeken",
-        "in-progress": "Bezig",
-        "watched": "Bekeken"
-      },
-      "undefinedLanguage": "Onbekende taal",
-      "active_one": "Filteren, {{count}} aan",
-      "active_other": "Filteren, {{count}} aan",
-      "showOnly": "Alleen tonen"
-    },
-    "stats": {
-      "movie_one": "{{count}} film",
-      "movie_other": "{{count}} films",
-      "movie_many": "{{count}} films",
-      "series_one": "{{count}} serie",
-      "series_other": "{{count}} series",
-      "series_many": "{{count}} series",
-      "shownOf": "{{shown}} van {{total}}"
     }
   },
   "playlists": {
@@ -1236,17 +1138,17 @@
   },
   "sync": {
     "indicator": {
-      "updating": "Mediatheek bijwerken…",
-      "updatingProgress": "Mediatheek bijwerken… {{percent}}%",
-      "savedStaysLabel": "Je opgeslagen mediatheek blijft beschikbaar",
+      "updating": "Bibliotheek bijwerken…",
+      "updatingProgress": "Bibliotheek bijwerken… {{percent}}%",
+      "savedStaysLabel": "Je opgeslagen mediabibliotheek blijft beschikbaar",
       "newEpisodes_one": "{{count}} nieuwe aflevering",
       "newEpisodes_other": "{{count}} nieuwe afleveringen",
       "newTitles_one": "{{count}} nieuwe titel",
       "newTitles_other": "{{count}} nieuwe titels",
-      "updated": "Mediatheek bijgewerkt",
+      "updated": "Bibliotheek bijgewerkt",
       "upToDate": "Bijgewerkt",
       "failed": "Bijwerken mislukt",
-      "failedLabel": "Bijwerken van de mediatheek mislukt — opgeslagen inhoud",
+      "failedLabel": "Bijwerken van de mediabibliotheek mislukt — opgeslagen inhoud",
       "retry": "Tik om opnieuw te proberen."
     }
   },
@@ -1392,40 +1294,6 @@
   },
   "appUpdate": {
     "title": "Werk {{app}} bij om verder te gaan",
-    "tooOld": "Deze versie van {{app}} is te oud om verbinding te maken.",
-    "how": {
-      "appstore": "Werk {{app}} bij in de App Store en open de app daarna opnieuw.",
-      "testflight": "Installeer de nieuwe versie van {{app}} via TestFlight en open de app daarna opnieuw.",
-      "play": "Werk {{app}} bij via Google Play en open de app daarna opnieuw.",
-      "amazon": "Werk {{app}} bij in de Amazon Appstore en open de app daarna opnieuw.",
-      "fdroid": "Werk {{app}} bij in F-Droid en open de app daarna opnieuw.",
-      "obtainium": "Werk {{app}} bij in Obtainium en open de app daarna opnieuw.",
-      "apk": "Download de nieuwe versie van {{app}}, installeer die over deze heen en open de app daarna opnieuw.",
-      "store": "Werk {{app}} bij in de winkel waarmee je de app hebt geïnstalleerd en open hem daarna opnieuw.",
-      "unknown": "Installeer de nieuwe versie vanaf waar je {{app}} hebt gekregen en open de app daarna opnieuw."
-    },
-    "open": {
-      "appstore": "App Store openen",
-      "testflight": "TestFlight openen",
-      "play": "Google Play openen",
-      "amazon": "Amazon Appstore openen",
-      "fdroid": "F-Droid openen",
-      "obtainium": "Obtainium openen",
-      "apk": "Nieuwe versie downloaden",
-      "store": "Winkel openen"
-    }
-  },
-  "sibling": {
-    "title": "Doorgaan met je {{other}}-account",
-    "body": "{{other}} is ingelogd op deze telefoon. Je hoeft niets in te typen.",
-    "button": "Doorgaan als {{email}}",
-    "otherAccount": "Een ander account gebruiken",
-    "waiting": "Wachten op {{other}}…",
-    "waitingNote": "Sta het toe in {{other}} en kom dan terug.",
-    "cancel": "Annuleren",
-    "failure": "{{other}} kon je niet inloggen. Log op een andere manier in.",
-    "askTitle": "{{app}} je SpaceFleet-account laten gebruiken?",
-    "askBody": "{{app}} op deze telefoon wordt ingelogd als {{email}}, met een eigen kopie van je mediatheeksleutel. Je kunt het altijd uitloggen bij Apparaten.",
-    "allow": "Toestaan"
+    "body": "Deze versie van {{app}} is te oud om verbinding te maken. Installeer de nieuwe versie vanaf waar je {{app}} hebt gekregen en open de app daarna opnieuw."
   }
 }

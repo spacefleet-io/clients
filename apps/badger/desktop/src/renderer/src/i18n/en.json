@@ -199,19 +199,6 @@
     "openingImport": "Opening media import…"
   },
   "library": {
-    "export": {
-      "submittedToast_one": "Saving {{count}} file to {{folder}}",
-      "submittedToast_other": "Saving {{count}} files to {{folder}}",
-      "errors": {
-        "insufficient_disk_space": "Not enough free space in that folder: {{required}} needed, {{free}} free.",
-        "not_authenticated": "Sign in again to download files.",
-        "library_db_not_open": "Your library is not open yet. Try again in a moment.",
-        "dest_not_writable": "Can't save in that folder. Pick another one.",
-        "dest_not_picked": "Pick the folder again.",
-        "nothing_to_export": "There is nothing to download yet.",
-        "generic": "Download failed: {{reason}}"
-      }
-    },
     "showDelisting": {
       "title": "Episodes no longer in the catalogue",
       "description": "The catalogue no longer lists these episodes of {{show}}. Do you want to remove them from your library?",
@@ -711,36 +698,9 @@
         "original": "Original"
       }
     },
-    "offlineContent": {
-      "total": "Kept on this computer",
-      "empty": "Nothing is kept on this computer to watch offline. Use “Save offline” on a film, a season or an episode to keep it here.",
-      "remove": "Remove {{name}} from this computer",
-      "removeAll": "Remove all",
-      "expand": "Show or hide what {{name}} holds",
-      "confirmTitle": "Remove everything kept offline?",
-      "confirmBody": "Every film and episode kept on this computer is deleted from it and the space is freed now. They stay in your library and play from your server when you are online.",
-      "confirmCancel": "Cancel",
-      "confirmRemove": "Remove all",
-      "season": "Season {{n}}",
-      "episodeNumber": "S{{season}} · E{{episode}}",
-      "unknownTitle": "A title no longer in your library",
-      "unknownEpisode": "Episode",
-      "removeFailed": "Could not remove it from this computer. Try again."
-    },
-    "exportAll": {
-      "title": "Download everything",
-      "help": "Save your whole library as video files in a folder you choose, at the best quality you have. Movies go in Movies, shows in Shows.",
-      "button": "Download everything",
-      "moreOptions": "More options",
-      "confirmTitle": "Download everything?",
-      "confirmBody_one": "{{count}} file, {{size}} in total, will be saved to {{folder}}.",
-      "confirmBody_other": "{{count}} files, {{size}} in total, will be saved to {{folder}}.",
-      "confirm": "Download",
-      "cancel": "Cancel"
-    },
     "offlineExportFormat": {
-      "label": "File format",
-      "help": "Format of the video files you download. MKV keeps every subtitle type. MP4 plays on more devices but cannot hold PGS / ASS subtitles — those tracks are left out.",
+      "label": "Offline export format",
+      "help": "Container used when you save media to your device. MKV is lossless for every subtitle type. MP4 is more portable but cannot embed PGS / ASS subtitles — those tracks are skipped when present.",
       "mkv": "MKV (recommended)",
       "mp4": "MP4",
       "mp4Warning": "MP4 cannot embed PGS or ASS subtitles. SRT / VTT subtitles are converted to mov_text and preserved."
@@ -975,7 +935,6 @@
       "playback": "Playback",
       "trailers": "Trailers",
       "downloads": "Downloads",
-      "offlineContent": "Manage offline content",
       "transcoding": "Transcoding",
       "metadata": "Metadata",
       "performance": "Performance",
@@ -992,7 +951,6 @@
       "playback": "Default quality and what happens during playback.",
       "trailers": "Where trailers come from and which languages to fetch.",
       "downloads": "How offline copies are saved to your device.",
-      "offlineContent": "What is kept on this computer to watch offline, and the space it takes.",
       "transcoding": "Which qualities and codecs your library is processed into.",
       "metadata": "Where title and artwork data comes from.",
       "performance": "Hardware acceleration and processing offload.",
@@ -1464,15 +1422,12 @@
       "ffmpegLogs": "FFmpeg logs",
       "offlineDownloading": "Downloading offline",
       "offlineSavedOffline": "Saved offline",
-      "exportDownloading": "Downloading file",
-      "exportSaved": "Saved to folder",
       "help": {
         "sourceIngest": "We split the original file into stream-ready chunks for fast playback startup.",
         "transcode": "We create extra quality versions so playback stays smooth on slower connections.",
         "tracks": "We prepare audio and subtitle tracks so viewers can switch language and captions.",
         "job": "This step prepares media files for playback and sync.",
-        "offlineDownloading": "We fetch every chunk, decrypt it, and mux all tracks into a single file you can play offline.",
-        "exportDownloading": "We fetch the best quality you have, decrypt it, and save one video file with every track in the folder you picked."
+        "offlineDownloading": "We fetch every chunk, decrypt it, and mux all tracks into a single file you can play offline."
       }
     },
     "transcodePlan": "Transcode plan",

@@ -8,14 +8,12 @@
  * Why this exists: Chris opened Badger on his phone after a night of episode uploads from Badger desktop and saw the
  * old library with no sign that anything was loading; the new episodes arrived minutes later, silently (2026-11-21).
  * Every sync (cold start, back to the front, the live stream, pull-to-refresh) now goes through one tracker that the
- * tab bar's sign reads: "Updating media library…" with progress while ops arrive, then a short result, or the failure.
+ * tab bar's sign reads: "Updating library…" with progress while ops arrive, then a short result, or the failure.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createLibrarySyncTracker,
   LIBRARY_SYNC_RESULT_MS,
-  LIBRARY_SYNC_SHOW_AT_ONCE_BYTES,
-  LIBRARY_SYNC_SHOW_AT_ONCE_VERSIONS,
   LIBRARY_SYNC_SHOW_DELAY_MS,
   librarySyncProgress,
   type LibrarySyncCounts,
@@ -55,11 +53,9 @@ describe("library sync tracker (LIB-SYNC-13)", () => {
     expect(states, "asking the server for its version is quiet").toEqual([]);
 
     tracker.progress({ kind: "start", fromVersion: 391, toVersion: 521 });
-    expect(
-      last(),
-      "a batch shows before the first page is asked for (reading a page holds the JS thread for seconds)"
-    ).toMatchObject({ kind: "syncing", source: "start", fromVersion: 391, toVersion: 521, doneVersion: 391, phase: "ops" });
-    expect(LIBRARY_SYNC_SHOW_AT_ONCE_VERSIONS).toBeLessThanOrEqual(521 - 391);
+    await vi.advanceTimersByTimeAsync(LIBRARY_SYNC_SHOW_DELAY_MS);
+    expect(LIBRARY_SYNC_SHOW_DELAY_MS).toBeLessThan(1_000);
+    expect(last()).toMatchObject({ kind: "syncing", source: "start", fromVersion: 391, toVersion: 521, doneVersion: 391, phase: "ops" });
     expect(librarySyncProgress(last())).toBe(0);
 
     tracker.progress({ kind: "page", version: 456 });
@@ -81,7 +77,6 @@ describe("library sync tracker (LIB-SYNC-13)", () => {
     const tracker = make();
     await tracker.track("stream", async () => {
       tracker.progress({ kind: "start", fromVersion: 520, toVersion: 521 });
-      tracker.progress({ kind: "fetch", bytes: 4_096 });
       tracker.progress({ kind: "page", version: 521 });
       return true;
     });
@@ -101,38 +96,6 @@ describe("library sync tracker (LIB-SYNC-13)", () => {
     await flush();
     expect(states.map((s) => s.kind)).toEqual(["done"]);
     expect(last()).toMatchObject({ newTitles: 0, newEpisodes: 1 });
-  });
-
-  // @req LIB-SYNC-13[badger-mobile]
-  it("a sync one or two versions behind shows only once it outlasts the delay", async () => {
-    const tracker = make();
-    const run = Promise.withResolvers<boolean>();
-    const done = tracker.track("foreground", () => run.promise);
-    tracker.progress({ kind: "start", fromVersion: 520, toVersion: 522 });
-    expect(states).toEqual([]);
-    await vi.advanceTimersByTimeAsync(LIBRARY_SYNC_SHOW_DELAY_MS);
-    expect(LIBRARY_SYNC_SHOW_DELAY_MS).toBeLessThan(1_000);
-    expect(last()).toMatchObject({ kind: "syncing", source: "foreground" });
-    run.resolve(true);
-    await done;
-  });
-
-  // @req LIB-SYNC-13[badger-mobile]
-  it("@bugfix a large page shows the sign before its download, even one version behind", async () => {
-    // op9 2026-11-21: one 4.65 MB media.upsert op held the JS thread ~11 s, so the 400 ms timer fired 11.2 s late.
-    const tracker = make();
-    const run = Promise.withResolvers<boolean>();
-    const done = tracker.track("stream", () => run.promise);
-    tracker.progress({ kind: "start", fromVersion: 23, toVersion: 24 });
-    expect(states).toEqual([]);
-    tracker.progress({ kind: "fetch", bytes: LIBRARY_SYNC_SHOW_AT_ONCE_BYTES });
-    expect(last(), "no timer: the sign is set before the download starts").toMatchObject({
-      kind: "syncing",
-      fromVersion: 23,
-      toVersion: 24,
-    });
-    run.resolve(true);
-    await done;
   });
 
   // @req LIB-SYNC-13[badger-mobile]
@@ -202,21 +165,6 @@ describe("library sync tracker (LIB-SYNC-13)", () => {
     expect(last()).toEqual({ kind: "idle" });
   });
 
-  // @req LIB-SYNC-13[badger-mobile]
-  it("@bugfix a retry after a failure replaces the failed sign at once", async () => {
-    // op9 2026-11-21: after a tap on the failed sign the screen kept saying the update failed for 11 s of retry.
-    const tracker = make();
-    await expect(tracker.track("stream", async () => Promise.reject(new Error("Network request failed")))).rejects.toThrow();
-    await flush();
-    expect(last().kind).toBe("failed");
-    const run = Promise.withResolvers<boolean>();
-    const retry = tracker.track("pull", () => run.promise);
-    tracker.progress({ kind: "start", fromVersion: 26, toVersion: 27 });
-    expect(last()).toMatchObject({ kind: "syncing", fromVersion: 26, toVersion: 27 });
-    run.resolve(true);
-    await retry;
-  });
-
   it("counts that cannot be read still give a result after a sync that showed (changed, no numbers)", async () => {
     const tracker = createLibrarySyncTracker({
       onState: (state) => states.push(state),
@@ -235,41 +183,11 @@ describe("library sync tracker (LIB-SYNC-13)", () => {
     expect(last()).toMatchObject({ kind: "done", changed: true, newTitles: null, newEpisodes: null });
   });
 
-  // @req LIB-SYNC-13[badger-mobile]
-  it("a run the db starts on its own shows, and its `end` settles it (with its failure)", async () => {
+  it("a run no caller tracks (the db's own re-sync) shows nothing: it has no end to wait for", async () => {
     const tracker = make();
     tracker.progress({ kind: "start", fromVersion: 1, toVersion: 4 });
-    expect(last()).toMatchObject({ kind: "syncing", fromVersion: 1, toVersion: 4 });
-    counts = { titles: 11, episodes: 100 };
-    tracker.progress({ kind: "end", error: null });
-    await flush();
-    expect(last()).toMatchObject({ kind: "done", changed: true, newTitles: 1 });
-
-    tracker.progress({ kind: "start", fromVersion: 4, toVersion: 9 });
-    tracker.progress({ kind: "end", error: "OPS_RESPONSE_INVALID" });
-    await flush();
-    expect(last()).toMatchObject({ kind: "failed", error: "OPS_RESPONSE_INVALID" });
-  });
-
-  // @req LIB-SYNC-13[badger-mobile]
-  // op9, 2026-11-21: the cold start's sync was already running (begun by the db's own re-sync) when the store's tracked
-  // "start" call joined it, so the tracker never saw a `start` while it had a caller and the sign never showed.
-  it("a tracked caller that joins a run the db started keeps the sign until the caller settles", async () => {
-    const tracker = make();
-    tracker.progress({ kind: "start", fromVersion: 7, toVersion: 16 });
-    expect(last()).toMatchObject({ kind: "syncing", fromVersion: 7, toVersion: 16 });
-    const run = Promise.withResolvers<boolean>();
-    const done = tracker.track("start", () => run.promise);
-    tracker.progress({ kind: "page", version: 11 });
-    expect(last()).toMatchObject({ kind: "syncing", doneVersion: 11 });
-    tracker.progress({ kind: "end", error: null });
-    await flush();
-    expect(last().kind, "the caller is still waiting: no result yet").toBe("syncing");
-    counts = { titles: 11, episodes: 110 };
-    run.resolve(true);
-    await done;
-    await flush();
-    expect(states.filter((s) => s.kind === "done")).toHaveLength(1);
-    expect(last()).toMatchObject({ kind: "done", newTitles: 1, newEpisodes: 10 });
+    tracker.progress({ kind: "snapshot" });
+    await vi.advanceTimersByTimeAsync(LIBRARY_SYNC_SHOW_DELAY_MS);
+    expect(states).toEqual([]);
   });
 });

@@ -12,45 +12,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createDesktopUpdater,
-  SYSTEM_RELAUNCH_DELAY_MS,
   type AutoUpdaterLike,
   type DesktopUpdaterOptions,
   type UpdaterWindow,
 } from "../src/updater/main";
-import type { SystemProbe } from "../src/updater/systemPackage";
 import { AUTO_UPDATE_INTERVAL_MS, UPDATER_CHANNELS, type UpdaterEvent, type UpdaterState } from "../src/updater/types";
 
 type Handler = (event: unknown, ...args: unknown[]) => unknown;
 type FetchAnswer = { ok: boolean; json?: () => Promise<unknown> } | Error;
-
-/**
- * A fake OS for systemPackage.ts: `files` exist, `path` commands are installed, `owners` is what each package manager
- * answers when asked who owns the helper, `pkexec` the answer of the password dialog + helper.
- */
-const fakeProbe = (
-  o: {
-    env?: Record<string, string>;
-    files?: string[];
-    path?: string[];
-    owners?: Record<string, string>;
-    pkexec?: { code: number | null; stdout?: string; stderr?: string };
-  } = {},
-) => {
-  const run = vi.fn(async (command: string, _args: readonly string[]) =>
-    command === "pkexec"
-      ? { code: o.pkexec?.code ?? 0, stdout: o.pkexec?.stdout ?? "", stderr: o.pkexec?.stderr ?? "" }
-      : { code: 0, stdout: o.owners?.[command] ?? "", stderr: "" },
-  );
-  const relaunchAfterExit = vi.fn((_command: string, _args: readonly string[]) => undefined);
-  const probe: SystemProbe = {
-    env: o.env ?? {},
-    exists: (path) => (o.files ?? []).includes(path),
-    onPath: (name) => (o.path ?? []).includes(name),
-    run,
-    relaunchAfterExit,
-  };
-  return { probe, run, relaunchAfterExit };
-};
 
 const flush = async (): Promise<void> => {
   for (let i = 0; i < 10; i += 1) await Promise.resolve();
@@ -66,15 +35,10 @@ const makeHarness = (
     loaderError?: string;
     fetchAnswer?: FetchAnswer;
     withWindow?: boolean;
-    probe?: SystemProbe;
   } = {},
 ) => {
   const appId = opts.app ?? "badger";
-  const electronApp = {
-    isPackaged: opts.packaged ?? true,
-    getVersion: vi.fn(() => opts.version ?? "1.0.0"),
-    quit: vi.fn(),
-  };
+  const electronApp = { isPackaged: opts.packaged ?? true, getVersion: vi.fn(() => opts.version ?? "1.0.0") };
   const handlers = new Map<string, Handler>();
   const handleCalls: string[] = [];
   const ipcMain = {
@@ -139,9 +103,6 @@ const makeHarness = (
     logger,
     onAutoUpdateChange,
     onQuitForUpdate,
-    linuxPackageName: "spacebadger",
-    // Default: a Linux copy without SpaceFleet's update helper (unpacked folder, package built elsewhere).
-    systemProbe: opts.probe ?? fakeProbe().probe,
   };
   const updater = createDesktopUpdater(options);
 
@@ -241,182 +202,45 @@ afterEach(() => {
   vi.unstubAllEnvs();
 });
 
-const HELPER = "/usr/lib/spacebadger/system-update";
-const LATEST_0_1_9 = { ok: true, json: async () => ({ latestVersion: "0.1.9", minClientVersion: "0.0.1", mandatory: false }) };
-/** A pacman install of Badger 0.1.5 on a desktop with pkexec. */
-const pacmanInstall = (pkexec?: { code: number | null; stdout?: string; stderr?: string }) =>
-  fakeProbe({ env: { DISPLAY: ":0" }, files: [HELPER], path: ["pacman", "pkexec"], owners: { pacman: "spacebadger\n" }, pkexec });
+describe("createDesktopUpdater — Linux system installs stay silent (REL-DIST-10)", () => {
+  const systemInstalls = [
+    { label: "apt/dnf/AUR package (/opt/<App>, no APPIMAGE)", env: {} },
+    { label: "Flatpak (FLATPAK_ID set, no APPIMAGE)", env: { FLATPAK_ID: "io.spacefleet.Badger" } },
+  ];
 
-/** Detection runs a few awaits deep (the package-manager queries); let it settle under fake timers. */
-const settle = async (): Promise<void> => {
-  for (let i = 0; i < 5; i += 1) await flush();
-};
-
-describe("createDesktopUpdater — Linux copies the package manager installed (REL-DIST-10, REL-UPD-07)", () => {
-  // @req REL-DIST-10 @regression-proof
-  it("a Linux copy without SpaceFleet's update helper: never builds electron-updater, never checks, answers unsupported", async () => {
-    vi.stubEnv("APPIMAGE", "");
-    const h = makeHarness({ platform: "linux" });
-    h.updater.setAutoUpdate(true);
-    h.register();
-    vi.advanceTimersByTime(AUTO_UPDATE_INTERVAL_MS * 2);
-    await settle();
-    const check = await h.invoke(UPDATER_CHANNELS.check);
-    const download = await h.invoke(UPDATER_CHANNELS.download);
-    const install = await h.invoke(UPDATER_CHANNELS.install);
-    const state = (await h.invoke(UPDATER_CHANNELS.state)) as UpdaterState;
-    await checked(h, "linux-other", () => {
+  for (const install of systemInstalls) {
+    // @req REL-DIST-10 @regression-proof
+    it(`${install.label}: never builds electron-updater, never checks, answers unsupported`, async () => {
+      vi.stubEnv("APPIMAGE", "");
+      for (const [key, value] of Object.entries(install.env)) vi.stubEnv(key, value);
+      const h = makeHarness({ platform: "linux" });
+      console.log(`[updater-main:linux-system:start] ${install.label}`);
+      h.updater.setAutoUpdate(true);
+      h.register();
+      vi.advanceTimersByTime(AUTO_UPDATE_INTERVAL_MS * 2);
+      await flush();
+      const check = await h.invoke(UPDATER_CHANNELS.check);
+      const download = await h.invoke(UPDATER_CHANNELS.download);
+      const install_ = await h.invoke(UPDATER_CHANNELS.install);
+      const state = (await h.invoke(UPDATER_CHANNELS.state)) as UpdaterState;
+      h.dump(`linux-system ${install.label}`);
       expect(h.loadAutoUpdater).not.toHaveBeenCalled();
+      expect(h.au.checkForUpdates).not.toHaveBeenCalled();
+      expect(h.au.downloadUpdate).not.toHaveBeenCalled();
+      expect(h.au.quitAndInstall).not.toHaveBeenCalled();
       expect(h.fetchSpy).not.toHaveBeenCalled();
       expect(h.sent).toEqual([]);
       expect(check).toEqual({ status: "unsupported" });
       expect(download).toEqual({ ok: false, message: "unsupported" });
-      expect(install).toEqual({ ok: false });
+      expect(install_).toEqual({ ok: false });
       expect(state.phase).toBe("unsupported");
       expect(state.currentVersion).toBe("1.0.0");
+      expect(h.logger.warn).not.toHaveBeenCalled();
       expect(h.logger.info.mock.calls.map(([, message]) => message)).toContain(
-        "in-app updates off — this Linux copy is not from SpaceFleet's packages",
+        "in-app updater off — Linux copy not started from an AppImage; updates come through the system's package manager",
       );
     });
-  });
-
-  // @req REL-UPD-07[badger-desktop,parrot] a package-manager copy checks the feed, asks, and updates through pkexec
-  it("pacman copy, automatic updates on: checks release-status at once and every 6 h, never builds electron-updater", async () => {
-    vi.stubEnv("APPIMAGE", "");
-    const { probe } = pacmanInstall();
-    const h = makeHarness({ platform: "linux", version: "0.1.5", probe, fetchAnswer: LATEST_0_1_9 });
-    h.updater.setAutoUpdate(true);
-    h.register();
-    await settle();
-    const state = (await h.invoke(UPDATER_CHANNELS.state)) as UpdaterState;
-    await checked(h, "pacman-auto", () => {
-      expect(h.loadAutoUpdater).not.toHaveBeenCalled();
-      expect(h.fetchSpy).toHaveBeenCalledTimes(1);
-      expect(h.fetchSpy.mock.calls[0]?.[0]).toBe("https://api.example.com/desktop/badger/release-status?currentVersion=0.1.5&platform=linux");
-      expect(h.sent.map((e) => e.kind)).toEqual(["checking", "update-available"]);
-      expect(state).toMatchObject({
-        phase: "available",
-        version: "0.1.9",
-        channel: "system",
-        canInstall: true,
-        manualCommand: `sudo ${HELPER}`,
-      });
-    });
-    vi.advanceTimersByTime(AUTO_UPDATE_INTERVAL_MS);
-    await settle();
-    expect(h.fetchSpy).toHaveBeenCalledTimes(2);
-  });
-
-  // @req REL-UPD-07[badger-desktop,parrot] automatic updates off: no check and no prompt
-  it("automatic updates off: no background check; a check by hand still finds the version", async () => {
-    vi.stubEnv("APPIMAGE", "");
-    const h = makeHarness({ platform: "linux", version: "0.1.5", probe: pacmanInstall().probe, fetchAnswer: LATEST_0_1_9 });
-    h.updater.setAutoUpdate(false);
-    h.register();
-    vi.advanceTimersByTime(AUTO_UPDATE_INTERVAL_MS * 2);
-    await settle();
-    expect(h.fetchSpy).not.toHaveBeenCalled();
-    expect(h.sent).toEqual([]);
-    expect(await h.invoke(UPDATER_CHANNELS.check)).toEqual({ status: "available", version: "0.1.9" });
-  });
-
-  // @req REL-UPD-07[badger-desktop,parrot] Install runs pkexec on the fixed helper only; the app then relaunches itself
-  it("Install: pkexec with the helper as its only argument, then the app quits and starts the new binary on its own", async () => {
-    vi.stubEnv("APPIMAGE", "");
-    const { probe, run, relaunchAfterExit } = pacmanInstall({ code: 0, stdout: "SF_SYSTEM_UPDATE=0 before=0.1.5-1 after=0.1.9-1\n" });
-    const h = makeHarness({ platform: "linux", version: "0.1.5", probe, fetchAnswer: LATEST_0_1_9 });
-    h.register();
-    await settle();
-    await h.invoke(UPDATER_CHANNELS.check);
-    const result = await h.invoke(UPDATER_CHANNELS.download);
-    const state = (await h.invoke(UPDATER_CHANNELS.state)) as UpdaterState;
-    await checked(h, "pacman-install", async () => {
-      expect(result).toEqual({ ok: true });
-      expect(run.mock.calls.filter(([command]) => command === "pkexec")).toEqual([["pkexec", [HELPER]]]);
-      expect(h.sent.map((e) => e.kind)).toEqual(["checking", "update-available", "system-installing", "system-installed"]);
-      expect(state.phase).toBe("installed");
-      expect(state.version).toBe("0.1.9");
-      // "Installed, restarting" shows first; a background check in that window never hides it.
-      await h.invoke(UPDATER_CHANNELS.check);
-      expect(((await h.invoke(UPDATER_CHANNELS.state)) as UpdaterState).phase).toBe("installed");
-      expect(h.electronApp.quit).not.toHaveBeenCalled();
-      vi.advanceTimersByTime(SYSTEM_RELAUNCH_DELAY_MS);
-      await settle();
-      expect(h.onQuitForUpdate).toHaveBeenCalledTimes(1);
-      // Never Electron's app.relaunch(): its helper is the replaced binary. The new one starts once this process exits.
-      expect(relaunchAfterExit.mock.calls).toEqual([[process.execPath, process.argv.slice(1)]]);
-      expect(h.onQuitForUpdate.mock.invocationCallOrder[0]).toBeLessThan(relaunchAfterExit.mock.invocationCallOrder[0]!);
-      expect(relaunchAfterExit.mock.invocationCallOrder[0]).toBeLessThan(h.electronApp.quit.mock.invocationCallOrder[0]!);
-      expect(h.electronApp.quit).toHaveBeenCalledTimes(1);
-      // Settings' "Restart Badger" in the same moment never starts a second copy.
-      expect(await h.invoke(UPDATER_CHANNELS.install)).toEqual({ ok: true });
-      expect(relaunchAfterExit).toHaveBeenCalledTimes(1);
-      expect(h.au.quitAndInstall).not.toHaveBeenCalled();
-    });
-  });
-
-  // @req REL-UPD-07[badger-desktop,parrot] closing the password dialog changes nothing
-  it("password dialog closed (pkexec 126): back to available, no error", async () => {
-    vi.stubEnv("APPIMAGE", "");
-    const h = makeHarness({ platform: "linux", version: "0.1.5", probe: pacmanInstall({ code: 126 }).probe, fetchAnswer: LATEST_0_1_9 });
-    h.register();
-    await settle();
-    await h.invoke(UPDATER_CHANNELS.check);
-    expect(await h.invoke(UPDATER_CHANNELS.download)).toEqual({ ok: false, message: "dismissed" });
-    const state = (await h.invoke(UPDATER_CHANNELS.state)) as UpdaterState;
-    expect(state.phase).toBe("available");
-    expect(state.failure).toBeNull();
-  });
-
-  // @req REL-UPD-07[badger-desktop,parrot] a failure says why and gives the command to run by hand
-  it.each([
-    [12, "needsSystemUpdate", "sudo pacman -Syu"],
-    [10, "notNewer", `sudo ${HELPER}`],
-    [13, "packageManager", `sudo ${HELPER}`],
-    [127, "notAuthorized", `sudo ${HELPER}`],
-  ] as const)("helper or pkexec exit %i: failure %s, manual command %s", async (code, failure, command) => {
-    vi.stubEnv("APPIMAGE", "");
-    const probe = pacmanInstall({ code, stderr: "[system-update] updating spacebadger would also upgrade: glibc\n" }).probe;
-    const h = makeHarness({ platform: "linux", version: "0.1.5", probe, fetchAnswer: LATEST_0_1_9 });
-    h.register();
-    await settle();
-    await h.invoke(UPDATER_CHANNELS.check);
-    expect(await h.invoke(UPDATER_CHANNELS.download)).toEqual({ ok: false, message: failure });
-    const state = (await h.invoke(UPDATER_CHANNELS.state)) as UpdaterState;
-    await checked(h, `pacman-failure-${code}`, () => {
-      expect(state).toMatchObject({ phase: "error", failure, manualCommand: command });
-      expect(state.failureDetail).toContain("would also upgrade: glibc");
-    });
-  });
-
-  // @req REL-UPD-07[badger-desktop,parrot] no pkexec or no display: the manual command only
-  it("no pkexec on the system: Install never runs pkexec and shows the manual command", async () => {
-    vi.stubEnv("APPIMAGE", "");
-    const { probe, run } = fakeProbe({ env: { DISPLAY: ":0" }, files: [HELPER], path: ["dpkg-query"], owners: { "dpkg-query": `spacebadger: ${HELPER}\n` } });
-    const h = makeHarness({ platform: "linux", version: "0.1.5", probe, fetchAnswer: LATEST_0_1_9 });
-    h.register();
-    await settle();
-    const before = (await h.invoke(UPDATER_CHANNELS.state)) as UpdaterState;
-    expect(before).toMatchObject({ channel: "system", canInstall: false, manualCommand: `sudo ${HELPER}` });
-    await h.invoke(UPDATER_CHANNELS.check);
-    expect(await h.invoke(UPDATER_CHANNELS.download)).toEqual({ ok: false, message: "noPasswordDialog" });
-    expect(run.mock.calls.some(([command]) => command === "pkexec")).toBe(false);
-    expect(((await h.invoke(UPDATER_CHANNELS.state)) as UpdaterState).failure).toBe("noPasswordDialog");
-  });
-
-  // @req REL-UPD-07[badger-desktop,parrot] a Flatpak is told the flatpak update command
-  it("Flatpak: checks the feed and offers `flatpak update <id>`, never pkexec", async () => {
-    vi.stubEnv("APPIMAGE", "");
-    const { probe, run } = fakeProbe({ env: { FLATPAK_ID: "io.spacefleet.Badger", DISPLAY: ":0" }, path: ["pkexec"] });
-    const h = makeHarness({ platform: "linux", version: "0.1.5", probe, fetchAnswer: LATEST_0_1_9 });
-    h.updater.setAutoUpdate(true);
-    h.register();
-    await settle();
-    const state = (await h.invoke(UPDATER_CHANNELS.state)) as UpdaterState;
-    expect(state).toMatchObject({ phase: "available", version: "0.1.9", channel: "flatpak", canInstall: false, manualCommand: "flatpak update io.spacefleet.Badger" });
-    expect(await h.invoke(UPDATER_CHANNELS.download)).toEqual({ ok: false, message: "manual" });
-    expect(run).not.toHaveBeenCalled();
-  });
+  }
 
   // @req REL-DIST-10
   it("AppImage (APPIMAGE set): builds the updater and checks at once with automatic updates on", async () => {
