@@ -18,16 +18,9 @@ export type NativeAppInfo = {
   version: string | null;
   /** Android only: the installer's package name (raw, mapped on device before anything is sent); null when unknown. */
   installer: string | null;
-  /**
-   * Apple only: where this build came from, TestFlight (a sandbox receipt) or the App Store, so the update screen sends
-   * the user to the right one. Absent elsewhere and from an older native build. Never sent to the API.
-   */
-  appleDistribution?: AppleDistribution;
 };
 
-export type AppleDistribution = "testflight" | "appstore";
-
-type AppInfoConstants = { appVersion?: unknown; installer?: unknown; appleDistribution?: unknown };
+type AppInfoConstants = { appVersion?: unknown; installer?: unknown };
 
 const text = (value: unknown): string | null => (typeof value === "string" && value.trim() ? value.trim() : null);
 
@@ -36,26 +29,7 @@ export const nativeAppInfo = (modules: Record<string, unknown> | undefined = Nat
   const module = modules?.SpaceAppInfo as (AppInfoConstants & { getConstants?: () => AppInfoConstants }) | undefined;
   if (!module) return { version: null, installer: null };
   const constants = typeof module.appVersion === "string" ? module : (module.getConstants?.() ?? {});
-  const info: NativeAppInfo = { version: text(constants.appVersion), installer: text(constants.installer) };
-  const distribution = constants.appleDistribution;
-  if (distribution === "testflight" || distribution === "appstore") info.appleDistribution = distribution;
-  return info;
-};
-
-/**
- * REL-CD-29 update screen, Android only: asks the app that installed this build (Play, an F-Droid client, Amazon, any
- * other store) to show this app's page there, or opens that app when it shows no page (Obtainium). False when no
- * installer is known, it opens nothing, or the native method is missing (an older native build, Apple platforms).
- */
-export const openInstallerListing = async (modules: Record<string, unknown> | undefined = NativeModules): Promise<boolean> => {
-  const open = (modules?.SpaceAppInfo as { openInstaller?: () => Promise<boolean> } | undefined)?.openInstaller;
-  if (typeof open !== "function") return false;
-  try {
-    return (await open()) === true;
-  } catch (error) {
-    console.warn("[app-info] openInstaller failed", error);
-    return false;
-  }
+  return { version: text(constants.appVersion), installer: text(constants.installer) };
 };
 
 /** Where a build runs, in the API's platform names: a phone or a TV, Android or Apple. */

@@ -29,13 +29,6 @@ class ChunkedFileRegistry {
   @Synchronized
   fun serve(id: String): ChunkedFile? = files[id]?.also { started.add(id) }
 
-  /**
-   * The file registered at [id] now, null when none, WITHOUT counting as the player asking for it: the copy stays open to
-   * [swap]. The proxy's own loading ahead of the next song reads its chunk keys through this (PAR-PLAY-07).
-   */
-  @Synchronized
-  fun peek(id: String): ChunkedFile? = files[id]
-
   /** Forgets [id]; false when it was not registered. */
   @Synchronized
   fun unregister(id: String): Boolean {

@@ -11,14 +11,13 @@
 import { secretSafeStorage } from "@space/desktop-platform/secret-file";
 import { app, ipcMain, safeStorage } from "electron";
 import { join } from "node:path";
-import { SESSION_REPLACE_CHANNEL, SESSION_SNAPSHOT_CHANNEL, type SessionEntries } from "../shared/sessionKeys";
+import { SESSION_REPLACE_CHANNEL, SESSION_SNAPSHOT_CHANNEL } from "../shared/sessionKeys";
 import { scopeLogger } from "./logger";
 import { createSessionStore, type SessionStore } from "./sessionStore";
 
 const logger = scopeLogger("session-store");
 
-/** `onReplace`: every time the window saves its session (sign-in, sign-out, key change), with the stored copy. */
-export const registerSessionIpc = (options: { onReplace?: (entries: SessionEntries) => void } = {}): SessionStore => {
+export const registerSessionIpc = (): SessionStore => {
   // `secretSafeStorage` passes Electron's sync `decryptString` only while Electron
   // has it (46 removes it), so the login migration simply turns off once it is gone.
   const store = createSessionStore({
@@ -37,7 +36,6 @@ export const registerSessionIpc = (options: { onReplace?: (entries: SessionEntri
   ipcMain.handle(SESSION_REPLACE_CHANNEL, async (_event, entries: unknown) => {
     try {
       await store.replace(entries);
-      options.onReplace?.(store.read());
       return { ok: true };
     } catch (err) {
       logger.error({ err: String(err) }, "[session-store] persist failed");

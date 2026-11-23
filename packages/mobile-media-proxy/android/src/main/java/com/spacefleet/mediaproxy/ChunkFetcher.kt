@@ -50,18 +50,10 @@ interface ChunkFetcher {
 
   /**
    * Aborts the network fetches in flight for the keys [matches] accepts (a rung switch drops the variant it leaves, so its
-   * read-ahead stops taking the link from the segment the switch needs, PLAY-ABR-04), including one that has not reached
-   * the wire yet (still opening the session), which is aborted as it starts. Another read that joined such a fetch fetches
-   * the object again rather than failing. Returns how many fetches were aborted; the default (no network of its own)
-   * aborts nothing.
+   * read-ahead stops taking the link from the segment the switch needs, PLAY-ABR-04). Every caller waiting on such a fetch
+   * gets its failure. Returns how many fetches were aborted; the default (no network of its own) aborts nothing.
    */
   fun cancelInFlight(matches: (String) -> Boolean): Int = 0
-
-  /**
-   * Keeps the objects [keys] in the cache however much else is fetched, replacing the previous set (the openings of the
-   * playing, next and previous songs, PAR-PLAY-07). The default (no cache of its own) keeps nothing.
-   */
-  fun pin(keys: Set<String>) {}
 
   /** Release any pooled resources (HTTP client, cache memory, in-flight tasks). */
   fun shutdown()

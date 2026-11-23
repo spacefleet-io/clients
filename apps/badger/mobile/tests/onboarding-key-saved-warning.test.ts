@@ -27,8 +27,7 @@ const ctl = vi.hoisted(() => ({
   languages: [] as string[],
 }));
 
-vi.mock("react-native", async () => ({
-  ...(await import("./setup/reactNativeMock")).reactNativeBase(),
+vi.mock("react-native", () => ({
   View: "View",
   Text: "Text",
   ScrollView: "ScrollView",
@@ -97,7 +96,7 @@ vi.mock("../src/lib/libraryDb", () => ({
 }));
 // A brand-new account: the server never had a library, so the screen makes a key.
 vi.mock("@space/shared/api", () => ({
-  getLibraryMetaForKeyStep: async () => ({ exists: false, keyProbe: null, bootstrapRequired: true }),
+  getLibraryMeta: async () => ({ exists: false, keyProbe: null, bootstrapRequired: true }),
 }));
 
 let tree: ReactTestRenderer | null = null;

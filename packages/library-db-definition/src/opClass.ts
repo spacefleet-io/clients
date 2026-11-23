@@ -19,11 +19,3 @@ export const isProgressClassOp = (op: { type: string; payload?: unknown }): bool
   const key = payload.key;
   return typeof key === "string" && isPlaybackProgressSettingKey(key);
 };
-
-/**
- * LIB-SYNC-12: once the non-progress ops since the latest snapshot weigh this much (ciphertext as the server stores
- * it), a client publishes a snapshot even below its op-count threshold, because a new device downloads the whole
- * tail. 16 MiB = four 4 MiB op pages (LIB-SYNC-11). A snapshot larger than the tail it would replace is not published;
- * the client waits until the tail outgrows it.
- */
-export const SNAPSHOT_TAIL_BYTES_THRESHOLD = 16 * 1024 * 1024;

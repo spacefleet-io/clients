@@ -40,7 +40,7 @@ const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 // can point to different versions than the app's copies (e.g. react@19.2.4 vs
 // react@19.2.3), causing dual-instance crashes. Blocking these directories
 // forces Metro to resolve everything from the app's node_modules instead.
-const workspaceNodeModulesBlockList = [sharedRoot, libraryDbRoot, libraryDbDefinitionRoot, mobileShellRoot, mobileMpvPlaybackRoot, mobileMediaProxyRoot, mobileMediaVolumeRoot, mobileSelfUpdateRoot, mobileMediaSessionRoot, mediaSessionRoot, playbackAbrRoot, errorReportRoot, metadataClientRoot, privacyPassRoot, sdkRoot, streamSlotsRoot, profileAvatarsRoot, ingestCoreRoot]
+const workspaceNodeModulesBlockList = [sharedRoot, libraryDbRoot, libraryDbDefinitionRoot, mobileShellRoot, mobileMpvPlaybackRoot, mobileMediaProxyRoot, mobileMediaVolumeRoot, mobileSelfUpdateRoot, mobileMediaSessionRoot, mediaSessionRoot, playbackAbrRoot, errorReportRoot, metadataClientRoot, privacyPassRoot, sdkRoot, streamSlotsRoot, profileAvatarsRoot]
   .map((dir) => new RegExp(`${escapeRegex(path.join(dir, 'node_modules'))}(/.*)?$`));
 
 const config = {

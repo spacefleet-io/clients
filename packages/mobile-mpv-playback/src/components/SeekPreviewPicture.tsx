@@ -1,7 +1,7 @@
 import React from "react";
 import { Image, StyleSheet, Text, View } from "react-native";
 import { previewPictureLayout, type SeekPreviewFrame } from "../seekPreview";
-import { scaleStyle, scaleStyleSheet } from "@space/shared/uiScale";
+import { scaleStyle, scaleStyleSheet } from "../uiScale";
 
 /**
  * The seek-bar preview picture (MPV-PREV-01), drawn above the bar: one picture clipped out of its sheet, with the time it

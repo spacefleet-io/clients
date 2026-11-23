@@ -75,7 +75,7 @@ vi.mock("../lib/tvSetupStore", () => ({
     ctl.answered += 1;
   },
 }));
-vi.mock("@space/mobile-shell/tv/useTvMenuKey", async () => {
+vi.mock("../lib/useTvMenuKey", async () => {
   const { useEffect } = await import("react");
   return {
     useTvMenuKeyHold: (reason: string, active: boolean) => {
@@ -90,7 +90,7 @@ vi.mock("@space/mobile-shell/tv/useTvMenuKey", async () => {
 });
 
 import { ProfileActionError } from "@space/shared/profileStore";
-import { TV_AVATAR_FOCUS_SETTLE_MS, TV_AVATAR_GRID_LAYOUT, TV_SETUP_AVATAR_FOCUS_SCALE } from "@space/mobile-shell/tv/TvAvatarGrid";
+import { TV_AVATAR_FOCUS_SETTLE_MS, TV_AVATAR_GRID_LAYOUT, TV_SETUP_AVATAR_FOCUS_SCALE } from "../components/TvAvatarGrid";
 import { setupMascotOverlap, TV_SETUP_MASCOT_SIZE } from "@space/mobile-shell/setup-step";
 import { TV_PROFILE_SETUP_PREVIEW, TvProfileSetupScreen } from "./TvProfileSetupScreen";
 import { TV_WHATS_NEW_HOLD_MS, TvWhatsNewWindow } from "./TvWhatsNewWindow";

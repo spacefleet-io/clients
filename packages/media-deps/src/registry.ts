@@ -32,7 +32,7 @@ export const SHA256_SUFFIX = ".sha256";
 export const defaultCacheDir = () => path.join(os.homedir(), ".cache", "spacefleet", "deps");
 
 /**
- * The GitHub token for READING the releases through the API (the repository is public, so downloads need none):
+ * The GitHub token for READING the releases while the repository is private (public releases need none):
  * MEDIA_DEPS_GH_TOKEN, then GH_TOKEN, then the git credential stored for github.com (`git credential fill`, never
  * prompting; `gh auth setup-git` provides one). Undefined when none is set: downloads then use the plain release URLs.
  */
@@ -108,7 +108,7 @@ const ensureRelease = async (api: ReleasesApi, tag: string, body: string): Promi
   throw new Error(`release_create_failed:${response.status}:${tag}:${(await response.text()).slice(0, 300)}`);
 };
 
-/** Downloads a release asset through the API; the storage redirect is followed without the token. */
+/** Downloads a release asset through the API (works on a private repository); the storage redirect is followed without the token. */
 const downloadAsset = async (api: ReleasesApi, asset: ReleaseAsset): Promise<Buffer> => {
   const response = await api.fetchImpl(asset.url, { headers: apiHeaders(api.token, { Accept: "application/octet-stream" }), redirect: "manual" });
   const location = response.headers.get("location");
@@ -117,8 +117,8 @@ const downloadAsset = async (api: ReleasesApi, asset: ReleaseAsset): Promise<Buf
   return Buffer.from(await final.arrayBuffer());
 };
 
-/** Appended to an anonymous GitHub 404: the repository is public, so the usual cause is a version not published (yet). */
-export const ANONYMOUS_GITHUB_HINT = ` (anonymous download: ${RELEASES_REPO} is public, so a 404 means this version is not published there; check that the deps-build run for this recipe published it, or set MEDIA_DEPS_GH_TOKEN or GH_TOKEN to read through the API)`;
+/** Appended to an anonymous GitHub 404: on a fresh host the usual cause is the missing read token, not a missing bundle. */
+export const ANONYMOUS_GITHUB_HINT = ` (no GitHub token: ${RELEASES_REPO} is private, so GitHub answers 404 to an anonymous download even when the release is published; set MEDIA_DEPS_GH_TOKEN or GH_TOKEN, or store a github.com git credential with \`gh auth setup-git\`)`;
 
 /** Where one published version's files are read from: the plain release URLs, or the API when a token is at hand. */
 export type ReleaseFiles = {
@@ -133,7 +133,7 @@ export const releaseFiles = (options: {
   version: string;
   /** A mirror (`<base>/<tag>/<file>`); default MEDIA_DEPS_BASE_URL, else the GitHub releases. */
   baseUrl?: string;
-  /** Read through the GitHub API with this token; ignored for a mirror. */
+  /** Read through the GitHub API with this token (private repository); ignored for a mirror. */
   token?: string;
   fetchImpl?: FetchLike;
   apiUrl?: string;
@@ -153,8 +153,8 @@ export const releaseFiles = (options: {
       get: async (file) => {
         const response = await fetchImpl(url(file));
         if (response.ok) return Buffer.from(await response.arrayBuffer());
-        // RELEASES_REPO is public, so an anonymous 404 from GitHub means the file is not published: say so, and
-        // name the token route through the API.
+        // While RELEASES_REPO is private, GitHub answers 404 to an anonymous download of a published file too, so
+        // without a token a 404 says nothing about publication: name the missing token instead of "not published".
         const anonymousGitHub = response.status === 404 && baseUrl === DEFAULT_RELEASES_URL;
         throw new Error(`download_failed:${response.status}:${url(file)}${anonymousGitHub ? ANONYMOUS_GITHUB_HINT : ""}`);
       },
@@ -202,7 +202,7 @@ export type FetchDepsOptions = {
   fetchImpl?: FetchLike;
   packageRoot?: string;
   log?: (line: string) => void;
-  /** GitHub token for reading the releases through the API; resolved by releasesToken() when omitted. */
+  /** GitHub token for a private releases repository; resolved by releasesToken() when omitted. */
   token?: string;
   apiUrl?: string;
 };
@@ -236,7 +236,7 @@ export const fetchDeps = async (options: FetchDepsOptions): Promise<FetchDepsRes
     target,
     version,
     baseUrl,
-    // A mirror is read anonymously; only the GitHub releases may be read through the API with the token.
+    // A mirror is read anonymously; only the GitHub releases may need the token while private.
     token: baseUrl === DEFAULT_RELEASES_URL ? (options.token ?? releasesToken()) : undefined,
     fetchImpl,
     apiUrl: options.apiUrl,
@@ -350,7 +350,7 @@ export const isPublished = async (options: {
   fileName: string;
   baseUrl?: string;
   fetchImpl?: FetchLike;
-  /** GitHub token for the releases API; resolved by releasesToken() when omitted. */
+  /** GitHub token (private repository); resolved by releasesToken() when omitted. */
   token?: string;
   apiUrl?: string;
 }): Promise<{ published: boolean; url: string }> => {

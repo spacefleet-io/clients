@@ -7,7 +7,6 @@ import { ApiError, signup } from "../api";
 import { tooManyAttemptsText } from "@space/shared/signInError";
 import { Input } from "@space/ui";
 import { Label } from "@space/ui";
-import { MASCOT_GLOW } from "@space/ui/floating-mascot";
 import { deviceUiLanguageNow } from "@/lib/accountUiLanguage";
 import AuthApiHostButton from "@/components/AuthApiHostButton";
 import {
@@ -89,7 +88,7 @@ export default function Signup() {
         subtitle={t("login.subtitle")}
         mascotSrc={mascotSrc}
         mascotAlt={t("brand.mascotAlt")}
-        mascotGlowClassName={MASCOT_GLOW.badger}
+        mascotGlowClassName="drop-shadow-[0_0_30px_rgba(255,170,84,0.3)]"
       >
             <form className="grid gap-4" onSubmit={onSubmit}>
               {error ? <NoticeSurface tone="error">{error}</NoticeSurface> : null}
