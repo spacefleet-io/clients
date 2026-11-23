@@ -148,6 +148,7 @@ import { fetchSourceCredits } from "@space/metadata-client/credits";
 import { ticketKeysForBuild } from "@space/privacy-pass";
 import { SPACE_APP_HEADER } from "@space/shared/appScope";
 import { getAppUpdateRequired, onAppUpdateRequired, setClientIdentity } from "@space/shared/appVersion";
+import { noteHelloPlay, noteHelloScreen, startDailyHello } from "@space/shared/dailyHello";
 import { logFailedApiCalls, recentFailedRequestIds } from "@space/shared/apiFailure";
 import { desktopClientIdentity } from "@space/desktop-shell/client-identity";
 import {
@@ -2967,7 +2968,13 @@ const registerIpc = () => {
   ipcMain.handle(PARROT_IPC.playbackUrl, async (_event, fileId: string) => (await ensurePlayback()).urlFor(playbackFileFor(String(fileId))));
   // The loudness pass reads the song's own file, beside the player: no copy is picked for it (PAR-PLAY-04).
   ipcMain.handle(PARROT_IPC.measureUrl, async (_event, fileId: string) => (await ensurePlayback()).readUrlFor(String(fileId)));
-  ipcMain.handle(PARROT_IPC.streamAcquire, (_event, trackId: unknown) => streamSlots.acquire(String(trackId)));
+  ipcMain.handle(PARROT_IPC.streamAcquire, async (_event, trackId: unknown) => {
+    const answer = await streamSlots.acquire(String(trackId));
+    // OPS-BIZ-20: every song the window starts asks here first (a kept one included): one play for the hello's tally.
+    if (answer === "play") noteHelloPlay();
+    return answer;
+  });
+  ipcMain.handle(PARROT_IPC.noteScreen, () => noteHelloScreen());
   ipcMain.handle(PARROT_IPC.streamAnswer, (_event, answer: unknown) => streamSlots.answer(answer === "playHere" ? "playHere" : "cancel"));
   ipcMain.handle(PARROT_IPC.streamDismiss, () => streamSlots.dismiss());
   ipcMain.handle(PARROT_IPC.streamRelease, () => streamSlots.release());
@@ -3148,6 +3155,16 @@ void app.whenReady().then(async () => {
   // ACCT-PAIR-07: signed in, Badger on this computer can offer this account.
   publishSiblingAccount();
   reapplyStartAtLoginAtLaunch({ platform: process.platform, setup: store.setup, applyStartAtLogin, fail });
+  // OPS-BIZ-20: the daily hello (once per local day, a few seconds after start, silent on failure); its date and
+  // tallies live in `<userData>/daily-hello.json`.
+  const dailyHelloFile = join(userDataDir, "daily-hello.json");
+  startDailyHello({
+    baseUrl: apiBaseUrl,
+    store: {
+      read: () => (existsSync(dailyHelloFile) ? readFileSync(dailyHelloFile, "utf8") : null),
+      write: (value) => writeFileSync(dailyHelloFile, value),
+    },
+  });
   keptFiles = await createParrotKeptFiles({ dir: offlineDir, token: () => store.token() ?? "", clientType: CLIENT_TYPE, appId: PARROT_APP_ID, log });
   keeping = await createDesktopKeeping({
     dir: offlineDir,

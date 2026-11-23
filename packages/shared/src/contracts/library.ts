@@ -39,6 +39,11 @@ export const LibraryOpsResponseSchema = z.object({
   // keeps a pre-paging server's body (no field) valid.
   hasMore: z.boolean().default(false),
   ops: z.array(LibraryOpEntrySchema),
+  // LIB-SYNC-19: the library's state hash at `version`, read with it. A device that moves to `version` chains its
+  // next op on this hash, never on one read earlier with an older version. Absent on a server from before it (the
+  // device then moves no further than the version its meta read named) and on a partial page of ops stored before
+  // op hashes.
+  stateHash: z.string().nullable().optional(),
   // Format-versioning surfaces (Parts A/B). `.default(1)` keeps every existing
   // server response and test fixture valid: a body omitting these parses as
   // version 1, which is the only format that has ever shipped.

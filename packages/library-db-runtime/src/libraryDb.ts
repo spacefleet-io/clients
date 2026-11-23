@@ -983,7 +983,17 @@ type ScopedViewingReads = {
  */
 export type PreparedRemoteSync =
   | { kind: "none" }
-  | { kind: "ops"; meta: LibraryMeta; fromVersion: number; toVersion: number; ops: LibraryOp[]; opSizes: number[] }
+  | {
+      kind: "ops";
+      meta: LibraryMeta;
+      fromVersion: number;
+      toVersion: number;
+      /** LIB-SYNC-19: the server's state hash at `toVersion` and the last op id up to it */
+      stateHash: string | null;
+      lastOpId: string | null;
+      ops: LibraryOp[];
+      opSizes: number[];
+    }
   | {
       kind: "snapshot";
       meta: LibraryMeta;
@@ -1788,6 +1798,8 @@ export class LibraryDb {
    * LIB-FMT-12: adopt the account's switch from a meta read; a switched account converts this device's playback
    * group in place (never by downloading the library again). Synchronous, so no other library call interleaves.
    */
+  // tla: LibrarySync/CompactMeta
+  // tla: LibrarySync/SyncMeta
   private adoptTargetOpStreamVersion(meta: unknown) {
     const target = metaTargetOpStreamVersion(meta);
     // The switch is one-way (LIB-FMT-13): a meta without the field (an older server copy mid-update) never undoes it.
@@ -1803,6 +1815,7 @@ export class LibraryDb {
    * The op-stream version this library's writes are in (LIB-FMT-13): 4 only once the account is switched AND this
    * device's playback group is converted; a version-3 layout writes version 3, whatever the switch.
    */
+  // tla: LibrarySync/FlushBuild
   private writtenOpStreamVersion() {
     return this.packedPlayback ? writeOpStreamVersion(this.targetOpStreamVersion) : OP_STREAM_VERSION;
   }
@@ -2655,6 +2668,7 @@ export class LibraryDb {
     if (this.pendingOps.length > 0) this.scheduleOpsFlush(2000);
   }
 
+  // tla: LibrarySync/TimerFlush
   private scheduleOpsFlush(delayMs = 250) {
     if (this.closed) return;
     if (this.opsFlushInFlight) return;
@@ -2691,6 +2705,7 @@ export class LibraryDb {
     return this.queueOps([op]);
   }
 
+  // tla: LibrarySync/Edit
   private async queueOps(ops: LibraryOp[]) {
     if (!this.syncEnabled || this.applyingRemoteOps || !ops.length) return;
     const op = ops[ops.length - 1]!;
@@ -8428,6 +8443,10 @@ export class LibraryDb {
    * drain never ended and the sync never got to fetch. Ops left over go to
    * the normal debounced flush.
    */
+  // tla: LibrarySync/FlushBuild
+  // tla: LibrarySync/FlushRecv
+  // tla: LibrarySync/FlushDone
+  // tla: LibrarySync/FlushAfter409
   private async flushOps(maxOps = Number.POSITIVE_INFINITY) {
     if (this.closed || !this.syncEnabled || this.opsFlushInFlight) return;
     if (!this.pendingOps.length) return;
@@ -8607,6 +8626,8 @@ export class LibraryDb {
     saveOpsSinceSnapshot(this.opsSinceSnapshot);
   }
 
+  // tla: LibrarySync/CompactMeta
+  // tla: LibrarySync/CompactSkip
   private async maybeCompactAfterOps() {
     // LIB-STORE-05: below the thresholds nothing is asked of the server, so a
     // progress-only flush (which never counts, LIB-SYNC-07) costs no meta GET.
@@ -8617,6 +8638,10 @@ export class LibraryDb {
     if (!meta?.exists) return;
     this.adoptTargetOpStreamVersion(meta);
     if (counted.snapshotVersion !== meta.snapshotVersion) return;
+    // LIB-SYNC-20: the full copy is this device's copy. Another device saved since this flush, so meta.version holds a
+    // change this copy lacks: publishing on top of it would leave that change out of every copy a new reader gets.
+    // The next flush after the sync that brings it in tries again.
+    if (meta.version !== this.remoteVersion) return;
     const latestSnapshotMs = getLatestSnapshotMs(meta.snapshotHistory);
     if (latestSnapshotMs && Date.now() - latestSnapshotMs < SNAPSHOT_MIN_INTERVAL_MS) {
       return;
@@ -8635,6 +8660,7 @@ export class LibraryDb {
    * the snapshot is due by tail bytes alone (LIB-SYNC-12): a snapshot larger than the tail it replaces is not
    * published, and the byte threshold rises to its size instead.
    */
+  // tla: LibrarySync/CompactPut
   private async uploadSnapshot(meta: LibraryMeta, maxBytes?: number) {
     const expectedVersion = meta.version;
     if (!(await this.ensurePublishableState("snapshot"))) return;
@@ -9222,6 +9248,7 @@ export class LibraryDb {
     };
   }
 
+  // tla: LibrarySync/FlushAfter409
   async syncFromRemoteIfNewer(metaOverride?: LibraryMeta | null) {
     const prepared = await this.prepareRemoteSync(metaOverride);
     if (prepared.kind === "none") return false;
@@ -9236,6 +9263,9 @@ export class LibraryDb {
    * the gate for minutes and every read and write queued behind it. Pair
    * with `applyPreparedRemoteSync`, which the runtime runs inside the gate.
    */
+  // tla: LibrarySync/SyncFlush
+  // tla: LibrarySync/SyncMeta
+  // tla: LibrarySync/SyncFetch
   async prepareRemoteSync(metaOverride?: LibraryMeta | null): Promise<PreparedRemoteSync> {
     if (this.closed || !this.syncEnabled) {
       return { kind: "none" };
@@ -9288,7 +9318,7 @@ export class LibraryDb {
     // The server pages a long op tail (`hasMore`): `version` of a partial page
     // is its last op, the next page starts there. Collect every page before
     // applying so the version/state hash adopted below match what was applied.
-    const entries = [...opsResult.ops];
+    let entries = [...opsResult.ops];
     let toVersion = opsResult.version;
     while (opsResult.hasMore && opsResult.ops.length > 0) {
       opsResult = await getLibraryOps(this.token, toVersion);
@@ -9302,6 +9332,21 @@ export class LibraryDb {
       entries.push(...opsResult.ops);
       toVersion = opsResult.version;
     }
+    // LIB-SYNC-19: the device moves to `toVersion` with the hash AT `toVersion`, never meta's: another device's op
+    // can land between the meta read and the ops read, and chaining on meta's older hash had the next op refused
+    // 409 lineage_conflict. The last page names that hash; a server from before the field names none, and the
+    // device then stops at the version its meta named, whose hash it read (the rest comes with the next sync).
+    let toStateHash: string | null;
+    if (opsResult.stateHash !== undefined) {
+      toStateHash = normalizeStateHash(opsResult.stateHash);
+    } else {
+      if (toVersion > meta.version) {
+        entries = entries.filter((entry) => entry.version <= meta.version);
+        toVersion = meta.version;
+      }
+      toStateHash = normalizeStateHash(meta.stateHash);
+    }
+    const toLastOpId = entries.at(-1)?.opId ?? meta.lastOpId ?? null;
 
     const ops: LibraryOp[] = [];
     const CONCURRENCY = 4;
@@ -9324,7 +9369,16 @@ export class LibraryDb {
       );
       ops.push(...results);
     }
-    return { kind: "ops", meta, fromVersion, toVersion, ops, opSizes: entries.map((entry) => entry.size) };
+    return {
+      kind: "ops",
+      meta,
+      fromVersion,
+      toVersion,
+      stateHash: toStateHash,
+      lastOpId: toLastOpId,
+      ops,
+      opSizes: entries.map((entry) => entry.size),
+    };
   }
 
   /**
@@ -9334,6 +9388,7 @@ export class LibraryDb {
    * fetched ops/snapshot no longer start at this instance's base, so the
    * caller must run the full `syncFromRemoteIfNewer` instead.
    */
+  // tla: LibrarySync/SyncApply
   async applyPreparedRemoteSync(prepared: PreparedRemoteSync): Promise<boolean | "stale"> {
     if (prepared.kind === "none") return false;
     if (this.closed) return false;
@@ -9360,6 +9415,7 @@ export class LibraryDb {
    * unsent, so the copy holds exactly the server's library. Two devices racing are serialised by the base-version
    * check (LIB-SYNC-01): the loser's 409 leaves its converted copy in place, never downloads the winner's.
    */
+  // tla: LibrarySync/SyncPublish
   private async publishConvertedCopy(meta: LibraryMeta) {
     if (!this.packedPlayback || this.targetOpStreamVersion < 4 || (meta.opStreamVersion ?? 0) >= 4) return;
     if (this.closed || this.pendingOps.length > 0 || this.remoteVersion !== meta.version) return;
@@ -9392,6 +9448,7 @@ export class LibraryDb {
     }
   }
 
+  // tla: LibrarySync/SyncApply
   private async applyRemoteOps(prepared: Extract<PreparedRemoteSync, { kind: "ops" }>): Promise<boolean> {
     const { meta, ops } = prepared;
     // Rebase local, not-yet-acknowledged writes on top of the remote ops.
@@ -9417,8 +9474,8 @@ export class LibraryDb {
     if (!this.pendingOps.length) {
       this.version = Math.max(this.version, prepared.toVersion);
     }
-    this.stateHash = normalizeStateHash(meta.stateHash);
-    this.lastOpId = meta.lastOpId ?? this.lastOpId;
+    this.stateHash = prepared.stateHash;
+    this.lastOpId = prepared.lastOpId ?? this.lastOpId;
     await saveCache({
       version: Math.max(this.version, this.remoteVersion),
       dbPath: getCacheDbPath(),

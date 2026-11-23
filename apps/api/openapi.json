@@ -17425,6 +17425,93 @@
         }
       }
     },
+    "/usage/hello": {
+      "post": {
+        "operationId": "sayDailyHello",
+        "tags": [
+          "Usage"
+        ],
+        "summary": "Daily hello of an app (anonymous)",
+        "description": "Sent once per local day by each app (OPS-BIZ-20). Adds one hello and the two tallies to today's totals (UTC) for the app, platform and version of the `x-space-client` header; nothing else is kept, no account, device or install id and no address. Needs no login and ignores any `Authorization` header. Never refused for an old app version. Limited to 20 per network address an hour (429).",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "plays": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Plays started on this device since its last hello. Above 2000 counts as 2000."
+                  },
+                  "screens": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Screens opened on this device since its last hello. Above 2000 counts as 2000."
+                  }
+                },
+                "required": [
+                  "plays",
+                  "screens"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Counted."
+          },
+          "400": {
+            "description": "The `x-space-client` header is missing or not valid, or the body is not valid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "invalid_client"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many attempts; wait `retryAfterSeconds` (also sent as the `Retry-After` header).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "rate_limited"
+                      ]
+                    },
+                    "retryAfterSeconds": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "error",
+                    "retryAfterSeconds"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/account/email/keep": {
       "post": {
         "operationId": "keepEmailAddress",
