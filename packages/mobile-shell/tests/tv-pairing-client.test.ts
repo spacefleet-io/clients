@@ -7,13 +7,21 @@
  *   pairing contract; the approver side uses the real `sealLibraryKey`.
  */
 import { describe, expect, it } from "vitest";
-import { base64ToBytes, bytesToBase64, normalizeShortCode, sealLibraryKey } from "@space/pairing-crypto";
+import {
+  base64ToBytes,
+  bytesToBase64,
+  commitmentFingerprint,
+  fingerprintFromLink,
+  fingerprintMatches,
+  normalizeShortCode,
+  sealLibraryKey,
+} from "@space/pairing-crypto";
 import { PairingHttpError, TV_POLL_WAIT_SECONDS, createTvPairingClient, resolveTvDeviceName } from "../src/tv/pairingClient";
 
 const LIBRARY_KEY = bytesToBase64(new Uint8Array(32).map((_, i) => i + 1));
 const USER = { id: "u1", email: "tv-test@spacefleet.test" };
 
-type Created = { deviceType: string; deviceName: string; publicKey: string };
+type Created = { deviceType: string; deviceName: string; publicKey: string; commitment: string };
 
 type FakeApiState = {
   created: Created | null;
@@ -75,7 +83,11 @@ describe("TV pairing client (new device)", () => {
     expect(api.state.headers?.["x-space-app"]).toBe("badger");
     expect(started.shortCode).toBe("ABCD-EFGH");
     expect(normalizeShortCode(started.shortCode)).toBe("ABCDEFGH");
-    expect(started.qrPayload).toBe("https://spacefleet.io/pair/badger?code=ABCDEFGH");
+    // PRIV-PAIR-01 (sf-pair-v2): the server's link, plus a `#c=` fragment naming the commitment the TV sent.
+    const commitment = api.state.created?.commitment ?? "";
+    expect(base64ToBytes(commitment)).toHaveLength(32); // SHA-256 commitment (PAIRING_COMMITMENT_BYTES)
+    expect(started.qrPayload).toBe(`https://spacefleet.io/pair/badger?code=ABCDEFGH#c=${commitmentFingerprint(commitment)}`);
+    expect(fingerprintMatches(fingerprintFromLink(started.qrPayload), commitment)).toBe(true);
   });
 
   it("long-polls with its secret and asks the API to hold the poll open", async () => {

@@ -5,10 +5,12 @@
  * Pure: the only side effects are the injected `fetch` (used by `@space/sdk`) and the OS-free key generation, so it runs in Node,
  * Hermes and under test. Platform specifics (device name, QR drawing, UI) stay with the caller.
  *
- *   start()  -> own X25519 keypair, POST /pairing/requests, short code + QR payload back to the caller.
- *   poll()   -> GET /pairing/requests/:id; on approval the sealed library key is opened here and
+ *   start()  -> own X25519 keypair and a commitment to it (PRIV-PAIR-01), POST /pairing/requests, short code + QR
+ *               payload (carrying the commitment's fingerprint, written here) back to the caller.
+ *   poll()   -> GET /pairing/requests/:id; once a sending app connected, reveals this device's number and hands the
+ *               6-digit check code to the caller to show; on approval the sealed library key is opened here and
  *               {token, user, libraryKey} is handed to the caller.
- *   cancel() -> forget the keypair and abort any request in flight.
+ *   cancel() -> forget the keypair, abort any request in flight and delete the request on the API (PRIV-PAIR-03).
  *   deliverLocalKey() -> same-device sign-in (ACCT-PAIR-07): the sister app on this device approved with `localKey`
  *               and handed the sealed key over locally; the API's approval then carries only the token.
  *
@@ -18,6 +20,7 @@
 import * as sdk from "@space/sdk";
 import type { SpaceAppId } from "@space/shared/appScope";
 import { bytesToBase64 } from "./base64";
+import { newPairingNonce, pairingCheckCode, pairingCommitment, withCommitmentFingerprint } from "./checkCode";
 import { generateDeviceKeyPair, openSealedKey, type SealedKey } from "./seal";
 
 export const PAIRING_DEVICE_NAME_MAX = 80;
@@ -39,7 +42,8 @@ export type PairingCreated = {
 };
 
 export type PairingPoll =
-  | { status: "pending" }
+  /** `checkCode`: a sending app connected (PRIV-PAIR-01); show these six digits until the approval comes. */
+  | { status: "pending"; checkCode?: string }
   | { status: "expired" }
   | { status: "denied" }
   | { status: "approved"; token: string; user: PairingUser; libraryKey: string }
@@ -47,7 +51,7 @@ export type PairingPoll =
   | { status: "key_unreadable" };
 
 type PollResponse =
-  | { status: "pending" }
+  | { status: "pending"; approverNonce?: string }
   | { status: "expired" }
   | { status: "denied" }
   | { status: "consumed" }
@@ -95,6 +99,14 @@ type ActiveRequest = {
   requestId: string;
   pollSecret: string;
   privateKey: string;
+  /** PRIV-PAIR-01: this device's key, its secret number and the commitment sent with the request. */
+  publicKey: string;
+  requesterNonce: string;
+  commitment: string;
+  /** PRIV-PAIR-01: the first approver number a poll carried, pinned before any await; every other number is ignored. */
+  approverNonce: string | null;
+  /** The check code, once a sending app connected and this device revealed its number. */
+  checkCode: string | null;
   approved: Extract<PairingPoll, { status: "approved" }> | null;
   /** Key mode: the device's own session, handed back on approval. */
   sessionToken: string | null;
@@ -162,6 +174,7 @@ export const createPairingClientCore = (deps: PairingClientCoreDeps): PairingCli
     polling.clear();
   };
 
+  // tla: PairingV2/RStart
   const start = async (): Promise<PairingCreated> => {
     forget();
     const mine = generation;
@@ -169,7 +182,9 @@ export const createPairingClientCore = (deps: PairingClientCoreDeps): PairingCli
     const deviceName = clampDeviceName(deps.deviceName(), deps.fallbackDeviceName);
     const sessionToken = deps.sessionToken?.() ?? null;
     if (deps.sessionToken && !sessionToken) throw new PairingHttpError(401, "unauthorized");
-    const body = { deviceType: deps.deviceType, deviceName, publicKey: keys.publicKey };
+    const requesterNonce = newPairingNonce();
+    const commitment = pairingCommitment(keys.publicKey, requesterNonce);
+    const body = { deviceType: deps.deviceType, deviceName, publicKey: keys.publicKey, commitment };
     const created = await request(
       (client, signal) =>
         sessionToken
@@ -179,18 +194,74 @@ export const createPairingClientCore = (deps: PairingClientCoreDeps): PairingCli
     );
     // A newer start() or a cancel() while this request was in flight wins: this one is no longer polled.
     if (mine === generation) {
-      active = { requestId: created.requestId, pollSecret: created.pollSecret, privateKey: keys.privateKey, approved: null, sessionToken, localKey: null, localApproval: null };
+      active = {
+        requestId: created.requestId,
+        pollSecret: created.pollSecret,
+        privateKey: keys.privateKey,
+        publicKey: keys.publicKey,
+        requesterNonce,
+        commitment,
+        approverNonce: null,
+        checkCode: null,
+        approved: null,
+        sessionToken,
+        localKey: null,
+        localApproval: null,
+      };
     }
     log("pairing request created", { requestId: created.requestId, expiresAt: created.expiresAt, deviceName });
     return {
       requestId: created.requestId,
       shortCode: created.shortCode,
-      qrPayload: created.qrPayload,
+      // PRIV-PAIR-01: the fingerprint is written here, over anything the server put in the link.
+      qrPayload: withCommitmentFingerprint(created.qrPayload, commitment),
       expiresAt: created.expiresAt,
       deviceName,
     };
   };
 
+  /**
+   * PRIV-PAIR-01: a sending app connected with its number. This device reveals its own and computes the code from the
+   * FIRST approver number it saw, pinned synchronously before the reveal is sent. A server that takes the reveal but
+   * fails the answer must not get a second, different number accepted: it would know this device's number by then and
+   * could grind that number until the code matches a code it controls on the approver. A retry after a failed reveal
+   * re-sends the same reveal (the API accepts the same number again) and still uses the pinned number.
+   */
+  // tla: PairingV2/RPoll
+  const revealFor = async (current: ActiveRequest, approverNonce: string): Promise<string | null> => {
+    if (current.checkCode) return current.checkCode;
+    current.approverNonce ??= approverNonce;
+    const pinned = current.approverNonce;
+    if (approverNonce !== pinned) {
+      log("pairing approver number changed; ignored, the first one stays", { requestId: current.requestId });
+    }
+    try {
+      await request(
+        (client, signal) =>
+          sdk.revealPairing({
+            client,
+            path: { requestId: current.requestId },
+            body: { pollSecret: current.pollSecret, requesterNonce: current.requesterNonce },
+            signal,
+          }),
+        { timeoutMs: REQUEST_TIMEOUT_MS },
+      );
+    } catch (err) {
+      log("pairing reveal failed", { requestId: current.requestId, status: err instanceof PairingHttpError ? err.status : null });
+      return null;
+    }
+    current.checkCode ??= pairingCheckCode({
+      publicKey: current.publicKey,
+      commitment: current.commitment,
+      approverNonce: pinned,
+      requesterNonce: current.requesterNonce,
+    });
+    log("pairing check code ready", { requestId: current.requestId });
+    return current.checkCode;
+  };
+
+  // tla: PairingV2/RPoll
+  // tla: PairingV2/RApproved
   const poll = async (requestId: string): Promise<PairingPoll> => {
     const current = active;
     if (!current || current.requestId !== requestId) return { status: "expired" };
@@ -220,7 +291,11 @@ export const createPairingClientCore = (deps: PairingClientCoreDeps): PairingCli
     }
     if (mine !== generation) return { status: "expired" };
 
-    if (res.status === "pending") return { status: "pending" };
+    if (res.status === "pending") {
+      const checkCode = res.approverNonce ? await revealFor(current, res.approverNonce) : current.checkCode;
+      if (mine !== generation) return { status: "expired" };
+      return checkCode ? { status: "pending", checkCode } : { status: "pending" };
+    }
     if (res.status === "expired" || res.status === "denied") {
       log("pairing request ended", { requestId, status: res.status });
       forget();
@@ -293,5 +368,16 @@ export const createPairingClientCore = (deps: PairingClientCoreDeps): PairingCli
     }
   };
 
-  return { start, poll, cancel: forget, deliverLocalKey };
+  /** The user left the screen: the request goes at once, on the API too (PRIV-PAIR-03); a failure only logs. */
+  const cancel = () => {
+    const current = active;
+    forget();
+    if (!current || current.approved) return;
+    void request(
+      (client, signal) => sdk.cancelPairingRequest({ client, path: { requestId: current.requestId }, query: { pollSecret: current.pollSecret }, signal }),
+      { timeoutMs: REQUEST_TIMEOUT_MS },
+    ).catch((err: unknown) => log("pairing cancel failed", { requestId: current.requestId, status: err instanceof PairingHttpError ? err.status : null }));
+  };
+
+  return { start, poll, cancel, deliverLocalKey };
 };

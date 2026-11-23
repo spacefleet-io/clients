@@ -107,6 +107,7 @@ describe("systemPromptView (REL-UPD-07)", () => {
     expect(systemPromptView(systemState({ phase: "installing" }))).toBe("installing");
     expect(systemPromptView(systemState({ phase: "installed" }))).toBe("installed");
     expect(systemPromptView(systemState({ phase: "error", failure: "packageManager" }))).toBe("failed");
+    expect(systemPromptView(systemState({ phase: "error", failure: "notNewer" }))).toBe("pending");
     expect(systemPromptView(systemState({ phase: "error", failure: null }))).toBeNull();
     expect(systemPromptView(systemState({ channel: "flatpak", canInstall: false }))).toBe("flatpak");
     expect(systemPromptView(systemState({ channel: "self" }))).toBeNull();
@@ -194,6 +195,30 @@ describe("SystemUpdatePrompt (REL-UPD-07)", () => {
       expect(writeText).toHaveBeenCalledWith("sudo pacman -Syu");
       expect(q("update-manual-copy")?.textContent).toBe("Copied");
       expect(q("system-update-prompt-later")?.textContent).toBe("Close");
+      await act(async () => q("system-update-prompt-later")?.click());
+      expect(q("system-update-prompt")).toBeNull();
+    });
+  });
+
+  // @bugfix @regression-proof Chris 2026-11-23: Parrot offered 0.1.40 before the Arch repository listed it, and the
+  // modal said "The package repository doesn't have the new version yet" as a failure. It is not one: the version is on
+  // its way, and the main process offers it again once the repository has it.
+  it.each([
+    ["en", "A new version is on its way. We'll offer it when it's ready."],
+    ["fr", "Une nouvelle version arrive. Nous vous la proposerons dès qu'elle sera prête."],
+  ])("@req REL-UPD-07 the repository does not list the version yet (%s): 'on its way', no failure, no command", async (lang, sentence) => {
+    const controls = makeControls(
+      systemState({ phase: "error", failure: "notNewer", failureDetail: "[system-update] nothing newer than 0.1.39", manualCommand: HELPER_COMMAND }),
+    );
+    await mount(prompt(controls, lang));
+    console.log(`[${SUITE}:pending:${lang}] ${q("system-update-prompt")?.outerHTML}`);
+    await checked(`pending-${lang}`, controls, async () => {
+      expect(q("system-update-prompt")?.getAttribute("data-view")).toBe("pending");
+      expect(q("system-update-prompt")?.getAttribute("role")).toBe("dialog");
+      expect(q("system-update-prompt-message")?.textContent).toBe(sentence);
+      expect(q("system-update-prompt-detail")).toBeNull();
+      expect(q("update-manual-command")).toBeNull();
+      expect(q("system-update-prompt")?.textContent).not.toMatch(/doesn't have|failed|couldn't/i);
       await act(async () => q("system-update-prompt-later")?.click());
       expect(q("system-update-prompt")).toBeNull();
     });
@@ -291,6 +316,16 @@ describe("Settings › About on a package-manager copy (REL-UPD-07)", () => {
       expect(q("update-section-status")?.textContent).toBe("Your account isn't allowed to install updates.");
       expect(q("update-manual-command")?.textContent).toBe(HELPER_COMMAND);
       expect(q("settings-auto-update-switch")).not.toBeNull();
+    });
+  });
+
+  it("@req REL-UPD-07 @bugfix the repository not ready yet reads 'on its way' in Settings, not as an error, with no command", async () => {
+    const controls = makeControls(systemState({ phase: "error", failure: "notNewer", manualCommand: HELPER_COMMAND }));
+    await mount(<DesktopUpdateSection controls={controls} language="en" appName="Badger" autoUpdate={{ checked: true, onCheckedChange: vi.fn() }} />);
+    await checked("section-pending", controls, () => {
+      expect(q("update-section-status")?.textContent).toBe("A new version is on its way. We'll offer it when it's ready.");
+      expect(q("update-section-status")?.className).not.toContain("text-destructive");
+      expect(q("update-manual-command")).toBeNull();
     });
   });
 });

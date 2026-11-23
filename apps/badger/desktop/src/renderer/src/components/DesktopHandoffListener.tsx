@@ -26,11 +26,11 @@ export default function DesktopHandoffListener() {
     if (!api) return;
     const enqueue = (request: HandoffRequest, via: "push" | "pending") => {
       if (seenRef.current.has(request.handoffId)) {
-        console.info("[handoff] play already handled: ignored", { ...request, via });
+        handoffLog.info({ ...request, via }, "[handoff] play already handled: ignored");
         return;
       }
       seenRef.current.add(request.handoffId);
-      console.info("[handoff] play received by the renderer", { ...request, via });
+      handoffLog.info({ ...request, via }, "[handoff] play received by the renderer");
       setQueue((current) => [...current, request]);
     };
     const unsubscribe = api.onPlay((request) => enqueue(request, "push"));
@@ -53,14 +53,14 @@ export default function DesktopHandoffListener() {
     setQueue([]);
     if (!request) return;
     const reportFailed = (error: string) => {
-      console.info("[handoff] playback could not start: reporting failure", { ...request, error });
+      handoffLog.info({ ...request, error }, "[handoff] playback could not start: reporting failure");
       void api?.reportFailed({ handoffId: request.handoffId, error });
     };
     if (!user) {
       reportFailed("not_signed_in");
       return;
     }
-    console.info("[handoff] starting playback (auto-resume, no prompt)", request);
+    handoffLog.info({ ...request }, "[handoff] starting playback (auto-resume, no prompt)");
     handlePlayMedia(request.mediaId, { autoResume: true, onFailed: reportFailed });
   }, [handlePlayMedia, loading, queue, user]);
 

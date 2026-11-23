@@ -6,6 +6,7 @@
 // dir is refused before Electron starts. A lane run is silent and headless (REL-ENV-36): muted Electron, and its
 // own Xvfb when no private DISPLAY is set. Without a lane, Parrot runs as before.
 
+import { TEST_KEYCHAIN_ARGS } from "@space/desktop-shell/test-keychain-args";
 import { admitLaneOrExit, electronViteDevArgs, prepareLaneSilentLaunch, resolveDesktopDevEnv, runDevChild } from "../../../../scripts/desktop-dev-lane.mjs";
 
 const baseEnv = { ...process.env };
@@ -42,7 +43,8 @@ if (silent.logLine) console.log(`[parrot-desktop:dev] ${silent.logLine}`);
 // `--watch`: a preload or main change rebuilds them (UX-CRASH-01: a new screen on the old preload crashed).
 runDevChild({
   command: "electron-vite",
-  args: electronViteDevArgs({ userArgs: process.argv.slice(2), electronArgs: silent.electronArgs }),
+  // A dev build is an unsigned binary on macOS: like the test launches, it keeps its session off the login keychain.
+  args: electronViteDevArgs({ userArgs: process.argv.slice(2), electronArgs: [...TEST_KEYCHAIN_ARGS, ...silent.electronArgs] }),
   env: silent.env,
   xvfb: silent.xvfb,
   sink: silent.sink,

@@ -79,7 +79,7 @@ export function SameDeviceSignIn<A = PairingHandOver>({ language, app, actions, 
 
   if (phase === "failed") {
     return (
-      <div className="w-full" data-testid="same-device-sign-in-failure">
+      <div className="w-full min-w-0" data-testid="same-device-sign-in-failure">
         <NoticeSurface tone="error" className="w-full">
           {t("failure", { Other: other })}
         </NoticeSurface>
@@ -88,9 +88,11 @@ export function SameDeviceSignIn<A = PairingHandOver>({ language, app, actions, 
   }
 
   const [before, after] = t("button", { Other: other }).split("{email}");
+  // `min-w-0`: the sign-in forms are grids and flex columns, whose items never shrink below their content by default;
+  // the one-line email button would then widen the whole form past its card. The email truncates instead.
   return (
     <div
-      className="flex w-full flex-col gap-3 rounded-2xl border-[1.5px] border-primary/60 bg-primary/[0.09] px-4 py-3.5 text-left"
+      className="flex w-full min-w-0 flex-col gap-3 rounded-2xl border-[1.5px] border-primary/60 bg-primary/[0.09] px-4 py-3.5 text-left"
       data-testid="same-device-sign-in-card"
     >
       <div className="flex items-center gap-3.5">
@@ -127,7 +129,7 @@ export function SameDeviceSignIn<A = PairingHandOver>({ language, app, actions, 
             type="button"
             onClick={() => void signIn()}
             title={offer.email}
-            className="flex h-10 w-full items-center justify-center whitespace-nowrap rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+            className="flex h-10 w-full min-w-0 items-center justify-center whitespace-nowrap rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
             data-testid="same-device-sign-in-continue"
           >
             {before ? <span className="flex-none whitespace-pre">{before}</span> : null}

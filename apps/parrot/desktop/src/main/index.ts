@@ -10,6 +10,7 @@ import {
   ApiError,
   approvePairing,
   completeStancerPayment,
+  connectPairing,
   denyPairing,
   getBillingStatus,
   getFounderStatus,
@@ -23,6 +24,7 @@ import {
   updateProfile,
   deleteProfile,
   lookupPairing,
+  readPairingReveal,
   login,
   completeProviderSignIn,
   listSignInProviders,
@@ -42,6 +44,7 @@ import {
   updateSettings,
   updateSubscription,
 } from "@space/shared/api";
+import { keyOpensProbe } from "@space/pairing-crypto";
 import { paymentPageLang } from "@space/shared/billingCheckout";
 import { findPaymentReturn, parsePaymentReturnLink } from "@space/shared/checkoutReturn";
 import {
@@ -62,10 +65,12 @@ import {
   buildTrayActions,
   createAppTray,
   MAIN_SHELL_STRINGS,
+  protocolClientArgs,
   registerTrayTestIpc,
   resolveTrayIconPath,
   revealWindow,
   shouldQuitWhenAllWindowsClosed,
+  resolveUserDataDir,
   trayLabelsFor,
 } from "@space/desktop-shell/main-shell";
 import { getDesktopPlatform } from "@space/desktop-platform";
@@ -148,6 +153,7 @@ import { fetchSourceCredits } from "@space/metadata-client/credits";
 import { ticketKeysForBuild } from "@space/privacy-pass";
 import { SPACE_APP_HEADER } from "@space/shared/appScope";
 import { getAppUpdateRequired, onAppUpdateRequired, setClientIdentity } from "@space/shared/appVersion";
+import { noteHelloPlay, noteHelloScreen, startDailyHello } from "@space/shared/dailyHello";
 import { logFailedApiCalls, recentFailedRequestIds } from "@space/shared/apiFailure";
 import { desktopClientIdentity } from "@space/desktop-shell/client-identity";
 import {
@@ -273,7 +279,10 @@ setClientIdentity(
   desktopClientIdentity({ app: "parrot", version: app.getVersion(), packaged: app.isPackaged, os: process.platform, env: process.env }),
 );
 
-app.setPath("userData", process.env.SF_USER_DATA_PATH?.trim() || join(app.getPath("appData"), "spaceparrot"));
+// PLAT-DESK-14: every release keeps `<appData>/spaceparrot` (the dir existing installs use, on every OS); a development
+// build keeps its own `spaceparrot-dev` next to it, so it never reads the installed app's production sign-in or library.
+const releaseUserDataDir = join(app.getPath("appData"), "spaceparrot");
+app.setPath("userData", resolveUserDataDir({ releaseDir: releaseUserDataDir, env: process.env, devBuild: isDevBuild }));
 const userDataDir = app.getPath("userData");
 mkdirSync(join(userDataDir, "logs"), { recursive: true });
 const logFile = join(userDataDir, "logs", "parrot-main.log");
@@ -335,9 +344,15 @@ if (!primaryInstance) {
 // Tests (SF_E2E=1) never rewrite the machine's `parrot:` handler: they hand the link over in a second launch's argv.
 if (primaryInstance && process.env.SF_E2E !== "1") {
   // A dev run (`electron <main.js>`) registers the Electron binary plus its main script, else the OS starts a bare Electron.
-  const registered = process.defaultApp && process.argv[1]
-    ? app.setAsDefaultProtocolClient("parrot", process.execPath, [resolve(process.argv[1])])
-    : app.setAsDefaultProtocolClient("parrot");
+  const protocolArgs = protocolClientArgs("parrot", {
+    defaultApp: Boolean(process.defaultApp),
+    execPath: process.execPath,
+    argv: process.argv,
+    resolvePath: (path) => resolve(path),
+  });
+  const registered = protocolArgs.length === 3
+    ? app.setAsDefaultProtocolClient(protocolArgs[0], protocolArgs[1], protocolArgs[2])
+    : app.setAsDefaultProtocolClient(protocolArgs[0]);
   log(`[billing] parrot:// link registered: ${registered}`);
 }
 /** A return link that arrived before the window existed (Parrot started by the link): completed once signed in. */
@@ -2621,7 +2636,11 @@ const registerIpc = () => {
   // A session the API just handed over (sign-in or a verified new account): another account's local data goes first.
   const acceptSession = async (session: { token: string; user: { id: string; email: string } }) => {
     const previous = store.user;
-    if (previous && previous.id !== session.user.id) resetToSignIn("signOut");
+    if (previous && previous.id !== session.user.id) {
+      // PAR-PL-05: the previous account's queued saves go out with its own session before its data is dropped.
+      await quitGuard.saveNow("account switch");
+      resetToSignIn("signOut");
+    }
     await store.signIn({ id: session.user.id, email: session.user.email }, session.token);
     sessionChecked = Promise.resolve();
     publishSiblingAccount();
@@ -2775,7 +2794,10 @@ const registerIpc = () => {
   let pairingMode: PairingMode = "sign_in";
   const pairedSignInDeps: ParrotPairedSignInDeps = {
     previousUserId: () => store.user?.id ?? null,
-    forgetPreviousAccount: () => resetToSignIn("signOut"),
+    forgetPreviousAccount: async () => {
+      await quitGuard.saveNow("account switch");
+      resetToSignIn("signOut");
+    },
     verifyKey: (token, key) => verifyLibraryKey(token, key),
     signIn: async (user, token) => {
       await store.signIn(user, token);
@@ -2898,6 +2920,8 @@ const registerIpc = () => {
     }
   });
   ipcMain.handle(PARROT_IPC.signOut, async () => {
+    // PAR-PL-05: queued saves go out while the session still works; the logout below revokes the token.
+    await quitGuard.saveNow("sign out");
     const token = store.token();
     await streamSlots.release().catch((error: unknown) => fail(`[stream] could not give the stream back: ${errorText(error)}`));
     if (token) await logout(token).catch((error: unknown) => fail(`[auth] sign-out on the server failed: ${errorText(error)}`));
@@ -2967,7 +2991,13 @@ const registerIpc = () => {
   ipcMain.handle(PARROT_IPC.playbackUrl, async (_event, fileId: string) => (await ensurePlayback()).urlFor(playbackFileFor(String(fileId))));
   // The loudness pass reads the song's own file, beside the player: no copy is picked for it (PAR-PLAY-04).
   ipcMain.handle(PARROT_IPC.measureUrl, async (_event, fileId: string) => (await ensurePlayback()).readUrlFor(String(fileId)));
-  ipcMain.handle(PARROT_IPC.streamAcquire, (_event, trackId: unknown) => streamSlots.acquire(String(trackId)));
+  ipcMain.handle(PARROT_IPC.streamAcquire, async (_event, trackId: unknown) => {
+    const answer = await streamSlots.acquire(String(trackId));
+    // OPS-BIZ-20: every song the window starts asks here first (a kept one included): one play for the hello's tally.
+    if (answer === "play") noteHelloPlay();
+    return answer;
+  });
+  ipcMain.handle(PARROT_IPC.noteScreen, () => noteHelloScreen());
   ipcMain.handle(PARROT_IPC.streamAnswer, (_event, answer: unknown) => streamSlots.answer(answer === "playHere" ? "playHere" : "cancel"));
   ipcMain.handle(PARROT_IPC.streamDismiss, () => streamSlots.dismiss());
   ipcMain.handle(PARROT_IPC.streamRelease, () => streamSlots.release());
@@ -2988,7 +3018,7 @@ const registerIpc = () => {
     appVersion: app.getVersion(),
     platform: `${process.platform} ${release()}`,
     requestIds: recentFailedRequestIds,
-    send: sendFeedback,
+    send: (token, body) => sendFeedback(token, body, "parrot"),
     log,
     fail,
   });
@@ -3002,6 +3032,11 @@ const registerIpc = () => {
       approve: (token, requestId, sealedKey, password, twoFactorCode) =>
         approvePairing(token, requestId, sealedKey, undefined, password, twoFactorCode),
       deny: denyPairing,
+      connect: connectPairing,
+      readReveal: readPairingReveal,
+      // PRIV-PAIR-02: a key the account no longer opens (rotated elsewhere) is not sent.
+      keyOpensAccount: (token, libraryKey) =>
+        keyOpensProbe(libraryKey, async () => (await getLibraryMeta(token, PARROT_APP_ID)).keyProbe, decryptBase64ToBytes),
     },
     log,
   });
@@ -3148,6 +3183,16 @@ void app.whenReady().then(async () => {
   // ACCT-PAIR-07: signed in, Badger on this computer can offer this account.
   publishSiblingAccount();
   reapplyStartAtLoginAtLaunch({ platform: process.platform, setup: store.setup, applyStartAtLogin, fail });
+  // OPS-BIZ-20: the daily hello (once per local day, a few seconds after start, silent on failure); its date and
+  // tallies live in `<userData>/daily-hello.json`.
+  const dailyHelloFile = join(userDataDir, "daily-hello.json");
+  startDailyHello({
+    baseUrl: apiBaseUrl,
+    store: {
+      read: () => (existsSync(dailyHelloFile) ? readFileSync(dailyHelloFile, "utf8") : null),
+      write: (value) => writeFileSync(dailyHelloFile, value),
+    },
+  });
   keptFiles = await createParrotKeptFiles({ dir: offlineDir, token: () => store.token() ?? "", clientType: CLIENT_TYPE, appId: PARROT_APP_ID, log });
   keeping = await createDesktopKeeping({
     dir: offlineDir,

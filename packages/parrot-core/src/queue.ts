@@ -99,6 +99,29 @@ export const goBack = <T>(queue: PlayQueue<T>): PlayQueue<T> => {
   return queue;
 };
 
+/** PAR-PLAY-09: past this many seconds into a song, Previous restarts it (Media3's `maxSeekToPreviousPosition`). */
+export const PREVIOUS_RESTART_S = 3;
+
+/** What Previous does: start the playing song over, or play `queue` (the song before it). */
+export type PreviousAction<T> = { kind: "restart" } | { kind: "go"; queue: PlayQueue<T> };
+
+/**
+ * PAR-PLAY-09, the one Previous rule on every Parrot control (player bar, OS media controls, media keys): past the
+ * first 3 seconds it restarts the song; within them it goes to the song before (repeat-all wraps), and restarts the
+ * song when there is none before it, as the phone's player (Media3 `seekToPrevious`) does.
+ */
+export const previousAction = <T>(queue: PlayQueue<T>, positionS: number): PreviousAction<T> => {
+  if (positionS > PREVIOUS_RESTART_S) return { kind: "restart" };
+  const back = goBack(queue);
+  return back.position === queue.position ? { kind: "restart" } : { kind: "go", queue: back };
+};
+
+/** PAR-PLAY-09: Previous works whenever a song is loaded (it restarts at worst); Next while a song follows. */
+export const transportState = <T>(queue: PlayQueue<T>): { canPrevious: boolean; canNext: boolean } => ({
+  canPrevious: currentEntry(queue) !== null,
+  canNext: advance(queue, "skip") !== null,
+});
+
 /** Plays the entry at `index` of the play order. */
 export const jumpTo = <T>(queue: PlayQueue<T>, index: number): PlayQueue<T> =>
   index >= 0 && index < queue.entries.length ? { ...queue, position: index } : queue;

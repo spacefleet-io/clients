@@ -1,6 +1,12 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { AlertTriangle } from "lucide-react";
-import { SHORT_CODE_LENGTH, type ApprovePairingProof, type ApprovePairingResult, type PairingRequestView } from "@space/pairing-crypto";
+import {
+  SHORT_CODE_LENGTH,
+  formatCheckCode,
+  type ApprovePairingProof,
+  type ApprovePairingResult,
+  type PairingRequestView,
+} from "@space/pairing-crypto";
 import {
   Button,
   Dialog,
@@ -26,8 +32,9 @@ export const pairDeviceKind = (deviceType: string): PairDeviceKind =>
 
 /**
  * The three steps, as plain results so they can run in the window (Badger) or in the main process over IPC (Parrot,
- * whose token and library key never reach the window). `approve` seals the key for `request` only; its proof is the
- * account password, or `{ code }` for an account without one.
+ * whose token and library key never reach the window). `lookup` finds the request and runs the check (PRIV-PAIR-01,
+ * `runPairingCheck`), so its request carries the `check` code; `approve` seals the key for `request` only; its proof is
+ * the account password, or `{ code }` for an account without one.
  */
 export type PairDeviceActions<R extends PairingRequestView = PairingRequestView> = {
   lookup: (code: string) => Promise<ApprovePairingResult<R>>;
@@ -50,7 +57,8 @@ type Stage<R> =
 /**
  * ACCT-PAIR-01 / ACCT-PAIR-02: approve another device (a TV, a phone, a browser, another computer) from this computer.
  * The user types the code that device shows (or pastes its QR link); the dialog names the device and its type with the
- * warning to approve only a code shown on a screen in front of them, then asks for the account password, which the
+ * warning to approve only a code shown on a screen in front of them, shows the six-digit check code and asks whether
+ * the device shows the same (PRIV-PAIR-01: Decline when not), then asks for the account password, which the
  * API checks before approving. A wrong password leaves the request pending and asks again. An account without a
  * password (`hasPassword` false, ACCT-AUTH-04) is asked a code instead: Approve first asks the API for it (it emails one
  * unless the authenticator app is on), then the code field appears.
@@ -155,7 +163,7 @@ export function PairDeviceDialog<R extends PairingRequestView>({
             {t("cancel")}
           </Button>
           <Button type="submit" disabled={busy || code.length !== SHORT_CODE_LENGTH} data-testid="pair-approve-continue">
-            {busy ? t("code.looking") : t("code.submit")}
+            {busy ? t("code.checking") : t("code.submit")}
           </Button>
         </DialogFooter>
       </form>
@@ -180,6 +188,15 @@ export function PairDeviceDialog<R extends PairingRequestView>({
           <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
           <span>{t("confirm.warning")}</span>
         </div>
+        {request.check && !request.check.confirmedByQr ? (
+          <div className="grid gap-1 rounded-md border px-3 py-2" data-testid="pair-approve-check">
+            <p className="text-sm">{t("check.question", { name: request.deviceName })}</p>
+            <p className="text-3xl font-semibold tracking-widest tabular-nums" data-testid="pair-approve-check-code">
+              {formatCheckCode(request.check.code)}
+            </p>
+            <p className="text-xs text-muted-foreground">{t("check.hint")}</p>
+          </div>
+        ) : null}
         {hasPassword ? (
           <div className="grid gap-2">
             <Label htmlFor="pairApprovePassword">{t("confirm.passwordLabel")}</Label>

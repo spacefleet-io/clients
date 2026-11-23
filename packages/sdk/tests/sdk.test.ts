@@ -104,7 +104,7 @@ describe("client", () => {
     const client = sdk.createSpaceClient({
       baseUrl: "https://api.test",
       fetch: (async () => {
-        throw "boom"; // eslint-disable-line @typescript-eslint/only-throw-error
+        throw "boom";
       }) as never,
     });
     const failure = await sdk.unwrap(sdk.getAccountSettings({ client })).catch((error) => error);

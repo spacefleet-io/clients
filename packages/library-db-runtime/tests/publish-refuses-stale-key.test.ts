@@ -25,13 +25,13 @@ describe(`${SUITE} assertAccountLibraryKey`, () => {
     expect((error as Error).message).toBe(KEY_MISMATCH);
   });
 
-  it("lets the account's key publish", async () => {
+  it("lets the account's key publish, returning the probe it checked (sent as checkedKeyProbe)", async () => {
     const accountKey = newKey();
     const probe = await encryptBytesToBase64(accountKey, new Uint8Array(randomBytes(32)));
-    await expect(assertAccountLibraryKey("token", accountKey, "badger", { keyProbe: probe })).resolves.toBeUndefined();
+    await expect(assertAccountLibraryKey("token", accountKey, "badger", { keyProbe: probe })).resolves.toBe(probe);
   });
 
-  it("lets a first library publish on an account with no probe", async () => {
-    await expect(assertAccountLibraryKey("token", newKey(), "badger", { keyProbe: null })).resolves.toBeUndefined();
+  it("lets a first library publish on an account with no probe, returning null (it checked none)", async () => {
+    await expect(assertAccountLibraryKey("token", newKey(), "badger", { keyProbe: null })).resolves.toBeNull();
   });
 });

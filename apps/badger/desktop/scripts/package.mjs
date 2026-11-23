@@ -9,7 +9,7 @@
 //
 // --test-build (`package:windows-test`): a dev-key TEST package for runs against a development-key stack
 // (windows-quick.ts), never a release: renderer built with VITE_SF_DEV_TICKET_KEY=1 and version `<version>-devkey`,
-// which the installer store refuses (scripts/test-build-lib.mjs, META-ANON-06). Without the flag nothing changes.
+// which the installer store refuses (packages/desktop-platform/packaging/test-build-lib.mjs, META-ANON-06). Without the flag nothing changes.
 //
 // Steps (each timed; the report lands in dist/package-report-<target>.json):
 //   fetch-deps        bun scripts/fetch-deps.ts: the published ffmpeg + ffprobe + mpv bundle for the target
@@ -18,7 +18,7 @@
 //   materialize       prune better-sqlite3 to the target's prebuilds
 //   runtime           bun build --compile the runtime for the target (cross-compile)
 //   stage             slices next to the runtime binary
-//   electron-builder  AppImage + .deb + .rpm + .pacman (+ update feed file, all four listed) / NSIS installer (+ update feed file; signed with Azure Artifact Signing when configured, scripts/windows-signing-lib.mjs) / dmg + update zip (+ latest-mac.yml listing the zip; the app signed by scripts/mac-after-pack.mjs: Developer ID when the APPLE_* variables are set, then notarized and stapled before it is zipped, scripts/mac-signing-lib.mjs, ad-hoc otherwise)
+//   electron-builder  AppImage + .deb + .rpm + .pacman (+ update feed file, all four listed) / NSIS installer (+ update feed file; signed with Azure Artifact Signing when configured, packages/desktop-platform-windows/packaging/windows-signing-lib.mjs) / dmg + update zip (+ latest-mac.yml listing the zip; the app signed by scripts/mac-after-pack.mjs: Developer ID when the APPLE_* variables are set, then notarized and stapled before it is zipped, packages/desktop-platform-macos/packaging/mac-signing-lib.mjs, ad-hoc otherwise)
 //   verify            every required resource and only the supported locales are in the unpacked package, and app.asar holds no source maps or unused drizzle-orm dialects
 //   signatures        Windows, signing configured: the installer and every unpacked .exe carry a valid, timestamped signature
 //   notarize          macOS, signing configured: the dmg is signed, notarized (notarytool), stapled, and accepted by Gatekeeper (spctl); the app in the update zip is stapled and accepted by Gatekeeper
@@ -36,8 +36,9 @@ import {
   stageDirFor,
   unpackedResourcesDir,
 } from "./package-targets.mjs";
-import { checkPackagedAsarEntries, listAsarEntries } from "./packaged-asar-lib.mjs";
-import { checkPackagedLocales } from "./packaged-locales-lib.mjs";
+import { listAsarEntries } from "../../../../packages/desktop-platform/packaging/asar-entries.mjs";
+import { checkPackagedLocales } from "../../../../packages/desktop-platform/packaging/packaged-locales-lib.mjs";
+import { checkPackagedAsarEntries } from "./packaged-asar-lib.mjs";
 import {
   MAC_NOTARY_ISSUER_ENV,
   MAC_NOTARY_KEY_ENV,
@@ -50,11 +51,11 @@ import {
   openSigningKeychain,
   removeAppCopy,
   resolveMacSigning,
-} from "./mac-signing-lib.mjs";
+} from "../../../../packages/desktop-platform-macos/packaging/mac-signing-lib.mjs";
 import { packageClosure, SUBTITLE_OCR_DIR, SUBTITLE_OCR_EXTERNAL, subtitleOcrBuildArgs } from "./subtitle-ocr-stage-lib.mjs";
 import { LINUX_FORMATS, LINUX_TOOL_PACKAGES, missingLinuxPackageTools } from "../../../../packages/desktop-platform-linux/packaging/linux-packages.mjs";
 import { PACKAGING_UMASK } from "../../../../packages/desktop-platform-linux/packaging/file-modes.mjs";
-import { packageBuildEnv, TEST_BUILD_ENV, TEST_BUILD_FLAG } from "./test-build-lib.mjs";
+import { packageBuildEnv, TEST_BUILD_ENV, TEST_BUILD_FLAG } from "../../../../packages/desktop-platform/packaging/test-build-lib.mjs";
 import {
   assertWindowsSigningHost,
   authenticodeCheckScript,
@@ -63,7 +64,7 @@ import {
   resolveWindowsSigning,
   windowsSigningLogLine,
   windowsUpdatePublisherFor,
-} from "./windows-signing-lib.mjs";
+} from "../../../../packages/desktop-platform-windows/packaging/windows-signing-lib.mjs";
 
 const appDir = resolve(import.meta.dirname, "..");
 // REL-DIST-13: every file this run and its children (electron-builder, fpm) write is 644/755, whatever umask the host
@@ -186,7 +187,7 @@ await step("build", async () => {
   // META-ANON-06: a release pins the production ticket key. The dev-key flag of test builds (`build:test`) is refused
   // here and blanked for the build, so neither the shell nor an .env file can slip it into a package. Only --test-build
   // (a `-devkey` test package the installer store refuses) builds with it: the app is then the same `build:test` test
-  // build the e2e runs use, packaged (scripts/test-build-lib.mjs).
+  // build the e2e runs use, packaged (packages/desktop-platform/packaging/test-build-lib.mjs).
   run("bun", ["run", testBuild ? "build:test" : "build", "--sourcemap"], { env: packageBuildEnv({ testBuild, env: process.env }) });
   run("bun", ["run", "check:main-bundle"]);
 });

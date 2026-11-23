@@ -10,6 +10,8 @@
  *   while it is up and by nothing once it is down; iOS keeps `KeyboardAvoidingView`; older Android keeps the window
  *   resize. Shared by Badger (sign-in, key) and Parrot (setup, sign-in, key).
  */
+import { readdirSync, readFileSync } from "node:fs";
+import { join, relative, resolve } from "node:path";
 import React from "react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -108,5 +110,22 @@ describe("KeyboardAvoidingForm", () => {
     expect(element.type).toBe(stubs.ViewStub);
     expect(element.props.style).toEqual([{ flex: 1 }, { paddingBottom: 0 }]);
     expect(stubs.listeners).toEqual([]);
+  });
+});
+
+// #3350 S47: Parrot's Edit details and playlist name dialogs still used a raw `KeyboardAvoidingView` "padding" after
+// the shared fix, so on Android 15+ they could slide out of sight. Every phone form goes through KeyboardAvoidingForm.
+describe("phone forms", () => {
+  it("no app or shared phone package uses KeyboardAvoidingView except keyboard.tsx", () => {
+    const root = resolve(import.meta.dirname, "../../..");
+    const dirs = ["apps/badger/mobile/src", "apps/parrot/mobile/src", "packages/mobile-shell/src"];
+    const raw = dirs.flatMap((dir) =>
+      readdirSync(join(root, dir), { recursive: true, encoding: "utf8" })
+        .filter((file) => /\.tsx?$/.test(file))
+        .map((file) => relative(root, join(root, dir, file)))
+        .filter((file) => file !== "packages/mobile-shell/src/keyboard.tsx" && readFileSync(join(root, file), "utf8").includes("KeyboardAvoidingView"))
+    );
+    console.info("[keyboard] raw KeyboardAvoidingView", raw);
+    expect(raw).toEqual([]);
   });
 });

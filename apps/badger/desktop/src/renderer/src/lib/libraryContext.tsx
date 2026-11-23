@@ -1,7 +1,7 @@
 import React, { createContext, startTransition, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useRuntimeInstanceId } from "@space/desktop-shell/services/runtime-status";
 import { checkKeptLibraryKey } from "@space/desktop-shell/library-kept-key";
-import { ApiError, deleteStorageObjects, getLibraryMeta, getMe, getMetadataDetails, TitleDetails } from "@/api";
+import { ApiError, deleteStorageObjects, getLibraryMeta, getMe, getMetadataDetails, TitleDetails, type RotationOwnLibrary } from "@/api";
 import { useAuth } from "@/auth";
 import { clearLibraryKey, getStoredLibraryKey, isLibraryKeyAcknowledged } from "@/lib/onboarding";
 import {
@@ -72,6 +72,9 @@ import { ensureWriteAllowed } from "@/lib/writeGuard";
 import { attachLibraryRemoteSyncStream } from "@/lib/libraryRemoteSyncStream";
 import { markMediaDeleted } from "@/lib/libraryGhosts";
 import { clearAssetCaches } from "@/lib/assets";
+
+const artworkCopyLog = rendererLogger.child({ scope: "artwork-copy" });
+const errorText = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
 const EXTERNAL_MPV_SESSION_EVENT = "sf:external-mpv-session";
 
@@ -276,7 +279,7 @@ type LibraryContextValue = {
   purgeMissingObjects: (missingKeys: string[]) => Promise<void>;
   syncFromRemote: () => Promise<void>;
   resetKey: () => Promise<void>;
-  exportLocalDb: () => Promise<Uint8Array>;
+  sealLibraryForRotation: (newKeyBase64: string) => Promise<RotationOwnLibrary>;
   clearLocalCache: () => Promise<void>;
   getDebugSnapshot: () => Promise<Record<string, unknown> | null>;
   debugRevision: number;
@@ -1151,6 +1154,7 @@ export const LibraryProvider = ({
     [db, refreshSnapshot]
   );
 
+  // tla: VaultKeys/Retry
   const reload = useCallback(() => {
     const { promise, resolve } = Promise.withResolvers<void>();
     reloadWaitersRef.current.push(resolve);
@@ -2038,7 +2042,7 @@ export const LibraryProvider = ({
     // A migration applies one title every few seconds: re-read the library at most every ARTWORK_REFRESH_GAP_MS.
     const refreshAfterCopy = coalesceRefresh(() => requestSnapshotRefresh(db), {
       minGapMs: ARTWORK_REFRESH_GAP_MS,
-      onError: (error) => console.warn("[artwork-copy] library refresh failed", error),
+      onError: (error) => artworkCopyLog.warn({ error: errorText(error) }, "[artwork-copy] library refresh failed"),
     });
     const queue = createDesktopArtworkCopyQueue({
       store: db,
@@ -2075,9 +2079,9 @@ export const LibraryProvider = ({
       queue: artworkCopyQueue,
     })
       .then((scheduled) => {
-        if (scheduled > 0) console.info("[artwork-copy] migration scheduled", { titles: scheduled });
+        if (scheduled > 0) artworkCopyLog.info({ titles: scheduled }, "[artwork-copy] migration scheduled");
       })
-      .catch((error: unknown) => console.warn("[artwork-copy] migration not scheduled", error));
+      .catch((error: unknown) => artworkCopyLog.warn({ error: errorText(error) }, "[artwork-copy] migration not scheduled"));
   }, [db, artworkCopyQueue]);
 
   const copyMediaArtwork = useCallback(
@@ -3201,10 +3205,13 @@ export const LibraryProvider = ({
     reload();
   }, [reload, syncMediaKey]);
 
-  const exportLocalDb = useCallback(async () => {
-    if (!db) throw new Error("LIBRARY_NOT_READY");
-    return await db.exportBytes();
-  }, [db]);
+  const sealLibraryForRotation = useCallback(
+    async (newKeyBase64: string) => {
+      if (!db) throw new Error("LIBRARY_NOT_READY");
+      return await db.sealForRotation(newKeyBase64);
+    },
+    [db]
+  );
 
   const clearLocalCache = useCallback(async () => {
     await LibraryDb.clearLocalCache();
@@ -3355,7 +3362,7 @@ export const LibraryProvider = ({
       purgeMissingObjects: guardWriteAction(purgeMissingObjects),
       syncFromRemote,
       resetKey: guardWriteAction(resetKey),
-      exportLocalDb,
+      sealLibraryForRotation,
       clearLocalCache: guardWriteAction(clearLocalCache),
       getDebugSnapshot,
       suspendUiUpdates,
@@ -3416,7 +3423,7 @@ export const LibraryProvider = ({
       purgeMissingObjects,
       syncFromRemote,
       resetKey,
-      exportLocalDb,
+      sealLibraryForRotation,
       clearLocalCache,
       getDebugSnapshot,
       suspendUiUpdates,

@@ -50,7 +50,6 @@ export const ContinueHero = memo(({ item, onOpen, onResume }: ContinueHeroProps)
       cancelled = true;
     };
     // `item` is read for its id, type and progress only: a new row object with the same values must not reload.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [awaitDatasetReady, getEpisodeResumeMap, getMediaDetails, item.id, item.type, item.progressPct]);
 
   const shown = read?.mediaId === item.id ? read.progress : null;

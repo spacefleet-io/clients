@@ -29,6 +29,9 @@ import {
 import type { LabJob } from "../../../shared/labQueueShared";
 import type { LabJobGroup } from "@/components/labQueueGroups";
 import { hasProcessingLabJobs, splitLabJobsByCompletion } from "@/lib/labJobsState";
+import { rendererLogger } from "@/logger";
+
+const labJobsLog = rendererLogger.child({ scope: "lab-jobs" });
 
 // Re-exports preserved so existing consumers keep working.
 export type { JobStatus, LabJob, LabQueueAction, QueuePreset } from "../../../shared/labQueueShared";
@@ -113,7 +116,7 @@ export const LabJobsProvider = ({ children }: { children: ReactNode; defer?: boo
   useEffect(() => {
     if (!failedJobsKey) return;
     const failed = failedJobsKey.split(",");
-    console.info("[lab-jobs] failed jobs kept off the active set", { count: failed.length, jobs: failed });
+    labJobsLog.info({ count: failed.length, jobs: failed }, "[lab-jobs] failed jobs kept off the active set");
   }, [failedJobsKey]);
   // A group is active iff one of its jobs can still make progress (queued,
   // running, interrupted awaiting requeue). The group's display status is a

@@ -384,4 +384,25 @@ describe("createRuntimeCommandClient", () => {
       }
     }
   });
+
+  it("bytes cross the wire tagged both ways and come back as a Uint8Array @req RT-CMD-05", async () => {
+    const bytesContract = defineCommand({
+      name: "test.bytes",
+      module: "badger",
+      payloadSchema: z.object({ image: z.instanceof(Uint8Array) }),
+      resultSchema: z.instanceof(Uint8Array),
+    });
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(fakeLoginResponse())
+      .mockResolvedValueOnce(fakeCommandResponse({ __sfWireBytes: Buffer.from([4, 5, 6]).toString("base64") }));
+    const client = makeClient(fetchMock);
+
+    const result = await client.sendCommand(bytesContract, { image: new Uint8Array([1, 2, 3]) });
+    const body = JSON.parse(fetchMock.mock.calls[1][1].body);
+    console.info(`[${SUITE}:bytes] payload=${JSON.stringify(body.payload)} result=${Object.prototype.toString.call(result)}`);
+    expect(body.payload).toEqual({ image: { __sfWireBytes: Buffer.from([1, 2, 3]).toString("base64") } });
+    expect(result).toBeInstanceOf(Uint8Array);
+    expect(Array.from(result)).toEqual([4, 5, 6]);
+  });
 });

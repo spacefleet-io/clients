@@ -3,6 +3,7 @@
  * @level integration (the real AuthProvider in a real React tree; jsdom localStorage; api, tickets and reset stubbed)
  * @bugfix @regression-proof
  * @req ACCT-DEV-01
+ * @req PRIV-KEY-13[badger-desktop]
  *
  * badger-desktop-v0.1.16 release smoke (run 38822, [sign-out]): after Settings → Sign out the app sat on the
  * "Loading..." splash for 60 s. The user's `logout("signOut")` had revoked the session, then spent 59 s stopping the
@@ -146,6 +147,24 @@ describe("desktop sign-out runs once and always ends (run 38822)", () => {
     });
     dump("sequential");
     expect(reset.resetClientStorage).toHaveBeenCalledTimes(2);
+  });
+
+  it("a late session-rejected logout after the sign-out finished, with no session left, does nothing (the kept key stays)", async () => {
+    // Proof of PR #3835: the key rotation signed out keeping the new key; 12 ms after that sign-out ended, a 401 probe
+    // still holding the revoked token started a second one, which found no user to scope the key by, preserved
+    // nothing and cleared it: the computer that rotated came back on "Enter your library key".
+    await mount();
+    await act(async () => {
+      await auth!.logout("sessionRejected");
+    });
+    await act(async () => {
+      await auth!.logout("sessionRejected");
+    });
+    dump("late-401");
+    expect(reset.resetClientStorage).toHaveBeenCalledTimes(1);
+    expect(reset.resetClientStorage.mock.calls[0]?.[0]).toMatchObject({ preserveLibraryKey: true });
+    expect(api.logout).toHaveBeenCalledTimes(1);
+    expect(logged.some((l) => l.msg === "logout skipped: already signed out")).toBe(true);
   });
 
   it("a metadata tickets stop that never settles is logged and passed: the app still signs out", async () => {

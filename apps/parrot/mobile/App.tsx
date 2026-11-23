@@ -1,12 +1,14 @@
 // Parrot: the sign-in first, then the first setup (language, library key, your profile, notifications, error reports),
 // then the four tabs (Home, Library, Playlists, Settings) on the starry sky, and play.
-import "./src/config";
+import { API_BASE_URL } from "./src/config";
 import React, { useEffect, useRef, useState } from "react";
 import { phoneSetupSignedOut, resolvePhoneSetupStep, type PhoneSetupProgress } from "@space/mobile-shell/setup";
 import { MobileMascotLoader } from "@space/mobile-shell/mascot-loader";
 import { Linking, Platform, StatusBar, View } from "react-native";
 import { handOffProviderReturn } from "@space/mobile-shell/provider-sign-in";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { keyValueHelloStore, noteHelloScreen, startDailyHello } from "@space/shared/dailyHello";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { createNavigationContainerRef, DarkTheme, NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator, type NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -94,7 +96,11 @@ const Library = ({ profile }: { profile: ApiProfile | null }) => {
         ref={navigationRef}
         theme={theme}
         onReady={openHeldPairLink}
-        onStateChange={() => setRoute((navigationRef.getCurrentRoute()?.name as keyof RootStack) ?? "Main")}
+        onStateChange={() => {
+          setRoute((navigationRef.getCurrentRoute()?.name as keyof RootStack) ?? "Main");
+          // OPS-BIZ-20: each screen the navigator opens adds one to the daily hello's screen tally.
+          noteHelloScreen();
+        }}
       >
         <Stack.Navigator
           // UX-CRASH-01: a screen that throws shows Retry in its place; the rest of the app keeps running.
@@ -162,6 +168,8 @@ const Gates = () => {
     // REL-UPD-06: a hand-installed APK checks our repository for a newer Parrot (nothing in other builds).
     void startSelfUpdate("parrot");
   }, []);
+  // OPS-BIZ-20: the daily hello, once per local day, a few seconds after start, silent on failure.
+  useEffect(() => startDailyHello({ baseUrl: API_BASE_URL, store: keyValueHelloStore(AsyncStorage) }), []);
   // Google, Apple and Microsoft sign-in (ACCT-SIGNIN-05): the browser comes back through `parrot://auth/provider`, as
   // the link that started the app or one that arrives while it runs; the sign-in screen takes it, held until it mounts.
   // A pairing link (ACCT-PAIR-06) is held until the library is up, then opens the approve screen.
@@ -184,7 +192,6 @@ const Gates = () => {
       setSetup(fresh && session && libraryKey ? { ...saved, done: true } : saved);
     });
     // Read once, after the stored session is known.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [booting]);
   // Signed out during the setup (Back from the key): the next sign-in settles the language again, before step 1.
   useEffect(() => {

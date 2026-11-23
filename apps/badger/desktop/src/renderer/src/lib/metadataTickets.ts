@@ -34,6 +34,9 @@ import { SPACE_APP_HEADER } from "@space/shared/appScope";
 import { AUTH_TOKEN_KEY } from "../../../shared/sessionKeys";
 import { closeArtworkSession, getRendererArtworkStore, openArtworkSession } from "./artworkCache";
 import { createLookupPacer } from "./lookupPacer";
+import { rendererLogger } from "../logger";
+
+const ticketsLog = rendererLogger.child({ scope: "metadata-tickets" });
 
 export { RESERVE_STORAGE_KEY };
 
@@ -98,7 +101,7 @@ export const getDesktopMetadata = (): SessionMetadata => {
   // Each batch of a refill is logged as it lands (the refill line above comes only once the whole refill is done), and
   // artwork that failed for lack of a ticket may be asked again at once.
   instance.reserve.onTickets((count) => {
-    console.info(`[metadata-tickets] batch landed held=${count}`);
+    ticketsLog.info(`[metadata-tickets] batch landed held=${count}`);
     imageResolver?.forgetFailures();
   });
   return instance;
@@ -148,7 +151,7 @@ export const resolveArtwork = (kind: ImageKind, path: string): Promise<ImageOutc
 
 /** Call once the user is signed in (token and user known) and again on every app start with a session. */
 export const startMetadataTickets = (): void => {
-  console.info("[metadata-tickets] refill schedule starting");
+  ticketsLog.info("[metadata-tickets] refill schedule starting");
   openArtworkSession();
   void getDesktopMetadata().start();
 };

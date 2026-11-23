@@ -19,7 +19,7 @@ type FloatingMascotProps = {
 /**
  * The floating, glowing app mascot of the sign-in screens (UX-THEME-02), one piece for every web and desktop screen
  * that shows it: the startup card, the Parrot web player's pairing screen and the whole-window crash screen
- * (UX-CRASH-01). The float animation is each app's `.animate-float`.
+ * (UX-CRASH-01). The float animation is `.animate-float` from `@space/ui/styles/float.css`.
  */
 export const FloatingMascot = ({ src, alt = "", glowClassName = MASCOT_GLOW.badger, className, testId }: FloatingMascotProps) => (
   <div className={cn("h-20 w-20 animate-float", className)} data-testid={testId}>

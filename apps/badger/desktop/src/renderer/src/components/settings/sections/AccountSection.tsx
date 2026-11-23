@@ -249,7 +249,7 @@ export default function AccountSection() {
       relativeLastVerified: formatRelativeBucket(accountStorage?.lastReconciledAt),
       strings: recomputeStrings,
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- rebuilt only when the run, last check, strings or token change; the callbacks read fresh state
   }, [storageGcRun, accountStorage?.lastReconciledAt, recomputeStrings, token]);
 
   /** Reloads what a plan change touches (plan, storage, billing, access), so no restart is needed. */
