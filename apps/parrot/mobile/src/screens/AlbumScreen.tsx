@@ -2,7 +2,7 @@
 // is marked (green title, equaliser for its number) and the cover is ringed while the album plays (PAR-LOOK-01). Under
 // the title sit the design's Play, Shuffle, heart and "…" (PAR-LOOK-05): the "…" holds the album card's actions
 // (the shared `parrotCardActionList` of @space/parrot-core, PAR-CARD-01) without Play and Shuffle, Edit metadata among
-// them (PAR-META-16/17), then Save offline (PAR-OFFL-01) and last Delete (PAR-LIB-03). The album's songs the
+// them (PAR-META-16/17), then Keep on this phone (PAR-OFFL-01) and last Delete (PAR-LIB-03). The album's songs the
 // user does not have sit greyed between them, never played (PAR-LIB-05).
 import React from "react";
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, View } from "react-native";
@@ -82,8 +82,8 @@ export const AlbumScreen = ({ route }: NativeStackScreenProps<RootStack, "Album"
   const player: ParrotCardPlayer<TrackRow> = {
     play: (list) => void play(list, 0, albumInfo),
     shuffle: (list) => void play(list, Math.floor(Math.random() * list.length), albumInfo, { shuffle: true }),
-    playNext: (list) => void queue(list, "next", albumInfo).then(editor.queued),
-    addToQueue: (list) => void queue(list, "end", albumInfo).then(editor.queued),
+    playNext: (list) => void queue(list, "next", albumInfo),
+    addToQueue: (list) => void queue(list, "end", albumInfo),
   };
   const artistId = header.data?.artistId || songs.find((track) => track.artistId)?.artistId;
   const openArtist = artistId ? () => navigation.navigate("Artist", { artistId, name: artistName }) : undefined;
@@ -111,7 +111,6 @@ export const AlbumScreen = ({ route }: NativeStackScreenProps<RootStack, "Album"
           id: "delete",
           label: t("shell.manage.delete"),
           icon: Trash2,
-          destructive: true,
           onSelect: () => manage.remove({ kind: "album", id: albumId }, title, () => navigation.goBack()),
           testID: "album-menu-delete",
         },
@@ -200,7 +199,7 @@ export const AlbumScreen = ({ route }: NativeStackScreenProps<RootStack, "Album"
             unavailable={reach ? !reach.song(item.id) : false}
             accessibilityLabel={t("parrot.album.play", { title: item.title })}
             onPress={() => void play(songs, index, { title, cover })}
-            onMore={() => editor.openSong({ id: item.id, title: item.title }, undefined, { onAddToQueue: () => queue([item], "end", albumInfo) })}
+            onMore={() => editor.openSong({ id: item.id, title: item.title })}
             moreLabel={`${t("parrot.player.more")}, ${item.title}`}
           />
         );

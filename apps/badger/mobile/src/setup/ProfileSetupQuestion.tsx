@@ -5,7 +5,8 @@
 import React from "react";
 import { View } from "react-native";
 import { scopeLogger } from "@space/mobile-shell/logger";
-import { PhoneSetupProfileStep, ProfileSetupStep } from "@space/mobile-shell/profile-setup-step";
+import { ProfileSetupStep } from "@space/mobile-shell/profile-setup-step";
+import { phoneSetupPosition } from "@space/mobile-shell/setup";
 import type { PhoneSetupStepProps } from "@space/mobile-shell/setup-flow";
 import { useActiveProfile } from "../lib/profileSetupQuestion";
 import { IS_TV } from "../tv/lib/tvRuntime";
@@ -16,9 +17,23 @@ const log = scopeLogger("profile-setup");
 const logEvent = (event: string, data: Record<string, unknown>) => log.info(event, data);
 
 /** The phone setup's numbered step (after the key and "Who's watching?", before the title question). */
-export const ProfileSetupPhoneStep = (props: PhoneSetupStepProps) => {
+export const ProfileSetupPhoneStep = ({ progress, advance, back, onLanguage }: PhoneSetupStepProps) => {
   const profile = useActiveProfile();
-  return <PhoneSetupProfileStep {...props} profile={profile} log={logEvent} />;
+  // The sky alone until the profile picked is known: a profile already set up skips the step.
+  if (!profile) return <View testID="setup-profile-wait" />;
+  const { step, total } = phoneSetupPosition(progress);
+  return (
+    <ProfileSetupStep
+      key={profile.id}
+      profile={profile}
+      position={{ step, total }}
+      onBack={back}
+      onLanguage={(code) => void onLanguage(code)}
+      // Kept counted once answered here, so the steps after it keep their numbers.
+      onDone={() => void advance({ profileSetupAnswered: true })}
+      log={logEvent}
+    />
+  );
 };
 
 /**

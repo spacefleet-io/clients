@@ -12,8 +12,6 @@ import { ProfileActionError, profileErrorKey } from "@space/shared/profileStore"
 import { MobileSetupStep } from "../components/mobile-setup-step";
 import { useTranslation, type MobileUiLanguage } from "../i18n";
 import { useMobileShellTheme } from "../theme";
-import { phoneSetupPosition } from "../setup/phoneSetup";
-import type { PhoneSetupStepProps } from "../setup/PhoneSetupFlow";
 import { AvatarGrid } from "./AvatarGrid";
 import { ProfileAvatarImage } from "./ProfileAvatarImage";
 import { saveProfileSetup } from "./profileSetup";
@@ -104,34 +102,6 @@ export const ProfileSetupStep = ({ profile, position, onBack, onDone, onLanguage
       ) : null}
       <AvatarGrid variant="round" columns={5} value={avatarId} onChange={setAvatarId} />
     </MobileSetupStep>
-  );
-};
-
-/**
- * The phone setup's numbered "Your profile" step (Badger and Parrot): the shared step for the profile picked, counted
- * in the setup. The sky alone until the profile picked is known: a profile already set up skips the step.
- */
-export const PhoneSetupProfileStep = ({
-  profile,
-  progress,
-  advance,
-  back,
-  onLanguage,
-  log,
-}: PhoneSetupStepProps & { profile: ApiProfile | null; log: NonNullable<ProfileSetupStepProps["log"]> }) => {
-  if (!profile) return <View testID="setup-profile-wait" />;
-  const { step, total } = phoneSetupPosition(progress);
-  return (
-    <ProfileSetupStep
-      key={profile.id}
-      profile={profile}
-      position={{ step, total }}
-      onBack={back}
-      onLanguage={(code) => void onLanguage(code)}
-      // Kept counted once answered here, so the steps after it keep their numbers.
-      onDone={() => void advance({ profileSetupAnswered: true })}
-      log={log}
-    />
   );
 };
 

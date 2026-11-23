@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Bell, Download, House, LibraryBig, ListEnd, ListMusic, Loader2, Pencil, Play, Search, Settings, Shuffle, Trash2 } from "lucide-react";
+import { Bell, Download, House, LibraryBig, ListMusic, Loader2, Pencil, Play, Search, Settings, Shuffle, Trash2 } from "lucide-react";
 import { DesktopAppTopNav, DesktopNotificationTray, desktopTopNavIconActionClassName, desktopTopNavItemClassName, NotificationTrayContent } from "@space/desktop-shell/components";
 import { createNotificationStore, useNotificationStore } from "@space/desktop-shell/services/notifications";
 import { useOnline } from "@space/desktop-shell/hooks";
@@ -8,12 +8,11 @@ import { DesktopTourHost, startDesktopTour } from "@space/desktop-shell/tour";
 import tourDropVideo from "./assets/tour-drop.webm";
 import { isParrotAudioFile } from "@space/parrot-ingest/audio-formats";
 import { RenderBoundary } from "@space/ui/render-boundary";
-import { Button, Notifications, toast } from "@space/ui";
+import { Button, Input, Notifications, toast } from "@space/ui";
 import { BadgerIconButton, badgerTopBarIcons } from "@space/ui/badger";
 import { LibraryLoading } from "./LoadingMascot";
 import { libraryContent } from "@space/shared/libraryContent";
 import { ImportJobList, ImportJobs, importErrorPart, useImportJobs } from "./ImportJobs";
-import { useExportNotifications, type ExportNotify } from "./ExportJobs";
 import { MediaDetailTabs } from "@space/ui/badger/media-detail";
 import { keyedNotification, shownNotification } from "./notificationText";
 import {
@@ -23,6 +22,7 @@ import {
   ParrotArtistTile,
   ParrotAlsoBy,
   ParrotBackButton,
+  ParrotChips,
   ParrotPageHeader,
   ParrotSongList,
   ParrotTileGrid,
@@ -31,8 +31,7 @@ import {
 import { ParrotNameLink } from "@space/ui/parrot";
 import { ParrotAlbumMenu, parrotCardControls, type ParrotCardPlayer } from "@space/ui/parrot/card-actions";
 import { ParrotConfirmDialog, ParrotPlaylistArt, ParrotPlaylistTile, useParrotPlaylistEditor } from "@space/ui/parrot/playlists";
-import { type ParrotMenuItem } from "@space/ui/parrot/menu";
-import { parrotLibraryToolbarLabels, ParrotLibraryToolbar, useParrotLibraryPrefs, useParrotLibraryShown } from "@space/ui/parrot/library-toolbar";
+import { ParrotAlbumSortMenu, useParrotAlbumSort, type ParrotMenuItem } from "@space/ui/parrot/menu";
 import { ParrotKeepButton, ParrotKeepChoiceDialog, ParrotKeptLine, type ParrotKeepState } from "@space/ui/parrot/offline";
 import { ParrotEditMetadataDialog, type ParrotCoverInput, type ParrotEditFields } from "@space/ui/parrot/manage";
 import { ParrotNowPlaying, type ParrotLyricsFetchControl, type ParrotNowPlayingTab } from "@space/ui/parrot/screens";
@@ -55,7 +54,6 @@ import {
   parrotEditTarget,
   parseHistory,
   playlistEntries,
-  newToUpNext,
   playNext,
   recordPlay,
   recordPosition,
@@ -65,6 +63,10 @@ import {
   type ListeningHistory,
   type ParrotManageTarget,
   type ParrotLyrics,
+  filterParrotAlbums,
+  filterParrotArtists,
+  filterParrotTracks,
+  sortParrotAlbums,
   albumPageRows,
   copyFormatName,
   type ParrotPlaylist,
@@ -85,9 +87,8 @@ import AddMusic from "./AddMusic";
 import { Feedback } from "./Feedback";
 import Home, { EmptyMusicLibrary } from "./Home";
 import { countText, type ParrotStringKey, type Translate } from "./i18n";
-import { editLyricsLabels, useEditLyrics } from "./editLookups";
-import { editSuggestLabels, useEditSuggest } from "./editSuggest";
-import ImportReview, { coverFrameLabels } from "./ImportReview";
+import { editLookUpLabels, useEditLookups } from "./editLookups";
+import ImportReview from "./ImportReview";
 import Plans from "./Plans";
 import Player from "./Player";
 import { StreamSlotPrompt } from "./StreamSlotPrompt";
@@ -101,9 +102,6 @@ export { Feedback } from "./Feedback";
 export { waveBarsFor } from "@space/ui/parrot/screens";
 
 type Props = { t: Translate; state: ParrotState; onState: (state: ParrotState) => void };
-
-/** A queued song is the same song as another when the ids match: the library hands out fresh rows (PAR-CARD-02). */
-const songId = (track: ParrotLibraryTrack) => track.id;
 
 /** The library's lists (the chips). Playlists have their own top-bar tab (PAR-NAV-02). */
 type View = "albums" | "artists" | "songs";
@@ -148,6 +146,7 @@ export default function Library({ t, state, onState }: Props) {
   const [view, setView] = useState<View>("albums");
   const [route, setRoute] = useState<Route>({ kind: "home" });
   const [previous, setPrevious] = useState<Route[]>([]);
+  const [query, setQuery] = useState("");
   const [playing, setPlaying] = useState(false);
   const [clockMs, setClockMs] = useState(0);
   const seekRef = useRef<((ms: number) => void) | null>(null);
@@ -184,17 +183,19 @@ export default function Library({ t, state, onState }: Props) {
   const [removing, setRemoving] = useState<{ target: ParrotManageTarget; title: string; trackCount: number } | null>(null);
   // PAR-OFFL-01/03: what is kept on this computer, and the copy question when there is one.
   const [kept, setKept] = useState<KeptStatus | null>(null);
-  const [, setLibraryPrefs] = useParrotLibraryPrefs();
+  const [albumSort, setAlbumSort] = useParrotAlbumSort();
   const [choosing, setChoosing] = useState<{ kind: KeptKind; id: string; choices: KeepCopyChoice[] } | null>(null);
   /**
-   * The edit dialog (PAR-META-16). `fields` opens the form; `current` is the library's values, so what the user or a
-   * picked suggestion (PAR-META-18) changed is marked as changed.
+   * The edit dialog (PAR-META-16). `fields` opens the form; `current` is the library's values, so what "Look it up
+   * again" filled in (PAR-META-18) is marked as changed, with the found `cover`.
    */
   const [editing, setEditing] = useState<{
     target: ParrotManageTarget & { kind: "track" | "album" };
+    title: string;
     fields: ParrotEditFields;
     current: ParrotEditFields;
     coverUrl: string | null;
+    cover: ParrotCoverInput | null;
   } | null>(null);
   const [editError, setEditError] = useState<string | null>(null);
   const [editBusy, setEditBusy] = useState(false);
@@ -364,9 +365,10 @@ export default function Library({ t, state, onState }: Props) {
     setPrevious([]);
     setRoute({ kind: "home" });
   }, [libraryClosed, onLibraryRoute, route.kind]);
-  // PAR-LIB-06: the open tab's list as its sort and filters leave them.
-  const likedSongIds = useMemo(() => new Set((library?.playlists ?? []).find((playlist) => isLikedPlaylist(playlist.id))?.trackIds ?? []), [library]);
-  const shown = useParrotLibraryShown({ tab: view, albums, artists, songs: tracks, history, likedSongIds });
+  const needle = query.trim();
+  const shownAlbums = useMemo(() => sortParrotAlbums(filterParrotAlbums(albums, needle), albumSort), [albums, needle, albumSort]);
+  const shownArtists = useMemo(() => filterParrotArtists(artists, needle), [artists, needle]);
+  const shownTracks = useMemo(() => filterParrotTracks(tracks, needle), [tracks, needle]);
   // PAR-OFFL-04: offline, what is not kept on this computer is greyed out and does not play. Null while online.
   const online = useOnline();
   const reach = useMemo(
@@ -471,18 +473,9 @@ export default function Library({ t, state, onState }: Props) {
   });
   const playlistName = playlistEditor.name;
   const like = (track: { id: string }) => playlistEditor.heart(track.id);
-  /** "Download everything" (Settings, OFFL-FILE-01) runs in the background: its end shows in the tray. */
-  const notifyExport: ExportNotify = (level, title, message) => notifications.push(keyedNotification(t, level, title, message));
-  useExportNotifications(language, notifyExport);
-  /**
-   * A song row's "Add to queue" (PAR-CARD-02), heart and "Add to playlist", plus edit (PAR-META-16) and delete outside a
-   * playlist (PAR-LIB-03) or remove inside one.
-   */
+  /** A song row's heart and "Add to playlist", plus edit (PAR-META-16) and delete outside a playlist (PAR-LIB-03) or remove inside one. */
   const songActions = (remove?: (track: ParrotLibraryTrack, index: number) => void) => (track: ParrotLibraryTrack, index: number) => (
     <>
-      <Button variant="ghost" size="icon" className="size-8 text-muted-foreground" aria-label={t("card.addToQueue")} title={t("card.addToQueue")} onClick={() => enqueue([track], "end")} data-testid="song-add-to-queue">
-        <ListEnd className="size-4" aria-hidden />
-      </Button>
       {playlistEditor.songActions(remove)(track, index)}
       {keepButton("song", track.id, "sm", "song-keep")}
       {!remove && (
@@ -531,14 +524,17 @@ export default function Library({ t, state, onState }: Props) {
     }
     setEditError(null);
     const fields = parrotEditFields(values);
-    setEditing({ target, fields, current: fields, coverUrl });
+    setEditing({ target, title: fields.title, fields, current: fields, coverUrl, cover: null });
   };
-  // PAR-META-18: the fields' connected autocomplete; PAR-LYR-05: the dialog's Lyrics section. Nothing is saved before Save.
-  const editSuggest = useEditSuggest({ artists, albums, tracks: library?.tracks ?? [] });
-  const editLyrics = useEditLyrics({
+  // PAR-META-18, PAR-LYR-05: the dialog's own lookups; what "Look it up again" found fills the form, nothing is saved.
+  const editLookups = useEditLookups({
     target: editing?.target ?? null,
+    title: editing?.title ?? "",
     songIds: editing?.target.kind === "album" ? tracks.filter((track) => track.albumId === editing.target.id).map((track) => track.id) : [],
     lyricsChanges,
+    t,
+    onFound: (result) =>
+      setEditing((open) => open && { ...open, fields: parrotEditFields(result.found), current: parrotEditFields(result.current), cover: result.cover }),
   });
   const saveEdit = async (fields: ParrotEditFields, cover: ParrotCoverInput | null) => {
     if (!editing) return;
@@ -587,15 +583,6 @@ export default function Library({ t, state, onState }: Props) {
     const first = currentEntry(next);
     setStartAt(start.startMs > 0 && first ? { key: first.key, ms: start.startMs } : null);
   };
-  /**
-   * Play next ("next") or Add to queue ("end"): a song is in Up next at most once (PAR-CARD-02), so the songs already
-   * playing or up next are left out, and when none is left the usual short notice says so.
-   */
-  const enqueue = (songs: ParrotLibraryTrack[], where: "next" | "end") => {
-    const add = where === "next" ? playNext : addToQueue;
-    if (songs.length > 0 && newToUpNext(queue, songs, songId).length === 0) toast.info(t("card.alreadyInUpNext"));
-    setQueue((current) => add(current, songs, songId));
-  };
   // A card's Play, Shuffle, Play next and Add to queue (PAR-CARD-01) on the same queue as the rest of the app.
   const cardPlayer: ParrotCardPlayer<ParrotLibraryTrack> = {
     play: (songs) => play(songs, 0, false),
@@ -603,8 +590,8 @@ export default function Library({ t, state, onState }: Props) {
       setStartAt(null);
       setQueue((current) => shuffleQueue(songs, current));
     },
-    playNext: (songs) => enqueue(songs, "next"),
-    addToQueue: (songs) => enqueue(songs, "end"),
+    playNext: (songs) => setQueue((current) => playNext(current, songs)),
+    addToQueue: (songs) => setQueue((current) => addToQueue(current, songs)),
   };
   const albumControls = (album: { id: string; artistId: string; title?: string; coverUrl?: string | null }, more: ParrotMenuItem[] = []) =>
     parrotCardControls(
@@ -684,39 +671,64 @@ export default function Library({ t, state, onState }: Props) {
 
   const libraryPage = () => {
     if (content === "empty") return <EmptyMusicLibrary t={t} onAddMusic={() => setAddOpen(true)} onAddFolder={() => void pickAndScan("folders")} />;
-    const totals = { albums: { kind: "album" as const, n: albums.length }, artists: { kind: "artist" as const, n: artists.length }, songs: { kind: "song" as const, n: tracks.length } };
-    // PAR-LIB-06: the quiet counts; with a filter on, how many of the open tab's are shown.
-    const counts = shown.filtered
-      ? [{ n: shown.shownCount, text: t("library.shownOf", { shown: shown.shownCount, total: countText(language, t, totals[view].kind, totals[view].n) }) }]
-      : [totals.albums, totals.songs, totals.artists].map(({ kind, n }) => ({ n, text: countText(language, t, kind, n) }));
+    const nothing = needle && (view === "albums" ? shownAlbums : view === "artists" ? shownArtists : shownTracks).length === 0;
     return (
       <section>
-        <ParrotLibraryToolbar
-          tab={view}
-          onTab={setView}
-          counts={counts}
-          prefs={shown.prefs}
-          onPrefs={shown.setPrefs}
-          genres={shown.genres}
-          decades={shown.decades}
-          labels={parrotLibraryToolbarLabels(t)}
-          // The page scrolls inside <main>, whose 32px top padding the sticky top counts from: -32 pins the row flush
-          // under the top bar.
-          pinTop={-32}
-          className="-mx-10 -mt-4 mb-4 px-10"
-        />
-        {/* UX-CRASH-01: a crashing list blanks only itself; the row keeps working and switching clears it;
+        <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+          <div className="min-w-0">
+            <h1 className="font-['Space_Grotesk'] text-4xl font-bold tracking-tight" data-testid="library-heading">
+              {t("library.title")}
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground" data-testid="library-counts">
+              {countText(language, t, "album", albums.length)} · {countText(language, t, "song", tracks.length)} ·{" "}
+              {countText(language, t, "artist", artists.length)}
+            </p>
+          </div>
+          <div className="flex w-full max-w-xl items-center justify-end gap-2.5">
+            <label className="relative block w-full max-w-xs">
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+              <Input
+                type="search"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder={t("library.search")}
+                aria-label={t("library.search")}
+                className="h-10 rounded-lg pl-9"
+                data-testid="library-search"
+              />
+            </label>
+            {view === "albums" && (
+              <ParrotAlbumSortMenu
+                value={albumSort}
+                onChange={setAlbumSort}
+                labels={{ sort: t("library.sort"), recent: t("library.sortRecent"), title: t("library.sortTitle"), artist: t("library.sortArtist") }}
+              />
+            )}
+          </div>
+        </div>
+        <div className="mb-7 flex flex-wrap items-center gap-2">
+          <ParrotChips
+            chips={[
+              { value: "albums" as const, label: t("library.albums"), testId: "library-chip-albums" },
+              { value: "artists" as const, label: t("library.artists"), testId: "library-chip-artists" },
+              { value: "songs" as const, label: t("library.songs"), testId: "library-chip-songs" },
+            ]}
+            value={view}
+            onChange={setView}
+          />
+        </div>
+        {/* UX-CRASH-01: a crashing list blanks only itself; the search and chips keep working and switching clears it;
             "Try again" reads the library afresh first. */}
         <RenderBoundary name={`library-list:${view}`} resetKey={view} onRetry={() => load(true)}>
-          {() => shown.shownCount === 0 ? (
+          {() => nothing ? (
             <p className="text-muted-foreground" data-testid="library-no-match">
-              {t("library.noFilterMatch")}
+              {t("library.noMatch", { query: query.trim() })}
             </p>
           ) : view === "albums" ? (
-            albumTiles(shown.shownAlbums)
+            albumTiles(shownAlbums)
           ) : view === "artists" ? (
             <ParrotTileGrid kind="artist" testId="library-artists">
-              {shown.shownArtists.map((artist) => (
+              {shownArtists.map((artist) => (
                 <ParrotArtistTile
                   key={artist.id}
                   id={artist.id}
@@ -733,12 +745,12 @@ export default function Library({ t, state, onState }: Props) {
             </ParrotTileGrid>
           ) : (
             <ParrotSongList
-              tracks={shown.shownSongs}
+              tracks={shownTracks}
               playingId={playingTrack?.id}
               playing={playing}
               showAlbum
               labels={songLabels}
-              onPlay={(i) => play(shown.shownSongs, i)}
+              onPlay={(i) => play(shownTracks, i)}
               actions={songActions()}
               unavailable={songAway}
               links={nameLinks}
@@ -772,19 +784,6 @@ export default function Library({ t, state, onState }: Props) {
           }}
           onRefresh={() => void load(true)}
           onSignOut={() => void requestSignOut()}
-          describeKept={(kind, id) => {
-            if (kind === "album") {
-              const album = albums.find((item) => item.id === id);
-              return album ? { title: album.title, subtitle: album.artistName, imagePath: album.coverThumbUrl ?? album.coverUrl } : null;
-            }
-            if (kind === "playlist") {
-              const playlist = playlists.find((item) => item.id === id);
-              return playlist ? { title: playlistName(playlist) } : null;
-            }
-            const track = library?.tracks.find((item) => item.id === id);
-            const cover = track ? coverFor(track.albumId) : undefined;
-            return track ? { title: track.title, subtitle: track.artistName, imagePath: cover?.coverThumbUrl ?? cover?.coverUrl } : null;
-          }}
         />
       );
     }
@@ -814,9 +813,7 @@ export default function Library({ t, state, onState }: Props) {
           artistFetching={artistFetching}
           onAddMusic={() => setAddOpen(true)}
           onAddFolder={() => void pickAndScan("folders")}
-          onSeeAll={(next, sort) => {
-            // "See all" shows every album in that order, so a filter left on from before is cleared (PAR-HOME-01).
-            if (sort) setLibraryPrefs("albums", { sort, filters: {} });
+          onSeeAll={(next) => {
             setView(next);
             go({ kind: "library" });
           }}
@@ -1008,6 +1005,9 @@ export default function Library({ t, state, onState }: Props) {
     if (route.kind === "playlists") {
       return (
         <section data-testid="playlists-page">
+          <h1 className="mb-6 font-['Space_Grotesk'] text-4xl font-bold tracking-tight" data-testid="playlists-heading">
+            {t("playlists.title")}
+          </h1>
           {playlists.length === 0 && (
             <p className="mb-6 text-muted-foreground" data-testid="playlists-empty">
               {t("playlists.empty")}
@@ -1279,18 +1279,9 @@ export default function Library({ t, state, onState }: Props) {
         artists={artists}
         albums={albums}
         songs={() => tracks}
-        playlists={playlists.map((playlist) => ({ id: playlist.id, name: playlistName(playlist) }))}
         language={language}
         onOpenArtist={(id) => open({ kind: "artist", id })}
         onOpenAlbum={(id) => open({ kind: "album", id })}
-        onOpenPlaylist={(id) => open({ kind: "playlist", id })}
-        addToQueue={{
-          label: t("card.addToQueue"),
-          onAdd: ({ id }) => {
-            const song = tracks.find((track) => track.id === id);
-            if (song) enqueue([song], "end");
-          },
-        }}
         renderCover={(albumId) => {
           const src = coverFor(albumId)?.coverUrl;
           return src ? <img src={src} alt="" className="size-full object-cover" /> : null;
@@ -1332,6 +1323,7 @@ export default function Library({ t, state, onState }: Props) {
           initial={editing.fields}
           current={editing.current}
           coverUrl={editing.coverUrl}
+          initialCover={editing.cover}
           labels={{
             title: t(`manage.editTitle.${editing.target.kind}`),
             cancel: t("manage.cancel"),
@@ -1350,19 +1342,16 @@ export default function Library({ t, state, onState }: Props) {
             },
             coverHint: t("manage.coverHint"),
             coverPick: t("manage.coverPick"),
-            coverFrame: t("import.cover.frame"),
-            frame: coverFrameLabels(t),
           }}
           error={editError}
           busy={editBusy}
-          suggest={editSuggest}
-          suggestLabels={editSuggestLabels(t)}
-          lyrics={editLyrics}
-          lyricsLabels={editLyricsLabels(t)}
+          lookUp={editLookups.lookUp}
+          lyrics={editLookups.lyrics}
+          lookUpLabels={editLookUpLabels(t)}
           onSubmit={(fields, cover) => void saveEdit(fields, cover)}
         />
       ) : null}
-      {importScan && importStatus?.phase === "review" ? <ImportReview t={t} language={language} scan={importScan} suggest={editSuggest} onDone={() => setImportScan(null)} /> : null}
+      {importScan && importStatus?.phase === "review" ? <ImportReview t={t} language={language} scan={importScan} onDone={() => setImportScan(null)} /> : null}
       <span className="hidden" data-testid="signed-in-user">
         {state.user?.email}
       </span>

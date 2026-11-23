@@ -1,7 +1,6 @@
 import { Buffer } from "node:buffer";
 import { mkdirSync, readFileSync, writeFileSync, existsSync, renameSync, rmSync } from "node:fs";
 import { dirname, join as joinPath } from "node:path";
-import { SNAPSHOT_TAIL_BYTES_THRESHOLD } from "@space/library-db-definition/opClass";
 import { getApiBaseUrl } from "./apiHost";
 import { libraryDir } from "./libraryAccount";
 
@@ -29,9 +28,6 @@ export type PendingSync = {
   // publishes them only if the file still hashes to exactly this list.
   // Absent on records written before PR #143.
   chunkRefs?: string[];
-  // The op-stream version the snapshot was built in (LIB-FMT-13). Absent on records written before vault v4: those
-  // are version 3.
-  opStreamVersion?: number;
 };
 
 export type PendingOp = {
@@ -221,30 +217,21 @@ export const savePendingOps = async (ops: PendingOp[]) => {
 };
 
 /**
- * Non-progress ops seen since the snapshot `snapshotVersion` (LIB-SYNC-07): how many, and their ciphertext `bytes`
- * (LIB-SYNC-12). The server cannot tell op types apart (payloads are encrypted), so the client counts;
- * `snapshotVersion` ties the count to one snapshot, a different server snapshotVersion means the count restarts.
- * `bytesThreshold` is the tail size that makes a snapshot due: `SNAPSHOT_TAIL_BYTES_THRESHOLD`, or the size of a
- * snapshot that came out larger than the tail it would have replaced.
+ * Non-progress ops seen since the snapshot `snapshotVersion` (LIB-SYNC-07).
+ * The server cannot tell op types apart (payloads are encrypted), so the
+ * client counts; `snapshotVersion` ties the count to one snapshot, a different
+ * server snapshotVersion means the count restarts.
  */
-export type OpsSinceSnapshot = { snapshotVersion: number; count: number; bytes: number; bytesThreshold: number };
+export type OpsSinceSnapshot = { snapshotVersion: number; count: number };
 
 export const loadOpsSinceSnapshot = (): OpsSinceSnapshot => {
   const stored = readJson<Partial<OpsSinceSnapshot>>(opsSinceSnapshotFile());
   const snapshotVersion = Number(stored?.snapshotVersion);
   const count = Number(stored?.count);
   if (!Number.isInteger(snapshotVersion) || !Number.isInteger(count) || count < 0) {
-    return { snapshotVersion: -1, count: 0, bytes: 0, bytesThreshold: SNAPSHOT_TAIL_BYTES_THRESHOLD };
+    return { snapshotVersion: -1, count: 0 };
   }
-  // A file written before LIB-SYNC-12 has no bytes: the tail counts from now on.
-  const bytes = Number(stored?.bytes);
-  const bytesThreshold = Number(stored?.bytesThreshold);
-  return {
-    snapshotVersion,
-    count,
-    bytes: Number.isFinite(bytes) && bytes > 0 ? bytes : 0,
-    bytesThreshold: Number.isFinite(bytesThreshold) && bytesThreshold > 0 ? bytesThreshold : SNAPSHOT_TAIL_BYTES_THRESHOLD,
-  };
+  return { snapshotVersion, count };
 };
 
 export const saveOpsSinceSnapshot = (state: OpsSinceSnapshot) => {

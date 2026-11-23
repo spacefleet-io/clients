@@ -22,24 +22,3 @@ export const errorReportsPrivacyUrl = (language: string): string => {
   const lang = (WEBSITE_LANGUAGES as readonly string[]).includes(base) ? base : "en";
   return `${LEGAL_WEBSITE}/${lang}/privacy#error-reports`;
 };
-
-/**
- * A legal page on spacefleet.io (`/<lang>/<slug>`, e.g. `terms`, `privacy`), in the app's language: the phones' sign-up
- * line links the terms and the privacy policy (ACCT-AUTH-10, WEB-LEGAL-18).
- */
-export const legalPageUrl = (language: string, slug: string): string => {
-  const base = language.split("-")[0] ?? "";
-  const lang = (WEBSITE_LANGUAGES as readonly string[]).includes(base) ? base : "en";
-  return `${LEGAL_WEBSITE}/${lang}/${slug}`;
-};
-
-/**
- * REL-CD-29: the downloads page's Android window with "Without Google Play" open (`#android-repo`, WEB-DL-05), on
- * spacefleet.io in the app's language: where a hand-installed Google Play build (the APK with Google services) gets
- * its new version.
- */
-export const androidApkDownloadsUrl = (app: "badger" | "parrot", language: string): string => {
-  const base = language.split("-")[0] ?? "";
-  const lang = (WEBSITE_LANGUAGES as readonly string[]).includes(base) ? base : "en";
-  return `${LEGAL_WEBSITE}/${lang}/downloads?app=${app}#android-repo`;
-};

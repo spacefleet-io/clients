@@ -16,15 +16,9 @@ import time
 import urllib.error
 import urllib.request
 
-from compat import CLIENT_PLATFORM, CLIENT_TYPE, CLIENT_VERSION, log
-import ops_sql
+from compat import CLIENT_TYPE, CLIENT_VERSION, log
 
 APP_SCOPE = "badger"
-# REL-CD-29: every API call says which app, platform and version it is.
-SPACE_CLIENT_HEADER = "x-space-client"
-# LIB-FMT-13: the op stream a library call reads (GET) or writes (POST); absent means 1 to the API.
-LIBRARY_OP_STREAM_HEADER = "x-library-op-stream-version"
-APP_UPDATE_REQUIRED = "app_update_required"
 SESSION_TTL_SECONDS = 8 * 60  # gateway TTL is 10 min; refresh early
 HTTP_TIMEOUT = 30
 DOWNLOAD_TIMEOUT = 120
@@ -40,15 +34,6 @@ class ApiError(Exception):
 
 class UnauthorizedError(ApiError):
     """401: the device token was revoked or expired (ACCT-DEV-01: wipe key + cache)."""
-
-
-class AppUpdateRequiredError(ApiError):
-    """426 app_update_required (REL-CD-29, LIB-FMT-13): this add-on is too old for the API or for the account's library
-    (`reason` "library_op_stream"). The caller shows compat.UPDATE_REQUIRED_MESSAGE and stops."""
-
-    @property
-    def reason(self):
-        return self.body.get("reason") if self.body else None
 
 
 class UnpaidError(ApiError):
@@ -108,8 +93,6 @@ def _raise_for(status, body):
     parsed = _json_or_empty(body)
     if status == 401:
         raise UnauthorizedError(status, parsed)
-    if status == 426 and parsed.get("error") == APP_UPDATE_REQUIRED:
-        raise AppUpdateRequiredError(status, parsed)
     if status == 402:
         raise UnpaidError(status, parsed)
     if status == 503 and parsed.get("error") == "free_playback_refused":
@@ -265,8 +248,7 @@ class ApiClient(object):
 
     # ---- plumbing
     def _headers(self, json_body=False, extra=None):
-        headers = {"x-space-app": APP_SCOPE, "accept": "application/json", "user-agent": "SpaceBadger-Kodi/%s" % CLIENT_VERSION,
-                   SPACE_CLIENT_HEADER: "%s/%s/%s" % (APP_SCOPE, CLIENT_PLATFORM, CLIENT_VERSION)}
+        headers = {"x-space-app": APP_SCOPE, "accept": "application/json", "user-agent": "SpaceBadger-Kodi/%s" % CLIENT_VERSION}
         if self.token:
             headers["authorization"] = "Bearer %s" % self.token
         if json_body:
@@ -279,9 +261,9 @@ class ApiClient(object):
         """The app's usual headers for an authenticated JSON call (used by the ticket refill, META-ANON-02)."""
         return self._headers(json_body=True)
 
-    def request_json(self, method, path, body=None, expect=(200,), timeout=HTTP_TIMEOUT, extra=None):
+    def request_json(self, method, path, body=None, expect=(200,), timeout=HTTP_TIMEOUT):
         data = json.dumps(body).encode("utf-8") if body is not None else None
-        status, _h, raw = http_request(method, self.base_url + path, self._headers(json_body=body is not None, extra=extra), data, timeout)
+        status, _h, raw = http_request(method, self.base_url + path, self._headers(json_body=body is not None), data, timeout)
         log("api %s %s -> %s (%d bytes)" % (method, path.split("?")[0], status, len(raw)), "debug")
         if status not in expect:
             _raise_for(status, raw)
@@ -334,22 +316,18 @@ class ApiClient(object):
 
     # ---- library
     def library_meta(self):
-        return self.request_json("GET", "/library/db/meta",
-                                 extra={LIBRARY_OP_STREAM_HEADER: str(ops_sql.READ_OP_STREAM_VERSION)})  # op-stream: read
+        return self.request_json("GET", "/library/db/meta")
 
     def library_ops(self, since):
-        return self.request_json("GET", "/library/db/ops?since=%d" % int(since),
-                                 extra={LIBRARY_OP_STREAM_HEADER: str(ops_sql.READ_OP_STREAM_VERSION)})  # op-stream: read
+        return self.request_json("GET", "/library/db/ops?since=%d" % int(since))
 
-    def post_op(self, encrypted, op_id, base_version, prev_state_hash, next_hash, op_stream_version):
-        """`op_stream_version` is ops_sql.write_op_stream_version(<account target>): 3 until the switch, then 4."""
+    def post_op(self, encrypted, op_id, base_version, prev_state_hash, next_hash):
         headers = self._headers(extra={
             "content-type": "application/octet-stream",
             "x-library-base-version": str(int(base_version)),
             # Every op is written compressed (storage format v2, LIB-FMT-07).
             "x-library-storage-format-version": "2",
             "x-library-op-id": op_id,
-            LIBRARY_OP_STREAM_HEADER: str(int(op_stream_version)),
         })
         # Without a known head (no local state hash) both lineage headers are omitted and the server derives
         # the next hash from its own head; the base version still rejects a stale writer.

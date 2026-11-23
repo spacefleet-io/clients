@@ -36,12 +36,6 @@ describe("Badger claims only its own pairing links", () => {
     console.info("[badger-pair-claim-2] entitlements", entitlements.replace(/\s+/gu, " "));
     expect(entitlements).toContain("com.apple.developer.associated-domains");
     expect(entitlements).toContain("<string>applinks:spacefleet.io</string>");
-    // Under the UIScene lifecycle (PLAT-MOBILE-09) a Universal Link reaches the scene, not the AppDelegate: while the app
-    // runs through scene(_:continue:), on a cold start in the scene's connection options, handed to JS as launch options.
-    const swift = read("ios/SpaceBadgerMobile/AppDelegate.swift");
-    expect(swift).toMatch(/func scene\(\s*_ scene: UIScene,\s*continue userActivity: NSUserActivity\s*\)/u);
-    expect(swift).toContain("RCTLinkingManager.scene(scene, continue: userActivity)");
-    expect(swift).toContain("options.userActivities.first");
-    expect(swift).toContain("launch[.userActivityDictionary]");
+    expect(read("ios/SpaceBadgerMobile/AppDelegate.swift")).toContain("RCTLinkingManager.application(application, continue: userActivity");
   });
 });

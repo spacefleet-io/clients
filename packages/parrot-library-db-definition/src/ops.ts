@@ -151,23 +151,10 @@ export type TrackFileRow = {
   lossless: boolean;
   bitrateKbps: number | null;
   sampleRate: number | null;
-  /** Bytes the players read: the stored pieces end to end. */
   sizeBytes: number;
   lightCopy: boolean;
   createdAt: number;
-  /**
-   * PAR-FMT-01, a file stored split: the header's bytes at the start of the stored file (0: the container needs none,
-   * MP3 and ADTS), the size of the file the user picked, and the sealed object holding the file's own tags. All three
-   * absent or null: the file is stored whole, as the user's file was (imports before 2026-11-21, light copies).
-   */
-  headerBytes?: number | null;
-  sourceSizeBytes?: number | null;
-  tagsObjectKey?: string | null;
 };
-
-/** A file stored in parts (PAR-FMT-01): its row needs schema 11's layout columns. */
-export const isSplitTrackFile = (file: TrackFileRow) =>
-  file.headerBytes != null || file.sourceSizeBytes != null || file.tagsObjectKey != null;
 
 /** A playlist's own row (PAR-PL-01); its songs travel in `playlist_tracks.set`. */
 export type PlaylistRow = { id: string; name: string; createdAt: number; updatedAt: number };
@@ -354,40 +341,27 @@ ON CONFLICT(id) DO UPDATE SET album_id = excluded.album_id, disc = excluded.disc
     }
     case "track_file.upsert": {
       const { file: f, chunks } = op.payload;
-      const columns = `id, track_id, codec, container, mime, lossless, bitrate_kbps, sample_rate, size_bytes, light_copy, created_at`;
-      const update = `track_id = excluded.track_id, codec = excluded.codec, container = excluded.container,
-  mime = excluded.mime, lossless = excluded.lossless, bitrate_kbps = excluded.bitrate_kbps,
-  sample_rate = excluded.sample_rate, size_bytes = excluded.size_bytes, light_copy = excluded.light_copy`;
-      const params = [
-        f.id,
-        f.trackId,
-        f.codec,
-        f.container,
-        f.mime,
-        bool(f.lossless),
-        f.bitrateKbps,
-        f.sampleRate,
-        f.sizeBytes,
-        bool(f.lightCopy),
-        f.createdAt,
-      ];
       return [
-        // A file stored whole names only schema 10's columns, so it applies to a library still at schema 10
-        // (API-VER-01); a file in parts also sets the layout columns, which describe the chunks below.
-        isSplitTrackFile(f)
-          ? {
-              sql: `INSERT INTO track_files (${columns}, header_bytes, source_size_bytes, tags_object_key)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-ON CONFLICT(id) DO UPDATE SET ${update},
-  header_bytes = excluded.header_bytes, source_size_bytes = excluded.source_size_bytes, tags_object_key = excluded.tags_object_key`,
-              params: [...params, f.headerBytes ?? null, f.sourceSizeBytes ?? null, f.tagsObjectKey ?? null],
-            }
-          : {
-              sql: `INSERT INTO track_files (${columns})
+        {
+          sql: `INSERT INTO track_files (id, track_id, codec, container, mime, lossless, bitrate_kbps, sample_rate, size_bytes, light_copy, created_at)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-ON CONFLICT(id) DO UPDATE SET ${update}`,
-              params,
-            },
+ON CONFLICT(id) DO UPDATE SET track_id = excluded.track_id, codec = excluded.codec, container = excluded.container,
+  mime = excluded.mime, lossless = excluded.lossless, bitrate_kbps = excluded.bitrate_kbps,
+  sample_rate = excluded.sample_rate, size_bytes = excluded.size_bytes, light_copy = excluded.light_copy`,
+          params: [
+            f.id,
+            f.trackId,
+            f.codec,
+            f.container,
+            f.mime,
+            bool(f.lossless),
+            f.bitrateKbps,
+            f.sampleRate,
+            f.sizeBytes,
+            bool(f.lightCopy),
+            f.createdAt,
+          ],
+        },
         { sql: "DELETE FROM track_file_chunks WHERE track_file_id = ?", params: [f.id] },
         ...chunks.map((c) => ({
           sql: "INSERT INTO track_file_chunks (track_file_id, idx, object_key, plain_offset, plain_size) VALUES (?, ?, ?, ?, ?)",

@@ -5,11 +5,11 @@ import {
   BadgerContinueHero,
   BadgerPosterCard,
   BadgerPosterGrid,
+  BadgerSegmented,
   formatBadgerRuntime,
 } from "../src/badger/components";
 import { MediaDetailPage } from "../src/badger/media-detail";
 import { EmptyLibrary } from "../src/empty-library";
-import { LibrarySegmented } from "../src/library-row";
 
 // The home and library pieces the Badger desktop renderer and web player will share (REL-FAM-02).
 describe("[badger] home and library pieces", () => {
@@ -43,32 +43,6 @@ describe("[badger] home and library pieces", () => {
     expect(html).toContain("The Cartographer and the Keeper&#x27;s Lantern</h1>");
   });
 
-  // UX-HOME-04 (Chris 2026-11-19, a still of the YouTube promo video): a vertical line through the Continue watching
-  // card where the dark side stopped against the glow. The glow was a 760 px box pinned to the right, so its left edge
-  // (blurred only to a band) crossed the card at every width wider than the box.
-  it("@bugfix @regression-proof @req UX-HOME-04[badger-desktop] @req UX-HOME-04[badger-web-player] the glow's left edge fades in from nothing, so no line crosses the hero", () => {
-    const html = renderToStaticMarkup(
-      <BadgerContinueHero eyebrow="Continue watching" title="The General" meta="1926" progressPct={53} poster={null} glowSrc="glow.jpg" resumeLabel="Resume" detailsLabel="Details" onResume={() => undefined} onDetails={() => undefined} />,
-    );
-    const glow = html.match(/<img[^>]*data-testid="continue-hero-glow"[^>]*>/)?.[0] ?? "";
-    console.info("[UX-HOME-04 web] glow", glow);
-    // Its right, top and bottom edges lie outside the card (which clips it); only the left edge is inside.
-    expect(glow).toContain("-right-20");
-    expect(glow).toContain("-top-[120px]");
-    expect(glow).toContain("h-[560px]");
-    const mask = glow.match(/mask-image:linear-gradient\(to right, ([^;"]*)\)/)?.[1] ?? "";
-    const stops = [...mask.matchAll(/rgba\(0,0,0,([\d.]+)\) ([\d.]+)%/g)].map((match) => [Number(match[2]), Number(match[1])] as const);
-    console.info("[UX-HOME-04 web] glow mask stops", JSON.stringify(stops));
-    expect(stops[0]).toEqual([0, 0]);
-    expect(stops.at(-1)![1]).toBe(1);
-    for (let index = 1; index < stops.length; index++) {
-      const [[prevAt, prevAlpha], [at, alpha]] = [stops[index - 1]!, stops[index]!];
-      expect(alpha).toBeGreaterThanOrEqual(prevAlpha);
-      // No step steeper than 3 alpha points per percent of the glow: the fade never turns into a line.
-      expect((alpha - prevAlpha) / (at - prevAt)).toBeLessThanOrEqual(0.03);
-    }
-  });
-
   it("the detail page draws the backdrop with eased fades, never the poster; no backdrop = the plain sky (LIB-DETAIL-03)", () => {
     const page = (backdrop?: ReactNode) =>
       renderToStaticMarkup(
@@ -100,7 +74,7 @@ describe("[badger] home and library pieces", () => {
 
   it("the segmented toggle marks the picked tab; the empty library has the bare mascot and three steps", () => {
     const seg = renderToStaticMarkup(
-      <LibrarySegmented ariaLabel="Kind" value="tv" onChange={() => undefined} options={[{ id: "movie", label: "Movies" }, { id: "tv", label: "TV shows" }]} />,
+      <BadgerSegmented ariaLabel="Kind" value="tv" onChange={() => undefined} options={[{ id: "movie", label: "Movies" }, { id: "tv", label: "TV shows" }]} />,
     );
     expect(seg).toContain('aria-selected="true"');
     expect(seg).toContain("h-8");

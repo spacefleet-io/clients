@@ -19,7 +19,6 @@ import math
 import time
 import uuid
 
-import chunk_lists
 import progress as prog
 from ops_sql import CATALOG_ID_SOURCES_SQL
 
@@ -115,14 +114,6 @@ def _load_chunks(conn, table, owner_col, owner_sql, owner_params):
     for owner, key, _order, size, start in _rows(conn, sql, owner_params):
         out.setdefault(_s(owner), []).append({"key": _s(key), "sizeBytes": _opt_n(size), "startSeconds": _opt_n(start)})
     return out
-
-
-def _load_owner_chunks(conn, owner_kind, owner_ids):
-    """{owner id: [{key, sizeBytes, startSeconds}]} of a title's formats or audio tracks, from the packed rows of
-    LIB-FMT-11 (or the old per-chunk rows before the layout step)."""
-    return dict((_s(owner), [{"key": _s(r["chunk_key"]), "sizeBytes": _opt_n(r["size_bytes"]), "startSeconds": _opt_n(r["start_seconds"])}
-                             for r in rows])
-                for owner, rows in chunk_lists.load_chunk_rows(conn, owner_kind, owner_ids).items())
 
 
 def _load_template_chunks(conn, table, owner_col, ids):
@@ -364,7 +355,7 @@ def build_media_details(conn, media_id, heal_is_source=True):
     format_rows = _rows(conn, "SELECT id, media_id, file_id, quality, codec, codec_string, bitrate_kbps, init_key, init_size, "
                               "duration_seconds, total_size, size_mb, is_source, %s FROM media_formats WHERE media_id = ? "
                               "ORDER BY quality DESC, codec ASC" % ("preview_sheets" if has_previews_col else "NULL"), (mid,))
-    format_chunks = _load_owner_chunks(conn, chunk_lists.OWNER_KIND_FORMAT, [_s(r[0]) for r in format_rows])
+    format_chunks = _load_chunks(conn, "media_format_chunks", "format_id", "SELECT id FROM media_formats WHERE media_id = ?", (mid,))
     formats = [{
         "id": _s(r[0]), "mediaId": _s(r[1]), "fileId": _s(r[2]), "quality": _s(r[3]), "codec": _s(r[4]),
         "codecString": _opt_s(r[5]), "bitrateKbps": _opt_n(r[6]), "initKey": _opt_s(r[7]), "initSize": _opt_n(r[8]),
@@ -394,7 +385,7 @@ def build_media_details(conn, media_id, heal_is_source=True):
     audio_rows = _rows(conn, "SELECT id, media_id, file_id, episode_id, language, label, is_default, source, codec, codec_string, "
                              "init_key, init_size, duration_seconds, total_size FROM media_audio_tracks WHERE media_id = ? "
                              "ORDER BY is_default DESC, language ASC", (mid,))
-    audio_chunks = _load_owner_chunks(conn, chunk_lists.OWNER_KIND_AUDIO_TRACK, [_s(r[0]) for r in audio_rows])
+    audio_chunks = _load_chunks(conn, "media_audio_chunks", "track_id", "SELECT id FROM media_audio_tracks WHERE media_id = ?", (mid,))
     audio_tracks = [{
         "id": _s(r[0]), "mediaId": _s(r[1]), "fileId": _opt_s(r[2]), "episodeId": _opt_s(r[3]), "language": _s(r[4]),
         "label": _s(r[5]), "isDefault": bool(r[6]), "source": _s(r[7]), "codec": _opt_s(r[8]), "codecString": _opt_s(r[9]),
@@ -548,21 +539,6 @@ def with_track_defaults(details, episode_id, audio_language=None, subtitle=UNCHA
     return out
 
 
-def episode_file_ids(details, episode_id):
-    """Ids of the files whose (season, episode) resolves to `episode_id` (None: files that resolve to no episode),
-    in `details.files` order: what `media.episode.delete` names (LIB-FMT-11)."""
-    by_key = {}
-    for ep in details.get("episodes") or []:
-        by_key.setdefault((ep["seasonNumber"], ep["episodeNumber"]), ep["id"])
-
-    def resolved(f):
-        if f.get("season") is None or f.get("episode") is None:
-            return None
-        return by_key.get((f["season"], f["episode"]))
-
-    return [f["id"] for f in details.get("files") or [] if resolved(f) == (episode_id or None)]
-
-
 def without_episode_files(details, episode_id):
     """Return a copy of `details` as it is after LibraryDb.deleteMediaFile of the file(s) of `episode_id`.
 
@@ -573,7 +549,16 @@ def without_episode_files(details, episode_id):
     "any file left".
     """
     out = copy.deepcopy(details)
-    gone = set(episode_file_ids(out, episode_id))
+    by_key = {}
+    for ep in out.get("episodes") or []:
+        by_key.setdefault((ep["seasonNumber"], ep["episodeNumber"]), ep["id"])
+
+    def resolved(f):
+        if f.get("season") is None or f.get("episode") is None:
+            return None
+        return by_key.get((f["season"], f["episode"]))
+
+    gone = set(f["id"] for f in out.get("files") or [] if resolved(f) == (episode_id or None))
     out["files"] = [f for f in out.get("files") or [] if f["id"] not in gone]
     gone_formats = set(f["id"] for f in out.get("formats") or [] if f["fileId"] in gone)
     out["formats"] = [f for f in out.get("formats") or [] if f["id"] not in gone_formats]

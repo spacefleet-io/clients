@@ -1,8 +1,9 @@
 import { Database } from "bun:sqlite";
 import { describe, expect, it } from "bun:test";
 import path from "node:path";
-import { parrotAlbumEditValues, parrotAlbumId, parrotArtistId, saveParrotEdit, parrotTrackEditValues, type ParrotLibraryQuery } from "@space/parrot-core";
+import { fetchParrotMetadata, parrotAlbumEditValues, parrotAlbumId, parrotArtistId, saveParrotEdit, parrotTrackEditValues, type ParrotLibraryQuery } from "@space/parrot-core";
 import { buildParrotOpStatements, parrotLibraryMigrationStatements, type ParrotLibraryOp } from "@space/parrot-library-db-definition";
+import type { MusicAlbum } from "@space/shared/api";
 import { buildParrotTrackOps } from "../src/importer";
 import type { ParrotTrackInfo } from "../src/readTrack";
 import { parrotTrackIds } from "../src/ids";
@@ -113,9 +114,21 @@ describe("PAR-META-17: an emptied year or genre is cleared", () => {
     log("after re-import", await values(reopened), reopened.query("SELECT year, genre, year_edited, genre_edited FROM albums").all());
     expect(await values(reopened)).toEqual(cleared);
 
-    // A suggestion picked in the edit dialog (PAR-META-18) fills 2003: saving the dialog puts the year back.
-    expect(await save(reopened, [], { year: 2003, genre: null })).toEqual({ ok: true });
-    log("after a picked suggestion", await values(reopened));
+    // Fetch metadata, asked by the user, finds 2003: saving the dialog it fills puts the year back.
+    const found = await fetchParrotMetadata({
+      query: query(reopened),
+      target: { kind: "album", id: ALBUM },
+      recordings: async () => ({ results: [] }),
+      albums: async (question) => {
+        log("lookup asked", question);
+        return { results: [{ id: "album-meltway", title: "Meltway", artist: { name: "Linnet Park" }, year: 2003 } as unknown as MusicAlbum] };
+      },
+    });
+    log("fetch metadata", found);
+    if (found.kind !== "album") throw new Error(`expected an album match, got ${found.kind}`);
+    expect(found.found).toEqual({ title: "Meltway", albumArtist: "Linnet Park", year: 2003, genre: null });
+    expect(await save(reopened, [], found.found)).toEqual({ ok: true });
+    log("after fetch metadata", await values(reopened));
     expect(await values(reopened)).toEqual({ album: { year: 2003, genre: null }, track: { year: 2003, genre: null } });
 
     // The genre comes back when the user types it; an import tagged otherwise still changes neither.
