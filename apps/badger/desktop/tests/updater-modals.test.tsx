@@ -231,11 +231,6 @@ describe("UpdateAvailableModal (Part E4)", async () => {
     autoUpdate: true,
     currentVersion: "2.0.0",
     lastCheckedAt: null,
-    channel: "self",
-    canInstall: false,
-    manualCommand: null,
-    failure: null,
-    failureDetail: null,
   };
 
   it("does not render when open=false", () => {

@@ -14,7 +14,6 @@ import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { streamBridgeStub } from "./streamBridge";
-import { exportBridgeStub } from "./exportBridge";
 import type { ParrotLanguage, ParrotLibraryResult, ParrotState } from "../src/shared/ipc";
 import Library from "../src/renderer/src/Library";
 import { PARROT_STRINGS, translator } from "../src/renderer/src/i18n";
@@ -106,7 +105,6 @@ describe("Parrot desktop while the library opens (UX-WAIT-04)", () => {
       configurable: true,
       value: {
         ...streamBridgeStub(),
-        ...exportBridgeStub(),
         // The first load stays open until the test answers it.
         getLibrary: vi.fn(() => {
           const { promise, resolve } = Promise.withResolvers<ParrotLibraryResult>();
@@ -151,11 +149,6 @@ describe("Parrot desktop while the library opens (UX-WAIT-04)", () => {
     expect(q("library-loading")).toHaveLength(1);
     expect(q("library-loading")[0]?.querySelector('[data-testid="mascot-loader-parrot"]')).not.toBeNull();
     expect(q("library-loading")[0]?.textContent).toContain("Loading library…");
-    // Chris 2026-11-19: it fills the scrolling page between the top bar and the player, the parrot centred in it.
-    const loader = q("library-loading")[0];
-    console.info(`${LOG} loading classes ${loader?.className} in <${loader?.parentElement?.tagName.toLowerCase()}>`);
-    expect(loader?.className.split(" ")).toEqual(expect.arrayContaining(["flex", "min-h-full", "flex-col", "items-center", "justify-center"]));
-    expect(loader?.parentElement?.tagName).toBe("MAIN");
   });
 
   it("says 'Loading library…' in the app's language (French)", async () => {

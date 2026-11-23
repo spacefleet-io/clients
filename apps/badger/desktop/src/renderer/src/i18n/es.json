@@ -93,6 +93,7 @@
       "continueInBrowser": "Termina de iniciar sesión en tu navegador. Badger volverá cuando acabes.",
       "errorStart": "No se pudo iniciar el inicio de sesión. Vuelve a intentarlo.",
       "errors": {
+        "no_account": "Ninguna cuenta de SpaceFleet usa todavía este correo.",
         "email_unverified": "El correo de esta cuenta no está confirmado. Confírmalo con el proveedor o inicia sesión con tu correo y contraseña.",
         "email_domain_disallowed": "No se pueden crear cuentas con este correo.",
         "account_deletion_pending": "La eliminación de esta cuenta está programada.",
@@ -199,19 +200,6 @@
     "openingImport": "Abriendo la importación de contenido…"
   },
   "library": {
-    "export": {
-      "submittedToast_one": "Guardando {{count}} archivo en {{folder}}",
-      "submittedToast_other": "Guardando {{count}} archivos en {{folder}}",
-      "errors": {
-        "insufficient_disk_space": "No hay espacio libre suficiente en esa carpeta: se necesitan {{required}}, hay {{free}} libres.",
-        "not_authenticated": "Vuelve a iniciar sesión para descargar archivos.",
-        "library_db_not_open": "Tu biblioteca aún no está abierta. Inténtalo de nuevo en un momento.",
-        "dest_not_writable": "No se puede guardar en esa carpeta. Elige otra.",
-        "dest_not_picked": "Vuelve a elegir la carpeta.",
-        "nothing_to_export": "Todavía no hay nada que descargar.",
-        "generic": "La descarga ha fallado: {{reason}}"
-      }
-    },
     "showDelisting": {
       "title": "Episodios que ya no están en el catálogo",
       "description": "El catálogo ya no incluye estos episodios de {{show}}. ¿Quieres quitarlos de tu mediateca?",
@@ -244,15 +232,7 @@
     "manageKey": "Gestionar la clave de la mediateca",
     "browseTitle": "Explorar",
     "browseSubtitle": "El contenido sin archivos subidos aparece en gris, pero puedes seguir viendo sus metadatos.",
-    "stats": {
-      "movie_one": "{{count}} película",
-      "movie_other": "{{count}} películas",
-      "movie_many": "{{count}} películas",
-      "tv_one": "{{count}} serie",
-      "tv_other": "{{count}} series",
-      "tv_many": "{{count}} series",
-      "shownOf": "{{shown}} de {{total}}"
-    },
+    "searchPlaceholder": "Buscar títulos…",
     "sort": {
       "title": "Ordenar por",
       "by": "Campo",
@@ -285,41 +265,47 @@
       "clear": "Borrar filtros",
       "genres": {
         "title": "Géneros",
+        "placeholder": "Elige géneros para acotar los resultados.",
         "search": "Buscar géneros…",
         "empty": "Ningún género coincide con esta búsqueda."
       },
       "actors": {
         "title": "Actores",
+        "placeholder": "Elige actores para acotar los resultados.",
         "search": "Buscar actores…",
         "empty": "Ningún actor coincide con esta búsqueda."
       },
       "title": "Filtrar",
       "clearShort": "Borrar",
-      "more": "+{{count}} más",
       "reset": "Restablecer",
       "apply": "Aplicar",
       "qualities": {
         "title": "Calidad",
+        "placeholder": "Cualquier calidad",
         "search": "Buscar calidades",
         "empty": "No se encontró ninguna calidad"
       },
       "directors": {
         "title": "Director",
+        "placeholder": "Cualquier director",
         "search": "Buscar directores",
         "empty": "No se encontró ningún director"
       },
       "audioLanguages": {
         "title": "Idioma del audio",
+        "placeholder": "Cualquier idioma de audio",
         "search": "Buscar idiomas",
         "empty": "No se encontró ningún idioma"
       },
       "subtitleLanguages": {
         "title": "Idioma de los subtítulos",
+        "placeholder": "Cualquier idioma de subtítulos",
         "search": "Buscar idiomas",
         "empty": "No se encontró ningún idioma"
       },
       "watchStates": {
         "title": "Estado de visualización",
+        "placeholder": "Cualquier estado",
         "search": "Buscar estados",
         "empty": "No se encontró ningún estado"
       },
@@ -407,7 +393,7 @@
       "compact": "Ocultar faltantes",
       "subtitle": "Mostrar solo los elementos reproducibles."
     },
-    "loading": "Cargando la biblioteca…",
+    "loading": "Cargando la mediateca…",
     "syncing": "Sincronizando la mediateca…",
     "offline": {
       "indicator": "Sin conexión",
@@ -650,6 +636,8 @@
     }
   },
   "playlists": {
+    "title": "Listas de reproducción",
+    "subtitle": "Agrupa títulos en listas a las que puedes volver cuando quieras.",
     "manageTitle": "Tus listas",
     "manageSubtitle": "Favoritos siempre está disponible. Todo lo demás lo gestionas tú.",
     "newPlaceholder": "Nombre de la nueva lista",
@@ -711,36 +699,9 @@
         "original": "Original"
       }
     },
-    "offlineContent": {
-      "total": "Guardado en esta computadora",
-      "empty": "No hay nada guardado en esta computadora para ver sin conexión. Usa «Guardar sin conexión» en una película, una temporada o un episodio para guardarlo aquí.",
-      "remove": "Quitar {{name}} de esta computadora",
-      "removeAll": "Quitar todo",
-      "expand": "Mostrar u ocultar el contenido de {{name}}",
-      "confirmTitle": "¿Quitar todo lo guardado sin conexión?",
-      "confirmBody": "Todas las películas y episodios guardados en esta computadora se borran de ella y el espacio se libera ahora. Siguen en tu biblioteca y se reproducen desde tu servidor cuando tengas conexión.",
-      "confirmCancel": "Cancelar",
-      "confirmRemove": "Quitar todo",
-      "season": "Temporada {{n}}",
-      "episodeNumber": "T{{season}} · E{{episode}}",
-      "unknownTitle": "Un título que ya no está en tu biblioteca",
-      "unknownEpisode": "Episodio",
-      "removeFailed": "No se pudo quitar de esta computadora. Vuelve a intentarlo."
-    },
-    "exportAll": {
-      "title": "Descargar todo",
-      "help": "Guarda toda tu biblioteca como archivos de vídeo en la carpeta que elijas, con la mejor calidad que tengas. Las películas van a Movies y las series a Shows.",
-      "button": "Descargar todo",
-      "moreOptions": "Más opciones",
-      "confirmTitle": "¿Descargar todo?",
-      "confirmBody_one": "Se guardará {{count}} archivo, {{size}} en total, en {{folder}}.",
-      "confirmBody_other": "Se guardarán {{count}} archivos, {{size}} en total, en {{folder}}.",
-      "confirm": "Descargar",
-      "cancel": "Cancelar"
-    },
     "offlineExportFormat": {
-      "label": "Formato de archivo",
-      "help": "Formato de los archivos de vídeo que descargas. MKV conserva todos los tipos de subtítulos. MP4 se reproduce en más dispositivos, pero no puede incluir subtítulos PGS / ASS: esas pistas se omiten.",
+      "label": "Formato de exportación sin conexión",
+      "help": "Contenedor que se usa al guardar contenido en tu dispositivo. MKV no pierde ningún tipo de subtítulo. MP4 es más compatible, pero no puede incrustar subtítulos PGS / ASS: esas pistas se omiten si las hay.",
       "mkv": "MKV (recomendado)",
       "mp4": "MP4",
       "mp4Warning": "MP4 no puede incrustar subtítulos PGS ni ASS. Los subtítulos SRT / VTT se convierten a mov_text y se conservan."
@@ -975,7 +936,6 @@
       "playback": "Reproducción",
       "trailers": "Tráileres",
       "downloads": "Descargas",
-      "offlineContent": "Gestionar contenido sin conexión",
       "transcoding": "Transcodificación",
       "metadata": "Metadatos",
       "performance": "Rendimiento",
@@ -992,7 +952,6 @@
       "playback": "Calidad predeterminada y qué ocurre durante la reproducción.",
       "trailers": "De dónde vienen los tráileres y en qué idiomas obtenerlos.",
       "downloads": "Cómo se guardan las copias sin conexión en tu dispositivo.",
-      "offlineContent": "Lo que está guardado en esta computadora para ver sin conexión y el espacio que ocupa.",
       "transcoding": "En qué calidades y códecs se procesa tu mediateca.",
       "metadata": "De dónde vienen los datos de títulos e imágenes.",
       "performance": "Aceleración por hardware y descarga del procesamiento.",
@@ -1464,15 +1423,12 @@
       "ffmpegLogs": "Registros de FFmpeg",
       "offlineDownloading": "Descargando sin conexión",
       "offlineSavedOffline": "Guardado sin conexión",
-      "exportDownloading": "Descargando archivo",
-      "exportSaved": "Guardado en la carpeta",
       "help": {
         "sourceIngest": "Dividimos el archivo original en fragmentos listos para streaming para que la reproducción empiece rápido.",
         "transcode": "Creamos versiones adicionales en otras calidades para que la reproducción siga fluida con conexiones más lentas.",
         "tracks": "Preparamos las pistas de audio y de subtítulos para que se pueda cambiar de idioma y de subtítulos.",
         "job": "Este paso prepara los archivos multimedia para la reproducción y la sincronización.",
-        "offlineDownloading": "Obtenemos cada fragmento, lo desciframos y combinamos todas las pistas en un solo archivo que puedes reproducir sin conexión.",
-        "exportDownloading": "Obtenemos la mejor calidad que tienes, la desciframos y guardamos un archivo de vídeo con todas las pistas en la carpeta elegida."
+        "offlineDownloading": "Obtenemos cada fragmento, lo desciframos y combinamos todas las pistas en un solo archivo que puedes reproducir sin conexión."
       }
     },
     "transcodePlan": "Plan de transcodificación",

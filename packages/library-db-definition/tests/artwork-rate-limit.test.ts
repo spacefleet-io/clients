@@ -33,7 +33,7 @@ const memoryStore = (slots: ArtworkSlot[]) => {
     listArtworkToCopy: () => slots,
     applyArtworkCopies: (_mediaId, copies) => {
       applied.push(...copies);
-      return { applied: copies.length, skipped: 0, unapplied: [] };
+      return { applied: copies.length, skipped: 0 };
     },
   };
   return { store, applied };

@@ -5,8 +5,8 @@ import { formatPendingOpsLabel, type MobileOfflineVariant } from "@space/mobile-
 import { useTranslation } from "@space/mobile-shell/i18n";
 import { theme } from "../../theme/theme";
 import { TV_RADIUS, tvTrackedLabel } from "../lib/tvLook";
-import { useTvScale, useTvStyles } from "@space/mobile-shell/tv/tvScale";
-import { TvFocusable } from "@space/mobile-shell/tv/TvFocusable";
+import { useTvScale, useTvStyles } from "../lib/tvScale";
+import { TvFocusable } from "./TvFocusable";
 
 type TvOfflineNoticeProps = {
   variant: MobileOfflineVariant;

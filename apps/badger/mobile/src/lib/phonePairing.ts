@@ -5,7 +5,6 @@
  * (`@space/mobile-shell/pairing`, also the TV's and Parrot's); this file fixes only what is phone specific.
  */
 import { getApiBaseUrl } from "@space/shared/api";
-import { READ_OP_STREAM_VERSION } from "@space/library-db-definition/ops";
 import { createPairingClientCore } from "@space/pairing-crypto";
 import { scopeLogger } from "@space/mobile-shell/logger";
 import { createPairingCompletionDeps, type PairingCompletionDeps } from "@space/mobile-shell/pairing";
@@ -41,7 +40,6 @@ export const createPhoneCompletionDeps = (setSession: PairingCompletionDeps["set
     library: "badger",
     decrypt: decryptBase64ToBytes,
     logTag: PHONE_PAIRING_LOG_TAG,
-    readOpStreamVersion: READ_OP_STREAM_VERSION, // op-stream: read
     setStoredLibraryKey,
     setLibraryKeyAcknowledged,
     setSession,

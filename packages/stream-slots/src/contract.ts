@@ -20,10 +20,7 @@ export type StreamApp = (typeof STREAM_APPS)[number];
 export const STREAM_KINDS = ["play", "cast"] as const;
 export type StreamKind = (typeof STREAM_KINDS)[number];
 
-/**
- * ACCT-STREAM-01: live streams a single profile may hold per app, by default. The API seeds each account type's number
- * with it and falls back to it when a type has none; an admin may change either (ACCT-STREAM-07).
- */
+/** ACCT-STREAM-01: live streams a single profile may hold per app. */
 export const STREAM_LIMITS: Readonly<Record<StreamApp, number>> = { badger: 1, parrot: 2 };
 
 /** ACCT-STREAM-04: how often a playing device heartbeats. */

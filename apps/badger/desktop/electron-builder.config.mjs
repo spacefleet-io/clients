@@ -23,14 +23,11 @@ import { resolveWindowsSigning, windowsSigningBuilderOptions, windowsUpdatePubli
 
 const appDir = import.meta.dirname;
 const repoRoot = resolve(appDir, "..", "..", "..");
-// The app icons (UX-THEME-04, drawn by scripts/app-icons/generate.py). Linux and Windows: the helmet alone on
-// transparency. ICON_SOURCE (1024 px) is the window / tray icon on Linux and Windows; LINUX_ICONS (one PNG per hicolor
-// size) the AppImage/.deb/.rpm/.pacman icons; WINDOWS_ICON the .exe and NSIS installer icon. Each platform names its
-// own: without linux.icon electron-builder draws the Linux icons from mac.icon, the navy tile. The renderer favicon
-// (src/renderer/public/icon.png) is 403x366 and electron-builder rejects/mangles non-square icons.
+// The app icon (UX-THEME-04, drawn by scripts/app-icons/generate.py): the 1024 px PNG, the mascot alone on
+// transparency, for the .exe/.ico and NSIS installer, the AppImage/.deb/.rpm and the window / tray icon on Linux and
+// Windows; the renderer favicon (src/renderer/public/icon.png) is 403x366 and electron-builder rejects/mangles
+// non-square icons.
 const ICON_SOURCE = "installer/icon.png";
-const LINUX_ICONS = "installer/icons";
-const WINDOWS_ICON = "installer/icon.ico";
 // macOS app icon: the mascot on the navy rounded square, on Apple's grid with its margin (all sizes 16..1024).
 const MAC_ICON = "installer/icon.icns";
 // macOS menu-bar icon: monochrome template image (16 pt, @2x 32 px), PLAT-DESK-06.
@@ -80,6 +77,7 @@ export const createBuilderConfig = ({ targetId, updateFeedUrl = DEFAULT_UPDATE_F
     // Per target (scripts/package-targets.mjs): "Badger" everywhere, Badger.app on macOS (REL-MAC-05).
     productName: target.productName,
     electronVersion: "45.3.2",
+    icon: ICON_SOURCE,
     npmRebuild: false,
     asarUnpack: ["**/*.node"],
     // Only the locales the UI supports (en, fr, nl, de); see scripts/packaged-locales-lib.mjs.
@@ -101,14 +99,12 @@ export const createBuilderConfig = ({ targetId, updateFeedUrl = DEFAULT_UPDATE_F
       synopsis: "Your own films and series, played anywhere",
       maintainer: "SpaceFleet <contact@spacefleet.io>",
       vendor: "SpaceFleet",
-      icon: LINUX_ICONS,
     },
     // REL-DIST-14: the .deb/.rpm/.pacman are named "spacebadger" (Debian/Ubuntu's own "badger" is BadgerDB 2.x) and
     // take over the "badger" packages Badger 0.1.0/0.1.1 installed.
     ...nativeLinuxPackageOptions({
       appDir,
       packageName: "spacebadger",
-      productName: "Badger",
       legacyName: "badger",
       version: JSON.parse(readFileSync(join(appDir, "package.json"), "utf8")).version,
       mpv: true,
@@ -123,7 +119,6 @@ export const createBuilderConfig = ({ targetId, updateFeedUrl = DEFAULT_UPDATE_F
       // The Windows app is named Badger: Badger.exe, the "Badger" shortcuts, Badger-Setup-<version>.exe.
       ...winSigning,
       executableName: "Badger",
-      icon: WINDOWS_ICON,
     },
     mac: {
       // REL-MAC-02/03: the dmg to install and the zip the in-app updater (Squirrel.Mac) downloads, one per arch.

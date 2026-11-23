@@ -25,16 +25,16 @@ describe("the startup card's mascot", () => {
     console.info(LOG, "DESKTOP-SHELL-STARTUP-MASCOT-001", html.length);
     const box = html.slice(html.indexOf('data-testid="startup-card-mascot"') - 200, html.indexOf('src="/mascot.webp"'));
     expect(html).toContain('data-testid="startup-card-mascot"');
-    // About 15% of the card's width (64 to 96 px, at most 12% of a short window's height: two thirds of the first size,
-    // Chris 2026-11-19), lifted by 55% of its height so its lower 45% sits on the card, above the card.
-    expect(box).toContain("w-[clamp(4rem,min(15%,12vh),6rem)]");
+    // About a fifth of the card's width (at most 17% of a short window's height), lifted by 55% of its height so its
+    // lower 45% sits on the card, above the card.
+    expect(box).toContain("w-[clamp(6rem,min(22%,17vh),9rem)]");
     expect(box).toContain("-translate-y-[55%]");
     expect(box).toContain("z-10");
     // The phone's glow: a disc of the app's colour at 16% behind the mascot.
     expect(box).toContain("rounded-full bg-primary opacity-[0.16]");
     expect(html).toContain("animate-float");
     // The header clears the overlap (45% of the mascot's width) plus 12 px.
-    expect(html).toContain("pt-[clamp(2.55rem,calc(min(6.75%,5.4vh)_+_0.75rem),3.45rem)]");
+    expect(html).toContain("pt-[clamp(3.5rem,calc(min(9.9%,7.65vh)_+_0.75rem),4.75rem)]");
     expect(html).not.toContain("-translate-y-[120%]");
   });
 

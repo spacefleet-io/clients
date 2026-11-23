@@ -5,17 +5,7 @@ import {
   type LibraryDbGroup,
 } from "@space/library-db-definition";
 import { healSystemPlaylists } from "./library/systemPlaylists";
-import {
-  coreMigrations,
-  ingestMigrations,
-  metadataMigrations,
-  PACKED_PLAYBACK_LAYOUT_VERSION,
-  playbackMigrations,
-  playbackMigrationsPacked,
-  readPlaybackLayoutVersion,
-  runMigrations,
-} from "./libraryMigrations";
-import { PACKED_PLAYBACK_DDL } from "@space/library-db-definition/packedPlayback";
+import { coreMigrations, ingestMigrations, metadataMigrations, playbackMigrations, runMigrations } from "./libraryMigrations";
 
 // Per-DB perf pragmas applied on every open. WAL lets readers continue
 // during a writer (vs default `delete` mode where writers block readers
@@ -68,31 +58,11 @@ export const ensureMetadataSchema = async (db: SQLiteDatabase) => {
   await runMigrations(db, metadataMigrations, { dbName: "metadata" });
 };
 
-const convertedFileHasNoPendingStep = async () => {
-  throw new Error("PLAYBACK_CONVERT_NOT_REACHED");
-};
-
 export const ensurePlaybackSchema = async (db: SQLiteDatabase) => {
   await applyPerfPragmas(db);
   await db.executeSql("PRAGMA foreign_keys=OFF;");
-  // LIB-FMT-12: a converted file (user_version 6) opens through the packed registry, so its version is known, not
-  // "too new"; the conversion step itself never runs here (it is the last step, already applied). An unconverted
-  // file gets the plain registry: opening never converts — `convertPlaybackToPacked` does, on a switched account.
-  const converted = (await readPlaybackLayoutVersion(db)) >= PACKED_PLAYBACK_LAYOUT_VERSION;
-  await runMigrations(db, converted ? playbackMigrationsPacked(convertedFileHasNoPendingStep) : playbackMigrations, {
-    dbName: "playback",
-  });
-  // LIB-FMT-11: the packed tables are in the base DDL but an install already past the baseline step never replays
-  // it; create them empty on every open, without a migration step (no user_version bump before the switch).
-  for (const statement of PACKED_PLAYBACK_DDL) await db.executeSql(statement);
+  await runMigrations(db, playbackMigrations, { dbName: "playback" });
 };
-
-/**
- * LIB-FMT-12: converts the open playback file in place (packs every chunk list, then `user_version` 6). `convert`
- * runs the packing on its own connection (native `convertChunkLists`), so this connection must be idle. Idempotent.
- */
-export const convertPlaybackToPacked = async (db: SQLiteDatabase, convert: () => Promise<unknown>) =>
-  runMigrations(db, playbackMigrationsPacked(convert), { dbName: "playback" });
 
 export const ensureIngestSchema = async (db: SQLiteDatabase) => {
   await applyPerfPragmas(db);

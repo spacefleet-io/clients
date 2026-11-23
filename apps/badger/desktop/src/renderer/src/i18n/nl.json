@@ -93,6 +93,7 @@
       "continueInBrowser": "Rond het inloggen af in je browser. Badger komt daarna terug.",
       "errorStart": "Inloggen kon niet starten. Probeer het opnieuw.",
       "errors": {
+        "no_account": "Er is nog geen SpaceFleet-account met dit e-mailadres.",
         "email_unverified": "Het e-mailadres van dit account is niet bevestigd. Bevestig het bij de aanbieder, of log in met je e-mailadres en wachtwoord.",
         "email_domain_disallowed": "Met dit e-mailadres kan geen account worden aangemaakt.",
         "account_deletion_pending": "Dit account wordt binnenkort verwijderd.",
@@ -199,19 +200,6 @@
     "openingImport": "Media-import openen…"
   },
   "library": {
-    "export": {
-      "submittedToast_one": "{{count}} bestand wordt opgeslagen in {{folder}}",
-      "submittedToast_other": "{{count}} bestanden worden opgeslagen in {{folder}}",
-      "errors": {
-        "insufficient_disk_space": "Niet genoeg vrije ruimte in die map: {{required}} nodig, {{free}} vrij.",
-        "not_authenticated": "Log opnieuw in om bestanden te downloaden.",
-        "library_db_not_open": "Je bibliotheek is nog niet geopend. Probeer het zo opnieuw.",
-        "dest_not_writable": "Opslaan in die map lukt niet. Kies een andere.",
-        "dest_not_picked": "Kies de map opnieuw.",
-        "nothing_to_export": "Er is nog niets om te downloaden.",
-        "generic": "Downloaden mislukt: {{reason}}"
-      }
-    },
     "showDelisting": {
       "title": "Afleveringen niet meer in de catalogus",
       "description": "De catalogus vermeldt deze afleveringen van {{show}} niet meer. Wil je ze uit je mediatheek verwijderen?",
@@ -244,15 +232,7 @@
     "manageKey": "Mediatheeksleutel beheren",
     "browseTitle": "Bladeren",
     "browseSubtitle": "Media zonder geüploade bestanden wordt grijs weergegeven, maar je kunt de metadata nog steeds bekijken.",
-    "stats": {
-      "movie_one": "{{count}} film",
-      "movie_other": "{{count}} films",
-      "movie_many": "{{count}} films",
-      "tv_one": "{{count}} serie",
-      "tv_other": "{{count}} series",
-      "tv_many": "{{count}} series",
-      "shownOf": "{{shown}} van {{total}}"
-    },
+    "searchPlaceholder": "Titels zoeken…",
     "sort": {
       "title": "Sorteren op",
       "by": "Veld",
@@ -285,41 +265,47 @@
       "clear": "Filters wissen",
       "genres": {
         "title": "Genres",
+        "placeholder": "Kies genres om de resultaten te verfijnen.",
         "search": "Genres zoeken…",
         "empty": "Geen genres gevonden voor deze zoekopdracht."
       },
       "actors": {
         "title": "Acteurs",
+        "placeholder": "Kies acteurs om de resultaten te verfijnen.",
         "search": "Acteurs zoeken…",
         "empty": "Geen acteurs gevonden voor deze zoekopdracht."
       },
       "title": "Filteren",
       "clearShort": "Wissen",
-      "more": "+{{count}} meer",
       "reset": "Resetten",
       "apply": "Toepassen",
       "qualities": {
         "title": "Kwaliteit",
+        "placeholder": "Elke kwaliteit",
         "search": "Kwaliteit zoeken",
         "empty": "Geen kwaliteit gevonden"
       },
       "directors": {
         "title": "Regie",
+        "placeholder": "Elke regisseur",
         "search": "Regisseur zoeken",
         "empty": "Geen regisseur gevonden"
       },
       "audioLanguages": {
         "title": "Audiotaal",
+        "placeholder": "Elke audiotaal",
         "search": "Taal zoeken",
         "empty": "Geen taal gevonden"
       },
       "subtitleLanguages": {
         "title": "Ondertiteltaal",
+        "placeholder": "Elke ondertiteltaal",
         "search": "Taal zoeken",
         "empty": "Geen taal gevonden"
       },
       "watchStates": {
         "title": "Kijkstatus",
+        "placeholder": "Elke status",
         "search": "Status zoeken",
         "empty": "Geen status gevonden"
       },
@@ -407,7 +393,7 @@
       "compact": "Ontbrekend verbergen",
       "subtitle": "Alleen afspeelbare items tonen."
     },
-    "loading": "Bibliotheek wordt geladen…",
+    "loading": "Mediatheek laden…",
     "syncing": "Mediatheek synchroniseren…",
     "offline": {
       "indicator": "Offline",
@@ -650,6 +636,8 @@
     }
   },
   "playlists": {
+    "title": "Afspeellijsten",
+    "subtitle": "Groepeer titels in afspeellijsten waar je altijd naar terug kunt.",
     "manageTitle": "Je afspeellijsten",
     "manageSubtitle": "Favorieten is er altijd. Al het andere beheer je zelf.",
     "newPlaceholder": "Naam nieuwe afspeellijst",
@@ -711,36 +699,9 @@
         "original": "Origineel"
       }
     },
-    "offlineContent": {
-      "total": "Bewaard op deze computer",
-      "empty": "Er is niets op deze computer bewaard om offline te kijken. Gebruik ‘Offline opslaan’ bij een film, seizoen of aflevering om die hier te bewaren.",
-      "remove": "{{name}} van deze computer verwijderen",
-      "removeAll": "Alles verwijderen",
-      "expand": "Inhoud van {{name}} tonen of verbergen",
-      "confirmTitle": "Alles wat offline bewaard is verwijderen?",
-      "confirmBody": "Alle films en afleveringen die op deze computer bewaard zijn, worden ervan verwijderd en de ruimte komt meteen vrij. Ze blijven in je bibliotheek en spelen vanaf je server zodra je online bent.",
-      "confirmCancel": "Annuleren",
-      "confirmRemove": "Alles verwijderen",
-      "season": "Seizoen {{n}}",
-      "episodeNumber": "S{{season}} · A{{episode}}",
-      "unknownTitle": "Een titel die niet meer in je bibliotheek staat",
-      "unknownEpisode": "Aflevering",
-      "removeFailed": "Kon niet van deze computer verwijderd worden. Probeer het opnieuw."
-    },
-    "exportAll": {
-      "title": "Alles downloaden",
-      "help": "Sla je hele bibliotheek op als videobestanden in een map naar keuze, in de beste kwaliteit die je hebt. Films komen in Movies, series in Shows.",
-      "button": "Alles downloaden",
-      "moreOptions": "Meer opties",
-      "confirmTitle": "Alles downloaden?",
-      "confirmBody_one": "{{count}} bestand, in totaal {{size}}, wordt opgeslagen in {{folder}}.",
-      "confirmBody_other": "{{count}} bestanden, in totaal {{size}}, worden opgeslagen in {{folder}}.",
-      "confirm": "Downloaden",
-      "cancel": "Annuleren"
-    },
     "offlineExportFormat": {
-      "label": "Bestandsformaat",
-      "help": "Formaat van de videobestanden die je downloadt. MKV behoudt elk type ondertiteling. MP4 werkt op meer apparaten, maar kan geen PGS- of ASS-ondertiteling bevatten; die sporen worden weggelaten.",
+      "label": "Formaat voor offline export",
+      "help": "Container die wordt gebruikt als je media op je apparaat opslaat. MKV is verliesvrij voor elk type ondertiteling. MP4 werkt op meer apparaten, maar kan geen PGS- of ASS-ondertiteling bevatten; die sporen worden dan overgeslagen.",
       "mkv": "MKV (aanbevolen)",
       "mp4": "MP4",
       "mp4Warning": "MP4 kan geen PGS- of ASS-ondertiteling bevatten. SRT- en VTT-ondertiteling wordt omgezet naar mov_text en blijft behouden."
@@ -975,7 +936,6 @@
       "playback": "Afspelen",
       "trailers": "Trailers",
       "downloads": "Downloads",
-      "offlineContent": "Offline inhoud beheren",
       "transcoding": "Transcoderen",
       "metadata": "Metadata",
       "performance": "Prestaties",
@@ -992,7 +952,6 @@
       "playback": "Standaardkwaliteit en wat er gebeurt tijdens het afspelen.",
       "trailers": "Waar trailers vandaan komen en in welke talen ze worden opgehaald.",
       "downloads": "Hoe offline kopieën op je apparaat worden opgeslagen.",
-      "offlineContent": "Wat op deze computer bewaard is om offline te kijken, en hoeveel ruimte het inneemt.",
       "transcoding": "In welke kwaliteiten en codecs je mediatheek wordt verwerkt.",
       "metadata": "Waar de gegevens over titels en artwork vandaan komen.",
       "performance": "Hardwareversnelling en het uitbesteden van verwerking.",
@@ -1464,15 +1423,12 @@
       "ffmpegLogs": "FFmpeg-logs",
       "offlineDownloading": "Offline downloaden",
       "offlineSavedOffline": "Offline opgeslagen",
-      "exportDownloading": "Bestand downloaden",
-      "exportSaved": "Opgeslagen in map",
       "help": {
         "sourceIngest": "We splitsen het originele bestand op in streamklare blokken, zodat het afspelen snel start.",
         "transcode": "We maken extra kwaliteitsversies, zodat het afspelen soepel blijft op tragere verbindingen.",
         "tracks": "We maken audio- en ondertitelsporen klaar, zodat kijkers van taal en ondertiteling kunnen wisselen.",
         "job": "Deze stap maakt mediabestanden klaar voor afspelen en synchronisatie.",
-        "offlineDownloading": "We halen elk blok op, ontsleutelen het en voegen alle sporen samen tot één bestand dat je offline kunt afspelen.",
-        "exportDownloading": "We halen de beste kwaliteit die je hebt op, ontsleutelen die en slaan één videobestand met alle sporen op in de gekozen map."
+        "offlineDownloading": "We halen elk blok op, ontsleutelen het en voegen alle sporen samen tot één bestand dat je offline kunt afspelen."
       }
     },
     "transcodePlan": "Transcodeplan",

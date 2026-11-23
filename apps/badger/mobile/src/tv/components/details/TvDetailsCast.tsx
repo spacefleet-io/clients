@@ -1,12 +1,12 @@
 import React, { memo } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
-import type { TvViewInstance } from "@space/mobile-shell/tv/tvViewInstance";
+import type { TvViewInstance } from "../../lib/tvViewInstance";
 import type { MediaCastMember } from "@space/shared/libraryTypes";
 import { MediaArtwork } from "../../../components/MediaArtwork";
 import { initials } from "../../lib/detailsMedia";
-import { useTvStyles } from "@space/mobile-shell/tv/tvScale";
+import { useTvStyles } from "../../lib/tvScale";
 import { TV_COLOR, TV_FONT } from "../../ui";
-import { TvFocusable } from "@space/mobile-shell/tv/TvFocusable";
+import { TvFocusable } from "../TvFocusable";
 
 type Props = {
   cast: readonly MediaCastMember[];

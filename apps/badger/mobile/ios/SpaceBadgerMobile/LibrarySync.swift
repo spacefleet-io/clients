@@ -1,14 +1,14 @@
-import Compression
 import CryptoKit
 import Foundation
 import React
 
 /// iOS counterpart of the Android `LibrarySyncModule` (apps/badger/mobile/android/.../LibrarySyncModule.kt).
-/// Same JS contract (`src/native/LibrarySync.ts`): saved-copy (snapshot) encrypt/decrypt, whole-file + per-chunk
+/// Same JS contract (`src/native/LibrarySync.ts`): library snapshot encrypt/decrypt, whole-file + per-chunk
 /// SHA-256, and the storage-tunnel `upload.data` frame builder, all off the JS thread.
 ///
 /// Wire format of an encrypted file is `iv(12) || ciphertext || tag(16)` (AES-256-GCM), which is exactly
-/// CryptoKit's `AES.GCM.SealedBox.combined`.
+/// CryptoKit's `AES.GCM.SealedBox.combined`. CryptoKit has no streaming GCM, so unlike Android the whole
+/// file is processed in one shot (the input is memory-mapped; library snapshots are a few MB).
 @objc(LibrarySync)
 final class LibrarySync: RCTEventEmitter {
   /// Written on RN's observer thread, read from `run`'s background queue.
@@ -21,13 +21,6 @@ final class LibrarySync: RCTEventEmitter {
   }
 
   override class func requiresMainQueueSetup() -> Bool { false }
-
-  override init() {
-    super.init()
-    // Vault v4: op page files a previous process left (its JS never unlinked them) go at module start.
-    let cutoff = Date().addingTimeInterval(-2)
-    DispatchQueue.global(qos: .utility).async { LibraryOpsPage.sweep(olderThan: cutoff) }
-  }
 
   override func supportedEvents() -> [String]! { ["librarySyncProgress"] }
 
@@ -79,112 +72,77 @@ final class LibrarySync: RCTEventEmitter {
     return SymmetricKey(data: raw)
   }
 
+  private func readSource(_ path: String) throws -> Data {
+    guard FileManager.default.fileExists(atPath: path) else { throw SyncError(code: "SOURCE_MISSING") }
+    return try Data(contentsOf: URL(fileURLWithPath: path), options: .alwaysMapped)
+  }
+
+  private func writeOutput(_ data: Data, to path: String) throws {
+    let url = URL(fileURLWithPath: path)
+    try FileManager.default.createDirectory(
+      at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+    try data.write(to: url, options: .atomic)
+  }
+
   /// JS numbers arrive as Doubles; `Int(_:)` traps on NaN/infinite/out-of-range values.
   private func nonNegativeInt(_ value: Double) throws -> Int {
     guard value.isFinite, value >= 0, value < Double(Int.max) else { throw SyncError(code: "INVALID_ARGUMENT") }
     return Int(value)
   }
 
-  private func snapshotResult(_ result: SnapshotCodec.Result, startedAt: Date) -> [String: Any] {
-    [
-      "dbBytes": result.dbBytes,
-      "storedBytes": result.storedBytes,
-      "compressed": result.compressed,
-      "ms": Int(Date().timeIntervalSince(startedAt) * 1000),
-    ]
+  private func decrypt(_ combined: Data, key: SymmetricKey) throws -> Data {
+    guard combined.count >= 12 else { throw SyncError(code: "INVALID_IV") }
+    return try AES.GCM.open(try AES.GCM.SealedBox(combined: combined), using: key)
   }
 
-  /// SQLite file -> saved copy of the library (LIB-FMT-07 v2), on a background queue (LIB-SYNC-14): the database
-  /// never crosses into JS.
-  @objc(encryptSnapshotFile:keyBase64:outputPath:resolve:reject:)
-  func encryptSnapshotFile(
-    _ dbPath: String, keyBase64: String, outputPath: String,
-    resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock
-  ) {
-    run("ENCRYPT_FAILED", resolve, reject) {
-      let startedAt = Date()
-      NSLog("[LibrarySync] snapshot.encrypt.start db=%@ output=%@", dbPath, outputPath)
-      let result = try SnapshotCodec.encrypt(
-        source: dbPath, key: try self.key(from: keyBase64), target: outputPath
-      ) { stage, done, total in self.emitProgress(stage, bytesRead: done, totalBytes: total) }
-      NSLog("[LibrarySync] snapshot.encrypt.done dbBytes=%d storedBytes=%d", result.dbBytes, result.storedBytes)
-      return self.snapshotResult(result, startedAt: startedAt)
-    }
-  }
-
-  /// Saved copy (v2 framed or v1 plain) -> SQLite file, decrypted and inflated on a background queue.
-  @objc(decryptSnapshotFile:keyBase64:dbPath:resolve:reject:)
-  func decryptSnapshotFile(
-    _ sourcePath: String, keyBase64: String, dbPath: String,
+  @objc(decryptBase64File:keyBase64:outputPath:resolve:reject:)
+  func decryptBase64File(
+    _ sourcePath: String, keyBase64: String, outputPath: String,
     resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock
   ) {
     run("DECRYPT_FAILED", resolve, reject) {
-      let startedAt = Date()
-      NSLog("[LibrarySync] snapshot.decrypt.start source=%@ db=%@", sourcePath, dbPath)
-      let result = try SnapshotCodec.decrypt(
-        source: sourcePath, key: try self.key(from: keyBase64), target: dbPath
-      ) { stage, done, total in self.emitProgress(stage, bytesRead: done, totalBytes: total) }
-      NSLog(
-        "[LibrarySync] snapshot.decrypt.done storedBytes=%d dbBytes=%d compressed=%d",
-        result.storedBytes, result.dbBytes, result.compressed ? 1 : 0)
-      return self.snapshotResult(result, startedAt: startedAt)
-    }
-  }
-
-  /// One stored library change (base64 envelope) -> its JSON text in the file at `targetPath`, opened on a background
-  /// queue (LIB-SYNC-14), plus `sliceEnds`: where to cut it into slices of about `sliceBytes` that each decode as
-  /// UTF-8. Same contract as Android, where one String of a 56 MB change threw OutOfMemoryError. Rejects with
-  /// `DECRYPT_FAILED` for a wrong key or broken envelope, otherwise with the frame error
-  /// (`corrupt_compressed_frame`, `unknown_compression_codec:N`): the messages the JS reader throws.
-  @objc(openOpPayloadToFile:keyBase64:targetPath:sliceBytes:resolve:reject:)
-  func openOpPayloadToFile(
-    _ payloadBase64: String, keyBase64: String, targetPath: String, sliceBytes: Double,
-    resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock
-  ) {
-    DispatchQueue.global(qos: .userInitiated).async {
-      let startedAt = Date()
-      do {
-        let slice = try self.nonNegativeInt(sliceBytes)
-        guard slice > 0 else { throw SyncError(code: "INVALID_ARGUMENT") }
-        guard let envelope = Data(base64Encoded: payloadBase64) else { throw SyncError(code: "DECRYPT_FAILED") }
-        let json = try SnapshotCodec.openPayload(envelope, key: try self.key(from: keyBase64))
-        let url = URL(fileURLWithPath: targetPath)
-        try FileManager.default.createDirectory(
-          at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
-        try json.write(to: url, options: .atomic)
-        let ends = SnapshotCodec.utf8SliceEnds(json, sliceBytes: slice)
-        let ms = Int(Date().timeIntervalSince(startedAt) * 1000)
-        NSLog(
-          "[LibrarySync] op.open.done storedBytes=%d jsonBytes=%d slices=%d ms=%d", envelope.count, json.count,
-          ends.count, ms)
-        resolve(["storedBytes": envelope.count, "jsonBytes": json.count, "sliceEnds": ends, "ms": ms])
-      } catch let error as SnapshotCodec.CodecError {
-        NSLog("[LibrarySync] op.open.failed %@", error.code)
-        reject("OPEN_FAILED", error.code, error)
-      } catch {
-        NSLog("[LibrarySync] op.open.failed %@", error.localizedDescription)
-        reject("OPEN_FAILED", "DECRYPT_FAILED", error)
+      let text = try self.readSource(sourcePath)
+      let key = try self.key(from: keyBase64)
+      guard let combined = Data(base64Encoded: text, options: .ignoreUnknownCharacters) else {
+        throw SyncError(code: "INVALID_IV")
       }
+      self.emitProgress("decrypt", bytesRead: 0, totalBytes: text.count)
+      try self.writeOutput(try self.decrypt(combined, key: key), to: outputPath)
+      self.emitProgress("decrypt", bytesRead: text.count, totalBytes: text.count)
+      return true
     }
   }
 
-  /// Bytes [start, end) of a UTF-8 file as text: one slice from `openOpPayloadToFile`.
-  @objc(readTextSlice:start:end:resolve:reject:)
-  func readTextSlice(
-    _ path: String, start: Double, end: Double,
+  @objc(decryptBinaryFile:keyBase64:outputPath:resolve:reject:)
+  func decryptBinaryFile(
+    _ sourcePath: String, keyBase64: String, outputPath: String,
     resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock
   ) {
-    run("READ_FAILED", resolve, reject) {
-      let from = try self.nonNegativeInt(start)
-      let to = try self.nonNegativeInt(end)
-      guard to >= from else { throw SyncError(code: "INVALID_RANGE") }
-      let handle = try FileHandle(forReadingFrom: URL(fileURLWithPath: path))
-      defer { try? handle.close() }
-      try handle.seek(toOffset: UInt64(from))
-      let bytes = try handle.read(upToCount: to - from) ?? Data()
-      guard bytes.count == to - from else { throw SyncError(code: "SHORT_READ") }
-      guard let text = String(data: bytes, encoding: .utf8) else { throw SyncError(code: "INVALID_UTF8") }
-      return text
+    run("DECRYPT_FAILED", resolve, reject) {
+      let combined = try self.readSource(sourcePath)
+      let key = try self.key(from: keyBase64)
+      self.emitProgress("decrypt", bytesRead: 0, totalBytes: combined.count)
+      try self.writeOutput(try self.decrypt(combined, key: key), to: outputPath)
+      self.emitProgress("decrypt", bytesRead: combined.count, totalBytes: combined.count)
+      return true
+    }
+  }
+
+  @objc(encryptBinaryFile:keyBase64:outputPath:resolve:reject:)
+  func encryptBinaryFile(
+    _ sourcePath: String, keyBase64: String, outputPath: String,
+    resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock
+  ) {
+    run("ENCRYPT_FAILED", resolve, reject) {
+      let plain = try self.readSource(sourcePath)
+      let key = try self.key(from: keyBase64)
+      self.emitProgress("encrypt", bytesRead: 0, totalBytes: plain.count)
+      guard let combined = try AES.GCM.seal(plain, using: key).combined else {
+        throw SyncError(code: "ENCRYPT_FAILED")
+      }
+      try self.writeOutput(combined, to: outputPath)
+      self.emitProgress("encrypt", bytesRead: plain.count, totalBytes: plain.count)
+      return true
     }
   }
 
@@ -269,182 +227,6 @@ final class LibrarySync: RCTEventEmitter {
           .takeUnretainedValue() as? String
       else { throw SyncError(code: "BLOB_STORE_FAILED") }
       return ["blobId": blobId, "size": message.count]
-    }
-  }
-}
-
-/// A saved copy of the library on disk (storage format v2, LIB-FMT-07), same bytes as Android's `SnapshotCodec.kt`:
-///
-///     stored = iv(12) || AES-256-GCM(frame) || tag(16)
-///     frame  = 00 5A 01 || raw DEFLATE (RFC 1951) of the SQLite file
-///
-/// `COMPRESSION_ZLIB` is raw DEFLATE, the stream every reader inflates (desktop `node:zlib`, `fflate`, Android
-/// `Inflater(nowrap)`). Compression streams from the memory-mapped file; CryptoKit has no streaming GCM, so the
-/// compressed frame (a fraction of the database) is sealed and opened in one shot. Decrypt also reads a v1 copy
-/// (no frame) and writes it through unchanged. Output goes to `<target>.partial`, then is renamed over `target`.
-enum SnapshotCodec {
-  struct Result {
-    let dbBytes: Int
-    let storedBytes: Int
-    let compressed: Bool
-  }
-
-  struct CodecError: LocalizedError {
-    let code: String
-    var errorDescription: String? { code }
-  }
-
-  typealias Progress = (_ stage: String, _ done: Int, _ total: Int) -> Void
-
-  static let frameHeader: [UInt8] = [0x00, 0x5A, 0x01]
-  private static let bufferSize = 64 * 1024
-
-  static func encrypt(source: String, key: SymmetricKey, target: String, progress: Progress = { _, _, _ in })
-    throws -> Result
-  {
-    guard FileManager.default.fileExists(atPath: source) else { throw CodecError(code: "SOURCE_MISSING") }
-    let db = try Data(contentsOf: URL(fileURLWithPath: source), options: .alwaysMapped)
-    var frame = Data(frameHeader)
-    progress("encrypt", 0, db.count)
-    try process(COMPRESSION_STREAM_ENCODE, input: db, from: 0, stage: "encrypt", progress: progress) {
-      frame.append($0)
-    }
-    guard let combined = try AES.GCM.seal(frame, using: key).combined else {
-      throw CodecError(code: "ENCRYPT_FAILED")
-    }
-    try replace(target) { try combined.write(to: URL(fileURLWithPath: $0)) }
-    progress("encrypt", db.count, db.count)
-    return Result(dbBytes: db.count, storedBytes: combined.count, compressed: true)
-  }
-
-  static func decrypt(source: String, key: SymmetricKey, target: String, progress: Progress = { _, _, _ in })
-    throws -> Result
-  {
-    guard FileManager.default.fileExists(atPath: source) else { throw CodecError(code: "SOURCE_MISSING") }
-    let stored = try Data(contentsOf: URL(fileURLWithPath: source), options: .alwaysMapped)
-    guard stored.count >= 12 else { throw CodecError(code: "INVALID_IV") }
-    progress("decrypt", 0, stored.count)
-    let plain = try AES.GCM.open(try AES.GCM.SealedBox(combined: stored), using: key)
-    let compressed = plain.count >= frameHeader.count && plain[plain.startIndex] == frameHeader[0]
-      && plain[plain.startIndex + 1] == frameHeader[1]
-    var written = 0
-    try replace(target) { partial in
-      guard compressed else {
-        try plain.write(to: URL(fileURLWithPath: partial))
-        written = plain.count
-        return
-      }
-      let codec = plain[plain.startIndex + 2]
-      guard codec == frameHeader[2] else { throw CodecError(code: "unknown_compression_codec:\(codec)") }
-      FileManager.default.createFile(atPath: partial, contents: nil)
-      let handle = try FileHandle(forWritingTo: URL(fileURLWithPath: partial))
-      defer { try? handle.close() }
-      try process(COMPRESSION_STREAM_DECODE, input: plain, from: frameHeader.count, stage: nil, progress: progress) {
-        try handle.write(contentsOf: $0)
-        written += $0.count
-      }
-    }
-    progress("decrypt", stored.count, stored.count)
-    return Result(dbBytes: written, storedBytes: stored.count, compressed: compressed)
-  }
-
-  /// One library change as stored (LIB-FMT-07): `iv(12) || AES-256-GCM(frame or v1 plain JSON) || tag(16)` -> the
-  /// change's JSON bytes. Throws the cipher's error for a wrong key, `CodecError` for a frame this build cannot read.
-  static func openPayload(_ envelope: Data, key: SymmetricKey) throws -> Data {
-    let plain = try AES.GCM.open(try AES.GCM.SealedBox(combined: envelope), using: key)
-    guard plain.count >= frameHeader.count, plain[plain.startIndex] == frameHeader[0],
-      plain[plain.startIndex + 1] == frameHeader[1]
-    else { return plain }
-    let codec = plain[plain.startIndex + 2]
-    guard codec == frameHeader[2] else { throw CodecError(code: "unknown_compression_codec:\(codec)") }
-    var json = Data(capacity: plain.count * 4)
-    try process(COMPRESSION_STREAM_DECODE, input: plain, from: frameHeader.count, stage: nil, progress: { _, _, _ in }) {
-      json.append($0)
-    }
-    return json
-  }
-
-  /// Exclusive ends of slices of about `sliceBytes` of `text`, each at a UTF-8 character start (not a `10xxxxxx`
-  /// continuation byte), the last being the whole length; the same cuts as Android's `Utf8SliceSink`.
-  static func utf8SliceEnds(_ text: Data, sliceBytes: Int) -> [Int] {
-    var ends: [Int] = []
-    var position = sliceBytes
-    while position < text.count {
-      if text[text.startIndex + position] & 0xC0 != 0x80 {
-        ends.append(position)
-        position += sliceBytes
-      } else {
-        position += 1
-      }
-    }
-    if !text.isEmpty { ends.append(text.count) }
-    return ends
-  }
-
-  /// Writes through `<target>.partial` and renames it over `target`, so a failure never leaves a truncated file.
-  private static func replace(_ target: String, _ write: (String) throws -> Void) throws {
-    let url = URL(fileURLWithPath: target)
-    try FileManager.default.createDirectory(
-      at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
-    let partial = target + ".partial"
-    try? FileManager.default.removeItem(atPath: partial)
-    do {
-      try write(partial)
-      if FileManager.default.fileExists(atPath: target) {
-        _ = try FileManager.default.replaceItemAt(url, withItemAt: URL(fileURLWithPath: partial))
-      } else {
-        try FileManager.default.moveItem(atPath: partial, toPath: target)
-      }
-    } catch {
-      try? FileManager.default.removeItem(atPath: partial)
-      throw error
-    }
-  }
-
-  /// Runs a raw-DEFLATE stream over `input[from...]`, handing each output buffer to `sink`. `stage` reports input
-  /// progress (encode); decode reports nothing per buffer.
-  private static func process(
-    _ operation: compression_stream_operation, input: Data, from offset: Int, stage: String?,
-    progress: Progress, sink: (Data) throws -> Void
-  ) throws {
-    let stream = UnsafeMutablePointer<compression_stream>.allocate(capacity: 1)
-    defer { stream.deallocate() }
-    guard compression_stream_init(stream, operation, COMPRESSION_ZLIB) == COMPRESSION_STATUS_OK else {
-      throw CodecError(code: "COMPRESSION_INIT_FAILED")
-    }
-    defer { compression_stream_destroy(stream) }
-    let output = UnsafeMutablePointer<UInt8>.allocate(capacity: bufferSize)
-    defer { output.deallocate() }
-    let total = input.count - offset
-    var lastReportedPct = -1
-    try input.withUnsafeBytes { (raw: UnsafeRawBufferPointer) in
-      guard let base = raw.bindMemory(to: UInt8.self).baseAddress else { throw CodecError(code: "EMPTY_INPUT") }
-      stream.pointee.src_ptr = base + offset
-      stream.pointee.src_size = total
-      let flags = operation == COMPRESSION_STREAM_ENCODE ? Int32(COMPRESSION_STREAM_FINALIZE.rawValue) : 0
-      while true {
-        stream.pointee.dst_ptr = output
-        stream.pointee.dst_size = bufferSize
-        let status = compression_stream_process(stream, flags)
-        let produced = bufferSize - stream.pointee.dst_size
-        if status == COMPRESSION_STATUS_ERROR {
-          throw CodecError(code: operation == COMPRESSION_STREAM_DECODE ? "corrupt_compressed_frame" : "COMPRESSION_FAILED")
-        }
-        if produced > 0 { try sink(Data(bytes: output, count: produced)) }
-        if let stage, total > 0 {
-          let consumed = total - stream.pointee.src_size
-          let pct = consumed * 100 / total
-          if pct / 5 != lastReportedPct / 5 {
-            lastReportedPct = pct
-            progress(stage, consumed, total)
-          }
-        }
-        if status == COMPRESSION_STATUS_END { return }
-        // Decode with all input consumed and nothing produced: the deflate stream is truncated.
-        if operation == COMPRESSION_STREAM_DECODE && produced == 0 && stream.pointee.src_size == 0 {
-          throw CodecError(code: "corrupt_compressed_frame")
-        }
-      }
     }
   }
 }

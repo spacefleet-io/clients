@@ -170,7 +170,7 @@ describe("fetchDeps", () => {
   });
 
   // @req REL-DEPS-05[ci]
-  it("without a token, a 404 from the public GitHub releases says the version is not published and names the token route", async () => {
+  it("without a token, a 404 from the private GitHub releases names the missing token, not a missing bundle", async () => {
     const fetchImpl: FetchLike = async () => new Response("", { status: 404 });
     const error = (await fetchDeps({ targetId: "linux-x64", repoRoot: tempDir(), cacheDir: tempDir(), fetchImpl, ...plain }).catch((caught) => caught)) as Error;
     expect(error.message.startsWith(`download_failed:404:${DEFAULT_RELEASES_URL}/`)).toBe(true);

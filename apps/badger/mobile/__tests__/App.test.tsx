@@ -71,14 +71,6 @@ jest.mock('@space/mobile-shell/account-language-prompt', () => ({
   AccountLanguagePromptHost: () => null,
 }));
 
-// REL-UPD-06: the self-update dialogs import the shell's setup step (lucide icons, native modules); a shell module like
-// the others above.
-jest.mock('@space/mobile-self-update', () => ({
-  SelfUpdateConsent: () => null,
-  SelfUpdateDialog: () => null,
-  startSelfUpdate: jest.fn(async () => undefined),
-}));
-
 jest.mock('../src/lib/skyMode', () => ({
   loadLowRamDevice: jest.fn(async () => false),
   useSkyMode: () => 'animated',
