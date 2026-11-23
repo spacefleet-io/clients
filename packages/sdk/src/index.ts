@@ -53,34 +53,15 @@ export const onApiError = (listener: (error: ApiError) => void): (() => void) =>
   };
 };
 
-/**
- * REL-LOG-28: the API, the metadata service and the storage gateways answer every request with a random id the server
- * made (`x-request-id`), the one on the server's request line for that call. A client reads it only to write it on its
- * own local log line about a failed call (REL-LOG-31), never into an error report.
- */
-export const REQUEST_ID_HEADER = "x-request-id";
-
-// The server mints a UUID; anything else a proxy or captive portal put there is not ours and is not logged.
-const REQUEST_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-/** The server's request id of an answer, or null when it has none (or something that is not one). */
-export const requestIdOf = (response: Pick<Response, "headers"> | null | undefined): string | null => {
-  const value = response?.headers?.get(REQUEST_ID_HEADER)?.trim() ?? "";
-  return REQUEST_ID_PATTERN.test(value) ? value.toLowerCase() : null;
-};
-
 /** A non-2xx answer from the API. `payload` is the JSON body (`{ error }` for every route). */
 export class ApiError extends Error {
   status: number;
   payload: ApiErrorPayload;
-  /** The server's `x-request-id` for this answer (REL-LOG-28); null when there was no answer or it carried none. */
-  requestId: string | null;
 
-  constructor(status: number, payload: ApiErrorPayload, requestId: string | null = null) {
+  constructor(status: number, payload: ApiErrorPayload) {
     super(payload.error ?? "request_failed");
     this.status = status;
     this.payload = payload;
-    this.requestId = requestId;
     for (const listener of apiErrorListeners) {
       try {
         listener(this);
@@ -90,16 +71,6 @@ export class ApiError extends Error {
     }
   }
 }
-
-/** The `ApiError` of a hand-written fetch's non-2xx answer: its JSON body (`{}` when not JSON) and its request id. */
-export const apiErrorFromResponse = async (response: Response): Promise<ApiError> => {
-  const payload = (await response.json().catch(() => ({}))) as unknown;
-  return new ApiError(
-    response.status,
-    payload && typeof payload === "object" && !Array.isArray(payload) ? (payload as ApiErrorPayload) : {},
-    requestIdOf(response)
-  );
-};
 
 export type SdkClientOptions = {
   /** API origin, with `/api` when it sits behind the website's proxy. No trailing slash needed. */
@@ -164,12 +135,12 @@ export const unwrap = async <T>(call: PromiseLike<SdkResult<T>>): Promise<T> => 
   if (!response) throw error instanceof Error ? error : new ApiError(0, { error: "no_response" });
   if (!response.ok) {
     const payload = error && typeof error === "object" ? (error as ApiErrorPayload) : {};
-    throw new ApiError(response.status, payload, requestIdOf(response));
+    throw new ApiError(response.status, payload);
   }
   if (error !== undefined) throw error;
   if (response.status === 204) return undefined as T;
   if (!/json/i.test(response.headers.get("Content-Type") ?? "")) {
-    throw new ApiError(response.status, { error: "invalid_response" }, requestIdOf(response));
+    throw new ApiError(response.status, { error: "invalid_response" });
   }
   return data as T;
 };

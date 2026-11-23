@@ -29,9 +29,6 @@ export type PendingSync = {
   // publishes them only if the file still hashes to exactly this list.
   // Absent on records written before PR #143.
   chunkRefs?: string[];
-  // The op-stream version the snapshot was built in (LIB-FMT-13). Absent on records written before vault v4: those
-  // are version 3.
-  opStreamVersion?: number;
 };
 
 export type PendingOp = {

@@ -18,9 +18,8 @@
  * Side effects on success:
  *   - For each `removeFormatIds[i]`: forwards the format's initKey + every
  *     chunk key to `/storage/delete` via the runtime's storage gateway, then
- *     removes the SQLite row via `removeMediaFormat` (its chunk list goes
- *     with it: media_format_chunks rows cascade via the existing FK, or the
- *     packed list row once converted, LIB-FMT-11). Fail-loud on storage error: the
+ *     removes the SQLite row via `removeMediaFormat` (media_format_chunks
+ *     rows cascade via the existing FK). Fail-loud on storage error: the
  *     SQLite row is NOT removed, so the user can retry. A missing token
  *     defers cleanup to the storage GC (same policy as `deleteMedia`).
  *   - For each `addQualities[i]`: picks a source variant via

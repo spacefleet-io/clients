@@ -8,9 +8,6 @@
 //   the unstripped library, whose debug info and symbols still hold machine-specific paths: CMake's build directory
 //   .cxx/RelWithDebInfo/<hash of these flags>, and the source paths behind the names ThinLTO gives promoted symbols
 //   (react-native-reanimated). The NDK's own -Wl,--build-id=sha1 comes first, so this one wins.
-// The app module also leaves out the "Dependency metadata" signing block, the Google-encrypted dependency list the
-// Android Gradle plugin adds when it signs an APK: F-Droid's binary scanner fails the fdroiddata pipeline on it
-// (`check apk`: "Found extra signing block 'Dependency metadata'"), and only Google can read it.
 // Included builds (React Native's Gradle plugin) run this script too, with the property only on the top build.
 def top = gradle
 while (top.parent != null) top = top.parent
@@ -30,12 +27,6 @@ allprojects {
                 cmake.cppFlags.addAll(prefixMaps)
                 cmake.arguments.add("-DCMAKE_SHARED_LINKER_FLAGS=-Wl,--build-id=none")
             }
-        }
-    }
-    plugins.withId("com.android.application") {
-        androidComponents.finalizeDsl { android ->
-            android.dependenciesInfo.includeInApk = false
-            android.dependenciesInfo.includeInBundle = false
         }
     }
 }

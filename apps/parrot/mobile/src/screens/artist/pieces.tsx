@@ -54,11 +54,7 @@ const initials = (name: string) =>
     .map((word) => word[0]!.toUpperCase())
     .join("");
 
-/**
- * The photo edge to edge, fading into the sky at the bottom (Badger's title hero). The fade is drawn at the hero's
- * size in numbers, not "100%": when a large text size grew the hero after its first layout, a percentage fade stayed
- * at its first size and the photo showed unfaded below it (UX-A11Y-05).
- */
+/** The photo edge to edge, fading into the sky at the bottom (Badger's title hero). */
 export const ArtistHero = ({ artistId, name, page, width, height }: { artistId: string; name: string; page: ArtistPage; width: number; height: number }) => (
   <View testID="artist-hero" style={{ width, height }}>
     {page.photoWaiting ? (
@@ -78,7 +74,7 @@ export const ArtistHero = ({ artistId, name, page, width, height }: { artistId: 
         <Text style={[styles.initials, { fontSize: height / 3.2 }]}>{initials(name)}</Text>
       </View>
     ) : null}
-    <Svg testID="artist-hero-fade" style={StyleSheet.absoluteFill} width={width} height={height} pointerEvents="none">
+    <Svg style={StyleSheet.absoluteFill} width="100%" height="100%" pointerEvents="none">
       <Defs>
         <LinearGradient id="artistHeroFade" x1="0" y1="0" x2="0" y2="1">
           {HERO_FADE_STOPS.map((stop) => (
@@ -86,7 +82,7 @@ export const ArtistHero = ({ artistId, name, page, width, height }: { artistId: 
           ))}
         </LinearGradient>
       </Defs>
-      <Rect x={0} y={0} width={width} height={height} fill="url(#artistHeroFade)" />
+      <Rect x="0" y="0" width="100%" height="100%" fill="url(#artistHeroFade)" />
     </Svg>
   </View>
 );
