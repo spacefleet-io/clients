@@ -89,46 +89,6 @@ object SnapshotCodec {
   }
 
   /**
-   * Passes bytes through to [out] and records where text slices of about [sliceBytes] end: each end is the first
-   * position at or past the due size that starts a UTF-8 character (not a `10xxxxxx` continuation byte), so every
-   * slice decodes on its own. Only the bytes at a due position are looked at.
-   */
-  internal class Utf8SliceSink(private val out: OutputStream, private val sliceBytes: Long) : OutputStream() {
-    var written = 0L
-      private set
-    private var due = sliceBytes
-    private val ends = ArrayList<Long>()
-
-    override fun write(b: Int) = write(byteArrayOf(b.toByte()), 0, 1)
-
-    override fun write(b: ByteArray, off: Int, len: Int) {
-      // A due position whose character continued past the last write is still being looked for: start at 0.
-      var i = maxOf(due - written, 0L)
-      while (i < len) {
-        if ((b[off + i.toInt()].toInt() and 0xC0) != 0x80) {
-          ends.add(written + i)
-          due = written + i + sliceBytes
-          i += sliceBytes
-        } else {
-          i++
-        }
-      }
-      out.write(b, off, len)
-      written += len
-    }
-
-    /** Every slice end, the last one being the whole length; empty for an empty payload. */
-    fun sliceEnds(): LongArray = if (written == 0L) LongArray(0) else (ends + written).toLongArray()
-  }
-
-  data class OpenedPayload(
-    /** Bytes of the change's JSON text. */
-    val jsonBytes: Long,
-    /** Exclusive end of each text slice of the file, each at a UTF-8 character start; the last is [jsonBytes]. */
-    val sliceEnds: LongArray,
-  )
-
-  /**
    * SQLite file -> v2 stored copy at [target]. Writes `<target>.partial` and renames it, so a failure never leaves a
    * truncated copy where an upload would pick it up.
    */
@@ -244,45 +204,21 @@ object SnapshotCodec {
 
   /**
    * One library change as stored (LIB-FMT-07): `iv(12) || AES-256-GCM(frame or v1 plain JSON) || tag(16)` -> the
-   * change's JSON text in [target], inflated straight to the file, plus where to cut it into slices of about
-   * [sliceBytes] that each decode as UTF-8. A 3.5 MB stored change is ~56 MB of JSON (deflate packs repetitive JSON
-   * ~16:1); as one Java String that is 113 MB of UTF-16, which threw OutOfMemoryError on a 256 MB heap. Throws
-   * `IllegalArgumentException("INVALID_BLOB")` for a short envelope, the cipher's `AEADBadTagException` for a wrong
-   * key, and the frame errors [decrypt] throws; [target] is deleted on any failure.
+   * change's JSON bytes. A 2.8 MB change took ~12 s of the phone's script thread to open in JS (base64, GCM, fflate,
+   * UTF-8); here it runs on a worker thread. Throws `IllegalArgumentException("INVALID_BLOB")` for a short envelope,
+   * the cipher's `AEADBadTagException` for a wrong key, and the frame errors [decrypt] throws.
    */
-  fun openPayloadToFile(envelope: ByteArray, rawKey: ByteArray, target: File, sliceBytes: Int): OpenedPayload {
-    require(sliceBytes > 0) { "INVALID_SLICE" }
-    try {
-      target.parentFile?.mkdirs()
-      return BufferedOutputStream(FileOutputStream(target), BUFFER_SIZE).use { file ->
-        val sink = Utf8SliceSink(file, sliceBytes.toLong())
-        openPayloadInto(envelope, rawKey, sink)
-        OpenedPayload(jsonBytes = sink.written, sliceEnds = sink.sliceEnds())
-      }
-    } catch (error: Throwable) {
-      target.delete()
-      throw error
-    }
-  }
-
-  /**
-   * One stored change -> its JSON bytes streamed into [out] (the binary ops page, LibraryOpsPage, picks memory or a
-   * file per op). Only the compressed plaintext is held whole; the inflated JSON never is. Returns the JSON length.
-   * Throws as [openPayloadToFile].
-   */
-  fun openPayloadInto(envelope: ByteArray, rawKey: ByteArray, out: OutputStream): Long {
+  fun openPayload(envelope: ByteArray, rawKey: ByteArray): ByteArray {
     if (envelope.size <= IV_SIZE + TAG_BITS / 8) throw IllegalArgumentException("INVALID_BLOB")
     val cipher = Cipher.getInstance("AES/GCM/NoPadding")
     cipher.init(Cipher.DECRYPT_MODE, keySpec(rawKey), GCMParameterSpec(TAG_BITS, envelope, 0, IV_SIZE))
     val plain = cipher.doFinal(envelope, IV_SIZE, envelope.size - IV_SIZE)
-    val framed = plain.size >= FRAME_HEADER.size && plain[0] == FRAME_SENTINEL && plain[1] == FRAME_MARKER
-    if (!framed) {
-      out.write(plain, 0, plain.size)
-      return plain.size.toLong()
-    }
+    if (!(plain.size >= FRAME_HEADER.size && plain[0] == FRAME_SENTINEL && plain[1] == FRAME_MARKER)) return plain
     val codec = plain[2].toInt() and 0xff
     if (codec != FRAME_HEADER[2].toInt()) throw IllegalArgumentException("unknown_compression_codec:$codec")
-    return inflateInto(plain, FRAME_HEADER.size, out)
+    val out = java.io.ByteArrayOutputStream(plain.size * 4)
+    inflateInto(plain, FRAME_HEADER.size, out)
+    return out.toByteArray()
   }
 
   private fun inflateInto(bytes: ByteArray, offset: Int, out: OutputStream): Long {

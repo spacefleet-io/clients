@@ -10,29 +10,22 @@ export type ParrotChunkLoader = (chunk: ParrotChunkRef) => Promise<Uint8Array>;
 
 /**
  * Yields the plaintext bytes `start..end` (inclusive) of a file stored as chunks, chunk by chunk, so a player can
- * start before the whole song has arrived. While the current chunk is being sent, the next `ahead` chunks are fetched
- * (default 1), so at most `ahead + 1` chunks are held at once (PAR-PLAY-08).
+ * start before the whole song has arrived. The next chunk is fetched while the current one is being sent.
  */
 export async function* readParrotFileRange(
   chunks: readonly ParrotChunkRef[],
   start: number,
   end: number,
-  load: ParrotChunkLoader,
-  ahead = 1
+  load: ParrotChunkLoader
 ): AsyncGenerator<Uint8Array> {
   const needed = chunks.filter((chunk) => chunk.plainOffset + chunk.plainSize > start && chunk.plainOffset <= end);
-  const inFlight = 1 + Math.max(0, ahead);
-  const pending: Array<Promise<Uint8Array>> = [];
-  let requested = 0;
-  for (const chunk of needed) {
-    while (requested < needed.length && pending.length < inFlight) {
-      const loading = load(needed[requested]!);
-      // A consumer that stops early (the player seeking away) never awaits a prefetch: keep its failure quiet.
-      loading.catch(() => {});
-      pending.push(loading);
-      requested += 1;
-    }
-    const plain = await pending.shift()!;
+  let next = needed[0] ? load(needed[0]) : null;
+  for (let i = 0; i < needed.length; i += 1) {
+    const chunk = needed[i]!;
+    const plain = await next!;
+    next = needed[i + 1] ? load(needed[i + 1]!) : null;
+    // A consumer that stops early (the player seeking away) never awaits the prefetch: keep its failure quiet.
+    next?.catch(() => {});
     const from = Math.max(0, start - chunk.plainOffset);
     const to = Math.min(chunk.plainSize, end - chunk.plainOffset + 1);
     yield plain.subarray(from, to);

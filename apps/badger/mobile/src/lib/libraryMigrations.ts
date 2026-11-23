@@ -195,35 +195,6 @@ export const playbackMigrations: ReadonlyArray<Migration> = [
   },
 ];
 
-/**
- * The playback version at which the group holds packed chunk lists (LIB-FMT-11). A playback file at or above it is
- * converted; below it every chunk list is still one row per chunk.
- */
-export const PACKED_PLAYBACK_LAYOUT_VERSION = 6;
-
-/** The playback file's `user_version`: at `PACKED_PLAYBACK_LAYOUT_VERSION` or above it holds packed chunk lists. */
-export const readPlaybackLayoutVersion = async (db: SQLiteDatabase): Promise<number> => {
-  const [result] = await db.executeSql("PRAGMA user_version;");
-  return Number(result?.rows.length ? (result.rows.item(0)?.user_version ?? 0) : 0);
-};
-
-/**
- * The playback registry WITH the conversion step (LIB-FMT-12). `convert` packs the file in place (native
- * `convertChunkLists` on the app, idempotent); the runner then writes `user_version` 6. Run only on a switched account
- * (LIB-FMT-13): a version-3 build cannot open a file at 6. The build's declared support folds this registry so a
- * converted library opens.
- */
-export const playbackMigrationsPacked = (convert: () => Promise<unknown>): ReadonlyArray<Migration> => [
-  ...playbackMigrations,
-  {
-    version: PACKED_PLAYBACK_LAYOUT_VERSION,
-    description: "packed_chunk_lists",
-    up: async () => {
-      await convert();
-    },
-  },
-];
-
 export const ingestMigrations: ReadonlyArray<Migration> = [
   {
     version: 1,

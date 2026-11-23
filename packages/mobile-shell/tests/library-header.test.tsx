@@ -118,20 +118,15 @@ describe("the phone library header is layout A (UX-LIB-04)", () => {
     expect(calls).toEqual({ filter: 1, sort: 1, clear: 1 });
   });
 
-  // Contract changed on purpose (fix/staging-red-tests): the badge was capped at 1.5x, which UX-A11Y-05 forbids; UX-LIB-04
-  // now has the badge grow with the phone's text size, uncapped.
-  it("@req UX-LIB-04 at a large font size the buttons keep their size, the badge grows with the text uncapped and each tab sizes to its label", () => {
+  it("@req UX-LIB-04 at a large font size the buttons keep their size, the badge grows at most 1.5x and each tab sizes to its label", () => {
     mount(12);
     const sizes = ["library-filter-button", "library-sort-button"].map((id) => flat(byId(id)[0]!.props.style));
     const badge = byId("library-filter-button-badge")[0]!;
     const badgeText = badge.findByType("Text" as never);
     const tab = byId("library-tab-albums")[0]!;
-    console.info(SUITE, "large text", JSON.stringify({ sizes, badge: flat(badge.props.style), badgeText: { maxFontSizeMultiplier: badgeText.props.maxFontSizeMultiplier, allowFontScaling: badgeText.props.allowFontScaling }, tab: flat(tab.props.style) }));
+    console.info(SUITE, "large text", JSON.stringify({ sizes, badge: flat(badge.props.style), badgeText: badgeText.props.maxFontSizeMultiplier, tab: flat(tab.props.style) }));
     for (const size of sizes) expect(size).toMatchObject({ width: 42, height: 42 });
-    expect(badgeText.props.maxFontSizeMultiplier).toBeUndefined();
-    expect(badgeText.props.allowFontScaling).toBeUndefined();
-    // A pill whatever height the text gives it.
-    expect(flat(badge.props.style).borderRadius).toBeGreaterThanOrEqual(999);
+    expect(badgeText.props.maxFontSizeMultiplier).toBe(1.5);
     // The badge grows with a two-digit count and its text instead of clipping it.
     expect(flat(badge.props.style)).toMatchObject({ minWidth: 19, minHeight: 19 });
     expect(flat(badge.props.style).height).toBeUndefined();

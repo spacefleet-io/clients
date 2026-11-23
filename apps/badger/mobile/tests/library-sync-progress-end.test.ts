@@ -20,7 +20,6 @@ vi.mock("react-native", async () => ({ ...(await import("./setup/reactNativeMock
 vi.mock("react-native-fs", async () => ({ default: (await import("./library-db-fixture")).fakeRnfs }));
 vi.mock("react-native-sqlite-storage", () => ({ default: { enablePromise: () => undefined } }));
 vi.mock("react-native-quick-crypto", async () => (await import("./library-db-fixture")).quickCryptoMock());
-vi.mock("../src/lib/library/opsPage", async (importOriginal) => (await import("./library-db-fixture")).opsPageMock(await importOriginal()));
 vi.mock("@space/shared/api", async (importOriginal) =>
   (await import("./library-db-fixture")).sharedApiMock(await importOriginal<typeof SharedApi>())
 );
@@ -37,7 +36,7 @@ beforeEach(() => {
 
 describe("LibraryDb sync progress (LIB-SYNC-13)", () => {
   // @req LIB-SYNC-13[badger-mobile]
-  it("a run that finds the server newer says start, each page's size before it, each page, then end", async () => {
+  it("a run that finds the server newer says start, each page, then end", async () => {
     setServer({
       version: 6,
       snapshotVersion: 1,
@@ -52,12 +51,6 @@ describe("LibraryDb sync progress (LIB-SYNC-13)", () => {
     await settle(db);
     expect(events[0]).toEqual({ kind: "start", fromVersion: 2, toVersion: 6 });
     expect(events.filter((event) => event.kind === "page").at(-1)).toEqual({ kind: "page", version: 6 });
-    events.forEach((event, index) => {
-      if (event.kind !== "page") return;
-      const before = events[index - 1];
-      expect(before?.kind, "each page is announced with its size before its download").toBe("fetch");
-      expect(before?.kind === "fetch" && before.bytes).toBeGreaterThan(0);
-    });
     expect(events.at(-1), "the run's last word is its end").toEqual({ kind: "end", error: null });
     expect(events.filter((event) => event.kind === "end")).toHaveLength(1);
   });

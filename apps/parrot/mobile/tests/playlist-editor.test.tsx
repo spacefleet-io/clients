@@ -60,7 +60,7 @@ vi.mock("react-native", async () => {
 });
 vi.mock("lucide-react-native", () =>
   Object.fromEntries(
-    ["ArrowDownToLine", "CircleCheck", "Disc3", "FileAudio", "Heart", "HeartOff", "ListEnd", "ListMusic", "ListPlus", "ListX", "MicVocal", "Pencil", "Plus", "Sparkles", "Trash2", "X"].map((name) => [name, () => null])
+    ["ArrowDownToLine", "CircleCheck", "Disc3", "FileAudio", "Heart", "HeartOff", "ListMusic", "ListPlus", "ListX", "MicVocal", "Pencil", "Plus", "Sparkles", "Trash2", "X"].map((name) => [name, () => null])
   )
 );
 vi.mock("react-native-quick-crypto", () => ({ default: { randomUUID: () => `uuid-${(fake.uuid += 1)}` } }));
@@ -361,7 +361,7 @@ describe("the phone's playlist editing", () => {
     await press(one("song-go-to-artist"));
     expect(went).toEqual(["album", "artist"]);
 
-    // Save offline (PAR-OFFL-01) keeps the song itself.
+    // Keep on this phone (PAR-OFFL-01) keeps the song itself.
     await open();
     await press(one("song-keep"));
     log("kept", { keeps: fake.keeps });
@@ -378,46 +378,6 @@ describe("the phone's playlist editing", () => {
     expect(byTestId("song-go-to-album")).toHaveLength(0);
     expect(byTestId("song-go-to-artist")).toHaveLength(0);
     expect(byTestId("song-sheet-artist")).toHaveLength(0);
-  });
-
-  it("@req PAR-CARD-02[parrot] a song row's sheet adds the song to Up next; a song already there is not added again and the notice says so", async () => {
-    // The fake player's Up next, as `queueTracks` answers: how many songs it added (0: already playing or up next).
-    const upNext: string[] = [];
-    const onAddToQueue = async () => {
-      if (upNext.includes(NOOK.id)) return 0;
-      upNext.push(NOOK.id);
-      return 1;
-    };
-    const open = () => run(() => ed().openSong(NOOK, undefined, { onAddToQueue }));
-    await open();
-    const sheet = tree.root.findAll((node) => String(node.type) === "MobileBottomSheet" && node.props.visible)[0]!;
-    const rows = sheet.findAll((node) => typeof node.type === "string" && typeof node.props.testID === "string" && node.props.accessibilityRole === "button").map((node) => node.props.testID as string);
-    log("queue-sheet", { rows });
-    // Add to queue comes first after the heart, where a card lists it before the go-to and playlist rows.
-    expect(rows.slice(0, 3)).toEqual(["song-like", "song-add-to-queue", "song-add-to"]);
-    expect(labels("song-add-to-queue")).toEqual([SHELL_EN["card.addToQueue"]]);
-    await press(one("song-add-to-queue"));
-    log("queued-once", { upNext, notice: notice() });
-    expect(byTestId("song-sheet")).toHaveLength(0);
-    expect(upNext).toEqual([NOOK.id]);
-    expect(notice()).toEqual([]);
-
-    await open();
-    await press(one("song-add-to-queue"));
-    log("queued-twice", { upNext, notice: notice() });
-    expect(upNext).toEqual([NOOK.id]);
-    expect(notice()).toEqual(["info:Already in Up next"]);
-
-    // In French the row and the notice read the shared strings.
-    fake.language = "fr";
-    await open();
-    expect(labels("song-add-to-queue")).toEqual([SHELL_FR["card.addToQueue"]]);
-    await press(one("song-add-to-queue"));
-    expect(notice()).toEqual([`info:${SHELL_FR["card.alreadyInUpNext"]}`]);
-
-    // A sheet opened without a queue (the Now playing song's) has no Add to queue.
-    await run(() => ed().openSong(FABLE));
-    expect(byTestId("song-add-to-queue")).toHaveLength(0);
   });
 
   it("draws a page's actions sheet with its destructive row last, and closes it on Back", async () => {

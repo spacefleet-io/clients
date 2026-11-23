@@ -1,8 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { AppState, type AppStateStatus } from "react-native";
 import type { MediaDetails, MediaRow, PlaylistRow } from "@space/shared/libraryTypes";
-import { ApiError, getApiBaseUrl, getSystemContract, getSystemContractIssue } from "@space/shared/api";
-import { libraryReadOpStreamVersion, readLibraryMeta } from "../lib/library/libraryReads";
+import { ApiError, getApiBaseUrl, getLibraryMeta, getSystemContract, getSystemContractIssue } from "@space/shared/api";
 import type { LibraryMeta, SystemContract } from "@space/shared/api";
 import type { TrackPrefs, TrackPrefsPatch } from "@space/shared/trackPrefs";
 import { LibraryFormatTooNewError } from "@space/library-db-definition";
@@ -93,7 +92,7 @@ type LibraryStatusValue = {
    */
   settled: boolean;
   /**
-   * What the library sync is doing (LIB-SYNC-13): the tab bar's "Updating media library…" sign with its progress, then the
+   * What the library sync is doing (LIB-SYNC-13): the tab bar's "Updating library…" sign with its progress, then the
    * short result ("12 new episodes"), or the failure. Every sync trigger (cold start, back to the front, the live
    * stream, pull-to-refresh) shows here; the saved library stays usable throughout.
    */
@@ -741,7 +740,7 @@ export const LibraryProvider = ({ children }: { children: React.ReactNode }) => 
           // answer is only used once the contract verdict let the load go on.
           let metaError: unknown = null;
           const metaStartedAt = Date.now();
-          const metaRequest = withNetworkTimeout(readLibraryMeta(token), PREFLIGHT_TIMEOUT_MS, "library meta").catch((err) => {
+          const metaRequest = withNetworkTimeout(getLibraryMeta(token), PREFLIGHT_TIMEOUT_MS, "library meta").catch((err) => {
             if (err instanceof ApiError && err.status === 401) {
               void logout("sessionRejected");
             }
@@ -1177,7 +1176,7 @@ export const LibraryProvider = ({ children }: { children: React.ReactNode }) => 
 
     const connect = () => {
       if (closed || paused) return;
-      const url = `${getApiBaseUrl()}/library/db/stream?token=${encodeURIComponent(token)}&app=badger&opStream=${libraryReadOpStreamVersion}`;
+      const url = `${getApiBaseUrl()}/library/db/stream?token=${encodeURIComponent(token)}&app=badger`;
       console.warn("library.stream.connect", JSON.stringify({ url }));
       const es = new EventSource(url, { lineEndingCharacter: "\n" });
       streamRef.current = es;
@@ -1303,7 +1302,7 @@ export const LibraryProvider = ({ children }: { children: React.ReactNode }) => 
           if (key) {
             const verdict = await checkKeptLibraryKey(key, {
               fetchMeta: async () => {
-                const meta = await withNetworkTimeout(readLibraryMeta(token), PREFLIGHT_TIMEOUT_MS, "library meta");
+                const meta = await withNetworkTimeout(getLibraryMeta(token), PREFLIGHT_TIMEOUT_MS, "library meta");
                 checkedMeta = meta;
                 return meta;
               },
@@ -1428,7 +1427,7 @@ export const LibraryProvider = ({ children }: { children: React.ReactNode }) => 
       // LIB-SYNC-13: the meta check runs inside the tracked sync, so a failing pull shows on the tab bar's sign too.
       const synced = await syncTracker.track(source, async () => {
         // Same time limit as the load's meta check: a stalled API must not hold the pull spinner open.
-        const meta = token ? await withNetworkTimeout(readLibraryMeta(token), PREFLIGHT_TIMEOUT_MS, "library meta") : null;
+        const meta = token ? await withNetworkTimeout(getLibraryMeta(token), PREFLIGHT_TIMEOUT_MS, "library meta") : null;
         // The library may have been erased, or its key remade, elsewhere: check the kept key first, as the load
         // does, so nothing below syncs or publishes with a key the account no longer has (UX-KEY-01).
         const key = meta ? await getStoredLibraryKey().catch(() => null) : null;
@@ -1708,7 +1707,7 @@ export const LibraryProvider = ({ children }: { children: React.ReactNode }) => 
   // after it. Every move throws without an open library instead of skipping silently.
   const syncConfirmed = useCallback(async () => {
     if (!db) throw new Error("LIBRARY_NOT_OPEN");
-    const meta = token ? await withNetworkTimeout(readLibraryMeta(token), PREFLIGHT_TIMEOUT_MS, "library meta") : null;
+    const meta = token ? await withNetworkTimeout(getLibraryMeta(token), PREFLIGHT_TIMEOUT_MS, "library meta") : null;
     if (!meta || classifyLibraryMeta(meta) !== "present") throw new LibrarySyncUnavailableError();
     if (await db.syncFromRemoteIfNewer(meta)) await syncLists();
     return db;

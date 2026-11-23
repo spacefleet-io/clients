@@ -69,15 +69,11 @@ export type LibraryView = ParrotLibraryTab;
 /** Home's "See all" asks for a list, and for albums maybe an order ("Recently added": "recent"). */
 export type LibraryRequest = { view: LibraryView; albumSort?: ParrotAlbumSort };
 
-/**
- * Each sort's words in the Sort sheet (the shell's, shared with the desktop and the web player): sort id → key under
- * `shell.library.`. The ids are quoted: a bare `title:` property reads as a hard-coded screen title to the UX-I18N-02
- * check in `tests/i18n-translation-files.test.ts`.
- */
+/** Each sort's words in the Sort sheet (the shell's, shared with the desktop and the web player). */
 const SORT_LABEL: Record<ParrotLibraryTab, Record<string, string>> = {
-  albums: { "recent": "sortRecent", "played": "sortPlayed", "title": "sortTitle", "artist": "sortArtist", "year": "sortYear" },
-  artists: { "name": "sortName", "plays": "sortPlays", "albums": "sortAlbumCount", "songs": "sortSongCount" },
-  songs: { "title": "sortTitle", "artist": "sortArtist", "album": "sortAlbum", "year": "sortYear", "duration": "sortDuration" },
+  albums: { recent: "sortRecent", played: "sortPlayed", title: "sortTitle", artist: "sortArtist", year: "sortYear" },
+  artists: { name: "sortName", plays: "sortPlays", albums: "sortAlbumCount", songs: "sortSongCount" },
+  songs: { title: "sortTitle", artist: "sortArtist", album: "sortAlbum", year: "sortYear", duration: "sortDuration" },
 };
 
 /** The count words of each tab's items ("14 albums"). */
@@ -360,7 +356,7 @@ const ArtistsView = ({ artists, loading }: { artists: ArtistRow[]; loading: bool
 
 const SongsView = ({ songs, loading, error: readError }: { songs: Array<WithCoverKeys<SongRow>>; loading: boolean; error: string | null }) => {
   const { t } = useTranslation();
-  const { play, queue, starting, error } = usePlay();
+  const { play, starting, error } = usePlay();
   const now = useNowPlaying();
   const skyScroll = useSkyScroll();
   const editor = usePlaylistEditor();
@@ -393,7 +389,7 @@ const SongsView = ({ songs, loading, error: readError }: { songs: Array<WithCove
           unavailable={reach ? !reach.song(item.id) : false}
           accessibilityLabel={t("parrot.album.play", { title: item.title })}
           onPress={() => void play(songs, index)}
-          onMore={() => editor.openSong({ id: item.id, title: item.title }, undefined, { onAddToQueue: () => queue([item], "end") })}
+          onMore={() => editor.openSong({ id: item.id, title: item.title })}
           moreLabel={`${t("parrot.player.more")}, ${item.title}`}
         />
       ))}

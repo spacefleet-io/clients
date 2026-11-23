@@ -1,8 +1,8 @@
 /**
  * @test-id PARROT-INGEST-IMPORTER-001
  * @level unit
- * @why PAR-FMT-01 / INGS-RESUME-01: an import uploads each new audio file split (header, sound in 256 KiB then 1 MiB
- *      SFV1 pieces, its own tags) on the song's own placement, adds the song to the library and publishes the snapshot; the same import run again uploads
+ * @why PAR-FMT-01 / INGS-RESUME-01: an import uploads each new audio file whole as 1 MiB SFV1 chunks on the song's
+ *      own placement, adds the song to the library and publishes the snapshot; the same import run again uploads
  *      nothing; one bad file does not stop the others; a publish conflict replays the batch on the newer
  *      snapshot. Everything runs against an in-memory transport, and global fetch is replaced so any real
  *      network call fails the test.
@@ -18,16 +18,14 @@ import { parrotCoverMime } from "@space/parrot-core";
 import jpeg from "jpeg-js";
 import { openParrotCover } from "../src/covers";
 import { parrotAudioFormatFor } from "../src/formats";
-import { parrotChunkKey, parrotPlacementId, parrotTagsKey, parrotTrackIds, sha256Hex } from "../src/ids";
+import { parrotChunkKey, parrotPlacementId, parrotTrackIds, sha256Hex } from "../src/ids";
 import { importParrotFiles, PARROT_APP_ID, type ParrotImportProgress, type ParrotImportTransport } from "../src/importer";
 import { getParrotFile, listParrotAlbums, listParrotTracks, openParrotLibrary, serializeParrotLibrary } from "../src/library";
 import { readParrotTrackInfo, type ParrotTrackInfo } from "../src/readTrack";
-import { PARROT_FIRST_PAYLOAD_PIECE_BYTES, splitParrotOriginal } from "../src/splitOriginal";
 import { makeAudioFixture, makeCoverPicture, makeTempDir, testLog } from "./helpers";
 
 const log = testLog("PARROT-INGEST-IMPORTER-001");
 const CHUNK = TRACK_FILE_CHUNK_SIZE_BYTES;
-const FIRST = PARROT_FIRST_PAYLOAD_PIECE_BYTES;
 const USER_ID = "user-chris";
 const TOKEN = "token-abc";
 const CLIENT_TYPE = "parrot-desktop";
@@ -188,7 +186,6 @@ describe("importParrotFiles", () => {
       userId: USER_ID,
       libraryKeyBase64: keyBase64,
       clientType: CLIENT_TYPE,
-      splitOriginals: true,
       transport: server.transport,
       onProgress: (event) => progress.push(event),
       log: (message) => messages.push(message),
@@ -200,36 +197,30 @@ describe("importParrotFiles", () => {
 
     expect(result).toEqual({ imported: [nookMp3, nookFlac], skipped: [], failed: [], snapshotVersion: 2 });
     expect(server.fetches).toEqual([{ token: TOKEN, keyBase64, appId: PARROT_APP_ID }]);
-    // PAR-FMT-01: each file goes up split: its header (none for an MP3), its sound, and its own tags in an object.
-    expect(server.uploads).toHaveLength(5);
+    expect(server.uploads).toHaveLength(2);
 
     for (const [index, file] of [nookMp3, nookFlac].entries()) {
       const bytes = new Uint8Array(await fs.readFile(file));
       const fileHash = sha256Hex(bytes);
-      const fileId = `tf-${sha256Hex(fileHash).slice(0, 24)}`;
-      const calls = server.uploads.filter((call) => call.objectKey.startsWith(`${fileId}/`));
-      const split = splitParrotOriginal(bytes, index === 0 ? "mp3" : "flac");
-      if (split.kind !== "split") throw new Error(split.reason);
-      log(`uploads of ${path.basename(file)}`, { keys: calls.map((call) => call.objectKey), options: calls.map((call) => call.options), plain: bytes.length });
-      const pieces = index === 0 ? [split.payload] : [split.header, split.payload];
-      expect(calls.map((call) => call.objectKey)).toEqual([...pieces.map((_, idx) => parrotChunkKey(fileId, idx)), parrotTagsKey(fileId)]);
-      for (const call of calls) {
-        expect(call.token).toBe(TOKEN);
-        expect(call.appId).toBe(PARROT_APP_ID);
-        expect(new TextDecoder().decode(call.payload.subarray(0, 4))).toBe("SFV1");
-        expect(call.options).toMatchObject({ placementId: parrotPlacementId(USER_ID, fileHash), objectNamespace: "media", contentType: "application/octet-stream", clientType: CLIENT_TYPE });
-      }
-      // STOR-USE-02: the song still counts at the size of the file the user picked, spread over what is stored.
-      const declared = calls.map(({ options: { counting } }) => {
-        expect(counting).toMatchObject({ role: "source" });
-        return counting && typeof counting === "object" && "declaredBytes" in counting ? Number(counting.declaredBytes) : Number.NaN;
+      const call = server.uploads[index]!;
+      const fileId = call.objectKey.split("/")[0]!;
+      log(`upload ${path.basename(file)}`, { objectKey: call.objectKey, options: call.options, appId: call.appId, payload: call.payload.length, plain: bytes.length });
+      expect(call.token).toBe(TOKEN);
+      expect(call.appId).toBe(PARROT_APP_ID);
+      expect(call.objectKey).toBe(parrotChunkKey(fileId, 0));
+      expect(fileId).toBe(`tf-${sha256Hex(fileHash).slice(0, 24)}`);
+      expect(call.options).toEqual({
+        placementId: parrotPlacementId(USER_ID, fileHash),
+        objectNamespace: "media",
+        contentType: "application/octet-stream",
+        clientType: CLIENT_TYPE,
+        // STOR-USE-02: a song counts at the size of the file the user picked (one chunk here).
+        counting: { role: "source", declaredBytes: bytes.length },
       });
-      expect(declared.reduce((sum, value) => sum + value, 0)).toBe(bytes.length);
-      // Each piece decrypts to its part; the tags object holds the file's own tags.
-      pieces.forEach((piece, idx) => expect(Buffer.from(decryptMediaObject(calls[idx]!.payload, keyBase64)).equals(Buffer.from(piece))).toBe(true));
-      const tags = JSON.parse(new TextDecoder().decode(decryptMediaObject(calls.at(-1)!.payload, keyBase64)));
-      log(`tags of ${path.basename(file)}`, tags);
-      expect(tags).toEqual(split.tags);
+      expect(new TextDecoder().decode(call.payload.subarray(0, 4))).toBe("SFV1");
+      // Padding hides the exact size: the sealed object is larger than plaintext + the fixed 54-byte overhead.
+      expect(call.payload.length).toBeGreaterThanOrEqual(bytes.length + 54);
+      expect(Buffer.from(decryptMediaObject(call.payload, keyBase64)).equals(Buffer.from(bytes))).toBe(true);
     }
 
     // PAR-UP-03: one publish per stored song, the first with one song, the second with both.
@@ -252,12 +243,8 @@ describe("importParrotFiles", () => {
     ]);
     const file = getParrotFile(db, tracks[0]!.fileId!);
     log("nook file row", file);
-    // The players read header then sound: the stored size is theirs, the user's file size is kept beside it.
-    const nookBytes = new Uint8Array(await fs.readFile(nookMp3));
-    const nookSplit = splitParrotOriginal(nookBytes, "mp3");
-    if (nookSplit.kind !== "split") throw new Error(nookSplit.reason);
-    expect(file!).toMatchObject({ sizeBytes: nookSplit.payload.length, headerBytes: 0, sourceSizeBytes: nookBytes.length, tagsObjectKey: `media/${server.uploads[0]!.options.placementId}/${parrotTagsKey(file!.id)}` });
-    expect(file!.chunks).toEqual([{ idx: 0, objectKey: `media/${server.uploads[0]!.options.placementId}/${parrotChunkKey(file!.id, 0)}`, plainOffset: 0, plainSize: file!.sizeBytes }]);
+    expect(file!.sizeBytes).toBe((await fs.stat(nookMp3)).size);
+    expect(file!.chunks).toEqual([{ idx: 0, objectKey: `media/${server.uploads[0]!.options.placementId}/${server.uploads[0]!.objectKey}`, plainOffset: 0, plainSize: file!.sizeBytes }]);
     db.close();
 
     // PAR-UP-04: the bytes go up as each file is through; `published` counts the library versions.
@@ -285,46 +272,13 @@ describe("importParrotFiles", () => {
     expect(messages.some((message) => message.includes("published library snapshot v1"))).toBe(true);
   });
 
-  // @req PAR-FMT-01: until the API turns songs in parts on (`PARROT_SPLIT_ORIGINALS`), each file is stored whole, so
-  // builds that predate the format still play every song.
-  it("stores each file whole, its bytes untouched and no tags object, while songs in parts are off", async () => {
-    const server = createFakeServer();
-    const result = await importParrotFiles([nookMp3, nookFlac], {
-      token: TOKEN,
-      userId: USER_ID,
-      libraryKeyBase64: keyBase64,
-      clientType: CLIENT_TYPE,
-      transport: server.transport,
-      log: (message) => log(message),
-    });
-    log("result", result);
-    log("server", server.dump());
-    expect(result.imported).toEqual([nookMp3, nookFlac]);
-    expect(server.uploads.map((call) => call.objectKey).some((key) => key.endsWith("/tags"))).toBe(false);
-    const db = openParrotLibrary(server.state.dbBytes!);
-    for (const track of listParrotTracks(db)) {
-      const file = getParrotFile(db, track.fileId!)!;
-      log("whole file row", file);
-      expect(file).toMatchObject({ headerBytes: null, sourceSizeBytes: null, tagsObjectKey: null });
-      const source = new Uint8Array(await fs.readFile(track.mime === "audio/flac" ? nookFlac : nookMp3));
-      expect(file.sizeBytes).toBe(source.length);
-      const stored = Buffer.concat(
-        file.chunks.map((chunk) => decryptMediaObject(server.uploads.find((call) => chunk.objectKey.endsWith(`/${call.objectKey}`))!.payload, keyBase64))
-      );
-      expect(stored.equals(Buffer.from(source))).toBe(true);
-    }
-    db.close();
-  });
-
-  // @req PAR-FMT-01 @req PAR-UP-02: a small first piece of sound, so a player starts after 256 KiB, then 1 MiB pieces.
-  it("cuts a large file's sound into a 256 KiB piece then 1 MiB pieces in order, each decrypting to its slice", async () => {
+  it("cuts a large file into 1 MiB chunks in order, each decrypting to its slice", async () => {
     const server = createFakeServer();
     const result = await importParrotFiles([bigFile], {
       token: TOKEN,
       userId: USER_ID,
       libraryKeyBase64: keyBase64,
       clientType: CLIENT_TYPE,
-      splitOriginals: true,
       transport: server.transport,
       readInfo: async (file) => info(file, { title: "Big One" }),
       log: (message) => log(message),
@@ -337,17 +291,16 @@ describe("importParrotFiles", () => {
     const placementIds = new Set(server.uploads.map((call) => call.options.placementId));
     expect(placementIds).toEqual(new Set([parrotPlacementId(USER_ID, sha256Hex(bigBytes))]));
     const plain = server.uploads.map((call) => decryptMediaObject(call.payload, keyBase64));
-    const last = bigBytes.length - FIRST - CHUNK;
-    expect(plain.map((part) => part.length)).toEqual([FIRST, CHUNK, last]);
+    expect(plain.map((part) => part.length)).toEqual([CHUNK, CHUNK, 4321]);
     expect(Buffer.concat(plain).equals(Buffer.from(bigBytes))).toBe(true);
 
     const db = openParrotLibrary(server.state.dbBytes);
     const file = getParrotFile(db, fileId)!;
     log("chunk map", file.chunks);
     expect(file.chunks.map(({ idx, plainOffset, plainSize }) => ({ idx, plainOffset, plainSize }))).toEqual([
-      { idx: 0, plainOffset: 0, plainSize: FIRST },
-      { idx: 1, plainOffset: FIRST, plainSize: CHUNK },
-      { idx: 2, plainOffset: FIRST + CHUNK, plainSize: last },
+      { idx: 0, plainOffset: 0, plainSize: CHUNK },
+      { idx: 1, plainOffset: CHUNK, plainSize: CHUNK },
+      { idx: 2, plainOffset: 2 * CHUNK, plainSize: 4321 },
     ]);
     expect(file.chunks.every((chunk) => server.objects.has(chunk.objectKey))).toBe(true);
     db.close();
@@ -415,15 +368,14 @@ describe("importParrotFiles", () => {
 
   it("skips files already in the library when the import runs again", async () => {
     const server = createFakeServer();
-    const options = { token: TOKEN, userId: USER_ID, libraryKeyBase64: keyBase64, clientType: CLIENT_TYPE, splitOriginals: true, transport: server.transport, log: (message: string) => log(message) };
+    const options = { token: TOKEN, userId: USER_ID, libraryKeyBase64: keyBase64, clientType: CLIENT_TYPE, transport: server.transport, log: (message: string) => log(message) };
     await importParrotFiles([nookMp3], options);
     const uploadsAfterFirst = server.uploads.length;
     const second = await importParrotFiles([nookMp3, nookFlac], options);
     log("second run", second);
     log("server", server.dump());
     expect(second).toEqual({ imported: [nookFlac], skipped: [nookMp3], failed: [], snapshotVersion: 2 });
-    // The FLAC only: its header, its sound and its tags.
-    expect(server.uploads.length - uploadsAfterFirst).toBe(3);
+    expect(server.uploads.length - uploadsAfterFirst).toBe(1);
     expect(server.publishes.map((call) => call.baseVersion)).toEqual([0, 1]);
 
     const third = await importParrotFiles([nookMp3, nookFlac], options);
@@ -522,8 +474,7 @@ describe("importParrotFiles", () => {
   it("records one failing file and imports the others", async () => {
     const server = createFakeServer();
     const missing = path.join(root, "gone.mp3");
-    // Only the big file has a third piece: the small FLAC is now its header plus one sound piece (PAR-FMT-01).
-    server.state.failUpload = (objectKey) => objectKey.endsWith("chunk-00002");
+    server.state.failUpload = (objectKey) => objectKey.endsWith("chunk-00001");
     const result = await importParrotFiles([nookMp3, missing, bigFile, nookFlac], {
       token: TOKEN,
       userId: USER_ID,

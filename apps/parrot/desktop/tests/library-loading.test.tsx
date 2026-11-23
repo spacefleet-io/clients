@@ -14,7 +14,6 @@ import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { streamBridgeStub } from "./streamBridge";
-import { exportBridgeStub } from "./exportBridge";
 import type { ParrotLanguage, ParrotLibraryResult, ParrotState } from "../src/shared/ipc";
 import Library from "../src/renderer/src/Library";
 import { PARROT_STRINGS, translator } from "../src/renderer/src/i18n";
@@ -106,7 +105,6 @@ describe("Parrot desktop while the library opens (UX-WAIT-04)", () => {
       configurable: true,
       value: {
         ...streamBridgeStub(),
-        ...exportBridgeStub(),
         // The first load stays open until the test answers it.
         getLibrary: vi.fn(() => {
           const { promise, resolve } = Promise.withResolvers<ParrotLibraryResult>();

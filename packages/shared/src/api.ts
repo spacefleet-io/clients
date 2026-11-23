@@ -1,11 +1,10 @@
 import * as sdk from "@space/sdk";
-import { ApiError, apiErrorFromResponse, createSpaceClient, unwrap, type ApiErrorPayload } from "@space/sdk";
+import { ApiError, createSpaceClient, unwrap, type ApiErrorPayload } from "@space/sdk";
 import { createUserStorageTunnelClient, type StorageTunnelPurpose, type TunnelUploadSource } from "./storageTunnel";
 import type { StorageObjectCounting } from "./storageCounting";
 import { DEFAULT_SPACE_APP_ID, SPACE_APP_HEADER, type SpaceAppId } from "./appScope";
 import { clientIdentityHeaders } from "./appVersion";
 import { parseLibraryOpsResponse, type ChunkRefsSource, type LibraryOpsResponse } from "./contracts/library";
-import { postLibraryOp, type LibraryOpLineage, type LibraryWriterFormats } from "./libraryOpUpload";
 import type { AccountAccess, BillingPeriod } from "./accountAccess";
 import type { BillingStatus, PaidPlanId, PaymentOutcome, SubscriptionChangeOutcome } from "./billingCheckout";
 import type { CheckoutReturnApp } from "./checkoutReturn";
@@ -137,7 +136,10 @@ export const apiRequest = async <T>(
     body: options.body ? JSON.stringify(options.body) : undefined,
   });
 
-  if (!res.ok) throw await apiErrorFromResponse(res);
+  if (!res.ok) {
+    const payload = (await res.json().catch(() => ({}))) as ApiErrorPayload;
+    throw new ApiError(res.status, payload);
+  }
 
   if (res.status === 204) {
     return undefined as T;
@@ -382,8 +384,6 @@ export type FeedbackInput = {
   platform?: string | null;
   deviceModel?: string | null;
   log?: string | null;
-  /** UX-SUP-07: the server's request ids of the app's last failed API calls (`recentFailedRequestIds`), ids only. */
-  requestIds?: string[] | null;
 };
 
 export const sendFeedback = (token: string, body: FeedbackInput): Promise<{ id: string }> =>
@@ -429,23 +429,6 @@ export const approvePairing = (
         ...(password !== undefined ? { password } : {}),
         ...(twoFactorCode !== undefined ? { twoFactorCode } : {}),
       },
-    })
-  );
-
-/**
- * Same-device sign-in (ACCT-PAIR-07): approves the sister app's request on this device with no key in the body; the
- * caller hands the sealed key to that app over the local channel, so the server never sees it.
- */
-export const approvePairingLocal = (
-  token: string,
-  requestId: string,
-  approverDeviceId?: string
-): Promise<{ ok: boolean; sessionId?: string }> =>
-  unwrap(
-    sdk.approvePairing({
-      ...scoped(token),
-      path: { requestId },
-      body: { localKey: true, ...(approverDeviceId ? { approverDeviceId } : {}) },
     })
   );
 
@@ -797,36 +780,10 @@ export type LibraryMeta = {
   snapshotHistory: Array<{ snapshotId: string; manifestKey: string; createdAt: string }>;
   /** The newest op since the snapshot only (the full ledger needs `opsHistory=all`, which no app asks for). */
   opsHistory: Array<{ opId: string; version: number; createdAt: string; size: number; objectKey: string }>;
-  /**
-   * Badger only: the op-stream version writers of this account declare (`writeOpStreamVersion` of
-   * @space/library-db-definition/ops): 4 once the account is switched (LIB-FMT-13), else 3. Absent from older servers
-   * and for Parrot.
-   */
-  targetOpStreamVersion?: number;
-  /**
-   * Parrot only: whether this account's imports store each song in parts (PAR-FMT-01, `PARROT_SPLIT_ORIGINALS` on the
-   * API). Absent from older servers and for Badger: store whole.
-   */
-  splitOriginals?: boolean;
 };
 
-/**
- * The scope of a library READ (meta, snapshot, ops). `readOpStreamVersion` is the highest op-stream version the caller
- * reads (`READ_OP_STREAM_VERSION`), sent as `x-library-op-stream-version`; a switched account answers 426
- * `app_update_required` to a read without it (LIB-FMT-13). Omitted = no header (Parrot, builds that read no v4).
- */
-const libraryReadScope = (token: string, appId: SpaceAppId, readOpStreamVersion: number | undefined) => {
-  const base = scoped(token, appId);
-  return readOpStreamVersion === undefined
-    ? base
-    : { ...base, headers: { ...base.headers, "x-library-op-stream-version": String(readOpStreamVersion) } };
-};
-
-export const getLibraryMeta = (
-  token: string,
-  appId: SpaceAppId = DEFAULT_SPACE_APP_ID,
-  readOpStreamVersion?: number
-): Promise<LibraryMeta> => unwrap(sdk.getLibraryMeta(libraryReadScope(token, appId, readOpStreamVersion)));
+export const getLibraryMeta = (token: string, appId: SpaceAppId = DEFAULT_SPACE_APP_ID): Promise<LibraryMeta> =>
+  unwrap(sdk.getLibraryMeta(scoped(token, appId)));
 
 /** The waits between tries of the key step's meta read: about 7 s in all, which covers one server copy restarting. */
 export const KEY_STEP_META_RETRY_DELAYS_MS: readonly number[] = [1_000, 2_000, 4_000];
@@ -840,12 +797,11 @@ export const KEY_STEP_META_RETRY_DELAYS_MS: readonly number[] = [1_000, 2_000, 4
 export const getLibraryMetaForKeyStep = async (
   token: string,
   appId: SpaceAppId = DEFAULT_SPACE_APP_ID,
-  delaysMs: readonly number[] = KEY_STEP_META_RETRY_DELAYS_MS,
-  readOpStreamVersion?: number
+  delaysMs: readonly number[] = KEY_STEP_META_RETRY_DELAYS_MS
 ): Promise<LibraryMeta> => {
   for (let attempt = 0; ; attempt++) {
     try {
-      return await getLibraryMeta(token, appId, readOpStreamVersion);
+      return await getLibraryMeta(token, appId);
     } catch (error) {
       const transient =
         error instanceof ApiError ? error.status === 0 || error.status === 502 || error.status === 503 : error instanceof TypeError;
@@ -858,8 +814,7 @@ export const getLibraryMetaForKeyStep = async (
 
 export const getLibraryDb = (
   token: string,
-  appId: SpaceAppId = DEFAULT_SPACE_APP_ID,
-  readOpStreamVersion?: number
+  appId: SpaceAppId = DEFAULT_SPACE_APP_ID
 ): Promise<{
   exists: boolean;
   version: number;
@@ -871,41 +826,57 @@ export const getLibraryDb = (
   blobEncoding: "binary";
   snapshotId: string | null;
   chunkSize: number | null;
-  /** As `LibraryMeta.targetOpStreamVersion`. */
-  targetOpStreamVersion?: number;
-}> => unwrap(sdk.getLibraryDb(libraryReadScope(token, appId, readOpStreamVersion)));
+}> => unwrap(sdk.getLibraryDb(scoped(token, appId)));
 
 export const getLibraryOps = async (
   token: string,
   sinceVersion: number,
-  appId: SpaceAppId = DEFAULT_SPACE_APP_ID,
-  readOpStreamVersion?: number
+  appId: SpaceAppId = DEFAULT_SPACE_APP_ID
 ): Promise<LibraryOpsResponse> => {
-  const raw = await unwrap(
-    sdk.getLibraryOps({ ...libraryReadScope(token, appId, readOpStreamVersion), query: { since: String(sinceVersion) } })
-  );
+  const raw = await unwrap(sdk.getLibraryOps({ ...scoped(token, appId), query: { since: String(sinceVersion) } }));
   return parseLibraryOpsResponse(raw);
 };
 
-export type { LibraryWriterFormats };
+/**
+ * The library storage and op-stream formats a client declares on every write.
+ * The caller supplies the values (`STORAGE_FORMAT_VERSION`, `OP_STREAM_VERSION`
+ * from `@space/library-db-definition`): shared cannot import the definition
+ * package without a dependency cycle. The server rejects a write that declares
+ * less than the library's stored version (LIB-FMT-05 downgrade protection).
+ */
+export type LibraryWriterFormats = { storageFormatVersion: number; opStreamVersion: number };
 
 export const putLibraryOp = (
   token: string,
   baseVersion: number,
   opId: string,
   payload: Uint8Array,
-  lineage?: LibraryOpLineage,
+  lineage?: { prevStateHash?: string | null; nextStateHash?: string | null },
   appId: SpaceAppId = DEFAULT_SPACE_APP_ID,
   // Formats this build writes (see `LibraryWriterFormats`).
   formats?: LibraryWriterFormats
-) =>
-  postLibraryOp(
-    { client: sdkClient, ...(token ? { auth: token } : {}), headers: { [SPACE_APP_HEADER]: appId } },
-    baseVersion,
-    opId,
-    payload,
-    lineage,
-    formats
+): Promise<{ version: number; snapshotVersion: number; stateHash: string | null; lastOpId: string | null }> =>
+  unwrap(
+    sdk.postLibraryOp({
+      client: sdkClient,
+      ...(token ? { auth: token } : {}),
+      headers: {
+        [SPACE_APP_HEADER]: appId,
+        "x-library-base-version": String(baseVersion),
+        "x-library-op-id": opId,
+        ...(lineage?.prevStateHash ? { "x-library-prev-state-hash": lineage.prevStateHash } : {}),
+        ...(lineage?.nextStateHash ? { "x-library-next-state-hash": lineage.nextStateHash } : {}),
+        ...(formats
+          ? {
+              "x-library-storage-format-version": String(formats.storageFormatVersion),
+              "x-library-op-stream-version": String(formats.opStreamVersion),
+            }
+          : {}),
+      },
+      // The generated type says Blob|File, but `bodySerializer: null` hands the bytes to fetch as-is, and
+      // `new Blob([typedArray])` throws on React Native; so pass the Uint8Array and cast.
+      body: toBinaryBody(payload) as unknown as Blob,
+    })
   );
 
 /** What the server answers once it has taken a library snapshot (the new library version and its stamps). */
@@ -1002,7 +973,10 @@ export const putLibraryDbBinary = async (
     body: toBinaryBody(payload),
   });
 
-  if (!res.ok) throw await apiErrorFromResponse(res);
+  if (!res.ok) {
+    const payload = (await res.json().catch(() => ({}))) as ApiErrorPayload;
+    throw new ApiError(res.status, payload);
+  }
 
   return res.json() as Promise<{ version: number; stateHash: string | null; lastOpId: string | null }>;
 };

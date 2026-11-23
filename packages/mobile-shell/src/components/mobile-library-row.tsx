@@ -142,7 +142,7 @@ export const MobileLibraryRowButton = ({
       <Icon size={17} color={fg} />
       {count > 0 ? (
         <View style={[styles.badge, { backgroundColor: theme.colors.text, borderColor: theme.colors.bg }]} accessible={false} testID={testID ? `${testID}-badge` : undefined}>
-          <Text style={[styles.badgeLabel, { color: theme.colors.bg }]}>
+          <Text style={[styles.badgeLabel, { color: theme.colors.bg }]} maxFontSizeMultiplier={1.5}>
             {count}
           </Text>
         </View>
@@ -436,9 +436,7 @@ const styles = StyleSheet.create({
   segment: { flexGrow: 1, flexShrink: 1, flexBasis: "auto", height: 34, borderRadius: 9, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingHorizontal: 6 },
   segmentLabel: { fontSize: 13, fontWeight: "700" },
   iconButton: { width: 42, height: 42, borderRadius: 10, borderWidth: 1, alignItems: "center", justifyContent: "center" },
-  // The badge's number follows the phone's text size uncapped (UX-A11Y-05): no fixed height, and a pill radius so it
-  // stays round as it grows.
-  badge: { position: "absolute", top: -6, right: -6, minWidth: 19, minHeight: 19, borderRadius: 999, borderWidth: 2, paddingHorizontal: 4, alignItems: "center", justifyContent: "center" },
+  badge: { position: "absolute", top: -6, right: -6, minWidth: 19, minHeight: 19, borderRadius: 10, borderWidth: 2, paddingHorizontal: 4, alignItems: "center", justifyContent: "center" },
   badgeLabel: { fontSize: 11, fontWeight: "800" },
   clear: { fontSize: 13, fontWeight: "600" },
   disabled: { opacity: 0.5 },
