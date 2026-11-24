@@ -8,7 +8,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { UNAVAILABLE_LOOK } from "@space/mobile-shell/theme";
-import { MobileLibraryLoading, SkyCover, useSkyScroll } from "@space/mobile-shell/components";
+import { MobileButton, MobileLibraryLoading, SkyCover, useSkyScroll } from "@space/mobile-shell/components";
 import {
   MobileLibraryFilterPicker,
   MobileLibraryHeader,
@@ -61,7 +61,7 @@ import { AlbumGrid } from "./AlbumGrid";
 import { SongListRow, songRowNames } from "./SongListRow";
 import { useOfflineReach } from "./kept";
 import { EmptyLibrary } from "./EmptyLibrary";
-import { Body, Button, Centered, ErrorText } from "./ui";
+import { Body, Centered, ErrorText } from "./ui";
 import type { RootStack } from "./routes";
 
 export type LibraryView = ParrotLibraryTab;
@@ -137,7 +137,7 @@ export const LibraryScreen = ({ active, viewRequest }: LibraryScreenProps) => {
     return (
       <Centered>
         <ErrorText>{t("parrot.library.openFailed", { error: library.error })}</ErrorText>
-        <Button label={t("parrot.library.tryAgain")} onPress={() => void reloadLibrary()} />
+        <MobileButton label={t("parrot.library.tryAgain")} onPress={() => void reloadLibrary()} />
       </Centered>
     );
   }

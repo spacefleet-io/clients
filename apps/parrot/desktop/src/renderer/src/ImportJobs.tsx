@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   DesktopCompletedJobRow,
+  DesktopFailedJobDetail,
   DesktopJobActionButton,
   DesktopJobProgress,
   DesktopJobRow,
@@ -16,8 +17,16 @@ import {
   type DesktopJobTone,
 } from "@space/desktop-shell/components";
 import { formatLocalizedStorage } from "@space/shared/format";
-import { IMPORT_INTERRUPTED, type ParrotBackgroundWork, type ParrotImportJob, type ParrotImportStatus, type ParrotLanguage } from "../../shared/ipc";
-import type { ParrotStringKey, Translate } from "./i18n";
+import {
+  IMPORT_INTERRUPTED,
+  importJobRetryable,
+  type ParrotBackgroundWork,
+  type ParrotImportJob,
+  type ParrotImportRetry,
+  type ParrotImportStatus,
+  type ParrotLanguage,
+} from "../../shared/ipc";
+import { pluralForm, type ParrotStringKey, type Translate } from "./i18n";
 import type { NotificationPart } from "./notificationText";
 import { ExportJobList, exportJobMatches, useExportJobs } from "./ExportJobs";
 
@@ -34,13 +43,62 @@ const importErrorText = (t: Translate, error: string) => {
   return typeof part === "string" ? part : t(part.key);
 };
 
+/** UX-JOBS-03: the first line of a card that stopped or left files out: what happened, in plain words. */
+const failedWhat = (t: Translate, job: ParrotImportJob): string => {
+  if (job.status.phase !== "failed") return t("jobs.failed.whatSomeFiles");
+  const error = job.status.error ?? "";
+  if (error === IMPORT_INTERRUPTED) return t("jobs.failed.whatInterrupted");
+  if (/version_conflict|library_db_conflict/.test(error)) return t("jobs.failed.whatConflict");
+  return t("jobs.failed.whatError", { error });
+};
+
+/**
+ * UX-JOBS-03: what a stopped card offers and why it was last refused. `refused` is the answer of the last try
+ * ("missing" until main's next list says so too), cleared when the job comes back from main changed.
+ */
+function useImportRetry(job: ParrotImportJob) {
+  const [busy, setBusy] = useState(false);
+  const [refused, setRefused] = useState<"busy" | "missing" | null>(null);
+  useEffect(() => setRefused(null), [job]);
+  const missing = refused === "missing" || job.sourcesMissing === true;
+  const run = async () => {
+    setBusy(true);
+    try {
+      const answer: ParrotImportRetry | { cancelled: true } = missing
+        ? await window.parrot.findImportJobFolder(job.id)
+        : await window.parrot.retryImportJob(job.id);
+      console.info(`[parrot-jobs] ${missing ? "find folder" : "import again"} for ${job.id}: ${JSON.stringify(answer)}`);
+      if ("started" in answer && !answer.started && answer.reason !== "gone") setRefused(answer.reason);
+    } catch (error) {
+      console.warn(`[parrot-jobs] trying ${job.id} again failed: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return { busy, missing, refused, run };
+}
+
+/** What an ended import added, found already there and could not import, each count in its own plural form. */
+export const importCountsText = (t: Translate, language: ParrotLanguage, status: ParrotImportStatus): string =>
+  [
+    t(`jobs.counts.added.${pluralForm(language, status.imported)}`, { n: status.imported }),
+    t(`jobs.counts.skipped.${pluralForm(language, status.skipped)}`, { n: status.skipped }),
+    t(`jobs.counts.failed.${pluralForm(language, status.failed)}`, { n: status.failed }),
+  ].join(" · ");
+
+/** The import's first source, then "and 2 more" for the others. */
+export const importNameText = (t: Translate, language: ParrotLanguage, first: string, others: number): string =>
+  others > 0 ? t(`jobs.more.${pluralForm(language, others)}`, { name: first, n: others }) : first;
+
 /** One line for where an import stands (PAR-UP-04): reading, waiting for the review, uploading, adding, done, failed or stopped. */
 export function importLine(t: Translate, language: ParrotLanguage, status: ParrotImportStatus): string | null {
   switch (status.phase) {
     case "idle":
       return null;
     case "scanning":
-      return status.total > 0 ? t("import.scanningCount", { done: status.done, total: status.total }) : t("import.scanning");
+      return status.total > 0
+        ? t(`import.scanningCount.${pluralForm(language, status.total)}`, { done: status.done, total: status.total })
+        : t("import.scanning");
     case "review":
       return t("import.review");
     case "uploading":
@@ -235,7 +293,7 @@ function ImportJobItem({
   const { status } = job;
   const ended = importJobEnded(status);
   const first = job.sources[0] ? fileName(job.sources[0]) : "";
-  const name = job.sources.length > 1 ? t("jobs.more", { name: first, n: job.sources.length - 1 }) : first;
+  const name = importNameText(t, language, first, Math.max(0, job.sources.length - 1));
   const started = new Date(job.startedAt).toLocaleString();
   const pill = importPill(status);
   const badge =
@@ -253,7 +311,8 @@ function ImportJobItem({
   // Uploading, the counts are the file's; once it ended, what it added, found already there and could not import.
   const counted = ended && (status.imported > 0 || status.skipped > 0 || status.failed > 0);
   const line = ended ? null : importLine(t, language, status);
-  const error = status.phase === "failed" ? (status.error === IMPORT_INTERRUPTED ? t("jobs.interrupted") : t("import.failed", { error: importErrorText(t, status.error ?? "") })) : null;
+  const retryable = importJobRetryable(job);
+  const retry = useImportRetry(job);
   const extra = (
     <>
       {line ? (
@@ -263,13 +322,21 @@ function ImportJobItem({
       ) : null}
       {counted ? (
         <p className="mt-2 text-xs" data-testid="import-job-counts">
-          {t("jobs.counts", { imported: status.imported, skipped: status.skipped, failed: status.failed })}
+          {importCountsText(t, language, status)}
         </p>
       ) : null}
-      {error ? (
-        <p className="mt-2 text-xs text-destructive" data-testid="import-job-error">
-          {error}
-        </p>
+      {retryable ? (
+        <DesktopFailedJobDetail
+          testId="import-job-failed"
+          what={status.phase === "failed" ? <span data-testid="import-job-error">{failedWhat(t, job)}</span> : failedWhat(t, job)}
+          meaning={t(retry.refused === "busy" ? "jobs.failed.meaningBusy" : retry.missing ? "jobs.failed.meaningMissing" : "jobs.failed.meaningRetry")}
+          action={{
+            label: t(retry.missing ? "jobs.failed.actionFindFolder" : "jobs.failed.actionImportAgain"),
+            onClick: () => void retry.run(),
+            busy: retry.busy,
+            testId: "import-job-retry",
+          }}
+        />
       ) : null}
       {job.failures.length > 0 ? (
         <div className="mt-2">

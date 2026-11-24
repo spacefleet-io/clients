@@ -1,18 +1,14 @@
 // The pieces Parrot TV's screens share (PAR-TV-03..09, PAR-TV-13), sized from the approved drafts (`1a-home-topbar`,
 // `2-album`, `4-artist`, `6-queue`; design dp = the drafts' px halved, scaled with the TV): the square album card, the
-// round artist card, a row of cards with its heading and "See all", a song row, the song's wave and the playing bars.
+// round artist card, a song row, the song's wave and the playing bars. Rows of cards are the family's `TvCardRow`
+// (`@space/mobile-shell/tv/TvCardRow`, shared with Badger TV's rail).
 // Covers and photos are the user's own (`ParrotArt` with the library's keys), as on the phone.
-import React, { memo, useCallback, useRef, useState, type ReactNode } from "react";
+import React, { memo, useState, type ReactNode } from "react";
 import { Heart, ListMusic, type LucideIcon } from "lucide-react-native";
-import { FlatList, StyleSheet, Text, TVFocusGuideView, View, useWindowDimensions, type StyleProp, type ViewStyle } from "react-native";
-import { SkyCover } from "@space/mobile-shell/components";
-import { MobileRenderBoundary } from "@space/mobile-shell/render-boundary";
+import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from "react-native";
 import { useTranslation } from "@space/mobile-shell/i18n";
-import { railScrollOffset } from "@space/mobile-shell/tv/focusOrder";
 import { TvFocusable } from "@space/mobile-shell/tv/TvFocusable";
-import { focusDestination, type TvViewInstance } from "@space/mobile-shell/tv/tvViewInstance";
-import { TvTitle } from "@space/mobile-shell/tv/TvText";
-import { TV_COLOR, TV_FOCUS, TV_RADII, TV_SHADOW, TV_SPACE, TV_TYPE, tvFocusRing, useTvAccent } from "@space/mobile-shell/tv/tokens";
+import { TV_COLOR, TV_FOCUS, TV_RADII, TV_SHADOW, TV_TYPE, tvFocusRing, useTvAccent } from "@space/mobile-shell/tv/tokens";
 import { useTvScale, useTvStyles } from "@space/mobile-shell/tv/tvScale";
 import { formatDuration, parrotArtistPictureThumbKey, parrotCoverThumbKey, type ArtistRow } from "@space/parrot-core";
 import type { AlbumWithCover } from "../lib/library";
@@ -21,8 +17,6 @@ import { ParrotEqualizer, PlayingBadge } from "../screens/equalizer";
 import { isLikedPlaylist } from "../lib/playlists";
 import { tvAlbumCaption } from "./tvModel";
 
-/** Room above and below a row of cards for the focused card's grow and ring, which the list would otherwise clip. */
-export const TV_CARD_GROW_ROOM = 12;
 /** Picture to caption (draft 14 px), and how far the caption moves when the picture grows under the focus. */
 const CAPTION_GAP = 7;
 const CAPTION_SHIFT = 6;
@@ -173,88 +167,6 @@ export const TvPlaylistCard = memo(
   )
 );
 TvPlaylistCard.displayName = "TvPlaylistCard";
-
-/**
- * A row of cards straight on the sky (draft `.rowhead` + `.cards`): the heading with "See all" at its right, and the
- * cards under it in a full-width focus guide, so Up or Down into the row lands on its last focused card (Badger TV's
- * rail, TV-RAIL-FOCUS-001). Right past the last card goes to "See all" (a short row has nothing else to its right, and
- * Up leaves for the row above). The row scrolls itself to keep the focused card in view.
- */
-export const TvCardRow = <T,>({
-  title,
-  items,
-  keyOf,
-  cardWidth,
-  gap,
-  renderCard,
-  onSeeAll,
-  testID,
-}: {
-  title: string;
-  items: readonly T[];
-  keyOf: (item: T) => string;
-  /** Picture width on screen (already scaled). */
-  cardWidth: number;
-  /** Gap between cards in design dp. */
-  gap: number;
-  renderCard: (item: T, index: number, onFocus: () => void) => ReactNode;
-  onSeeAll?: () => void;
-  testID?: string;
-}) => {
-  const { t } = useTranslation();
-  const { width: windowWidth } = useWindowDimensions();
-  const scale = useTvScale();
-  const styles = useTvStyles(baseStyles);
-  const listRef = useRef<FlatList<T>>(null);
-  const [seeAllView, setSeeAllView] = useState<TvViewInstance | null>(null);
-  const itemLength = cardWidth + gap * scale;
-  const focusAt = useCallback(
-    (index: number) => {
-      const offset = railScrollOffset({ focusedIndex: index, itemLength, itemCount: items.length, viewportWidth: windowWidth - TV_SPACE.screenX * scale });
-      listRef.current?.scrollToOffset({ offset, animated: true });
-    },
-    [itemLength, items.length, scale, windowWidth]
-  );
-  return (
-    <View testID={testID}>
-      <View style={styles.rowHead}>
-        <TvTitle size="section" numberOfLines={1} style={styles.rowTitle}>
-          {title}
-        </TvTitle>
-        {onSeeAll ? (
-          <TvFocusable ref={setSeeAllView} onPress={onSeeAll} style={styles.seeAll} testID={testID ? `${testID}-see-all` : undefined} accessibilityLabel={`${t("shell.home.seeAll")}, ${title}`}>
-            <Text style={styles.seeAllText}>{t("shell.home.seeAll")}</Text>
-          </TvFocusable>
-        ) : null}
-      </View>
-      <TVFocusGuideView autoFocus>
-        <FlatList
-          ref={listRef}
-          horizontal
-          data={items}
-          keyExtractor={keyOf}
-          renderItem={({ item, index }) => (
-            <SkyCover>
-              {/* UX-CRASH-01: a card that throws shows a placeholder in its place; the rest of the row stays. */}
-              <MobileRenderBoundary name={`tv-card:${keyOf(item)}`} variant="item" style={{ width: cardWidth, margin: 0 }}>
-                {() => renderCard(item, index, () => focusAt(index))}
-              </MobileRenderBoundary>
-            </SkyCover>
-          )}
-          ItemSeparatorComponent={() => <View style={{ width: gap * scale }} />}
-          ListFooterComponent={
-            onSeeAll ? <TVFocusGuideView destinations={focusDestination(seeAllView)} style={{ width: cardWidth, height: tvCardHeight(cardWidth, scale) }} testID={testID ? `${testID}-to-see-all` : undefined} /> : undefined
-          }
-          style={{ height: tvCardHeight(cardWidth, scale) + TV_CARD_GROW_ROOM * 2 * scale }}
-          contentContainerStyle={styles.rowContent}
-          showsHorizontalScrollIndicator={false}
-          initialNumToRender={items.length}
-          windowSize={21}
-        />
-      </TVFocusGuideView>
-    </View>
-  );
-};
 
 /** The playing song's green bars, at the TV's size. */
 export const TvPlayingBars = ({ animated, color }: { animated: boolean; color?: string }) => {
@@ -443,11 +355,6 @@ const baseStyles = StyleSheet.create({
   title: { ...TV_TYPE.caption, height: 14, lineHeight: 14, color: TV_COLOR.text },
   titleFocused: { color: "#ffffff" },
   subtitle: { fontFamily: TV_TYPE.small.fontFamily, fontSize: 9, lineHeight: 12, marginTop: 2, color: TV_COLOR.muted },
-  rowHead: { flexDirection: "row", alignItems: "center", paddingHorizontal: TV_SPACE.screenX, marginBottom: TV_SPACE.headingGap - TV_CARD_GROW_ROOM },
-  rowTitle: { flex: 1 },
-  seeAll: { paddingHorizontal: 6, paddingVertical: 2 },
-  seeAllText: { fontFamily: TV_TYPE.body.fontFamily, fontSize: 10, fontWeight: "600", color: TV_COLOR.muted },
-  rowContent: { paddingHorizontal: TV_SPACE.screenX, paddingVertical: TV_CARD_GROW_ROOM },
   songRow: { flexDirection: "row", alignItems: "center", gap: 13, paddingHorizontal: 14, borderRadius: TV_RADII.control },
   songRowFocused: { backgroundColor: "rgba(255, 255, 255, 0.06)" },
   songNumber: { width: 17, alignItems: "flex-end", justifyContent: "center" },

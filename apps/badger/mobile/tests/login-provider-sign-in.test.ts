@@ -12,9 +12,11 @@ import { createElement, type ReactNode } from "react";
 import { act, create, type ReactTestInstance, type ReactTestRenderer } from "react-test-renderer";
 import i18next, { type i18n as I18n } from "i18next";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import type * as SignInForm from "../../../../packages/mobile-shell/src/components/mobile-password-sign-in-form";
 import type * as SharedApi from "@space/shared/api";
 import type * as ProviderRows from "../../../../packages/mobile-shell/src/components/mobile-provider-sign-in-rows";
 import { withSignInErrorTexts } from "@space/shared/signInError";
+import { providerSignInTexts, withProviderSignInTexts } from "@space/shared/providerSignIn";
 import en from "../../../../packages/mobile-shell/src/i18n/en.json";
 
 const h = vi.hoisted(() => {
@@ -43,11 +45,20 @@ vi.mock("react-native", async () => ({
 }));
 vi.mock("lucide-react-native", () => ({ ArrowRight: "Icon", ChevronRight: "Icon", Lock: "Icon", Mail: "Icon", QrCode: "Icon" }));
 vi.mock("@react-navigation/native", () => ({ useNavigation: () => ({ navigate: vi.fn() }) }));
+// The shared form is real (its fields are what the screen shows); its inputs and buttons are host elements.
+vi.mock("../../../../packages/mobile-shell/src/components/mobile-auth-form", () => ({
+  MobileAuthInput: "MobileAuthInput",
+  MobileAuthButton: "MobileAuthButton",
+  MobileAuthLink: "MobileAuthLink",
+}));
 vi.mock("@space/mobile-shell/components", async () => {
   const passthrough = (name: string) => (props: { children?: ReactNode }) => createElement(name, props, props.children);
   // The real rows: their order, testIDs and sizes are what is under test (ACCT-SIGNIN-07).
   const rows = await vi.importActual<typeof ProviderRows>("../../../../packages/mobile-shell/src/components/mobile-provider-sign-in-rows");
+  const form = await vi.importActual<typeof SignInForm>("../../../../packages/mobile-shell/src/components/mobile-password-sign-in-form");
   return {
+    MobilePasswordSignInForm: form.MobilePasswordSignInForm,
+    useMobilePasswordSignIn: form.useMobilePasswordSignIn,
     MobileStartupPage: passthrough("MobileStartupPage"),
     MobileAuthBrand: "MobileAuthBrand",
     MobileAuthInput: "MobileAuthInput",
@@ -154,7 +165,7 @@ describe(`[${SUITE}] Google, Apple and Microsoft on the Badger phone`, () => {
       lng: "en",
       fallbackLng: "en",
       interpolation: { escapeValue: false },
-      resources: { en: { translation: withSignInErrorTexts(en, "en") } },
+      resources: { en: { translation: withProviderSignInTexts(withSignInErrorTexts(en, "en"), "en") } },
     });
     h.i18n = i18n;
   });
@@ -294,7 +305,7 @@ describe(`[${SUITE}] Google, Apple and Microsoft on the Badger phone`, () => {
     h.store.set(PROVIDER_VERIFIER_KEY, "stored-verifier");
     await deliver("spacebadger://auth/provider?signinError=cancelled");
     console.info(`[${SUITE}] cancelled texts`, texts(tree));
-    expect(texts(tree)).toContain(en.login.provider.errors.cancelled);
+    expect(texts(tree)).toContain(providerSignInTexts.en.errors.cancelled);
     expect(h.completeProviderSignIn).not.toHaveBeenCalled();
     expect(h.store.has(PROVIDER_VERIFIER_KEY)).toBe(false);
   });

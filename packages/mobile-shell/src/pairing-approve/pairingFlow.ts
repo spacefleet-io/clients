@@ -153,7 +153,7 @@ export const sessionDeviceType = (session: { deviceType?: string | null; clientT
   return null;
 };
 
-/** "Parrot on Studio laptop (Computer) wants to sign in to your account." (ACCT-PAIR-05), or "… wants your library key."
+/** "Parrot on Studio laptop (Computer) wants to sign in to your account." (ACCT-PAIR-05), or "… wants your media library key."
  * when the device is already signed in and asks only for the key (ACCT-PAIR-01, key screen). */
 export const approvalQuestion = (request: Pick<PairingRequestInfo, "app" | "purpose" | "deviceName" | "deviceType">): string =>
   translate(request.purpose === "key" ? "pairing.approvalKeyQuestion" : "pairing.approvalQuestion", {

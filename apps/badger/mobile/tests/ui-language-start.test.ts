@@ -13,9 +13,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getCurrentLanguage } from "@space/mobile-shell/i18n";
 import { pickStartLanguage, readDeviceLocale } from "@space/mobile-shell/i18n/deviceLanguage";
 import { createFakeAsyncStorage } from "./harness";
-import type { AccountLanguageInput, AccountLanguageStep, AccountLanguageSync } from "../src/lib/uiLanguage";
 import {
   accountLanguageStep,
+  type AccountLanguageInput,
+  type AccountLanguageStep,
+  type AccountLanguageSync,
+} from "@space/mobile-shell/account-language-sync";
+import {
   chooseUiLanguage,
   ensureI18n,
   forgetAccountLanguage,

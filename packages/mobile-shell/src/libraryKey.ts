@@ -67,6 +67,25 @@ export const createLibraryKeyStore = (input: {
   };
 };
 
+/** Whose library key stayed on the phone after the server refused their session (`keepsKeyOnSignIn`). */
+export type KeptKeyOwnerStore = {
+  read: () => Promise<string | null>;
+  write: (userId: string) => Promise<void>;
+  forget: () => Promise<void>;
+};
+
+/**
+ * A refused session keeps the key (`keyAfterSignedOut`), and only that account gets it back at the next sign-in: the
+ * app writes the owner when it keeps the key, checks `keepsKeyOnSignIn` at sign-in, and forgets the owner after. A key
+ * stored afterwards (pairing, the key step) belongs to the account signing in, so storing one forgets the owner too.
+ * Shared by Badger's and Parrot's phone apps; each keeps its own storage `key`.
+ */
+export const createKeptKeyOwnerStore = (input: { asyncStorage: AsyncStorageApi; key: string }): KeptKeyOwnerStore => ({
+  read: () => input.asyncStorage.getItem(input.key),
+  write: (userId) => input.asyncStorage.setItem(input.key, userId),
+  forget: () => input.asyncStorage.removeItem(input.key),
+});
+
 /**
  * ACCT-DEV-03: whether the user's own Sign out must first ask if the library key was saved, i.e. this device holds it.
  * A store that cannot be read counts as holding one: asking once too often costs a tap, losing the key costs the

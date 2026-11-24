@@ -33,7 +33,8 @@ import { albumHeader, listAlbumTracklist, listAlbumTracks } from "../lib/library
 import { useManage } from "../state/manage";
 import { useSession } from "../state/session";
 import { colors, spacing } from "../theme";
-import { Body, ErrorText, IconButton, Title } from "./ui";
+import { MobileIconButton } from "@space/mobile-shell/components";
+import { Body, ErrorText, Title } from "./ui";
 import { PageBackButton, usePageTop } from "./pageBack";
 import type { RootStack } from "./routes";
 import { ParrotSky } from "./sky";
@@ -158,15 +159,19 @@ export const AlbumScreen = ({ route }: NativeStackScreenProps<RootStack, "Album"
             >
               <Play size={26} color={colors.accentText} fill={colors.accentText} />
             </Pressable>
-            <IconButton testID="album-shuffle" icon={Shuffle} label={t("shell.card.shuffle")} onPress={() => songs.length > 0 && player.shuffle(songs)} />
-            <IconButton
+            <MobileIconButton testID="album-shuffle" label={t("shell.card.shuffle")} onPress={() => songs.length > 0 && player.shuffle(songs)}>
+              <Shuffle size={22} color={colors.text} />
+            </MobileIconButton>
+            <MobileIconButton
               testID="album-like"
-              icon={AlbumHeart(allLiked)}
-              color={allLiked ? colors.accent : colors.text}
               label={allLiked ? t("shell.playlists.unlike") : t("shell.playlists.like")}
               onPress={() => songs.length > 0 && editor.toggleLikeAll(songIds)}
-            />
-            <IconButton testID="album-more" icon={Ellipsis} label={t("shell.card.more")} onPress={openMenu} />
+            >
+              <AlbumHeart on={allLiked} />
+            </MobileIconButton>
+            <MobileIconButton testID="album-more" label={t("shell.card.more")} onPress={openMenu}>
+              <Ellipsis size={22} color={colors.text} />
+            </MobileIconButton>
           </View>
           {error ? <ErrorText>{error}</ErrorText> : null}
           {tracks.error ? <ErrorText>{tracks.error}</ErrorText> : null}
@@ -212,8 +217,8 @@ export const AlbumScreen = ({ route }: NativeStackScreenProps<RootStack, "Album"
 };
 
 /** The album's heart: filled green when every song is liked (PAR-PL-04). */
-const FilledHeart = ({ size, color }: { size?: number; color?: string }) => <Heart size={size} color={color} fill={color} />;
-const AlbumHeart = (on: boolean): SheetAction["icon"] => (on ? FilledHeart : Heart);
+const AlbumHeart = ({ on }: { on: boolean }) =>
+  on ? <Heart size={22} color={colors.accent} fill={colors.accent} /> : <Heart size={22} color={colors.text} />;
 
 const styles = StyleSheet.create({
   actions: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginTop: spacing.sm },

@@ -54,7 +54,11 @@ export type UpdateSectionStringKey =
   | "systemPromptTitle"
   | "systemFailedTitle"
   | "installNow"
-  | "close";
+  | "close"
+  | "readyTitle"
+  | "readyBody"
+  | "readyBodyCurrent"
+  | "restartNow";
 
 export const updateSectionStrings: Record<ClientUiLanguage, Record<UpdateSectionStringKey, string>> = {
   en: {
@@ -103,6 +107,10 @@ export const updateSectionStrings: Record<ClientUiLanguage, Record<UpdateSection
     systemFailedTitle: "The update wasn't installed",
     installNow: "Install now",
     close: "Close",
+    readyTitle: "Update ready",
+    readyBody: "{app} {version} has downloaded. It installs the next time you quit {app}.",
+    readyBodyCurrent: "A new version of {app} has downloaded. It installs the next time you quit {app}.",
+    restartNow: "Restart now",
   },
   fr: {
     title: "À propos et mises à jour",
@@ -152,6 +160,10 @@ export const updateSectionStrings: Record<ClientUiLanguage, Record<UpdateSection
     systemFailedTitle: "La mise à jour n'a pas été installée",
     installNow: "Installer maintenant",
     close: "Fermer",
+    readyTitle: "Mise à jour prête",
+    readyBody: "{app} {version} est téléchargé. Il s'installe la prochaine fois que vous quittez {app}.",
+    readyBodyCurrent: "Une nouvelle version de {app} est téléchargée. Elle s'installe la prochaine fois que vous quittez {app}.",
+    restartNow: "Redémarrer maintenant",
   },
   nl: {
     title: "Over en updates",
@@ -199,6 +211,10 @@ export const updateSectionStrings: Record<ClientUiLanguage, Record<UpdateSection
     systemFailedTitle: "De update is niet geïnstalleerd",
     installNow: "Nu installeren",
     close: "Sluiten",
+    readyTitle: "Update klaar",
+    readyBody: "{app} {version} is gedownload. De update wordt geïnstalleerd zodra je {app} afsluit.",
+    readyBodyCurrent: "Een nieuwe versie van {app} is gedownload. De update wordt geïnstalleerd zodra je {app} afsluit.",
+    restartNow: "Nu herstarten",
   },
   de: {
     title: "Info & Updates",
@@ -246,6 +262,10 @@ export const updateSectionStrings: Record<ClientUiLanguage, Record<UpdateSection
     systemFailedTitle: "Das Update wurde nicht installiert",
     installNow: "Jetzt installieren",
     close: "Schließen",
+    readyTitle: "Update bereit",
+    readyBody: "{app} {version} wurde heruntergeladen. Es wird beim nächsten Beenden von {app} installiert.",
+    readyBodyCurrent: "Eine neue Version von {app} wurde heruntergeladen. Sie wird beim nächsten Beenden von {app} installiert.",
+    restartNow: "Jetzt neu starten",
   },
   es: {
     title: "Acerca de y actualizaciones",
@@ -293,6 +313,10 @@ export const updateSectionStrings: Record<ClientUiLanguage, Record<UpdateSection
     systemFailedTitle: "La actualización no se instaló",
     installNow: "Instalar ahora",
     close: "Cerrar",
+    readyTitle: "Actualización lista",
+    readyBody: "{app} {version} ya se descargó. Se instala la próxima vez que cierres {app}.",
+    readyBodyCurrent: "Una nueva versión de {app} ya se descargó. Se instala la próxima vez que cierres {app}.",
+    restartNow: "Reiniciar ahora",
   },
 };
 

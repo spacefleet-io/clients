@@ -5,8 +5,8 @@
  * @req REL-UPD-01
  * @req REL-UPD-02
  * @req REL-UPD-05
- * @why Parrot updates itself in the window: the main process downloads in the background, the renderer shows a
- *   "Restart now" card once a version is ready, and Settings › About & updates shows the version, the updater's
+ * @why Parrot updates itself in the window: the main process downloads in the background, the renderer shows the
+ *   shared "Restart now" card (`DesktopUpdateReadyNotice`) once a version is ready, and Settings › About & updates shows the version, the updater's
  *   state, its one Check / Download / Restart button and the automatic-updates switch. These tests drive both surfaces
  *   through the same bridge the preload exposes.
  */
@@ -14,13 +14,12 @@ import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { UpdaterBridge, UpdaterCheckResult, UpdaterEvent, UpdaterState } from "@space/desktop-shell/updater";
-import { ParrotUpdateSection, UpdateReadyNotice } from "../src/renderer/src/updates";
-import { translator } from "../src/renderer/src/i18n";
+import { ParrotUpdateReadyNotice, ParrotUpdateSection } from "../src/renderer/src/updates";
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
 const SUITE = "[PARROT-DESKTOP-UPDATES-001]";
-const t = translator("en");
+const readyNotice = <ParrotUpdateReadyNotice language="en" />;
 
 const mainState = (state: Partial<UpdaterState> = {}): UpdaterState => ({
   phase: "idle",
@@ -101,20 +100,21 @@ afterEach(() => {
   Reflect.deleteProperty(window, "parrot");
 });
 
-describe("Parrot UpdateReadyNotice", () => {
+describe("ParrotUpdateReadyNotice", () => {
   // @req REL-UPD-01
   it("appears once the main process reports a downloaded version, and Restart now installs", async () => {
     const testId = "ready-from-main-state";
     const bridge = makeBridge(mainState({ phase: "downloaded", version: "2.1.0", progress: 100 }));
     install(bridge);
     console.info(`${SUITE}[${testId}] phase:mount with main state downloaded 2.1.0`);
-    await mount(<UpdateReadyNotice t={t} />);
+    await mount(readyNotice);
     dump(testId, bridge);
     const notice = q("update-ready-notice");
     expect(notice).not.toBeNull();
     expect(notice!.getAttribute("role")).toBe("status");
-    expect(notice!.textContent).toContain(t("update.ready.title"));
-    expect(notice!.textContent).toContain(t("update.ready.body", { version: "2.1.0" }));
+    expect(notice!.textContent).toContain("Update ready");
+    expect(notice!.textContent).toContain("Parrot 2.1.0 has downloaded. It installs the next time you quit Parrot.");
+    expect(notice!.className).toContain("bottom-24");
     console.info(`${SUITE}[${testId}] phase:click restart`);
     await act(async () => q<HTMLButtonElement>("update-ready-restart")!.click());
     dump(testId, bridge);
@@ -126,7 +126,7 @@ describe("Parrot UpdateReadyNotice", () => {
     const testId = "ready-from-event";
     const bridge = makeBridge(mainState());
     install(bridge);
-    await mount(<UpdateReadyNotice t={t} />);
+    await mount(readyNotice);
     dump(testId, bridge);
     expect(q("update-ready-notice")).toBeNull();
     console.info(`${SUITE}[${testId}] phase:emit update-available + progress`);
@@ -140,7 +140,7 @@ describe("Parrot UpdateReadyNotice", () => {
     await act(async () => bridge.emit({ kind: "update-downloaded", version: "2.2.0" }));
     dump(testId, bridge);
     expect(q("update-ready-notice")).not.toBeNull();
-    const later = Array.from(container!.querySelectorAll("button")).find((b) => b.textContent === t("update.later"));
+    const later = Array.from(container!.querySelectorAll("button")).find((b) => b.textContent === "Later");
     console.info(`${SUITE}[${testId}] phase:click later`);
     await act(async () => later!.click());
     dump(testId, bridge);
@@ -153,12 +153,12 @@ describe("Parrot UpdateReadyNotice", () => {
     const testId = "ready-no-version";
     const bridge = makeBridge(mainState({ phase: "downloaded", version: null, progress: 100 }));
     install(bridge);
-    await mount(<UpdateReadyNotice t={t} />);
+    await mount(readyNotice);
     dump(testId, bridge);
     const notice = q("update-ready-notice");
     expect(notice).not.toBeNull();
-    expect(notice!.textContent).toContain(t("update.ready.bodyCurrent"));
-    expect(notice!.textContent).not.toContain("Parrot  is ready");
+    expect(notice!.textContent).toContain("A new version of Parrot has downloaded. It installs the next time you quit Parrot.");
+    expect(notice!.textContent).not.toContain("Parrot  has");
   });
 
   // @req REL-UPD-01
@@ -166,7 +166,7 @@ describe("Parrot UpdateReadyNotice", () => {
     const testId = "ready-mandatory";
     const bridge = makeBridge(mainState({ phase: "downloaded", version: "3.0.0", progress: 100, mandatory: true }));
     install(bridge);
-    await mount(<UpdateReadyNotice t={t} />);
+    await mount(readyNotice);
     dump(testId, bridge);
     expect(q("update-ready-notice")).toBeNull();
   });
@@ -174,7 +174,7 @@ describe("Parrot UpdateReadyNotice", () => {
   // @req REL-UPD-01
   it("renders nothing without a bridge (browser build)", async () => {
     const testId = "ready-no-bridge";
-    await mount(<UpdateReadyNotice t={t} />);
+    await mount(readyNotice);
     dump(testId);
     expect(container!.innerHTML).toBe("");
   });

@@ -27,7 +27,7 @@
     },
     "apps/badger/desktop": {
       "name": "@space/badger-desktop",
-      "version": "0.1.55",
+      "version": "0.1.60",
       "dependencies": {
         "better-sqlite3": "^13.2.0",
         "drizzle-orm": "^0.45.3",
@@ -55,6 +55,7 @@
         "@space/library-db-definition": "workspace:*",
         "@space/library-db-runtime": "workspace:*",
         "@space/logger": "workspace:*",
+        "@space/media-reseal": "workspace:*",
         "@space/media-session": "workspace:*",
         "@space/metadata-client": "workspace:*",
         "@space/mpv": "file:../../../packages/mpv",
@@ -153,6 +154,7 @@
         "@space/library-db": "workspace:*",
         "@space/library-db-definition": "workspace:*",
         "@space/media-crypto": "workspace:*",
+        "@space/media-reseal": "workspace:*",
         "@space/media-session": "workspace:*",
         "@space/metadata-client": "workspace:*",
         "@space/mobile-media-proxy": "workspace:*",
@@ -231,7 +233,7 @@
     },
     "apps/parrot/desktop": {
       "name": "@space/parrot-desktop",
-      "version": "0.1.46",
+      "version": "0.1.51",
       "devDependencies": {
         "@playwright/test": "~1.65.1",
         "@rolldown/plugin-babel": "^0.3.1",
@@ -240,6 +242,7 @@
         "@space/error-report": "workspace:*",
         "@space/legal": "workspace:*",
         "@space/library-db-runtime": "workspace:*",
+        "@space/media-reseal": "workspace:*",
         "@space/media-session": "workspace:*",
         "@space/metadata-client": "workspace:*",
         "@space/pairing-crypto": "workspace:*",
@@ -566,6 +569,7 @@
       "dependencies": {
         "@space/library-db-definition": "workspace:*",
         "@space/logger": "workspace:*",
+        "@space/media-reseal": "workspace:*",
         "@space/sdk": "workspace:*",
         "@space/shared": "workspace:*",
         "drizzle-orm": "^0.45.3",
@@ -594,6 +598,19 @@
     "packages/media-deps": {
       "name": "@space/media-deps",
       "devDependencies": {
+        "vitest": "^5.1.0",
+      },
+    },
+    "packages/media-reseal": {
+      "name": "@space/media-reseal",
+      "dependencies": {
+        "@space/library-db-definition": "workspace:*",
+        "@space/media-crypto": "workspace:*",
+        "@space/shared": "workspace:*",
+      },
+      "devDependencies": {
+        "@space/content-core": "workspace:*",
+        "@space/parrot-library-db-definition": "workspace:*",
         "vitest": "^5.1.0",
       },
     },
@@ -1984,6 +2001,8 @@
     "@space/media-crypto": ["@space/media-crypto@workspace:packages/media-crypto"],
 
     "@space/media-deps": ["@space/media-deps@workspace:packages/media-deps"],
+
+    "@space/media-reseal": ["@space/media-reseal@workspace:packages/media-reseal"],
 
     "@space/media-session": ["@space/media-session@workspace:packages/media-session"],
 

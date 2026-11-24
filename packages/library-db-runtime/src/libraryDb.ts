@@ -38,6 +38,7 @@ import {
   uploadChunks,
   type LibrarySnapshotManifest,
 } from "./snapshotTransport";
+import { rewriteLibraryBytesForReseal } from "./resealSnapshot";
 import { isProgressClassOp, SNAPSHOT_TAIL_BYTES_THRESHOLD } from "@space/library-db-definition/opClass";
 import {
   addProfilePlaylistItem,
@@ -938,6 +939,11 @@ const mapMediaRows = (
 
 const OPS_SNAPSHOT_THRESHOLD = 250;
 const SNAPSHOT_MIN_INTERVAL_MS = 10 * 60 * 1000;
+/**
+ * STOR-PLACE-11: how long this device watches an artwork copy it applied, in case another device's copy of the same
+ * picture replaces it through sync. Past that, the leftover clean-up (STOR-PLACE-06) covers what is left.
+ */
+const OWN_ARTWORK_COPY_WATCH_MS = 60 * 60 * 1000;
 // One statement answers "did anything write to this SQLite file since I last
 // looked": `total_changes()` counts every row this connection changed
 // (including trigger / FK-action rows and rolled-back ones, which only costs
@@ -1354,6 +1360,8 @@ export class LibraryDb {
    * applied locally, so a write after a remote change always uploads.
    */
   private lastQueuedUpsertSignature = new Map<string, { signature: string; updatedAt: string }>();
+  /** STOR-PLACE-11: storage key → when this device applied its own artwork copy holding it. */
+  private ownArtworkCopies = new Map<string, number>();
   private opsFlushConsecutiveFailures = 0;
   private opsFlushBackoffMs = 2000;
   private opsFlushCircuitOpen = false;
@@ -2639,10 +2647,12 @@ export class LibraryDb {
 
   /**
    * PRIV-KEY-13: this library sealed under the new key for the rotation, as a snapshot (chunks uploaded), declaring
-   * the op stream its writes are in.
+   * the op stream its writes are in. STOR-RESEAL-01: `resealCopies` (old media key → its re-sealed copy) renames the
+   * media references in the sealed bytes only; this library keeps playing the old objects until the switch.
    */
-  async sealForRotation(newKeyBase64: string): Promise<RotationOwnLibrary> {
-    const sealed = await sealLibrarySnapshot(this.token, newKeyBase64, this.buildCombinedExportBytes());
+  async sealForRotation(newKeyBase64: string, resealCopies: Array<[string, string]> = []): Promise<RotationOwnLibrary> {
+    const { bytes } = await rewriteLibraryBytesForReseal(this.buildCombinedExportBytes(), "badger", new Map(resealCopies));
+    const sealed = await sealLibrarySnapshot(this.token, newKeyBase64, bytes);
     return { ...sealed, opStreamVersion: this.writtenOpStreamVersion() };
   }
 
@@ -4616,8 +4626,11 @@ export class LibraryDb {
           break;
         }
       }
-      if (swapped) applied += 1;
-      else unapplied.push(copy);
+      if (swapped) {
+        applied += 1;
+        const key = artworkStorageKey(copy.value);
+        if (key) this.ownArtworkCopies.set(key, Date.now());
+      } else unapplied.push(copy);
     }
     const result: ArtworkApplyResult = { applied, skipped: unapplied.length, unapplied };
     // Counts only: the copies carry storage keys.
@@ -4628,6 +4641,42 @@ export class LibraryDb {
     this.core.update(mediaItems).set({ updatedAt: nowIso() }).where(eq(mediaItems.id, mediaId)).run();
     this.queueMediaUpsert(mediaId);
     return this.persist().then(() => result);
+  }
+
+  /** STOR-PLACE-11: every stored picture key a slot of the library holds (titles, seasons, episodes, people). */
+  private collectArtworkKeysInUse(): Set<string> {
+    const keys = new Set<string>();
+    const add = (value: string | null | undefined) => {
+      const key = artworkStorageKey(value);
+      if (key) keys.add(key);
+    };
+    for (const row of this.core.select({ poster: mediaItems.posterPath, backdrop: mediaItems.backdropPath }).from(mediaItems).all()) {
+      add(row.poster);
+      add(row.backdrop);
+    }
+    for (const row of this.metadata.select({ path: mediaSeasons.posterPath }).from(mediaSeasons).all()) add(row.path);
+    for (const row of this.metadata.select({ path: mediaEpisodes.stillPath }).from(mediaEpisodes).all()) add(row.path);
+    for (const row of this.metadata.select({ path: people.profilePath }).from(people).all()) add(row.path);
+    return keys;
+  }
+
+  /**
+   * STOR-PLACE-11: after remote changes are applied, deletes this device's own artwork copies that no slot holds any
+   * more. Two signed-in devices both copy a new title's pictures; sync keeps one device's row (LIB-SYNC-08), and the
+   * other device's copy would otherwise stay on the account, referenced by nothing, until the leftover clean-up.
+   */
+  private async discardSupersededArtworkCopies(): Promise<void> {
+    if (this.ownArtworkCopies.size === 0) return;
+    const cutoff = Date.now() - OWN_ARTWORK_COPY_WATCH_MS;
+    for (const [key, appliedAt] of this.ownArtworkCopies) if (appliedAt < cutoff) this.ownArtworkCopies.delete(key);
+    if (this.ownArtworkCopies.size === 0) return;
+    const inUse = this.collectArtworkKeysInUse();
+    const superseded = [...this.ownArtworkCopies.keys()].filter((key) => !inUse.has(key));
+    if (superseded.length === 0) return;
+    for (const key of superseded) this.ownArtworkCopies.delete(key);
+    // Counts only: the keys are storage object names.
+    logger.info({ count: superseded.length }, "artwork copies replaced through sync — deleting them (STOR-PLACE-11)");
+    await this.removeUploadedChunks(superseded);
   }
 
   /**
@@ -8500,7 +8549,12 @@ export class LibraryDb {
     };
 
     const base = this.secondaryOpsInFlight ?? Promise.resolve();
-    const next = base.then(applySecondary);
+    // STOR-PLACE-11: once every file holds the remote rows, a copy of ours that another device's replaced is deleted.
+    const next = base.then(applySecondary).then(() =>
+      this.discardSupersededArtworkCopies().catch((error: unknown) => {
+        logger.warn({ error: error instanceof Error ? error.message : String(error) }, "superseded artwork copy check failed");
+      })
+    );
     const finalPromise = next.finally(() => {
       if (this.secondaryOpsInFlight === finalPromise) {
         this.secondaryOpsInFlight = null;
@@ -9191,6 +9245,8 @@ export class LibraryDb {
     // STOR-PLACE-10: the title's own artwork goes with it; a photo another title still shows stays.
     const details = this.getMediaDetails(mediaId);
     const keys = details ? collectMediaDeleteKeys(details, (personId) => this.personInOtherTitle(personId, mediaId)) : [];
+    // The delete removes them itself (STOR-PLACE-10): no later sync check deletes them a second time.
+    for (const key of keys) this.ownArtworkCopies.delete(key);
     let deletedKeys = 0;
     let reclaimedBytes = 0;
     if (keys.length > 0 && this.token) {

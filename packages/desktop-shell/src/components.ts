@@ -76,6 +76,7 @@ export {
 } from "./components/desktop-jobs-panel";
 export {
   DesktopCompletedJobRow,
+  DesktopFailedJobDetail,
   DesktopJobActionButton,
   DesktopJobBucketHeader,
   DesktopJobGroupCard,
@@ -110,6 +111,15 @@ export {
   type PairDeviceKind,
   type PairDeviceStringKey,
 } from "./components/pair-device-strings";
+export {
+  KeyChangeDialog,
+  KeyChangeResealPanel,
+  type KeyChangeDialogFile,
+  type KeyChangeDialogPhase,
+  type KeyChangeDialogProgress,
+  type KeyChangeDialogProps,
+  type KeyChangeDialogView,
+} from "./components/key-change-dialog";
 export { default as PairWithPhone, PAIRING_POLL_INTERVAL_MS, type PairWithPhoneActions } from "./components/pair-with-phone";
 export { pairWithPhoneStrings, pairWithPhoneText, type PairWithPhoneStringKey } from "./components/pair-with-phone-strings";
 export { SameDeviceSignIn, type SameDeviceSignInProps } from "./components/same-device-sign-in-card";

@@ -27,6 +27,7 @@ import en from "../src/i18n/en.json";
 import es from "../src/i18n/es.json";
 import fr from "../src/i18n/fr.json";
 import nl from "../src/i18n/nl.json";
+import { withProviderSignInTexts } from "@space/shared/providerSignIn";
 
 type Tree = { [key: string]: string | Tree };
 
@@ -122,9 +123,10 @@ describe("Parrot phone translation files", () => {
   it("every key the code looks up exists in the shared or Parrot English file", () => {
     // `shell.*`: the Parrot texts every surface shares (@space/parrot-core), which `src/lib/i18n.ts` nests under `shell.`.
     const shellKeys = Object.keys(SHELL_EN).map((key) => `shell.${key}`);
-    // `profiles.*` and the labels on the way to account deletion (`settings.account.deleteAccount`): texts every app
-    // shares, added by the phone shell's i18n (`withProfilesTexts`, `withAccountDeletionLabels`).
-    const sharedKeys = baseKeys(flatten(withAccountDeletionLabels({ profiles: profilesTexts.en }, "mobile", "en") as Tree));
+    // `profiles.*`, the labels on the way to account deletion (`settings.account.deleteAccount`) and the Google, Apple
+    // and Microsoft sign-in words (`login.provider.*`): texts every app shares, added by the phone shell's i18n
+    // (`withProfilesTexts`, `withAccountDeletionLabels`, `withProviderSignInTexts`).
+    const sharedKeys = baseKeys(flatten(withProviderSignInTexts(withAccountDeletionLabels({ profiles: profilesTexts.en }, "mobile", "en"), "en") as Tree));
     const known = new Set([...baseKeys(flatten(sharedEn as Tree)), ...baseKeys(enFlat), ...shellKeys, ...sharedKeys]);
     const missing: string[] = [];
     let lookups = 0;

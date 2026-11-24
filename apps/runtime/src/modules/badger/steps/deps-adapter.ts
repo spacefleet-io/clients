@@ -349,11 +349,11 @@ export const resolveTranscodeRoot = (): string => {
     : joinPath(process.cwd(), ".runtime", "transcode");
 };
 
-const resolveJobDir = (userId: string, jobId: string): string =>
+export const resolveJobDir = (userId: string, jobId: string): string =>
   joinPath(resolveTranscodeRoot(), userId, jobId);
 
-/** Total bytes of the regular files under `dir` (0 when missing); for the removal log line only. */
-const dirSizeBytes = async (dir: string): Promise<number> => {
+/** Total bytes of the regular files under `dir` (0 when missing); for removal logs and the kept-copies size. */
+export const dirSizeBytes = async (dir: string): Promise<number> => {
   let total = 0;
   const walk = async (current: string): Promise<void> => {
     let entries;

@@ -1,120 +1,373 @@
-import React, { useCallback, useEffect, useState } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
-import { Button, Input, SectionHeader } from "../components/ui";
-import { Screen } from "../components/Screen";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Alert, AppState, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
+import { MobileButton, MobileInput, MobileScreen } from "@space/mobile-shell/components";
+import { SectionHeader } from "../components/SectionHeader";
+import { SwitchRow } from "../components/SettingsRows";
 import { useAuth } from "../store/auth";
 import { useLibrary } from "../store/library";
-import { ApiError } from "@space/shared/api";
-import { rotateWithParrotLibrary, rotationRefusal, type RotationRefusal } from "../lib/rotationCopies";
-import { encryptBytesToBase64 } from "../lib/crypto";
+import { createBadgerPhoneKeyChange } from "../lib/keyChange";
+import { createResealNetworkGate } from "../lib/resealNetwork";
+import { setStoredLibraryKey } from "../lib/onboarding";
+import {
+  KEY_CHANGE_IDLE,
+  KEY_CHANGE_WAIT_POLL_MS,
+  switchNowOpen,
+  type KeyChange,
+  type KeyChangeOutcome,
+  type KeyChangeState,
+  type UnreadableFile,
+} from "@space/media-reseal";
+import { SPACE_APP_NAMES } from "@space/shared/appScope";
+import { formatStorageBytes } from "@space/shared/format";
+import { isClientUiLanguage } from "@space/shared/i18n";
+import { keyChangeFailureOf, keyChangeFailureText } from "@space/shared/keyChangeFailure";
+import { keyChangeCountText, keyChangeEtaText, keyChangeText } from "@space/shared/keyChangeText";
 import { generateLibraryKeyWords, type NewLibraryKey } from "@space/shared/libraryKeyWords";
 import { LibraryKeyWordsGrid } from "@space/mobile-shell/libraryKeyWords";
-import { getStoredLibraryKey, setStoredLibraryKey } from "../lib/onboarding";
 import { useTranslation } from "@space/mobile-shell/i18n";
 import { theme } from "../theme/theme";
 
+const APP = SPACE_APP_NAMES.badger;
+
+/**
+ * Replace the media library key on Badger's phone (ACCT-KEYCHG-01), the same steps as the computer's dialog: the new
+ * key's words, the confirm, the password and code, then every media file copied under the new key (STOR-RESEAL-01) with
+ * progress and a time estimate (ACCT-KEYCHG-09), the unreadable files (ACCT-KEYCHG-07), the wait on another device with
+ * "Switch now" (ACCT-KEYCHG-06) and Stop under "More options" (ACCT-KEYCHG-08). On mobile data the copying waits unless
+ * "Use mobile data" is on (ACCT-KEYCHG-05). Leaving the screen or the app pauses it; Finish carries on.
+ */
 export const ResetKeyScreen = () => {
-  const { t, i18n } = useTranslation();
-  const { token, user } = useAuth();
+  const { i18n } = useTranslation();
+  const language = isClientUiLanguage(i18n?.language) ? i18n.language : "en";
+  const kt = useMemo(() => keyChangeText(language), [language]);
+  const { token, user, logout } = useAuth();
   // ACCT-AUTH-04: an account without a password is asked a code instead (the first try emails one).
   const hasPassword = user?.hasPassword !== false;
-  const { sealForRotation, reload } = useLibrary();
-  const [fresh, setFresh] = useState<NewLibraryKey | null>(null);
-  const newKey = fresh?.keyBase64 ?? null;
+  const { sealForRotation } = useLibrary();
+  const [fresh] = useState<NewLibraryKey>(() => generateLibraryKeyWords(i18n?.language));
   const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
+  const [needsCode, setNeedsCode] = useState(false);
+  const [method, setMethod] = useState<"email" | "totp" | null>(null);
   const [confirmed, setConfirmed] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<
-    "confirmRequired" | "passwordRequired" | "notReady" | "rotate" | "codeSent" | RotationRefusal | null
-  >(null);
-  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [state, setState] = useState<KeyChangeState>(KEY_CHANGE_IDLE);
+  const [now, setNow] = useState(() => Date.now());
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [unreadable, setUnreadable] = useState<UnreadableFile[] | null>(null);
+  const [unreadableOpen, setUnreadableOpen] = useState(false);
+  const [unreadableBusy, setUnreadableBusy] = useState(false);
 
+  const network = useMemo(() => createResealNetworkGate(), []);
+  const [useMobileData, setUseMobileData] = useState(false);
+  const [networkPaused, setNetworkPaused] = useState(false);
+  useEffect(() => network.subscribe(() => setNetworkPaused(network.paused())), [network]);
+
+  const keyChangeRef = useRef<KeyChange | null>(null);
+  const keyChangeFor = (signedIn: string): KeyChange => {
+    keyChangeRef.current ??= createBadgerPhoneKeyChange({
+      token: signedIn,
+      newKeyBase64: fresh.keyBase64,
+      sealForRotation,
+      network,
+      onState: (next) => {
+        setState(next);
+        if (next.phase === "waiting") setNow(Date.now());
+        // The run opened: the code was spent on it (codes are single-use) and the switch asks nothing again.
+        if (next.phase === "resealing") {
+          setCode("");
+          setNeedsCode(false);
+        }
+      },
+    });
+    return keyChangeRef.current;
+  };
+
+  // Leaving the screen or the app pauses the copying between files; the run keeps what was copied.
   useEffect(() => {
-    setFresh(generateLibraryKeyWords(i18n?.language));
+    const subscription = AppState.addEventListener("change", (next) => {
+      if (next !== "active") keyChangeRef.current?.pause();
+    });
+    return () => {
+      subscription.remove();
+      keyChangeRef.current?.pause();
+    };
   }, []);
 
-  const handleRotate = useCallback(async () => {
-    if (!token || !newKey) return;
-    setError(null);
-    setSuccess(false);
-    if (!confirmed) {
-      setError("confirmRequired");
-      return;
+  const showError = (err: unknown) => {
+    const failure = keyChangeFailureOf(err);
+    if (failure.status === "codeNeeded") {
+      setNeedsCode(true);
+      setMethod(failure.method);
+      setNotice(kt("codeSent"));
+    } else {
+      // PRIV-KEY-06: Parrot's library is the one re-encrypted alongside.
+      setError(keyChangeFailureText(language, failure, SPACE_APP_NAMES.parrot));
     }
-    if (hasPassword && !password) {
-      setError("passwordRequired");
-      return;
-    }
+  };
+
+  const busyRef = useRef(false);
+  const runBusy = async (step: () => Promise<void>) => {
+    if (busyRef.current) return;
+    busyRef.current = true;
     setBusy(true);
+    setError(null);
+    setNotice(null);
     try {
-      // PRIV-KEY-13: this library as a snapshot under the new key (chunks uploaded), declaring its formats.
-      const library = await sealForRotation(newKey);
-      if (!library) {
-        setError("notReady");
-        return;
-      }
-      const probeBytes = new Uint8Array(32);
-      global.crypto.getRandomValues(probeBytes);
-      const keyProbe = await encryptBytesToBase64(newKey, probeBytes);
-      // PRIV-KEY-06: Parrot's library is re-encrypted with this phone's current key, never emptied.
-      await rotateWithParrotLibrary({
-        token,
-        oldKey: await getStoredLibraryKey(),
-        newKey,
-        library,
-        keyProbe,
-        password: hasPassword ? password : "",
-        twoFactorCode: code || undefined,
-      });
-      await setStoredLibraryKey(newKey);
-      setSuccess(true);
-      reload();
+      await step();
     } catch (err) {
-      // Without a password the first try emails a code (or asks the authenticator's): say where to type it.
-      const refused = rotationRefusal(err);
-      if (refused) setError(refused);
-      else setError(!hasPassword && err instanceof ApiError && err.payload?.error === "two_factor_required" ? "codeSent" : "rotate");
+      showError(err);
     } finally {
+      busyRef.current = false;
       setBusy(false);
     }
-  }, [code, confirmed, sealForRotation, hasPassword, newKey, password, reload, token]);
+  };
+
+  /** After the switch: the new key is kept and this session ends (the rotation revoked every session). */
+  const finish = async (outcome: KeyChangeOutcome | null) => {
+    if (outcome !== "switched") return;
+    keyChangeRef.current = null;
+    await setStoredLibraryKey(fresh.keyBase64);
+    await logout("sessionRejected");
+  };
+
+  /** Start (ACCT-KEYCHG-03), or Finish after a refused switch or interrupted copying: the same run carries on. */
+  const submit = () =>
+    runBusy(async () => {
+      if (!token) return;
+      const keyChange = keyChangeFor(token);
+      await finish(
+        keyChange.state().phase !== "form"
+          ? await keyChange.resume()
+          : await keyChange.start({ password: hasPassword ? password : "", ...(code ? { twoFactorCode: code } : {}) })
+      );
+    });
+
+  /** "Switch now" (ACCT-KEYCHG-06): the other device's unfinished uploads are cancelled (STOR-RESEAL-10). */
+  const switchNow = () => runBusy(async () => await finish((await keyChangeRef.current?.switchNow()) ?? null));
+
+  // STOR-RESEAL-08: a waiting switch asks the run whether the other uploads ended, then switches.
+  useEffect(() => {
+    const keyChange = keyChangeRef.current;
+    if (state.phase !== "waiting" || !keyChange) return;
+    const timer = setInterval(() => {
+      setNow(Date.now());
+      if (busyRef.current) return;
+      void keyChange
+        .poll()
+        .then(finish)
+        // A failed look at the run is tried again on the next tick; a refused switch left the wait and says why.
+        .catch((err: unknown) => {
+          if (keyChange.state().phase !== "waiting") showError(err);
+        });
+    }, KEY_CHANGE_WAIT_POLL_MS);
+    return () => clearInterval(timer);
+  }, [state.phase]);
+
+  /** Stop (ACCT-KEYCHG-08, confirmed): the copies are deleted and the library stays as it was (STOR-RESEAL-07). */
+  const confirmStop = () =>
+    Alert.alert(kt("reseal.stopTitle"), kt("reseal.stopBody"), [
+      { text: kt("reseal.keepGoing"), style: "cancel" },
+      {
+        text: kt("reseal.stopConfirm"),
+        style: "destructive",
+        onPress: () =>
+          void runBusy(async () => {
+            await keyChangeRef.current?.stop();
+            keyChangeRef.current = null;
+            setState(KEY_CHANGE_IDLE);
+            setMoreOpen(false);
+            setUnreadable(null);
+            setUnreadableOpen(false);
+            Alert.alert(kt("reseal.stoppedTitle"), kt("reseal.stoppedMessage"));
+          }),
+      },
+    ]);
+
+  /** "See the N files" (ACCT-KEYCHG-07): the files the old key could not open. */
+  const showUnreadable = async () => {
+    setUnreadableOpen(true);
+    setUnreadable(null);
+    const keyChange = keyChangeRef.current;
+    setUnreadable(keyChange ? await keyChange.unreadableFiles().catch(() => []) : []);
+  };
+
+  /** Deletes the unreadable files; they were lost already (STOR-RESEAL-05). */
+  const deleteUnreadable = async () => {
+    const keyChange = keyChangeRef.current;
+    if (!keyChange || !unreadable?.length) return;
+    setUnreadableBusy(true);
+    try {
+      await keyChange.deleteUnreadableFiles(unreadable);
+      Alert.alert(kt("reseal.unreadableDeletedTitle"), keyChangeCountText(language, "reseal.unreadableDeletedMessage", unreadable.length));
+      setUnreadable([]);
+    } catch {
+      Alert.alert(kt("reseal.unreadableTitle"), kt("reseal.unreadableDeleteFailed"));
+    } finally {
+      setUnreadableBusy(false);
+    }
+  };
+
+  const onForm = state.phase === "form";
+  const progress = state.progress;
+  const percent =
+    progress && progress.transferBytes > 0
+      ? Math.min(100, Math.floor((progress.transferredBytes / progress.transferBytes) * 100))
+      : progress && progress.totalFiles > 0
+        ? Math.floor((progress.doneFiles / progress.totalFiles) * 100)
+        : 0;
+  const kept = progress?.keptFiles ?? 0;
 
   return (
-    <Screen>
-      <ScrollView contentContainerStyle={styles.scroll}>
-        <SectionHeader
-          title={t("resetKey.title")}
-          subtitle={t("resetKey.subtitle")}
-        />
-        <View style={styles.card}>
-          <Text style={styles.label}>{t("resetKey.newKey")}</Text>
-          <LibraryKeyWordsGrid words={fresh?.words ?? []} />
-          <Button
-            label={t("resetKey.generateAnother")}
-            variant="secondary"
-            onPress={() => setFresh(generateLibraryKeyWords(i18n?.language))}
-          />
-        </View>
-        {hasPassword ? (
-          <Input label={t("resetKey.password")} value={password} onChangeText={setPassword} secureTextEntry />
+    <MobileScreen>
+      <ScrollView contentContainerStyle={styles.scroll} testID="key-change-screen">
+        <SectionHeader title={kt("dialogTitle")} />
+        {onForm ? (
+          <>
+            <View style={styles.card}>
+              <Text style={styles.title}>{kt("keyLabel")}</Text>
+              <LibraryKeyWordsGrid words={fresh.words} />
+              <Text style={styles.muted}>{kt("keyHint")}</Text>
+              <Text style={styles.muted}>{kt("resealHint", { app: APP })}</Text>
+            </View>
+            <SwitchRow title={kt("confirmLabel")} value={confirmed} onValueChange={setConfirmed} testID="key-change-confirm" />
+            {hasPassword ? (
+              <MobileInput label={kt("passwordLabel")} value={password} onChangeText={setPassword} secureTextEntry />
+            ) : (
+              <Text testID="key-change-no-password" style={styles.muted}>
+                {kt("noPasswordHint")}
+              </Text>
+            )}
+          </>
+        ) : state.phase === "waiting" ? (
+          <View style={styles.card} testID="key-change-waiting">
+            <Text style={styles.title}>{kt("reseal.waitingTitle")}</Text>
+            <Text style={styles.muted}>{keyChangeCountText(language, "reseal.waitingBody", state.uploadsInFlight)}</Text>
+            {switchNowOpen(state.switchNowAt, now) ? (
+              <>
+                <Text style={styles.muted}>{kt("reseal.switchNowBody")}</Text>
+                <MobileButton label={kt("reseal.switchNow")} variant="secondary" onPress={() => void switchNow()} loading={busy} />
+              </>
+            ) : null}
+          </View>
         ) : (
-          <Text testID="reset-key-recheck-hint" style={styles.label}>{t("login.code.recheckHint")}</Text>
+          <View style={styles.card} testID="key-change-reseal">
+            <Text style={styles.title}>{state.phase === "resealing" ? kt("reseal.title") : kt("reseal.readyTitle")}</Text>
+            <View
+              style={styles.track}
+              accessibilityRole="progressbar"
+              accessibilityLabel={kt("reseal.title")}
+              accessibilityValue={{ min: 0, max: 100, now: percent }}
+            >
+              <View style={[styles.fill, { width: `${percent}%` }]} />
+            </View>
+            {progress ? (
+              <View style={styles.progressRow}>
+                <Text style={styles.muted}>
+                  {kt("reseal.files", { done: progress.doneFiles, total: progress.totalFiles })}
+                  {" · "}
+                  {formatStorageBytes(progress.transferredBytes)} / {formatStorageBytes(progress.transferBytes)}
+                </Text>
+                {state.phase === "resealing" ? <Text style={styles.muted}>{keyChangeEtaText(language, state.etaSeconds)}</Text> : null}
+              </View>
+            ) : null}
+            {state.phase === "resealing" ? (
+              <Text style={styles.muted} testID="key-change-keep-open">
+                {/* ACCT-KEYCHG-05: iOS stops an app that leaves the screen, and a long copy drains the battery. */}
+                {kt(Platform.OS === "ios" ? "reseal.keepOpenPlugged" : "reseal.keepOpen", { app: APP })}
+              </Text>
+            ) : null}
+          </View>
         )}
-        <Input label={t("resetKey.code")} value={code} onChangeText={setCode} />
-        <View style={styles.card}>
-          <Text style={styles.confirmLabel}>{t("resetKey.confirmLabel")}</Text>
-          <Button
-            label={confirmed ? t("resetKey.confirmed") : t("resetKey.confirm")}
-            variant={confirmed ? "secondary" : "primary"}
-            onPress={() => setConfirmed((prev) => !prev)}
+
+        {!onForm && networkPaused && !useMobileData ? (
+          <View style={styles.banner} testID="key-change-mobile-data-paused">
+            <Text style={styles.title}>{kt("reseal.mobileDataTitle")}</Text>
+            <Text style={styles.muted}>{kt("reseal.mobileDataBody")}</Text>
+          </View>
+        ) : null}
+        {!onForm && state.phase !== "waiting" ? (
+          <SwitchRow
+            title={kt("reseal.useMobileData")}
+            description={kt("reseal.useMobileDataHint")}
+            value={useMobileData}
+            onValueChange={(allowed) => {
+              setUseMobileData(allowed);
+              network.setUseMobileData(allowed);
+            }}
+            testID="key-change-use-mobile-data"
           />
-        </View>
-        {error ? <Text style={styles.error}>{error === "codeSent" ? t("login.code.recheckSent") : t(`resetKey.errors.${error}`)}</Text> : null}
-        {success ? <Text style={styles.success}>{t("resetKey.success")}</Text> : null}
-        <Button label={busy ? t("resetKey.rotating") : t("resetKey.rotate")} onPress={handleRotate} loading={busy} />
+        ) : null}
+
+        {needsCode ? (
+          <View style={styles.field}>
+            <MobileInput label={kt("codeLabel")} value={code} onChangeText={setCode} placeholder="123456" />
+            <Text style={styles.muted}>{method === "totp" ? kt("codeHintTotp") : kt("codeHintEmail")}</Text>
+          </View>
+        ) : null}
+
+        {kept > 0 ? (
+          <View style={styles.card} testID="key-change-unreadable">
+            <Text style={styles.muted}>{keyChangeCountText(language, "reseal.unreadable", kept)}</Text>
+            <MobileButton label={keyChangeCountText(language, "reseal.seeFiles", kept)} variant="ghost" onPress={() => void showUnreadable()} />
+            {unreadableOpen ? (
+              <View style={styles.field}>
+                <Text style={styles.title}>{kt("reseal.unreadableTitle")}</Text>
+                <Text style={styles.muted}>{kt("reseal.unreadableBody")}</Text>
+                {unreadable === null ? (
+                  <Text style={styles.muted}>{kt("reseal.unreadableLoading")}</Text>
+                ) : unreadable.length === 0 ? (
+                  <Text style={styles.muted}>{kt("reseal.unreadableNone")}</Text>
+                ) : (
+                  unreadable.map((file) => (
+                    <View key={file.key} style={styles.fileRow}>
+                      <Text style={styles.fileKey} numberOfLines={1}>
+                        {file.key}
+                      </Text>
+                      <Text style={styles.muted}>{formatStorageBytes(file.sizeBytes)}</Text>
+                    </View>
+                  ))
+                )}
+                <MobileButton
+                  label={keyChangeCountText(language, "reseal.unreadableDelete", unreadable?.length ?? 0)}
+                  variant="danger"
+                  disabled={!unreadable?.length}
+                  loading={unreadableBusy}
+                  onPress={() => void deleteUnreadable()}
+                />
+                <MobileButton label={kt("reseal.close")} variant="ghost" onPress={() => setUnreadableOpen(false)} />
+              </View>
+            ) : null}
+          </View>
+        ) : null}
+
+        {notice ? <Text style={styles.notice}>{notice}</Text> : null}
+        {error ? (
+          <Text style={styles.error} testID="key-change-error">
+            {error}
+          </Text>
+        ) : null}
+
+        {onForm || state.phase === "ready" ? (
+          <MobileButton
+            label={busy ? kt("working") : state.phase === "ready" ? kt("reseal.finish") : kt("submit")}
+            onPress={() => void submit()}
+            disabled={!confirmed || (hasPassword && !password.trim())}
+            loading={busy}
+            testID="key-change-submit"
+          />
+        ) : null}
+
+        {onForm ? null : (
+          <View style={styles.field}>
+            <MobileButton label={kt("reseal.moreOptions")} variant="ghost" onPress={() => setMoreOpen((wasOpen) => !wasOpen)} />
+            {moreOpen ? <MobileButton label={kt("reseal.stop")} variant="danger" onPress={confirmStop} testID="key-change-stop" /> : null}
+          </View>
+        )}
       </ScrollView>
-    </Screen>
+    </MobileScreen>
   );
 };
 
@@ -130,17 +383,51 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.border,
     gap: theme.spacing.sm,
   },
-  label: {
+  banner: {
+    borderRadius: theme.radius.md,
+    padding: theme.spacing.md,
+    borderWidth: 1,
+    borderColor: theme.colors.accent,
+    gap: theme.spacing.xs,
+  },
+  field: {
+    gap: theme.spacing.sm,
+  },
+  title: {
+    color: theme.colors.text,
+    fontWeight: "600",
+  },
+  muted: {
     color: theme.colors.textMuted,
     fontSize: theme.font.size.sm,
   },
-  confirmLabel: {
+  track: {
+    height: 8,
+    borderRadius: 4,
+    overflow: "hidden",
+    backgroundColor: theme.colors.surfaceRaised,
+  },
+  fill: {
+    height: "100%",
+    backgroundColor: theme.colors.accent,
+  },
+  progressRow: {
+    gap: theme.spacing.xs,
+  },
+  fileRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: theme.spacing.sm,
+  },
+  fileKey: {
+    flexShrink: 1,
     color: theme.colors.text,
+    fontSize: theme.font.size.sm,
+  },
+  notice: {
+    color: theme.colors.accent,
   },
   error: {
     color: theme.colors.danger,
-  },
-  success: {
-    color: theme.colors.success,
   },
 });

@@ -295,6 +295,43 @@ export function DesktopCompletedJobRow({
 }
 
 /**
+ * The three lines under a failed job (UX-JOBS-03): what happened, what it means for the user, and the ONE thing to do
+ * about it. Omit `action` when nothing can be done but remove the job (the row's bin already does that).
+ */
+export function DesktopFailedJobDetail({
+  what,
+  meaning,
+  action,
+  testId,
+}: {
+  what: ReactNode;
+  meaning: ReactNode;
+  action?: { label: string; onClick: () => void; busy?: boolean; testId?: string };
+  testId?: string;
+}) {
+  return (
+    <div className="mt-2 space-y-1" data-testid={testId}>
+      <p className="text-[11px] font-medium text-destructive">{what}</p>
+      <p className="text-[11px] text-muted-foreground">{meaning}</p>
+      {action ? (
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="h-7 px-2.5 text-[11px]"
+          disabled={action.busy}
+          aria-busy={action.busy || undefined}
+          onClick={action.onClick}
+          data-testid={action.testId}
+        >
+          {action.label}
+        </Button>
+      ) : null}
+    </div>
+  );
+}
+
+/**
  * Placeholder cards while the job list loads, shaped like the real ones so nothing shifts when they arrive. `card`
  * is the panel's (three group cards); `row` is a title's Jobs tab (two rows).
  */

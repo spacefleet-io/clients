@@ -11,7 +11,7 @@ import type { ParrotPhotoCredit } from "@space/parrot-library-db-definition/ops"
 import { colors, spacing } from "../../theme";
 import { ParrotArt } from "../art";
 import { PAGE_BACK_ROW } from "../pageBack";
-import { Shimmer } from "../shimmer";
+import { MobileSkeletonPulse } from "@space/mobile-shell/components";
 import { SongListRow } from "../SongListRow";
 import type { ArtistPage, ArtistSong } from "./useArtistPage";
 
@@ -62,7 +62,7 @@ const initials = (name: string) =>
 export const ArtistHero = ({ artistId, name, page, width, height }: { artistId: string; name: string; page: ArtistPage; width: number; height: number }) => (
   <View testID="artist-hero" style={{ width, height }}>
     {page.photoWaiting ? (
-      <Shimmer testID="artist-photo-shimmer" style={StyleSheet.absoluteFill} />
+      <MobileSkeletonPulse testID="artist-photo-shimmer" style={StyleSheet.absoluteFill} />
     ) : (
       <ParrotArt
         seed={artistId}

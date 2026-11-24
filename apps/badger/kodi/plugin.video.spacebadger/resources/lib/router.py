@@ -65,7 +65,7 @@ def _setup_needed(ctx, handle):
         li = xbmcgui.ListItem("[B]Pair with your phone[/B]")
         li.setArt({"icon": "DefaultAddonService.png"})
         items.append((url_for(action="pair"), li, False))
-        adv = xbmcgui.ListItem("[COLOR gray]Advanced: sign in with email and password, or type the library key[/COLOR]")
+        adv = xbmcgui.ListItem("[COLOR gray]Advanced: sign in with email and password, or type the media library key[/COLOR]")
         items.append((url_for(action="advanced"), adv, False))
         if not core.load_state().get("pairPrompted"):
             # first run: open the pairing dialog once on its own
@@ -237,7 +237,7 @@ def action_signin():
         ok_dialog("Badger", "Not signed in (%s). Enter email and password in the settings first." % (status or "no credentials"))
         return
     if not ctx.key:
-        ok_dialog("Badger", "Signed in. Now enter your library key in the settings (see %s)." % KEY_DOCS_URL)
+        ok_dialog("Badger", "Signed in. Now enter your media library key in the settings (see %s)." % KEY_DOCS_URL)
         return
     action_sync(ctx)
 
@@ -396,8 +396,8 @@ def dispatch(argv):
         xbmcaddon.Addon(ADDON_ID).openSettings()
     elif action == "keywarning":
         ok_dialog(
-            "Badger: library key storage",
-            "Your library key is stored in a private file (owner-only permissions) in this addon's data folder. "
+            "Badger: media library key storage",
+            "Your media library key is stored in a private file (owner-only permissions) in this addon's data folder. "
             "Anyone who can read this device's files can decrypt your library. Only enter it on devices you trust.\n%s" % KEY_DOCS_URL,
         )
     elif action == "delete":

@@ -44,7 +44,10 @@ vi.mock("@space/mobile-shell/sibling", () => ({
 vi.mock("../src/lib/libraryDb", () => ({ LibraryDb: { clearLocalCache: async () => undefined } }));
 vi.mock("../src/lib/assets", () => ({ clearAssetUrlCache: () => undefined }));
 vi.mock("../src/lib/pairing/deviceWatch", () => ({ forgetKnownSessions: async () => undefined }));
-vi.mock("../src/lib/onboarding", () => ({ clearLibraryKey: async () => undefined }));
+vi.mock("../src/lib/onboarding", () => ({
+  clearLibraryKey: async () => undefined,
+  keptKeyOwnerStore: { read: async () => null, write: async () => undefined, forget: async () => undefined },
+}));
 vi.mock("@space/shared/api", async (importOriginal) => {
   const actual = await importOriginal<typeof SharedApi>();
   return {

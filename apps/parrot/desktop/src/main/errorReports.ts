@@ -1,36 +1,11 @@
 /**
- * Error reports (REL-LOG-06) for Parrot's main process, on the shared desktop basis Badger uses
- * (`@space/error-report/desktop-main`). Kept out of `index.ts`, which needs a running Electron, so tests drive it.
+ * Setup answers for Parrot's main process: the error-reports answer (REL-LOG-06) goes through the shared desktop
+ * controller (`@space/error-report/desktop-main-reports`). Kept out of `index.ts`, which needs a running Electron, so
+ * tests drive it.
  */
-import { join } from "node:path";
-import { resolveDsn } from "@space/error-report";
-import { createConsentFile } from "@space/error-report/consent-file";
-import { parseForcedErrorReports } from "@space/error-report/desktop";
-import { createErrorReports, type ErrorReportsController } from "@space/error-report/desktop-main";
-import { createElectronMainReporting } from "@space/error-report/electron-main";
+import type { ErrorReportsController } from "@space/error-report/desktop-main";
 import type { ParrotSetupState } from "../shared/ipc";
 import type { ParrotStore } from "./store";
-
-/** The answer lives in `<userData>/error-reports.json`, the file Parrot always used, so earlier answers survive. */
-export const createParrotErrorReports = (deps: {
-  userDataDir: string;
-  /** The build's Bugsink address (`__SF_BUGSINK_DSN__`); "" in a build without one, which never reports. */
-  dsn: string;
-  release: string;
-  /** `process.env.SF_ERROR_REPORTS` */
-  forcedRaw: string | undefined;
-  log: (line: string) => void;
-  fail: (line: string) => void;
-}): ErrorReportsController =>
-  createErrorReports({
-    consent: createConsentFile(join(deps.userDataDir, "error-reports.json")),
-    reporting: createElectronMainReporting({ dsn: deps.dsn, release: deps.release, app: "parrot", platform: "desktop" }),
-    available: resolveDsn(deps.dsn) !== null,
-    release: deps.release,
-    forced: parseForcedErrorReports(deps.forcedRaw),
-    log: deps.log,
-    logError: deps.fail,
-  });
 
 /** Saves setup answers; the error-reports answer is stored and applied through the shared controller. */
 export const createSetupSaver = (deps: {
