@@ -18,7 +18,8 @@ import React from "react";
 import { describe, expect, it, vi } from "vitest";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import type { MediaRow } from "@space/shared/libraryTypes";
-import { TV_RAIL_GROW_ROOM, TvRail } from "./TvRail";
+import { TV_CARD_GROW_ROOM } from "@space/mobile-shell/tv/TvCardRow";
+import { TvRail } from "./TvRail";
 import { TV_SPACE } from "../ui/tokens";
 
 /** The window: 960x540 dp (Android TV at 1080p) unless a test switches it to an Apple TV's 1920x1080 points. */
@@ -42,6 +43,8 @@ vi.mock("./TvPosterCard", () => ({ TvPosterCard: "TvPosterCard", tvPosterCardHei
 const items = [{ id: "a", title: "A" }, { id: "b", title: "B" }] as unknown as MediaRow[];
 const flat = (style: unknown) => Object.assign({}, ...[style].flat(Infinity).filter(Boolean)) as Record<string, number | string>;
 const isType = (name: string) => (node: { type: unknown }) => (node.type as unknown) === name;
+/** The row's heading line: the View holding the title (the row's first inner View). */
+const headOf = (tree: ReactTestRenderer) => tree.root.findAll(isType("View"))[1];
 
 const renderRail = (props: Partial<React.ComponentProps<typeof TvRail>> = {}) => {
   let tree!: ReactTestRenderer;
@@ -96,7 +99,7 @@ describe("TvRail on the sky (TV-RAIL-SKY-001)", () => {
   it("@req UX-TV-11 no panel: no border, background or margin; heading and first poster at the screen margin", () => {
     const tree = renderRail();
     const rail = flat(tree.root.findAll(isType("View"))[0].props.style);
-    const header = flat(tree.root.find((n) => isType("Text")(n) && n.props.accessibilityRole === "header").props.style);
+    const header = flat(headOf(tree).props.style);
     const content = flat(tree.root.find(isType("FlatList")).props.contentContainerStyle);
     console.info("[TV-RAIL-SKY-001] rail", JSON.stringify({ rail, header, content }));
     expect(rail.borderWidth).toBeUndefined();
@@ -114,7 +117,7 @@ describe("TvRail on the sky (TV-RAIL-SKY-001)", () => {
     const list = tree.root.find(isType("FlatList"));
     expect(card.props.showProgress).toBe(true);
     expect(card.props.showType).toBeUndefined();
-    expect(flat(list.props.style).height).toBe(107 * 2 + TV_RAIL_GROW_ROOM * 2);
+    expect(flat(list.props.style).height).toBe(107 * 2 + TV_CARD_GROW_ROOM * 2);
   });
 });
 
@@ -130,7 +133,7 @@ describe("TvRail on an Apple TV (TV-SCALE-RAIL-001)", () => {
       const tree = renderRail({ cardWidth });
       const list = tree.root.find(isType("FlatList"));
       return {
-        header: flat(tree.root.find((n) => isType("Text")(n) && n.props.accessibilityRole === "header").props.style),
+        header: flat(headOf(tree).props.style),
         content: flat(list.props.contentContainerStyle),
         listHeight: flat(list.props.style).height as number,
       };

@@ -113,7 +113,7 @@ vi.mock("../src/state/manage", () => ({
     remove: (target: { kind: string; id: string }, title: string) => void fake.calls.push(`delete:${target.kind}:${target.id}:${title}`),
   }),
 }));
-vi.mock("@space/mobile-shell/components", () => ({}));
+vi.mock("@space/mobile-shell/components", () => ({ MobileIconButton: "MobileIconButton" }));
 vi.mock("@space/mobile-shell/render-boundary", () => ({ guardRenderItem: (_name: string, render: unknown) => render }));
 
 import { AlbumScreen } from "../src/screens/AlbumScreen";
@@ -159,9 +159,10 @@ describe("PARROT-MOBILE-ALBUM-ACTIONS-001 album page action row", () => {
     fake.liked = new Set(["t1", "t2"]);
     const heart = byTestId(render(), "album-like")!;
     expect(heart.props.label).toBe(SHELL_FR["playlists.unlike"]);
-    expect(heart.props.icon).not.toBe("Icon:Heart");
+    // The icon is the button's child: the album heart, filled while every song is liked (PAR-PL-04).
+    expect((heart.props.children as Element).props.on).toBe(true);
     fake.liked = new Set(["t1"]);
-    expect(byTestId(render(), "album-like")!.props.icon).toBe("Icon:Heart");
+    expect((byTestId(render(), "album-like")!.props.children as Element).props.on).toBe(false);
     log("done", { case: "heart" });
   });
 

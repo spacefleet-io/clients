@@ -37,7 +37,12 @@ import {
 } from "@space/runtime-contracts/badger/offline";
 import { badgerExportEstimate, badgerExportSubmit } from "@space/runtime-contracts/badger/export";
 import { createBadgerExportEstimateHandler, createBadgerExportSubmitHandler } from "./badger/export";
-import { badgerPreviewsGetStatus } from "@space/runtime-contracts/badger/previews";
+import {
+  badgerPreviewsGetCatchUp,
+  badgerPreviewsGetStatus,
+  badgerPreviewsRetryCatchUp,
+  badgerPreviewsSetCatchUpVideo,
+} from "@space/runtime-contracts/badger/previews";
 import {
   configureBadgerOfflineDeps,
   createOfflineAwaitCredentials,
@@ -71,12 +76,7 @@ import {
   uploadEncryptedBadgerFile,
 } from "./badgerIngest";
 import { createSubtitleOcrWorker, type SubtitleOcrWorker } from "./badger/subtitleOcrWorker";
-import {
-  createPreviewSheetsCatchUp,
-  type PreviewCatchUp,
-  type PreviewCatchUpLocalImport,
-} from "./badger/previewSheetsCatchUp";
-import type { PreviewSheetCandidate } from "@space/shared/libraryTypes";
+import { createPreviewSheetsCatchUp, type PreviewCatchUp } from "./badger/previewSheetsCatchUp";
 import { uploadPlaybackGate } from "@space/content-core/storageTransport";
 import { ocrPictureSubtitleFile } from "@space/ingest-core/subtitleOcr";
 import { tmpdir } from "node:os";
@@ -128,6 +128,8 @@ const badgerModuleDependencies = () => ({
   onLibraryClosed: ((reason) => libraryClosedListener?.(reason)) satisfies LibraryClosedListener,
   onLibraryOpened: (mode: "online" | "local") => {
     if (badgerEngineV2) void runOfflineLibraryMaintenance(badgerEngineV2, mode);
+    // MPV-PREV-07: a re-open paused the skip catch-up; it resumes with the same video.
+    previewCatchUp?.kick("library_opened");
   },
   onSessionChanged: () => sessionChangedListener?.(),
 });
@@ -367,22 +369,6 @@ const stopPreviewCatchUp = () => {
   void previewCatchUp?.stop();
   previewCatchUp = null;
 };
-/** The newest import of this candidate this runtime still remembers (job history keeps 30 days). */
-const findLocalPreviewImport = async (userId: string, candidate: PreviewSheetCandidate): Promise<PreviewCatchUpLocalImport | null> => {
-  const engine = badgerEngineV2;
-  if (!engine) return null;
-  const { jobs } = await engine.list({ app: "badger", ownerId: userId, kind: ["source"], status: ["succeeded"], includeDismissed: true });
-  const asNumber = (value: unknown) => (typeof value === "number" && Number.isFinite(value) ? value : null);
-  const match = jobs
-    .filter((job) => {
-      const hints = (job.payload.hints ?? {}) as Record<string, unknown>;
-      if (job.mediaId !== candidate.mediaId && hints.mediaId !== candidate.mediaId) return false;
-      return asNumber(hints.season) === candidate.season && asNumber(hints.episode) === candidate.episode;
-    })
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-    .find((job) => typeof job.payload.filename === "string" && asNumber(job.payload.sizeMb) !== null);
-  return match ? { path: match.payload.filename as string, sizeMb: match.payload.sizeMb as number } : null;
-};
 const startPreviewCatchUp = () => {
   stopPreviewCatchUp();
   if (process.env.SF_PREVIEW_CATCH_UP?.trim() === "0") {
@@ -402,7 +388,6 @@ const startPreviewCatchUp = () => {
     resolveLibraryKey: () => badgerModuleState.current.getActiveLibraryKey(),
     countBusyIngestJobs: countUnfinishedBadgerEngineJobs,
     isPlaybackActive: () => uploadPlaybackGate.getState().playbackActive,
-    findLocalImport: findLocalPreviewImport,
     downloadObject: downloadAndDecryptBadgerObject,
     // A video with no init object has nothing stored to head; its run's own uploads still classify an outage.
     probeBackend: async (token, objectKey) => {
@@ -875,12 +860,50 @@ const executePreviewStatusCommand = (request: RuntimeCommandRequest): ModuleComm
   return { response: { requestId: request.requestId, ok: true, result, error: null } };
 };
 
+/**
+ * MPV-PREV-07: `badger.previews.get_catch_up`, polled by the desktop Jobs tab ("Skip detection: N of M videos").
+ * Without a running pass there is nothing to show: `done`, zeros.
+ */
+const executeCatchUpStatusCommand = async (request: RuntimeCommandRequest): Promise<ModuleCommandResult> => {
+  const parsed = parsePayload(badgerPreviewsGetCatchUp, { payload: (request.payload ?? {}) as Record<string, unknown> });
+  if (!parsed.ok) return { response: error(request.requestId, "invalid_payload", parsed.error) };
+  const result = previewCatchUp
+    ? await previewCatchUp.catchUpStatus()
+    : { state: "done" as const, handled: 0, total: 0, current: null, failed: [], cancelled: [], videos: [], finishedAt: null };
+  return { response: { requestId: request.requestId, ok: true, result, error: null } };
+};
+
+/** MPV-PREV-07: `badger.previews.retry_catch_up`, the Jobs card's "Try again" (one video, or all of them). */
+const executeCatchUpRetryCommand = async (request: RuntimeCommandRequest): Promise<ModuleCommandResult> => {
+  const parsed = parsePayload(badgerPreviewsRetryCatchUp, { payload: (request.payload ?? {}) as Record<string, unknown> });
+  if (!parsed.ok) return { response: error(request.requestId, "invalid_payload", parsed.error) };
+  const reset = previewCatchUp?.retry(parsed.data.formatId ?? null) ?? 0;
+  return { response: { requestId: request.requestId, ok: true, result: { reset }, error: null } };
+};
+
+/** MPV-PREV-07: `badger.previews.set_catch_up_video`, a skip job's Cancel or Remove from history in the Jobs queue. */
+const executeCatchUpSetVideoCommand = async (request: RuntimeCommandRequest): Promise<ModuleCommandResult> => {
+  const parsed = parsePayload(badgerPreviewsSetCatchUpVideo, { payload: (request.payload ?? {}) as Record<string, unknown> });
+  if (!parsed.ok) return { response: error(request.requestId, "invalid_payload", parsed.error) };
+  const ok = previewCatchUp?.setVideo(parsed.data.formatId, parsed.data.action) ?? false;
+  return { response: { requestId: request.requestId, ok: true, result: { ok }, error: null } };
+};
+
 export const executeModuleCommand = async (
   request: RuntimeCommandRequest,
   context: RuntimeCommandContext = { backendToken: null }
 ): Promise<ModuleCommandResult> => {
   if (request.module === "badger" && request.command === badgerPreviewsGetStatus.name) {
     return executePreviewStatusCommand(request);
+  }
+  if (request.module === "badger" && request.command === badgerPreviewsGetCatchUp.name) {
+    return executeCatchUpStatusCommand(request);
+  }
+  if (request.module === "badger" && request.command === badgerPreviewsRetryCatchUp.name) {
+    return executeCatchUpRetryCommand(request);
+  }
+  if (request.module === "badger" && request.command === badgerPreviewsSetCatchUpVideo.name) {
+    return executeCatchUpSetVideoCommand(request);
   }
   if (request.module === "badger" && isV2BadgerIngestCommand(request.command)) {
     return executeV2BadgerIngestCommand(request);

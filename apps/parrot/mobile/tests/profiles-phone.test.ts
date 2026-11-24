@@ -19,7 +19,8 @@ import type { ProfileAvatarId } from "@space/shared/profileAvatars";
 import type { ApiProfile, ProfilesResponse } from "@space/shared/profiles";
 import { loadHistory, saveHistory } from "../src/lib/history";
 import { activeProfileId } from "../src/lib/activeProfile";
-import { createParrotProfileStore, parrotProfileMoves } from "../src/lib/profiles";
+import { NO_LIBRARY_MOVES } from "@space/shared/profileStore";
+import { createParrotProfileStore } from "../src/lib/profiles";
 
 // vi.mock is hoisted above the imports; the map it reads must be too.
 const { saved } = vi.hoisted(() => ({ saved: new Map<string, string>() }));
@@ -128,7 +129,7 @@ describe("listening history per profile", () => {
     await saveHistory({ userId: USER, profileId: "p2", isMain: false }, played("sam-album"));
     await saveHistory({ userId: USER, profileId: "main", isMain: true }, played("chris-album"));
 
-    await store.deleteProfile("p2", parrotProfileMoves);
+    await store.deleteProfile("p2", NO_LIBRARY_MOVES);
     expect(store.getSnapshot().profiles.map((p) => p.id)).toEqual(["main"]);
     expect(saved.has(profileHistoryStorageKey(USER, "p2"))).toBe(false);
     expect(saved.has(profileHistoryStorageKey(USER, "main"))).toBe(true);

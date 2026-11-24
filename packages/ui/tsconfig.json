@@ -5,8 +5,5 @@
     "lib": ["ES2024", "DOM", "DOM.Iterable"],
     "jsx": "react-jsx"
   },
-  // tests/render-boundary*.test.tsx render the Badger web player's and Parrot desktop's real screens, whose code
-  // reads import.meta.env and imports assets: bring in each app's own Vite ambient types for them (the public
-  // client repository has no web player, so Parrot's must stand on its own).
-  "include": ["**/*.ts", "**/*.tsx", "../../apps/badger/web-player/src/vite-env.d.ts", "../../apps/parrot/desktop/src/renderer/src/env.d.ts"]
+  "include": ["**/*.ts", "**/*.tsx"]
 }

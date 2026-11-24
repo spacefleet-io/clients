@@ -19,6 +19,7 @@ export const LUA_CHANNELS = {
   PREVIEW_PICTURE: "sf-preview-picture",
   AUDIO_STALL: "sf-audio-stall",
   SUBTITLE_FETCH_JSON: "sf-subtitle-fetch-json",
+  SKIP_EDIT_JSON: "sf-skip-edit-json",
 } as const;
 
 export type LuaChannelKey = keyof typeof LUA_CHANNELS;
@@ -42,6 +43,7 @@ export const LUA_CHANNEL_REGISTRATIONS: ReadonlyArray<{
   { channel: "sf-preview-picture", file: "tog4in1/tog4in1.lua" },
   { channel: "sf-audio-stall", file: "sf.lua" },
   { channel: "sf-subtitle-fetch-json", file: "sf-select.lua" },
+  { channel: "sf-skip-edit-json", file: "sf.lua" },
 ];
 
 /**
@@ -81,6 +83,14 @@ export const LUA_CHANNEL_REGISTRATIONS: ReadonlyArray<{
  * "Add a subtitle file…" row, PLAY-SUBGET-23) or `["cancel"]` (Escape on the
  * list, the field or a panel). The renderer answers on
  * `sf-subtitle-fetch-json`.
+ *
+ * SKIP_EDIT (sf.lua, PLAY-SKIP-03/05): the "Was it right?" line and the Change
+ * times panel. Args: `["verdict", kind, start, end]` ("Yes": the times were
+ * right), `["preselect", kind, start, end]` (Save was pressed: which scope the
+ * "Use these times for" step starts on) or `["save", kind, start, end, scope]`
+ * (scope "season" | "episode"); kind is "intro" | "credits", times in seconds
+ * as "%.3f" strings. The renderer stores the times, queues the contribution to
+ * the metadata service and answers on `sf-skip-edit-json`.
  */
 export const LUA_OUTBOUND_CHANNELS = {
   TRACK_PICKED: "sf-track-picked",
@@ -89,4 +99,5 @@ export const LUA_OUTBOUND_CHANNELS = {
   PREVIEW_SHOWN: "sf-preview-shown",
   AUDIO_RETRY: "sf-audio-retry",
   SUBTITLE_FETCH: "sf-subtitle-fetch",
+  SKIP_EDIT: "sf-skip-edit",
 } as const;

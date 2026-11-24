@@ -1,0 +1,51 @@
+export {
+  createKeyChange,
+  ETA_WINDOW_MS,
+  KEY_CHANGE_IDLE,
+  KEY_CHANGE_WAIT_POLL_MS,
+  listUnreadableFiles,
+  pushTransferSample,
+  resealSecondsLeft,
+  switchNowOpen,
+  type KeyChange,
+  type KeyChangeApp,
+  type KeyChangeCredentials,
+  type KeyChangeOptions,
+  type KeyChangeOutcome,
+  type KeyChangePhase,
+  type KeyChangeState,
+  type TransferSample,
+  type UnreadableFile,
+} from "./keyChange";
+export { placementOfKey, resealCopyKey } from "./copyKey";
+export {
+  preparedResealDb,
+  rewriteBadgerReferences,
+  rewriteParrotReferences,
+  type PreparedSqlDb,
+  type ReferenceRewrite,
+  type ResealSqlDb,
+  type ResealSqlRow,
+  type ResealSqlValue,
+} from "./references";
+export {
+  collectResealCopies,
+  RESEAL_PAGE_MAX,
+  resealIoForRun,
+  runMediaReseal,
+  type ResealIo,
+  type ResealPending,
+  type ResealRunOptions,
+  type ResealRunProgress,
+  type ResealRunResult,
+  type ResealUpload,
+} from "./run";
+export {
+  importResealKey,
+  importResealKeyFromBase64,
+  resealObject,
+  type ResealFormat,
+  type ResealKey,
+  type ResealKeys,
+  type ResealOutcome,
+} from "./sealing";

@@ -89,7 +89,6 @@ vi.mock("../src/store/auth", () => ({ useAuth: () => ({ user: null, refresh: asy
 vi.mock("../src/lib/metadata/runtime", () => ({ fetchEpisodes: async () => [] }));
 vi.mock("../src/tv/lib/tvRuntime", () => ({ IS_TV: false }));
 vi.mock("../src/tv/components/TvPlayerRemote", () => ({ TvPlayerRemote: () => null }));
-vi.mock("../src/components/Screen", () => ({ Screen: (props: { children?: ReactNode }) => createElement("Screen", null, props.children) }));
 // The cast picker drives the Google Cast SDK (a native module); casting is not under test.
 vi.mock("../src/components/PlayerCastPicker", () => ({ PlayerCastPicker: () => null }));
 // "Get subtitles" (PLAY-SUBGET) loads the metadata client and lucide icons (native modules, Flow sources): a stand-in.

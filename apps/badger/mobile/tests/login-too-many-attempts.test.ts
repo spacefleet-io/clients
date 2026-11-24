@@ -8,6 +8,8 @@ import { createElement, type ReactNode } from "react";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import i18next, { type i18n as I18n } from "i18next";
 import { beforeAll, describe, expect, it, vi } from "vitest";
+import type * as SignInForm from "../../../../packages/mobile-shell/src/components/mobile-password-sign-in-form";
+import type * as PasswordReset from "../../../../packages/mobile-shell/src/components/mobile-password-reset";
 import type * as SharedApi from "@space/shared/api";
 import { withSignInErrorTexts } from "@space/shared/signInError";
 
@@ -29,9 +31,20 @@ vi.mock("react-native", () => ({
 }));
 vi.mock("lucide-react-native", () => ({ ArrowRight: "Icon", ChevronRight: "Icon", Lock: "Icon", Mail: "Icon", QrCode: "Icon" }));
 vi.mock("@react-navigation/native", () => ({ useNavigation: () => ({ navigate: vi.fn() }) }));
-vi.mock("@space/mobile-shell/components", () => {
+// The shared form and reset card are real (their words are under test); their inputs and buttons are host elements.
+vi.mock("../../../../packages/mobile-shell/src/components/mobile-auth-form", () => ({
+  MobileAuthInput: "MobileAuthInput",
+  MobileAuthButton: "MobileAuthButton",
+  MobileAuthLink: "MobileAuthLink",
+}));
+vi.mock("@space/mobile-shell/components", async () => {
   const passthrough = (name: string) => (props: { children?: ReactNode }) => createElement(name, props, props.children);
+  const form = await vi.importActual<typeof SignInForm>("../../../../packages/mobile-shell/src/components/mobile-password-sign-in-form");
+  const reset = await vi.importActual<typeof PasswordReset>("../../../../packages/mobile-shell/src/components/mobile-password-reset");
   return {
+    MobilePasswordSignInForm: form.MobilePasswordSignInForm,
+    useMobilePasswordSignIn: form.useMobilePasswordSignIn,
+    MobilePasswordReset: reset.MobilePasswordReset,
     MobileStartupPage: passthrough("MobileStartupPage"),
     MobileAuthBrand: "MobileAuthBrand",
     MobileAuthInput: "MobileAuthInput",
@@ -115,6 +128,11 @@ describe(`[${SUITE}] phone sign-in on a 429`, () => {
   it("sign-in shows the wait in minutes, singular for one minute", async () => {
     h.login.mockRejectedValueOnce(limited(840));
     const tree = await render();
+    // The shared form signs in only with both fields filled.
+    await act(async () => {
+      byType(tree, "MobileAuthInput")[0]!.props.onChangeText("pilot@example.test");
+      byType(tree, "MobileAuthInput")[1]!.props.onChangeText("pw");
+    });
     await act(async () => {
       byType(tree, "MobileAuthButton")[0]!.props.onPress();
     });

@@ -33,7 +33,8 @@ export type LabJob = {
   completedAt?: string;
   sourceQuality?: string;
   groupId?: string;
-  jobType?: "source" | "transcode" | "download" | "export";
+  /** `skip-detect`: a video's intro and credits search (MPV-PREV-07), mapped from the catch-up status, never stored. */
+  jobType?: "source" | "transcode" | "download" | "export" | "skip-detect";
   includeSource?: boolean;
   includeFallback?: boolean;
   includeAudio?: boolean;

@@ -75,7 +75,7 @@ const libraryBehaviorState = vi.hoisted(() => ({
   mediaDetails: new Map<string, unknown>(),
   skipAnalysisRows: [] as Array<{ id: string; mediaId: string; episodeId: string | null; kind: string; payload: Record<string, unknown>; createdAt: string; updatedAt: string }>,
   setProgress: vi.fn(async () => undefined),
-  replaceSkipMarkers: vi.fn(async () => undefined),
+  mergeSkipMarkers: vi.fn(async () => undefined),
   fetchMediaDetails: vi.fn(async (mediaId: string) => libraryBehaviorState.mediaDetails.get(mediaId) ?? null),
   upsertSkipAnalysis: vi.fn(async () => undefined),
   listSkipAnalysis: vi.fn(async () => []),
@@ -85,7 +85,7 @@ const libraryBehaviorState = vi.hoisted(() => ({
     libraryBehaviorState.mediaDetails.clear();
     libraryBehaviorState.skipAnalysisRows.length = 0;
     libraryBehaviorState.setProgress.mockClear();
-    libraryBehaviorState.replaceSkipMarkers.mockClear();
+    libraryBehaviorState.mergeSkipMarkers.mockClear();
     libraryBehaviorState.fetchMediaDetails.mockClear();
     libraryBehaviorState.upsertSkipAnalysis.mockClear();
     libraryBehaviorState.listSkipAnalysis.mockClear();
@@ -204,7 +204,7 @@ vi.mock("@/lib/libraryContext", () => ({
       libraryBehaviorState.sharedSettings.get(key) ?? null,
     setMediaFormatChunks: vi.fn(async () => undefined),
     setProgress: libraryBehaviorState.setProgress,
-    replaceSkipMarkers: libraryBehaviorState.replaceSkipMarkers,
+    mergeSkipMarkers: libraryBehaviorState.mergeSkipMarkers,
     upsertSkipAnalysis: libraryBehaviorState.upsertSkipAnalysis,
     listSkipAnalysis: libraryBehaviorState.listSkipAnalysis,
     awaitDatasetReady: (...args: Parameters<typeof libraryBehaviorState.awaitDatasetReady>) =>

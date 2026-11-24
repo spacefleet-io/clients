@@ -188,6 +188,17 @@ type LibraryContextValue = {
       confidence?: number | null;
     }>
   ) => Promise<void>;
+  mergeSkipMarkers: (
+    mediaId: string,
+    episodeId: string | null,
+    markers: Array<{
+      type: MediaSkipMarkerType;
+      startSeconds: number;
+      endSeconds: number;
+      source: string;
+      confidence?: number | null;
+    }>
+  ) => Promise<void>;
   upsertSkipAnalysis: (
     mediaId: string,
     episodeId: string | null,
@@ -279,7 +290,8 @@ type LibraryContextValue = {
   purgeMissingObjects: (missingKeys: string[]) => Promise<void>;
   syncFromRemote: () => Promise<void>;
   resetKey: () => Promise<void>;
-  sealLibraryForRotation: (newKeyBase64: string) => Promise<RotationOwnLibrary>;
+  /** PRIV-KEY-13; STOR-RESEAL-01: `resealCopies` (old media key → copy) renames the media references in the sealed bytes. */
+  sealLibraryForRotation: (newKeyBase64: string, resealCopies?: ReadonlyMap<string, string>) => Promise<RotationOwnLibrary>;
   clearLocalCache: () => Promise<void>;
   getDebugSnapshot: () => Promise<Record<string, unknown> | null>;
   debugRevision: number;
@@ -2875,6 +2887,25 @@ export const LibraryProvider = ({
     [db, requestSnapshotRefresh]
   );
 
+  const mergeSkipMarkers = useCallback(
+    async (
+      mediaId: string,
+      episodeId: string | null,
+      markers: Array<{
+        type: MediaSkipMarkerType;
+        startSeconds: number;
+        endSeconds: number;
+        source: string;
+        confidence?: number | null;
+      }>
+    ) => {
+      if (!db) throw new Error("LIBRARY_NOT_READY");
+      await db.mergeSkipMarkers(mediaId, episodeId, markers);
+      await requestSnapshotRefresh(db);
+    },
+    [db, requestSnapshotRefresh]
+  );
+
   const upsertSkipAnalysis = useCallback(
     async (mediaId: string, episodeId: string | null, kind: string, payload: Record<string, unknown>) => {
       if (!db) throw new Error("LIBRARY_NOT_READY");
@@ -3206,9 +3237,9 @@ export const LibraryProvider = ({
   }, [reload, syncMediaKey]);
 
   const sealLibraryForRotation = useCallback(
-    async (newKeyBase64: string) => {
+    async (newKeyBase64: string, resealCopies?: ReadonlyMap<string, string>) => {
       if (!db) throw new Error("LIBRARY_NOT_READY");
-      return await db.sealForRotation(newKeyBase64);
+      return await db.sealForRotation(newKeyBase64, resealCopies);
     },
     [db]
   );
@@ -3341,6 +3372,7 @@ export const LibraryProvider = ({
       addMediaFormat: guardWriteAction(addMediaFormat),
       setMediaFormatChunks: guardWriteAction(setMediaFormatChunks),
       replaceSkipMarkers: guardWriteAction(replaceSkipMarkers),
+      mergeSkipMarkers: guardWriteAction(mergeSkipMarkers),
       upsertSkipAnalysis: guardWriteAction(upsertSkipAnalysis),
       listSkipAnalysis,
       removeMediaFormat: guardWriteAction(removeMediaFormat),
@@ -3402,6 +3434,7 @@ export const LibraryProvider = ({
       addMediaFormat,
       setMediaFormatChunks,
       replaceSkipMarkers,
+      mergeSkipMarkers,
       upsertSkipAnalysis,
       listSkipAnalysis,
       removeMediaFormat,

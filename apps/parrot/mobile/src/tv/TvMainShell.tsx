@@ -20,7 +20,8 @@ import { UnpaidAccessBanner } from "@space/mobile-shell/unpaid-access-banner";
 import type { TvViewInstance } from "@space/mobile-shell/tv/tvViewInstance";
 import type { ParrotAlbumSort } from "@space/parrot-core";
 import { PARROT_TV_ICON } from "../brand";
-import { parrotProfileMoves, profileStore } from "../lib/profiles";
+import { NO_LIBRARY_MOVES } from "@space/shared/profileStore";
+import { profileStore } from "../lib/profiles";
 import { useSession } from "../state/session";
 import { TvAlbumPage } from "./TvAlbumPage";
 import { TvArtistPage } from "./TvArtistPage";
@@ -76,7 +77,7 @@ const Page = ({ page, pop, shown }: { page: TvPage; pop: () => void; shown: bool
     case "queue":
       return <TvQueuePage />;
     case "profiles":
-      return <TvProfilesView store={profileStore} moves={parrotProfileMoves} startMode={page.mode} inApp audience="listening" onPicked={pop} onClose={pop} log={profilesLog} />;
+      return <TvProfilesView store={profileStore} moves={NO_LIBRARY_MOVES} startMode={page.mode} inApp audience="listening" onPicked={pop} onClose={pop} log={profilesLog} />;
   }
 };
 

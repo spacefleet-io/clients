@@ -24,6 +24,7 @@ import { runFfmpeg, runFfprobe } from "@space/ffmpeg";
 import { requireMediaBinary } from "@space/media-deps";
 import { configureMediaIngestRuntime, producePreviewSheets } from "../src/mediaProcessor";
 import { generatePreviewSheets, type PreviewHardwareDecode } from "../src/previewSheets";
+import { decodeSkipSignature, type SkipSignature } from "../src/skipDetect";
 
 const SUITE = "preview-sheets-integration";
 const MARKER = Buffer.from("ENCRYPTED:");
@@ -146,6 +147,41 @@ describe("seek-bar preview sheets at import (real ffmpeg)", () => {
         expect(size.width).toBe(160 * 10);
         expect(size.height).toBe(66 * Math.ceil(sheet.pictureCount / 10));
       }
+    },
+    300_000,
+  );
+
+  it.skipIf(!ffmpegAvailable)(
+    "@req META-SKIP-04 the same decode stores an encrypted skip signature next to the sheets",
+    async () => {
+      const { clip, duration } = await makeClip(130);
+      const uploads: Upload[] = [];
+      configure(uploads);
+      const reported: string[] = [];
+      const handed: SkipSignature[] = [];
+      const workDir = join(root, "previews-skip");
+      const previews = await producePreviewSheets({
+        token: "token",
+        inputPath: clip,
+        durationSeconds: duration,
+        workDir,
+        onSheetUploaded: (key) => reported.push(key),
+        skip: { analyzeAudio: async () => null, onSignature: (signature) => handed.push(signature) },
+      });
+      console.info(`[${SUITE}:skip] record=${JSON.stringify(previews.skipSignature)}`);
+      expect(previews.skipSignature).toBeDefined();
+      expect(reported).toEqual([...previews.sheets.map((sheet) => sheet.objectKey), previews.skipSignature!.objectKey]);
+      const upload = uploads.find((entry) => `persisted-${entry.key}` === previews.skipSignature!.objectKey)!;
+      expect(upload.payload.subarray(0, MARKER.length).equals(MARKER)).toBe(true);
+      const signature = decodeSkipSignature(upload.payload.subarray(MARKER.length));
+      expect(signature).toEqual(handed[0]);
+      // Head window: a quarter of the clip at 4 frames a second; tail: the whole clip (shorter than 10 min).
+      const head = Buffer.from(signature!.picture.head.flags, "base64").byteLength;
+      const tail = Buffer.from(signature!.picture.tail.flags, "base64").byteLength;
+      console.info(`[${SUITE}:skip] headFrames=${head} tailFrames=${tail} bytes=${previews.skipSignature!.sizeBytes}`);
+      expect(Math.abs(head - duration)).toBeLessThanOrEqual(2);
+      expect(Math.abs(tail - duration * 4)).toBeLessThanOrEqual(4);
+      expect(existsSync(workDir), "work dir removed").toBe(false);
     },
     300_000,
   );

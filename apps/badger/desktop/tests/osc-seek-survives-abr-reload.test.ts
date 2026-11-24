@@ -170,8 +170,8 @@ describe("an OSC seek survives an ABR reload (@bugfix @regression-proof issue #2
     // definition + seekbar drag + seekbar click
     expect(togAnnounces).toBe(3);
     expect(tog.includes(`"${LUA_OUTBOUND_CHANNELS.OSC_SEEK}"`)).toBe(true);
-    // definition + skip intro/credits marker
-    expect(sfAnnounces).toBe(2);
+    // definition + skip intro/credits marker + times editor frame preview + times editor return
+    expect(sfAnnounces).toBe(4);
     expect(sf.includes(`"${LUA_OUTBOUND_CHANNELS.OSC_SEEK}"`)).toBe(true);
     const needles = [
       "parseOscSeekMessage(msg)",

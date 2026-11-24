@@ -52,6 +52,7 @@ vi.mock("@space/mobile-shell/i18n", () => ({ useTranslation: () => ({ t: (key: s
 // The real rail (Discography's year row, UX-PHONE-09) without the barrel's native modules (reanimated).
 vi.mock("@space/mobile-shell/components", async () => ({
   MobileRailScroll: (await vi.importActual<typeof import("../../../../packages/mobile-shell/src/components/mobile-rail")>("../../../../packages/mobile-shell/src/components/mobile-rail")).MobileRailScroll,
+  MobileSkeletonPulse: "Shimmer",
 }));
 vi.mock("../src/state/useQuery", () => ({
   useQuery: (load: () => unknown) => (String(load).includes("readArtistPicture") ? fake.picture : { loading: false, error: null, data: [] }),
@@ -64,7 +65,6 @@ vi.mock("../src/state/playlistEditor", () => ({ usePlaylistEditor: () => ({}) })
 vi.mock("../src/lib/library", () => ({ listArtistAlbums: async () => [], listSongs: async () => [], readArtistPicture: async () => null }));
 vi.mock("../src/screens/kept", () => ({ useKept: () => ({ entry: () => undefined }), useOfflineReach: () => null }));
 vi.mock("../src/screens/art", () => ({ ParrotArt: "ParrotArt" }));
-vi.mock("../src/screens/shimmer", () => ({ Shimmer: "Shimmer" }));
 vi.mock("../src/screens/ui", () => ({ ErrorText: "ErrorText" }));
 vi.mock("../src/screens/sky", () => ({ ParrotSky: "ParrotSky" }));
 vi.mock("../src/screens/pageBack", () => ({ PageBackButton: "PageBackButton", PAGE_BACK_ROW: 60, usePageTop: () => 120 }));

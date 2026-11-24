@@ -74,7 +74,6 @@ vi.mock("@space/mobile-shell/i18n", async () => {
   const translate = (key: string, options?: Record<string, unknown>) => i18next.t(key, options);
   return { translate, getCurrentLanguage: () => "en", useTranslation: () => ({ t: translate }) };
 });
-vi.mock("@space/mobile-shell/components", () => ({ SkyCover: "SkyCover" }));
 vi.mock("@space/mobile-shell/theme", () => {
   const colors = new Proxy({}, { get: () => "#888" });
   // The app builds Badger's shell theme from the default one (UX-CRASH-01 brand name, UX-SKY-03 nebula).
@@ -87,12 +86,13 @@ vi.mock("@space/mobile-shell/theme", () => {
 vi.mock("lucide-react-native", () => ({ Check: () => null, ChevronRight: () => null }));
 vi.mock("../src/components/PosterCard", () => ({ RIPPLE: {} }));
 vi.mock("../src/components/Panel", () => ({ panelCardStyle: {} }));
-vi.mock("../src/components/ui", async () => {
+vi.mock("@space/mobile-shell/components", async () => {
   const React = await import("react");
   return {
-    Button: ({ label, onPress }: { label: string; onPress?: () => void }) =>
+    SkyCover: "SkyCover",
+    MobileButton: ({ label, onPress }: { label: string; onPress?: () => void }) =>
       React.createElement("Pressable", { accessibilityRole: "button", accessibilityLabel: label, onPress }),
-    Card: ({ children }: { children: React.ReactNode }) => React.createElement("View", null, children),
+    MobileCard: ({ children }: { children: React.ReactNode }) => React.createElement("View", null, children),
   };
 });
 vi.mock("@space/shared/api", () => ({

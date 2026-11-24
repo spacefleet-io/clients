@@ -17,6 +17,7 @@ import { withSignInErrorTexts } from "@space/shared/signInError";
 const h = vi.hoisted(() => ({ i18n: null as I18n | null, requestPasswordReset: vi.fn(), confirmPasswordReset: vi.fn() }));
 
 vi.mock("react-native", () => ({
+  BackHandler: { addEventListener: () => ({ remove: () => undefined }) },
   Pressable: "Pressable",
   Text: "Text",
   View: "View",

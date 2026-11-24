@@ -330,10 +330,14 @@ export const buildPlaybackChapters = ({
     .sort((a, b) => a.startSeconds - b.startSeconds);
 };
 
+/**
+ * The playing episode's intro / credits times, in order. A film (no episode) gets none: films have no intro or credits
+ * markers (Chris 2026-11-24), so times stored for one before that (detected, or from the import) are never used.
+ */
 export const buildPlaybackSkipMarkers = (
   skipMarkers: MediaSkipMarker[],
   episodeId: string | null | undefined
 ) =>
-  selectEpisodeScoped(skipMarkers, episodeId)
-    .slice()
-    .sort((left, right) => left.startSeconds - right.startSeconds);
+  episodeId
+    ? skipMarkers.filter((marker) => marker.episodeId === episodeId).sort((left, right) => left.startSeconds - right.startSeconds)
+    : [];

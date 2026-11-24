@@ -44,12 +44,3 @@ export const parsePaymentReturnLink = (app: CheckoutReturnApp, value: unknown): 
   const paymentId = url.searchParams.get("payment");
   return isPaymentId(paymentId) ? paymentId : null;
 };
-
-/** The payment id of the first return link for `app` in a command line (a second launch's argv), or null. */
-export const findPaymentReturn = (app: CheckoutReturnApp, argv: readonly unknown[]): string | null => {
-  for (const arg of argv) {
-    const paymentId = parsePaymentReturnLink(app, arg);
-    if (paymentId !== null) return paymentId;
-  }
-  return null;
-};

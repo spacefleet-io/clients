@@ -31,6 +31,8 @@ import { mobileCreditsSource } from "../lib/metadata/runtime";
 import { RootStackParamList } from "../navigation/AppNavigator";
 import { ChoiceRow, Divider, LinkRow, SettingsGroup, SwitchRow } from "../components/SettingsRows";
 import { keyChangeOffered } from "@space/shared/keyChange";
+import { keyChangeText } from "@space/shared/keyChangeText";
+import { isClientUiLanguage } from "@space/shared/i18n";
 import { useKeyRotationReadiness } from "@space/shared/useKeyRotationReadiness";
 import { TITLE_LANGUAGES } from "@space/shared/titleLanguage";
 import { useSignOut } from "../lib/useSignOut";
@@ -65,7 +67,8 @@ export const SettingsScreen = memo(({ devicesRequest = 0 }: { devicesRequest?: n
   const { t, i18n } = useTranslation();
   const { user, token, setUser } = useAuth();
   // ACCT-KEYCHG-04: the key-change row shows exactly when the server would accept the change.
-  const keyChange = keyChangeOffered(useKeyRotationReadiness(token));
+  const keyChange = keyChangeOffered("badger-mobile", useKeyRotationReadiness(token));
+  const keyChangeEntry = keyChangeText(isClientUiLanguage(i18n.language) ? i18n.language : "en");
   const signOut = useSignOut();
   const navigation = useNavigation<Nav>();
   const [settings, update] = useAppSettings();
@@ -414,8 +417,8 @@ export const SettingsScreen = memo(({ devicesRequest = 0 }: { devicesRequest?: n
             {keyChange ? (
               <SettingsGroup title={t("settings.advanced.libraryKey")}>
                 <LinkRow
-                  title={t("settings.advanced.resetKey.title")}
-                  description={t("settings.advanced.resetKey.description")}
+                  title={keyChangeEntry("entry.title")}
+                  description={keyChangeEntry("entry.body")}
                   onPress={() => navigation.navigate("ResetKey")}
                 />
               </SettingsGroup>

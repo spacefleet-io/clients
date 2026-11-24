@@ -158,11 +158,11 @@ const FAILURE_BY_EXIT: Record<number, SystemUpdateFailure> = {
 };
 
 /**
- * The package manager's own words for "the repository's server could not be reached" (DNS, refused or failed
- * connection, timeout): libcurl's messages as pacman, dnf and zypper print them, and apt's. A 404 or a bad signature is
- * not a network failure.
+ * The package manager's own words (and Flatpak's, flatpakPortal.ts) for "the repository's server could not be
+ * reached" (DNS, refused or failed connection, timeout): libcurl's messages as pacman, dnf, zypper and flatpak print
+ * them, and apt's. A 404 or a bad signature is not a network failure.
  */
-const NETWORK_FAILURE =
+export const NETWORK_FAILURE =
   /could(?: no|n'?)t (?:resolve|connect)|failed to connect|unable to connect|connection (?:refused|timed out|reset)|temporary failure (?:in name )?resolv|name or service not known|network is unreachable|no route to host|timeout was reached|operation too slow|curl error \((?:5|6|7|28|35|52|56)\)/i;
 
 /** Runs `pkexec <helper>` (nothing else on the command line) and reads its answer. */

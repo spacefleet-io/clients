@@ -863,7 +863,7 @@ const clientIdentity = (() => {
 })();
 
 contextBridge.exposeInMainWorld("sf", {
-  version: "0.1.55",
+  version: "0.1.64",
   clientIdentity,
   // REL-CD-29: a "please update" refusal the runtime got on its own API call, forwarded by main.
   onAppUpdateRequired: (callback: (refusal: { status: number; payload: Record<string, unknown> }) => void) => {
@@ -1049,8 +1049,9 @@ contextBridge.exposeInMainWorld("sf", {
     openLocal: (payload: { token: string; keyBase64: string; userId: string }) => ipcRenderer.invoke("sf-library-db-open-local", payload),
     sealLocalCacheForRotation: (payload: { token: string; newKeyBase64: string }) =>
       ipcRenderer.invoke("sf-library-db-seal-local-cache-for-rotation", payload),
-    // PRIV-KEY-06: a key rotation re-encrypts every other app's library first (main/libraryRotationIpc.ts).
-    reencryptForRotation: (payload: { token: string; oldKeyBase64: string; newKeyBase64: string }) =>
+    // PRIV-KEY-06: a key rotation re-encrypts every other app's library first (main/libraryRotationIpc.ts);
+    // STOR-RESEAL-01: with their media references renamed to the re-sealed copies.
+    reencryptForRotation: (payload: { token: string; oldKeyBase64: string; newKeyBase64: string; resealCopies?: Array<[string, string]> }) =>
       ipcRenderer.invoke("sf-library-db-reencrypt-for-rotation", payload),
     hasLocalCache: () => ipcRenderer.invoke("sf-library-db-has-local-cache"),
     clearLocalCache: () => ipcRenderer.invoke("sf-library-db-clear-local-cache"),
@@ -1155,6 +1156,13 @@ contextBridge.exposeInMainWorld("sf", {
     setCapacity: (values: DeviceCapacityValues) => ipcRenderer.invoke("sf-device-capacity-set", values),
   },
   errorReports: createErrorReportsBridge(ipcRenderer),
+  /** MPV-PREV-07: the skip-detection catch-up for the Jobs tab (null when the runtime is not reachable). */
+  skipCatchUp: {
+    getStatus: () => ipcRenderer.invoke("sf-skip-catch-up-status"),
+    retry: (formatId: string | null) => ipcRenderer.invoke("sf-skip-catch-up-retry", formatId),
+    setVideo: (formatId: string, action: "cancel" | "dismiss") =>
+      ipcRenderer.invoke("sf-skip-catch-up-set-video", formatId, action),
+  },
   runtimeJobs: {
     getStreamUrl: () => ipcRenderer.invoke("sf-runtime-jobs-stream-url"),
     list: (filter?: { mediaId?: string; includeDismissed?: boolean }) =>
@@ -1165,8 +1173,12 @@ contextBridge.exposeInMainWorld("sf", {
       ipcRenderer.invoke("sf-runtime-jobs-cancel-by-group", payload),
     dismiss: (payload: { jobId: string }) =>
       ipcRenderer.invoke("sf-runtime-jobs-dismiss", payload),
-    retry: (payload: { jobId: string }) =>
+    retry: (payload: { jobId: string; mode?: "upload" | "process" }) =>
       ipcRenderer.invoke("sf-runtime-jobs-retry", payload),
+    availability: (payload: { jobIds: string[] }) =>
+      ipcRenderer.invoke("sf-runtime-jobs-availability", payload),
+    findFile: (payload: { jobId: string }) =>
+      ipcRenderer.invoke("sf-runtime-jobs-find-file", payload),
     submitSources: (payload: { userId: string; sources: unknown[] }) =>
       ipcRenderer.invoke("sf-runtime-jobs-submit-sources", payload),
     configureScheduling: (payload: {

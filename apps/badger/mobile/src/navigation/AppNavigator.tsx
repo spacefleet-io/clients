@@ -1,7 +1,7 @@
 import React, { Suspense, useEffect, useState } from "react";
 import { DarkTheme, NavigationContainer, createNavigationContainerRef } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../store/auth";
 import { useLibraryStatus } from "../store/library";
@@ -40,8 +40,8 @@ import type { CastTarget } from "../lib/cast/castFlow";
 import { PlaylistDetailScreen } from "../screens/PlaylistDetailScreen";
 import { ResetKeyScreen } from "../screens/ResetKeyScreen";
 import { PairDeviceScreen } from "../screens/PairDeviceScreen";
-import { parseLegacyPairLink, parsePairLink } from "@space/pairing-crypto";
-import { handOffProviderReturn } from "@space/mobile-shell/provider-sign-in";
+import { createPendingPairLink } from "@space/mobile-shell/pairing-approve";
+import { useHeldPairLink, usePairLinkIntake } from "@space/mobile-shell/pairing-approve/usePairLinks";
 import { BADGER_LINK_SCHEME } from "../lib/linkScheme";
 import { DownloadsScreen } from "../screens/DownloadsScreen";
 import { OfflineContentScreen } from "../screens/OfflineContentScreen";
@@ -51,7 +51,6 @@ import { SubscriptionScreen } from "../screens/SubscriptionScreen";
 import { DeleteAccountScreen } from "../screens/DeleteAccountScreen";
 import { FeedbackScreen } from "../screens/FeedbackScreen";
 import { theme } from "../theme/theme";
-import { scopeLogger } from "@space/mobile-shell/logger";
 import { MobileRenderBoundary } from "@space/mobile-shell/render-boundary";
 import { MobileSkyScreenLayout, mobileNavigationTheme } from "@space/mobile-shell/components";
 
@@ -71,7 +70,9 @@ import { useProfileSession } from "../lib/profiles/useProfileSession";
 import { IS_TV, routeAvailable } from "../tv/lib/tvRuntime";
 import { stackHasScreenToPop } from "@space/mobile-shell/tv/menuKey";
 import { setTvMenuKeyHold } from "@space/mobile-shell/tv/useTvMenuKey";
-const log = scopeLogger("pairing.link");
+// spacebadger://pair?code= is the QR of desktops released before the web link (ACCT-PAIR-06): read only by Badger, until
+// those desktops are below the minimum supported version (REL-CD-08).
+const pairLinks = createPendingPairLink({ legacy: true });
 
 const ScreenSuspenseFallback = () => (
   <View style={styles.loadingWrap}>
@@ -257,29 +258,9 @@ export const AppNavigator = () => {
   // link) opens the pairing flow. The code is held until the user is signed in and the navigator is ready.
   // spacebadger://auth/provider?... (the browser back from Google, Apple or Microsoft, ACCT-SIGNIN-05) goes to the
   // sign-in screen, which may mount after a cold start through that link.
-  const [pendingPairCode, setPendingPairCode] = useState<string | null>(null);
   const [navReady, setNavReady] = useState(false);
-  useEffect(() => {
-    const handle = (url: string | null | undefined) => {
-      if (handOffProviderReturn(BADGER_LINK_SCHEME, url)) return;
-      if (!url) return;
-      // spacebadger://pair?code= is the QR of desktops released before the web link (ACCT-PAIR-06): kept until
-      // those desktops are below the minimum supported version (REL-CD-08).
-      const link = parsePairLink(url);
-      const code = link?.code ?? parseLegacyPairLink(url);
-      if (!code) return;
-      log.warn("deep_link", { app: link?.app ?? "legacy" });
-      setPendingPairCode(code);
-    };
-    void Linking.getInitialURL().then(handle);
-    const subscription = Linking.addEventListener("url", (event) => handle(event.url));
-    return () => subscription.remove();
-  }, []);
-  useEffect(() => {
-    if (screen !== "main" || !pendingPairCode || !navReady || !navigationRef.isReady()) return;
-    navigationRef.navigate("PairDevice", { code: pendingPairCode });
-    setPendingPairCode(null);
-  }, [screen, pendingPairCode, navReady]);
+  usePairLinkIntake(BADGER_LINK_SCHEME, pairLinks);
+  useHeldPairLink(pairLinks, screen === "main" && navReady && navigationRef.isReady(), (code) => navigationRef.navigate("PairDevice", { code }));
 
   if (screen === "loading") {
     return <AppLoadingScreen label={t("nav.loading")} />;

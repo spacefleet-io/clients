@@ -14,7 +14,7 @@ import { act, create, type ReactTestInstance, type ReactTestRenderer } from "rea
 import { describe, expect, it, vi } from "vitest";
 import { PROFILE_AVATAR_IDS, type ProfileAvatarId } from "@space/shared/profileAvatars";
 import type { ApiProfile, ProfilesResponse } from "@space/shared/profiles";
-import type { ProfileStore } from "@space/shared/profileStore";
+import { NO_LIBRARY_MOVES, type ProfileStore } from "@space/shared/profileStore";
 
 vi.mock("react-native", () => ({
   ActivityIndicator: "ActivityIndicator",
@@ -62,7 +62,7 @@ vi.mock("@space/profile-avatars/native", async () => {
 });
 
 import { MobileProfilesScreen } from "@space/mobile-shell/profiles-screen";
-import { createParrotProfileStore, parrotProfileMoves } from "../src/lib/profiles";
+import { createParrotProfileStore } from "../src/lib/profiles";
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
@@ -148,7 +148,7 @@ const screen = (store: ProfileStore, startMode: "pick" | "manage") =>
   render(
     <MobileProfilesScreen
       store={store}
-      moves={parrotProfileMoves}
+      moves={NO_LIBRARY_MOVES}
       startMode={startMode}
       audience="listening"
       onClose={null}

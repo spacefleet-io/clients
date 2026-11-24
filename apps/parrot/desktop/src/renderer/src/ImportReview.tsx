@@ -49,7 +49,7 @@ import type {
   ParrotScanEntry,
 } from "../../shared/ipc";
 import { editSuggestLabels } from "./editSuggest";
-import { countText, type Translate } from "./i18n";
+import { countText, pluralForm, type Translate } from "./i18n";
 
 /** "Frame the cover" (PAR-META-22) in the window's language, for the import dialog and Edit details. */
 export const coverFrameLabels = (t: Translate): ParrotCoverFrameLabels => ({
@@ -1034,7 +1034,9 @@ export default function ImportReview({ t, language, scan, onDone, suggest }: Pro
     const added = card.files.filter((entry) => places[entry.file]?.number == null);
     return (
       <div className="space-y-2" data-testid="import-match-tracks">
-        <span className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">{t("import.match.tracks", { n: found.album.tracks.length })}</span>
+        <span className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+          {t(`import.match.tracks.${pluralForm(language, found.album.tracks.length)}`, { n: found.album.tracks.length })}
+        </span>
         <div className="rounded-lg border border-border/60">
           {found.album.tracks.map((track, index) => {
             const entry = byTrack.get(trackKey(track));
@@ -1066,8 +1068,7 @@ export default function ImportReview({ t, language, scan, onDone, suggest }: Pro
 
   const cleanupText = ({ rule, text, count }: ParrotTitleCleanupApplied) => {
     if (rule === "full-album") return t("import.cleanup.album", { text });
-    const plural = new Intl.PluralRules(language).select(count) === "one" ? "one" : "other";
-    return t(`import.cleanup.${rule === "artist-prefix" ? "start" : "end"}.${plural}`, { text, n: count });
+    return t(`import.cleanup.${rule === "artist-prefix" ? "start" : "end"}.${pluralForm(language, count)}`, { text, n: count });
   };
 
   /** PAR-META-23: what the review took off a file album's names, each with its own Undo (and Redo once undone). */
@@ -1296,7 +1297,12 @@ export default function ImportReview({ t, language, scan, onDone, suggest }: Pro
                         </ImportReviewBadge>
                       ) : null}
                       {incomplete && card.kind === "library" ? (
-                        <ImportReviewBadge data-testid="import-album-incomplete">{t("import.match.incomplete", { have: onTracks, total: card.found.album.tracks.length })}</ImportReviewBadge>
+                        <ImportReviewBadge data-testid="import-album-incomplete">
+                          {t(`import.match.incomplete.${pluralForm(language, card.found.album.tracks.length)}`, {
+                            have: onTracks,
+                            total: card.found.album.tracks.length,
+                          })}
+                        </ImportReviewBadge>
                       ) : null}
                     </div>
                   </ImportReviewRow>
@@ -1304,7 +1310,7 @@ export default function ImportReview({ t, language, scan, onDone, suggest }: Pro
               })}
               {scan.unreadable.length > 0 ? (
                 <ImportReviewSection tone="attention" data-testid="import-review-unreadable">
-                  {t("import.review.unreadable", { n: scan.unreadable.length })}
+                  {t(`import.review.unreadable.${pluralForm(language, scan.unreadable.length)}`, { n: scan.unreadable.length })}
                 </ImportReviewSection>
               ) : null}
             </ImportReviewList>
@@ -1314,7 +1320,11 @@ export default function ImportReview({ t, language, scan, onDone, suggest }: Pro
       </ImportReviewBody>
       <ImportReviewFooter>
         <ImportReviewSummary data-testid="import-review-summary">
-          {t("import.review.summary", { selected: importing.length, total: scan.entries.length, size: formatLocalizedStorage(importingBytes, language) })}
+          {t(`import.review.summary.${pluralForm(language, scan.entries.length)}`, {
+            selected: importing.length,
+            total: scan.entries.length,
+            size: formatLocalizedStorage(importingBytes, language),
+          })}
           {looking > 0 ? (
             <div className="text-xs" data-testid="import-review-still-looking">
               {t(looking === 1 ? "import.review.stillLooking.one" : "import.review.stillLooking.other", { n: looking })}

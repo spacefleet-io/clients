@@ -2,6 +2,7 @@
 // asked again after the wait the service named, never sooner, each wait at least twice the one before. The service's
 // limits stay as they are: this only spares the user an error for a refusal that a few seconds would have answered.
 
+import { retry } from "@space/shared/retry";
 import { MetadataUnavailableError } from "./client";
 import { defaultTimers, type Timers } from "./types";
 
@@ -21,20 +22,21 @@ export interface LookupRetryOptions {
  * thrown as it came.
  */
 export const withLookupRetry = async <T>(task: () => Promise<T>, options: LookupRetryOptions = {}): Promise<T> => {
-  const attempts = Math.max(1, options.attempts ?? 3);
-  const maxWaitSeconds = options.maxWaitSeconds ?? 10;
   const timers = options.timers ?? defaultTimers;
-  let previousWait = 0;
-  for (let attempt = 1; ; attempt += 1) {
-    try {
-      return await task();
-    } catch (error) {
-      if (!(error instanceof MetadataUnavailableError) || attempt >= attempts) throw error;
-      const wait = Math.max(error.retryAfterSeconds ?? 1, previousWait * 2, 1);
-      if (wait > maxWaitSeconds) throw error;
-      previousWait = wait;
-      options.onRetry?.(wait, attempt + 1, error);
-      await new Promise<void>((resolve) => timers.setTimeout(resolve, wait * 1000));
-    }
-  }
+  return retry(task, {
+    attempts: options.attempts ?? 3,
+    retryable: (error) => error instanceof MetadataUnavailableError,
+    retryAfterSeconds: (error) => (error instanceof MetadataUnavailableError ? error.retryAfterSeconds : undefined),
+    backoffMs: (_attempt, previousWaitMs) => Math.max(1000, previousWaitMs * 2),
+    maxWaitMs: (options.maxWaitSeconds ?? 10) * 1000,
+    overMaxWait: "give-up",
+    onRetry: ({ attempt, waitMs, error }) => {
+      if (error instanceof MetadataUnavailableError) options.onRetry?.(waitMs / 1000, attempt + 1, error);
+    },
+    sleep: (ms) => {
+      const { promise, resolve } = Promise.withResolvers<void>();
+      timers.setTimeout(resolve, ms);
+      return promise;
+    },
+  });
 };

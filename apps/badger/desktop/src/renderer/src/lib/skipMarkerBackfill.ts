@@ -60,7 +60,8 @@ export type SkipBackfillDeps = {
     kind: string,
     payload: Record<string, unknown>,
   ) => Promise<void>;
-  replaceSkipMarkers: (mediaId: string, episodeId: string | null, markers: ShowSkipMarker[]) => Promise<void>;
+  /** Writes by source priority: the user's times stay; detected times give way (PLAY-SKIP-08). */
+  mergeSkipMarkers: (mediaId: string, episodeId: string | null, markers: ShowSkipMarker[]) => Promise<void>;
   fetchMarkers: (input: {
     catalogId: number;
     seasonNumber: number;
@@ -179,29 +180,12 @@ export const selectSkipBackfillEpisodes = (
   return selected;
 };
 
-/** Keeps the episode's non-service markers of types the fetch did not return, like the playback lazy fetch. */
-const mergeEpisodeMarkers = (details: MediaDetails, episodeId: string, fetched: ShowSkipMarker[]): ShowSkipMarker[] => {
-  const fetchedTypes = new Set(fetched.map((marker) => marker.type));
-  return [
-    ...details.skipMarkers
-      .filter((marker) => marker.episodeId === episodeId && !fetchedTypes.has(marker.type))
-      .map((marker) => ({
-        type: marker.type,
-        startSeconds: marker.startSeconds,
-        endSeconds: marker.endSeconds,
-        source: marker.source,
-        confidence: marker.confidence,
-      })),
-    ...fetched,
-  ].sort((left, right) => left.startSeconds - right.startSeconds);
-};
-
 /** The metadata service said "not now" (429 rate limit or 503 source capacity): stop and retry at the next app start. */
 const isRateLimited = (err: unknown) => err instanceof MetadataUnavailableError;
 
 /**
  * Walks every TV show in `media`, one metadata service lookup at a time. Writes
- * markers with `replaceSkipMarkers`, the per-episode hit/miss row and the
+ * markers with `mergeSkipMarkers`, the per-episode hit/miss row and the
  * show cache with `upsertSkipAnalysis` — the same writers the import window
  * and the playback lazy fetch use — so nothing is asked twice.
  */
@@ -260,7 +244,7 @@ export const runSkipMarkerBackfill = async (media: MediaRow[], deps: SkipBackfil
     for (const episode of todo) {
       const key = showEpisodeKey(episode.seasonNumber, episode.episodeNumber);
       if (episode.cachedMarkers) {
-        await deps.replaceSkipMarkers(show.id, episode.episodeId, mergeEpisodeMarkers(details, episode.episodeId, episode.cachedMarkers));
+        await deps.mergeSkipMarkers(show.id, episode.episodeId, episode.cachedMarkers);
         summary.writtenFromCache += 1;
         deps.log("[skip-markers] backfill wrote cached markers", { mediaId: show.id, episode: key, markers: episode.cachedMarkers });
         continue;
@@ -307,7 +291,7 @@ export const runSkipMarkerBackfill = async (media: MediaRow[], deps: SkipBackfil
         if (markers.length > 0) {
           newMarkers[key] = markers;
           summary.hits += 1;
-          await deps.replaceSkipMarkers(show.id, episode.episodeId, mergeEpisodeMarkers(details, episode.episodeId, markers));
+          await deps.mergeSkipMarkers(show.id, episode.episodeId, markers);
         } else {
           summary.misses += 1;
         }

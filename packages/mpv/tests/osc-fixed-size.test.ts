@@ -269,14 +269,14 @@ const armPill = async (h: Harness, ipc: Ipc): Promise<PillRect> => {
 
 /**
  * Bounding box of the drawn pill's outline in the top half of a screenshot. sf.lua draws it with ASS
- * `\\3c&HF6B04E&` (BBGGRR: rgb 78,176,246), a light blue that nothing else in that corner is: on screen ~(104,170,218).
+ * `\\3c&H57B3FF&` (BBGGRR: rgb 255,179,87), an amber that nothing else in that corner is (PLAY-SKIP-06).
  */
 const drawnPill = (s: Shot): PillRect | null => {
   let box: PillRect | null = null;
   for (let y = 0; y < s.h / 2; y++) {
     for (let x = 0; x < s.w; x++) {
       const i = (y * s.w + x) * 3;
-      if (!(s.raw[i + 2]! >= 190 && s.raw[i + 2]! - s.raw[i]! >= 80)) continue;
+      if (!(s.raw[i]! >= 190 && s.raw[i]! - s.raw[i + 2]! >= 80)) continue;
       box = box ? { left: Math.min(box.left, x), top: Math.min(box.top, y), right: Math.max(box.right, x), bottom: Math.max(box.bottom, y) } : { left: x, top: y, right: x, bottom: y };
     }
   }

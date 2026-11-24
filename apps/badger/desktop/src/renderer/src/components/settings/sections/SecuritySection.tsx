@@ -18,6 +18,8 @@ import {
 import { useAuth, useHasPassword } from "@/auth";
 import { Button, Input, Label } from "@space/ui";
 import { keyChangeOffered } from "@space/shared/keyChange";
+import { isClientUiLanguage } from "@space/shared";
+import { keyChangeText } from "@space/shared/keyChangeText";
 import { useKeyRotationReadiness } from "@space/shared/useKeyRotationReadiness";
 import { tooManyAttemptsText } from "@space/shared/signInError";
 import { useLibraryRecoveryFlows } from "@/lib/settings/useLibraryRecoveryFlows";
@@ -51,6 +53,7 @@ const getApiErrorMessage = (error: unknown, t: (key: string) => string) => {
 
 export default function SecuritySection() {
   const { t, i18n } = useTranslation();
+  const keyChangeT = keyChangeText(isClientUiLanguage(i18n.language) ? i18n.language : "en");
   const { token, logout } = useAuth();
   const recovery = useLibraryRecoveryFlows();
   // ACCT-AUTH-04 / ACCT-AUTH-05: an account without a password sets its first one here, confirmed by a code.
@@ -58,7 +61,7 @@ export default function SecuritySection() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { setShowKeyOpen } = recovery;
   // ACCT-KEYCHG-04: the key-change card shows exactly when the server would accept the change.
-  const keyChange = keyChangeOffered(useKeyRotationReadiness(token));
+  const keyChange = keyChangeOffered("badger-desktop", useKeyRotationReadiness(token));
 
   // ACCT-DEV-03: "Show my key" in the sign-out question lands here with `showKey=1`; open the show-key dialog once and
   // drop the param so a reload or Back does not open it again.
@@ -454,13 +457,13 @@ export default function SecuritySection() {
           {keyChange ? (
             <div className="rounded-xl border border-border p-4" data-testid="settings-key-change">
               <div className="space-y-1">
-                <div className="font-semibold">{t("settings.recovery.rotate.title")}</div>
-                <SettingHint>{t("settings.recovery.rotate.subtitle")}</SettingHint>
+                <div className="font-semibold">{keyChangeT("entry.title")}</div>
+                <SettingHint>{keyChangeT("entry.body")}</SettingHint>
               </div>
               <div className="pt-3">
                 <Button type="button" variant="secondary" onClick={() => recovery.setRecoveryOpen(true)}>
                   <RotateCwIcon className="mr-2 h-4 w-4" />
-                  {t("settings.recovery.rotate.button")}
+                  {keyChangeT("entry.button")}
                 </Button>
               </div>
             </div>
@@ -565,6 +568,7 @@ export default function SecuritySection() {
             recoveryError={recovery.recoveryError}
             recoveryBusy={recovery.recoveryBusy}
             submitRecovery={recovery.submitRecovery}
+            keyChange={recovery.keyChange}
             resetOpen={recovery.resetOpen}
             setResetOpen={recovery.setResetOpen}
             resetConfirmed={recovery.resetConfirmed}

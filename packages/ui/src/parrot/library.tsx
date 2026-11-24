@@ -4,7 +4,7 @@
  * back button, the album and artist page header and the song list. Texts come in already translated, so each app keeps
  * its own string table.
  */
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, type MouseEvent, type ReactNode } from "react";
 import { Loader2, Play } from "lucide-react";
 import { formatDuration, type ParrotAlbumRow } from "@space/parrot-core";
 import { BackButton } from "../button";
@@ -306,7 +306,7 @@ type ParrotSongListProps<T extends ParrotSongListTrack> = {
   /** The equaliser moves only while the music really plays. */
   playing: boolean;
   showAlbum: boolean;
-  /** Column titles and the play button's name, already translated. */
+  /** Column titles and the play button's and row's names, already translated. */
   labels: {
     song: string;
     artist: string;
@@ -314,6 +314,8 @@ type ParrotSongListProps<T extends ParrotSongListTrack> = {
     time: string;
     unknownArtist: string;
     play: (title: string) => string;
+    /** The name of the playing song's button and row, which pause it. */
+    pause: (title: string) => string;
     /** The note on a song of the album the user does not have (PAR-LIB-05); needed with `rows`. */
     missing?: string;
     /** The mark on a song kept as is at import (PAR-UP-05). */
@@ -321,6 +323,8 @@ type ParrotSongListProps<T extends ParrotSongListTrack> = {
   };
   /** Plays this list from the picked song: the rest of the list follows in the queue. */
   onPlay: (index: number) => void;
+  /** Pauses or resumes the song playing now: what its row and its play button do (PAR-PLAY-10). */
+  onToggle: () => void;
   /** Extra buttons at the end of a row (play next, add to queue, remove from a playlist); `index` is the row's place in the list. */
   actions?: (track: T, index: number) => ReactNode;
   /** Offline: the songs not kept here, greyed out and not played; their row buttons stay (PAR-OFFL-04). */
@@ -379,8 +383,33 @@ function useGrowingRowCount(total: number) {
   return { shown: canWatch ? Math.min(count, total) : total, endRef: setEnd };
 }
 
-/** Songs one per row: play button (equaliser while playing), title, artist, album (in the Songs list), length. */
-export function ParrotSongList<T extends ParrotSongListTrack>({ tracks, playingId, playing, showAlbum, labels, onPlay, actions, unavailable, rows, links, testId = "library-tracks", rowTestId = "library-track" }: ParrotSongListProps<T>) {
+/**
+ * What inside a song row keeps its own click (PAR-PLAY-10): the play button, the name links, the row's buttons and
+ * menus. Anything else in the row plays the song.
+ */
+const ROW_CONTROLS = "button, a, input, select, textarea, label, [role=button], [role=menuitem], [role=checkbox], [role=switch]";
+
+/**
+ * True when a click on a song row belongs to something else: a control in the row, a menu or dialog the row opened
+ * (drawn in a portal, so its clicks still reach the row through React), the second click of a double-click (the
+ * first one already played), or the end of a drag that selected some of the row's text.
+ */
+const clickIsNotForRow = (event: MouseEvent<HTMLElement>) => {
+  const target = event.target as Element;
+  if (!event.currentTarget.contains(target)) return true;
+  if (event.detail > 1) return true;
+  const control = target.closest(ROW_CONTROLS);
+  if (control && control !== event.currentTarget && event.currentTarget.contains(control)) return true;
+  return document.getSelection()?.isCollapsed === false;
+};
+
+/**
+ * Songs one per row: play button (equaliser while playing), title, artist, album (in the Songs list), length. A click,
+ * Enter or Space anywhere on a row does what its play button does (PAR-PLAY-10): plays the song from this list, or
+ * pauses or resumes it when it is the song playing now. The list is a grid of rows (Spotify's pattern), so each row can
+ * take the focus and still hold its own buttons.
+ */
+export function ParrotSongList<T extends ParrotSongListTrack>({ tracks, playingId, playing, showAlbum, labels, onPlay, onToggle, actions, unavailable, rows, links, testId = "library-tracks", rowTestId = "library-track" }: ParrotSongListProps<T>) {
   const columns = SONG_LIST_COLUMNS[showAlbum ? (actions ? "albumActions" : "album") : actions ? "actions" : "plain"];
   const allRows = rows ?? tracks.map((track, index): ParrotAlbumRow<T> => ({ kind: "owned", track, index }));
   const { shown, endRef } = useGrowingRowCount(allRows.length);
@@ -395,7 +424,7 @@ export function ParrotSongList<T extends ParrotSongListTrack>({ tracks, playingI
           <span className="text-right">{labels.time}</span>
           {actions && <span className="hidden @lg:block" />}
         </div>
-        <ol className="col-span-full grid grid-cols-subgrid" data-testid={testId}>
+        <ol className="col-span-full grid grid-cols-subgrid" role="grid" aria-label={labels.song} data-testid={testId}>
           {allRows.slice(0, shown).map((row) => {
             if (row.kind === "missing") {
               const { listed } = row;
@@ -404,11 +433,12 @@ export function ParrotSongList<T extends ParrotSongListTrack>({ tracks, playingI
                 <li
                   key={`missing:${listed.disc}:${listed.number}`}
                   className="col-span-full grid cursor-default grid-cols-subgrid items-center rounded-md px-2 py-1.5 opacity-40 grayscale"
+                  role="row"
                   aria-disabled
                   data-testid="library-missing-track"
                 >
-                  <span className="flex h-8 w-8 items-center justify-center text-xs tabular-nums text-muted-foreground">{listed.number}</span>
-                  <span className="min-w-0">
+                  <span role="gridcell" className="flex h-8 w-8 items-center justify-center text-xs tabular-nums text-muted-foreground">{listed.number}</span>
+                  <span role="gridcell" className="min-w-0">
                     <span className="block truncate font-medium" title={listed.title}>
                       {listed.title}
                     </span>
@@ -416,7 +446,7 @@ export function ParrotSongList<T extends ParrotSongListTrack>({ tracks, playingI
                   </span>
                   <span className="hidden @lg:block" />
                   {showAlbum && <span className="hidden @lg:block" />}
-                  <span className="text-right tabular-nums text-muted-foreground">{formatDuration(listed.durationMs)}</span>
+                  <span role="gridcell" className="text-right tabular-nums text-muted-foreground">{formatDuration(listed.durationMs)}</span>
                   {actions && <span className="hidden @lg:block" />}
                 </li>
               );
@@ -431,19 +461,40 @@ export function ParrotSongList<T extends ParrotSongListTrack>({ tracks, playingI
             const artist = track.artistName || labels.unknownArtist;
             const openArtist = links && track.artistId && track.artistName ? () => links.onOpenArtist(track.artistId!) : undefined;
             const openAlbum = links && track.albumId ? () => links.onOpenAlbum(track.albumId!) : undefined;
+            const activate = () => (isCurrent ? onToggle() : onPlay(i));
+            const name = isCurrent && playing ? labels.pause(track.title) : labels.play(track.title);
             return (
               <li
                 // A playlist can hold the same song twice.
                 key={`${track.id}:${i}`}
-                className={cn("col-span-full grid cursor-pointer grid-cols-subgrid items-center rounded-md px-2 py-1.5 hover:bg-secondary/60", isCurrent && "bg-primary/10 text-primary", away && "cursor-default")}
-                onDoubleClick={away ? undefined : () => onPlay(i)}
+                className={cn(
+                  "col-span-full grid cursor-pointer grid-cols-subgrid items-center rounded-md px-2 py-1.5 outline-none hover:bg-secondary/60 focus-visible:ring-2 focus-visible:ring-ring",
+                  isCurrent && "bg-primary/10 text-primary",
+                  away && "cursor-default"
+                )}
+                role="row"
+                tabIndex={away ? -1 : 0}
+                aria-label={name}
+                aria-selected={isCurrent}
+                aria-disabled={away || undefined}
+                onClick={(event) => {
+                  if (away || clickIsNotForRow(event)) return;
+                  activate();
+                }}
+                onKeyDown={(event) => {
+                  if (away || event.target !== event.currentTarget || (event.key !== "Enter" && event.key !== " ")) return;
+                  event.preventDefault();
+                  activate();
+                }}
                 data-testid={rowTestId}
                 data-unavailable={away || undefined}
               >
-                <button type="button" className={cn("flex h-8 w-8 items-center justify-center rounded-full hover:bg-secondary", away && UNAVAILABLE_CLASS)} aria-label={labels.play(track.title)} disabled={away} onClick={() => onPlay(i)}>
-                  {isCurrent && playing ? <ParrotEqualizer animated /> : <Play className="h-4 w-4 fill-current" />}
-                </button>
-                <span className={cn("min-w-0", away && UNAVAILABLE_CLASS)}>
+                <span role="gridcell" className="flex">
+                  <button type="button" className={cn("flex h-8 w-8 items-center justify-center rounded-full hover:bg-secondary", away && UNAVAILABLE_CLASS)} aria-label={name} disabled={away} onClick={activate} data-testid="song-play">
+                    {isCurrent && playing ? <ParrotEqualizer animated /> : <Play className="h-4 w-4 fill-current" />}
+                  </button>
+                </span>
+                <span role="gridcell" className={cn("min-w-0", away && UNAVAILABLE_CLASS)}>
                   <span className="flex min-w-0 items-center gap-2">
                     <span className="truncate font-medium" title={track.title}>
                       {track.title}
@@ -460,21 +511,21 @@ export function ParrotSongList<T extends ParrotSongListTrack>({ tracks, playingI
                     </ParrotNameLink>
                   </span>
                 </span>
-                <span className={cn("hidden truncate text-muted-foreground @lg:block", away && UNAVAILABLE_CLASS)} title={artist}>
+                <span role="gridcell" className={cn("hidden truncate text-muted-foreground @lg:block", away && UNAVAILABLE_CLASS)} title={artist}>
                   <ParrotNameLink onOpen={openArtist} testId="song-artist-link">
                     {artist}
                   </ParrotNameLink>
                 </span>
                 {showAlbum && (
-                  <span className={cn("hidden truncate text-muted-foreground @lg:block", away && UNAVAILABLE_CLASS)} title={track.albumTitle ?? undefined}>
+                  <span role="gridcell" className={cn("hidden truncate text-muted-foreground @lg:block", away && UNAVAILABLE_CLASS)} title={track.albumTitle ?? undefined}>
                     <ParrotNameLink onOpen={openAlbum} testId="song-album-link">
                       {track.albumTitle}
                     </ParrotNameLink>
                   </span>
                 )}
-                <span className={cn("text-right tabular-nums text-muted-foreground", away && UNAVAILABLE_CLASS)}>{formatDuration(track.durationMs)}</span>
+                <span role="gridcell" className={cn("text-right tabular-nums text-muted-foreground", away && UNAVAILABLE_CLASS)}>{formatDuration(track.durationMs)}</span>
                 {actions && (
-                  <span className="col-span-2 col-start-2 flex items-center @lg:col-span-1 @lg:col-start-auto" data-testid="song-row-actions">
+                  <span role="gridcell" className="col-span-2 col-start-2 flex items-center @lg:col-span-1 @lg:col-start-auto" data-testid="song-row-actions">
                     {actions(track, i)}
                   </span>
                 )}

@@ -18,7 +18,6 @@ import {
 } from "@space/shared/api";
 import {
   createProfileStore,
-  type ProfileLibraryMoves,
   type ProfilesSnapshot,
   type ProfileStoreDeps,
 } from "@space/shared/profileStore";
@@ -54,15 +53,3 @@ askProfileSetupInSetup(() => activeProfileNeedsSetup(profileStore.getSnapshot())
 export const useProfiles = (): ProfilesSnapshot =>
   useSyncExternalStore(profileStore.subscribe, profileStore.getSnapshot, profileStore.getSnapshot);
 
-/**
- * What a delete moves in Parrot's library: nothing yet, since playlists and hearts are the account's until they are
- * per profile; the deleted profile's history goes in `reconcileResumeHints`. With nothing to move, a delete needs no
- * open library: a phone without a Parrot library, or with it still opening, deletes like the website (ACCT-PROF-02).
- */
-export const parrotProfileMoves: ProfileLibraryMoves = {
-  ensureReady: async () => undefined,
-  wipeProfileViewing: async () => undefined,
-  promoteProfileToMain: async () => undefined,
-  healMainPromotion: async () => undefined,
-  listViewingProfileIds: async () => [],
-};

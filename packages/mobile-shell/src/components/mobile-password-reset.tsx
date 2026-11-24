@@ -2,8 +2,8 @@
  * "Forgot password?" on a phone sign-in screen: the e-mail gets a code, then the
  * code and a new password reset it. A card over the sign-in form; `onDone` hands back the notice to show under it.
  */
-import React, { useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import React, { useEffect, useState } from "react";
+import { BackHandler, Pressable, StyleSheet, Text, View } from "react-native";
 import { Lock, Mail } from "lucide-react-native";
 import { confirmPasswordReset, requestPasswordReset } from "@space/shared/api";
 import { isRateLimited, signInErrorValues, TOO_MANY_ATTEMPTS_KEY } from "@space/shared/signInError";
@@ -29,6 +29,15 @@ export const MobilePasswordReset = ({ initialEmail, onDone }: Props) => {
   /** `{count, minutes}` for the "too many attempts" sentence (ACCT-AUTH-11). */
   const [messageValues, setMessageValues] = useState(signInErrorValues(null));
   const [busy, setBusy] = useState(false);
+
+  // Android Back closes the card first, as its Cancel does; with it closed Back leaves the sign-in as before.
+  useEffect(() => {
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => {
+      onDone(null);
+      return true;
+    });
+    return () => sub.remove();
+  }, [onDone]);
 
   const request = async () => {
     if (!email.trim()) return;

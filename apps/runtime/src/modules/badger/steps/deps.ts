@@ -229,7 +229,7 @@ export interface CommitResult {
   /**
    * For TV source-job commits: the resolved `media_episodes.id` of the
    * (season, episode) the file maps to. Used by the commit step to address
-   * `replaceSkipMarkers` writes at the right episode row. Movie commits and
+   * `mergeSkipMarkers` writes at the right episode row. Movie commits and
    * format-job commits leave this null/omitted.
    */
   episodeId?: string | null;
@@ -357,7 +357,7 @@ export interface BadgerStepDeps {
   runPreviewSheetsCatchUp?(job: PreviewSheetsJob, options: PreviewSheetsCatchUpOptions): Promise<PreviewSheetsOutcome>;
   /** MPV-PREV-03: formats whose import's preview run is queued or running; the catch-up pass leaves them to it. */
   queuedPreviewImportFormatIds?(): string[];
-  /** On shutdown: abort the running preview decode and keep it pending for the next start. */
+  /** On shutdown: abort the running preview decode and keep it pending for the next start; stop skip matching. */
   stopPreviewSheets?(): void;
   /**
    * Remove a SUCCEEDED ingest job's local transcode directory (`<transcode
@@ -371,11 +371,12 @@ export interface BadgerStepDeps {
   /**
    * Persist the service-fetched per-episode markers for the just-committed
    * file's episode (or the show's media row for a movie — movies omit
-   * markers entirely, so callers should not invoke this for them). Idempotent
-   * delete-then-insert under the hood. Optional so unit tests for flows that
-   * don't exercise skip-markers don't have to wire it.
+   * markers entirely, so callers should not invoke this for them). Kind by
+   * kind; a marker the user set, or one detection found, is never replaced by
+   * the service's (PLAY-SKIP-08). Optional so unit tests for flows that don't
+   * exercise skip-markers don't have to wire it.
    */
-  replaceSkipMarkers?(
+  mergeSkipMarkers?(
     mediaId: string,
     episodeId: string | null,
     markers: BadgerIngestSkipMarker[]
@@ -384,7 +385,7 @@ export interface BadgerStepDeps {
    * Persist the full-show skip-marker cache to `media_skip_analysis` with
    * `kind = "external-skip-markers-show-v1"`. Idempotent overwrite — same
    * payload across multiple files of the same show just refreshes the
-   * timestamp. Optional, paired with `replaceSkipMarkers`.
+   * timestamp. Optional, paired with `mergeSkipMarkers`.
    */
   upsertShowSkipCache?(
     showMediaId: string,

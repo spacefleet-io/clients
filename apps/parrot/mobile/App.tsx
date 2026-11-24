@@ -4,8 +4,9 @@ import { API_BASE_URL } from "./src/config";
 import React, { useEffect, useRef, useState } from "react";
 import { phoneSetupSignedOut, resolvePhoneSetupStep, type PhoneSetupProgress } from "@space/mobile-shell/setup";
 import { MobileMascotLoader } from "@space/mobile-shell/mascot-loader";
-import { Linking, Platform, StatusBar, View } from "react-native";
-import { handOffProviderReturn } from "@space/mobile-shell/provider-sign-in";
+import { Platform, StatusBar, View } from "react-native";
+import { createPendingPairLink } from "@space/mobile-shell/pairing-approve";
+import { useHeldPairLink, usePairLinkIntake } from "@space/mobile-shell/pairing-approve/usePairLinks";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { keyValueHelloStore, noteHelloScreen, startDailyHello } from "@space/shared/dailyHello";
@@ -17,7 +18,8 @@ import type { ApiProfile } from "@space/shared/profiles";
 import { activeProfileNeedsSetup, useUpdateFeatures } from "@space/mobile-shell/profile-setup";
 import { ProfileSetupStep } from "@space/mobile-shell/profile-setup-step";
 import { WhatsNewModal } from "@space/mobile-shell/whats-new";
-import { parrotProfileMoves, profileStore, useProfiles } from "./src/lib/profiles";
+import { NO_LIBRARY_MOVES } from "@space/shared/profileStore";
+import { profileStore, useProfiles } from "./src/lib/profiles";
 import { stopPlayback } from "./src/lib/playback";
 import { SessionProvider, useSession } from "./src/state/session";
 import { LoginScreen } from "./src/screens/LoginScreen";
@@ -49,10 +51,11 @@ import { PARROT_MASCOT } from "./src/brand";
 import { startI18n } from "./src/lib/i18n";
 import { PARROT_LINK_SCHEME } from "./src/lib/linkScheme";
 import { TvGates } from "./src/tv/TvGates";
-import { holdPairLink, onPairLink, takePairLink } from "./src/lib/pendingPairLink";
 
 // Started once at launch, before any screen reads a translated text (Settings may mount first, with a saved session).
 const i18nStarted = startI18n();
+// ACCT-PAIR-06: a pairing link held until the library's navigator is up (a cold start through the link, or signed out).
+const pairLinks = createPendingPairLink();
 
 const Stack = createNativeStackNavigator<RootStack>();
 const navigationRef = createNavigationContainerRef<RootStack>();
@@ -66,7 +69,7 @@ const profilesLog = (event: string, data: Record<string, unknown>) => console.in
 const ProfilesRoute = ({ navigation, route }: NativeStackScreenProps<RootStack, "Profiles">) => (
   <MobileProfilesScreen
     store={profileStore}
-    moves={parrotProfileMoves}
+    moves={NO_LIBRARY_MOVES}
     startMode={route.params.mode}
     audience="listening"
     onClose={() => navigation.goBack()}
@@ -81,12 +84,8 @@ const Library = ({ profile }: { profile: ApiProfile | null }) => {
   // Offline with no saved list: the account's own history, as before profiles.
   const owner = { userId, profileId: profile?.id ?? "main", isMain: profile?.isMain ?? true };
   // ACCT-PAIR-06: a pairing link held before this navigator existed, or one arriving now, opens the approve screen.
-  const openHeldPairLink = () => {
-    if (!navigationRef.isReady()) return;
-    const code = takePairLink();
-    if (code) navigationRef.navigate("PairDevice", { code });
-  };
-  useEffect(() => onPairLink(openHeldPairLink), []);
+  const [navReady, setNavReady] = useState(false);
+  useHeldPairLink(pairLinks, navReady, (code) => navigationRef.navigate("PairDevice", { code }));
   return (
     <HistoryProvider owner={owner}>
     <ManageProvider>
@@ -95,7 +94,7 @@ const Library = ({ profile }: { profile: ApiProfile | null }) => {
       <NavigationContainer
         ref={navigationRef}
         theme={theme}
-        onReady={openHeldPairLink}
+        onReady={() => setNavReady(true)}
         onStateChange={() => {
           setRoute((navigationRef.getCurrentRoute()?.name as keyof RootStack) ?? "Main");
           // OPS-BIZ-20: each screen the navigator opens adds one to the daily hello's screen tally.
@@ -173,17 +172,7 @@ const Gates = () => {
   // Google, Apple and Microsoft sign-in (ACCT-SIGNIN-05): the browser comes back through `parrot://auth/provider`, as
   // the link that started the app or one that arrives while it runs; the sign-in screen takes it, held until it mounts.
   // A pairing link (ACCT-PAIR-06) is held until the library is up, then opens the approve screen.
-  useEffect(() => {
-    const handle = (url: string | null | undefined) => {
-      if (handOffProviderReturn(PARROT_LINK_SCHEME, url)) return;
-      holdPairLink(url);
-    };
-    void Linking.getInitialURL()
-      .then(handle)
-      .catch(() => undefined);
-    const subscription = Linking.addEventListener("url", ({ url }) => handle(url));
-    return () => subscription.remove();
-  }, []);
+  usePairLinkIntake(PARROT_LINK_SCHEME, pairLinks);
   useEffect(() => {
     if (booting) return;
     void setupStore.read().then((saved) => {
@@ -257,7 +246,7 @@ const ProfileGate = () => {
     return (
       <MobileProfilesScreen
         store={profileStore}
-        moves={parrotProfileMoves}
+        moves={NO_LIBRARY_MOVES}
         startMode="pick"
         audience="listening"
         onClose={null}

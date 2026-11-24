@@ -1,7 +1,7 @@
 {
   "keyStepWords": {
     "collection": "bibliotheek",
-    "collectionKey": "bibliotheeksleutel"
+    "collectionKey": "mediatheeksleutel"
   },
   "parrot": {
     "artist": {
@@ -24,17 +24,15 @@
       "nowPlaying": "Speelt nu"
     },
     "login": {
-      "sameAsBadger": "Gebruik hetzelfde e-mailadres en wachtwoord als voor Badger.",
-      "codeTotp": "Code uit je authenticator-app",
-      "codeEmail": "Code die we je hebben gemaild"
+      "sameAsBadger": "Gebruik hetzelfde e-mailadres en wachtwoord als voor Badger."
     },
     "key": {
-      "title": "Voer je bibliotheeksleutel in",
-      "showTitle": "Je bibliotheeksleutel",
+      "title": "Voer je mediatheeksleutel in",
+      "showTitle": "Je mediatheeksleutel",
       "body": "Typ de 12 woorden die je hebt bewaard toen je je bibliotheek maakte.",
-      "field": "Bibliotheeksleutel",
+      "field": "Mediatheeksleutel",
       "continue": "Doorgaan",
-      "saved": "Je bibliotheeksleutel is op deze telefoon bewaard.",
+      "saved": "Je mediatheeksleutel is op deze telefoon bewaard.",
       "errors": {
         "unavailable": "De sleutel kan nu niet worden gecontroleerd. Controleer je verbinding en probeer het opnieuw."
       }
@@ -66,7 +64,8 @@
       "noPlayableFile": "Dit album heeft nog geen afspeelbaar bestand.",
       "playFailed": "Dit nummer kon niet worden afgespeeld ({{error}}).",
       "noSongs": "Geen nummers.",
-      "play": "{{title}} afspelen"
+      "play": "{{title}} afspelen",
+      "pause": "{{title}} pauzeren"
     },
     "player": {
       "nothing": "Er speelt niets.",
@@ -87,8 +86,8 @@
       "signOut": "Uitloggen",
       "language": "Taal",
       "signOutKey": {
-        "title": "Heb je je bibliotheeksleutel bewaard?",
-        "body": "Als je uitlogt, verdwijnt je bibliotheeksleutel van deze telefoon. Om weer in te loggen moet je hem intypen, want inloggen met een QR-code werkt alleen zolang een ander apparaat van je de sleutel nog heeft. Zonder de sleutel gaat je bibliotheek niet open.",
+        "title": "Heb je je mediatheeksleutel bewaard?",
+        "body": "Als je uitlogt, verdwijnt je mediatheeksleutel van deze telefoon. Om weer in te loggen moet je hem intypen, want inloggen met een QR-code werkt alleen zolang een ander apparaat van je de sleutel nog heeft. Zonder de sleutel gaat je bibliotheek niet open.",
         "cancel": "Annuleren",
         "confirm": "Bewaard, uitloggen"
       },

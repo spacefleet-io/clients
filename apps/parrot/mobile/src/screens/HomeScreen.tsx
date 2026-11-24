@@ -10,9 +10,8 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Pause, Play, Shuffle } from "lucide-react-native";
 import { AudioPlayback, showsPause } from "@space/mobile-audio-playback";
 import { useTranslation } from "@space/mobile-shell/i18n";
-import { MobileLibraryLoading, MobileRail, SkyCover, useSkyScroll } from "@space/mobile-shell/components";
+import { MobileHomeRail, MobileLibraryLoading, SkyCover, useSkyScroll } from "@space/mobile-shell/components";
 import { libraryContent } from "@space/shared/libraryContent";
-import { guardRenderItem } from "@space/mobile-shell/render-boundary";
 import {
   formatDuration,
   homeAlbumDetail,
@@ -40,6 +39,7 @@ import { ErrorText } from "./ui";
 import type { RootStack } from "./routes";
 
 const TILE = 140;
+const idOf = (x: { id: string }) => x.id;
 
 /** Which library list a row's "See all" opens. */
 export type HomeSeeAll = "albums" | "artists";
@@ -89,31 +89,52 @@ export const HomeScreen = ({ onSeeAll }: { onSeeAll: (view: HomeSeeAll, sort?: P
   // While the card's album is queued the button follows the player: Pause while it plays, Resume where it stands.
   const button = jump ? homeJumpButton(jump.album.id, entry, now && player ? { ...now, positionMs: player.positionMs, playing: showsPause(player) } : null) : null;
   const waveTrack = button?.trackId ? songs.find((song) => song.id === button.trackId) : undefined;
-  // One sideways row of album tiles, shared by "Recently added" and "Recently played". A `MobileRail`, so a swipe
-  // on it scrolls the row and not the tab pager (UX-PHONE-09).
-  const albumRow = (rowAlbums: typeof albums) => (
-    <MobileRail
-      contentContainerStyle={styles.row}
-      data={rowAlbums}
-      keyExtractor={(album) => album.id}
-      {...skyScroll}
-      renderItem={guardRenderItem("album-tile", ({ item }) => (
-        <SkyCover>
-          <AlbumTile
-            album={item}
-            size={TILE}
-            playing={now?.albumId === item.id ? { animated: now.playing } : null}
-            onPress={() =>
-              navigation.navigate("Album", {
-                albumId: item.id,
-                title: item.title,
-                artistName: item.artistName,
-                cover: { coverObjectKey: item.coverObjectKey ?? null, coverThumbObjectKey: item.coverThumbObjectKey ?? null },
-              })
-            }
-          />
-        </SkyCover>
-      ), { width: TILE, height: TILE, margin: 0 })}
+  // The album tile of "Recently played" / "Albums" and "Recently added".
+  const renderAlbum = (item: (typeof albums)[number]) => (
+    <SkyCover>
+      <AlbumTile
+        album={item}
+        size={TILE}
+        playing={now?.albumId === item.id ? { animated: now.playing } : null}
+        onPress={() =>
+          navigation.navigate("Album", {
+            albumId: item.id,
+            title: item.title,
+            artistName: item.artistName,
+            cover: { coverObjectKey: item.coverObjectKey ?? null, coverThumbObjectKey: item.coverThumbObjectKey ?? null },
+          })
+        }
+      />
+    </SkyCover>
+  );
+  const renderArtist = (item: (typeof view.artists)[number]) => (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={item.name}
+      onPress={() => navigation.navigate("Artist", { artistId: item.id, name: item.name })}
+      style={({ pressed }) => [styles.artist, pressed && { opacity: 0.7 }]}
+    >
+      <SkyCover>
+        <ParrotArt seed={item.id} size={96} radius={48} coverKey={parrotArtistPictureThumbKey(item)} />
+      </SkyCover>
+      <Text style={styles.artistName} numberOfLines={1}>
+        {item.name}
+      </Text>
+    </Pressable>
+  );
+  // Every Home row is the shell's titled rail (UX-PHONE-01): its swipe scrolls the row, not the tab pager (UX-PHONE-09).
+  const albumRail = (title: string, rowAlbums: typeof albums, testID: string, onPress: () => void) => (
+    <MobileHomeRail
+      {...shelf}
+      title={title}
+      items={rowAlbums}
+      keyOf={idOf}
+      renderItem={renderAlbum}
+      itemWidth={TILE}
+      itemHeight={TILE}
+      boundaryName="album-tile"
+      seeAll={{ label: t("shell.home.seeAll"), onPress }}
+      testID={testID}
     />
   );
 
@@ -171,57 +192,24 @@ export const HomeScreen = ({ onSeeAll }: { onSeeAll: (view: HomeSeeAll, sort?: P
         </SkyCover>
       ) : null}
 
-      <Shelf title={view.played ? t("shell.home.recentlyPlayed") : t("parrot.library.view.albums")} onSeeAll={() => onSeeAll("albums")} testID="home-albums">
-        {albumRow(view.albums)}
-      </Shelf>
+      {albumRail(view.played ? t("shell.home.recentlyPlayed") : t("parrot.library.view.albums"), view.albums, "home-albums", () => onSeeAll("albums"))}
 
-      {added.length > 0 ? (
-        <Shelf title={t("shell.home.recentlyAdded")} onSeeAll={() => onSeeAll("albums", "recent")} testID="home-added">
-          {albumRow(added)}
-        </Shelf>
-      ) : null}
+      {added.length > 0 ? albumRail(t("shell.home.recentlyAdded"), added, "home-added", () => onSeeAll("albums", "recent")) : null}
 
       {view.artists.length > 0 ? (
-        <Shelf title={t("shell.home.yourArtists")} onSeeAll={() => onSeeAll("artists")} testID="home-artists">
-          <MobileRail
-            contentContainerStyle={styles.row}
-            data={view.artists}
-            keyExtractor={(artist) => artist.id}
-            {...skyScroll}
-            renderItem={guardRenderItem("artist-tile", ({ item }) => (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={item.name}
-                onPress={() => navigation.navigate("Artist", { artistId: item.id, name: item.name })}
-                style={({ pressed }) => [styles.artist, pressed && { opacity: 0.7 }]}
-              >
-                <SkyCover>
-                  <ParrotArt seed={item.id} size={96} radius={48} coverKey={parrotArtistPictureThumbKey(item)} />
-                </SkyCover>
-                <Text style={styles.artistName} numberOfLines={1}>
-                  {item.name}
-                </Text>
-              </Pressable>
-            ), { width: 96, margin: 0 })}
-          />
-        </Shelf>
+        <MobileHomeRail
+          {...shelf}
+          title={t("shell.home.yourArtists")}
+          items={view.artists}
+          keyOf={idOf}
+          renderItem={renderArtist}
+          itemWidth={96}
+          boundaryName="artist-tile"
+          seeAll={{ label: t("shell.home.seeAll"), onPress: () => onSeeAll("artists") }}
+          testID="home-artists"
+        />
       ) : null}
     </ScrollView>
-  );
-};
-
-const Shelf = ({ title, onSeeAll, testID, children }: { title: string; onSeeAll: () => void; testID: string; children: React.ReactNode }) => {
-  const { t } = useTranslation();
-  return (
-    <View style={styles.shelf} testID={testID}>
-      <View style={styles.shelfHead}>
-        <Text style={styles.shelfTitle}>{title}</Text>
-        <Pressable accessibilityRole="button" hitSlop={8} onPress={onSeeAll} testID={`${testID}-see-all`}>
-          <Text style={styles.seeAll}>{t("shell.home.seeAll")}</Text>
-        </Pressable>
-      </View>
-      {children}
-    </View>
   );
 };
 
@@ -274,11 +262,19 @@ const styles = StyleSheet.create({
     minHeight: 36,
   },
   secondaryText: { color: colors.text, fontWeight: "600", fontSize: 13 },
-  shelf: { marginTop: spacing.xl },
-  shelfHead: { flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", paddingHorizontal: spacing.lg, marginBottom: spacing.md },
+  shelf: { marginTop: spacing.xl, gap: spacing.md },
   shelfTitle: { color: colors.text, fontSize: 20, fontWeight: "800" },
   seeAll: { color: colors.accent, fontSize: 13, fontWeight: "600" },
-  row: { paddingHorizontal: spacing.lg, gap: spacing.lg },
   artist: { width: 96, alignItems: "center", gap: spacing.sm },
   artistName: { color: colors.text, fontSize: 13, fontWeight: "600", textAlign: "center" },
 });
+
+/** Parrot's look of a Home row: inset to the page edge, roomier gaps, its larger heading and accent "See all". */
+const shelf = {
+  style: styles.shelf,
+  inset: spacing.lg,
+  gap: spacing.lg,
+  followSky: true,
+  titleStyle: styles.shelfTitle,
+  seeAllStyle: styles.seeAll,
+} as const;

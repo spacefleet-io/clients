@@ -111,9 +111,14 @@ elseif scenario == "pause" then
   M.play(30, nil, first_fire)
   checkpoint("after-resume-fire")
 elseif scenario == "next-episode" then
+  -- PLAY-SKIP-02: the credits marker carries autoSkip, but credits are never
+  -- skipped by themselves: the "Next episode" pill waits for a press.
   boot(597, { CREDITS }, { id = "episode-2", label = "Episode 2" })
   M.set_prop("speed", 0.5)
-  M.play(60, nil, first_fire)
+  M.play(20)
+  checkpoint("credits+10s")
+  result.nextEpisodeRequestsBeforeClick = next_episode_requests()
+  M.script_message("sf-skip-confirm")
   M.play(0.5)
   checkpoint("notice-shown")
   M.play(5)
@@ -179,10 +184,10 @@ elseif scenario == "credits-autoplay-off" then
   result.nextEpisodeRequests = next_episode_requests()
 elseif scenario == "credits-last-episode-autoplay-off" then
   -- Control: no next episode (last one), so the credits pill is "Skip
-  -- credits", which keeps following the marker's autoSkip with autoplay off.
+  -- credits", which never fires by itself either (PLAY-SKIP-02).
   boot(597, { CREDITS }, nil, false)
   M.play(30, nil, first_fire)
-  checkpoint("after-fire")
+  checkpoint("after-wait")
   result.nextEpisodeRequests = next_episode_requests()
 else
   error("unknown scenario " .. scenario)

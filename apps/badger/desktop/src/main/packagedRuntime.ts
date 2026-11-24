@@ -1,7 +1,7 @@
 import { join } from "node:path";
 
 /** Resolves a bundled binary's absolute path (the platform layer's `binaries.resolve(name, ctx)?.path`). */
-export type ResolveBundledBinary = (name: "ffmpeg" | "ffprobe") => string | undefined;
+export type ResolveBundledBinary = (name: "ffmpeg" | "ffprobe" | "mpv") => string | undefined;
 
 /**
  * Environment the packaged (compiled) runtime binary needs that a source/dev
@@ -9,6 +9,7 @@ export type ResolveBundledBinary = (name: "ffmpeg" | "ffprobe") => string | unde
  * - `RUNTIME_SLICES_DIR` points at the manifests shipped in `<resources>/runtime/slices`;
  * - `SF_FFMPEG_PATH` / `SF_FFPROBE_PATH` point at the bundled binaries: the compiled runtime has no
  *   app root of its own, so only the desktop main process can locate `<resources>/deps/bin`.
+ * - `SF_MPV_PATH` points at the bundled mpv, which decodes audio for skip detection (META-SKIP-04).
  * - `SF_SUBTITLE_OCR_DIR` points at the subtitle OCR child shipped in `<resources>/runtime/ocr` (PLAY-TRACK-05).
  * An explicit value already on `env` wins.
  *
@@ -30,6 +31,10 @@ export const buildPackagedRuntimeEnv = (
   if (!env.SF_FFPROBE_PATH?.trim()) {
     const ffprobe = resolveBinary("ffprobe");
     if (ffprobe) out.SF_FFPROBE_PATH = ffprobe;
+  }
+  if (!env.SF_MPV_PATH?.trim()) {
+    const mpv = resolveBinary("mpv");
+    if (mpv) out.SF_MPV_PATH = mpv;
   }
   return out;
 };
