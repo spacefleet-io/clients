@@ -27,12 +27,15 @@ export const LabStatusBadge = memo(
     error,
     stageLabel,
     queuePosition,
+    waitingLabel,
   }: {
     status: JobStatus;
     error?: string;
     stageLabel?: string;
     /** Place in the runtime's queue while waiting (#2499): "Waiting · #3 in line". */
     queuePosition?: number;
+    /** Why a waiting job waits, read instead of its place in line (a skip job behind an import, MPV-PREV-07). */
+    waitingLabel?: string;
   }) => {
     const { t } = useTranslation();
     // Stabilize the (status, stageLabel) tuple so a fast
@@ -89,7 +92,9 @@ export const LabStatusBadge = memo(
     const text =
       isLivePhase && trimmedStage && !echoesStatus
         ? trimmedStage
-        : displayStatus === "waiting" && queuePosition !== undefined
+        : displayStatus === "waiting" && waitingLabel
+          ? waitingLabel
+          : displayStatus === "waiting" && queuePosition !== undefined
           ? t("lab.status.waitingInLine", { position: queuePosition })
           : labels[displayStatus];
     return <DesktopJobStatusPill tone={tones[displayStatus]}>{text}</DesktopJobStatusPill>;

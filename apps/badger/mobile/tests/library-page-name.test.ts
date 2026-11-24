@@ -94,7 +94,6 @@ vi.mock("../src/components/PosterGrid", () => ({ PosterGrid: () => null }));
 vi.mock("../src/components/PlaylistsPanel", () => ({ PlaylistsPanel: () => null }));
 // The phone Search overlay (UX-PHONE-12) pulls react-native-fs and the real shell components, which plain node cannot load.
 vi.mock("../src/components/PhoneSearch", () => ({ PhoneSearch: () => null }));
-vi.mock("../src/components/IconButton", () => ({ IconButton: () => null }));
 vi.mock("../src/components/PosterCard", () => ({ RIPPLE: {} }));
 vi.mock("../src/components/usePickerSheet", () => ({ usePickerSheet: () => ({ visible: false }) }));
 vi.mock("../src/lib/usePullToRefresh", () => ({ usePullToRefresh: () => ({}) }));

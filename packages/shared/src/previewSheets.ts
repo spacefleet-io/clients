@@ -30,7 +30,14 @@ export type MediaPreviewSheets = {
   /** Pictures across all sheets: ceil(duration / intervalSeconds). */
   pictureCount: number;
   sheets: MediaPreviewSheet[];
+  /**
+   * The video's skip signature (META-SKIP-04), made by the same decode: one encrypted gzip JSON object on the same
+   * silo. Absent on records made before it existed (the catch-up makes it then, MPV-PREV-03).
+   */
+  skipSignature?: MediaSkipSignatureRef;
 };
+
+export type MediaSkipSignatureRef = { objectKey: string; sizeBytes: number; version: number };
 
 export const PREVIEW_SHEETS_VERSION = 1;
 export const PREVIEW_INTERVAL_SECONDS = 5;
@@ -98,9 +105,21 @@ export const parsePreviewSheets = (raw: unknown): MediaPreviewSheets | null => {
       Boolean(sheet) && typeof sheet.objectKey === "string" && sheet.objectKey.length > 0 && Number.isFinite(sheet.firstPicture) && Number.isFinite(sheet.pictureCount)
   );
   if (sheets.length === 0) return null;
-  return { ...(candidate as MediaPreviewSheets), version: PREVIEW_SHEETS_VERSION, sheets };
+  const { skipSignature, ...rest } = candidate as MediaPreviewSheets;
+  const signature =
+    skipSignature &&
+    typeof skipSignature === "object" &&
+    typeof skipSignature.objectKey === "string" &&
+    skipSignature.objectKey.length > 0 &&
+    Number.isFinite(skipSignature.sizeBytes) &&
+    Number.isFinite(skipSignature.version)
+      ? { objectKey: skipSignature.objectKey, sizeBytes: skipSignature.sizeBytes, version: skipSignature.version }
+      : null;
+  return { ...rest, version: PREVIEW_SHEETS_VERSION, sheets, ...(signature ? { skipSignature: signature } : {}) };
 };
 
-/** Object keys of every sheet (deletion walks, storage checks). */
+/** Object keys of every sheet and of the skip signature (deletion walks, storage checks). */
 export const previewSheetKeys = (previews: MediaPreviewSheets | null | undefined): string[] =>
-  previews ? previews.sheets.map((sheet) => sheet.objectKey) : [];
+  previews
+    ? [...previews.sheets.map((sheet) => sheet.objectKey), ...(previews.skipSignature ? [previews.skipSignature.objectKey] : [])]
+    : [];

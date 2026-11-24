@@ -21,6 +21,7 @@ import {
   notarizeIfDeveloperId,
   notaryAccepted,
   notarytoolSubmitArgs,
+  openSigningKeychain,
   parseKeychainList,
   pickDeveloperIdIdentity,
   forgetAppBundles,
@@ -116,6 +117,62 @@ describe("parseKeychainList / notaryAccepted", () => {
   it("accepts only an Accepted submission", () => {
     expect(notaryAccepted(JSON.stringify({ id: "s1", status: "Accepted", message: "Processing complete" }))).toBe("s1");
     expect(() => notaryAccepted(JSON.stringify({ id: "s2", status: "Invalid", message: "Processing complete" }))).toThrow(/"Invalid".*notarytool log s2/);
+  });
+});
+
+// A fake macOS `security` shared by every build on one Mac user: one keychain search list, read and rewritten.
+const fakeMacUser = (initial: string[]) => {
+  let searchList = [...initial];
+  const identityHash = "0123456789ABCDEF0123456789ABCDEF01234567";
+  const run = (command: string, args: string[]) => {
+    if (command !== "security") return "";
+    if (args[0] === "list-keychains" && args.includes("-s")) {
+      searchList = args.slice(args.indexOf("-s") + 1);
+      console.info(`[mac-keychain] list-keychains -s -> ${JSON.stringify(searchList)}`);
+      return "";
+    }
+    if (args[0] === "list-keychains") return searchList.map((path) => `    "${path}"\n`).join("");
+    if (args[0] === "find-identity") return `  1) ${identityHash} "Developer ID Application: Chris-Alexandre Pena (8766H6KW4V)"\n     1 valid identities found\n`;
+    return "";
+  };
+  return { run, list: () => searchList };
+};
+
+// @req REL-MAC-02 the throwaway keychain leaves the search list without dropping another build's keychain
+describe("openSigningKeychain search list", () => {
+  it("[mac-keychain] two overlapping builds on one Mac user each keep their keychain until they close", () => {
+    const login = "/Users/c/Library/Keychains/login.keychain-db";
+    const system = "/Library/Keychains/System.keychain";
+    const mac = fakeMacUser([login, system]);
+    const signing = resolveMacSigning(FULL_ENV) as Parameters<typeof openSigningKeychain>[0];
+    const options = { run: mac.run, intermediateCert: "/installer/DeveloperIDG2CA.cer" };
+
+    const a = openSigningKeychain(signing, options);
+    const b = openSigningKeychain(signing, options);
+    console.info(`[mac-keychain] A=${a.keychain} B=${b.keychain} list=${JSON.stringify(mac.list())}`);
+    expect(mac.list()).toEqual([b.keychain, a.keychain, login, system]);
+
+    a.close();
+    console.info(`[mac-keychain] after A closed: ${JSON.stringify(mac.list())}`);
+    expect(mac.list()).toContain(b.keychain);
+    expect(mac.list()).not.toContain(a.keychain);
+
+    b.close();
+    console.info(`[mac-keychain] after B closed: ${JSON.stringify(mac.list())}`);
+    expect(mac.list()).toEqual([login, system]);
+    expect(existsSync(a.keychain)).toBe(false);
+  });
+
+  it("[mac-keychain] keeps a keychain another tool added while the build ran", () => {
+    const login = "/Users/c/Library/Keychains/login.keychain-db";
+    const mac = fakeMacUser([login]);
+    const signing = resolveMacSigning(FULL_ENV) as Parameters<typeof openSigningKeychain>[0];
+    const build = openSigningKeychain(signing, { run: mac.run, intermediateCert: "/installer/DeveloperIDG2CA.cer" });
+    const testflight = "/tmp/sf-testflight/dist.keychain-db";
+    mac.run("security", ["list-keychains", "-d", "user", "-s", testflight, ...mac.list()]);
+    build.close();
+    console.info(`[mac-keychain] after desktop build closed: ${JSON.stringify(mac.list())}`);
+    expect(mac.list()).toEqual([testflight, login]);
   });
 });
 

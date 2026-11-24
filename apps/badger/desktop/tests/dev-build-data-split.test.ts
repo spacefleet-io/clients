@@ -6,7 +6,7 @@
  * app read the release app's session, and whichever build started second attached to the other's runtime.
  *
  * @bugfix @regression-proof @req PLAT-DESK-14
- * @covers apps/badger/desktop/src/main/appIdentity.ts
+ * @covers apps/badger/desktop/src/main/appIdentity.ts + packages/desktop-shell/src/main-shell/appIdentity.ts
  *         apps/badger/desktop/src/main/runtimeSpawnEnv.ts (applyDevBuildRuntimeDefaults, isExternalRuntimeUrl)
  *         apps/badger/desktop/src/main/devBuildEnv.ts + index.ts (load order)
  */
@@ -17,8 +17,13 @@ import { describe, expect, it } from "vitest";
 import { platform as linux } from "../../../../packages/desktop-platform-linux/src/index";
 import { platform as macos } from "../../../../packages/desktop-platform-macos/src/index";
 import { platform as windows } from "../../../../packages/desktop-platform-windows/src/index";
-import { resolveAppIdentity } from "../src/main/appIdentity";
+import { resolveAppIdentity as resolveSharedIdentity, type AppIdentityPlatform } from "@space/desktop-shell/main-shell";
+import { BADGER_IDENTITY } from "../src/main/appIdentity";
 import { applyDevBuildRuntimeDefaults, DEV_BUILD_RUNTIME_PORT, isExternalRuntimeUrl } from "../src/main/runtimeSpawnEnv";
+
+/** Badger's declaration through the shared resolver, as index.ts calls it. */
+const resolveAppIdentity = (platform: AppIdentityPlatform, appData: string, env: NodeJS.ProcessEnv, devBuild: boolean) =>
+  resolveSharedIdentity({ ...BADGER_IDENTITY, platform, appData, env, devBuild });
 
 const T = "dev-build-data-split";
 const RELEASE_RUNTIME_DIR = "/home/u/.local/share/SpaceFleet/runtime";

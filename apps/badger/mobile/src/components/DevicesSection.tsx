@@ -4,7 +4,7 @@ import type { Session } from "@space/shared/api";
 import { useTranslation } from "@space/mobile-shell/i18n";
 import { useMobileShellTheme } from "@space/mobile-shell/theme";
 import { MobileSheetScrollView } from "@space/mobile-shell/bottom-sheet";
-import { Button, Card } from "./ui";
+import { MobileButton, MobileCard } from "@space/mobile-shell/components";
 import { BottomSheet } from "./BottomSheet";
 import { usePickerSheet } from "./usePickerSheet";
 import { sessionDetail, sessionDisplayName, useAccountDevices } from "../lib/accountDevices";
@@ -44,7 +44,7 @@ export const DevicesSection = ({ token, openRequest = 0 }: { token: string; open
       : t("account.devices.summary", { count: sessions.length });
 
   return (
-    <Card>
+    <MobileCard>
       <Text style={[styles.title, { color: theme.colors.textDim }]}>{t("account.devices.title").toUpperCase()}</Text>
       {error ? <Text style={[styles.line, { color: theme.colors.danger }]}>{t(`account.devices.errors.${error}`)}</Text> : null}
       <Text style={[styles.line, { color: theme.colors.textMuted }]} testID="devices-summary">
@@ -55,7 +55,7 @@ export const DevicesSection = ({ token, openRequest = 0 }: { token: string; open
           {t("account.devices.thisDevice", { name: sessionDisplayName(current) })}
         </Text>
       ) : null}
-      <Button label={t("account.devices.manage", { count: sessions.length })} variant="secondary" onPress={sheet.open} />
+      <MobileButton label={t("account.devices.manage", { count: sessions.length })} variant="secondary" onPress={sheet.open} />
       <BottomSheet sheet={sheet} testID="devices-sheet">
         <Text style={[styles.sheetTitle, { color: theme.colors.text }]}>{t("account.devices.title")}</Text>
         {error ? <Text style={[styles.line, { color: theme.colors.danger }]}>{t(`account.devices.errors.${error}`)}</Text> : null}
@@ -73,15 +73,15 @@ export const DevicesSection = ({ token, openRequest = 0 }: { token: string; open
                 </Text>
               </View>
               {!session.current ? (
-                <Button label={t("account.devices.revoke")} variant="ghost" onPress={() => confirmSignOut(session)} />
+                <MobileButton label={t("account.devices.revoke")} variant="ghost" onPress={() => confirmSignOut(session)} />
               ) : null}
             </View>
           ))}
           <Text style={[styles.line, { color: theme.colors.textDim }]}>{t("account.devices.footnote")}</Text>
         </MobileSheetScrollView>
-        <Button label={t("account.devices.refresh")} variant="secondary" onPress={() => void load()} loading={loading} />
+        <MobileButton label={t("account.devices.refresh")} variant="secondary" onPress={() => void load()} loading={loading} />
       </BottomSheet>
-    </Card>
+    </MobileCard>
   );
 };
 

@@ -16,7 +16,8 @@ import { ParrotArt } from "../screens/art";
 import { useSession } from "../state/session";
 import { useNowPlaying } from "../state/usePlayerState";
 import { useQuery } from "../state/useQuery";
-import { TvAlbumCard, TvCardRow } from "./TvMusicParts";
+import { TvCardRow } from "@space/mobile-shell/tv/TvCardRow";
+import { TvAlbumCard, tvCardHeight } from "./TvMusicParts";
 import { artistSongs } from "./tvModel";
 import { useTvPages, useTvPlay } from "./tvPages";
 
@@ -82,6 +83,7 @@ export const TvArtistPage = ({ artistId, name }: { artistId: string; name: strin
           items={rows}
           keyOf={(album) => album.id}
           cardWidth={CARD * scale}
+          cardHeight={tvCardHeight(CARD * scale, scale)}
           gap={CARD_GAP}
           renderCard={(album, _index, onFocus) => (
             <TvAlbumCard

@@ -381,6 +381,22 @@ export type PreviewSheetCandidate = {
   initKey: string | null;
 };
 
+/**
+ * One video the skip-detection catch-up counts (MPV-PREV-07, the Jobs card's detailed list): its file, the format the
+ * pass works on (the row holding the skip signature once made), whether that signature exists, and whether the
+ * library holds an intro / credits skip for it (any source).
+ */
+export type SkipCatchUpVideo = {
+  formatId: string;
+  mediaId: string;
+  fileId: string;
+  season: number | null;
+  episode: number | null;
+  signed: boolean;
+  intro: boolean;
+  credits: boolean;
+};
+
 /** Outcome of storing an OCR twin: `created: false` when the picture row is gone or already has a twin. */
 export type AddOcrSubtitleTwinResult =
   | { created: true; reason: null; id: string }

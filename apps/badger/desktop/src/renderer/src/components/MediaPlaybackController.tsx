@@ -129,6 +129,7 @@ export default function MediaPlaybackController({
     addSubtitleTrack,
     removeSubtitleTrackNow,
     getMediaObjectKeys,
+    mergeSkipMarkers,
     replaceSkipMarkers,
     upsertSkipAnalysis,
     listSkipAnalysis,
@@ -596,6 +597,15 @@ export default function MediaPlaybackController({
     addSubtitleTrack,
     removeSubtitleTrack: removeSubtitleTrackNow,
     getMediaObjectKeys,
+    skipEditLibrary: {
+      listSkipAnalysis,
+      upsertSkipAnalysis,
+      replaceSkipMarkers,
+      onChanged: async () => {
+        const refreshed = await fetchMediaDetails(currentMedia.id);
+        if (refreshed) setCurrentMedia(scopeToEdition(refreshed, activeEditionRef.current));
+      },
+    },
     t,
   });
 
@@ -1039,32 +1049,21 @@ export default function MediaPlaybackController({
           );
         }
 
-        const existingEpisodeMarkers = currentMedia.skipMarkers.filter(
-          (marker) => marker.episodeId === currentEpisode.id
+        // By source priority: the user's own times stay, the detected ones give way (PLAY-SKIP-08).
+        const fetched = result.markers.flatMap((marker) =>
+          marker.endSeconds == null
+            ? []
+            : [
+                {
+                  type: marker.type,
+                  startSeconds: marker.startSeconds,
+                  endSeconds: marker.endSeconds,
+                  source: marker.source,
+                  confidence: marker.confidence,
+                },
+              ]
         );
-        const fetchedTypes = new Set(result.markers.map((marker) => marker.type));
-        const merged = [
-          ...existingEpisodeMarkers
-            .filter((marker) => !fetchedTypes.has(marker.type))
-            .map((marker) => ({
-              type: marker.type,
-              startSeconds: marker.startSeconds,
-              endSeconds: marker.endSeconds,
-              source: marker.source,
-              confidence: marker.confidence,
-            })),
-          ...result.markers
-            .filter((marker) => marker.endSeconds != null)
-            .map((marker) => ({
-              type: marker.type,
-              startSeconds: marker.startSeconds,
-              endSeconds: marker.endSeconds as number,
-              source: marker.source,
-              confidence: marker.confidence,
-            })),
-        ].sort((left, right) => left.startSeconds - right.startSeconds);
-
-        await replaceSkipMarkers(currentMedia.id, currentEpisode.id, merged);
+        if (fetched.length > 0) await mergeSkipMarkers(currentMedia.id, currentEpisode.id, fetched);
         const refreshed = await fetchMediaDetails(currentMedia.id);
         if (refreshed) {
           setCurrentMedia(refreshed);
@@ -1079,7 +1078,7 @@ export default function MediaPlaybackController({
     fetchMediaDetails,
     getStoredDuration,
     listSkipAnalysis,
-    replaceSkipMarkers,
+    mergeSkipMarkers,
     upsertSkipAnalysis,
   ]);
 

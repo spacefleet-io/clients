@@ -16,7 +16,8 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { findProviderReturn, PROVIDER_SIGN_IN_ERRORS, type ProviderReturn } from "@space/shared/providerSignIn";
+import { PROVIDER_SIGN_IN_ERRORS, providerSignInTexts, type ProviderReturn } from "@space/shared/providerSignIn";
+import { parrotLinks } from "../src/main/appIdentity";
 import type { ParrotBridge, ParrotLanguage, ParrotProviderCompleteResult, ParrotState } from "../src/shared/ipc";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -48,7 +49,7 @@ vi.mock("@space/ui", () => {
 
 import SignIn from "../src/renderer/src/SignIn";
 import { passwordResetText } from "@space/desktop-shell/components";
-import { PROVIDER_VERIFIER_KEY } from "../src/renderer/src/ProviderSignIn";
+import { PROVIDER_VERIFIER_KEY } from "@space/desktop-shell/provider-sign-in";
 import { PARROT_STRINGS, translator } from "../src/renderer/src/i18n";
 
 const SUITE = "PARROT-DESKTOP-PROVIDER-SIGN-IN-001";
@@ -348,28 +349,37 @@ describe("Parrot desktop: Google, Apple and Microsoft sign-in", () => {
   // @req ACCT-SIGNIN-05[parrot]
   it("@req ACCT-SIGNIN-05[parrot] main reads the parrot://auth/provider link from a launch or second-instance argv", () => {
     const argv = ["/usr/bin/parrot", "--no-sandbox", "parrot://auth/provider?signinCode=abc0123456789abcdef"];
+    const outcomeOf = (args: string[]) => {
+      const link = parrotLinks.fromArgv(args);
+      return link?.kind === "provider-return" ? link.outcome : null;
+    };
     dump("argv", argv);
-    expect(findProviderReturn("parrot", argv)).toEqual({ code: "abc0123456789abcdef" });
-    expect(findProviderReturn("parrot", ["/usr/bin/parrot", "parrot://auth/provider?signinError=cancelled"])).toEqual({ error: "cancelled" });
-    expect(findProviderReturn("parrot", ["/usr/bin/parrot", "badger://auth/provider?signinCode=abc0123456789abcdef"])).toBeNull();
-    expect(findProviderReturn("parrot", ["/usr/bin/parrot", "parrot://billing/return?paymentId=p1"])).toBeNull();
+    expect(outcomeOf(argv)).toEqual({ code: "abc0123456789abcdef" });
+    expect(outcomeOf(["/usr/bin/parrot", "parrot://auth/provider?signinError=cancelled"])).toEqual({ error: "cancelled" });
+    expect(outcomeOf(["/usr/bin/parrot", "badger://auth/provider?signinCode=abc0123456789abcdef"])).toBeNull();
+    expect(outcomeOf(["/usr/bin/parrot", "parrot://billing/return?paymentId=p1"])).toBeNull();
     const main = readFileSync(resolve(import.meta.dirname, "../src/main/index.ts"), "utf8");
     const secondInstance = main.slice(main.indexOf('app.on("second-instance"'));
-    expect(secondInstance.indexOf("findProviderReturn")).toBeGreaterThan(-1);
-    expect(secondInstance.indexOf("findProviderReturn")).toBeLessThan(secondInstance.indexOf("findPaymentReturn"));
+    expect(secondInstance).toContain("parrotLinks.fromArgv(argv)");
+    expect(secondInstance.indexOf('"provider-return"')).toBeGreaterThan(-1);
+    expect(secondInstance.indexOf('"provider-return"')).toBeLessThan(secondInstance.indexOf('"payment-return"'));
     expect(main).toContain('returnTo: providerReturnAddress("parrot")');
     expect(main).toContain('surface: "desktop"');
   });
 
   // @req ACCT-SIGNIN-05[parrot]
   it("@req ACCT-SIGNIN-05[parrot] has the provider words in Parrot's five languages, every return error included", () => {
+    // The row titles, the "or" line and the error sentences are the shared ones (`@space/shared/providerSignIn`);
+    // only "Finish in your browser", which names Parrot, stays in Parrot's own table.
     const keys = Object.keys(PARROT_STRINGS.en).filter((key) => key.startsWith("signIn.provider."));
-    dump("provider keys", keys.length);
-    for (const code of PROVIDER_SIGN_IN_ERRORS) expect(keys).toContain(`signIn.provider.errors.${code}`);
-    for (const language of ["fr", "nl", "de", "es"] as ParrotLanguage[]) {
-      for (const key of keys) expect(PARROT_STRINGS[language][key as keyof (typeof PARROT_STRINGS)["en"]], `${language} ${key}`).toBeTruthy();
-      expect(PARROT_STRINGS[language]["signIn.provider.continueInBrowser"]).not.toBe(PARROT_STRINGS.en["signIn.provider.continueInBrowser"]);
-      expect(PARROT_STRINGS[language]["signIn.provider.signInWith"]).toContain("{provider}");
+    dump("parrot provider keys", keys);
+    expect(keys).toEqual(["signIn.provider.continueInBrowser"]);
+    for (const language of ["en", "fr", "nl", "de", "es"] as ParrotLanguage[]) {
+      const shared = providerSignInTexts[language];
+      for (const code of PROVIDER_SIGN_IN_ERRORS) expect(shared.errors[code], `${language} ${code}`).toBeTruthy();
+      expect(shared.signInWith).toContain("{{provider}}");
+      expect(PARROT_STRINGS[language]["signIn.provider.continueInBrowser"]).toContain("Parrot");
+      if (language !== "en") expect(PARROT_STRINGS[language]["signIn.provider.continueInBrowser"]).not.toBe(PARROT_STRINGS.en["signIn.provider.continueInBrowser"]);
     }
   });
 });

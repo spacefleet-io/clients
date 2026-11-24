@@ -2,7 +2,7 @@ import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { useTranslation } from "@space/mobile-shell/i18n";
 import { UpdateSourceHow } from "@space/mobile-shell/update-required";
-import { Screen } from "../components/Screen";
+import { MobileScreen } from "@space/mobile-shell/components";
 import { theme } from "../theme/theme";
 
 /**
@@ -18,12 +18,12 @@ import { theme } from "../theme/theme";
 export const LibraryFormatTooNewScreen = () => {
   const { t } = useTranslation();
   return (
-    <Screen>
+    <MobileScreen>
       <View style={styles.container}>
         <Text style={styles.title}>{t("libraryFormat.title")}</Text>
         <UpdateSourceHow app="badger" lead={t("libraryFormat.body")} />
       </View>
-    </Screen>
+    </MobileScreen>
   );
 };
 

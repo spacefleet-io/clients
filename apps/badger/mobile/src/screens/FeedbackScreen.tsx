@@ -4,10 +4,9 @@ import { useNavigation } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ArrowLeft } from "lucide-react-native";
 import { sendFeedback, type FeedbackInput } from "@space/shared/api";
-import { MobileFeedbackForm } from "@space/mobile-shell/components";
+import { MobileFeedbackForm, MobileIconButton } from "@space/mobile-shell/components";
 import { useTranslation } from "@space/mobile-shell/i18n";
 import { useAuth } from "../store/auth";
-import { IconButton } from "../components/IconButton";
 import { SettingsGroup } from "../components/SettingsRows";
 import { phoneFeedbackDevice } from "@space/mobile-shell/feedback-device";
 import packageJson from "../../package.json";
@@ -34,9 +33,9 @@ export const FeedbackScreen = () => {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
-        <IconButton label={t("feedback.back")} onPress={() => navigation.goBack()}>
+        <MobileIconButton label={t("feedback.back")} onPress={() => navigation.goBack()}>
           <ArrowLeft size={22} color={theme.colors.text} />
-        </IconButton>
+        </MobileIconButton>
         <Text style={styles.title} accessibilityRole="header">
           {t("feedback.title")}
         </Text>

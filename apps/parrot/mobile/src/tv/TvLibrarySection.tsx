@@ -17,7 +17,8 @@ import { useSession } from "../state/session";
 import { useNowPlaying } from "../state/usePlayerState";
 import { useQuery } from "../state/useQuery";
 import { TvLibraryState } from "./TvHomeSection";
-import { TV_CARD_GROW_ROOM, TvAlbumCard, TvArtistCard, TvCardRow } from "./TvMusicParts";
+import { TV_CARD_GROW_ROOM, TvCardRow } from "@space/mobile-shell/tv/TvCardRow";
+import { TvAlbumCard, TvArtistCard, tvCardHeight } from "./TvMusicParts";
 import { tvGridColumnsFor } from "./tvModel";
 import { useTvPages } from "./tvPages";
 
@@ -73,6 +74,7 @@ export const TvLibrarySection = ({ albumSort }: { albumSort: ParrotAlbumSort | n
               items={artists}
               keyOf={(artist) => artist.id}
               cardWidth={ARTIST_WIDTH * scale}
+              cardHeight={tvCardHeight(ARTIST_WIDTH * scale, scale)}
               gap={ARTIST_GAP}
               renderCard={(artist, _index, onFocus) => (
                 <TvArtistCard

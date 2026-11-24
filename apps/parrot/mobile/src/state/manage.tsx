@@ -12,7 +12,7 @@ import { launchImageLibrary } from "react-native-image-picker";
 import { Buffer } from "buffer";
 import { KeyboardAvoidingForm } from "@space/mobile-shell/keyboard";
 import { useTranslation } from "@space/mobile-shell/i18n";
-import { MobileNoticeBanner } from "@space/mobile-shell/components";
+import { MobileNoticeBanner, MobileSkeletonPulse } from "@space/mobile-shell/components";
 import { MobileRenderBoundary } from "@space/mobile-shell/render-boundary";
 import {
   applyParrotEditSuggestion,
@@ -29,7 +29,6 @@ import {
 import { shellPluralForm } from "@space/parrot-core/shell-strings";
 import { deleteFromLibrary, editDetails, getEditValues, previewDelete } from "../lib/library";
 import { ParrotArt } from "../screens/art";
-import { Shimmer } from "../screens/shimmer";
 import { colors, spacing } from "../theme";
 import { useEditLookups, type EditLookups } from "./editLookups";
 import { useSession } from "./session";
@@ -523,7 +522,7 @@ const SuggestList = ({
       ) : null}
       {asking ? (
         <View style={styles.asking} testID="manage-suggest-asking">
-          <Shimmer style={[styles.shimmerLine, { flex: 1 }]} />
+          <MobileSkeletonPulse style={[styles.shimmerLine, { flex: 1 }]} />
           <Text style={styles.suggestAbout}>{t("shell.manage.suggestStillAsking")}</Text>
         </View>
       ) : null}
@@ -554,8 +553,8 @@ const LyricsSection = ({ lyrics }: { lyrics: EditLookups["lyrics"] }) => {
     body = (
       <View style={{ gap: spacing.sm }} accessibilityState={{ busy: true }} testID="manage-lyrics-loading">
         <Text style={styles.label}>{t("shell.nowPlaying.searchingLyricsTitle")}</Text>
-        <Shimmer style={[styles.shimmerLine, { width: "75%" }]} />
-        <Shimmer style={[styles.shimmerLine, { width: "50%" }]} />
+        <MobileSkeletonPulse style={[styles.shimmerLine, { width: "75%" }]} />
+        <MobileSkeletonPulse style={[styles.shimmerLine, { width: "50%" }]} />
       </View>
     );
   else if (state.status === "found")

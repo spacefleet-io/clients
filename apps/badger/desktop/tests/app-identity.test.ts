@@ -9,18 +9,22 @@ import { describe, expect, it } from "vitest";
 import { platform as linux } from "../../../../packages/desktop-platform-linux/src/index";
 import { platform as macos } from "../../../../packages/desktop-platform-macos/src/index";
 import { platform as windows } from "../../../../packages/desktop-platform-windows/src/index";
-import { resolveAppIdentity } from "../src/main/appIdentity";
-import { buildApplicationMenu } from "@space/desktop-shell/main-shell";
+import { BADGER_IDENTITY } from "../src/main/appIdentity";
+import { buildApplicationMenu, resolveAppIdentity, type AppIdentityPlatform } from "@space/desktop-shell/main-shell";
+
+/** Badger's declaration through the shared resolver, as index.ts calls it. */
+const badgerIdentity = (platform: AppIdentityPlatform, appData: string, env: NodeJS.ProcessEnv, devBuild: boolean) =>
+  resolveAppIdentity({ ...BADGER_IDENTITY, platform, appData, env, devBuild });
 
 describe("app identity per OS", () => {
   it("keeps the Linux name and userData dir of existing installs (Badger, ~/.config/@sf/desktop)", () => {
-    const identity = resolveAppIdentity(linux, "/home/u/.config", {}, false);
+    const identity = badgerIdentity(linux, "/home/u/.config", {}, false);
     console.info(`[app-identity:linux] ${JSON.stringify(identity)}`);
     expect(identity).toEqual({ name: "Badger", userDataDir: "/home/u/.config/@sf/desktop" });
   });
 
   it("keeps the Windows name and userData dir of existing installs (Badger, %APPDATA%\\@sf\\desktop)", () => {
-    const identity = resolveAppIdentity(windows, "C:\\Users\\u\\AppData\\Roaming", {}, false);
+    const identity = badgerIdentity(windows, "C:\\Users\\u\\AppData\\Roaming", {}, false);
     console.info(`[app-identity:windows] ${JSON.stringify(identity)}`);
     expect(identity).toEqual({ name: "Badger", userDataDir: "C:\\Users\\u\\AppData\\Roaming\\@sf\\desktop" });
   });
@@ -28,14 +32,14 @@ describe("app identity per OS", () => {
   // @req PLAT-DESK-07 app data in ~/Library/Application Support/Badger
   // @req REL-MAC-05 the Mac app is named Badger
   it("names the Mac app Badger with its data in Application Support/Badger", () => {
-    const identity = resolveAppIdentity(macos, "/Users/u/Library/Application Support", {}, false);
+    const identity = badgerIdentity(macos, "/Users/u/Library/Application Support", {}, false);
     console.info(`[app-identity:macos] ${JSON.stringify(identity)}`);
     expect(identity).toEqual({ name: "Badger", userDataDir: "/Users/u/Library/Application Support/Badger" });
   });
 
   it("lets SF_USER_DATA_PATH override the dir on every OS", () => {
     for (const platform of [linux, windows, macos]) {
-      expect(resolveAppIdentity(platform, "/x", { SF_USER_DATA_PATH: " /lane/data " }, false).userDataDir).toBe("/lane/data");
+      expect(badgerIdentity(platform, "/x", { SF_USER_DATA_PATH: " /lane/data " }, false).userDataDir).toBe("/lane/data");
     }
   });
 });

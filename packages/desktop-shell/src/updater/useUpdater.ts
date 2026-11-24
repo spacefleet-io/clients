@@ -27,8 +27,12 @@ export type DesktopUpdaterControls = {
   setAutoUpdate: (enabled: boolean) => Promise<void>;
   /** Check, and when an update is available download it; the user then restarts via `install`. */
   runFullUpdate: () => Promise<void>;
-  /** Back to idle, keeping a latched `mandatory` flag (a server-mandated update is not dismissible) and the setting. */
+  /** Back to idle, keeping a latched `mandatory` flag (a server-mandated update is not dismissible), the setting and the user's remind/ignore choices. */
   reset: () => void;
+  /** REL-UPD-08: "Remind me later" on the offered version; the main process answers with a `prompt-snoozed` event. */
+  remindLater: () => Promise<void>;
+  /** REL-UPD-08: "Ignore" the offered version; the main process answers with a `prompt-ignored` event. */
+  ignoreVersion: () => Promise<void>;
 };
 
 export const useDesktopUpdater = (
@@ -89,15 +93,15 @@ export const useDesktopUpdater = (
   }, [updater]);
 
   /**
-   * Channel `self`: download, then the `update-downloaded` event moves the phase to `downloaded`. Channel `system`
-   * (REL-UPD-07): the same IPC opens the password dialog and runs the package manager; the main process's
-   * `system-*` events carry the phase (installing → installed, back to available on a dismissed dialog, error with
-   * the reason), so only a bridge failure lands here.
+   * Channel `self`: download, then the `update-downloaded` event moves the phase to `downloaded`. Channels `system`
+   * and `flatpak` (REL-UPD-07): the same IPC opens the password dialog and runs the package manager, or updates
+   * through the Flatpak portal; the main process's `system-*` events carry the phase (installing → installed, back to
+   * available on a dismissed dialog, error with the reason), so only a bridge failure lands here.
    */
   const download = useCallback(async (): Promise<void> => {
     if (!updater) return;
     setState((prev) =>
-      prev.channel === "system"
+      prev.channel === "system" || prev.channel === "flatpak"
         ? { ...prev, phase: "installing", errorMessage: null, failure: null, failureDetail: null }
         : { ...prev, phase: "downloading", progress: 0, errorMessage: null },
     );
@@ -108,7 +112,7 @@ export const useDesktopUpdater = (
     }));
     if (result.ok) return;
     setState((prev) => {
-      if (prev.channel !== "system") return { ...prev, phase: "error", errorMessage: result.message ?? "download_failed" };
+      if (prev.channel !== "system" && prev.channel !== "flatpak") return { ...prev, phase: "error", errorMessage: result.message ?? "download_failed" };
       // The events already set the phase (installed, available after a dismissed dialog, error with the reason); a
       // thrown bridge call or a refusal before any event did not. "busy" = an install is already running: keep it.
       if (result.message === "busy") return prev;
@@ -137,9 +141,28 @@ export const useDesktopUpdater = (
   }, [check, download]);
 
   const reset = useCallback(
-    () => setState((prev) => ({ ...INITIAL_UPDATER_STATE, mandatory: prev.mandatory, autoUpdate: prev.autoUpdate })),
+    () =>
+      setState((prev) => ({
+        ...INITIAL_UPDATER_STATE,
+        mandatory: prev.mandatory,
+        autoUpdate: prev.autoUpdate,
+        remindLater: prev.remindLater,
+        ignoredVersion: prev.ignoredVersion,
+      })),
     [],
   );
 
-  return { state, supported: Boolean(updater), check, download, install, setAutoUpdate, runFullUpdate, reset };
+  const remindLater = useCallback(async (): Promise<void> => {
+    await updater
+      ?.remindLater()
+      .catch((err: unknown) => onErrorRef.current?.(err instanceof Error ? err.message : String(err), "remind me later failed"));
+  }, [updater]);
+
+  const ignoreVersion = useCallback(async (): Promise<void> => {
+    await updater
+      ?.ignoreVersion()
+      .catch((err: unknown) => onErrorRef.current?.(err instanceof Error ? err.message : String(err), "ignore update failed"));
+  }, [updater]);
+
+  return { state, supported: Boolean(updater), check, download, install, setAutoUpdate, runFullUpdate, reset, remindLater, ignoreVersion };
 };

@@ -1,6 +1,7 @@
 import i18n from "i18next";
 import { initReactI18next, useTranslation } from "react-i18next";
 import { withSignInErrorTexts } from "@space/shared/signInError";
+import { withProviderSignInTexts } from "@space/shared/providerSignIn";
 import { withSubtitleLanguageTexts } from "@space/shared/profileSettings";
 import { withTitleLanguageTexts } from "@space/shared/titleLanguage";
 import { withProfilesTexts } from "@space/shared/profileTexts";
@@ -36,14 +37,18 @@ export const DEFAULT_MOBILE_UI_LANGUAGE: MobileUiLanguage = "en";
 export const isMobileUiLanguage = isClientUiLanguage;
 
 /**
- * The sign-in error sentences (`login.errors`) come from `@space/shared/signInError`, the title-language choice
+ * The sign-in error sentences (`login.errors`) come from `@space/shared/signInError`, the Google, Apple and Microsoft
+ * sign-in words (`login.provider`, ACCT-SIGNIN-05) from `@space/shared/providerSignIn`, the title-language choice
  * (`titleLanguage`, ACCT-PROF-03) from `@space/shared/titleLanguage`, the Subtitle language setting (`subtitleLanguage`) from `@space/shared/profileSettings`, the profile texts from `@space/shared/profileTexts`, and the labels on the way to account deletion from
  * `@space/shared/accountDeletionLabels` (the legal page prints them too, WEB-LEGAL-04), shared by every app.
  */
 export const withSharedTexts = <T extends Record<string, unknown>>(translation: T, language: MobileUiLanguage): T =>
   withAccountDeletionLabels(
     withProfilesTexts(
-      withSubtitleLanguageTexts(withTitleLanguageTexts(withSignInErrorTexts(translation, language), language), language),
+      withSubtitleLanguageTexts(
+        withTitleLanguageTexts(withProviderSignInTexts(withSignInErrorTexts(translation, language), language), language),
+        language,
+      ),
       language,
     ),
     "mobile",

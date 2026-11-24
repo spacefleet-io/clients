@@ -31,15 +31,17 @@ if scenario == "fit" then
   for _, win in ipairs(WINDOWS) do
     for _, hidpi in ipairs(SCALES) do
       for _, chapters in ipairs({ false, true }) do
-        -- the window is win points = win * hidpi OSD px, and a layout unit is
-        -- 2 * hidpi OSD px: the same units at every display scale
-        local w, h = win[1] * hidpi / (2 * hidpi), win[2] * hidpi / (2 * hidpi)
-        local fit = sf_fit_controls(w, h, chapters)
-        result.cases[#result.cases + 1] = {
-          window = win[1] .. "x" .. win[2], hidpi = hidpi, chapters = chapters, w = w, h = h,
-          shown = fit.shown, timecodes = fit.timecodes, band = fit.band, title = fit.title,
-          centre = fit.centre, centreY = fit.centreY, episodes = fit.episodes,
-        }
+        for _, skip in ipairs({ false, true }) do
+          -- the window is win points = win * hidpi OSD px, and a layout unit is
+          -- 2 * hidpi OSD px: the same units at every display scale
+          local w, h = win[1] * hidpi / (2 * hidpi), win[2] * hidpi / (2 * hidpi)
+          local fit = sf_fit_controls(w, h, chapters, skip)
+          result.cases[#result.cases + 1] = {
+            window = win[1] .. "x" .. win[2], hidpi = hidpi, chapters = chapters, skip = skip, w = w, h = h,
+            shown = fit.shown, timecodes = fit.timecodes, band = fit.band, title = fit.title,
+            centre = fit.centre, centreY = fit.centreY, episodes = fit.episodes,
+          }
+        end
       end
     end
   end

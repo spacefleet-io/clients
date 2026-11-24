@@ -15,6 +15,7 @@
     "./app-backdrop": "./src/app-backdrop.tsx",
     "./floating-mascot": "./src/floating-mascot.tsx",
     "./mascot-loader": "./src/mascot-loader.tsx",
+    "./library-loading": "./src/library-loading.tsx",
     "./artwork-image": "./src/artwork-image.tsx",
     "./library-key-words": "./src/library-key-words.tsx",
     "./app-playback-mark": "./src/app-playback-mark.ts",

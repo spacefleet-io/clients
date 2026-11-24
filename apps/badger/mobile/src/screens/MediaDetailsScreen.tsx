@@ -26,7 +26,7 @@ import YoutubePlayer from "react-native-youtube-iframe";
 import { getCurrentLanguage, useTranslation } from "@space/mobile-shell/i18n";
 import { MobileRenderBoundary } from "@space/mobile-shell/render-boundary";
 import { MobileSheetScrollView, useMobileDismissPan } from "@space/mobile-shell/bottom-sheet";
-import { MobileRailScroll, MobileSkyLayer } from "@space/mobile-shell/components";
+import { MobileRailScroll, MobileSkeletonBlock, MobileSkeletonPulse, MobileSkyLayer } from "@space/mobile-shell/components";
 import type { MediaDetails, MediaEpisode } from "@space/shared/libraryTypes";
 import { subtitleFetchCopy } from "@space/shared/subtitleFetch";
 import { crewLines as toCrewLines } from "@space/shared/libraryCrew";
@@ -38,7 +38,6 @@ import { usePlaylistMembership } from "../lib/usePlaylistMembership";
 import { useMediaImageSource } from "../lib/useMediaImage";
 import { MediaArtwork } from "../components/MediaArtwork";
 import { theme } from "../theme/theme";
-import { SkeletonBlock, SkeletonPulse } from "../components/Skeleton";
 import { isEpisodeResumable } from "../lib/playback/resume";
 import { youtubeWatchUrl } from "../lib/youtubeWatchUrl";
 import { formatEpisodeCode } from "../lib/playback/nextEpisode";
@@ -422,16 +421,16 @@ export const MediaDetailsScreen = () => {
           scrollEventThrottle={16}
         >
           {loading ? (
-            <SkeletonPulse style={styles.loadingContent}>
-              <SkeletonBlock width="100%" height={340} radius={0} />
+            <MobileSkeletonPulse style={styles.loadingContent}>
+              <MobileSkeletonBlock width="100%" height={340} radius={0} />
               <View style={styles.loadingBody}>
-                <SkeletonBlock width="60%" height={26} radius={8} />
-                <SkeletonBlock width="35%" height={12} radius={6} />
-                <SkeletonBlock width="100%" height={56} radius={18} />
-                <SkeletonBlock width="100%" height={12} radius={6} />
-                <SkeletonBlock width="90%" height={12} radius={6} />
+                <MobileSkeletonBlock width="60%" height={26} radius={8} />
+                <MobileSkeletonBlock width="35%" height={12} radius={6} />
+                <MobileSkeletonBlock width="100%" height={56} radius={18} />
+                <MobileSkeletonBlock width="100%" height={12} radius={6} />
+                <MobileSkeletonBlock width="90%" height={12} radius={6} />
               </View>
-            </SkeletonPulse>
+            </MobileSkeletonPulse>
           ) : details ? (
             <>
               <GestureDetector gesture={heroDismissPan}>

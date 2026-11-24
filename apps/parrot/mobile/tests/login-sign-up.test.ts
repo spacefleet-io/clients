@@ -33,7 +33,7 @@ describe("Parrot phone creates free accounts and deletes them (ACCT-AUTH-10, ACC
       heading: login.includes('t("login.withAccount")'),
       card: login.includes("<MobileSignUp"),
       link: login.includes('testID="login-create-account"'),
-      unverifiedOpensCode: /onUnverified=\{\(\) => setMode\("verify"\)\}/.test(login),
+      unverifiedOpensCode: /onUnverified: \(\) => setMode\("verify"\)/.test(login),
     };
     console.info("[PARROT-MOBILE-LOGIN-SIGN-UP-001] LoginScreen wiring:", wired);
     expect(wired).toEqual({ heading: true, card: true, link: true, unverifiedOpensCode: true });

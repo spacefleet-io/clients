@@ -1,8 +1,7 @@
 import React, { useCallback } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
-import { MobileAppBackdrop, MobileErrorReportsLink } from "@space/mobile-shell/components";
-import { Button, SectionHeader } from "../components/ui";
-import { Screen } from "../components/Screen";
+import { MobileAppBackdrop, MobileButton, MobileErrorReportsLink, MobileScreen } from "@space/mobile-shell/components";
+import { SectionHeader } from "../components/SectionHeader";
 import { useAppSettings } from "../lib/appSettings";
 import { scopeLogger } from "@space/mobile-shell/logger";
 import { theme } from "../theme/theme";
@@ -43,17 +42,17 @@ type AnswerProps = { onAnswer: (errorReports: boolean) => void };
 const PhoneErrorReports = ({ onAnswer }: AnswerProps) => {
   const { t } = useTranslation();
   return (
-    <Screen>
+    <MobileScreen>
       <ScrollView contentContainerStyle={styles.scroll}>
         <SectionHeader title={t("errorReports.title")} />
         <View style={styles.card}>
           <Text style={styles.description}>{t("errorReports.description")}</Text>
           <MobileErrorReportsLink />
         </View>
-        <Button testID="error-reports-send" label={t("errorReports.send")} variant="secondary" onPress={() => onAnswer(true)} />
-        <Button testID="error-reports-decline" label={t("errorReports.decline")} variant="secondary" onPress={() => onAnswer(false)} />
+        <MobileButton testID="error-reports-send" label={t("errorReports.send")} variant="secondary" onPress={() => onAnswer(true)} />
+        <MobileButton testID="error-reports-decline" label={t("errorReports.decline")} variant="secondary" onPress={() => onAnswer(false)} />
       </ScrollView>
-    </Screen>
+    </MobileScreen>
   );
 };
 

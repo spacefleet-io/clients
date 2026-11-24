@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { LibraryDb } from "../src/libraryDb";
+import type { TitleDetails } from "@space/shared/api";
 
 let root = "";
 
@@ -317,6 +318,67 @@ describe("library skip markers", () => {
         episodeIds: [episodeOneId, episodeTwoId],
       });
       throw err;
+    } finally {
+      db.close();
+    }
+  });
+
+  // PLAY-SKIP-08: every writer that is not the user's own change merges by source priority.
+  // @req PLAY-SKIP-08[badger-desktop]
+  it("merges markers by source priority: the user's times stay, the metadata service's replace detection", async () => {
+    console.info(`[skip-markers-runtime:merge] opening LibraryDb`);
+    const db = await LibraryDb.openLocal("token", "key");
+    db.setSyncEnabled(false);
+    const mediaId = await db.addMediaFromCatalog({
+      id: 203,
+      type: "tv",
+      title: "Merged Skip Show",
+      originalTitle: null,
+      originalLanguage: "en",
+      overview: null,
+      year: "2026",
+      rating: null,
+      posterPath: null,
+      backdropPath: null,
+      genres: [],
+      cast: [],
+      trailers: [],
+      seasons: [{ seasonNumber: 1, name: "Season 1", overview: null, posterPath: null, episodeCount: 1, airDate: null }],
+      episodes: [{ seasonNumber: 1, episodeNumber: 1, name: "Episode 1", overview: null, stillPath: null, airDate: null }],
+      totalEpisodes: 1,
+      // Fixture: only the catalog fields the import reads; the rest of TitleDetails is unused here.
+    } as unknown as TitleDetails);
+    const episodeId = db.getMediaDetails(mediaId)?.episodes[0]?.id ?? null;
+    const dump = (label: string) =>
+      console.info(
+        `[skip-markers-runtime:merge] ${label} ${JSON.stringify(db.getMediaDetails(mediaId)?.skipMarkers.map((m) => ({ type: m.type, start: m.startSeconds, end: m.endSeconds, source: m.source })))}`,
+      );
+    try {
+      expect(episodeId).toBeTruthy();
+      db.mergeSkipMarkers(mediaId, episodeId, [
+        { type: "intro", startSeconds: 12, endSeconds: 42, source: "metadata" },
+        { type: "credits", startSeconds: 1250, endSeconds: 1290, source: "metadata" },
+      ]);
+      dump("after metadata");
+      db.mergeSkipMarkers(mediaId, episodeId, [{ type: "intro", startSeconds: 10, endSeconds: 40, source: "detected" }]);
+      dump("after detection");
+      db.replaceSkipMarkers(mediaId, episodeId, [
+        { type: "intro", startSeconds: 9, endSeconds: 39, source: "user" },
+        { type: "credits", startSeconds: 1250, endSeconds: 1290, source: "metadata" },
+      ]);
+      db.mergeSkipMarkers(mediaId, episodeId, [
+        { type: "intro", startSeconds: 11, endSeconds: 41, source: "detected" },
+        { type: "credits", startSeconds: 1260, endSeconds: 1290, source: "detected" },
+      ]);
+      dump("after user then detection");
+      const markers = db.getMediaDetails(mediaId)?.skipMarkers ?? [];
+      expect(markers).toHaveLength(2);
+      expect(markers.find((m) => m.type === "intro")).toMatchObject({ startSeconds: 9, endSeconds: 39, source: "user" });
+      // The metadata service's times outrank this device's detection (Chris 2026-11-24).
+      expect(markers.find((m) => m.type === "credits")).toMatchObject({ startSeconds: 1250, source: "metadata" });
+      db.mergeSkipMarkers(mediaId, episodeId, [{ type: "credits", startSeconds: 1200, endSeconds: 1290, source: "metadata" }]);
+      dump("after newer metadata");
+      expect(db.getMediaDetails(mediaId)?.skipMarkers.find((m) => m.type === "credits")).toMatchObject({ startSeconds: 1200, source: "metadata" });
     } finally {
       db.close();
     }

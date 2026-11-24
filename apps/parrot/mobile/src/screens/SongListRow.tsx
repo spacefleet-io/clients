@@ -1,12 +1,14 @@
 // One song in a list (an album's songs, the library's Songs view, a playlist). The song that plays is marked as in the
-// approved design (PAR-LOOK-01): its title turns green and the equaliser takes the place of its track number. Its
-// "more" button (or a long press) opens the song sheet: heart, add to playlist, remove (PAR-PL-02/04).
+// approved design (PAR-LOOK-01): its title turns green and the equaliser takes the place of its track number. A tap on
+// the row plays the song, or pauses or resumes it when it is the song playing now (PAR-PLAY-10). Its "more" button (or
+// a long press) opens the song sheet: heart, add to playlist, remove (PAR-PL-02/04).
 import React from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import { Ellipsis } from "lucide-react-native";
 import { formatDuration } from "@space/parrot-core";
 import { UNAVAILABLE_LOOK } from "@space/mobile-shell/theme";
 import { colors, spacing } from "../theme";
+import { togglePlayback } from "../state/usePlayerState";
 import { ParrotEqualizer } from "./equalizer";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RootStack } from "./routes";
@@ -55,7 +57,9 @@ export const SongListRow = ({
   disabled: boolean;
   /** While the phone is offline: a song not on it, greyed out and not played (PAR-OFFL-04). Its "more" sheet stays. */
   unavailable?: boolean;
+  /** "Play {title}", or "Pause {title}" on the song playing now. */
   accessibilityLabel: string;
+  /** Plays this song from its list; on the song playing now the row pauses or resumes instead. */
   onPress: () => void;
   /** Opens the song sheet; the row then has its "more" button. */
   onMore?: () => void;
@@ -67,7 +71,7 @@ export const SongListRow = ({
     accessibilityLabel={accessibilityLabel}
     accessibilityState={{ selected: !!playing, disabled: unavailable }}
     disabled={disabled || unavailable}
-    onPress={onPress}
+    onPress={playing ? () => void togglePlayback() : onPress}
     onLongPress={onMore}
     style={({ pressed }) => [styles.row, pressed && { opacity: 0.7 }]}
   >

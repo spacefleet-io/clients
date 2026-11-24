@@ -90,7 +90,11 @@ import {
   type WarmStorageCacheArgs,
   type WarmStorageCacheResult,
 } from "./cacheWarmup";
-import { createPreviewSheetsRunner, type ProducePreviewSheetsFn } from "./previewSheetsAfterCommit";
+import { createPreviewSheetsRunner, skipJobFor, type ProducePreviewSheetsFn } from "./previewSheetsAfterCommit";
+import { createSkipMatchRunner } from "./skipDetectAfterCommit";
+import { resolveRuntimeMpvPath } from "../../../core/content/ffmpegRuntime";
+import { analyzeSkipAudio } from "@space/ingest-core/skipDetect";
+import { getDesktopPlatform } from "@space/desktop-platform";
 
 /**
  * Cache of `ProducedMedia` per `(userId, jobId, scope, variant)`. The legacy
@@ -349,11 +353,11 @@ export const resolveTranscodeRoot = (): string => {
     : joinPath(process.cwd(), ".runtime", "transcode");
 };
 
-const resolveJobDir = (userId: string, jobId: string): string =>
+export const resolveJobDir = (userId: string, jobId: string): string =>
   joinPath(resolveTranscodeRoot(), userId, jobId);
 
-/** Total bytes of the regular files under `dir` (0 when missing); for the removal log line only. */
-const dirSizeBytes = async (dir: string): Promise<number> => {
+/** Total bytes of the regular files under `dir` (0 when missing); for removal logs and the kept-copies size. */
+export const dirSizeBytes = async (dir: string): Promise<number> => {
   let total = 0;
   const walk = async (current: string): Promise<void> => {
     let entries;
@@ -638,6 +642,19 @@ export function buildBadgerStepDeps(
       return false;
     }
   };
+  // Skip detection (META-SKIP-04): each video's signature is made in its preview pass; a recorded signature
+  // matches its show against the show's other signatures (fetched, never videos).
+  const skipMatch = createSkipMatchRunner({
+    libraryDb,
+    fetchSignature: async (objectKey) => {
+      const userId = opts.resolveActiveUserId?.() ?? null;
+      const token = userId ? (resolveToken?.(userId) ?? "") : "";
+      const libraryKey = userId ? (resolveLibraryKey?.(userId) ?? null) : null;
+      if (!token || !libraryKey || !opts.downloadAndDecryptObject) throw new Error("SKIP_SIGNATURE_NOT_SIGNED_IN");
+      return opts.downloadAndDecryptObject(token, objectKey, libraryKey);
+    },
+    pendingPath: () => joinPath(resolveTranscodeRoot(), opts.resolveActiveUserId?.() ?? "_", "skip-match-pending.json"),
+  });
   // Seek-bar previews after the source commit (MPV-PREV-02). Their pending runs sit beside the job dirs (which the
   // succeeded-job cleanup removes while a run may still go on) and are re-queued at start (RT-LIFE-04).
   const previewShutdown = new AbortController();
@@ -653,6 +670,26 @@ export function buildBadgerStepDeps(
     awaitReady: async (job) => {
       const ctx: AuthWaitContext = { stage: "preview-sheets", userId: job.userId, jobId: job.jobId, signal: previewShutdown.signal };
       return (await awaitToken(ctx)) !== "" && (await awaitLibraryKey(ctx)) !== null && (await awaitLibraryDbOpen(ctx));
+    },
+    analyzeSkipAudio: async ({ inputPath, durationSeconds, workDir, signal }) => {
+      const mpvPath = resolveRuntimeMpvPath();
+      if (!mpvPath) return null;
+      return analyzeSkipAudio({
+        mpvPath,
+        inputPath,
+        durationSeconds,
+        workDir,
+        env: getDesktopPlatform().binaries.launchEnv({ libDirs: [joinPath(mpvPath, "..")] }, process.env),
+        signal,
+        onLog: (line) => console.info(line),
+      });
+    },
+    onSkipSignature: async (job, objectKey, signature) => {
+      const episodeId =
+        job.skip && job.skip.season !== null && job.skip.episode !== null
+          ? ((await libraryDb.call("resolveEpisodeId", [job.mediaId, job.skip.season, job.skip.episode])) as string | null)
+          : null;
+      await skipMatch.signatureRecorded({ mediaId: job.mediaId, episodeId, objectKey, signature });
     },
   });
   /** Bounded wait for the library DB; throws STEP_COMMIT_LIBRARY_NOT_READY on timeout. */
@@ -1577,6 +1614,7 @@ export function buildBadgerStepDeps(
           inputPath: input.filename,
           durationSeconds: previewFormat.durationSeconds,
           initKey: previewFormat.initKey,
+          skip: skipJobFor(input.season, input.episode),
         });
       }
 
@@ -1922,12 +1960,12 @@ export function buildBadgerStepDeps(
   const getLibraryVersion: BadgerStepDeps["getLibraryVersion"] = () =>
     libraryDb.getVersion();
 
-  const replaceSkipMarkers: BadgerStepDeps["replaceSkipMarkers"] = async (
+  const mergeSkipMarkers: BadgerStepDeps["mergeSkipMarkers"] = async (
     mediaId: string,
     episodeId: string | null,
     markers: BadgerIngestSkipMarker[]
   ): Promise<void> => {
-    await libraryDb.replaceSkipMarkers(mediaId, episodeId, markers);
+    await libraryDb.mergeSkipMarkers(mediaId, episodeId, markers);
   };
 
   const upsertShowSkipCache: BadgerStepDeps["upsertShowSkipCache"] = async (
@@ -1958,15 +1996,16 @@ export function buildBadgerStepDeps(
     persistJobPlacementId,
     discardJobOutputs,
     removeJobDir,
-    replaceSkipMarkers,
+    mergeSkipMarkers,
     upsertShowSkipCache,
     listExistingEpisodeIds,
-    resumePreviewSheets: previewSheets.resume,
+    resumePreviewSheets: () => Promise.all([previewSheets.resume(), skipMatch.resume()]).then(() => undefined),
     runPreviewSheetsCatchUp: previewSheets.runCatchUp,
     queuedPreviewImportFormatIds: previewSheets.queuedImportFormatIds,
     stopPreviewSheets: () => {
       previewShutdown.abort();
       previewSheets.stop();
+      skipMatch.stop();
     },
   };
 }

@@ -20,14 +20,16 @@
  * into `<job dir>.previews-source`), it gives way when an import or a playback starts, and a catch-up run cut by a
  * restart is released and dropped at the next start (the pass picks the video again).
  */
-import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import type { producePreviewSheets } from "@space/ingest-core/mediaProcessor";
+import { existsSync, readdirSync, readFileSync, rmSync } from "node:fs";
+import { join } from "node:path";
+import type { producePreviewSheets, produceSkipSignature } from "@space/ingest-core/mediaProcessor";
+import type { SkipAudioAnalysisPayload, SkipSignature } from "@space/ingest-core/skipDetect";
 import { parseMediaPlacementIdFromObjectKey } from "@space/shared/storagePlacement";
 import { isTransientStorageTransportError, StorageTunnelError } from "@space/shared/storageTunnel";
 import { previewSheetKeys, type MediaPreviewSheets } from "@space/shared/previewSheets";
 import type { BadgerLibraryDbService } from "../../badgerLibraryDb";
-import { produceBadgerPreviewSheets } from "../../badgerIngest";
+import { produceBadgerPreviewSheets, produceBadgerSkipSignature } from "../../badgerIngest";
+import { writeFileDurably } from "./skipDetectAfterCommit";
 
 /**
  * Makes and uploads the sheets. The run is queued after the source commit, outside the import's library-key
@@ -37,6 +39,19 @@ import { produceBadgerPreviewSheets } from "../../badgerIngest";
 export type ProducePreviewSheetsFn = (
   args: Parameters<typeof producePreviewSheets>[0] & { libraryKeyBase64: string }
 ) => Promise<MediaPreviewSheets>;
+
+/** Makes and uploads a skip signature alone (a video whose previews predate signatures), encrypted like the sheets. */
+export type ProduceSkipSignatureFn = (
+  args: Parameters<typeof produceSkipSignature>[0] & { libraryKeyBase64: string }
+) => Promise<NonNullable<MediaPreviewSheets["skipSignature"]>>;
+
+/** The sound pass of a skip signature (the runtime's mpv); null when it has nothing to read. */
+export type AnalyzeSkipAudioFn = (args: {
+  inputPath: string;
+  durationSeconds: number;
+  workDir: string;
+  signal?: AbortSignal;
+}) => Promise<SkipAudioAnalysisPayload | null>;
 
 export type PreviewSheetsJob = {
   userId: string;
@@ -51,7 +66,16 @@ export type PreviewSheetsJob = {
   initKey: string | null;
   /** Set on runs of the catch-up pass (MPV-PREV-03); absent on a run queued by an import. */
   origin?: "catch-up";
+  /** The skip signature made in the same pass (META-SKIP-04), for an episode. Absent: no signature (a film). */
+  skip?: { season: number | null; episode: number | null };
 };
+
+/**
+ * The skip part of a run for a file: an episode gets its signature; a film (a file with neither season nor episode)
+ * gets none, since films have no intro or credits markers (Chris 2026-11-24, META-SKIP-04).
+ */
+export const skipJobFor = (season: number | null | undefined, episode: number | null | undefined): PreviewSheetsJob["skip"] =>
+  season == null && episode == null ? undefined : { season: season ?? null, episode: episode ?? null };
 
 /**
  * How a run ended. The catch-up pass counts `failed` toward a video's tries; `unreachable` (the backend could not
@@ -67,6 +91,7 @@ export type PreviewSheetsOutcome =
   | "format-gone"
   | "stopped"
   | "yielded"
+  | "interrupted"
   | "no-credentials";
 
 /** Thrown by a catch-up run's `prepareInput` to skip the video this pass without counting a failure. */
@@ -81,11 +106,24 @@ export class PreviewCatchUpSkip extends Error {
 export const isBackendUnreachable = (err: unknown): boolean =>
   isTransientStorageTransportError(err) || (err instanceof StorageTunnelError && (err.status === 401 || err.status === 403));
 
+/**
+ * A catch-up download cut because the storage session it ran in was replaced (a sign-in again or a library re-open
+ * mid-run): the gateway no longer knows the download (`download_not_open`). Nothing is wrong with the video
+ * (MPV-PREV-07).
+ */
+export const isSessionCut = (err: unknown): boolean => err instanceof StorageTunnelError && err.code === "download_not_open";
+
 export type PreviewSheetsCatchUpOptions = {
-  /** Make the input under `dir` (or return a local file) and answer its path; throws on failure. */
-  prepareInput: (dir: string, signal: AbortSignal) => Promise<string>;
+  /**
+   * Download the input from the vault under `dir` and answer its paths; throws on failure. `audioPath`: the audio
+   * track, stored apart from the video, for the sound half of the skip signature (null: the sound is read from
+   * `inputPath`). `signatureOnly`: the video already has its previews and the run makes its skip signature alone.
+   */
+  prepareInput: (dir: string, signal: AbortSignal, need: { signatureOnly: boolean }) => Promise<{ inputPath: string; audioPath: string | null }>;
   /** Checked with the format check: true when an import or a playback started, and the run gives way. */
   shouldYield: () => boolean | Promise<boolean>;
+  /** The run reached its next step once the input is ready: reading the pictures, then the sound (MPV-PREV-07). */
+  onStep?: (step: "pictures" | "sound") => void;
 };
 
 /** What `<job dir>.previews.json` holds while a run is pending. */
@@ -95,12 +133,7 @@ const PENDING_SUFFIX = ".previews.json";
 const WORK_DIR_SUFFIX = ".previews";
 const SOURCE_DIR_SUFFIX = ".previews-source";
 
-const writePending = (path: string, pending: PendingPreviewRun) => {
-  mkdirSync(dirname(path), { recursive: true });
-  const tmp = `${path}.tmp`;
-  writeFileSync(tmp, JSON.stringify(pending));
-  renameSync(tmp, path);
-};
+const writePending = (path: string, pending: PendingPreviewRun) => writeFileDurably(path, JSON.stringify(pending));
 
 const readPending = (path: string): PendingPreviewRun | null => {
   try {
@@ -117,6 +150,11 @@ export const createPreviewSheetsRunner = (deps: {
   resolveToken?: (userId: string) => string | null;
   deleteStorageKeys?: (token: string, keys: string[]) => Promise<{ deleted: number; reclaimedBytes: number }>;
   produce?: ProducePreviewSheetsFn;
+  produceSignature?: ProduceSkipSignatureFn;
+  /** The sound pass of the skip signature; absent: signatures without sound. */
+  analyzeSkipAudio?: AnalyzeSkipAudioFn;
+  /** A recorded skip signature (cache it, match its show); not awaited by the queue. */
+  onSkipSignature?: (job: PreviewSheetsJob, objectKey: string, signature: SkipSignature) => Promise<void>;
   /** The transcode root: `<root>/<userId>/<jobId>` is a job dir. */
   transcodeRoot: () => string;
   /** Bounded wait for what a resumed run needs (backend token, open library DB); false when it expired. */
@@ -131,8 +169,14 @@ export const createPreviewSheetsRunner = (deps: {
   resolveLibraryKey?: (userId: string) => string | null;
   /** How often a running decode checks that its format still exists (media deleted or replaced). Default 5 s. */
   formatCheckMs?: number;
+  /**
+   * How often a running catch-up video asks whether it must give way (MPV-PREV-07: an import or a playback
+   * started). Default 500 ms, so it stops within 2 s inside any step.
+   */
+  yieldCheckMs?: number;
 }) => {
   const produce = deps.produce ?? produceBadgerPreviewSheets;
+  const produceSignature = deps.produceSignature ?? produceBadgerSkipSignature;
   const jobDir = (job: Pick<PreviewSheetsJob, "userId" | "jobId">) => join(deps.transcodeRoot(), job.userId, job.jobId);
   const pendingPath = (job: PreviewSheetsJob) => `${jobDir(job)}${PENDING_SUFFIX}`;
   /** Set on shutdown: a run cut by it keeps its pending file so the next start runs it again. */
@@ -140,6 +184,9 @@ export const createPreviewSheetsRunner = (deps: {
   /** Pending files of runs queued or running in this process; `resume` leaves them (and their work dirs) alone. */
   const active = new Set<string>();
   const formatCheckMs = deps.formatCheckMs ?? 5_000;
+  const yieldCheckMs = deps.yieldCheckMs ?? 500;
+  /** Cuts the catch-up video running now; set only while one runs. An import's run queued behind it calls it. */
+  let yieldRunningCatchUp: (() => void) | null = null;
   /** Whether the format still exists; a failed read counts as present (the record step decides). */
   const formatExists = async (job: PreviewSheetsJob): Promise<boolean> => {
     try {
@@ -213,8 +260,61 @@ export const createPreviewSheetsRunner = (deps: {
       abort.abort(new Error("PREVIEW_SHEETS_FORMAT_GONE"));
     };
     const timer = setInterval(() => void checkFormat(), formatCheckMs);
+    const yieldNow = () => {
+      if (abort.signal.aborted) return;
+      yielded = true;
+      abort.abort(new Error("PREVIEW_SHEETS_YIELD"));
+    };
+    let yieldChecking = false;
+    const yieldTimer = catchUp
+      ? setInterval(() => {
+          if (yieldChecking || abort.signal.aborted) return;
+          yieldChecking = true;
+          void Promise.resolve(catchUp.shouldYield())
+            .then((must) => {
+              if (must) yieldNow();
+            })
+            .catch(() => {})
+            .finally(() => {
+              yieldChecking = false;
+            });
+        }, yieldCheckMs)
+      : null;
+    if (catchUp) yieldRunningCatchUp = yieldNow;
     let outcome: PreviewSheetsOutcome;
+    /** The signature the pass made, handed over once its record lands. */
+    let signature: SkipSignature | null = null;
+    const workDir = `${jobDir(job)}${WORK_DIR_SUFFIX}`;
+    const skipRequest = (inputPath: string, audioPath: string | null) =>
+      job.skip
+        ? {
+            analyzeAudio:
+              deps.analyzeSkipAudio && job.durationSeconds
+                ? (signal?: AbortSignal) => {
+                    catchUp?.onStep?.("sound");
+                    return deps.analyzeSkipAudio!({ inputPath: audioPath ?? inputPath, durationSeconds: job.durationSeconds!, workDir: join(workDir, "skip-audio"), signal });
+                  }
+                : undefined,
+            onSignature: (made: SkipSignature) => {
+              signature = made;
+            },
+          }
+        : null;
+    const onSheetUploaded = (key: string) => {
+      uploaded.push(key);
+      writePending(path, { version: 1, job, uploaded });
+      void checkFormat();
+    };
+    const handOver = (record: MediaPreviewSheets) => {
+      const objectKey = record.skipSignature?.objectKey;
+      if (!objectKey || !signature || !deps.onSkipSignature) return;
+      void deps.onSkipSignature(job, objectKey, signature).catch((err: unknown) =>
+        console.warn(`[skip-detect] signature hand-over failed ${JSON.stringify({ mediaId: job.mediaId })}`, err instanceof Error ? err.message : String(err))
+      );
+    };
     try {
+      /** Previews recorded before signatures existed: the catch-up makes the signature alone. */
+      let signatureOnlyOf: MediaPreviewSheets | null = null;
       if (catchUp) {
         // The pass listed the video a while ago: an import's run (or another runtime) may have recorded it since.
         const stored = (await deps.libraryDb.call("getMediaFormatPreviewSheets", [job.formatId])) as {
@@ -225,36 +325,43 @@ export const createPreviewSheetsRunner = (deps: {
           rmSync(path, { force: true });
           return "format-gone";
         }
-        if (stored.previewSheets) {
+        if (stored.previewSheets && (stored.previewSheets.skipSignature || !job.skip)) {
           console.info(`[preview-sheets] catch-up: already recorded, not decoded again ${JSON.stringify({ jobId: job.jobId, formatId: job.formatId })}`);
           rmSync(path, { force: true });
           return "already-recorded";
         }
+        if (stored.previewSheets && !job.durationSeconds) throw new PreviewCatchUpSkip("no duration for the skip signature");
+        signatureOnlyOf = stored.previewSheets;
       }
-      const inputPath = catchUp ? await catchUp.prepareInput(sourceDir, abort.signal) : job.inputPath;
+      const { inputPath, audioPath } = catchUp
+        ? await catchUp.prepareInput(sourceDir, abort.signal, { signatureOnly: signatureOnlyOf !== null })
+        : { inputPath: job.inputPath, audioPath: null };
       if (abort.signal.aborted) throw abort.signal.reason;
-      const record = await produce({
+      catchUp?.onStep?.("pictures");
+      const common = {
         token,
         libraryKeyBase64,
         inputPath,
-        durationSeconds: job.durationSeconds,
-        workDir: `${jobDir(job)}${WORK_DIR_SUFFIX}`,
+        workDir,
         placementId: (job.initKey && parseMediaPlacementIdFromObjectKey(job.initKey)) || undefined,
         signal: abort.signal,
-        onLog: (line) => console.info(line),
-        onSheetUploaded: (key) => {
-          uploaded.push(key);
-          writePending(path, { version: 1, job, uploaded });
-          void checkFormat();
-        },
-      });
+        onLog: (line: string) => console.info(line),
+        onSheetUploaded,
+      };
+      const record: MediaPreviewSheets = signatureOnlyOf
+        ? {
+            ...signatureOnlyOf,
+            skipSignature: await produceSignature({ ...common, durationSeconds: job.durationSeconds!, skip: skipRequest(inputPath, audioPath)! }),
+          }
+        : await produce({ ...common, durationSeconds: job.durationSeconds, skip: skipRequest(inputPath, audioPath) });
       if (abort.signal.aborted) throw abort.signal.reason;
       const recorded = await deps.libraryDb.call("setMediaFormatPreviewSheets", [job.formatId, record]);
       if (recorded === true) {
         console.info(
-          `[preview-sheets] recorded ${JSON.stringify({ jobId: job.jobId, mediaId: job.mediaId, formatId: job.formatId, origin: job.origin ?? "import", sheets: record.sheets.length, ms: Date.now() - startedAt })}`
+          `[preview-sheets] recorded ${JSON.stringify({ jobId: job.jobId, mediaId: job.mediaId, formatId: job.formatId, origin: job.origin ?? "import", sheets: record.sheets.length, signatureOnly: signatureOnlyOf !== null, skipSignature: record.skipSignature?.sizeBytes ?? null, ms: Date.now() - startedAt })}`
         );
         rmSync(path, { force: true });
+        handOver(record);
         return "recorded";
       }
       console.warn(`[preview-sheets] format gone, releasing sheets ${JSON.stringify({ jobId: job.jobId, formatId: job.formatId })}`);
@@ -273,6 +380,11 @@ export const createPreviewSheetsRunner = (deps: {
       } else if (catchUp && err instanceof PreviewCatchUpSkip) {
         console.info(`[preview-sheets] catch-up skipped: ${err.message} ${JSON.stringify({ jobId: job.jobId, formatId: job.formatId })}`);
         outcome = "skipped";
+      } else if (catchUp && isSessionCut(err)) {
+        console.info(
+          `[preview-sheets] catch-up cut by a session change: ${err instanceof Error ? err.message : String(err)} ${JSON.stringify({ jobId: job.jobId, formatId: job.formatId, uploaded: uploaded.length })}`
+        );
+        outcome = "interrupted";
       } else if (catchUp && isBackendUnreachable(err)) {
         console.warn(
           `[preview-sheets] catch-up cut by an outage: ${err instanceof Error ? err.message : String(err)} ${JSON.stringify({ jobId: job.jobId, formatId: job.formatId, uploaded: uploaded.length })}`
@@ -286,6 +398,8 @@ export const createPreviewSheetsRunner = (deps: {
       }
     } finally {
       clearInterval(timer);
+      clearInterval(yieldTimer ?? undefined);
+      if (yieldRunningCatchUp === yieldNow) yieldRunningCatchUp = null;
       stopping.signal.removeEventListener("abort", onStop);
       // The stored copy is decrypted video: never left behind.
       if (catchUp) rmSync(sourceDir, { recursive: true, force: true });
@@ -304,7 +418,11 @@ export const createPreviewSheetsRunner = (deps: {
     const path = pendingPath(job);
     active.add(path);
     enqueueCount.set(path, (enqueueCount.get(path) ?? 0) + 1);
-    if (!catchUp) importFormats.set(job.formatId, (importFormats.get(job.formatId) ?? 0) + 1);
+    if (!catchUp) {
+      importFormats.set(job.formatId, (importFormats.get(job.formatId) ?? 0) + 1);
+      // MPV-PREV-07, imports always first: the catch-up video running now gives way at once, so this run is next.
+      yieldRunningCatchUp?.();
+    }
     const next = queue
       .then(() => run(job, catchUp))
       .catch((err: unknown): PreviewSheetsOutcome => {
@@ -332,7 +450,8 @@ export const createPreviewSheetsRunner = (deps: {
       rmSync(path, { force: true });
       return;
     }
-    const { job } = pending;
+    // A run written before films lost their markers carries a film's skip part: dropped, so it makes previews only.
+    const job = { ...pending.job, skip: pending.job.skip ? skipJobFor(pending.job.skip.season, pending.job.skip.episode) : undefined };
     const context = { jobId: job.jobId, mediaId: job.mediaId, formatId: job.formatId };
     // Another user's run: their token and library are not this session's. Kept for when they are back. Before the
     // session wait an unknown user is waited for (at boot it is often unknown until the session attaches); after

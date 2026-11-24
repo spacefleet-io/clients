@@ -25,6 +25,7 @@ import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { PhoneSetupProgress } from "@space/mobile-shell/setup";
 import { TvFocusGuide } from "@space/mobile-shell/tv/TvFocusGuide";
+import { NO_LIBRARY_MOVES } from "@space/shared/profileStore";
 import type { TvPages } from "../src/tv/tvPages";
 
 const h = vi.hoisted(() => ({
@@ -70,7 +71,7 @@ vi.mock("@space/mobile-shell/tv/useTvMenuKey", () => ({
 }));
 vi.mock("../src/lib/i18n", () => ({ setParrotLanguage: async (code: string) => void h.languages.push(code) }));
 vi.mock("../src/lib/playback", () => ({ stopPlayback: async () => void (h.stops += 1) }));
-vi.mock("../src/lib/profiles", () => ({ parrotProfileMoves: { name: "moves" }, profileStore: { name: "store" }, useProfiles: () => h.profiles }));
+vi.mock("../src/lib/profiles", () => ({ profileStore: { name: "store" }, useProfiles: () => h.profiles }));
 vi.mock("../src/screens/LibraryKeyScreen", () => ({ LibraryKeyScreen: () => null }));
 vi.mock("../src/screens/LoginScreen", () => ({ LoginScreen: () => null }));
 vi.mock("../src/state/session", () => ({
@@ -243,7 +244,7 @@ describe("@req PAR-TV-02[parrot-tv] Parrot TV start: language, pairing, key, Who
     await mount(<TvGates setup={DONE} save={async () => undefined} spinner={null} />);
     const pick = props(TvProfilesView);
     console.info(`${SUITE} profiles`, JSON.stringify({ audience: pick.audience, startMode: pick.startMode, inApp: pick.inApp }));
-    expect(pick).toMatchObject({ audience: "listening", startMode: "pick", inApp: false, store: { name: "store" }, moves: { name: "moves" } });
+    expect(pick).toMatchObject({ audience: "listening", startMode: "pick", inApp: false, store: { name: "store" }, moves: NO_LIBRARY_MOVES });
     h.profiles = { status: "ready", needsChoice: false, profiles: [{ id: "a" }, { id: "b" }], activeId: "b" };
     await act(async () => renderer!.update(<TvGates setup={DONE} save={async () => undefined} spinner={null} />));
     expect(has(TvMainShell)).toBe(true);
@@ -349,7 +350,7 @@ describe("@req PAR-TV-10[parrot-tv] Parrot TV shell: the top bar, the page stack
     await mount(<TvMainShell />);
     await act(async () => h.pages!.push({ kind: "profiles", mode: "manage" }));
     const view = props(TvProfilesView);
-    expect(view).toMatchObject({ startMode: "manage", inApp: true, audience: "listening", store: { name: "store" }, moves: { name: "moves" } });
+    expect(view).toMatchObject({ startMode: "manage", inApp: true, audience: "listening", store: { name: "store" }, moves: NO_LIBRARY_MOVES });
     await act(async () => view.onClose!());
     expect(has(TvProfilesView)).toBe(false);
     expect(has(TvHomeSection)).toBe(true);

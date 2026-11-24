@@ -31,7 +31,7 @@ const source = (path: string) => readFileSync(join(process.cwd(), "src/renderer/
 /** The mascot sits above the text: it comes first in the document and the text is not inside it. */
 const expectMascotAboveText = (host: HTMLElement, text: string) => {
   const mascot = host.querySelector('[data-testid="mascot-loader-badger"]');
-  const label = [...host.querySelectorAll("div")].find((el) => el.textContent === text && el.children.length === 0);
+  const label = [...host.querySelectorAll("p")].find((el) => el.textContent === text && el.children.length === 0);
   say("markup", host.innerHTML);
   expect(mascot).not.toBeNull();
   expect(mascot?.getAttribute("aria-hidden")).toBe("true");
@@ -39,6 +39,8 @@ const expectMascotAboveText = (host: HTMLElement, text: string) => {
   expect(mascot!.contains(label!)).toBe(false);
   expect(mascot!.compareDocumentPosition(label!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   expect(label!.className).toBe("text-sm text-muted-foreground");
+  // The text is the accessible status: the shared @space/ui/library-loading view, as on Parrot and the web players.
+  expect(label!.closest('[role="status"]')).not.toBeNull();
 };
 
 describe("Badger desktop loading screens: hovering badger above the unchanged text", () => {

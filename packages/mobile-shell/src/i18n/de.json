@@ -100,19 +100,7 @@
       "body": "Zeige einen Code, den du in Badger oder Parrot auf einem angemeldeten Computer, Handy oder Fernseher bestätigst."
     },
     "provider": {
-      "signInWith": "Mit {{provider}} anmelden",
-      "signUpWith": "Mit {{provider}} registrieren",
-      "or": "oder",
-      "continueInBrowser": "Schließe die Anmeldung in deinem Browser ab. Danach kommst du hierher zurück.",
-      "errorStart": "Die Anmeldung konnte nicht gestartet werden. Bitte versuch es noch einmal.",
-      "errors": {
-        "email_unverified": "Die E-Mail-Adresse dieses Kontos ist nicht bestätigt. Bestätige sie beim Anbieter oder melde dich mit E-Mail und Passwort an.",
-        "email_domain_disallowed": "Mit dieser E-Mail-Adresse kann kein Konto erstellt werden.",
-        "account_deletion_pending": "Die Löschung dieses Kontos ist geplant.",
-        "provider_failed": "Die Anmeldung hat nicht geklappt. Bitte versuch es noch einmal.",
-        "cancelled": "Die Anmeldung wurde abgebrochen.",
-        "invalid_code": "Diese Anmeldung ist abgelaufen oder wurde woanders gestartet. Bitte versuch es noch einmal."
-      }
+      "continueInBrowser": "Schließe die Anmeldung in deinem Browser ab. Danach kommst du hierher zurück."
     },
     "pairing": {
       "title": "Mit einem anderen Gerät anmelden"
@@ -681,10 +669,6 @@
       "saveHost": "Host speichern",
       "hostSaved": "Gespeichert",
       "libraryKey": "Mediathek-Schlüssel",
-      "resetKey": {
-        "title": "Verschlüsselungsschlüssel zurücksetzen",
-        "description": "Erneuere den Schlüssel, der deine Mediathek schützt."
-      },
       "animatedBackground": {
         "title": "Animierter Hintergrund",
         "description": "Alle paar Sekunden ziehen Sternschnuppen über den Sternenhimmel hinter der App. Mit Automatisch werden sie auf Handys mit wenig Speicher ausgeschaltet.",
@@ -1024,30 +1008,6 @@
       "noLibrary": "Für dieses Konto wurde keine Mediathek gefunden.",
       "unavailable": "Deine Mediathek ist gerade nicht erreichbar. Bitte versuch es gleich nochmal.",
       "validate": "Dein Schlüssel konnte nicht geprüft werden."
-    }
-  },
-  "resetKey": {
-    "title": "Mediathek-Schlüssel erneuern",
-    "subtitle": "Erzeuge einen neuen Schlüssel und verschlüssele deine Mediathek neu.",
-    "newKey": "Neuer Schlüssel",
-    "generateAnother": "Anderen Schlüssel erzeugen",
-    "password": "Kontopasswort",
-    "code": "Zwei-Faktor-Code (optional)",
-    "confirmLabel": "Ich habe den neuen Schlüssel gespeichert.",
-    "confirm": "Bestätigen",
-    "confirmed": "Bestätigt",
-    "rotate": "Schlüssel erneuern",
-    "rotating": "Wird erneuert…",
-    "success": "Schlüssel erneuert. Mediathek wird neu geladen…",
-    "errors": {
-      "confirmRequired": "Bestätige, dass du den neuen Schlüssel gespeichert hast.",
-      "passwordRequired": "Passwort erforderlich.",
-      "notReady": "Die Mediathek ist nicht bereit.",
-      "rotate": "Der Schlüssel konnte nicht erneuert werden. Prüfe dein Passwort bzw. deinen Code.",
-      "notReencrypted": "Die Mediathek einer anderen App konnte nicht auf den neuen Schlüssel umgestellt werden. Nichts wurde geändert. Erneuere ihn auf einem Gerät mit dem aktuellen Schlüssel.",
-      "unreadable": "Der Schlüssel dieses Telefons öffnet die Mediathek einer anderen App nicht. Nichts wurde geändert. Erneuere ihn auf einem Gerät mit dem aktuellen Schlüssel.",
-      "notSnapshotted": "Die Mediathek einer anderen App wird noch gespeichert. Nichts wurde geändert. Öffne diese App, lass sie synchronisieren und versuch es dann nochmal.",
-      "changed": "Eine Mediathek hat sich beim Erneuern geändert. Nichts wurde geändert. Versuch es nochmal."
     }
   },
   "libraryFormat": {

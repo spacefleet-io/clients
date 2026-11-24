@@ -222,7 +222,7 @@ describe("audioStallPayloadSchema (MPV-AUDIO-01)", () => {
 });
 
 describe("ENVELOPE_SCHEMAS map", () => {
-  it("exposes all nine channel schemas", () => {
+  it("exposes all ten channel schemas", () => {
     const actual = Object.keys(ENVELOPE_SCHEMAS).sort();
     const expected = [
       "sf-audio-json",
@@ -232,6 +232,7 @@ describe("ENVELOPE_SCHEMAS map", () => {
       "sf-playback-json",
       "sf-preview-picture",
       "sf-preview-sheets",
+      "sf-skip-edit-json",
       "sf-subtitle-fetch-json",
       "sf-subtitles-json",
     ].sort();

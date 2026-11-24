@@ -217,6 +217,27 @@ describe("a rotation seals this device's own library as a readable snapshot (PRI
     await openAfterRotation(sealed, mediaId);
   }, 30_000);
 
+  // @req STOR-RESEAL-01
+  it("sealForRotation with re-sealed copies: the sealed library names the copies, this device's library is untouched", async () => {
+    const poster = "media/0f0e0d0c-0b0a-4908-8706-050403020100/00000000-0000-4000-8000-000000000001";
+    const copy = "media/0f0e0d0c-0b0a-4908-8706-050403020100/00000000-0000-4000-8000-000000000101";
+    const db = await LibraryDb.open(TOKEN, OLD_KEY);
+    const mediaId = await db.addMediaFromCatalog({ ...MOVIE, posterPath: poster });
+    const sealed = await db.sealForRotation(NEW_KEY, [[poster, copy]]);
+    const kept = db.getMediaDetails(mediaId)?.posterPath ?? null;
+    db.close();
+    fake.storeSnapshot(sealed.manifestBase64, sealed.snapshotId);
+    useFreshRoot();
+    const fresh = await LibraryDb.open(TOKEN, NEW_KEY);
+    try {
+      const published = fresh.getMediaDetails(mediaId)?.posterPath ?? null;
+      log("state:reseal-sealed", { kept, published });
+      expect({ kept, published }).toEqual({ kept: poster, published: copy });
+    } finally {
+      fresh.close();
+    }
+  }, 30_000);
+
   it("sealLocalCacheForRotation: the local files, with no library open, sealed the same way", async () => {
     const { db, mediaId } = await seededLibrary();
     db.close();

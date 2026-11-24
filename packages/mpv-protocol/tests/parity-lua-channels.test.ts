@@ -107,7 +107,9 @@ describe("parity: LUA_CHANNELS ↔ mp.register_script_message in sf.lua / sf-sel
   //     (#25 input-section handshake, Lua to Lua); no payload.
   //   - sf-episode-nav: tog4in1's centre episode buttons tell sf.lua
   //     "previous"/"next" (PLAY-OVL-03, Lua to Lua); a bare word, not a JSON envelope.
-  const NON_ENVELOPE_SF_REGISTRATIONS = new Set(["sf-skip-confirm", "sf-e2e-pill", "sf-pill-mouse", "sf-bindings-query", "sf-episode-nav"]);
+  //   - sf-skip-menu: tog4in1's intro / credits button opens sf.lua's menu
+  //     (PLAY-SKIP-10, Lua to Lua); no payload.
+  const NON_ENVELOPE_SF_REGISTRATIONS = new Set(["sf-skip-confirm", "sf-e2e-pill", "sf-pill-mouse", "sf-bindings-query", "sf-episode-nav", "sf-skip-menu"]);
 
   it("every Lua sf-* envelope registration has a matching LUA_CHANNELS entry", () => {
     const knownChannels = new Set<LuaChannelName>(

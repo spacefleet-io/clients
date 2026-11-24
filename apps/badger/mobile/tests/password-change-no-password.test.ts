@@ -18,7 +18,7 @@ import en from "../../../../packages/mobile-shell/src/i18n/en.json";
 const h = vi.hoisted(() => ({ i18n: null as I18n | null, changePassword: vi.fn() }));
 
 vi.mock("react-native", () => ({ Text: "Text", StyleSheet: { create: <T,>(s: T) => s } }));
-vi.mock("../src/components/ui", () => ({ Button: "Button", Card: "Card", Input: "Input" }));
+vi.mock("@space/mobile-shell/components", () => ({ MobileButton: "Button", MobileCard: "Card", MobileInput: "Input" }));
 vi.mock("../src/theme/theme", () => ({
   theme: { colors: { text: "#fff", textMuted: "#aaa", danger: "#f00", success: "#0f0" }, font: { size: { sm: 13, md: 15 } } },
 }));

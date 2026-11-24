@@ -35,6 +35,7 @@ type FitCase = {
   window: string;
   hidpi: number;
   chapters: boolean;
+  skip: boolean;
   w: number;
   h: number;
   shown: Record<string, boolean>;
@@ -78,7 +79,7 @@ describe.skipIf(!lua)("MPV-OSC-05: tog4in1 leaves controls out instead of shrink
 
   it("depends on the window's size in points only, not on the display scale", () => {
     for (const c of cases) {
-      const same = cases.find((o) => o.window === c.window && o.chapters === c.chapters && o.hidpi === 1)!;
+      const same = cases.find((o) => o.window === c.window && o.chapters === c.chapters && o.skip === c.skip && o.hidpi === 1)!;
       const { hidpi: _a, ...mine } = c;
       const { hidpi: _b, ...base } = same;
       expect(mine, `${c.window} at display scale ${c.hidpi}`).toEqual(base);
@@ -87,15 +88,16 @@ describe.skipIf(!lua)("MPV-OSC-05: tog4in1 leaves controls out instead of shrink
 
   it("keeps every control in a window of 960x540 points or more", () => {
     for (const c of cases.filter((o) => ["1920x1080", "1600x900", "1280x720", "960x540"].includes(o.window))) {
-      const label = `${c.window}@${c.hidpi} chapters=${c.chapters}`;
+      const label = `${c.window}@${c.hidpi} chapters=${c.chapters} skip=${c.skip}`;
       for (const name of ALL_BOTTOM) expect(c.shown[name], `${label}: ${name}`).toBe(true);
       expect(c.shown.chapters, `${label}: chapters`).toBe(c.chapters);
+      expect(c.shown.cy_skip, `${label}: skip button @req PLAY-SKIP-10[badger-desktop]`).toBe(c.skip);
       expect([c.timecodes, c.band, c.title, c.centre, c.episodes], label).toEqual([true, true, true, true, true]);
     }
   });
 
   it("keeps the 640x360 player whole but the volume track (with chapters)", () => {
-    const small = cases.filter((o) => o.window === "640x360" && o.hidpi === 1);
+    const small = cases.filter((o) => o.window === "640x360" && o.hidpi === 1 && !o.skip);
     console.info(`${TAG} 640x360: ${JSON.stringify(small)}`);
     const plain = small.find((o) => !o.chapters)!;
     const chaptered = small.find((o) => o.chapters)!;
@@ -107,7 +109,7 @@ describe.skipIf(!lua)("MPV-OSC-05: tog4in1 leaves controls out instead of shrink
 
   it("never overlaps: bottom row, seek row, centre cluster and top band", () => {
     for (const c of cases) {
-      const label = `${c.window}@${c.hidpi} chapters=${c.chapters}`;
+      const label = `${c.window}@${c.hidpi} chapters=${c.chapters} skip=${c.skip}`;
       expect(c.shown.tog_fs, `${label}: fullscreen always stays`).toBe(true);
       const left = c.shown.volume ? f!.margin + f!.chip + (c.shown.volume_slider ? f!.volume : 0) : f!.margin - f!.gap;
       const n = result!.right_group.filter((name) => c.shown[name]).length;
@@ -126,10 +128,10 @@ describe.skipIf(!lua)("MPV-OSC-05: tog4in1 leaves controls out instead of shrink
 
   it("leaves bottom-row controls out in priority order", () => {
     for (const c of cases) {
-      const order = result!.drop_order.filter((name) => name !== "chapters" || c.chapters);
+      const order = result!.drop_order.filter((name) => (name !== "chapters" || c.chapters) && (name !== "cy_skip" || c.skip));
       const firstKept = order.findIndex((name) => c.shown[name]);
       const kept = firstKept < 0 ? [] : order.slice(firstKept);
-      for (const name of kept) expect(c.shown[name], `${c.window}@${c.hidpi} chapters=${c.chapters}: ${name} kept after a higher-priority one went`).toBe(true);
+      for (const name of kept) expect(c.shown[name], `${c.window}@${c.hidpi} chapters=${c.chapters} skip=${c.skip}: ${name} kept after a higher-priority one went`).toBe(true);
     }
   });
 });

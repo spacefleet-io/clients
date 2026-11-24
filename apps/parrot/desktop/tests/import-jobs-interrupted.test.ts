@@ -6,7 +6,7 @@
  *   saved "the encoder window closed" as its error and the card said "Import failed: the encoder window closed".
  */
 import { describe, expect, it } from "vitest";
-import { importStopError, restoreImportJobs, type StoredImportJob } from "../src/main/importJobs";
+import { importStopError, restoreImportJobs, retrySources, withSourcesMissing, type StoredImportJob } from "../src/main/importJobs";
 import { IMPORT_INTERRUPTED, type ParrotImportStatus } from "../src/shared/ipc";
 
 const SUITE = "[parrot-import-interrupted]";
@@ -69,5 +69,30 @@ describe("an import cut short by Parrot closing", () => {
     expect(restored[0]).toMatchObject({ finishedAt: 99, status: { running: false, phase: "failed", currentFile: null, error: IMPORT_INTERRUPTED, imported: 2 } });
     expect(restored[1]).toBe(failedOnClose);
     expect(restoreImportJobs({ not: "a list" }, 99)).toEqual([]);
+  });
+});
+
+// @req UX-JOBS-03[parrot]
+describe("trying an import again", () => {
+  it("a stopped import reads its folders again; one that left files out reads only those files", () => {
+    const cut = stored("Cut", { phase: "failed", error: IMPORT_INTERRUPTED }, 2);
+    const partly = { ...stored("Partly", { phase: "done", failed: 1 }, 3), failures: [{ file: "/home/me/Music/Partly/03.mp3", error: "not an audio file" }] };
+    console.info(`${SUITE} retry sources`, { cut: retrySources(cut), partly: retrySources(partly) });
+    expect(retrySources(cut)).toEqual(["/home/me/Music/Cut"]);
+    expect(retrySources(partly)).toEqual(["/home/me/Music/Partly/03.mp3"]);
+  });
+
+  it("says the sources are missing only when none of them is still there, and only on a job the card offers to retry", () => {
+    const cut = { ...stored("Cut", { phase: "failed", error: "boom" }, 2), sources: ["/gone/a", "/here/b"] };
+    const here = (path: string) => path.startsWith("/here/");
+    const nowhere = () => false;
+    const finished = stored("Done", { phase: "done", imported: 3 }, 4);
+    const results = {
+      oneLeft: withSourcesMissing(cut, here).sourcesMissing,
+      allGone: withSourcesMissing(cut, nowhere).sourcesMissing,
+      finished: withSourcesMissing(finished, nowhere).sourcesMissing,
+    };
+    console.info(`${SUITE} sources missing`, results);
+    expect(results).toEqual({ oneLeft: false, allGone: true, finished: undefined });
   });
 });

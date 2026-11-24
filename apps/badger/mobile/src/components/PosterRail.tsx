@@ -1,14 +1,11 @@
 import React, { memo, useCallback } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet } from "react-native";
 import type { MediaRow } from "@space/shared/libraryTypes";
-import { MobileRail } from "@space/mobile-shell/components";
-import { MobileRenderBoundary } from "@space/mobile-shell/render-boundary";
+import { MobileHomeRail } from "@space/mobile-shell/components";
 import { PosterCard, posterCardHeight } from "./PosterCard";
 import { theme } from "../theme/theme";
 
-const GAP = 12;
-const keyExtractor = (item: MediaRow) => item.id;
-const Separator = () => <View style={styles.separator} />;
+const keyOf = (item: MediaRow) => item.id;
 
 type PosterRailProps = {
   title: string;
@@ -21,59 +18,32 @@ type PosterRailProps = {
   testID?: string;
 };
 
-/** A Home row: a heading with "See all", then a horizontal virtualised row of posters, straight on the sky (no panel). */
+/** A Home row of posters, straight on the sky (no panel): the shell's titled rail (UX-PHONE-01, UX-PHONE-09). */
 export const PosterRail = memo(({ title, items, cardWidth, onOpenMedia, showProgress, seeAll, testID }: PosterRailProps) => {
-  const itemLength = cardWidth + GAP;
-  const getItemLayout = useCallback(
-    (_: ArrayLike<MediaRow> | null | undefined, index: number) => ({ length: itemLength, offset: itemLength * index, index }),
-    [itemLength],
-  );
   const renderItem = useCallback(
-    ({ item }: { item: MediaRow }) => (
-      // UX-CRASH-01: a poster that throws shows a placeholder in its place; the rest of the rail stays.
-      <MobileRenderBoundary name={`home-card:${item.id}`} variant="item" style={{ width: cardWidth, margin: 0 }}>
-        {() => <PosterCard item={item} width={cardWidth} onPress={onOpenMedia} showProgress={showProgress} />}
-      </MobileRenderBoundary>
-    ),
+    (item: MediaRow) => <PosterCard item={item} width={cardWidth} onPress={onOpenMedia} showProgress={showProgress} />,
     [cardWidth, onOpenMedia, showProgress],
   );
-
   return (
-    <View style={styles.rail} testID={testID}>
-      <View style={styles.head}>
-        <Text style={styles.title} accessibilityRole="header" numberOfLines={1}>
-          {title}
-        </Text>
-        {seeAll ? (
-          <Pressable onPress={seeAll.onPress} accessibilityRole="button" accessibilityLabel={`${seeAll.label}, ${title}`} hitSlop={10} testID={testID ? `${testID}-see-all` : undefined}>
-            <Text style={styles.seeAll}>{seeAll.label}</Text>
-          </Pressable>
-        ) : null}
-      </View>
-      {/* The shared rail keeps a sideways swipe from the tab pager (UX-PHONE-09). */}
-      <MobileRail
-        data={items}
-        keyExtractor={keyExtractor}
-        renderItem={renderItem}
-        getItemLayout={getItemLayout}
-        ItemSeparatorComponent={Separator}
-        style={{ height: posterCardHeight(cardWidth) }}
-        snapToInterval={itemLength}
-        decelerationRate="fast"
-        initialNumToRender={4}
-        maxToRenderPerBatch={4}
-        windowSize={5}
-        removeClippedSubviews
-      />
-    </View>
+    <MobileHomeRail
+      title={title}
+      items={items}
+      keyOf={keyOf}
+      renderItem={renderItem}
+      itemWidth={cardWidth}
+      rowHeight={posterCardHeight(cardWidth)}
+      snap
+      seeAll={seeAll}
+      boundaryName="home-card"
+      testID={testID}
+      titleStyle={styles.title}
+      seeAllStyle={styles.seeAll}
+    />
   );
 });
 PosterRail.displayName = "PosterRail";
 
 const styles = StyleSheet.create({
-  rail: { gap: 10 },
-  head: { flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 12 },
-  title: { flex: 1, fontSize: 18, fontWeight: "800", color: theme.colors.text, fontFamily: theme.font.family.display },
-  seeAll: { fontSize: 13, fontWeight: "600", color: theme.colors.textMuted },
-  separator: { width: GAP },
+  title: { color: theme.colors.text, fontFamily: theme.font.family.display },
+  seeAll: { color: theme.colors.textMuted },
 });

@@ -27,6 +27,7 @@
     "packages/logger",
     "packages/media-crypto",
     "packages/media-deps",
+    "packages/media-reseal",
     "packages/media-session",
     "packages/metadata-client",
     "packages/mobile-audio-playback",
