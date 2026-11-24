@@ -18,6 +18,7 @@ import es from "../../../../packages/mobile-shell/src/i18n/es.json";
 import fr from "../../../../packages/mobile-shell/src/i18n/fr.json";
 import nl from "../../../../packages/mobile-shell/src/i18n/nl.json";
 import { withSignInErrorTexts } from "@space/shared/signInError";
+import { withProviderSignInTexts } from "@space/shared/providerSignIn";
 
 const APP = resolve(__dirname, "..");
 const SRC = join(APP, "src");
@@ -80,7 +81,8 @@ describe("the phone creates a free account, the TV signs in (ACCT-AUTH-10)", () 
 
   // @req ACCT-AUTH-10[badger-mobile]
   it.each(LOCALES)("the %s translation file has every sign-up and code word", (lang, tree) => {
-    const flat = flatten(tree as Tree);
+    // `login.provider.*` is shared (`@space/shared/providerSignIn`); mobile-shell's i18n merges it into each file.
+    const flat = flatten(withProviderSignInTexts(tree as Tree, lang) as Tree);
     const needed = [
       ...Object.keys(flatten(en as Tree)).filter((key) => key.startsWith("signup.") || key.startsWith("verifyEmail.")),
       "login.noAccountPrompt",
@@ -113,15 +115,18 @@ describe("the phone creates a free account, the TV signs in (ACCT-AUTH-10)", () 
 
 describe("a failed sign-in says why (ACCT-AUTH-11)", () => {
   // @req ACCT-AUTH-11[badger-mobile,badger-tv]
-  it("the sign-in screen maps every failure through the shared classifier and logs it", () => {
+  it("the sign-in screen's shared form maps every failure through the shared classifier and logs it", () => {
+    // Since S56 (audit #3350) the screen draws the family's `MobilePasswordSignInForm`; its hook holds the failure path.
+    const form = readFileSync(resolve(APP, "../../../packages/mobile-shell/src/components/mobile-password-sign-in-form.tsx"), "utf8");
     const wired = {
-      classifies: /classifySignInError\(err\)/.test(LOGIN),
-      mapsKey: /signInErrorMessageKey\(failure\)/.test(LOGIN),
-      logs: /log\.warn\("login\.failed"/.test(LOGIN),
-      noBlanketFailed: !LOGIN.includes("login.errors.failed"),
+      usesSharedForm: LOGIN.includes("useMobilePasswordSignIn(") && LOGIN.includes("<MobilePasswordSignInForm"),
+      classifies: /classifySignInError\(err\)/.test(form),
+      mapsKey: /signInErrorMessageKey\(failure\)/.test(form),
+      logs: /log\.warn\("login\.failed"/.test(form),
+      noBlanketFailed: !LOGIN.includes("login.errors.failed") && !form.includes("login.errors.failed"),
     };
     console.info("[sign-in-why] LoginScreen wiring:", wired);
-    expect(wired).toEqual({ classifies: true, mapsKey: true, logs: true, noBlanketFailed: true });
+    expect(wired).toEqual({ usesSharedForm: true, classifies: true, mapsKey: true, logs: true, noBlanketFailed: true });
   });
 
   // @req ACCT-AUTH-11[badger-mobile,badger-tv]

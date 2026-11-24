@@ -500,6 +500,13 @@ describe("mpvPlaybackSelection", () => {
     }
     expect(markerIds).toEqual(["a", "b"]);
   });
+
+  it("@req PLAY-SKIP-11 gives a film no skip markers, even ones stored for it before films got none", () => {
+    const filmMarkers = [makeSkipMarker({ id: "f", episodeId: null, type: "credits", startSeconds: 5000, endSeconds: 5400 })];
+    const markers = buildPlaybackSkipMarkers(filmMarkers, null);
+    console.info(`[mpv-playback-selection:skip-markers-film] markers=${JSON.stringify(markers)}`);
+    expect(markers).toEqual([]);
+  });
 });
 
 describe("resolveNextEpisodeFormatId — next-episode quality is the Settings default", () => {

@@ -38,6 +38,7 @@ import {
   uploadChunks,
   type LibrarySnapshotManifest,
 } from "./snapshotTransport";
+import { rewriteLibraryBytesForReseal } from "./resealSnapshot";
 import { isProgressClassOp, SNAPSHOT_TAIL_BYTES_THRESHOLD } from "@space/library-db-definition/opClass";
 import {
   addProfilePlaylistItem,
@@ -255,6 +256,7 @@ import type {
   SubtitleTrack,
   SubtitleOcrCandidate,
   PreviewSheetCandidate,
+  SkipCatchUpVideo,
   AddOcrSubtitleTwinResult,
   ShowEpisodeRefreshResult,
   ShowEpisodeNotListed,
@@ -266,6 +268,7 @@ import { PICTURE_SUBTITLE_FORMATS } from "@space/shared/libraryTypes";
 import { pickLibraryCrew } from "@space/shared/libraryCrew";
 import { airDateToday, showEpisodeTotal, showWatchedPct, type EpisodeAirInfo } from "@space/shared/showProgress";
 import { parsePreviewSheets, previewSheetKeys, type MediaPreviewSheets } from "@space/shared/previewSheets";
+import { mergeSkipMarkersByPriority } from "@space/shared/skipMarkers";
 import { scopeLogger } from "./logger";
 
 const nowIso = () => new Date().toISOString();
@@ -938,6 +941,11 @@ const mapMediaRows = (
 
 const OPS_SNAPSHOT_THRESHOLD = 250;
 const SNAPSHOT_MIN_INTERVAL_MS = 10 * 60 * 1000;
+/**
+ * STOR-PLACE-11: how long this device watches an artwork copy it applied, in case another device's copy of the same
+ * picture replaces it through sync. Past that, the leftover clean-up (STOR-PLACE-06) covers what is left.
+ */
+const OWN_ARTWORK_COPY_WATCH_MS = 60 * 60 * 1000;
 // One statement answers "did anything write to this SQLite file since I last
 // looked": `total_changes()` counts every row this connection changed
 // (including trigger / FK-action rows and rolled-back ones, which only costs
@@ -1354,6 +1362,8 @@ export class LibraryDb {
    * applied locally, so a write after a remote change always uploads.
    */
   private lastQueuedUpsertSignature = new Map<string, { signature: string; updatedAt: string }>();
+  /** STOR-PLACE-11: storage key → when this device applied its own artwork copy holding it. */
+  private ownArtworkCopies = new Map<string, number>();
   private opsFlushConsecutiveFailures = 0;
   private opsFlushBackoffMs = 2000;
   private opsFlushCircuitOpen = false;
@@ -2639,10 +2649,12 @@ export class LibraryDb {
 
   /**
    * PRIV-KEY-13: this library sealed under the new key for the rotation, as a snapshot (chunks uploaded), declaring
-   * the op stream its writes are in.
+   * the op stream its writes are in. STOR-RESEAL-01: `resealCopies` (old media key → its re-sealed copy) renames the
+   * media references in the sealed bytes only; this library keeps playing the old objects until the switch.
    */
-  async sealForRotation(newKeyBase64: string): Promise<RotationOwnLibrary> {
-    const sealed = await sealLibrarySnapshot(this.token, newKeyBase64, this.buildCombinedExportBytes());
+  async sealForRotation(newKeyBase64: string, resealCopies: Array<[string, string]> = []): Promise<RotationOwnLibrary> {
+    const { bytes } = await rewriteLibraryBytesForReseal(this.buildCombinedExportBytes(), "badger", new Map(resealCopies));
+    const sealed = await sealLibrarySnapshot(this.token, newKeyBase64, bytes);
     return { ...sealed, opStreamVersion: this.writtenOpStreamVersion() };
   }
 
@@ -4616,8 +4628,11 @@ export class LibraryDb {
           break;
         }
       }
-      if (swapped) applied += 1;
-      else unapplied.push(copy);
+      if (swapped) {
+        applied += 1;
+        const key = artworkStorageKey(copy.value);
+        if (key) this.ownArtworkCopies.set(key, Date.now());
+      } else unapplied.push(copy);
     }
     const result: ArtworkApplyResult = { applied, skipped: unapplied.length, unapplied };
     // Counts only: the copies carry storage keys.
@@ -4628,6 +4643,42 @@ export class LibraryDb {
     this.core.update(mediaItems).set({ updatedAt: nowIso() }).where(eq(mediaItems.id, mediaId)).run();
     this.queueMediaUpsert(mediaId);
     return this.persist().then(() => result);
+  }
+
+  /** STOR-PLACE-11: every stored picture key a slot of the library holds (titles, seasons, episodes, people). */
+  private collectArtworkKeysInUse(): Set<string> {
+    const keys = new Set<string>();
+    const add = (value: string | null | undefined) => {
+      const key = artworkStorageKey(value);
+      if (key) keys.add(key);
+    };
+    for (const row of this.core.select({ poster: mediaItems.posterPath, backdrop: mediaItems.backdropPath }).from(mediaItems).all()) {
+      add(row.poster);
+      add(row.backdrop);
+    }
+    for (const row of this.metadata.select({ path: mediaSeasons.posterPath }).from(mediaSeasons).all()) add(row.path);
+    for (const row of this.metadata.select({ path: mediaEpisodes.stillPath }).from(mediaEpisodes).all()) add(row.path);
+    for (const row of this.metadata.select({ path: people.profilePath }).from(people).all()) add(row.path);
+    return keys;
+  }
+
+  /**
+   * STOR-PLACE-11: after remote changes are applied, deletes this device's own artwork copies that no slot holds any
+   * more. Two signed-in devices both copy a new title's pictures; sync keeps one device's row (LIB-SYNC-08), and the
+   * other device's copy would otherwise stay on the account, referenced by nothing, until the leftover clean-up.
+   */
+  private async discardSupersededArtworkCopies(): Promise<void> {
+    if (this.ownArtworkCopies.size === 0) return;
+    const cutoff = Date.now() - OWN_ARTWORK_COPY_WATCH_MS;
+    for (const [key, appliedAt] of this.ownArtworkCopies) if (appliedAt < cutoff) this.ownArtworkCopies.delete(key);
+    if (this.ownArtworkCopies.size === 0) return;
+    const inUse = this.collectArtworkKeysInUse();
+    const superseded = [...this.ownArtworkCopies.keys()].filter((key) => !inUse.has(key));
+    if (superseded.length === 0) return;
+    for (const key of superseded) this.ownArtworkCopies.delete(key);
+    // Counts only: the keys are storage object names.
+    logger.info({ count: superseded.length }, "artwork copies replaced through sync — deleting them (STOR-PLACE-11)");
+    await this.removeUploadedChunks(superseded);
   }
 
   /**
@@ -5836,9 +5887,12 @@ export class LibraryDb {
   }
 
   /**
-   * Videos still owed seek-bar preview sheets (MPV-PREV-03): for every video file none of whose formats holds a
-   * record, its source format, newest file first (`media_files.added_at`), minus `excludeFormatIds` (the runtime's
-   * exhausted retries). The source format is the `is_source` row, or the highest quality when none is flagged: an
+   * Videos still owed seek-bar preview sheets or their skip signature (MPV-PREV-03, META-SKIP-04): for every video
+   * file none of whose formats holds a record with a `skipSignature`, the title watched last first
+   * (`media_items.last_watched_at`), then the newest (`media_files.added_at`), a show's episodes together in order,
+   * minus `excludeFormatIds` (the runtime's exhausted retries). A file whose sheets are recorded without a signature
+   * lists the row holding them (the runtime then makes the signature alone and records it beside the sheets). A file
+   * with no record lists its source format: the `is_source` row, or the highest quality when none is flagged: an
    * import that named no source quality flags no row and records its sheets on the first (highest) one, and synced
    * rows land unflagged until the next open's backfill (`backfillMissingIsSourceFlags`), which picks the same row.
    * Template-projected formats are never listed (they are not this library's source copy).
@@ -5861,18 +5915,22 @@ export class LibraryDb {
     const rank = (row: (typeof rows)[number]) =>
       Number(row.isSource ?? 0) === 1 ? -1 : rankQualityForSourceBackfill(String(row.quality));
     const sourceByFile = new Map<string, (typeof rows)[number]>();
-    const filesWithSheets = new Set<string>();
+    const filesDone = new Set<string>();
+    const sheetsWithoutSignature = new Map<string, (typeof rows)[number]>();
     for (const row of rows) {
       const fileId = String(row.fileId);
-      if (row.previewSheets !== null && row.previewSheets !== undefined) filesWithSheets.add(fileId);
+      const record = parsePreviewSheets(row.previewSheets);
+      if (record?.skipSignature) filesDone.add(fileId);
+      else if (record) sheetsWithoutSignature.set(fileId, row);
       const current = sourceByFile.get(fileId);
       if (!current || rank(row) < rank(current) || (rank(row) === rank(current) && String(row.id) < String(current.id))) {
         sourceByFile.set(fileId, row);
       }
     }
     const formats = Array.from(sourceByFile.entries())
-      .filter(([fileId, row]) => !filesWithSheets.has(fileId) && !excluded.has(String(row.id)))
-      .map(([, row]) => row);
+      .filter(([fileId]) => !filesDone.has(fileId))
+      .map(([fileId, row]) => sheetsWithoutSignature.get(fileId) ?? row)
+      .filter((row) => !excluded.has(String(row.id)));
     if (formats.length === 0) return [];
     const files = this.metadata
       .select({ id: mediaFiles.id, season: mediaFiles.season, episode: mediaFiles.episode, addedAt: mediaFiles.addedAt })
@@ -5880,11 +5938,23 @@ export class LibraryDb {
       .where(inArray(mediaFiles.id, Array.from(new Set(formats.map((row) => String(row.fileId))))))
       .all();
     const fileById = new Map(files.map((row) => [String(row.id), row]));
+    const mediaIds = Array.from(new Set(formats.map((row) => String(row.mediaId))));
+    const lastWatchedByMedia = new Map(
+      this.core
+        .select({ id: mediaItems.id, lastWatchedAt: mediaItems.lastWatchedAt })
+        .from(mediaItems)
+        .where(inArray(mediaItems.id, mediaIds))
+        .all()
+        .map((row) => [String(row.id), row.lastWatchedAt ? String(row.lastWatchedAt) : ""]),
+    );
     const out: PreviewSheetCandidate[] = [];
     for (const row of formats) {
       const file = fileById.get(String(row.fileId));
       // A format whose file row is gone is no video of the library any more.
       if (!file) continue;
+      // A film gets no skip signature (it has no intro or credits markers, Chris 2026-11-24): its sheets finish it.
+      const film = (file.season === null || file.season === undefined) && (file.episode === null || file.episode === undefined);
+      if (film && sheetsWithoutSignature.has(String(row.fileId))) continue;
       out.push({
         formatId: String(row.id),
         mediaId: String(row.mediaId),
@@ -5896,8 +5966,136 @@ export class LibraryDb {
         initKey: row.initKey ? String(row.initKey) : null,
       });
     }
-    out.sort((a, b) => (a.addedAt === b.addedAt ? a.formatId.localeCompare(b.formatId) : a.addedAt < b.addedAt ? 1 : -1));
+    // The title watched last comes first (its skips are wanted soonest), then never-watched titles by their newest
+    // file; a show's episodes stay together, in order, since a show gets its skips once two of them are done.
+    const newestAddedByMedia = new Map<string, string>();
+    for (const row of out) {
+      if ((newestAddedByMedia.get(row.mediaId) ?? "") < row.addedAt) newestAddedByMedia.set(row.mediaId, row.addedAt);
+    }
+    const desc = (a: string, b: string) => (a === b ? 0 : a < b ? 1 : -1);
+    const nullsLast = (value: number | null) => value ?? Number.MAX_SAFE_INTEGER;
+    out.sort(
+      (a, b) =>
+        desc(lastWatchedByMedia.get(a.mediaId) ?? "", lastWatchedByMedia.get(b.mediaId) ?? "") ||
+        desc(newestAddedByMedia.get(a.mediaId) ?? "", newestAddedByMedia.get(b.mediaId) ?? "") ||
+        a.mediaId.localeCompare(b.mediaId) ||
+        nullsLast(a.season) - nullsLast(b.season) ||
+        nullsLast(a.episode) - nullsLast(b.episode) ||
+        a.formatId.localeCompare(b.formatId),
+    );
     return out.slice(0, input.limit);
+  }
+
+  /**
+   * The library's videos the catch-up pass counts (MPV-PREV-07): files with at least one format and a file row, the
+   * same set `listPreviewSheetCandidates` draws from.
+   */
+  countPreviewSheetVideos(): number {
+    const fileIds = new Set(
+      this.playback
+        .select({ fileId: mediaFormats.fileId })
+        .from(mediaFormats)
+        .all()
+        .map((row) => String(row.fileId)),
+    );
+    if (fileIds.size === 0) return 0;
+    return this.metadata
+      .select({ id: mediaFiles.id })
+      .from(mediaFiles)
+      .where(inArray(mediaFiles.id, Array.from(fileIds)))
+      .all().length;
+  }
+
+  /**
+   * Every video `countPreviewSheetVideos` counts, for the Jobs card's detailed list (MPV-PREV-07): the format the
+   * catch-up works on (the row holding a skip signature when one does, else the one `listPreviewSheetCandidates`
+   * would list), whether it is done (an episode: signed; a film, which gets no skip markers: sheets made), and whether
+   * an intro / credits skip is stored for its episode (never for a film). Ordered by title, season, episode.
+   */
+  listSkipCatchUpVideos(): SkipCatchUpVideo[] {
+    const rows = this.playback
+      .select({
+        id: mediaFormats.id,
+        mediaId: mediaFormats.mediaId,
+        fileId: mediaFormats.fileId,
+        quality: mediaFormats.quality,
+        isSource: mediaFormats.isSource,
+        previewSheets: mediaFormats.previewSheets,
+      })
+      .from(mediaFormats)
+      .all();
+    const rank = (row: (typeof rows)[number]) =>
+      Number(row.isSource ?? 0) === 1 ? -1 : rankQualityForSourceBackfill(String(row.quality));
+    const pick = new Map<string, { row: (typeof rows)[number]; tier: number }>();
+    for (const row of rows) {
+      const record = parsePreviewSheets(row.previewSheets);
+      // The signed row wins, then a row with sheets (the signature goes beside them), then the source.
+      const tier = record?.skipSignature ? 0 : record ? 1 : 2;
+      const fileId = String(row.fileId);
+      const current = pick.get(fileId);
+      if (
+        !current ||
+        tier < current.tier ||
+        (tier === current.tier && (rank(row) < rank(current.row) || (rank(row) === rank(current.row) && String(row.id) < String(current.row.id))))
+      ) {
+        pick.set(fileId, { row, tier });
+      }
+    }
+    if (pick.size === 0) return [];
+    const files = this.metadata
+      .select({ id: mediaFiles.id, season: mediaFiles.season, episode: mediaFiles.episode })
+      .from(mediaFiles)
+      .where(inArray(mediaFiles.id, Array.from(pick.keys())))
+      .all();
+    const mediaIds = Array.from(new Set(Array.from(pick.values(), ({ row }) => String(row.mediaId))));
+    const episodeKey = (mediaId: string, season: number | null, episode: number | null) => `${mediaId}|${season ?? ""}|${episode ?? ""}`;
+    const episodeIdByKey = new Map(
+      this.metadata
+        .select({ id: mediaEpisodes.id, mediaId: mediaEpisodes.mediaId, season: mediaEpisodes.seasonNumber, episode: mediaEpisodes.episodeNumber })
+        .from(mediaEpisodes)
+        .where(inArray(mediaEpisodes.mediaId, mediaIds))
+        .all()
+        .map((row) => [episodeKey(String(row.mediaId), Number(row.season), Number(row.episode)), String(row.id)]),
+    );
+    const markers = new Set(
+      this.metadata
+        .select({ mediaId: mediaSkipMarkers.mediaId, episodeId: mediaSkipMarkers.episodeId, type: mediaSkipMarkers.type })
+        .from(mediaSkipMarkers)
+        .where(inArray(mediaSkipMarkers.mediaId, mediaIds))
+        .all()
+        .map((row) => `${row.mediaId}|${row.episodeId ?? ""}|${row.type}`),
+    );
+    const num = (value: unknown) => (value === null || value === undefined ? null : Number(value));
+    const out: SkipCatchUpVideo[] = [];
+    for (const file of files) {
+      const picked = pick.get(String(file.id));
+      if (!picked) continue;
+      const mediaId = String(picked.row.mediaId);
+      const season = num(file.season);
+      const episode = num(file.episode);
+      const film = season === null && episode === null;
+      const episodeId = film ? undefined : episodeIdByKey.get(episodeKey(mediaId, season, episode));
+      const has = (type: "intro" | "credits") => episodeId !== undefined && markers.has(`${mediaId}|${episodeId}|${type}`);
+      out.push({
+        formatId: String(picked.row.id),
+        mediaId,
+        fileId: String(file.id),
+        season,
+        episode,
+        signed: film ? picked.tier <= 1 : picked.tier === 0,
+        intro: has("intro"),
+        credits: has("credits"),
+      });
+    }
+    const nullsLast = (value: number | null) => value ?? Number.MAX_SAFE_INTEGER;
+    out.sort(
+      (a, b) =>
+        a.mediaId.localeCompare(b.mediaId) ||
+        nullsLast(a.season) - nullsLast(b.season) ||
+        nullsLast(a.episode) - nullsLast(b.episode) ||
+        a.formatId.localeCompare(b.formatId),
+    );
+    return out;
   }
 
   /**
@@ -6546,6 +6744,37 @@ export class LibraryDb {
     });
     this.queueMediaUpsert(mediaId);
     return this.persist();
+  }
+
+  /**
+   * Writes `markers` for the episode kind by kind, keeping an existing marker of a kind that ranks higher
+   * (`skipSourceRank`: the user's times, then the metadata service's, then detection or chapters). Kinds absent from
+   * `markers` stay as they are. The writer for every source that is not the user's own change (PLAY-SKIP-08).
+   */
+  mergeSkipMarkers(
+    mediaId: string,
+    episodeId: string | null,
+    markers: Array<{
+      type: MediaSkipMarkerType;
+      startSeconds: number;
+      endSeconds: number;
+      source: string;
+      confidence?: number | null;
+    }>
+  ) {
+    const scopeFilter = episodeId ? eq(mediaSkipMarkers.episodeId, episodeId) : isNull(mediaSkipMarkers.episodeId);
+    const existing = this.metadata
+      .select()
+      .from(mediaSkipMarkers)
+      .where(and(eq(mediaSkipMarkers.mediaId, mediaId), scopeFilter))
+      .all()
+      .flatMap((row) => {
+        const type: MediaSkipMarkerType | null = row.type === "intro" || row.type === "credits" ? row.type : null;
+        return type
+          ? [{ type, startSeconds: row.startSeconds, endSeconds: row.endSeconds, source: row.source, confidence: row.confidence }]
+          : [];
+      });
+    return this.replaceSkipMarkers(mediaId, episodeId, mergeSkipMarkersByPriority(existing, markers));
   }
 
   // -------------------------------------------------------------------------
@@ -8500,7 +8729,12 @@ export class LibraryDb {
     };
 
     const base = this.secondaryOpsInFlight ?? Promise.resolve();
-    const next = base.then(applySecondary);
+    // STOR-PLACE-11: once every file holds the remote rows, a copy of ours that another device's replaced is deleted.
+    const next = base.then(applySecondary).then(() =>
+      this.discardSupersededArtworkCopies().catch((error: unknown) => {
+        logger.warn({ error: error instanceof Error ? error.message : String(error) }, "superseded artwork copy check failed");
+      })
+    );
     const finalPromise = next.finally(() => {
       if (this.secondaryOpsInFlight === finalPromise) {
         this.secondaryOpsInFlight = null;
@@ -9191,6 +9425,8 @@ export class LibraryDb {
     // STOR-PLACE-10: the title's own artwork goes with it; a photo another title still shows stays.
     const details = this.getMediaDetails(mediaId);
     const keys = details ? collectMediaDeleteKeys(details, (personId) => this.personInOtherTitle(personId, mediaId)) : [];
+    // The delete removes them itself (STOR-PLACE-10): no later sync check deletes them a second time.
+    for (const key of keys) this.ownArtworkCopies.delete(key);
     let deletedKeys = 0;
     let reclaimedBytes = 0;
     if (keys.length > 0 && this.token) {

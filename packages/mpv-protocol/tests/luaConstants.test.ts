@@ -19,7 +19,7 @@ const dumpLuaConstantsSnapshot = (label: string, extra?: Record<string, unknown>
 };
 
 describe("LUA_CHANNELS constants", () => {
-  it("exports the nine expected channel names", () => {
+  it("exports the ten expected channel names", () => {
     console.info(
       `[mpv-protocol-luaConstants:channel-names] LUA_CHANNELS keys=${JSON.stringify(Object.keys(LUA_CHANNELS))}`,
     );
@@ -33,6 +33,7 @@ describe("LUA_CHANNELS constants", () => {
       PREVIEW_PICTURE: "sf-preview-picture",
       AUDIO_STALL: "sf-audio-stall",
       SUBTITLE_FETCH_JSON: "sf-subtitle-fetch-json",
+      SKIP_EDIT_JSON: "sf-skip-edit-json",
     };
     try {
       expect(LUA_CHANNELS).toEqual(expected);
@@ -51,7 +52,7 @@ describe("LUA_CHANNELS constants", () => {
       `[mpv-protocol-luaConstants:channel-file-pairs] registrations=${LUA_CHANNEL_REGISTRATIONS.length} channels=${JSON.stringify(channels)} audioFile=${JSON.stringify(audioEntry?.file)}`,
     );
     try {
-      expect(LUA_CHANNEL_REGISTRATIONS).toHaveLength(10);
+      expect(LUA_CHANNEL_REGISTRATIONS).toHaveLength(11);
       expect(channels.sort()).toEqual(
         [
           "sf-audio-json",
@@ -62,6 +63,7 @@ describe("LUA_CHANNELS constants", () => {
           "sf-playback-json",
           "sf-preview-picture",
           "sf-preview-sheets",
+          "sf-skip-edit-json",
           "sf-subtitle-fetch-json",
           "sf-subtitles-json",
         ].sort(),

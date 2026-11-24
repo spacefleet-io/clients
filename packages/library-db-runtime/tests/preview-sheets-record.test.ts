@@ -24,7 +24,7 @@ import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { ensureLibrarySchema, type SqliteDb } from "@space/library-db-definition/migrations";
 import { buildOpStatements, isV3MediaUpsert } from "@space/library-db-definition/ops";
 import type { LibraryOp } from "@space/shared/libraryOps";
-import { locatePreviewPicture, type MediaPreviewSheets } from "@space/shared/previewSheets";
+import { locatePreviewPicture, parsePreviewSheets, type MediaPreviewSheets } from "@space/shared/previewSheets";
 import { LibraryDb } from "../src/libraryDb";
 
 const TAG = "[LIB-PREVIEW-SHEETS-001]";
@@ -187,6 +187,37 @@ describe("seek-bar preview sheets in the library (MPV-PREV-02)", () => {
       fresh.close();
       expect(JSON.parse(replayed.find((row) => row.isSource === 1)?.previews ?? "null")).toEqual(PREVIEWS);
       expect(replayed.find((row) => row.isSource === 0)?.previews).toBeNull();
+    } finally {
+      db.close();
+    }
+  });
+
+  it("a signature added later (catch-up on the importing computer) rides the next media.upsert to the other computers", async () => {
+    const db = await LibraryDb.openLocal("token", "key");
+    try {
+      db.setSyncEnabled(true);
+      const mediaId = await db.addMediaFromCatalog(MOVIE);
+      await addFormats(db, mediaId);
+      const sourceId = db.listMediaFormats(mediaId).find((format) => format.isSource)!.id;
+      const withSignature: MediaPreviewSheets = {
+        ...PREVIEWS,
+        skipSignature: { objectKey: `${PLACEMENT}/previews/skip-signature`, sizeBytes: 33_000, version: 1 },
+      };
+      expect(await db.setMediaFormatPreviewSheets(sourceId, withSignature)).toBe(true);
+      const ops = (db as unknown as { pendingOps: LibraryOp[] }).pendingOps;
+      const upserts = ops.filter((op) => op.type === "media.upsert");
+      const last = upserts[upserts.length - 1];
+      if (last?.type !== "media.upsert" || !isV3MediaUpsert(last)) throw new Error("no v3 media.upsert queued");
+      const fresh = new Database(":memory:");
+      ensureLibrarySchema(fresh as unknown as SqliteDb, "playback");
+      let seq = 0;
+      for (const statement of buildOpStatements(last, () => `gen-${++seq}`).playback ?? []) {
+        fresh.prepare(statement.sql).run(...(statement.params as Array<string | number | null>));
+      }
+      const row = fresh.prepare("SELECT preview_sheets AS previews FROM media_formats WHERE is_source = 1;").get() as { previews: string | null };
+      fresh.close();
+      console.info(`${TAG} signature replay=${row.previews?.length ?? null}`);
+      expect(parsePreviewSheets(row.previews)?.skipSignature).toEqual(withSignature.skipSignature);
     } finally {
       db.close();
     }

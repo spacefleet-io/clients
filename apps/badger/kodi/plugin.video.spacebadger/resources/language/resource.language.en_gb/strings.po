@@ -28,15 +28,15 @@ msgid "Password (cleared after sign-in)"
 msgstr ""
 
 msgctxt "#30005"
-msgid "Library key (cleared after saving)"
+msgid "Media library key (cleared after saving)"
 msgstr ""
 
 msgctxt "#30006"
-msgid "Paste the library key from your Badger app. It is stored in a private file in this addon's data folder."
+msgid "Paste the media library key from your Badger app. It is stored in a private file in this addon's data folder."
 msgstr ""
 
 msgctxt "#30007"
-msgid "Warning: the library key is stored in a private file on this device"
+msgid "Warning: the media library key is stored in a private file on this device"
 msgstr ""
 
 msgctxt "#30010"

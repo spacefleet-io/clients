@@ -1,91 +1,21 @@
 /**
- * ACCT-SIGNIN-05 on Parrot desktop: an "or" line, then the Google, Apple and Microsoft buttons, under the email form and
- * its button on the sign-in and sign-up screens. Only the providers `GET /auth/providers` lists are drawn, so nothing shows while
- * none is configured. A row makes a fresh secret, keeps it in this window and asks main to start the sign-in; main
- * opens the provider in the system browser, the API sends the browser back to `parrot://auth/provider` and the sign-in
- * screen trades the code (`useProviderSignInReturn`).
+ * ACCT-SIGNIN-05 on Parrot desktop: the return half of the Google, Apple and Microsoft sign-in. The rows under the email
+ * form are the shared `DesktopProviderSignIn` (`@space/desktop-shell/provider-sign-in`): a row keeps a fresh secret in
+ * this window and asks main to start the sign-in; main opens the provider in the system browser, the API sends the
+ * browser back to `parrot://auth/provider` and the sign-in screen trades the code here (`useProviderSignInReturn`).
  */
-import { useEffect, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { Button, Input, Spinner } from "@space/ui";
-import { ProviderSignInRows } from "@space/ui/provider-sign-in-rows";
-import { BadgerSignInDivider } from "@space/ui/badger/sign-in";
 import { useProviderReturn } from "@space/desktop-shell/provider-return";
-import { newProviderClientSecret, type ProviderReturn, type ProviderSignInErrorCode } from "@space/shared/providerSignIn";
-import type { SignInProvider } from "@space/shared/api";
+import { providerVerifier } from "@space/desktop-shell/provider-sign-in";
+import { providerSignInTexts, type ProviderReturn, type ProviderSignInErrorCode } from "@space/shared/providerSignIn";
 import type { ParrotLanguage } from "../../shared/ipc";
 import { signInFailureText, type Translate } from "./i18n";
 
 const log = (message: string, extra?: Record<string, unknown>) => console.info(`[parrot:provider-sign-in] ${message}`, extra ?? "");
 
-/**
- * Where the window keeps the secret whose hash started the sign-in. `localStorage`, so a Parrot restarted while the
- * person was at the provider still finishes; the secret is worth nothing without the code and is dropped once used.
- */
-export const PROVIDER_VERIFIER_KEY = "sf_provider_sign_in_verifier";
-
-const PROVIDER_NAMES: Record<SignInProvider, string> = { google: "Google", apple: "Apple", microsoft: "Microsoft" };
-
-const providerErrorText = (t: Translate, code: ProviderSignInErrorCode) => t(`signIn.provider.errors.${code}`);
-
-type RowsProps = {
-  t: Translate;
-  language: ParrotLanguage;
-  /** "signIn" titles the rows "Sign in with …", "signUp" "Sign up with …". */
-  mode: "signIn" | "signUp";
-  /** The browser was opened: the screen says to finish there. */
-  onStarted: () => void;
-  /** A failure to start, in words. */
-  onError: (message: string) => void;
-};
-
-export function ProviderSignIn({ t, language, mode, onStarted, onError }: RowsProps) {
-  const [providers, setProviders] = useState<SignInProvider[]>([]);
-  const [busy, setBusy] = useState<SignInProvider | null>(null);
-
-  useEffect(() => {
-    let live = true;
-    void window.parrot.providerSignIn.list().then((on) => {
-      log("providers listed", { providers: on });
-      if (live) setProviders(on);
-    });
-    return () => {
-      live = false;
-    };
-  }, []);
-
-  if (providers.length === 0) return null;
-
-  const start = async (provider: SignInProvider) => {
-    setBusy(provider);
-    try {
-      const { verifier, challenge } = newProviderClientSecret();
-      localStorage.setItem(PROVIDER_VERIFIER_KEY, verifier);
-      const result = await window.parrot.providerSignIn.start(provider, challenge);
-      if (result.ok) {
-        log("provider opened in the browser", { provider, mode });
-        onStarted();
-        return;
-      }
-      log("start failed", { provider, failure: result.failure });
-      onError(result.failure === "rateLimited" ? signInFailureText(language, result.failure, result.retryAfterMinutes) : t("signIn.provider.errorStart"));
-    } finally {
-      setBusy(null);
-    }
-  };
-
-  const titleKey = mode === "signUp" ? "signIn.provider.signUpWith" : "signIn.provider.signInWith";
-  return (
-    <div className="grid gap-4" data-testid="provider-sign-in">
-      <BadgerSignInDivider label={t("signIn.provider.or")} testId="provider-sign-in-divider" />
-      <ProviderSignInRows
-        providers={providers}
-        busy={busy}
-        label={(provider) => t(titleKey, { provider: PROVIDER_NAMES[provider] })}
-        onSelect={(provider) => void start(provider)}
-      />
-    </div>
-  );
-}
+/** The words for a `signinError` (or a completion's `invalid_code`), shared with every app (`@space/shared/providerSignIn`). */
+const providerErrorText = (language: ParrotLanguage, code: ProviderSignInErrorCode) => providerSignInTexts[language].errors[code];
 
 /** A provider sign-in coming back: the code waits here while the account asks for its second step. */
 export type ProviderSignInReturn = {
@@ -103,13 +33,11 @@ export type ProviderSignInReturn = {
  * trades the code with the kept secret. `onSignedIn` runs once main holds the session; `onMessage` shows an error.
  */
 export function useProviderSignInReturn({
-  t,
   language,
   onBack,
   onSignedIn,
   onMessage,
 }: {
-  t: Translate;
   language: ParrotLanguage;
   /** The return came: bring the email screen back (it shows the second step or the error). */
   onBack: () => void;
@@ -120,17 +48,17 @@ export function useProviderSignInReturn({
   const [busy, setBusy] = useState(false);
 
   const drop = () => {
-    localStorage.removeItem(PROVIDER_VERIFIER_KEY);
+    providerVerifier.drop();
     setSecondStep(null);
   };
 
   const complete = async (code: string, extra: { twoFactorCode?: string; resendTwoFactor?: boolean } = {}) => {
-    const verifier = localStorage.getItem(PROVIDER_VERIFIER_KEY);
+    const verifier = providerVerifier.read();
     if (!verifier) {
       // The secret is gone (another sign-in, a cleared profile): this code cannot be traded here.
       log("return without a kept secret");
       drop();
-      onMessage(providerErrorText(t, "invalid_code"));
+      onMessage(providerErrorText(language, "invalid_code"));
       return;
     }
     setBusy(true);
@@ -146,7 +74,7 @@ export function useProviderSignInReturn({
       if ("error" in result) {
         log("code spent", { error: result.error });
         drop();
-        onMessage(providerErrorText(t, result.error));
+        onMessage(providerErrorText(language, result.error));
         return;
       }
       log("completion asks again", { failure: result.failure, method: result.method });
@@ -163,7 +91,7 @@ export function useProviderSignInReturn({
     if ("error" in outcome) {
       log("return with an error", { error: outcome.error });
       drop();
-      onMessage(providerErrorText(t, outcome.error));
+      onMessage(providerErrorText(language, outcome.error));
       return;
     }
     log("return with a code");

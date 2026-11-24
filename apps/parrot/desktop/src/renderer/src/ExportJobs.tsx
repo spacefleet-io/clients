@@ -18,7 +18,7 @@ import {
 } from "@space/desktop-shell/components";
 import { formatLocalizedStorage } from "@space/shared/format";
 import { EXPORT_FOLDER_MISSING, EXPORT_NO_SPACE, type ParrotExportJob, type ParrotLanguage } from "../../shared/ipc";
-import { countText, translator, type ParrotStringKey, type Translate } from "./i18n";
+import { countText, pluralForm, translator, type ParrotStringKey, type Translate } from "./i18n";
 import type { NotificationPart } from "./notificationText";
 
 /** Puts a line in the tray (Library binds it to its notification store). */
@@ -154,7 +154,7 @@ function ExportJobItem({ t, language, job, removing, onDismiss }: { t: Translate
     <>
       {job.phase === "running" || job.phase === "queued" ? (
         <p className="mt-2 truncate text-xs text-muted-foreground" data-testid="export-job-progress">
-          {t("export.job.progress", {
+          {t(`export.job.progress.${pluralForm(language, job.totalSongs)}`, {
             done: job.doneSongs,
             total: job.totalSongs,
             doneSize: formatLocalizedStorage(job.doneBytes, language),

@@ -61,6 +61,7 @@ vi.mock("lucide-react", () => ({
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string, second?: unknown) => (typeof second === "string" ? second : key),
+    i18n: { language: "en" },
   }),
 }));
 

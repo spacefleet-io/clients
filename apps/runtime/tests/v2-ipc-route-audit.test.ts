@@ -40,6 +40,7 @@ const desktopIpcCallTable = [
   { method: "POST", path: "/runtime/jobs/v2/cancel", body: { jobId: "j1" } },
   { method: "POST", path: "/runtime/jobs/v2/dismiss", body: { jobId: "j1" } },
   { method: "POST", path: "/runtime/jobs/v2/retry", body: { jobId: "j1" } },
+  { method: "POST", path: "/runtime/jobs/v2/availability", body: { jobIds: ["j1"] } },
   {
     method: "POST",
     path: "/runtime/jobs/v2/cancel-by-group",

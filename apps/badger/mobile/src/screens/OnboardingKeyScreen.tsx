@@ -3,7 +3,7 @@
 // 2026-11-12 (chat): "the setup step to enter/save the key should be the same shared one between the 2 apps".
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { StyleSheet, Text } from "react-native";
-import { Screen } from "../components/Screen";
+import { MobileScreen } from "@space/mobile-shell/components";
 import { useAuth } from "../store/auth";
 import { useLibrary } from "../store/library";
 import { getLibraryMetaForKeyStep, resetLibrary } from "@space/shared/api";
@@ -255,9 +255,9 @@ export const OnboardingKeyScreen = () => {
 
   if (loading) {
     return (
-      <Screen>
+      <MobileScreen>
         <Text style={styles.muted}>{t("onboarding.loading")}</Text>
-      </Screen>
+      </MobileScreen>
     );
   }
 

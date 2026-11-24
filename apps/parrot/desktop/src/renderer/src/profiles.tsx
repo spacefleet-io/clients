@@ -6,13 +6,15 @@
  * `last_profile` for the only one). Playback on this computer names the account's main profile (STOR-BW-11), so picking
  * a profile in the top bar's menu (UX-TOP-02) only changes which one is ticked; with no "Who's listening?" on this
  * computer, the main profile is the current one until another is picked.
+ * The menu, the Settings section and the main-profile rule are Parrot's shared ones in `@space/ui/profiles`, as on the
+ * web player (#3350 S32).
  */
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
 import { ApiError } from "@space/shared/api";
 import type { ApiProfile } from "@space/shared/profiles";
-import { createProfileStore, type ProfileLibraryMoves, type ProfileStore } from "@space/shared/profileStore";
+import { NO_LIBRARY_MOVES, createProfileStore, localStorageProfileStorage, type ProfileStore } from "@space/shared/profileStore";
 import { profilesTranslator } from "@space/shared/profileTexts";
-import { ProfileMenu, ProfilesManager } from "@space/ui/profiles";
+import { useMainProfileWhenUnchosen } from "@space/ui/profiles";
 import { MASCOT_GLOW } from "@space/ui/floating-mascot";
 import { ProfileSetupStep, UpdateFeaturesHost, needsProfileSetupStep, saveProfileSetup } from "@space/desktop-shell/profile-setup";
 import mascotUrl from "@space/parrot-core/mascot.webp";
@@ -22,7 +24,8 @@ import type { Translate } from "./i18n";
 /** What the profiles need from `window.parrot`: main's calls with the session token. */
 export type ParrotProfilesBridge = Pick<ParrotBridge, "listProfiles" | "createProfile" | "updateProfile" | "deleteProfile">;
 
-const log = (event: string, data: Record<string, unknown>) => console.info(`parrot.${event}`, JSON.stringify(data));
+/** The profile screens' log lines, `parrot.profiles.*`. */
+export const profilesLog = (event: string, data: Record<string, unknown>) => console.info(`parrot.${event}`, JSON.stringify(data));
 
 const answer = async <T,>(call: Promise<ParrotProfilesResult<T>>): Promise<T> => {
   const result = await call;
@@ -31,26 +34,10 @@ const answer = async <T,>(call: Promise<ParrotProfilesResult<T>>): Promise<T> =>
   throw new ApiError(result.status, { error: result.code });
 };
 
-/**
- * What a delete moves in Parrot's library: nothing, as on the phone (`parrotProfileMoves`): playlists and hearts are
- * the account's until they are per profile, and this computer keeps no history per profile.
- */
-const parrotDesktopMoves: ProfileLibraryMoves = {
-  ensureReady: async () => undefined,
-  wipeProfileViewing: async () => undefined,
-  promoteProfileToMain: async () => undefined,
-  healMainPromotion: async () => undefined,
-  listViewingProfileIds: async () => [],
-};
-
 /** The store over main's profile calls and the window's localStorage; tests pass their own bridge. */
 export const createParrotDesktopProfileStore = (bridge: ParrotProfilesBridge): ProfileStore => {
   const store = createProfileStore({
-    storage: {
-      getItem: async (key) => window.localStorage.getItem(key),
-      setItem: async (key, value) => window.localStorage.setItem(key, value),
-      removeItem: async (key) => window.localStorage.removeItem(key),
-    },
+    storage: localStorageProfileStorage,
     // The token is main's; the store only needs one to be set (`startSession`).
     api: {
       list: () => answer(bridge.listProfiles()),
@@ -58,10 +45,11 @@ export const createParrotDesktopProfileStore = (bridge: ParrotProfilesBridge): P
       update: (_token, id, body) => answer(bridge.updateProfile(id, body)),
       remove: (_token, id) => answer(bridge.deleteProfile(id)),
     },
-    applyScope: (profileId) => log("profiles.scope", { profileId }),
-    log,
+    applyScope: (profileId) => profilesLog("profiles.scope", { profileId }),
+    log: profilesLog,
   });
-  store.attachLibrary(parrotDesktopMoves);
+  // A delete moves nothing: playlists and hearts are the account's until they are per profile.
+  store.attachLibrary(NO_LIBRARY_MOVES);
   return store;
 };
 
@@ -77,93 +65,9 @@ export const useParrotDesktopProfileStore = (userId: string, bridge: ParrotProfi
     if (!store) return;
     void store.startSession({ userId, token: "main", askEveryStart: false });
   }, [store, userId]);
-  useEffect(() => {
-    if (!store) return;
-    const settle = () => {
-      const snapshot = store.getSnapshot();
-      if (snapshot.status !== "ready" || !snapshot.needsChoice) return;
-      const main = snapshot.profiles.find((profile) => profile.isMain) ?? snapshot.profiles[0];
-      if (!main) return;
-      log("profiles.desktop.main_current", { profileId: main.id, count: snapshot.profiles.length });
-      void store.selectProfile(main.id);
-    };
-    settle();
-    return store.subscribe(settle);
-  }, [store]);
+  useMainProfileWhenUnchosen(store, profilesLog);
   return store;
 };
-
-/**
- * The top bar's avatar menu (UX-TOP-02): the current profile's avatar, every profile, then Add profile, Manage profiles
- * and Sign out. Always shown, even with one profile.
- */
-export function ParrotProfileMenu({
-  store,
-  language,
-  signOutLabel,
-  onSignOut,
-  onAddProfile,
-  onManageProfiles,
-}: {
-  store: ProfileStore;
-  language: ParrotLanguage;
-  signOutLabel: string;
-  onSignOut: () => void;
-  onAddProfile: () => void;
-  onManageProfiles: () => void;
-}) {
-  return (
-    <ProfileMenu
-      store={store}
-      log={log}
-      t={profilesTranslator(language, { listening: true })}
-      signOutLabel={signOutLabel}
-      onSignOut={onSignOut}
-      onAddProfile={onAddProfile}
-      onManageProfiles={onManageProfiles}
-    />
-  );
-}
-
-/**
- * Settings ▸ Account ▸ Profiles: the account's profiles with their avatars, added, edited (name and avatar, through
- * the shared chooser, ACCT-PROF-05) and deleted with the API's limits. `startWith: "add"` opens straight on a new
- * profile (the menu's "Add profile") and shows the list once it is saved or cancelled. Opening the page reads the
- * list again, so a profile added, renamed or deleted on another device or the website shows here; the plan dialog
- * opens over this page, so the list (and its limit) is read again when it closes.
- */
-export function ProfilesSection({
-  store,
-  language,
-  planOpen = false,
-  startWith,
-}: {
-  store: ProfileStore;
-  language: ParrotLanguage;
-  planOpen?: boolean;
-  startWith?: "add";
-}) {
-  useEffect(() => {
-    void store.refresh();
-  }, [store]);
-  const planWasOpen = useRef(planOpen);
-  useEffect(() => {
-    if (planWasOpen.current && !planOpen) void store.refresh();
-    planWasOpen.current = planOpen;
-  }, [store, planOpen]);
-  return (
-    <section data-testid="settings-profiles" className="mt-6 space-y-2">
-      <h3 className="text-sm font-semibold">{profilesTranslator(language)("profiles.settingsGroup")}</h3>
-      <ProfilesManager
-        store={store}
-        deleteProfile={(profileId) => store.deleteProfile(profileId, parrotDesktopMoves)}
-        log={log}
-        t={profilesTranslator(language, { listening: true })}
-        startWith={startWith}
-      />
-    </section>
-  );
-}
 
 /**
  * The profile this computer is on (the current one, else the main one) once the list is known; `ready` is true without
@@ -223,12 +127,12 @@ export function ParrotProfileSetupStep({
       nextLabel={progress && progress.current === progress.total ? t("finish") : t("next")}
       mascotSrc={mascotUrl}
       mascotGlowClassName={MASCOT_GLOW.parrot}
-      log={log}
+      log={profilesLog}
       onBack={onBack}
       onNext={async (answer) => {
         onSaving?.();
         await saveProfileSetup(store, profile.id, answer);
-        log("profiles.setup.saved", { profileId: profile.id, avatarId: answer.avatarId, step: progress?.current ?? null });
+        profilesLog("profiles.setup.saved", { profileId: profile.id, avatarId: answer.avatarId, step: progress?.current ?? null });
         await onDone();
       }}
     />
@@ -259,7 +163,7 @@ export function ParrotProfileSetupOverlays({ store, language, t }: { store: Prof
       profile={profile}
       store={store}
       t={profilesTranslator(language, { listening: true })}
-      log={log}
+      log={profilesLog}
       backLabel={t("back")}
       nextLabel={t("next")}
       mascotSrc={mascotUrl}

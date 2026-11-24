@@ -6,6 +6,10 @@ import {
   badgerPlaybackRecordSignedUrlRequest,
   badgerPlaybackSetUploadPolicy,
   badgerPreviewsGetStatus,
+  badgerPreviewsGetCatchUp,
+  badgerPreviewsRetryCatchUp,
+  badgerPreviewsSetCatchUpVideo,
+  type BadgerPreviewsCatchUp,
 } from "@space/runtime-contracts";
 import { createRuntimeSession, type RuntimeSessionHandle } from "@space/runtime-client/session";
 import { createRuntimeCommandClient } from "@space/runtime-client/command";
@@ -157,6 +161,62 @@ export class PlaybackRuntimeBridge {
         "runtime preview status failed"
       );
       return null;
+    }
+  }
+
+  /**
+   * MPV-PREV-07: the skip-detection catch-up as the Jobs tab shows it ("Skip detection: N of M videos").
+   * Null (never throws) when the runtime is not reachable; the Jobs tab then hides the card.
+   */
+  async getCatchUpStatus(): Promise<BadgerPreviewsCatchUp | null> {
+    if (!this.client) return null;
+    try {
+      return await this.client.sendCommand(badgerPreviewsGetCatchUp, {});
+    } catch (error) {
+      this.logger?.warn(
+        {
+          event: "runtime_badger_catch_up_status_failed",
+          message: error instanceof Error ? error.message : String(error ?? "unknown_error"),
+        },
+        "runtime catch-up status failed"
+      );
+      return null;
+    }
+  }
+
+  /** MPV-PREV-07: a skip job's Cancel (`cancel`) or Remove from history (`dismiss`). False when the runtime did not take it. */
+  async setCatchUpVideo(formatId: string, action: "cancel" | "dismiss"): Promise<boolean> {
+    if (!this.client) return false;
+    try {
+      const result = await this.client.sendCommand(badgerPreviewsSetCatchUpVideo, { formatId, action });
+      return result.ok;
+    } catch (error) {
+      this.logger?.warn(
+        {
+          event: "runtime_badger_catch_up_set_video_failed",
+          message: error instanceof Error ? error.message : String(error ?? "unknown_error"),
+        },
+        "runtime catch-up set video failed"
+      );
+      return false;
+    }
+  }
+
+  /** MPV-PREV-07 "Try again": one video (`formatId`) or all of them. False when the runtime did not take it. */
+  async retryCatchUp(formatId: string | null): Promise<boolean> {
+    if (!this.client) return false;
+    try {
+      await this.client.sendCommand(badgerPreviewsRetryCatchUp, formatId ? { formatId } : {});
+      return true;
+    } catch (error) {
+      this.logger?.warn(
+        {
+          event: "runtime_badger_catch_up_retry_failed",
+          message: error instanceof Error ? error.message : String(error ?? "unknown_error"),
+        },
+        "runtime catch-up retry failed"
+      );
+      return false;
     }
   }
 

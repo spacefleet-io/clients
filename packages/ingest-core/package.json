@@ -15,7 +15,8 @@
     "./mediaProcessor": "./src/mediaProcessor.ts",
     "./parseMediaFilename": "./src/parseMediaFilename.ts",
     "./subtitleLanguageDetection": "./src/subtitleLanguageDetection.ts",
-    "./subtitleOcr": "./src/subtitleOcr/index.ts"
+    "./subtitleOcr": "./src/subtitleOcr/index.ts",
+    "./skipDetect": "./src/skipDetect/index.ts"
   },
   "dependencies": {
     "@space/content-core": "workspace:*",

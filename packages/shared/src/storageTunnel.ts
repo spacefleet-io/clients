@@ -429,6 +429,9 @@ const assertUploadAckFrame = (ack: TunnelGatewayFrame) => {
   throw new Error(`TUNNEL_UPLOAD_ACK_FAILED:${errorCode}`);
 };
 
+/** A re-sealed copy (STOR-RESEAL-03): the media reseal run it belongs to and the old object it replaces at the switch. */
+export type StorageResealCopy = { runId: string; of: string };
+
 /** Per-object options of an upload on a reused session; the placement and client are the session's. */
 export type StorageUploadSessionObjectOptions = {
   objectNamespace?: string;
@@ -1250,16 +1253,22 @@ export const createUserStorageTunnelClient = (input: {
       placementId?: string;
       /** How the object counts toward the allowance (STOR-USE-02); sent on `upload.open`. Absent: it counts its stored bytes. */
       counting?: StorageObjectCounting;
+      /**
+       * A re-sealed copy of `of` for media reseal run `runId` (STOR-RESEAL-03): uploaded over a `reseal` session, which
+       * accepts copies only (also for an unpaid or over-quota account), with `resealRunId` + `resealOf` on `upload.open`.
+       */
+      reseal?: StorageResealCopy;
     },
     resume?: UploadResumeState,
     /** An open session of `createUploadSession`: no session of its own is made, started or ended. */
     reused?: { sessionId: string; resolvedObjectKey: string }
   ) => {
-    // Every upload session is purpose `upload`: refused with 402 `subscription_unpaid` once the account is unpaid.
+    // An upload session is purpose `upload` (refused with 402 `subscription_unpaid` once the account is unpaid); a
+    // re-sealed copy goes over a `reseal` session instead (STOR-RESEAL-03).
     const session = reused
       ? { sessionId: reused.sessionId, resolvedObjectKey: reused.resolvedObjectKey }
       : await client.createSession(token, objectKey, {
-          purpose: "upload",
+          purpose: options?.reseal ? "reseal" : "upload",
           ...(options?.placementId ? { placementId: options.placementId } : {}),
         });
     const sessionId = session.sessionId;
@@ -1326,6 +1335,7 @@ export const createUserStorageTunnelClient = (input: {
         ...(options?.counting ? { role: options.counting.role } : {}),
         ...(options?.counting?.declaredBytes !== undefined ? { declaredBytes: Math.max(0, Math.floor(options.counting.declaredBytes)) } : {}),
         ...(resumeIdSent ? { resumeId: resumeIdSent } : {}),
+        ...(options?.reseal ? { resealRunId: options.reseal.runId, resealOf: options.reseal.of } : {}),
       });
       if (String(open.kind ?? "") !== "upload.progress") {
         const errorDetail = String((open as Record<string, unknown>).error ?? "unknown");

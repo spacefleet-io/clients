@@ -11,6 +11,7 @@
 import { describe, expect, it } from "vitest";
 import { MetadataUnavailableError } from "@space/metadata-client";
 import type { MediaDetails, MediaRow, MediaSkipMarker } from "@space/shared/libraryTypes";
+import { mergeSkipMarkersByPriority } from "@space/shared/skipMarkers";
 import {
   EXTERNAL_SKIP_MARKER_FETCH_KIND,
   EXTERNAL_SKIP_MARKER_SHOW_KIND,
@@ -124,14 +125,19 @@ const makeDeps = (
     lib.analysis = lib.analysis.filter((row) => !(row.mediaId === mediaId && row.episodeId === episodeId && row.kind === kind));
     lib.analysis.push({ mediaId, episodeId, kind, payload, updatedAt: new Date(NOW).toISOString() });
   },
-  replaceSkipMarkers: async (mediaId, episodeId, markers) => {
-    lib.written.set(`${mediaId}/${episodeId}`, markers);
-    // Mirror into the details so a second run sees the stored markers, like the real library.
+  // Like the real library: merged by source priority (PLAY-SKIP-08); `written` keeps the episode's result.
+  mergeSkipMarkers: async (mediaId, episodeId, markers) => {
     const details = lib.details.get(mediaId);
+    const held = (details?.skipMarkers ?? [])
+      .filter((m) => m.episodeId === episodeId)
+      .map((m) => ({ type: m.type, startSeconds: m.startSeconds, endSeconds: m.endSeconds, source: m.source, confidence: m.confidence }));
+    const merged = mergeSkipMarkersByPriority(held, markers);
+    lib.written.set(`${mediaId}/${episodeId}`, merged);
+    // Mirror into the details so a second run sees the stored markers, like the real library.
     if (details && episodeId) {
       details.skipMarkers = [
         ...details.skipMarkers.filter((m) => m.episodeId !== episodeId),
-        ...markers.map((m) => ({ ...storedMarker(mediaId, episodeId, m.source, m.type), ...m, confidence: m.confidence ?? null })),
+        ...merged.map((m) => ({ ...storedMarker(mediaId, episodeId, m.source, m.type), ...m, confidence: m.confidence ?? null })),
       ];
     }
   },

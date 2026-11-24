@@ -174,7 +174,7 @@ type LibraryActionsValue = {
   acknowledgeKey: () => Promise<void>;
   clearLibrary: () => Promise<void>;
   /** PRIV-KEY-13: this library sealed under the new key for a rotation, or null when none is open. */
-  sealForRotation: (newKeyBase64: string) => Promise<RotationOwnLibrary | null>;
+  sealForRotation: (newKeyBase64: string, copies: ReadonlyMap<string, string>) => Promise<RotationOwnLibrary | null>;
   /** ACCT-PROF-02: the data moves of a profile deletion (`profileStore.deleteProfile`). */
   profileMoves: ProfileLibraryMoves;
 };
@@ -1699,9 +1699,9 @@ export const LibraryProvider = ({ children }: { children: React.ReactNode }) => 
   }, [db]);
 
   const sealForRotation = useCallback(
-    async (newKeyBase64: string) => {
+    async (newKeyBase64: string, copies: ReadonlyMap<string, string>) => {
       if (!db) return null;
-      return await db.sealForRotation(newKeyBase64);
+      return await db.sealForRotation(newKeyBase64, copies);
     },
     [db]
   );

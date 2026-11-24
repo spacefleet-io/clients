@@ -149,6 +149,31 @@ export type ProfileLibraryMoves = {
   listViewingProfileIds: () => Promise<string[]>;
 };
 
+/**
+ * What a delete moves where no library holds data per profile: nothing, the API's delete is the whole of it. The
+ * website, Parrot (playlists and hearts are the account's until they are per profile) and Badger's web player with no
+ * library yet use it (ACCT-PROF-02).
+ */
+export const NO_LIBRARY_MOVES: ProfileLibraryMoves = Object.freeze({
+  ensureReady: async () => undefined,
+  wipeProfileViewing: async () => undefined,
+  promoteProfileToMain: async () => undefined,
+  healMainPromotion: async () => undefined,
+  listViewingProfileIds: async () => [],
+});
+
+type BrowserStorage = { getItem(key: string): string | null; setItem(key: string, value: string): void; removeItem(key: string): void };
+/** This package builds without the DOM types; the storage below is only read on a page, where `localStorage` exists. */
+const browserGlobal = globalThis as unknown as { localStorage: BrowserStorage };
+const browserStorage = (): BrowserStorage => browserGlobal.localStorage;
+
+/** The store's storage on the page's localStorage: the web players and the desktop windows. */
+export const localStorageProfileStorage: ProfileStoreDeps["storage"] = Object.freeze({
+  getItem: async (key: string) => browserStorage().getItem(key),
+  setItem: async (key: string, value: string) => browserStorage().setItem(key, value),
+  removeItem: async (key: string) => browserStorage().removeItem(key),
+});
+
 const errorCode = (error: unknown): ProfileErrorCode => {
   if (error instanceof ApiError) {
     const code = error.payload?.error;

@@ -30,6 +30,7 @@ import { formatNowPlayingParts } from "@space/shared/nowPlaying";
 import { isOcrTwin } from "@space/shared/subtitleTwins";
 import { isRemovableSubtitleSource } from "@space/shared/subtitleFetch";
 import { useMpvSubtitleFetch } from "@/lib/useMpvSubtitleFetch";
+import { useMpvSkipEdit } from "@/lib/useMpvSkipEdit";
 import { getDecryptedAssetUrl, isAssetKey } from "@/lib/assets";
 import { getStoredLibraryKey } from "@/lib/onboarding";
 import { objectUrlToDataUrl, resolvePlaybackBackdrop } from "@/lib/playbackBackdrop";
@@ -40,6 +41,7 @@ import {
   missingPreviewsFor,
   sourcePreviewSheets,
   oscMenuPrompts,
+  oscSkipLabels,
   type ExternalPlaybackMetadataPayload,
 } from "@/lib/mpvExternalMetadata";
 import { createPreviewSheetsHandoff } from "@/lib/previewSheetsHandoff";
@@ -217,6 +219,7 @@ export const useMpvPlaybackEngine = ({
   addSubtitleTrack,
   removeSubtitleTrack,
   getMediaObjectKeys,
+  skipEditLibrary,
   t,
 }: UsePlaybackEngineParams) => {
   const playerRef = useRef<HTMLCanvasElement | null>(null);
@@ -826,6 +829,14 @@ export const useMpvPlaybackEngine = ({
     () => media.subtitleTracks.find((track) => track.id === selectedSubtitleId) ?? null,
     [media.subtitleTracks, selectedSubtitleId]
   );
+  useMpvSkipEdit({
+    open,
+    isExternalPlayer: () => mpvFlagsRef.current.externalPlayer,
+    media,
+    episodeId: episodeId ?? null,
+    library: skipEditLibrary,
+    sendExternalCommand,
+  });
   const { getMoreSubtitlesLabel, tryAnotherVersionLabel, addSubtitleFileLabel } = useMpvSubtitleFetch({
     open,
     isExternalPlayer: () => mpvFlagsRef.current.externalPlayer,
@@ -1047,6 +1058,7 @@ export const useMpvPlaybackEngine = ({
         audioOptions: [],
         subtitlesOffLabel: t("player.subtitlesOff"),
         menuPrompts: oscMenuPrompts(t),
+        skipLabels: oscSkipLabels(t),
         skipMarkers: [],
         title: nowPlaying.title,
         meta: nowPlaying.meta,
@@ -1164,6 +1176,8 @@ export const useMpvPlaybackEngine = ({
       tryAnotherVersionLabel: tryAnotherVersionLabelRef.current,
       addSubtitleFileLabel: addSubtitleFileLabelRef.current,
       menuPrompts: oscMenuPrompts(t),
+      skipLabels: oscSkipLabels(t),
+      skipMenu: episode != null,
       skipMarkers: currentSkipMarkers,
       title: nowPlaying.title,
       meta: nowPlaying.meta,

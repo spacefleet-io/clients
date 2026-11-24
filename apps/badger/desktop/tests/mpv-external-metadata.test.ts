@@ -113,6 +113,8 @@ import {
   buildExternalMetadataCommands,
   buildExternalPlaybackMetadataPayload,
   oscMenuPrompts,
+  oscSkipLabels,
+  OSC_SKIP_LABEL_KEYS,
 } from "../src/renderer/src/lib/mpvExternalMetadata";
 import de from "../src/renderer/src/i18n/de.json";
 import en from "../src/renderer/src/i18n/en.json";
@@ -527,6 +529,81 @@ describe("mpv external metadata helpers", () => {
       }
     }
     expect(texts.fr!.audioRetry).toBe("Réessayer avec le son");
+  });
+
+  // @req PLAY-SKIP-07[badger-desktop] @bugfix desktop-skip-pill-english-only
+  it("[sf-skip] sends the skip texts in the UI language, for all 5 languages (the skip pill was English-only)", () => {
+    const locales = { en, fr, nl, de, es } as const;
+    const texts = Object.fromEntries(
+      Object.entries(locales).map(([lang, json]) => {
+        const skipUi: Record<string, unknown> = json.player.skipUi;
+        return [lang, oscSkipLabels((key) => String(skipUi[key.replace(/^player\.skipUi\./, "")] ?? `MISSING ${key}`))];
+      })
+    );
+    console.info("[sf-skip] skip texts", JSON.stringify(texts));
+    // Key names read the same in Dutch and English.
+    const sameInEnglish = new Set(["nl enterKey"]);
+    for (const [lang, set] of Object.entries(texts)) {
+      for (const key of OSC_SKIP_LABEL_KEYS) {
+        expect(set[key], `${lang} ${key}`).toMatch(/\S/);
+        expect(set[key], `${lang} ${key}`).not.toMatch(/^MISSING/);
+        if (lang !== "en" && !sameInEnglish.has(`${lang} ${key}`)) {
+          expect(set[key], `${lang} ${key} is translated`).not.toBe(texts.en![key]);
+        }
+        expect(set[key], `${lang} ${key} uses no banned word`).not.toMatch(/confidence|group|split|adjust/i);
+      }
+    }
+    expect(texts.fr!.skipIntro).toBe("Passer le générique");
+    expect(texts.fr!.askedIntro).toBe("Générique passé. C’était bien\u202f?");
+    const commands = buildExternalMetadataCommands(
+      buildExternalPlaybackMetadataPayload({
+        subtitlesOffLabel: "Aucun",
+        skipLabels: texts.fr,
+        subtitles: [],
+        chapters: [],
+        audioOptions: [],
+        skipMarkers: [],
+        title: "",
+        meta: "",
+        previousEpisode: null,
+        nextEpisode: null,
+        autoplayNextEpisode: false,
+        autoSkipIntro: false,
+        autoSkipCredits: false,
+      })
+    );
+    const labels = JSON.parse(commands.find((entry) => entry.command[1] === "sf-labels-json")!.command[2] as string);
+    expect(labels.skip.changeTimes).toBe("Modifier les temps");
+  });
+
+  // @req PLAY-SKIP-02[badger-desktop] PLAY-SKIP-10[badger-desktop]
+  it("[sf-skip] never skips credits automatically, and offers the skip menu only on an episode", () => {
+    const build = (skipMenu?: boolean) =>
+      buildExternalPlaybackMetadataPayload({
+        subtitlesOffLabel: "Off",
+        subtitles: [],
+        chapters: [],
+        audioOptions: [],
+        skipMarkers: [
+          { type: "intro", startSeconds: 60, endSeconds: 90 },
+          { type: "credits", startSeconds: 1250, endSeconds: 1290 },
+        ],
+        title: "",
+        meta: "",
+        previousEpisode: null,
+        nextEpisode: null,
+        autoplayNextEpisode: true,
+        autoSkipIntro: true,
+        autoSkipCredits: true,
+        ...(skipMenu === undefined ? {} : { skipMenu }),
+      });
+    const payload = build(true);
+    console.info("[sf-skip] playback payload", JSON.stringify(payload.playback));
+    expect(payload.playback.markers.find((marker) => marker.type === "intro")?.autoSkip).toBe(true);
+    expect(payload.playback.markers.find((marker) => marker.type === "credits")?.autoSkip).toBe(false);
+    expect(payload.playback.skipMenu).toBe(true);
+    expect(build(false).playback.skipMenu).toBe(false);
+    expect(build().playback.skipMenu).toBe(false);
   });
 
   it("@bugfix @regression-proof always emits sf-chapters-json even when chapters is empty (cache coherence for reload re-apply)", () => {

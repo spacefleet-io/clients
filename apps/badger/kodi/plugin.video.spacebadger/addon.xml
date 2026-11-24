@@ -19,7 +19,7 @@
   <extension point="xbmc.addon.metadata">
     <summary lang="en_GB">Your encrypted Badger library in Kodi</summary>
     <description lang="en_GB">Browse and play your end-to-end encrypted Badger library in Kodi. Streams every stored quality with audio and subtitle tracks, remembers where you stopped and syncs it back.</description>
-    <disclaimer lang="en_GB">Your library key is stored in a private file in this addon's data folder; anyone with access to the device can read it.</disclaimer>
+    <disclaimer lang="en_GB">Your media library key is stored in a private file in this addon's data folder; anyone with access to the device can read it.</disclaimer>
     <platform>all</platform>
     <license>GPL-3.0-only</license>
     <website>https://spacebadger.io</website>

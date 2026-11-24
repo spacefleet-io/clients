@@ -30,6 +30,7 @@ describe("packaged runtime spawn env", () => {
       SF_SUBTITLE_OCR_DIR: join(resources, "runtime", "ocr"),
       SF_FFMPEG_PATH: found("ffmpeg"),
       SF_FFPROBE_PATH: found("ffprobe"),
+      SF_MPV_PATH: found("mpv"),
     });
   });
 

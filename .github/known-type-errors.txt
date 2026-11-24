@@ -31,4 +31,3 @@ packages/mpv/tests/sf-pill-click-routing.test.ts	reads properties of a value nar
 packages/parrot-ingest/tests/edit-clear.test.ts	imports @space/shared/api, which the package does not depend on, and calls a helper with too many arguments; fails upstream too
 packages/parrot-ingest/tests/importer.test.ts	calls a helper with more arguments than it takes; fails upstream too
 packages/shared/tests/billing-checkout.test.ts	billing fixtures miss fields the billing state now requires; fails upstream too
-packages/ui/tests/render-boundary.test.tsx	renders Parrot's Home without the onAddMusic and onAddFolder props it now requires; fails upstream too

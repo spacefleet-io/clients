@@ -1,5 +1,5 @@
 /**
- * The app's name and Electron userData dir, per OS through the platform layer.
+ * Badger's name and Electron userData dir, resolved per OS by the shared `resolveAppIdentity` (REL-FAM-03).
  *
  * The product is "Badger" on every OS. Linux and Windows keep their data in
  * `<appData>/@sf/desktop` (the dir existing installs use; the Linux safeStorage
@@ -11,25 +11,9 @@
  * sharing the dir mixed the two servers' sessions and libraries (PLAT-DESK-14). `SF_USER_DATA_PATH` overrides the dir
  * on every OS (lanes, e2e).
  */
-import type { DesktopPlatform } from "@space/desktop-platform";
-import { resolveUserDataDir } from "@space/desktop-shell/main-shell";
+import type { AppIdentitySpec } from "@space/desktop-shell/main-shell";
 
-export const APP_NAMES = { productName: "Badger", legacyName: "Badger" } as const;
-export const LEGACY_USER_DATA_DIR = ["@sf", "desktop"];
-
-export const resolveAppIdentity = (
-  platform: Pick<DesktopPlatform, "paths" | "shell">,
-  appData: string,
-  env: NodeJS.ProcessEnv,
-  devBuild: boolean,
-): { name: string; userDataDir: string } => {
-  const releaseDir = platform.paths.appUserDataDir({
-    appData,
-    productName: APP_NAMES.productName,
-    legacyDir: LEGACY_USER_DATA_DIR,
-  });
-  return {
-    name: platform.shell.appName(APP_NAMES),
-    userDataDir: resolveUserDataDir({ releaseDir, env, devBuild }),
-  };
+export const BADGER_IDENTITY: AppIdentitySpec = {
+  names: { productName: "Badger", legacyName: "Badger" },
+  userData: { legacyDir: ["@sf", "desktop"] },
 };

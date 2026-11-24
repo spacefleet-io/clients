@@ -58,8 +58,15 @@ vi.mock("lucide-react-native", () => ({ ArrowLeft: () => null }));
 vi.mock("@react-navigation/native", () => ({
   useNavigation: () => navigationStub,
 }));
-// The founder badge (WAIT-FOUND-04) has its own test in mobile-shell; not under test here.
-vi.mock("@space/mobile-shell/components", () => ({ MobileFounderBadge: () => null }));
+// The founder badge (WAIT-FOUND-04) has its own test in mobile-shell; the shared plan panel imports it from its own
+// folder. Leaf UI components pull in native-only modules (SVG sky, Animated), so stand-ins keep their labels and children.
+vi.mock("../../../../packages/mobile-shell/src/components/mobile-founder", () => ({ MobileFounderBadge: () => null }));
+vi.mock("@space/mobile-shell/components", () => ({
+  MobileIconButton: ({ label, onPress }: { label: string; onPress: () => void }) =>
+    React.createElement("Pressable", { accessibilityLabel: label, onPress }),
+  MobileSkeletonBlock: () => null,
+  MobileSkeletonPulse: ({ children }: { children: React.ReactNode }) => React.createElement("View", null, children),
+}));
 vi.mock("../src/store/auth", () => ({ useAuth: () => authStub }));
 vi.mock("@space/shared/api", () => ({
   getSubscription: async () => {
@@ -68,16 +75,7 @@ vi.mock("@space/shared/api", () => ({
   },
   getAccountStorage: async () => ctl.storage,
 }));
-// Leaf UI components pull in native-only modules (SVG sky, Animated); stand-ins keep their labels and children.
-vi.mock("../src/components/IconButton", () => ({
-  IconButton: ({ label, onPress }: { label: string; onPress: () => void }) =>
-    React.createElement("Pressable", { accessibilityLabel: label, onPress }),
-}));
 vi.mock("../src/components/PosterCard", () => ({ RIPPLE: {} }));
-vi.mock("../src/components/Skeleton", () => ({
-  SkeletonBlock: () => null,
-  SkeletonPulse: ({ children }: { children: React.ReactNode }) => React.createElement("View", null, children),
-}));
 vi.mock("../src/components/SettingsRows", () => ({
   SettingsGroup: ({ title, children }: { title: string; children: React.ReactNode }) =>
     React.createElement("View", null, React.createElement("Text", null, title), children),

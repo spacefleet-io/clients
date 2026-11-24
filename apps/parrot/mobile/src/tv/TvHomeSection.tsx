@@ -35,7 +35,8 @@ import { useListeningHistory } from "../state/history";
 import { useSession } from "../state/session";
 import { usePlayerState } from "../state/usePlayerState";
 import { useQuery } from "../state/useQuery";
-import { TvAlbumCard, TvArtistCard, TvCardRow, TvWave } from "./TvMusicParts";
+import { TvCardRow } from "@space/mobile-shell/tv/TvCardRow";
+import { TvAlbumCard, TvArtistCard, TvWave, tvCardHeight } from "./TvMusicParts";
 import { useTvPages, useTvPlay } from "./tvPages";
 
 const log = scopeLogger("parrot.tv.home");
@@ -146,8 +147,9 @@ export const TvHomeSection = ({ onSeeAll }: { onSeeAll: (albumSort?: ParrotAlbum
         items={view.albums}
         keyOf={(album) => album.id}
         cardWidth={cardWidth}
+        cardHeight={tvCardHeight(cardWidth, scale)}
         gap={TV_SPACE.posterGap}
-        onSeeAll={() => onSeeAll()}
+        seeAll={{ label: t("shell.home.seeAll"), onPress: () => onSeeAll() }}
         renderCard={(album, _index, onFocus) => (
           <TvAlbumCard album={album} width={cardWidth} playing={now?.albumId === album.id ? { animated: now.playing } : null} onOpen={openAlbum} onFocus={onFocus} />
         )}
@@ -160,8 +162,9 @@ export const TvHomeSection = ({ onSeeAll }: { onSeeAll: (albumSort?: ParrotAlbum
           items={added}
           keyOf={(album) => album.id}
           cardWidth={cardWidth}
+          cardHeight={tvCardHeight(cardWidth, scale)}
           gap={TV_SPACE.posterGap}
-          onSeeAll={() => onSeeAll("recent")}
+          seeAll={{ label: t("shell.home.seeAll"), onPress: () => onSeeAll("recent") }}
           renderCard={(album, _index, onFocus) => (
             <TvAlbumCard album={album} width={cardWidth} playing={now?.albumId === album.id ? { animated: now.playing } : null} onOpen={openAlbum} onFocus={onFocus} />
           )}
@@ -175,8 +178,9 @@ export const TvHomeSection = ({ onSeeAll }: { onSeeAll: (albumSort?: ParrotAlbum
           items={view.artists}
           keyOf={(artist) => artist.id}
           cardWidth={ARTIST_WIDTH * scale}
+          cardHeight={tvCardHeight(ARTIST_WIDTH * scale, scale)}
           gap={ARTIST_GAP}
-          onSeeAll={() => onSeeAll()}
+          seeAll={{ label: t("shell.home.seeAll"), onPress: () => onSeeAll() }}
           renderCard={(artist, _index, onFocus) => (
             <TvArtistCard artist={artist} width={ARTIST_WIDTH * scale} onOpen={(row) => push({ kind: "artist", artistId: row.id, name: row.name })} onFocus={onFocus} />
           )}

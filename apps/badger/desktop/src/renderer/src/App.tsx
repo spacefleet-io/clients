@@ -7,9 +7,8 @@ import { AuthProvider, useAuth } from "./auth";
 import { RequireAuthGuard } from "@space/desktop-shell/guards";
 import { AppRouter } from "./lib/AppRouter";
 import { LoadingScreen } from "./components/LoadingScreen";
-import UpdateReadyNotice from "./components/UpdateReadyNotice";
-import { useUpdater } from "./lib/useUpdater";
-import { SystemUpdatePrompt } from "@space/desktop-shell/updater-system-prompt";
+import { usePushStoredAutoUpdate, useUpdater } from "./lib/useUpdater";
+import { DesktopUpdatePrompt } from "@space/desktop-shell/updater-prompt";
 import { DailyHello } from "./components/DailyHello";
 
 const Login = lazy(() => import("./pages/Login"));
@@ -60,6 +59,7 @@ function AppContent() {
   // prompt covers every screen, signed out included.
   const updateRequired = useSyncExternalStore(onAppUpdateRequired, getAppUpdateRequired);
   const updater = useUpdater();
+  usePushStoredAutoUpdate();
   const serverMandatory = updater.state.mandatory;
   const mustUpdate = updateRequired !== null || serverMandatory;
   return (
@@ -73,9 +73,9 @@ function AppContent() {
           <AppUpdateRequiredGate refusal={updateRequired} />
         </Suspense>
       ) : null}
-      <UpdateReadyNotice blocked={mustUpdate} />
-      {/* REL-UPD-07: a copy from SpaceFleet's .deb/.rpm/.pacman packages asks before updating through the package manager. */}
-      <SystemUpdatePrompt controls={updater} language={i18n.language} appName="Badger" blocked={mustUpdate} />
+      {/* REL-UPD-08: a new version found by the automatic checks is offered in a modal (Restart now once it has
+          downloaded; the package manager's Install now for a .deb/.rpm/.pacman copy), on every screen, signed in or out. */}
+      <DesktopUpdatePrompt controls={updater} language={i18n.language} appName="Badger" blocked={mustUpdate} />
     </CloseLabelProvider>
   );
 }

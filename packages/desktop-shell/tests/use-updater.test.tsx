@@ -25,6 +25,8 @@ const makeBridge = (initial: UpdaterState = INITIAL_UPDATER_STATE) => {
     downloadUpdate: vi.fn(async (): Promise<{ ok: boolean; message?: string }> => ({ ok: true })),
     installAndRestart: vi.fn(async () => ({ ok: true })),
     setAutoUpdate: vi.fn(async (_enabled: boolean) => ({ ok: true })),
+    remindLater: vi.fn(async () => ({ ok: true })),
+    ignoreVersion: vi.fn(async () => ({ ok: true })),
     getState: vi.fn(async () => initial),
     onEvent: vi.fn((listener: (event: UpdaterEvent) => void) => {
       listeners.add(listener);
@@ -221,6 +223,17 @@ describe("useDesktopUpdater — events", () => {
     console.log(`[use-updater:mandatory-downloading] state=${JSON.stringify(result.current.state)}`);
     expect(result.current.state).toMatchObject({ mandatory: true, phase: "downloading", version: "2.9.0" });
   });
+
+  // @req REL-UPD-08 the modal needs the setting the window pushed after its first snapshot
+  it("auto-update event sets autoUpdate over a snapshot taken before the window's push", async () => {
+    const b = makeBridge({ ...INITIAL_UPDATER_STATE, autoUpdate: false });
+    const { result } = await mount(b);
+    const before = result.current.state.autoUpdate;
+    b.fire({ kind: "auto-update", enabled: true });
+    console.log(`[use-updater:auto-update-event] before=${before} after=${result.current.state.autoUpdate}`);
+    expect(before).toBe(false);
+    expect(result.current.state.autoUpdate).toBe(true);
+  });
 });
 
 describe("useDesktopUpdater — actions", () => {
@@ -363,15 +376,18 @@ describe("useDesktopUpdater — actions", () => {
 });
 
 // @req REL-UPD-07[badger-desktop,parrot] on a package-manager copy "download" is Install: the main process's events carry the phase
-describe("useDesktopUpdater — system channel (REL-UPD-07)", () => {
+describe.each<[UpdaterState["channel"], string]>([
+  ["system", "sudo /usr/lib/spacebadger/system-update"],
+  ["flatpak", "flatpak update io.spacefleet.Badger"],
+])("useDesktopUpdater — %s channel (REL-UPD-07)", (channel, manualCommand) => {
   const systemState: UpdaterState = {
     ...INITIAL_UPDATER_STATE,
     phase: "available",
     version: "0.1.9",
-    channel: "system",
+    channel,
     canInstall: true,
     autoUpdate: true,
-    manualCommand: "sudo /usr/lib/spacebadger/system-update",
+    manualCommand,
   };
 
   it("Install shows installing, then follows installed; a later check keeps installed", async () => {
