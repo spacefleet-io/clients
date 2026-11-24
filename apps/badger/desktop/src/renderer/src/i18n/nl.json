@@ -36,87 +36,11 @@
       "filterFailed": "Mislukt",
       "downloadsHeld": "Downloads staan in de wacht zolang het erg druk is. Ze gaan vanzelf verder zodra het rustiger wordt.",
       "downloadsSlowed": "Downloads zijn trager omdat het nu erg druk is.",
-      "crewBackfill": "Regisseurs en schrijvers worden aan je titels toegevoegd ({{handled}} van {{total}})",
-      "failed": {
-        "whatUploadStopped": "Het uploaden is niet afgerond.",
-        "whatImportStopped": "Het importeren is niet afgerond.",
-        "whatPlanFull": "Het uploaden is gestopt: de opslag van het abonnement is vol.",
-        "whatDiskFull": "De verwerking is gestopt: de schijf van deze computer is vol.",
-        "meaningKeptOutputs": "De video is al verwerkt en blijft tot {{date}} op deze computer. Alleen het uploaden wordt herhaald.",
-        "meaningSourceUnchanged": "Het originele bestand is er nog. De verwerking begint opnieuw.",
-        "meaningKeptRemovedLowDisk": "De verwerkte kopie is verwijderd om schijfruimte vrij te maken. Het originele bestand is er nog, dus de verwerking begint opnieuw.",
-        "meaningKeptRemovedExpired": "De verwerkte kopie is na 14 dagen verwijderd. Het originele bestand is er nog, dus de verwerking begint opnieuw.",
-        "meaningSourceChanged": "Het originele bestand is sinds het importeren veranderd. Kies het originele bestand om het opnieuw te importeren.",
-        "meaningSourceMissing": "Het originele bestand staat niet meer op zijn plek. Zoek het om het opnieuw te importeren.",
-        "meaningPickedMismatch": "Het gekozen bestand is niet dezelfde video. Kies het originele bestand.",
-        "meaningSourceDeleted": "Het originele bestand staat in de prullenbak. Er is niets meer te importeren, je kunt deze taak verwijderen.",
-        "meaningNoSourcePath": "Er is geen bestand om opnieuw te importeren, je kunt deze taak verwijderen.",
-        "meaningReimported": "Deze video is sindsdien opnieuw geïmporteerd en staat in de bibliotheek. Je kunt deze taak verwijderen.",
-        "meaningPlanFull": "Kies bovenaan deze lijst een groter abonnement. Er is niets verloren: de taak kan daarna opnieuw draaien.",
-        "meaningPlanHasRoom": "Het abonnement heeft nu ruimte. Er is niets verloren: de taak kan opnieuw draaien.",
-        "meaningDiskFull": "Maak ruimte vrij op deze computer. Er is niets verloren: de taak kan daarna opnieuw draaien.",
-        "meaningParentFailed": "Dit deel is gestopt omdat het hoofdimport niet is afgerond. Herhaal liever het hoofdimport.",
-        "meaningNotRetryable": "Deze taak kan niet opnieuw draaien, je kunt hem verwijderen.",
-        "actionUploadAgain": "Opnieuw uploaden",
-        "actionProcessAgain": "Opnieuw verwerken",
-        "actionFindFile": "Bestand zoeken",
-        "actionUpgradePlan": "Abonnement wijzigen",
-        "keptCopies": "Bewaarde kopieën van mislukte imports nemen {{size}} in op deze computer. Elke kopie wordt na 14 dagen verwijderd, of eerder als de schijf vol raakt."
-      },
-      "skipCatchUp": {
-        "state": {
-          "paused_playback": "Gepauzeerd tijdens het kijken",
-          "paused_import": "Gepauzeerd tijdens het importeren",
-          "offline": "Wacht op verbinding",
-          "retry_wait": "Nieuwe poging om {{time}}"
-        },
-        "offlineHint": "Gaat vanzelf verder zodra de verbinding terug is",
-        "list": {
-          "step": {
-            "download": "Downloaden: {{done}} van {{total}} MB",
-            "pictures": "Beelden lezen",
-            "sound": "Geluid lezen",
-            "waiting": "Starten"
-          },
-          "result": {
-            "found_both": "Intro en aftiteling gevonden",
-            "found_intro": "Intro gevonden",
-            "found_credits": "Aftiteling gevonden",
-            "waiting_other_episode": "Wacht op een andere aflevering",
-            "nothing_found": "Niets gevonden",
-            "previews_made": "Voorbeelden voor de tijdbalk klaar"
-          },
-          "failedStep": {
-            "download": "Kon de opgeslagen kopie niet downloaden",
-            "read": "Kon de video niet lezen",
-            "room": "Niet genoeg vrije schijfruimte"
-          },
-          "tryAgain": "Opnieuw proberen",
-          "tryAgainNow": "Nu opnieuw proberen",
-          "retryAt": "Nieuwe poging om {{time}}",
-          "stepShort": {
-            "download": "Downloaden",
-            "pictures": "Beelden",
-            "sound": "Geluid",
-            "waiting": "Starten"
-          },
-          "waitingImport": "Wacht op je import"
-        }
-      },
-      "skipDetect": {
-        "whatCancelled": "Je hebt het geannuleerd.",
-        "meaningCancelled": "Deze video wordt overgeslagen tot je het opnieuw probeert.",
-        "meaningFailed": "Deze video heeft geen intro- of aftitelingtijden tot hij opnieuw loopt.",
-        "meaningFailedFilm": "Deze film heeft geen voorbeelden voor de tijdbalk tot het opnieuw draait.",
-        "meaningRetryWait": "Badger probeert deze video om {{time}} vanzelf opnieuw."
-      },
-      "clearFinished": "Afgeronde taken wissen"
+      "crewBackfill": "Regisseurs en schrijvers worden aan je titels toegevoegd ({{handled}} van {{total}})"
     },
     "notifications": {
       "title": "Meldingen",
-      "subtitle_one": "{{count}} recent item",
-      "subtitle_other": "{{count}} recente items",
-      "subtitle_many": "{{count}} recente items",
+      "subtitle": "{{count}} recente items",
       "empty": "Nog geen meldingen.",
       "open": "Openen",
       "filterAll": "Alle",
@@ -125,8 +49,7 @@
       "filterInfo": "Info",
       "filterSuccess": "Gelukt",
       "clearAll": "Alles wissen",
-      "dismiss": "Sluiten",
-      "subtitle": "{{count}} recente items"
+      "dismiss": "Sluiten"
     },
     "account": "Account"
   },
@@ -164,7 +87,19 @@
     "resendSuccess": "Er is een nieuwe verificatiecode verstuurd.",
     "resendError": "Kan de code niet opnieuw sturen.",
     "provider": {
-      "continueInBrowser": "Rond het inloggen af in je browser. Badger komt daarna terug."
+      "signInWith": "Inloggen met {{provider}}",
+      "signUpWith": "Registreren met {{provider}}",
+      "or": "of",
+      "continueInBrowser": "Rond het inloggen af in je browser. Badger komt daarna terug.",
+      "errorStart": "Inloggen kon niet starten. Probeer het opnieuw.",
+      "errors": {
+        "email_unverified": "Het e-mailadres van dit account is niet bevestigd. Bevestig het bij de aanbieder, of log in met je e-mailadres en wachtwoord.",
+        "email_domain_disallowed": "Met dit e-mailadres kan geen account worden aangemaakt.",
+        "account_deletion_pending": "Dit account wordt binnenkort verwijderd.",
+        "provider_failed": "Inloggen is niet gelukt. Probeer het opnieuw.",
+        "cancelled": "Inloggen is geannuleerd.",
+        "invalid_code": "Deze inlogpoging is verlopen of ergens anders gestart. Probeer het opnieuw."
+      }
     }
   },
   "signup": {
@@ -437,9 +372,6 @@
     "labels": {
       "audio": "Audio",
       "subtitles": "Ondertiteling",
-      "episodeShort_one": "{{count}} afl.",
-      "episodeShort_other": "{{count}} afl.",
-      "episodeShort_many": "{{count}} afl.",
       "episodeShort": "{{count}} afl."
     },
     "availableQualities": "Beschikbare kwaliteiten",
@@ -459,22 +391,16 @@
       "addModalSource": "Bron: {{quality}}",
       "addModalSize": "~{{size}}",
       "addModalSizeUnknown": "Grootte onbekend",
-      "addModalConfirm_one": "{{count}} transcodering in wachtrij zetten",
-      "addModalConfirm_other": "{{count}} transcoderingen in wachtrij zetten",
-      "addModalConfirm_many": "{{count}} transcoderingen in wachtrij zetten",
+      "addModalConfirm": "{{count}} transcodering(en) in wachtrij zetten",
       "addModalCancel": "Annuleren",
-      "addModalSubmittedToast_one": "{{count}} transcodering in de wachtrij gezet: volg die in Taken.",
-      "addModalSubmittedToast_other": "{{count}} transcoderingen in de wachtrij gezet: volg ze in Taken.",
-      "addModalSubmittedToast_many": "{{count}} transcoderingen in de wachtrij gezet: volg ze in Taken.",
+      "addModalSubmittedToast": "{{count}} transcodering(en) in de wachtrij gezet: volg ze in Taken.",
       "addModalFailedToast": "Kan de nieuwe kwaliteiten niet in de wachtrij zetten: {{reason}}",
       "errors": {
         "source-protected": "Je kunt de bronkwaliteit niet verwijderen.",
         "quality-exists": "Die kwaliteit staat al in dit bestand.",
         "cannot-transcode-up": "Kan niet transcoderen naar een hogere resolutie dan die is opgeslagen.",
         "media-not-found": "Dat mediabestand bestaat niet meer."
-      },
-      "addModalConfirm": "{{count}} transcodering(en) in wachtrij zetten",
-      "addModalSubmittedToast": "{{count}} transcodering(en) in de wachtrij gezet: volg ze in Taken."
+      }
     },
     "hideMissing": {
       "title": "Ontbrekende bestanden verbergen",
@@ -499,9 +425,6 @@
         "show": "{{title}} — hele serie",
         "season": "{{title}} — seizoen {{season}}",
         "episode": "{{title}} — S{{season}}E{{episode}}{{episodeTitle, mustache}}",
-        "missingEpisodes_one": "{{count}} ontbrekende aflevering",
-        "missingEpisodes_other": "{{count}} ontbrekende afleveringen",
-        "missingEpisodes_many": "{{count}} ontbrekende afleveringen",
         "missingEpisodes": "{{count}} ontbrekende aflevering(en)"
       },
       "modal": {
@@ -514,31 +437,22 @@
         "size": "Totale grootte",
         "includesAudioSubs": "Alle audiosporen en ondertitels zijn inbegrepen.",
         "expectedFilename": "Opgeslagen als",
-        "expectedFilenamePlusN_one": "en nog {{count}} bestand",
-        "expectedFilenamePlusN_other": "en nog {{count}} bestanden",
-        "expectedFilenamePlusN_many": "en nog {{count}} bestanden",
+        "expectedFilenamePlusN": "en nog {{count}} bestand(en)",
         "estimating": "Grootte en schijfruimte berekenen…",
         "estimateFailedToast": "Kan de download niet inschatten: {{reason}}",
         "skippedSubsWarning": "MP4 kan deze ondertitelsporen niet insluiten; ze worden overgeslagen: {{tracks}}",
-        "skippedItems_one": "{{count}} item wordt overgeslagen (geen geschikte kwaliteit of geen bestand).",
-        "skippedItems_other": "{{count}} items worden overgeslagen (geen geschikte kwaliteit of geen bestand).",
-        "skippedItems_many": "{{count}} items worden overgeslagen (geen geschikte kwaliteit of geen bestand).",
+        "skippedItems": "{{count}} item(s) worden overgeslagen (geen geschikte kwaliteit of geen bestand).",
         "diskWarning": "Niet genoeg vrije schijfruimte.",
         "diskWarningDetail": "{{required}} nodig, maar slechts {{free}} vrij.",
         "confirm": "Download starten",
         "cancel": "Annuleren",
-        "submittedToast_one": "{{count}} offline download in de wachtrij gezet: volg die in Taken.",
-        "submittedToast_other": "{{count}} offline downloads in de wachtrij gezet: volg ze in Taken.",
-        "submittedToast_many": "{{count}} offline downloads in de wachtrij gezet: volg ze in Taken.",
+        "submittedToast": "{{count}} offline download(s) in de wachtrij gezet: volg ze in Taken.",
         "submitFailedToast": "Kan de download niet starten: {{reason}}",
         "errors": {
           "insufficient_disk_space": "Niet genoeg vrije schijfruimte ({{required}} nodig, {{free}} vrij).",
           "library_db_not_open": "De mediatheek is niet geopend. Open hem opnieuw en probeer het nog eens.",
           "not_authenticated": "Log in en probeer het opnieuw."
-        },
-        "expectedFilenamePlusN": "en nog {{count}} bestand(en)",
-        "skippedItems": "{{count}} item(s) worden overgeslagen (geen geschikte kwaliteit of geen bestand).",
-        "submittedToast": "{{count}} offline download(s) in de wachtrij gezet: volg ze in Taken."
+        }
       },
       "button": {
         "save": "Offline opslaan",
@@ -548,11 +462,8 @@
         "deleteConfirmDescription": "Hiermee worden de opgeslagen bestanden van dit apparaat verwijderd. Streamen blijft werken.",
         "deleteConfirm": "Verwijderen",
         "deleteCancel": "Annuleren",
-        "deletedToast_one": "{{count}} offline bestand verwijderd.",
-        "deletedToast_other": "{{count}} offline bestanden verwijderd.",
-        "deletedToast_many": "{{count}} offline bestanden verwijderd.",
-        "deleteFailedToast": "Kan de offline bestanden niet verwijderen: {{reason}}",
-        "deletedToast": "{{count}} offline bestand(en) verwijderd."
+        "deletedToast": "{{count}} offline bestand(en) verwijderd.",
+        "deleteFailedToast": "Kan de offline bestanden niet verwijderen: {{reason}}"
       },
       "badge": {
         "savedOffline": "Offline opgeslagen",
@@ -576,9 +487,6 @@
     "sections": {
       "movies": "Films",
       "tv": "Series",
-      "count_one": "{{count}} item",
-      "count_other": "{{count}} items",
-      "count_many": "{{count}} items",
       "count": "{{count}} items"
     },
     "media": {
@@ -672,13 +580,10 @@
     "seasons": {
       "title": "Seizoenen",
       "empty": "Nog geen seizoenen geladen.",
-      "episodeCount_one": "{{count}} aflevering",
-      "episodeCount_other": "{{count}} afleveringen",
-      "episodeCount_many": "{{count}} afleveringen",
+      "episodeCount": "{{count}} afleveringen",
       "available": "Beschikbaar",
       "missing": "Bestanden ontbreken",
-      "specials": "Specials",
-      "episodeCount": "{{count}} afleveringen"
+      "specials": "Specials"
     },
     "episodes": {
       "title": "Afleveringen · Seizoen {{season}}",
@@ -742,22 +647,6 @@
       "back": "Bibliotheek",
       "playsThisVersion": "Afspelen start met deze versie",
       "more": "Meer acties"
-    },
-    "skipTimes": {
-      "menu": "Intro en aftiteling",
-      "setIntro": "Introtijden instellen",
-      "setCredits": "Aftitelingstijden instellen",
-      "introChip": "Intro {{start}}–{{end}}",
-      "creditsChip": "Aftiteling {{start}}",
-      "creditsStart": "Aftiteling begint",
-      "creditsHint": "Sleep de markering: het beeld volgt.  ← → verschuiven hem met 1 s",
-      "noPicture": "Nog geen beeld",
-      "failed": "De tijden konden niet worden opgeslagen.",
-      "back": "Terug  [Esc]",
-      "episodeLine": "{{show}} · S{{season}} A{{episode}} · {{title}}",
-      "leftOut": "Overgeslagen",
-      "tryAgain": "Opnieuw proberen",
-      "tryAgainAll": "Opnieuw proberen voor alle overgeslagen afleveringen"
     }
   },
   "playlists": {
@@ -773,13 +662,10 @@
     "selectTitle": "Kies een afspeellijst",
     "selectSubtitle": "Kies een afspeellijst om de items te bekijken.",
     "selectPrompt": "Kies een afspeellijst om de items te zien.",
-    "itemsCount_one": "{{count}} item",
-    "itemsCount_other": "{{count}} items",
-    "itemsCount_many": "{{count}} items",
+    "itemsCount": "{{count}} items",
     "noItems": "Nog geen items.",
     "missing": "Bestand ontbreekt",
-    "remove": "Verwijderen",
-    "itemsCount": "{{count}} items"
+    "remove": "Verwijderen"
   },
   "settings": {
     "subtitle": "Alles voor deze app en je account.",
@@ -1028,9 +914,32 @@
         "errorMissing": "Er staat geen mediatheeksleutel op dit apparaat."
       },
       "rotate": {
+        "title": "Mediatheeksleutel vervangen",
+        "subtitle": "Maak een nieuwe sleutel en vergrendel de gegevens van je mediatheek opnieuw.",
+        "button": "Nieuwe sleutel maken",
+        "dialogTitle": "Je mediatheeksleutel vervangen",
+        "keyLabel": "Nieuwe mediatheeksleutel",
+        "keyHint": "Bewaar deze sleutel op een veilige plek voordat je verdergaat.",
         "copyButton": "Sleutel kopiëren",
         "copySuccess": "Mediatheeksleutel gekopieerd.",
-        "copyFail": "Sleutel kon niet worden gekopieerd."
+        "copyFail": "Sleutel kon niet worden gekopieerd.",
+        "confirmLabel": "Ik begrijp dat andere sessies hierdoor worden beëindigd",
+        "passwordLabel": "Accountwachtwoord",
+        "codeLabel": "Verificatiecode",
+        "codeHintEmail": "Vul de code in die we naar je e-mail hebben gestuurd.",
+        "codeHintTotp": "Vul de code uit je authenticator-app in.",
+        "cancel": "Annuleren",
+        "codeSent": "We hebben een verificatiecode gestuurd. Kijk in je e-mail of je authenticator-app.",
+        "errorInvalidPassword": "Onjuist wachtwoord.",
+        "errorTwoFactorInvalid": "De verificatiecode is ongeldig.",
+        "submit": "Sleutel vervangen",
+        "working": "Vervangen…",
+        "errorGeneric": "De sleutel kon niet worden vervangen. Probeer het opnieuw.",
+        "errorNotReencrypted": "Je Parrot-mediatheek kon hier niet opnieuw worden vergrendeld met de nieuwe sleutel, dus er is niets veranderd. Vervang de sleutel via Instellingen op een computer die je huidige sleutel heeft.",
+        "errorUnreadable": "Je huidige sleutel opent je Parrot-mediatheek niet, dus er is niets veranderd.",
+        "errorNotSnapshotted": "Je Parrot-mediatheek heeft wijzigingen die nog niet zijn opgeslagen. Open Parrot, laat het klaar synchroniseren en probeer het dan opnieuw. Er is niets veranderd.",
+        "errorReencryptFailed": "Je Parrot-mediatheek kon niet opnieuw worden vergrendeld met de nieuwe sleutel. Er is niets veranderd. Probeer het opnieuw.",
+        "errorChanged": "Je mediatheek is veranderd terwijl de sleutel werd vervangen. Er is niets veranderd. Probeer het opnieuw."
       },
       "reset": {
         "title": "Gegevens van de mediatheek wissen",
@@ -1359,37 +1268,7 @@
       "noDisplay": "De video kan in deze sessie niet worden afgespeeld: die draait alleen op Wayland en de videospeler heeft X11 nodig. Zet XWayland (X11-compatibiliteit) aan of log in met een X11-sessie en probeer het opnieuw.",
       "sourceUnreachable": "Deze titel is niet offline opgeslagen en de server is niet bereikbaar. Maak verbinding met internet of download hem om offline te kijken."
     },
-    "preparingPlayback": "Afspelen voorbereiden",
-    "skipUi": {
-      "skipIntro": "Intro overslaan",
-      "skipCredits": "Aftiteling overslaan",
-      "nextEpisode": "Volgende aflevering",
-      "nextEpisodeIn": "Volgende aflevering start over",
-      "openingNextEpisode": "Volgende aflevering wordt geopend",
-      "enterKey": "[Enter]",
-      "askedIntro": "Intro overgeslagen. Klopte dat?",
-      "askedCredits": "Aftiteling overgeslagen. Klopte dat?",
-      "yes": "Ja",
-      "changeTimes": "Tijden wijzigen",
-      "thanks": "Bedankt",
-      "changeIntroTimes": "Introtijden wijzigen",
-      "changeCreditsTimes": "Aftitelingstijden wijzigen",
-      "start": "Begin",
-      "end": "Einde",
-      "hint": "Sleep een markering: het beeld volgt.  ← → verschuiven de gekozen met 1 s",
-      "save": "Opslaan  [Enter]",
-      "cancel": "Annuleren  [Esc]",
-      "back": "Terug",
-      "scopeQuestion": "Deze tijden gebruiken voor",
-      "thisSeason": "Dit seizoen",
-      "onlyThisEpisode": "Alleen deze aflevering",
-      "farNote": "Deze tijden wijken sterk af van de rest van het seizoen.",
-      "savedSeason": "Opgeslagen voor dit seizoen",
-      "savedEpisode": "Opgeslagen voor deze aflevering",
-      "menuPrompt": "Intro en aftiteling",
-      "introEndsHere": "Intro eindigt hier",
-      "creditsStartHere": "Aftiteling begint hier"
-    }
+    "preparingPlayback": "Afspelen voorbereiden"
   },
   "dashboard": {
     "title": "Home",
@@ -1400,11 +1279,8 @@
       "resume": "Hervatten op {{time}}",
       "resumeShort": "Hervatten",
       "details": "Details",
-      "minutesLeft_one": "nog {{count}} min",
-      "minutesLeft_other": "nog {{count}} min",
-      "minutesLeft_many": "nog {{count}} min",
-      "seeAll": "Alles bekijken",
-      "minutesLeft": "nog {{count}} min"
+      "minutesLeft": "nog {{count}} min",
+      "seeAll": "Alles bekijken"
     },
     "empty": {
       "eyebrow": "Je bibliotheek",
@@ -1531,15 +1407,9 @@
         "tv": "Series"
       },
       "empty": "Nog geen bestanden geüpload",
-      "fileCount_one": "{{count}} bestand",
-      "fileCount_other": "{{count}} bestanden",
-      "fileCount_many": "{{count}} bestanden",
-      "episodeFileCount_one": "{{count}} afleveringsbestand",
-      "episodeFileCount_other": "{{count}} afleveringsbestanden",
-      "episodeFileCount_many": "{{count}} afleveringsbestanden",
-      "episodeShort_one": "{{count}} afl.",
-      "episodeShort_other": "{{count}} afl.",
-      "episodeShort_many": "{{count}} afl.",
+      "fileCount": "{{count}} bestand",
+      "episodeFileCount": "{{count}} afleveringsbestanden",
+      "episodeShort": "{{count}} afl.",
       "apply": "Wijzigingen toepassen",
       "delete": "Bestand verwijderen",
       "applyTitle": "Formaatwijzigingen toepassen?",
@@ -1551,10 +1421,7 @@
       "cancel": "Annuleren",
       "queued": "Transcode-updates voor {{label}} in de wachtrij gezet.",
       "cleanupMessage": "{{removed}} verweesde bestanden verwijderd. {{missing}} ontbrekende verwijzingen gewist.",
-      "cleanupFailed": "Opruimen mislukt. Probeer het opnieuw.",
-      "fileCount": "{{count}} bestand",
-      "episodeFileCount": "{{count}} afleveringsbestanden",
-      "episodeShort": "{{count}} afl."
+      "cleanupFailed": "Opruimen mislukt. Probeer het opnieuw."
     },
     "status": {
       "waiting": "Wachten",
@@ -1565,8 +1432,7 @@
       "transcoding": "Transcoderen",
       "uploading": "Uploaden",
       "done": "Gereed",
-      "failed": "Mislukt",
-      "cancelled": "Geannuleerd"
+      "failed": "Mislukt"
     },
     "queue": {
       "remove": "Uit wachtrij verwijderen",
@@ -1592,9 +1458,7 @@
       "subtitleTracks": "Ondertiteling",
       "tracksOnly": "Alleen sporen",
       "noVideoOutputs": "Geen video-uitvoer.",
-      "jobCount_one": "{{count}} taak",
-      "jobCount_other": "{{count}} taken",
-      "jobCount_many": "{{count}} taken",
+      "jobCount": "{{count}} taak",
       "sourceIngest": "Bron inlezen",
       "transcode": "Transcoderen",
       "tracks": "Sporen",
@@ -1613,13 +1477,8 @@
         "tracks": "We maken audio- en ondertitelsporen klaar, zodat kijkers van taal en ondertiteling kunnen wisselen.",
         "job": "Deze stap maakt mediabestanden klaar voor afspelen en synchronisatie.",
         "offlineDownloading": "We halen elk blok op, ontsleutelen het en voegen alle sporen samen tot één bestand dat je offline kunt afspelen.",
-        "exportDownloading": "We halen de beste kwaliteit die je hebt op, ontsleutelen die en slaan één videobestand met alle sporen op in de gekozen map.",
-        "skipDetect": "We zoeken waar de intro eindigt en de aftiteling begint, zodat je ze kunt overslaan.",
-        "skipPreviews": "We maken de beelden die je ziet als je over de tijdbalk gaat."
-      },
-      "jobCount": "{{count}} taak",
-      "skipDetect": "Intro en aftiteling zoeken",
-      "skipPreviews": "Voorbeelden voor de tijdbalk maken"
+        "exportDownloading": "We halen de beste kwaliteit die je hebt op, ontsleutelen die en slaan één videobestand met alle sporen op in de gekozen map."
+      }
     },
     "transcodePlan": "Transcodeplan",
     "audio": "Audio",
@@ -1819,9 +1678,7 @@
       "recomputeRunning": "Controleren…",
       "lastVerified": "Laatst gecontroleerd: {{relative}}",
       "reclaimableHint": "{{bytes}} vrij te maken",
-      "confirmTitle_one": "{{count}} verweesd blok gevonden dat ~{{bytes}} inneemt. Vrijmaken?",
-      "confirmTitle_other": "{{count}} verweesde blokken gevonden die ~{{bytes}} innemen. Vrijmaken?",
-      "confirmTitle_many": "{{count}} verweesde blokken gevonden die ~{{bytes}} innemen. Vrijmaken?",
+      "confirmTitle": "{{count}} verweesde blokken gevonden die ~{{bytes}} innemen. Vrijmaken?",
       "confirmAccept": "Vrijmaken",
       "confirmCancel": "Annuleren",
       "resultReclaimed": "{{bytes}} vrijgemaakt",
@@ -1831,8 +1688,7 @@
       "relativeSeconds": "{{value}} s geleden",
       "relativeMinutes": "{{value}} min geleden",
       "relativeHours": "{{value}} u geleden",
-      "relativeDays": "{{value}} d geleden",
-      "confirmTitle": "{{count}} verweesde blokken gevonden die ~{{bytes}} innemen. Vrijmaken?"
+      "relativeDays": "{{value}} d geleden"
     },
     "sponsorships": {
       "title": "Verwijzingen",
@@ -2111,9 +1967,7 @@
       "dummyStartFailed": "Dummy-import starten mislukt.",
       "audioSampleFailed": "Kon geen audiovoorbeeld maken.",
       "setTrackLanguages": "Stel voor elk spoor een taal in, of kies 'Negeren en sporen ongedefinieerd laten'.",
-      "removedDuplicates_one": "{{count}} dubbel bestand verwijderd.",
-      "removedDuplicates_other": "{{count}} dubbele bestanden verwijderd.",
-      "removedDuplicates_many": "{{count}} dubbele bestanden verwijderd.",
+      "removedDuplicates": "{{count}} dubbel bestand verwijderd.",
       "addMetadataFailedSingle": "1 titel kon niet worden toegevoegd: de metadataservice antwoordde niet. Hij staat er nog, probeer het zo opnieuw.",
       "addMetadataFailedMany": "{{count}} titels konden niet worden toegevoegd: de metadataservice antwoordde niet. Ze staan er nog, probeer het zo opnieuw.",
       "mediaNotInLibrary": "\"{{title}}\" staat nog niet in je mediatheek. Voeg eerst een videobestand toe.",
@@ -2124,8 +1978,7 @@
       "skippedDuplicateMany": "{{count}} video's overgeslagen die al in dezelfde kwaliteit in je mediatheek staan.",
       "subtitleTrackAddedSingle": "Ondertitelspoor toegevoegd.",
       "subtitleTrackAddedMany": "{{count}} ondertitelsporen toegevoegd.",
-      "queueFailed": "Taken in de wachtrij zetten mislukt. Probeer het opnieuw.",
-      "removedDuplicates": "{{count}} dubbel bestand verwijderd."
+      "queueFailed": "Taken in de wachtrij zetten mislukt. Probeer het opnieuw."
     },
     "samples": {
       "noSubtitleSample": "Geen ondertitelvoorbeeld beschikbaar.",
@@ -2223,9 +2076,7 @@
       "loadingMore": "Meer laden…",
       "moreResults": "Meer resultaten",
       "selectFileToReview": "Selecteer een bestand om de details te bekijken",
-      "readyToImportCount_one": "{{count}} klaar om te importeren",
-      "readyToImportCount_other": "{{count}} klaar om te importeren",
-      "readyToImportCount_many": "{{count}} klaar om te importeren",
+      "readyToImportCount": "{{count}} klaar om te importeren",
       "sameQualityOverlapIgnoredSingle": "{{count}} video in dezelfde kwaliteit genegeerd",
       "sameQualityOverlapIgnoredMany": "{{count}} video's in dezelfde kwaliteit genegeerd",
       "addWithDummyData": "Toevoegen met dummydata",
@@ -2237,24 +2088,12 @@
       "storageBlocked": "Je opslag is vol. Upgrade je abonnement om meer media toe te voegen.",
       "storageWarning": "Je gebruikt meer dan 90% van je opslag. Overweeg je abonnement te upgraden.",
       "resolveBeforeAddingTitle": "Eerst afhandelen",
-      "blockerMatchOrRemove_one": "Koppel of verwijder {{count}} niet-herkend bestand.",
-      "blockerMatchOrRemove_other": "Koppel of verwijder {{count}} niet-herkende bestanden.",
-      "blockerMatchOrRemove_many": "Koppel of verwijder {{count}} niet-herkende bestanden.",
-      "blockerWaitSearch_one": "Wacht tot het zoeken naar details voor {{count}} bestand klaar is.",
-      "blockerWaitSearch_other": "Wacht tot het zoeken naar details voor {{count}} bestanden klaar is.",
-      "blockerWaitSearch_many": "Wacht tot het zoeken naar details voor {{count}} bestanden klaar is.",
-      "blockerResolveVideo_one": "Maak {{count}} keuze over videokwaliteit.",
-      "blockerResolveVideo_other": "Maak {{count}} keuzes over videokwaliteit.",
-      "blockerResolveVideo_many": "Maak {{count}} keuzes over videokwaliteit.",
-      "blockerWaitMetadata_one": "Wacht tot {{count}} bestand klaar is met de metadatascan.",
-      "blockerWaitMetadata_other": "Wacht tot {{count}} bestanden klaar zijn met de metadatascan.",
-      "blockerWaitMetadata_many": "Wacht tot {{count}} bestanden klaar zijn met de metadatascan.",
-      "blockerClickInput_one": "Klik op \"Je invoer is nodig\" en beantwoord {{count}} item.",
-      "blockerClickInput_other": "Klik op \"Je invoer is nodig\" en beantwoord {{count}} items.",
-      "blockerClickInput_many": "Klik op \"Je invoer is nodig\" en beantwoord {{count}} items.",
-      "blockerSkipDataLoading_one": "Overslaggegevens ophalen voor {{count}} aflevering — even geduld.",
-      "blockerSkipDataLoading_other": "Overslaggegevens ophalen voor {{count}} afleveringen — even geduld.",
-      "blockerSkipDataLoading_many": "Overslaggegevens ophalen voor {{count}} afleveringen — even geduld.",
+      "blockerMatchOrRemove": "Koppel of verwijder {{count}} niet-herkende bestand(en).",
+      "blockerWaitSearch": "Wacht tot het zoeken naar details voor {{count}} bestand(en) klaar is.",
+      "blockerResolveVideo": "Maak {{count}} keuze(s) over videokwaliteit.",
+      "blockerWaitMetadata": "Wacht tot {{count}} bestand(en) klaar zijn met de metadatascan.",
+      "blockerClickInput": "Klik op \"Je invoer is nodig\" en beantwoord {{count}} item(s).",
+      "blockerSkipDataLoading": "Overslaggegevens ophalen voor {{count}} aflevering(en) — even geduld.",
       "yourInputNeededProgress": "Je invoer is nodig ({{current}}/{{total}})",
       "setLanguageAndNameAudioTracks": "Taal en naam instellen voor audiosporen",
       "setLanguageAndNameSubtitleTracks": "Taal en naam instellen voor ondertitelsporen",
@@ -2279,24 +2118,14 @@
       "alreadyAvailable": "Al beschikbaar",
       "skipQuality": "Kwaliteit overslaan",
       "addQuality": "Kwaliteit toevoegen",
-      "videoDecisionsPending_one": "{{count}} videokeuze open",
-      "videoDecisionsPending_other": "{{count}} videokeuzes open",
-      "videoDecisionsPending_many": "{{count}} videokeuzes open",
+      "videoDecision": "videokeuze",
+      "videoDecisions": "videokeuzes",
+      "videoDecisionsPending": "{{count}} {{decisionLabel}} open",
       "needsInputToContinue": "Invoer nodig om verder te gaan",
       "undefined": "Ongedefinieerd",
       "unknownMedia": "Onbekende media",
       "file": "bestand",
-      "files": "bestanden",
-      "readyToImportCount": "{{count}} klaar om te importeren",
-      "blockerMatchOrRemove": "Koppel of verwijder {{count}} niet-herkende bestand(en).",
-      "blockerWaitSearch": "Wacht tot het zoeken naar details voor {{count}} bestand(en) klaar is.",
-      "blockerResolveVideo": "Maak {{count}} keuze(s) over videokwaliteit.",
-      "blockerWaitMetadata": "Wacht tot {{count}} bestand(en) klaar zijn met de metadatascan.",
-      "blockerClickInput": "Klik op \"Je invoer is nodig\" en beantwoord {{count}} item(s).",
-      "blockerSkipDataLoading": "Overslaggegevens ophalen voor {{count}} aflevering(en) — even geduld.",
-      "videoDecision": "videokeuze",
-      "videoDecisions": "videokeuzes",
-      "videoDecisionsPending": "{{count}} {{decisionLabel}} open"
+      "files": "bestanden"
     }
   },
   "pairApprove": {
@@ -2308,12 +2137,5 @@
     "checksum": "Deze woorden vormen geen geldige sleutel. Vergelijk elk woord met de woorden die je hebt bewaard.",
     "unknownMark": "geen sleutelwoord",
     "pairedNoWords": "Deze computer heeft de sleutel van een ander apparaat gekregen en heeft dus de 12 woorden niet. Die staan op het apparaat waar de sleutel is gemaakt, of in de kopie die je hebt bewaard."
-  },
-  "skipCatchUpNotice": {
-    "title": "Badger vindt nu intro's en aftitelingen",
-    "what": "Versie {{version}} vindt zelf intro's en aftitelingen in video's waarover we geen informatie hebben.",
-    "background": "Je bestaande bibliotheek wordt nu op de achtergrond op deze computer verwerkt. Je kunt de voortgang volgen op het tabblad Taken. Het pauzeert zodra je iets importeert of afspeelt, dus het zit je niet in de weg.",
-    "close": "Sluiten",
-    "openJobs": "Taken openen"
   }
 }

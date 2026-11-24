@@ -248,8 +248,7 @@ const collectItems = async (
   return { items, skipped };
 };
 
-/** Free bytes on the volume holding `dir` (0 when unknown); also used for the kept failed-import copies. */
-export const defaultFreeBytesAt = (dir: string): number => {
+const defaultFreeBytesAt = (dir: string): number => {
   // `statfsSync` needs an existing path: walk up to the nearest one (the picked folder normally exists).
   let probe = dir;
   for (;;) {

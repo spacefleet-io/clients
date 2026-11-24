@@ -8,7 +8,7 @@
  *   case, or their first 4 letters) are checked and the key they stand for is stored, that Validate key stays off
  *   while a word is unknown, and that the old base64 key, long-pressed in with spaces, line breaks and zero-width
  *   characters, still works. Chris (2026-11-12): the screens that show and take the key were confusable, so this one
- *   is titled "Enter your media library key", its boxes start empty and it shows no grid of words. Chris 2026-11-12 (chat):
+ *   is titled "Enter your library key", its boxes start empty and it shows no grid of words. Chris 2026-11-12 (chat):
  *   "the setup step to enter/save the key should be the same shared one between the 2 apps": the screen is the
  *   shared `MobileLibraryKeyStep` (MOBILE-SHELL-LIBRARY-KEY-STEP-001 mounts it); these tests pin what Badger hands
  *   it, including the account-wide erase (Chris 2026-11-12 (chat): "they share the key and everything related to
@@ -45,14 +45,14 @@ vi.mock("react-native", async () => ({
 vi.mock("@space/mobile-shell/library-key-step", () => ({
   MobileLibraryKeyStep: (props: { overlay?: React.ReactNode }) => React.createElement("MobileLibraryKeyStep", props, props.overlay),
 }));
+vi.mock("../src/components/Screen", () => ({
+  Screen: ({ children }: { children: React.ReactNode }) => children,
+}));
 vi.mock("@space/mobile-shell/keyboard", () => ({
   KeyboardAvoidingForm: ({ children }: { children: React.ReactNode }) => children,
 }));
 vi.mock("@space/mobile-shell/key-saved-warning", () => ({ MobileKeySavedWarning: () => null }));
-vi.mock("@space/mobile-shell/components", () => ({
-  MobilePhoneSignInCard: "MobilePhoneSignInCard",
-  MobileScreen: ({ children }: { children: React.ReactNode }) => children,
-}));
+vi.mock("@space/mobile-shell/components", () => ({ MobilePhoneSignInCard: "MobilePhoneSignInCard" }));
 vi.mock("@space/mobile-shell/i18n", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 vi.mock("@space/mobile-shell/logger", () => ({
   scopeLogger: () => ({ info: () => undefined, error: () => undefined, warn: () => undefined }),

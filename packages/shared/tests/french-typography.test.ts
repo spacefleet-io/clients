@@ -10,7 +10,6 @@ import { FRENCH_SPACING, frenchTypographyProblems } from "../src/frenchTypograph
 import subtitleFetchCopyFr from "../src/subtitleFetchCopy/fr.json";
 import { profilesTexts } from "../src/profileTexts";
 import { titleLanguageTexts } from "../src/titleLanguage";
-import { providerSignInTexts } from "../src/providerSignIn";
 
 const desktopFr: unknown = JSON.parse(
   readFileSync(new URL("../../../apps/badger/desktop/src/renderer/src/i18n/fr.json", import.meta.url), "utf8"),
@@ -35,10 +34,9 @@ describe("French typography (UX-I18N-15)", () => {
     expect(frenchTypographyProblems(subtitleFetchCopyFr)).toEqual([]);
   });
 
-  it("the shared profile screens, the title question and the provider sign-in words follow it", () => {
+  it("the shared profile screens and the title question follow it", () => {
     expect(frenchTypographyProblems(profilesTexts.fr)).toEqual([]);
     expect(frenchTypographyProblems(titleLanguageTexts.fr)).toEqual([]);
-    expect(frenchTypographyProblems(providerSignInTexts.fr)).toEqual([]);
   });
 
   it("Badger desktop's French strings follow it", () => {

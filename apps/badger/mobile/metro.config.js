@@ -25,7 +25,6 @@ const mediaSessionRoot = path.resolve(repoRoot, 'packages/media-session');
 const playbackAbrRoot = path.resolve(repoRoot, 'packages/playback-abr');
 const pairingCryptoRoot = path.resolve(repoRoot, 'packages/pairing-crypto');
 const mediaCryptoRoot = path.resolve(repoRoot, 'packages/media-crypto');
-const mediaResealRoot = path.resolve(repoRoot, 'packages/media-reseal');
 const errorReportRoot = path.resolve(repoRoot, 'packages/error-report');
 const metadataClientRoot = path.resolve(repoRoot, 'packages/metadata-client');
 const privacyPassRoot = path.resolve(repoRoot, 'packages/privacy-pass');
@@ -41,11 +40,11 @@ const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 // can point to different versions than the app's copies (e.g. react@19.2.4 vs
 // react@19.2.3), causing dual-instance crashes. Blocking these directories
 // forces Metro to resolve everything from the app's node_modules instead.
-const workspaceNodeModulesBlockList = [sharedRoot, libraryDbRoot, libraryDbDefinitionRoot, mobileShellRoot, mobileMpvPlaybackRoot, mobileMediaProxyRoot, mobileMediaVolumeRoot, mobileSelfUpdateRoot, mobileMediaSessionRoot, mediaSessionRoot, playbackAbrRoot, mediaResealRoot, errorReportRoot, metadataClientRoot, privacyPassRoot, sdkRoot, streamSlotsRoot, profileAvatarsRoot, ingestCoreRoot]
+const workspaceNodeModulesBlockList = [sharedRoot, libraryDbRoot, libraryDbDefinitionRoot, mobileShellRoot, mobileMpvPlaybackRoot, mobileMediaProxyRoot, mobileMediaVolumeRoot, mobileSelfUpdateRoot, mobileMediaSessionRoot, mediaSessionRoot, playbackAbrRoot, errorReportRoot, metadataClientRoot, privacyPassRoot, sdkRoot, streamSlotsRoot, profileAvatarsRoot, ingestCoreRoot]
   .map((dir) => new RegExp(`${escapeRegex(path.join(dir, 'node_modules'))}(/.*)?$`));
 
 const config = {
-  watchFolders: [repoRoot, sharedRoot, libraryDbRoot, libraryDbDefinitionRoot, mobileShellRoot, mobileMpvPlaybackRoot, mobileMediaProxyRoot, mobileMediaVolumeRoot, mobileMediaSessionRoot, mediaSessionRoot, playbackAbrRoot, pairingCryptoRoot, mediaCryptoRoot, mediaResealRoot, errorReportRoot, metadataClientRoot, privacyPassRoot, sdkRoot, legalRoot, streamSlotsRoot, profileAvatarsRoot, ingestCoreRoot, bunModules],
+  watchFolders: [repoRoot, sharedRoot, libraryDbRoot, libraryDbDefinitionRoot, mobileShellRoot, mobileMpvPlaybackRoot, mobileMediaProxyRoot, mobileMediaVolumeRoot, mobileMediaSessionRoot, mediaSessionRoot, playbackAbrRoot, pairingCryptoRoot, mediaCryptoRoot, errorReportRoot, metadataClientRoot, privacyPassRoot, sdkRoot, legalRoot, streamSlotsRoot, profileAvatarsRoot, ingestCoreRoot, bunModules],
   resolver: {
     blockList: [
       // Gradle plugin contains Kotlin build artifacts with missing dirs that crash Metro's watcher
@@ -72,8 +71,6 @@ const config = {
       '@space/pairing-crypto': pairingCryptoRoot,
       // SFV1's format constants and padding rule (a fetched subtitle is sealed on the phone, PLAY-SUBGET-03).
       '@space/media-crypto': mediaCryptoRoot,
-      // The key change's media re-seal and library rewrite (ACCT-KEYCHG, STOR-RESEAL).
-      '@space/media-reseal': mediaResealRoot,
       // Its node_modules is blocked above, so its @sentry/react-native import resolves to the app's single copy.
       '@space/error-report': errorReportRoot,
       '@space/metadata-client': metadataClientRoot,

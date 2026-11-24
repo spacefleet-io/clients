@@ -3,29 +3,23 @@
 // after a fresh sign-in or pairing it is reconciled once with the account's (asking when they differ), by the first
 // setup when it is open (UX-SETUP-08) and by the sign-in otherwise; while signed in, `/auth/me` brings the account's
 // language at start and on coming back to the app, and a language picked in setup or Settings is saved to the account.
-// The rules are the shared chain Badger's phone runs too (`@space/mobile-shell/account-language-sync`, REL-FAM-03): a
-// pick the account could not save stays pending and is pushed by the next `/auth/me`, never reverted by it.
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { PhoneSetupProgress } from "@space/mobile-shell/setup";
-import { changeLanguage, getCurrentLanguage, isMobileUiLanguage } from "@space/mobile-shell/i18n";
+import { getCurrentLanguage } from "@space/mobile-shell/i18n";
 import { askAccountLanguage } from "@space/mobile-shell/account-language-prompt";
-import { createAccountLanguageSync } from "@space/mobile-shell/account-language-sync";
-import { accountLanguageOf } from "@space/shared/accountLanguage";
+import { scopeLogger } from "@space/mobile-shell/logger";
+import { accountLanguageOf, reconcileAccountLanguage } from "@space/shared/accountLanguage";
 import { getMe, updateSettings, type User } from "@space/shared/api";
-import type { AccountLanguage } from "@space/shared/i18n";
-import { PARROT_LANGUAGE_KEY } from "./i18n";
+import { isAccountLanguage, type AccountLanguage } from "@space/shared/i18n";
+import { setParrotLanguage } from "./i18n";
 
-const accountLanguage = createAccountLanguageSync({
-  asyncStorage: AsyncStorage,
-  languageKey: PARROT_LANGUAGE_KEY,
-  unsyncedKey: "parrot.uiLanguageUnsynced",
-  currentLanguage: getCurrentLanguage,
-  showLanguage: changeLanguage,
-});
+const log = scopeLogger("account_language");
+
+const message = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
 /** Saves the account's language (`PATCH /account/settings`). */
-const saveAccountLanguage = async (token: string, language: AccountLanguage): Promise<void> => {
+export const saveAccountLanguage = async (token: string, language: AccountLanguage): Promise<void> => {
   await updateSettings(token, { preferences: { uiLanguage: language } });
+  log.info("saved", { language });
 };
 
 /**
@@ -41,44 +35,42 @@ export const setupSettlesLanguage = (setup: PhoneSetupProgress): boolean =>
  * Runs once right after a fresh sign-in or pairing, before setup's numbered steps (by the setup while it is open). A
  * failure is logged and never blocks the sign-in: the phone keeps its language and the next `/auth/me` settles it.
  */
-export const reconcileAfterSignIn = (token: string): Promise<void> =>
-  accountLanguage.reconcileAfterSignIn({
-    fetchAccountLanguage: async () => accountLanguageOf((await getMe(token)).user),
-    ask: askAccountLanguage,
-    saveAccountLanguage: (language) => saveAccountLanguage(token, language),
-  });
-
-/**
- * A signed-in session's `/auth/me` answer (start, back to the front): the account's language wins over the phone's,
- * so another device's change shows here, unless this phone holds a pick the account has not saved yet, which is
- * pushed now.
- */
-export const applyAccountLanguage = (token: string, user: Pick<User, "uiLanguage" | "preferences">): Promise<void> => {
-  const account = accountLanguageOf(user);
-  return accountLanguage.sync({
-    account,
-    fetchAccountLanguage: async () => account,
-    saveAccountLanguage: (language) => saveAccountLanguage(token, language),
-  });
+export const reconcileAfterSignIn = async (token: string): Promise<void> => {
+  const shown = getCurrentLanguage();
+  const device: AccountLanguage = isAccountLanguage(shown) ? shown : "en";
+  try {
+    const { user } = await getMe(token);
+    await reconcileAccountLanguage({
+      device,
+      account: accountLanguageOf(user),
+      ask: askAccountLanguage,
+      saveAccount: (language) => saveAccountLanguage(token, language),
+      applyDevice: setParrotLanguage,
+    });
+  } catch (error) {
+    log.warn("reconcile_failed", { device, message: message(error) });
+  }
 };
 
 /**
- * A language picked in setup or Settings: shown on this phone at once and, signed in (`token`), saved as the account's.
- * A save that fails stays pending on this phone and is retried by the next `/auth/me` (`applyAccountLanguage`). The
- * account's language at the pick is the one this phone last synced, which the phone shows until the pick (a pick
- * still pending keeps its own): it holds even when no `/auth/me` answered since the app started offline.
+ * A restored session's `/auth/me` answer (the session reads it, with the account's access): the account's language
+ * wins over the phone's, so another device's change shows here.
  */
+export const applyAccountLanguage = async (user: Pick<User, "uiLanguage" | "preferences">): Promise<void> => {
+  try {
+    const account = accountLanguageOf(user);
+    const shown = getCurrentLanguage();
+    if (!account || account === shown) return;
+    log.info("applied", { from: shown, to: account, source: "auth_me" });
+    await setParrotLanguage(account);
+  } catch (error) {
+    log.warn("refresh_failed", { message: message(error) });
+  }
+};
+
+/** A language picked while signed in (setup, Settings): shown on this phone at once, then saved as the account's. */
 export const pickSignedInLanguage = async (token: string | null, code: string): Promise<void> => {
-  if (!isMobileUiLanguage(code)) return;
-  const shownBefore = getCurrentLanguage();
-  await accountLanguage.choose(code, { pushToAccount: token !== null, account: token ? shownBefore : undefined });
-  if (!token) return;
-  await accountLanguage.sync({
-    account: null,
-    fetchAccountLanguage: async () => accountLanguageOf((await getMe(token)).user),
-    saveAccountLanguage: (language) => saveAccountLanguage(token, language),
-  });
+  await setParrotLanguage(code);
+  if (!token || !isAccountLanguage(code)) return;
+  await saveAccountLanguage(token, code).catch((error: unknown) => log.warn("pick_not_saved", { language: code, message: message(error) }));
 };
-
-/** Signed out: a pick still waiting for the account belonged to the account that just left. */
-export const forgetAccountLanguage = (): Promise<void> => accountLanguage.forget();

@@ -1,66 +1,41 @@
 import { Buffer } from "buffer";
-import RNFS from "react-native-fs";
 import crypto from "react-native-quick-crypto";
 import {
+  ApiError,
   downloadStorageObjectViaTunnel,
   getLibraryDb,
   getLibraryMeta,
+  rotateLibraryKey,
   uploadStorageObjectViaTunnel,
   type RotationLibraryCopy,
+  type RotationOwnLibrary,
 } from "@space/shared/api";
 import { TRUSTED_CHUNK_REFS_VERSION } from "@space/shared/contracts/library";
 import { openRemoteLibrarySnapshot } from "@space/mobile-shell/librarySnapshot";
 import { fflateCodec } from "@space/mobile-shell/libraryOps";
 import { reencryptLibrarySnapshotWith } from "@space/library-db-definition/snapshotPublish";
 import { STORAGE_FORMAT_VERSION } from "@space/library-db-definition/storageFormat";
-import { rewriteParrotReferences } from "@space/media-reseal";
 import { decryptBytesToBytes, encryptBytesToBytes } from "./crypto";
-import { openSqliteDb, removeDbFile } from "./library/dbFiles";
-import { leaveWalForExport } from "./library/leaveWal";
-import { sqliteStorageResealDb } from "./library/resealDb";
-import { getRotationParrotDbPath, ROTATION_PARROT_DB_NAME } from "./libraryStorage";
 
-/**
- * STOR-RESEAL-01: Parrot's library bytes with every media reference in `copies` (old key → copy) renamed, in a
- * temporary SQLite file: the published library refers to the re-sealed copies, never to the objects the switch deletes.
- */
-const rewriteParrotBytes = async (bytes: Uint8Array, copies: ReadonlyMap<string, string>): Promise<Uint8Array> => {
-  if (copies.size === 0) return bytes;
-  const path = getRotationParrotDbPath();
-  await removeDbFile(path);
-  try {
-    await RNFS.writeFile(path, Buffer.from(bytes).toString("base64"), "base64");
-    const db = await openSqliteDb(ROTATION_PARROT_DB_NAME);
-    try {
-      await rewriteParrotReferences(sqliteStorageResealDb(db), copies);
-      // The file is read whole next: every change in it, its header in the form every reader opens (LIB-FMT-10).
-      await leaveWalForExport(db);
-    } finally {
-      await db.close();
-    }
-    return new Uint8Array(Buffer.from(await RNFS.readFile(path, "base64"), "base64"));
-  } finally {
-    await removeDbFile(path);
+/** Why a rotation was refused with nothing changed; each has its own words (`resetKey.errors.<reason>`). */
+export type RotationRefusal = "notReencrypted" | "unreadable" | "notSnapshotted" | "changed";
+
+class RotationRefusedError extends Error {
+  constructor(readonly reason: RotationRefusal) {
+    super(`ROTATION_REFUSED_${reason}`);
   }
-};
+}
 
 /**
- * PRIV-KEY-06: Parrot's library opened with the old key, its media references renamed to the re-sealed copies
- * (STOR-RESEAL-01) and re-encrypted under the new one (chunks uploaded), with the version it was read at. None when
- * Parrot has no snapshot (the server refuses the rotation if it has a library). Throws
- * `ROTATION_REENCRYPT_<UNREADABLE|NOT_SNAPSHOTTED>` (`keyChangeFailureOf`): nothing rotated.
+ * PRIV-KEY-06: Parrot's library opened with the old key and re-encrypted under the new one (chunks uploaded), with
+ * the version it was read at. None when Parrot has no snapshot (the server refuses the rotation if it has a library).
  */
 // tla: VaultKeys/RotateRead
-export const reencryptParrotLibrary = async (
-  token: string,
-  oldKey: string,
-  newKey: string,
-  resealCopies: ReadonlyMap<string, string>
-): Promise<RotationLibraryCopy[]> => {
+const reencryptParrotLibrary = async (token: string, oldKey: string, newKey: string): Promise<RotationLibraryCopy[]> => {
   const meta = await getLibraryMeta(token, "parrot");
   if (!meta.exists) return [];
   // Changes after the latest snapshot are not in it: re-encrypting it would drop them, so the rotation waits.
-  if (meta.snapshotVersion !== meta.version) throw new Error("ROTATION_REENCRYPT_NOT_SNAPSHOTTED");
+  if (meta.snapshotVersion !== meta.version) throw new RotationRefusedError("notSnapshotted");
   const opened = await openRemoteLibrarySnapshot(oldKey, {
     getLibraryDb: () => getLibraryDb(token, "parrot"),
     download: (objectKey) =>
@@ -70,13 +45,12 @@ export const reencryptParrotLibrary = async (
     supportedStorageFormatVersion: STORAGE_FORMAT_VERSION,
   }).catch((err: unknown) => {
     if (err instanceof Error && err.message === "LIBRARY_MISSING") return null;
-    if (err instanceof Error && err.message === "DECRYPT_FAILED") throw new Error("ROTATION_REENCRYPT_UNREADABLE");
+    if (err instanceof Error && err.message === "DECRYPT_FAILED") throw new RotationRefusedError("unreadable");
     throw err;
   });
   if (!opened) return [];
   // Read at the snapshot's version: an edit landing since makes the server answer `version_conflict` (user tries again).
-  const dbBytes = await rewriteParrotBytes(opened.dbBytes, resealCopies);
-  const copy = await reencryptLibrarySnapshotWith(dbBytes, opened.snapshotVersion, {
+  const copy = await reencryptLibrarySnapshotWith(opened.dbBytes, opened.snapshotVersion, {
     seal: (plaintext) => encryptBytesToBytes(newKey, plaintext),
     codec: fflateCodec,
     sha256Hex: async (bytes) => crypto.createHash("sha256").update(Buffer.from(bytes)).digest("hex") as string,
@@ -100,4 +74,37 @@ export const reencryptParrotLibrary = async (
       opStreamVersion: meta.opStreamVersion,
     },
   ];
+};
+
+/**
+ * PRIV-KEY-06: rotates the key with Parrot's library re-encrypted under the new key (never emptied), in one request.
+ * If Parrot's library changed meanwhile the server answers 409 `version_conflict` and the user tries again (with a new
+ * 2FA code: the code is single-use, so no automatic retry). Without the old key no copy is sent and the server refuses
+ * when Parrot has a library.
+ */
+export const rotateWithParrotLibrary = async (input: {
+  token: string;
+  oldKey: string | null;
+  newKey: string;
+  /** PRIV-KEY-13: this phone's library as a snapshot under the new key, declaring its formats. */
+  library: RotationOwnLibrary;
+  keyProbe: string;
+  password: string;
+  twoFactorCode?: string;
+}) => {
+  const copies = input.oldKey ? await reencryptParrotLibrary(input.token, input.oldKey, input.newKey) : [];
+  return rotateLibraryKey(input.token, input.library, input.keyProbe, input.password, input.twoFactorCode, copies);
+};
+
+/**
+ * The refusal a rotation error stands for (nothing changed), or null for any other error. The media refusal
+ * (409 `rotation_needs_media_reseal`) is not one: no entry is offered while the server would answer it
+ * (ACCT-KEYCHG-04), so reaching it is a fault and gets the generic error.
+ */
+export const rotationRefusal = (err: unknown): RotationRefusal | null => {
+  if (err instanceof RotationRefusedError) return err.reason;
+  if (!(err instanceof ApiError)) return null;
+  if (err.payload?.error === "library_not_reencrypted") return "notReencrypted";
+  if (err.payload?.error === "version_conflict") return "changed";
+  return null;
 };

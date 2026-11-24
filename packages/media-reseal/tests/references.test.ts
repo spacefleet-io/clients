@@ -137,66 +137,6 @@ describe("rewriteBadgerReferences (STOR-RESEAL-01)", () => {
     expect(rewrite.byColumn).toEqual({ "media_chunk_lists.key_data": 3 });
   });
 
-  it("with blobsAsHex reads chunk lists as hex text and repacks them through a driver that carries no bytes", async () => {
-    const db = badger();
-    const list = packChunkList([
-      { key: media(21), sizeBytes: 10, startSeconds: 0 },
-      { key: media(22), sizeBytes: 20, startSeconds: 2 },
-    ]);
-    insert(db, "media_chunk_lists", {
-      owner_id: "fmt-h",
-      owner_kind: 1,
-      placement_id: list.placementId,
-      key_mode: list.keyMode,
-      key_data: list.keyData,
-      count: list.count,
-      sizes: list.sizes,
-      starts: list.starts,
-      updated_at: "2020-01-01T00:00:00.000Z",
-    });
-    const plain = preparedResealDb(db);
-    // Like react-native-sqlite-storage on Android: a BLOB comes back as base64 text, and a bound byte array is no BLOB.
-    const noBytes = {
-      blobsAsHex: true,
-      all: async (sql: string, params: Value[] = []) =>
-        (await plain.all(sql, params)).map((row) =>
-          Object.fromEntries(Object.entries(row).map(([k, v]) => [k, v instanceof Uint8Array ? Buffer.from(v).toString("base64") : v]))
-        ),
-      run: async (sql: string, params: Value[] = []) => {
-        const kept: Value[] = [];
-        let at = 0;
-        const inlined = sql.replace(/\?/g, () => {
-          const param = params[at++]!;
-          if (!(param instanceof Uint8Array)) {
-            kept.push(param);
-            return "?";
-          }
-          return `X'${Buffer.from(param).toString("hex")}'`;
-        });
-        await plain.run(inlined, kept);
-      },
-    };
-
-    const rewrite = await rewriteBadgerReferences(noBytes, new Map([[media(22), media(122)]]));
-
-    const row = one(db, "SELECT * FROM media_chunk_lists WHERE owner_id = 'fmt-h'")!;
-    expect(row.key_data).toBeInstanceOf(Uint8Array);
-    expect(
-      unpackChunkList({
-        placementId: String(row.placement_id),
-        keyMode: CHUNK_LIST_KEY_MODE.uuidBytes,
-        keyData: bytes(row.key_data),
-        count: Number(row.count),
-        sizes: bytes(row.sizes),
-        starts: row.starts == null ? null : bytes(row.starts),
-      })
-    ).toEqual([
-      { key: media(21), sizeBytes: 10, startSeconds: 0 },
-      { key: media(122), sizeBytes: 20, startSeconds: 2 },
-    ]);
-    expect(rewrite.byColumn).toEqual({ "media_chunk_lists.key_data": 1 });
-  });
-
   it("skips a group file that holds none of the tables, and does nothing without copies", async () => {
     const db = new DatabaseSync(":memory:");
     db.exec("CREATE TABLE unrelated (id TEXT PRIMARY KEY)");

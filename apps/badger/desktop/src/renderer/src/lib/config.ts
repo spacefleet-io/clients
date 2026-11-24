@@ -105,9 +105,8 @@ export type ClientConfig = {
    */
   runtimeEngineV2Enabled: boolean;
   /**
-   * Automatic desktop updates (REL-UPD-01, REL-UPD-08). Default **true**: the main-process updater checks at start,
-   * every 4h, on wake and on window focus, downloads a new version in the background and installs it when the app
-   * quits (or on "Restart now" in the update modal). Off: the user
+   * Automatic desktop updates (REL-UPD-01). Default **true**: the main-process updater checks at start and every 6h,
+   * downloads a new version in the background and installs it when the app quits (or on "Restart now"). Off: the user
    * checks, downloads and restarts from Settings. A mandatory update is offered either way.
    */
   autoUpdate: boolean;

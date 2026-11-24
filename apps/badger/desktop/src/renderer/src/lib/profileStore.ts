@@ -13,7 +13,6 @@ import { PLAYBACK_PROFILE_NOT_OWNED_CODE } from "@space/shared/playbackProfile";
 import {
   ProfileActionError,
   createProfileStore,
-  localStorageProfileStorage,
   type ProfileLibraryMoves,
   type ProfilesSnapshot,
 } from "@space/shared/profileStore";
@@ -41,7 +40,11 @@ const applyScope = (profile: { id: string; isMain: boolean } | null) => {
 };
 
 export const profileStore = createProfileStore({
-  storage: localStorageProfileStorage,
+  storage: {
+    getItem: async (key) => localStorage.getItem(key),
+    setItem: async (key, value) => localStorage.setItem(key, value),
+    removeItem: async (key) => localStorage.removeItem(key),
+  },
   api: {
     list: listProfiles,
     create: createProfile,

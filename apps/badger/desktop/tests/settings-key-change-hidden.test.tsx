@@ -3,11 +3,11 @@
  * @test-id BADGER-DESKTOP-KEY-CHANGE-HIDDEN-001
  * @level unit
  * @why ACCT-KEYCHG-04 (Chris 2026-11-23): Badger offers to change the media library key exactly when the server would
- *   accept it, so no user meets the media refusal. Badger desktop re-seals media (STOR-RESEAL-01), so that is every
- *   account whose readiness is known (`GET /library/recovery/rotate`), with or without media. The test renders the real
+ *   accept it, so no user meets the media refusal. Until the release whose clients re-seal media, that is only while
+ *   the account stores no media (`GET /library/recovery/rotate` → `needsMediaReseal: false`). The test renders the real
  *   Security settings section (account calls and the recovery flows stubbed, the server's answer driven) and checks the
- *   "Library access" panel keeps Show key, hides the Replace key card only while the answer is unknown, and the erase
- *   entry stays in every case.
+ *   "Library access" panel keeps Show key, shows the Replace key card only for an account without media, and the
+ *   erase entry stays in every case.
  */
 import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -79,20 +79,20 @@ describe("@req ACCT-KEYCHG-04[badger-desktop] Badger settings offer a key change
     return { text, card: container.querySelector("[data-testid='settings-key-change']") };
   };
 
-  it("offers no key change while the server's answer is not known (loading, offline); erasing stays offered", async () => {
-    const { text, card } = await renderSection(null);
-    expect(text).not.toContain("Replace media library key");
-    expect(text).not.toContain("Create new key");
+  it.each([
+    ["the server's answer is not known (loading, offline)", null],
+    ["the account stores media", { needsMediaReseal: true }],
+  ])("offers no key change when %s; erasing stays offered", async (_label, readiness) => {
+    const { text, card } = await renderSection(readiness);
+    expect(text).not.toContain("settings.recovery.rotate.title");
+    expect(text).not.toContain("settings.recovery.rotate.button");
     expect(card).toBeNull();
   });
 
-  it.each([
-    ["without media", { needsMediaReseal: false }],
-    ["with media (re-sealed during the change)", { needsMediaReseal: true }],
-  ])("offers the key change to an account %s", async (_label, readiness) => {
-    const { text, card } = await renderSection(readiness);
+  it("offers the key change to an account without media", async () => {
+    const { text, card } = await renderSection({ needsMediaReseal: false });
     expect(card).not.toBeNull();
-    expect(text).toContain("Replace media library key");
-    expect(text).toContain("Create new key");
+    expect(text).toContain("settings.recovery.rotate.title");
+    expect(text).toContain("settings.recovery.rotate.button");
   });
 });

@@ -35,13 +35,3 @@ const resolveBundledBinary = (filename: "ffmpeg" | "ffprobe") => {
 export const resolveRuntimeFfmpegPath = () => resolveBundledBinary("ffmpeg");
 
 export const resolveRuntimeFfprobePath = () => resolveBundledBinary("ffprobe");
-
-/**
- * The bundled mpv, which decodes the audio for shared-audio skip detection (META-SKIP-04): `SF_MPV_PATH` (set by
- * the desktop for the packaged runtime), else the platform layer's media-deps bundle; undefined when neither has it.
- */
-export const resolveRuntimeMpvPath = (): string | undefined => {
-  const raw = process.env.SF_MPV_PATH?.trim();
-  if (raw && raw !== "undefined" && raw !== "null") return raw;
-  return getDesktopPlatform().binaries.resolve("mpv", { env: process.env, cwd: process.cwd() })?.path;
-};

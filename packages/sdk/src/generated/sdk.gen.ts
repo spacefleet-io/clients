@@ -156,7 +156,7 @@ export const getLibraryKeyRotationReadiness = <ThrowOnError extends boolean = fa
 /**
  * Rotate library key
  *
- * Rotates the library encryption key after re-auth with 2FA. Use case: user suspects key compromise and re-encrypts the library. Badger and Parrot both call it (`X-Space-App`); each sends the other app's library as its copy. The body carries the caller's library as a snapshot under the new key (`manifestBase64`, its `chunkRefs` uploaded already, as `PUT /library/db` sends it) with the storage format and op stream it is written in, and the new key's `keyProbe`, plus `otherLibraries`: every other app's latest snapshot, opened by the rotating device with the old key and re-encrypted under the new one (chunks already uploaded), each with the version it was read at. In one step the caller's library and every other library are replaced by their copies under the new key and every session of the account is revoked; nothing is deleted. A declared format below the stored one answers 409 `library_format_downgrade`. An app whose library changed since it was read answers 409 `version_conflict` with its `appId` (read again and retry); an app with a library and no copy answers 409 `library_not_reencrypted`; an account that stores media sealed with the key (songs, videos, covers) names its re-seal run (`mediaReseal`), switched in the same transaction (STOR-RESEAL-11): without one it answers 409 `rotation_needs_media_reseal`, and while a media file has no copy or another upload runs, 409 `media_reseal_incomplete` / `uploads_in_flight`. Nothing is written on a refusal. ACCT-KEYCHG-03: a request naming the account's open run from the session that re-authenticated when it opened or last resumed that run (`POST /library/media-reseal/runs`) needs no `password` nor `twoFactorCode`; any other request is asked them (401).
+ * Rotates the library encryption key after re-auth with 2FA. Use case: user suspects key compromise and re-encrypts the library. The body carries the caller's library as a snapshot under the new key (`manifestBase64`, its `chunkRefs` uploaded already, as `PUT /library/db` sends it) with the storage format and op stream it is written in, and the new key's `keyProbe`, plus `otherLibraries`: every other app's latest snapshot, opened by the rotating device with the old key and re-encrypted under the new one (chunks already uploaded), each with the version it was read at. In one step the caller's library and every other library are replaced by their copies under the new key and every session of the account is revoked; nothing is deleted. A declared format below the stored one answers 409 `library_format_downgrade`. An app whose library changed since it was read answers 409 `version_conflict` with its `appId` (read again and retry); an app with a library and no copy answers 409 `library_not_reencrypted`; an account that stores media sealed with the key (songs, videos, covers) answers 409 `rotation_needs_media_reseal` until rotation re-seals media too. Nothing is written on a refusal.
  *
  * Personal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.
  */
@@ -190,18 +190,14 @@ export const resetLibrary = <ThrowOnError extends boolean = false>(options: Opti
 /**
  * Open or resume a media reseal run
  *
- * STOR-RESEAL-02: starts re-sealing the account's media under its next media library key, or answers the run already open (one per account), so a device that stopped (closed, crashed, offline) resumes where the account stands. Use case: a device asked to change the media library key opens the run, then uploads a copy of each pending object with `resealRunId` and `resealOf`. ACCT-KEYCHG-03: opening or resuming asks the account password and a code every time (the authenticator's when it is on, else one emailed: a call without `twoFactorCode` sends it and answers 401 `two_factor_required`). The run then records that this session re-authenticated: the key change that names the run (`POST /library/recovery/rotate` with `mediaReseal.runId`) from this same session, while the run is open, asks nothing again. Another session, another run, or a run switched or abandoned asks again.
+ * STOR-RESEAL-02: starts re-sealing the account's media under its next media library key, or answers the run already open (one per account), so a device that stopped (closed, crashed, offline) resumes where the account stands. Use case: a device asked to change the media library key opens the run, then uploads a copy of each pending object with `resealRunId` and `resealOf`.
  *
  * Personal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.
  */
-export const openMediaResealRun = <ThrowOnError extends boolean = false>(options: Options<OpenMediaResealRunData, ThrowOnError>): RequestResult<OpenMediaResealRunResponses, OpenMediaResealRunErrors, ThrowOnError> => (options.client ?? client).post<OpenMediaResealRunResponses, OpenMediaResealRunErrors, ThrowOnError>({
+export const openMediaResealRun = <ThrowOnError extends boolean = false>(options?: Options<OpenMediaResealRunData, ThrowOnError>): RequestResult<OpenMediaResealRunResponses, OpenMediaResealRunErrors, ThrowOnError> => (options?.client ?? client).post<OpenMediaResealRunResponses, OpenMediaResealRunErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/library/media-reseal/runs',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
+    ...options
 });
 
 /**

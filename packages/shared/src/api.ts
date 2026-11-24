@@ -1032,9 +1032,6 @@ export const putLibraryDbBinary = async (
 /** Another app's library, re-encrypted under the new key by the rotating device (PRIV-KEY-06). */
 export type RotationLibraryCopy = NonNullable<sdk.RotateLibraryKeyData["body"]["otherLibraries"]>[number];
 
-/** The media reseal run a rotation switches to (STOR-RESEAL-04); `switchNow` cancels other devices' uploads (STOR-RESEAL-10). */
-export type RotationMediaReseal = NonNullable<sdk.RotateLibraryKeyData["body"]["mediaReseal"]>;
-
 /**
  * PRIV-KEY-13: the rotating device's own library, as a snapshot under the new key (chunks uploaded, a manifest naming
  * them) with the storage format and op stream it is written in; the server refuses a whole blob and a downgrade.
@@ -1046,23 +1043,19 @@ export type RotationOwnLibrary = Pick<
 
 /**
  * PRIV-KEY-06: rotates the key. `otherLibraries` carries every other app's library re-encrypted under the new key; an
- * app with a library and no copy is refused (409 `library_not_reencrypted`), never emptied. `mediaReseal` names the run
- * whose copies replace the media sealed with the old key, in the same step. `appId`: the app `library` belongs to.
+ * app with a library and no copy is refused (409 `library_not_reencrypted`), never emptied.
  */
 export const rotateLibraryKey = (
   token: string,
   library: RotationOwnLibrary,
   keyProbe: string,
-  /** Undefined when `mediaReseal` names a run this session re-authenticated when it opened it (ACCT-KEYCHG-03). */
-  password: string | undefined,
+  password: string,
   twoFactorCode?: string,
-  otherLibraries: RotationLibraryCopy[] = [],
-  mediaReseal?: RotationMediaReseal,
-  appId: SpaceAppId = DEFAULT_SPACE_APP_ID
+  otherLibraries: RotationLibraryCopy[] = []
 ): Promise<{ version: number }> =>
   unwrap(
     sdk.rotateLibraryKey({
-      ...scoped(token, appId),
+      ...scoped(token),
       body: {
         manifestBase64: library.manifestBase64,
         snapshotId: library.snapshotId,
@@ -1075,7 +1068,6 @@ export const rotateLibraryKey = (
         password,
         twoFactorCode,
         otherLibraries,
-        ...(mediaReseal ? { mediaReseal } : {}),
       },
     })
   );
@@ -1156,13 +1148,8 @@ export type MediaResealProgress = sdk.GetMediaResealRunResponses[200];
 /** One page of a run's copies and kept objects (STOR-RESEAL-01/05). */
 export type MediaResealCopies = sdk.ListMediaResealCopiesResponses[200];
 
-/**
- * Opens the account's media reseal run, or resumes the open one (STOR-RESEAL-02), after the password and code are
- * checked; the run is bound to this session, so the switch that ends it asks nothing again (ACCT-KEYCHG-03).
- * `restart` abandons a run left open by an earlier key change, whose key this device no longer holds.
- */
-export const openMediaResealRun = (token: string, body: sdk.OpenMediaResealRunData["body"]) =>
-  unwrap(sdk.openMediaResealRun({ ...scoped(token), body }));
+/** Opens the account's media reseal run, or resumes the open one (STOR-RESEAL-02). */
+export const openMediaResealRun = (token: string) => unwrap(sdk.openMediaResealRun(scoped(token)));
 
 export const getMediaResealRun = (token: string, runId: string, page: { after?: string | null; limit?: number } = {}): Promise<MediaResealProgress> =>
   unwrap(

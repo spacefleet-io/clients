@@ -32,7 +32,6 @@ import {
 import { getApiBaseUrl } from "./apiHost";
 import { decryptBase64ToBytes, decryptBytesToBytes, encryptBytesToBase64, encryptBytesToBytes } from "./crypto";
 import { decryptLibraryPayload, encryptSnapshotBytes, nodeDeflateCodec } from "./payloadCodec";
-import { rewriteLibraryBytesForReseal } from "./resealSnapshot";
 import { retryTransient } from "./transientRetry";
 import { scopeLogger } from "./logger";
 
@@ -429,21 +428,19 @@ export type RotationOwnLibrary = {
 
 /**
  * PRIV-KEY-13: library bytes sealed under `keyBase64` and cut into chunks exactly as this build publishes a snapshot
- * (`uploadSnapshot`), the chunks uploaded under `appId`; the rotation writes the manifest. The op stream is the caller's
- * to declare.
+ * (`uploadSnapshot`), the chunks uploaded; the rotation writes the manifest. The op stream is the caller's to declare.
  */
 export const sealLibrarySnapshot = async (
   token: string,
   keyBase64: string,
-  rawBytes: Uint8Array,
-  appId: SpaceAppId = DEFAULT_SPACE_APP_ID
+  rawBytes: Uint8Array
 ): Promise<Omit<RotationOwnLibrary, "opStreamVersion">> => {
   const encrypted = await encryptSnapshotBytes(keyBase64, rawBytes);
   const chunks = buildChunks(encrypted);
   const snapshotId = randomUUID();
   const manifest = buildManifest(snapshotId, encrypted, rawBytes, chunks);
   const manifestPayload = await encryptBytesToBytes(keyBase64, new TextEncoder().encode(JSON.stringify(manifest)));
-  await uploadChunks(token, chunks, appId);
+  await uploadChunks(token, chunks);
   return {
     manifestBase64: Buffer.from(manifestPayload).toString("base64"),
     snapshotId,
@@ -462,8 +459,7 @@ export const LIBRARY_NOT_SNAPSHOTTED = "LIBRARY_NOT_SNAPSHOTTED";
  * new one (its chunks uploaded), each with the version it was read at, for the rotation to write all of them in one
  * step. An app with no snapshot is skipped (the server refuses the rotation if it has a library after all); a library
  * the old key does not open (`DECRYPT_FAILED`) or with changes after its snapshot (`LIBRARY_NOT_SNAPSHOTTED`) throws,
- * so nothing is rotated and nothing is lost. With `resealCopies` (old key → re-sealed copy, STOR-RESEAL-01), each
- * library is re-encrypted with its media references renamed to the copies the switch keeps.
+ * so nothing is rotated and nothing is lost.
  */
 // tla: VaultKeys/RotateRead
 export const reencryptLibrariesForRotation = async (input: {
@@ -471,7 +467,6 @@ export const reencryptLibrariesForRotation = async (input: {
   oldKeyBase64: string;
   newKeyBase64: string;
   appIds: readonly SpaceAppId[];
-  resealCopies?: ReadonlyMap<string, string>;
 }): Promise<RotationLibraryCopy[]> => {
   const copies: RotationLibraryCopy[] = [];
   for (const appId of input.appIds) {
@@ -480,10 +475,7 @@ export const reencryptLibrariesForRotation = async (input: {
     // Changes after the latest snapshot are not in it: re-encrypting it would drop them, so the rotation waits.
     if (fetched.meta.version !== fetched.meta.snapshotVersion) throw new Error(`${LIBRARY_NOT_SNAPSHOTTED}:${appId}`);
     // Read at the snapshot's version: an edit landing since makes the server answer `version_conflict` (user tries again).
-    const dbBytes = input.resealCopies
-      ? (await rewriteLibraryBytesForReseal(fetched.dbBytes, appId, input.resealCopies)).bytes
-      : fetched.dbBytes;
-    const copy = await reencryptLibrarySnapshotWith(dbBytes, fetched.snapshotVersion, {
+    const copy = await reencryptLibrarySnapshotWith(fetched.dbBytes, fetched.snapshotVersion, {
       seal: (plaintext) => encryptBytesToBytes(input.newKeyBase64, plaintext),
       codec: nodeDeflateCodec,
       sha256Hex: async (bytes) => hashBytes(bytes),

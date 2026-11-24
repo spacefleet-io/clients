@@ -6,9 +6,6 @@
  *
  * Pure (no Electron import) so the decision is unit-tested.
  */
-/** `[scheme]` for the app itself, or `[scheme, electronBinary, [mainScript]]` for a dev run. */
-export type ProtocolClientArgs = [scheme: string] | [scheme: string, path: string, args: string[]];
-
 export const protocolClientArgs = (
   scheme: string,
   input: {
@@ -17,7 +14,7 @@ export const protocolClientArgs = (
     argv: readonly string[];
     resolvePath: (path: string) => string;
   },
-): ProtocolClientArgs => {
+): [scheme: string] | [scheme: string, path: string, args: string[]] => {
   const script = input.argv[1];
   const isLink = typeof script === "string" && script.trim().toLowerCase().startsWith(`${scheme}:`);
   if (input.defaultApp && typeof script === "string" && script.length > 0 && !isLink) {

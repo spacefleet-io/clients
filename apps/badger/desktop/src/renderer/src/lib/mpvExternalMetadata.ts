@@ -2,7 +2,6 @@ import type { AudioOption } from "@/lib/playbackTypes";
 import type { MediaFormat } from "@/lib/libraryDb";
 import type { MediaPreviewSheets } from "@space/shared/previewSheets";
 import { formatPlayerTrackLabel } from "@/lib/playerTrackLabel";
-import { SKIP_SOURCE_DETECTED } from "@space/shared/skipMarkers";
 import {
   buildScriptMessageCommand,
   type EnvelopeChannel,
@@ -44,47 +43,6 @@ export const oscMenuPrompts = (t: (key: string) => string): OscMenuPrompts => ({
   audioOutputLabel: t("player.audioOutputLabel"),
 });
 
-/** The skip pill, the "Was it right?" line, the bar button's menu and the Change times panel (sf.lua), i18n `player.skipUi.*`. */
-export const OSC_SKIP_LABEL_KEYS = [
-  "skipIntro",
-  "skipCredits",
-  "nextEpisode",
-  "nextEpisodeIn",
-  "openingNextEpisode",
-  "enterKey",
-  "askedIntro",
-  "askedCredits",
-  "yes",
-  "changeTimes",
-  "thanks",
-  "changeIntroTimes",
-  "changeCreditsTimes",
-  "start",
-  "end",
-  "hint",
-  "save",
-  "cancel",
-  "back",
-  "scopeQuestion",
-  "thisSeason",
-  "onlyThisEpisode",
-  "farNote",
-  "savedSeason",
-  "savedEpisode",
-  "menuPrompt",
-  "introEndsHere",
-  "creditsStartHere",
-] as const;
-export type OscSkipLabelKey = (typeof OSC_SKIP_LABEL_KEYS)[number];
-export type OscSkipLabels = Record<OscSkipLabelKey, string>;
-
-export const oscSkipLabels = (t: (key: string) => string): OscSkipLabels => {
-  const labels: Partial<OscSkipLabels> = {};
-  for (const key of OSC_SKIP_LABEL_KEYS) labels[key] = t(`player.skipUi.${key}`);
-  // Every key of OSC_SKIP_LABEL_KEYS was set by the loop above.
-  return labels as OscSkipLabels;
-};
-
 export type ExternalPlaybackMetadataPayload = {
   // `selected: true` tells sf.lua to sub-add this entry with mpv's "select"
   // flag (vs the default "auto"). Setting sid at sub-add time avoids a
@@ -96,21 +54,13 @@ export type ExternalPlaybackMetadataPayload = {
   chapters: Array<{ title: string; startSeconds: number; endSeconds: number | null; orderIndex: number }>;
   audio: Array<{ title?: string | null; label?: string | null; lang?: string | null }>;
   /** UI-language strings the OSC menus show (sf-select.lua: apply_labels_json). */
-  labels: {
-    subtitlesOff: string;
-    getMoreSubtitles: string;
-    tryAnotherVersion?: string;
-    addSubtitleFile?: string;
-    /** sf.lua's skip texts (pill, asked line, bar menu, Change times panel); omitted, sf.lua keeps its English ones. */
-    skip?: OscSkipLabels;
-  } & Partial<OscMenuPrompts>;
+  labels: { subtitlesOff: string; getMoreSubtitles: string; tryAnotherVersion?: string; addSubtitleFile?: string } & Partial<OscMenuPrompts>;
   playback: {
     markers: Array<{
       type: "intro" | "credits";
       startSeconds: number;
       endSeconds: number;
       autoSkip: boolean;
-      ask: boolean;
     }>;
     /** The overlay's "what's playing" line (PLAY-OVL-01); sf.lua sets it as force-media-title. */
     title: string;
@@ -128,11 +78,6 @@ export type ExternalPlaybackMetadataPayload = {
      */
     autoSkipNextEpisode: boolean;
     fallbackCountdownSeconds: number;
-    /**
-     * PLAY-SKIP-10: the control bar's skip button and its menu (change or mark intro / credits times). True for every
-     * episode of a show in the library; a movie or an offline copy without a library row gets no button.
-     */
-    skipMenu: boolean;
   };
 };
 
@@ -153,11 +98,7 @@ export const buildExternalPlaybackMetadataPayload = (params: {
   addSubtitleFileLabel?: string;
   /** Track-menu prompts in the UI language (`oscMenuPrompts(t)`); omitted, the OSC keeps its English ones. */
   menuPrompts?: OscMenuPrompts;
-  /** The skip texts in the UI language (`oscSkipLabels(t)`). */
-  skipLabels?: OscSkipLabels;
-  /** PLAY-SKIP-10: show the control bar's skip button (an episode in the library). */
-  skipMenu?: boolean;
-  skipMarkers: Array<{ type: "intro" | "credits"; startSeconds: number; endSeconds: number; source?: string; confidence?: number | null }>;
+  skipMarkers: Array<{ type: "intro" | "credits"; startSeconds: number; endSeconds: number }>;
   title: string;
   meta: string;
   previousEpisode: { id: string; label: string } | null;
@@ -189,17 +130,13 @@ export const buildExternalPlaybackMetadataPayload = (params: {
       tryAnotherVersion: params.tryAnotherVersionLabel ?? "",
       addSubtitleFile: params.addSubtitleFileLabel ?? "",
       ...params.menuPrompts,
-      ...(params.skipLabels ? { skip: params.skipLabels } : {}),
     },
     playback: {
       markers: skipMarkers.map((marker) => ({
         type: marker.type,
         startSeconds: marker.startSeconds,
         endSeconds: marker.endSeconds,
-        // PLAY-SKIP-02: credits are never skipped on their own; the pill offers "Skip credits" and the user presses it.
-        autoSkip: marker.type === "intro" ? params.autoSkipIntro : false,
-        // PLAY-SKIP-03: "Was it right?" only for times this device detected and is unsure of (Chris 2026-11-24).
-        ask: marker.source === SKIP_SOURCE_DETECTED && (marker.confidence ?? 0) < 1,
+        autoSkip: marker.type === "intro" ? params.autoSkipIntro : params.autoSkipCredits,
       })),
       title: params.title,
       meta: params.meta,
@@ -208,7 +145,6 @@ export const buildExternalPlaybackMetadataPayload = (params: {
       autoplayNextEpisode,
       autoSkipNextEpisode: params.autoSkipCredits,
       fallbackCountdownSeconds: 15,
-      skipMenu: params.skipMenu === true,
     },
   };
 };

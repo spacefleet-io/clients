@@ -201,13 +201,13 @@ export const commitStepHandler: StepHandler = async (ctx) => {
       if (
         Array.isArray(skipMarkers) &&
         skipMarkers.length > 0 &&
-        deps.mergeSkipMarkers
+        deps.replaceSkipMarkers
       ) {
-        await deps.mergeSkipMarkers(mediaId, episodeId, skipMarkers);
+        await deps.replaceSkipMarkers(mediaId, episodeId, skipMarkers);
       }
       if (showSkipCache && deps.upsertShowSkipCache) {
         await deps.upsertShowSkipCache(mediaId, showSkipCache);
-        if (deps.listExistingEpisodeIds && deps.mergeSkipMarkers) {
+        if (deps.listExistingEpisodeIds && deps.replaceSkipMarkers) {
           const episodeIdByKey = await deps.listExistingEpisodeIds(mediaId);
           for (const [seasonEpisodeKey, markers] of Object.entries(
             showSkipCache.markersByEpisode
@@ -224,7 +224,7 @@ export const commitStepHandler: StepHandler = async (ctx) => {
             ) {
               continue;
             }
-            await deps.mergeSkipMarkers(mediaId, targetEpisodeId, markers);
+            await deps.replaceSkipMarkers(mediaId, targetEpisodeId, markers);
           }
         }
       }

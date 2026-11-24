@@ -66,10 +66,10 @@ vi.mock("@space/mobile-shell/components", () => ({
   MobileCard: "MobileCard",
   SkyCover: "SkyCover",
   MobileAppBackdrop: "MobileAppBackdrop",
-  MobileScreen: ({ children }: { children: React.ReactNode }) => children,
   useSkyScroll: () => ({}),
 }));
 vi.mock("lucide-react-native", () => ({ Check: "Check", Globe: "Globe" }));
+vi.mock("../../components/Screen", () => ({ Screen: ({ children }: { children: React.ReactNode }) => children }));
 vi.mock("../../lib/appSettings", () => ({
   useAppSettings: () => [{}, (patch: Record<string, unknown>) => ctl.patches.push(patch)],
 }));

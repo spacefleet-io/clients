@@ -217,11 +217,11 @@ const COLLECTION: Record<KeySavedWarningApp, Record<ClientUiLanguage, { collecti
     nl: { collection: "mediatheek", CollectionKey: "Mediatheeksleutel" },
   },
   parrot: {
-    en: { collection: "library", CollectionKey: "Media library key" },
-    fr: { collection: "bibliothèque", CollectionKey: "Clé de médiathèque" },
-    es: { collection: "biblioteca", CollectionKey: "Clave de la mediateca" },
-    de: { collection: "Bibliothek", CollectionKey: "Mediathek-Schlüssel" },
-    nl: { collection: "bibliotheek", CollectionKey: "Mediatheeksleutel" },
+    en: { collection: "library", CollectionKey: "Library key" },
+    fr: { collection: "bibliothèque", CollectionKey: "Clé de bibliothèque" },
+    es: { collection: "biblioteca", CollectionKey: "Clave de la biblioteca" },
+    de: { collection: "Bibliothek", CollectionKey: "Bibliotheksschlüssel" },
+    nl: { collection: "bibliotheek", CollectionKey: "Bibliotheeksleutel" },
   },
 };
 

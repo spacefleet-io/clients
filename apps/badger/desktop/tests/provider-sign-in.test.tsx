@@ -74,7 +74,7 @@ vi.mock("@space/desktop-shell/components", async (importOriginal) => ({
 
 import Login from "../src/renderer/src/pages/Login";
 import Signup from "../src/renderer/src/pages/Signup";
-import { PROVIDER_VERIFIER_KEY } from "@space/desktop-shell/provider-sign-in";
+import { PROVIDER_VERIFIER_KEY } from "../src/renderer/src/components/ProviderSignIn";
 
 const sha256Base64url = (text: string) => createHash("sha256").update(text).digest("base64url");
 
@@ -156,8 +156,7 @@ describe(`[${SUITE}] provider rows`, () => {
     console.info(`[${SUITE}] rows=${JSON.stringify(rowIds())}`);
     expect(rowIds()).toEqual(["provider-sign-in-google", "provider-sign-in-apple", "provider-sign-in-microsoft"]);
     const apple = container.querySelector<HTMLButtonElement>('[data-testid="provider-sign-in-apple"]')!;
-    // The row titles come from `@space/shared/providerSignIn` in the window's language (French here).
-    expect(apple.getAttribute("aria-label")).toBe("Se connecter avec Apple");
+    expect(apple.getAttribute("aria-label")).toBe("login.provider.signInWith:Apple");
     expect(apple.textContent).toBe("");
     expect(container.querySelector('[data-testid="provider-sign-in-apple-caption"]')?.textContent).toBe("Apple");
     for (const id of rowIds()) {
@@ -168,7 +167,7 @@ describe(`[${SUITE}] provider rows`, () => {
     }
     expect(apple.style.background).toBe("rgb(0, 0, 0)");
     const divider = container.querySelector('[data-testid="provider-sign-in-divider"]')!;
-    expect(divider.textContent).toBe("ou");
+    expect(divider.textContent).toBe("login.provider.or");
     expect(follows(container.querySelector("#password")!, divider)).toBe(true);
     expect(follows(divider, apple)).toBe(true);
   });
@@ -192,7 +191,7 @@ describe(`[${SUITE}] provider rows`, () => {
     await render(<Signup />, "/signup");
     expect(rowIds()).toEqual(["provider-sign-in-google"]);
     const google = container.querySelector('[data-testid="provider-sign-in-google"]')!;
-    expect(google.getAttribute("aria-label")).toBe("S'inscrire avec Google");
+    expect(google.getAttribute("aria-label")).toBe("login.provider.signUpWith:Google");
     expect(follows(container.querySelector("#email")!, google)).toBe(true);
   });
 

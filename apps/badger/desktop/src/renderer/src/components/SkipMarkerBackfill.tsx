@@ -18,13 +18,13 @@ export const SKIP_BACKFILL_START_DELAY_MS = 15_000;
 export default function SkipMarkerBackfill() {
   const { user } = useAuth();
   const { loading, writeBlockedReason, media } = useLibraryData();
-  const { fetchMediaDetails, listSkipAnalysis, upsertSkipAnalysis, mergeSkipMarkers } = useLibraryActions();
+  const { fetchMediaDetails, listSkipAnalysis, upsertSkipAnalysis, replaceSkipMarkers } = useLibraryActions();
   const startedRef = useRef(false);
   const unmountedRef = useRef(false);
   const mediaRef = useRef(media);
   mediaRef.current = media;
-  const actionsRef = useRef({ fetchMediaDetails, listSkipAnalysis, upsertSkipAnalysis, mergeSkipMarkers });
-  actionsRef.current = { fetchMediaDetails, listSkipAnalysis, upsertSkipAnalysis, mergeSkipMarkers };
+  const actionsRef = useRef({ fetchMediaDetails, listSkipAnalysis, upsertSkipAnalysis, replaceSkipMarkers });
+  actionsRef.current = { fetchMediaDetails, listSkipAnalysis, upsertSkipAnalysis, replaceSkipMarkers };
 
   const ready = Boolean(user) && !loading && !writeBlockedReason && media.length > 0;
 
@@ -48,8 +48,8 @@ export default function SkipMarkerBackfill() {
         listSkipAnalysis: (mediaId, kind) => actionsRef.current.listSkipAnalysis(mediaId, kind),
         upsertSkipAnalysis: (mediaId, episodeId, kind, payload) =>
           actionsRef.current.upsertSkipAnalysis(mediaId, episodeId, kind, payload),
-        mergeSkipMarkers: (mediaId, episodeId, markers) =>
-          actionsRef.current.mergeSkipMarkers(mediaId, episodeId, markers),
+        replaceSkipMarkers: (mediaId, episodeId, markers) =>
+          actionsRef.current.replaceSkipMarkers(mediaId, episodeId, markers),
         fetchMarkers: ({ catalogId, seasonNumber, episodeNumber, durationSeconds }) =>
           getMetadataSkipMarkers("", "tv", catalogId, seasonNumber, episodeNumber, durationSeconds),
         sleep: (ms) => {

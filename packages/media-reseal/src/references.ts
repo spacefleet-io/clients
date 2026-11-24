@@ -18,7 +18,6 @@
  */
 import {
   CHUNK_LIST_KEY_MODE,
-  hexToBytes,
   packChunkList,
   type PackedChunkList,
   unpackChunkList,
@@ -29,15 +28,10 @@ import { artworkStorageKey } from "@space/library-db-definition/mediaDetails";
 export type ResealSqlValue = string | number | null | Uint8Array;
 export type ResealSqlRow = Record<string, unknown>;
 
-/**
- * The database calls the rewrite needs; a synchronous driver is wrapped by `preparedResealDb`. A driver that carries
- * no BLOB bytes (react-native-sqlite-storage) sets `blobsAsHex`: BLOB columns are then read as `hex()` text, and its
- * `run` must write each `Uint8Array` parameter as a BLOB itself (as an `X'..'` literal).
- */
+/** The database calls the rewrite needs; a synchronous driver is wrapped by `preparedResealDb`. */
 export type ResealSqlDb = {
   all(sql: string, params?: ResealSqlValue[]): Promise<ResealSqlRow[]>;
   run(sql: string, params?: ResealSqlValue[]): Promise<void>;
-  blobsAsHex?: boolean;
 };
 
 /** A `prepare`-style driver: node:sqlite `DatabaseSync`, bun:sqlite, better-sqlite3. */
@@ -197,12 +191,6 @@ const rewritePreviewSheets = async (
 };
 
 const asBytes = (value: unknown): Uint8Array => (value instanceof Uint8Array ? new Uint8Array(value) : new Uint8Array(0));
-const hexBytes = (value: unknown): Uint8Array => hexToBytes(typeof value === "string" ? value : "");
-
-const CHUNK_LIST_BYTES_SELECT = `SELECT owner_id, placement_id, key_mode, key_data, count, sizes, starts FROM media_chunk_lists`;
-const CHUNK_LIST_HEX_SELECT =
-  `SELECT owner_id, placement_id, key_mode, hex(key_data) AS key_data, count, hex(sizes) AS sizes, ` +
-  `CASE WHEN starts IS NULL THEN NULL ELSE hex(starts) END AS starts FROM media_chunk_lists`;
 
 const KEY_MODES: ReadonlyArray<ChunkListKeyMode> = Object.values(CHUNK_LIST_KEY_MODE);
 const asKeyMode = (value: unknown): ChunkListKeyMode => {
@@ -213,17 +201,16 @@ const asKeyMode = (value: unknown): ChunkListKeyMode => {
 
 const rewriteChunkLists = async (db: ResealSqlDb, copies: ReadonlyMap<string, string>, cache: Map<string, Set<string>>, rewrite: ReferenceRewrite) => {
   if (!(await has(db, cache, { table: "media_chunk_lists", column: "key_data" }))) return;
-  const rows = await db.all(db.blobsAsHex ? CHUNK_LIST_HEX_SELECT : CHUNK_LIST_BYTES_SELECT);
-  const blob = db.blobsAsHex ? hexBytes : asBytes;
+  const rows = await db.all(`SELECT owner_id, placement_id, key_mode, key_data, count, sizes, starts FROM media_chunk_lists`);
   let n = 0;
   for (const row of rows) {
     const list: PackedChunkList = {
       placementId: String(row.placement_id ?? ""),
       keyMode: asKeyMode(row.key_mode),
-      keyData: blob(row.key_data),
+      keyData: asBytes(row.key_data),
       count: Number(row.count),
-      sizes: blob(row.sizes),
-      starts: row.starts == null ? null : blob(row.starts),
+      sizes: asBytes(row.sizes),
+      starts: row.starts == null ? null : asBytes(row.starts),
     };
     const chunks = unpackChunkList(list);
     let changed = 0;

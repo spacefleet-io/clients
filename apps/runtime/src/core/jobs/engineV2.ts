@@ -162,17 +162,6 @@ export const CANCELLED_BEFORE_RESTART_REASON = "cancelled-before-restart";
  */
 export const INTERRUPTED_BY_RESTART_REASON = "interrupted-by-restart";
 
-/** How {@link EngineV2.retry} re-runs a job. */
-export type RetryOptions = {
-  /** `"unfinished"`: re-queue only the steps that did not succeed. `"all"`: re-run every step. */
-  steps?: "unfinished" | "all";
-  /** Merged onto the job payload before it is queued again. */
-  payloadPatch?: Record<string, unknown>;
-};
-
-/** Why {@link EngineV2.retry} left a job alone. */
-export type RetryRefusal = "not-found" | "not-retryable" | "duplicate-running";
-
 export interface EngineV2 {
   start(): Promise<void>;
   stop(): Promise<void>;
@@ -190,19 +179,9 @@ export interface EngineV2 {
   dismiss(
     jobId: string
   ): Promise<{ dismissed: boolean; errorCode?: string }>;
-  /**
-   * Run a failed (or parent-cancelled) job again IN PLACE: same jobId, so its
-   * kept outputs dir (`<transcode base>/<userId>/<jobId>`) is reused
-   * (UX-JOBS-03). `steps: "unfinished"` (default) re-queues only the steps
-   * that did not succeed; `"all"` re-runs every step. `payloadPatch` is merged
-   * onto the payload first (a moved source file). Children the job's failure
-   * cancelled (`parent-cancelled`) are re-queued with every step. Never runs
-   * on its own: only a user action calls it.
-   */
   retry(
-    jobId: string,
-    options?: RetryOptions
-  ): Promise<{ retried: boolean; newJobId?: string; reason?: RetryRefusal }>;
+    jobId: string
+  ): Promise<{ retried: boolean; newJobId?: string }>;
   list(
     filter?: ListFilter
   ): Promise<{ jobs: IngestJobRecord[]; maxEventId: number }>;
@@ -640,74 +619,6 @@ export function createEngineV2(config: EngineV2Config): EngineV2 {
       }
     }
     runnable.wake(jobId);
-    return true;
-  };
-
-  /**
-   * Queue a finished job again under its own jobId (UX-JOBS-03 retry). Steps
-   * that succeeded keep their status and outputs unless `steps` is `"all"`.
-   * Returns false when another live job holds the same dedupe key (the user
-   * imported the file again meanwhile): that job does the work.
-   */
-  const requeueInPlace = (
-    job: IngestJobRecord,
-    steps: "unfinished" | "all",
-    payloadPatch: Record<string, unknown> | undefined
-  ): boolean => {
-    const s = requireStore();
-    const now = new Date().toISOString();
-    const fresh: IngestJobRecord = {
-      ...job,
-      payload: payloadPatch ? { ...job.payload, ...payloadPatch } : job.payload,
-      status: "queued",
-      stageCode: "queued",
-      stageLabel: "Queued",
-      progressPct: 0,
-      progress: { mode: "fraction", completed: 0, total: 100, unit: "percent" },
-      errorCode: null,
-      errorMessage: null,
-      cancelRequested: false,
-      outputs: steps === "all" ? {} : job.outputs,
-      startedAt: null,
-      finishedAt: null,
-      dismissedAt: null,
-      updatedAt: now,
-      attemptCount: (job.attemptCount ?? 0) + 1,
-    };
-    const stored = s.upsertJob(fresh);
-    if (stored.jobId !== job.jobId) {
-      console.info(
-        JSON.stringify({ event: "runtime.jobs.v2.retry_duplicate_running", jobId: job.jobId, runningJobId: stored.jobId })
-      );
-      return false;
-    }
-    const existing = s.steps.getSteps(job.jobId);
-    const seeded = existing.length > 0 ? existing : seedStepsForJob(fresh);
-    const kept: string[] = [];
-    for (const step of seeded) {
-      if (steps === "unfinished" && step.status === "succeeded") {
-        kept.push(step.kind);
-        continue;
-      }
-      s.steps.upsertStep({
-        ...step,
-        status: "queued",
-        progressPct: 0,
-        errorCode: null,
-        errorMessage: null,
-        startedAt: null,
-        finishedAt: null,
-        outputs: {},
-        updatedAt: now,
-      });
-    }
-    failedParentIds.delete(job.jobId);
-    console.info(
-      JSON.stringify({ event: "runtime.jobs.v2.requeued_in_place", jobId: job.jobId, kind: job.kind, steps, keptSteps: kept })
-    );
-    runnable.enqueue(job.jobId);
-    runnable.wake(job.jobId);
-    emit(job.jobId, "runtime.jobs.created", { job: s.getJob(job.jobId) ?? fresh });
     return true;
   };
 
@@ -1542,47 +1453,41 @@ export function createEngineV2(config: EngineV2Config): EngineV2 {
       return { dismissed: true };
     },
 
-    async retry(jobId, options) {
+    async retry(jobId) {
       const s = requireStore();
       const job = s.getJob(jobId);
-      if (!job) return { retried: false, reason: "not-found" };
-      // Failed, or cancelled only because its parent failed.
-      if (!(job.status === "failed" || (job.status === "cancelled" && job.errorCode === "parent-cancelled"))) {
-        console.info(
-          JSON.stringify({ event: "runtime.jobs.v2.retry_refused", jobId, status: job.status, errorCode: job.errorCode ?? null })
-        );
-        return { retried: false, reason: "not-retryable" };
-      }
-      const requeued = requeueInPlace(job, options?.steps ?? "unfinished", options?.payloadPatch);
-      if (!requeued) return { retried: false, reason: "duplicate-running" };
-      // The children this job's failure cancelled run again with it; their
-      // encode outputs were discarded on cancel, so every step re-runs.
-      const childIds: string[] = [];
-      const walk = (parentId: string) => {
-        for (const child of s.findChildren(parentId)) {
-          if (child.status !== "cancelled" || child.errorCode !== "parent-cancelled") continue;
-          if (childIds.includes(child.jobId)) continue;
-          if (requeueInPlace(child, "all", undefined)) {
-            childIds.push(child.jobId);
-            walk(child.jobId);
-          }
-        }
+      if (!job) return { retried: false };
+      if (job.status !== "failed") return { retried: false };
+      const newJobId = `${jobId}:retry:${Date.now()}`;
+      const now = new Date().toISOString();
+      const fresh: IngestJobRecord = {
+        ...job,
+        jobId: newJobId,
+        status: "queued",
+        stageCode: "queued",
+        stageLabel: "Queued",
+        progressPct: 0,
+        progress: { mode: "fraction", completed: 0, total: 100, unit: "percent" },
+        errorCode: null,
+        errorMessage: null,
+        cancelRequested: false,
+        outputs: {},
+        startedAt: null,
+        finishedAt: null,
+        dismissedAt: null,
+        createdAt: now,
+        updatedAt: now,
+        attemptCount: (job.attemptCount ?? 0) + 1,
       };
-      walk(jobId);
-      console.info(
-        JSON.stringify({
-          event: "runtime.jobs.v2.retried_in_place",
-          jobId,
-          kind: job.kind,
-          steps: options?.steps ?? "unfinished",
-          payloadPatched: Boolean(options?.payloadPatch),
-          attemptCount: (job.attemptCount ?? 0) + 1,
-          previousErrorCode: job.errorCode ?? null,
-          requeuedChildren: childIds,
-        })
-      );
+      s.upsertJob(fresh);
+      const steps = seedStepsForJob(fresh);
+      for (const step of steps) s.steps.upsertStep(step);
+      const stored = s.getJob(newJobId) ?? fresh;
+      runnable.enqueue(newJobId);
+      runnable.wake(newJobId);
+      emit(newJobId, "runtime.jobs.created", { job: stored });
       tick();
-      return { retried: true, newJobId: jobId };
+      return { retried: true, newJobId };
     },
 
     async list(filter) {

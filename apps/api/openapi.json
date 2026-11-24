@@ -4753,7 +4753,7 @@
           "Library"
         ],
         "summary": "Rotate library key",
-        "description": "Rotates the library encryption key after re-auth with 2FA. Use case: user suspects key compromise and re-encrypts the library. Badger and Parrot both call it (`X-Space-App`); each sends the other app's library as its copy. The body carries the caller's library as a snapshot under the new key (`manifestBase64`, its `chunkRefs` uploaded already, as `PUT /library/db` sends it) with the storage format and op stream it is written in, and the new key's `keyProbe`, plus `otherLibraries`: every other app's latest snapshot, opened by the rotating device with the old key and re-encrypted under the new one (chunks already uploaded), each with the version it was read at. In one step the caller's library and every other library are replaced by their copies under the new key and every session of the account is revoked; nothing is deleted. A declared format below the stored one answers 409 `library_format_downgrade`. An app whose library changed since it was read answers 409 `version_conflict` with its `appId` (read again and retry); an app with a library and no copy answers 409 `library_not_reencrypted`; an account that stores media sealed with the key (songs, videos, covers) names its re-seal run (`mediaReseal`), switched in the same transaction (STOR-RESEAL-11): without one it answers 409 `rotation_needs_media_reseal`, and while a media file has no copy or another upload runs, 409 `media_reseal_incomplete` / `uploads_in_flight`. Nothing is written on a refusal. ACCT-KEYCHG-03: a request naming the account's open run from the session that re-authenticated when it opened or last resumed that run (`POST /library/media-reseal/runs`) needs no `password` nor `twoFactorCode`; any other request is asked them (401).\n\nPersonal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.",
+        "description": "Rotates the library encryption key after re-auth with 2FA. Use case: user suspects key compromise and re-encrypts the library. The body carries the caller's library as a snapshot under the new key (`manifestBase64`, its `chunkRefs` uploaded already, as `PUT /library/db` sends it) with the storage format and op stream it is written in, and the new key's `keyProbe`, plus `otherLibraries`: every other app's latest snapshot, opened by the rotating device with the old key and re-encrypted under the new one (chunks already uploaded), each with the version it was read at. In one step the caller's library and every other library are replaced by their copies under the new key and every session of the account is revoked; nothing is deleted. A declared format below the stored one answers 409 `library_format_downgrade`. An app whose library changed since it was read answers 409 `version_conflict` with its `appId` (read again and retry); an app with a library and no copy answers 409 `library_not_reencrypted`; an account that stores media sealed with the key (songs, videos, covers) answers 409 `rotation_needs_media_reseal` until rotation re-seals media too. Nothing is written on a refusal.\n\nPersonal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.",
         "security": [
           {
             "bearerAuth": []
@@ -4881,24 +4881,6 @@
                       ]
                     },
                     "description": "Every other app's library re-encrypted under the new key. Required for each app that has a library; omitted by builds from before 2026-11-23, which are refused (409 `library_not_reencrypted`) when another library exists."
-                  },
-                  "mediaReseal": {
-                    "type": "object",
-                    "properties": {
-                      "runId": {
-                        "type": "string",
-                        "format": "uuid",
-                        "description": "The account's open re-seal run, every media file copied under the new key (STOR-RESEAL-01)."
-                      },
-                      "switchNow": {
-                        "type": "boolean",
-                        "description": "\"Switch now\" (STOR-RESEAL-10): cancel the account's other running uploads, once the run's `switchNowAt` has passed."
-                      }
-                    },
-                    "required": [
-                      "runId"
-                    ],
-                    "description": "Required when the account stores media sealed with the key: the run is switched in the same transaction as the new key (STOR-RESEAL-11). Omitted with such media: 409 `rotation_needs_media_reseal`."
                   }
                 },
                 "required": [
@@ -5021,7 +5003,7 @@
             }
           },
           "409": {
-            "description": "The library already uses a newer format than this client writes, a library changed since it was read (`version_conflict`), another app's library came without its re-encrypted copy (`library_not_reencrypted`), the account stores media sealed with the key and no re-seal run was named (`rotation_needs_media_reseal`), the named run is not open (`reseal_run_not_open`), a media file has no copy yet (`media_reseal_incomplete`, STOR-RESEAL-04) or another upload of the account is running (`uploads_in_flight`, STOR-RESEAL-08). Nothing is written.",
+            "description": "The library already uses a newer format than this client writes, a library changed since it was read (`version_conflict`), another app's library came without its re-encrypted copy (`library_not_reencrypted`), or the account stores media sealed with the key (`rotation_needs_media_reseal`). Nothing is written.",
             "content": {
               "application/json": {
                 "schema": {
@@ -5108,70 +5090,6 @@
                       },
                       "required": [
                         "error"
-                      ]
-                    },
-                    {
-                      "type": "object",
-                      "properties": {
-                        "error": {
-                          "type": "string",
-                          "enum": [
-                            "reseal_run_not_open"
-                          ]
-                        }
-                      },
-                      "required": [
-                        "error"
-                      ]
-                    },
-                    {
-                      "type": "object",
-                      "properties": {
-                        "error": {
-                          "type": "string",
-                          "enum": [
-                            "media_reseal_incomplete"
-                          ]
-                        },
-                        "pendingFiles": {
-                          "type": "integer",
-                          "description": "Media files with neither a copy nor an unreadable mark."
-                        },
-                        "pendingBytes": {
-                          "type": "integer"
-                        }
-                      },
-                      "required": [
-                        "error",
-                        "pendingFiles",
-                        "pendingBytes"
-                      ]
-                    },
-                    {
-                      "type": "object",
-                      "properties": {
-                        "error": {
-                          "type": "string",
-                          "enum": [
-                            "uploads_in_flight"
-                          ]
-                        },
-                        "uploadsInFlight": {
-                          "type": "integer",
-                          "description": "Other running uploads of the account the switch waits for."
-                        },
-                        "switchNowAt": {
-                          "type": [
-                            "string",
-                            "null"
-                          ],
-                          "description": "When \"Switch now\" opens (STOR-RESEAL-10); null before the switch first waited."
-                        }
-                      },
-                      "required": [
-                        "error",
-                        "uploadsInFlight",
-                        "switchNowAt"
                       ]
                     }
                   ]
@@ -5499,39 +5417,12 @@
           "Library"
         ],
         "summary": "Open or resume a media reseal run",
-        "description": "STOR-RESEAL-02: starts re-sealing the account's media under its next media library key, or answers the run already open (one per account), so a device that stopped (closed, crashed, offline) resumes where the account stands. Use case: a device asked to change the media library key opens the run, then uploads a copy of each pending object with `resealRunId` and `resealOf`. ACCT-KEYCHG-03: opening or resuming asks the account password and a code every time (the authenticator's when it is on, else one emailed: a call without `twoFactorCode` sends it and answers 401 `two_factor_required`). The run then records that this session re-authenticated: the key change that names the run (`POST /library/recovery/rotate` with `mediaReseal.runId`) from this same session, while the run is open, asks nothing again. Another session, another run, or a run switched or abandoned asks again.\n\nPersonal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.",
+        "description": "STOR-RESEAL-02: starts re-sealing the account's media under its next media library key, or answers the run already open (one per account), so a device that stopped (closed, crashed, offline) resumes where the account stands. Use case: a device asked to change the media library key opens the run, then uploads a copy of each pending object with `resealRunId` and `resealOf`.\n\nPersonal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.",
         "security": [
           {
             "bearerAuth": []
           }
         ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "password": {
-                    "type": "string",
-                    "description": "The account password; an account without one sends none and is asked the code alone (ACCT-AUTH-04)."
-                  },
-                  "twoFactorCode": {
-                    "type": [
-                      "string",
-                      "null"
-                    ],
-                    "description": "The authenticator's code, or the emailed one; missing, the answer is 401 `two_factor_required`."
-                  },
-                  "restart": {
-                    "type": "boolean",
-                    "description": "Abandon the run already open (its copies are deleted, STOR-RESEAL-07) and open a new one, under the same re-authentication. For a device that does not hold the key the open run's copies were sealed with (the key lives only in the key change it started)."
-                  }
-                }
-              }
-            }
-          }
-        },
         "responses": {
           "200": {
             "description": "The open run; `created` is false when it was already open.",
@@ -5556,7 +5447,7 @@
             }
           },
           "401": {
-            "description": "The password is wrong, or the code is needed or wrong (`method`: `email` when it was just emailed, `totp` for the authenticator).",
+            "description": "Missing or unknown token.",
             "content": {
               "application/json": {
                 "schema": {
@@ -5565,17 +5456,7 @@
                     "error": {
                       "type": "string",
                       "enum": [
-                        "unauthorized",
-                        "invalid_password",
-                        "two_factor_required",
-                        "two_factor_invalid"
-                      ]
-                    },
-                    "method": {
-                      "type": "string",
-                      "enum": [
-                        "email",
-                        "totp"
+                        "unauthorized"
                       ]
                     }
                   },
