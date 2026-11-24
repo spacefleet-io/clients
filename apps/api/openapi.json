@@ -900,6 +900,56 @@
           "nextAfter"
         ]
       },
+      "MediaResealCopies": {
+        "type": "object",
+        "properties": {
+          "copies": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MediaResealCopy"
+            }
+          },
+          "nextAfter": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "copies",
+          "nextAfter"
+        ]
+      },
+      "MediaResealCopy": {
+        "type": "object",
+        "properties": {
+          "oldKey": {
+            "type": "string"
+          },
+          "newKey": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The live copy that replaces `oldKey`; null when kept."
+          },
+          "kept": {
+            "type": "boolean",
+            "description": "The old key could not open it: it stays as it is (STOR-RESEAL-05)."
+          },
+          "sizeBytes": {
+            "type": "integer",
+            "description": "Stored size of the old object."
+          }
+        },
+        "required": [
+          "oldKey",
+          "newKey",
+          "kept",
+          "sizeBytes"
+        ]
+      },
       "P2pPeer": {
         "type": "object",
         "properties": {
@@ -5588,6 +5638,152 @@
           },
           "503": {
             "description": "The progress could not be read.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "media_reseal_unavailable"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/library/media-reseal/runs/{id}/copies": {
+      "get": {
+        "operationId": "listMediaResealCopies",
+        "tags": [
+          "Library"
+        ],
+        "summary": "Copies and kept objects of a media reseal run",
+        "description": "STOR-RESEAL-01/05: one page, by old key, of the run's old objects that have a live copy (with its key) or are kept. Use case: before the key switch the device rewrites its library's references to the copies, including copies another device made; the kept ones are listed to the user as unreadable files (ACCT-KEYCHG-07).\n\nPersonal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "`nextAfter` of the previous page."
+            },
+            "required": false,
+            "description": "`nextAfter` of the previous page.",
+            "name": "after",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500,
+              "description": "Page size, 200 when absent, at most 500."
+            },
+            "required": false,
+            "description": "Page size, 200 when absent, at most 500.",
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One page of copies and kept objects.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MediaResealCopies"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or unknown token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "unauthorized"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The account is blocked or scheduled for deletion, or a personal token was used on a route that needs a login session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "account_blocked",
+                        "account_deleted",
+                        "personal_token_not_allowed"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No reseal run with this id on the account.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "reseal_run_not_found"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The copies could not be read.",
             "content": {
               "application/json": {
                 "schema": {

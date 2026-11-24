@@ -597,6 +597,19 @@
         "vitest": "^5.1.0",
       },
     },
+    "packages/media-reseal": {
+      "name": "@space/media-reseal",
+      "dependencies": {
+        "@space/library-db-definition": "workspace:*",
+        "@space/media-crypto": "workspace:*",
+        "@space/shared": "workspace:*",
+      },
+      "devDependencies": {
+        "@space/content-core": "workspace:*",
+        "@space/parrot-library-db-definition": "workspace:*",
+        "vitest": "^5.1.0",
+      },
+    },
     "packages/media-session": {
       "name": "@space/media-session",
       "devDependencies": {
@@ -1984,6 +1997,8 @@
     "@space/media-crypto": ["@space/media-crypto@workspace:packages/media-crypto"],
 
     "@space/media-deps": ["@space/media-deps@workspace:packages/media-deps"],
+
+    "@space/media-reseal": ["@space/media-reseal@workspace:packages/media-reseal"],
 
     "@space/media-session": ["@space/media-session@workspace:packages/media-session"],
 

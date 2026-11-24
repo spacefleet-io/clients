@@ -1,6 +1,6 @@
 import * as sdk from "@space/sdk";
 import { ApiError, apiErrorFromResponse, createSpaceClient, unwrap, type ApiErrorPayload } from "@space/sdk";
-import { createUserStorageTunnelClient, type StorageTunnelPurpose, type TunnelUploadSource } from "./storageTunnel";
+import { createUserStorageTunnelClient, type StorageResealCopy, type StorageTunnelPurpose, type TunnelUploadSource } from "./storageTunnel";
 import type { StorageObjectCounting } from "./storageCounting";
 import { DEFAULT_SPACE_APP_ID, SPACE_APP_HEADER, type SpaceAppId } from "./appScope";
 import { clientIdentityHeaders } from "./appVersion";
@@ -1124,6 +1124,8 @@ export const uploadStorageObjectViaTunnel = (
     placementId?: string;
     /** How the object counts toward the allowance (STOR-USE-02). */
     counting?: StorageObjectCounting;
+    /** A re-sealed copy (STOR-RESEAL-03): uploaded over a `reseal` session with its run and old key. */
+    reseal?: StorageResealCopy;
   }
 ) => getStorageTunnelClient().uploadObject(token, objectKey, payload, options);
 
@@ -1140,6 +1142,40 @@ export const downloadStorageObjectViaTunnel = (
     profileId?: string | null;
   }
 ) => getStorageTunnelClient().downloadObject(token, objectKey, options);
+
+/** A media reseal run's progress (STOR-RESEAL-02): totals, done, kept, and one page of the objects still waiting. */
+export type MediaResealProgress = sdk.GetMediaResealRunResponses[200];
+/** One page of a run's copies and kept objects (STOR-RESEAL-01/05). */
+export type MediaResealCopies = sdk.ListMediaResealCopiesResponses[200];
+
+/** Opens the account's media reseal run, or resumes the open one (STOR-RESEAL-02). */
+export const openMediaResealRun = (token: string) => unwrap(sdk.openMediaResealRun(scoped(token)));
+
+export const getMediaResealRun = (token: string, runId: string, page: { after?: string | null; limit?: number } = {}): Promise<MediaResealProgress> =>
+  unwrap(
+    sdk.getMediaResealRun({
+      ...scoped(token),
+      path: { id: runId },
+      query: { ...(page.after ? { after: page.after } : {}), ...(page.limit ? { limit: page.limit } : {}) },
+    })
+  );
+
+export const listMediaResealCopies = (token: string, runId: string, page: { after?: string | null; limit?: number } = {}): Promise<MediaResealCopies> =>
+  unwrap(
+    sdk.listMediaResealCopies({
+      ...scoped(token),
+      path: { id: runId },
+      query: { ...(page.after ? { after: page.after } : {}), ...(page.limit ? { limit: page.limit } : {}) },
+    })
+  );
+
+/** Marks objects the old key cannot open as kept (STOR-RESEAL-05); at most 500 keys per call. */
+export const markMediaResealKept = (token: string, runId: string, keys: string[]): Promise<{ kept: number }> =>
+  unwrap(sdk.markMediaResealKept({ ...scoped(token), path: { id: runId }, body: { keys } }));
+
+/** Stops the key change: the run's copies are deleted, the library stays as it was (STOR-RESEAL-07). */
+export const abandonMediaResealRun = (token: string, runId: string): Promise<{ abandoned: boolean; purgeQueued: number }> =>
+  unwrap(sdk.abandonMediaResealRun({ ...scoped(token), path: { id: runId } }));
 
 /**
  * Per-media silo placement (#145): the silo serving `media/<placementId>/…`
