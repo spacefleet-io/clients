@@ -17,6 +17,7 @@ import {
   getMe,
   markFounderNoticeSeen,
   getLibraryMeta,
+  getKeyRotationReadiness,
   getLibraryMetaForKeyStep,
   getSubscription,
   listProfiles,
@@ -85,7 +86,17 @@ import { isAppFeatureId, isAppFeatureState, type ProfileFeatures } from "@space/
 import { classifySignInError, retryAfterMinutes, signInErrorDetails, type SignInFailure } from "@space/shared/signInError";
 import { classifyResendVerificationError, classifySignUpError, classifyVerifyEmailError } from "@space/shared/signUp";
 import { asksKeySavedBeforeSignOut, type SignedOutReason } from "@space/shared/keptLibraryKey";
-import { fetchLibrarySnapshot, publishLibrarySnapshot, type FetchedLibrarySnapshot } from "@space/library-db-runtime/snapshotTransport";
+import {
+  createKeyProbe,
+  fetchLibrarySnapshot,
+  publishLibrarySnapshot,
+  reencryptLibrariesForRotation,
+  sealLibrarySnapshot,
+  type FetchedLibrarySnapshot,
+} from "@space/library-db-runtime/snapshotTransport";
+import { rewriteLibraryBytesForReseal } from "@space/library-db-runtime/resealSnapshot";
+import { registerNodeSqlite } from "@space/library-db-runtime/nodeSqlite";
+import { createParrotKeyChange } from "./keyChange";
 import { deleteStorageObjects, downloadStorageObjectViaTunnel, uploadStorageObjectViaTunnel } from "@space/library-db-runtime/api";
 import { decryptBase64ToBytes } from "@space/library-db-runtime/crypto";
 import { checkKeyAgainstAccount, makeAccountKey } from "./libraryKeyCheck";
@@ -2426,6 +2437,56 @@ const eraseLibrary = (password: unknown, twoFactorCode: unknown) => {
   });
 };
 
+// The key change rewrites library files through library-db-runtime's SQLite loader; main has `node:sqlite`, not
+// better-sqlite3 (STOR-RESEAL-01).
+registerNodeSqlite();
+
+/**
+ * ACCT-KEYCHG-01 (Chris 2026-11-23, Q2): Parrot changes the media library key as Badger does, on the same controller.
+ * Parrot's own library is the server's latest (every Parrot device's saves), its media references renamed to their
+ * re-sealed copies, sealed under the new key (PRIV-KEY-13); Badger's library goes re-encrypted alongside (PRIV-KEY-06).
+ */
+const keyChange = createParrotKeyChange({
+  token: () => store.token(),
+  newKey: () => generateLibraryKeyWords(store.setup.language),
+  hasPassword: async (token) => (await getMe(token)).user.hasPassword !== false,
+  readiness: getKeyRotationReadiness,
+  app: (token) => ({
+    appId: PARROT_APP_ID,
+    oldKey: async () => store.libraryKey(),
+    sealOwnLibrary: async (newKeyBase64, copies) => {
+      const oldKey = store.libraryKey();
+      if (!oldKey) throw new Error("ROTATION_REENCRYPT_UNREADABLE");
+      const fetched = await fetchLibrarySnapshot({ token, keyBase64: oldKey, appId: PARROT_APP_ID });
+      let raw: Uint8Array;
+      if (fetched) {
+        raw = fetched.dbBytes;
+      } else {
+        const empty = openParrotLibrary(null);
+        try {
+          raw = serializeParrotLibrary(empty);
+        } finally {
+          empty.close();
+        }
+      }
+      const { bytes, rewrite } = await rewriteLibraryBytesForReseal(raw, PARROT_APP_ID, copies);
+      log(`[key-change] Parrot library v${fetched?.snapshotVersion ?? "none"} sealed under the new key (${rewrite.references} media reference(s) renamed)`);
+      return { ...(await sealLibrarySnapshot(token, newKeyBase64, bytes, PARROT_APP_ID)), opStreamVersion: PARROT_OP_STREAM_VERSION };
+    },
+    reencryptOtherLibraries: (oldKeyBase64, newKeyBase64, copies) =>
+      reencryptLibrariesForRotation({ token, oldKeyBase64, newKeyBase64, appIds: ["badger"], resealCopies: copies }),
+    keyProbe: createKeyProbe,
+  }),
+  onState: (state) => mainWindow?.webContents.send(PARROT_IPC.keyChangeStateEvent, state),
+  // The rotation revoked every session: keep the new key, drop the copy kept under the old one, back to sign-in.
+  onSwitched: async (newKeyBase64) => {
+    await storeLibraryKey(newKeyBase64);
+    for (const name of ["library.sealed", "library.json"]) rmSync(join(offlineDir, name), { force: true });
+    resetToSignIn("sessionRejected");
+  },
+  log,
+});
+
 /**
  * A billing call with the session token (ACCT-PAY-01). The API's error code travels back as `code`
  * (an Error thrown across IPC would lose it), with `excessBytes` for a `library_too_large` refusal
@@ -2932,6 +2993,27 @@ const registerIpc = () => {
   ipcMain.handle(PARROT_IPC.setLibraryKey, (_event, key: string) => checkLibraryKey(String(key)));
   ipcMain.handle(PARROT_IPC.createLibraryKey, () => createLibraryKey());
   ipcMain.handle(PARROT_IPC.eraseLibrary, (_event, password: unknown, twoFactorCode: unknown) => eraseLibrary(password, twoFactorCode));
+  ipcMain.handle(PARROT_IPC.keyChangeReadiness, () => keyChange.readiness());
+  ipcMain.handle(PARROT_IPC.keyChangeOpen, () => keyChange.open());
+  ipcMain.handle(PARROT_IPC.keyChangeSubmit, (_event, password: unknown, twoFactorCode: unknown) =>
+    keyChange.submit(String(password ?? ""), typeof twoFactorCode === "string" && twoFactorCode ? twoFactorCode : undefined),
+  );
+  ipcMain.handle(PARROT_IPC.keyChangeSwitchNow, () => keyChange.switchNow());
+  ipcMain.handle(PARROT_IPC.keyChangePoll, () => keyChange.poll());
+  ipcMain.handle(PARROT_IPC.keyChangeStop, () => keyChange.stop());
+  ipcMain.handle(PARROT_IPC.keyChangePause, () => keyChange.pause());
+  ipcMain.handle(PARROT_IPC.keyChangeUnreadableFiles, () => keyChange.unreadableFiles());
+  ipcMain.handle(PARROT_IPC.keyChangeDeleteUnreadableFiles, (_event, files: unknown) =>
+    keyChange.deleteUnreadableFiles(
+      Array.isArray(files)
+        ? files.flatMap((file: unknown) =>
+            file && typeof file === "object" && "key" in file && typeof file.key === "string" && "sizeBytes" in file && typeof file.sizeBytes === "number"
+              ? [{ key: file.key, sizeBytes: file.sizeBytes }]
+              : [],
+          )
+        : [],
+    ),
+  );
   ipcMain.handle(PARROT_IPC.pickFolders, async () => {
     const picked = await dialog.showOpenDialog(mainWindow!, { properties: ["openDirectory", "multiSelections"] });
     return picked.canceled ? [] : picked.filePaths;

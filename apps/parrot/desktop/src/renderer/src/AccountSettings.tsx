@@ -22,6 +22,7 @@ import { desktopTourText } from "@space/desktop-shell/tour";
 import { localStorageCreditsStore, type CreditsSource } from "@space/metadata-client/credits";
 import { OfflineContent, type DescribeKept } from "./OfflineContent";
 import { DownloadEverythingRow } from "./ExportJobs";
+import { KeyChangeRow } from "./KeyChangeRow";
 
 /** Settings › About's data credits (META-SRC-09): main asks the lookups' metadata service; the last answer stays in localStorage. */
 const creditsSource: CreditsSource = {
@@ -155,6 +156,8 @@ export function SettingsPage({
                   {t("library.pairDevice")}
                 </Button>
               </Row>
+              {/* ACCT-KEYCHG-01: replace the media library key, with every media file re-sealed first (STOR-RESEAL-01). */}
+              <KeyChangeRow language={language} onState={onState} />
               {/* ACCT-EXPORT-01: every song as plain music files in a folder the user picks. */}
               <DownloadEverythingRow t={t} language={language} />
               {news.value !== undefined ? (

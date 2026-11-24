@@ -914,32 +914,9 @@
         "errorMissing": "Er staat geen mediatheeksleutel op dit apparaat."
       },
       "rotate": {
-        "title": "Mediatheeksleutel vervangen",
-        "subtitle": "Maak een nieuwe sleutel en vergrendel de gegevens van je mediatheek opnieuw.",
-        "button": "Nieuwe sleutel maken",
-        "dialogTitle": "Je mediatheeksleutel vervangen",
-        "keyLabel": "Nieuwe mediatheeksleutel",
-        "keyHint": "Bewaar deze sleutel op een veilige plek voordat je verdergaat.",
         "copyButton": "Sleutel kopiëren",
         "copySuccess": "Mediatheeksleutel gekopieerd.",
-        "copyFail": "Sleutel kon niet worden gekopieerd.",
-        "confirmLabel": "Ik begrijp dat andere sessies hierdoor worden beëindigd",
-        "passwordLabel": "Accountwachtwoord",
-        "codeLabel": "Verificatiecode",
-        "codeHintEmail": "Vul de code in die we naar je e-mail hebben gestuurd.",
-        "codeHintTotp": "Vul de code uit je authenticator-app in.",
-        "cancel": "Annuleren",
-        "codeSent": "We hebben een verificatiecode gestuurd. Kijk in je e-mail of je authenticator-app.",
-        "errorInvalidPassword": "Onjuist wachtwoord.",
-        "errorTwoFactorInvalid": "De verificatiecode is ongeldig.",
-        "submit": "Sleutel vervangen",
-        "working": "Vervangen…",
-        "errorGeneric": "De sleutel kon niet worden vervangen. Probeer het opnieuw.",
-        "errorNotReencrypted": "Je Parrot-mediatheek kon hier niet opnieuw worden vergrendeld met de nieuwe sleutel, dus er is niets veranderd. Vervang de sleutel via Instellingen op een computer die je huidige sleutel heeft.",
-        "errorUnreadable": "Je huidige sleutel opent je Parrot-mediatheek niet, dus er is niets veranderd.",
-        "errorNotSnapshotted": "Je Parrot-mediatheek heeft wijzigingen die nog niet zijn opgeslagen. Open Parrot, laat het klaar synchroniseren en probeer het dan opnieuw. Er is niets veranderd.",
-        "errorReencryptFailed": "Je Parrot-mediatheek kon niet opnieuw worden vergrendeld met de nieuwe sleutel. Er is niets veranderd. Probeer het opnieuw.",
-        "errorChanged": "Je mediatheek is veranderd terwijl de sleutel werd vervangen. Er is niets veranderd. Probeer het opnieuw."
+        "copyFail": "Sleutel kon niet worden gekopieerd."
       },
       "reset": {
         "title": "Gegevens van de mediatheek wissen",

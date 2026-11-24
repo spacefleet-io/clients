@@ -95,9 +95,9 @@ def open_sealed_key(device_private, request_id, sealed):
         raise
     except (KeyError, ValueError, TypeError, AttributeError, crypto.CryptoError, x25519.X25519Error) as exc:
         log("pairing: could not open sealed key: %s" % exc, "error")
-        raise PairingError("Could not unlock the library key sent by your phone. Try pairing again.")
+        raise PairingError("Could not unlock the media library key sent by your phone. Try pairing again.")
     if len(plain) != 32:
-        raise PairingError("The library key sent by your phone has the wrong size. Try pairing again.")
+        raise PairingError("The media library key sent by your phone has the wrong size. Try pairing again.")
     return plain
 
 
@@ -124,7 +124,7 @@ def verify_key_against_probe(library_key, meta):
         crypto.envelope_decrypt_b64(library_key, probe)
         return True
     except crypto.CryptoError:
-        raise PairingError("The library key from your phone does not match this account's library. Nothing was saved.")
+        raise PairingError("The media library key from your phone does not match this account's library. Nothing was saved.")
 
 
 # ------------------------------------------------------------------ check code (PRIV-PAIR-01, same as @space/pairing-crypto)

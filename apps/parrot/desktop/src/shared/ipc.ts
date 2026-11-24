@@ -16,10 +16,38 @@ import type { KeepCopyChoice, KeptKind, KeptStatus, ParrotEditTarget, ParrotLyri
 import type { ParrotPhotoCredit } from "@space/parrot-library-db-definition";
 import type { ParrotCoverCrop, ParrotImportPlacedFile, ParrotImportUnidentifiedFile } from "@space/parrot-core";
 import type { ParrotLibraryPatch } from "./libraryPatch";
+import type { KeyChangeFailure } from "@space/shared/keyChangeFailure";
+import type { KeyChangeOutcome, KeyChangeState, UnreadableFile } from "@space/media-reseal";
+import type { KeyRotationReadiness } from "@space/shared/keyChange";
 
 import type { ParrotEditCover, ParrotEditSuggestion, ParrotEditSuggestQuery, ParrotEditValues } from "@space/parrot-core";
 
 export type { ParrotEditCover, ParrotEditValues } from "@space/parrot-core";
+export type { KeyChangeState, UnreadableFile } from "@space/media-reseal";
+
+/** The key change dialog opened: a new key's words to write down, and whether the account has a password (ACCT-AUTH-04). */
+export type ParrotKeyChangeOpen = { ok: true; words: string[]; hasPassword: boolean } | { ok: false };
+
+/** How a key change step ended: switched (signed out), copying paused, waiting on another device, or refused. */
+export type ParrotKeyChangeResult = { status: KeyChangeOutcome } | KeyChangeFailure;
+
+/** The media library key change (ACCT-KEYCHG-01, STOR-RESEAL-01), run in main on the controller Badger runs too. */
+export type ParrotKeyChangeBridge = {
+  /** ACCT-KEYCHG-04: `GET /library/recovery/rotate`; null while unknown (the entry stays hidden). */
+  readiness(): Promise<KeyRotationReadiness | null>;
+  open(): Promise<ParrotKeyChangeOpen>;
+  /** Start (password and code, ACCT-KEYCHG-03) from the form; Finish once the run is open (no reauth). */
+  submit(password: string, twoFactorCode?: string): Promise<ParrotKeyChangeResult>;
+  switchNow(): Promise<ParrotKeyChangeResult>;
+  poll(): Promise<ParrotKeyChangeResult>;
+  stop(): Promise<ParrotKeyChangeResult>;
+  /** Leaving Settings: the copying pauses between files. */
+  pause(): Promise<void>;
+  unreadableFiles(): Promise<UnreadableFile[]>;
+  /** True once deleted. */
+  deleteUnreadableFiles(files: UnreadableFile[]): Promise<boolean>;
+  onState(listener: (state: KeyChangeState) => void): () => void;
+};
 export type { ParrotImportEdit, ParrotImportScan, ParrotScanEntry } from "@space/parrot-ingest";
 /** The songs the user ticked in the confirm dialog, with the names they confirmed (PAR-UP-05). */
 export type ParrotImportSelection = Array<ParrotImportEdit & { file: string }>;
@@ -377,6 +405,8 @@ export type ParrotBridge = {
    * computer's key and cache; setup goes back to the key step.
    */
   eraseLibrary(password: string, twoFactorCode?: string): Promise<LibraryKeyEraseOutcome>;
+  /** ACCT-KEYCHG-01: Settings › Account's media library key change, run in main (Badger's library re-encrypted alongside). */
+  keyChange: ParrotKeyChangeBridge;
   pickFolders(): Promise<string[]>;
   /** UX-ADD-01: song files picked from the "+" dialog; scanImport takes them like folders. */
   pickFiles(): Promise<string[]>;
@@ -581,6 +611,16 @@ export const PARROT_IPC = {
   setLibraryKey: "parrot:key:set",
   createLibraryKey: "parrot:key:create",
   eraseLibrary: "parrot:key:erase",
+  keyChangeReadiness: "parrot:key-change:readiness",
+  keyChangeOpen: "parrot:key-change:open",
+  keyChangeSubmit: "parrot:key-change:submit",
+  keyChangeSwitchNow: "parrot:key-change:switch-now",
+  keyChangePoll: "parrot:key-change:poll",
+  keyChangeStop: "parrot:key-change:stop",
+  keyChangePause: "parrot:key-change:pause",
+  keyChangeUnreadableFiles: "parrot:key-change:unreadable-files",
+  keyChangeDeleteUnreadableFiles: "parrot:key-change:unreadable-delete",
+  keyChangeStateEvent: "parrot:key-change:state-event",
   pickFolders: "parrot:folders:pick",
   pickFiles: "parrot:files:pick",
   scanImport: "parrot:import:scan",
