@@ -73,6 +73,9 @@ vi.mock("../src/components/PosterGrid", () => ({
   },
 }));
 vi.mock("../src/components/PlaylistsPanel", () => ({ PlaylistsPanel: () => null }));
+vi.mock("../src/components/IconButton", () => ({
+  IconButton: (props: { label: string; children?: ReactNode }) => createElement("IconButton", props, props.children),
+}));
 vi.mock("../src/components/usePickerSheet", () => ({ usePickerSheet: () => ({ visible: false, open: () => undefined }) }));
 vi.mock("../src/lib/usePullToRefresh", () => ({ usePullToRefresh: () => ({}) }));
 vi.mock("../src/lib/downloads/downloadsStore", () => ({

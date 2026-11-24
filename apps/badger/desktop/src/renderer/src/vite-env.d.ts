@@ -6,8 +6,6 @@
 type _MpvCommand = import("@space/mpv-protocol").MpvCommand;
 type _MpvResponse = import("@space/mpv-protocol").MpvResponse;
 type _MpvExternalMessage = import("@space/mpv-protocol").MpvExternalMessage;
-type _RuntimeJobsRetryResult = import("@space/runtime-contracts/runtime/jobs").RuntimeJobsRetryResult;
-type _RuntimeJobsAvailabilityResult = import("@space/runtime-contracts/runtime/jobs").RuntimeJobsAvailabilityResult;
 type _OscActionFile = import("@space/mpv-protocol").OscActionFile;
 type _SubtitleEntry = import("@space/mpv-protocol").SubtitleEntry;
 type _SiblingSignInActions = import("@space/desktop-shell/sibling").SiblingSignInActions;
@@ -18,7 +16,6 @@ type _DeviceCapacityValues = import("../../shared/deviceCapacity").DeviceCapacit
 type _DeviceCapacitySettings = import("../../shared/deviceCapacity").DeviceCapacitySettings;
 type _UploadsFirstRunAnswer = import("../../shared/uploadPlaybackDefault").UploadsFirstRunAnswer;
 type _ErrorReportsState = import("@space/error-report/desktop").ErrorReportsState;
-type _SkipCatchUpStatus = import("@space/runtime-contracts").BadgerPreviewsCatchUp;
 type _PairingStartResult = import("@space/desktop-shell/pairing").PairingStartResult;
 type _PlaybackSaturationState = import("../../shared/playbackSaturation").PlaybackSaturationState;
 type _PairingPollResult = import("@space/desktop-shell/pairing").PairingPollResult;
@@ -368,14 +365,6 @@ interface Window {
       /** Stores the answer and starts or stops reporting at once. */
       set: (decision: "on" | "off") => Promise<_ErrorReportsState>;
     };
-    /** MPV-PREV-07: the skip-detection catch-up shown in the Jobs tab; null when the runtime is not reachable. */
-    skipCatchUp?: {
-      getStatus: () => Promise<_SkipCatchUpStatus | null>;
-      /** "Try again": one video (`formatId`) or all (null); false when the runtime did not take it. */
-      retry: (formatId: string | null) => Promise<boolean>;
-      /** A skip job's Cancel (`cancel`) or Remove from history (`dismiss`); false when the runtime did not take it. */
-      setVideo?: (formatId: string, action: "cancel" | "dismiss") => Promise<boolean>;
-    };
     /**
      * V2 ingest IPC surface. Backs the renderer's v2 hook. Always exposed; the
      * renderer chooses between v1 and v2 paths via `runtimeEngineV2Enabled`
@@ -396,11 +385,7 @@ interface Window {
       dismiss?: (payload: { jobId: string }) => Promise<
         { dismissed: true } | { dismissed: false; errorCode: "not-terminal" }
       >;
-      retry?: (payload: { jobId: string; mode?: "upload" | "process" }) => Promise<_RuntimeJobsRetryResult>;
-      /** UX-JOBS-03: the one action each failed job offers, from what is still on disk. */
-      availability?: (payload: { jobIds: string[] }) => Promise<_RuntimeJobsAvailabilityResult>;
-      /** UX-JOBS-03 "Find the file": main opens a picker, the runtime checks it is the same video. */
-      findFile?: (payload: { jobId: string }) => Promise<_RuntimeJobsRetryResult | { cancelled: true }>;
+      retry?: (payload: { jobId: string }) => Promise<{ retried: boolean; newJobId?: string }>;
       submitSources?: (payload: {
         userId: string;
         sources: Array<{

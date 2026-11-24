@@ -34,7 +34,6 @@ import {
   type RuntimeJobsV2Handler,
 } from "./routes/runtimeJobsV2";
 import { registerBadgerStepHandlers } from "./modules/badger/steps";
-import { createBadgerFailedJobs } from "./modules/badger/failedJobs";
 import { getApiBaseUrl } from "@space/library-db-runtime";
 import {
   getBadgerSessionUserId,
@@ -157,14 +156,9 @@ if (isEngineV2Enabled()) {
     v2EventLogStore = createSqliteRuntimeJobsStore(v2DbPath);
     v2EventLog = createEventLog(createSqliteEventLogDeps(v2EventLogStore.db));
 
-    // UX-JOBS-03 / INGS-KEEP-01: the failed imports' actions, and the sweep of
-    // their kept processed copies (boot, then hourly).
-    const failedJobs = createBadgerFailedJobs({ engine: engineV2 });
-    failedJobs.startSweeper();
     v2Handler = createRuntimeJobsV2Handler({
       engine: engineV2,
       eventLog: v2EventLog,
-      failedJobs,
     });
     setRuntimeJobsV2Handler(v2Handler);
     setEngineV2BootStatus({ state: "ready" });

@@ -36,87 +36,11 @@
       "filterFailed": "Fehlgeschlagen",
       "downloadsHeld": "Downloads sind pausiert, solange sehr viel los ist. Sie gehen von selbst weiter, sobald es ruhiger wird.",
       "downloadsSlowed": "Downloads sind langsamer, weil gerade sehr viel los ist.",
-      "crewBackfill": "Regie und Drehbuch werden zu deinen Titeln ergänzt ({{handled}} von {{total}})",
-      "failed": {
-        "whatUploadStopped": "Der Upload wurde nicht abgeschlossen.",
-        "whatImportStopped": "Der Import wurde nicht abgeschlossen.",
-        "whatPlanFull": "Der Upload wurde gestoppt: Der Speicher des Tarifs ist voll.",
-        "whatDiskFull": "Die Verarbeitung wurde gestoppt: Die Festplatte dieses Computers ist voll.",
-        "meaningKeptOutputs": "Das Video ist bereits verarbeitet und bleibt bis {{date}} auf diesem Computer. Nur der Upload läuft erneut.",
-        "meaningSourceUnchanged": "Die Originaldatei ist noch da. Die Verarbeitung beginnt von vorn.",
-        "meaningKeptRemovedLowDisk": "Die verarbeitete Kopie wurde gelöscht, um Speicherplatz freizugeben. Die Originaldatei ist noch da, daher beginnt die Verarbeitung von vorn.",
-        "meaningKeptRemovedExpired": "Die verarbeitete Kopie wurde nach 14 Tagen gelöscht. Die Originaldatei ist noch da, daher beginnt die Verarbeitung von vorn.",
-        "meaningSourceChanged": "Die Originaldatei hat sich seit dem Import geändert. Wähle die Originaldatei, um sie erneut zu importieren.",
-        "meaningSourceMissing": "Die Originaldatei ist nicht mehr dort, wo sie war. Suche sie, um sie erneut zu importieren.",
-        "meaningPickedMismatch": "Die gewählte Datei ist nicht dasselbe Video. Wähle die Originaldatei.",
-        "meaningSourceDeleted": "Die Originaldatei liegt im Papierkorb. Es gibt nichts mehr zu importieren, du kannst diesen Auftrag entfernen.",
-        "meaningNoSourcePath": "Es gibt keine Datei zum erneuten Import, du kannst diesen Auftrag entfernen.",
-        "meaningReimported": "Dieses Video wurde seitdem erneut importiert und ist in der Bibliothek. Du kannst diesen Auftrag entfernen.",
-        "meaningPlanFull": "Wechsle oben in dieser Liste zum größeren Tarif. Nichts ist verloren: Der Auftrag kann danach erneut laufen.",
-        "meaningPlanHasRoom": "Der Tarif hat jetzt Platz. Nichts ist verloren: Der Auftrag kann erneut laufen.",
-        "meaningDiskFull": "Gib Speicherplatz auf diesem Computer frei. Nichts ist verloren: Der Auftrag kann danach erneut laufen.",
-        "meaningParentFailed": "Dieser Teil wurde gestoppt, weil der Hauptimport nicht abgeschlossen wurde. Starte stattdessen den Hauptimport neu.",
-        "meaningNotRetryable": "Dieser Auftrag kann nicht erneut laufen, du kannst ihn entfernen.",
-        "actionUploadAgain": "Erneut hochladen",
-        "actionProcessAgain": "Erneut verarbeiten",
-        "actionFindFile": "Datei suchen",
-        "actionUpgradePlan": "Tarif wechseln",
-        "keptCopies": "Aufbewahrte Kopien fehlgeschlagener Importe belegen {{size}} auf diesem Computer. Jede wird nach 14 Tagen gelöscht, oder früher, wenn der Speicher knapp wird."
-      },
-      "skipCatchUp": {
-        "state": {
-          "paused_playback": "Pausiert während der Wiedergabe",
-          "paused_import": "Pausiert während des Imports",
-          "offline": "Wartet auf Verbindung",
-          "retry_wait": "Neuer Versuch um {{time}}"
-        },
-        "offlineHint": "Läuft von selbst weiter, sobald die Verbindung zurück ist",
-        "list": {
-          "step": {
-            "download": "Download: {{done}} von {{total}} MB",
-            "pictures": "Bilder lesen",
-            "sound": "Ton lesen",
-            "waiting": "Wird gestartet"
-          },
-          "result": {
-            "found_both": "Intro und Abspann gefunden",
-            "found_intro": "Intro gefunden",
-            "found_credits": "Abspann gefunden",
-            "waiting_other_episode": "Wartet auf eine weitere Folge",
-            "nothing_found": "Nichts gefunden",
-            "previews_made": "Vorschaubilder für die Zeitleiste fertig"
-          },
-          "failedStep": {
-            "download": "Die gespeicherte Kopie konnte nicht heruntergeladen werden",
-            "read": "Das Video konnte nicht gelesen werden",
-            "room": "Nicht genug freier Speicherplatz"
-          },
-          "tryAgain": "Erneut versuchen",
-          "tryAgainNow": "Jetzt erneut versuchen",
-          "retryAt": "Neuer Versuch um {{time}}",
-          "stepShort": {
-            "download": "Download",
-            "pictures": "Bilder",
-            "sound": "Ton",
-            "waiting": "Start"
-          },
-          "waitingImport": "Wartet auf deinen Import"
-        }
-      },
-      "skipDetect": {
-        "whatCancelled": "Du hast es abgebrochen.",
-        "meaningCancelled": "Dieses Video bleibt außen vor, bis du es erneut versuchst.",
-        "meaningFailed": "Dieses Video hat keine Intro- oder Abspannzeiten, bis es erneut läuft.",
-        "meaningFailedFilm": "Dieser Film hat keine Vorschaubilder für die Zeitleiste, bis es erneut läuft.",
-        "meaningRetryWait": "Badger versucht dieses Video um {{time}} von selbst erneut."
-      },
-      "clearFinished": "Abgeschlossene entfernen"
+      "crewBackfill": "Regie und Drehbuch werden zu deinen Titeln ergänzt ({{handled}} von {{total}})"
     },
     "notifications": {
       "title": "Benachrichtigungen",
-      "subtitle_one": "{{count}} neuer Eintrag",
-      "subtitle_other": "{{count}} neue Einträge",
-      "subtitle_many": "{{count}} neue Einträge",
+      "subtitle": "{{count}} neue Einträge",
       "empty": "Noch keine Benachrichtigungen.",
       "open": "Öffnen",
       "filterAll": "Alle",
@@ -125,8 +49,7 @@
       "filterInfo": "Info",
       "filterSuccess": "Erfolg",
       "clearAll": "Alle löschen",
-      "dismiss": "Schließen",
-      "subtitle": "{{count}} neue Einträge"
+      "dismiss": "Schließen"
     },
     "account": "Konto"
   },
@@ -164,7 +87,19 @@
     "resendSuccess": "Ein neuer Bestätigungscode wurde gesendet.",
     "resendError": "Der Code konnte nicht erneut gesendet werden.",
     "provider": {
-      "continueInBrowser": "Schließe die Anmeldung in deinem Browser ab. Danach kommt Badger wieder nach vorne."
+      "signInWith": "Mit {{provider}} anmelden",
+      "signUpWith": "Mit {{provider}} registrieren",
+      "or": "oder",
+      "continueInBrowser": "Schließe die Anmeldung in deinem Browser ab. Danach kommt Badger wieder nach vorne.",
+      "errorStart": "Die Anmeldung konnte nicht gestartet werden. Bitte versuch es noch einmal.",
+      "errors": {
+        "email_unverified": "Die E-Mail-Adresse dieses Kontos ist nicht bestätigt. Bestätige sie beim Anbieter oder melde dich mit E-Mail und Passwort an.",
+        "email_domain_disallowed": "Mit dieser E-Mail-Adresse kann kein Konto erstellt werden.",
+        "account_deletion_pending": "Die Löschung dieses Kontos ist geplant.",
+        "provider_failed": "Die Anmeldung hat nicht geklappt. Bitte versuch es noch einmal.",
+        "cancelled": "Die Anmeldung wurde abgebrochen.",
+        "invalid_code": "Diese Anmeldung ist abgelaufen oder wurde woanders gestartet. Bitte versuch es noch einmal."
+      }
     }
   },
   "signup": {
@@ -437,9 +372,6 @@
     "labels": {
       "audio": "Audio",
       "subtitles": "Untertitel",
-      "episodeShort_one": "{{count}} Folge",
-      "episodeShort_other": "{{count}} Folgen",
-      "episodeShort_many": "{{count}} Folgen",
       "episodeShort": "{{count}} Folgen"
     },
     "availableQualities": "Verfügbare Qualitäten",
@@ -459,22 +391,16 @@
       "addModalSource": "Quelle: {{quality}}",
       "addModalSize": "~{{size}}",
       "addModalSizeUnknown": "Größe unbekannt",
-      "addModalConfirm_one": "{{count}} Transkodierung einreihen",
-      "addModalConfirm_other": "{{count}} Transkodierungen einreihen",
-      "addModalConfirm_many": "{{count}} Transkodierungen einreihen",
+      "addModalConfirm": "{{count}} Transkodierung(en) einreihen",
       "addModalCancel": "Abbrechen",
-      "addModalSubmittedToast_one": "{{count}} Transkodierung eingereiht – verfolge sie unter „Aufträge“.",
-      "addModalSubmittedToast_other": "{{count}} Transkodierungen eingereiht – verfolge sie unter „Aufträge“.",
-      "addModalSubmittedToast_many": "{{count}} Transkodierungen eingereiht – verfolge sie unter „Aufträge“.",
+      "addModalSubmittedToast": "{{count}} Transkodierung(en) eingereiht – verfolge sie unter „Aufträge“.",
       "addModalFailedToast": "Die neuen Qualitäten konnten nicht eingereiht werden: {{reason}}",
       "errors": {
         "source-protected": "Die Quellqualität kannst du nicht löschen.",
         "quality-exists": "Diese Qualität ist für diese Datei bereits vorhanden.",
         "cannot-transcode-up": "Transkodieren in eine höhere Auflösung als die gespeicherte ist nicht möglich.",
         "media-not-found": "Diese Mediendatei existiert nicht mehr."
-      },
-      "addModalConfirm": "{{count}} Transkodierung(en) einreihen",
-      "addModalSubmittedToast": "{{count}} Transkodierung(en) eingereiht – verfolge sie unter „Aufträge“."
+      }
     },
     "hideMissing": {
       "title": "Fehlende Dateien ausblenden",
@@ -499,9 +425,6 @@
         "show": "{{title}} — ganze Serie",
         "season": "{{title}} — Staffel {{season}}",
         "episode": "{{title}} — S{{season}}E{{episode}}{{episodeTitle, mustache}}",
-        "missingEpisodes_one": "{{count}} fehlende Folge",
-        "missingEpisodes_other": "{{count}} fehlende Folgen",
-        "missingEpisodes_many": "{{count}} fehlende Folgen",
         "missingEpisodes": "{{count}} fehlende Folge(n)"
       },
       "modal": {
@@ -514,31 +437,22 @@
         "size": "Gesamtgröße",
         "includesAudioSubs": "Alle Tonspuren und Untertitel sind enthalten.",
         "expectedFilename": "Gespeichert als",
-        "expectedFilenamePlusN_one": "und {{count}} weitere Datei",
-        "expectedFilenamePlusN_other": "und {{count}} weitere Dateien",
-        "expectedFilenamePlusN_many": "und {{count}} weitere Dateien",
+        "expectedFilenamePlusN": "und {{count}} weitere Datei(en)",
         "estimating": "Größe und Speicherplatz werden berechnet…",
         "estimateFailedToast": "Der Download konnte nicht abgeschätzt werden: {{reason}}",
         "skippedSubsWarning": "MP4 kann diese Untertitelspuren nicht einbetten – sie werden übersprungen: {{tracks}}",
-        "skippedItems_one": "{{count}} Eintrag wird übersprungen (keine passende Qualität oder keine Datei).",
-        "skippedItems_other": "{{count}} Einträge werden übersprungen (keine passende Qualität oder keine Datei).",
-        "skippedItems_many": "{{count}} Einträge werden übersprungen (keine passende Qualität oder keine Datei).",
+        "skippedItems": "{{count}} Eintrag/Einträge werden übersprungen (keine passende Qualität oder keine Datei).",
         "diskWarning": "Nicht genug freier Speicherplatz.",
         "diskWarningDetail": "{{required}} benötigt, nur {{free}} frei.",
         "confirm": "Download starten",
         "cancel": "Abbrechen",
-        "submittedToast_one": "{{count}} Offline-Download eingereiht – verfolge ihn unter „Aufträge“.",
-        "submittedToast_other": "{{count}} Offline-Downloads eingereiht – verfolge sie unter „Aufträge“.",
-        "submittedToast_many": "{{count}} Offline-Downloads eingereiht – verfolge sie unter „Aufträge“.",
+        "submittedToast": "{{count}} Offline-Download(s) eingereiht – verfolge sie unter „Aufträge“.",
         "submitFailedToast": "Der Download konnte nicht gestartet werden: {{reason}}",
         "errors": {
           "insufficient_disk_space": "Nicht genug freier Speicherplatz ({{required}} benötigt, {{free}} frei).",
           "library_db_not_open": "Die Mediathek ist nicht geöffnet. Öffne sie erneut und versuch es nochmal.",
           "not_authenticated": "Melde dich an und versuch es erneut."
-        },
-        "expectedFilenamePlusN": "und {{count}} weitere Datei(en)",
-        "skippedItems": "{{count}} Eintrag/Einträge werden übersprungen (keine passende Qualität oder keine Datei).",
-        "submittedToast": "{{count}} Offline-Download(s) eingereiht – verfolge sie unter „Aufträge“."
+        }
       },
       "button": {
         "save": "Offline speichern",
@@ -548,11 +462,8 @@
         "deleteConfirmDescription": "Dadurch werden die gespeicherten Dateien von diesem Gerät entfernt. Streamen funktioniert weiterhin.",
         "deleteConfirm": "Löschen",
         "deleteCancel": "Abbrechen",
-        "deletedToast_one": "{{count}} Offline-Datei entfernt.",
-        "deletedToast_other": "{{count}} Offline-Dateien entfernt.",
-        "deletedToast_many": "{{count}} Offline-Dateien entfernt.",
-        "deleteFailedToast": "Die Offline-Dateien konnten nicht gelöscht werden: {{reason}}",
-        "deletedToast": "{{count}} Offline-Datei(en) entfernt."
+        "deletedToast": "{{count}} Offline-Datei(en) entfernt.",
+        "deleteFailedToast": "Die Offline-Dateien konnten nicht gelöscht werden: {{reason}}"
       },
       "badge": {
         "savedOffline": "Offline gespeichert",
@@ -576,9 +487,6 @@
     "sections": {
       "movies": "Filme",
       "tv": "Serien",
-      "count_one": "{{count}} Eintrag",
-      "count_other": "{{count}} Einträge",
-      "count_many": "{{count}} Einträge",
       "count": "{{count}} Einträge"
     },
     "media": {
@@ -672,13 +580,10 @@
     "seasons": {
       "title": "Staffeln",
       "empty": "Noch keine Staffeln geladen.",
-      "episodeCount_one": "{{count}} Folge",
-      "episodeCount_other": "{{count}} Folgen",
-      "episodeCount_many": "{{count}} Folgen",
+      "episodeCount": "{{count}} Folgen",
       "available": "Verfügbar",
       "missing": "Dateien fehlen",
-      "specials": "Specials",
-      "episodeCount": "{{count}} Folgen"
+      "specials": "Specials"
     },
     "episodes": {
       "title": "Folgen · Staffel {{season}}",
@@ -742,22 +647,6 @@
       "back": "Mediathek",
       "playsThisVersion": "Die Wiedergabe startet mit dieser Version",
       "more": "Weitere Aktionen"
-    },
-    "skipTimes": {
-      "menu": "Intro und Abspann",
-      "setIntro": "Intro-Zeiten festlegen",
-      "setCredits": "Abspann-Zeiten festlegen",
-      "introChip": "Intro {{start}}–{{end}}",
-      "creditsChip": "Abspann {{start}}",
-      "creditsStart": "Abspann beginnt",
-      "creditsHint": "Ziehe die Marke: das Bild folgt ihr.  ← → verschieben sie um 1 s",
-      "noPicture": "Noch kein Bild",
-      "failed": "Die Zeiten konnten nicht gespeichert werden.",
-      "back": "Zurück  [Esc]",
-      "episodeLine": "{{show}} · S{{season}} F{{episode}} · {{title}}",
-      "leftOut": "Ausgelassen",
-      "tryAgain": "Erneut versuchen",
-      "tryAgainAll": "Für alle ausgelassenen Folgen erneut versuchen"
     }
   },
   "playlists": {
@@ -773,13 +662,10 @@
     "selectTitle": "Playlist auswählen",
     "selectSubtitle": "Wähle eine Playlist, um ihre Einträge zu sehen.",
     "selectPrompt": "Wähle eine Playlist, um ihre Einträge zu sehen.",
-    "itemsCount_one": "{{count}} Eintrag",
-    "itemsCount_other": "{{count}} Einträge",
-    "itemsCount_many": "{{count}} Einträge",
+    "itemsCount": "{{count}} Einträge",
     "noItems": "Noch keine Einträge.",
     "missing": "Datei fehlt",
-    "remove": "Entfernen",
-    "itemsCount": "{{count}} Einträge"
+    "remove": "Entfernen"
   },
   "settings": {
     "subtitle": "Alles für diese App und dein Konto.",
@@ -1359,37 +1245,7 @@
       "noDisplay": "Das Video kann in dieser Sitzung nicht abgespielt werden: diese Sitzung nutzt nur Wayland, und der Videoplayer braucht X11. Aktiviere XWayland (X11-Kompatibilität) oder melde dich in einer X11-Sitzung an und versuch es dann noch einmal.",
       "sourceUnreachable": "Dieser Titel ist nicht offline gespeichert und der Server ist nicht erreichbar. Verbinde dich mit dem Internet oder lade ihn zum Offline-Ansehen herunter."
     },
-    "preparingPlayback": "Wiedergabe wird vorbereitet",
-    "skipUi": {
-      "skipIntro": "Intro überspringen",
-      "skipCredits": "Abspann überspringen",
-      "nextEpisode": "Nächste Folge",
-      "nextEpisodeIn": "Nächste Folge startet in",
-      "openingNextEpisode": "Nächste Folge wird geöffnet",
-      "enterKey": "[Eingabe]",
-      "askedIntro": "Intro übersprungen. Hat es gepasst?",
-      "askedCredits": "Abspann übersprungen. Hat es gepasst?",
-      "yes": "Ja",
-      "changeTimes": "Zeiten ändern",
-      "thanks": "Danke",
-      "changeIntroTimes": "Intro-Zeiten ändern",
-      "changeCreditsTimes": "Abspann-Zeiten ändern",
-      "start": "Anfang",
-      "end": "Ende",
-      "hint": "Ziehe eine Marke: das Bild folgt ihr.  ← → verschieben die gewählte um 1 s",
-      "save": "Speichern  [Eingabe]",
-      "cancel": "Abbrechen  [Esc]",
-      "back": "Zurück",
-      "scopeQuestion": "Diese Zeiten verwenden für",
-      "thisSeason": "Diese Staffel",
-      "onlyThisEpisode": "Nur diese Folge",
-      "farNote": "Diese Zeiten weichen stark vom Rest der Staffel ab.",
-      "savedSeason": "Für diese Staffel gespeichert",
-      "savedEpisode": "Für diese Folge gespeichert",
-      "menuPrompt": "Intro und Abspann",
-      "introEndsHere": "Intro endet hier",
-      "creditsStartHere": "Abspann beginnt hier"
-    }
+    "preparingPlayback": "Wiedergabe wird vorbereitet"
   },
   "dashboard": {
     "title": "Start",
@@ -1400,11 +1256,8 @@
       "resume": "Fortsetzen bei {{time}}",
       "resumeShort": "Fortsetzen",
       "details": "Details",
-      "minutesLeft_one": "noch {{count}} Min.",
-      "minutesLeft_other": "noch {{count}} Min.",
-      "minutesLeft_many": "noch {{count}} Min.",
-      "seeAll": "Alle anzeigen",
-      "minutesLeft": "noch {{count}} Min."
+      "minutesLeft": "noch {{count}} Min.",
+      "seeAll": "Alle anzeigen"
     },
     "empty": {
       "eyebrow": "Deine Bibliothek",
@@ -1531,15 +1384,9 @@
         "tv": "Serien"
       },
       "empty": "Noch keine Dateien hochgeladen",
-      "fileCount_one": "{{count}} Datei",
-      "fileCount_other": "{{count}} Dateien",
-      "fileCount_many": "{{count}} Dateien",
-      "episodeFileCount_one": "{{count}} Folgendatei",
-      "episodeFileCount_other": "{{count}} Folgendateien",
-      "episodeFileCount_many": "{{count}} Folgendateien",
-      "episodeShort_one": "{{count}} Folge",
-      "episodeShort_other": "{{count}} Folgen",
-      "episodeShort_many": "{{count}} Folgen",
+      "fileCount": "{{count}} Datei",
+      "episodeFileCount": "{{count}} Folgendateien",
+      "episodeShort": "{{count}} Folgen",
       "apply": "Änderungen übernehmen",
       "delete": "Datei löschen",
       "applyTitle": "Formatänderungen übernehmen?",
@@ -1551,10 +1398,7 @@
       "cancel": "Abbrechen",
       "queued": "Transcode-Aktualisierungen für {{label}} eingereiht.",
       "cleanupMessage": "{{removed}} verwaiste Dateien entfernt. {{missing}} fehlende Verweise bereinigt.",
-      "cleanupFailed": "Bereinigung fehlgeschlagen. Bitte versuch es erneut.",
-      "fileCount": "{{count}} Datei",
-      "episodeFileCount": "{{count}} Folgendateien",
-      "episodeShort": "{{count}} Folgen"
+      "cleanupFailed": "Bereinigung fehlgeschlagen. Bitte versuch es erneut."
     },
     "status": {
       "waiting": "Wartet",
@@ -1565,8 +1409,7 @@
       "transcoding": "Wird transkodiert",
       "uploading": "Wird hochgeladen",
       "done": "Fertig",
-      "failed": "Fehlgeschlagen",
-      "cancelled": "Abgebrochen"
+      "failed": "Fehlgeschlagen"
     },
     "queue": {
       "remove": "Aus Warteschlange entfernen",
@@ -1592,9 +1435,7 @@
       "subtitleTracks": "Untertitel",
       "tracksOnly": "Nur Spuren",
       "noVideoOutputs": "Keine Videoausgaben.",
-      "jobCount_one": "{{count}} Auftrag",
-      "jobCount_other": "{{count}} Aufträge",
-      "jobCount_many": "{{count}} Aufträge",
+      "jobCount": "{{count}} Auftrag",
       "sourceIngest": "Quelle einlesen",
       "transcode": "Transkodieren",
       "tracks": "Spuren",
@@ -1613,13 +1454,8 @@
         "tracks": "Wir bereiten Audio- und Untertitelspuren vor, damit Zuschauer Sprache und Untertitel wechseln können.",
         "job": "Dieser Schritt bereitet Mediendateien für Wiedergabe und Synchronisierung vor.",
         "offlineDownloading": "Wir laden jeden Block, entschlüsseln ihn und führen alle Spuren zu einer einzigen Datei zusammen, die du offline abspielen kannst.",
-        "exportDownloading": "Wir laden die beste vorhandene Qualität, entschlüsseln sie und speichern eine Videodatei mit allen Spuren im gewählten Ordner.",
-        "skipDetect": "Wir suchen, wo das Intro endet und der Abspann beginnt, damit du sie überspringen kannst.",
-        "skipPreviews": "Wir erstellen die Bilder, die du siehst, wenn du über die Zeitleiste fährst."
-      },
-      "jobCount": "{{count}} Auftrag",
-      "skipDetect": "Intro und Abspann suchen",
-      "skipPreviews": "Vorschaubilder für die Zeitleiste erstellen"
+        "exportDownloading": "Wir laden die beste vorhandene Qualität, entschlüsseln sie und speichern eine Videodatei mit allen Spuren im gewählten Ordner."
+      }
     },
     "transcodePlan": "Transcode-Plan",
     "audio": "Audio",
@@ -1819,9 +1655,7 @@
       "recomputeRunning": "Wird geprüft…",
       "lastVerified": "Zuletzt geprüft: {{relative}}",
       "reclaimableHint": "{{bytes}} freigebbar",
-      "confirmTitle_one": "{{count}} verwaister Block mit ~{{bytes}} gefunden. Freigeben?",
-      "confirmTitle_other": "{{count}} verwaiste Blöcke mit ~{{bytes}} gefunden. Freigeben?",
-      "confirmTitle_many": "{{count}} verwaiste Blöcke mit ~{{bytes}} gefunden. Freigeben?",
+      "confirmTitle": "{{count}} verwaiste Blöcke mit ~{{bytes}} gefunden. Freigeben?",
       "confirmAccept": "Freigeben",
       "confirmCancel": "Abbrechen",
       "resultReclaimed": "{{bytes}} freigegeben",
@@ -1831,8 +1665,7 @@
       "relativeSeconds": "vor {{value}} s",
       "relativeMinutes": "vor {{value}} min",
       "relativeHours": "vor {{value}} h",
-      "relativeDays": "vor {{value}} T",
-      "confirmTitle": "{{count}} verwaiste Blöcke mit ~{{bytes}} gefunden. Freigeben?"
+      "relativeDays": "vor {{value}} T"
     },
     "sponsorships": {
       "title": "Empfehlungen",
@@ -2111,9 +1944,7 @@
       "dummyStartFailed": "Dummy-Import konnte nicht gestartet werden.",
       "audioSampleFailed": "Audiobeispiel konnte nicht erstellt werden.",
       "setTrackLanguages": "Lege für jede Spur eine Sprache fest oder wähle „Ignorieren und Spuren undefiniert lassen“.",
-      "removedDuplicates_one": "{{count}} doppelte Datei entfernt.",
-      "removedDuplicates_other": "{{count}} doppelte Dateien entfernt.",
-      "removedDuplicates_many": "{{count}} doppelte Dateien entfernt.",
+      "removedDuplicates": "{{count}} doppelte Datei entfernt.",
       "addMetadataFailedSingle": "1 Titel konnte nicht hinzugefügt werden: Der Metadatendienst hat nicht geantwortet. Er ist noch hier, versuch es gleich nochmal.",
       "addMetadataFailedMany": "{{count}} Titel konnten nicht hinzugefügt werden: Der Metadatendienst hat nicht geantwortet. Sie sind noch hier, versuch es gleich nochmal.",
       "mediaNotInLibrary": "„{{title}}“ ist noch nicht in deiner Mediathek. Füge zuerst eine Videodatei hinzu.",
@@ -2124,8 +1955,7 @@
       "skippedDuplicateMany": "{{count}} Videos übersprungen, die schon in gleicher Qualität in deiner Mediathek sind.",
       "subtitleTrackAddedSingle": "Untertitelspur hinzugefügt.",
       "subtitleTrackAddedMany": "{{count}} Untertitelspuren hinzugefügt.",
-      "queueFailed": "Aufträge konnten nicht eingereiht werden. Versuch es nochmal.",
-      "removedDuplicates": "{{count}} doppelte Datei entfernt."
+      "queueFailed": "Aufträge konnten nicht eingereiht werden. Versuch es nochmal."
     },
     "samples": {
       "noSubtitleSample": "Kein Untertitelbeispiel verfügbar.",
@@ -2223,9 +2053,7 @@
       "loadingMore": "Mehr wird geladen…",
       "moreResults": "Mehr Ergebnisse",
       "selectFileToReview": "Wähle eine Datei aus, um die Details zu sehen",
-      "readyToImportCount_one": "{{count}} bereit zum Import",
-      "readyToImportCount_other": "{{count}} bereit zum Import",
-      "readyToImportCount_many": "{{count}} bereit zum Import",
+      "readyToImportCount": "{{count}} bereit zum Import",
       "sameQualityOverlapIgnoredSingle": "{{count}} Video in gleicher Qualität ignoriert",
       "sameQualityOverlapIgnoredMany": "{{count}} Videos in gleicher Qualität ignoriert",
       "addWithDummyData": "Mit Dummy-Daten hinzufügen",
@@ -2237,24 +2065,12 @@
       "storageBlocked": "Dein Speicher ist voll. Upgrade deinen Tarif, um mehr Medien hinzuzufügen.",
       "storageWarning": "Du nutzt über 90 % deines Speichers. Überleg dir ein Tarif-Upgrade.",
       "resolveBeforeAddingTitle": "Vor dem Hinzufügen klären",
-      "blockerMatchOrRemove_one": "Ordne {{count}} nicht zugeordnete Datei zu oder entferne sie.",
-      "blockerMatchOrRemove_other": "Ordne {{count}} nicht zugeordnete Dateien zu oder entferne sie.",
-      "blockerMatchOrRemove_many": "Ordne {{count}} nicht zugeordnete Dateien zu oder entferne sie.",
-      "blockerWaitSearch_one": "Warte, bis die Suche für {{count}} Datei fertig ist.",
-      "blockerWaitSearch_other": "Warte, bis die Suche für {{count}} Dateien fertig ist.",
-      "blockerWaitSearch_many": "Warte, bis die Suche für {{count}} Dateien fertig ist.",
-      "blockerResolveVideo_one": "Triff {{count}} Entscheidung zur Videoqualität.",
-      "blockerResolveVideo_other": "Triff {{count}} Entscheidungen zur Videoqualität.",
-      "blockerResolveVideo_many": "Triff {{count}} Entscheidungen zur Videoqualität.",
-      "blockerWaitMetadata_one": "Warte, bis der Metadaten-Scan für {{count}} Datei fertig ist.",
-      "blockerWaitMetadata_other": "Warte, bis der Metadaten-Scan für {{count}} Dateien fertig ist.",
-      "blockerWaitMetadata_many": "Warte, bis der Metadaten-Scan für {{count}} Dateien fertig ist.",
-      "blockerClickInput_one": "Klick auf „Deine Eingabe ist nötig“ und beantworte {{count}} Punkt.",
-      "blockerClickInput_other": "Klick auf „Deine Eingabe ist nötig“ und beantworte {{count}} Punkte.",
-      "blockerClickInput_many": "Klick auf „Deine Eingabe ist nötig“ und beantworte {{count}} Punkte.",
-      "blockerSkipDataLoading_one": "Überspring-Daten für {{count}} Folge werden geladen – einen Moment.",
-      "blockerSkipDataLoading_other": "Überspring-Daten für {{count}} Folgen werden geladen – einen Moment.",
-      "blockerSkipDataLoading_many": "Überspring-Daten für {{count}} Folgen werden geladen – einen Moment.",
+      "blockerMatchOrRemove": "Ordne {{count}} nicht zugeordnete Datei(en) zu oder entferne sie.",
+      "blockerWaitSearch": "Warte, bis die Suche für {{count}} Datei(en) fertig ist.",
+      "blockerResolveVideo": "Triff {{count}} Entscheidung(en) zur Videoqualität.",
+      "blockerWaitMetadata": "Warte, bis der Metadaten-Scan für {{count}} Datei(en) fertig ist.",
+      "blockerClickInput": "Klick auf „Deine Eingabe ist nötig“ und beantworte {{count}} Punkt(e).",
+      "blockerSkipDataLoading": "Überspring-Daten für {{count}} Folge(n) werden geladen – einen Moment.",
       "yourInputNeededProgress": "Deine Eingabe ist nötig ({{current}}/{{total}})",
       "setLanguageAndNameAudioTracks": "Sprache und Namen für Audiospuren festlegen",
       "setLanguageAndNameSubtitleTracks": "Sprache und Namen für Untertitelspuren festlegen",
@@ -2279,24 +2095,14 @@
       "alreadyAvailable": "Schon vorhanden",
       "skipQuality": "Qualität überspringen",
       "addQuality": "Qualität hinzufügen",
-      "videoDecisionsPending_one": "{{count}} Videoentscheidung offen",
-      "videoDecisionsPending_other": "{{count}} Videoentscheidungen offen",
-      "videoDecisionsPending_many": "{{count}} Videoentscheidungen offen",
+      "videoDecision": "Videoentscheidung",
+      "videoDecisions": "Videoentscheidungen",
+      "videoDecisionsPending": "{{count}} {{decisionLabel}} offen",
       "needsInputToContinue": "Eingabe nötig, um fortzufahren",
       "undefined": "Undefiniert",
       "unknownMedia": "Unbekanntes Medium",
       "file": "Datei",
-      "files": "Dateien",
-      "readyToImportCount": "{{count}} bereit zum Import",
-      "blockerMatchOrRemove": "Ordne {{count}} nicht zugeordnete Datei(en) zu oder entferne sie.",
-      "blockerWaitSearch": "Warte, bis die Suche für {{count}} Datei(en) fertig ist.",
-      "blockerResolveVideo": "Triff {{count}} Entscheidung(en) zur Videoqualität.",
-      "blockerWaitMetadata": "Warte, bis der Metadaten-Scan für {{count}} Datei(en) fertig ist.",
-      "blockerClickInput": "Klick auf „Deine Eingabe ist nötig“ und beantworte {{count}} Punkt(e).",
-      "blockerSkipDataLoading": "Überspring-Daten für {{count}} Folge(n) werden geladen – einen Moment.",
-      "videoDecision": "Videoentscheidung",
-      "videoDecisions": "Videoentscheidungen",
-      "videoDecisionsPending": "{{count}} {{decisionLabel}} offen"
+      "files": "Dateien"
     }
   },
   "pairApprove": {
@@ -2308,12 +2114,5 @@
     "checksum": "Diese Wörter ergeben keinen gültigen Schlüssel. Vergleiche jedes Wort mit den Wörtern, die du gespeichert hast.",
     "unknownMark": "kein Schlüsselwort",
     "pairedNoWords": "Dieser Computer hat den Schlüssel von einem anderen Gerät erhalten und hat deshalb seine 12 Wörter nicht. Sie sind auf dem Gerät, auf dem der Schlüssel erstellt wurde, oder in deiner gespeicherten Kopie."
-  },
-  "skipCatchUpNotice": {
-    "title": "Badger erkennt jetzt Intros und Abspann",
-    "what": "Version {{version}} erkennt Intros und Abspann selbst, für Videos, zu denen wir keine Informationen haben.",
-    "background": "Deine vorhandene Bibliothek wird jetzt auf diesem Computer im Hintergrund verarbeitet. Den Fortschritt siehst du im Tab Aufträge. Die Verarbeitung pausiert, sobald du etwas importierst oder abspielst, und stört dich also nicht.",
-    "close": "Schließen",
-    "openJobs": "Aufträge öffnen"
   }
 }

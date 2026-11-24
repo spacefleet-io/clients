@@ -8,29 +8,37 @@
  * last attempt's, is thrown at once: waiting would not change it.
  */
 import { MetadataRequestError, MetadataUnavailableError } from "@space/metadata-client";
-import { retry } from "@space/shared/retry";
 
 export const METADATA_RETRY_ATTEMPTS = 5;
 const BASE_BACKOFF_MS = 1_000;
 const MAX_WAIT_MS = 30_000;
 
-export const withMetadataRetry = <T>(
+export const withMetadataRetry = async <T>(
   run: () => Promise<T>,
   options: { attempts?: number; sleep?: (ms: number) => Promise<void> } = {}
-): Promise<T> =>
-  retry(run, {
-    attempts: options.attempts ?? METADATA_RETRY_ATTEMPTS,
-    retryable: (error) =>
-      error instanceof MetadataUnavailableError ||
-      (error instanceof MetadataRequestError && error.status >= 500) ||
-      error instanceof TypeError,
-    retryAfterSeconds: (error) => (error instanceof MetadataUnavailableError ? error.retryAfterSeconds : undefined),
-    backoffMs: (attempt) => BASE_BACKOFF_MS * 2 ** (attempt - 1),
-    // INGS-RESUME-01: a lookup the user started waits at most 30 s, then asks again rather than failing outright.
-    maxWaitMs: MAX_WAIT_MS,
-    overMaxWait: "cap",
-    sleep: options.sleep,
-  });
+): Promise<T> => {
+  const attempts = Math.max(1, options.attempts ?? METADATA_RETRY_ATTEMPTS);
+  const sleep =
+    options.sleep ??
+    ((ms: number) => {
+      const { promise, resolve } = Promise.withResolvers<void>();
+      setTimeout(resolve, ms);
+      return promise;
+    });
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      return await run();
+    } catch (error) {
+      const passing =
+        error instanceof MetadataUnavailableError ||
+        (error instanceof MetadataRequestError && error.status >= 500) ||
+        error instanceof TypeError;
+      if (!passing || attempt >= attempts) throw error;
+      const retryAfterMs = error instanceof MetadataUnavailableError ? (error.retryAfterSeconds ?? 0) * 1000 : 0;
+      await sleep(Math.min(MAX_WAIT_MS, Math.max(BASE_BACKOFF_MS * 2 ** (attempt - 1), retryAfterMs)));
+    }
+  }
+};
 
 /** How long one automatic lookup attempt may go unanswered before the import gives up on it (INGS-IDENT-02). */
 export const METADATA_LOOKUP_TIMEOUT_MS = 20_000;

@@ -189,23 +189,7 @@ export type ParrotImportJob = {
   failures: Array<{ file: string; error: string }>;
   /** The albums the import added songs to, for that album's Jobs tab (UX-JOBS-02); absent on imports saved before. */
   albumIds?: string[];
-  /**
-   * UX-JOBS-03: on an import that stopped or left files out, true when none of what "Import again" would read is
-   * still where it was; main checks each time it sends the list.
-   */
-  sourcesMissing?: boolean;
 };
-
-/**
- * UX-JOBS-03: the answer to "Import again" or "Find the folder". Started, the job is replaced by the new import,
- * which stops at the review like any import. Not started: another import is running, the files are gone (the card
- * turns to "Find the folder"), or the job is no longer in the list.
- */
-export type ParrotImportRetry = { started: true } | { started: false; reason: "busy" | "missing" | "gone" };
-
-/** UX-JOBS-03: an ended import the card offers to try again: it stopped, or some of its files were not added. */
-export const importJobRetryable = (job: ParrotImportJob): boolean =>
-  !job.status.running && (job.status.phase === "failed" || (job.status.phase === "done" && job.failures.length > 0));
 
 /**
  * Slow work Parrot runs on its own after an import or a sign-in (UX-JOBS-02): a quiet line in the Jobs panel says
@@ -467,10 +451,6 @@ export type ParrotBridge = {
   onImportJobs(listener: (jobs: ParrotImportJob[]) => void): () => void;
   /** Removes a finished or failed import from the list; a running one stays. */
   dismissImportJob(id: string): Promise<ParrotImportJob[]>;
-  /** UX-JOBS-03 "Import again": scans the job's folders again, or only its files not added; the job gives way to the new import. */
-  retryImportJob(id: string): Promise<ParrotImportRetry>;
-  /** UX-JOBS-03 "Find the folder": main asks for the folder, then imports it in place of the job; nothing picked answers cancelled. */
-  findImportJobFolder(id: string): Promise<ParrotImportRetry | { cancelled: true }>;
   /** OFFL-FILE-01 / ACCT-EXPORT-01: how many songs "Download everything" would save, and their size. */
   previewExport(): Promise<ParrotExportPreview>;
   /** Asks for a folder, then saves the whole library there as plain audio files, in the background (Jobs panel). */
@@ -661,8 +641,6 @@ export const PARROT_IPC = {
   getImportJobs: "parrot:import:jobs",
   importJobsEvent: "parrot:import:jobs-event",
   dismissImportJob: "parrot:import:jobs-dismiss",
-  retryImportJob: "parrot:import:jobs-retry",
-  findImportJobFolder: "parrot:import:jobs-find-folder",
   previewExport: "parrot:export:preview",
   exportMusic: "parrot:export:start",
   getExportJobs: "parrot:export:jobs",

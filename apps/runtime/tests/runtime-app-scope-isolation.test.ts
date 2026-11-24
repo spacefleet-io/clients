@@ -351,7 +351,6 @@ describe("v2 job routes are scoped to the session's apps", () => {
       handleCancel: async (input) => record("handleCancel", input, { cancelled: true }),
       handleDismiss: async (input) => record("handleDismiss", input, { dismissed: true }),
       handleRetry: async (input) => record("handleRetry", input, { retried: true }),
-      handleAvailability: async (input) => record("handleAvailability", input, { jobs: [], keptBytesTotal: 0 }),
     };
     const app = new Hono();
     registerRuntimeJobsV2Routes(app, () => handler);
@@ -398,14 +397,6 @@ describe("v2 job routes are scoped to the session's apps", () => {
       expect(calls.map((c) => c.method)).toEqual([handlerMethod]);
     });
   }
-
-  it("availability leaves out another app's jobs @req RT-SEC-03[runtime]", async () => {
-    const { app, calls } = buildApp();
-    const badger = runtimeState.login("t", ["badger"], "u");
-    const res = await post(app, "/runtime/jobs/v2/availability", badger.token, { jobIds: ["k1", "b1"] });
-    expect(res.status).toBe(200);
-    expect(calls).toEqual([{ method: "handleAvailability", payload: { jobIds: ["b1"] } }]);
-  });
 
   it("cancel-by-group: 403 forbidden_scope on another app's group, 200 on its own @req RT-SEC-03[runtime]", async () => {
     const { app, calls } = buildApp();

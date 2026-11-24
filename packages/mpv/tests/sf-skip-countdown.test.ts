@@ -140,23 +140,20 @@ describe.skipIf(!lua)("sf.lua auto-skip countdown runs on media time (P22)", () 
     expect(fire.media).toBeLessThanOrEqual(65 + FIRE_SLACK_MEDIA_S);
   });
 
-  // @req PLAY-SKIP-06[badger-desktop]
-  it("credits never start the next episode by themselves; a press opens it with a boxed 'Opening next episode' notice @req PLAY-SKIP-02[badger-desktop]", () => {
+  it("next episode fires at credits start+5 s at 0.5x and shows a boxed 'Opening next episode' notice", () => {
     const result = runScenario("next-episode");
-    const waited = checkpoint(result, "credits+10s");
-    console.info(`${TAG} next-episode waited=${JSON.stringify(waited)} before-click=${result.nextEpisodeRequestsBeforeClick} fires=${JSON.stringify(result.fires)}`);
-    expect(waited.active, "credits pill shown").toBe(true);
-    expect(waited.kind).toBe("next_episode");
-    expect(result.fires, "no auto-fire at the credits").toHaveLength(0);
-    expect(result.nextEpisodeRequestsBeforeClick).toBe(0);
+    expect(result.fires).toHaveLength(1);
+    const fire = result.fires[0]!;
+    expect(fire.kind).toBe("next_episode");
+    expect(fire.media).toBeGreaterThanOrEqual(605 - 1e-6);
+    expect(fire.media).toBeLessThanOrEqual(605 + FIRE_SLACK_MEDIA_S);
 
     const shown = checkpoint(result, "notice-shown");
     expect(shown.overlay).toContain("Opening next episode");
-    // Same box as the pills (ASS vector shape, pill fill, 2 px border, same
-    // font size), with a neutral outline: amber marks a clickable action, and
-    // the ultimate harness's pill detector keys on it. Colours in ASS byte
-    // order: fill #1F2430, outline #C8CCD4 (PLAY-SKIP-06).
-    expect(shown.overlay).toMatch(/\\p1\\an7\\pos\(0,0\)\\1c&H30241F&\\3c&HD4CCC8&\\1a&H22&\\bord2/);
+    // Same box as the pills (ASS vector rectangle, pill fill, 2 px border,
+    // same font size), with a neutral outline: amber marks a clickable action,
+    // and the ultimate harness's pill detector keys on it.
+    expect(shown.overlay).toMatch(/\\p1\\an7\\pos\(0,0\)\\1c&H1F2430&\\3c&HC8CCD4&\\1a&H22&\\bord2/);
     expect(shown.overlay).toContain("\\fs26");
     expect(result.openingOsdMessages, "no unboxed osd_message for the notice").toBe(0);
 
@@ -240,13 +237,12 @@ describe.skipIf(!lua)("sf.lua credits pill obeys autoplay next episode @req PLAY
     expect(result.nextEpisodeRequests, "next-episode requests at the end").toBe(expected);
   });
 
-  it("control: on a last episode 'Skip credits' never fires by itself either @req PLAY-SKIP-02[badger-desktop]", () => {
+  it("control: on a last episode 'Skip credits' still follows the credits auto-skip with autoplay off", () => {
     const result = runScenario("credits-last-episode-autoplay-off");
-    const waited = checkpoint(result, "after-wait");
-    console.info(`${TAG} credits-last-episode-autoplay-off waited=${JSON.stringify(waited)} fires=${JSON.stringify(result.fires)} requests=${result.nextEpisodeRequests}`);
-    expect(waited.active, "credits pill shown").toBe(true);
-    expect(waited.kind).toBe("skip_credits");
-    expect(result.fires, "no auto-fire").toHaveLength(0);
+    console.info(`${TAG} credits-last-episode-autoplay-off fires=${JSON.stringify(result.fires)} requests=${result.nextEpisodeRequests}`);
+    expect(result.fires).toHaveLength(1);
+    expect(result.fires[0]!.kind).toBe("skip_credits");
+    expect(result.fires[0]!.media).toBeGreaterThanOrEqual(605 - 1e-6);
     expect(result.nextEpisodeRequests).toBe(0);
   });
 });

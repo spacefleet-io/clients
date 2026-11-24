@@ -76,18 +76,15 @@ export {
 } from "./components/desktop-jobs-panel";
 export {
   DesktopCompletedJobRow,
-  DesktopFailedJobDetail,
   DesktopJobActionButton,
   DesktopJobBucketHeader,
   DesktopJobGroupCard,
-  DesktopJobFailureGroups,
   DesktopJobProgress,
   DesktopJobRow,
   DesktopJobStatusPill,
   DesktopJobsBackgroundLine,
   DesktopJobsLoadingSkeleton,
   DesktopJobsTabEmpty,
-  type DesktopJobFailureGroup,
   type DesktopJobTone,
 } from "./components/desktop-job-card";
 export { NotificationTrayContent, type NotificationTrayLabels, type NotificationTrayContentProps } from "./components/desktop-notification-tray-content";

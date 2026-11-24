@@ -100,7 +100,19 @@
       "body": "Affichez un code à approuver dans Badger ou Parrot sur un ordinateur, un téléphone ou une TV déjà connectés."
     },
     "provider": {
-      "continueInBrowser": "Terminez la connexion dans votre navigateur. Vous reviendrez ici une fois terminé."
+      "signInWith": "Se connecter avec {{provider}}",
+      "signUpWith": "S'inscrire avec {{provider}}",
+      "or": "ou",
+      "continueInBrowser": "Terminez la connexion dans votre navigateur. Vous reviendrez ici une fois terminé.",
+      "errorStart": "Impossible de lancer la connexion. Veuillez réessayer.",
+      "errors": {
+        "email_unverified": "L'adresse e-mail de ce compte n'est pas confirmée. Confirmez-la auprès du fournisseur, ou connectez-vous avec votre e-mail et votre mot de passe.",
+        "email_domain_disallowed": "Impossible de créer un compte avec cette adresse e-mail.",
+        "account_deletion_pending": "La suppression de ce compte est programmée.",
+        "provider_failed": "La connexion n'a pas abouti. Veuillez réessayer.",
+        "cancelled": "La connexion a été annulée.",
+        "invalid_code": "Cette connexion a expiré ou a été lancée ailleurs. Veuillez réessayer."
+      }
     },
     "pairing": {
       "title": "Se connecter avec un autre appareil"

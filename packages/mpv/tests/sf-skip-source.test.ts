@@ -52,9 +52,9 @@ describe("sf.lua skip and up-next contract", () => {
 
   it("uses the pill for skip intro, skip credits, and next episode actions", () => {
     assertContainsAll("pill-actions", [
-      'label = skip_text.skipIntro',
-      'label = skip_text.skipCredits',
-      'label = skip_text.nextEpisode',
+      'label = "Skip intro"',
+      'label = "Skip credits"',
+      'label = "Next episode"',
       'write_next_episode_action()',
     ]);
   });

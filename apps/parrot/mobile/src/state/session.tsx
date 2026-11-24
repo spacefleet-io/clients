@@ -24,7 +24,7 @@ import { stopPlayback } from "../lib/playback";
 import { loadEvenVolume } from "../lib/evenVolume";
 import { scopeLogger } from "@space/mobile-shell/logger";
 import { profileStore } from "../lib/profiles";
-import { applyAccountLanguage, forgetAccountLanguage, reconcileAfterSignIn, setupSettlesLanguage } from "../lib/accountLanguage";
+import { applyAccountLanguage, reconcileAfterSignIn, setupSettlesLanguage } from "../lib/accountLanguage";
 import { publishSiblingStatus } from "@space/mobile-shell/sibling";
 
 const log = scopeLogger("session");
@@ -302,10 +302,8 @@ export const SessionProvider = ({ children }: { children: React.ReactNode }) => 
           : Promise.resolve()
         : Promise.all([libraryKeyStore.clear(), keptKeyOwnerStore.forget()]),
     ]);
-    // The next sign-in asks "Who's listening?" again (UX-PROF-01); a language pick still waiting for the account
-    // belonged to this one (UX-I18N-07).
+    // The next sign-in asks "Who's listening?" again (UX-PROF-01).
     await profileStore.endSession(ownerId);
-    await forgetAccountLanguage();
     log.info("signed_out", { reason, keptKey: keepKey });
     setLibrary({ status: "idle", error: null, version: 0 });
     setLibraryKey(null);
@@ -453,7 +451,7 @@ export const SessionProvider = ({ children }: { children: React.ReactNode }) => 
       setAccess(user.access ?? null);
       log.info("account.access", { state: user.access?.state ?? null });
       if (!language || (await languageLeftToSetup())) return;
-      await applyAccountLanguage(sessionToken, user);
+      await applyAccountLanguage(user);
     };
     void refresh(reconciledToken.current !== sessionToken);
     reconciledToken.current = null;

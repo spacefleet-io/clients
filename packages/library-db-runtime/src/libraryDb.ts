@@ -256,7 +256,6 @@ import type {
   SubtitleTrack,
   SubtitleOcrCandidate,
   PreviewSheetCandidate,
-  SkipCatchUpVideo,
   AddOcrSubtitleTwinResult,
   ShowEpisodeRefreshResult,
   ShowEpisodeNotListed,
@@ -268,7 +267,6 @@ import { PICTURE_SUBTITLE_FORMATS } from "@space/shared/libraryTypes";
 import { pickLibraryCrew } from "@space/shared/libraryCrew";
 import { airDateToday, showEpisodeTotal, showWatchedPct, type EpisodeAirInfo } from "@space/shared/showProgress";
 import { parsePreviewSheets, previewSheetKeys, type MediaPreviewSheets } from "@space/shared/previewSheets";
-import { mergeSkipMarkersByPriority } from "@space/shared/skipMarkers";
 import { scopeLogger } from "./logger";
 
 const nowIso = () => new Date().toISOString();
@@ -5887,12 +5885,9 @@ export class LibraryDb {
   }
 
   /**
-   * Videos still owed seek-bar preview sheets or their skip signature (MPV-PREV-03, META-SKIP-04): for every video
-   * file none of whose formats holds a record with a `skipSignature`, the title watched last first
-   * (`media_items.last_watched_at`), then the newest (`media_files.added_at`), a show's episodes together in order,
-   * minus `excludeFormatIds` (the runtime's exhausted retries). A file whose sheets are recorded without a signature
-   * lists the row holding them (the runtime then makes the signature alone and records it beside the sheets). A file
-   * with no record lists its source format: the `is_source` row, or the highest quality when none is flagged: an
+   * Videos still owed seek-bar preview sheets (MPV-PREV-03): for every video file none of whose formats holds a
+   * record, its source format, newest file first (`media_files.added_at`), minus `excludeFormatIds` (the runtime's
+   * exhausted retries). The source format is the `is_source` row, or the highest quality when none is flagged: an
    * import that named no source quality flags no row and records its sheets on the first (highest) one, and synced
    * rows land unflagged until the next open's backfill (`backfillMissingIsSourceFlags`), which picks the same row.
    * Template-projected formats are never listed (they are not this library's source copy).
@@ -5915,22 +5910,18 @@ export class LibraryDb {
     const rank = (row: (typeof rows)[number]) =>
       Number(row.isSource ?? 0) === 1 ? -1 : rankQualityForSourceBackfill(String(row.quality));
     const sourceByFile = new Map<string, (typeof rows)[number]>();
-    const filesDone = new Set<string>();
-    const sheetsWithoutSignature = new Map<string, (typeof rows)[number]>();
+    const filesWithSheets = new Set<string>();
     for (const row of rows) {
       const fileId = String(row.fileId);
-      const record = parsePreviewSheets(row.previewSheets);
-      if (record?.skipSignature) filesDone.add(fileId);
-      else if (record) sheetsWithoutSignature.set(fileId, row);
+      if (row.previewSheets !== null && row.previewSheets !== undefined) filesWithSheets.add(fileId);
       const current = sourceByFile.get(fileId);
       if (!current || rank(row) < rank(current) || (rank(row) === rank(current) && String(row.id) < String(current.id))) {
         sourceByFile.set(fileId, row);
       }
     }
     const formats = Array.from(sourceByFile.entries())
-      .filter(([fileId]) => !filesDone.has(fileId))
-      .map(([fileId, row]) => sheetsWithoutSignature.get(fileId) ?? row)
-      .filter((row) => !excluded.has(String(row.id)));
+      .filter(([fileId, row]) => !filesWithSheets.has(fileId) && !excluded.has(String(row.id)))
+      .map(([, row]) => row);
     if (formats.length === 0) return [];
     const files = this.metadata
       .select({ id: mediaFiles.id, season: mediaFiles.season, episode: mediaFiles.episode, addedAt: mediaFiles.addedAt })
@@ -5938,23 +5929,11 @@ export class LibraryDb {
       .where(inArray(mediaFiles.id, Array.from(new Set(formats.map((row) => String(row.fileId))))))
       .all();
     const fileById = new Map(files.map((row) => [String(row.id), row]));
-    const mediaIds = Array.from(new Set(formats.map((row) => String(row.mediaId))));
-    const lastWatchedByMedia = new Map(
-      this.core
-        .select({ id: mediaItems.id, lastWatchedAt: mediaItems.lastWatchedAt })
-        .from(mediaItems)
-        .where(inArray(mediaItems.id, mediaIds))
-        .all()
-        .map((row) => [String(row.id), row.lastWatchedAt ? String(row.lastWatchedAt) : ""]),
-    );
     const out: PreviewSheetCandidate[] = [];
     for (const row of formats) {
       const file = fileById.get(String(row.fileId));
       // A format whose file row is gone is no video of the library any more.
       if (!file) continue;
-      // A film gets no skip signature (it has no intro or credits markers, Chris 2026-11-24): its sheets finish it.
-      const film = (file.season === null || file.season === undefined) && (file.episode === null || file.episode === undefined);
-      if (film && sheetsWithoutSignature.has(String(row.fileId))) continue;
       out.push({
         formatId: String(row.id),
         mediaId: String(row.mediaId),
@@ -5966,136 +5945,8 @@ export class LibraryDb {
         initKey: row.initKey ? String(row.initKey) : null,
       });
     }
-    // The title watched last comes first (its skips are wanted soonest), then never-watched titles by their newest
-    // file; a show's episodes stay together, in order, since a show gets its skips once two of them are done.
-    const newestAddedByMedia = new Map<string, string>();
-    for (const row of out) {
-      if ((newestAddedByMedia.get(row.mediaId) ?? "") < row.addedAt) newestAddedByMedia.set(row.mediaId, row.addedAt);
-    }
-    const desc = (a: string, b: string) => (a === b ? 0 : a < b ? 1 : -1);
-    const nullsLast = (value: number | null) => value ?? Number.MAX_SAFE_INTEGER;
-    out.sort(
-      (a, b) =>
-        desc(lastWatchedByMedia.get(a.mediaId) ?? "", lastWatchedByMedia.get(b.mediaId) ?? "") ||
-        desc(newestAddedByMedia.get(a.mediaId) ?? "", newestAddedByMedia.get(b.mediaId) ?? "") ||
-        a.mediaId.localeCompare(b.mediaId) ||
-        nullsLast(a.season) - nullsLast(b.season) ||
-        nullsLast(a.episode) - nullsLast(b.episode) ||
-        a.formatId.localeCompare(b.formatId),
-    );
+    out.sort((a, b) => (a.addedAt === b.addedAt ? a.formatId.localeCompare(b.formatId) : a.addedAt < b.addedAt ? 1 : -1));
     return out.slice(0, input.limit);
-  }
-
-  /**
-   * The library's videos the catch-up pass counts (MPV-PREV-07): files with at least one format and a file row, the
-   * same set `listPreviewSheetCandidates` draws from.
-   */
-  countPreviewSheetVideos(): number {
-    const fileIds = new Set(
-      this.playback
-        .select({ fileId: mediaFormats.fileId })
-        .from(mediaFormats)
-        .all()
-        .map((row) => String(row.fileId)),
-    );
-    if (fileIds.size === 0) return 0;
-    return this.metadata
-      .select({ id: mediaFiles.id })
-      .from(mediaFiles)
-      .where(inArray(mediaFiles.id, Array.from(fileIds)))
-      .all().length;
-  }
-
-  /**
-   * Every video `countPreviewSheetVideos` counts, for the Jobs card's detailed list (MPV-PREV-07): the format the
-   * catch-up works on (the row holding a skip signature when one does, else the one `listPreviewSheetCandidates`
-   * would list), whether it is done (an episode: signed; a film, which gets no skip markers: sheets made), and whether
-   * an intro / credits skip is stored for its episode (never for a film). Ordered by title, season, episode.
-   */
-  listSkipCatchUpVideos(): SkipCatchUpVideo[] {
-    const rows = this.playback
-      .select({
-        id: mediaFormats.id,
-        mediaId: mediaFormats.mediaId,
-        fileId: mediaFormats.fileId,
-        quality: mediaFormats.quality,
-        isSource: mediaFormats.isSource,
-        previewSheets: mediaFormats.previewSheets,
-      })
-      .from(mediaFormats)
-      .all();
-    const rank = (row: (typeof rows)[number]) =>
-      Number(row.isSource ?? 0) === 1 ? -1 : rankQualityForSourceBackfill(String(row.quality));
-    const pick = new Map<string, { row: (typeof rows)[number]; tier: number }>();
-    for (const row of rows) {
-      const record = parsePreviewSheets(row.previewSheets);
-      // The signed row wins, then a row with sheets (the signature goes beside them), then the source.
-      const tier = record?.skipSignature ? 0 : record ? 1 : 2;
-      const fileId = String(row.fileId);
-      const current = pick.get(fileId);
-      if (
-        !current ||
-        tier < current.tier ||
-        (tier === current.tier && (rank(row) < rank(current.row) || (rank(row) === rank(current.row) && String(row.id) < String(current.row.id))))
-      ) {
-        pick.set(fileId, { row, tier });
-      }
-    }
-    if (pick.size === 0) return [];
-    const files = this.metadata
-      .select({ id: mediaFiles.id, season: mediaFiles.season, episode: mediaFiles.episode })
-      .from(mediaFiles)
-      .where(inArray(mediaFiles.id, Array.from(pick.keys())))
-      .all();
-    const mediaIds = Array.from(new Set(Array.from(pick.values(), ({ row }) => String(row.mediaId))));
-    const episodeKey = (mediaId: string, season: number | null, episode: number | null) => `${mediaId}|${season ?? ""}|${episode ?? ""}`;
-    const episodeIdByKey = new Map(
-      this.metadata
-        .select({ id: mediaEpisodes.id, mediaId: mediaEpisodes.mediaId, season: mediaEpisodes.seasonNumber, episode: mediaEpisodes.episodeNumber })
-        .from(mediaEpisodes)
-        .where(inArray(mediaEpisodes.mediaId, mediaIds))
-        .all()
-        .map((row) => [episodeKey(String(row.mediaId), Number(row.season), Number(row.episode)), String(row.id)]),
-    );
-    const markers = new Set(
-      this.metadata
-        .select({ mediaId: mediaSkipMarkers.mediaId, episodeId: mediaSkipMarkers.episodeId, type: mediaSkipMarkers.type })
-        .from(mediaSkipMarkers)
-        .where(inArray(mediaSkipMarkers.mediaId, mediaIds))
-        .all()
-        .map((row) => `${row.mediaId}|${row.episodeId ?? ""}|${row.type}`),
-    );
-    const num = (value: unknown) => (value === null || value === undefined ? null : Number(value));
-    const out: SkipCatchUpVideo[] = [];
-    for (const file of files) {
-      const picked = pick.get(String(file.id));
-      if (!picked) continue;
-      const mediaId = String(picked.row.mediaId);
-      const season = num(file.season);
-      const episode = num(file.episode);
-      const film = season === null && episode === null;
-      const episodeId = film ? undefined : episodeIdByKey.get(episodeKey(mediaId, season, episode));
-      const has = (type: "intro" | "credits") => episodeId !== undefined && markers.has(`${mediaId}|${episodeId}|${type}`);
-      out.push({
-        formatId: String(picked.row.id),
-        mediaId,
-        fileId: String(file.id),
-        season,
-        episode,
-        signed: film ? picked.tier <= 1 : picked.tier === 0,
-        intro: has("intro"),
-        credits: has("credits"),
-      });
-    }
-    const nullsLast = (value: number | null) => value ?? Number.MAX_SAFE_INTEGER;
-    out.sort(
-      (a, b) =>
-        a.mediaId.localeCompare(b.mediaId) ||
-        nullsLast(a.season) - nullsLast(b.season) ||
-        nullsLast(a.episode) - nullsLast(b.episode) ||
-        a.formatId.localeCompare(b.formatId),
-    );
-    return out;
   }
 
   /**
@@ -6744,37 +6595,6 @@ export class LibraryDb {
     });
     this.queueMediaUpsert(mediaId);
     return this.persist();
-  }
-
-  /**
-   * Writes `markers` for the episode kind by kind, keeping an existing marker of a kind that ranks higher
-   * (`skipSourceRank`: the user's times, then the metadata service's, then detection or chapters). Kinds absent from
-   * `markers` stay as they are. The writer for every source that is not the user's own change (PLAY-SKIP-08).
-   */
-  mergeSkipMarkers(
-    mediaId: string,
-    episodeId: string | null,
-    markers: Array<{
-      type: MediaSkipMarkerType;
-      startSeconds: number;
-      endSeconds: number;
-      source: string;
-      confidence?: number | null;
-    }>
-  ) {
-    const scopeFilter = episodeId ? eq(mediaSkipMarkers.episodeId, episodeId) : isNull(mediaSkipMarkers.episodeId);
-    const existing = this.metadata
-      .select()
-      .from(mediaSkipMarkers)
-      .where(and(eq(mediaSkipMarkers.mediaId, mediaId), scopeFilter))
-      .all()
-      .flatMap((row) => {
-        const type: MediaSkipMarkerType | null = row.type === "intro" || row.type === "credits" ? row.type : null;
-        return type
-          ? [{ type, startSeconds: row.startSeconds, endSeconds: row.endSeconds, source: row.source, confidence: row.confidence }]
-          : [];
-      });
-    return this.replaceSkipMarkers(mediaId, episodeId, mergeSkipMarkersByPriority(existing, markers));
   }
 
   // -------------------------------------------------------------------------

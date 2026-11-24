@@ -4,11 +4,12 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ArrowLeft } from "lucide-react-native";
-import { MobileEmptyState, MobileIconButton } from "@space/mobile-shell/components";
+import { MobileEmptyState } from "@space/mobile-shell/components";
 import { useTranslation } from "@space/mobile-shell/i18n";
 import { useLibraryActions, useLibraryData, useLibraryStatus } from "../store/library";
 import { RootStackParamList } from "../navigation/AppNavigator";
 import { PosterGrid } from "../components/PosterGrid";
+import { IconButton } from "../components/IconButton";
 import { usePullToRefresh } from "../lib/usePullToRefresh";
 import { theme } from "../theme/theme";
 
@@ -44,9 +45,9 @@ export const PlaylistDetailScreen = () => {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
-        <MobileIconButton label={t("playlists.detail.back")} onPress={goBack}>
+        <IconButton label={t("playlists.detail.back")} onPress={goBack}>
           <ArrowLeft size={22} color={theme.colors.text} />
-        </MobileIconButton>
+        </IconButton>
         <Text style={styles.title} numberOfLines={1} accessibilityRole="header" testID="playlist-detail-title">
           {title}
         </Text>

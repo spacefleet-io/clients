@@ -3219,7 +3219,10 @@ export default function FileIngestionDialog({ paths: initialPaths, pathsNonce, o
                                   : `${fileCount} ${fileCount === 1 ? t("ingestion.ui.file") : t("ingestion.ui.files")}`}
                               </div>
                               <div className="mt-2 text-[11px] text-amber-300">
-                                {t("ingestion.ui.videoDecisionsPending", { count: unresolvedCount })}
+                                {t("ingestion.ui.videoDecisionsPending", {
+                                  count: unresolvedCount,
+                                  decisionLabel: unresolvedCount === 1 ? t("ingestion.ui.videoDecision") : t("ingestion.ui.videoDecisions"),
+                                })}
                               </div>
                             </div>
                             <div className="shrink-0 flex items-center gap-2">

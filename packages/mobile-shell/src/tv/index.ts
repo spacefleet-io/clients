@@ -19,7 +19,6 @@ export * from "./TvFocusable";
 export * from "./TvPillButton";
 export * from "./TvChip";
 export * from "./TvRow";
-export * from "./TvCardRow";
 export * from "./TvSky";
 export * from "./TvTopBar";
 export * from "./TvAvatarGrid";

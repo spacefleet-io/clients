@@ -20,8 +20,7 @@ import { profilesTexts } from "@space/shared/profileTexts";
 import type { ApiProfile } from "@space/shared/profiles";
 import type { ProfileAvatarId } from "@space/shared/profileAvatars";
 import type { ProfileStore } from "@space/shared/profileStore";
-import { ParrotProfilesSection } from "@space/ui/profiles";
-import { createParrotDesktopProfileStore, type ParrotProfilesBridge } from "../src/renderer/src/profiles";
+import { createParrotDesktopProfileStore, ProfilesSection, type ParrotProfilesBridge } from "../src/renderer/src/profiles";
 import type { ParrotProfilesResult } from "../src/shared/ipc";
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
@@ -89,7 +88,7 @@ const mount = async (bridge: ParrotProfilesBridge, planOpen = false) => {
   }
   container ??= document.body.appendChild(document.createElement("div"));
   root ??= createRoot(container);
-  await act(async () => root!.render(<ParrotProfilesSection store={store} language="en" log={() => {}} planOpen={planOpen} />));
+  await act(async () => root!.render(<ProfilesSection store={store} language="en" planOpen={planOpen} />));
 };
 
 const q = <T extends Element>(selector: string) => container!.querySelector<T>(selector);

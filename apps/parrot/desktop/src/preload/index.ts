@@ -105,8 +105,6 @@ const bridge: ParrotBridge = {
     return () => ipcRenderer.off(PARROT_IPC.importJobsEvent, handler);
   },
   dismissImportJob: (id) => ipcRenderer.invoke(PARROT_IPC.dismissImportJob, id),
-  retryImportJob: (id) => ipcRenderer.invoke(PARROT_IPC.retryImportJob, id),
-  findImportJobFolder: (id) => ipcRenderer.invoke(PARROT_IPC.findImportJobFolder, id),
   previewExport: () => ipcRenderer.invoke(PARROT_IPC.previewExport),
   exportMusic: () => ipcRenderer.invoke(PARROT_IPC.exportMusic),
   getExportJobs: () => ipcRenderer.invoke(PARROT_IPC.getExportJobs),

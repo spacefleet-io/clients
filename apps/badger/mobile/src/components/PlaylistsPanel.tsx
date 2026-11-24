@@ -9,7 +9,7 @@ import { MobileRenderBoundary } from "@space/mobile-shell/render-boundary";
 import type { PlaylistRow } from "@space/shared/libraryTypes";
 import { useLibraryActions, useLibraryData, useLibraryStatus } from "../store/library";
 import { RootStackParamList } from "../navigation/AppNavigator";
-import { MobileIconButton } from "@space/mobile-shell/components";
+import { IconButton } from "./IconButton";
 import { RIPPLE } from "./PosterCard";
 import { usePullRefreshScroll, usePullToRefresh } from "../lib/usePullToRefresh";
 import { theme } from "../theme/theme";
@@ -118,9 +118,9 @@ export const PlaylistsPanel = memo(() => {
           onSubmitEditing={() => void handleCreate()}
           accessibilityLabel={t("playlists.newPlaceholder")}
         />
-        <MobileIconButton label={t("playlists.create")} onPress={() => void handleCreate()} disabled={busy || !name.trim()} style={styles.create}>
+        <IconButton label={t("playlists.create")} onPress={() => void handleCreate()} disabled={busy || !name.trim()} style={styles.create}>
           <Plus size={20} color={theme.colors.bg} />
-        </MobileIconButton>
+        </IconButton>
       </View>
       <FlatList
         data={sorted}
