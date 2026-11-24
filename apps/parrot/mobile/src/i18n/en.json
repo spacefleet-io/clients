@@ -1,7 +1,7 @@
 {
   "keyStepWords": {
     "collection": "library",
-    "collectionKey": "library key"
+    "collectionKey": "media library key"
   },
   "parrot": {
     "artist": {
@@ -29,12 +29,12 @@
       "codeEmail": "Code we emailed you"
     },
     "key": {
-      "title": "Enter your library key",
-      "showTitle": "Your library key",
+      "title": "Enter your media library key",
+      "showTitle": "Your media library key",
       "body": "Type the 12 words you saved when you created your library.",
-      "field": "Library key",
+      "field": "Media library key",
       "continue": "Continue",
-      "saved": "Your library key is saved on this phone.",
+      "saved": "Your media library key is saved on this phone.",
       "errors": {
         "unavailable": "Can't check the key right now. Check your connection and try again."
       }
@@ -87,8 +87,8 @@
       "signOut": "Sign out",
       "language": "Language",
       "signOutKey": {
-        "title": "Have you saved your library key?",
-        "body": "Signing out removes your library key from this phone. To sign back in you will have to type it, because signing in with a QR code only works while another of your devices still has the key. Without the key, your library can't be opened.",
+        "title": "Have you saved your media library key?",
+        "body": "Signing out removes your media library key from this phone. To sign back in you will have to type it, because signing in with a QR code only works while another of your devices still has the key. Without the key, your library can't be opened.",
         "cancel": "Cancel",
         "confirm": "I saved it, sign out"
       },

@@ -20,6 +20,7 @@ import {
   IMPORT_INTERRUPTED,
   type ParrotBackgroundWork,
   type ParrotImportJob,
+  type ParrotImportRetry,
   type ParrotImportStatus,
   type ParrotLanguage,
 } from "../src/shared/ipc";
@@ -113,6 +114,8 @@ describe("Parrot desktop Jobs panel", () => {
           return current;
         }),
         cancelImport: vi.fn(async () => running.status),
+        retryImportJob: vi.fn(async (_id: string): Promise<ParrotImportRetry> => ({ started: true })),
+        findImportJobFolder: vi.fn(async (_id: string): Promise<ParrotImportRetry | { cancelled: true }> => ({ started: true })),
         getBackgroundWork: vi.fn(async () => [{ kind: "lyrics", done: 3, total: 12 }]),
         onBackgroundWork: vi.fn((listener: (work: ParrotBackgroundWork[]) => void) => {
           pushWork = listener;
@@ -286,5 +289,88 @@ describe("Parrot desktop Jobs panel", () => {
     expect(only?.querySelector('[data-testid="import-job-status"]')?.textContent).toBe("Uploading");
     expect(only?.querySelector('[data-testid="import-job-remove"]')).toBeNull();
     expect(only?.querySelector('[data-testid="import-job-counts"]')).toBeNull();
+  });
+
+  // @req UX-JOBS-03[parrot]
+  it("a stopped import and one that left files out say what happened, what it means, and offer Import again", async () => {
+    await openPanel();
+    const cut = card("Cut Album")?.querySelector('[data-testid="import-job-failed"]');
+    const broken = card("Broken Album")?.querySelector('[data-testid="import-job-failed"]');
+    console.info(SUITE, "failed details", { cut: cut?.textContent, broken: broken?.textContent });
+    expect(cut?.textContent).toContain("Parrot closed before this import finished.");
+    expect(cut?.textContent).toContain("Songs already added stay in the library. Importing again adds only what is missing.");
+    expect(broken?.textContent).toContain("Some files were not added.");
+    // Nothing to try again on a finished, stopped-by-the-user or running import.
+    for (const name of ["Finished Album", "Stopped Album", "Running Album", "Review Album"]) {
+      expect(card(name)?.querySelector('[data-testid="import-job-failed"]'), name).toBeNull();
+    }
+    const again = card("Cut Album")?.querySelector('[data-testid="import-job-retry"]') as HTMLButtonElement;
+    expect(again.textContent).toBe("Import again");
+    await act(async () => again.click());
+    await flush();
+    console.info(SUITE, "retry calls", vi.mocked(window.parrot.retryImportJob).mock.calls);
+    expect(window.parrot.retryImportJob).toHaveBeenCalledWith("Cut Album");
+    expect(window.parrot.findImportJobFolder).not.toHaveBeenCalled();
+    // The bin stays beside the one action.
+    expect(card("Cut Album")?.querySelector('[data-testid="import-job-remove"]')).not.toBeNull();
+  });
+
+  // @req UX-JOBS-03[parrot]
+  it("when the folder is gone the card offers Find the folder, and turns to it when Import again finds nothing", async () => {
+    vi.mocked(window.parrot.retryImportJob).mockResolvedValueOnce({ started: false, reason: "missing" });
+    await openPanel();
+    const button = () => card("Cut Album")?.querySelector('[data-testid="import-job-retry"]') as HTMLButtonElement;
+    await act(async () => button().click());
+    await flush();
+    const detail = card("Cut Album")?.querySelector('[data-testid="import-job-failed"]')?.textContent;
+    console.info(SUITE, "after missing", { label: button().textContent, detail });
+    expect(button().textContent).toBe("Find the folder");
+    expect(detail).toContain("The folder is no longer where it was. Find it to import again.");
+    await act(async () => button().click());
+    await flush();
+    expect(window.parrot.findImportJobFolder).toHaveBeenCalledWith("Cut Album");
+    // Main's own list says so as well; the card keeps offering the picker.
+    await act(async () => push([{ ...partly, sourcesMissing: true }]));
+    expect(card("Broken Album")?.querySelector('[data-testid="import-job-retry"]')?.textContent).toBe("Find the folder");
+  });
+
+  // @req UX-JOBS-03[parrot]
+  it("another import under way: the card says to try again once it ends; French reads in French", async () => {
+    vi.mocked(window.parrot.retryImportJob).mockResolvedValueOnce({ started: false, reason: "busy" });
+    await openPanel();
+    await act(async () => (card("Cut Album")?.querySelector('[data-testid="import-job-retry"]') as HTMLButtonElement).click());
+    await flush();
+    expect(card("Cut Album")?.querySelector('[data-testid="import-job-failed"]')?.textContent).toContain("Another import is under way. Try again once it ends.");
+    act(() => root.unmount());
+    container.remove();
+    await mount(Promise.resolve(current), "fr");
+    await openPanel();
+    const french = card("Cut Album")?.querySelector('[data-testid="import-job-failed"]')?.textContent;
+    console.info(SUITE, "french detail", french);
+    expect(french).toContain("Parrot s’est fermé avant la fin de cet import.");
+    expect(card("Cut Album")?.querySelector('[data-testid="import-job-retry"]')?.textContent).toBe("Importer à nouveau");
+  });
+
+  it("the counts and the other sources read in the right plural form: 1 ajouté, 2 ajoutés, et 1 autre, et 2 autres", async () => {
+    const one = job("One", { finishedAt: 6, sources: ["/home/me/Music/One", "/home/me/Music/Extra"] }, { phase: "done", imported: 1, skipped: 1, failed: 1 });
+    const two = job("Two", { finishedAt: 7, sources: ["/home/me/Music/Two", "/x", "/y"] }, { phase: "done", imported: 2, skipped: 2, failed: 2 });
+    const read = async (language: ParrotLanguage) => {
+      act(() => root.unmount());
+      container.remove();
+      current = [one, two];
+      await mount(Promise.resolve(current), language);
+      await openPanel();
+      const lines = cards().map((el) => el.querySelector('[data-testid="import-job-counts"]')?.textContent ?? "");
+      console.info(SUITE, language, "plural lines", JSON.stringify(lines));
+      return lines;
+    };
+    const en = await read("en");
+    expect(en.sort()).toEqual(["1 added · 1 already there · 1 failed", "2 added · 2 already there · 2 failed"]);
+    expect(cards().some((el) => el.textContent?.includes("One and 1 more"))).toBe(true);
+    expect(cards().some((el) => el.textContent?.includes("Two and 2 more"))).toBe(true);
+    const fr = await read("fr");
+    expect(fr.sort()).toEqual(["1 ajouté · 1 déjà présent · 1 en échec", "2 ajoutés · 2 déjà présents · 2 en échec"]);
+    expect(cards().some((el) => el.textContent?.includes("One et 1 autre") && !el.textContent?.includes("One et 1 autres"))).toBe(true);
+    expect(cards().some((el) => el.textContent?.includes("Two et 2 autres"))).toBe(true);
   });
 });

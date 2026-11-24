@@ -125,6 +125,9 @@ export const getCacheBlobPath = () => cacheBlobFile();
 export const getPendingSnapshotPath = () => pendingSnapshotFile();
 /** PRIV-KEY-13: the snapshot a key rotation seals under the new key; never the pending snapshot's file. */
 export const getRotationSnapshotPath = () => `${libraryDir()}/rotation.snapshot`;
+/** STOR-RESEAL-01: the SQLite file name where a key change renames Parrot's library references before re-encrypting it. */
+export const ROTATION_PARROT_DB_NAME = "rotation.parrot.sqlite";
+export const getRotationParrotDbPath = () => dbFile(ROTATION_PARROT_DB_NAME);
 
 export const loadCache = async (): Promise<LibraryCache | null> => {
   const cache = await readJson<LibraryCache>(cacheFile());

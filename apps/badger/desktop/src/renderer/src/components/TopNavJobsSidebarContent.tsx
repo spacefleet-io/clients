@@ -5,7 +5,7 @@
  *
  * Plan reference: video-ingestion-is-buggy-effervescent-teapot.md Round 3.
  */
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import {
   DesktopCompletedJobRow,
@@ -41,6 +41,9 @@ import QuotaUploadsNotice, { isUploadQuotaExceededJobError } from "@/components/
 import MediaImage from "@/components/MediaImage";
 import type { JobStatus } from "../../../shared/labQueueShared";
 import { offlineDiskSpaceJobMessage } from "@/lib/offlineDiskSpaceLabel";
+import { formatLocalizedStorage } from "@space/shared/format";
+import { useFailedJobActions } from "@/lib/failedJobActions";
+import FailedImportDetail from "@/components/FailedImportDetail";
 
 type JobFilter = DesktopJobFilter;
 
@@ -61,8 +64,15 @@ const isActiveJobStatus = (status: JobStatus) =>
 
 const GROUP_LIMIT = 30;
 
+// "Upgrade plan" on a failed upload (UX-JOBS-03) leads to the one upgrade offer, QuotaUploadsNotice at the top.
+const showQuotaUpgradeOffer = () => {
+  const notice = document.querySelector<HTMLElement>('[data-testid="quota-uploads-notice"]');
+  notice?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  document.querySelector<HTMLButtonElement>('[data-testid="quota-uploads-notice-upgrade"]')?.focus();
+};
+
 export default function TopNavJobsSidebarContent() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const libraryData = useOptionalLibraryData();
   const media = libraryData?.media;
   const { jobs: allJobs, groups: allGroups, loading, runtimeError } = useRuntimeIngestJobs({ media });
@@ -79,6 +89,25 @@ export default function TopNavJobsSidebarContent() {
   // active/failed-aware default in `bucketDefaultExpanded`.
   const [expandedBuckets, setExpandedBuckets] = useState<Record<string, boolean>>({});
   const [filter, setFilter] = useState<JobFilter>("all");
+  const [planHasRoom, setPlanHasRoom] = useState(false);
+  const failedJobIds = useMemo(
+    () => allJobs.filter((job) => job.status === "failed").map((job) => job.jobId),
+    [allJobs],
+  );
+  const failedActions = useFailedJobActions(failedJobIds);
+  const renderFailedDetail = (job: LabJob): ReactNode => {
+    const availability = failedActions.byJobId.get(job.id);
+    if (job.status !== "failed" || !availability) return null;
+    return (
+      <FailedImportDetail
+        availability={availability}
+        planHasRoom={planHasRoom}
+        busy={failedActions.busyJobId === job.id}
+        onRun={(jobId) => void failedActions.run(jobId)}
+        onUpgradePlan={showQuotaUpgradeOffer}
+      />
+    );
+  };
 
   const filteredGroups = useMemo(() => {
     if (filter === "all") return allGroups;
@@ -103,8 +132,10 @@ export default function TopNavJobsSidebarContent() {
     [allJobs, media],
   );
 
-  const toggleGroup = (id: string) =>
-    setExpandedGroups((prev) => ({ ...prev, [id]: !prev[id] }));
+  // A group holding a failed job opens by default, so its "what happened / what it means / one action" lines show
+  // without a click (UX-JOBS-03); flip relative to that default, as the bucket toggle does.
+  const toggleGroup = (id: string, jobs: LabJob[]) =>
+    setExpandedGroups((prev) => ({ ...prev, [id]: !(prev[id] ?? groupDefaultExpanded(jobs)) }));
 
   // Episode bucket toggle. The default (when a key is absent) is not always
   // `false`, so flip relative to the active/failed-aware default rather than
@@ -129,7 +160,12 @@ export default function TopNavJobsSidebarContent() {
       {allJobs.some(
         (job) => job.status === "failed" && (isUploadQuotaExceededJobError(job.errorMessage) || isUploadQuotaExceededJobError(job.errorCode)),
       ) ? (
-        <QuotaUploadsNotice />
+        <QuotaUploadsNotice onRoomChange={setPlanHasRoom} />
+      ) : null}
+      {failedActions.keptBytesTotal > 0 ? (
+        <p className="text-[11px] text-muted-foreground" data-testid="failed-jobs-kept-copies">
+          {t("nav.jobs.failed.keptCopies", { size: formatLocalizedStorage(failedActions.keptBytesTotal, i18n.language) })}
+        </p>
       ) : null}
       <DesktopJobsFilterBar
         value={filter}
@@ -166,11 +202,12 @@ export default function TopNavJobsSidebarContent() {
             <GroupCard
               key={group.id}
               group={group}
-              expanded={expandedGroups[group.id] ?? false}
-              onToggle={() => toggleGroup(group.id)}
+              expanded={expandedGroups[group.id] ?? groupDefaultExpanded(group.jobs)}
+              onToggle={() => toggleGroup(group.id, group.jobs)}
               expandedBuckets={expandedBuckets}
               onToggleBucket={toggleBucket}
               enableCodecSelection={clientConfig.enableCodecSelection}
+              renderFailedDetail={renderFailedDetail}
               dismissing={dismissing}
               onCancel={(id) => {
                 scheduleDismiss(id, () => {
@@ -205,6 +242,9 @@ export default function TopNavJobsSidebarContent() {
 const bucketDefaultExpanded = (jobs: LabJob[]): boolean =>
   jobs.some((j) => j.status !== "done" && j.status !== "cancelled");
 
+// A job group starts open when one of its jobs failed: the failed job's action must be in sight (UX-JOBS-03).
+const groupDefaultExpanded = (jobs: LabJob[]): boolean => jobs.some((j) => j.status === "failed");
+
 function GroupCard({
   group,
   expanded,
@@ -212,6 +252,7 @@ function GroupCard({
   expandedBuckets,
   onToggleBucket,
   enableCodecSelection,
+  renderFailedDetail,
   dismissing,
   onCancel,
   onDismiss,
@@ -223,6 +264,8 @@ function GroupCard({
   expandedBuckets: Record<string, boolean>;
   onToggleBucket: (bucketKey: string, jobs: LabJob[]) => void;
   enableCodecSelection: boolean;
+  /** The failed job's three lines and its one action (UX-JOBS-03); null for any other job. */
+  renderFailedDetail: (job: LabJob) => ReactNode;
   dismissing: ReadonlySet<string>;
   onCancel: (id: string) => void;
   onDismiss: (id: string) => void;
@@ -249,6 +292,7 @@ function GroupCard({
       job={job}
       isCompleted={isCompleted}
       enableCodecSelection={enableCodecSelection}
+      failedDetail={renderFailedDetail(job)}
       dismissing={dismissing}
       onCancel={onCancel}
       onDismiss={onDismiss}
@@ -318,6 +362,7 @@ function SidebarJobRow({
   job,
   isCompleted,
   enableCodecSelection,
+  failedDetail,
   dismissing,
   onCancel,
   onDismiss,
@@ -325,6 +370,7 @@ function SidebarJobRow({
   job: LabJob;
   isCompleted: boolean;
   enableCodecSelection: boolean;
+  failedDetail: ReactNode;
   dismissing: ReadonlySet<string>;
   onCancel: (id: string) => void;
   onDismiss: (id: string) => void;
@@ -363,6 +409,7 @@ function SidebarJobRow({
           <DesktopJobProgress percent={job.progress} speedLabel={uploadSpeedLabel} />
         ) : null
       }
+      extra={failedDetail}
       action={
         <DesktopJobActionButton
           kind={active ? "cancel" : "remove"}

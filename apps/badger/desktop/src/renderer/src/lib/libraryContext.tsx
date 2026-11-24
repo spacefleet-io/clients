@@ -279,7 +279,8 @@ type LibraryContextValue = {
   purgeMissingObjects: (missingKeys: string[]) => Promise<void>;
   syncFromRemote: () => Promise<void>;
   resetKey: () => Promise<void>;
-  sealLibraryForRotation: (newKeyBase64: string) => Promise<RotationOwnLibrary>;
+  /** PRIV-KEY-13; STOR-RESEAL-01: `resealCopies` (old media key → copy) renames the media references in the sealed bytes. */
+  sealLibraryForRotation: (newKeyBase64: string, resealCopies?: ReadonlyMap<string, string>) => Promise<RotationOwnLibrary>;
   clearLocalCache: () => Promise<void>;
   getDebugSnapshot: () => Promise<Record<string, unknown> | null>;
   debugRevision: number;
@@ -3206,9 +3207,9 @@ export const LibraryProvider = ({
   }, [reload, syncMediaKey]);
 
   const sealLibraryForRotation = useCallback(
-    async (newKeyBase64: string) => {
+    async (newKeyBase64: string, resealCopies?: ReadonlyMap<string, string>) => {
       if (!db) throw new Error("LIBRARY_NOT_READY");
-      return await db.sealForRotation(newKeyBase64);
+      return await db.sealForRotation(newKeyBase64, resealCopies);
     },
     [db]
   );

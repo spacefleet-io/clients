@@ -196,12 +196,12 @@ public sealed class SpaceBadgerController : ControllerBase
         }
         catch (FormatException)
         {
-            return BadRequest("The library key is not valid base64.");
+            return BadRequest("The media library key is not valid base64.");
         }
 
         if (decoded.Length != 32)
         {
-            return BadRequest($"The library key must be 32 bytes, got {decoded.Length}.");
+            return BadRequest($"The media library key must be 32 bytes, got {decoded.Length}.");
         }
 
         var plugin = Plugin.Instance!;

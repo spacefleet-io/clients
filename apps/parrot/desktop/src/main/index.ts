@@ -17,6 +17,7 @@ import {
   getMe,
   markFounderNoticeSeen,
   getLibraryMeta,
+  getKeyRotationReadiness,
   getLibraryMetaForKeyStep,
   getSubscription,
   listProfiles,
@@ -85,7 +86,17 @@ import { isAppFeatureId, isAppFeatureState, type ProfileFeatures } from "@space/
 import { classifySignInError, retryAfterMinutes, signInErrorDetails, type SignInFailure } from "@space/shared/signInError";
 import { classifyResendVerificationError, classifySignUpError, classifyVerifyEmailError } from "@space/shared/signUp";
 import { asksKeySavedBeforeSignOut, type SignedOutReason } from "@space/shared/keptLibraryKey";
-import { fetchLibrarySnapshot, publishLibrarySnapshot, type FetchedLibrarySnapshot } from "@space/library-db-runtime/snapshotTransport";
+import {
+  createKeyProbe,
+  fetchLibrarySnapshot,
+  publishLibrarySnapshot,
+  reencryptLibrariesForRotation,
+  sealLibrarySnapshot,
+  type FetchedLibrarySnapshot,
+} from "@space/library-db-runtime/snapshotTransport";
+import { rewriteLibraryBytesForReseal } from "@space/library-db-runtime/resealSnapshot";
+import { registerNodeSqlite } from "@space/library-db-runtime/nodeSqlite";
+import { createParrotKeyChange } from "./keyChange";
 import { deleteStorageObjects, downloadStorageObjectViaTunnel, uploadStorageObjectViaTunnel } from "@space/library-db-runtime/api";
 import { decryptBase64ToBytes } from "@space/library-db-runtime/crypto";
 import { checkKeyAgainstAccount, makeAccountKey } from "./libraryKeyCheck";
@@ -201,6 +212,8 @@ import {
   PARROT_IPC,
   type ParrotBackgroundWork,
   type ParrotImportJob,
+  importJobRetryable,
+  type ParrotImportRetry,
   type ParrotBillingResult,
   type ParrotCheckoutInput,
   type ParrotCreateKeyResult,
@@ -244,7 +257,7 @@ import { createParrotPairingApprover } from "./pairingApprove";
 import { completeParrotKeyPairing, completeParrotPairedSignIn, type ParrotPairedSignInDeps } from "./pairedSignIn";
 import { createDesktopStreamSlots } from "./streamSlot";
 import { importCoverOf, PARROT_MUSIC_ID, searchParrotImportAlbums } from "./importSearch";
-import { importEnded, importStopError, restoreImportJobs, type StoredImportJob } from "./importJobs";
+import { importEnded, importStopError, restoreImportJobs, retrySources, withSourcesMissing, type StoredImportJob } from "./importJobs";
 import { createDesktopPairingClient, pairingRefusalOf, resolveDeviceName } from "@space/desktop-shell/pairing-main";
 import { SIBLING_SIGN_IN_ARG, armSiblingHiddenQuit, isSiblingSignInLaunch, type SiblingHiddenQuit } from "@space/desktop-shell/sibling-main";
 import { SIBLING_IPC, type SiblingSignInResult } from "@space/desktop-shell/sibling";
@@ -840,7 +853,9 @@ let importJobs: StoredImportJob[] = (() => {
 let currentImportJob: StoredImportJob | null = null;
 
 const accountImportJobs = (): ParrotImportJob[] =>
-  importJobs.filter((job) => job.userId === (store.user?.id ?? "")).map(({ userId: _userId, ...job }) => job);
+  importJobs
+    .filter((job) => job.userId === (store.user?.id ?? ""))
+    .map(({ userId: _userId, ...job }) => withSourcesMissing(job, existsSync));
 
 /** Tells the window; writes the list only when a job starts, waits for its confirm, ends or leaves (not per piece). */
 const sendImportJobs = (save: boolean) => {
@@ -869,6 +884,59 @@ const dismissImportJob = (id: string): ParrotImportJob[] => {
     sendImportJobs(true);
   }
   return accountImportJobs();
+};
+
+/** UX-JOBS-03: this account's ended job the card offers to try again, or null when it left the list or is running. */
+const retryableImportJob = (id: string): StoredImportJob | null =>
+  importJobs.find((entry) => entry.id === id && entry.userId === (store.user?.id ?? "") && entry !== currentImportJob && importJobRetryable(entry)) ?? null;
+
+/**
+ * UX-JOBS-03: the job gives way to the import that tries it again; that import stops at the review like any other.
+ * A running import, or a scan waiting for its review, is never thrown away for it.
+ */
+const replaceImportJob = (job: StoredImportJob, sources: string[]): ParrotImportRetry => {
+  if (importStatus.running || importStatus.phase === "review") {
+    log(`[import] job ${job.id} not tried again: another import is ${importStatus.phase}`);
+    return { started: false, reason: "busy" };
+  }
+  importJobs = importJobs.filter((entry) => entry !== job);
+  log(`[import] job ${job.id} (${job.status.phase}, ${job.failures.length} file(s) not added) tried again from ${sources.length} source(s)`);
+  scanImport(sources);
+  return { started: true };
+};
+
+const retryImportJob = (id: string): ParrotImportRetry => {
+  const job = retryableImportJob(id);
+  if (!job) {
+    log(`[import] job ${id} not tried again: not in the list, running or nothing to retry`);
+    return { started: false, reason: "gone" };
+  }
+  const wanted = retrySources(job);
+  const present = wanted.filter((path) => existsSync(path));
+  if (present.length === 0) {
+    log(`[import] job ${id} not tried again: none of its ${wanted.length} source(s) is still there`);
+    sendImportJobs(false);
+    return { started: false, reason: "missing" };
+  }
+  if (present.length < wanted.length) log(`[import] job ${id}: ${wanted.length - present.length} of ${wanted.length} source(s) gone, trying the rest`);
+  return replaceImportJob(job, present);
+};
+
+/** UX-JOBS-03 "Find the folder": the picker lives here, so the window never hands main a path to import. */
+const findImportJobFolder = async (id: string): Promise<ParrotImportRetry | { cancelled: true }> => {
+  const job = retryableImportJob(id);
+  if (!job) {
+    log(`[import] find folder for job ${id}: not in the list, running or nothing to retry`);
+    return { started: false, reason: "gone" };
+  }
+  if (importStatus.running || importStatus.phase === "review") return { started: false, reason: "busy" };
+  const picked = await dialog.showOpenDialog(mainWindow!, { properties: ["openDirectory"] });
+  if (picked.canceled || picked.filePaths.length === 0) {
+    log(`[import] find folder for job ${id}: nothing picked`);
+    return { cancelled: true };
+  }
+  log(`[import] find folder for job ${id}: picked ${picked.filePaths[0]} (was ${job.sources[0] ?? "?"})`);
+  return replaceImportJob(job, picked.filePaths);
 };
 
 /** The import's state for the window, and the current job's with it; `failures` replaces the job's failed files. */
@@ -2426,6 +2494,56 @@ const eraseLibrary = (password: unknown, twoFactorCode: unknown) => {
   });
 };
 
+// The key change rewrites library files through library-db-runtime's SQLite loader; main has `node:sqlite`, not
+// better-sqlite3 (STOR-RESEAL-01).
+registerNodeSqlite();
+
+/**
+ * ACCT-KEYCHG-01 (Chris 2026-11-23, Q2): Parrot changes the media library key as Badger does, on the same controller.
+ * Parrot's own library is the server's latest (every Parrot device's saves), its media references renamed to their
+ * re-sealed copies, sealed under the new key (PRIV-KEY-13); Badger's library goes re-encrypted alongside (PRIV-KEY-06).
+ */
+const keyChange = createParrotKeyChange({
+  token: () => store.token(),
+  newKey: () => generateLibraryKeyWords(store.setup.language),
+  hasPassword: async (token) => (await getMe(token)).user.hasPassword !== false,
+  readiness: getKeyRotationReadiness,
+  app: (token) => ({
+    appId: PARROT_APP_ID,
+    oldKey: async () => store.libraryKey(),
+    sealOwnLibrary: async (newKeyBase64, copies) => {
+      const oldKey = store.libraryKey();
+      if (!oldKey) throw new Error("ROTATION_REENCRYPT_UNREADABLE");
+      const fetched = await fetchLibrarySnapshot({ token, keyBase64: oldKey, appId: PARROT_APP_ID });
+      let raw: Uint8Array;
+      if (fetched) {
+        raw = fetched.dbBytes;
+      } else {
+        const empty = openParrotLibrary(null);
+        try {
+          raw = serializeParrotLibrary(empty);
+        } finally {
+          empty.close();
+        }
+      }
+      const { bytes, rewrite } = await rewriteLibraryBytesForReseal(raw, PARROT_APP_ID, copies);
+      log(`[key-change] Parrot library v${fetched?.snapshotVersion ?? "none"} sealed under the new key (${rewrite.references} media reference(s) renamed)`);
+      return { ...(await sealLibrarySnapshot(token, newKeyBase64, bytes, PARROT_APP_ID)), opStreamVersion: PARROT_OP_STREAM_VERSION };
+    },
+    reencryptOtherLibraries: (oldKeyBase64, newKeyBase64, copies) =>
+      reencryptLibrariesForRotation({ token, oldKeyBase64, newKeyBase64, appIds: ["badger"], resealCopies: copies }),
+    keyProbe: createKeyProbe,
+  }),
+  onState: (state) => mainWindow?.webContents.send(PARROT_IPC.keyChangeStateEvent, state),
+  // The rotation revoked every session: keep the new key, drop the copy kept under the old one, back to sign-in.
+  onSwitched: async (newKeyBase64) => {
+    await storeLibraryKey(newKeyBase64);
+    for (const name of ["library.sealed", "library.json"]) rmSync(join(offlineDir, name), { force: true });
+    resetToSignIn("sessionRejected");
+  },
+  log,
+});
+
 /**
  * A billing call with the session token (ACCT-PAY-01). The API's error code travels back as `code`
  * (an Error thrown across IPC would lose it), with `excessBytes` for a `library_too_large` refusal
@@ -2932,6 +3050,27 @@ const registerIpc = () => {
   ipcMain.handle(PARROT_IPC.setLibraryKey, (_event, key: string) => checkLibraryKey(String(key)));
   ipcMain.handle(PARROT_IPC.createLibraryKey, () => createLibraryKey());
   ipcMain.handle(PARROT_IPC.eraseLibrary, (_event, password: unknown, twoFactorCode: unknown) => eraseLibrary(password, twoFactorCode));
+  ipcMain.handle(PARROT_IPC.keyChangeReadiness, () => keyChange.readiness());
+  ipcMain.handle(PARROT_IPC.keyChangeOpen, () => keyChange.open());
+  ipcMain.handle(PARROT_IPC.keyChangeSubmit, (_event, password: unknown, twoFactorCode: unknown) =>
+    keyChange.submit(String(password ?? ""), typeof twoFactorCode === "string" && twoFactorCode ? twoFactorCode : undefined),
+  );
+  ipcMain.handle(PARROT_IPC.keyChangeSwitchNow, () => keyChange.switchNow());
+  ipcMain.handle(PARROT_IPC.keyChangePoll, () => keyChange.poll());
+  ipcMain.handle(PARROT_IPC.keyChangeStop, () => keyChange.stop());
+  ipcMain.handle(PARROT_IPC.keyChangePause, () => keyChange.pause());
+  ipcMain.handle(PARROT_IPC.keyChangeUnreadableFiles, () => keyChange.unreadableFiles());
+  ipcMain.handle(PARROT_IPC.keyChangeDeleteUnreadableFiles, (_event, files: unknown) =>
+    keyChange.deleteUnreadableFiles(
+      Array.isArray(files)
+        ? files.flatMap((file: unknown) =>
+            file && typeof file === "object" && "key" in file && typeof file.key === "string" && "sizeBytes" in file && typeof file.sizeBytes === "number"
+              ? [{ key: file.key, sizeBytes: file.sizeBytes }]
+              : [],
+          )
+        : [],
+    ),
+  );
   ipcMain.handle(PARROT_IPC.pickFolders, async () => {
     const picked = await dialog.showOpenDialog(mainWindow!, { properties: ["openDirectory", "multiSelections"] });
     return picked.canceled ? [] : picked.filePaths;
@@ -2961,6 +3100,8 @@ const registerIpc = () => {
   ipcMain.handle(PARROT_IPC.getImportStatus, () => importStatus);
   ipcMain.handle(PARROT_IPC.getImportJobs, () => accountImportJobs());
   ipcMain.handle(PARROT_IPC.dismissImportJob, (_event, id: unknown) => dismissImportJob(String(id)));
+  ipcMain.handle(PARROT_IPC.retryImportJob, (_event, id: unknown) => retryImportJob(String(id)));
+  ipcMain.handle(PARROT_IPC.findImportJobFolder, (_event, id: unknown) => findImportJobFolder(String(id)));
   ipcMain.handle(PARROT_IPC.previewExport, () => exportJobs.preview());
   ipcMain.handle(PARROT_IPC.exportMusic, () => exportJobs.start());
   ipcMain.handle(PARROT_IPC.getExportJobs, () => exportJobs.list());

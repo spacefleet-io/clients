@@ -18,6 +18,7 @@ import {
   DesktopJobsBackgroundLine,
   DesktopJobsLoadingSkeleton,
   DesktopJobsTabEmpty,
+  DesktopFailedJobDetail,
 } from "../src/components/desktop-job-card";
 
 const SUITE = "[desktop-job-card]";
@@ -83,23 +84,56 @@ describe("shared desktop job cards", () => {
     expect(empty).toContain("All caught up");
   });
 
+  // @req UX-JOBS-03[badger-desktop]
+  // @req UX-JOBS-03[parrot]
+  it("a failed job says what happened, what it means and offers at most one action", () => {
+    const withAction = renderToStaticMarkup(
+      <DesktopFailedJobDetail
+        what="The upload stopped."
+        meaning="The processed copy is kept on this computer, so only the upload runs again."
+        action={{ label: "Upload again", onClick: () => undefined, testId: "failed-action" }}
+        testId="failed-detail"
+      />
+    );
+    console.info(SUITE, "failed detail with action", withAction);
+    expect(withAction).toContain("The upload stopped.");
+    expect(withAction).toContain("only the upload runs again");
+    expect(withAction.match(/<button/g)).toHaveLength(1);
+    expect(withAction).toContain('data-testid="failed-action"');
+
+    const busy = renderToStaticMarkup(
+      <DesktopFailedJobDetail what="x" meaning="y" action={{ label: "Upload again", onClick: () => undefined, busy: true }} />
+    );
+    expect(busy).toContain("disabled");
+
+    const removeOnly = renderToStaticMarkup(<DesktopFailedJobDetail what="The file was deleted." meaning="Nothing to import." />);
+    console.info(SUITE, "failed detail without action", removeOnly);
+    expect(removeOnly).not.toContain("<button");
+  });
+
   // @req UX-JOBS-02[badger-desktop]
   // @req UX-JOBS-02[parrot]
+  // @req UX-JOBS-03[badger-desktop]
+  // @req UX-JOBS-03[parrot]
   it("both apps draw their jobs with these cards, not their own", () => {
     const badger = {
       panel: source("apps/badger/desktop/src/renderer/src/components/TopNavJobsSidebarContent.tsx"),
       sheet: source("apps/badger/desktop/src/renderer/src/components/TopNavJobsSidebar.tsx"),
       tab: source("apps/badger/desktop/src/renderer/src/components/MediaDetailsProcessingPanel.tsx"),
       pill: source("apps/badger/desktop/src/renderer/src/components/LabStatusBadge.tsx"),
+      failed: source("apps/badger/desktop/src/renderer/src/components/FailedImportDetail.tsx"),
     };
     const parrot = source("apps/parrot/desktop/src/renderer/src/ImportJobs.tsx");
     for (const part of ["DesktopJobGroupCard", "DesktopJobRow", "DesktopCompletedJobRow", "DesktopJobActionButton", "DesktopJobsLoadingSkeleton", "useStaggeredDismiss"]) {
       expect(badger.panel, `Badger panel uses ${part}`).toContain(part);
     }
+    // UX-JOBS-03: a failed import's three lines are the shared card, drawn in the panel through FailedImportDetail.
+    expect(badger.failed).toContain("DesktopFailedJobDetail");
+    expect(badger.panel).toContain("FailedImportDetail");
     expect(badger.sheet).toContain("DesktopJobsBackgroundLine");
     for (const part of ["DesktopJobRow", "DesktopCompletedJobRow", "DesktopJobsTabEmpty"]) expect(badger.tab, `Badger Jobs tab uses ${part}`).toContain(part);
     expect(badger.pill).toContain("DesktopJobStatusPill");
-    for (const part of ["DesktopJobRow", "DesktopCompletedJobRow", "DesktopJobStatusPill", "DesktopJobActionButton", "DesktopJobProgress", "DesktopJobsLoadingSkeleton", "DesktopJobsBackgroundLine", "useStaggeredDismiss"]) {
+    for (const part of ["DesktopJobRow", "DesktopCompletedJobRow", "DesktopJobStatusPill", "DesktopJobActionButton", "DesktopJobProgress", "DesktopJobsLoadingSkeleton", "DesktopJobsBackgroundLine", "useStaggeredDismiss", "DesktopFailedJobDetail"]) {
       expect(parrot, `Parrot panel uses ${part}`).toContain(part);
     }
     // No hand-drawn pill or bin left in Parrot's panel.

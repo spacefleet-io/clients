@@ -10,7 +10,8 @@
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@space/shared/api";
-import { rotateWithOtherLibraries, rotationRefusalText } from "../src/renderer/src/lib/rotationRefusal";
+import { keyChangeFailureOf } from "@space/shared/keyChangeFailure";
+import { rotateWithOtherLibraries } from "../src/renderer/src/lib/rotationRefusal";
 
 const mocks = vi.hoisted(() => ({ rotate: vi.fn() }));
 
@@ -21,7 +22,6 @@ vi.mock("../src/renderer/src/api", async () => ({
 }));
 
 const SUITE = "[BADGER-DESKTOP-ROTATION-OTHER-LIBRARIES-001]";
-const t = (key: string) => key;
 const copyAt = (baseVersion: number) => ({
   appId: "parrot" as const,
   baseVersion,
@@ -57,7 +57,15 @@ beforeEach(() => {
 describe(`${SUITE} rotateWithOtherLibraries`, () => {
   it("sends the other libraries' re-encrypted copies with the rotation", async () => {
     await rotateWithOtherLibraries(input(async () => [copyAt(2)]));
-    expect(mocks.rotate).toHaveBeenCalledWith("t", OWN, "probe", "pw", undefined, [copyAt(2)]);
+    expect(mocks.rotate).toHaveBeenCalledWith("t", OWN, "probe", "pw", undefined, [copyAt(2)], undefined);
+  });
+
+  it("names the media re-seal run the rotation switches to (STOR-RESEAL-04)", async () => {
+    await rotateWithOtherLibraries({ ...input(async () => [copyAt(2)]), mediaReseal: { runId: "run-1", switchNow: true } });
+    expect(mocks.rotate).toHaveBeenCalledWith("t", OWN, "probe", "pw", undefined, [copyAt(2)], {
+      runId: "run-1",
+      switchNow: true,
+    });
   });
 
   it("a version conflict is shown as 'changed', sent once (the 2FA code is single-use), and the next try reads again", async () => {
@@ -66,7 +74,7 @@ describe(`${SUITE} rotateWithOtherLibraries`, () => {
     const reencrypt = async () => [copyAt(2 + reads++)];
     const err = await rotateWithOtherLibraries(input(reencrypt)).catch((e: unknown) => e);
     expect(mocks.rotate).toHaveBeenCalledTimes(1);
-    expect(rotationRefusalText(t, err)).toBe("settings.recovery.rotate.errorChanged");
+    expect(keyChangeFailureOf(err)).toEqual({ status: "failed", reason: "changed" });
     await rotateWithOtherLibraries(input(reencrypt));
     expect(mocks.rotate.mock.calls.map((call) => (call[5] as ReturnType<typeof copyAt>[])[0]!.baseVersion)).toEqual([2, 3]);
   });
@@ -78,26 +86,13 @@ describe(`${SUITE} rotateWithOtherLibraries`, () => {
       })
     ).catch((e: unknown) => e);
     expect(mocks.rotate).not.toHaveBeenCalled();
-    expect(rotationRefusalText(t, err)).toBe("settings.recovery.rotate.errorUnreadable");
+    expect(keyChangeFailureOf(err)).toEqual({ status: "failed", reason: "unreadable" });
   });
 
   it("@req ACCT-KEYCHG-04[badger-desktop] gives the media refusal no words of its own, sent once", async () => {
     mocks.rotate.mockRejectedValue(new ApiError(409, { error: "rotation_needs_media_reseal" }));
     const err = await rotateWithOtherLibraries(input(async () => [copyAt(2)])).catch((e: unknown) => e);
     expect(mocks.rotate).toHaveBeenCalledTimes(1);
-    expect(rotationRefusalText(t, err)).toBeNull();
-  });
-});
-
-describe(`${SUITE} rotationRefusalText`, () => {
-  it("names each refusal, and nothing else", () => {
-    expect(rotationRefusalText(t, new ApiError(409, { error: "library_not_reencrypted" }))).toBe(
-      "settings.recovery.rotate.errorNotReencrypted"
-    );
-    expect(rotationRefusalText(t, new Error("ROTATION_REENCRYPT_NOT_SNAPSHOTTED"))).toBe(
-      "settings.recovery.rotate.errorNotSnapshotted"
-    );
-    expect(rotationRefusalText(t, new Error("ROTATION_REENCRYPT_FAILED"))).toBe("settings.recovery.rotate.errorReencryptFailed");
-    expect(rotationRefusalText(t, new ApiError(401, { error: "invalid_password" }))).toBeNull();
+    expect(keyChangeFailureOf(err)).toEqual({ status: "failed", reason: "other" });
   });
 });

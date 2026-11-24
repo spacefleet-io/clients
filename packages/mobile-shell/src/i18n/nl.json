@@ -681,10 +681,6 @@
       "saveHost": "Host opslaan",
       "hostSaved": "Opgeslagen",
       "libraryKey": "Mediatheeksleutel",
-      "resetKey": {
-        "title": "Versleutelingssleutel vernieuwen",
-        "description": "Vernieuw de sleutel die je mediatheek beschermt."
-      },
       "animatedBackground": {
         "title": "Geanimeerde achtergrond",
         "description": "Om de paar seconden schieten er vallende sterren langs de sterrenhemel achter de app. Met Automatisch gaan ze uit op telefoons met weinig geheugen.",
@@ -1024,30 +1020,6 @@
       "noLibrary": "Er is geen mediatheek gevonden voor dit account.",
       "unavailable": "Je mediatheek is nu niet bereikbaar. Probeer het zo meteen opnieuw.",
       "validate": "Je sleutel kon niet worden gecontroleerd."
-    }
-  },
-  "resetKey": {
-    "title": "Mediatheeksleutel vernieuwen",
-    "subtitle": "Maak een nieuwe sleutel aan en versleutel je mediatheek opnieuw.",
-    "newKey": "Nieuwe sleutel",
-    "generateAnother": "Nog een sleutel aanmaken",
-    "password": "Accountwachtwoord",
-    "code": "Tweestapsverificatiecode (optioneel)",
-    "confirmLabel": "Ik heb de nieuwe sleutel bewaard.",
-    "confirm": "Bevestigen",
-    "confirmed": "Bevestigd",
-    "rotate": "Sleutel vernieuwen",
-    "rotating": "Vernieuwen…",
-    "success": "Sleutel vernieuwd. Mediatheek opnieuw laden…",
-    "errors": {
-      "confirmRequired": "Bevestig dat je de nieuwe sleutel hebt bewaard.",
-      "passwordRequired": "Wachtwoord is verplicht.",
-      "notReady": "De mediatheek is nog niet klaar.",
-      "rotate": "De sleutel kon niet worden vernieuwd. Controleer je wachtwoord en code.",
-      "notReencrypted": "De mediatheek van een andere app kon niet naar de nieuwe sleutel. Er is niets veranderd. Vernieuw vanaf een apparaat met de huidige sleutel.",
-      "unreadable": "De sleutel van deze telefoon opent de mediatheek van een andere app niet. Er is niets veranderd. Vernieuw vanaf een apparaat met de huidige sleutel.",
-      "notSnapshotted": "De mediatheek van een andere app wordt nog opgeslagen. Er is niets veranderd. Open die app, laat hem synchroniseren en probeer het opnieuw.",
-      "changed": "Een mediatheek veranderde tijdens het vernieuwen. Er is niets veranderd. Probeer het opnieuw."
     }
   },
   "libraryFormat": {

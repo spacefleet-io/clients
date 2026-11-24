@@ -1,7 +1,7 @@
 import type { ClientUiLanguage } from "@space/shared/i18n";
 
 /**
- * Every sentence the "Sign in with another device" screen shows, and its key-screen variant ("Get your library key from
+ * Every sentence the "Sign in with another device" screen shows, and its key-screen variant ("Get your media library key from
  * another device", the `key*` strings plus `typeKeyInstead`). `expiresIn` takes `{time}`.
  */
 export type PairWithPhoneStringKey =
@@ -59,7 +59,7 @@ export const pairWithPhoneStrings: Record<ClientUiLanguage, Record<PairWithPhone
     failed: "Something went wrong. Get a new code to try again.",
     keyLink: "Get the key from another device",
     keyCard: "Use any Badger or Parrot app you're signed in to, on any device or profile of this account: approve the code shown here.",
-    keyTitle: "Get your library key from another device",
+    keyTitle: "Get your media library key from another device",
     keyInstructions:
       "On a phone or computer already signed in to this account, open Badger or Parrot → Settings → Pair a device, then scan this code.",
     keyWaiting: "Waiting for your other device…",
