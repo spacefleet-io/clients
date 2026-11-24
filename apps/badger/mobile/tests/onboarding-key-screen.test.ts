@@ -8,7 +8,7 @@
  *   case, or their first 4 letters) are checked and the key they stand for is stored, that Validate key stays off
  *   while a word is unknown, and that the old base64 key, long-pressed in with spaces, line breaks and zero-width
  *   characters, still works. Chris (2026-11-12): the screens that show and take the key were confusable, so this one
- *   is titled "Enter your library key", its boxes start empty and it shows no grid of words. Chris 2026-11-12 (chat):
+ *   is titled "Enter your media library key", its boxes start empty and it shows no grid of words. Chris 2026-11-12 (chat):
  *   "the setup step to enter/save the key should be the same shared one between the 2 apps": the screen is the
  *   shared `MobileLibraryKeyStep` (MOBILE-SHELL-LIBRARY-KEY-STEP-001 mounts it); these tests pin what Badger hands
  *   it, including the account-wide erase (Chris 2026-11-12 (chat): "they share the key and everything related to

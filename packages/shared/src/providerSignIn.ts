@@ -80,15 +80,6 @@ export const parseProviderReturnLink = (scheme: string, value: unknown): Provide
   return code !== null && SIGNIN_CODE.test(code) ? { code } : { error: "invalid_code" };
 };
 
-/** The outcome of the first `<scheme>://auth/provider` link in a launch's argv (Windows / Linux), or null. */
-export const findProviderReturn = (scheme: string, argv: readonly unknown[]): ProviderReturn | null => {
-  for (const arg of argv) {
-    const outcome = parseProviderReturnLink(scheme, arg);
-    if (outcome !== null) return outcome;
-  }
-  return null;
-};
-
 /** The API keeps a returned code for 5 minutes; an outcome held longer is worth nothing. */
 export const PROVIDER_RETURN_TTL_MS = 5 * 60_000;
 

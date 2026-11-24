@@ -69,6 +69,7 @@
     "./notification-permission": "./src/setup/notificationPermission.ts",
     "./profiles-flow": "./src/profiles/useProfilesFlow.ts",
     "./account-language-prompt": "./src/AccountLanguagePrompt.tsx",
+    "./account-language-sync": "./src/accountLanguageSync.ts",
     "./update-required": "./src/components/mobile-update-required-screen.tsx",
     "./button-face": "./src/components/mobile-button-face.tsx",
     "./profiles-screen": "./src/profiles/MobileProfilesScreen.tsx",
