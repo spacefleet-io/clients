@@ -11,7 +11,7 @@
             <h1>Badger</h1>
 
             <div class="infoBanner" style="margin-bottom:1.5em;">
-                <strong>Your media library key is stored on this server.</strong>
+                <strong>Your library key is stored on this server.</strong>
                 It is kept in a private file (<code id="sbKeyPath">…/spacebadger/library.key</code>, owner-read only where the operating system supports it).
                 Anyone with access to this server can read it. Only install this plugin on a server you trust.
                 <a is="emby-linkbutton" class="button-link" href="https://spacebadger.io/docs/privacy/key-storage" target="_blank" rel="noopener">How key storage works</a>
@@ -125,11 +125,11 @@
                     <button is="emby-button" type="submit" class="raised button-submit block"><span>Sign in</span></button>
                 </form>
 
-                <h3 style="margin-top:2em;">Media library key</h3>
+                <h3 style="margin-top:2em;">Library key</h3>
                 <form id="sbKeyForm">
                     <div class="inputContainer">
-                        <input is="emby-input" type="password" id="sbKey" label="Media library key (base64)" autocomplete="off" />
-                        <div class="fieldDescription">Paste your media library key. It is checked against your library before it is used.</div>
+                        <input is="emby-input" type="password" id="sbKey" label="Library key (base64)" autocomplete="off" />
+                        <div class="fieldDescription">Paste your library key. It is checked against your library before it is used.</div>
                     </div>
                     <button is="emby-button" type="submit" class="raised button-submit block"><span>Save key</span></button>
                 </form>
@@ -182,7 +182,7 @@
                         lines.push('Profile: not picked yet, nothing syncs until you pick one');
                     }
                     if (service.keyRejected) {
-                        lines.push('The stored media library key does not match your library. Pair again.');
+                        lines.push('The stored library key does not match your library. Pair again.');
                     }
                 }
                 lines.push('Key file: ' + (status.keyFilePresent ? 'present' : 'missing'));
@@ -453,11 +453,11 @@
                 call('POST', 'Key', { key: el('sbKey').value }).then(function () {
                     el('sbKey').value = '';
                     Dashboard.hideLoadingMsg();
-                    toast('Media library key saved.');
+                    toast('Library key saved.');
                     refreshStatus();
                 }).catch(function () {
                     Dashboard.hideLoadingMsg();
-                    toast('That is not a valid media library key (32 bytes, base64).');
+                    toast('That is not a valid library key (32 bytes, base64).');
                 });
             });
 

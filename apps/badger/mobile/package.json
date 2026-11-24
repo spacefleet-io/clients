@@ -45,7 +45,6 @@
     "@sentry/react-native": "^8.36.0",
     "@space/pairing-crypto": "workspace:*",
     "@space/media-crypto": "workspace:*",
-    "@space/media-reseal": "workspace:*",
     "@space/playback-abr": "workspace:*",
     "@space/privacy-pass": "workspace:*",
     "@space/profile-avatars": "workspace:*",

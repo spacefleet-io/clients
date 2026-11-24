@@ -391,8 +391,6 @@ type ParrotNowPlayingProps = {
   entries: NowPlayingEntry[];
   position: number;
   onJump: (index: number) => void;
-  /** Pauses or resumes the song playing now: what a click on its queue row does (PAR-PLAY-10). */
-  onToggle: () => void;
   coverFor: (albumId: string) => string | null | undefined;
   labels: ParrotNowPlayingLabels;
   /** The like button (PAR-PL-04), next to the title. */
@@ -581,7 +579,7 @@ export function ParrotNowPlaying(props: ParrotNowPlayingProps) {
                     <button
                       type="button"
                       className="absolute inset-0 rounded-lg"
-                      onClick={() => (current ? props.onToggle() : props.onJump(index))}
+                      onClick={() => props.onJump(index)}
                       aria-label={entry.track.title}
                       data-testid="now-playing-queue-row"
                       data-current={current}

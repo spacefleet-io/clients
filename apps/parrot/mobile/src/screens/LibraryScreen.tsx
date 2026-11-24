@@ -8,7 +8,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { UNAVAILABLE_LOOK } from "@space/mobile-shell/theme";
-import { MobileButton, MobileLibraryLoading, SkyCover, useSkyScroll } from "@space/mobile-shell/components";
+import { MobileLibraryLoading, SkyCover, useSkyScroll } from "@space/mobile-shell/components";
 import {
   MobileLibraryFilterPicker,
   MobileLibraryHeader,
@@ -61,7 +61,7 @@ import { AlbumGrid } from "./AlbumGrid";
 import { SongListRow, songRowNames } from "./SongListRow";
 import { useOfflineReach } from "./kept";
 import { EmptyLibrary } from "./EmptyLibrary";
-import { Body, Centered, ErrorText } from "./ui";
+import { Body, Button, Centered, ErrorText } from "./ui";
 import type { RootStack } from "./routes";
 
 export type LibraryView = ParrotLibraryTab;
@@ -137,7 +137,7 @@ export const LibraryScreen = ({ active, viewRequest }: LibraryScreenProps) => {
     return (
       <Centered>
         <ErrorText>{t("parrot.library.openFailed", { error: library.error })}</ErrorText>
-        <MobileButton label={t("parrot.library.tryAgain")} onPress={() => void reloadLibrary()} />
+        <Button label={t("parrot.library.tryAgain")} onPress={() => void reloadLibrary()} />
       </Centered>
     );
   }
@@ -391,7 +391,7 @@ const SongsView = ({ songs, loading, error: readError }: { songs: Array<WithCove
           starting={starting === item.id}
           disabled={starting !== null}
           unavailable={reach ? !reach.song(item.id) : false}
-          accessibilityLabel={t(now?.trackId === item.id && now.playing ? "parrot.album.pause" : "parrot.album.play", { title: item.title })}
+          accessibilityLabel={t("parrot.album.play", { title: item.title })}
           onPress={() => void play(songs, index)}
           onMore={() => editor.openSong({ id: item.id, title: item.title }, undefined, { onAddToQueue: () => queue([item], "end") })}
           moreLabel={`${t("parrot.player.more")}, ${item.title}`}

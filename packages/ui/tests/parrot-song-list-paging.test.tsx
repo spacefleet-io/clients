@@ -30,7 +30,7 @@ const reach = () =>
 
 const songs = (n: number) =>
   Array.from({ length: n }, (_, i) => ({ id: `s${i}`, title: `Song ${i}`, artistName: "Artist", albumTitle: "Album", durationMs: 1000 }));
-const labels = { song: "Song", artist: "Artist", album: "Album", time: "Time", unknownArtist: "?", play: (title: string) => `Play ${title}`, pause: (title: string) => `Pause ${title}`, missing: "Missing" };
+const labels = { song: "Song", artist: "Artist", album: "Album", time: "Time", unknownArtist: "?", play: (title: string) => `Play ${title}`, missing: "Missing" };
 
 describe("[parrot] song list on a big library (#3350 C4)", () => {
   let container: HTMLDivElement;
@@ -51,7 +51,7 @@ describe("[parrot] song list on a big library (#3350 C4)", () => {
   const rows = () => container.querySelectorAll('[data-testid="library-track"]').length;
 
   it("draws 200 rows of 1,000 at first, then 200 more each time the end comes near, and stops at the last song", () => {
-    act(() => root.render(<ParrotSongList tracks={songs(1_000)} labels={labels} playingId={undefined} playing={false} showAlbum={false} onPlay={() => undefined} onToggle={() => undefined} />));
+    act(() => root.render(<ParrotSongList tracks={songs(1_000)} labels={labels} playingId={undefined} playing={false} showAlbum={false} onPlay={() => undefined} />));
     console.info("[parrot-song-list] first draw", rows());
     expect(rows()).toBe(200);
     expect(container.querySelector('[data-testid="library-tracks-more"]')).not.toBeNull();
@@ -64,7 +64,7 @@ describe("[parrot] song list on a big library (#3350 C4)", () => {
   });
 
   it("a short list is drawn whole, with no end marker", () => {
-    act(() => root.render(<ParrotSongList tracks={songs(12)} labels={labels} playingId={undefined} playing={false} showAlbum={false} onPlay={() => undefined} onToggle={() => undefined} />));
+    act(() => root.render(<ParrotSongList tracks={songs(12)} labels={labels} playingId={undefined} playing={false} showAlbum={false} onPlay={() => undefined} />));
     expect(rows()).toBe(12);
     expect(container.querySelector('[data-testid="library-tracks-more"]')).toBeNull();
   });
@@ -76,7 +76,7 @@ describe("[parrot] song list on a big library (#3350 C4)", () => {
     const playlists = [{ id: PARROT_LIKED_PLAYLIST_ID, name: "", trackIds: liked, trackCount: liked.length, createdAt: 0, updatedAt: 0 }];
     function Hearts() {
       const editor = useParrotPlaylistEditor({ playlists, save: async () => ({ ok: true }), t: (key) => key, detail: () => "", notify: () => undefined });
-      return <ParrotSongList tracks={all} labels={labels} playingId={undefined} playing={false} showAlbum={false} onPlay={() => undefined} onToggle={() => undefined} actions={editor.songActions()} />;
+      return <ParrotSongList tracks={all} labels={labels} playingId={undefined} playing={false} showAlbum={false} onPlay={() => undefined} actions={editor.songActions()} />;
     }
     const started = performance.now();
     act(() => root.render(<Hearts />));

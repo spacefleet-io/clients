@@ -103,9 +103,7 @@ export type AudioPayload = z.infer<typeof audioPayloadSchema>;
  *   `noSubtitles`, `noAudioTracks`, `noVideoTracks`; i18n `player.menu*`);
  *   absent or "" keeps the previous text, English until the first payload.
  * Lua side (sf.lua): reads the audio notice's text (MPV-AUDIO-01/02: `audioRetry`, `audioRetrying`,
- *   `audioStallExplanation`, `audioNoOutputExplanation`, `audioOutputLabel`; i18n `player.audio*`), same rule; and
- *   `skip`, the skip texts (PLAY-SKIP-07: pill, "Was it right?" line, bar menu, Change times panel; i18n
- *   `player.skipUi.*`), each key read the same way.
+ *   `audioStallExplanation`, `audioNoOutputExplanation`, `audioOutputLabel`; i18n `player.audio*`), same rule.
  */
 export const labelsPayloadSchema = z.object({
   subtitlesOff: z.string(),
@@ -124,7 +122,6 @@ export const labelsPayloadSchema = z.object({
   audioStallExplanation: z.string().optional(),
   audioNoOutputExplanation: z.string().optional(),
   audioOutputLabel: z.string().optional(),
-  skip: z.record(z.string(), z.string()).optional(),
 });
 
 export type LabelsPayload = z.infer<typeof labelsPayloadSchema>;
@@ -134,20 +131,15 @@ export type LabelsPayload = z.infer<typeof labelsPayloadSchema>;
  * episode CTA state, autoplay flag).
  *
  * Lua side (sf.lua: apply_playback_json):
- *   reads `parsed.markers[].type/startSeconds/endSeconds/autoSkip/ask`,
+ *   reads `parsed.markers[].type/startSeconds/endSeconds`,
  *   `parsed.nextEpisode.id/label`,
  *   `parsed.autoplayNextEpisode`,
- *   `parsed.fallbackCountdownSeconds`,
- *   `parsed.skipMenu` (PLAY-SKIP-10: the control bar's skip button).
- * A credits marker's `autoSkip` is always false (PLAY-SKIP-02); sf.lua forces it false too.
+ *   `parsed.fallbackCountdownSeconds`.
  */
 export const skipMarkerSchema = z.object({
   type: z.enum(["intro", "credits"]),
   startSeconds: z.number(),
   endSeconds: z.number(),
-  autoSkip: z.boolean().optional(),
-  /** PLAY-SKIP-03: after the skip, ask "Was it right?" (times this device detected and is unsure of). */
-  ask: z.boolean().optional(),
 });
 
 export const nextEpisodeSchema = z.object({
@@ -164,49 +156,7 @@ export const playbackPayloadSchema = z.object({
   nextEpisode: nextEpisodeSchema.nullable(),
   autoplayNextEpisode: z.boolean(),
   fallbackCountdownSeconds: z.number(),
-  skipMenu: z.boolean().optional(),
 });
-
-/**
- * Renderer → sf.lua `sf-skip-edit-json` (PLAY-SKIP-05): the answer to sf.lua's `sf-skip-edit preselect`, which
- * "Use these times for" choice the scope step starts on (`episode` when the new times are far from the rest of the
- * season), or the notice to show once a save or a "Yes" is stored (`saved`: "Saved for this season" / "… episode").
- */
-export const skipEditAnswerSchema = z.union([
-  z.object({ kind: z.literal("preselect"), scope: z.enum(["season", "episode"]) }),
-  z.object({ kind: z.literal("saved"), scope: z.enum(["season", "episode"]) }),
-  z.object({ kind: z.literal("failed") }),
-]);
-export type SkipEditAnswer = z.infer<typeof skipEditAnswerSchema>;
-
-const skipEditSeconds = z.string().transform((value, ctx) => {
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed) || parsed < 0) {
-    ctx.addIssue({ code: "custom", message: `not a time: ${value}` });
-    return z.NEVER;
-  }
-  return parsed;
-});
-const skipEditKind = z.enum(["intro", "credits"]);
-
-/**
- * sf.lua → renderer `sf-skip-edit` arguments (PLAY-SKIP-03/05), all strings, times in seconds:
- * `verdict <kind> <start> <end> <duration>` ("Yes" on the asked line), `preselect <kind> <start> <end>` (which scope
- * to start the save step on), `save <kind> <start> <end> <season|episode> <duration>`.
- */
-export const skipEditArgsSchema = z.union([
-  z.tuple([z.literal("verdict"), skipEditKind, skipEditSeconds, skipEditSeconds, skipEditSeconds]),
-  z.tuple([z.literal("preselect"), skipEditKind, skipEditSeconds, skipEditSeconds]),
-  z.tuple([
-    z.literal("save"),
-    skipEditKind,
-    skipEditSeconds,
-    skipEditSeconds,
-    z.enum(["season", "episode"]),
-    skipEditSeconds,
-  ]),
-]);
-export type SkipEditArgs = z.infer<typeof skipEditArgsSchema>;
 
 export type SkipMarker = z.infer<typeof skipMarkerSchema>;
 export type NextEpisode = z.infer<typeof nextEpisodeSchema>;
@@ -337,7 +287,6 @@ export const ENVELOPE_SCHEMAS = {
   "sf-preview-picture": previewPicturePayloadSchema,
   "sf-audio-stall": audioStallPayloadSchema,
   "sf-subtitle-fetch-json": subtitleFetchViewSchema,
-  "sf-skip-edit-json": skipEditAnswerSchema,
 } as const;
 
 export type EnvelopeChannel = keyof typeof ENVELOPE_SCHEMAS;

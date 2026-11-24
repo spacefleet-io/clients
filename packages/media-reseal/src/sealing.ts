@@ -79,7 +79,7 @@ export const importResealKey = async (raw: Uint8Array): Promise<ResealKey> => {
 export const importResealKeyFromBase64 = (keyBase64: string): Promise<ResealKey> =>
   importResealKey(Uint8Array.from(atob(keyBase64.replace(/\s+/g, "")), (char) => char.charCodeAt(0)));
 
-const objectKey = (master: CryptoKey, info: string, salt: Uint8Array<ArrayBuffer>, usage: "encrypt" | "decrypt") =>
+const objectKey = (master: CryptoKey, info: string, salt: Uint8Array<ArrayBuffer>, usage: KeyUsage) =>
   crypto.subtle.deriveKey({ name: "HKDF", hash: "SHA-256", salt, info: text.encode(info) }, master, { name: "AES-GCM", length: 256 }, false, [usage]);
 
 const hasMagic = (sealed: Uint8Array) =>

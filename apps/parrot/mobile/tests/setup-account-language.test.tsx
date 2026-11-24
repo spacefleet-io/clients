@@ -41,11 +41,6 @@ vi.mock("react-native", () => ({
 }));
 vi.mock("@space/mobile-shell/i18n", () => ({
   getCurrentLanguage: () => phone.shown,
-  isMobileUiLanguage: () => true,
-  changeLanguage: async (code: string) => {
-    phone.applied.push(code);
-    phone.shown = code;
-  },
   useTranslation: () => ({ i18n: { language: phone.shown }, t: (key: string) => key }),
 }));
 vi.mock("@space/mobile-shell/logger", () => ({ scopeLogger: () => ({ info: () => undefined, warn: () => undefined }) }));
@@ -68,17 +63,12 @@ vi.mock("@space/shared/api", () => ({
   },
 }));
 vi.mock("@space/mobile-shell/libraryEnvelope", () => ({ decryptBase64ToBytes: async () => new Uint8Array() }));
-vi.mock("@react-native-async-storage/async-storage", () => {
-  const items = new Map<string, string>();
-  return {
-    default: {
-      getItem: async (key: string) => items.get(key) ?? null,
-      setItem: async (key: string, value: string) => void items.set(key, value),
-      removeItem: async (key: string) => void items.delete(key),
-    },
-  };
-});
-vi.mock("../src/lib/i18n", () => ({ PARROT_LANGUAGE_KEY: "parrot.uiLanguage" }));
+vi.mock("../src/lib/i18n", () => ({
+  setParrotLanguage: async (code: string) => {
+    phone.applied.push(code);
+    phone.shown = code;
+  },
+}));
 vi.mock("../src/lib/stores", () => ({
   sessionStore: { read: async () => null, write: async () => undefined },
   libraryKeyStore: { get: async () => null, set: async () => undefined, clear: async () => undefined, acknowledge: async () => undefined },

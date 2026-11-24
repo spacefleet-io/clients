@@ -100,7 +100,19 @@
       "body": "Muestra un código para aprobarlo en Badger o Parrot en un ordenador, teléfono o TV con sesión iniciada."
     },
     "provider": {
-      "continueInBrowser": "Termina de iniciar sesión en tu navegador. Después volverás aquí."
+      "signInWith": "Iniciar sesión con {{provider}}",
+      "signUpWith": "Registrarse con {{provider}}",
+      "or": "o",
+      "continueInBrowser": "Termina de iniciar sesión en tu navegador. Después volverás aquí.",
+      "errorStart": "No se pudo iniciar el inicio de sesión. Vuelve a intentarlo.",
+      "errors": {
+        "email_unverified": "El correo de esta cuenta no está confirmado. Confírmalo con el proveedor o inicia sesión con tu correo y contraseña.",
+        "email_domain_disallowed": "No se pueden crear cuentas con este correo.",
+        "account_deletion_pending": "La eliminación de esta cuenta está programada.",
+        "provider_failed": "No se pudo iniciar sesión. Vuelve a intentarlo.",
+        "cancelled": "Se canceló el inicio de sesión.",
+        "invalid_code": "Este inicio de sesión ha caducado o se inició en otro lugar. Vuelve a intentarlo."
+      }
     },
     "pairing": {
       "title": "Iniciar sesión con otro dispositivo"
@@ -669,6 +681,10 @@
       "saveHost": "Guardar host",
       "hostSaved": "Guardado",
       "libraryKey": "Clave de la mediateca",
+      "resetKey": {
+        "title": "Restablecer la clave de cifrado",
+        "description": "Cambia la clave que protege tu mediateca."
+      },
       "animatedBackground": {
         "title": "Fondo animado",
         "description": "Cada pocos segundos, estrellas fugaces cruzan el cielo estrellado detrás de la aplicación. El modo automático las desactiva en los teléfonos con poca memoria.",
@@ -1009,6 +1025,30 @@
       "noLibrary": "No se encontró ninguna mediateca para esta cuenta.",
       "unavailable": "No se puede acceder a tu mediateca en este momento. Vuelve a intentarlo en un momento.",
       "validate": "No se pudo validar tu clave."
+    }
+  },
+  "resetKey": {
+    "title": "Cambiar la clave de la mediateca",
+    "subtitle": "Genera una clave nueva y vuelve a cifrar tu mediateca.",
+    "newKey": "Nueva clave",
+    "generateAnother": "Generar otra clave",
+    "password": "Contraseña de la cuenta",
+    "code": "Código de doble factor (opcional)",
+    "confirmLabel": "He guardado la nueva clave.",
+    "confirm": "Confirmar",
+    "confirmed": "Confirmado",
+    "rotate": "Cambiar la clave",
+    "rotating": "Cambiando…",
+    "success": "Clave cambiada. Recargando la mediateca…",
+    "errors": {
+      "confirmRequired": "Confirma que has guardado la nueva clave.",
+      "passwordRequired": "La contraseña es obligatoria.",
+      "notReady": "La mediateca no está lista.",
+      "rotate": "No se pudo cambiar la clave. Revisa tu contraseña o tu código.",
+      "notReencrypted": "La mediateca de otra app no se pudo pasar a la nueva clave. No ha cambiado nada. Cambia la clave desde un dispositivo que tenga la clave actual.",
+      "unreadable": "La clave de este teléfono no abre la mediateca de otra app. No ha cambiado nada. Cambia la clave desde un dispositivo que tenga la clave actual.",
+      "notSnapshotted": "La mediateca de otra app todavía se está guardando. No ha cambiado nada. Abre esa app, deja que se sincronice y vuelve a intentarlo.",
+      "changed": "Una mediateca cambió durante el cambio de clave. No ha cambiado nada. Vuelve a intentarlo."
     }
   },
   "libraryFormat": {

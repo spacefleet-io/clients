@@ -1047,7 +1047,7 @@ export type RotationOwnLibrary = Pick<
 /**
  * PRIV-KEY-06: rotates the key. `otherLibraries` carries every other app's library re-encrypted under the new key; an
  * app with a library and no copy is refused (409 `library_not_reencrypted`), never emptied. `mediaReseal` names the run
- * whose copies replace the media sealed with the old key, in the same step. `appId`: the app `library` belongs to.
+ * whose copies replace the media sealed with the old key, in the same step.
  */
 export const rotateLibraryKey = (
   token: string,
@@ -1057,12 +1057,11 @@ export const rotateLibraryKey = (
   password: string | undefined,
   twoFactorCode?: string,
   otherLibraries: RotationLibraryCopy[] = [],
-  mediaReseal?: RotationMediaReseal,
-  appId: SpaceAppId = DEFAULT_SPACE_APP_ID
+  mediaReseal?: RotationMediaReseal
 ): Promise<{ version: number }> =>
   unwrap(
     sdk.rotateLibraryKey({
-      ...scoped(token, appId),
+      ...scoped(token),
       body: {
         manifestBase64: library.manifestBase64,
         snapshotId: library.snapshotId,

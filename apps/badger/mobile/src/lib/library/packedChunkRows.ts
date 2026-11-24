@@ -3,14 +3,22 @@
  * across the bridge: Android hands a BLOB back as base64 text and iOS as lossy UTF-8, and a bound `Uint8Array` does
  * not arrive as a BLOB either. So the phone reads BLOB columns as `hex()` and writes them as `X'..'` literals.
  */
-import {
-  bytesToHex,
-  CHUNK_LIST_KEY_MODE,
-  ChunkListFormatError,
-  type ChunkListKeyMode,
-  hexToBytes,
-  type PackedChunkList,
-} from "@space/library-db-definition/chunkLists";
+import { CHUNK_LIST_KEY_MODE, ChunkListFormatError, type ChunkListKeyMode, type PackedChunkList } from "@space/library-db-definition/chunkLists";
+
+const HEX = "0123456789abcdef";
+
+export const bytesToHex = (bytes: Uint8Array): string => {
+  let out = "";
+  for (const byte of bytes) out += HEX[byte >> 4] + HEX[byte & 15];
+  return out;
+};
+
+export const hexToBytes = (hex: string): Uint8Array => {
+  if (hex.length % 2 !== 0 || !/^[0-9a-fA-F]*$/.test(hex)) throw new ChunkListFormatError("BLOB hex is malformed");
+  const out = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < out.length; i += 1) out[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
+  return out;
+};
 
 /** `media_chunk_lists` columns with every BLOB as hex text (`starts` stays NULL when absent). */
 export const PACKED_LIST_SELECT =

@@ -8,8 +8,7 @@ import { useAuth } from "../store/auth";
 import { phoneSetupSignedOut } from "@space/mobile-shell/setup";
 import { savePhoneSetup, usePhoneSetup } from "../setup/phoneSetupStore";
 import { IS_TV } from "../tv/lib/tvRuntime";
-import type { SignedInLanguageReconcile } from "@space/mobile-shell/account-language-sync";
-import { forgetAccountLanguage, reconcileSignedInLanguage, syncAccountLanguage } from "./uiLanguage";
+import { forgetAccountLanguage, reconcileSignedInLanguage, syncAccountLanguage, type SignedInLanguageReconcile } from "./uiLanguage";
 
 type SetUser = (user: User) => void;
 

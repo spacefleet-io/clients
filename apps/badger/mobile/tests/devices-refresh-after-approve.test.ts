@@ -60,12 +60,12 @@ vi.mock("@space/mobile-shell/theme", () => {
   return { defaultMobileShellTheme: { colors }, useMobileShellTheme: () => ({ colors }) };
 });
 vi.mock("../src/components/BottomSheet", () => ({ BottomSheet: () => null }));
-vi.mock("@space/mobile-shell/components", async () => {
+vi.mock("../src/components/ui", async () => {
   const React = await import("react");
   return {
-    MobileButton: ({ label, onPress }: { label: string; onPress?: () => void }) =>
+    Button: ({ label, onPress }: { label: string; onPress?: () => void }) =>
       React.createElement("Pressable", { accessibilityRole: "button", accessibilityLabel: label, onPress }),
-    MobileCard: ({ children }: { children: React.ReactNode }) => React.createElement("View", null, children),
+    Card: ({ children }: { children: React.ReactNode }) => React.createElement("View", null, children),
   };
 });
 vi.mock("@space/shared/api", () => ({

@@ -75,11 +75,6 @@ export type ResealRunOptions = {
   signal?: AbortSignal;
   /** The copy's fresh last part; tests pin it. */
   uuid?: () => string;
-  /**
-   * Awaited before each object (ACCT-KEYCHG-05: a phone on mobile data waits here for Wi-Fi). It resolves when the next
-   * object may go, or once `signal` aborts; it never rejects for the abort.
-   */
-  beforeFile?: (signal: AbortSignal) => Promise<void>;
 };
 
 const errorCode = (error: unknown): string | null => {
@@ -110,15 +105,11 @@ export const runMediaReseal = async (io: ResealIo, keys: ResealKeys, options: Re
   let copied = 0;
   let kept: string[] = [];
   let keptTotal = 0;
-  // A kept file is counted only once the server holds its mark, so "See the N files" lists every file the count
-  // names (ACCT-KEYCHG-07). Marks are batched until the next copy, the page's end or 500 keys.
   const flushKept = async () => {
     while (kept.length > 0) {
       const batch = kept.slice(0, RESEAL_PAGE_MAX);
       await io.markKept(batch);
       kept = kept.slice(batch.length);
-      progress.keptFiles += batch.length;
-      report();
     }
   };
 
@@ -130,13 +121,13 @@ export const runMediaReseal = async (io: ResealIo, keys: ResealKeys, options: Re
     if (outcome.kind === "unreadable") {
       kept.push(entry.key);
       keptTotal += 1;
+      progress.keptFiles += 1;
       progress.doneFiles += 1;
       progress.transferredBytes += entry.sizeBytes;
       if (kept.length >= RESEAL_PAGE_MAX) await flushKept();
       report();
       return;
     }
-    await flushKept();
     const copy: ResealUpload = {
       of: entry.key,
       objectNamespace: entry.objectNamespace,
@@ -158,17 +149,16 @@ export const runMediaReseal = async (io: ResealIo, keys: ResealKeys, options: Re
   let page = first;
   for (;;) {
     for (const entry of page.pending) {
-      if (options.beforeFile && !options.signal?.aborted) await options.beforeFile(options.signal ?? new AbortController().signal);
       if (options.signal?.aborted) {
         await flushKept();
         return { copied, kept: keptTotal, stopped: true };
       }
       await resealOne(entry);
     }
-    await flushKept();
     if (!page.nextAfter) break;
     page = await io.pending(page.nextAfter, RESEAL_PAGE_MAX);
   }
+  await flushKept();
   return { copied, kept: keptTotal, stopped: false };
 };
 

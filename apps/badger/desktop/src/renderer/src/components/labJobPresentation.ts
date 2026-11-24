@@ -3,9 +3,6 @@ import i18n, { type TFunction } from "i18next";
 import { formatJobOutputLabel, type LabJob } from "@/lib/labJobs";
 import { formatUploadSpeedLabel } from "@/lib/uploadSpeed";
 
-/** A film's catch-up job makes its seek-bar previews only: films get no intro or credits markers (Chris 2026-11-24). */
-const skipJobKey = (job: LabJob) => (job.detectedSeason || job.detectedEpisode ? "skipDetect" : "skipPreviews");
-
 export const buildActiveLabJobPresentation = (
   job: LabJob,
   enableCodecSelection: boolean,
@@ -16,7 +13,7 @@ export const buildActiveLabJobPresentation = (
   // matchedTo?.type === "tv" the way ingest jobs are — the detectedSeason/episode
   // pair is sufficient to show which episode is being saved.
   const episodeLabel =
-    (job.matchedTo?.type === "tv" || job.jobType === "download" || job.jobType === "export" || job.jobType === "skip-detect") &&
+    (job.matchedTo?.type === "tv" || job.jobType === "download" || job.jobType === "export") &&
     job.detectedSeason &&
     job.detectedEpisode
       ? `S${String(job.detectedSeason).padStart(2, "0")}E${String(job.detectedEpisode).padStart(2, "0")}`
@@ -45,8 +42,6 @@ export const buildActiveLabJobPresentation = (
           ? t("lab.queue.offlineDownloading")
           : job.jobType === "export"
             ? t("lab.queue.exportDownloading")
-          : job.jobType === "skip-detect"
-            ? t(`lab.queue.${skipJobKey(job)}`)
           : job.includeAudio || job.includeSubtitles
             ? t("lab.queue.tracks")
             : formatLabel ?? t("lab.queue.job");
@@ -58,9 +53,7 @@ export const buildActiveLabJobPresentation = (
     job.status !== "done" &&
     job.status !== "cancelled" &&
     job.status !== "failed" &&
-    job.status !== "waiting" &&
-    // A skip job's step is already its badge (MPV-PREV-07).
-    job.jobType !== "skip-detect";
+    job.status !== "waiting";
   const outputLabel =
     showsStage && job.stageLabel ? `${baseOutputLabel} · ${job.stageLabel}` : baseOutputLabel;
   const outputHelp =
@@ -72,8 +65,6 @@ export const buildActiveLabJobPresentation = (
           ? t("lab.queue.help.offlineDownloading")
           : job.jobType === "export"
             ? t("lab.queue.help.exportDownloading")
-          : job.jobType === "skip-detect"
-            ? t(`lab.queue.help.${skipJobKey(job)}`)
           : job.includeAudio || job.includeSubtitles
             ? t("lab.queue.help.tracks")
             : t("lab.queue.help.job");
@@ -122,8 +113,6 @@ export const buildCompletedLabJobPresentation = (
         ? t("lab.queue.offlineSavedOffline")
         : job.jobType === "export"
           ? t("lab.queue.exportSaved")
-        : job.jobType === "skip-detect"
-          ? t(`lab.queue.${skipJobKey(job)}`)
         : formatList;
 
   const completedTime = job.completedAt ? new Date(job.completedAt).toLocaleString(i18n.language) : "";

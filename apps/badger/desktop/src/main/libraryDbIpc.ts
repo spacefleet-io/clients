@@ -86,7 +86,6 @@ const WRITE_METHODS = new Set([
   "addSubtitleTrackWithObject",
   "addChaptersForFormat",
   "replaceSkipMarkers",
-  "mergeSkipMarkers",
   "upsertSkipAnalysis",
   "purgeMissingObjects",
   "createPlaylist",

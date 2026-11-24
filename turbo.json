@@ -109,8 +109,9 @@
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/apps/badger/desktop/src/renderer/src/pages/**",
         "$TURBO_ROOT$/apps/badger/desktop/src/renderer/src/assets/fonts/**",
-        "$TURBO_ROOT$/apps/parrot/desktop/src/renderer/src/main.tsx",
-        "$TURBO_ROOT$/apps/parrot/desktop/src/renderer/src/styles.css"
+        "$TURBO_ROOT$/apps/parrot/desktop/src/renderer/src/Home*",
+        "$TURBO_ROOT$/apps/parrot/desktop/src/renderer/src/i18n*",
+        "$TURBO_ROOT$/apps/parrot/desktop/src/renderer/src/env.d.ts"
       ],
       "outputs": []
     },

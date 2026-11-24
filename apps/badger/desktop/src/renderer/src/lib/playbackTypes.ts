@@ -1,15 +1,6 @@
 import type { MediaDetails, ProgressTiming } from "@/lib/libraryDb";
 import type { QualityPreset } from "@/lib/config";
 import type { TrackPrefs, TrackPrefsPatch } from "@space/shared/trackPrefs";
-import type { SkipEditDeps } from "@/lib/mpvSkipEdit";
-
-/**
- * The library actions the player's skip editing uses (PLAY-SKIP-03/05); `onChanged` refreshes the playing media
- * once times were saved, so the next envelope sends them to sf.lua.
- */
-export type SkipEditLibrary = Pick<SkipEditDeps, "listSkipAnalysis" | "upsertSkipAnalysis" | "replaceSkipMarkers"> & {
-  onChanged: () => Promise<void>;
-};
 
 /** The library's add-a-subtitle-track action (`useLibraryActions().addSubtitleTrack`). */
 export type AddSubtitleTrack = (
@@ -97,7 +88,5 @@ export type UsePlaybackEngineParams = {
   removeSubtitleTrack?: (trackId: string) => Promise<void>;
   /** The stored files the library names for a media: the replaced subtitle's file is deleted once it is not among them. */
   getMediaObjectKeys?: (mediaId: string) => Promise<string[]>;
-  /** Absent: the host cannot store skip times, and the player's skip editing does nothing (PLAY-SKIP-05). */
-  skipEditLibrary?: SkipEditLibrary;
   t: (key: string, options?: Record<string, unknown>) => string;
 };

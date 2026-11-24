@@ -23,7 +23,6 @@ import { MOBILE_UI_LANGUAGES } from "@space/mobile-shell/i18n";
 import { withSubtitleLanguageTexts } from "@space/shared/profileSettings";
 import { withTitleLanguageTexts } from "@space/shared/titleLanguage";
 import { withProfilesTexts } from "@space/shared/profileTexts";
-import { withProviderSignInTexts } from "@space/shared/providerSignIn";
 import { withAccountDeletionLabels } from "@space/shared/accountDeletionLabels";
 import { BARE_LIBRARY as SHARED_BARE_LIBRARY, bareLibraryOutside } from "@space/shared/libraryName";
 import { keySavedWarningText } from "@space/shared/keySavedWarning";
@@ -285,9 +284,7 @@ describe("mobile translation files", () => {
   /** @req UX-I18N-02[badger-mobile,badger-tv] */
   it("every key the code looks up exists in the English file", () => {
     // The texts shared by every app are added at load, as `initI18n` does.
-    const known = baseKeys(
-      flatten(withAccountDeletionLabels(withProfilesTexts(withSubtitleLanguageTexts(withTitleLanguageTexts(withProviderSignInTexts(en, "en"), "en"), "en"), "en"), "mobile", "en")),
-    );
+    const known = baseKeys(flatten(withAccountDeletionLabels(withProfilesTexts(withSubtitleLanguageTexts(withTitleLanguageTexts(en, "en"), "en"), "en"), "mobile", "en")));
     const lookups: Array<{ file: string; key: string }> = [];
     for (const file of SOURCES) {
       const text = stripComments(readFileSync(file, "utf8"));

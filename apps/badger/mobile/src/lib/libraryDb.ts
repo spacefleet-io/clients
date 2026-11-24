@@ -19,8 +19,6 @@ import { LIBRARY_SYNC_STUCK_AFTER_409S, LIBRARY_SYNC_STUCK_RETRY_MS, libraryRefu
 import { fetchLibraryOpsPage, type LibraryOpsPage } from "./library/opsPage";
 import { readLibraryMeta } from "./library/libraryReads";
 import { inlineBlobParams, PACKED_LIST_SELECT, packedListFromRow, packedRowWithBytes } from "./library/packedChunkRows";
-import { sqliteStorageResealDb } from "./library/resealDb";
-import { rewriteBadgerReferences } from "@space/media-reseal";
 import { chunkListToJson, unpackChunkList, type PackedChunkList } from "@space/library-db-definition/chunkLists";
 import { convertChunkLists } from "../native/LibrarySync";
 import {
@@ -3939,18 +3937,14 @@ export class LibraryDb {
 
   /**
    * PRIV-KEY-13: this library sealed under the new key for a rotation exactly as `uploadSnapshot` publishes it (chunks
-   * uploaded, a manifest naming them), with the formats this device writes; the rotation writes the manifest. Its media
-   * references are renamed to the re-sealed copies (`copies`: old key → copy, STOR-RESEAL-01) in the snapshot only;
-   * the local library follows when the switched library is read back after sign-in.
+   * uploaded, a manifest naming them), with the formats this device writes; the rotation writes the manifest.
    */
-  async sealForRotation(newKeyBase64: string, copies: ReadonlyMap<string, string>): Promise<RotationOwnLibrary> {
+  async sealForRotation(newKeyBase64: string): Promise<RotationOwnLibrary> {
     await ensureLibraryDir();
     return await withSnapshotLock(async () => {
       const snapshotDb = await this.buildSnapshotDb();
       const snapshotPath = getRotationSnapshotPath();
       try {
-        // The snapshot left WAL when it was built (leaveWalForExport), so each rewrite lands in the file read below.
-        await rewriteBadgerReferences(sqliteStorageResealDb(snapshotDb), copies);
         await encryptDbToBinaryFile(getSnapshotDbPath(), newKeyBase64, snapshotPath);
         const dbHash = await hashDbFile(getSnapshotDbPath());
         const chunkIndex = await buildChunkIndexFromFile(snapshotPath);

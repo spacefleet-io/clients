@@ -14,15 +14,11 @@
 import {
   createMetadataImageResolver,
   createSessionMetadata,
-  createSkipContributionQueue,
-  installSkipContributionQueue,
   refillLogLine,
   metadataTicketsForBuild,
   resolveMetadataUrl,
   RESERVE_STORAGE_KEY,
-  SKIP_CONTRIBUTION_STORAGE_KEY,
   syncStorageAdapter,
-  uninstallSkipContributionQueue,
   type ImageKind,
   type ImageOutcome,
   type MetadataClient,
@@ -158,10 +154,6 @@ export const startMetadataTickets = (): void => {
   ticketsLog.info("[metadata-tickets] refill schedule starting");
   openArtworkSession();
   void getDesktopMetadata().start();
-  // META-SKIP-06: the intro and credits reports wait in localStorage and go out hours later, one ticket each.
-  installSkipContributionQueue(
-    createSkipContributionQueue({ client: metadataClient, storage: syncStorageAdapter(() => window.localStorage) })
-  );
 };
 
 export interface KeyStepWatch {
@@ -204,17 +196,8 @@ export const startMetadataTicketsAfterKeyStep = (watch: KeyStepWatch, start: () 
 export const onMetadataTicketsAvailable = (listener: () => void): (() => void) =>
   getDesktopMetadata().reserve.onTickets(() => listener());
 
-/**
- * Call on sign-out: stops the schedule, clears the stored reserve, the intro and credits reports not sent yet, and the
- * artwork cache (memory and disk).
- */
+/** Call on sign-out: stops the schedule, clears the stored reserve and the artwork cache (memory and disk). */
 export const stopMetadataTickets = async (): Promise<void> => {
   closeArtworkSession();
-  await Promise.all([
-    imageResolver?.clear(),
-    getRendererArtworkStore().clear(),
-    getDesktopMetadata().stop(),
-    // The queue clears its own storage; the key is removed too for a queue never installed in this run.
-    uninstallSkipContributionQueue({ clear: true }).then(() => window.localStorage.removeItem(SKIP_CONTRIBUTION_STORAGE_KEY)),
-  ]);
+  await Promise.all([imageResolver?.clear(), getRendererArtworkStore().clear(), getDesktopMetadata().stop()]);
 };

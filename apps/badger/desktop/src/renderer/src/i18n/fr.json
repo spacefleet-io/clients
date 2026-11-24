@@ -16,8 +16,8 @@
     "addMedia": "Ajouter des médias",
     "signOut": "Se déconnecter",
     "signOutKeyCheck": {
-      "title": "Avez-vous noté votre clé de médiathèque\u202f?",
-      "body": "Vous déconnecter efface votre clé de médiathèque de cet ordinateur. Pour vous reconnecter, il faudra la saisir\u202f: la connexion par QR code ne fonctionne que si un autre de vos appareils a encore la clé. Sans elle, votre médiathèque ne peut pas être ouverte.",
+      "title": "Avez-vous noté votre clé de bibliothèque\u202f?",
+      "body": "Vous déconnecter efface votre clé de bibliothèque de cet ordinateur. Pour vous reconnecter, il faudra la saisir\u202f: la connexion par QR code ne fonctionne que si un autre de vos appareils a encore la clé. Sans elle, votre bibliothèque ne peut pas être ouverte.",
       "cancel": "Annuler",
       "showKey": "Afficher ma clé",
       "confirm": "Je l'ai notée, me déconnecter"
@@ -36,87 +36,11 @@
       "filterFailed": "Échoué",
       "downloadsHeld": "Les téléchargements sont suspendus tant que le trafic est très élevé. Ils reprennent d'eux-mêmes dès qu'il baisse.",
       "downloadsSlowed": "Les téléchargements sont plus lents car nous sommes en période de fort trafic.",
-      "crewBackfill": "Ajout des réalisateurs et scénaristes à vos titres ({{handled}} sur {{total}})",
-      "failed": {
-        "whatUploadStopped": "L’envoi ne s’est pas terminé.",
-        "whatImportStopped": "L’import ne s’est pas terminé.",
-        "whatPlanFull": "L’envoi s’est arrêté\u202f: l’espace de stockage de l’abonnement est plein.",
-        "whatDiskFull": "Le traitement s’est arrêté\u202f: le disque de cet ordinateur est plein.",
-        "meaningKeptOutputs": "La vidéo est déjà traitée et gardée sur cet ordinateur jusqu’au {{date}}. Seul l’envoi est relancé.",
-        "meaningSourceUnchanged": "Le fichier d’origine est toujours là. Le traitement repart de zéro à partir de lui.",
-        "meaningKeptRemovedLowDisk": "La copie traitée a été supprimée pour libérer de l’espace disque. Le fichier d’origine est toujours là, le traitement repart donc de zéro.",
-        "meaningKeptRemovedExpired": "La copie traitée a été supprimée au bout de 14 jours. Le fichier d’origine est toujours là, le traitement repart donc de zéro.",
-        "meaningSourceChanged": "Le fichier d’origine a changé depuis l’import. Choisissez le fichier d’origine pour l’importer à nouveau.",
-        "meaningSourceMissing": "Le fichier d’origine n’est plus à sa place. Retrouvez-le pour l’importer à nouveau.",
-        "meaningPickedMismatch": "Le fichier choisi n’est pas la même vidéo. Choisissez le fichier d’origine.",
-        "meaningSourceDeleted": "Le fichier d’origine a été mis à la corbeille. Il n’y a plus rien à importer, vous pouvez retirer cette tâche.",
-        "meaningNoSourcePath": "Il n’y a aucun fichier à importer à nouveau, vous pouvez retirer cette tâche.",
-        "meaningReimported": "Cette vidéo a été importée à nouveau depuis et elle est dans la bibliothèque. Vous pouvez retirer cette tâche.",
-        "meaningPlanFull": "Passez à l’abonnement supérieur en haut de cette liste. Rien n’est perdu\u202f: la tâche pourra être relancée ensuite.",
-        "meaningPlanHasRoom": "L’abonnement a de la place maintenant. Rien n’est perdu\u202f: la tâche peut être relancée.",
-        "meaningDiskFull": "Libérez de l’espace sur cet ordinateur. Rien n’est perdu\u202f: la tâche pourra être relancée ensuite.",
-        "meaningParentFailed": "Cette partie s’est arrêtée car l’import principal ne s’est pas terminé. Relancez plutôt l’import principal.",
-        "meaningNotRetryable": "Cette tâche ne peut pas être relancée, vous pouvez la retirer.",
-        "actionUploadAgain": "Renvoyer",
-        "actionProcessAgain": "Traiter à nouveau",
-        "actionFindFile": "Retrouver le fichier",
-        "actionUpgradePlan": "Changer d’abonnement",
-        "keptCopies": "Les copies gardées des imports échoués occupent {{size}} sur cet ordinateur. Chacune est supprimée au bout de 14 jours, ou plus tôt si le disque manque de place."
-      },
-      "skipCatchUp": {
-        "state": {
-          "paused_playback": "En pause pendant la lecture",
-          "paused_import": "En pause pendant l'import",
-          "offline": "En attente de connexion",
-          "retry_wait": "Nouvel essai à {{time}}"
-        },
-        "offlineHint": "Reprend toute seule au retour de la connexion",
-        "list": {
-          "step": {
-            "download": "Téléchargement\u202f: {{done}} sur {{total}} Mo",
-            "pictures": "Lecture des images",
-            "sound": "Lecture du son",
-            "waiting": "Démarrage"
-          },
-          "result": {
-            "found_both": "Générique de début et de fin trouvés",
-            "found_intro": "Générique de début trouvé",
-            "found_credits": "Générique de fin trouvé",
-            "waiting_other_episode": "En attente d'un autre épisode",
-            "nothing_found": "Rien trouvé",
-            "previews_made": "Aperçus de la barre de lecture prêts"
-          },
-          "failedStep": {
-            "download": "Impossible de télécharger la copie stockée",
-            "read": "Impossible de lire la vidéo",
-            "room": "Pas assez d’espace disque libre"
-          },
-          "tryAgain": "Réessayer",
-          "tryAgainNow": "Réessayer maintenant",
-          "retryAt": "Nouvel essai à {{time}}",
-          "stepShort": {
-            "download": "Téléchargement",
-            "pictures": "Images",
-            "sound": "Son",
-            "waiting": "Démarrage"
-          },
-          "waitingImport": "En attente de votre import"
-        }
-      },
-      "skipDetect": {
-        "whatCancelled": "Vous l’avez annulée.",
-        "meaningCancelled": "Cette vidéo est laissée de côté jusqu’à ce que vous réessayiez.",
-        "meaningFailed": "Cette vidéo n’a pas de temps de générique tant qu’elle n’est pas relancée.",
-        "meaningFailedFilm": "Ce film n’a pas d’aperçus de barre de lecture tant qu’il n’est pas relancé.",
-        "meaningRetryWait": "Badger réessaie cette vidéo de lui-même à {{time}}."
-      },
-      "clearFinished": "Effacer les tâches terminées"
+      "crewBackfill": "Ajout des réalisateurs et scénaristes à vos titres ({{handled}} sur {{total}})"
     },
     "notifications": {
       "title": "Notifications",
-      "subtitle_one": "{{count}} élément récent",
-      "subtitle_other": "{{count}} éléments récents",
-      "subtitle_many": "{{count}} éléments récents",
+      "subtitle": "{{count}} éléments récents",
       "empty": "Aucune notification pour le moment.",
       "open": "Ouvrir",
       "filterAll": "Tout",
@@ -125,8 +49,7 @@
       "filterInfo": "Info",
       "filterSuccess": "Succès",
       "clearAll": "Tout effacer",
-      "dismiss": "Ignorer",
-      "subtitle": "{{count}} éléments récents"
+      "dismiss": "Ignorer"
     },
     "account": "Compte"
   },
@@ -164,7 +87,19 @@
     "resendSuccess": "Un nouveau code a été envoyé.",
     "resendError": "Impossible de renvoyer le code.",
     "provider": {
-      "continueInBrowser": "Terminez la connexion dans votre navigateur. Badger revient ensuite au premier plan."
+      "signInWith": "Se connecter avec {{provider}}",
+      "signUpWith": "S'inscrire avec {{provider}}",
+      "or": "ou",
+      "continueInBrowser": "Terminez la connexion dans votre navigateur. Badger revient ensuite au premier plan.",
+      "errorStart": "Impossible de lancer la connexion. Veuillez réessayer.",
+      "errors": {
+        "email_unverified": "L'adresse e-mail de ce compte n'est pas confirmée. Confirmez-la auprès du fournisseur, ou connectez-vous avec votre e-mail et votre mot de passe.",
+        "email_domain_disallowed": "Impossible de créer un compte avec cette adresse e-mail.",
+        "account_deletion_pending": "La suppression de ce compte est programmée.",
+        "provider_failed": "La connexion n'a pas abouti. Veuillez réessayer.",
+        "cancelled": "La connexion a été annulée.",
+        "invalid_code": "Cette connexion a expiré ou a été lancée ailleurs. Veuillez réessayer."
+      }
     }
   },
   "signup": {
@@ -254,7 +189,7 @@
       "searchFailed": "Échec de la recherche. Réessayez.",
       "addFailed": "Impossible d'ajouter ce média. Réessayez.",
       "libraryLoading": "La bibliothèque est en cours de chargement. Réessayez dans un instant.",
-      "libraryUnavailable": "La médiathèque est indisponible. Vérifiez la clé de médiathèque et la synchro.",
+      "libraryUnavailable": "La bibliothèque est indisponible. Vérifiez la clé et la synchro.",
       "libraryNotReady": "La bibliothèque n'est pas encore prête. Réessayez.",
       "libraryMissing": "La base de la bibliothèque est manquante. Reconnectez-vous et resynchronisez.",
       "librarySaveFailed": "Impossible d'enregistrer la bibliothèque. Réessayez.",
@@ -306,7 +241,7 @@
     "addMedia": "Ajouter un média à la bibliothèque",
     "errorTitle": "Bibliothèque indisponible",
     "retrySync": "Relancer la synchro",
-    "manageKey": "Gérer la clé de médiathèque",
+    "manageKey": "Gérer la clé de bibliothèque",
     "browseTitle": "Parcourir",
     "browseSubtitle": "Les médias sans fichier sont grisés mais leurs métadonnées restent visibles.",
     "stats": {
@@ -437,9 +372,6 @@
     "labels": {
       "audio": "Audio",
       "subtitles": "Sous-titres",
-      "episodeShort_one": "{{count}} ép.",
-      "episodeShort_other": "{{count}} ép.",
-      "episodeShort_many": "{{count}} ép.",
       "episodeShort": "{{count}} ép."
     },
     "availableQualities": "Qualités disponibles",
@@ -459,22 +391,16 @@
       "addModalSource": "Source\u202f: {{quality}}",
       "addModalSize": "~{{size}}",
       "addModalSizeUnknown": "Taille inconnue",
-      "addModalConfirm_one": "Lancer {{count}} transcodage",
-      "addModalConfirm_other": "Lancer {{count}} transcodages",
-      "addModalConfirm_many": "Lancer {{count}} transcodages",
+      "addModalConfirm": "Lancer {{count}} transcodage(s)",
       "addModalCancel": "Annuler",
-      "addModalSubmittedToast_one": "{{count}} transcodage en file d'attente — suivez-le dans Tâches.",
-      "addModalSubmittedToast_other": "{{count}} transcodages en file d'attente — suivez-les dans Tâches.",
-      "addModalSubmittedToast_many": "{{count}} transcodages en file d'attente — suivez-les dans Tâches.",
+      "addModalSubmittedToast": "{{count}} transcodage(s) en file d'attente — suivez-les dans Tâches.",
       "addModalFailedToast": "Impossible d'ajouter les nouvelles qualités\u202f: {{reason}}",
       "errors": {
         "source-protected": "Vous ne pouvez pas supprimer la qualité source.",
         "quality-exists": "Cette qualité est déjà présente sur ce fichier.",
         "cannot-transcode-up": "Impossible de transcoder vers une résolution supérieure à celle stockée.",
         "media-not-found": "Ce fichier média n'existe plus."
-      },
-      "addModalConfirm": "Lancer {{count}} transcodage(s)",
-      "addModalSubmittedToast": "{{count}} transcodage(s) en file d'attente — suivez-les dans Tâches."
+      }
     },
     "hideMissing": {
       "title": "Masquer les fichiers manquants",
@@ -499,9 +425,6 @@
         "show": "{{title}} — série entière",
         "season": "{{title}} — saison {{season}}",
         "episode": "{{title}} — S{{season}}E{{episode}}{{episodeTitle, mustache}}",
-        "missingEpisodes_one": "{{count}} épisode manquant",
-        "missingEpisodes_other": "{{count}} épisodes manquants",
-        "missingEpisodes_many": "{{count}} épisodes manquants",
         "missingEpisodes": "{{count}} épisode(s) manquant(s)"
       },
       "modal": {
@@ -514,31 +437,22 @@
         "size": "Taille totale",
         "includesAudioSubs": "Toutes les pistes audio et tous les sous-titres sont inclus.",
         "expectedFilename": "Enregistré sous",
-        "expectedFilenamePlusN_one": "et {{count}} autre fichier",
-        "expectedFilenamePlusN_other": "et {{count}} autres fichiers",
-        "expectedFilenamePlusN_many": "et {{count}} autres fichiers",
+        "expectedFilenamePlusN": "et {{count}} autre(s) fichier(s)",
         "estimating": "Calcul de la taille et de l'espace disque…",
         "estimateFailedToast": "Estimation impossible\u202f: {{reason}}",
         "skippedSubsWarning": "MP4 ne peut pas intégrer ces pistes de sous-titres — elles seront ignorées\u202f: {{tracks}}",
-        "skippedItems_one": "{{count}} élément sera ignoré (qualité incompatible ou fichier manquant).",
-        "skippedItems_other": "{{count}} éléments seront ignorés (qualité incompatible ou fichier manquant).",
-        "skippedItems_many": "{{count}} éléments seront ignorés (qualité incompatible ou fichier manquant).",
+        "skippedItems": "{{count}} élément(s) seront ignorés (qualité incompatible ou fichier manquant).",
         "diskWarning": "Espace disque insuffisant.",
         "diskWarningDetail": "Il faut {{required}}, mais seulement {{free}} disponible.",
         "confirm": "Démarrer le téléchargement",
         "cancel": "Annuler",
-        "submittedToast_one": "{{count}} téléchargement lancé — suivez-le dans Tâches.",
-        "submittedToast_other": "{{count}} téléchargements lancés — suivez-les dans Tâches.",
-        "submittedToast_many": "{{count}} téléchargements lancés — suivez-les dans Tâches.",
+        "submittedToast": "{{count}} téléchargement(s) lancé(s) — suivez-les dans Tâches.",
         "submitFailedToast": "Téléchargement impossible\u202f: {{reason}}",
         "errors": {
           "insufficient_disk_space": "Espace disque insuffisant ({{required}} requis, {{free}} disponible).",
           "library_db_not_open": "La bibliothèque n'est pas ouverte. Rouvrez-la puis réessayez.",
           "not_authenticated": "Connectez-vous puis réessayez."
-        },
-        "expectedFilenamePlusN": "et {{count}} autre(s) fichier(s)",
-        "skippedItems": "{{count}} élément(s) seront ignorés (qualité incompatible ou fichier manquant).",
-        "submittedToast": "{{count}} téléchargement(s) lancé(s) — suivez-les dans Tâches."
+        }
       },
       "button": {
         "save": "Conserver hors ligne",
@@ -548,11 +462,8 @@
         "deleteConfirmDescription": "Les fichiers enregistrés seront retirés de cet appareil. Le visionnage en streaming reste disponible.",
         "deleteConfirm": "Supprimer",
         "deleteCancel": "Annuler",
-        "deletedToast_one": "{{count}} fichier hors ligne supprimé.",
-        "deletedToast_other": "{{count}} fichiers hors ligne supprimés.",
-        "deletedToast_many": "{{count}} fichiers hors ligne supprimés.",
-        "deleteFailedToast": "Suppression impossible\u202f: {{reason}}",
-        "deletedToast": "{{count}} fichier(s) hors ligne supprimé(s)."
+        "deletedToast": "{{count}} fichier(s) hors ligne supprimé(s).",
+        "deleteFailedToast": "Suppression impossible\u202f: {{reason}}"
       },
       "badge": {
         "savedOffline": "Hors ligne",
@@ -576,9 +487,6 @@
     "sections": {
       "movies": "Films",
       "tv": "Séries TV",
-      "count_one": "{{count}} élément",
-      "count_other": "{{count}} éléments",
-      "count_many": "{{count}} éléments",
       "count": "{{count}} éléments"
     },
     "media": {
@@ -672,13 +580,10 @@
     "seasons": {
       "title": "Saisons",
       "empty": "Aucune saison chargée.",
-      "episodeCount_one": "{{count}} épisode",
-      "episodeCount_other": "{{count}} épisodes",
-      "episodeCount_many": "{{count}} épisodes",
+      "episodeCount": "{{count}} épisodes",
       "available": "Disponible",
       "missing": "Fichiers manquants",
-      "specials": "Épisodes spéciaux",
-      "episodeCount": "{{count}} épisodes"
+      "specials": "Épisodes spéciaux"
     },
     "episodes": {
       "title": "Épisodes · Saison {{season}}",
@@ -742,22 +647,6 @@
       "back": "Bibliothèque",
       "playsThisVersion": "La lecture démarre sur cette version",
       "more": "Plus d’actions"
-    },
-    "skipTimes": {
-      "menu": "Génériques",
-      "setIntro": "Définir les temps du générique",
-      "setCredits": "Définir les temps du générique de fin",
-      "introChip": "Générique {{start}}–{{end}}",
-      "creditsChip": "Fin {{start}}",
-      "creditsStart": "Début du générique de fin",
-      "creditsHint": "Faites glisser le repère\u202f: l’image suit.  ← → le décalent de 1 s",
-      "noPicture": "Pas encore d’image",
-      "failed": "Les temps n’ont pas pu être enregistrés.",
-      "back": "Retour  [Échap]",
-      "episodeLine": "{{show}} · S{{season}} É{{episode}} · {{title}}",
-      "leftOut": "Mis de côté",
-      "tryAgain": "Réessayer",
-      "tryAgainAll": "Réessayer pour tous les épisodes mis de côté"
     }
   },
   "playlists": {
@@ -773,13 +662,10 @@
     "selectTitle": "Sélectionnez une playlist",
     "selectSubtitle": "Choisissez une playlist pour afficher ses éléments.",
     "selectPrompt": "Sélectionnez une playlist pour voir son contenu.",
-    "itemsCount_one": "{{count}} élément",
-    "itemsCount_other": "{{count}} éléments",
-    "itemsCount_many": "{{count}} éléments",
+    "itemsCount": "{{count}} éléments",
     "noItems": "Aucun élément pour l'instant.",
     "missing": "Fichier manquant",
-    "remove": "Retirer",
-    "itemsCount": "{{count}} éléments"
+    "remove": "Retirer"
   },
   "settings": {
     "subtitle": "Tout pour cette application et votre compte.",
@@ -1007,13 +893,13 @@
     },
     "recovery": {
       "title": "Accès à la bibliothèque",
-      "subtitle": "Gérez votre clé de médiathèque ou effacez toutes les données de la médiathèque.",
+      "subtitle": "Gérez votre clé de bibliothèque ou effacez toutes les données.",
       "show": {
-        "title": "Afficher la clé de médiathèque",
+        "title": "Afficher la clé de bibliothèque",
         "subtitle": "Affichez votre clé actuelle après vérification.",
         "button": "Afficher la clé",
-        "dialogTitle": "Afficher votre clé de médiathèque",
-        "keyLabel": "Clé de médiathèque",
+        "dialogTitle": "Afficher votre clé de bibliothèque",
+        "keyLabel": "Clé de bibliothèque",
         "passwordLabel": "Mot de passe du compte",
         "codeLabel": "Code de vérification",
         "codeHintEmail": "Entrez le code envoyé par email.",
@@ -1025,12 +911,35 @@
         "errorInvalidPassword": "Mot de passe incorrect.",
         "errorTwoFactorInvalid": "Code de vérification invalide.",
         "errorGeneric": "Impossible de vérifier votre session.",
-        "errorMissing": "Aucune clé de médiathèque n'est stockée sur cet appareil."
+        "errorMissing": "Aucune clé de bibliothèque n'est stockée sur cet appareil."
       },
       "rotate": {
+        "title": "Remplacer la clé de bibliothèque",
+        "subtitle": "Créez une nouvelle clé et reverrouillez vos données.",
+        "button": "Créer une nouvelle clé",
+        "dialogTitle": "Remplacer votre clé de bibliothèque",
+        "keyLabel": "Nouvelle clé de bibliothèque",
+        "keyHint": "Sauvegardez cette clé avant de continuer.",
         "copyButton": "Copier la clé",
-        "copySuccess": "Clé de médiathèque copiée.",
-        "copyFail": "Impossible de copier la clé."
+        "copySuccess": "Clé de bibliothèque copiée.",
+        "copyFail": "Impossible de copier la clé.",
+        "confirmLabel": "Je comprends que cela mettra fin aux autres sessions",
+        "passwordLabel": "Mot de passe du compte",
+        "codeLabel": "Code de vérification",
+        "codeHintEmail": "Entrez le code envoyé par email.",
+        "codeHintTotp": "Entrez le code de votre authenticator.",
+        "submit": "Remplacer la clé",
+        "working": "Remplacement…",
+        "cancel": "Annuler",
+        "codeSent": "Code envoyé. Vérifiez votre email ou votre application d'authentification.",
+        "errorInvalidPassword": "Mot de passe incorrect.",
+        "errorTwoFactorInvalid": "Code de vérification invalide.",
+        "errorGeneric": "Impossible de tourner la clé. Réessayez.",
+        "errorNotReencrypted": "Votre bibliothèque Parrot ne peut pas être reverrouillée avec la nouvelle clé depuis ici, donc rien n'a changé. Remplacez la clé depuis les Réglages d'un ordinateur qui a votre clé actuelle.",
+        "errorUnreadable": "Votre clé actuelle n'ouvre pas votre bibliothèque Parrot, donc rien n'a changé.",
+        "errorNotSnapshotted": "Votre bibliothèque Parrot a des changements pas encore enregistrés. Ouvrez Parrot, laissez-le finir de synchroniser, puis réessayez. Rien n'a changé.",
+        "errorReencryptFailed": "Impossible de reverrouiller votre bibliothèque Parrot avec la nouvelle clé. Rien n'a changé. Réessayez.",
+        "errorChanged": "Votre bibliothèque a changé pendant le remplacement de la clé. Rien n'a changé. Réessayez."
       },
       "reset": {
         "title": "Effacer les données",
@@ -1240,11 +1149,11 @@
   },
   "onboarding": {
     "key": {
-      "title": "Votre clé de médiathèque",
-      "enterTitle": "Saisissez votre clé de médiathèque",
+      "title": "Votre clé de bibliothèque",
+      "enterTitle": "Saisissez votre clé de bibliothèque",
       "enterSubtitle": "Tapez les 12 mots que vous avez enregistrés en créant votre bibliothèque.",
       "loading": "Chargement de la clé…",
-      "errorLoad": "Impossible de charger votre clé de médiathèque.",
+      "errorLoad": "Impossible de charger votre clé de bibliothèque.",
       "errorDecrypt": "La clé enregistrée n'a pas permis de déverrouiller la bibliothèque. Saisissez la bonne clé.",
       "errorNoRemote": "Aucune bibliothèque n'existe encore sur le serveur. Créez une nouvelle clé.",
       "errorValidate": "Impossible de valider la clé pour le moment. Réessayez.",
@@ -1257,7 +1166,7 @@
       "button": "Récupération",
       "title": "Récupérer depuis la bibliothèque locale",
       "subtitle": "La bibliothèque locale sera rechiffrée et synchronisée avec le cloud. Cela mettra fin aux autres sessions.",
-      "keyLabel": "Nouvelle clé de médiathèque",
+      "keyLabel": "Nouvelle clé de bibliothèque",
       "keyHint": "Sauvegardez cette clé avant de continuer.",
       "copy": "Copier la clé",
       "copied": "Copiée",
@@ -1359,37 +1268,7 @@
       "noDisplay": "La vidéo ne peut pas être lue dans cette session\u202f: cette session n'utilise que Wayland et le lecteur vidéo a besoin de X11. Activez XWayland (compatibilité X11) ou ouvrez une session X11, puis réessayez.",
       "sourceUnreachable": "Ce titre n'est pas téléchargé et le serveur est injoignable. Connectez-vous à Internet ou téléchargez-le pour le visionner hors connexion."
     },
-    "preparingPlayback": "Préparation de la lecture",
-    "skipUi": {
-      "skipIntro": "Passer le générique",
-      "skipCredits": "Passer le générique de fin",
-      "nextEpisode": "Épisode suivant",
-      "nextEpisodeIn": "L’épisode suivant commence dans",
-      "openingNextEpisode": "Ouverture de l’épisode suivant",
-      "enterKey": "[Entrée]",
-      "askedIntro": "Générique passé. C’était bien\u202f?",
-      "askedCredits": "Générique de fin passé. C’était bien\u202f?",
-      "yes": "Oui",
-      "changeTimes": "Modifier les temps",
-      "thanks": "Merci",
-      "changeIntroTimes": "Modifier les temps du générique",
-      "changeCreditsTimes": "Modifier les temps du générique de fin",
-      "start": "Début",
-      "end": "Fin",
-      "hint": "Faites glisser un repère\u202f: l’image suit.  ← → décalent celui choisi de 1 s",
-      "save": "Enregistrer  [Entrée]",
-      "cancel": "Annuler  [Échap]",
-      "back": "Retour",
-      "scopeQuestion": "Appliquer ces temps à",
-      "thisSeason": "Cette saison",
-      "onlyThisEpisode": "Cet épisode seulement",
-      "farNote": "Ces temps sont loin de ceux du reste de la saison.",
-      "savedSeason": "Enregistré pour cette saison",
-      "savedEpisode": "Enregistré pour cet épisode",
-      "menuPrompt": "Génériques",
-      "introEndsHere": "Le générique se termine ici",
-      "creditsStartHere": "Le générique de fin commence ici"
-    }
+    "preparingPlayback": "Préparation de la lecture"
   },
   "dashboard": {
     "title": "Accueil",
@@ -1400,11 +1279,8 @@
       "resume": "Reprendre à {{time}}",
       "resumeShort": "Reprendre",
       "details": "Détails",
-      "minutesLeft_one": "{{count}} min restante",
-      "minutesLeft_other": "{{count}} min restantes",
-      "minutesLeft_many": "{{count}} min restantes",
-      "seeAll": "Tout voir",
-      "minutesLeft": "{{count}} min restantes"
+      "minutesLeft": "{{count}} min restantes",
+      "seeAll": "Tout voir"
     },
     "empty": {
       "eyebrow": "Votre bibliothèque",
@@ -1531,15 +1407,9 @@
         "tv": "Séries TV"
       },
       "empty": "Aucun fichier ajouté",
-      "fileCount_one": "{{count}} fichier",
-      "fileCount_other": "{{count}} fichiers",
-      "fileCount_many": "{{count}} fichiers",
-      "episodeFileCount_one": "{{count}} fichier épisode",
-      "episodeFileCount_other": "{{count}} fichiers épisode",
-      "episodeFileCount_many": "{{count}} fichiers épisode",
-      "episodeShort_one": "{{count}} ép.",
-      "episodeShort_other": "{{count}} ép.",
-      "episodeShort_many": "{{count}} ép.",
+      "fileCount": "{{count}} fichier",
+      "episodeFileCount": "{{count}} fichiers épisode",
+      "episodeShort": "{{count}} eps",
       "apply": "Appliquer",
       "delete": "Supprimer le fichier",
       "applyTitle": "Appliquer les changements de format\u202f?",
@@ -1551,10 +1421,7 @@
       "cancel": "Annuler",
       "queued": "Mises à jour de transcodage en file pour {{label}}.",
       "cleanupMessage": "{{removed}} fichiers orphelins supprimés. {{missing}} références manquantes nettoyées.",
-      "cleanupFailed": "Le nettoyage a échoué. Réessayez.",
-      "fileCount": "{{count}} fichier",
-      "episodeFileCount": "{{count}} fichiers épisode",
-      "episodeShort": "{{count}} eps"
+      "cleanupFailed": "Le nettoyage a échoué. Réessayez."
     },
     "status": {
       "waiting": "En attente",
@@ -1565,8 +1432,7 @@
       "transcoding": "Transcodage",
       "uploading": "Transfert",
       "done": "Terminé",
-      "failed": "Échec",
-      "cancelled": "Annulé"
+      "failed": "Échec"
     },
     "queue": {
       "remove": "Retirer de la file",
@@ -1592,9 +1458,7 @@
       "subtitleTracks": "Sous-titres",
       "tracksOnly": "Pistes uniquement",
       "noVideoOutputs": "Aucune sortie vidéo.",
-      "jobCount_one": "{{count}} tâche",
-      "jobCount_other": "{{count}} tâches",
-      "jobCount_many": "{{count}} tâches",
+      "jobCount": "{{count}} tâche",
       "sourceIngest": "Ingestion source",
       "transcode": "Transcodage",
       "tracks": "Pistes",
@@ -1613,13 +1477,8 @@
         "tracks": "On prépare les pistes audio et sous-titres pour pouvoir changer la langue et les sous-titres.",
         "exportDownloading": "On récupère la meilleure qualité disponible, on la déchiffre, puis on écrit un seul fichier vidéo avec toutes les pistes dans le dossier choisi.",
         "offlineDownloading": "On télécharge chaque morceau, on le déchiffre, puis on assemble toutes les pistes dans un seul fichier lisible hors ligne.",
-        "job": "Cette étape prépare les fichiers média pour la lecture et la synchronisation.",
-        "skipDetect": "On cherche où finit le générique de début et où commence le générique de fin, pour que vous puissiez les passer.",
-        "skipPreviews": "On crée les images que vous voyez en parcourant la barre de lecture."
-      },
-      "jobCount": "{{count}} tâche",
-      "skipDetect": "Recherche des génériques",
-      "skipPreviews": "Création des aperçus de la barre de lecture"
+        "job": "Cette étape prépare les fichiers média pour la lecture et la synchronisation."
+      }
     },
     "transcodePlan": "Plan de transcodage",
     "audio": "Audio",
@@ -1819,9 +1678,7 @@
       "recomputeRunning": "Vérification…",
       "lastVerified": "Dernière vérification\u202f: {{relative}}",
       "reclaimableHint": "{{bytes}} récupérables",
-      "confirmTitle_one": "{{count}} morceau orphelin représente ~{{bytes}}. Le récupérer\u202f?",
-      "confirmTitle_other": "{{count}} morceaux orphelins représentent ~{{bytes}}. Les récupérer\u202f?",
-      "confirmTitle_many": "{{count}} morceaux orphelins représentent ~{{bytes}}. Les récupérer\u202f?",
+      "confirmTitle": "{{count}} morceaux orphelins représentent ~{{bytes}}. Les récupérer\u202f?",
       "confirmAccept": "Récupérer",
       "confirmCancel": "Annuler",
       "resultReclaimed": "{{bytes}} récupérés",
@@ -1831,8 +1688,7 @@
       "relativeSeconds": "il y a {{value}}s",
       "relativeMinutes": "il y a {{value}}m",
       "relativeHours": "il y a {{value}}h",
-      "relativeDays": "il y a {{value}}j",
-      "confirmTitle": "{{count}} morceaux orphelins représentent ~{{bytes}}. Les récupérer\u202f?"
+      "relativeDays": "il y a {{value}}j"
     },
     "sponsorships": {
       "title": "Parrainages",
@@ -2105,15 +1961,13 @@
       "viewMovies": "Voir les films",
       "pickExistingTitle": "Choisissez un titre déjà dans votre bibliothèque ou dans cet import.",
       "signInAddDummy": "Connectez-vous pour ajouter un média dummy.",
-      "missingLibraryKey": "Clé de médiathèque manquante. Terminez d'abord l'onboarding.",
+      "missingLibraryKey": "Clé de bibliothèque manquante. Terminez d'abord l'onboarding.",
       "dummyUnavailable": "L'ingestion dummy est indisponible.",
       "dummyAdded": "Ajouté avec des données dummy.",
       "dummyStartFailed": "Impossible de démarrer l'ingestion dummy.",
       "audioSampleFailed": "Impossible de générer un extrait audio.",
       "setTrackLanguages": "Définissez une langue pour chaque piste, ou utilisez \"Ignorer et garder les pistes indéfinies\".",
-      "removedDuplicates_one": "{{count}} fichier en doublon supprimé.",
-      "removedDuplicates_other": "{{count}} fichiers en doublon supprimés.",
-      "removedDuplicates_many": "{{count}} fichiers en doublon supprimés.",
+      "removedDuplicates": "{{count}} fichier(s) en doublon supprimé(s).",
       "addMetadataFailedSingle": "1 titre n'a pas pu être ajouté\u202f: le service de métadonnées n'a pas répondu. Il est toujours là, réessayez dans un instant.",
       "addMetadataFailedMany": "{{count}} titres n'ont pas pu être ajoutés\u202f: le service de métadonnées n'a pas répondu. Ils sont toujours là, réessayez dans un instant.",
       "mediaNotInLibrary": "\"{{title}}\" n'est pas encore dans votre bibliothèque. Ajoutez d'abord un fichier vidéo.",
@@ -2124,8 +1978,7 @@
       "skippedDuplicateMany": "{{count}} vidéos de qualité dupliquée déjà dans votre bibliothèque ont été ignorées.",
       "subtitleTrackAddedSingle": "Piste de sous-titres ajoutée.",
       "subtitleTrackAddedMany": "{{count}} pistes de sous-titres ajoutées.",
-      "queueFailed": "Échec de la mise en file. Réessayez.",
-      "removedDuplicates": "{{count}} fichier(s) en doublon supprimé(s)."
+      "queueFailed": "Échec de la mise en file. Réessayez."
     },
     "samples": {
       "noSubtitleSample": "Aucun extrait de sous-titres disponible.",
@@ -2223,9 +2076,7 @@
       "loadingMore": "Chargement…",
       "moreResults": "Plus de résultats",
       "selectFileToReview": "Sélectionnez un fichier pour voir les détails",
-      "readyToImportCount_one": "{{count}} prêt à importer",
-      "readyToImportCount_other": "{{count}} prêts à importer",
-      "readyToImportCount_many": "{{count}} prêts à importer",
+      "readyToImportCount": "{{count}} prêt(s) à importer",
       "sameQualityOverlapIgnoredSingle": "{{count}} doublon vidéo de même qualité ignoré",
       "sameQualityOverlapIgnoredMany": "{{count}} doublons vidéo de même qualité ignorés",
       "addWithDummyData": "Ajouter avec des données dummy",
@@ -2237,24 +2088,12 @@
       "storageBlocked": "Votre stockage est plein. Passez à un forfait supérieur pour ajouter plus de médias.",
       "storageWarning": "Vous utilisez plus de 90\u202f% de votre stockage. Pensez à passer à un forfait supérieur.",
       "resolveBeforeAddingTitle": "Résoudre avant d'ajouter",
-      "blockerMatchOrRemove_one": "Associez ou retirez {{count}} fichier non associé.",
-      "blockerMatchOrRemove_other": "Associez ou retirez {{count}} fichiers non associés.",
-      "blockerMatchOrRemove_many": "Associez ou retirez {{count}} fichiers non associés.",
-      "blockerWaitSearch_one": "Attendez la fin de la recherche de détails pour {{count}} fichier.",
-      "blockerWaitSearch_other": "Attendez la fin de la recherche de détails pour {{count}} fichiers.",
-      "blockerWaitSearch_many": "Attendez la fin de la recherche de détails pour {{count}} fichiers.",
-      "blockerResolveVideo_one": "Résolvez {{count}} décision de qualité vidéo.",
-      "blockerResolveVideo_other": "Résolvez {{count}} décisions de qualité vidéo.",
-      "blockerResolveVideo_many": "Résolvez {{count}} décisions de qualité vidéo.",
-      "blockerWaitMetadata_one": "Attendez la fin de l'analyse des métadonnées pour {{count}} fichier.",
-      "blockerWaitMetadata_other": "Attendez la fin de l'analyse des métadonnées pour {{count}} fichiers.",
-      "blockerWaitMetadata_many": "Attendez la fin de l'analyse des métadonnées pour {{count}} fichiers.",
-      "blockerClickInput_one": "Cliquez sur \"Votre saisie est requise\" et répondez à {{count}} élément.",
-      "blockerClickInput_other": "Cliquez sur \"Votre saisie est requise\" et répondez à {{count}} éléments.",
-      "blockerClickInput_many": "Cliquez sur \"Votre saisie est requise\" et répondez à {{count}} éléments.",
-      "blockerSkipDataLoading_one": "Récupération des données de saut pour {{count}} épisode — un instant.",
-      "blockerSkipDataLoading_other": "Récupération des données de saut pour {{count}} épisodes — un instant.",
-      "blockerSkipDataLoading_many": "Récupération des données de saut pour {{count}} épisodes — un instant.",
+      "blockerMatchOrRemove": "Associez ou retirez {{count}} fichier(s) non associé(s).",
+      "blockerWaitSearch": "Attendez la fin de la recherche de détails pour {{count}} fichier(s).",
+      "blockerResolveVideo": "Résolvez {{count}} décision(s) de qualité vidéo.",
+      "blockerWaitMetadata": "Attendez la fin de l'analyse des métadonnées pour {{count}} fichier(s).",
+      "blockerClickInput": "Cliquez sur \"Votre saisie est requise\" et répondez à {{count}} élément(s).",
+      "blockerSkipDataLoading": "Récupération des données de saut pour {{count}} épisode(s) — un instant.",
       "yourInputNeededProgress": "Votre saisie est requise ({{current}}/{{total}})",
       "setLanguageAndNameAudioTracks": "Définissez la langue et le nom des pistes audio",
       "setLanguageAndNameSubtitleTracks": "Définissez la langue et le nom des pistes de sous-titres",
@@ -2279,24 +2118,14 @@
       "alreadyAvailable": "Déjà disponible",
       "skipQuality": "Ignorer cette qualité",
       "addQuality": "Ajouter cette qualité",
-      "videoDecisionsPending_one": "{{count}} décision vidéo en attente",
-      "videoDecisionsPending_other": "{{count}} décisions vidéo en attente",
-      "videoDecisionsPending_many": "{{count}} décisions vidéo en attente",
+      "videoDecision": "décision vidéo",
+      "videoDecisions": "décisions vidéo",
+      "videoDecisionsPending": "{{count}} {{decisionLabel}} en attente",
       "needsInputToContinue": "Saisie requise pour continuer",
       "undefined": "Non identifiée",
       "unknownMedia": "Média inconnu",
       "file": "fichier",
-      "files": "fichiers",
-      "readyToImportCount": "{{count}} prêt(s) à importer",
-      "blockerMatchOrRemove": "Associez ou retirez {{count}} fichier(s) non associé(s).",
-      "blockerWaitSearch": "Attendez la fin de la recherche de détails pour {{count}} fichier(s).",
-      "blockerResolveVideo": "Résolvez {{count}} décision(s) de qualité vidéo.",
-      "blockerWaitMetadata": "Attendez la fin de l'analyse des métadonnées pour {{count}} fichier(s).",
-      "blockerClickInput": "Cliquez sur \"Votre saisie est requise\" et répondez à {{count}} élément(s).",
-      "blockerSkipDataLoading": "Récupération des données de saut pour {{count}} épisode(s) — un instant.",
-      "videoDecision": "décision vidéo",
-      "videoDecisions": "décisions vidéo",
-      "videoDecisionsPending": "{{count}} {{decisionLabel}} en attente"
+      "files": "fichiers"
     }
   },
   "pairApprove": {
@@ -2308,12 +2137,5 @@
     "checksum": "Ces mots ne forment pas une clé valide. Vérifiez chaque mot avec ceux que vous avez enregistrés.",
     "unknownMark": "pas un mot de la clé",
     "pairedNoWords": "Cet ordinateur a reçu la clé d’un autre appareil\u202f: il n’a donc pas ses 12 mots. Ils sont sur l’appareil où la clé a été créée, ou dans la copie que vous avez enregistrée."
-  },
-  "skipCatchUpNotice": {
-    "title": "Badger repère maintenant les génériques",
-    "what": "La version {{version}} repère toute seule les génériques de début et de fin des vidéos pour lesquelles nous n'avons aucune information.",
-    "background": "Votre bibliothèque existante est en cours de traitement en arrière-plan sur cet ordinateur. Vous pouvez suivre l'avancement dans l'onglet Tâches. Le traitement se met en pause dès que vous importez ou regardez quelque chose\u202f: il ne vous gênera pas.",
-    "close": "Fermer",
-    "openJobs": "Ouvrir les Tâches"
   }
 }

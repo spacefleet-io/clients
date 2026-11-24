@@ -851,8 +851,6 @@ local osc_styles = {
 -- text lines inside a closed box, PLAY-OVL-05); play, pause and the skip
 -- triangles are filled like the mockup's.
 local osc_icons = {
-	-- PLAY-SKIP-10: the intro / credits button, a bar and an arrow that arcs over it and lands on the far side
-	skip            = "{\\1a&HFF&\\bord0.44}{\\p1}m 0 4.6 b 0.16 -1.31 5.42 -1.31 5.58 3.28 b 5.42 -1.31 0.16 -1.31 0 4.6 m 2.79 3.28 l 2.79 5.75 l 2.79 3.28 m 4.43 2.13 l 5.58 3.28 l 6.73 2.13 l 5.58 3.28 l 4.43 2.13{\\p0}",
 	back            = "{\\1a&HFF&\\bord0.46}{\\p1}m 3.21 6.42 l 0 3.21 l 3.21 0 l 0 3.21 l 3.21 6.42 m 6.42 3.21 l 0 3.21 l 6.42 3.21{\\p0}",
 	play            = "{\\bord0.71}{\\p1}m 0 1.48 b 0 0.97 0.27 0.51 0.71 0.25 b 1.15 0 1.69 0 2.13 0.26 l 10.63 5.21 b 11.07 5.47 11.33 5.93 11.33 6.44 b 11.33 6.94 11.07 7.41 10.63 7.66 l 2.13 12.62 b 1.69 12.88 1.15 12.88 0.71 12.63 b 0.27 12.37 0 11.91 0 11.4{\\p0}",
 	pause           = "{\\bord0.71}{\\p1}m 7.08 0 l 9.21 0 b 9.6 0 9.92 0.32 9.92 0.71 l 9.92 12.04 b 9.92 12.43 9.6 12.75 9.21 12.75 l 7.08 12.75 b 6.69 12.75 6.38 12.43 6.38 12.04 l 6.38 0.71 b 6.38 0.32 6.69 0 7.08 0 m 0.71 0 l 2.83 0 b 3.22 0 3.54 0.32 3.54 0.71 l 3.54 12.04 b 3.54 12.43 3.22 12.75 2.83 12.75 l 0.71 12.75 b 0.32 12.75 0 12.43 0 12.04 l 0 0.71 b 0 0.32 0.32 0 0.71 0{\\p0}",
@@ -1983,13 +1981,12 @@ SF_FIT = {
 	backRight = 40, titleX = 48, titleMin = 40, bandBottom = 36, seekRowTop = 66, play = 43,
 	episodeHalfW = 21.5 + 20 + 2 * 15.5,
 }
-SF_FIT_DROP_ORDER = {"volume_slider", "chapters", "cy_skip", "cy_qual", "volume", "cy_audio", "cy_sub"}
-SF_FIT_RIGHT_GROUP = {"chapters", "cy_skip", "cy_sub", "cy_audio", "cy_qual", "tog_fs"}
+SF_FIT_DROP_ORDER = {"volume_slider", "chapters", "cy_qual", "volume", "cy_audio", "cy_sub"}
+SF_FIT_RIGHT_GROUP = {"chapters", "cy_sub", "cy_audio", "cy_qual", "tog_fs"}
 
--- hasSkip: sf.lua offers the intro / credits button (user-data/sf/skip-menu, PLAY-SKIP-10).
-function sf_fit_controls(w, h, hasChapters, hasSkip)
+function sf_fit_controls(w, h, hasChapters)
 	local f = SF_FIT
-	local shown = {volume = true, volume_slider = true, chapters = hasChapters, cy_skip = hasSkip == true, cy_sub = true, cy_audio = true, cy_qual = true, tog_fs = true}
+	local shown = {volume = true, volume_slider = true, chapters = hasChapters, cy_sub = true, cy_audio = true, cy_qual = true, tog_fs = true}
 	local function row_fits()
 		local left = f.margin - f.gap
 		if shown.volume then
@@ -2131,7 +2128,7 @@ function layout()
 	lo.alpha[3] = 0
 
 	-- MPV-OSC-05: what fits this window at full size (sf_fit_controls).
-	local fit = sf_fit_controls(osc_geo.w, osc_param.playresy, showChapters, state.sf_skip_menu == true)
+	local fit = sf_fit_controls(osc_geo.w, osc_param.playresy, showChapters)
 	state.sf_fit = fit
 
 	-- Seekbar: the played part in the accent, an upright 6 x 36 CSS px pill
@@ -2179,9 +2176,6 @@ function layout()
 	-- Top of the bottom bar (the seek row's thumb, 9 above the track centre): while the controls show,
 	-- subtitles stay above it (sf_update_sub_raise).
 	state.sf_bottom_chrome_top = seekY - 9
-	-- The seek track's ends and centre line, for sf.lua's intro / credits handles (PLAY-SKIP-04).
-	state.sf_seek = {x1 = seekX1, x2 = seekX2, y = seekY}
-	publish_seekbar()
 
 	-- Volume: the mute chip, then the 90-wide volume track 8 after it, on
 	-- the chip's centre line
@@ -2563,15 +2557,6 @@ function osc_init()
 		mp.commandv("script-message-to", "osc", "osc-hide")
 	end
 
-	-- cy_skip (PLAY-SKIP-10): sf.lua's intro / credits menu, on episodes only
-
-	ne = new_element("cy_skip", "button")
-	ne.content = osc_icons.skip
-	ne.eventresponder["mbtn_left_up"] = function ()
-		mp.commandv("script-message-to", "sf", "sf-skip-menu")
-		mp.commandv("script-message-to", "osc", "osc-hide")
-	end
-
 	-- cy_sub
 
 	ne = new_element("cy_sub", "button")
@@ -2763,31 +2748,11 @@ function publish_top_band()
 	msg.info("[sf-osc-top-band] visible=" .. tostring(shown) .. " bottom=" .. bottom)
 end
 
--- PLAY-SKIP-04: sf.lua draws the intro / credits handles on the seek track, so
--- publish where the track runs (OSD px) and whether the controls show.
-local published_seekbar_key = nil
-function publish_seekbar()
-	local seek = state.sf_seek
-	local sx, sy = get_virt_scale_factor()
-	if not seek or sx <= 0 or sy <= 0 then
-		return
-	end
-	local value = { visible = state.osc_visible == true, x1 = seek.x1 / sx, x2 = seek.x2 / sx, y = seek.y / sy }
-	local key = string.format("%s:%.1f:%.1f:%.1f", tostring(value.visible), value.x1, value.x2, value.y)
-	if key == published_seekbar_key then
-		return
-	end
-	published_seekbar_key = key
-	mp.set_property_native("user-data/sf/seekbar", value)
-	msg.info("[sf-skip] seekbar " .. key)
-end
-
 function osc_visible(visible)
 	if state.osc_visible ~= visible then
 		state.osc_visible = visible
 	end
 	publish_top_band()
-	publish_seekbar()
 	sf_update_sub_raise()
 	request_tick()
 end
@@ -3362,14 +3327,6 @@ mp.observe_property("user-data/sf/episode-nav", "native", function(_, nav)
 	state.episode_nav = type(nav) == "table" and nav or {}
 	msg.info(string.format("[sf-episode] episode-nav hasPrevious=%s hasNext=%s",
 		tostring(state.episode_nav.hasPrevious), tostring(state.episode_nav.hasNext)))
-	request_init()
-end)
-
--- PLAY-SKIP-10: sf.lua offers the intro / credits button on episodes; re-layout
--- so cy_skip appears or vanishes.
-mp.observe_property("user-data/sf/skip-menu", "native", function(_, on)
-	state.sf_skip_menu = on == true
-	msg.info("[sf-skip] skip-menu " .. tostring(state.sf_skip_menu))
 	request_init()
 end)
 

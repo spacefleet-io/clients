@@ -63,15 +63,7 @@ vi.mock("@space/mobile-shell/theme", async (importOriginal) => {
 vi.mock("@space/mobile-shell/components", async () => {
   const { MobileFeedbackForm } = await import("../../../../packages/mobile-shell/src/components/mobile-feedback-form");
   // Settings → About credits the outside data sources (UX-SET-02); not under test here.
-  return {
-    MobileFeedbackForm,
-    MobileIconButton: (props: { children?: ReactNode }) => createElement("MobileIconButton", props, props.children),
-    MobileCreditsPanel: () => null,
-    MobileOpenSourceNotice: () => null,
-    MobileErrorReportsLink: () => null,
-    MobileFounderBadge: () => null,
-    useSkyScroll: () => ({}),
-  };
+  return { MobileFeedbackForm, MobileCreditsPanel: () => null, MobileOpenSourceNotice: () => null, MobileErrorReportsLink: () => null, MobileFounderBadge: () => null, useSkyScroll: () => ({}) };
 });
 vi.mock("@react-navigation/native", () => ({ useNavigation: () => ctl }));
 vi.mock("lucide-react-native", () => ({ ArrowLeft: () => null, ChevronDown: () => null, ChevronUp: () => null }));
@@ -86,6 +78,9 @@ vi.mock("../src/components/SettingsRows", () => {
   };
 });
 vi.mock("../src/lib/metadata/runtime", () => ({ mobileCreditsSource: { load: null, store: null } }));
+vi.mock("../src/components/IconButton", () => ({
+  IconButton: (props: { children?: ReactNode }) => createElement("IconButton", props, props.children),
+}));
 vi.mock("../src/components/AccountSecurity", () => ({ PasswordChangeSection: () => null }));
 vi.mock("../src/components/DevicesSection", () => ({ DevicesSection: () => null }));
 vi.mock("../src/components/PosterCard", () => ({ RIPPLE: {} }));
@@ -196,19 +191,19 @@ describe("@req ACCT-KEYCHG-04[badger-mobile] Badger phone Settings offer a key c
     return { tree, rows };
   };
 
-  it("offers no way to change the media library key while the server's answer is not known, even with Advanced open", () => {
-    const { rows } = advancedRows(null);
-    expect(rows).not.toContain("Replace media library key");
+  it.each([
+    ["the server's answer is not known (loading, offline)", null],
+    ["the account stores media", { needsMediaReseal: true }],
+  ])("offers no way to change the media library key when %s, even with Advanced open", (_label, readiness) => {
+    const { rows } = advancedRows(readiness);
+    expect(rows).not.toContain("Reset encryption key");
     expect(ctl.navigate).not.toHaveBeenCalledWith("ResetKey");
   });
 
-  it.each([
-    ["without media", { needsMediaReseal: false }],
-    ["with media (the phone re-seals it, STOR-RESEAL-01)", { needsMediaReseal: true }],
-  ])("offers Replace media library key to an account %s", (_label, readiness) => {
-    const { tree, rows } = advancedRows(readiness);
-    expect(rows).toContain("Replace media library key");
-    const row = tree.root.find((n) => String(n.type) === "LinkRow" && n.props.title === "Replace media library key");
+  it("offers Reset encryption key to an account without media", () => {
+    const { tree, rows } = advancedRows({ needsMediaReseal: false });
+    expect(rows).toContain("Reset encryption key");
+    const row = tree.root.find((n) => String(n.type) === "LinkRow" && n.props.title === "Reset encryption key");
     act(() => row.props.onPress());
     expect(ctl.navigate).toHaveBeenCalledWith("ResetKey");
   });

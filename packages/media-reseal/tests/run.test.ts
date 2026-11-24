@@ -169,35 +169,4 @@ describe("runMediaReseal (STOR-RESEAL-01/02/03/05, ACCT-KEYCHG-09)", () => {
     expect(await runMediaReseal(server.io, keys)).toEqual({ copied: 0, kept: 1203, stopped: false });
     expect(server.calls.markKept.map((batch) => batch.length)).toEqual([500, 500, 203]);
   });
-
-  it("counts a kept file only once the server lists it, and marks it before the next copy (ACCT-KEYCHG-07)", async () => {
-    const { keys, sealed } = await setup();
-    const objects: Stored[] = [1, 2, 3, 4, 5, 6].map((n) => ({
-      key: `media/${P}/${uuid(n)}`,
-      bytes: n % 3 === 2 ? randomBytes(64) : sealed(n),
-      objectNamespace: "media",
-      contentType: null,
-    }));
-    const server = fakeServer(objects, 500);
-    const upload = server.io.upload;
-    const keptAtUpload: number[] = [];
-    server.io.upload = async (copyKey, bytes, copy) => {
-      keptAtUpload.push(server.kept.size);
-      await upload(copyKey, bytes, copy);
-    };
-    const shown: number[] = [];
-
-    await runMediaReseal(server.io, keys, {
-      onProgress: (p) => {
-        // "See the N files" lists what the server holds: the count shown never runs ahead of it.
-        expect(p.keptFiles).toBeLessThanOrEqual(server.kept.size);
-        shown.push(p.keptFiles);
-      },
-    });
-
-    // uuid(2) is marked before uuid(3) is uploaded, uuid(5) before uuid(6).
-    expect(keptAtUpload).toEqual([0, 1, 1, 2]);
-    expect(server.calls.markKept).toEqual([[`media/${P}/${uuid(2)}`], [`media/${P}/${uuid(5)}`]]);
-    expect(shown.at(-1)).toBe(2);
-  });
 });

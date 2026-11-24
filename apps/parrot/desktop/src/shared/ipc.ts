@@ -16,38 +16,10 @@ import type { KeepCopyChoice, KeptKind, KeptStatus, ParrotEditTarget, ParrotLyri
 import type { ParrotPhotoCredit } from "@space/parrot-library-db-definition";
 import type { ParrotCoverCrop, ParrotImportPlacedFile, ParrotImportUnidentifiedFile } from "@space/parrot-core";
 import type { ParrotLibraryPatch } from "./libraryPatch";
-import type { KeyChangeFailure } from "@space/shared/keyChangeFailure";
-import type { KeyChangeOutcome, KeyChangeState, UnreadableFile } from "@space/media-reseal";
-import type { KeyRotationReadiness } from "@space/shared/keyChange";
 
 import type { ParrotEditCover, ParrotEditSuggestion, ParrotEditSuggestQuery, ParrotEditValues } from "@space/parrot-core";
 
 export type { ParrotEditCover, ParrotEditValues } from "@space/parrot-core";
-export type { KeyChangeState, UnreadableFile } from "@space/media-reseal";
-
-/** The key change dialog opened: a new key's words to write down, and whether the account has a password (ACCT-AUTH-04). */
-export type ParrotKeyChangeOpen = { ok: true; words: string[]; hasPassword: boolean } | { ok: false };
-
-/** How a key change step ended: switched (signed out), copying paused, waiting on another device, or refused. */
-export type ParrotKeyChangeResult = { status: KeyChangeOutcome } | KeyChangeFailure;
-
-/** The media library key change (ACCT-KEYCHG-01, STOR-RESEAL-01), run in main on the controller Badger runs too. */
-export type ParrotKeyChangeBridge = {
-  /** ACCT-KEYCHG-04: `GET /library/recovery/rotate`; null while unknown (the entry stays hidden). */
-  readiness(): Promise<KeyRotationReadiness | null>;
-  open(): Promise<ParrotKeyChangeOpen>;
-  /** Start (password and code, ACCT-KEYCHG-03) from the form; Finish once the run is open (no reauth). */
-  submit(password: string, twoFactorCode?: string): Promise<ParrotKeyChangeResult>;
-  switchNow(): Promise<ParrotKeyChangeResult>;
-  poll(): Promise<ParrotKeyChangeResult>;
-  stop(): Promise<ParrotKeyChangeResult>;
-  /** Leaving Settings: the copying pauses between files. */
-  pause(): Promise<void>;
-  unreadableFiles(): Promise<UnreadableFile[]>;
-  /** True once deleted. */
-  deleteUnreadableFiles(files: UnreadableFile[]): Promise<boolean>;
-  onState(listener: (state: KeyChangeState) => void): () => void;
-};
 export type { ParrotImportEdit, ParrotImportScan, ParrotScanEntry } from "@space/parrot-ingest";
 /** The songs the user ticked in the confirm dialog, with the names they confirmed (PAR-UP-05). */
 export type ParrotImportSelection = Array<ParrotImportEdit & { file: string }>;
@@ -189,23 +161,7 @@ export type ParrotImportJob = {
   failures: Array<{ file: string; error: string }>;
   /** The albums the import added songs to, for that album's Jobs tab (UX-JOBS-02); absent on imports saved before. */
   albumIds?: string[];
-  /**
-   * UX-JOBS-03: on an import that stopped or left files out, true when none of what "Import again" would read is
-   * still where it was; main checks each time it sends the list.
-   */
-  sourcesMissing?: boolean;
 };
-
-/**
- * UX-JOBS-03: the answer to "Import again" or "Find the folder". Started, the job is replaced by the new import,
- * which stops at the review like any import. Not started: another import is running, the files are gone (the card
- * turns to "Find the folder"), or the job is no longer in the list.
- */
-export type ParrotImportRetry = { started: true } | { started: false; reason: "busy" | "missing" | "gone" };
-
-/** UX-JOBS-03: an ended import the card offers to try again: it stopped, or some of its files were not added. */
-export const importJobRetryable = (job: ParrotImportJob): boolean =>
-  !job.status.running && (job.status.phase === "failed" || (job.status.phase === "done" && job.failures.length > 0));
 
 /**
  * Slow work Parrot runs on its own after an import or a sign-in (UX-JOBS-02): a quiet line in the Jobs panel says
@@ -421,8 +377,6 @@ export type ParrotBridge = {
    * computer's key and cache; setup goes back to the key step.
    */
   eraseLibrary(password: string, twoFactorCode?: string): Promise<LibraryKeyEraseOutcome>;
-  /** ACCT-KEYCHG-01: Settings › Account's media library key change, run in main (Badger's library re-encrypted alongside). */
-  keyChange: ParrotKeyChangeBridge;
   pickFolders(): Promise<string[]>;
   /** UX-ADD-01: song files picked from the "+" dialog; scanImport takes them like folders. */
   pickFiles(): Promise<string[]>;
@@ -467,10 +421,6 @@ export type ParrotBridge = {
   onImportJobs(listener: (jobs: ParrotImportJob[]) => void): () => void;
   /** Removes a finished or failed import from the list; a running one stays. */
   dismissImportJob(id: string): Promise<ParrotImportJob[]>;
-  /** UX-JOBS-03 "Import again": scans the job's folders again, or only its files not added; the job gives way to the new import. */
-  retryImportJob(id: string): Promise<ParrotImportRetry>;
-  /** UX-JOBS-03 "Find the folder": main asks for the folder, then imports it in place of the job; nothing picked answers cancelled. */
-  findImportJobFolder(id: string): Promise<ParrotImportRetry | { cancelled: true }>;
   /** OFFL-FILE-01 / ACCT-EXPORT-01: how many songs "Download everything" would save, and their size. */
   previewExport(): Promise<ParrotExportPreview>;
   /** Asks for a folder, then saves the whole library there as plain audio files, in the background (Jobs panel). */
@@ -631,16 +581,6 @@ export const PARROT_IPC = {
   setLibraryKey: "parrot:key:set",
   createLibraryKey: "parrot:key:create",
   eraseLibrary: "parrot:key:erase",
-  keyChangeReadiness: "parrot:key-change:readiness",
-  keyChangeOpen: "parrot:key-change:open",
-  keyChangeSubmit: "parrot:key-change:submit",
-  keyChangeSwitchNow: "parrot:key-change:switch-now",
-  keyChangePoll: "parrot:key-change:poll",
-  keyChangeStop: "parrot:key-change:stop",
-  keyChangePause: "parrot:key-change:pause",
-  keyChangeUnreadableFiles: "parrot:key-change:unreadable-files",
-  keyChangeDeleteUnreadableFiles: "parrot:key-change:unreadable-delete",
-  keyChangeStateEvent: "parrot:key-change:state-event",
   pickFolders: "parrot:folders:pick",
   pickFiles: "parrot:files:pick",
   scanImport: "parrot:import:scan",
@@ -661,8 +601,6 @@ export const PARROT_IPC = {
   getImportJobs: "parrot:import:jobs",
   importJobsEvent: "parrot:import:jobs-event",
   dismissImportJob: "parrot:import:jobs-dismiss",
-  retryImportJob: "parrot:import:jobs-retry",
-  findImportJobFolder: "parrot:import:jobs-find-folder",
   previewExport: "parrot:export:preview",
   exportMusic: "parrot:export:start",
   getExportJobs: "parrot:export:jobs",

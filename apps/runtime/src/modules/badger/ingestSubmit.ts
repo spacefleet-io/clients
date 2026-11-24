@@ -24,7 +24,6 @@ import {
 } from "@space/runtime-contracts/badger/ingest";
 import type { EngineV2 } from "../../core/jobs/engineV2";
 import { readJobPlacementId } from "./steps/placement";
-import { fingerprintSourceFile } from "./failedJobs";
 import type {
   IngestJobRecord,
   IngestJobStatus,
@@ -211,9 +210,6 @@ export function createBadgerIngestSubmitHandler(
             skipMarkers: source.skipMarkers ?? [],
             showSkipCache: source.showSkipCache ?? null,
             placementId,
-            // UX-JOBS-03: tells "same video" from "another file" when the import
-            // fails and the file is processed again or picked again. Null when unreadable.
-            sourceFingerprint: await fingerprintSourceFile(source.filename),
           },
         };
         await engine.submit(sourceJob);

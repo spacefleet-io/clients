@@ -108,7 +108,7 @@ def run_sync(ctx, interactive=False):
         ctx.lib.sync(ctx.api, ctx.key)
     except KeyMismatchError:
         log("sync: library key does not match this account's library", "error")
-        return False, "the media library key does not match this library"
+        return False, "the library key does not match this library"
     except UnauthorizedError:
         core.wipe_everything("sync 401")
         set_prop("access", "signedout")

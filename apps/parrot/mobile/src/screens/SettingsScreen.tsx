@@ -1,5 +1,5 @@
-// Settings, the same rows as the desktop's Account and Settings pages (PAR-NAV-01): who is signed in, the plan and
-// storage (read only: no payment on a phone, ACCT-PAY-02; the phones' shared panel), pairing a device, who is listening (profiles, ACCT-PROF-01), the app's language,
+// Settings, the same rows as the desktop's Account and Settings pages (PAR-NAV-01): who is signed in, the plan (read
+// only: no payment on a phone, ACCT-PAY-02), pairing a device, who is listening (profiles, ACCT-PROF-01), the app's language,
 // Even out volume (off by default: songs play as recorded, PAR-PLAY-03), a message to the team (with the
 // error log when ticked), error reports, loading the library again, sign out (which stops the music and removes
 // the library and key from the phone) and delete the account (ACCT-DEL-01: a phone that creates accounts deletes them).
@@ -8,12 +8,12 @@ import React, { useEffect, useState } from "react";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { ScrollView, StyleSheet, Switch, Text, View } from "react-native";
-import { MobileAccountPlanPanel } from "@space/mobile-shell/account-plan-panel";
+import { getSubscription, type SubscriptionSummary } from "@space/shared/api";
 import {
   MobileCreditsPanel,
   MobileErrorReportsLink,
+  MobileFounderBadge,
   MobileOpenSourceNotice,
-  MobileButton,
   SkyCover,
   useSkyScroll,
 } from "@space/mobile-shell/components";
@@ -33,7 +33,7 @@ import { parrotCreditsSource } from "../lib/lookup";
 import { useSession } from "../state/session";
 import { useSignOut } from "../state/useSignOut";
 import { colors, spacing } from "../theme";
-import { Body } from "./ui";
+import { Body, Button } from "./ui";
 import type { RootStack } from "./routes";
 import { SelfUpdateSettings } from "@space/mobile-self-update";
 
@@ -133,6 +133,41 @@ const Section = ({ title, children }: { title: string; children: React.ReactNode
   </View>
 );
 
+/** The plan's name and whether it is paid: read only, never a way to pay (ACCT-PAY-02, like Badger's phone). */
+const PlanRow = ({ token }: { token: string }) => {
+  const { t } = useTranslation();
+  const [plan, setPlan] = useState<SubscriptionSummary | null>(null);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    let live = true;
+    getSubscription(token).then(
+      (next) => live && setPlan(next),
+      () => live && setFailed(true)
+    );
+    return () => {
+      live = false;
+    };
+  }, [token]);
+  const state = plan?.access?.state;
+  const status = state === "paid" ? t("subscription.status.active") : state === "unpaid" ? t("subscription.status.expired") : t("subscription.status.free");
+  return (
+    <View style={styles.row} testID="settings-plan">
+      <View style={{ flex: 1, gap: 2 }}>
+        <Body>{t("subscription.plan.plan")}</Body>
+      </View>
+      <Text style={[styles.value, state === "unpaid" && { color: colors.danger }]}>
+        {plan
+          ? plan.storageLimitGb === null
+            ? t("subscription.plan.adminUnlimited")
+            : `${t(`subscription.planName.${plan.plan}`, { defaultValue: plan.plan })} · ${status}`
+          : failed
+            ? t("subscription.loadError")
+            : "…"}
+      </Text>
+    </View>
+  );
+};
+
 /** Who is listening, a one-tap switch and the profile manager (ACCT-PROF-01, UX-PROF-01), like Badger's phone. */
 const ProfilesSection = ({ onOpen }: { onOpen: (mode: "pick" | "manage") => void }) => {
   const { t } = useTranslation();
@@ -146,9 +181,9 @@ const ProfilesSection = ({ onOpen }: { onOpen: (mode: "pick" | "manage") => void
         </View>
       ) : null}
       {profiles.length > 1 ? (
-        <MobileButton testID="settings-profile-switch" label={t("profiles.switch")} variant="secondary" onPress={() => onOpen("pick")} />
+        <Button testID="settings-profile-switch" label={t("profiles.switch")} tone="plain" onPress={() => onOpen("pick")} />
       ) : null}
-      <MobileButton testID="settings-profiles-manage" label={t("profiles.manage")} variant="secondary" onPress={() => onOpen("manage")} />
+      <Button testID="settings-profiles-manage" label={t("profiles.manage")} tone="plain" onPress={() => onOpen("manage")} />
     </Section>
   );
 };
@@ -171,26 +206,27 @@ export const SettingsScreen = () => {
             {session?.user.email}
           </Text>
         </View>
+        {session ? <PlanRow token={session.token} /> : null}
+        {/* WAIT-FOUND-04: "Founder 🎫 · since the waitlist, {date}" next to the plan; no price on the phone (ACCT-PAY-02). */}
+        <MobileFounderBadge showPriceLabel />
         {/* ACCT-PAIR-01: this phone approves a new device (a browser on the Parrot web player, a computer, a TV). */}
         <View style={{ gap: spacing.xs }}>
-          <MobileButton
+          <Button
             testID="settings-pair-device"
             label={t("settings.account.pairDevice.title")}
-            variant="secondary"
+            tone="plain"
             onPress={() => navigation.navigate("PairDevice")}
           />
           <Body muted>{t("parrot.settings.pairDeviceDescription")}</Body>
         </View>
         {/* ACCT-DEL-01: Settings > Account > Delete account, the same path as on Badger's phone. */}
-        <MobileButton
+        <Button
           testID="settings-delete-account"
           label={t("settings.account.deleteAccount")}
-          variant="secondary"
+          tone="plain"
           onPress={() => navigation.navigate("DeleteAccount")}
         />
       </Section>
-      {/* The plan, its state and storage, as on Badger's phone (REL-FAM-03); founder badge included (WAIT-FOUND-04). */}
-      {session ? <MobileAccountPlanPanel token={session.token} Group={Section} /> : null}
       <ProfilesSection onOpen={(mode) => navigation.navigate("Profiles", { mode })} />
       <Section title={t("parrot.settings.language")}>
         <LanguageChoice />
@@ -211,11 +247,11 @@ export const SettingsScreen = () => {
       ) : null}
       <Section title={t("parrot.settings.library")}>
         <Body muted>{t("shell.settings.refreshBody")}</Body>
-        <MobileButton
+        <Button
           testID="settings-refresh"
           label={t("parrot.settings.refresh")}
-          variant="secondary"
-          loading={refreshing}
+          tone="plain"
+          busy={refreshing}
           onPress={async () => {
             setRefreshing(true);
             try {
@@ -227,10 +263,10 @@ export const SettingsScreen = () => {
         />
         {/* OFFL-MANAGE-01: what is kept on this phone, its size, remove one or all. */}
         <View style={{ gap: spacing.xs }}>
-          <MobileButton
+          <Button
             testID="settings-offline-content"
             label={t("offlineContent.entry")}
-            variant="secondary"
+            tone="plain"
             onPress={() => navigation.navigate("OfflineContent")}
           />
           <Body muted>{t("offlineContent.parrot.entryDescription")}</Body>
@@ -246,10 +282,10 @@ export const SettingsScreen = () => {
         <Body muted>{t("parrot.settings.openSourceBody")}</Body>
         <MobileCreditsPanel language={getCurrentLanguage()} product="parrot" source={parrotCreditsSource} openLinks />
       </Section>
-      <MobileButton
+      <Button
         label={t("parrot.settings.signOut")}
-        variant="danger"
-        loading={busy}
+        tone="danger"
+        busy={busy}
         onPress={async () => {
           setBusy(true);
           try {

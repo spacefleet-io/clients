@@ -186,7 +186,7 @@ describe("PairWithPhone", () => {
     await flush();
     console.info("[pair-with-phone.test:key] start calls", pairing.start.mock.calls, "text", text());
     expect(pairing.start).toHaveBeenCalledWith({ mode: "key" });
-    expect(text()).toContain("Get your media library key from another device");
+    expect(text()).toContain("Get your library key from another device");
     expect(text()).toContain("already signed in to this account, open Badger or Parrot");
     expect(text()).toContain("Waiting for your other device…");
     expect(container.querySelector('[data-testid="pair-short-code"]')?.textContent).toBe("ABCDEFGH");

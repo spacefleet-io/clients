@@ -32,15 +32,6 @@ export { MobileStartupPage } from "./components/mobile-startup-page";
 export { default as MobilePosterWaterfall } from "./components/mobile-poster-waterfall";
 export { MobileAuthBrand } from "./components/mobile-auth-brand";
 export { MobileAuthInput, MobileAuthButton, MobileAuthLink } from "./components/mobile-auth-form";
-export {
-  MobilePasswordSignInForm,
-  MobileSignInNoticeBox,
-  useMobilePasswordSignIn,
-  type MobilePasswordSignIn,
-  type MobilePasswordSignInFormProps,
-  type MobilePasswordSignInProviderStep,
-  type UseMobilePasswordSignInInput,
-} from "./components/mobile-password-sign-in-form";
 export { MobileApiHostModal } from "./components/mobile-api-host-modal";
 export { MobileKeySavedWarning } from "./components/mobile-key-saved-warning";
 export {
@@ -62,7 +53,8 @@ export {
 export { MobileEmptyState } from "./components/mobile-empty-state";
 export { MobileEmptyLibrary, MobileEmptyLibraryAction, type MobileEmptyLibraryStep } from "./components/mobile-empty-library";
 export { MobileLibraryLoading } from "./components/mobile-library-loading";
-export { MobileHomeRail, type MobileHomeRailProps } from "./components/mobile-home-rail";
+export { MobileSectionHeader } from "./components/mobile-section-header";
+export { MobilePosterCard } from "./components/mobile-poster-card";
 export { MobileRail, MobileRailScroll, type MobileRailProps, type MobileRailScrollProps } from "./components/mobile-rail";
 export { MobileNoticeBanner } from "./components/mobile-notice-banner";
 export { MobileErrorReportsLink } from "./components/mobile-error-reports-link";
@@ -76,8 +68,6 @@ export {
 
 // UI primitives
 export { MobileButton } from "./components/mobile-button";
-export { MobileIconButton, MOBILE_ICON_BUTTON_SIZE, type MobileIconButtonProps } from "./components/mobile-icon-button";
-export { MobileSkeletonPulse, MobileSkeletonBlock, MOBILE_SKELETON_PULSE } from "./components/mobile-skeleton";
 export { MobileInput } from "./components/mobile-input";
 export { MobileCard } from "./components/mobile-card";
 

@@ -17,8 +17,7 @@ import type { ParrotPairedSignIn, ParrotState } from "../../shared/ipc";
 import { signInFailureText, type Translate } from "./i18n";
 import { reconcileAfterSignIn, useAccountLanguagePrompt } from "./accountLanguage";
 import { SignUpForm, VerifyEmailForm } from "./SignUp";
-import { DesktopProviderSignIn } from "@space/desktop-shell/provider-sign-in";
-import { ProviderSecondStep, useProviderSignInReturn } from "./ProviderSignIn";
+import { ProviderSecondStep, ProviderSignIn, useProviderSignInReturn } from "./ProviderSignIn";
 
 type Props = { t: Translate; state: ParrotState; onState: (state: ParrotState) => void };
 
@@ -52,6 +51,7 @@ export default function SignIn({ t, state, onState }: Props) {
   type Notice = { tone: "info" | "error"; text: string } | null;
   const [providerNotice, setProviderNotice] = useState<Notice>(null);
   const providerFlow = useProviderSignInReturn({
+    t,
     language,
     onBack: () => setMode("email"),
     onSignedIn: signedIn,
@@ -59,16 +59,10 @@ export default function SignIn({ t, state, onState }: Props) {
   });
   const providerRows = (rowsMode: "signIn" | "signUp") => (
     <>
-      <DesktopProviderSignIn
+      <ProviderSignIn
+        t={t}
         language={language}
         mode={rowsMode}
-        list={() => window.parrot.providerSignIn.list()}
-        start={async (provider, clientChallenge) => {
-          const result = await window.parrot.providerSignIn.start(provider, clientChallenge);
-          if (result.ok) return { ok: true };
-          // Too many attempts keeps Parrot's own sentence; any other refusal gets the shared one.
-          return { ok: false, message: result.failure === "rateLimited" ? signInFailureText(language, result.failure, result.retryAfterMinutes) : undefined };
-        }}
         onStarted={() => setProviderNotice({ tone: "info", text: t("signIn.provider.continueInBrowser") })}
         onError={(text) => setProviderNotice({ tone: "error", text })}
       />

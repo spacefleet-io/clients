@@ -33,11 +33,7 @@ const QUOTA_ERROR_MARKERS = [
 export const isUploadQuotaExceededJobError = (error: string | null | undefined): boolean =>
   typeof error === "string" && QUOTA_ERROR_MARKERS.some((marker) => error.includes(marker));
 
-/**
- * `onRoomChange` tells the Jobs panel whether the account has room again (just upgraded here, or the storage summary
- * is no longer blocked), so a failed upload's one action turns from "Upgrade plan" into "Upload again" (UX-JOBS-03).
- */
-export default function QuotaUploadsNotice({ onRoomChange }: { onRoomChange?: (hasRoom: boolean) => void } = {}) {
+export default function QuotaUploadsNotice() {
   const { t } = useTranslation();
   const { token } = useAuth();
   const offerText = usePlanOfferText();
@@ -65,11 +61,6 @@ export default function QuotaUploadsNotice({ onRoomChange }: { onRoomChange?: (h
   const offer = storage
     ? evaluateImportQuota({ items: [], storage, pendingLocalBytes: 0, billingPeriod: loadBillingPeriod() }).nextPlan
     : null;
-  const hasRoom = upgraded || (storage !== null && storage.warningLevel !== "blocked");
-  useEffect(() => {
-    log.info({ hasRoom, upgraded, warningLevel: storage?.warningLevel ?? null }, "quota-uploads-notice.room");
-    onRoomChange?.(hasRoom);
-  }, [hasRoom, onRoomChange, upgraded, storage?.warningLevel]);
 
   const handleUpgrade = async () => {
     if (!offer || upgrading) return;

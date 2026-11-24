@@ -1,12 +1,12 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { ApiError, getMe, isSessionRejected, login as apiLogin, logout as apiLogout, type LoginDevice, User } from "@space/shared/api";
-import { keepsKeyOnSignIn, keyAfterSignedOut, type SignedOutReason } from "@space/shared/keptLibraryKey";
+import { keyAfterSignedOut, type SignedOutReason } from "@space/shared/keptLibraryKey";
 import { LibraryDb } from "../lib/libraryDb";
 import { scopeLogger } from "@space/mobile-shell/logger";
 import { forgetKnownSessions } from "../lib/pairing/deviceWatch";
 import { clearPlayStartWarm } from "../lib/playback/playStartCache";
-import { clearLibraryKey, keptKeyOwnerStore } from "../lib/onboarding";
+import { clearLibraryKey } from "../lib/onboarding";
 import { publishSiblingStatus } from "@space/mobile-shell/sibling";
 
 const log = scopeLogger("auth");
@@ -29,19 +29,6 @@ export type AuthContextValue = {
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
-
-/**
- * A key kept from a refused session goes back only to its account (PRIV-KEY-03): another account signing in on this
- * phone or TV drops it before its session starts, and the owner is forgotten either way.
- */
-const dropKeptKeyOfAnotherAccount = async (signedInUserId: string) => {
-  const keyOwnerId = await keptKeyOwnerStore.read().catch(() => null);
-  if (!keepsKeyOnSignIn({ keyOwnerId, signedInUserId })) {
-    log.info("kept_key_dropped", { reason: "other_account" });
-    await clearLibraryKey().catch(() => undefined);
-  }
-  await keptKeyOwnerStore.forget().catch(() => undefined);
-};
 
 const loadStoredUser = async () => {
   const raw = await AsyncStorage.getItem(USER_KEY);
@@ -102,8 +89,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           setUserState(null);
           await AsyncStorage.removeItem(TOKEN_KEY);
           await AsyncStorage.removeItem(USER_KEY);
-          // The refused session keeps the key (`keyAfterSignedOut`), for its own account only.
-          if (storedUser?.id) await keptKeyOwnerStore.write(storedUser.id).catch(() => undefined);
         } else {
           // Offline / server down: keep the stored session so downloads stay playable.
           log.warn("load.offline_keep_session", { hasUser: Boolean(storedUser) });
@@ -141,7 +126,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     async (email: string, password: string, code?: string, device?: LoginDevice) => {
       log.info("login.start");
       const response = await apiLogin(email, password, code, undefined, device);
-      await dropKeptKeyOfAnotherAccount(response.user.id);
       sessionTokenRef.current = response.token;
       setToken(response.token);
       setUserState(response.user);
@@ -155,7 +139,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const setSession = useCallback(
     async (nextToken: string, nextUser: User) => {
       log.info("setSession.start");
-      await dropKeptKeyOfAnotherAccount(nextUser.id);
       sessionTokenRef.current = nextToken;
       setToken(nextToken);
       setUserState(nextUser);
@@ -172,8 +155,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     if (token) {
       await apiLogout(token).catch(() => undefined);
     }
-    // Whose key a refused session keeps; the saved user covers a session whose state has not caught up yet.
-    const ownerId = user?.id ?? (await loadStoredUser().catch(() => null))?.id ?? null;
     sessionTokenRef.current = null;
     setToken(null);
     setUserState(null);
@@ -181,14 +162,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     await AsyncStorage.removeItem(USER_KEY);
     await forgetKnownSessions().catch(() => undefined);
     await LibraryDb.clearLocalCache().catch(() => undefined);
-    if (key === "clear") {
-      await clearLibraryKey().catch(() => undefined);
-      await keptKeyOwnerStore.forget().catch(() => undefined);
-    } else if (ownerId) {
-      await keptKeyOwnerStore.write(ownerId).catch(() => undefined);
-    }
+    if (key === "clear") await clearLibraryKey().catch(() => undefined);
     clearPlayStartWarm();
-  }, [token, user]);
+  }, [token]);
 
   const refresh = useCallback(async () => {
     if (!token) return;
