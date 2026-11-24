@@ -1,6 +1,6 @@
 import * as sdk from "@space/sdk";
 import { ApiError, apiErrorFromResponse, createSpaceClient, unwrap, type ApiErrorPayload } from "@space/sdk";
-import { createUserStorageTunnelClient, type StorageTunnelPurpose, type TunnelUploadSource } from "./storageTunnel";
+import { createUserStorageTunnelClient, type StorageResealCopy, type StorageTunnelPurpose, type TunnelUploadSource } from "./storageTunnel";
 import type { StorageObjectCounting } from "./storageCounting";
 import { DEFAULT_SPACE_APP_ID, SPACE_APP_HEADER, type SpaceAppId } from "./appScope";
 import { clientIdentityHeaders } from "./appVersion";
@@ -1032,6 +1032,9 @@ export const putLibraryDbBinary = async (
 /** Another app's library, re-encrypted under the new key by the rotating device (PRIV-KEY-06). */
 export type RotationLibraryCopy = NonNullable<sdk.RotateLibraryKeyData["body"]["otherLibraries"]>[number];
 
+/** The media reseal run a rotation switches to (STOR-RESEAL-04); `switchNow` cancels other devices' uploads (STOR-RESEAL-10). */
+export type RotationMediaReseal = NonNullable<sdk.RotateLibraryKeyData["body"]["mediaReseal"]>;
+
 /**
  * PRIV-KEY-13: the rotating device's own library, as a snapshot under the new key (chunks uploaded, a manifest naming
  * them) with the storage format and op stream it is written in; the server refuses a whole blob and a downgrade.
@@ -1043,15 +1046,18 @@ export type RotationOwnLibrary = Pick<
 
 /**
  * PRIV-KEY-06: rotates the key. `otherLibraries` carries every other app's library re-encrypted under the new key; an
- * app with a library and no copy is refused (409 `library_not_reencrypted`), never emptied.
+ * app with a library and no copy is refused (409 `library_not_reencrypted`), never emptied. `mediaReseal` names the run
+ * whose copies replace the media sealed with the old key, in the same step.
  */
 export const rotateLibraryKey = (
   token: string,
   library: RotationOwnLibrary,
   keyProbe: string,
-  password: string,
+  /** Undefined when `mediaReseal` names a run this session re-authenticated when it opened it (ACCT-KEYCHG-03). */
+  password: string | undefined,
   twoFactorCode?: string,
-  otherLibraries: RotationLibraryCopy[] = []
+  otherLibraries: RotationLibraryCopy[] = [],
+  mediaReseal?: RotationMediaReseal
 ): Promise<{ version: number }> =>
   unwrap(
     sdk.rotateLibraryKey({
@@ -1068,6 +1074,7 @@ export const rotateLibraryKey = (
         password,
         twoFactorCode,
         otherLibraries,
+        ...(mediaReseal ? { mediaReseal } : {}),
       },
     })
   );
@@ -1124,6 +1131,8 @@ export const uploadStorageObjectViaTunnel = (
     placementId?: string;
     /** How the object counts toward the allowance (STOR-USE-02). */
     counting?: StorageObjectCounting;
+    /** A re-sealed copy (STOR-RESEAL-03): uploaded over a `reseal` session with its run and old key. */
+    reseal?: StorageResealCopy;
   }
 ) => getStorageTunnelClient().uploadObject(token, objectKey, payload, options);
 
@@ -1140,6 +1149,45 @@ export const downloadStorageObjectViaTunnel = (
     profileId?: string | null;
   }
 ) => getStorageTunnelClient().downloadObject(token, objectKey, options);
+
+/** A media reseal run's progress (STOR-RESEAL-02): totals, done, kept, and one page of the objects still waiting. */
+export type MediaResealProgress = sdk.GetMediaResealRunResponses[200];
+/** One page of a run's copies and kept objects (STOR-RESEAL-01/05). */
+export type MediaResealCopies = sdk.ListMediaResealCopiesResponses[200];
+
+/**
+ * Opens the account's media reseal run, or resumes the open one (STOR-RESEAL-02), after the password and code are
+ * checked; the run is bound to this session, so the switch that ends it asks nothing again (ACCT-KEYCHG-03).
+ * `restart` abandons a run left open by an earlier key change, whose key this device no longer holds.
+ */
+export const openMediaResealRun = (token: string, body: sdk.OpenMediaResealRunData["body"]) =>
+  unwrap(sdk.openMediaResealRun({ ...scoped(token), body }));
+
+export const getMediaResealRun = (token: string, runId: string, page: { after?: string | null; limit?: number } = {}): Promise<MediaResealProgress> =>
+  unwrap(
+    sdk.getMediaResealRun({
+      ...scoped(token),
+      path: { id: runId },
+      query: { ...(page.after ? { after: page.after } : {}), ...(page.limit ? { limit: page.limit } : {}) },
+    })
+  );
+
+export const listMediaResealCopies = (token: string, runId: string, page: { after?: string | null; limit?: number } = {}): Promise<MediaResealCopies> =>
+  unwrap(
+    sdk.listMediaResealCopies({
+      ...scoped(token),
+      path: { id: runId },
+      query: { ...(page.after ? { after: page.after } : {}), ...(page.limit ? { limit: page.limit } : {}) },
+    })
+  );
+
+/** Marks objects the old key cannot open as kept (STOR-RESEAL-05); at most 500 keys per call. */
+export const markMediaResealKept = (token: string, runId: string, keys: string[]): Promise<{ kept: number }> =>
+  unwrap(sdk.markMediaResealKept({ ...scoped(token), path: { id: runId }, body: { keys } }));
+
+/** Stops the key change: the run's copies are deleted, the library stays as it was (STOR-RESEAL-07). */
+export const abandonMediaResealRun = (token: string, runId: string): Promise<{ abandoned: boolean; purgeQueued: number }> =>
+  unwrap(sdk.abandonMediaResealRun({ ...scoped(token), path: { id: runId } }));
 
 /**
  * Per-media silo placement (#145): the silo serving `media/<placementId>/…`

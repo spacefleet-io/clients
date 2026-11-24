@@ -1,0 +1,23 @@
+{
+  "name": "@space/media-reseal",
+  "license": "GPL-3.0-only",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "bunx vitest run"
+  },
+  "dependencies": {
+    "@space/library-db-definition": "workspace:*",
+    "@space/media-crypto": "workspace:*",
+    "@space/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@space/content-core": "workspace:*",
+    "@space/parrot-library-db-definition": "workspace:*",
+    "vitest": "^5.1.0"
+  }
+}
