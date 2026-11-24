@@ -14,8 +14,10 @@
     "./libraryAccount": "./src/libraryAccount.ts",
     "./api": "./src/api.ts",
     "./snapshotTransport": "./src/snapshotTransport.ts",
+    "./resealSnapshot": "./src/resealSnapshot.ts",
     "./walCheckpointer": "./src/walCheckpointer.ts",
     "./bunSqlite": "./src/bunSqlite.ts",
+    "./nodeSqlite": "./src/nodeSqlite.ts",
     "./crypto": "./src/crypto.ts",
     "./castRefetch": "./src/castRefetch.ts",
     "./crewBackfill": "./src/crewBackfill.ts",
@@ -24,6 +26,7 @@
   "dependencies": {
     "@space/library-db-definition": "workspace:*",
     "@space/logger": "workspace:*",
+    "@space/media-reseal": "workspace:*",
     "@space/sdk": "workspace:*",
     "@space/shared": "workspace:*",
     "drizzle-orm": "^0.45.3"

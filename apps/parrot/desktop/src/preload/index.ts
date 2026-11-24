@@ -5,7 +5,7 @@ import { createErrorReportsBridge } from "@space/error-report/desktop";
 import { createUpdaterBridge } from "@space/desktop-shell/updater-preload";
 import { readStorageUnitBase } from "@space/desktop-shell/storage-units";
 import { SIBLING_IPC } from "@space/desktop-shell/sibling";
-import { PARROT_IPC, type ParrotBackgroundWork, type ParrotBridge, type ParrotCoverCutRequest, type ParrotExportJob, type ParrotImportJob, type ParrotImportStatus } from "../shared/ipc";
+import { PARROT_IPC, type KeyChangeState, type ParrotBackgroundWork, type ParrotBridge, type ParrotCoverCutRequest, type ParrotExportJob, type ParrotImportJob, type ParrotImportStatus } from "../shared/ipc";
 import type { ParrotLibraryPatch } from "../shared/libraryPatch";
 import type { KeptStatus } from "@space/parrot-core";
 import type { StreamSlotGateState } from "@space/stream-slots";
@@ -56,6 +56,22 @@ const bridge: ParrotBridge = {
   setLibraryKey: (keyBase64) => ipcRenderer.invoke(PARROT_IPC.setLibraryKey, keyBase64),
   createLibraryKey: () => ipcRenderer.invoke(PARROT_IPC.createLibraryKey),
   eraseLibrary: (password, twoFactorCode) => ipcRenderer.invoke(PARROT_IPC.eraseLibrary, password, twoFactorCode),
+  keyChange: {
+    readiness: () => ipcRenderer.invoke(PARROT_IPC.keyChangeReadiness),
+    open: () => ipcRenderer.invoke(PARROT_IPC.keyChangeOpen),
+    submit: (password, twoFactorCode) => ipcRenderer.invoke(PARROT_IPC.keyChangeSubmit, password, twoFactorCode),
+    switchNow: () => ipcRenderer.invoke(PARROT_IPC.keyChangeSwitchNow),
+    poll: () => ipcRenderer.invoke(PARROT_IPC.keyChangePoll),
+    stop: () => ipcRenderer.invoke(PARROT_IPC.keyChangeStop),
+    pause: () => ipcRenderer.invoke(PARROT_IPC.keyChangePause),
+    unreadableFiles: () => ipcRenderer.invoke(PARROT_IPC.keyChangeUnreadableFiles),
+    deleteUnreadableFiles: (files) => ipcRenderer.invoke(PARROT_IPC.keyChangeDeleteUnreadableFiles, files),
+    onState: (listener) => {
+      const handler = (_event: Electron.IpcRendererEvent, state: KeyChangeState) => listener(state);
+      ipcRenderer.on(PARROT_IPC.keyChangeStateEvent, handler);
+      return () => ipcRenderer.off(PARROT_IPC.keyChangeStateEvent, handler);
+    },
+  },
   pickFolders: () => ipcRenderer.invoke(PARROT_IPC.pickFolders),
   pickFiles: () => ipcRenderer.invoke(PARROT_IPC.pickFiles),
   getPathForFile: (file) => webUtils.getPathForFile(file),

@@ -116,13 +116,24 @@ export class LibraryDb {
   /**
    * PRIV-KEY-06: every other app's library (Parrot's) opened with the old key and re-encrypted under the new one, for
    * the rotation's `otherLibraries`. Throws `ROTATION_REENCRYPT_<UNREADABLE|NOT_SNAPSHOTTED|FAILED>`: nothing rotated.
+   * STOR-RESEAL-01: with `resealCopies` (old media key → copy) its media references name the re-sealed copies.
    */
-  static async reencryptForRotation(token: string, oldKeyBase64: string, newKeyBase64: string) {
+  static async reencryptForRotation(
+    token: string,
+    oldKeyBase64: string,
+    newKeyBase64: string,
+    resealCopies?: ReadonlyMap<string, string>
+  ) {
     const bridge = getBridge();
     if (!bridge.reencryptForRotation) {
       throw new Error("ROTATION_REENCRYPT_FAILED");
     }
-    const result = await bridge.reencryptForRotation({ token, oldKeyBase64, newKeyBase64 });
+    const result = await bridge.reencryptForRotation({
+      token,
+      oldKeyBase64,
+      newKeyBase64,
+      resealCopies: resealCopies && resealCopies.size > 0 ? [...resealCopies] : undefined,
+    });
     if (!result.ok) throw new Error(`ROTATION_REENCRYPT_${result.error.toUpperCase()}`);
     return result.copies;
   }
@@ -185,9 +196,12 @@ export class LibraryDb {
     return call<DatasetStatus>(this.handle, "getDatasetStatus");
   }
 
-  /** PRIV-KEY-13: this library as a snapshot under the new key (chunks uploaded), declaring its formats. */
-  sealForRotation(newKeyBase64: string) {
-    return call<RotationOwnLibrary>(this.handle, "sealForRotation", [newKeyBase64]);
+  /**
+   * PRIV-KEY-13: this library as a snapshot under the new key (chunks uploaded), declaring its formats.
+   * STOR-RESEAL-01: with its media references renamed to the re-sealed copies (old media key → copy).
+   */
+  sealForRotation(newKeyBase64: string, resealCopies: ReadonlyMap<string, string> = new Map()) {
+    return call<RotationOwnLibrary>(this.handle, "sealForRotation", [newKeyBase64, [...resealCopies]]);
   }
 
   setSyncEnabled(enabled: boolean) {

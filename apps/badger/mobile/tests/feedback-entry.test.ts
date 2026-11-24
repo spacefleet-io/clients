@@ -191,19 +191,19 @@ describe("@req ACCT-KEYCHG-04[badger-mobile] Badger phone Settings offer a key c
     return { tree, rows };
   };
 
-  it.each([
-    ["the server's answer is not known (loading, offline)", null],
-    ["the account stores media", { needsMediaReseal: true }],
-  ])("offers no way to change the media library key when %s, even with Advanced open", (_label, readiness) => {
-    const { rows } = advancedRows(readiness);
-    expect(rows).not.toContain("Reset encryption key");
+  it("offers no way to change the media library key while the server's answer is not known, even with Advanced open", () => {
+    const { rows } = advancedRows(null);
+    expect(rows).not.toContain("Replace media library key");
     expect(ctl.navigate).not.toHaveBeenCalledWith("ResetKey");
   });
 
-  it("offers Reset encryption key to an account without media", () => {
-    const { tree, rows } = advancedRows({ needsMediaReseal: false });
-    expect(rows).toContain("Reset encryption key");
-    const row = tree.root.find((n) => String(n.type) === "LinkRow" && n.props.title === "Reset encryption key");
+  it.each([
+    ["without media", { needsMediaReseal: false }],
+    ["with media (the phone re-seals it, STOR-RESEAL-01)", { needsMediaReseal: true }],
+  ])("offers Replace media library key to an account %s", (_label, readiness) => {
+    const { tree, rows } = advancedRows(readiness);
+    expect(rows).toContain("Replace media library key");
+    const row = tree.root.find((n) => String(n.type) === "LinkRow" && n.props.title === "Replace media library key");
     act(() => row.props.onPress());
     expect(ctl.navigate).toHaveBeenCalledWith("ResetKey");
   });

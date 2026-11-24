@@ -914,32 +914,9 @@
         "errorMissing": "Auf diesem Gerät ist kein Mediathek-Schlüssel gespeichert."
       },
       "rotate": {
-        "title": "Mediathek-Schlüssel ersetzen",
-        "subtitle": "Erstelle einen neuen Schlüssel und sperre die Daten deiner Mediathek neu.",
-        "button": "Neuen Schlüssel erstellen",
-        "dialogTitle": "Deinen Mediathek-Schlüssel ersetzen",
-        "keyLabel": "Neuer Mediathek-Schlüssel",
-        "keyHint": "Bewahre diesen Schlüssel sicher auf, bevor du fortfährst.",
         "copyButton": "Schlüssel kopieren",
         "copySuccess": "Mediathek-Schlüssel kopiert.",
-        "copyFail": "Schlüssel konnte nicht kopiert werden.",
-        "confirmLabel": "Mir ist klar, dass dadurch andere Sitzungen beendet werden",
-        "passwordLabel": "Kontopasswort",
-        "codeLabel": "Bestätigungscode",
-        "codeHintEmail": "Gib den Code ein, den wir dir per E-Mail geschickt haben.",
-        "codeHintTotp": "Gib den Code aus deiner Authentifizierungs-App ein.",
-        "cancel": "Abbrechen",
-        "codeSent": "Wir haben dir einen Bestätigungscode geschickt. Sieh in deinen E-Mails oder deiner Authentifizierungs-App nach.",
-        "errorInvalidPassword": "Falsches Passwort.",
-        "errorTwoFactorInvalid": "Der Bestätigungscode ist ungültig.",
-        "submit": "Schlüssel ersetzen",
-        "working": "Wird ersetzt …",
-        "errorGeneric": "Der Schlüssel konnte nicht ersetzt werden. Versuch es noch mal.",
-        "errorNotReencrypted": "Deine Parrot-Mediathek konnte von hier aus nicht mit dem neuen Schlüssel neu gesperrt werden, also wurde nichts geändert. Ersetze den Schlüssel in den Einstellungen eines Computers, der deinen aktuellen Schlüssel hat.",
-        "errorUnreadable": "Dein aktueller Schlüssel öffnet deine Parrot-Mediathek nicht, also wurde nichts geändert.",
-        "errorNotSnapshotted": "Deine Parrot-Mediathek hat noch nicht gespeicherte Änderungen. Öffne Parrot, lass es fertig synchronisieren und versuch es dann noch mal. Es wurde nichts geändert.",
-        "errorReencryptFailed": "Deine Parrot-Mediathek konnte nicht mit dem neuen Schlüssel neu gesperrt werden. Es wurde nichts geändert. Versuch es noch mal.",
-        "errorChanged": "Deine Mediathek hat sich geändert, während der Schlüssel ersetzt wurde. Es wurde nichts geändert. Versuch es noch mal."
+        "copyFail": "Schlüssel konnte nicht kopiert werden."
       },
       "reset": {
         "title": "Mediathek-Daten löschen",

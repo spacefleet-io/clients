@@ -1,6 +1,4 @@
-import { ApiError, rotateLibraryKey, type RotationLibraryCopy, type RotationOwnLibrary } from "@/api";
-
-type Translate = (key: string) => string;
+import { rotateLibraryKey, type RotationLibraryCopy, type RotationMediaReseal, type RotationOwnLibrary } from "@/api";
 
 /**
  * PRIV-KEY-06: rotates the key with every other app's library re-encrypted under the new key, in one request. A library
@@ -12,28 +10,13 @@ export const rotateWithOtherLibraries = async (input: {
   token: string;
   library: RotationOwnLibrary;
   keyProbe: string;
-  password: string;
+  /** Omitted when `mediaReseal` names the run this session opened with the password (ACCT-KEYCHG-03). */
+  password?: string;
   twoFactorCode?: string;
   reencrypt: () => Promise<RotationLibraryCopy[]>;
+  /** STOR-RESEAL-04: the re-seal run whose copies replace the media, switched in the same step. */
+  mediaReseal?: RotationMediaReseal;
 }) => {
   const copies = await input.reencrypt();
-  return rotateLibraryKey(input.token, input.library, input.keyProbe, input.password, input.twoFactorCode, copies);
-};
-
-/**
- * The words for a rotation that was refused with nothing changed, or null for any other error. The media refusal
- * (409 `rotation_needs_media_reseal`) has no words: no entry is offered while the server would answer it
- * (ACCT-KEYCHG-04), so reaching it is a fault and gets the generic error.
- */
-export const rotationRefusalText = (t: Translate, err: unknown): string | null => {
-  if (err instanceof ApiError) {
-    if (err.payload.error === "library_not_reencrypted") return t("settings.recovery.rotate.errorNotReencrypted");
-    if (err.payload.error === "version_conflict") return t("settings.recovery.rotate.errorChanged");
-    return null;
-  }
-  if (!(err instanceof Error)) return null;
-  if (err.message === "ROTATION_REENCRYPT_UNREADABLE") return t("settings.recovery.rotate.errorUnreadable");
-  if (err.message === "ROTATION_REENCRYPT_NOT_SNAPSHOTTED") return t("settings.recovery.rotate.errorNotSnapshotted");
-  if (err.message === "ROTATION_REENCRYPT_FAILED") return t("settings.recovery.rotate.errorReencryptFailed");
-  return null;
+  return rotateLibraryKey(input.token, input.library, input.keyProbe, input.password, input.twoFactorCode, copies, input.mediaReseal);
 };

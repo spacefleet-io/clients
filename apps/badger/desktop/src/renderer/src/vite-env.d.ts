@@ -202,8 +202,16 @@ interface Window {
         token: string;
         newKeyBase64: string;
       }) => Promise<import("@space/shared/api").RotationOwnLibrary | null>;
-      /** PRIV-KEY-06: every other app's library re-encrypted under the new key, or why one could not be. */
-      reencryptForRotation?: (payload: { token: string; oldKeyBase64: string; newKeyBase64: string }) => Promise<
+      /**
+       * PRIV-KEY-06: every other app's library re-encrypted under the new key, or why one could not be;
+       * STOR-RESEAL-01: with `resealCopies` (old media key → copy) its media references name the copies.
+       */
+      reencryptForRotation?: (payload: {
+        token: string;
+        oldKeyBase64: string;
+        newKeyBase64: string;
+        resealCopies?: Array<[string, string]>;
+      }) => Promise<
         | { ok: true; copies: import("@space/shared/api").RotationLibraryCopy[] }
         | { ok: false; error: "unreadable" | "not_snapshotted" | "failed"; message: string }
       >;

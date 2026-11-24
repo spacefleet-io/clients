@@ -20,6 +20,8 @@
     "./retryAfter": "./src/retryAfter.ts",
     "./signInError": "./src/signInError.ts",
     "./keyChange": "./src/keyChange.ts",
+    "./keyChangeText": "./src/keyChangeText.ts",
+    "./keyChangeFailure": "./src/keyChangeFailure.ts",
     "./useKeyRotationReadiness": "./src/useKeyRotationReadiness.ts",
     "./providerSignIn": "./src/providerSignIn.ts",
     "./signUp": "./src/signUp.ts",

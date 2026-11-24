@@ -4,7 +4,9 @@ import { Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth";
 import ReauthPasswordField from "@/components/ReauthPasswordField";
 import { ApiError, getLibraryMetaForKeyStep, resetLibrary } from "@/api";
-import { rotateWithOtherLibraries, rotationRefusalText } from "@/lib/rotationRefusal";
+import { rotateWithOtherLibraries } from "@/lib/rotationRefusal";
+import { keyChangeRefusalText } from "@space/shared/keyChangeFailure";
+import { SPACE_APP_NAMES } from "@space/shared/appScope";
 import {
   acknowledgeLibraryKey,
   clearLibraryKey,
@@ -531,7 +533,7 @@ export default function OnboardingKey() {
         setRecoverError(actionableMessage);
         return;
       }
-      const refusal = rotationRefusalText(t, err);
+      const refusal = keyChangeRefusalText(pairLanguage, err, SPACE_APP_NAMES.parrot);
       if (refusal) {
         setRecoverError(refusal);
       } else if (err instanceof ApiError) {

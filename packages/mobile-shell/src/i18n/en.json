@@ -681,10 +681,6 @@
       "saveHost": "Save host",
       "hostSaved": "Saved",
       "libraryKey": "Media library key",
-      "resetKey": {
-        "title": "Reset encryption key",
-        "description": "Rotate the key that protects your media library."
-      },
       "animatedBackground": {
         "title": "Animated background",
         "description": "Shooting stars cross the starry sky behind the app every few seconds. Automatic turns them off on phones with little memory.",
@@ -1024,30 +1020,6 @@
       "noLibrary": "No media library was found for this account.",
       "unavailable": "Your media library can't be reached right now. Please try again in a moment.",
       "validate": "Could not validate your key."
-    }
-  },
-  "resetKey": {
-    "title": "Rotate media library key",
-    "subtitle": "Generate a new key and re-encrypt your media library.",
-    "newKey": "New key",
-    "generateAnother": "Generate another key",
-    "password": "Account password",
-    "code": "Two-factor code (optional)",
-    "confirmLabel": "I have saved the new key.",
-    "confirm": "Confirm",
-    "confirmed": "Confirmed",
-    "rotate": "Rotate key",
-    "rotating": "Rotating…",
-    "success": "Key rotated. Reloading media library…",
-    "errors": {
-      "confirmRequired": "Confirm that you saved the new key.",
-      "passwordRequired": "Password required.",
-      "notReady": "Media library is not ready.",
-      "rotate": "Unable to rotate key. Check your password/code.",
-      "notReencrypted": "Another app's media library could not be moved to the new key. Nothing changed. Rotate from a device that holds the current key.",
-      "unreadable": "This phone's key can't open another app's media library. Nothing changed. Rotate from a device that holds the current key.",
-      "notSnapshotted": "Another app's media library is still saving. Nothing changed. Open that app, let it sync, then try again.",
-      "changed": "A media library changed while rotating. Nothing changed. Try again."
     }
   },
   "libraryFormat": {
