@@ -1,7 +1,7 @@
 {
   "keyStepWords": {
     "collection": "biblioteca",
-    "collectionKey": "clave de la biblioteca"
+    "collectionKey": "clave de la mediateca"
   },
   "parrot": {
     "artist": {
@@ -24,17 +24,15 @@
       "nowPlaying": "Sonando ahora"
     },
     "login": {
-      "sameAsBadger": "Usa el mismo correo electrónico y la misma contraseña que en Badger.",
-      "codeTotp": "Código de tu app de autenticación",
-      "codeEmail": "Código que te enviamos por correo"
+      "sameAsBadger": "Usa el mismo correo electrónico y la misma contraseña que en Badger."
     },
     "key": {
-      "title": "Introduce tu clave de biblioteca",
-      "showTitle": "Tu clave de biblioteca",
+      "title": "Introduce tu clave de la mediateca",
+      "showTitle": "Tu clave de la mediateca",
       "body": "Escribe las 12 palabras que guardaste al crear tu biblioteca.",
-      "field": "Clave de biblioteca",
+      "field": "Clave de la mediateca",
       "continue": "Continuar",
-      "saved": "Tu clave de biblioteca está guardada en este teléfono.",
+      "saved": "Tu clave de la mediateca está guardada en este teléfono.",
       "errors": {
         "unavailable": "Ahora mismo no se puede comprobar la clave. Revisa tu conexión. Vuelve a intentarlo."
       }
@@ -87,8 +85,8 @@
       "signOut": "Cerrar sesión",
       "language": "Idioma",
       "signOutKey": {
-        "title": "¿Guardaste tu clave de biblioteca?",
-        "body": "Al cerrar sesión, tu clave de biblioteca se borra de este teléfono. Para volver a iniciar sesión tendrás que escribirla, porque iniciar sesión con un código QR solo funciona mientras otro de tus dispositivos todavía tenga la clave. Sin la clave, tu biblioteca no se puede abrir.",
+        "title": "¿Guardaste tu clave de la mediateca?",
+        "body": "Al cerrar sesión, tu clave de la mediateca se borra de este teléfono. Para volver a iniciar sesión tendrás que escribirla, porque iniciar sesión con un código QR solo funciona mientras otro de tus dispositivos todavía tenga la clave. Sin la clave, tu biblioteca no se puede abrir.",
         "cancel": "Cancelar",
         "confirm": "Ya la guardé, cerrar sesión"
       },

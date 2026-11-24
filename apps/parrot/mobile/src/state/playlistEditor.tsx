@@ -12,7 +12,7 @@ import { ArrowDownToLine, CircleCheck, Disc3, FileAudio, Heart, HeartOff, ListEn
 import crypto from "react-native-quick-crypto";
 import { useTranslation } from "@space/mobile-shell/i18n";
 import { KeyboardAvoidingForm } from "@space/mobile-shell/keyboard";
-import { MobileBottomSheet, MobileSheetScrollView } from "@space/mobile-shell/bottom-sheet";
+import { MobileBottomSheet, MobileSheetScrollView, useMobileSheetClose } from "@space/mobile-shell/bottom-sheet";
 import { MobileNoticeBanner } from "@space/mobile-shell/components";
 import { MobileRenderBoundary } from "@space/mobile-shell/render-boundary";
 import { formatLocalizedStorage } from "@space/shared/format";
@@ -318,24 +318,18 @@ export const PlaylistEditorProvider = ({ children }: { children: React.ReactNode
                 if (kept.entry("song", dialog.song.id) || !kept.holdsSong(dialog.song.id)) toggleKeep("song", dialog.song.id);
               }}
             />
-            <SheetRow
+            <ClosingSheetRow
               testID="song-edit"
               icon={Pencil}
               label={t("shell.manage.edit")}
-              onPress={() => {
-                close();
-                manage.edit({ kind: "track", id: dialog.song.id, title: dialog.song.title });
-              }}
+              then={() => manage.edit({ kind: "track", id: dialog.song.id, title: dialog.song.title })}
             />
-            <SheetRow
+            <ClosingSheetRow
               testID="song-delete"
               icon={Trash2}
               destructive
               label={t("shell.manage.delete")}
-              onPress={() => {
-                close();
-                manage.remove({ kind: "track", id: dialog.song.id }, dialog.song.title);
-              }}
+              then={() => manage.remove({ kind: "track", id: dialog.song.id }, dialog.song.title)}
             />
           </>
         ) : dialog?.kind === "picker" ? (
@@ -344,7 +338,7 @@ export const PlaylistEditorProvider = ({ children }: { children: React.ReactNode
               {t("shell.playlists.addSongTo", { title: dialog.song.title })}
             </Text>
             <MobileSheetScrollView style={{ maxHeight: 420 }}>
-              <SheetRow testID="picker-new" icon={Plus} label={t("shell.playlists.new")} onPress={() => setDialog({ kind: "new", song: dialog.song })} />
+              <ClosingSheetRow testID="picker-new" icon={Plus} label={t("shell.playlists.new")} then={() => setDialog({ kind: "new", song: dialog.song })} />
               {playlists.map((playlist) => (
                 <SheetRow
                   key={playlist.id}
@@ -366,16 +360,13 @@ export const PlaylistEditorProvider = ({ children }: { children: React.ReactNode
               {dialog.title}
             </Text>
             {dialog.actions.map((action) => (
-              <SheetRow
+              <ClosingSheetRow
                 key={action.id}
                 testID={action.testID}
                 icon={action.icon}
                 label={action.label}
                 destructive={action.destructive}
-                onPress={() => {
-                  close();
-                  action.onSelect();
-                }}
+                then={action.onSelect}
               />
             ))}
           </>
@@ -434,21 +425,16 @@ const Sheet = ({ visible, onClose, testID, children }: { visible: boolean; onClo
   );
 };
 
-const SheetRow = ({
-  icon: Icon,
-  label,
-  detail,
-  onPress,
-  testID,
-  destructive = false,
-}: {
+type SheetRowProps = {
   icon: React.ComponentType<{ size?: number; color?: string }>;
   label: string;
   detail?: string;
   onPress: () => void;
   testID: string;
   destructive?: boolean;
-}) => (
+};
+
+const SheetRow = ({ icon: Icon, label, detail, onPress, testID, destructive = false }: SheetRowProps) => (
   <Pressable testID={testID} accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={({ pressed }) => [styles.sheetRow, pressed && { opacity: 0.6 }]}>
     <Icon size={22} color={destructive ? colors.danger : colors.accent} />
     <View style={{ flex: 1 }}>
@@ -459,6 +445,16 @@ const SheetRow = ({
     </View>
   </Pressable>
 );
+
+/**
+ * A row that slides its sheet away and runs `then` once the sheet is out of sight (#3350 S47). On iOS a dialog, an
+ * alert or another sheet asked for while the sheet's Modal is still leaving never shows, and the Modals after it stop
+ * opening too: Edit details, Rename, New playlist and Delete all open one.
+ */
+const ClosingSheetRow = ({ then, ...row }: Omit<SheetRowProps, "onPress"> & { then: () => void }) => {
+  const closeSheet = useMobileSheetClose();
+  return <SheetRow {...row} onPress={() => closeSheet(then)} />;
+};
 
 /** The song sheet's keep row: keep, remove, or (a song a kept album or playlist holds) where it is. */
 const SongKeepRow = ({ kept, trackId, onPress }: { kept: KeptView; trackId: string; onPress: () => void }) => {

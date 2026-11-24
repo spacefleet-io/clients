@@ -62,11 +62,14 @@ vi.mock("react-native", () => {
   };
 });
 vi.mock("react-native-svg", () => ({ default: "Svg", Circle: "Circle", Defs: "Defs", LinearGradient: "LinearGradient", Rect: "Rect", Stop: "Stop" }));
+// The shared pulse stands in as a tag: its real module pulls the shell theme past this test's tiny React Native mock.
+vi.mock("@space/mobile-shell/components", () => ({ MobileSkeletonPulse: "MobileSkeletonPulse" }));
 
 import { COVER_FADE_MS, FadeInCover, ParrotArt } from "../src/screens/art";
-import { Shimmer } from "../src/screens/shimmer";
 import { albumCoversWaiting } from "../src/lib/picturesWaiting";
 import { setPhoneCoverSource } from "../src/lib/covers";
+
+const SHIMMER = "MobileSkeletonPulse";
 
 type Element = { type: unknown; props: Record<string, unknown> & { children?: unknown } };
 const all = (node: unknown, match: (el: Element) => boolean, out: Element[] = []): Element[] => {
@@ -79,8 +82,8 @@ const all = (node: unknown, match: (el: Element) => boolean, out: Element[] = []
   return out;
 };
 const layers = (tree: unknown) =>
-  all(tree, (el) => ["Svg", "Text", "Image"].includes(el.type as string) || el.type === FadeInCover || el.type === Shimmer).map((el) =>
-    el.type === FadeInCover ? "cover" : el.type === Shimmer ? "shimmer" : (el.type as string)
+  all(tree, (el) => ["Svg", "Text", "Image"].includes(el.type as string) || el.type === FadeInCover || el.type === SHIMMER).map((el) =>
+    el.type === FadeInCover ? "cover" : el.type === SHIMMER ? "shimmer" : (el.type as string)
   );
 
 /** A cover cache whose downloads the test answers by hand. */

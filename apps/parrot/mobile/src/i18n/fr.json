@@ -1,7 +1,7 @@
 {
   "keyStepWords": {
     "collection": "bibliothèque",
-    "collectionKey": "clé de bibliothèque"
+    "collectionKey": "clé de médiathèque"
   },
   "parrot": {
     "artist": {
@@ -24,17 +24,15 @@
       "nowPlaying": "En cours de lecture"
     },
     "login": {
-      "sameAsBadger": "Utilisez le même e-mail et le même mot de passe que pour Badger.",
-      "codeTotp": "Code de votre app d'authentification",
-      "codeEmail": "Code reçu par e-mail"
+      "sameAsBadger": "Utilisez le même e-mail et le même mot de passe que pour Badger."
     },
     "key": {
-      "title": "Saisissez votre clé de bibliothèque",
-      "showTitle": "Votre clé de bibliothèque",
+      "title": "Saisissez votre clé de médiathèque",
+      "showTitle": "Votre clé de médiathèque",
       "body": "Saisissez les 12 mots que vous avez enregistrés en créant votre bibliothèque.",
-      "field": "Clé de bibliothèque",
+      "field": "Clé de médiathèque",
       "continue": "Continuer",
-      "saved": "Votre clé de bibliothèque est enregistrée sur ce téléphone.",
+      "saved": "Votre clé de médiathèque est enregistrée sur ce téléphone.",
       "errors": {
         "unavailable": "Impossible de vérifier la clé pour le moment. Vérifiez votre connexion et réessayez."
       }
@@ -87,8 +85,8 @@
       "signOut": "Se déconnecter",
       "language": "Langue",
       "signOutKey": {
-        "title": "Avez-vous enregistré votre clé de bibliothèque ?",
-        "body": "Se déconnecter retire votre clé de bibliothèque de ce téléphone. Pour vous reconnecter, il faudra la saisir : la connexion par QR code ne marche que si un autre de vos appareils a encore la clé. Sans elle, impossible d'ouvrir votre bibliothèque.",
+        "title": "Avez-vous enregistré votre clé de médiathèque ?",
+        "body": "Se déconnecter retire votre clé de médiathèque de ce téléphone. Pour vous reconnecter, il faudra la saisir : la connexion par QR code ne marche que si un autre de vos appareils a encore la clé. Sans elle, impossible d'ouvrir votre bibliothèque.",
         "cancel": "Annuler",
         "confirm": "Je l'ai enregistrée, me déconnecter"
       },

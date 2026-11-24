@@ -25,6 +25,8 @@ const makeBridge = (initial: UpdaterState = INITIAL_UPDATER_STATE) => {
     downloadUpdate: vi.fn(async (): Promise<{ ok: boolean; message?: string }> => ({ ok: true })),
     installAndRestart: vi.fn(async () => ({ ok: true })),
     setAutoUpdate: vi.fn(async (_enabled: boolean) => ({ ok: true })),
+    remindLater: vi.fn(async () => ({ ok: true })),
+    ignoreVersion: vi.fn(async () => ({ ok: true })),
     getState: vi.fn(async () => initial),
     onEvent: vi.fn((listener: (event: UpdaterEvent) => void) => {
       listeners.add(listener);

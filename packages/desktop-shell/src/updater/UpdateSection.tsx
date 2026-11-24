@@ -19,7 +19,7 @@ import { Button, Switch } from "@space/ui";
 import type { UpdateChannel, UpdaterPhase } from "./types";
 import type { DesktopUpdaterControls } from "./useUpdater";
 import { systemFailureKey, updateErrorKey, updateSectionText, type UpdateSectionStringKey } from "./strings";
-import { ManualUpdateCommand } from "./SystemUpdatePrompt";
+import { ManualUpdateCommand } from "./DesktopUpdatePrompt";
 
 export type UpdateSectionAction = "check" | "download" | "restart" | "install" | "restartApp";
 
@@ -183,7 +183,7 @@ export function DesktopUpdateSection({ controls, language, appName, autoUpdate }
           <StatusIcon className={`mt-0.5 size-4 shrink-0 ${busy ? "animate-spin" : ""}`} aria-hidden />
           <span className="min-w-0 break-words">{status}</span>
         </p>
-        {manual ? <ManualUpdateCommand command={state.manualCommand ?? ""} text={(key) => text(key)} /> : null}
+        {manual ? <ManualUpdateCommand command={state.manualCommand ?? ""} text={(key) => text(key)} hint={state.channel !== "flatpak"} /> : null}
         {phase === "downloading" ? (
           <div
             role="progressbar"

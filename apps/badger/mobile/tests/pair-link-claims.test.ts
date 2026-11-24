@@ -25,9 +25,9 @@ describe("Badger claims only its own pairing links", () => {
     expect(legacy).toHaveLength(1);
     expect(legacy[0]).toContain('android:scheme="spacebadger" android:host="pair"');
     expect(manifest).toContain("below the minimum supported version (REL-CD-08)");
-    const navigator = read("src/navigation/AppNavigator.tsx");
-    expect(navigator).toContain("parsePairLink(url)");
-    expect(navigator).toContain("parseLegacyPairLink(url)");
+    // The phones' shared intake (quality audit #3350 S21) reads the old link only when the app asks for it: Badger does.
+    expect(read("src/navigation/AppNavigator.tsx")).toContain("createPendingPairLink({ legacy: true })");
+    expect(read("../../../packages/mobile-shell/src/pairing-approve/pairLink.ts")).toContain("legacy ? parseLegacyPairLink(url) : null");
   });
 
   // @req ACCT-PAIR-06

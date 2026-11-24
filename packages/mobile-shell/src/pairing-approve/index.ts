@@ -17,3 +17,4 @@ export {
   type PairingErrorKind,
   type PairingRequestInfo,
 } from "./pairingFlow";
+export { createPendingPairLink, type PendingPairLink } from "./pairLink";

@@ -18,12 +18,34 @@ export const UPDATER_CHANNELS = {
   setAuto: "sf-updater-set-auto",
   /** invoke: current `UpdaterState`, so a window opened late still shows a finished download. */
   state: "sf-updater-state",
+  /** invoke: "Remind me later" in the update modal: the offered version is not prompted again for a day (this run only). */
+  remindLater: "sf-updater-remind-later",
+  /** invoke: "Ignore" in the update modal: the offered version is never prompted nor installed on quit (kept on disk). */
+  ignore: "sf-updater-ignore",
   /** main → renderer: one `UpdaterEvent`. */
   event: "sf-updater-event",
 } as const;
 
-/** The 6-hour cadence of the automatic background check (REL-UPD-01). */
-export const AUTO_UPDATE_INTERVAL_MS = 6 * 60 * 60 * 1000;
+/** The 4-hour cadence of the automatic background check (REL-UPD-01). */
+export const AUTO_UPDATE_INTERVAL_MS = 4 * 60 * 60 * 1000;
+
+/** REL-UPD-08: the first automatic check waits this long after launch, so it never competes with the app starting up. */
+export const AUTO_UPDATE_START_DELAY_MS = 30 * 1000;
+
+/**
+ * REL-UPD-08: the computer woke up from sleep: check again when the last automatic check is at least this old, so a
+ * laptop closed overnight learns of a release the moment it opens.
+ */
+export const AUTO_UPDATE_MIN_GAP_MS = 30 * 60 * 1000;
+
+/**
+ * REL-UPD-08: the window coming back to the front checks again only when the user was away from it (no window of the
+ * app focused) at least this long.
+ */
+export const AUTO_UPDATE_FOCUS_GAP_MS = 60 * 60 * 1000;
+
+/** REL-UPD-08: "Remind me later" hides the update modal for this version this long (or until the app restarts). */
+export const UPDATE_REMIND_LATER_MS = 24 * 60 * 60 * 1000;
 
 /** Lifecycle events forwarded to the renderer over `UPDATER_CHANNELS.event`. */
 export type UpdaterEvent =
@@ -44,7 +66,11 @@ export type UpdaterEvent =
   | { kind: "system-installed"; version: string }
   // The user closed the password dialog: back to "available", nothing changed.
   | { kind: "system-dismissed" }
-  | { kind: "system-failed"; failure: SystemUpdateFailure; detail: string | null; manualCommand: string | null };
+  | { kind: "system-failed"; failure: SystemUpdateFailure; detail: string | null; manualCommand: string | null }
+  // REL-UPD-08: "Remind me later" in the update modal: `version` is not prompted again before `until` (epoch ms).
+  | { kind: "prompt-snoozed"; version: string; until: number }
+  // REL-UPD-08: "Ignore" in the update modal: `version` is never prompted again nor installed on quit.
+  | { kind: "prompt-ignored"; version: string };
 
 /**
  * How this copy gets a new version (REL-UPD-07): `self` electron-updater (AppImage, Windows, macOS); `system` the
@@ -114,6 +140,10 @@ export type UpdaterState = {
   /** Channel `system`, phase `error`: why the update did not happen, and the package manager's last lines. */
   failure: SystemUpdateFailure | null;
   failureDetail: string | null;
+  /** REL-UPD-08: "Remind me later" holds the modal for this version until `until` (epoch ms); in memory, so a restart asks again. */
+  remindLater: { version: string; until: number } | null;
+  /** REL-UPD-08: the version the user chose to ignore (kept across restarts); a newer version prompts again. */
+  ignoredVersion: string | null;
 };
 
 export const INITIAL_UPDATER_STATE: UpdaterState = {
@@ -131,6 +161,8 @@ export const INITIAL_UPDATER_STATE: UpdaterState = {
   manualCommand: null,
   failure: null,
   failureDetail: null,
+  remindLater: null,
+  ignoredVersion: null,
 };
 
 /** Phases that wait for a restart: a background check or failure never replaces them. */
@@ -183,6 +215,10 @@ export const reduceUpdaterState = (prev: UpdaterState, event: UpdaterEvent): Upd
         failureDetail: event.detail,
         manualCommand: event.manualCommand ?? prev.manualCommand,
       };
+    case "prompt-snoozed":
+      return { ...prev, remindLater: { version: event.version, until: event.until } };
+    case "prompt-ignored":
+      return { ...prev, ignoredVersion: event.version };
   }
 };
 
@@ -194,4 +230,8 @@ export type UpdaterBridge = {
   setAutoUpdate: (enabled: boolean) => Promise<{ ok: boolean }>;
   getState: () => Promise<UpdaterState>;
   onEvent: (listener: (event: UpdaterEvent) => void) => () => void;
+  /** REL-UPD-08: "Remind me later" for the offered version (refused for a mandatory update). */
+  remindLater: () => Promise<{ ok: boolean }>;
+  /** REL-UPD-08: "Ignore" the offered version (refused for a mandatory update). */
+  ignoreVersion: () => Promise<{ ok: boolean }>;
 };

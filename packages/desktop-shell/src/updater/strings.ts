@@ -6,8 +6,9 @@ import type { SystemUpdateFailure } from "./types";
  * `required*`), shared by Badger and Parrot desktop in the five app languages. `{app}` is the product name,
  * `{version}`, `{time}` and `{percent}` are filled in by `updateSectionText`.
  * A failure never shows the updater's raw message (the main process logs it): `updateErrorKey` picks one of the plain
- * `error*` sentences. `system*`, `install*`, `later`, `close`, `installing`, `installed`, `restartApp`, `manualHint`,
- * `copy*` and `flatpakHint` are the package-manager update (REL-UPD-07): the update modal and the same steps in Settings.
+ * `error*` sentences. `system*`, `install*`, `close`, `installing`, `installed`, `restartApp`, `manualHint`, `copy*` and
+ * `flatpakHint` are the package-manager update (REL-UPD-07): the update modal and the same steps in Settings.
+ * `ready*`, `restartNow`, `remindLater`, `ignore` and `busyNote` are the update modal every channel shares (REL-UPD-08).
  */
 export type UpdateSectionStringKey =
   | "title"
@@ -33,7 +34,9 @@ export type UpdateSectionStringKey =
   | "requiredBody"
   | "systemPrompt"
   | "install"
-  | "later"
+  | "remindLater"
+  | "ignore"
+  | "busyNote"
   | "installing"
   | "installed"
   | "restartApp"
@@ -54,7 +57,11 @@ export type UpdateSectionStringKey =
   | "systemPromptTitle"
   | "systemFailedTitle"
   | "installNow"
-  | "close";
+  | "close"
+  | "readyTitle"
+  | "readyBody"
+  | "readyBodyCurrent"
+  | "restartNow";
 
 export const updateSectionStrings: Record<ClientUiLanguage, Record<UpdateSectionStringKey, string>> = {
   en: {
@@ -76,17 +83,19 @@ export const updateSectionStrings: Record<ClientUiLanguage, Record<UpdateSection
     download: "Download update",
     restart: "Restart to update",
     autoLabel: "Update automatically",
-    autoHint: "Checks when {app} starts and every 6 hours, downloads in the background and installs when {app} quits.",
+    autoHint: "Checks when {app} starts, every 4 hours and when your computer wakes up, downloads in the background and installs when {app} quits.",
     requiredTitle: "Update {app} to keep using it",
     requiredBody: "This version of {app} is too old to connect. Download the new version, then restart {app}.",
     systemPrompt: "{app} {version} is available. Install now?",
     install: "Install",
-    later: "Later",
+    remindLater: "Remind me later",
+    ignore: "Ignore",
+    busyNote: "{app} is still busy with something. Restarting now interrupts it.",
     installing: "Installing {app} {version}… Enter your password in the system window if it asks.",
     installed: "{app} {version} is installed. Restarting {app}…",
     restartApp: "Restart {app}",
-    autoHintSystem: "Checks when {app} starts and every 6 hours, then asks you before installing with your password.",
-    autoHintFlatpak: "Checks when {app} starts and every 6 hours, and tells you when Flatpak has a new version.",
+    autoHintSystem: "Checks when {app} starts, every 4 hours and when your computer wakes up, then asks you before installing with your password.",
+    autoHintFlatpak: "Checks when {app} starts, every 4 hours and when your computer wakes up, and tells you when Flatpak has a new version.",
     systemNotNewer: "A new version is on its way. We'll offer it when it's ready.",
     systemRepoMissing: "The SpaceFleet package repository isn't set up on this computer.",
     systemNeedsSystemUpdate: "{app} needs newer system packages first. Update your whole system, then try again.",
@@ -103,6 +112,10 @@ export const updateSectionStrings: Record<ClientUiLanguage, Record<UpdateSection
     systemFailedTitle: "The update wasn't installed",
     installNow: "Install now",
     close: "Close",
+    readyTitle: "Update ready",
+    readyBody: "{app} {version} has downloaded. It installs the next time you quit {app}.",
+    readyBodyCurrent: "A new version of {app} has downloaded. It installs the next time you quit {app}.",
+    restartNow: "Restart now",
   },
   fr: {
     title: "À propos et mises à jour",
@@ -124,17 +137,19 @@ export const updateSectionStrings: Record<ClientUiLanguage, Record<UpdateSection
     restart: "Redémarrer pour mettre à jour",
     autoLabel: "Mettre à jour automatiquement",
     autoHint:
-      "Recherche au démarrage de {app} puis toutes les 6 heures, télécharge en arrière-plan et installe à la fermeture de {app}.",
+      "Recherche au démarrage de {app}, toutes les 4 heures et au réveil de l'ordinateur, télécharge en arrière-plan et installe à la fermeture de {app}.",
     requiredTitle: "Mettez {app} à jour pour continuer",
     requiredBody: "Cette version de {app} est trop ancienne pour se connecter. Téléchargez la nouvelle version, puis redémarrez {app}.",
     systemPrompt: "{app} {version} est disponible. L'installer maintenant ?",
     install: "Installer",
-    later: "Plus tard",
+    remindLater: "Me le rappeler plus tard",
+    ignore: "Ignorer",
+    busyNote: "{app} a encore une tâche en cours. Redémarrer maintenant l'interrompt.",
     installing: "Installation de {app} {version}… Saisissez votre mot de passe dans la fenêtre du système s'il est demandé.",
     installed: "{app} {version} est installé. Redémarrage de {app}…",
     restartApp: "Redémarrer {app}",
-    autoHintSystem: "Recherche au démarrage de {app} puis toutes les 6 heures, et vous demande avant d'installer avec votre mot de passe.",
-    autoHintFlatpak: "Recherche au démarrage de {app} puis toutes les 6 heures, et vous prévient quand Flatpak a une nouvelle version.",
+    autoHintSystem: "Recherche au démarrage de {app}, toutes les 4 heures et au réveil de l'ordinateur, et vous demande avant d'installer avec votre mot de passe.",
+    autoHintFlatpak: "Recherche au démarrage de {app}, toutes les 4 heures et au réveil de l'ordinateur, et vous prévient quand Flatpak a une nouvelle version.",
     systemNotNewer: "Une nouvelle version arrive. Nous vous la proposerons dès qu'elle sera prête.",
     systemRepoMissing: "Le dépôt de paquets SpaceFleet n'est pas configuré sur cet ordinateur.",
     systemNeedsSystemUpdate:
@@ -152,6 +167,10 @@ export const updateSectionStrings: Record<ClientUiLanguage, Record<UpdateSection
     systemFailedTitle: "La mise à jour n'a pas été installée",
     installNow: "Installer maintenant",
     close: "Fermer",
+    readyTitle: "Mise à jour prête",
+    readyBody: "{app} {version} est téléchargé. Il s'installe la prochaine fois que vous quittez {app}.",
+    readyBodyCurrent: "Une nouvelle version de {app} est téléchargée. Elle s'installe la prochaine fois que vous quittez {app}.",
+    restartNow: "Redémarrer maintenant",
   },
   nl: {
     title: "Over en updates",
@@ -172,17 +191,19 @@ export const updateSectionStrings: Record<ClientUiLanguage, Record<UpdateSection
     download: "Update downloaden",
     restart: "Opnieuw starten om bij te werken",
     autoLabel: "Automatisch bijwerken",
-    autoHint: "Controleert bij het starten van {app} en elke 6 uur, downloadt op de achtergrond en installeert wanneer {app} sluit.",
+    autoHint: "Controleert bij het starten van {app}, elke 4 uur en wanneer je computer ontwaakt, downloadt op de achtergrond en installeert wanneer {app} sluit.",
     requiredTitle: "Werk {app} bij om verder te gaan",
     requiredBody: "Deze versie van {app} is te oud om verbinding te maken. Download de nieuwe versie en start {app} daarna opnieuw.",
     systemPrompt: "{app} {version} is beschikbaar. Nu installeren?",
     install: "Installeren",
-    later: "Later",
+    remindLater: "Herinner me later",
+    ignore: "Negeren",
+    busyNote: "{app} is nog met iets bezig. Nu herstarten onderbreekt dat.",
     installing: "{app} {version} wordt geïnstalleerd… Typ je wachtwoord in het systeemvenster als dat wordt gevraagd.",
     installed: "{app} {version} is geïnstalleerd. {app} wordt opnieuw gestart…",
     restartApp: "{app} opnieuw starten",
-    autoHintSystem: "Zoekt bij het starten van {app} en elke 6 uur, en vraagt het je voordat het met je wachtwoord installeert.",
-    autoHintFlatpak: "Zoekt bij het starten van {app} en elke 6 uur, en laat je weten wanneer Flatpak een nieuwe versie heeft.",
+    autoHintSystem: "Zoekt bij het starten van {app}, elke 4 uur en wanneer je computer ontwaakt, en vraagt het je voordat het met je wachtwoord installeert.",
+    autoHintFlatpak: "Zoekt bij het starten van {app}, elke 4 uur en wanneer je computer ontwaakt, en laat je weten wanneer Flatpak een nieuwe versie heeft.",
     systemNotNewer: "Er is een nieuwe versie onderweg. We bieden die aan zodra ze klaar is.",
     systemRepoMissing: "De SpaceFleet-pakketbron is niet ingesteld op deze computer.",
     systemNeedsSystemUpdate: "{app} heeft eerst nieuwere systeempakketten nodig. Werk je hele systeem bij en probeer het opnieuw.",
@@ -199,6 +220,10 @@ export const updateSectionStrings: Record<ClientUiLanguage, Record<UpdateSection
     systemFailedTitle: "De update is niet geïnstalleerd",
     installNow: "Nu installeren",
     close: "Sluiten",
+    readyTitle: "Update klaar",
+    readyBody: "{app} {version} is gedownload. De update wordt geïnstalleerd zodra je {app} afsluit.",
+    readyBodyCurrent: "Een nieuwe versie van {app} is gedownload. De update wordt geïnstalleerd zodra je {app} afsluit.",
+    restartNow: "Nu herstarten",
   },
   de: {
     title: "Info & Updates",
@@ -219,17 +244,19 @@ export const updateSectionStrings: Record<ClientUiLanguage, Record<UpdateSection
     download: "Update herunterladen",
     restart: "Neu starten und aktualisieren",
     autoLabel: "Automatisch aktualisieren",
-    autoHint: "Sucht beim Start von {app} und alle 6 Stunden, lädt im Hintergrund herunter und installiert beim Beenden von {app}.",
+    autoHint: "Sucht beim Start von {app}, alle 4 Stunden und wenn dein Computer aufwacht, lädt im Hintergrund herunter und installiert beim Beenden von {app}.",
     requiredTitle: "Aktualisiere {app}, um es weiter zu nutzen",
     requiredBody: "Diese {app}-Version ist zu alt, um sich zu verbinden. Lade die neue Version herunter und starte {app} dann neu.",
     systemPrompt: "{app} {version} ist verfügbar. Jetzt installieren?",
     install: "Installieren",
-    later: "Später",
+    remindLater: "Später erinnern",
+    ignore: "Ignorieren",
+    busyNote: "{app} ist noch mit etwas beschäftigt. Ein Neustart jetzt unterbricht das.",
     installing: "{app} {version} wird installiert… Gib dein Passwort im Systemfenster ein, falls es gefragt wird.",
     installed: "{app} {version} ist installiert. {app} wird neu gestartet…",
     restartApp: "{app} neu starten",
-    autoHintSystem: "Sucht beim Start von {app} und alle 6 Stunden und fragt dich, bevor es mit deinem Passwort installiert.",
-    autoHintFlatpak: "Sucht beim Start von {app} und alle 6 Stunden und sagt dir, wenn Flatpak eine neue Version hat.",
+    autoHintSystem: "Sucht beim Start von {app}, alle 4 Stunden und wenn dein Computer aufwacht, und fragt dich, bevor es mit deinem Passwort installiert.",
+    autoHintFlatpak: "Sucht beim Start von {app}, alle 4 Stunden und wenn dein Computer aufwacht, und sagt dir, wenn Flatpak eine neue Version hat.",
     systemNotNewer: "Eine neue Version ist unterwegs. Wir bieten sie dir an, sobald sie bereit ist.",
     systemRepoMissing: "Die SpaceFleet-Paketquelle ist auf diesem Computer nicht eingerichtet.",
     systemNeedsSystemUpdate: "{app} braucht zuerst neuere Systempakete. Aktualisiere das ganze System und versuch es dann noch einmal.",
@@ -246,6 +273,10 @@ export const updateSectionStrings: Record<ClientUiLanguage, Record<UpdateSection
     systemFailedTitle: "Das Update wurde nicht installiert",
     installNow: "Jetzt installieren",
     close: "Schließen",
+    readyTitle: "Update bereit",
+    readyBody: "{app} {version} wurde heruntergeladen. Es wird beim nächsten Beenden von {app} installiert.",
+    readyBodyCurrent: "Eine neue Version von {app} wurde heruntergeladen. Sie wird beim nächsten Beenden von {app} installiert.",
+    restartNow: "Jetzt neu starten",
   },
   es: {
     title: "Acerca de y actualizaciones",
@@ -266,17 +297,19 @@ export const updateSectionStrings: Record<ClientUiLanguage, Record<UpdateSection
     download: "Descargar actualización",
     restart: "Reiniciar para actualizar",
     autoLabel: "Actualizar automáticamente",
-    autoHint: "Busca al iniciar {app} y cada 6 horas, descarga en segundo plano e instala al cerrar {app}.",
+    autoHint: "Busca al iniciar {app}, cada 4 horas y cuando tu ordenador se reactiva, descarga en segundo plano e instala al cerrar {app}.",
     requiredTitle: "Actualiza {app} para seguir usándolo",
     requiredBody: "Esta versión de {app} es demasiado antigua para conectarse. Descarga la nueva versión y reinicia {app}.",
     systemPrompt: "{app} {version} está disponible. ¿Instalar ahora?",
     install: "Instalar",
-    later: "Más tarde",
+    remindLater: "Recordármelo más tarde",
+    ignore: "Ignorar",
+    busyNote: "{app} sigue ocupado con algo. Reiniciar ahora lo interrumpe.",
     installing: "Instalando {app} {version}… Escribe tu contraseña en la ventana del sistema si la pide.",
     installed: "{app} {version} está instalado. Reiniciando {app}…",
     restartApp: "Reiniciar {app}",
-    autoHintSystem: "Busca al iniciar {app} y cada 6 horas, y te pregunta antes de instalar con tu contraseña.",
-    autoHintFlatpak: "Busca al iniciar {app} y cada 6 horas, y te avisa cuando Flatpak tiene una versión nueva.",
+    autoHintSystem: "Busca al iniciar {app}, cada 4 horas y cuando tu ordenador se reactiva, y te pregunta antes de instalar con tu contraseña.",
+    autoHintFlatpak: "Busca al iniciar {app}, cada 4 horas y cuando tu ordenador se reactiva, y te avisa cuando Flatpak tiene una versión nueva.",
     systemNotNewer: "Hay una nueva versión en camino. Te la ofreceremos cuando esté lista.",
     systemRepoMissing: "El repositorio de paquetes de SpaceFleet no está configurado en este ordenador.",
     systemNeedsSystemUpdate: "{app} necesita antes paquetes del sistema más recientes. Actualiza todo el sistema y vuelve a intentarlo.",
@@ -293,6 +326,10 @@ export const updateSectionStrings: Record<ClientUiLanguage, Record<UpdateSection
     systemFailedTitle: "La actualización no se instaló",
     installNow: "Instalar ahora",
     close: "Cerrar",
+    readyTitle: "Actualización lista",
+    readyBody: "{app} {version} ya se descargó. Se instala la próxima vez que cierres {app}.",
+    readyBodyCurrent: "Una nueva versión de {app} ya se descargó. Se instala la próxima vez que cierres {app}.",
+    restartNow: "Reiniciar ahora",
   },
 };
 

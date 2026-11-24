@@ -100,19 +100,7 @@
       "body": "Show a code to approve in Badger or Parrot on a signed-in computer, phone or TV."
     },
     "provider": {
-      "signInWith": "Sign in with {{provider}}",
-      "signUpWith": "Sign up with {{provider}}",
-      "or": "or",
-      "continueInBrowser": "Finish signing in in your browser. You'll come back here once you're done.",
-      "errorStart": "Could not start the sign-in. Please try again.",
-      "errors": {
-        "email_unverified": "This account's email address is not confirmed. Confirm it with the provider, or sign in with your email and password.",
-        "email_domain_disallowed": "Accounts with this email address cannot be created.",
-        "account_deletion_pending": "This account is scheduled for deletion.",
-        "provider_failed": "The sign-in did not go through. Please try again.",
-        "cancelled": "The sign-in was cancelled.",
-        "invalid_code": "This sign-in has expired or was started elsewhere. Please try again."
-      }
+      "continueInBrowser": "Finish signing in in your browser. You'll come back here once you're done."
     },
     "pairing": {
       "title": "Sign in with another device"
@@ -681,10 +669,6 @@
       "saveHost": "Save host",
       "hostSaved": "Saved",
       "libraryKey": "Media library key",
-      "resetKey": {
-        "title": "Reset encryption key",
-        "description": "Rotate the key that protects your media library."
-      },
       "animatedBackground": {
         "title": "Animated background",
         "description": "Shooting stars cross the starry sky behind the app every few seconds. Automatic turns them off on phones with little memory.",
@@ -1024,30 +1008,6 @@
       "noLibrary": "No media library was found for this account.",
       "unavailable": "Your media library can't be reached right now. Please try again in a moment.",
       "validate": "Could not validate your key."
-    }
-  },
-  "resetKey": {
-    "title": "Rotate media library key",
-    "subtitle": "Generate a new key and re-encrypt your media library.",
-    "newKey": "New key",
-    "generateAnother": "Generate another key",
-    "password": "Account password",
-    "code": "Two-factor code (optional)",
-    "confirmLabel": "I have saved the new key.",
-    "confirm": "Confirm",
-    "confirmed": "Confirmed",
-    "rotate": "Rotate key",
-    "rotating": "Rotating…",
-    "success": "Key rotated. Reloading media library…",
-    "errors": {
-      "confirmRequired": "Confirm that you saved the new key.",
-      "passwordRequired": "Password required.",
-      "notReady": "Media library is not ready.",
-      "rotate": "Unable to rotate key. Check your password/code.",
-      "notReencrypted": "Another app's media library could not be moved to the new key. Nothing changed. Rotate from a device that holds the current key.",
-      "unreadable": "This phone's key can't open another app's media library. Nothing changed. Rotate from a device that holds the current key.",
-      "notSnapshotted": "Another app's media library is still saving. Nothing changed. Open that app, let it sync, then try again.",
-      "changed": "A media library changed while rotating. Nothing changed. Try again."
     }
   },
   "libraryFormat": {

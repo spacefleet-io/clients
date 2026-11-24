@@ -10,6 +10,7 @@
 import { createElement, type ReactNode } from "react";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import { beforeAll, describe, expect, it, vi } from "vitest";
+import type * as SignInForm from "../../../../packages/mobile-shell/src/components/mobile-password-sign-in-form";
 
 const SUITE = "[PARROT-MOBILE-LOGIN-SIBLING-OFFER-001]";
 
@@ -26,9 +27,18 @@ vi.mock("react-native", () => ({
   StyleSheet: { create: <T,>(s: T) => s, hairlineWidth: 1 },
 }));
 vi.mock("lucide-react-native", () => ({ ArrowRight: "Icon", Lock: "Icon", Mail: "Icon" }));
-vi.mock("@space/mobile-shell/components", () => {
+// The shared form is real (its fields are what the screen shows); its inputs and buttons are host elements.
+vi.mock("../../../../packages/mobile-shell/src/components/mobile-auth-form", () => ({
+  MobileAuthInput: "MobileAuthInput",
+  MobileAuthButton: "MobileAuthButton",
+  MobileAuthLink: "MobileAuthLink",
+}));
+vi.mock("@space/mobile-shell/components", async () => {
   const passthrough = (name: string) => (props: { children?: ReactNode }) => createElement(name, props, props.children);
+  const form = await vi.importActual<typeof SignInForm>("../../../../packages/mobile-shell/src/components/mobile-password-sign-in-form");
   return {
+    MobilePasswordSignInForm: form.MobilePasswordSignInForm,
+    useMobilePasswordSignIn: form.useMobilePasswordSignIn,
     MobileStartupPage: passthrough("MobileStartupPage"),
     MobileAuthBrand: "MobileAuthBrand",
     MobileAuthInput: "MobileAuthInput",

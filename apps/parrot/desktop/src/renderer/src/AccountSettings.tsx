@@ -12,7 +12,8 @@ import { pickLanguage } from "./accountLanguage";
 import { setEvenVolume, useEvenVolume } from "./evenVolume";
 import { errorReports, errorReportsLog } from "./errorReports";
 import type { Translate } from "./i18n";
-import { ProfilesSection } from "./profiles";
+import { ParrotProfilesSection } from "@space/ui/profiles";
+import { profilesLog } from "./profiles";
 import { useNewsOptIn } from "./newsOptIn";
 import { FounderBadge } from "@space/ui/founder";
 import { useParrotFounderStatus } from "./founder";
@@ -22,6 +23,7 @@ import { desktopTourText } from "@space/desktop-shell/tour";
 import { localStorageCreditsStore, type CreditsSource } from "@space/metadata-client/credits";
 import { OfflineContent, type DescribeKept } from "./OfflineContent";
 import { DownloadEverythingRow } from "./ExportJobs";
+import { KeyChangeRow } from "./KeyChangeRow";
 
 /** Settings › About's data credits (META-SRC-09): main asks the lookups' metadata service; the last answer stays in localStorage. */
 const creditsSource: CreditsSource = {
@@ -155,6 +157,8 @@ export function SettingsPage({
                   {t("library.pairDevice")}
                 </Button>
               </Row>
+              {/* ACCT-KEYCHG-01: replace the media library key, with every media file re-sealed first (STOR-RESEAL-01). */}
+              <KeyChangeRow language={language} onState={onState} />
               {/* ACCT-EXPORT-01: every song as plain music files in a folder the user picks. */}
               <DownloadEverythingRow t={t} language={language} />
               {news.value !== undefined ? (
@@ -170,7 +174,7 @@ export function SettingsPage({
               ) : null}
               {/* No bridge (a browser preview) → no profiles: the token that asks for them lives in main. */}
               {profileStore ? (
-                <ProfilesSection store={profileStore} language={language} planOpen={planOpen} startWith={profilesStartWith} />
+                <ParrotProfilesSection store={profileStore} language={language} log={profilesLog} planOpen={planOpen} startWith={profilesStartWith} />
               ) : null}
             </>
           ) : section === "general" ? (

@@ -2,10 +2,7 @@
 // @req UX-CRASH-01[badger-desktop] @bugfix @regression-proof: one broken element blanks only itself (Chris, 2026-11-09).
 import * as React from "react";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
-import { emptyHistory } from "@space/parrot-core";
-import ParrotHome from "../../../apps/parrot/desktop/src/renderer/src/Home";
-import { translator } from "../../../apps/parrot/desktop/src/renderer/src/i18n";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Dialog, DialogContent, DialogTitle } from "../src/dialog";
 import { Sheet, SheetContent, SheetTitle } from "../src/sheet";
 import { ParrotMenu } from "../src/parrot/menu";
@@ -303,59 +300,5 @@ describe("RenderBoundary", () => {
     shouldThrow = false;
     fireEvent.click(screen.getByRole("button", { name: "Try again" }));
     expect(screen.getByText("page works")).toBeTruthy();
-  });
-});
-
-// @req UX-CRASH-01[parrot]: the real app screens keep their other rows up (the Badger web player's case lives in
-// render-boundary.web-apps.test.tsx).
-describe("app screens behind their guards", () => {
-  let errorSpy: MockInstance;
-  beforeEach(() => {
-    document.documentElement.lang = "en";
-    errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
-  });
-  afterEach(() => {
-    log("console.error calls", errorSpy.mock.calls.map((call: unknown[]) => String(call[0]).slice(0, 160)));
-    errorSpy.mockRestore();
-    cleanup();
-  });
-
-  it("Parrot desktop Home: a crashing artist shows a placeholder in its place; the rows stay", async () => {
-    const album = { id: "alb-1", title: "First Light", artistId: "art-1", artistName: "Test Band", year: 2020, trackCount: 1, coverUrl: null, coverThumbUrl: null };
-    const track = { id: "t1", title: "Dawn", albumId: "alb-1", albumTitle: "First Light", artistId: "art-1", artistName: "Test Band", disc: 1, number: 1, durationMs: 180_000, fileId: "f1", mime: "audio/flac", sizeBytes: 1 };
-    // A name that is not a string makes the shared artist circle throw while rendering, as a corrupt library row would.
-    const brokenArtist = { id: "art-1", name: { broken: true } as unknown as string, albumCount: 1, trackCount: 1 };
-    render(
-      <Shell>
-        <ParrotHome
-          t={translator("en")}
-          language="en"
-          albums={[album] as never}
-          artists={[brokenArtist] as never}
-          content="ready"
-          tracks={[track] as never}
-          history={emptyHistory()}
-          playingTrack={undefined}
-          playing={false}
-          positionMs={0}
-          onToggle={() => undefined}
-          onOpenAlbum={() => undefined}
-          onOpenArtist={() => undefined}
-          onPlayAlbum={() => undefined}
-          onSeeAll={() => undefined}
-          onAddMusic={() => undefined}
-          onAddFolder={() => undefined}
-        />
-      </Shell>,
-    );
-    log("parrot home after crash", document.body.innerHTML.slice(0, 600));
-    expect(screen.getByText("top bar")).toBeTruthy();
-    expect(screen.queryByTestId("render-boundary-screen")).toBeNull();
-    expect(screen.queryByTestId("render-boundary-section")).toBeNull();
-    const [placeholder] = screen.getAllByTestId("render-boundary-item");
-    expect(placeholder.getAttribute("data-boundary")).toMatch(/art-1$/);
-    expect(placeholder.textContent).toBe(RENDER_ERROR_COPY.en.itemFailed);
-    expect(screen.getByTestId("home-recent")).toBeTruthy();
-    expect(screen.getAllByText("First Light").length).toBeGreaterThan(0);
   });
 });

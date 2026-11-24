@@ -40,14 +40,19 @@ import type { AppId } from "../types";
 import type { EngineV2, RuntimeJobEvent } from "../core/jobs/engineV2";
 import type { EventLog } from "../core/jobs/eventLog";
 import type { ListFilter } from "../core/jobs/engineV2";
+import type { BadgerFailedJobs } from "../modules/badger/failedJobs";
 import {
   runtimeJobsEventSchema,
   runtimeJobsSubscribeHandshakeResponseSchema,
   runtimeJobsCancelByGroupPayloadSchema,
   runtimeJobsListPayloadSchema,
   runtimeJobsCancelPayloadSchema,
+  runtimeJobsAvailabilityPayloadSchema,
   runtimeJobsDismissPayloadSchema,
   runtimeJobsRetryPayloadSchema,
+  type RuntimeJobsAvailabilityResult,
+  type RuntimeJobsRetryPayload,
+  type RuntimeJobsRetryResult,
   type RuntimeJobsSubscribeHandshakeResponse,
 } from "@space/runtime-contracts/runtime/jobs";
 import type { EventRow } from "../core/jobs/eventLog";
@@ -120,6 +125,11 @@ export interface RuntimeJobsV2HandlerDeps {
    * teardown side-effect without real-clock waits.
    */
   sseTeardownGraceMs?: number;
+  /**
+   * Failed Badger imports' actions (UX-JOBS-03). Absent (tests, other apps):
+   * availability answers nothing and retry re-runs every unfinished step.
+   */
+  failedJobs?: BadgerFailedJobs;
   /** Optional logger; mirrors the legacy route's console-based logging. */
   logger?: {
     warn?(message: string, data?: Record<string, unknown>): void;
@@ -179,10 +189,10 @@ export interface RuntimeJobsV2Handler {
     | { dismissed: true }
     | { dismissed: false; errorCode: "not-terminal" | "not-found" }
   >;
-  /** Re-queue a failed/cancelled job. Returns the new jobId on success. */
-  handleRetry(input: {
-    jobId: string;
-  }): Promise<{ retried: boolean; newJobId?: string }>;
+  /** Re-queue a failed job in place (same jobId); refusals name the action that fits now. */
+  handleRetry(input: RuntimeJobsRetryPayload): Promise<RuntimeJobsRetryResult>;
+  /** The one action each failed job offers, and the kept processed copies' size. */
+  handleAvailability(input: { jobIds: string[] }): Promise<RuntimeJobsAvailabilityResult>;
 }
 
 // ---------------------------------------------------------------------------
@@ -603,13 +613,20 @@ export function createRuntimeJobsV2Handler(
     return { dismissed: false, errorCode: code };
   };
 
-  const handleRetry: RuntimeJobsV2Handler["handleRetry"] = async ({ jobId }) => {
-    const result = await engine.retry(jobId);
+  const handleRetry: RuntimeJobsV2Handler["handleRetry"] = async (input) => {
+    const job = (await engine.get(input.jobId))?.job;
+    if (deps.failedJobs && job?.app === "badger" && (job.kind === "source" || job.kind === "format")) {
+      return deps.failedJobs.retry(input);
+    }
+    const result = await engine.retry(input.jobId);
     if (result.retried && result.newJobId) {
       return { retried: true, newJobId: result.newJobId };
     }
     return { retried: false };
   };
+
+  const handleAvailability: RuntimeJobsV2Handler["handleAvailability"] = async ({ jobIds }) =>
+    deps.failedJobs ? deps.failedJobs.availability(jobIds) : { jobs: [], keptBytesTotal: 0 };
 
   return {
     handleSseSubscribe,
@@ -618,6 +635,7 @@ export function createRuntimeJobsV2Handler(
     handleCancel,
     handleDismiss,
     handleRetry,
+    handleAvailability,
     getJobApp,
     getGroupApps,
   };
@@ -812,6 +830,26 @@ export const registerRuntimeJobsV2Routes = (
     }
     const result = await handler.handleRetry(parsed.data);
     return c.json(result);
+  });
+
+  // POST /runtime/jobs/v2/availability — the one action each failed job offers
+  // (UX-JOBS-03). Jobs of apps outside the session's scopes are left out.
+  app.post("/runtime/jobs/v2/availability", async (c) => {
+    const session = sessionOf(c.req.header("authorization"));
+    if (!session) return c.json({ error: "unauthorized" }, 401);
+    const unavail = v2UnavailableEnvelope();
+    if (unavail) return c.json(unavail, 503);
+    const handler = getHandler()!;
+    const body = await c.req.json().catch(() => null);
+    const parsed = runtimeJobsAvailabilityPayloadSchema.safeParse(body);
+    if (!parsed.success) {
+      return c.json({ error: "invalid_payload" }, 400);
+    }
+    const jobIds: string[] = [];
+    for (const jobId of parsed.data.jobIds) {
+      if (!(await isForeignJob(handler, jobId, session.scopes))) jobIds.push(jobId);
+    }
+    return c.json(await handler.handleAvailability({ jobIds }));
   });
 
   // Round-13 #4 (a): the legacy WebSocket stub at `GET /runtime/events/jobs/v2`

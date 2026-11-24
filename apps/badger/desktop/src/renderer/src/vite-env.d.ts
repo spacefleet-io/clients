@@ -6,6 +6,8 @@
 type _MpvCommand = import("@space/mpv-protocol").MpvCommand;
 type _MpvResponse = import("@space/mpv-protocol").MpvResponse;
 type _MpvExternalMessage = import("@space/mpv-protocol").MpvExternalMessage;
+type _RuntimeJobsRetryResult = import("@space/runtime-contracts/runtime/jobs").RuntimeJobsRetryResult;
+type _RuntimeJobsAvailabilityResult = import("@space/runtime-contracts/runtime/jobs").RuntimeJobsAvailabilityResult;
 type _OscActionFile = import("@space/mpv-protocol").OscActionFile;
 type _SubtitleEntry = import("@space/mpv-protocol").SubtitleEntry;
 type _SiblingSignInActions = import("@space/desktop-shell/sibling").SiblingSignInActions;
@@ -202,8 +204,16 @@ interface Window {
         token: string;
         newKeyBase64: string;
       }) => Promise<import("@space/shared/api").RotationOwnLibrary | null>;
-      /** PRIV-KEY-06: every other app's library re-encrypted under the new key, or why one could not be. */
-      reencryptForRotation?: (payload: { token: string; oldKeyBase64: string; newKeyBase64: string }) => Promise<
+      /**
+       * PRIV-KEY-06: every other app's library re-encrypted under the new key, or why one could not be;
+       * STOR-RESEAL-01: with `resealCopies` (old media key → copy) its media references name the copies.
+       */
+      reencryptForRotation?: (payload: {
+        token: string;
+        oldKeyBase64: string;
+        newKeyBase64: string;
+        resealCopies?: Array<[string, string]>;
+      }) => Promise<
         | { ok: true; copies: import("@space/shared/api").RotationLibraryCopy[] }
         | { ok: false; error: "unreadable" | "not_snapshotted" | "failed"; message: string }
       >;
@@ -377,7 +387,11 @@ interface Window {
       dismiss?: (payload: { jobId: string }) => Promise<
         { dismissed: true } | { dismissed: false; errorCode: "not-terminal" }
       >;
-      retry?: (payload: { jobId: string }) => Promise<{ retried: boolean; newJobId?: string }>;
+      retry?: (payload: { jobId: string; mode?: "upload" | "process" }) => Promise<_RuntimeJobsRetryResult>;
+      /** UX-JOBS-03: the one action each failed job offers, from what is still on disk. */
+      availability?: (payload: { jobIds: string[] }) => Promise<_RuntimeJobsAvailabilityResult>;
+      /** UX-JOBS-03 "Find the file": main opens a picker, the runtime checks it is the same video. */
+      findFile?: (payload: { jobId: string }) => Promise<_RuntimeJobsRetryResult | { cancelled: true }>;
       submitSources?: (payload: {
         userId: string;
         sources: Array<{

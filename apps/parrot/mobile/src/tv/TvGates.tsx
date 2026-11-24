@@ -11,7 +11,8 @@ import { TvProfilesView } from "@space/mobile-shell/tv/TvProfiles";
 import { TvSignInScreen } from "@space/mobile-shell/tv/TvSignIn";
 import { setParrotLanguage } from "../lib/i18n";
 import { stopPlayback } from "../lib/playback";
-import { parrotProfileMoves, profileStore, useProfiles } from "../lib/profiles";
+import { NO_LIBRARY_MOVES } from "@space/shared/profileStore";
+import { profileStore, useProfiles } from "../lib/profiles";
 import { LibraryKeyScreen } from "../screens/LibraryKeyScreen";
 import { LoginScreen } from "../screens/LoginScreen";
 import { useSession } from "../state/session";
@@ -84,7 +85,7 @@ const TvProfileGate = ({ spinner }: { spinner: ReactNode }) => {
     return (
       <TvProfilesView
         store={profileStore}
-        moves={parrotProfileMoves}
+        moves={NO_LIBRARY_MOVES}
         startMode="pick"
         inApp={false}
         audience="listening"

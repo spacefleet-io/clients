@@ -1,4 +1,5 @@
 import { sha256 } from "@noble/hashes/sha2.js";
+import type { ClientUiLanguage } from "./i18n";
 
 /**
  * Client side of the Google, Apple and Microsoft sign-in (ACCT-SIGNIN-05), shared by every app that draws the rows.
@@ -80,15 +81,6 @@ export const parseProviderReturnLink = (scheme: string, value: unknown): Provide
   return code !== null && SIGNIN_CODE.test(code) ? { code } : { error: "invalid_code" };
 };
 
-/** The outcome of the first `<scheme>://auth/provider` link in a launch's argv (Windows / Linux), or null. */
-export const findProviderReturn = (scheme: string, argv: readonly unknown[]): ProviderReturn | null => {
-  for (const arg of argv) {
-    const outcome = parseProviderReturnLink(scheme, arg);
-    if (outcome !== null) return outcome;
-  }
-  return null;
-};
-
 /** The API keeps a returned code for 5 minutes; an outcome held longer is worth nothing. */
 export const PROVIDER_RETURN_TTL_MS = 5 * 60_000;
 
@@ -120,3 +112,113 @@ export type ProviderReturnBridge = {
   onReturn: (callback: () => void) => () => void;
   takeReturn: () => Promise<ProviderReturn | null>;
 };
+
+/** The languages the provider sign-in words are written in: every app language (UX-I18N-01). */
+export type ProviderSignInLanguage = ClientUiLanguage;
+
+/**
+ * The words of the Google, Apple and Microsoft sign-in (ACCT-SIGNIN-05), written once for every app: the row titles
+ * (`{{provider}}` is the provider's name, never translated), the "or" line above them, the sentence when the browser
+ * could not be opened, and one sentence per {@link ProviderSignInErrorCode}. i18next apps load them as
+ * `login.provider` with {@link withProviderSignInTexts}; apps with their own string tables read
+ * {@link providerSignInTexts} through {@link providerSignInText}. "Finish in your browser" names the app, so each
+ * app keeps that sentence (`login.provider.continueInBrowser`) itself.
+ */
+export type ProviderSignInTexts = {
+  signInWith: string;
+  signUpWith: string;
+  or: string;
+  errorStart: string;
+  errors: Record<ProviderSignInErrorCode, string>;
+};
+
+export const providerSignInTexts: Record<ProviderSignInLanguage, ProviderSignInTexts> = {
+  en: {
+    signInWith: "Sign in with {{provider}}",
+    signUpWith: "Sign up with {{provider}}",
+    or: "or",
+    errorStart: "Could not start the sign-in. Please try again.",
+    errors: {
+      email_unverified: "This account's email address is not confirmed. Confirm it with the provider, or sign in with your email and password.",
+      email_domain_disallowed: "Accounts with this email address cannot be created.",
+      account_deletion_pending: "This account is scheduled for deletion.",
+      provider_failed: "The sign-in did not go through. Please try again.",
+      cancelled: "The sign-in was cancelled.",
+      invalid_code: "This sign-in has expired or was started elsewhere. Please try again.",
+    },
+  },
+  fr: {
+    signInWith: "Se connecter avec {{provider}}",
+    signUpWith: "S'inscrire avec {{provider}}",
+    or: "ou",
+    errorStart: "Impossible de lancer la connexion. Veuillez réessayer.",
+    errors: {
+      email_unverified: "L'adresse e-mail de ce compte n'est pas confirmée. Confirmez-la auprès du fournisseur, ou connectez-vous avec votre e-mail et votre mot de passe.",
+      email_domain_disallowed: "Impossible de créer un compte avec cette adresse e-mail.",
+      account_deletion_pending: "La suppression de ce compte est programmée.",
+      provider_failed: "La connexion n'a pas abouti. Veuillez réessayer.",
+      cancelled: "La connexion a été annulée.",
+      invalid_code: "Cette connexion a expiré ou a été lancée ailleurs. Veuillez réessayer.",
+    },
+  },
+  nl: {
+    signInWith: "Inloggen met {{provider}}",
+    signUpWith: "Registreren met {{provider}}",
+    or: "of",
+    errorStart: "Inloggen kon niet starten. Probeer het opnieuw.",
+    errors: {
+      email_unverified: "Het e-mailadres van dit account is niet bevestigd. Bevestig het bij de aanbieder, of log in met je e-mailadres en wachtwoord.",
+      email_domain_disallowed: "Met dit e-mailadres kan geen account worden aangemaakt.",
+      account_deletion_pending: "Dit account wordt binnenkort verwijderd.",
+      provider_failed: "Inloggen is niet gelukt. Probeer het opnieuw.",
+      cancelled: "Inloggen is geannuleerd.",
+      invalid_code: "Deze inlogpoging is verlopen of ergens anders gestart. Probeer het opnieuw.",
+    },
+  },
+  de: {
+    signInWith: "Mit {{provider}} anmelden",
+    signUpWith: "Mit {{provider}} registrieren",
+    or: "oder",
+    errorStart: "Die Anmeldung konnte nicht gestartet werden. Bitte versuch es noch einmal.",
+    errors: {
+      email_unverified: "Die E-Mail-Adresse dieses Kontos ist nicht bestätigt. Bestätige sie beim Anbieter oder melde dich mit E-Mail und Passwort an.",
+      email_domain_disallowed: "Mit dieser E-Mail-Adresse kann kein Konto erstellt werden.",
+      account_deletion_pending: "Die Löschung dieses Kontos ist geplant.",
+      provider_failed: "Die Anmeldung hat nicht geklappt. Bitte versuch es noch einmal.",
+      cancelled: "Die Anmeldung wurde abgebrochen.",
+      invalid_code: "Diese Anmeldung ist abgelaufen oder wurde woanders gestartet. Bitte versuch es noch einmal.",
+    },
+  },
+  es: {
+    signInWith: "Iniciar sesión con {{provider}}",
+    signUpWith: "Registrarse con {{provider}}",
+    or: "o",
+    errorStart: "No se pudo iniciar el inicio de sesión. Vuelve a intentarlo.",
+    errors: {
+      email_unverified: "El correo de esta cuenta no está confirmado. Confírmalo con el proveedor o inicia sesión con tu correo y contraseña.",
+      email_domain_disallowed: "No se pueden crear cuentas con este correo.",
+      account_deletion_pending: "La eliminación de esta cuenta está programada.",
+      provider_failed: "No se pudo iniciar sesión. Vuelve a intentarlo.",
+      cancelled: "Se canceló el inicio de sesión.",
+      invalid_code: "Este inicio de sesión ha caducado o se inició en otro lugar. Vuelve a intentarlo.",
+    },
+  },
+};
+
+/** The i18next key of the sentence for a `signinError` (or a completion's `invalid_code`), under `login.provider.errors`. */
+export const providerSignInErrorKey = (code: ProviderSignInErrorCode): `login.provider.errors.${ProviderSignInErrorCode}` =>
+  `login.provider.errors.${code}`;
+
+/** Puts {@link providerSignInTexts} into an i18next translation tree as `login.provider`, keeping the tree's other keys. */
+export const withProviderSignInTexts = <T extends Record<string, unknown>>(translation: T, language: ProviderSignInLanguage): T => {
+  const login = translation.login && typeof translation.login === "object" ? (translation.login as Record<string, unknown>) : {};
+  const own = login.provider && typeof login.provider === "object" ? login.provider : {};
+  return { ...translation, login: { ...login, provider: { ...own, ...providerSignInTexts[language] } } };
+};
+
+/** A row title, or any other provider sign-in sentence, for apps without i18next; `provider` fills `{{provider}}`. */
+export const providerSignInText = (
+  language: ProviderSignInLanguage,
+  key: Exclude<keyof ProviderSignInTexts, "errors">,
+  provider = "",
+): string => providerSignInTexts[language][key].replace("{{provider}}", provider);

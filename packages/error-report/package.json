@@ -22,6 +22,7 @@
     "./build-config": "./src/buildConfig.ts",
     "./desktop": "./src/desktop.ts",
     "./desktop-main": "./src/desktopMain.ts",
+    "./desktop-main-reports": "./src/desktopMainReports.ts",
     "./desktop-renderer": "./src/desktopRenderer.ts",
     "./react": "./src/react.ts",
     "./desktop-feedback": "./src/desktopFeedback.ts",

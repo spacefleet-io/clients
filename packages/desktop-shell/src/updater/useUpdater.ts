@@ -27,8 +27,12 @@ export type DesktopUpdaterControls = {
   setAutoUpdate: (enabled: boolean) => Promise<void>;
   /** Check, and when an update is available download it; the user then restarts via `install`. */
   runFullUpdate: () => Promise<void>;
-  /** Back to idle, keeping a latched `mandatory` flag (a server-mandated update is not dismissible) and the setting. */
+  /** Back to idle, keeping a latched `mandatory` flag (a server-mandated update is not dismissible), the setting and the user's remind/ignore choices. */
   reset: () => void;
+  /** REL-UPD-08: "Remind me later" on the offered version; the main process answers with a `prompt-snoozed` event. */
+  remindLater: () => Promise<void>;
+  /** REL-UPD-08: "Ignore" the offered version; the main process answers with a `prompt-ignored` event. */
+  ignoreVersion: () => Promise<void>;
 };
 
 export const useDesktopUpdater = (
@@ -137,9 +141,28 @@ export const useDesktopUpdater = (
   }, [check, download]);
 
   const reset = useCallback(
-    () => setState((prev) => ({ ...INITIAL_UPDATER_STATE, mandatory: prev.mandatory, autoUpdate: prev.autoUpdate })),
+    () =>
+      setState((prev) => ({
+        ...INITIAL_UPDATER_STATE,
+        mandatory: prev.mandatory,
+        autoUpdate: prev.autoUpdate,
+        remindLater: prev.remindLater,
+        ignoredVersion: prev.ignoredVersion,
+      })),
     [],
   );
 
-  return { state, supported: Boolean(updater), check, download, install, setAutoUpdate, runFullUpdate, reset };
+  const remindLater = useCallback(async (): Promise<void> => {
+    await updater
+      ?.remindLater()
+      .catch((err: unknown) => onErrorRef.current?.(err instanceof Error ? err.message : String(err), "remind me later failed"));
+  }, [updater]);
+
+  const ignoreVersion = useCallback(async (): Promise<void> => {
+    await updater
+      ?.ignoreVersion()
+      .catch((err: unknown) => onErrorRef.current?.(err instanceof Error ? err.message : String(err), "ignore update failed"));
+  }, [updater]);
+
+  return { state, supported: Boolean(updater), check, download, install, setAutoUpdate, runFullUpdate, reset, remindLater, ignoreVersion };
 };

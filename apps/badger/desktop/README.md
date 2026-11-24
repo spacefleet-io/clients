@@ -115,7 +115,7 @@ Official macOS dmgs are signed with the Developer ID of team `8766H6KW4V` and no
 
 How it works: `scripts/package.mjs` resolves the six `APPLE_*` variables (`resolveMacSigning` in
 `packages/desktop-platform-macos/packaging/mac-signing-lib.mjs`) and, on a Mac, opens a throwaway keychain in a temp dir with the `.p12` and Apple's
-Developer ID G2 intermediate (`installer/DeveloperIDG2CA.cer`). electron-builder does not sign (`identity: null`): the
+Developer ID G2 intermediate (`packages/desktop-platform-macos/packaging/DeveloperIDG2CA.cer`, shared with Parrot). electron-builder does not sign (`identity: null`): the
 `afterPack` hook `scripts/mac-after-pack.mjs` (common half: `finishMacApp` in `packages/desktop-platform-macos/packaging/mac-after-pack-lib.mjs`) signs every Mach-O file and nested bundle inside-out with
 `--options runtime --timestamp --entitlements packages/desktop-platform-macos/packaging/entitlements.mac.plist`, then notarizes and staples the app.
 The `notarize` step signs, notarizes and staples the dmg and checks it with `stapler validate` and

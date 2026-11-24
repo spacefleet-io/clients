@@ -19,6 +19,8 @@ if (typeof globalThis.TextDecoder === 'undefined') {
 const quickCrypto = require('react-native-quick-crypto');
 if (!globalThis.crypto) globalThis.crypto = {};
 if (!globalThis.crypto.subtle) {
+  // The key change re-seals media files (@space/media-reseal): HKDF and AES-GCM through quick-crypto's WebCrypto.
+  const quickSubtle = quickCrypto.subtle;
   globalThis.crypto.subtle = {
     async digest(algorithm, data) {
       const algo = typeof algorithm === 'string' ? algorithm : algorithm.name;
@@ -27,8 +29,14 @@ if (!globalThis.crypto.subtle) {
       hash.update(_Buffer.from(data));
       return hash.digest().buffer;
     },
+    importKey: quickSubtle.importKey.bind(quickSubtle),
+    deriveBits: quickSubtle.deriveBits.bind(quickSubtle),
+    deriveKey: quickSubtle.deriveKey.bind(quickSubtle),
+    encrypt: quickSubtle.encrypt.bind(quickSubtle),
+    decrypt: quickSubtle.decrypt.bind(quickSubtle),
   };
 }
+if (!globalThis.crypto.randomUUID) globalThis.crypto.randomUUID = () => quickCrypto.randomUUID();
 // === END POLYFILLS ===
 
 require('react-native-gesture-handler');

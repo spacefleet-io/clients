@@ -2,7 +2,7 @@
  * UX-JOBS-01: the import jobs list main keeps in userData/import-jobs.json, and how an import cut short by Parrot
  * closing is recorded: failed, with IMPORT_INTERRUPTED so the card says to import the folder again.
  */
-import { IMPORT_INTERRUPTED, type ParrotImportJob, type ParrotImportStatus } from "../shared/ipc";
+import { IMPORT_INTERRUPTED, importJobRetryable, type ParrotImportJob, type ParrotImportStatus } from "../shared/ipc";
 
 export type StoredImportJob = ParrotImportJob & { userId: string };
 
@@ -29,3 +29,17 @@ export const restoreImportJobs = (stored: unknown, now: number): StoredImportJob
  */
 export const importStopError = (error: unknown, appClosing: boolean): string =>
   appClosing ? IMPORT_INTERRUPTED : error instanceof Error ? error.message : String(error);
+
+/**
+ * UX-JOBS-03: what "Import again" reads. A stopped import starts over from its folders (the songs it already added
+ * come back as "already there"); an import that ended with some files not added tries only those files.
+ */
+export const retrySources = (job: ParrotImportJob): string[] =>
+  job.status.phase === "failed" ? job.sources : job.failures.map((failure) => failure.file);
+
+/**
+ * UX-JOBS-03: the job as the window gets it, saying whether every file "Import again" would read is gone from where
+ * it was (moved, renamed or deleted, or a drive unplugged): then the card offers "Find the folder" instead.
+ */
+export const withSourcesMissing = (job: ParrotImportJob, exists: (path: string) => boolean): ParrotImportJob =>
+  importJobRetryable(job) ? { ...job, sourcesMissing: retrySources(job).every((path) => !exists(path)) } : job;

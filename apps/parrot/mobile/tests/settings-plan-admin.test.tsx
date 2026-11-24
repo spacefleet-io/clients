@@ -2,21 +2,18 @@
  * @test-id PARROT-MOBILE-SETTINGS-PLAN-ADMIN-001
  * @level unit
  * @req ACCT-PLAN-14[parrot]
- * @why An admin has no plan and unlimited storage (ACCT-PLAN-14): the phone's plan row reads "Admin: unlimited
- *   storage", never a plan name and paid state, while a normal account still shows its plan. The API marks an admin
- *   with a null `storageLimitGb`. The row is called as a function against a mocked React Native, with translation keys
- *   standing for texts and `useState` fed from a queue.
+ * @why Parrot's Settings shows the phones' shared plan panel (REL-FAM-03) with the signed-in token, drawn in its own
+ *   Settings cards, so an admin reads "Admin: unlimited storage" there exactly as on Badger (ACCT-PLAN-14; the panel's
+ *   own cases are in packages/mobile-shell/tests/account-plan-panel.test.tsx). The screen is called as a function
+ *   against a mocked React Native, the panel standing in as a tag.
  */
 import { describe, expect, it, vi } from "vitest";
 
-const stateQueue: unknown[] = [];
+// The screen is called as a plain function, so its hooks hold their first value.
 vi.mock("react", async () => {
   const actual = await vi.importActual<typeof import("react")>("react");
   const useEffect = () => undefined;
-  const useState = <T,>(initial: T | (() => T)) => [
-    stateQueue.length > 0 ? stateQueue.shift() : typeof initial === "function" ? (initial as () => T)() : initial,
-    () => undefined,
-  ];
+  const useState = <T,>(initial: T | (() => T)) => [typeof initial === "function" ? (initial as () => T)() : initial, () => undefined];
   return { ...actual, default: { ...actual, useEffect, useState }, useEffect, useState };
 });
 vi.mock("react-native", () => ({
@@ -27,8 +24,8 @@ vi.mock("react-native", () => ({
   View: "View",
 }));
 vi.mock("@react-navigation/native", () => ({ useNavigation: () => ({ navigate: () => undefined }) }));
-vi.mock("@space/shared/api", () => ({ getSubscription: async () => null }));
-vi.mock("@space/mobile-shell/components", () => ({ MobileCreditsPanel: "MobileCreditsPanel", MobileFounderBadge: "MobileFounderBadge", MobileOpenSourceNotice: "MobileOpenSourceNotice", SkyCover: "SkyCover", useSkyScroll: () => ({}) }));
+vi.mock("@space/mobile-shell/account-plan-panel", () => ({ MobileAccountPlanPanel: "MobileAccountPlanPanel" }));
+vi.mock("@space/mobile-shell/components", () => ({ MobileButton: "Button", MobileCreditsPanel: "MobileCreditsPanel", MobileErrorReportsLink: "MobileErrorReportsLink", MobileOpenSourceNotice: "MobileOpenSourceNotice", SkyCover: "SkyCover", useSkyScroll: () => ({}) }));
 vi.mock("@space/mobile-shell/feedback-form", () => ({ MobileFeedbackForm: "MobileFeedbackForm" }));
 vi.mock("@space/mobile-shell/i18n", () => ({
   getCurrentLanguage: () => "en",
@@ -51,7 +48,7 @@ vi.mock("../src/state/session", () => ({
   useSession: () => ({ session: { token: "t", user: { email: "celeste@spacefleet.test" } }, reloadLibrary: async () => undefined }),
 }));
 vi.mock("../src/state/useSignOut", () => ({ useSignOut: () => async () => undefined }));
-vi.mock("../src/screens/ui", () => ({ Body: "Body", Button: "Button" }));
+vi.mock("../src/screens/ui", () => ({ Body: "Body" }));
 
 import { SettingsScreen } from "../src/screens/SettingsScreen";
 
@@ -65,28 +62,26 @@ const flatten = (node: unknown, out: Element[] = []): Element[] => {
   return out;
 };
 
-/** Renders the Settings tab, finds its plan row and calls it with `plan` as the loaded subscription. */
-const planRowText = (plan: Record<string, unknown>): string => {
-  const screen = SettingsScreen() as unknown as Element;
-  const row = flatten(screen).find((el) => typeof el.type === "function" && (el.type as { name: string }).name === "PlanRow")!;
-  expect(row).toBeDefined();
-  stateQueue.push(plan, false);
-  const rendered = (row.type as (props: unknown) => unknown)(row.props) as Element;
-  const value = flatten(rendered).find((el) => el.type === "Text")!;
-  return [value.props.children].flat().join("");
-};
-
-describe("the phone's plan row", () => {
-  it("reads 'Admin: unlimited storage' for an admin, with no plan name", () => {
-    const text = planRowText({ plan: "free", storageLimitGb: null, storageUsedGb: 0, storageAddonCount: 0, access: { state: "free" } });
-    console.info("[PARROT-MOBILE-SETTINGS-PLAN-ADMIN-001] admin row", text);
-    expect(text).toBe("subscription.plan.adminUnlimited");
-    expect(text).not.toContain("subscription.planName");
+describe("Parrot's Settings plan", () => {
+  it("shows the shared plan panel with the session's token, in Settings cards, right after Account", () => {
+    const all = flatten(SettingsScreen() as unknown as Element);
+    const panels = all.filter((el) => el.type === "MobileAccountPlanPanel");
+    console.info("[PARROT-MOBILE-SETTINGS-PLAN-ADMIN-001] panels", panels.map((el) => el.props.token));
+    expect(panels).toHaveLength(1);
+    expect(panels[0]!.props.token).toBe("t");
+    const Group = panels[0]!.props.Group as (props: { title: string; children: unknown }) => unknown;
+    expect(typeof Group).toBe("function");
+    const card = flatten(Group({ title: "subscription.plan.group", children: "x" }));
+    expect(card.some((el) => el.type === "Text" && el.props.children === "SUBSCRIPTION.PLAN.GROUP")).toBe(true);
+    const tops = (SettingsScreen() as unknown as Element).props.children as unknown[];
+    const titles = flatten(tops).filter((el) => el.type === Group).map((el) => el.props.title);
+    expect(titles[0]).toBe("shell.settings.section.account");
   });
 
-  it("still reads the plan and its state for a normal account", () => {
-    const text = planRowText({ plan: "tier2", storageLimitGb: 1000, storageUsedGb: 3, storageAddonCount: 0, access: { state: "paid" } });
-    console.info("[PARROT-MOBILE-SETTINGS-PLAN-ADMIN-001] paid row", text);
-    expect(text).toBe("subscription.planName.tier2 · subscription.status.active");
+  it("no longer carries its own plan row", () => {
+    const names = flatten(SettingsScreen() as unknown as Element)
+      .map((el) => (typeof el.type === "function" ? (el.type as { name: string }).name : el.type));
+    expect(names).not.toContain("PlanRow");
+    expect(names).not.toContain("MobileFounderBadge");
   });
 });

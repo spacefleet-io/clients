@@ -2,7 +2,8 @@ import { useEffect } from "react";
 
 /**
  * `<html data-app-playback>` is set while anything plays (a video in mpv, a
- * trailer, music). The backdrop flies no shooting star under it (UX-SKY-01).
+ * trailer, music). The backdrop flies no shooting star under it (UX-SKY-01),
+ * and the desktop update modal waits for it to clear (REL-UPD-08).
  */
 export const APP_PLAYBACK_ATTRIBUTE = "data-app-playback";
 

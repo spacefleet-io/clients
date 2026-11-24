@@ -1,6 +1,6 @@
 import "./packagedNodeEnv";
 import "./devBuildEnv";
-import { app, BrowserWindow, shell, ipcMain, screen, dialog, Menu, Tray, session as electronSession } from "electron";
+import { app, BrowserWindow, shell, ipcMain, screen, dialog, Menu, Tray, powerMonitor, session as electronSession } from "electron";
 import { NEUTRAL_USER_AGENT } from "@space/metadata-client";
 import { existsSync } from "node:fs";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
@@ -76,14 +76,15 @@ import {
   buildTrayActions,
   createAppTray,
   MAIN_SHELL_STRINGS,
-  protocolClientArgs,
+  describeAppLink,
   registerTrayTestIpc,
+  resolveAppIdentity,
   resolveTrayIconPath,
   revealWindow,
   shouldQuitWhenAllWindowsClosed,
   trayLabelsFor,
 } from "@space/desktop-shell/main-shell";
-import { createDesktopUpdater } from "@space/desktop-shell/updater-main";
+import { createDesktopUpdater, ignoredVersionFileStore } from "@space/desktop-shell/updater-main";
 // electron-updater is CommonJS: Node's ESM loader does not synthesize its named exports, so `import { autoUpdater }`
 // throws when the built main bundle loads. Default import, read lazily (reading `autoUpdater` builds the OS updater).
 import electronUpdater from "electron-updater";
@@ -91,37 +92,28 @@ import { mainUiLanguage, mainUiStrings, seedMainUiLanguage, setMainUiLanguage } 
 import { sendNotification, type NotifyInput } from "./notifications";
 import { handleSecondInstance } from "./secondInstanceHandler";
 import { createProviderReturnMailbox } from "@space/shared/providerSignIn";
-import {
-  BADGER_PROTOCOL_SCHEME,
-  decideLaunchVisibility,
-  findBadgerLink,
-  paymentReturnOf,
-  providerReturnOf,
-  shouldShowOnActivate,
-} from "./protocolLink";
+import { badgerLinks, decideLaunchVisibility, shouldShowOnActivate } from "./protocolLink";
 import { registerHandoffIpc, type HandoffRuntimeBridge } from "./handoffIpc";
 import { requestRendererFlush } from "./rendererFlush";
 import { installE2ePerfProbe } from "./e2ePerfProbe";
 import { markAppWindowVisibility, registerAppWindowVisibilityIpc, trackAppWindowVisibility } from "./appWindowVisibility";
 import { forwardEscapeKey } from "./escapeKeyForward";
-import { resolveAppIdentity } from "./appIdentity";
-import { createConsentFile } from "@space/error-report/consent-file";
-import { createElectronMainReporting } from "@space/error-report/electron-main";
-import { resolveDsn } from "@space/error-report";
-import { createErrorReports, registerErrorReportsIpc } from "@space/error-report/desktop-main";
-import { parseForcedErrorReports } from "@space/error-report/desktop";
+import { BADGER_IDENTITY } from "./appIdentity";
+import { registerErrorReportsIpc } from "@space/error-report/desktop-main";
+import { createDesktopErrorReports } from "@space/error-report/desktop-main-reports";
 const logger = scopeLogger("app-main");
 installE2ePerfProbe();
 
 // Name + userData per OS (appIdentity.ts): "Badger" everywhere; Linux/Windows keep
 // <appData>/@sf/desktop, macOS uses Application Support/Badger. A development
 // build uses the same dir with `-dev` appended (PLAT-DESK-14).
-const appIdentity = resolveAppIdentity(
-  getDesktopPlatform(),
-  app.getPath("appData"),
-  process.env,
-  isDesktopDevBuild(currentDesktopBuildEnv()),
-);
+const appIdentity = resolveAppIdentity({
+  ...BADGER_IDENTITY,
+  platform: getDesktopPlatform(),
+  appData: app.getPath("appData"),
+  env: process.env,
+  devBuild: isDesktopDevBuild(currentDesktopBuildEnv()),
+});
 app.setName(appIdentity.name);
 // The Linux window class is the packaged .desktop entry's StartupWMClass (package.json desktopName "spacebadger"),
 // so the taskbar shows that entry's name, "Badger" (REL-MAC-09), not the class.
@@ -182,44 +174,36 @@ let lastBadgerLinkAt: number | null = null;
 // ACCT-SIGNIN-05: the provider sign-in outcome waits here for the sign-in screen to pull it (a launch through the
 // link on Windows / Linux carries it in argv).
 const providerReturns = createProviderReturnMailbox();
-const launchLink = findBadgerLink(process.argv);
-const launchProviderReturn = launchLink === null ? null : providerReturnOf(launchLink);
-if (launchProviderReturn !== null) {
-  console.info("[provider-sign-in] started through a return link", {
-    outcome: "code" in launchProviderReturn ? "code" : launchProviderReturn.error,
-  });
-  providerReturns.put(launchProviderReturn);
+const launchLink = badgerLinks.fromArgv(process.argv);
+if (launchLink?.kind === "provider-return") {
+  console.info("[provider-sign-in] started through a return link", { link: describeAppLink(launchLink) });
+  providerReturns.put(launchLink.outcome);
 }
-const onBadgerLink = (link: string, source: "argv" | "second-instance" | "open-url") => {
+const onBadgerLink = (raw: string, source: "argv" | "second-instance" | "open-url") => {
   const hasWindow = Boolean(mainWindow && !mainWindow.isDestroyed());
+  const link = badgerLinks.classify(raw);
   // ACCT-SIGNIN-05: back from a Google, Apple or Microsoft sign-in. The app comes forward and the sign-in screen
   // trades the code (pulled through PROVIDER_RETURN_IPC.pending, so a window still loading gets it on mount).
-  const providerReturn = providerReturnOf(link);
-  if (providerReturn !== null) {
-    console.info("[provider-sign-in] return link received: app brought forward", {
-      source,
-      outcome: "code" in providerReturn ? "code" : providerReturn.error,
-      hasWindow,
-    });
-    providerReturns.put(providerReturn);
+  if (link.kind === "provider-return") {
+    console.info("[provider-sign-in] return link received: app brought forward", { source, link: describeAppLink(link), hasWindow });
+    providerReturns.put(link.outcome);
     showMainWindow();
     if (hasWindow) mainWindow?.webContents.send(PROVIDER_RETURN_IPC.returned);
     return;
   }
   // ACCT-PAY-05: back from Stancer's payment page. The app comes forward and its plan change checks the payment at
   // once; with no window yet, the webhook and the next check settle it (the renderer holds the session).
-  const paymentId = paymentReturnOf(link);
-  if (paymentId !== null) {
-    console.info("[billing] payment return link received: app brought forward", { source, paymentId, hasWindow });
+  if (link.kind === "payment-return") {
+    console.info("[billing] payment return link received: app brought forward", { source, paymentId: link.paymentId, hasWindow });
     showMainWindow();
-    if (hasWindow) mainWindow?.webContents.send("sf-billing-payment-return", paymentId);
+    if (hasWindow) mainWindow?.webContents.send("sf-billing-payment-return", link.paymentId);
     return;
   }
   lastBadgerLinkAt = Date.now();
   if (!hasWindow) openUrlBeforeWindow = true;
   console.info("[handoff] badger link received: app kept in the background", {
     source,
-    link,
+    link: raw,
     hasWindow,
     windowVisible: hasWindow ? mainWindow?.isVisible() : null,
   });
@@ -228,32 +212,27 @@ app.on("open-url", (event, url) => {
   event.preventDefault();
   onBadgerLink(url, "open-url");
 });
-if (process.env.SF_E2E === "1") {
-  // Tests must not rewrite the machine's `badger:` handler; they pass the link in argv instead.
-  console.info("[handoff] SF_E2E=1: badger:// protocol registration skipped");
-} else {
-  const protocolArgs = protocolClientArgs(BADGER_PROTOCOL_SCHEME, {
-    defaultApp: Boolean(process.defaultApp),
-    execPath: process.execPath,
-    argv: process.argv,
-    resolvePath: (path) => resolve(path),
-  });
-  const registered = protocolArgs.length === 3
-    ? app.setAsDefaultProtocolClient(protocolArgs[0], protocolArgs[1], protocolArgs[2])
-    : app.setAsDefaultProtocolClient(protocolArgs[0]);
-  console.info("[handoff] badger:// protocol registration", { registered, args: protocolArgs });
-}
+// Tests (SF_E2E=1) must not rewrite the machine's `badger:` handler; they pass the link in argv instead.
+console.info("[handoff] badger:// protocol registration", badgerLinks.register({
+  app,
+  primary: gotSingleInstanceLock,
+  env: process.env,
+  defaultApp: Boolean(process.defaultApp),
+  execPath: process.execPath,
+  argv: process.argv,
+  resolvePath: (path) => resolve(path),
+}));
 
 // REL-LOG-06: error reports are off until the user opts in (setup step or Settings). The answer
 // lives in <userData>/error-reports.json; the SDK is only initialised for "on", as early as the
 // userData path is known so startup crashes are covered.
 const errorReportsLogger = scopeLogger("error-report");
-const errorReports = createErrorReports({
-  consent: createConsentFile(join(app.getPath("userData"), "error-reports.json")),
-  reporting: createElectronMainReporting({ dsn: __SF_BUGSINK_DSN__, release: app.getVersion(), app: "badger", platform: "desktop" }),
-  available: resolveDsn(__SF_BUGSINK_DSN__) !== null,
+const errorReports = createDesktopErrorReports({
+  app: "badger",
+  userDataDir: app.getPath("userData"),
+  dsn: __SF_BUGSINK_DSN__,
   release: app.getVersion(),
-  forced: parseForcedErrorReports(process.env.SF_ERROR_REPORTS),
+  forcedRaw: process.env.SF_ERROR_REPORTS,
   log: (line) => errorReportsLogger.info(line),
   logError: (line) => errorReportsLogger.error(line),
 });
@@ -949,27 +928,35 @@ app.whenReady().then(async () => {
   registerSiblingIpc(siblingHost);
   // In-app updates (REL-UPD-01), from `<api>/desktop/badger/`. `getWindow` is resolved lazily so a recreated window
   // still receives update events. The renderer arms the background check by pushing its `autoUpdate` setting (ON by
-  // default) once it has loaded.
-  createDesktopUpdater({
+  // default) once it has loaded. REL-UPD-08: it also checks when the computer wakes and when a window comes back.
+  const updaterLogger = scopeLogger("updater");
+  const desktopUpdater = createDesktopUpdater({
     app: "badger",
     electron: { app, ipcMain },
     loadAutoUpdater: () => electronUpdater.autoUpdater,
     getApiBaseUrl,
     getPlatformId: () => getDesktopPlatform().id,
-    logger: scopeLogger("updater"),
+    logger: updaterLogger,
     // REL-UPD-07: a .deb/.rpm/.pacman copy updates through /usr/lib/spacebadger/system-update.
     linuxPackageName: "spacebadger",
+    // REL-UPD-08: the version the user chose to ignore, kept across restarts.
+    ignoredVersionStore: ignoredVersionFileStore(join(app.getPath("userData"), "updater-ignored-version.json"), updaterLogger),
     // The windows close instead of going to the tray; `before-quit` still asks about work in progress.
     onQuitForUpdate: () => {
       isQuitting = true;
     },
-  }).register(() => mainWindow);
+  });
+  desktopUpdater.register(() => mainWindow);
+  powerMonitor.on("resume", () => desktopUpdater.nudge("resume"));
+  // REL-UPD-08: the window back in front checks only after an absence of an hour; a blur starts the absence.
+  app.on("browser-window-blur", () => desktopUpdater.nudge("blur"));
+  app.on("browser-window-focus", () => desktopUpdater.nudge("focus"));
 
   await sessionLoaded;
   const launchVisibility = decideLaunchVisibility({ argv: process.argv, openUrlBeforeWindow });
   if (launchVisibility === "background") {
     console.info("[handoff] started through a badger:// link: main window created hidden", {
-      argvLink: findBadgerLink(process.argv),
+      argvLink: launchLink?.link ?? null,
       openUrlBeforeWindow,
     });
   }

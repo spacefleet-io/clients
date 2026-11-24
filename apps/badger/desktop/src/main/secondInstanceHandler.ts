@@ -11,7 +11,7 @@
  * PLAT-WEB-05: a second launch carrying a `badger://` link (the web player starting the desktop player) does NOT
  * bring the window forward: the user stays in the browser.
  */
-import { findBadgerLink } from "./protocolLink";
+import { badgerLinks } from "./protocolLink";
 
 export type SecondInstanceDeps = {
   showMainWindow: () => void;
@@ -24,7 +24,7 @@ export type SecondInstanceDeps = {
 };
 
 export const handleSecondInstance = (deps: SecondInstanceDeps): void => {
-  const link = findBadgerLink(deps.argv ?? []);
+  const link = badgerLinks.find(deps.argv ?? []);
   if (link !== null) {
     deps.onLink?.(link);
     return;

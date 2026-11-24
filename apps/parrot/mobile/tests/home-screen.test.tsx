@@ -58,8 +58,23 @@ vi.mock("lucide-react-native", () =>
 );
 vi.mock("@react-navigation/native", () => ({ useNavigation: () => ({ navigate: () => undefined }), useIsFocused: () => true }));
 vi.mock("react-native-safe-area-context", () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) }));
-// The rails render as the list they wrap, so the rows below are found as FlatLists.
-vi.mock("@space/mobile-shell/components", () => ({ SkyCover: "SkyCover", useSkyScroll: () => ({}), MobileRail: "FlatList", MobileTabPager: "MobileTabPager", MobileFounderNoticeHost: "MobileFounderNoticeHost", MobileLibraryLoading: "MobileLibraryLoading" }));
+// A Home row stands in as its title, its "See all" and the list it wraps (the shell's own test covers the rail itself),
+// so the rows below are found by testID and their items as FlatList data.
+type RailProps = { title: string; items: unknown; seeAll?: { label: string; onPress: () => void }; testID?: string };
+const { MobileHomeRail } = vi.hoisted(() => ({
+  MobileHomeRail: ({ title, items, seeAll, testID }: RailProps) => ({
+    type: "View",
+    props: {
+      testID,
+      children: [
+        { type: "Text", props: { children: title } },
+        seeAll ? { type: "Pressable", props: { testID: `${testID}-see-all`, onPress: seeAll.onPress, children: { type: "Text", props: { children: seeAll.label } } } } : null,
+        { type: "FlatList", props: { data: items } },
+      ],
+    },
+  }),
+}));
+vi.mock("@space/mobile-shell/components", () => ({ SkyCover: "SkyCover", useSkyScroll: () => ({}), MobileHomeRail, MobileTabPager: "MobileTabPager", MobileFounderNoticeHost: "MobileFounderNoticeHost", MobileLibraryLoading: "MobileLibraryLoading" }));
 vi.mock("../src/screens/EmptyLibrary", () => ({ EmptyLibrary: "EmptyLibrary" }));
 vi.mock("@space/mobile-shell/render-boundary", () => ({ guardRenderItem: (_name: string, render: unknown) => render }));
 vi.mock("@space/mobile-shell/i18n", () => ({
@@ -109,7 +124,7 @@ const all = (node: unknown, match: (el: Element) => boolean, out: Element[] = []
 };
 const byTestId = (node: unknown, id: string) => all(node, (el) => el.props?.testID === id)[0];
 const texts = (node: unknown) => all(node, (el) => el.type === "Text").map((el) => el.props.children);
-// Shelf is a component of HomeScreen's own: render it to reach its title, "See all" and list.
+// A row is the shell's Home rail: render it to reach its title, "See all" and list.
 const shelf = (home: Element, id: string) => {
   const element = all(home, (el) => el.props?.testID === id)[0]!;
   return (element.type as (props: unknown) => Element)(element.props);

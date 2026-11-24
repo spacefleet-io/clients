@@ -40,7 +40,9 @@ import { completePairedSignIn, type ApprovedPairing } from "@/lib/pairedSignIn";
 import { createPairedSignInDeps } from "@/lib/pairedSignInDeps";
 import { rendererLogger } from "@/logger";
 import SetupLanguageMenu from "@/components/SetupLanguageMenu";
-import { PROVIDER_VERIFIER_KEY, ProviderSignIn, providerErrorKey } from "@/components/ProviderSignIn";
+import { DesktopProviderSignIn, providerVerifier } from "@space/desktop-shell/provider-sign-in";
+import { providerSignInErrorKey } from "@space/shared/providerSignIn";
+import { listBadgerProviders, startBadgerProviderSignIn } from "@/lib/providerSignIn";
 import { useProviderReturn } from "@space/desktop-shell/provider-return";
 import type { ProviderReturn } from "@space/shared/providerSignIn";
 
@@ -85,7 +87,7 @@ export default function Login() {
   const [providerCode, setProviderCode] = useState<string | null>(null);
 
   const dropProviderSignIn = () => {
-    localStorage.removeItem(PROVIDER_VERIFIER_KEY);
+    providerVerifier.drop();
     setProviderCode(null);
     setTwoFactorRequired(false);
     setTwoFactorMethod(null);
@@ -94,16 +96,16 @@ export default function Login() {
 
   /** Trades the returned code and this computer's secret for a session; on a second step, keeps the code and asks for it. */
   const finishProviderSignIn = async (code: string, secondStepCode?: string) => {
-    const verifier = localStorage.getItem(PROVIDER_VERIFIER_KEY);
+    const verifier = providerVerifier.read();
     if (!verifier) {
       // Started on another computer or another Badger: its secret is not here.
       log.warn({}, "provider.return.noSecret");
-      setError(t(providerErrorKey("invalid_code")));
+      setError(t(providerSignInErrorKey("invalid_code")));
       return;
     }
     try {
       const result = await completeProviderSignIn(code, verifier, secondStepCode);
-      localStorage.removeItem(PROVIDER_VERIFIER_KEY);
+      providerVerifier.drop();
       setProviderCode(null);
       setSession(result.token, result.user);
       log.info({}, "provider.signedIn");
@@ -125,9 +127,9 @@ export default function Login() {
         setError(t(signInErrorMessageKey("twoFactorInvalid"), signInErrorValues(err)));
       } else if (apiCode === "invalid_code" || apiCode === "account_deletion_pending") {
         dropProviderSignIn();
-        setError(t(providerErrorKey(apiCode)));
+        setError(t(providerSignInErrorKey(apiCode)));
       } else {
-        setError(t(providerErrorKey("provider_failed")));
+        setError(t(providerSignInErrorKey("provider_failed")));
       }
     }
   };
@@ -140,7 +142,7 @@ export default function Login() {
     if ("error" in outcome) {
       log.info({ error: outcome.error }, "provider.return.error");
       dropProviderSignIn();
-      setError(t(providerErrorKey(outcome.error)));
+      setError(t(providerSignInErrorKey(outcome.error)));
       return;
     }
     setLoading(true);
@@ -233,7 +235,7 @@ export default function Login() {
       if (providerCode) {
         // The API sends a new code and answers `two_factor_required` again.
         try {
-          await completeProviderSignIn(providerCode, localStorage.getItem(PROVIDER_VERIFIER_KEY) ?? "", undefined, true);
+          await completeProviderSignIn(providerCode, providerVerifier.read() ?? "", undefined, true);
         } catch (err) {
           if (!(err instanceof ApiError && err.payload.error === "two_factor_required")) throw err;
         }
@@ -376,8 +378,11 @@ export default function Login() {
               <DesktopForgotPasswordLink language={pairLanguage} onClick={() => setResetOpen(true)} />
 
               {providerCode ? null : (
-                <ProviderSignIn
-                  mode="signin"
+                <DesktopProviderSignIn
+                  language={i18n.language}
+                  mode="signIn"
+                  list={listBadgerProviders}
+                  start={(provider, clientChallenge) => startBadgerProviderSignIn(provider, clientChallenge, t, i18n.language)}
                   disabled={Boolean(systemIssue)}
                   onStarted={() => {
                     setError(null);

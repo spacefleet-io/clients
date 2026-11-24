@@ -5,22 +5,23 @@
  * @req REL-UPD-01
  * @req REL-UPD-02
  * @req REL-UPD-05
- * @why Parrot updates itself in the window: the main process downloads in the background, the renderer shows a
- *   "Restart now" card once a version is ready, and Settings › About & updates shows the version, the updater's
- *   state, its one Check / Download / Restart button and the automatic-updates switch. These tests drive both surfaces
- *   through the same bridge the preload exposes.
+ * @req REL-UPD-08
+ * @why Parrot updates itself in the window: the main process downloads in the background, the renderer shows the
+ *   shared update modal (`DesktopUpdatePrompt`) once a version is ready, with Restart now, Remind me later and Ignore,
+ *   and Settings › About & updates shows the version, the updater's state, its one Check / Download / Restart button
+ *   and the automatic-updates switch. These tests drive both surfaces through the same bridge the preload exposes.
+ *   The modal renders through a portal, so its queries search `document`.
  */
 import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { UpdaterBridge, UpdaterCheckResult, UpdaterEvent, UpdaterState } from "@space/desktop-shell/updater";
-import { ParrotUpdateSection, UpdateReadyNotice } from "../src/renderer/src/updates";
-import { translator } from "../src/renderer/src/i18n";
+import { ParrotUpdatePrompt, ParrotUpdateSection } from "../src/renderer/src/updates";
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
 const SUITE = "[PARROT-DESKTOP-UPDATES-001]";
-const t = translator("en");
+const readyPrompt = <ParrotUpdatePrompt language="en" />;
 
 const mainState = (state: Partial<UpdaterState> = {}): UpdaterState => ({
   phase: "idle",
@@ -37,6 +38,8 @@ const mainState = (state: Partial<UpdaterState> = {}): UpdaterState => ({
   manualCommand: null,
   failure: null,
   failureDetail: null,
+  remindLater: null,
+  ignoredVersion: null,
   ...state,
 });
 
@@ -51,6 +54,8 @@ const makeBridge = (initial: UpdaterState, checkResult: UpdaterCheckResult = { s
     downloadUpdate: vi.fn(async () => ({ ok: true })),
     installAndRestart: vi.fn(async () => ({ ok: true })),
     setAutoUpdate: vi.fn(async (_enabled: boolean) => ({ ok: true })),
+    remindLater: vi.fn(async () => ({ ok: true })),
+    ignoreVersion: vi.fn(async () => ({ ok: true })),
     getState: vi.fn(async () => initial),
     onEvent: vi.fn((listener: (event: UpdaterEvent) => void) => {
       listeners.add(listener);
@@ -76,16 +81,18 @@ const mount = async (element: React.ReactElement) => {
   await flush();
 };
 
-const q = <T extends Element = HTMLElement>(testId: string) => container!.querySelector<T>(`[data-testid="${testId}"]`);
+const q = <T extends Element = HTMLElement>(testId: string) => document.querySelector<T>(`[data-testid="${testId}"]`);
 
 const dump = (testId: string, bridge?: FakeBridge) =>
   console.info(
-    `${SUITE}[${testId}] html=${container?.innerHTML ?? "(none)"} ` +
+    `${SUITE}[${testId}] html=${document.body.innerHTML || "(none)"} ` +
       (bridge
         ? `check=${(bridge.check as ReturnType<typeof vi.fn>).mock.calls.length} ` +
           `download=${(bridge.downloadUpdate as ReturnType<typeof vi.fn>).mock.calls.length} ` +
           `install=${(bridge.installAndRestart as ReturnType<typeof vi.fn>).mock.calls.length} ` +
-          `setAuto=${JSON.stringify((bridge.setAutoUpdate as ReturnType<typeof vi.fn>).mock.calls)}`
+          `setAuto=${JSON.stringify((bridge.setAutoUpdate as ReturnType<typeof vi.fn>).mock.calls)} ` +
+          `remindLater=${(bridge.remindLater as ReturnType<typeof vi.fn>).mock.calls.length} ` +
+          `ignore=${(bridge.ignoreVersion as ReturnType<typeof vi.fn>).mock.calls.length}`
         : ""),
   );
 
@@ -101,81 +108,102 @@ afterEach(() => {
   Reflect.deleteProperty(window, "parrot");
 });
 
-describe("Parrot UpdateReadyNotice", () => {
-  // @req REL-UPD-01
-  it("appears once the main process reports a downloaded version, and Restart now installs", async () => {
+describe("ParrotUpdatePrompt", () => {
+  // @req REL-UPD-08
+  it("opens once the main process reports a downloaded version, and Restart now installs", async () => {
     const testId = "ready-from-main-state";
     const bridge = makeBridge(mainState({ phase: "downloaded", version: "2.1.0", progress: 100 }));
     install(bridge);
     console.info(`${SUITE}[${testId}] phase:mount with main state downloaded 2.1.0`);
-    await mount(<UpdateReadyNotice t={t} />);
+    await mount(readyPrompt);
     dump(testId, bridge);
-    const notice = q("update-ready-notice");
-    expect(notice).not.toBeNull();
-    expect(notice!.getAttribute("role")).toBe("status");
-    expect(notice!.textContent).toContain(t("update.ready.title"));
-    expect(notice!.textContent).toContain(t("update.ready.body", { version: "2.1.0" }));
+    const prompt = q("update-prompt");
+    expect(prompt).not.toBeNull();
+    expect(prompt!.getAttribute("role")).toBe("dialog");
+    expect(prompt!.getAttribute("data-view")).toBe("ready");
+    expect(prompt!.textContent).toContain("Update ready");
+    expect(q("update-prompt-message")!.textContent).toBe("Parrot 2.1.0 has downloaded. It installs the next time you quit Parrot.");
     console.info(`${SUITE}[${testId}] phase:click restart`);
-    await act(async () => q<HTMLButtonElement>("update-ready-restart")!.click());
+    await act(async () => q<HTMLButtonElement>("update-prompt-install")!.click());
     dump(testId, bridge);
     expect(bridge.installAndRestart).toHaveBeenCalledTimes(1);
   });
 
-  // @req REL-UPD-01
-  it("stays hidden until a background download finishes, then shows; Later hides it for that version", async () => {
+  // @req REL-UPD-08
+  it("stays hidden until a background download finishes, then opens; Remind me later asks main and hides it", async () => {
     const testId = "ready-from-event";
     const bridge = makeBridge(mainState());
     install(bridge);
-    await mount(<UpdateReadyNotice t={t} />);
+    await mount(readyPrompt);
     dump(testId, bridge);
-    expect(q("update-ready-notice")).toBeNull();
+    expect(q("update-prompt")).toBeNull();
     console.info(`${SUITE}[${testId}] phase:emit update-available + progress`);
     await act(async () => {
       bridge.emit({ kind: "update-available", version: "2.2.0", releaseNotes: null });
       bridge.emit({ kind: "download-progress", percent: 40 });
     });
     dump(testId, bridge);
-    expect(q("update-ready-notice")).toBeNull();
+    expect(q("update-prompt")).toBeNull();
     console.info(`${SUITE}[${testId}] phase:emit update-downloaded`);
     await act(async () => bridge.emit({ kind: "update-downloaded", version: "2.2.0" }));
     dump(testId, bridge);
-    expect(q("update-ready-notice")).not.toBeNull();
-    const later = Array.from(container!.querySelectorAll("button")).find((b) => b.textContent === t("update.later"));
-    console.info(`${SUITE}[${testId}] phase:click later`);
-    await act(async () => later!.click());
+    expect(q("update-prompt")).not.toBeNull();
+    console.info(`${SUITE}[${testId}] phase:click remind me later, main answers prompt-snoozed`);
+    await act(async () => q<HTMLButtonElement>("update-prompt-later")!.click());
+    await act(async () => bridge.emit({ kind: "prompt-snoozed", version: "2.2.0", until: Date.now() + 24 * 3600 * 1000 }));
     dump(testId, bridge);
-    expect(q("update-ready-notice")).toBeNull();
+    expect(bridge.remindLater).toHaveBeenCalledTimes(1);
+    expect(q("update-prompt")).toBeNull();
     expect(bridge.installAndRestart).not.toHaveBeenCalled();
   });
 
-  // @req REL-UPD-01
+  // @req REL-UPD-08
+  it("Ignore asks main to skip the version; a newer version opens the modal again", async () => {
+    const testId = "ready-ignore";
+    const bridge = makeBridge(mainState({ phase: "downloaded", version: "2.2.0", progress: 100 }));
+    install(bridge);
+    await mount(readyPrompt);
+    console.info(`${SUITE}[${testId}] phase:click ignore, main answers prompt-ignored`);
+    await act(async () => q<HTMLButtonElement>("update-prompt-ignore")!.click());
+    await act(async () => bridge.emit({ kind: "prompt-ignored", version: "2.2.0" }));
+    dump(testId, bridge);
+    expect(bridge.ignoreVersion).toHaveBeenCalledTimes(1);
+    expect(q("update-prompt")).toBeNull();
+    console.info(`${SUITE}[${testId}] phase:emit newer version downloaded`);
+    await act(async () => bridge.emit({ kind: "update-downloaded", version: "2.3.0" }));
+    dump(testId, bridge);
+    expect(q("update-prompt-message")!.textContent).toContain("Parrot 2.3.0 has downloaded.");
+  });
+
+  // @req REL-UPD-08
   it("a downloaded update without a version still reads as a sentence, not an empty name", async () => {
     const testId = "ready-no-version";
     const bridge = makeBridge(mainState({ phase: "downloaded", version: null, progress: 100 }));
     install(bridge);
-    await mount(<UpdateReadyNotice t={t} />);
+    await mount(readyPrompt);
     dump(testId, bridge);
-    const notice = q("update-ready-notice");
-    expect(notice).not.toBeNull();
-    expect(notice!.textContent).toContain(t("update.ready.bodyCurrent"));
-    expect(notice!.textContent).not.toContain("Parrot  is ready");
+    const message = q("update-prompt-message");
+    expect(message).not.toBeNull();
+    expect(message!.textContent).toBe("A new version of Parrot has downloaded. It installs the next time you quit Parrot.");
+    expect(message!.textContent).not.toContain("Parrot  has");
   });
 
-  // @req REL-UPD-01
+  // @req REL-UPD-08
   it("stays out of the way of a mandatory update (the blocking screen handles it)", async () => {
     const testId = "ready-mandatory";
     const bridge = makeBridge(mainState({ phase: "downloaded", version: "3.0.0", progress: 100, mandatory: true }));
     install(bridge);
-    await mount(<UpdateReadyNotice t={t} />);
+    await mount(readyPrompt);
     dump(testId, bridge);
-    expect(q("update-ready-notice")).toBeNull();
+    expect(q("update-prompt")).toBeNull();
   });
 
-  // @req REL-UPD-01
+  // @req REL-UPD-08
   it("renders nothing without a bridge (browser build)", async () => {
     const testId = "ready-no-bridge";
-    await mount(<UpdateReadyNotice t={t} />);
+    await mount(readyPrompt);
     dump(testId);
+    expect(q("update-prompt")).toBeNull();
     expect(container!.innerHTML).toBe("");
   });
 });

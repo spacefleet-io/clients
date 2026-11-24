@@ -9,10 +9,15 @@
  * `latest.yml`, `latest-mac.yml` and the files they list). The API host can change at runtime, so the feed URL is set
  * before every check.
  *
- * Automatic updates (the user's setting, ON by default): a check at start and every 6 hours; a found update downloads
- * in the background and installs when the app quits, or at once through "Restart to update". An update never installs
- * while the app is running, so never during playback. With the setting off the user checks, downloads and restarts by
- * hand from Settings.
+ * Automatic updates (the user's setting, ON by default): a check at start and every 4 hours, and again when the
+ * computer wakes (last automatic check 30 minutes old or more) or the window comes back to the front (one hour or
+ * more), never more than once per 30 minutes (REL-UPD-08); a found update downloads in the background and installs
+ * when the app quits, or at once through "Restart now" in the update modal. An update never installs while the app is
+ * running, so never during playback. With the setting off the user checks, downloads and restarts by hand from Settings.
+ *
+ * REL-UPD-08: the window's update modal offers "Remind me later" (this version, for a day or until the next launch:
+ * kept in memory here) and "Ignore" (this version for good, kept in a file: it is not prompted again nor installed on
+ * quit; Settings still offers it, and a newer version prompts again). A mandatory update refuses both.
  *
  * REL-UPD-07: a Linux copy installed by the system's package manager (.deb, .rpm, .pacman) or as a Flatpak never runs
  * electron-updater. It checks release-status on the same schedule and behind the same setting, naming its install
@@ -24,6 +29,8 @@
  * electron-updater only works inside a packaged app: every entry point short-circuits when `!app.isPackaged` (except
  * the E2E test mode) and answers "unsupported".
  */
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname } from "node:path";
 import { compareVersions } from "@space/shared/appVersion";
 import {
   canAskPassword,
@@ -35,8 +42,12 @@ import {
   type SystemProbe,
 } from "./systemPackage";
 import {
+  AUTO_UPDATE_FOCUS_GAP_MS,
   AUTO_UPDATE_INTERVAL_MS,
+  AUTO_UPDATE_MIN_GAP_MS,
+  AUTO_UPDATE_START_DELAY_MS,
   INITIAL_UPDATER_STATE,
+  UPDATE_REMIND_LATER_MS,
   UPDATER_CHANNELS,
   reduceUpdaterState,
   type DesktopUpdaterApp,
@@ -113,14 +124,68 @@ export type DesktopUpdaterOptions = {
   linuxPackageName: string;
   /** Test seam: the OS calls of systemPackage.ts. */
   systemProbe?: SystemProbe;
+  /**
+   * REL-UPD-08: where "Ignore" keeps the ignored version across restarts (`ignoredVersionFileStore` on a file in the
+   * app's userData). Without it the choice lasts until the app quits.
+   */
+  ignoredVersionStore?: IgnoredVersionStore;
+  /** REL-UPD-08: how long after launch the first automatic check waits (default `AUTO_UPDATE_START_DELAY_MS`). */
+  startDelayMs?: number;
 };
+
+/** REL-UPD-08: the version "Ignore" skipped, kept across restarts. */
+export type IgnoredVersionStore = { read: () => string | null; write: (version: string) => void };
+
+/**
+ * What the app reports about the user's attention (REL-UPD-08): the computer woke up, a window of the app came to the
+ * front, or the app lost the focus (no window of it in front: the start of an absence).
+ */
+export type UpdaterWakeTrigger = "resume" | "focus" | "blur";
 
 export type DesktopUpdater = {
   /** Register the IPC handlers once; `getWindow` is read on every event so a recreated window still gets them. */
   register: (getWindow: () => UpdaterWindow | null) => void;
-  /** Apply the user's automatic-updates setting: arms (check now + every 6 h) or disarms the background check. */
+  /** Apply the user's automatic-updates setting: arms (first check 30 s after launch, then every 4 h) or disarms the background check. */
   setAutoUpdate: (enabled: boolean) => void;
+  /**
+   * REL-UPD-08: the app calls this from Electron's `powerMonitor` "resume", `browser-window-focus` and
+   * `browser-window-blur`. With automatic updates on, a wake checks at once unless the last automatic check is under
+   * 30 minutes old; a focus checks only when the app was out of focus at least an hour (and the last check is not under
+   * 30 minutes old). A blur only starts the absence.
+   */
+  nudge: (trigger: UpdaterWakeTrigger) => void;
 };
+
+/**
+ * REL-UPD-08: "Ignore" kept as `{ "version": "1.2.3" }` in `path` (the app's userData). An unreadable or missing file
+ * reads as nothing ignored; a failed write is logged and the choice still holds for this run.
+ */
+export const ignoredVersionFileStore = (path: string, logger: UpdaterLogger): IgnoredVersionStore => ({
+  read: () => {
+    let raw: string;
+    try {
+      raw = readFileSync(path, "utf8");
+    } catch {
+      return null;
+    }
+    try {
+      const parsed: unknown = JSON.parse(raw);
+      const version = parsed && typeof parsed === "object" && "version" in parsed ? parsed.version : null;
+      return typeof version === "string" && version.length > 0 ? version : null;
+    } catch (err) {
+      logger.warn({ path, message: errorMessage(err) }, "ignored update version file unreadable — nothing ignored");
+      return null;
+    }
+  },
+  write: (version) => {
+    try {
+      mkdirSync(dirname(path), { recursive: true });
+      writeFileSync(path, `${JSON.stringify({ version })}\n`, "utf8");
+    } catch (err) {
+      logger.warn({ path, version, message: errorMessage(err) }, "couldn't keep the ignored update version — it holds for this run only");
+    }
+  },
+});
 
 /** API `GET /desktop/<app>/release-status` (untrusted wire data: every field is validated where read). */
 type ReleaseStatus = { latestVersion: string | null; minClientVersion: string; mandatory: boolean };
@@ -152,15 +217,15 @@ export const SYSTEM_UPDATE_HOLD_MS = 60 * 60 * 1000;
 
 /**
  * E2E hook (`SF_UPDATER_CHECK_INTERVAL_MS`, never set in a release): the automatic background check runs on this
- * cadence instead of every 6 hours, so the update e2e can watch the real timer fire in a packaged app. Anything but a
- * whole number of at least 1000 ms keeps 6 hours.
+ * cadence instead of every 4 hours, so the update e2e can watch the real timer fire in a packaged app. Anything but a
+ * whole number of at least 1000 ms keeps 4 hours.
  */
 const autoCheckIntervalMs = (logger: UpdaterLogger): number => {
   const value = process.env.SF_UPDATER_CHECK_INTERVAL_MS?.trim() ?? "";
   if (value === "") return AUTO_UPDATE_INTERVAL_MS;
   const ms = /^\d+$/.test(value) ? Number(value) : Number.NaN;
   if (Number.isSafeInteger(ms) && ms >= MIN_TEST_INTERVAL_MS) return ms;
-  logger.warn({ value }, `SF_UPDATER_CHECK_INTERVAL_MS ignored (not a whole number ≥ ${MIN_TEST_INTERVAL_MS} ms) — checking every 6 hours`);
+  logger.warn({ value }, `SF_UPDATER_CHECK_INTERVAL_MS ignored (not a whole number ≥ ${MIN_TEST_INTERVAL_MS} ms) — checking every 4 hours`);
   return AUTO_UPDATE_INTERVAL_MS;
 };
 
@@ -191,12 +256,20 @@ export const createDesktopUpdater = ({
   onQuitForUpdate,
   linuxPackageName,
   systemProbe = nodeSystemProbe,
+  ignoredVersionStore,
+  startDelayMs = AUTO_UPDATE_START_DELAY_MS,
 }: DesktopUpdaterOptions): DesktopUpdater => {
+  /** REL-UPD-08: the first automatic check counts its delay from here (the app creates the updater at launch). */
+  const launchedAt = Date.now();
   let registered = false;
   let windowGetter: (() => UpdaterWindow | null) | null = null;
   let updater: AutoUpdaterLike | null = null;
   let autoEnabled = false;
   let autoTimer: ReturnType<typeof setInterval> | null = null;
+  /** REL-UPD-08: the pending first check, while the launch delay runs. */
+  let startTimer: ReturnType<typeof setTimeout> | null = null;
+  /** REL-UPD-08: when the app lost the focus (epoch ms); null while a window of it is in front. */
+  let awaySince: number | null = null;
   let state: UpdaterState = INITIAL_UPDATER_STATE;
   /** REL-UPD-07: set once a package-manager or Flatpak install is detected; electron-updater is never built then. */
   let packageInstall: Extract<LinuxInstall, { kind: "system" | "flatpak" }> | null = null;
@@ -204,10 +277,22 @@ export const createDesktopUpdater = ({
   let heldBack: { version: string; until: number } | null = null;
   /** Settles when the install type is known; the IPC handlers wait for it so the window never sees a half state. */
   let ready: Promise<void> = Promise.resolve();
+  /** REL-UPD-08: when the last automatic check started (epoch ms), for the wake/focus throttle; null = none yet. */
+  let lastAutoCheckAt: number | null = null;
+  /** The automatic cadence (4 hours, or the e2e hook's), read when the checks are armed. */
+  let intervalMs = AUTO_UPDATE_INTERVAL_MS;
+  /** REL-UPD-08: the version "Ignore" skipped (read once at start, rides every state snapshot). */
+  let ignoredVersion: string | null = ignoredVersionStore?.read() ?? null;
 
   const canRun = (): boolean =>
     (app.isPackaged || isUpdaterTestMode()) && (packageInstall !== null || !isSystemPackagedLinux(getPlatformId()));
   const feedUrl = (): string => `${getApiBaseUrl().replace(/\/+$/, "")}/desktop/${appId}`;
+  /**
+   * Install on quit only with automatic updates on, and never the version the user ignored (REL-UPD-08) unless the
+   * server marks it required. `version` = the one electron-updater is about to download or holds.
+   */
+  const installOnQuit = (version: string | null = state.version): boolean =>
+    autoEnabled && (state.mandatory || version === null || version !== ignoredVersion);
 
   const emit = (event: UpdaterEvent): void => {
     state = reduceUpdaterState(state, event);
@@ -286,7 +371,7 @@ export const createDesktopUpdater = ({
     au.setFeedURL({ provider: "generic", url: feedUrl() });
     // Automatic: a found update downloads at once and installs when the app quits. Manual: the user clicks.
     au.autoDownload = autoEnabled;
-    au.autoInstallOnAppQuit = autoEnabled;
+    au.autoInstallOnAppQuit = installOnQuit();
   };
 
   /**
@@ -302,6 +387,7 @@ export const createDesktopUpdater = ({
   };
 
   const backgroundCheck = (): void => {
+    lastAutoCheckAt = Date.now();
     if (packageInstall) {
       void checkPackageFeed();
       return;
@@ -320,24 +406,71 @@ export const createDesktopUpdater = ({
       .catch((err: unknown) => logger.warn({ message: errorMessage(err) }, "scheduled update check failed"));
   };
 
+  /**
+   * REL-UPD-08: an automatic check that is not the one at start (the 4-hour timer, a wake, the window back in front)
+   * runs only when the last automatic check is at least `gapMs` old, never more than once per 30 minutes. The e2e
+   * cadence hook shortens the gaps with the interval.
+   */
+  const throttledCheck = (trigger: UpdaterWakeTrigger | "interval", gapMs: number): void => {
+    const gap = Math.min(gapMs, intervalMs);
+    const sinceLast = lastAutoCheckAt === null ? null : Date.now() - lastAutoCheckAt;
+    if (sinceLast !== null && sinceLast < gap) {
+      logger.info({ trigger, sinceLastMs: sinceLast, gapMs: gap }, "automatic update check skipped — checked recently");
+      return;
+    }
+    logger.info({ trigger, sinceLastMs: sinceLast }, "automatic update check");
+    backgroundCheck();
+  };
+
   const armAutoChecks = (): void => {
+    if (startTimer) {
+      clearTimeout(startTimer);
+      startTimer = null;
+    }
     if (autoTimer) {
       clearInterval(autoTimer);
       autoTimer = null;
     }
     if (updater) {
       updater.autoDownload = autoEnabled;
-      updater.autoInstallOnAppQuit = autoEnabled;
+      updater.autoInstallOnAppQuit = installOnQuit();
     }
     if (!autoEnabled || !canRun()) return;
     if (!updater && !packageInstall) {
       logger.warn({ version: app.getVersion() }, "automatic update checks skipped — in-app updater unavailable");
       return;
     }
-    const intervalMs = autoCheckIntervalMs(logger);
-    logger.info({ intervalMs, feed: feedUrl() }, "automatic update checks armed");
-    backgroundCheck();
-    autoTimer = setInterval(backgroundCheck, intervalMs);
+    intervalMs = autoCheckIntervalMs(logger);
+    // The e2e cadence hook shortens the launch delay with the interval; armed later than that (the setting turned on
+    // in Settings), the first check runs at once.
+    const startInMs = Math.max(0, Math.min(startDelayMs, intervalMs) - (Date.now() - launchedAt));
+    logger.info({ intervalMs, startInMs, feed: feedUrl() }, "automatic update checks armed");
+    const startChecks = (): void => {
+      startTimer = null;
+      backgroundCheck();
+      autoTimer = setInterval(() => throttledCheck("interval", AUTO_UPDATE_MIN_GAP_MS), intervalMs);
+    };
+    if (startInMs === 0) startChecks();
+    else startTimer = setTimeout(startChecks, startInMs);
+  };
+
+  const nudge = (trigger: UpdaterWakeTrigger): void => {
+    if (trigger === "blur") {
+      awaySince = Date.now();
+      return;
+    }
+    if (trigger === "focus") {
+      const awayMs = awaySince === null ? null : Date.now() - awaySince;
+      awaySince = null;
+      const minAwayMs = Math.min(AUTO_UPDATE_FOCUS_GAP_MS, intervalMs);
+      if (autoTimer && (awayMs === null || awayMs < minAwayMs)) {
+        logger.info({ trigger, awayMs, minAwayMs }, "automatic update check skipped — not away long enough");
+        return;
+      }
+    }
+    // Only once the checks run: automatic updates on, a working updater, the install type known, the launch delay over.
+    if (!autoTimer) return;
+    throttledCheck(trigger, AUTO_UPDATE_MIN_GAP_MS);
   };
 
   const registerUnavailableHandlers = (): void => {
@@ -452,7 +585,33 @@ export const createDesktopUpdater = ({
     // The installed version rides every snapshot, also when the updater is unavailable: Settings always shows it.
     ipcMain.handle(UPDATER_CHANNELS.state, async (): Promise<UpdaterState> => {
       await ready;
-      return { ...state, autoUpdate: autoEnabled, currentVersion: app.getVersion() };
+      return { ...state, autoUpdate: autoEnabled, currentVersion: app.getVersion(), ignoredVersion };
+    });
+    // REL-UPD-08: the update modal's "Remind me later" and "Ignore" act on the offered version; a mandatory update
+    // (REL-CD-29) has neither.
+    ipcMain.handle(UPDATER_CHANNELS.remindLater, (): { ok: boolean } => {
+      const version = state.version;
+      if (!version || state.mandatory) {
+        logger.info({ version, mandatory: state.mandatory }, "remind me later refused — no optional update offered");
+        return { ok: false };
+      }
+      const until = Date.now() + UPDATE_REMIND_LATER_MS;
+      logger.info({ version, until: new Date(until).toISOString() }, "update prompt: remind me later");
+      emit({ kind: "prompt-snoozed", version, until });
+      return { ok: true };
+    });
+    ipcMain.handle(UPDATER_CHANNELS.ignore, (): { ok: boolean } => {
+      const version = state.version;
+      if (!version || state.mandatory) {
+        logger.info({ version, mandatory: state.mandatory }, "ignore refused — no optional update offered");
+        return { ok: false };
+      }
+      ignoredVersion = version;
+      ignoredVersionStore?.write(version);
+      if (updater) updater.autoInstallOnAppQuit = installOnQuit();
+      logger.info({ version, installOnQuit: updater?.autoInstallOnAppQuit ?? null }, "update prompt: version ignored");
+      emit({ kind: "prompt-ignored", version });
+      return { ok: true };
     });
 
     if (isSystemPackagedLinux(getPlatformId())) {
@@ -478,7 +637,7 @@ export const createDesktopUpdater = ({
     }
     updater = au;
     au.autoDownload = autoEnabled;
-    au.autoInstallOnAppQuit = autoEnabled;
+    au.autoInstallOnAppQuit = installOnQuit();
     if (isUpdaterTestMode()) {
       au.forceDevUpdateConfig = true;
       au.disableDifferentialDownload = true;
@@ -491,7 +650,12 @@ export const createDesktopUpdater = ({
     };
     au.on("checking-for-update", () => emit({ kind: "checking" }));
     au.on("update-available", (info) => {
-      logger.info({ version: info.version, current: app.getVersion(), autoDownload: au.autoDownload }, "update available");
+      // REL-UPD-08: an ignored version may still download, but never installs on quit.
+      au.autoInstallOnAppQuit = installOnQuit(info.version);
+      logger.info(
+        { version: info.version, current: app.getVersion(), autoDownload: au.autoDownload, installOnQuit: au.autoInstallOnAppQuit, ignoredVersion },
+        "update available",
+      );
       emit({ kind: "update-available", version: info.version, releaseNotes: releaseNotesToText(info.releaseNotes), checkedAt: Date.now() });
     });
     au.on("update-not-available", () => emit({ kind: "update-not-available", checkedAt: Date.now() }));
@@ -564,11 +728,11 @@ export const createDesktopUpdater = ({
   };
 
   const setAutoUpdate = (enabled: boolean): void => {
-    if (enabled === autoEnabled && (autoTimer !== null || !enabled)) return;
+    if (enabled === autoEnabled && (autoTimer !== null || startTimer !== null || !enabled)) return;
     autoEnabled = enabled;
     logger.info({ enabled }, "automatic updates setting applied");
     armAutoChecks();
   };
 
-  return { register, setAutoUpdate };
+  return { register, setAutoUpdate, nudge };
 };
