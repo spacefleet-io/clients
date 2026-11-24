@@ -295,6 +295,27 @@ export type MediaResealProgress = {
     nextAfter: string | null;
 };
 
+export type MediaResealCopies = {
+    copies: Array<MediaResealCopy>;
+    nextAfter: string | null;
+};
+
+export type MediaResealCopy = {
+    oldKey: string;
+    /**
+     * The live copy that replaces `oldKey`; null when kept.
+     */
+    newKey: string | null;
+    /**
+     * The old key could not open it: it stays as it is (STOR-RESEAL-05).
+     */
+    kept: boolean;
+    /**
+     * Stored size of the old object.
+     */
+    sizeBytes: number;
+};
+
 export type P2pPeer = {
     peerId: string;
     kind: 'tv' | 'mobile';
@@ -2024,6 +2045,62 @@ export type GetMediaResealRunResponses = {
 };
 
 export type GetMediaResealRunResponse = GetMediaResealRunResponses[keyof GetMediaResealRunResponses];
+
+export type ListMediaResealCopiesData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: {
+        /**
+         * `nextAfter` of the previous page.
+         */
+        after?: string;
+        /**
+         * Page size, 200 when absent, at most 500.
+         */
+        limit?: number;
+    };
+    url: '/library/media-reseal/runs/{id}/copies';
+};
+
+export type ListMediaResealCopiesErrors = {
+    /**
+     * Missing or unknown token.
+     */
+    401: {
+        error: 'unauthorized';
+    };
+    /**
+     * The account is blocked or scheduled for deletion, or a personal token was used on a route that needs a login session.
+     */
+    403: {
+        error: 'account_blocked' | 'account_deleted' | 'personal_token_not_allowed';
+    };
+    /**
+     * No reseal run with this id on the account.
+     */
+    404: {
+        error: 'reseal_run_not_found';
+    };
+    /**
+     * The copies could not be read.
+     */
+    503: {
+        error: 'media_reseal_unavailable';
+    };
+};
+
+export type ListMediaResealCopiesError = ListMediaResealCopiesErrors[keyof ListMediaResealCopiesErrors];
+
+export type ListMediaResealCopiesResponses = {
+    /**
+     * One page of copies and kept objects.
+     */
+    200: MediaResealCopies;
+};
+
+export type ListMediaResealCopiesResponse = ListMediaResealCopiesResponses[keyof ListMediaResealCopiesResponses];
 
 export type MarkMediaResealKeptData = {
     body: {
