@@ -9,6 +9,7 @@ import { activeLyricIndex, formatDuration, homeJumpButton, homeRecentlyAdded, ho
 import type { HistoryAlbum, HomeNowPlaying, ListeningHistory, ParrotAlbumSort, ParrotLyrics, RepeatMode } from "@space/parrot-core";
 import { Button } from "../button";
 import { GuardedItems, RenderBoundary } from "../render-boundary";
+import { usePlayPauseShortcut } from "../play-pause-shortcut";
 import { cn } from "../utils";
 import { ParrotCardOverlay, type ParrotCardControls } from "./card-actions";
 import { ParrotCover, ParrotEqualizer, ParrotNameLink, ParrotWaveSeek } from "./components";
@@ -219,11 +220,13 @@ const iconButton = "h-9 w-9 text-muted-foreground hover:bg-white/5 hover:text-fo
 
 /**
  * The bottom player bar in the approved design (PAR-LOOK-01): cover, title and artist and the like button; shuffle,
- * previous, play, next and repeat over the waveform seek bar; lyrics, queue and volume on the right.
+ * previous, play, next and repeat over the waveform seek bar; lyrics, queue and volume on the right. While it is
+ * shown, space plays or pauses from anywhere in the window (PAR-PLAY-11).
  */
 export function ParrotPlayerBar(props: ParrotPlayerBarProps) {
   const { track, coverSrc, playing, positionMs, durationMs, error, shuffle, repeat, canPrevious, canNext, labels, openTab = null } = props;
   const [waveWidth, waveBox] = useBoxWidth();
+  usePlayPauseShortcut(props.onToggle);
   const repeatLabel = repeat === "one" ? labels.repeatOne : repeat === "all" ? labels.repeatAll : labels.repeatOff;
   return (
     <footer
