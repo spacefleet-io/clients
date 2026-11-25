@@ -11,7 +11,7 @@ import type { ParrotPhotoCredit } from "@space/parrot-library-db-definition/ops"
 import { colors, spacing } from "../../theme";
 import { ParrotArt } from "../art";
 import { PAGE_BACK_ROW } from "../pageBack";
-import { MobileSkeletonPulse } from "@space/mobile-shell/components";
+import { Shimmer } from "../shimmer";
 import { SongListRow } from "../SongListRow";
 import type { ArtistPage, ArtistSong } from "./useArtistPage";
 
@@ -62,7 +62,7 @@ const initials = (name: string) =>
 export const ArtistHero = ({ artistId, name, page, width, height }: { artistId: string; name: string; page: ArtistPage; width: number; height: number }) => (
   <View testID="artist-hero" style={{ width, height }}>
     {page.photoWaiting ? (
-      <MobileSkeletonPulse testID="artist-photo-shimmer" style={StyleSheet.absoluteFill} />
+      <Shimmer testID="artist-photo-shimmer" style={StyleSheet.absoluteFill} />
     ) : (
       <ParrotArt
         seed={artistId}
@@ -114,7 +114,7 @@ export const SongRows = ({ list, page, withCover = true }: { list: ArtistSong[];
         starting={page.starting === song.id}
         disabled={page.starting !== null}
         unavailable={page.reach ? !page.reach.song(song.id) : false}
-        accessibilityLabel={page.t(page.now?.trackId === song.id && page.now.playing ? "parrot.album.pause" : "parrot.album.play", { title: song.title })}
+        accessibilityLabel={page.t("parrot.album.play", { title: song.title })}
         onPress={() => page.playFrom(list, index)}
         onMore={() => page.openSong(song)}
         moreLabel={`${page.t("parrot.player.more")}, ${song.title}`}

@@ -7,7 +7,7 @@ import { ActivityIndicator, FlatList, StyleSheet } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { Ellipsis, Pencil, Trash2 } from "lucide-react-native";
 import { useTranslation } from "@space/mobile-shell/i18n";
-import { MobileIconButton, useSkyScroll } from "@space/mobile-shell/components";
+import { useSkyScroll } from "@space/mobile-shell/components";
 import { guardRenderItem } from "@space/mobile-shell/render-boundary";
 import { parrotCoverThumbKey } from "@space/parrot-core";
 import { useSession } from "../state/session";
@@ -21,7 +21,7 @@ import { colors, spacing } from "../theme";
 import { ParrotArt } from "./art";
 import { SongListRow, songRowNames } from "./SongListRow";
 import { KeepButton, KeptLine, useKept, useOfflineReach } from "./kept";
-import { Body, ErrorText, PageTitle } from "./ui";
+import { Body, ErrorText, IconButton, PageTitle } from "./ui";
 import { PageBackButton, usePageTop } from "./pageBack";
 import { ParrotSky } from "./sky";
 import type { RootStack } from "./routes";
@@ -61,8 +61,9 @@ export const PlaylistScreen = ({ route, navigation }: NativeStackScreenProps<Roo
                 <>
                   <KeepButton testID="playlist-keep" state={kept.state("playlist", playlistId)} onPress={() => editor.toggleKeep("playlist", playlistId)} />
                   {liked ? null : (
-                    <MobileIconButton
+                    <IconButton
                       testID="playlist-more"
+                      icon={Ellipsis}
                       label={t("shell.card.more")}
                       onPress={() =>
                         editor.openActions(
@@ -81,9 +82,7 @@ export const PlaylistScreen = ({ route, navigation }: NativeStackScreenProps<Roo
                           "playlist-menu"
                         )
                       }
-                    >
-                      <Ellipsis size={22} color={colors.text} />
-                    </MobileIconButton>
+                    />
                   )}
                 </>
               }
@@ -109,7 +108,7 @@ export const PlaylistScreen = ({ route, navigation }: NativeStackScreenProps<Roo
             starting={starting === item.id}
             disabled={starting !== null}
             unavailable={reach ? !reach.song(item.id) : false}
-            accessibilityLabel={t(now?.trackId === item.id && now.playing ? "parrot.album.pause" : "parrot.album.play", { title: item.title })}
+            accessibilityLabel={t("parrot.album.play", { title: item.title })}
             onPress={() => void play(list, index)}
             onMore={() => editor.openSong({ id: item.id, title: item.title }, { playlistId, position: index }, { onAddToQueue: () => queue([item], "end") })}
             moreLabel={`${t("parrot.player.more")}, ${item.title}`}

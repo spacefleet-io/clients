@@ -24,7 +24,9 @@
       "nowPlaying": "En cours de lecture"
     },
     "login": {
-      "sameAsBadger": "Utilisez le même e-mail et le même mot de passe que pour Badger."
+      "sameAsBadger": "Utilisez le même e-mail et le même mot de passe que pour Badger.",
+      "codeTotp": "Code de votre app d'authentification",
+      "codeEmail": "Code reçu par e-mail"
     },
     "key": {
       "title": "Saisissez votre clé de médiathèque",
@@ -64,8 +66,7 @@
       "noPlayableFile": "Cet album n'a pas encore de fichier lisible.",
       "playFailed": "Impossible de lire ce titre ({{error}}).",
       "noSongs": "Aucun titre.",
-      "play": "Lire {{title}}",
-      "pause": "Mettre en pause {{title}}"
+      "play": "Lire {{title}}"
     },
     "player": {
       "nothing": "Rien n'est en lecture.",

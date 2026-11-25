@@ -24,7 +24,9 @@
       "nowPlaying": "Sonando ahora"
     },
     "login": {
-      "sameAsBadger": "Usa el mismo correo electrónico y la misma contraseña que en Badger."
+      "sameAsBadger": "Usa el mismo correo electrónico y la misma contraseña que en Badger.",
+      "codeTotp": "Código de tu app de autenticación",
+      "codeEmail": "Código que te enviamos por correo"
     },
     "key": {
       "title": "Introduce tu clave de la mediateca",
@@ -64,8 +66,7 @@
       "noPlayableFile": "Este álbum todavía no tiene ningún archivo reproducible.",
       "playFailed": "No se pudo reproducir esta canción ({{error}}).",
       "noSongs": "No hay canciones.",
-      "play": "Reproducir {{title}}",
-      "pause": "Pausar {{title}}"
+      "play": "Reproducir {{title}}"
     },
     "player": {
       "nothing": "No se está reproduciendo nada.",

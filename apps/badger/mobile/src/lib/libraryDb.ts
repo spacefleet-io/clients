@@ -1093,12 +1093,8 @@ export class LibraryDb {
           undefined,
           chunkIndex.chunks.map((entry) => entry.hash),
           MOBILE_CHUNK_REFS_SOURCE,
-          // An empty library holds no playback rows: it is as valid in op stream 4 as in 3, so it declares what the
-          // account's writers declare (a switched account refuses a version-3 write, LIB-FMT-13).
-          {
-            storageFormatVersion: MOBILE_LIBRARY_SUPPORT.storageFormatVersion,
-            opStreamVersion: writeOpStreamVersion(metaTargetOpStreamVersion(selection.meta)),
-          },
+          // A new library is never switched yet: it writes the op stream this build starts on (LIB-FMT-13).
+          { storageFormatVersion: MOBILE_LIBRARY_SUPPORT.storageFormatVersion, opStreamVersion: OP_STREAM_VERSION },
           checkedKeyProbe
         );
         await saveCache({
@@ -1121,8 +1117,6 @@ export class LibraryDb {
           pending,
           pendingOps
         );
-        // Packs the new playback copy on a switched account, so its first ops declare 4 too.
-        await instance.adoptTargetOpStreamVersion(selection.meta);
         if (pendingOps.length) {
           await instance.applyLibraryOps(pendingOps as LibraryOp[]);
         }

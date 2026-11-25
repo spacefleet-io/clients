@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Alert, AppState, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
-import { MobileButton, MobileInput, MobileScreen } from "@space/mobile-shell/components";
-import { SectionHeader } from "../components/SectionHeader";
+import { Button, Input, SectionHeader } from "../components/ui";
 import { SwitchRow } from "../components/SettingsRows";
+import { Screen } from "../components/Screen";
 import { useAuth } from "../store/auth";
 import { useLibrary } from "../store/library";
 import { createBadgerPhoneKeyChange } from "../lib/keyChange";
@@ -221,7 +221,7 @@ export const ResetKeyScreen = () => {
   const kept = progress?.keptFiles ?? 0;
 
   return (
-    <MobileScreen>
+    <Screen>
       <ScrollView contentContainerStyle={styles.scroll} testID="key-change-screen">
         <SectionHeader title={kt("dialogTitle")} />
         {onForm ? (
@@ -234,7 +234,7 @@ export const ResetKeyScreen = () => {
             </View>
             <SwitchRow title={kt("confirmLabel")} value={confirmed} onValueChange={setConfirmed} testID="key-change-confirm" />
             {hasPassword ? (
-              <MobileInput label={kt("passwordLabel")} value={password} onChangeText={setPassword} secureTextEntry />
+              <Input label={kt("passwordLabel")} value={password} onChangeText={setPassword} secureTextEntry />
             ) : (
               <Text testID="key-change-no-password" style={styles.muted}>
                 {kt("noPasswordHint")}
@@ -248,7 +248,7 @@ export const ResetKeyScreen = () => {
             {switchNowOpen(state.switchNowAt, now) ? (
               <>
                 <Text style={styles.muted}>{kt("reseal.switchNowBody")}</Text>
-                <MobileButton label={kt("reseal.switchNow")} variant="secondary" onPress={() => void switchNow()} loading={busy} />
+                <Button label={kt("reseal.switchNow")} variant="secondary" onPress={() => void switchNow()} loading={busy} />
               </>
             ) : null}
           </View>
@@ -303,7 +303,7 @@ export const ResetKeyScreen = () => {
 
         {needsCode ? (
           <View style={styles.field}>
-            <MobileInput label={kt("codeLabel")} value={code} onChangeText={setCode} placeholder="123456" />
+            <Input label={kt("codeLabel")} value={code} onChangeText={setCode} placeholder="123456" />
             <Text style={styles.muted}>{method === "totp" ? kt("codeHintTotp") : kt("codeHintEmail")}</Text>
           </View>
         ) : null}
@@ -311,7 +311,7 @@ export const ResetKeyScreen = () => {
         {kept > 0 ? (
           <View style={styles.card} testID="key-change-unreadable">
             <Text style={styles.muted}>{keyChangeCountText(language, "reseal.unreadable", kept)}</Text>
-            <MobileButton label={keyChangeCountText(language, "reseal.seeFiles", kept)} variant="ghost" onPress={() => void showUnreadable()} />
+            <Button label={keyChangeCountText(language, "reseal.seeFiles", kept)} variant="ghost" onPress={() => void showUnreadable()} />
             {unreadableOpen ? (
               <View style={styles.field}>
                 <Text style={styles.title}>{kt("reseal.unreadableTitle")}</Text>
@@ -330,14 +330,14 @@ export const ResetKeyScreen = () => {
                     </View>
                   ))
                 )}
-                <MobileButton
+                <Button
                   label={keyChangeCountText(language, "reseal.unreadableDelete", unreadable?.length ?? 0)}
                   variant="danger"
                   disabled={!unreadable?.length}
                   loading={unreadableBusy}
                   onPress={() => void deleteUnreadable()}
                 />
-                <MobileButton label={kt("reseal.close")} variant="ghost" onPress={() => setUnreadableOpen(false)} />
+                <Button label={kt("reseal.close")} variant="ghost" onPress={() => setUnreadableOpen(false)} />
               </View>
             ) : null}
           </View>
@@ -351,7 +351,7 @@ export const ResetKeyScreen = () => {
         ) : null}
 
         {onForm || state.phase === "ready" ? (
-          <MobileButton
+          <Button
             label={busy ? kt("working") : state.phase === "ready" ? kt("reseal.finish") : kt("submit")}
             onPress={() => void submit()}
             disabled={!confirmed || (hasPassword && !password.trim())}
@@ -362,12 +362,12 @@ export const ResetKeyScreen = () => {
 
         {onForm ? null : (
           <View style={styles.field}>
-            <MobileButton label={kt("reseal.moreOptions")} variant="ghost" onPress={() => setMoreOpen((wasOpen) => !wasOpen)} />
-            {moreOpen ? <MobileButton label={kt("reseal.stop")} variant="danger" onPress={confirmStop} testID="key-change-stop" /> : null}
+            <Button label={kt("reseal.moreOptions")} variant="ghost" onPress={() => setMoreOpen((wasOpen) => !wasOpen)} />
+            {moreOpen ? <Button label={kt("reseal.stop")} variant="danger" onPress={confirmStop} testID="key-change-stop" /> : null}
           </View>
         )}
       </ScrollView>
-    </MobileScreen>
+    </Screen>
   );
 };
 

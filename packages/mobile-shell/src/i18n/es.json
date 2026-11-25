@@ -100,7 +100,19 @@
       "body": "Muestra un código para aprobarlo en Badger o Parrot en un ordenador, teléfono o TV con sesión iniciada."
     },
     "provider": {
-      "continueInBrowser": "Termina de iniciar sesión en tu navegador. Después volverás aquí."
+      "signInWith": "Iniciar sesión con {{provider}}",
+      "signUpWith": "Registrarse con {{provider}}",
+      "or": "o",
+      "continueInBrowser": "Termina de iniciar sesión en tu navegador. Después volverás aquí.",
+      "errorStart": "No se pudo iniciar el inicio de sesión. Vuelve a intentarlo.",
+      "errors": {
+        "email_unverified": "El correo de esta cuenta no está confirmado. Confírmalo con el proveedor o inicia sesión con tu correo y contraseña.",
+        "email_domain_disallowed": "No se pueden crear cuentas con este correo.",
+        "account_deletion_pending": "La eliminación de esta cuenta está programada.",
+        "provider_failed": "No se pudo iniciar sesión. Vuelve a intentarlo.",
+        "cancelled": "Se canceló el inicio de sesión.",
+        "invalid_code": "Este inicio de sesión ha caducado o se inició en otro lugar. Vuelve a intentarlo."
+      }
     },
     "pairing": {
       "title": "Iniciar sesión con otro dispositivo"

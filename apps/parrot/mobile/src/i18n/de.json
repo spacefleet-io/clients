@@ -24,7 +24,9 @@
       "nowPlaying": "Läuft gerade"
     },
     "login": {
-      "sameAsBadger": "Verwende dieselbe E-Mail und dasselbe Passwort wie bei Badger."
+      "sameAsBadger": "Verwende dieselbe E-Mail und dasselbe Passwort wie bei Badger.",
+      "codeTotp": "Code aus deiner Authenticator-App",
+      "codeEmail": "Code, den wir dir per E-Mail geschickt haben"
     },
     "key": {
       "title": "Gib deinen Mediathek-Schlüssel ein",
@@ -64,8 +66,7 @@
       "noPlayableFile": "Dieses Album hat noch keine abspielbare Datei.",
       "playFailed": "Dieser Titel konnte nicht abgespielt werden ({{error}}).",
       "noSongs": "Keine Titel.",
-      "play": "{{title}} abspielen",
-      "pause": "{{title}} pausieren"
+      "play": "{{title}} abspielen"
     },
     "player": {
       "nothing": "Gerade läuft nichts.",

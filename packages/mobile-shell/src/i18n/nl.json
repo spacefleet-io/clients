@@ -100,7 +100,19 @@
       "body": "Toon een code om goed te keuren in Badger of Parrot op een ingelogde computer, telefoon of tv."
     },
     "provider": {
-      "continueInBrowser": "Rond het inloggen af in je browser. Daarna kom je hier terug."
+      "signInWith": "Inloggen met {{provider}}",
+      "signUpWith": "Registreren met {{provider}}",
+      "or": "of",
+      "continueInBrowser": "Rond het inloggen af in je browser. Daarna kom je hier terug.",
+      "errorStart": "Inloggen kon niet starten. Probeer het opnieuw.",
+      "errors": {
+        "email_unverified": "Het e-mailadres van dit account is niet bevestigd. Bevestig het bij de aanbieder, of log in met je e-mailadres en wachtwoord.",
+        "email_domain_disallowed": "Met dit e-mailadres kan geen account worden aangemaakt.",
+        "account_deletion_pending": "Dit account wordt binnenkort verwijderd.",
+        "provider_failed": "Inloggen is niet gelukt. Probeer het opnieuw.",
+        "cancelled": "Inloggen is geannuleerd.",
+        "invalid_code": "Deze inlogpoging is verlopen of ergens anders gestart. Probeer het opnieuw."
+      }
     },
     "pairing": {
       "title": "Inloggen met een ander apparaat"

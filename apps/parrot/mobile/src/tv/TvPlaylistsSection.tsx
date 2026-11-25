@@ -15,8 +15,7 @@ import { listPlaylists } from "../lib/library";
 import { usePlaylistName } from "../screens/PlaylistsView";
 import { useSession } from "../state/session";
 import { useQuery } from "../state/useQuery";
-import { TV_CARD_GROW_ROOM } from "@space/mobile-shell/tv/TvCardRow";
-import { TvPlaylistCard } from "./TvMusicParts";
+import { TV_CARD_GROW_ROOM, TvPlaylistCard } from "./TvMusicParts";
 import { tvGridColumnsFor } from "./tvModel";
 import { useTvPages } from "./tvPages";
 

@@ -70,13 +70,9 @@ vi.mock("react-native", async () => {
     },
   };
 });
-vi.mock("@space/mobile-shell/components", () => ({
-  MobileButton: "Button",
-  MobileInput: "Input",
-  MobileScreen: ({ children }: { children: React.ReactNode }) => children,
-}));
-vi.mock("../src/components/SectionHeader", () => ({ SectionHeader: "SectionHeader" }));
+vi.mock("../src/components/ui", () => ({ Button: "Button", Input: "Input", SectionHeader: "SectionHeader" }));
 vi.mock("../src/components/SettingsRows", () => ({ SwitchRow: "SwitchRow" }));
+vi.mock("../src/components/Screen", () => ({ Screen: ({ children }: { children: React.ReactNode }) => children }));
 vi.mock("@space/mobile-shell/libraryKeyWords", () => ({ LibraryKeyWordsGrid: "LibraryKeyWordsGrid" }));
 vi.mock("@space/mobile-shell/i18n", () => ({ useTranslation: () => ({ t: (key: string) => key, i18n: { language: "en" } }) }));
 vi.mock("../src/theme/theme", () => ({ theme: new Proxy({}, { get: () => new Proxy({}, { get: () => ({}) }) }) }));

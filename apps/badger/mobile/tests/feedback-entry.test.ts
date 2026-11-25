@@ -63,15 +63,7 @@ vi.mock("@space/mobile-shell/theme", async (importOriginal) => {
 vi.mock("@space/mobile-shell/components", async () => {
   const { MobileFeedbackForm } = await import("../../../../packages/mobile-shell/src/components/mobile-feedback-form");
   // Settings → About credits the outside data sources (UX-SET-02); not under test here.
-  return {
-    MobileFeedbackForm,
-    MobileIconButton: (props: { children?: ReactNode }) => createElement("MobileIconButton", props, props.children),
-    MobileCreditsPanel: () => null,
-    MobileOpenSourceNotice: () => null,
-    MobileErrorReportsLink: () => null,
-    MobileFounderBadge: () => null,
-    useSkyScroll: () => ({}),
-  };
+  return { MobileFeedbackForm, MobileCreditsPanel: () => null, MobileOpenSourceNotice: () => null, MobileErrorReportsLink: () => null, MobileFounderBadge: () => null, useSkyScroll: () => ({}) };
 });
 vi.mock("@react-navigation/native", () => ({ useNavigation: () => ctl }));
 vi.mock("lucide-react-native", () => ({ ArrowLeft: () => null, ChevronDown: () => null, ChevronUp: () => null }));
@@ -86,6 +78,9 @@ vi.mock("../src/components/SettingsRows", () => {
   };
 });
 vi.mock("../src/lib/metadata/runtime", () => ({ mobileCreditsSource: { load: null, store: null } }));
+vi.mock("../src/components/IconButton", () => ({
+  IconButton: (props: { children?: ReactNode }) => createElement("IconButton", props, props.children),
+}));
 vi.mock("../src/components/AccountSecurity", () => ({ PasswordChangeSection: () => null }));
 vi.mock("../src/components/DevicesSection", () => ({ DevicesSection: () => null }));
 vi.mock("../src/components/PosterCard", () => ({ RIPPLE: {} }));

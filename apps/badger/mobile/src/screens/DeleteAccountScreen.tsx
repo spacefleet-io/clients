@@ -7,7 +7,7 @@ import { useTranslation } from "@space/mobile-shell/i18n";
 import { finishAccountDeletion } from "@space/mobile-shell/account-deletion";
 import { MobileDeleteAccount } from "@space/mobile-shell/delete-account";
 import { useAuth } from "../store/auth";
-import { MobileIconButton } from "@space/mobile-shell/components";
+import { IconButton } from "../components/IconButton";
 import { clearLibraryKey } from "../lib/onboarding";
 import { removeDownloads } from "../lib/downloads/downloadActions";
 import { getDownloadsState } from "../lib/downloads/downloadsStore";
@@ -25,9 +25,9 @@ export const DeleteAccountScreen = () => {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
-        <MobileIconButton label={t("deleteAccount.back")} onPress={() => navigation.goBack()}>
+        <IconButton label={t("deleteAccount.back")} onPress={() => navigation.goBack()}>
           <ArrowLeft size={22} color={theme.colors.text} />
-        </MobileIconButton>
+        </IconButton>
         <Text style={styles.title} accessibilityRole="header">
           {t("deleteAccount.title")}
         </Text>

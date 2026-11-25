@@ -62,61 +62,11 @@
         "actionFindFile": "Buscar el archivo",
         "actionUpgradePlan": "Cambiar de plan",
         "keptCopies": "Las copias guardadas de importaciones fallidas ocupan {{size}} en este ordenador. Cada una se borra tras 14 días, o antes si falta espacio en disco."
-      },
-      "skipCatchUp": {
-        "state": {
-          "paused_playback": "En pausa mientras ves",
-          "paused_import": "En pausa durante la importación",
-          "offline": "Esperando conexión",
-          "retry_wait": "Nuevo intento a las {{time}}"
-        },
-        "offlineHint": "Se reanuda sola cuando vuelva la conexión",
-        "list": {
-          "step": {
-            "download": "Descargando {{done}} de {{total}} MB",
-            "pictures": "Leyendo imágenes",
-            "sound": "Leyendo sonido",
-            "waiting": "Iniciando"
-          },
-          "result": {
-            "found_both": "Intro y créditos encontrados",
-            "found_intro": "Intro encontrada",
-            "found_credits": "Créditos encontrados",
-            "waiting_other_episode": "Esperando otro episodio",
-            "nothing_found": "No se encontró nada",
-            "previews_made": "Vistas previas de la barra de progreso listas"
-          },
-          "failedStep": {
-            "download": "No se pudo descargar la copia guardada",
-            "read": "No se pudo leer el vídeo",
-            "room": "No hay suficiente espacio libre en disco"
-          },
-          "tryAgain": "Reintentar",
-          "tryAgainNow": "Reintentar ahora",
-          "retryAt": "Nuevo intento a las {{time}}",
-          "stepShort": {
-            "download": "Descargando",
-            "pictures": "Imágenes",
-            "sound": "Sonido",
-            "waiting": "Iniciando"
-          },
-          "waitingImport": "Esperando a tu importación"
-        }
-      },
-      "skipDetect": {
-        "whatCancelled": "Lo cancelaste.",
-        "meaningCancelled": "Este vídeo queda fuera hasta que lo vuelvas a intentar.",
-        "meaningFailed": "Este vídeo no tiene tiempos de intro ni de créditos hasta que vuelva a ejecutarse.",
-        "meaningFailedFilm": "Esta película no tiene vistas previas de la barra de progreso hasta que se vuelva a ejecutar.",
-        "meaningRetryWait": "Badger vuelve a intentar este vídeo por sí solo a las {{time}}."
-      },
-      "clearFinished": "Borrar las terminadas"
+      }
     },
     "notifications": {
       "title": "Notificaciones",
-      "subtitle_one": "{{count}} elemento reciente",
-      "subtitle_other": "{{count}} elementos recientes",
-      "subtitle_many": "{{count}} elementos recientes",
+      "subtitle": "{{count}} elementos recientes",
       "empty": "Aún no hay notificaciones.",
       "open": "Abrir",
       "filterAll": "Todas",
@@ -125,8 +75,7 @@
       "filterInfo": "Información",
       "filterSuccess": "Éxito",
       "clearAll": "Borrar todo",
-      "dismiss": "Descartar",
-      "subtitle": "{{count}} elementos recientes"
+      "dismiss": "Descartar"
     },
     "account": "Cuenta"
   },
@@ -164,7 +113,19 @@
     "resendSuccess": "Se envió un nuevo código de verificación.",
     "resendError": "No se pudo reenviar el código.",
     "provider": {
-      "continueInBrowser": "Termina de iniciar sesión en tu navegador. Badger volverá cuando acabes."
+      "signInWith": "Iniciar sesión con {{provider}}",
+      "signUpWith": "Registrarse con {{provider}}",
+      "or": "o",
+      "continueInBrowser": "Termina de iniciar sesión en tu navegador. Badger volverá cuando acabes.",
+      "errorStart": "No se pudo iniciar el inicio de sesión. Vuelve a intentarlo.",
+      "errors": {
+        "email_unverified": "El correo de esta cuenta no está confirmado. Confírmalo con el proveedor o inicia sesión con tu correo y contraseña.",
+        "email_domain_disallowed": "No se pueden crear cuentas con este correo.",
+        "account_deletion_pending": "La eliminación de esta cuenta está programada.",
+        "provider_failed": "No se pudo iniciar sesión. Vuelve a intentarlo.",
+        "cancelled": "Se canceló el inicio de sesión.",
+        "invalid_code": "Este inicio de sesión ha caducado o se inició en otro lugar. Vuelve a intentarlo."
+      }
     }
   },
   "signup": {
@@ -437,9 +398,6 @@
     "labels": {
       "audio": "Audio",
       "subtitles": "Subtítulos",
-      "episodeShort_one": "{{count}} ep.",
-      "episodeShort_other": "{{count}} ep.",
-      "episodeShort_many": "{{count}} ep.",
       "episodeShort": "{{count}} ep."
     },
     "availableQualities": "Calidades disponibles",
@@ -459,22 +417,16 @@
       "addModalSource": "Fuente: {{quality}}",
       "addModalSize": "~{{size}}",
       "addModalSizeUnknown": "Tamaño desconocido",
-      "addModalConfirm_one": "Poner en cola {{count}} transcodificación",
-      "addModalConfirm_other": "Poner en cola {{count}} transcodificaciones",
-      "addModalConfirm_many": "Poner en cola {{count}} transcodificaciones",
+      "addModalConfirm": "Poner en cola {{count}} transcodificación(es)",
       "addModalCancel": "Cancelar",
-      "addModalSubmittedToast_one": "{{count}} transcodificación en cola: síguela en Tareas.",
-      "addModalSubmittedToast_other": "{{count}} transcodificaciones en cola: síguelas en Tareas.",
-      "addModalSubmittedToast_many": "{{count}} transcodificaciones en cola: síguelas en Tareas.",
+      "addModalSubmittedToast": "{{count}} transcodificación(es) en cola: síguelas en Tareas.",
       "addModalFailedToast": "No se pudieron poner en cola las nuevas calidades: {{reason}}",
       "errors": {
         "source-protected": "No puedes eliminar la calidad de origen.",
         "quality-exists": "Ese archivo ya tiene esa calidad.",
         "cannot-transcode-up": "No se puede transcodificar a una resolución mayor que la almacenada.",
         "media-not-found": "Ese archivo multimedia ya no existe."
-      },
-      "addModalConfirm": "Poner en cola {{count}} transcodificación(es)",
-      "addModalSubmittedToast": "{{count}} transcodificación(es) en cola: síguelas en Tareas."
+      }
     },
     "hideMissing": {
       "title": "Ocultar archivos que faltan",
@@ -499,9 +451,6 @@
         "show": "{{title}}: serie completa",
         "season": "{{title}}: temporada {{season}}",
         "episode": "{{title}} — T{{season}}E{{episode}}{{episodeTitle, mustache}}",
-        "missingEpisodes_one": "{{count}} episodio que falta",
-        "missingEpisodes_other": "{{count}} episodios que faltan",
-        "missingEpisodes_many": "{{count}} episodios que faltan",
         "missingEpisodes": "{{count}} episodio(s) que faltan"
       },
       "modal": {
@@ -514,31 +463,22 @@
         "size": "Tamaño total",
         "includesAudioSubs": "Se incluyen todas las pistas de audio y los subtítulos.",
         "expectedFilename": "Se guardará como",
-        "expectedFilenamePlusN_one": "y {{count}} archivo más",
-        "expectedFilenamePlusN_other": "y {{count}} archivos más",
-        "expectedFilenamePlusN_many": "y {{count}} archivos más",
+        "expectedFilenamePlusN": "y {{count}} archivo(s) más",
         "estimating": "Calculando el tamaño y el espacio en disco…",
         "estimateFailedToast": "No se pudo estimar la descarga: {{reason}}",
         "skippedSubsWarning": "MP4 no puede incrustar estas pistas de subtítulos, así que se omitirán: {{tracks}}",
-        "skippedItems_one": "Se omitirá {{count}} elemento (sin calidad compatible o sin archivo).",
-        "skippedItems_other": "Se omitirán {{count}} elementos (sin calidad compatible o sin archivo).",
-        "skippedItems_many": "Se omitirán {{count}} elementos (sin calidad compatible o sin archivo).",
+        "skippedItems": "Se omitirán {{count}} elemento(s) (sin calidad compatible o sin archivo).",
         "diskWarning": "No hay suficiente espacio libre en disco.",
         "diskWarningDetail": "Se necesitan {{required}} y solo hay {{free}} libres.",
         "confirm": "Iniciar la descarga",
         "cancel": "Cancelar",
-        "submittedToast_one": "{{count}} descarga sin conexión en cola: síguela en Tareas.",
-        "submittedToast_other": "{{count}} descargas sin conexión en cola: síguelas en Tareas.",
-        "submittedToast_many": "{{count}} descargas sin conexión en cola: síguelas en Tareas.",
+        "submittedToast": "{{count}} descarga(s) sin conexión en cola: síguelas en Tareas.",
         "submitFailedToast": "No se pudo iniciar la descarga: {{reason}}",
         "errors": {
           "insufficient_disk_space": "No hay suficiente espacio libre en disco (se necesitan {{required}}, hay {{free}} libres).",
           "library_db_not_open": "La mediateca no está abierta. Vuelve a abrirla y vuelve a intentarlo.",
           "not_authenticated": "Inicia sesión y vuelve a intentarlo."
-        },
-        "expectedFilenamePlusN": "y {{count}} archivo(s) más",
-        "skippedItems": "Se omitirán {{count}} elemento(s) (sin calidad compatible o sin archivo).",
-        "submittedToast": "{{count}} descarga(s) sin conexión en cola: síguelas en Tareas."
+        }
       },
       "button": {
         "save": "Guardar sin conexión",
@@ -548,11 +488,8 @@
         "deleteConfirmDescription": "Esto elimina los archivos guardados en este dispositivo. El streaming sigue funcionando.",
         "deleteConfirm": "Eliminar",
         "deleteCancel": "Cancelar",
-        "deletedToast_one": "Se eliminó {{count}} archivo sin conexión.",
-        "deletedToast_other": "Se eliminaron {{count}} archivos sin conexión.",
-        "deletedToast_many": "Se eliminaron {{count}} archivos sin conexión.",
-        "deleteFailedToast": "No se pudieron eliminar los archivos sin conexión: {{reason}}",
-        "deletedToast": "Se eliminaron {{count}} archivo(s) sin conexión."
+        "deletedToast": "Se eliminaron {{count}} archivo(s) sin conexión.",
+        "deleteFailedToast": "No se pudieron eliminar los archivos sin conexión: {{reason}}"
       },
       "badge": {
         "savedOffline": "Guardado sin conexión",
@@ -576,9 +513,6 @@
     "sections": {
       "movies": "Películas",
       "tv": "Series",
-      "count_one": "{{count}} elemento",
-      "count_other": "{{count}} elementos",
-      "count_many": "{{count}} elementos",
       "count": "{{count}} elementos"
     },
     "media": {
@@ -672,13 +606,10 @@
     "seasons": {
       "title": "Temporadas",
       "empty": "Aún no se han cargado temporadas.",
-      "episodeCount_one": "{{count}} episodio",
-      "episodeCount_other": "{{count}} episodios",
-      "episodeCount_many": "{{count}} episodios",
+      "episodeCount": "{{count}} episodios",
       "available": "Disponible",
       "missing": "Faltan archivos",
-      "specials": "Especiales",
-      "episodeCount": "{{count}} episodios"
+      "specials": "Especiales"
     },
     "episodes": {
       "title": "Episodios · Temporada {{season}}",
@@ -742,22 +673,6 @@
       "back": "Mediateca",
       "playsThisVersion": "La reproducción empieza en esta versión",
       "more": "Más acciones"
-    },
-    "skipTimes": {
-      "menu": "Intro y créditos",
-      "setIntro": "Fijar tiempos de la intro",
-      "setCredits": "Fijar tiempos de los créditos",
-      "introChip": "Intro {{start}}–{{end}}",
-      "creditsChip": "Créditos {{start}}",
-      "creditsStart": "Los créditos empiezan",
-      "creditsHint": "Arrastra el marcador: la imagen lo sigue.  ← → lo mueven 1 s",
-      "noPicture": "Aún no hay imagen",
-      "failed": "No se pudieron guardar los tiempos.",
-      "back": "Atrás  [Esc]",
-      "episodeLine": "{{show}} · T{{season}} E{{episode}} · {{title}}",
-      "leftOut": "Apartado",
-      "tryAgain": "Reintentar",
-      "tryAgainAll": "Reintentar todos los episodios apartados"
     }
   },
   "playlists": {
@@ -773,13 +688,10 @@
     "selectTitle": "Selecciona una lista",
     "selectSubtitle": "Elige una lista para ver sus elementos.",
     "selectPrompt": "Selecciona una lista para ver sus elementos.",
-    "itemsCount_one": "{{count}} elemento",
-    "itemsCount_other": "{{count}} elementos",
-    "itemsCount_many": "{{count}} elementos",
+    "itemsCount": "{{count}} elementos",
     "noItems": "Aún no hay elementos.",
     "missing": "Falta el archivo",
-    "remove": "Quitar",
-    "itemsCount": "{{count}} elementos"
+    "remove": "Quitar"
   },
   "settings": {
     "subtitle": "Todo lo relativo a esta app y a tu cuenta.",
@@ -1359,37 +1271,7 @@
       "noDisplay": "El vídeo no se puede reproducir en esta sesión: solo usa Wayland y el reproductor de vídeo necesita X11. Activa XWayland (compatibilidad con X11) o inicia una sesión X11 y vuelve a intentarlo.",
       "sourceUnreachable": "Este título no está guardado sin conexión y no se puede acceder al servidor. Conéctate a internet o descárgalo para verlo sin conexión."
     },
-    "preparingPlayback": "Preparando la reproducción",
-    "skipUi": {
-      "skipIntro": "Saltar intro",
-      "skipCredits": "Saltar créditos",
-      "nextEpisode": "Siguiente episodio",
-      "nextEpisodeIn": "El siguiente episodio empieza en",
-      "openingNextEpisode": "Abriendo el siguiente episodio",
-      "enterKey": "[Intro]",
-      "askedIntro": "Intro saltada. ¿Era correcto?",
-      "askedCredits": "Créditos saltados. ¿Era correcto?",
-      "yes": "Sí",
-      "changeTimes": "Cambiar tiempos",
-      "thanks": "Gracias",
-      "changeIntroTimes": "Cambiar tiempos de la intro",
-      "changeCreditsTimes": "Cambiar tiempos de los créditos",
-      "start": "Inicio",
-      "end": "Fin",
-      "hint": "Arrastra un marcador: la imagen lo sigue.  ← → mueven el elegido 1 s",
-      "save": "Guardar  [Intro]",
-      "cancel": "Cancelar  [Esc]",
-      "back": "Atrás",
-      "scopeQuestion": "Usar estos tiempos para",
-      "thisSeason": "Esta temporada",
-      "onlyThisEpisode": "Solo este episodio",
-      "farNote": "Estos tiempos se alejan mucho del resto de la temporada.",
-      "savedSeason": "Guardado para esta temporada",
-      "savedEpisode": "Guardado para este episodio",
-      "menuPrompt": "Intro y créditos",
-      "introEndsHere": "La intro termina aquí",
-      "creditsStartHere": "Los créditos empiezan aquí"
-    }
+    "preparingPlayback": "Preparando la reproducción"
   },
   "dashboard": {
     "title": "Inicio",
@@ -1400,11 +1282,8 @@
       "resume": "Reanudar {{time}}",
       "resumeShort": "Reanudar",
       "details": "Detalles",
-      "minutesLeft_one": "Queda {{count}} min",
-      "minutesLeft_other": "Quedan {{count}} min",
-      "minutesLeft_many": "Quedan {{count}} min",
-      "seeAll": "Ver todo",
-      "minutesLeft": "Quedan {{count}} min"
+      "minutesLeft": "Quedan {{count}} min",
+      "seeAll": "Ver todo"
     },
     "empty": {
       "eyebrow": "Tu mediateca",
@@ -1531,15 +1410,9 @@
         "tv": "Series"
       },
       "empty": "Aún no se han subido archivos",
-      "fileCount_one": "{{count}} archivo",
-      "fileCount_other": "{{count}} archivos",
-      "fileCount_many": "{{count}} archivos",
-      "episodeFileCount_one": "{{count}} archivo de episodio",
-      "episodeFileCount_other": "{{count}} archivos de episodios",
-      "episodeFileCount_many": "{{count}} archivos de episodios",
-      "episodeShort_one": "{{count}} ep.",
-      "episodeShort_other": "{{count}} ep.",
-      "episodeShort_many": "{{count}} ep.",
+      "fileCount": "{{count}} archivo(s)",
+      "episodeFileCount": "{{count}} archivos de episodios",
+      "episodeShort": "{{count}} ep.",
       "apply": "Aplicar cambios",
       "delete": "Eliminar archivo",
       "applyTitle": "¿Aplicar los cambios de formato?",
@@ -1551,10 +1424,7 @@
       "cancel": "Cancelar",
       "queued": "Actualizaciones de transcodificación en cola para {{label}}.",
       "cleanupMessage": "Se eliminaron {{removed}} archivos huérfanos. Se borraron {{missing}} referencias que faltaban.",
-      "cleanupFailed": "La limpieza falló. Vuelve a intentarlo.",
-      "fileCount": "{{count}} archivo(s)",
-      "episodeFileCount": "{{count}} archivos de episodios",
-      "episodeShort": "{{count}} ep."
+      "cleanupFailed": "La limpieza falló. Vuelve a intentarlo."
     },
     "status": {
       "waiting": "En espera",
@@ -1565,8 +1435,7 @@
       "transcoding": "Transcodificando",
       "uploading": "Subiendo",
       "done": "Listo",
-      "failed": "Fallido",
-      "cancelled": "Cancelado"
+      "failed": "Fallido"
     },
     "queue": {
       "remove": "Quitar de la cola",
@@ -1613,13 +1482,8 @@
         "tracks": "Preparamos las pistas de audio y de subtítulos para que se pueda cambiar de idioma y de subtítulos.",
         "job": "Este paso prepara los archivos multimedia para la reproducción y la sincronización.",
         "offlineDownloading": "Obtenemos cada fragmento, lo desciframos y combinamos todas las pistas en un solo archivo que puedes reproducir sin conexión.",
-        "exportDownloading": "Obtenemos la mejor calidad que tienes, la desciframos y guardamos un archivo de vídeo con todas las pistas en la carpeta elegida.",
-        "skipDetect": "Buscamos dónde termina la intro y dónde empiezan los créditos, para que puedas saltarlos.",
-        "skipPreviews": "Creamos las imágenes que ves al moverte por la barra de progreso."
-      },
-      "jobCount": "{{count}} tarea(s)",
-      "skipDetect": "Buscando intro y créditos",
-      "skipPreviews": "Creando vistas previas de la barra de progreso"
+        "exportDownloading": "Obtenemos la mejor calidad que tienes, la desciframos y guardamos un archivo de vídeo con todas las pistas en la carpeta elegida."
+      }
     },
     "transcodePlan": "Plan de transcodificación",
     "audio": "Audio",
@@ -1819,9 +1683,7 @@
       "recomputeRunning": "Comprobando…",
       "lastVerified": "Última comprobación: {{relative}}",
       "reclaimableHint": "{{bytes}} recuperables",
-      "confirmTitle_one": "Se encontró {{count}} fragmento huérfano que ocupa ~{{bytes}}. ¿Recuperar ese espacio?",
-      "confirmTitle_other": "Se encontraron {{count}} fragmentos huérfanos que ocupan ~{{bytes}}. ¿Recuperar ese espacio?",
-      "confirmTitle_many": "Se encontraron {{count}} fragmentos huérfanos que ocupan ~{{bytes}}. ¿Recuperar ese espacio?",
+      "confirmTitle": "Se encontraron {{count}} fragmentos huérfanos que ocupan ~{{bytes}}. ¿Recuperar ese espacio?",
       "confirmAccept": "Recuperar",
       "confirmCancel": "Cancelar",
       "resultReclaimed": "Se recuperaron {{bytes}}",
@@ -1831,8 +1693,7 @@
       "relativeSeconds": "hace {{value}} s",
       "relativeMinutes": "hace {{value}} min",
       "relativeHours": "hace {{value}} h",
-      "relativeDays": "hace {{value}} d",
-      "confirmTitle": "Se encontraron {{count}} fragmentos huérfanos que ocupan ~{{bytes}}. ¿Recuperar ese espacio?"
+      "relativeDays": "hace {{value}} d"
     },
     "sponsorships": {
       "title": "Recomendaciones",
@@ -2111,9 +1972,7 @@
       "dummyStartFailed": "No se pudo iniciar la importación de prueba.",
       "audioSampleFailed": "No se pudo generar la muestra de audio.",
       "setTrackLanguages": "Define un idioma para cada pista o usa «Ignorar y dejar las pistas sin definir».",
-      "removedDuplicates_one": "Se quitó {{count}} archivo duplicado.",
-      "removedDuplicates_other": "Se quitaron {{count}} archivos duplicados.",
-      "removedDuplicates_many": "Se quitaron {{count}} archivos duplicados.",
+      "removedDuplicates": "Se quitaron {{count}} archivo(s) duplicado(s).",
       "addMetadataFailedSingle": "No se pudo añadir 1 título: el servicio de metadatos no respondió. Sigue aquí, vuelve a intentarlo en un momento.",
       "addMetadataFailedMany": "No se pudieron añadir {{count}} títulos: el servicio de metadatos no respondió. Siguen aquí, vuelve a intentarlo en un momento.",
       "mediaNotInLibrary": "«{{title}}» aún no está en tu mediateca. Primero añade un archivo de video.",
@@ -2124,8 +1983,7 @@
       "skippedDuplicateMany": "Se omitieron {{count}} videos de calidad duplicada que ya están en tu mediateca.",
       "subtitleTrackAddedSingle": "Pista de subtítulos añadida.",
       "subtitleTrackAddedMany": "Se añadieron {{count}} pistas de subtítulos.",
-      "queueFailed": "No se pudieron poner en cola las tareas. Vuelve a intentarlo.",
-      "removedDuplicates": "Se quitaron {{count}} archivo(s) duplicado(s)."
+      "queueFailed": "No se pudieron poner en cola las tareas. Vuelve a intentarlo."
     },
     "samples": {
       "noSubtitleSample": "No hay ninguna muestra de subtítulos disponible.",
@@ -2223,9 +2081,7 @@
       "loadingMore": "Cargando más…",
       "moreResults": "Más resultados",
       "selectFileToReview": "Selecciona un archivo para revisar sus detalles",
-      "readyToImportCount_one": "{{count}} listo para importar",
-      "readyToImportCount_other": "{{count}} listos para importar",
-      "readyToImportCount_many": "{{count}} listos para importar",
+      "readyToImportCount": "{{count}} listos para importar",
       "sameQualityOverlapIgnoredSingle": "Se ignoró {{count}} video duplicado de la misma calidad",
       "sameQualityOverlapIgnoredMany": "Se ignoraron {{count}} videos duplicados de la misma calidad",
       "addWithDummyData": "Añadir con datos de prueba",
@@ -2237,24 +2093,12 @@
       "storageBlocked": "Tu almacenamiento está lleno. Mejora tu plan para añadir más contenido.",
       "storageWarning": "Estás usando más del 90 % de tu almacenamiento. Considera mejorar tu plan.",
       "resolveBeforeAddingTitle": "Resuelve esto antes de añadir",
-      "blockerMatchOrRemove_one": "Asocia o quita {{count}} archivo sin coincidencia.",
-      "blockerMatchOrRemove_other": "Asocia o quita {{count}} archivos sin coincidencia.",
-      "blockerMatchOrRemove_many": "Asocia o quita {{count}} archivos sin coincidencia.",
-      "blockerWaitSearch_one": "Espera a que termine la búsqueda de detalles de {{count}} archivo.",
-      "blockerWaitSearch_other": "Espera a que termine la búsqueda de detalles de {{count}} archivos.",
-      "blockerWaitSearch_many": "Espera a que termine la búsqueda de detalles de {{count}} archivos.",
-      "blockerResolveVideo_one": "Resuelve {{count}} decisión de calidad de video.",
-      "blockerResolveVideo_other": "Resuelve {{count}} decisiones de calidad de video.",
-      "blockerResolveVideo_many": "Resuelve {{count}} decisiones de calidad de video.",
-      "blockerWaitMetadata_one": "Espera a que {{count}} archivo termine el análisis de metadatos.",
-      "blockerWaitMetadata_other": "Espera a que {{count}} archivos terminen el análisis de metadatos.",
-      "blockerWaitMetadata_many": "Espera a que {{count}} archivos terminen el análisis de metadatos.",
-      "blockerClickInput_one": "Haz clic en «Se necesita tu respuesta» y responde a {{count}} elemento.",
-      "blockerClickInput_other": "Haz clic en «Se necesita tu respuesta» y responde a {{count}} elementos.",
-      "blockerClickInput_many": "Haz clic en «Se necesita tu respuesta» y responde a {{count}} elementos.",
-      "blockerSkipDataLoading_one": "Obteniendo los datos de salto de {{count}} episodio: espera un momento.",
-      "blockerSkipDataLoading_other": "Obteniendo los datos de salto de {{count}} episodios: espera un momento.",
-      "blockerSkipDataLoading_many": "Obteniendo los datos de salto de {{count}} episodios: espera un momento.",
+      "blockerMatchOrRemove": "Asocia o quita {{count}} archivo(s) sin coincidencia.",
+      "blockerWaitSearch": "Espera a que termine la búsqueda de detalles de {{count}} archivo(s).",
+      "blockerResolveVideo": "Resuelve {{count}} decisión(es) de calidad de video.",
+      "blockerWaitMetadata": "Espera a que {{count}} archivo(s) terminen el análisis de metadatos.",
+      "blockerClickInput": "Haz clic en «Se necesita tu respuesta» y responde a {{count}} elemento(s).",
+      "blockerSkipDataLoading": "Obteniendo los datos de salto de {{count}} episodio(s): espera un momento.",
       "yourInputNeededProgress": "Se necesita tu respuesta ({{current}}/{{total}})",
       "setLanguageAndNameAudioTracks": "Define el idioma y el nombre de las pistas de audio",
       "setLanguageAndNameSubtitleTracks": "Define el idioma y el nombre de las pistas de subtítulos",
@@ -2279,24 +2123,14 @@
       "alreadyAvailable": "Ya disponible",
       "skipQuality": "Omitir la calidad",
       "addQuality": "Añadir la calidad",
-      "videoDecisionsPending_one": "{{count}} decisión de video pendiente",
-      "videoDecisionsPending_other": "{{count}} decisiones de video pendientes",
-      "videoDecisionsPending_many": "{{count}} decisiones de video pendientes",
+      "videoDecision": "decisión de video",
+      "videoDecisions": "decisiones de video",
+      "videoDecisionsPending": "{{count}} {{decisionLabel}} pendiente(s)",
       "needsInputToContinue": "Se necesita tu respuesta para continuar",
       "undefined": "Sin definir",
       "unknownMedia": "Contenido desconocido",
       "file": "archivo",
-      "files": "archivos",
-      "readyToImportCount": "{{count}} listos para importar",
-      "blockerMatchOrRemove": "Asocia o quita {{count}} archivo(s) sin coincidencia.",
-      "blockerWaitSearch": "Espera a que termine la búsqueda de detalles de {{count}} archivo(s).",
-      "blockerResolveVideo": "Resuelve {{count}} decisión(es) de calidad de video.",
-      "blockerWaitMetadata": "Espera a que {{count}} archivo(s) terminen el análisis de metadatos.",
-      "blockerClickInput": "Haz clic en «Se necesita tu respuesta» y responde a {{count}} elemento(s).",
-      "blockerSkipDataLoading": "Obteniendo los datos de salto de {{count}} episodio(s): espera un momento.",
-      "videoDecision": "decisión de video",
-      "videoDecisions": "decisiones de video",
-      "videoDecisionsPending": "{{count}} {{decisionLabel}} pendiente(s)"
+      "files": "archivos"
     }
   },
   "pairApprove": {
@@ -2308,12 +2142,5 @@
     "checksum": "Estas palabras no forman una clave válida. Compara cada palabra con las que guardaste.",
     "unknownMark": "no es una palabra de la clave",
     "pairedNoWords": "Este ordenador recibió la clave de otro dispositivo, así que no tiene sus 12 palabras. Están en el dispositivo donde se creó la clave o en la copia que guardaste."
-  },
-  "skipCatchUpNotice": {
-    "title": "Badger ahora detecta intros y créditos",
-    "what": "La versión {{version}} detecta por sí sola las intros y los créditos de los vídeos de los que no tenemos información.",
-    "background": "Tu biblioteca actual se está procesando en segundo plano en este ordenador. Puedes seguir el progreso en la pestaña Tareas. Se pausa cuando importas o reproduces algo, así que no te molestará.",
-    "close": "Cerrar",
-    "openJobs": "Abrir Tareas"
   }
 }

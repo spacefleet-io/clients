@@ -98,7 +98,7 @@ describe("Parrot plan screen for an unlimited (admin) account (ACCT-PLAN-14)", (
   // @req STOR-UNIT-02[parrot]
   for (const [language, expected] of [
     ["en", "Admin: unlimited storage, 12.0 GB used"],
-    ["fr", "Admin\u202f: stockage illimité, 12,0 Go utilisés"],
+    ["fr", "Admin : stockage illimité, 12,0 Go utilisés"],
   ] as const) {
     it(`[ACCT-PLAN-14-PARROT-01] ${language}: shows "${expected}" and no plan, price or checkout`, async () => {
       parrot.getSubscription.mockResolvedValue(subscription(null));

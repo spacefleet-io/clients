@@ -8,9 +8,8 @@
  * A copy from SpaceFleet's .deb/.rpm/.pacman packages (channel `system`, REL-UPD-07) goes Check → Install (the
  * system's password window, then the package manager updates only this app) → the app restarts by itself (Restart
  * {app} stays as the button if it has not); a failure, or a desktop without a password window, shows the reason and
- * the command to run by hand. A Flatpak copy (channel `flatpak`) goes the same way through the Flatpak portal, with
- * its progress; where the portal is missing it says why and shows the `flatpak update` command. A check never
- * installs on its own there: Install is always the user's click.
+ * the command to run by hand. A Flatpak copy shows the `flatpak update` command. A check never installs on its own
+ * there: Install is always the user's click.
  *
  * The app passes its own updater controls (`useDesktopUpdater` over its preload bridge) and its own setting, since
  * Badger keeps the switch in the window's settings and Parrot in the main process.
@@ -20,7 +19,7 @@ import { Button, Switch } from "@space/ui";
 import type { UpdateChannel, UpdaterPhase } from "./types";
 import type { DesktopUpdaterControls } from "./useUpdater";
 import { systemFailureKey, updateErrorKey, updateSectionText, type UpdateSectionStringKey } from "./strings";
-import { ManualUpdateCommand } from "./DesktopUpdatePrompt";
+import { ManualUpdateCommand } from "./SystemUpdatePrompt";
 
 export type UpdateSectionAction = "check" | "download" | "restart" | "install" | "restartApp";
 
@@ -37,12 +36,13 @@ export type DesktopUpdateSectionProps = {
 /** What the one button does in each phase; null = no button (no in-app updater, or only a command to run by hand). */
 export const updateSectionAction = (phase: UpdaterPhase, channel: UpdateChannel = "self", canInstall = true): UpdateSectionAction | null => {
   if (phase === "unsupported") return null;
-  if (channel === "system" || channel === "flatpak") {
+  if (channel === "system") {
     if (phase === "installed") return "restartApp";
     if (phase === "installing") return "install";
     if (phase === "available") return canInstall ? "install" : null;
     return "check";
   }
+  if (channel === "flatpak") return phase === "available" ? null : "check";
   switch (phase) {
     case "downloaded":
       return "restart";
@@ -80,19 +80,17 @@ export function DesktopUpdateSection({ controls, language, appName, autoUpdate }
   const version = state.version ?? "";
   const action = updateSectionAction(phase, state.channel, state.canInstall);
   const busy = phase === "checking" || phase === "downloading" || phase === "installing";
-  const flatpak = state.channel === "flatpak";
-  /** A copy updated by the system's package manager or by Flatpak (REL-UPD-07): Install, not electron-updater. */
-  const system = state.channel === "system" || flatpak;
+  const system = state.channel === "system";
 
   const available =
-    flatpak && !state.canInstall
+    state.channel === "flatpak"
       ? text("flatpakHint", { version })
       : system && state.canInstall
         ? text("systemPrompt", { version })
         : system
           ? `${text("available", { version })} ${text("systemNoPasswordDialog")}`
           : text("available", { version });
-  // REL-UPD-07: the package manager (or Flatpak's remote) did not have the offered version yet: "on its way", not a failure.
+  // REL-UPD-07: the package manager did not have the offered version yet: "on its way", not a failure.
   const pending = system && phase === "error" && state.failure === "notNewer";
   const status =
     phase === "checking"
@@ -104,7 +102,7 @@ export function DesktopUpdateSection({ controls, language, appName, autoUpdate }
           : phase === "downloaded"
             ? text("ready", { version })
             : phase === "installing"
-              ? text(flatpak ? "installingFlatpak" : "installing", { version })
+              ? text("installing", { version })
               : phase === "installed"
                 ? text("installed", { version })
                 : phase === "error"
@@ -116,8 +114,8 @@ export function DesktopUpdateSection({ controls, language, appName, autoUpdate }
                       : text("notChecked");
   const manual =
     state.manualCommand !== null &&
-    system &&
-    ((phase === "available" && !state.canInstall) || (phase === "error" && state.failure !== null && !pending));
+    ((state.channel === "flatpak" && phase === "available") ||
+      (system && ((phase === "available" && !state.canInstall) || (phase === "error" && state.failure !== null && !pending))));
 
   const StatusIcon =
     busy
@@ -185,10 +183,8 @@ export function DesktopUpdateSection({ controls, language, appName, autoUpdate }
           <StatusIcon className={`mt-0.5 size-4 shrink-0 ${busy ? "animate-spin" : ""}`} aria-hidden />
           <span className="min-w-0 break-words">{status}</span>
         </p>
-        {manual ? (
-          <ManualUpdateCommand command={state.manualCommand ?? ""} text={(key) => text(key)} hint={!(flatpak && phase === "available")} />
-        ) : null}
-        {phase === "downloading" || (phase === "installing" && flatpak) ? (
+        {manual ? <ManualUpdateCommand command={state.manualCommand ?? ""} text={(key) => text(key)} /> : null}
+        {phase === "downloading" ? (
           <div
             role="progressbar"
             aria-valuemin={0}
@@ -206,7 +202,7 @@ export function DesktopUpdateSection({ controls, language, appName, autoUpdate }
           <div className="min-w-0 space-y-0.5">
             <div className="text-sm font-medium text-foreground">{text("autoLabel")}</div>
             <div className="text-sm text-muted-foreground">
-              {text(flatpak ? "autoHintFlatpak" : system ? "autoHintSystem" : "autoHint")}
+              {text(system ? "autoHintSystem" : state.channel === "flatpak" ? "autoHintFlatpak" : "autoHint")}
             </div>
           </div>
           <Switch

@@ -3,7 +3,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Keychain from "react-native-keychain";
 import { createAsyncStorageAuthSessionStore } from "@space/mobile-shell/services/auth";
-import { createKeptKeyOwnerStore, createLibraryKeyStore } from "@space/mobile-shell/libraryKey";
+import { createLibraryKeyStore } from "@space/mobile-shell/libraryKey";
 import { createPhoneSetupStore } from "@space/mobile-shell/setup";
 
 export const sessionStore = createAsyncStorageAuthSessionStore({ asyncStorage: AsyncStorage, key: "parrot.session" });
@@ -17,4 +17,9 @@ export const setupStore = createPhoneSetupStore({ asyncStorage: AsyncStorage, ke
  * Whose library key stayed on the phone after the server rejected their session: only that account gets it back at
  * the next sign-in. A key a pairing just brought belongs to the account signing in, so storing one forgets the owner.
  */
-export const keptKeyOwnerStore = createKeptKeyOwnerStore({ asyncStorage: AsyncStorage, key: "parrot.libraryKeyOwner" });
+const KEY_OWNER_STORAGE = "parrot.libraryKeyOwner";
+export const keptKeyOwnerStore = {
+  read: () => AsyncStorage.getItem(KEY_OWNER_STORAGE),
+  write: (userId: string) => AsyncStorage.setItem(KEY_OWNER_STORAGE, userId),
+  forget: () => AsyncStorage.removeItem(KEY_OWNER_STORAGE),
+};

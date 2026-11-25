@@ -24,7 +24,9 @@
       "nowPlaying": "Now playing"
     },
     "login": {
-      "sameAsBadger": "Use the same email and password as Badger."
+      "sameAsBadger": "Use the same email and password as Badger.",
+      "codeTotp": "Code from your authenticator app",
+      "codeEmail": "Code we emailed you"
     },
     "key": {
       "title": "Enter your media library key",
@@ -64,8 +66,7 @@
       "noPlayableFile": "This album has no playable file yet.",
       "playFailed": "Couldn't play this song ({{error}}).",
       "noSongs": "No songs.",
-      "play": "Play {{title}}",
-      "pause": "Pause {{title}}"
+      "play": "Play {{title}}"
     },
     "player": {
       "nothing": "Nothing is playing.",

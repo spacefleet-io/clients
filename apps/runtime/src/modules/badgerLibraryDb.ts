@@ -71,8 +71,6 @@ const READ_ONLY_METHODS: Record<string, true> = {
   listViewingProfileIds: true,
   listSubtitleOcrCandidates: true,
   listPreviewSheetCandidates: true,
-  countPreviewSheetVideos: true,
-  listSkipCatchUpVideos: true,
   listArtworkToCopy: true,
   listMediaWithArtworkToCopy: true,
   listMediaWithCollapsedCast: true,
@@ -659,28 +657,21 @@ export class BadgerLibraryDbService {
   }
 
   /**
-   * Write per-episode skip markers in `media_skip_markers` kind by kind, keeping a higher-ranked marker already
-   * there (the user's times, then detection or chapters, then the metadata service; PLAY-SKIP-08).
+   * Persist the service-fetched per-episode markers in `media_skip_markers`.
+   * Idempotent — `replaceSkipMarkers` deletes existing rows for the
+   * (mediaId, episodeId) scope and reinserts the supplied set.
    *
-   * Used by the badger commit step for the service-fetched markers and by the shared-audio detection after commit
-   * (META-SKIP-04). Callers must NOT invoke this for movies (markers omitted by design).
+   * Used by the badger commit step after a source-job finalises a TV file's
+   * library row. Callers must NOT invoke this for movies (markers omitted by
+   * design); the commit step gates on `payload.skipMarkers` being a
+   * non-empty array, which is only true for TV ingest paths.
    */
-  async mergeSkipMarkers(
+  async replaceSkipMarkers(
     mediaId: string,
     episodeId: string | null,
     markers: BadgerIngestSkipMarker[]
   ): Promise<void> {
-    await this.call("mergeSkipMarkers", [mediaId, episodeId, markers]);
-  }
-
-  /** Store one analysis row (`media_skip_analysis`, local to this device). */
-  async upsertSkipAnalysis(
-    mediaId: string,
-    episodeId: string | null,
-    kind: string,
-    payload: Record<string, unknown>
-  ): Promise<void> {
-    await this.call("upsertSkipAnalysis", [mediaId, episodeId, kind, payload]);
+    await this.call("replaceSkipMarkers", [mediaId, episodeId, markers]);
   }
 
   /**

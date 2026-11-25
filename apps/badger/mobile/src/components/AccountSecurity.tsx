@@ -1,7 +1,7 @@
 import React, { useCallback, useState } from "react";
 import { StyleSheet, Text } from "react-native";
 import { useTranslation } from "@space/mobile-shell/i18n";
-import { MobileButton, MobileCard, MobileInput } from "@space/mobile-shell/components";
+import { Button, Card, Input } from "./ui";
 import { theme } from "../theme/theme";
 import { changePassword, ApiError } from "@space/shared/api";
 import { TOO_MANY_ATTEMPTS_KEY, isRateLimited, signInErrorValues, type SignInErrorValues } from "@space/shared/signInError";
@@ -61,10 +61,10 @@ export const PasswordChangeSection = ({ token, hasPassword = true }: { token: st
   }, [code, currentPassword, hasPassword, newPassword, token]);
 
   return (
-    <MobileCard>
+    <Card>
       <Text style={styles.sectionLabel}>{hasPassword ? t("account.password.title") : t("account.password.set.title")}</Text>
       {hasPassword ? (
-        <MobileInput
+        <Input
           label={t("account.password.currentPassword")}
           value={currentPassword}
           onChangeText={setCurrentPassword}
@@ -73,9 +73,9 @@ export const PasswordChangeSection = ({ token, hasPassword = true }: { token: st
       ) : (
         <Text testID="password-change-recheck-hint" style={styles.subtle}>{t("login.code.recheckHint")}</Text>
       )}
-      <MobileInput label={t("account.password.newPassword")} value={newPassword} onChangeText={setNewPassword} secureTextEntry />
+      <Input label={t("account.password.newPassword")} value={newPassword} onChangeText={setNewPassword} secureTextEntry />
       {codeAsked ? (
-        <MobileInput label={t("account.password.codeLabel")} value={code} onChangeText={setCode} />
+        <Input label={t("account.password.codeLabel")} value={code} onChangeText={setCode} />
       ) : null}
       {message ? (
         <Text style={message.error ? styles.error : styles.success}>
@@ -86,7 +86,7 @@ export const PasswordChangeSection = ({ token, hasPassword = true }: { token: st
               : t("account.password.success")}
         </Text>
       ) : null}
-      <MobileButton
+      <Button
         label={
           hasPassword
             ? busy ? t("account.password.changing") : t("account.password.change")
@@ -96,7 +96,7 @@ export const PasswordChangeSection = ({ token, hasPassword = true }: { token: st
         onPress={handleChange}
         loading={busy}
       />
-    </MobileCard>
+    </Card>
   );
 };
 

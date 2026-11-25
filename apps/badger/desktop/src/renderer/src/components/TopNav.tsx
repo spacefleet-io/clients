@@ -18,7 +18,6 @@ import TopNavNotificationsButton from "@/components/TopNavNotificationsButton";
 import TopNavJobsSidebar from "@/components/TopNavJobsSidebar";
 import { DesktopOfflineIndicator } from "@/components/DesktopOfflineIndicator";
 import { FounderNotice } from "@/components/FounderNotice";
-import { SkipCatchUpNotice } from "@/components/SkipCatchUpNotice";
 import { UnpaidAccessBanner } from "@/components/UnpaidAccessBanner";
 import { OverQuotaBanner } from "@/components/OverQuotaBanner";
 import { useSignOutWithKeyCheck } from "@/components/SignOutKeyCheck";
@@ -188,7 +187,6 @@ function TopNav() {
       <UnpaidAccessBanner />
       <OverQuotaBanner />
       <FounderNotice />
-      {user ? <SkipCatchUpNotice /> : null}
       <SyncBannerSurface
         visible={Boolean(user && writeBlockedMessage)}
         message={writeBlockedMessage}

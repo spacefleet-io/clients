@@ -3,8 +3,6 @@ import {
   DesktopCompletedJobRow,
   DesktopFailedJobDetail,
   DesktopJobActionButton,
-  DesktopJobFailureGroups,
-  DesktopJobGroupCard,
   DesktopJobProgress,
   DesktopJobRow,
   DesktopJobStatusPill,
@@ -15,7 +13,6 @@ import {
   DesktopJobsSheet,
   desktopTopNavIconActionClassName,
   useStaggeredDismiss,
-  type DesktopJobFailureGroup,
   type DesktopJobFilter,
   type DesktopJobTone,
 } from "@space/desktop-shell/components";
@@ -29,34 +26,21 @@ import {
   type ParrotImportStatus,
   type ParrotLanguage,
 } from "../../shared/ipc";
-import { countText, pluralForm, type ParrotStringKey, type Translate } from "./i18n";
+import type { ParrotStringKey, Translate } from "./i18n";
+import type { NotificationPart } from "./notificationText";
 import { ExportJobList, exportJobMatches, useExportJobs } from "./ExportJobs";
-import { useAppBusyMark } from "@space/ui/app-busy-mark";
 
 /**
- * Why a file or an import failed, as a class the user can read (UX-JOBS-03). The importer stores the error as it came
- * (`ENOENT: no such file or directory, open '/home/…'`, a fetch error, "not an audio file Parrot imports: …"); the card
- * never shows that text, a path or a stack, only the sentence of its class.
+ * Why an import or a file failed, as the user reads it: a publish other saves kept beating (the server's 409
+ * `version_conflict`, PAR-UP-03) and an import cut short by closing Parrot are said in words; any other reason is shown
+ * as it came (a file system or network error).
  */
-export type ImportFailureReason = "missing" | "unsupported" | "unreadable" | "network" | "conflict" | "other";
+export const importErrorPart = (error: string): NotificationPart =>
+  error === IMPORT_INTERRUPTED ? { key: "jobs.interrupted" } : /version_conflict|library_db_conflict/.test(error) ? { key: "import.conflict" } : error;
 
-export function importFailureReason(error: string): ImportFailureReason {
-  if (/version_conflict|library_db_conflict/.test(error)) return "conflict";
-  if (/\bENOENT\b|no such file|ENOTDIR/i.test(error)) return "missing";
-  if (/not an audio file|no audio format/i.test(error)) return "unsupported";
-  if (/\b(EACCES|EPERM|EISDIR|EIO|EBUSY)\b|unreadable|permission denied/i.test(error)) return "unreadable";
-  if (/fetch failed|network|socket|\b(ECONNRESET|ECONNREFUSED|ETIMEDOUT|ENOTFOUND|EAI_AGAIN|EPIPE|ENETUNREACH)\b|timed? ?out|HTTP 5\d\d/i.test(error)) return "network";
-  return "other";
-}
-
-/**
- * Why a whole import stopped, as the user reads it, in the Jobs panel and the bell: closing Parrot, a publish other
- * saves kept beating (the server's 409 `version_conflict`, PAR-UP-03), or the sentence of the error's class.
- */
-export const importErrorPart = (error: string): { key: ParrotStringKey } => {
-  if (error === IMPORT_INTERRUPTED) return { key: "jobs.interrupted" };
-  const reason = importFailureReason(error);
-  return { key: reason === "conflict" ? "import.conflict" : `jobs.failed.what.${reason}` };
+const importErrorText = (t: Translate, error: string) => {
+  const part = importErrorPart(error);
+  return typeof part === "string" ? part : t(part.key);
 };
 
 /** UX-JOBS-03: the first line of a card that stopped or left files out: what happened, in plain words. */
@@ -64,26 +48,9 @@ const failedWhat = (t: Translate, job: ParrotImportJob): string => {
   if (job.status.phase !== "failed") return t("jobs.failed.whatSomeFiles");
   const error = job.status.error ?? "";
   if (error === IMPORT_INTERRUPTED) return t("jobs.failed.whatInterrupted");
-  const reason = importFailureReason(error);
-  return t(reason === "conflict" ? "jobs.failed.whatConflict" : `jobs.failed.what.${reason}`);
+  if (/version_conflict|library_db_conflict/.test(error)) return t("jobs.failed.whatConflict");
+  return t("jobs.failed.whatError", { error });
 };
-
-const REASON_ORDER: ImportFailureReason[] = ["missing", "unsupported", "unreadable", "network", "conflict", "other"];
-
-/** The files an import left out, one group per reason ("13 files not found: …"), each with its files' names only. */
-export function importFailureGroups(t: Translate, language: ParrotLanguage, failures: ParrotImportJob["failures"]): DesktopJobFailureGroup[] {
-  const byReason = new Map<ImportFailureReason, string[]>();
-  for (const failure of failures) {
-    const reason = importFailureReason(failure.error);
-    const files = byReason.get(reason);
-    if (files) files.push(fileName(failure.file));
-    else byReason.set(reason, [fileName(failure.file)]);
-  }
-  return REASON_ORDER.filter((reason) => byReason.has(reason)).map((reason) => {
-    const files = byReason.get(reason)!;
-    return { key: reason, label: t(`jobs.reason.${reason}.${pluralForm(language, files.length)}`, { n: files.length }), files };
-  });
-}
 
 /**
  * UX-JOBS-03: what a stopped card offers and why it was last refused. `refused` is the answer of the last try
@@ -111,6 +78,10 @@ function useImportRetry(job: ParrotImportJob) {
   return { busy, missing, refused, run };
 }
 
+/** `one` or `other` for `n` in the user's language: French says "0 ajouté" and "1 ajouté", English "1 more" and "2 more". */
+const pluralForm = (language: ParrotLanguage, n: number): "one" | "other" =>
+  new Intl.PluralRules(language).select(n) === "one" ? "one" : "other";
+
 /** What an ended import added, found already there and could not import, each count in its own plural form. */
 export const importCountsText = (t: Translate, language: ParrotLanguage, status: ParrotImportStatus): string =>
   [
@@ -129,9 +100,7 @@ export function importLine(t: Translate, language: ParrotLanguage, status: Parro
     case "idle":
       return null;
     case "scanning":
-      return status.total > 0
-        ? t(`import.scanningCount.${pluralForm(language, status.total)}`, { done: status.done, total: status.total })
-        : t("import.scanning");
+      return status.total > 0 ? t("import.scanningCount", { done: status.done, total: status.total }) : t("import.scanning");
     case "review":
       return t("import.review");
     case "uploading":
@@ -146,7 +115,7 @@ export function importLine(t: Translate, language: ParrotLanguage, status: Parro
     case "done":
       return t("import.done", { imported: status.imported, skipped: status.skipped, failed: status.failed });
     case "failed":
-      return t(importErrorPart(status.error ?? "").key);
+      return t("import.failed", { error: importErrorText(t, status.error ?? "") });
     case "cancelled":
       return t("jobs.status.cancelled");
   }
@@ -237,27 +206,13 @@ const BACKGROUND_KEY: Record<ParrotBackgroundWork["kind"], ParrotStringKey> = {
   covers: "jobs.background.covers",
 };
 
-/** The album an import touched, as its card shows it: the title and the small cover. */
-export type ImportJobAlbum = { title: string; cover: string | null };
-
 /**
  * UX-JOBS-01 / UX-JOBS-02 / PAR-UP-04: the top bar's Jobs item in Parrot, the same flask, side panel and job cards as
  * Badger's, listing this account's imports (running, ready to review, finished, stopped, failed) with what each added,
- * found already there, or could not import and why. Each import is a group card like a Badger title (cover, title,
- * count, pill, X or bin, chevron) opening onto its row. A running import has the X (it stops the uploads left; songs
+ * found already there, or could not import and why. A running import has the X (it stops the uploads left; songs
  * already in stay), an ended one the bin; one ready to review opens the review on a click.
  */
-export function ImportJobs({
-  t,
-  language,
-  onReview,
-  albumFor,
-}: {
-  t: Translate;
-  language: ParrotLanguage;
-  onReview: () => void;
-  albumFor: (albumId: string) => ImportJobAlbum | undefined;
-}) {
+export function ImportJobs({ t, language, onReview }: { t: Translate; language: ParrotLanguage; onReview: () => void }) {
   const jobs = useImportJobs();
   const background = useBackgroundWork();
   const [filter, setFilter] = useState<DesktopJobFilter>("all");
@@ -267,8 +222,6 @@ export function ImportJobs({
   const exports = useExportJobs() ?? [];
   const shownExports = exports.filter((job) => exportJobMatches(job, filter));
   const activeCount = list.filter((job) => job.status.running).length + exports.filter((job) => job.phase === "running").length;
-  // REL-UPD-08: the update modal waits while an import or an export runs (a restart would cut it).
-  useAppBusyMark(activeCount > 0);
 
   return (
     <DesktopJobsSheet title={t("jobs.title")} subtitle={t("jobs.subtitle")} activeCount={activeCount} jobCount={list.length + exports.length} triggerClassName={desktopTopNavIconActionClassName} testId="nav-jobs">
@@ -296,7 +249,7 @@ export function ImportJobs({
         ) : (
           <>
             {shownExports.length > 0 && <ExportJobList t={t} language={language} jobs={shownExports} />}
-            {shown.length > 0 && <ImportJobList t={t} language={language} jobs={shown} onReview={onReview} variant="card" albumFor={albumFor} />}
+            {shown.length > 0 && <ImportJobList t={t} language={language} jobs={shown} onReview={onReview} />}
           </>
         )}
       </div>
@@ -304,28 +257,11 @@ export function ImportJobs({
   );
 }
 
-/**
- * The imports, with the shared removal animation. The panel draws each as a group card (`card`, like a Badger title);
- * an album's Jobs tab draws the rows alone (`row`, like a Badger title's Jobs tab).
- */
-export function ImportJobList({
-  t,
-  language,
-  jobs,
-  onReview,
-  variant,
-  albumFor,
-}: {
-  t: Translate;
-  language: ParrotLanguage;
-  jobs: ParrotImportJob[];
-  onReview: () => void;
-  variant: "card" | "row";
-  albumFor?: (albumId: string) => ImportJobAlbum | undefined;
-}) {
+/** The import rows, with the shared removal animation; the panel and an album's Jobs tab both list them. */
+export function ImportJobList({ t, language, jobs, onReview }: { t: Translate; language: ParrotLanguage; jobs: ParrotImportJob[]; onReview: () => void }) {
   const { dismissing, scheduleDismiss } = useStaggeredDismiss();
   return (
-    <ul className={variant === "card" ? "flex flex-col gap-3" : "flex flex-col gap-2"}>
+    <ul className="flex flex-col gap-2">
       {jobs.map((job) => (
         <ImportJobItem
           key={job.id}
@@ -335,8 +271,6 @@ export function ImportJobList({
           removing={dismissing.has(job.id)}
           onReview={onReview}
           onDismiss={() => scheduleDismiss(job.id, () => void window.parrot.dismissImportJob(job.id))}
-          variant={variant}
-          album={variant === "card" && job.albumIds?.length === 1 ? albumFor?.(job.albumIds[0]) : undefined}
         />
       ))}
     </ul>
@@ -350,8 +284,6 @@ function ImportJobItem({
   removing,
   onReview,
   onDismiss,
-  variant,
-  album,
 }: {
   t: Translate;
   language: ParrotLanguage;
@@ -359,56 +291,30 @@ function ImportJobItem({
   removing: boolean;
   onReview: () => void;
   onDismiss: () => void;
-  variant: "card" | "row";
-  album: ImportJobAlbum | undefined;
 }) {
   const { status } = job;
   const ended = importJobEnded(status);
   const first = job.sources[0] ? fileName(job.sources[0]) : "";
   const name = importNameText(t, language, first, Math.max(0, job.sources.length - 1));
-  const started = new Date(job.startedAt).toLocaleString(language);
+  const started = new Date(job.startedAt).toLocaleString();
   const pill = importPill(status);
-  const pillNode = (
-    <DesktopJobStatusPill tone={pill.tone} testId="import-job-status">
-      {t(pill.key)}
-    </DesktopJobStatusPill>
-  );
   const badge =
     status.phase === "review" && !status.running ? (
-      <button
-        type="button"
-        className="rounded-full"
-        onClick={(event) => {
-          // The card's header opens and closes on a click; the pill opens the review instead.
-          event.stopPropagation();
-          onReview();
-        }}
-        data-testid="import-job-review"
-      >
-        {pillNode}
+      <button type="button" className="rounded-full" onClick={onReview} data-testid="import-job-review">
+        <DesktopJobStatusPill tone={pill.tone} testId="import-job-status">
+          {t(pill.key)}
+        </DesktopJobStatusPill>
       </button>
     ) : (
-      pillNode
+      <DesktopJobStatusPill tone={pill.tone} testId="import-job-status">
+        {t(pill.key)}
+      </DesktopJobStatusPill>
     );
   // Uploading, the counts are the file's; once it ended, what it added, found already there and could not import.
   const counted = ended && (status.imported > 0 || status.skipped > 0 || status.failed > 0);
-  const counts = counted ? importCountsText(t, language, status) : null;
   const line = ended ? null : importLine(t, language, status);
   const retryable = importJobRetryable(job);
   const retry = useImportRetry(job);
-  // UX-JOBS-03: a card with something to do is open without a click, as a Badger title with a failed job is; so is a
-  // running one, whose progress is the point. The chevron still closes it.
-  const [open, setOpen] = useState<boolean | null>(null);
-  const expanded = open ?? (retryable || !ended);
-  const action = ended ? (
-    <DesktopJobActionButton kind="remove" label={t("jobs.remove")} onClick={onDismiss} disabled={removing} testId="import-job-remove" />
-  ) : (
-    <DesktopJobActionButton kind="cancel" label={t("jobs.cancel")} onClick={() => void window.parrot.cancelImport()} testId="import-job-cancel" />
-  );
-  const progress =
-    status.phase === "uploading" && status.bytesTotal > 0 ? (
-      <DesktopJobProgress percent={Math.min(100, (status.bytesDone / status.bytesTotal) * 100)} testId="import-job-bar" />
-    ) : null;
   const extra = (
     <>
       {line ? (
@@ -416,9 +322,9 @@ function ImportJobItem({
           {line}
         </p>
       ) : null}
-      {counts && variant === "row" ? (
+      {counted ? (
         <p className="mt-2 text-xs" data-testid="import-job-counts">
-          {counts}
+          {importCountsText(t, language, status)}
         </p>
       ) : null}
       {retryable ? (
@@ -434,40 +340,47 @@ function ImportJobItem({
           }}
         />
       ) : null}
-      <DesktopJobFailureGroups groups={importFailureGroups(t, language, job.failures)} filesLabel={t("jobs.reason.files")} testId="import-job-failures" />
+      {job.failures.length > 0 ? (
+        <div className="mt-2">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{t("jobs.failedFiles")}</p>
+          <ul className="mt-1 max-h-40 overflow-y-auto text-xs" data-testid="import-job-failures">
+            {job.failures.map((failure) => (
+              <li key={failure.file} className="py-0.5" title={failure.file}>
+                <span className="font-medium">{fileName(failure.file)}</span>
+                <span className="text-muted-foreground"> · {importErrorText(t, failure.error)}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
     </>
   );
 
-  if (variant === "row") {
-    return (
-      <li data-testid="import-job" data-phase={status.phase}>
-        {ended ? (
-          <DesktopCompletedJobRow removing={removing} title={name} meta={started} badge={badge} extra={extra} action={action} />
-        ) : (
-          <DesktopJobRow title={name} filename={started} badge={badge} progress={progress} extra={extra} action={action} />
-        )}
-      </li>
-    );
-  }
   return (
-    <li data-testid="import-job" data-phase={status.phase}>
-      <DesktopJobGroupCard
-        removing={removing}
-        expanded={expanded}
-        onToggle={() => setOpen(!expanded)}
-        artwork={album?.cover ? <img src={album.cover} alt="" className="h-full w-full object-cover" /> : null}
-        title={album?.title ?? name}
-        countLabel={counts ?? (status.total > 0 ? countText(language, t, "song", status.total) : started)}
-        badge={badge}
-        action={action}
-        testId="import-job-card"
-      >
-        {ended ? (
-          <DesktopCompletedJobRow title={started} filename={name} badge={null} extra={extra} action={null} />
-        ) : (
-          <DesktopJobRow title={started} filename={name} badge={null} progress={progress} extra={extra} action={null} />
-        )}
-      </DesktopJobGroupCard>
+    <li data-testid="import-job" data-phase={status.phase} title={job.sources.join("\n")}>
+      {ended ? (
+        <DesktopCompletedJobRow
+          removing={removing}
+          title={name}
+          meta={started}
+          badge={badge}
+          extra={extra}
+          action={<DesktopJobActionButton kind="remove" label={t("jobs.remove")} onClick={onDismiss} disabled={removing} testId="import-job-remove" />}
+        />
+      ) : (
+        <DesktopJobRow
+          title={name}
+          filename={started}
+          badge={badge}
+          progress={
+            status.phase === "uploading" && status.bytesTotal > 0 ? (
+              <DesktopJobProgress percent={Math.min(100, (status.bytesDone / status.bytesTotal) * 100)} testId="import-job-bar" />
+            ) : null
+          }
+          extra={extra}
+          action={<DesktopJobActionButton kind="cancel" label={t("jobs.cancel")} onClick={() => void window.parrot.cancelImport()} testId="import-job-cancel" />}
+        />
+      )}
     </li>
   );
 }

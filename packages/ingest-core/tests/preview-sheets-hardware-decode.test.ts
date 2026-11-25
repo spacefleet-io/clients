@@ -89,23 +89,6 @@ describe("preview sampling pass on the graphics card", () => {
     expect(withoutDecode).toEqual(LEGACY_CPU_ARGS("/in.mkv", "/f/%06d.png"));
   });
 
-  /** @req META-SKIP-04[runtime] */
-  it("cuda: the skip-detection windows scale on the card with nearest sampling, straight to 160x90 grey", () => {
-    const args = buildPreviewSampleArgs({
-      inputPath: "/in.mkv",
-      framePattern: "/f/%06d.png",
-      threads: THREADS,
-      hardware: { kind: "cuda" },
-      skipPicture: { headPattern: "/h/%06d.png", headSeconds: 600, tailPattern: "/t/%06d.png", tailOffsetSeconds: 1000 },
-    });
-    console.info(`[${SUITE}:cuda-skip] ${args.join(" ")}`);
-    const filters = args.flatMap((arg, i) => (arg === "-vf" ? [args[i + 1]] : []));
-    // The card's bilinear averages thin credits text away (Parks and Recreation S2E01–E04 lost every credits start);
-    // nearest sampling keeps the letters as bright as the CPU path's `fast_bilinear`.
-    const skip = "hwupload,scale_cuda=160:90:interp_algo=nearest:format=nv12,hwdownload,format=nv12,format=gray";
-    expect(filters).toEqual([`hwupload,scale_cuda=160:${HEIGHT_EXPR}:interp_algo=bilinear:format=nv12,hwdownload,format=nv12`, skip, skip]);
-  });
-
   /** Fake ffmpeg: the sampling pass writes `pictures` PNG frames of `width`x`height`; the sheet pass writes a JPEG stub. */
   const fakeRunner = (opts: { pictures: number; width: number; height: number; failHardware?: Error; emptyHardware?: boolean }) => {
     const calls: string[][] = [];

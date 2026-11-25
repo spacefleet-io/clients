@@ -5,7 +5,6 @@ import {
   configureMediaIngestRuntime,
   processMediaJob,
   producePreviewSheets,
-  produceSkipSignature,
   produceMediaOutputs,
   uploadEncryptedFile,
   uploadProducedMedia,
@@ -15,7 +14,7 @@ import {
   type UploadProducedMediaResult,
 } from "@space/ingest-core/mediaProcessor";
 import type { QualityPreset } from "@space/ingest-core/quality";
-import type { MediaPreviewSheets, MediaSkipSignatureRef } from "@space/shared/previewSheets";
+import type { MediaPreviewSheets } from "@space/shared/previewSheets";
 import { createRuntimeContentStorageBridge, createRuntimeMediaStorageTransport } from "../core/content/storageBridge";
 import { decryptMediaObject, sealMediaObjectWithPadding } from "@space/media-crypto";
 
@@ -205,14 +204,6 @@ export const produceBadgerPreviewSheets = (
   return currentLibraryKey.run(libraryKeyBase64.trim() || null, () => producePreviewSheets(args));
 };
 
-/** A skip signature alone (META-SKIP-04, catch-up of a video whose previews predate signatures), encrypted the same way. */
-export const produceBadgerSkipSignature = (
-  input: Parameters<typeof produceSkipSignature>[0] & { libraryKeyBase64: string }
-): Promise<MediaSkipSignatureRef> => {
-  const { libraryKeyBase64, ...args } = input;
-  return currentLibraryKey.run(libraryKeyBase64.trim() || null, () => produceSkipSignature(args));
-};
-
 /**
  * Phase 7 — fetch + decrypt one encrypted DASH object from storage. Used by
  * the retranscode step to stage source-format chunks before feeding them
@@ -226,35 +217,11 @@ export const produceBadgerSkipSignature = (
 export const downloadAndDecryptBadgerObject = async (
   token: string,
   objectKey: string,
-  libraryKeyBase64: string,
-  /** Cuts the download: at once for the caller, and the tunnel session at its next chunk (MPV-PREV-07 yield). */
-  signal?: AbortSignal
+  libraryKeyBase64: string
 ): Promise<Buffer> => {
-  signal?.throwIfAborted();
   // Not live playback: zero bytes while the silo is saturated, resumed afterwards (STOR-BW-09).
-  const download = storageBridge.downloadObject(token, objectKey, {
-    purpose: "export",
-    ...(signal
-      ? {
-          onChunk: () => {
-            signal.throwIfAborted();
-          },
-        }
-      : {}),
-  });
-  if (!signal) return decryptMediaObject(await download, libraryKeyBase64);
-  // A saturated silo may send nothing for a while: the caller does not wait for a chunk to learn it was cut.
-  download.catch(() => {});
-  let onAbort: (() => void) | null = null;
-  const aborted = new Promise<never>((_, reject) => {
-    onAbort = () => reject(signal.reason);
-    signal.addEventListener("abort", onAbort, { once: true });
-  });
-  try {
-    return decryptMediaObject(await Promise.race([download, aborted]), libraryKeyBase64);
-  } finally {
-    signal.removeEventListener("abort", onAbort!);
-  }
+  const encrypted = await storageBridge.downloadObject(token, objectKey, { purpose: "export" });
+  return decryptMediaObject(encrypted, libraryKeyBase64);
 };
 
 /**

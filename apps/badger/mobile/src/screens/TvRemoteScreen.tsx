@@ -6,7 +6,7 @@ import { ArrowLeft, AudioLines, Captions, Check, Pause, Play, RotateCcw, RotateC
 import { MobileSheetScrollView } from "@space/mobile-shell/bottom-sheet";
 import { useTranslation } from "@space/mobile-shell/i18n";
 import { useAuth } from "../store/auth";
-import { MobileIconButton } from "@space/mobile-shell/components";
+import { IconButton } from "../components/IconButton";
 import { BottomSheet } from "../components/BottomSheet";
 import { usePickerSheet } from "../components/usePickerSheet";
 import { createAppRelay } from "../lib/playOnTv/appRelay";
@@ -104,9 +104,9 @@ export const TvRemoteScreen = () => {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
-        <MobileIconButton label={t("playOnTv.remote.close")} onPress={() => navigation.goBack()}>
+        <IconButton label={t("playOnTv.remote.close")} onPress={() => navigation.goBack()}>
           <ArrowLeft size={22} color={theme.colors.text} />
-        </MobileIconButton>
+        </IconButton>
         <Text style={styles.title} numberOfLines={2} accessibilityRole="header">
           {tv?.title ?? title}
         </Text>
