@@ -8,7 +8,8 @@ import { RequireAuthGuard } from "@space/desktop-shell/guards";
 import { AppRouter } from "./lib/AppRouter";
 import { LoadingScreen } from "./components/LoadingScreen";
 import { usePushStoredAutoUpdate, useUpdater } from "./lib/useUpdater";
-import { DesktopUpdatePrompt } from "@space/desktop-shell/updater-prompt";
+import { DesktopUpdateReadyNotice } from "@space/desktop-shell/updater-ready-notice";
+import { SystemUpdatePrompt } from "@space/desktop-shell/updater-system-prompt";
 import { DailyHello } from "./components/DailyHello";
 
 const Login = lazy(() => import("./pages/Login"));
@@ -73,9 +74,10 @@ function AppContent() {
           <AppUpdateRequiredGate refusal={updateRequired} />
         </Suspense>
       ) : null}
-      {/* REL-UPD-08: a new version found by the automatic checks is offered in a modal (Restart now once it has
-          downloaded; the package manager's Install now for a .deb/.rpm/.pacman copy), on every screen, signed in or out. */}
-      <DesktopUpdatePrompt controls={updater} language={i18n.language} appName="Badger" blocked={mustUpdate} />
+      {/* REL-UPD-01: a version downloaded in the background offers "Restart now", on every screen, signed in or out. */}
+      <DesktopUpdateReadyNotice controls={updater} language={i18n.language} appName="Badger" blocked={mustUpdate} />
+      {/* REL-UPD-07: a copy from SpaceFleet's .deb/.rpm/.pacman packages asks before updating through the package manager. */}
+      <SystemUpdatePrompt controls={updater} language={i18n.language} appName="Badger" blocked={mustUpdate} />
     </CloseLabelProvider>
   );
 }

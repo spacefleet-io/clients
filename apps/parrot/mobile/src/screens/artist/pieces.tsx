@@ -114,7 +114,7 @@ export const SongRows = ({ list, page, withCover = true }: { list: ArtistSong[];
         starting={page.starting === song.id}
         disabled={page.starting !== null}
         unavailable={page.reach ? !page.reach.song(song.id) : false}
-        accessibilityLabel={page.t(page.now?.trackId === song.id && page.now.playing ? "parrot.album.pause" : "parrot.album.play", { title: song.title })}
+        accessibilityLabel={page.t("parrot.album.play", { title: song.title })}
         onPress={() => page.playFrom(list, index)}
         onMore={() => page.openSong(song)}
         moreLabel={`${page.t("parrot.player.more")}, ${song.title}`}

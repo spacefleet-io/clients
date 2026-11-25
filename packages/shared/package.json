@@ -65,7 +65,6 @@
     "./subtitleTwins": "./src/subtitleTwins.ts",
     "./subtitleVtt": "./src/subtitleVtt.ts",
     "./previewSheets": "./src/previewSheets.ts",
-    "./skipMarkers": "./src/skipMarkers.ts",
     "./playbackResume": "./src/playbackResume.ts",
     "./progressBand": "./src/progressBand.ts",
     "./seasonName": "./src/seasonName.ts",

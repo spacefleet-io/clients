@@ -18,7 +18,6 @@ type _DeviceCapacityValues = import("../../shared/deviceCapacity").DeviceCapacit
 type _DeviceCapacitySettings = import("../../shared/deviceCapacity").DeviceCapacitySettings;
 type _UploadsFirstRunAnswer = import("../../shared/uploadPlaybackDefault").UploadsFirstRunAnswer;
 type _ErrorReportsState = import("@space/error-report/desktop").ErrorReportsState;
-type _SkipCatchUpStatus = import("@space/runtime-contracts").BadgerPreviewsCatchUp;
 type _PairingStartResult = import("@space/desktop-shell/pairing").PairingStartResult;
 type _PlaybackSaturationState = import("../../shared/playbackSaturation").PlaybackSaturationState;
 type _PairingPollResult = import("@space/desktop-shell/pairing").PairingPollResult;
@@ -367,14 +366,6 @@ interface Window {
       get: () => Promise<_ErrorReportsState>;
       /** Stores the answer and starts or stops reporting at once. */
       set: (decision: "on" | "off") => Promise<_ErrorReportsState>;
-    };
-    /** MPV-PREV-07: the skip-detection catch-up shown in the Jobs tab; null when the runtime is not reachable. */
-    skipCatchUp?: {
-      getStatus: () => Promise<_SkipCatchUpStatus | null>;
-      /** "Try again": one video (`formatId`) or all (null); false when the runtime did not take it. */
-      retry: (formatId: string | null) => Promise<boolean>;
-      /** A skip job's Cancel (`cancel`) or Remove from history (`dismiss`); false when the runtime did not take it. */
-      setVideo?: (formatId: string, action: "cancel" | "dismiss") => Promise<boolean>;
     };
     /**
      * V2 ingest IPC surface. Backs the renderer's v2 hook. Always exposed; the

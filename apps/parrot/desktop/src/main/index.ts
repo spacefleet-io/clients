@@ -256,7 +256,7 @@ import { createDesktopPairingClient, pairingRefusalOf, resolveDeviceName } from 
 import { SIBLING_SIGN_IN_ARG, armSiblingHiddenQuit, isSiblingSignInLaunch, type SiblingHiddenQuit } from "@space/desktop-shell/sibling-main";
 import { SIBLING_IPC, type SiblingSignInResult } from "@space/desktop-shell/sibling";
 import { createParrotSiblingHost, parrotSiblingAccount, setupStepAfterSiblingSignIn } from "./siblingSignIn";
-import { createDesktopUpdater, ignoredVersionFileStore } from "@space/desktop-shell/updater-main";
+import { createDesktopUpdater } from "@space/desktop-shell/updater-main";
 // electron-updater is CommonJS (bundled here: Parrot ships no node_modules): read `autoUpdater` off the default import.
 import electronUpdater from "electron-updater";
 import { pairingModeOf, type PairingMode, type PairingPollResult, type PairingStartResult } from "@space/desktop-shell/pairing";
@@ -403,7 +403,6 @@ const publishSiblingAccount = () => void siblingHost.setAccount(parrotSiblingAcc
 /** REL-UPD-01: new versions install themselves, from `<api>/desktop/parrot/`; the setting lives in the store. */
 const updaterLogLine = (level: string) => (fields: Record<string, unknown>, message: string) =>
   log(`[updater] ${level === "info" ? "" : `${level}: `}${message} ${JSON.stringify(fields)}`);
-const updaterLogger = { info: updaterLogLine("info"), warn: updaterLogLine("warn"), error: updaterLogLine("error") };
 const updater = createDesktopUpdater({
   app: "parrot",
   electron: { app, ipcMain },
@@ -412,9 +411,7 @@ const updater = createDesktopUpdater({
   getPlatformId: () => getDesktopPlatform().id,
   // REL-UPD-07: a .deb/.rpm/.pacman copy updates through /usr/lib/spaceparrot/system-update.
   linuxPackageName: "spaceparrot",
-  logger: updaterLogger,
-  // REL-UPD-08: the version the user chose to ignore, kept across restarts.
-  ignoredVersionStore: ignoredVersionFileStore(join(userDataDir, "updater-ignored-version.json"), updaterLogger),
+  logger: { info: updaterLogLine("info"), warn: updaterLogLine("warn"), error: updaterLogLine("error") },
   onAutoUpdateChange: (enabled) => {
     void store.setAutoUpdate(enabled).catch((error: unknown) => fail(`[store] automatic updates setting not saved: ${errorText(error)}`));
   },
@@ -3354,11 +3351,6 @@ void app.whenReady().then(async () => {
   registerIpc();
   createWindow();
   updater.register(() => mainWindow);
-  // REL-UPD-08: an automatic check also runs when the computer wakes, and when the window comes back after an hour away
-  // (a blur starts the absence).
-  powerMonitor.on("resume", () => updater.nudge("resume"));
-  app.on("browser-window-blur", () => updater.nudge("blur"));
-  app.on("browser-window-focus", () => updater.nudge("focus"));
   // REL-CD-29: the first "please update" refusal of any API call reaches the window, which then shows the update screen.
   onAppUpdateRequired((payload) => {
     log(`[parrot] app update required: ${payload.version} is below ${payload.minVersion}`);

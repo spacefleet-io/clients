@@ -77,9 +77,9 @@ describe("[parrot] library pieces", () => {
   // The browser check of the same rule (headings over their columns, phone width, EN/FR) is
   // apps/parrot/desktop/e2e/web-player-covers.e2e.test.ts.
   it("the song list lays its columns once for the heading and every row; a narrow list puts the artist under the title", () => {
-    const labels = { song: "Song", artist: "Artist", album: "Album", time: "Time", unknownArtist: "Unknown artist", play: (title: string) => `Play ${title}`, pause: (title: string) => `Pause ${title}` };
+    const labels = { song: "Song", artist: "Artist", album: "Album", time: "Time", unknownArtist: "Unknown artist", play: (title: string) => `Play ${title}` };
     const tracks = [{ id: "t1", title: "Opening Lights", artistName: "Test Tones", albumTitle: "Low Orbit", durationMs: 20_000 }];
-    const html = renderToStaticMarkup(<ParrotSongList tracks={tracks} playingId={undefined} playing={false} showAlbum labels={labels} onPlay={() => undefined} onToggle={() => undefined} actions={() => <button type="button">+</button>} />);
+    const html = renderToStaticMarkup(<ParrotSongList tracks={tracks} playingId={undefined} playing={false} showAlbum labels={labels} onPlay={() => undefined} actions={() => <button type="button">+</button>} />);
     console.info("[parrot-library] song list", html.slice(0, 600));
     // One grid on the list; the heading, the list and each row are subgrids spanning it.
     expect(html).toContain("@container");
@@ -94,7 +94,7 @@ describe("[parrot] library pieces", () => {
     expect(html).toMatch(/class="truncate font-medium" title="Opening Lights">Opening Lights<\/span><\/span><span class="block truncate text-xs text-muted-foreground @lg:hidden" title="Test Tones" data-testid="song-artist-under-title"><span>Test Tones<\/span></);
     expect(html).toMatch(/class="hidden truncate text-muted-foreground @lg:block" title="Low Orbit"><span>Low Orbit<\/span></);
     // Without buttons or the album column, the narrow and wide grids drop those columns.
-    const plain = renderToStaticMarkup(<ParrotSongList tracks={tracks} playingId={undefined} playing={false} showAlbum={false} labels={labels} onPlay={() => undefined} onToggle={() => undefined} />);
+    const plain = renderToStaticMarkup(<ParrotSongList tracks={tracks} playingId={undefined} playing={false} showAlbum={false} labels={labels} onPlay={() => undefined} />);
     expect(plain).toContain("grid-cols-[2.5rem_minmax(0,1fr)_auto] @lg:grid-cols-[2.5rem_minmax(0,2fr)_minmax(0,1.4fr)_4rem]");
     expect(plain).not.toContain(">Album<");
   });

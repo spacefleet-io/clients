@@ -2,8 +2,8 @@
 
 /**
  * usePushStoredAutoUpdate (REL-UPD-01): at start, Badger pushes the stored auto-update window setting to the main
- * process once, so the start-up and background checks follow it. The update modal itself is the shared
- * `DesktopUpdatePrompt` (packages/desktop-shell/tests/update-prompt.test.tsx).
+ * process once, so the start-up and background checks follow it. The "update ready" card itself is the shared
+ * `DesktopUpdateReadyNotice` (packages/desktop-shell/tests/update-ready-notice.test.tsx).
  *
  * @req REL-UPD-01
  */

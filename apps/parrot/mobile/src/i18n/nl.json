@@ -64,8 +64,7 @@
       "noPlayableFile": "Dit album heeft nog geen afspeelbaar bestand.",
       "playFailed": "Dit nummer kon niet worden afgespeeld ({{error}}).",
       "noSongs": "Geen nummers.",
-      "play": "{{title}} afspelen",
-      "pause": "{{title}} pauzeren"
+      "play": "{{title}} afspelen"
     },
     "player": {
       "nothing": "Er speelt niets.",

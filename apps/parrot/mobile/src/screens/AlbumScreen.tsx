@@ -203,7 +203,7 @@ export const AlbumScreen = ({ route }: NativeStackScreenProps<RootStack, "Album"
             starting={starting === item.id}
             disabled={starting !== null}
             unavailable={reach ? !reach.song(item.id) : false}
-            accessibilityLabel={t(now?.trackId === item.id && now.playing ? "parrot.album.pause" : "parrot.album.play", { title: item.title })}
+            accessibilityLabel={t("parrot.album.play", { title: item.title })}
             onPress={() => void play(songs, index, { title, cover })}
             onMore={() => editor.openSong({ id: item.id, title: item.title }, undefined, { onAddToQueue: () => queue([item], "end", albumInfo) })}
             moreLabel={`${t("parrot.player.more")}, ${item.title}`}

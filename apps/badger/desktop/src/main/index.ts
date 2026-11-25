@@ -1,6 +1,6 @@
 import "./packagedNodeEnv";
 import "./devBuildEnv";
-import { app, BrowserWindow, shell, ipcMain, screen, dialog, Menu, Tray, powerMonitor, session as electronSession } from "electron";
+import { app, BrowserWindow, shell, ipcMain, screen, dialog, Menu, Tray, session as electronSession } from "electron";
 import { NEUTRAL_USER_AGENT } from "@space/metadata-client";
 import { existsSync } from "node:fs";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
@@ -84,7 +84,7 @@ import {
   shouldQuitWhenAllWindowsClosed,
   trayLabelsFor,
 } from "@space/desktop-shell/main-shell";
-import { createDesktopUpdater, ignoredVersionFileStore } from "@space/desktop-shell/updater-main";
+import { createDesktopUpdater } from "@space/desktop-shell/updater-main";
 // electron-updater is CommonJS: Node's ESM loader does not synthesize its named exports, so `import { autoUpdater }`
 // throws when the built main bundle loads. Default import, read lazily (reading `autoUpdater` builds the OS updater).
 import electronUpdater from "electron-updater";
@@ -508,16 +508,6 @@ const requestExplicitQuit = () => {
 
 let playbackServer: PlaybackServer | null = null;
 const playbackRuntimeBridge = new PlaybackRuntimeBridge(fetch, undefined, logger);
-// MPV-PREV-07: the Jobs tab polls the skip-detection catch-up while it is open.
-ipcMain.handle("sf-skip-catch-up-status", () => playbackRuntimeBridge.getCatchUpStatus());
-ipcMain.handle("sf-skip-catch-up-retry", (_event, formatId: unknown) =>
-  playbackRuntimeBridge.retryCatchUp(typeof formatId === "string" && formatId.length > 0 ? formatId : null)
-);
-ipcMain.handle("sf-skip-catch-up-set-video", (_event, formatId: unknown, action: unknown) =>
-  typeof formatId === "string" && formatId.length > 0 && (action === "cancel" || action === "dismiss")
-    ? playbackRuntimeBridge.setCatchUpVideo(formatId, action)
-    : false
-);
 
 // #25 "uploads while a video plays": tells the runtime this computer's mode while mpv is alive.
 // Armed after the first-start detection (armUploadPlaybackPolicy); Settings changes arrive live.
@@ -802,9 +792,6 @@ app.whenReady().then(async () => {
     toolAccessBridge?.setAuthToken(token ?? null);
     handoffBridge?.setAuthToken(token ?? null);
     ffmpegRuntimeBridge.setBackendToken(token ?? null);
-    // MPV-PREV-07: the Jobs card's catch-up status, Cancel and Try again go through this bridge; it needs the session
-    // from sign-in, not only once the player has opened.
-    playbackRuntimeBridge.setBackendToken(token ?? null);
     void import("./runtimeJobsIpc").then(({ setRuntimeJobsBackendToken }) => {
       setRuntimeJobsBackendToken(token ?? null);
     }).catch(() => undefined);
@@ -941,29 +928,21 @@ app.whenReady().then(async () => {
   registerSiblingIpc(siblingHost);
   // In-app updates (REL-UPD-01), from `<api>/desktop/badger/`. `getWindow` is resolved lazily so a recreated window
   // still receives update events. The renderer arms the background check by pushing its `autoUpdate` setting (ON by
-  // default) once it has loaded. REL-UPD-08: it also checks when the computer wakes and when a window comes back.
-  const updaterLogger = scopeLogger("updater");
-  const desktopUpdater = createDesktopUpdater({
+  // default) once it has loaded.
+  createDesktopUpdater({
     app: "badger",
     electron: { app, ipcMain },
     loadAutoUpdater: () => electronUpdater.autoUpdater,
     getApiBaseUrl,
     getPlatformId: () => getDesktopPlatform().id,
-    logger: updaterLogger,
+    logger: scopeLogger("updater"),
     // REL-UPD-07: a .deb/.rpm/.pacman copy updates through /usr/lib/spacebadger/system-update.
     linuxPackageName: "spacebadger",
-    // REL-UPD-08: the version the user chose to ignore, kept across restarts.
-    ignoredVersionStore: ignoredVersionFileStore(join(app.getPath("userData"), "updater-ignored-version.json"), updaterLogger),
     // The windows close instead of going to the tray; `before-quit` still asks about work in progress.
     onQuitForUpdate: () => {
       isQuitting = true;
     },
-  });
-  desktopUpdater.register(() => mainWindow);
-  powerMonitor.on("resume", () => desktopUpdater.nudge("resume"));
-  // REL-UPD-08: the window back in front checks only after an absence of an hour; a blur starts the absence.
-  app.on("browser-window-blur", () => desktopUpdater.nudge("blur"));
-  app.on("browser-window-focus", () => desktopUpdater.nudge("focus"));
+  }).register(() => mainWindow);
 
   await sessionLoaded;
   const launchVisibility = decideLaunchVisibility({ argv: process.argv, openUrlBeforeWindow });

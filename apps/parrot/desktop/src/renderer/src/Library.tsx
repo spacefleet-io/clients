@@ -79,8 +79,7 @@ import type { ParrotLibraryTrack } from "@space/parrot-ingest";
 import type { ParrotImportScan, ParrotImportStatus, ParrotLibrary, ParrotState } from "../../shared/ipc";
 import { applyParrotLibraryPatch } from "../../shared/libraryPatch";
 import { SettingsPage, type ParrotSettingsSection } from "./AccountSettings";
-import { ParrotProfileSetupOverlays, profilesLog, useParrotDesktopProfileStore } from "./profiles";
-import { ParrotProfileMenu } from "@space/ui/profiles";
+import { ParrotProfileMenu, ParrotProfileSetupOverlays, useParrotDesktopProfileStore } from "./profiles";
 import { FounderBanner } from "@space/ui/founder";
 import { useParrotFounderStatus } from "./founder";
 import AddMusic from "./AddMusic";
@@ -646,8 +645,7 @@ export default function Library({ t, state, onState }: Props) {
     album: t("library.album"),
     time: t("library.time"),
     unknownArtist: t("library.unknownArtist"),
-    play: (title: string) => t("library.playSong", { title }),
-    pause: (title: string) => t("library.pauseSong", { title }),
+    play: () => t("player.play"),
     missing: t("library.missingTrack"),
     unidentified: t("library.unidentified"),
   };
@@ -762,7 +760,6 @@ export default function Library({ t, state, onState }: Props) {
               showAlbum
               labels={songLabels}
               onPlay={(i) => play(shown.shownSongs, i)}
-              onToggle={() => toggleRef.current?.()}
               actions={songActions()}
               unavailable={songAway}
               links={nameLinks}
@@ -875,7 +872,6 @@ export default function Library({ t, state, onState }: Props) {
           entries={queue.entries}
           position={queue.position}
           onJump={(index) => setQueue((current) => jumpTo(current, index))}
-          onToggle={() => toggleRef.current?.()}
           coverFor={(albumId) => coverFor(albumId)?.coverThumbUrl}
           onOpenAlbum={() => open({ kind: "album", id: playingTrack.albumId })}
           onOpenArtist={(id) => open({ kind: "artist", id })}
@@ -973,7 +969,7 @@ export default function Library({ t, state, onState }: Props) {
           ) : null}
           {jobsTab ? (
             <div className="mt-6" data-testid="album-jobs">
-              <ImportJobList t={t} language={language} jobs={albumJobs} onReview={reviewImport} variant="row" />
+              <ImportJobList t={t} language={language} jobs={albumJobs} onReview={reviewImport} />
             </div>
           ) : (
             // The album's songs the user does not have sit greyed between them, never played (PAR-LIB-05).
@@ -985,7 +981,6 @@ export default function Library({ t, state, onState }: Props) {
               showAlbum={false}
               labels={songLabels}
               onPlay={(i) => play(songs, i)}
-              onToggle={() => toggleRef.current?.()}
               actions={songActions()}
               unavailable={songAway}
               links={nameLinks}
@@ -1094,7 +1089,6 @@ export default function Library({ t, state, onState }: Props) {
               showAlbum
               labels={songLabels}
               onPlay={(i) => play(songs, i)}
-              onToggle={() => toggleRef.current?.()}
               actions={songActions((track, index) => playlistEditor.removeSong(playlist, track.id, entries[index]?.position ?? index))}
               testId="playlist-tracks"
               unavailable={songAway}
@@ -1170,15 +1164,7 @@ export default function Library({ t, state, onState }: Props) {
               testId="library-import"
             />
             {/* UX-JOBS-01: imports and how they went live in the Jobs panel, as in Badger, not in a strip. */}
-            <ImportJobs
-              t={t}
-              language={language}
-              onReview={reviewImport}
-              albumFor={(albumId) => {
-                const album = coverFor(albumId);
-                return album ? { title: album.title, cover: album.coverThumbUrl ?? album.coverUrl } : undefined;
-              }}
-            />
+            <ImportJobs t={t} language={language} onReview={reviewImport} />
           </>
         }
         notificationAction={
@@ -1221,7 +1207,6 @@ export default function Library({ t, state, onState }: Props) {
           profileStore ? (
             <ParrotProfileMenu
               store={profileStore}
-              log={profilesLog}
               language={language}
               signOutLabel={t("library.signOut")}
               onSignOut={() => void requestSignOut()}

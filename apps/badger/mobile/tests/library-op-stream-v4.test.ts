@@ -189,47 +189,6 @@ describe("switch: convert in place, then write 4 (LIB-FMT-12, LIB-FMT-13)", () =
   });
 });
 
-describe("a new account's first library (LIB-FMT-13)", () => {
-  // Sign-up bug (Badger iOS 0.1.54, 2026-11-25): the first full copy declared 3 whatever the switch, a switched account
-  // refused it with 426 and onboarding showed "Impossible d'initialiser votre médiathèque".
-  const createLibrary = async (target: number | null) => {
-    fx.meta = { exists: false, version: 0, snapshotVersion: 0, updatedAt: null, keyProbe: null, targetOpStreamVersion: target };
-    fx.nextPutVersion = 1;
-    return (await LibraryDb.open("token", "key")) as unknown as LibraryDbSeam;
-  };
-
-  it("@req LIB-FMT-13 on a switched account the first copy declares 4, the playback copy is converted, ops declare 4", async () => {
-    const db = await createLibrary(4);
-    try {
-      fx.nextPutVersion = 2;
-      await db.queueOp(settingOp("local-1", "episode_resume_v1:e1", "{}"));
-      await db.flushOps();
-      log("switched create", { putDb: fx.putDbCalls, declared: fx.declaredFormats, converts: native.converts });
-      expect(fx.putDbCalls, "fixture sanity: the first copy was published").toBe(1);
-      expect(fx.declaredFormats.db).toEqual([declared(4)]);
-      expect(native.converts, "the new playback copy is packed before any op").toEqual([PLAYBACK_DB_PATH]);
-      expect(fx.declaredFormats.op).toEqual([declared(4)]);
-    } finally {
-      await db.close();
-    }
-  });
-
-  it("@req LIB-FMT-13 on an unswitched account the first copy and its ops declare 3, nothing converted", async () => {
-    const db = await createLibrary(null);
-    try {
-      fx.nextPutVersion = 2;
-      await db.queueOp(settingOp("local-1", "episode_resume_v1:e1", "{}"));
-      await db.flushOps();
-      log("unswitched create", { putDb: fx.putDbCalls, declared: fx.declaredFormats, converts: native.converts });
-      expect(fx.declaredFormats.db).toEqual([declared(OP_STREAM_VERSION)]);
-      expect(native.converts).toEqual([]);
-      expect(fx.declaredFormats.op).toEqual([declared(OP_STREAM_VERSION)]);
-    } finally {
-      await db.close();
-    }
-  });
-});
-
 describe("an op type this build does not know (LIB-FMT-13)", () => {
   it("@req LIB-FMT-13 stops the sync with nothing applied, the cursor unchanged and the update screen latched", async () => {
     const unknown = { id: "op-12", type: "media.hologram.set", createdAt: "2026-11-21T00:00:00.000Z", payload: {} } as unknown as LibraryOp;

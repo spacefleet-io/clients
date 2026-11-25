@@ -18,8 +18,7 @@ import type { ApiProfile } from "@space/shared/profiles";
 import { activeProfileNeedsSetup, useUpdateFeatures } from "@space/mobile-shell/profile-setup";
 import { ProfileSetupStep } from "@space/mobile-shell/profile-setup-step";
 import { WhatsNewModal } from "@space/mobile-shell/whats-new";
-import { NO_LIBRARY_MOVES } from "@space/shared/profileStore";
-import { profileStore, useProfiles } from "./src/lib/profiles";
+import { parrotProfileMoves, profileStore, useProfiles } from "./src/lib/profiles";
 import { stopPlayback } from "./src/lib/playback";
 import { SessionProvider, useSession } from "./src/state/session";
 import { LoginScreen } from "./src/screens/LoginScreen";
@@ -69,7 +68,7 @@ const profilesLog = (event: string, data: Record<string, unknown>) => console.in
 const ProfilesRoute = ({ navigation, route }: NativeStackScreenProps<RootStack, "Profiles">) => (
   <MobileProfilesScreen
     store={profileStore}
-    moves={NO_LIBRARY_MOVES}
+    moves={parrotProfileMoves}
     startMode={route.params.mode}
     audience="listening"
     onClose={() => navigation.goBack()}
@@ -246,7 +245,7 @@ const ProfileGate = () => {
     return (
       <MobileProfilesScreen
         store={profileStore}
-        moves={NO_LIBRARY_MOVES}
+        moves={parrotProfileMoves}
         startMode="pick"
         audience="listening"
         onClose={null}

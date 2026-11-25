@@ -19,7 +19,6 @@
     "./artwork-image": "./src/artwork-image.tsx",
     "./library-key-words": "./src/library-key-words.tsx",
     "./app-playback-mark": "./src/app-playback-mark.ts",
-    "./play-pause-shortcut": "./src/play-pause-shortcut.ts",
     "./app-busy-mark": "./src/app-busy-mark.ts",
     "./star-sky": "./src/star-sky.tsx",
     "./stream-slot-prompt": "./src/stream-slot-prompt.tsx",

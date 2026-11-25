@@ -26,10 +26,7 @@ const TONE_CLASS: Record<DesktopJobTone, string> = {
 /** A job's status pill ("Uploading", "Waiting · #3 in line", "Done"…). */
 export function DesktopJobStatusPill({ tone, children, testId }: { tone: DesktopJobTone; children: ReactNode; testId?: string }) {
   return (
-    <span
-      className={`inline-block max-w-full truncate align-middle rounded-full px-2 py-0.5 text-[10px] font-medium ${TONE_CLASS[tone]}`}
-      data-testid={testId}
-    >
+    <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${TONE_CLASS[tone]}`} data-testid={testId}>
       {children}
     </span>
   );
@@ -135,16 +132,15 @@ export function DesktopJobGroupCard({
         aria-expanded={expanded}
       >
         <div className="h-12 w-9 rounded bg-muted overflow-hidden shrink-0">{artwork}</div>
-        {/* The title keeps room for a few letters; a long status pill gives way and ends in "…" (MPV-PREV-07). */}
-        <div className="min-w-[4.5rem] flex-1">
+        <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <span className="text-sm font-semibold truncate">{title}</span>
             {kindLabel ? <span className="text-[10px] text-muted-foreground">{kindLabel}</span> : null}
           </div>
           <div className="text-[11px] text-muted-foreground">{countLabel}</div>
         </div>
-        <div className="flex min-w-0 items-center gap-3">
-          <div className="flex min-w-0">{badge}</div>
+        <div className="flex items-center gap-3 shrink-0">
+          {badge}
           {action}
           {expanded ? (
             <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -332,45 +328,6 @@ export function DesktopFailedJobDetail({
         </Button>
       ) : null}
     </div>
-  );
-}
-
-/** One reason some of a job's files were not taken, with how many and which ones. */
-export type DesktopJobFailureGroup = {
-  /** Stable across renders ("missing", "unsupported"…). */
-  key: string;
-  /** The whole sentence, count included and already translated ("13 files not found: …"). */
-  label: string;
-  /** The files' names only, never a path: shown behind the disclosure. */
-  files: string[];
-};
-
-/**
- * The files a job could not take, grouped by reason (UX-JOBS-03): one plain line per reason ("13 files not found:
- * they were moved or deleted after you chose them."), each opening onto its files' names. Never a raw error, a path
- * or a stack: the app turns its errors into these groups before it passes them in.
- */
-export function DesktopJobFailureGroups({ groups, filesLabel, testId }: { groups: DesktopJobFailureGroup[]; filesLabel: string; testId?: string }) {
-  if (groups.length === 0) return null;
-  return (
-    <ul className="mt-2 space-y-1 text-[11px]" data-testid={testId}>
-      {groups.map((group) => (
-        <li key={group.key} data-reason={group.key}>
-          <details>
-            <summary className="cursor-pointer text-muted-foreground marker:text-muted-foreground/60">
-              <span className="text-foreground">{group.label}</span> <span className="underline-offset-2 hover:underline">{filesLabel}</span>
-            </summary>
-            <ul className="mt-1 max-h-40 overflow-y-auto pl-4 text-muted-foreground">
-              {group.files.map((file, index) => (
-                <li key={`${index}:${file}`} className="truncate py-0.5">
-                  {file}
-                </li>
-              ))}
-            </ul>
-          </details>
-        </li>
-      ))}
-    </ul>
   );
 }
 

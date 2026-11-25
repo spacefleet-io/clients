@@ -543,21 +543,6 @@ export class LibraryDb {
     return call<void>(this.handle, "replaceSkipMarkers", [mediaId, episodeId, markers]);
   }
 
-  /** Writes markers by source priority (the user's times are never replaced; PLAY-SKIP-08). */
-  mergeSkipMarkers(
-    mediaId: string,
-    episodeId: string | null,
-    markers: Array<{
-      type: MediaSkipMarkerType;
-      startSeconds: number;
-      endSeconds: number;
-      source: string;
-      confidence?: number | null;
-    }>
-  ) {
-    return call<void>(this.handle, "mergeSkipMarkers", [mediaId, episodeId, markers]);
-  }
-
   upsertSkipAnalysis(
     mediaId: string,
     episodeId: string | null,

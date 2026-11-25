@@ -64,8 +64,7 @@
       "noPlayableFile": "Cet album n'a pas encore de fichier lisible.",
       "playFailed": "Impossible de lire ce titre ({{error}}).",
       "noSongs": "Aucun titre.",
-      "play": "Lire {{title}}",
-      "pause": "Mettre en pause {{title}}"
+      "play": "Lire {{title}}"
     },
     "player": {
       "nothing": "Rien n'est en lecture.",

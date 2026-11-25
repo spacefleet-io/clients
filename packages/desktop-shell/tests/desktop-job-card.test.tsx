@@ -19,7 +19,6 @@ import {
   DesktopJobsLoadingSkeleton,
   DesktopJobsTabEmpty,
   DesktopFailedJobDetail,
-  DesktopJobFailureGroups,
 } from "../src/components/desktop-job-card";
 
 const SUITE = "[desktop-job-card]";
@@ -112,26 +111,6 @@ describe("shared desktop job cards", () => {
     expect(removeOnly).not.toContain("<button");
   });
 
-  // @req UX-JOBS-03[parrot]
-  it("the files a job could not take read as one line per reason, their names behind a disclosure", () => {
-    const html = renderToStaticMarkup(
-      <DesktopJobFailureGroups
-        testId="failures"
-        filesLabel="Show files"
-        groups={[
-          { key: "missing", label: "2 files not found: they were moved or deleted after you chose them.", files: ["01 A.m4a", "02 B.m4a"] },
-          { key: "unsupported", label: "1 file is not a song Parrot can import.", files: ["cover.pdf"] },
-        ]}
-      />
-    );
-    console.info(SUITE, "failure groups", html);
-    expect(html.match(/<details>/g)).toHaveLength(2);
-    expect(html).toContain('data-reason="missing"');
-    expect(html).toContain("2 files not found");
-    expect(html).toContain("<li class=\"truncate py-0.5\">02 B.m4a</li>");
-    expect(renderToStaticMarkup(<DesktopJobFailureGroups groups={[]} filesLabel="Show files" />)).toBe("");
-  });
-
   // @req UX-JOBS-02[badger-desktop]
   // @req UX-JOBS-02[parrot]
   // @req UX-JOBS-03[badger-desktop]
@@ -154,11 +133,10 @@ describe("shared desktop job cards", () => {
     expect(badger.sheet).toContain("DesktopJobsBackgroundLine");
     for (const part of ["DesktopJobRow", "DesktopCompletedJobRow", "DesktopJobsTabEmpty"]) expect(badger.tab, `Badger Jobs tab uses ${part}`).toContain(part);
     expect(badger.pill).toContain("DesktopJobStatusPill");
-    for (const part of ["DesktopJobGroupCard", "DesktopJobRow", "DesktopCompletedJobRow", "DesktopJobStatusPill", "DesktopJobActionButton", "DesktopJobProgress", "DesktopJobsLoadingSkeleton", "DesktopJobsBackgroundLine", "useStaggeredDismiss", "DesktopFailedJobDetail", "DesktopJobFailureGroups"]) {
+    for (const part of ["DesktopJobRow", "DesktopCompletedJobRow", "DesktopJobStatusPill", "DesktopJobActionButton", "DesktopJobProgress", "DesktopJobsLoadingSkeleton", "DesktopJobsBackgroundLine", "useStaggeredDismiss", "DesktopFailedJobDetail"]) {
       expect(parrot, `Parrot panel uses ${part}`).toContain(part);
     }
-    // No hand-drawn pill, bin or failures list left in Parrot's panel; no raw error reaches the card.
+    // No hand-drawn pill or bin left in Parrot's panel.
     expect(parrot).not.toContain("lucide-react");
-    expect(parrot).not.toContain("failure.error}");
   });
 });

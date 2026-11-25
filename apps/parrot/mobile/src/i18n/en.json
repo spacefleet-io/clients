@@ -64,8 +64,7 @@
       "noPlayableFile": "This album has no playable file yet.",
       "playFailed": "Couldn't play this song ({{error}}).",
       "noSongs": "No songs.",
-      "play": "Play {{title}}",
-      "pause": "Pause {{title}}"
+      "play": "Play {{title}}"
     },
     "player": {
       "nothing": "Nothing is playing.",

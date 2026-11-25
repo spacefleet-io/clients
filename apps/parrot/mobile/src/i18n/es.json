@@ -64,8 +64,7 @@
       "noPlayableFile": "Este álbum todavía no tiene ningún archivo reproducible.",
       "playFailed": "No se pudo reproducir esta canción ({{error}}).",
       "noSongs": "No hay canciones.",
-      "play": "Reproducir {{title}}",
-      "pause": "Pausar {{title}}"
+      "play": "Reproducir {{title}}"
     },
     "player": {
       "nothing": "No se está reproduciendo nada.",

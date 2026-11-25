@@ -1,19 +1,19 @@
 /**
  * Automatic updates in Parrot's window (REL-UPD-01), over the shared desktop updater (`@space/desktop-shell/updater`).
- * The main process keeps the setting (ON unless the user turned it off), checks at start, every 4 hours, when the
- * computer wakes and when the window comes back (REL-UPD-08), and downloads in the background; a downloaded version
- * installs the next time Parrot closes.
+ * The main process keeps the setting (ON unless the user turned it off), checks at start and every 6 hours, and
+ * downloads in the background; a downloaded version installs the next time Parrot closes.
  *  - `ParrotUpdateSection`: Settings › About & updates, the shared `DesktopUpdateSection` (REL-UPD-05, the section
  *    Badger shows too) over `window.parrot.updater`, with the automatic-updates switch saved in main.
- *  - `ParrotUpdatePrompt`: on every screen, the shared `DesktopUpdatePrompt` (the modal Badger shows too, REL-UPD-08)
- *    offers the new version with Remind me later and Ignore: "Restart now" once it has downloaded, "Install now"
- *    through the package manager for a .deb/.rpm/.pacman copy (REL-UPD-07), the `flatpak update` command for Flatpak.
- *    It waits while music plays or an import/export runs. A mandatory update has its own blocking screen
- *    (`UpdateRequiredGate`), so the modal stays out of its way.
+ *  - `ParrotUpdateReadyNotice`: on every screen, once a version has downloaded, the shared `DesktopUpdateReadyNotice`
+ *    (the card Badger shows too) offers "Restart now". A mandatory update has its own blocking screen
+ *    (`UpdateRequiredGate`), so the card stays out of its way.
+ *  - `ParrotSystemUpdatePrompt`: a copy from SpaceFleet's .deb/.rpm/.pacman packages asks before updating through the
+ *    package manager (REL-UPD-07, the shared `SystemUpdatePrompt`); a Flatpak copy shows `flatpak update`.
  */
 import { useDesktopUpdater, type DesktopUpdaterControls } from "@space/desktop-shell/updater-react";
-import { DesktopUpdatePrompt } from "@space/desktop-shell/updater-prompt";
+import { DesktopUpdateReadyNotice } from "@space/desktop-shell/updater-ready-notice";
 import { DesktopUpdateSection } from "@space/desktop-shell/updater-section";
+import { SystemUpdatePrompt } from "@space/desktop-shell/updater-system-prompt";
 import type { ParrotLanguage } from "../../shared/ipc";
 
 const logUpdaterError = (message: string, context: string) => console.error(`[updater] ${context}: ${message}`);
@@ -32,7 +32,13 @@ export function ParrotUpdateSection({ language }: { language: ParrotLanguage }) 
   );
 }
 
-export function ParrotUpdatePrompt({ language }: { language: ParrotLanguage }) {
+export function ParrotSystemUpdatePrompt({ language }: { language: ParrotLanguage }) {
   const updater = useParrotUpdater();
-  return <DesktopUpdatePrompt controls={updater} language={language} appName="Parrot" />;
+  return <SystemUpdatePrompt controls={updater} language={language} appName="Parrot" />;
+}
+
+export function ParrotUpdateReadyNotice({ language }: { language: ParrotLanguage }) {
+  const updater = useParrotUpdater();
+  // Sits above the player bar.
+  return <DesktopUpdateReadyNotice controls={updater} language={language} appName="Parrot" className="bottom-24 right-4" />;
 }

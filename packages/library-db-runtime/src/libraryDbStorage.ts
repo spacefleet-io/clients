@@ -6,7 +6,6 @@ import { getApiBaseUrl } from "./apiHost";
 import { libraryDir } from "./libraryAccount";
 
 export type LibraryCache = {
-  /** This device's save counter: moves with every local save, so it runs ahead of the server's version. */
   version: number;
   dbPath: string;
   updatedAt: string | null;
@@ -14,12 +13,6 @@ export type LibraryCache = {
   lastOpId?: string | null;
   /** The API server the cached library came from (LIB-STORE-06); absent in caches written before it was recorded. */
   apiOrigin?: string | null;
-  /**
-   * The server version whose changes the cached library holds (LIB-SYNC-23): a reopened device fetches the changes
-   * after it. Absent (null) when unknown: in caches written before it was recorded, and in a cache rebuilt from the
-   * per-group files alone.
-   */
-  remoteVersion?: number | null;
 };
 
 export type PendingSync = {
@@ -104,9 +97,6 @@ const writeJson = (filePath: string, value: unknown) => {
   writeFileAtomicSync(filePath, JSON.stringify(value));
 };
 
-const knownRemoteVersion = (value: unknown) =>
-  typeof value === "number" && Number.isInteger(value) && value >= 0 ? value : null;
-
 export const loadCache = async (): Promise<LibraryCache | null> => {
   const cache = readJson<LibraryCache & { blobBase64?: string }>(cacheFile());
   if (!cache || typeof cache !== "object") return null;
@@ -125,7 +115,6 @@ export const loadCache = async (): Promise<LibraryCache | null> => {
       stateHash: typeof cache.stateHash === "string" ? cache.stateHash : null,
       lastOpId: typeof cache.lastOpId === "string" ? cache.lastOpId : null,
       apiOrigin: typeof cache.apiOrigin === "string" ? cache.apiOrigin : null,
-      remoteVersion: knownRemoteVersion(cache.remoteVersion),
     };
     writeJson(cacheFile(), migrated);
     return migrated;
@@ -155,7 +144,6 @@ export const loadCache = async (): Promise<LibraryCache | null> => {
     stateHash: typeof cache.stateHash === "string" ? cache.stateHash : null,
     lastOpId: typeof cache.lastOpId === "string" ? cache.lastOpId : null,
     apiOrigin: typeof cache.apiOrigin === "string" ? cache.apiOrigin : null,
-    remoteVersion: knownRemoteVersion(cache.remoteVersion),
   };
   if (cache.dbPath !== normalized.dbPath) {
     writeJson(cacheFile(), normalized);

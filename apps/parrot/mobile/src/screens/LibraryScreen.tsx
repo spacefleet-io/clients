@@ -391,7 +391,7 @@ const SongsView = ({ songs, loading, error: readError }: { songs: Array<WithCove
           starting={starting === item.id}
           disabled={starting !== null}
           unavailable={reach ? !reach.song(item.id) : false}
-          accessibilityLabel={t(now?.trackId === item.id && now.playing ? "parrot.album.pause" : "parrot.album.play", { title: item.title })}
+          accessibilityLabel={t("parrot.album.play", { title: item.title })}
           onPress={() => void play(songs, index)}
           onMore={() => editor.openSong({ id: item.id, title: item.title }, undefined, { onAddToQueue: () => queue([item], "end") })}
           moreLabel={`${t("parrot.player.more")}, ${item.title}`}

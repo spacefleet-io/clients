@@ -236,8 +236,6 @@ describe("UpdateAvailableModal (Part E4)", async () => {
     manualCommand: null,
     failure: null,
     failureDetail: null,
-    remindLater: null,
-    ignoredVersion: null,
   };
 
   it("does not render when open=false", () => {
@@ -421,8 +419,6 @@ describe("server-mandatory update (Part E1/E4) — app-level gate, library gate 
     install: vi.fn(),
     runFullUpdate: vi.fn(async () => {}),
     reset: vi.fn(),
-    remindLater: vi.fn(async () => {}),
-    ignoreVersion: vi.fn(async () => {}),
   };
 
   beforeEach(() => {

@@ -64,8 +64,7 @@
       "noPlayableFile": "Dieses Album hat noch keine abspielbare Datei.",
       "playFailed": "Dieser Titel konnte nicht abgespielt werden ({{error}}).",
       "noSongs": "Keine Titel.",
-      "play": "{{title}} abspielen",
-      "pause": "{{title}} pausieren"
+      "play": "{{title}} abspielen"
     },
     "player": {
       "nothing": "Gerade läuft nichts.",

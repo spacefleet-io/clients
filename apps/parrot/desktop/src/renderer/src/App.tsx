@@ -6,7 +6,7 @@ import SignIn from "./SignIn";
 import Setup from "./Setup";
 import Library from "./Library";
 import { LoadingMascot } from "./LoadingMascot";
-import { ParrotUpdatePrompt } from "./updates";
+import { ParrotSystemUpdatePrompt, ParrotUpdateReadyNotice } from "./updates";
 import { UpdateRequiredGate } from "./UpdateRequiredGate";
 import { useNoteScreen } from "./noteScreen";
 
@@ -60,8 +60,10 @@ export default function App() {
           <Setup t={t} state={state} onState={setState} />
         )}
       </RenderBoundary>
-      {/* REL-UPD-08: a new version found by the automatic checks is offered in a modal, on every screen. */}
-      <ParrotUpdatePrompt language={state.setup.language} />
+      {/* REL-UPD-01: a version downloaded in the background offers "Restart now", on every screen. */}
+      <ParrotUpdateReadyNotice language={state.setup.language} />
+      {/* REL-UPD-07: a copy from SpaceFleet's packages asks before updating through the package manager. */}
+      <ParrotSystemUpdatePrompt language={state.setup.language} />
       {/* REL-CD-29: a build the API refuses (or release-status marks below the minimum) only offers the update. */}
       <UpdateRequiredGate language={state.setup.language} />
     </CloseLabelProvider>

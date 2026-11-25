@@ -62,55 +62,7 @@
         "actionFindFile": "Retrouver le fichier",
         "actionUpgradePlan": "Changer d’abonnement",
         "keptCopies": "Les copies gardées des imports échoués occupent {{size}} sur cet ordinateur. Chacune est supprimée au bout de 14 jours, ou plus tôt si le disque manque de place."
-      },
-      "skipCatchUp": {
-        "state": {
-          "paused_playback": "En pause pendant la lecture",
-          "paused_import": "En pause pendant l'import",
-          "offline": "En attente de connexion",
-          "retry_wait": "Nouvel essai à {{time}}"
-        },
-        "offlineHint": "Reprend toute seule au retour de la connexion",
-        "list": {
-          "step": {
-            "download": "Téléchargement\u202f: {{done}} sur {{total}} Mo",
-            "pictures": "Lecture des images",
-            "sound": "Lecture du son",
-            "waiting": "Démarrage"
-          },
-          "result": {
-            "found_both": "Générique de début et de fin trouvés",
-            "found_intro": "Générique de début trouvé",
-            "found_credits": "Générique de fin trouvé",
-            "waiting_other_episode": "En attente d'un autre épisode",
-            "nothing_found": "Rien trouvé",
-            "previews_made": "Aperçus de la barre de lecture prêts"
-          },
-          "failedStep": {
-            "download": "Impossible de télécharger la copie stockée",
-            "read": "Impossible de lire la vidéo",
-            "room": "Pas assez d’espace disque libre"
-          },
-          "tryAgain": "Réessayer",
-          "tryAgainNow": "Réessayer maintenant",
-          "retryAt": "Nouvel essai à {{time}}",
-          "stepShort": {
-            "download": "Téléchargement",
-            "pictures": "Images",
-            "sound": "Son",
-            "waiting": "Démarrage"
-          },
-          "waitingImport": "En attente de votre import"
-        }
-      },
-      "skipDetect": {
-        "whatCancelled": "Vous l’avez annulée.",
-        "meaningCancelled": "Cette vidéo est laissée de côté jusqu’à ce que vous réessayiez.",
-        "meaningFailed": "Cette vidéo n’a pas de temps de générique tant qu’elle n’est pas relancée.",
-        "meaningFailedFilm": "Ce film n’a pas d’aperçus de barre de lecture tant qu’il n’est pas relancé.",
-        "meaningRetryWait": "Badger réessaie cette vidéo de lui-même à {{time}}."
-      },
-      "clearFinished": "Effacer les tâches terminées"
+      }
     },
     "notifications": {
       "title": "Notifications",
@@ -125,8 +77,7 @@
       "filterInfo": "Info",
       "filterSuccess": "Succès",
       "clearAll": "Tout effacer",
-      "dismiss": "Ignorer",
-      "subtitle": "{{count}} éléments récents"
+      "dismiss": "Ignorer"
     },
     "account": "Compte"
   },
@@ -439,8 +390,7 @@
       "subtitles": "Sous-titres",
       "episodeShort_one": "{{count}} ép.",
       "episodeShort_other": "{{count}} ép.",
-      "episodeShort_many": "{{count}} ép.",
-      "episodeShort": "{{count}} ép."
+      "episodeShort_many": "{{count}} ép."
     },
     "availableQualities": "Qualités disponibles",
     "qualities": {
@@ -472,9 +422,7 @@
         "quality-exists": "Cette qualité est déjà présente sur ce fichier.",
         "cannot-transcode-up": "Impossible de transcoder vers une résolution supérieure à celle stockée.",
         "media-not-found": "Ce fichier média n'existe plus."
-      },
-      "addModalConfirm": "Lancer {{count}} transcodage(s)",
-      "addModalSubmittedToast": "{{count}} transcodage(s) en file d'attente — suivez-les dans Tâches."
+      }
     },
     "hideMissing": {
       "title": "Masquer les fichiers manquants",
@@ -501,8 +449,7 @@
         "episode": "{{title}} — S{{season}}E{{episode}}{{episodeTitle, mustache}}",
         "missingEpisodes_one": "{{count}} épisode manquant",
         "missingEpisodes_other": "{{count}} épisodes manquants",
-        "missingEpisodes_many": "{{count}} épisodes manquants",
-        "missingEpisodes": "{{count}} épisode(s) manquant(s)"
+        "missingEpisodes_many": "{{count}} épisodes manquants"
       },
       "modal": {
         "confirmTitle": "Conserver hors ligne",
@@ -535,10 +482,7 @@
           "insufficient_disk_space": "Espace disque insuffisant ({{required}} requis, {{free}} disponible).",
           "library_db_not_open": "La bibliothèque n'est pas ouverte. Rouvrez-la puis réessayez.",
           "not_authenticated": "Connectez-vous puis réessayez."
-        },
-        "expectedFilenamePlusN": "et {{count}} autre(s) fichier(s)",
-        "skippedItems": "{{count}} élément(s) seront ignorés (qualité incompatible ou fichier manquant).",
-        "submittedToast": "{{count}} téléchargement(s) lancé(s) — suivez-les dans Tâches."
+        }
       },
       "button": {
         "save": "Conserver hors ligne",
@@ -551,8 +495,7 @@
         "deletedToast_one": "{{count}} fichier hors ligne supprimé.",
         "deletedToast_other": "{{count}} fichiers hors ligne supprimés.",
         "deletedToast_many": "{{count}} fichiers hors ligne supprimés.",
-        "deleteFailedToast": "Suppression impossible\u202f: {{reason}}",
-        "deletedToast": "{{count}} fichier(s) hors ligne supprimé(s)."
+        "deleteFailedToast": "Suppression impossible\u202f: {{reason}}"
       },
       "badge": {
         "savedOffline": "Hors ligne",
@@ -578,8 +521,7 @@
       "tv": "Séries TV",
       "count_one": "{{count}} élément",
       "count_other": "{{count}} éléments",
-      "count_many": "{{count}} éléments",
-      "count": "{{count}} éléments"
+      "count_many": "{{count}} éléments"
     },
     "media": {
       "movie": "Film",
@@ -677,8 +619,7 @@
       "episodeCount_many": "{{count}} épisodes",
       "available": "Disponible",
       "missing": "Fichiers manquants",
-      "specials": "Épisodes spéciaux",
-      "episodeCount": "{{count}} épisodes"
+      "specials": "Épisodes spéciaux"
     },
     "episodes": {
       "title": "Épisodes · Saison {{season}}",
@@ -742,22 +683,6 @@
       "back": "Bibliothèque",
       "playsThisVersion": "La lecture démarre sur cette version",
       "more": "Plus d’actions"
-    },
-    "skipTimes": {
-      "menu": "Génériques",
-      "setIntro": "Définir les temps du générique",
-      "setCredits": "Définir les temps du générique de fin",
-      "introChip": "Générique {{start}}–{{end}}",
-      "creditsChip": "Fin {{start}}",
-      "creditsStart": "Début du générique de fin",
-      "creditsHint": "Faites glisser le repère\u202f: l’image suit.  ← → le décalent de 1 s",
-      "noPicture": "Pas encore d’image",
-      "failed": "Les temps n’ont pas pu être enregistrés.",
-      "back": "Retour  [Échap]",
-      "episodeLine": "{{show}} · S{{season}} É{{episode}} · {{title}}",
-      "leftOut": "Mis de côté",
-      "tryAgain": "Réessayer",
-      "tryAgainAll": "Réessayer pour tous les épisodes mis de côté"
     }
   },
   "playlists": {
@@ -778,8 +703,7 @@
     "itemsCount_many": "{{count}} éléments",
     "noItems": "Aucun élément pour l'instant.",
     "missing": "Fichier manquant",
-    "remove": "Retirer",
-    "itemsCount": "{{count}} éléments"
+    "remove": "Retirer"
   },
   "settings": {
     "subtitle": "Tout pour cette application et votre compte.",
@@ -1359,37 +1283,7 @@
       "noDisplay": "La vidéo ne peut pas être lue dans cette session\u202f: cette session n'utilise que Wayland et le lecteur vidéo a besoin de X11. Activez XWayland (compatibilité X11) ou ouvrez une session X11, puis réessayez.",
       "sourceUnreachable": "Ce titre n'est pas téléchargé et le serveur est injoignable. Connectez-vous à Internet ou téléchargez-le pour le visionner hors connexion."
     },
-    "preparingPlayback": "Préparation de la lecture",
-    "skipUi": {
-      "skipIntro": "Passer le générique",
-      "skipCredits": "Passer le générique de fin",
-      "nextEpisode": "Épisode suivant",
-      "nextEpisodeIn": "L’épisode suivant commence dans",
-      "openingNextEpisode": "Ouverture de l’épisode suivant",
-      "enterKey": "[Entrée]",
-      "askedIntro": "Générique passé. C’était bien\u202f?",
-      "askedCredits": "Générique de fin passé. C’était bien\u202f?",
-      "yes": "Oui",
-      "changeTimes": "Modifier les temps",
-      "thanks": "Merci",
-      "changeIntroTimes": "Modifier les temps du générique",
-      "changeCreditsTimes": "Modifier les temps du générique de fin",
-      "start": "Début",
-      "end": "Fin",
-      "hint": "Faites glisser un repère\u202f: l’image suit.  ← → décalent celui choisi de 1 s",
-      "save": "Enregistrer  [Entrée]",
-      "cancel": "Annuler  [Échap]",
-      "back": "Retour",
-      "scopeQuestion": "Appliquer ces temps à",
-      "thisSeason": "Cette saison",
-      "onlyThisEpisode": "Cet épisode seulement",
-      "farNote": "Ces temps sont loin de ceux du reste de la saison.",
-      "savedSeason": "Enregistré pour cette saison",
-      "savedEpisode": "Enregistré pour cet épisode",
-      "menuPrompt": "Génériques",
-      "introEndsHere": "Le générique se termine ici",
-      "creditsStartHere": "Le générique de fin commence ici"
-    }
+    "preparingPlayback": "Préparation de la lecture"
   },
   "dashboard": {
     "title": "Accueil",
@@ -1403,8 +1297,7 @@
       "minutesLeft_one": "{{count}} min restante",
       "minutesLeft_other": "{{count}} min restantes",
       "minutesLeft_many": "{{count}} min restantes",
-      "seeAll": "Tout voir",
-      "minutesLeft": "{{count}} min restantes"
+      "seeAll": "Tout voir"
     },
     "empty": {
       "eyebrow": "Votre bibliothèque",
@@ -1551,10 +1444,7 @@
       "cancel": "Annuler",
       "queued": "Mises à jour de transcodage en file pour {{label}}.",
       "cleanupMessage": "{{removed}} fichiers orphelins supprimés. {{missing}} références manquantes nettoyées.",
-      "cleanupFailed": "Le nettoyage a échoué. Réessayez.",
-      "fileCount": "{{count}} fichier",
-      "episodeFileCount": "{{count}} fichiers épisode",
-      "episodeShort": "{{count}} eps"
+      "cleanupFailed": "Le nettoyage a échoué. Réessayez."
     },
     "status": {
       "waiting": "En attente",
@@ -1565,8 +1455,7 @@
       "transcoding": "Transcodage",
       "uploading": "Transfert",
       "done": "Terminé",
-      "failed": "Échec",
-      "cancelled": "Annulé"
+      "failed": "Échec"
     },
     "queue": {
       "remove": "Retirer de la file",
@@ -1613,13 +1502,8 @@
         "tracks": "On prépare les pistes audio et sous-titres pour pouvoir changer la langue et les sous-titres.",
         "exportDownloading": "On récupère la meilleure qualité disponible, on la déchiffre, puis on écrit un seul fichier vidéo avec toutes les pistes dans le dossier choisi.",
         "offlineDownloading": "On télécharge chaque morceau, on le déchiffre, puis on assemble toutes les pistes dans un seul fichier lisible hors ligne.",
-        "job": "Cette étape prépare les fichiers média pour la lecture et la synchronisation.",
-        "skipDetect": "On cherche où finit le générique de début et où commence le générique de fin, pour que vous puissiez les passer.",
-        "skipPreviews": "On crée les images que vous voyez en parcourant la barre de lecture."
-      },
-      "jobCount": "{{count}} tâche",
-      "skipDetect": "Recherche des génériques",
-      "skipPreviews": "Création des aperçus de la barre de lecture"
+        "job": "Cette étape prépare les fichiers média pour la lecture et la synchronisation."
+      }
     },
     "transcodePlan": "Plan de transcodage",
     "audio": "Audio",
@@ -1831,8 +1715,7 @@
       "relativeSeconds": "il y a {{value}}s",
       "relativeMinutes": "il y a {{value}}m",
       "relativeHours": "il y a {{value}}h",
-      "relativeDays": "il y a {{value}}j",
-      "confirmTitle": "{{count}} morceaux orphelins représentent ~{{bytes}}. Les récupérer\u202f?"
+      "relativeDays": "il y a {{value}}j"
     },
     "sponsorships": {
       "title": "Parrainages",
@@ -2043,11 +1926,6 @@
       "restart": "Redémarrer maintenant",
       "later": "Plus tard",
       "failed": "La mise à jour n'a pas pu être téléchargée. Réessayez plus tard."
-    },
-    "ready": {
-      "title": "Mise à jour prête",
-      "body": "Badger Desktop {{version}} est téléchargé. Il s’installe la prochaine fois que vous quittez Badger, ou redémarrez maintenant.",
-      "bodyCurrent": "Une nouvelle version de Badger Desktop est téléchargée. Elle s’installe la prochaine fois que vous quittez Badger, ou redémarrez maintenant."
     }
   },
   "fileIngestion": {
@@ -2124,8 +2002,7 @@
       "skippedDuplicateMany": "{{count}} vidéos de qualité dupliquée déjà dans votre bibliothèque ont été ignorées.",
       "subtitleTrackAddedSingle": "Piste de sous-titres ajoutée.",
       "subtitleTrackAddedMany": "{{count}} pistes de sous-titres ajoutées.",
-      "queueFailed": "Échec de la mise en file. Réessayez.",
-      "removedDuplicates": "{{count}} fichier(s) en doublon supprimé(s)."
+      "queueFailed": "Échec de la mise en file. Réessayez."
     },
     "samples": {
       "noSubtitleSample": "Aucun extrait de sous-titres disponible.",
@@ -2286,17 +2163,7 @@
       "undefined": "Non identifiée",
       "unknownMedia": "Média inconnu",
       "file": "fichier",
-      "files": "fichiers",
-      "readyToImportCount": "{{count}} prêt(s) à importer",
-      "blockerMatchOrRemove": "Associez ou retirez {{count}} fichier(s) non associé(s).",
-      "blockerWaitSearch": "Attendez la fin de la recherche de détails pour {{count}} fichier(s).",
-      "blockerResolveVideo": "Résolvez {{count}} décision(s) de qualité vidéo.",
-      "blockerWaitMetadata": "Attendez la fin de l'analyse des métadonnées pour {{count}} fichier(s).",
-      "blockerClickInput": "Cliquez sur \"Votre saisie est requise\" et répondez à {{count}} élément(s).",
-      "blockerSkipDataLoading": "Récupération des données de saut pour {{count}} épisode(s) — un instant.",
-      "videoDecision": "décision vidéo",
-      "videoDecisions": "décisions vidéo",
-      "videoDecisionsPending": "{{count}} {{decisionLabel}} en attente"
+      "files": "fichiers"
     }
   },
   "pairApprove": {
@@ -2308,12 +2175,5 @@
     "checksum": "Ces mots ne forment pas une clé valide. Vérifiez chaque mot avec ceux que vous avez enregistrés.",
     "unknownMark": "pas un mot de la clé",
     "pairedNoWords": "Cet ordinateur a reçu la clé d’un autre appareil\u202f: il n’a donc pas ses 12 mots. Ils sont sur l’appareil où la clé a été créée, ou dans la copie que vous avez enregistrée."
-  },
-  "skipCatchUpNotice": {
-    "title": "Badger repère maintenant les génériques",
-    "what": "La version {{version}} repère toute seule les génériques de début et de fin des vidéos pour lesquelles nous n'avons aucune information.",
-    "background": "Votre bibliothèque existante est en cours de traitement en arrière-plan sur cet ordinateur. Vous pouvez suivre l'avancement dans l'onglet Tâches. Le traitement se met en pause dès que vous importez ou regardez quelque chose\u202f: il ne vous gênera pas.",
-    "close": "Fermer",
-    "openJobs": "Ouvrir les Tâches"
   }
 }
