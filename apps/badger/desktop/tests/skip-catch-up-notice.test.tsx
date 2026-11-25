@@ -3,7 +3,8 @@
  * @req MPV-PREV-08
  *
  * The one-time "Badger now finds intros and credits" notice (EN + FR): shown while the catch-up has videos to process,
- * not when it has none, remembered per user only once closed, and "Open Jobs" opens the Jobs panel.
+ * not when it has none, remembered per user only once closed, "Open Jobs" opens the Jobs panel, and decided once per
+ * app run (a page change after an import does not bring it).
  */
 
 import React from "react";
@@ -21,7 +22,11 @@ const auth = vi.hoisted(() => ({
 }));
 vi.mock("@/auth", () => ({ useAuth: () => ({ user: auth.user }) }));
 
-import { SkipCatchUpNotice, skipCatchUpNoticeSeenKey } from "../src/renderer/src/components/SkipCatchUpNotice";
+import {
+  forgetSkipCatchUpNoticeDecisions,
+  SkipCatchUpNotice,
+  skipCatchUpNoticeSeenKey,
+} from "../src/renderer/src/components/SkipCatchUpNotice";
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -57,6 +62,7 @@ describe("skip-detection one-time notice (MPV-PREV-08)", () => {
 
   beforeEach(() => {
     window.localStorage.clear();
+    forgetSkipCatchUpNoticeDecisions();
     auth.user = { id: "user-a" };
     current = status();
     (window as unknown as { sf: unknown }).sf = {
@@ -108,7 +114,7 @@ describe("skip-detection one-time notice (MPV-PREV-08)", () => {
   it("@req MPV-PREV-08 shown while videos remain, in English and French; Close remembers it for that user", async () => {
     const enNotice = await render("en");
     expect(enNotice?.textContent).toContain("Badger now finds intros and credits");
-    expect(enNotice?.textContent).toContain("Version 0.1.58 finds intros and credits on its own");
+    expect(enNotice?.textContent).toContain("Version 0.1.66 finds intros and credits on its own");
     expect(enNotice?.textContent).toContain("Open Jobs");
     act(() => root?.unmount());
     container?.remove();
@@ -140,6 +146,36 @@ describe("skip-detection one-time notice (MPV-PREV-08)", () => {
     current = status({ state: "done", handled: 0, total: 0, current: null });
     expect(await render("en")).toBeNull();
     expect(window.localStorage.getItem(skipCatchUpNoticeSeenKey("user-a"))).toBeNull();
+  });
+
+  it("@req MPV-PREV-08 a fresh account's first import does not bring it on the next page (release smoke 0.1.67)", async () => {
+    // At sign-in the fresh library is empty: nothing to process, so not this run.
+    current = status({ state: "done", handled: 0, total: 0, current: null });
+    expect(await render("en")).toBeNull();
+    act(() => root?.unmount());
+    container?.remove();
+    // The film just imported is owed its previews until the import records them; the media page mounts a new TopNav.
+    current = status({ state: "paused_import", handled: 0, total: 1 });
+    expect(await render("en")).toBeNull();
+    expect(window.localStorage.getItem(skipCatchUpNoticeSeenKey("user-a"))).toBeNull();
+    act(() => root?.unmount());
+    container?.remove();
+    // The next start of the app decides again from its own first answer.
+    forgetSkipCatchUpNoticeDecisions();
+    expect(await render("en")).not.toBeNull();
+  });
+
+  it("@req MPV-PREV-08 once shown it stays across page changes until closed, even when the catch-up finishes", async () => {
+    expect(await render("en")).not.toBeNull();
+    act(() => root?.unmount());
+    container?.remove();
+    current = status({ state: "done", handled: 85, total: 85, current: null });
+    expect(await render("en")).not.toBeNull();
+    await click("skip-catch-up-notice-close");
+    act(() => root?.unmount());
+    container?.remove();
+    current = status();
+    expect(await render("en")).toBeNull();
   });
 
   it("@req MPV-PREV-08 Open Jobs closes the notice and asks the Jobs panel to open", async () => {
