@@ -96,7 +96,7 @@ vi.mock("../src/screens/sky", () => ({ ParrotSky: ({ children }: { children: unk
 vi.mock("../src/screens/pageBack", () => ({ PageBackButton: "PageBackButton", usePageTop: () => 120 }));
 vi.mock("../src/state/session", () => ({ useSession: () => ({ library: { status: "ready", error: null, version: 3 } }) }));
 vi.mock("../src/state/manage", () => ({ useManage: () => ({ edit: () => undefined, remove: () => undefined }) }));
-vi.mock("@space/mobile-shell/components", () => ({ MobileIconButton: "MobileIconButton" }));
+vi.mock("@space/mobile-shell/components", () => ({}));
 vi.mock("@space/mobile-shell/render-boundary", () => ({ guardRenderItem: (_name: string, render: unknown) => render }));
 
 import { AlbumScreen } from "../src/screens/AlbumScreen";

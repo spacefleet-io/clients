@@ -31,7 +31,7 @@ import { AudioPlayback, showsPause, type AudioPlaybackState } from "@space/mobil
 import { setPlaybackShuffle } from "../lib/playback";
 import { useMediaVolume, VolumeSlider } from "@space/mobile-media-volume";
 import { useTranslation } from "@space/mobile-shell/i18n";
-import { MOBILE_ICON_BUTTON_SIZE, MobileIconButton, SkyCover } from "@space/mobile-shell/components";
+import { SkyCover } from "@space/mobile-shell/components";
 import { MobileBottomSheet, MobileSheetScrollView, useMobileDismissPan } from "@space/mobile-shell/bottom-sheet";
 import { SHEET_CLOSE_MS } from "@space/mobile-shell/bottom-sheet-motion";
 import { formatDuration, nextRepeatMode, parrotCoverThumbKey } from "@space/parrot-core";
@@ -41,7 +41,7 @@ import { usePlayerState } from "../state/usePlayerState";
 import { useUpNext } from "../state/useUpNext";
 import { colors, spacing } from "../theme";
 import { ParrotArt, WaveSeek } from "./art";
-import { Body, Centered, ErrorText } from "./ui";
+import { Body, Centered, ErrorText, IconButton } from "./ui";
 import { PLAYER_TINT, ParrotSky } from "./sky";
 import { PlayerLyrics } from "./PlayerLyrics";
 import type { RootStack } from "./routes";
@@ -140,9 +140,7 @@ export const PlayerScreen = () => {
       <View style={[styles.screen, { paddingTop: insets.top + spacing.sm }]}>
         <GestureDetector gesture={headerPan}>
         <View style={styles.header}>
-          <MobileIconButton testID="player-close" label={t("parrot.player.close")} onPress={() => navigation.goBack()}>
-            <ChevronDown size={28} color={colors.text} />
-          </MobileIconButton>
+          <IconButton testID="player-close" icon={ChevronDown} size={28} label={t("parrot.player.close")} onPress={() => navigation.goBack()} />
           <View style={styles.headerText} accessibilityRole="header" accessible accessibilityLabel={`${t("parrot.player.playingFromAlbum")}, ${meta?.album ?? ""}`}>
             <Text style={styles.headerKicker} numberOfLines={1}>
               {t("parrot.player.playingFromAlbum").toUpperCase()}
@@ -151,9 +149,7 @@ export const PlayerScreen = () => {
               {meta?.album || t("parrot.nav.nowPlaying")}
             </Text>
           </View>
-          <MobileIconButton testID="player-menu" label={t("parrot.player.more")} onPress={openMenu}>
-            <Ellipsis size={22} color={colors.text} />
-          </MobileIconButton>
+          <IconButton testID="player-menu" icon={Ellipsis} label={t("parrot.player.more")} onPress={openMenu} />
         </View>
         </GestureDetector>
 
@@ -247,9 +243,7 @@ export const PlayerScreen = () => {
 
         <View style={styles.bottom}>
           {canCast ? (
-            <MobileIconButton testID="player-cast" label={t("parrot.player.output")} onPress={() => void AudioPlayback.showOutputSwitcher()}>
-              <Cast size={22} color={colors.textMuted} />
-            </MobileIconButton>
+            <IconButton testID="player-cast" icon={Cast} color={colors.textMuted} label={t("parrot.player.output")} onPress={() => void AudioPlayback.showOutputSwitcher()} />
           ) : (
             <View style={styles.bottomSpacer} />
           )}
@@ -257,9 +251,7 @@ export const PlayerScreen = () => {
             <Mic size={18} color={colors.textMuted} />
             <Text style={styles.lyricsText}>{t("shell.player.lyrics")}</Text>
           </Pressable>
-          <MobileIconButton testID="player-queue" label={t("shell.player.queue")} onPress={() => setSheet("queue")}>
-            <ListMusic size={22} color={colors.textMuted} />
-          </MobileIconButton>
+          <IconButton testID="player-queue" icon={ListMusic} color={colors.textMuted} label={t("shell.player.queue")} onPress={() => setSheet("queue")} />
         </View>
       </View>
       <PlayerSheet
@@ -362,7 +354,7 @@ const styles = StyleSheet.create({
   control: { width: 52, height: 52, alignItems: "center", justifyContent: "center" },
   bigControl: { width: 76, height: 76, borderRadius: 38, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" },
   bottom: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginHorizontal: -spacing.md },
-  bottomSpacer: { width: MOBILE_ICON_BUTTON_SIZE },
+  bottomSpacer: { width: 44 },
   lyrics: { flexDirection: "row", alignItems: "center", gap: 6, minHeight: 44, paddingHorizontal: spacing.md },
   lyricsText: { color: colors.textMuted, fontSize: 14, fontWeight: "600" },
   sheet: { backgroundColor: colors.surfaceRaised, paddingHorizontal: spacing.xl, paddingBottom: spacing.xl, gap: spacing.md },

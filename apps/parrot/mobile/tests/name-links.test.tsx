@@ -19,7 +19,6 @@ vi.mock("lucide-react-native", () => ({ Ellipsis: "Icon:Ellipsis" }));
 vi.mock("@space/mobile-shell/theme", () => ({ UNAVAILABLE_LOOK: {} }));
 vi.mock("../src/theme", () => ({ colors: { accent: "#0f0", textMuted: "#888" }, spacing: { sm: 4, md: 8 } }));
 vi.mock("../src/screens/equalizer", () => ({ ParrotEqualizer: "ParrotEqualizer" }));
-vi.mock("../src/state/usePlayerState", () => ({ togglePlayback: async () => undefined }));
 
 import { SongListRow, songRowNames } from "../src/screens/SongListRow";
 

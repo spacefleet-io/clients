@@ -44,7 +44,7 @@ vi.mock("@space/mobile-shell/theme", () => {
   return { useMobileShellTheme: () => ({ colors }) };
 });
 vi.mock("../src/components/BottomSheet", () => ({ BottomSheet: () => null }));
-vi.mock("@space/mobile-shell/components", () => ({ MobileButton: "Button", MobileCard: "Card" }));
+vi.mock("../src/components/ui", () => ({ Button: "Button", Card: "Card" }));
 vi.mock("@space/shared/api", () => ({ listDevices: async () => ({ sessions: [] }), revokeDevice: async () => undefined }));
 vi.mock("@space/mobile-shell/pairing-approve", () => ({
   deviceTypeLabel: (type: string | null) => type ?? "Device",

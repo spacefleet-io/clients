@@ -100,7 +100,19 @@
       "body": "Zeige einen Code, den du in Badger oder Parrot auf einem angemeldeten Computer, Handy oder Fernseher bestätigst."
     },
     "provider": {
-      "continueInBrowser": "Schließe die Anmeldung in deinem Browser ab. Danach kommst du hierher zurück."
+      "signInWith": "Mit {{provider}} anmelden",
+      "signUpWith": "Mit {{provider}} registrieren",
+      "or": "oder",
+      "continueInBrowser": "Schließe die Anmeldung in deinem Browser ab. Danach kommst du hierher zurück.",
+      "errorStart": "Die Anmeldung konnte nicht gestartet werden. Bitte versuch es noch einmal.",
+      "errors": {
+        "email_unverified": "Die E-Mail-Adresse dieses Kontos ist nicht bestätigt. Bestätige sie beim Anbieter oder melde dich mit E-Mail und Passwort an.",
+        "email_domain_disallowed": "Mit dieser E-Mail-Adresse kann kein Konto erstellt werden.",
+        "account_deletion_pending": "Die Löschung dieses Kontos ist geplant.",
+        "provider_failed": "Die Anmeldung hat nicht geklappt. Bitte versuch es noch einmal.",
+        "cancelled": "Die Anmeldung wurde abgebrochen.",
+        "invalid_code": "Diese Anmeldung ist abgelaufen oder wurde woanders gestartet. Bitte versuch es noch einmal."
+      }
     },
     "pairing": {
       "title": "Mit einem anderen Gerät anmelden"

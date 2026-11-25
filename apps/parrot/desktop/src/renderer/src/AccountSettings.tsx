@@ -12,8 +12,7 @@ import { pickLanguage } from "./accountLanguage";
 import { setEvenVolume, useEvenVolume } from "./evenVolume";
 import { errorReports, errorReportsLog } from "./errorReports";
 import type { Translate } from "./i18n";
-import { ParrotProfilesSection } from "@space/ui/profiles";
-import { profilesLog } from "./profiles";
+import { ProfilesSection } from "./profiles";
 import { useNewsOptIn } from "./newsOptIn";
 import { FounderBadge } from "@space/ui/founder";
 import { useParrotFounderStatus } from "./founder";
@@ -174,7 +173,7 @@ export function SettingsPage({
               ) : null}
               {/* No bridge (a browser preview) → no profiles: the token that asks for them lives in main. */}
               {profileStore ? (
-                <ParrotProfilesSection store={profileStore} language={language} log={profilesLog} planOpen={planOpen} startWith={profilesStartWith} />
+                <ProfilesSection store={profileStore} language={language} planOpen={planOpen} startWith={profilesStartWith} />
               ) : null}
             </>
           ) : section === "general" ? (

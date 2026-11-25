@@ -6,23 +6,19 @@
  */
 import { describe, expect, it, vi } from "vitest";
 import { createProviderReturnMailbox, PROVIDER_RETURN_TTL_MS } from "@space/shared/providerSignIn";
-import type { AppLink } from "@space/desktop-shell/main-shell";
-import { badgerLinks, decideLaunchVisibility, LINK_ACTIVATE_GRACE_MS, shouldShowOnActivate } from "../src/main/protocolLink";
+import {
+  decideLaunchVisibility,
+  findBadgerLink,
+  LINK_ACTIVATE_GRACE_MS,
+  paymentReturnOf,
+  providerReturnOf,
+  shouldShowOnActivate,
+} from "../src/main/protocolLink";
 import { handleSecondInstance } from "../src/main/secondInstanceHandler";
-
-/** What the shared classifier made of a link, shaped like the old per-app helpers for a short expectation. */
-const paymentReturnOf = (link: string): string | null => {
-  const classified: AppLink = badgerLinks.classify(link);
-  return classified.kind === "payment-return" ? classified.paymentId : null;
-};
-const providerReturnOf = (link: string) => {
-  const found = badgerLinks.fromArgv([link]);
-  return found?.kind === "provider-return" ? found.outcome : null;
-};
 
 const dump = (label: string, value: unknown) => console.info(`[protocol-link:${label}] state`, JSON.stringify(value));
 
-describe("badgerLinks.find", () => {
+describe("findBadgerLink", () => {
   const cases: Array<{ name: string; argv: unknown[]; expected: string | null }> = [
     { name: "windows packaged", argv: ["C:\\Program Files\\SpaceBadger\\Badger.exe", "badger://start"], expected: "badger://start" },
     { name: "linux packaged", argv: ["/opt/SpaceBadger/spacebadger", "badger://start"], expected: "badger://start" },
@@ -39,7 +35,7 @@ describe("badgerLinks.find", () => {
   for (const testCase of cases) {
     // @req PLAT-WEB-05
     it(`finds the link: ${testCase.name}`, () => {
-      const found = badgerLinks.find(testCase.argv);
+      const found = findBadgerLink(testCase.argv);
       dump("find", { name: testCase.name, found });
       expect(found).toBe(testCase.expected);
     });

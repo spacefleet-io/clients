@@ -89,7 +89,7 @@ vi.mock("lucide-react-native", () =>
 );
 vi.mock("@react-navigation/native", () => ({ useNavigation: () => ({ navigate: () => undefined }), useIsFocused: () => true }));
 vi.mock("react-native-safe-area-context", () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) }));
-vi.mock("@space/mobile-shell/components", () => ({ MobileTabPager: "MobileTabPager", MobileRailScroll: "ScrollView", SkyCover: "SkyCover", useSkyScroll: () => ({}), MobileFounderNoticeHost: "MobileFounderNoticeHost", MobileLibraryLoading: "MobileLibraryLoading", MobileButton: "MobileButton", MobileIconButton: "MobileIconButton", MOBILE_ICON_BUTTON_SIZE: 48 }));
+vi.mock("@space/mobile-shell/components", () => ({ MobileTabPager: "MobileTabPager", MobileRailScroll: "ScrollView", SkyCover: "SkyCover", useSkyScroll: () => ({}), MobileFounderNoticeHost: "MobileFounderNoticeHost", MobileLibraryLoading: "MobileLibraryLoading" }));
 vi.mock("../src/screens/EmptyLibrary", () => ({ EmptyLibrary: "EmptyLibrary" }));
 vi.mock("../src/screens/sky", () => ({ ParrotSky: "ParrotSky", PLAYER_TINT: "tint" }));
 vi.mock("../src/screens/HomeScreen", () => ({ HomeScreen: "HomeScreen" }));

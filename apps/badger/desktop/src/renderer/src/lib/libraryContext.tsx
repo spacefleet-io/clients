@@ -188,17 +188,6 @@ type LibraryContextValue = {
       confidence?: number | null;
     }>
   ) => Promise<void>;
-  mergeSkipMarkers: (
-    mediaId: string,
-    episodeId: string | null,
-    markers: Array<{
-      type: MediaSkipMarkerType;
-      startSeconds: number;
-      endSeconds: number;
-      source: string;
-      confidence?: number | null;
-    }>
-  ) => Promise<void>;
   upsertSkipAnalysis: (
     mediaId: string,
     episodeId: string | null,
@@ -2887,25 +2876,6 @@ export const LibraryProvider = ({
     [db, requestSnapshotRefresh]
   );
 
-  const mergeSkipMarkers = useCallback(
-    async (
-      mediaId: string,
-      episodeId: string | null,
-      markers: Array<{
-        type: MediaSkipMarkerType;
-        startSeconds: number;
-        endSeconds: number;
-        source: string;
-        confidence?: number | null;
-      }>
-    ) => {
-      if (!db) throw new Error("LIBRARY_NOT_READY");
-      await db.mergeSkipMarkers(mediaId, episodeId, markers);
-      await requestSnapshotRefresh(db);
-    },
-    [db, requestSnapshotRefresh]
-  );
-
   const upsertSkipAnalysis = useCallback(
     async (mediaId: string, episodeId: string | null, kind: string, payload: Record<string, unknown>) => {
       if (!db) throw new Error("LIBRARY_NOT_READY");
@@ -3372,7 +3342,6 @@ export const LibraryProvider = ({
       addMediaFormat: guardWriteAction(addMediaFormat),
       setMediaFormatChunks: guardWriteAction(setMediaFormatChunks),
       replaceSkipMarkers: guardWriteAction(replaceSkipMarkers),
-      mergeSkipMarkers: guardWriteAction(mergeSkipMarkers),
       upsertSkipAnalysis: guardWriteAction(upsertSkipAnalysis),
       listSkipAnalysis,
       removeMediaFormat: guardWriteAction(removeMediaFormat),
@@ -3434,7 +3403,6 @@ export const LibraryProvider = ({
       addMediaFormat,
       setMediaFormatChunks,
       replaceSkipMarkers,
-      mergeSkipMarkers,
       upsertSkipAnalysis,
       listSkipAnalysis,
       removeMediaFormat,

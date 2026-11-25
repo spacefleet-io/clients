@@ -863,7 +863,7 @@ const clientIdentity = (() => {
 })();
 
 contextBridge.exposeInMainWorld("sf", {
-  version: "0.1.68",
+  version: "0.1.58",
   clientIdentity,
   // REL-CD-29: a "please update" refusal the runtime got on its own API call, forwarded by main.
   onAppUpdateRequired: (callback: (refusal: { status: number; payload: Record<string, unknown> }) => void) => {
@@ -1156,13 +1156,6 @@ contextBridge.exposeInMainWorld("sf", {
     setCapacity: (values: DeviceCapacityValues) => ipcRenderer.invoke("sf-device-capacity-set", values),
   },
   errorReports: createErrorReportsBridge(ipcRenderer),
-  /** MPV-PREV-07: the skip-detection catch-up for the Jobs tab (null when the runtime is not reachable). */
-  skipCatchUp: {
-    getStatus: () => ipcRenderer.invoke("sf-skip-catch-up-status"),
-    retry: (formatId: string | null) => ipcRenderer.invoke("sf-skip-catch-up-retry", formatId),
-    setVideo: (formatId: string, action: "cancel" | "dismiss") =>
-      ipcRenderer.invoke("sf-skip-catch-up-set-video", formatId, action),
-  },
   runtimeJobs: {
     getStreamUrl: () => ipcRenderer.invoke("sf-runtime-jobs-stream-url"),
     list: (filter?: { mediaId?: string; includeDismissed?: boolean }) =>

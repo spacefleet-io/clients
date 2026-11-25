@@ -3,8 +3,8 @@ import { Linking } from "react-native";
 import { ApiError, completeProviderSignIn, listSignInProviders, startProviderSignIn } from "@space/shared/api";
 import type { LoginDevice, SignInProvider, User } from "@space/shared/api";
 import type { AccountLanguage } from "@space/shared/i18n";
-import { newProviderClientSecret, parseProviderReturnLink, providerReturnAddress, providerSignInErrorKey } from "@space/shared/providerSignIn";
-import type { ProviderReturn } from "@space/shared/providerSignIn";
+import { newProviderClientSecret, parseProviderReturnLink, providerReturnAddress } from "@space/shared/providerSignIn";
+import type { ProviderReturn, ProviderSignInErrorCode } from "@space/shared/providerSignIn";
 import { isRateLimited, signInErrorMessageKey, signInErrorValues, TOO_MANY_ATTEMPTS_KEY } from "@space/shared/signInError";
 import type { SignInErrorValues } from "@space/shared/signInError";
 import { scopeLogger } from "./logger";
@@ -30,6 +30,9 @@ export type ProviderVerifierStorage = {
   setItem: (key: string, value: string) => Promise<void>;
   removeItem: (key: string) => Promise<void>;
 };
+
+/** The words for a `signinError` (or a completion's `invalid_code`), under `login.provider.errors`. */
+export const providerSignInErrorKey = (code: ProviderSignInErrorCode) => `login.provider.errors.${code}`;
 
 // Per scheme: the sign-in screen listening now, and an outcome that came while none was (a cold start through the
 // link, before the screen mounted). Each outcome is delivered once.

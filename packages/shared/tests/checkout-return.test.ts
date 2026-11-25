@@ -6,6 +6,7 @@
 import { describe, expect, it } from "vitest";
 import {
   CHECKOUT_RETURN_APPS,
+  findPaymentReturn,
   isCheckoutReturnApp,
   isPaymentId,
   parsePaymentReturnLink,
@@ -50,6 +51,14 @@ describe(`[${SUITE}] return link`, () => {
       console.info(`[${SUITE}] refuse`, { value: String(value).slice(0, 60), got });
       expect(got).toBeNull();
     }
+  });
+
+  // @req ACCT-PAY-05
+  it("finds the link in a second launch's command line, after Chromium switches", () => {
+    const argv = ["/opt/Parrot/parrot", "--allow-file-access-from-files", "--no-sandbox", `parrot://billing/return?payment=${PAY}`];
+    expect(findPaymentReturn("parrot", argv)).toBe(PAY);
+    expect(findPaymentReturn("parrot", ["/opt/Parrot/parrot"])).toBeNull();
+    expect(findPaymentReturn("badger", argv)).toBeNull();
   });
 
   // @req ACCT-PAY-05

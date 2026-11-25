@@ -3,7 +3,6 @@ import { Suspense, lazy, startTransition, useCallback, useEffect, useMemo, useRe
 import { useTranslation } from "react-i18next";
 import { useMediaDetailHistory } from "@/lib/mediaDetailHistory";
 import { useAuth } from "@/auth";
-import { SkipLeftOutChip, SkipLeftOutRetryAll, SkipTimesChips, SkipTimesMenu, type SkipTimesLibrary } from "@/components/SkipTimesEditor";
 import { deleteStorageObjects } from "@/api";
 import { extractAssetObjectKey } from "@/lib/assets";
 import { findMediaPlacementId } from "@space/shared/mediaPlacement";
@@ -250,9 +249,6 @@ export default function MediaDetailsDialog({ selectedId, onClose }: MediaDetails
     updateSubtitleTrack,
     setDefaultAudioTrack,
     setDefaultSubtitleTrack,
-    listSkipAnalysis,
-    upsertSkipAnalysis,
-    replaceSkipMarkers,
   } = useLibraryActions();
   const { showLoading, hideLoading } = useLoadingModal();
   const detailsLoadingRef = useRef<string | null>(null);
@@ -442,20 +438,6 @@ export default function MediaDetailsDialog({ selectedId, onClose }: MediaDetails
       return;
     }
     setSelectedDetails(getMediaDetails(selectedId));
-  };
-
-  // PLAY-SKIP-09: the episode rows' times panel writes like the player's; the show reloads from the library after.
-  const skipTimesLibrary: SkipTimesLibrary = {
-    listSkipAnalysis,
-    upsertSkipAnalysis,
-    replaceSkipMarkers,
-    onChanged: () => {
-      const mediaId = selectedId;
-      if (!mediaId) return;
-      void fetchMediaDetails(mediaId).then((details) => {
-        if (details) setSelectedDetails((current) => (current?.id === mediaId ? details : current));
-      });
-    },
   };
 
   // Fetch media details when dialog opens (selectedId changes).
@@ -2542,7 +2524,6 @@ export default function MediaDetailsDialog({ selectedId, onClose }: MediaDetails
                                 : t("library.episodes.empty")
                             }
                           >
-                            <SkipLeftOutRetryAll media={selectedDetails} />
                             {selectedDetails.episodes
                                   .filter((ep) => ep.seasonNumber === selectedSeason)
                                   .map((episode) => {
@@ -2606,8 +2587,6 @@ export default function MediaDetailsDialog({ selectedId, onClose }: MediaDetails
                                                     {t("library.labels.subtitles")} {subtitleCount}
                                                   </span>
                                                 ) : null}
-                                                {selectedDetails ? <SkipTimesChips media={selectedDetails} episodeId={episode.id} /> : null}
-                                                {selectedDetails ? <SkipLeftOutChip media={selectedDetails} episodeId={episode.id} /> : null}
                                           </>
                                         }
                                         chips={
@@ -2779,22 +2758,6 @@ export default function MediaDetailsDialog({ selectedId, onClose }: MediaDetails
                                                     </div>
                                                   );
                                                 })()}
-                                                {selectedDetails ? (
-                                                  <SkipTimesMenu
-                                                    media={selectedDetails}
-                                                    episodeId={episode.id}
-                                                    episodeLine={t("library.skipTimes.episodeLine", {
-                                                      show: selectedDetails.title,
-                                                      season: episode.seasonNumber,
-                                                      episode: episode.episodeNumber,
-                                                      title:
-                                                        localizedEpisodes.get(`${episode.seasonNumber}:${episode.episodeNumber}`)?.name ??
-                                                        episode.name,
-                                                    })}
-                                                    library={skipTimesLibrary}
-                                                    playbackToken={token ?? null}
-                                                  />
-                                                ) : null}
                                               </>
                                             ) : null
                                         }

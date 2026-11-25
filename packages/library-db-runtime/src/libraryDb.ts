@@ -256,7 +256,6 @@ import type {
   SubtitleTrack,
   SubtitleOcrCandidate,
   PreviewSheetCandidate,
-  SkipCatchUpVideo,
   AddOcrSubtitleTwinResult,
   ShowEpisodeRefreshResult,
   ShowEpisodeNotListed,
@@ -268,7 +267,6 @@ import { PICTURE_SUBTITLE_FORMATS } from "@space/shared/libraryTypes";
 import { pickLibraryCrew } from "@space/shared/libraryCrew";
 import { airDateToday, showEpisodeTotal, showWatchedPct, type EpisodeAirInfo } from "@space/shared/showProgress";
 import { parsePreviewSheets, previewSheetKeys, type MediaPreviewSheets } from "@space/shared/previewSheets";
-import { mergeSkipMarkersByPriority } from "@space/shared/skipMarkers";
 import { scopeLogger } from "./logger";
 
 const nowIso = () => new Date().toISOString();
@@ -1167,19 +1165,14 @@ const pickBlob = async (token: string, owner: LibraryOwner | null) => {
 
   const cacheAhead = cache && cache.version > meta.version;
 
-  // LIB-SYNC-23: this device's own cache opens as itself whether it is ahead of the server or behind it, and `open`
-  // brings it to the server's version from the server version it records. Downloading the full copy instead would
-  // not replace it: the per-group files keep their split markers, so their rows win over the copy's
-  // (`splitGroupFromLegacy` copies nothing once a group is split), and the copy's version would be taken as theirs.
-  if (cache) {
+  if (cacheFresh || cacheAhead) {
     source = "cache";
     syncDebug("pick-blob", {
       apiBaseUrl: getApiBaseUrl(),
       metaExists: meta.exists,
       bootstrapRequired: meta.bootstrapRequired,
       metaVersion: meta.version,
-      cacheVersion: cache.version,
-      cacheRemoteVersion: cache.remoteVersion ?? null,
+      cacheVersion: cache?.version ?? null,
       cacheFresh: Boolean(cacheFresh),
       cacheAhead: Boolean(cacheAhead),
       selected: source,
@@ -1193,6 +1186,7 @@ const pickBlob = async (token: string, owner: LibraryOwner | null) => {
     metaExists: meta.exists,
     bootstrapRequired: meta.bootstrapRequired,
     metaVersion: meta.version,
+    cacheVersion: cache?.version ?? null,
     cacheFresh: Boolean(cacheFresh),
     cacheAhead: Boolean(cacheAhead),
     cacheRejected: foreignReason,
@@ -1311,14 +1305,6 @@ export class LibraryDb {
   private readonly splitFileIdentities = new Map<string, string | null>();
   private version: number;
   private remoteVersion: number;
-  /**
-   * LIB-SYNC-23: the cache this library opened from records no server version (written by 0.1.66 and older), so it
-   * cannot say which of the server's changes it holds. Until the server's full copy replaces it, it sends nothing
-   * and its next sync downloads that copy; `cache.json` keeps recording no server version meanwhile.
-   */
-  private serverCopyPending = false;
-  /** LIB-SYNC-23: this device's skip analysis from before the rebuild, put back after each apply until caught up. */
-  private skipAnalysisToRestore: Array<Record<string, unknown>> | null = null;
   /** LIB-FMT-13: the account's switch, from the last meta read (`targetOpStreamVersion`); 3 until one says 4. */
   private targetOpStreamVersion: 3 | 4;
   /** LIB-FMT-11: the playback file holds packed chunk lists (its conversion step ran, user_version >= 2). */
@@ -2071,7 +2057,7 @@ export class LibraryDb {
     const targetOpStreamVersion = metaTargetOpStreamVersion(selection.meta);
     const openCacheFallback = async (
       cache:
-        | { version: number; dbPath?: string; stateHash?: string | null; lastOpId?: string | null; remoteVersion?: number | null }
+        | { version: number; dbPath?: string; stateHash?: string | null; lastOpId?: string | null }
         | null
         | undefined,
       remoteVersionHint?: number
@@ -2109,13 +2095,28 @@ export class LibraryDb {
           throw error;
         }
       }
-      return await LibraryDb.constructFromCache(token, keyBase64, db, cache, pending, pendingOps, targetOpStreamVersion);
+      const remoteVersion = Number.isFinite(Number(remoteVersionHint))
+        ? Number(remoteVersionHint)
+        : cache.version;
+      return await LibraryDb.construct(
+        token,
+        keyBase64,
+        db,
+        cache.version,
+        remoteVersion,
+        pending,
+        pendingOps,
+        normalizeStateHash(cache.stateHash ?? null),
+        cache.lastOpId ?? null,
+        targetOpStreamVersion
+      );
     };
 
     if (selection.source === "remote") {
       syncDebug("open:remote-start", {
         apiBaseUrl: getApiBaseUrl(),
         metaVersion: selection.meta?.version ?? null,
+        cacheVersion: selection.cache?.version ?? null,
       });
       const remote = await getLibraryDb(token);
       if (!remote.exists || !remote.manifestKey) {
@@ -2176,7 +2177,6 @@ export class LibraryDb {
         updatedAt: remote.updatedAt ?? null,
         stateHash: normalizeStateHash(selection.meta?.stateHash),
         lastOpId: selection.meta?.lastOpId ?? null,
-        remoteVersion: snapshotVersion,
       });
       const instance = await LibraryDb.construct(
         token,
@@ -2234,30 +2234,19 @@ export class LibraryDb {
             throw error;
           }
         }
-        // LIB-SYNC-23: the cache holds the server's changes up to the version it records (its own `version` is a
-        // save counter that runs ahead of the server), so the device fetches everything after it. A cache that
-        // records none is rebuilt from the server's full copy, then catches up.
-        const instance = await LibraryDb.constructFromCache(
+        const remoteVersion = selection.meta?.version ?? selection.cache.version;
+        return await LibraryDb.construct(
           token,
           keyBase64,
           db,
-          selection.cache,
+          selection.cache.version,
+          remoteVersion,
           pending,
           pendingOps,
+          normalizeStateHash(selection.cache.stateHash ?? selection.meta?.stateHash),
+          selection.cache.lastOpId ?? selection.meta?.lastOpId ?? null,
           targetOpStreamVersion
         );
-        const meta = selection.meta?.exists ? selection.meta : null;
-        if (meta && instance.serverCopyPending) {
-          await instance
-            .syncFromRemoteIfNewer(meta)
-            .then(() => instance.syncFromRemoteIfNewer())
-            .catch((error) => {
-              logger.warn({ error: error instanceof Error ? error.message : String(error) }, "open: rebuilding a cache that records no server version failed — the next sync retries");
-            });
-        } else if (meta && meta.version > instance.remoteVersion) {
-          await instance.syncFromRemoteIfNewer(meta).catch(() => undefined);
-        }
-        return instance;
       } catch (error) {
         // A LibraryFormatTooNewError from the constructor's per-group
         // initialize (initialize<Group>Db → runMigrations) means this build
@@ -2341,7 +2330,6 @@ export class LibraryDb {
         updatedAt: nowIso(),
         stateHash: normalizeStateHash(created.stateHash ?? null),
         lastOpId: created.lastOpId ?? null,
-        remoteVersion: created.version,
       });
       markBootstrap("saveCache");
       const instance = await LibraryDb.construct(
@@ -2410,7 +2398,6 @@ export class LibraryDb {
           updatedAt: remote.updatedAt ?? null,
           stateHash: normalizeStateHash(selection.meta?.stateHash),
           lastOpId: selection.meta?.lastOpId ?? null,
-          remoteVersion: remote.version,
         });
         db.close();
         return await LibraryDb.construct(
@@ -2481,49 +2468,34 @@ export class LibraryDb {
       // the existing backup). Preserve the cache's version + sync state.
       const db = openInMemorySqliteDb();
       ensureLibrarySchema(db);
-      return await LibraryDb.constructFromCache(token, keyBase64, db, cache, pending, pendingOps, 3);
+      return await LibraryDb.construct(
+        token,
+        keyBase64,
+        db,
+        cache.version,
+        cache.version,
+        pending,
+        pendingOps,
+        normalizeStateHash(cache.stateHash ?? null),
+        cache.lastOpId ?? null,
+        3
+      );
     }
     const bytes = readFileSync(cachePath);
     const db = openSqliteDb(bytes);
     ensureLibrarySchema(db);
-    return await LibraryDb.constructFromCache(token, keyBase64, db, cache, pending, pendingOps, 3);
-  }
-
-  /**
-   * LIB-SYNC-23: a library opened from its cache bases its uploads and its catch-up on the server version the cache
-   * holds, never on the cache's save counter (ahead of the server: the changes between were skipped, and an offline
-   * open's uploads were refused). A cache that records none starts from 0 with no hash and waits for the server's
-   * full copy (`serverCopyPending`).
-   */
-  private static async constructFromCache(
-    token: string,
-    keyBase64: string,
-    db: SqliteDatabase,
-    cache: { version: number; stateHash?: string | null; lastOpId?: string | null; remoteVersion?: number | null },
-    pending: PendingSync | null,
-    pendingOps: PendingOp[],
-    targetOpStreamVersion: 3 | 4
-  ) {
-    const held = cache.remoteVersion ?? null;
-    const instance = await LibraryDb.construct(
+    return await LibraryDb.construct(
       token,
       keyBase64,
       db,
       cache.version,
-      held ?? 0,
+      cache.version,
       pending,
       pendingOps,
-      held === null ? null : normalizeStateHash(cache.stateHash ?? null),
-      held === null ? null : cache.lastOpId ?? null,
-      targetOpStreamVersion
+      normalizeStateHash(cache.stateHash ?? null),
+      cache.lastOpId ?? null,
+      3
     );
-    instance.serverCopyPending = held === null;
-    return instance;
-  }
-
-  /** The server version `cache.json` records: none while the server's full copy is still owed (LIB-SYNC-23). */
-  private heldRemoteVersion() {
-    return this.serverCopyPending ? null : this.remoteVersion;
   }
 
   static async getLocalCacheBytes(keyBase64?: string) {
@@ -2590,7 +2562,6 @@ export class LibraryDb {
         updatedAt: nowIso(),
         stateHash: this.stateHash,
         lastOpId: this.lastOpId,
-        remoteVersion: this.heldRemoteVersion(),
       });
     }
     // Clear every scheduled callback that could later touch this.db. A
@@ -5914,12 +5885,9 @@ export class LibraryDb {
   }
 
   /**
-   * Videos still owed seek-bar preview sheets or their skip signature (MPV-PREV-03, META-SKIP-04): for every video
-   * file none of whose formats holds a record with a `skipSignature`, the title watched last first
-   * (`media_items.last_watched_at`), then the newest (`media_files.added_at`), a show's episodes together in order,
-   * minus `excludeFormatIds` (the runtime's exhausted retries). A file whose sheets are recorded without a signature
-   * lists the row holding them (the runtime then makes the signature alone and records it beside the sheets). A file
-   * with no record lists its source format: the `is_source` row, or the highest quality when none is flagged: an
+   * Videos still owed seek-bar preview sheets (MPV-PREV-03): for every video file none of whose formats holds a
+   * record, its source format, newest file first (`media_files.added_at`), minus `excludeFormatIds` (the runtime's
+   * exhausted retries). The source format is the `is_source` row, or the highest quality when none is flagged: an
    * import that named no source quality flags no row and records its sheets on the first (highest) one, and synced
    * rows land unflagged until the next open's backfill (`backfillMissingIsSourceFlags`), which picks the same row.
    * Template-projected formats are never listed (they are not this library's source copy).
@@ -5942,22 +5910,18 @@ export class LibraryDb {
     const rank = (row: (typeof rows)[number]) =>
       Number(row.isSource ?? 0) === 1 ? -1 : rankQualityForSourceBackfill(String(row.quality));
     const sourceByFile = new Map<string, (typeof rows)[number]>();
-    const filesDone = new Set<string>();
-    const sheetsWithoutSignature = new Map<string, (typeof rows)[number]>();
+    const filesWithSheets = new Set<string>();
     for (const row of rows) {
       const fileId = String(row.fileId);
-      const record = parsePreviewSheets(row.previewSheets);
-      if (record?.skipSignature) filesDone.add(fileId);
-      else if (record) sheetsWithoutSignature.set(fileId, row);
+      if (row.previewSheets !== null && row.previewSheets !== undefined) filesWithSheets.add(fileId);
       const current = sourceByFile.get(fileId);
       if (!current || rank(row) < rank(current) || (rank(row) === rank(current) && String(row.id) < String(current.id))) {
         sourceByFile.set(fileId, row);
       }
     }
     const formats = Array.from(sourceByFile.entries())
-      .filter(([fileId]) => !filesDone.has(fileId))
-      .map(([fileId, row]) => sheetsWithoutSignature.get(fileId) ?? row)
-      .filter((row) => !excluded.has(String(row.id)));
+      .filter(([fileId, row]) => !filesWithSheets.has(fileId) && !excluded.has(String(row.id)))
+      .map(([, row]) => row);
     if (formats.length === 0) return [];
     const files = this.metadata
       .select({ id: mediaFiles.id, season: mediaFiles.season, episode: mediaFiles.episode, addedAt: mediaFiles.addedAt })
@@ -5965,23 +5929,11 @@ export class LibraryDb {
       .where(inArray(mediaFiles.id, Array.from(new Set(formats.map((row) => String(row.fileId))))))
       .all();
     const fileById = new Map(files.map((row) => [String(row.id), row]));
-    const mediaIds = Array.from(new Set(formats.map((row) => String(row.mediaId))));
-    const lastWatchedByMedia = new Map(
-      this.core
-        .select({ id: mediaItems.id, lastWatchedAt: mediaItems.lastWatchedAt })
-        .from(mediaItems)
-        .where(inArray(mediaItems.id, mediaIds))
-        .all()
-        .map((row) => [String(row.id), row.lastWatchedAt ? String(row.lastWatchedAt) : ""]),
-    );
     const out: PreviewSheetCandidate[] = [];
     for (const row of formats) {
       const file = fileById.get(String(row.fileId));
       // A format whose file row is gone is no video of the library any more.
       if (!file) continue;
-      // A film gets no skip signature (it has no intro or credits markers, Chris 2026-11-24): its sheets finish it.
-      const film = (file.season === null || file.season === undefined) && (file.episode === null || file.episode === undefined);
-      if (film && sheetsWithoutSignature.has(String(row.fileId))) continue;
       out.push({
         formatId: String(row.id),
         mediaId: String(row.mediaId),
@@ -5993,136 +5945,8 @@ export class LibraryDb {
         initKey: row.initKey ? String(row.initKey) : null,
       });
     }
-    // The title watched last comes first (its skips are wanted soonest), then never-watched titles by their newest
-    // file; a show's episodes stay together, in order, since a show gets its skips once two of them are done.
-    const newestAddedByMedia = new Map<string, string>();
-    for (const row of out) {
-      if ((newestAddedByMedia.get(row.mediaId) ?? "") < row.addedAt) newestAddedByMedia.set(row.mediaId, row.addedAt);
-    }
-    const desc = (a: string, b: string) => (a === b ? 0 : a < b ? 1 : -1);
-    const nullsLast = (value: number | null) => value ?? Number.MAX_SAFE_INTEGER;
-    out.sort(
-      (a, b) =>
-        desc(lastWatchedByMedia.get(a.mediaId) ?? "", lastWatchedByMedia.get(b.mediaId) ?? "") ||
-        desc(newestAddedByMedia.get(a.mediaId) ?? "", newestAddedByMedia.get(b.mediaId) ?? "") ||
-        a.mediaId.localeCompare(b.mediaId) ||
-        nullsLast(a.season) - nullsLast(b.season) ||
-        nullsLast(a.episode) - nullsLast(b.episode) ||
-        a.formatId.localeCompare(b.formatId),
-    );
+    out.sort((a, b) => (a.addedAt === b.addedAt ? a.formatId.localeCompare(b.formatId) : a.addedAt < b.addedAt ? 1 : -1));
     return out.slice(0, input.limit);
-  }
-
-  /**
-   * The library's videos the catch-up pass counts (MPV-PREV-07): files with at least one format and a file row, the
-   * same set `listPreviewSheetCandidates` draws from.
-   */
-  countPreviewSheetVideos(): number {
-    const fileIds = new Set(
-      this.playback
-        .select({ fileId: mediaFormats.fileId })
-        .from(mediaFormats)
-        .all()
-        .map((row) => String(row.fileId)),
-    );
-    if (fileIds.size === 0) return 0;
-    return this.metadata
-      .select({ id: mediaFiles.id })
-      .from(mediaFiles)
-      .where(inArray(mediaFiles.id, Array.from(fileIds)))
-      .all().length;
-  }
-
-  /**
-   * Every video `countPreviewSheetVideos` counts, for the Jobs card's detailed list (MPV-PREV-07): the format the
-   * catch-up works on (the row holding a skip signature when one does, else the one `listPreviewSheetCandidates`
-   * would list), whether it is done (an episode: signed; a film, which gets no skip markers: sheets made), and whether
-   * an intro / credits skip is stored for its episode (never for a film). Ordered by title, season, episode.
-   */
-  listSkipCatchUpVideos(): SkipCatchUpVideo[] {
-    const rows = this.playback
-      .select({
-        id: mediaFormats.id,
-        mediaId: mediaFormats.mediaId,
-        fileId: mediaFormats.fileId,
-        quality: mediaFormats.quality,
-        isSource: mediaFormats.isSource,
-        previewSheets: mediaFormats.previewSheets,
-      })
-      .from(mediaFormats)
-      .all();
-    const rank = (row: (typeof rows)[number]) =>
-      Number(row.isSource ?? 0) === 1 ? -1 : rankQualityForSourceBackfill(String(row.quality));
-    const pick = new Map<string, { row: (typeof rows)[number]; tier: number }>();
-    for (const row of rows) {
-      const record = parsePreviewSheets(row.previewSheets);
-      // The signed row wins, then a row with sheets (the signature goes beside them), then the source.
-      const tier = record?.skipSignature ? 0 : record ? 1 : 2;
-      const fileId = String(row.fileId);
-      const current = pick.get(fileId);
-      if (
-        !current ||
-        tier < current.tier ||
-        (tier === current.tier && (rank(row) < rank(current.row) || (rank(row) === rank(current.row) && String(row.id) < String(current.row.id))))
-      ) {
-        pick.set(fileId, { row, tier });
-      }
-    }
-    if (pick.size === 0) return [];
-    const files = this.metadata
-      .select({ id: mediaFiles.id, season: mediaFiles.season, episode: mediaFiles.episode })
-      .from(mediaFiles)
-      .where(inArray(mediaFiles.id, Array.from(pick.keys())))
-      .all();
-    const mediaIds = Array.from(new Set(Array.from(pick.values(), ({ row }) => String(row.mediaId))));
-    const episodeKey = (mediaId: string, season: number | null, episode: number | null) => `${mediaId}|${season ?? ""}|${episode ?? ""}`;
-    const episodeIdByKey = new Map(
-      this.metadata
-        .select({ id: mediaEpisodes.id, mediaId: mediaEpisodes.mediaId, season: mediaEpisodes.seasonNumber, episode: mediaEpisodes.episodeNumber })
-        .from(mediaEpisodes)
-        .where(inArray(mediaEpisodes.mediaId, mediaIds))
-        .all()
-        .map((row) => [episodeKey(String(row.mediaId), Number(row.season), Number(row.episode)), String(row.id)]),
-    );
-    const markers = new Set(
-      this.metadata
-        .select({ mediaId: mediaSkipMarkers.mediaId, episodeId: mediaSkipMarkers.episodeId, type: mediaSkipMarkers.type })
-        .from(mediaSkipMarkers)
-        .where(inArray(mediaSkipMarkers.mediaId, mediaIds))
-        .all()
-        .map((row) => `${row.mediaId}|${row.episodeId ?? ""}|${row.type}`),
-    );
-    const num = (value: unknown) => (value === null || value === undefined ? null : Number(value));
-    const out: SkipCatchUpVideo[] = [];
-    for (const file of files) {
-      const picked = pick.get(String(file.id));
-      if (!picked) continue;
-      const mediaId = String(picked.row.mediaId);
-      const season = num(file.season);
-      const episode = num(file.episode);
-      const film = season === null && episode === null;
-      const episodeId = film ? undefined : episodeIdByKey.get(episodeKey(mediaId, season, episode));
-      const has = (type: "intro" | "credits") => episodeId !== undefined && markers.has(`${mediaId}|${episodeId}|${type}`);
-      out.push({
-        formatId: String(picked.row.id),
-        mediaId,
-        fileId: String(file.id),
-        season,
-        episode,
-        signed: film ? picked.tier <= 1 : picked.tier === 0,
-        intro: has("intro"),
-        credits: has("credits"),
-      });
-    }
-    const nullsLast = (value: number | null) => value ?? Number.MAX_SAFE_INTEGER;
-    out.sort(
-      (a, b) =>
-        a.mediaId.localeCompare(b.mediaId) ||
-        nullsLast(a.season) - nullsLast(b.season) ||
-        nullsLast(a.episode) - nullsLast(b.episode) ||
-        a.formatId.localeCompare(b.formatId),
-    );
-    return out;
   }
 
   /**
@@ -6771,37 +6595,6 @@ export class LibraryDb {
     });
     this.queueMediaUpsert(mediaId);
     return this.persist();
-  }
-
-  /**
-   * Writes `markers` for the episode kind by kind, keeping an existing marker of a kind that ranks higher
-   * (`skipSourceRank`: the user's times, then the metadata service's, then detection or chapters). Kinds absent from
-   * `markers` stay as they are. The writer for every source that is not the user's own change (PLAY-SKIP-08).
-   */
-  mergeSkipMarkers(
-    mediaId: string,
-    episodeId: string | null,
-    markers: Array<{
-      type: MediaSkipMarkerType;
-      startSeconds: number;
-      endSeconds: number;
-      source: string;
-      confidence?: number | null;
-    }>
-  ) {
-    const scopeFilter = episodeId ? eq(mediaSkipMarkers.episodeId, episodeId) : isNull(mediaSkipMarkers.episodeId);
-    const existing = this.metadata
-      .select()
-      .from(mediaSkipMarkers)
-      .where(and(eq(mediaSkipMarkers.mediaId, mediaId), scopeFilter))
-      .all()
-      .flatMap((row) => {
-        const type: MediaSkipMarkerType | null = row.type === "intro" || row.type === "credits" ? row.type : null;
-        return type
-          ? [{ type, startSeconds: row.startSeconds, endSeconds: row.endSeconds, source: row.source, confidence: row.confidence }]
-          : [];
-      });
-    return this.replaceSkipMarkers(mediaId, episodeId, mergeSkipMarkersByPriority(existing, markers));
   }
 
   // -------------------------------------------------------------------------
@@ -8732,7 +8525,6 @@ export class LibraryDb {
           updatedAt: nowIso(),
           stateHash: this.stateHash,
           lastOpId: this.lastOpId,
-          remoteVersion: this.heldRemoteVersion(),
         });
         this.playbackSqlite.transaction(() => {
           for (const { statements } of applied) this.executeOpStatementGroups(statements, ["playback"]);
@@ -8748,7 +8540,6 @@ export class LibraryDb {
           updatedAt: nowIso(),
           stateHash: this.stateHash,
           lastOpId: this.lastOpId,
-          remoteVersion: this.heldRemoteVersion(),
         });
       } catch (error) {
         logger.warn({
@@ -8784,7 +8575,7 @@ export class LibraryDb {
   // tla: LibrarySync/FlushDone
   // tla: LibrarySync/FlushAfter409
   private async flushOps(maxOps = Number.POSITIVE_INFINITY) {
-    if (this.closed || !this.syncEnabled || this.opsFlushInFlight || this.serverCopyPending) return;
+    if (this.closed || !this.syncEnabled || this.opsFlushInFlight) return;
     if (!this.pendingOps.length) return;
     if (!(await this.ensurePublishableState("ops"))) return;
     this.opsFlushInFlight = true;
@@ -8840,7 +8631,6 @@ export class LibraryDb {
             updatedAt: nowIso(),
             stateHash: this.stateHash,
             lastOpId: this.lastOpId,
-            remoteVersion: this.heldRemoteVersion(),
           });
         } catch (error) {
           this.opsFlushConsecutiveFailures += 1;
@@ -9072,7 +8862,6 @@ export class LibraryDb {
       updatedAt: pending.updatedAt,
       stateHash: this.stateHash,
       lastOpId: this.lastOpId,
-      remoteVersion: this.heldRemoteVersion(),
     });
   }
 
@@ -9597,26 +9386,6 @@ export class LibraryDb {
     return this.applyRemoteSync(prepared);
   }
 
-  /** Puts back skip analysis rows for every title the library still has, unless it holds a newer row of its own. */
-  private restoreSkipAnalysis(rows: Array<Record<string, unknown>>) {
-    if (this.closed || rows.length === 0) return;
-    const templatesDb = this.templatesSqlite;
-    const hasMedia = this.coreSqlite.prepare("SELECT 1 FROM media_items WHERE id = ?;");
-    templatesDb.transaction(() => {
-      for (const row of rows) {
-        if (!hasMedia.get(row.media_id as string)) continue;
-        const columns = Object.keys(row);
-        templatesDb
-          .prepare(
-            `INSERT INTO media_skip_analysis (${columns.map((c) => `"${c}"`).join(", ")}) VALUES (${columns.map(() => "?").join(", ")})
-             ON CONFLICT(id) DO UPDATE SET ${columns.filter((c) => c !== "id").map((c) => `"${c}" = excluded."${c}"`).join(", ")}
-             WHERE excluded.updated_at > media_skip_analysis.updated_at;`
-          )
-          .run(...columns.map((c) => row[c] as string | number | null));
-      }
-    })();
-  }
-
   /**
    * Network half of `syncFromRemoteIfNewer` (#25 N4): drains local writes to
    * the API (flushPending / flushOps), reads meta, and downloads + decrypts
@@ -9632,7 +9401,6 @@ export class LibraryDb {
     if (this.closed || !this.syncEnabled) {
       return { kind: "none" };
     }
-    if (this.serverCopyPending) return this.prepareServerCopy(metaOverride);
     // Upload only what was queued when this sync started (see flushOps).
     const maxOps = this.pendingOps.length;
     if (this.pendingSync && !this.opsFlushQuotaExceeded && !this.opsFlushCircuitOpen) {
@@ -9767,46 +9535,9 @@ export class LibraryDb {
   }
 
   private async applyRemoteSync(prepared: Exclude<PreparedRemoteSync, { kind: "none" }>): Promise<boolean> {
-    // LIB-SYNC-23: skip signatures and matches (META-SKIP-04) travel in no op, only in a full copy, and replaying a
-    // title's media.upsert clears them. This device's own are newer than the server's copy and than every op the
-    // catch-up replays (it had applied its own ops when it recorded them), so they are put back after the rebuild
-    // and after each catch-up apply, until the device holds the server's head.
-    const rebuilding = this.serverCopyPending && prepared.kind === "snapshot";
-    if (rebuilding) {
-      this.skipAnalysisToRestore = this.templatesSqlite.prepare("SELECT * FROM media_skip_analysis;").all() as Array<
-        Record<string, unknown>
-      >;
-    }
-    try {
-      const changed = prepared.kind === "snapshot" ? await this.applyRemoteSnapshot(prepared) : await this.applyRemoteOps(prepared);
-      if (rebuilding) this.serverCopyPending = false;
-      await this.publishConvertedCopy(prepared.meta);
-      return changed;
-    } finally {
-      const rows = this.skipAnalysisToRestore;
-      if (rows && !this.serverCopyPending) {
-        this.restoreSkipAnalysis(rows);
-        if (this.remoteVersion >= prepared.meta.version) this.skipAnalysisToRestore = null;
-      }
-    }
-  }
-
-  /**
-   * LIB-SYNC-23: the sync of a library whose cache recorded no server version downloads the server's full copy,
-   * sending nothing first: the device holds no server hash to chain on, and its unsent changes are applied on the
-   * copy and go with the next sync.
-   */
-  private async prepareServerCopy(metaOverride?: LibraryMeta | null): Promise<PreparedRemoteSync> {
-    const meta = metaOverride ?? (await getLibraryMeta(this.token));
-    if (meta.syncUnavailable) return { kind: "none" };
-    if (!meta.exists) {
-      // No server library to rebuild from: this device's library is the only copy, from version 0.
-      this.serverCopyPending = false;
-      return { kind: "none" };
-    }
-    this.adoptTargetOpStreamVersion(meta);
-    logger.info({ serverVersion: meta.version, localVersion: this.version }, "sync: the cache records no server version — rebuilding from the server's full copy");
-    return this.prepareRemoteSnapshot(meta, 0);
+    const changed = prepared.kind === "snapshot" ? await this.applyRemoteSnapshot(prepared) : await this.applyRemoteOps(prepared);
+    await this.publishConvertedCopy(prepared.meta);
+    return changed;
   }
 
   /**
@@ -9882,7 +9613,6 @@ export class LibraryDb {
       updatedAt: meta.updatedAt ?? nowIso(),
       stateHash: this.stateHash,
       lastOpId: this.lastOpId,
-      remoteVersion: this.heldRemoteVersion(),
     });
     // `true` = remote data changed local rows (callers reload on it). An empty
     // op list only moved the version (LIB-SYNC-06).
@@ -10053,7 +9783,6 @@ export class LibraryDb {
       updatedAt: prepared.updatedAt,
       stateHash: normalizeStateHash(meta.stateHash),
       lastOpId: meta.lastOpId ?? null,
-      remoteVersion: snapshotVersion,
     });
     this.setDatasetStatus({ core: true, metadata: true, playback: true });
     return true;
@@ -10072,7 +9801,6 @@ export class LibraryDb {
       updatedAt,
       stateHash: this.stateHash,
       lastOpId: this.lastOpId,
-      remoteVersion: this.heldRemoteVersion(),
     });
 
     if (this.syncEnabled) {
@@ -10156,7 +9884,7 @@ export class LibraryDb {
    * pending will be retried on next login.
    */
   async flushPending(options: { maxOps?: number } = {}) {
-    if (this.closed || !this.syncEnabled || this.serverCopyPending) return false;
+    if (this.closed || !this.syncEnabled) return false;
 
     // Cancel the debounced ops-flush timer up-front. flushPending will drain
     // pendingOps directly — we want to *be* the flush, not race against a
@@ -10294,7 +10022,6 @@ export class LibraryDb {
         updatedAt: pending.updatedAt,
         stateHash: this.stateHash,
         lastOpId: this.lastOpId,
-        remoteVersion: this.heldRemoteVersion(),
       });
       return true;
     } catch (error) {

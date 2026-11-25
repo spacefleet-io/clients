@@ -42,8 +42,6 @@ const makeControls = (state: Partial<UpdaterState>, opts: { supported?: boolean;
     setAutoUpdate: vi.fn(async () => undefined),
     runFullUpdate: vi.fn(async () => undefined),
     reset: vi.fn(),
-    remindLater: vi.fn(async () => undefined),
-    ignoreVersion: vi.fn(async () => undefined),
   } satisfies DesktopUpdaterControls;
   return controls;
 };

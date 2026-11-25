@@ -17,7 +17,7 @@ const gateLog = rendererLogger.child({ scope: "app-update-required" });
  *  - no `refusal`: the desktop `release-status` reported this build below `minClientVersion` (the updater's latched
  *    `state.mandatory`). That answer came from a check the main process already ran, so the gate checks nothing more.
  * `App` mounts it above the routes, so it also covers the signed-out screens; `LibraryUpdateGate` and
- * `DesktopUpdatePrompt` leave both cases to it.
+ * `UpdateReadyNotice` leave both cases to it.
  */
 export default function AppUpdateRequiredGate({ refusal }: { refusal: AppUpdateRequiredPayload | null }) {
   const { i18n } = useTranslation();

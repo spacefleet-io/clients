@@ -26,8 +26,8 @@ vi.mock("react-native", () => ({
   View: "View",
 }));
 vi.mock("@react-navigation/native", () => ({ useNavigation: () => ({ navigate: () => undefined }) }));
-vi.mock("@space/mobile-shell/account-plan-panel", () => ({ MobileAccountPlanPanel: "MobileAccountPlanPanel" }));
-vi.mock("@space/mobile-shell/components", () => ({ MobileButton: "Button", MobileCreditsPanel: "MobileCreditsPanel", MobileOpenSourceNotice: "MobileOpenSourceNotice", SkyCover: "SkyCover", useSkyScroll: () => ({}) }));
+vi.mock("@space/shared/api", () => ({ getSubscription: async () => null }));
+vi.mock("@space/mobile-shell/components", () => ({ MobileCreditsPanel: "MobileCreditsPanel", MobileFounderBadge: "MobileFounderBadge", MobileOpenSourceNotice: "MobileOpenSourceNotice", SkyCover: "SkyCover", useSkyScroll: () => ({}) }));
 vi.mock("@space/mobile-shell/feedback-form", () => ({ MobileFeedbackForm: "MobileFeedbackForm" }));
 vi.mock("@space/mobile-shell/i18n", () => ({
   getCurrentLanguage: () => "en",
@@ -50,7 +50,7 @@ vi.mock("../src/state/session", () => ({
   useSession: () => ({ session: { token: "t", user: { email: "celeste@spacefleet.test" } }, reloadLibrary: async () => undefined }),
 }));
 vi.mock("../src/state/useSignOut", () => ({ useSignOut: () => async () => undefined }));
-vi.mock("../src/screens/ui", () => ({ Body: "Body" }));
+vi.mock("../src/screens/ui", () => ({ Body: "Body", Button: "Button" }));
 
 import { SettingsScreen } from "../src/screens/SettingsScreen";
 
