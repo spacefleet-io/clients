@@ -26,9 +26,9 @@
  */
 import { createHash } from "node:crypto";
 import { existsSync, promises as fs } from "node:fs";
-import { homedir } from "node:os";
-import { basename, join as joinPath } from "node:path";
+import { join as joinPath } from "node:path";
 import { loadJobStateSync } from "@space/content-core";
+import { getDesktopPlatform } from "@space/desktop-platform";
 import type {
   FailedJobAction,
   FailedJobAvailability,
@@ -38,7 +38,7 @@ import type {
   RuntimeJobsRetryResult,
 } from "@space/runtime-contracts/runtime/jobs";
 import type { IngestJobRecord } from "@space/runtime-jobs";
-import type { EngineV2 } from "../../core/jobs/engineV2";
+import type { EngineV2 } from "@space/runtime-jobs-engine/engineV2";
 import { defaultFreeBytesAt } from "./export";
 import { getBadgerStepDeps } from "./steps/deps";
 import { dirSizeBytes, resolveJobDir, resolveTranscodeRoot } from "./steps/deps-adapter";
@@ -107,17 +107,6 @@ export const readKeptCopyBytes = async (userId: string, jobId: string): Promise<
   return dirSizeBytes(dir);
 };
 
-/** Where the desktop's trash puts a deleted file of that name (Linux, macOS); Windows has no plain path. */
-const trashPathsFor = (filename: string): string[] => {
-  const name = basename(filename);
-  if (process.platform === "darwin") return [joinPath(homedir(), ".Trash", name)];
-  if (process.platform === "linux") {
-    const dataHome = process.env.XDG_DATA_HOME?.trim() || joinPath(homedir(), ".local", "share");
-    return [joinPath(dataHome, "Trash", "files", name)];
-  }
-  return [];
-};
-
 const failedAtMs = (job: IngestJobRecord): number => Date.parse(job.finishedAt ?? job.updatedAt);
 
 const userIdOf = (job: IngestJobRecord): string | null =>
@@ -144,7 +133,7 @@ export type BadgerFailedJobs = {
 export const createBadgerFailedJobs = (deps: BadgerFailedJobsDeps): BadgerFailedJobs => {
   const { engine } = deps;
   const freeBytesAt = deps.freeBytesAt ?? defaultFreeBytesAt;
-  const trashPaths = deps.trashPathsFor ?? trashPathsFor;
+  const trashPaths = deps.trashPathsFor ?? ((filename: string) => getDesktopPlatform().paths.trashPaths(filename));
   const now = deps.now ?? Date.now;
 
   /** The source file path and its submit-time fingerprint (a format job reads its source job's). */

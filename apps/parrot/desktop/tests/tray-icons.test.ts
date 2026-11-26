@@ -10,7 +10,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { createBuilderConfig, TRAY_TEMPLATE_ICONS } from "../electron-builder.config.mjs";
-import { SIGNED_WINDOWS_ENV } from "../../../../packages/desktop-platform-windows/packaging/signedWindowsEnv";
+import { SIGNED_WINDOWS_ENV } from "@space/desktop-platform-windows/packaging/signedWindowsEnv";
 
 const installer = join(__dirname, "..", "installer");
 const log = (line: string, data?: unknown) =>

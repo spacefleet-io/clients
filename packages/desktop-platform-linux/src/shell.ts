@@ -40,25 +40,32 @@ export const linuxShell: ShellLayer = {
     // An operator-set value wins.
     return { ...env, XDG_DATA_HOME: dataDir, MALLOC_ARENA_MAX: env.MALLOC_ARENA_MAX?.trim() || "1" };
   },
-  // GPU vo first, CPU x11 vo last (#25). The gpu vo probes its contexts with
-  // software renderers rejected (no --gpu-context / --gpu-sw: an explicit
-  // context accepts llvmpipe), so no GPU, Xvfb's llvmpipe or a broken driver
-  // leave mpv on x11, which converts and scales on the CPU through zimg.
-  // x11 is the CPU vo only with an X display: a Wayland-only session cannot open it.
-  // A Wayland-only session needs an mpv with a Wayland gpu context; the bundled
-  // one has none (media-deps builds -Dwayland=disabled), so there no window can
-  // open and the launch reports `noWindow` instead of starting an mpv that exits.
-  // mpv's flag is `--wayland-app-id`: the old `--wayland-appid` is not an mpv
-  // option, and mpv quit at once with "option not found" on every Wayland-only launch.
+  // GPU vo first, CPU vo last (#25). The gpu vo probes its contexts with software renderers rejected (no
+  // --gpu-context / --gpu-sw: an explicit context accepts llvmpipe), so no GPU, Xvfb's llvmpipe or a broken driver
+  // leave mpv on the CPU vo of the session: wlshm on Wayland, x11 on X11 (both scale on the CPU through zimg).
+  // MPV-GPU-04: a Wayland session plays in a native Wayland window whenever the mpv has a Wayland gpu context (the
+  // bundled one does, media-deps builds -Dwayland=enabled), never through XWayland: DISPLAY is taken out of mpv's
+  // environment, because with it mpv's context probe falls through to x11egl (an XWayland window) whenever the
+  // wayland context is rejected (llvmpipe), instead of reaching wlshm. An mpv without Wayland (a system mpv) still
+  // opens an X11 window when there is a DISPLAY; on a Wayland-only session it cannot open any window, so the launch
+  // reports `noWindow` instead of starting an mpv that exits.
+  // mpv's flag is `--wayland-app-id`: the old `--wayland-appid` is not an mpv option, and mpv quit at once with
+  // "option not found" on every Wayland-only launch.
   mpvWindow: ({ appId, env = process.env, mpvHasWayland }) => {
     const hasWayland = Boolean(env.WAYLAND_DISPLAY) || env.XDG_SESSION_TYPE?.toLowerCase() === "wayland";
     const hasX11 = Boolean(env.DISPLAY);
-    if (hasX11) return { defaultVo: "gpu,x11", cpuVo: "x11", args: [`--x11-name=${appId}`], noWindow: null };
-    if (!hasWayland) return { defaultVo: "gpu,x11", cpuVo: null, args: [], noWindow: null };
-    if (mpvHasWayland?.() === true) {
-      return { defaultVo: "gpu,x11", cpuVo: null, args: [`--wayland-app-id=${appId}`], noWindow: null };
+    if (hasWayland && mpvHasWayland?.() === true) {
+      return {
+        defaultVo: "gpu,wlshm",
+        cpuVo: "wlshm",
+        args: [`--wayland-app-id=${appId}`],
+        unsetEnv: hasX11 ? ["DISPLAY"] : [],
+        noWindow: null,
+      };
     }
-    return { defaultVo: "gpu,x11", cpuVo: null, args: [], noWindow: "mpv_no_display" };
+    if (hasX11) return { defaultVo: "gpu,x11", cpuVo: "x11", args: [`--x11-name=${appId}`], unsetEnv: [], noWindow: null };
+    if (!hasWayland) return { defaultVo: "gpu,x11", cpuVo: null, args: [], unsetEnv: [], noWindow: null };
+    return { defaultVo: "gpu,x11", cpuVo: null, args: [], unsetEnv: [], noWindow: "mpv_no_display" };
   },
   quitWhenAllWindowsClosed: true,
   hasDisplay: (env = process.env) => Boolean(env.DISPLAY || env.WAYLAND_DISPLAY),

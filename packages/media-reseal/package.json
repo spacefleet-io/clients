@@ -5,7 +5,9 @@
   "type": "module",
   "sideEffects": false,
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./run": "./src/run.ts",
+    "./sealing": "./src/sealing.ts"
   },
   "scripts": {
     "test": "bunx vitest run"

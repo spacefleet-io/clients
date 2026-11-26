@@ -7,6 +7,7 @@ import { withTitleLanguageTexts } from "@space/shared/titleLanguage";
 import { withProfilesTexts } from "@space/shared/profileTexts";
 import { withAccountDeletionLabels } from "@space/shared/accountDeletionLabels";
 import { withProviderSignInTexts } from "@space/shared/providerSignIn";
+import { withNotifyTexts } from "@space/notify-core/texts";
 import { rendererLogger } from "../logger";
 
 // i18next 27 made `strictInterpolationChecks` the default; this keeps the v26 typing of `t()` (options may be left
@@ -23,20 +24,24 @@ declare module "i18next" {
 // another locale is fetched only when the user switches to it. The five app
 // languages are English, French, Dutch, German and Spanish (UX-I18N-01). The sign-in error
 // sentences (`login.errors`) come from `@space/shared/signInError`, the title language question and setting
-// (`titleLanguage`, ACCT-PROF-03) from `@space/shared/titleLanguage`, the Subtitle language setting (`subtitleLanguage`) from `@space/shared/profileSettings`, the profile texts from `@space/shared/profileTexts`, the Google, Apple and Microsoft sign-in words (`login.provider`, ACCT-SIGNIN-05) from `@space/shared/providerSignIn`, and the labels on the way to account deletion from
-// `@space/shared/accountDeletionLabels` (the legal page prints them too, WEB-LEGAL-04), all shared by every app.
+// (`titleLanguage`, ACCT-PROF-03) from `@space/shared/titleLanguage`, the Subtitle language setting (`subtitleLanguage`) from `@space/shared/profileSettings`, the profile texts from `@space/shared/profileTexts`, the Google, Apple and Microsoft sign-in words (`login.provider`, ACCT-SIGNIN-05) from `@space/shared/providerSignIn`, the labels on the way to account deletion from
+// `@space/shared/accountDeletionLabels` (the legal page prints them too, WEB-LEGAL-04), and the notices' bell and default
+// titles (`notify`, UX-NOTICE-13) from `@space/notify-core/texts`, all shared by every app.
 type Translation = Record<string, unknown>;
 
 const withSharedTexts = (translation: Translation, language: ClientUiLanguage): Translation =>
-  withAccountDeletionLabels(
-    withProfilesTexts(
-      withSubtitleLanguageTexts(
-        withTitleLanguageTexts(withProviderSignInTexts(withSignInErrorTexts(translation, language), language), language),
+  withNotifyTexts(
+    withAccountDeletionLabels(
+      withProfilesTexts(
+        withSubtitleLanguageTexts(
+          withTitleLanguageTexts(withProviderSignInTexts(withSignInErrorTexts(translation, language), language), language),
+          language,
+        ),
         language,
       ),
+      "desktop",
       language,
     ),
-    "desktop",
     language,
   );
 

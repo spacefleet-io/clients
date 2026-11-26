@@ -5,7 +5,8 @@ import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import { decryptMediaObject, sealMediaObjectWithPadding } from "@space/media-crypto";
 import { PARROT_LIGHT_COPY } from "@space/parrot-core";
-import { importParrotFiles, type ParrotImportTransport } from "../src/importer";
+import type { ParrotImportTransport } from "../src/importer";
+import { importParrotFiles } from "../src/importJobs";
 import { getParrotFile, openParrotLibrary, serializeParrotLibrary } from "../src/library";
 import {
   addParrotLightCopy,

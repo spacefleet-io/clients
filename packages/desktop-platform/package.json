@@ -7,7 +7,12 @@
   "exports": {
     ".": "./src/index.ts",
     "./secret-file": "./src/secretFile.ts",
-    "./host-capacity": "./src/hostCapacity.ts"
+    "./host-capacity": "./src/hostCapacity.ts",
+    "./packaging/asar-entries": "./packaging/asar-entries.mjs",
+    "./packaging/check-main-bundle-lib": "./packaging/check-main-bundle-lib.mjs",
+    "./packaging/package-steps": "./packaging/package-steps.mjs",
+    "./packaging/packaged-locales-lib": "./packaging/packaged-locales-lib.mjs",
+    "./packaging/test-build-lib": "./packaging/test-build-lib.mjs"
   },
   "scripts": {
     "test": "bunx vitest run",

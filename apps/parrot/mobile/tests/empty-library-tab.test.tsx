@@ -59,7 +59,7 @@ vi.mock("@space/mobile-shell/theme", () => ({
 }));
 vi.mock("@space/mobile-shell/i18n", () => ({ useTranslation: () => ({ t: (key: string) => key, i18n: { language: "en" } }) }));
 vi.mock("@space/mobile-shell/components", async () => ({
-  MobileTabPager: (await vi.importActual<typeof import("../../../../packages/mobile-shell/src/components/mobile-tab-pager")>(
+  MobileTabPager: (await vi.importActual<typeof import("@space/mobile-shell/tab-pager")>(
     "../../../../packages/mobile-shell/src/components/mobile-tab-pager"
   )).MobileTabPager,
   MobileFounderNoticeHost: () => null,
@@ -77,6 +77,7 @@ vi.mock("../src/screens/PlaylistsView", () => ({ PlaylistsView: "PlaylistsView" 
 vi.mock("../src/screens/SettingsScreen", () => ({ SettingsScreen: "SettingsScreen" }));
 vi.mock("../src/screens/NowPlayingBar", () => ({ NowPlayingBar: "NowPlayingBar" }));
 vi.mock("../src/screens/PhoneSearch", () => ({ PhoneSearch: "PhoneSearch" }));
+vi.mock("../src/screens/NoticeBell", () => ({ ParrotNoticeBell: "ParrotNoticeBell" }));
 vi.mock("../src/state/session", () => ({ useSession: () => ({ library: state.library }) }));
 // The albums the library's current version holds (the real hook reruns `listAlbums` on each new version).
 vi.mock("../src/state/useQuery", () => ({

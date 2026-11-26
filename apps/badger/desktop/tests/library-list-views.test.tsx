@@ -30,7 +30,6 @@ const makeRow = (overrides: Partial<LibraryListRowModel> & { id: string }): Libr
   title: `Title ${overrides.id}`,
   year: "2020",
   posterPath: null,
-  rating: 7.5,
   overview: "A long synopsis.",
   genres: ["Drama"],
   seasonCount: null,
@@ -94,6 +93,20 @@ describe("LibraryListRows", () => {
     expect(text).toContain("Drama");
     expect(text).toContain('library.row.seasons:{"count":3}');
     expect(text).toContain('library.row.runtimeHours:{"hours":2,"minutes":15}');
+  });
+
+  it("@req META-SRC-05[badger-desktop] shows no rating in the compact or the details list, even when the row holds one", () => {
+    // A caller that still spreads a synced library row (which carries `rating`) must not get it on screen.
+    const rated = { ...makeRow({ id: "r", seasonCount: 2 }), rating: 7.94 } as LibraryListRowModel;
+    for (const view of ["compact", "details"] as const) {
+      const { text } = renderRows([rated], view);
+      console.info("[META-SRC-05] desktop list", view, JSON.stringify(text));
+      expect(text).toContain("Title r");
+      expect(text).not.toContain("★");
+      expect(text).not.toMatch(/7[.,]9/);
+      act(() => root?.unmount());
+      container?.remove();
+    }
   });
 
   it("falls back to a placeholder when a title has no synopsis", () => {

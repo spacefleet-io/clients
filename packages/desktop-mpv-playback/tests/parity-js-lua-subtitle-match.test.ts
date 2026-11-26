@@ -21,7 +21,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { TRACK_LIST_CORPUS, type MpvTrack } from "./fixtures/track-list-corpus";
+import { TRACK_LIST_CORPUS, type MpvTrack } from "@space/mpv-protocol/tests/track-list-corpus";
 
 // ----- Inline copy of sf.lua:13–32 subtitle_exists -----
 // this mirrors packages/mpv/resources/osc/sf.lua:13–32 and will be moved to

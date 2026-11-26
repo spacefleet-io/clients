@@ -154,7 +154,7 @@ const render = async (group?: TvSettingsGroupId) => {
   if (group) rememberTvSettingsGroup(group);
   phase("render", { group: group ?? "default", profiles: ctl.profiles.length });
   await act(async () => {
-    renderer = create(<TvSettingsScreen />, { createNodeMock });
+    renderer = create(<TvSettingsScreen history={null} />, { createNodeMock });
   });
 };
 const unmount = async () => {
@@ -275,7 +275,7 @@ describe("every setting in its group (UX-TV-42)", () => {
   it("keeps each shipped setting in the group the mockup puts it in", async () => {
     const expected: Record<TvSettingsGroupId, string[]> = {
       profiles: ["settings-switch-profile", "settings-manage-profiles"],
-      account: ["tv-settings-email", "tv-settings-devices", "tv-settings-pair", "tv-settings-sign-out"],
+      account: ["tv-settings-email", "tv-settings-devices", "tv-settings-notifications", "tv-settings-pair", "tv-settings-sign-out"],
       playback: [
         "tv-settings-autoplay",
         "tv-settings-skip-intro",

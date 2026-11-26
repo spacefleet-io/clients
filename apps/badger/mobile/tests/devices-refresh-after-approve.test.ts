@@ -45,7 +45,7 @@ vi.mock("@space/mobile-shell/bottom-sheet", () => ({
   useMobileSheetClose: () => (after?: () => void) => after?.(),
 }));
 vi.mock("@space/mobile-shell/i18n", async () => {
-  const enDict = (await import("../../../../packages/mobile-shell/src/i18n/en.json")).default;
+  const enDict = (await import("@space/mobile-shell/i18n/en.json")).default;
   await i18next.init({
     resources: { en: { translation: enDict } },
     lng: "en",

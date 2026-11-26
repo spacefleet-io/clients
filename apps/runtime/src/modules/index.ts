@@ -4,7 +4,7 @@ import { parseRuntimeJobId, type ParsedRuntimeJobId } from "@space/runtime-jobs"
 import type { RuntimeJobFilter, RuntimeJobRecord } from "@space/runtime-jobs";
 import { BadgerModule } from "./badger";
 import type { LibraryClosedListener } from "./badgerLibraryDb";
-import type { EngineV2 } from "../core/jobs/engineV2";
+import type { EngineV2 } from "@space/runtime-jobs-engine/engineV2";
 import {
   createBadgerIngestSubmitHandler,
   createBadgerIngestAttachMetadataHandler,

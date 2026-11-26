@@ -27,7 +27,7 @@
     },
     "apps/badger/desktop": {
       "name": "@space/badger-desktop",
-      "version": "0.1.68",
+      "version": "0.1.74",
       "dependencies": {
         "better-sqlite3": "^13.2.0",
         "drizzle-orm": "^0.45.3",
@@ -47,19 +47,24 @@
         "@rolldown/plugin-babel": "^0.3.1",
         "@space/desktop-mpv-playback": "workspace:*",
         "@space/desktop-platform": "workspace:*",
+        "@space/desktop-platform-linux": "workspace:*",
+        "@space/desktop-platform-macos": "workspace:*",
+        "@space/desktop-platform-windows": "workspace:*",
         "@space/desktop-shell": "workspace:*",
         "@space/error-report": "workspace:*",
-        "@space/ffmpeg": "file:../../../packages/ffmpeg",
-        "@space/ingest-core": "file:../../../packages/ingest-core",
+        "@space/ffmpeg": "workspace:*",
+        "@space/ingest-core": "workspace:*",
         "@space/legal": "workspace:*",
         "@space/library-db-definition": "workspace:*",
         "@space/library-db-runtime": "workspace:*",
         "@space/logger": "workspace:*",
+        "@space/media-deps": "workspace:*",
         "@space/media-reseal": "workspace:*",
         "@space/media-session": "workspace:*",
         "@space/metadata-client": "workspace:*",
-        "@space/mpv": "file:../../../packages/mpv",
+        "@space/mpv": "workspace:*",
         "@space/mpv-protocol": "workspace:*",
+        "@space/notify-core": "workspace:*",
         "@space/pairing-crypto": "workspace:*",
         "@space/playback-abr": "workspace:*",
         "@space/privacy-pass": "workspace:*",
@@ -67,10 +72,10 @@
         "@space/runtime-contracts": "workspace:*",
         "@space/runtime-host": "workspace:*",
         "@space/sdk": "workspace:*",
-        "@space/shared": "file:../../../packages/shared",
+        "@space/shared": "workspace:*",
         "@space/stream-slots": "workspace:*",
         "@space/tool-access": "workspace:*",
-        "@space/ui": "file:../../../packages/ui",
+        "@space/ui": "workspace:*",
         "@tailwindcss/postcss": "^4.3.5",
         "@types/better-sqlite3": "^9.6.0",
         "@types/node": "^24.19.1",
@@ -163,6 +168,7 @@
         "@space/mobile-mpv-playback": "workspace:*",
         "@space/mobile-self-update": "workspace:*",
         "@space/mobile-shell": "workspace:*",
+        "@space/notify-core": "workspace:*",
         "@space/pairing-crypto": "workspace:*",
         "@space/playback-abr": "workspace:*",
         "@space/privacy-pass": "workspace:*",
@@ -233,11 +239,15 @@
     },
     "apps/parrot/desktop": {
       "name": "@space/parrot-desktop",
-      "version": "0.1.59",
+      "version": "0.1.66",
       "devDependencies": {
         "@playwright/test": "~1.65.1",
         "@rolldown/plugin-babel": "^0.3.1",
+        "@space/content-core": "workspace:*",
         "@space/desktop-platform": "workspace:*",
+        "@space/desktop-platform-linux": "workspace:*",
+        "@space/desktop-platform-macos": "workspace:*",
+        "@space/desktop-platform-windows": "workspace:*",
         "@space/desktop-shell": "workspace:*",
         "@space/error-report": "workspace:*",
         "@space/legal": "workspace:*",
@@ -245,14 +255,17 @@
         "@space/media-reseal": "workspace:*",
         "@space/media-session": "workspace:*",
         "@space/metadata-client": "workspace:*",
+        "@space/notify-core": "workspace:*",
         "@space/pairing-crypto": "workspace:*",
         "@space/parrot-core": "workspace:*",
         "@space/parrot-ingest": "workspace:*",
         "@space/parrot-library-db-definition": "workspace:*",
         "@space/privacy-pass": "workspace:*",
-        "@space/shared": "file:../../../packages/shared",
+        "@space/runtime-jobs": "workspace:*",
+        "@space/runtime-jobs-engine": "workspace:*",
+        "@space/shared": "workspace:*",
         "@space/stream-slots": "workspace:*",
-        "@space/ui": "file:../../../packages/ui",
+        "@space/ui": "workspace:*",
         "@tailwindcss/postcss": "^4.3.5",
         "@types/node": "^24.19.1",
         "@types/react": "^19.3.0",
@@ -299,6 +312,7 @@
         "@space/mobile-media-volume": "workspace:*",
         "@space/mobile-self-update": "workspace:*",
         "@space/mobile-shell": "workspace:*",
+        "@space/notify-core": "workspace:*",
         "@space/pairing-crypto": "workspace:*",
         "@space/parrot-core": "workspace:*",
         "@space/parrot-library-db-definition": "workspace:*",
@@ -368,6 +382,7 @@
         "@space/runtime-contracts": "workspace:*",
         "@space/runtime-jobs": "workspace:*",
         "@space/runtime-jobs-db": "workspace:*",
+        "@space/runtime-jobs-engine": "workspace:*",
         "@space/shared": "workspace:*",
         "@space/tool-access": "workspace:*",
         "ajv": "^8.20.0",
@@ -376,6 +391,7 @@
         "pngjs": "^7.0.0",
       },
       "devDependencies": {
+        "@space/runtime-host": "workspace:*",
         "bun-types": "1.4.5",
         "typescript": "^6.0.3",
         "vitest": "^5.1.0",
@@ -455,6 +471,7 @@
       "dependencies": {
         "@space/legal": "workspace:*",
         "@space/metadata-client": "workspace:*",
+        "@space/notify-core": "workspace:*",
         "@space/pairing-crypto": "workspace:*",
         "@space/shared": "workspace:*",
         "@space/ui": "workspace:*",
@@ -462,6 +479,9 @@
         "qrcode": "^1.5.4",
       },
       "devDependencies": {
+        "@space/desktop-platform-linux": "workspace:*",
+        "@space/desktop-platform-macos": "workspace:*",
+        "@space/desktop-platform-windows": "workspace:*",
         "@testing-library/react": "^16.3.3",
         "@types/node": "^24.19.1",
         "@types/qrcode": "^1.5.5",
@@ -480,6 +500,9 @@
     },
     "packages/error-report": {
       "name": "@space/error-report",
+      "dependencies": {
+        "@space/shared": "workspace:*",
+      },
       "devDependencies": {
         "@sentry/electron": "^8.4.0",
         "@sentry/node": "^11.12.0",
@@ -520,6 +543,7 @@
         "tesseract.js": "^7.0.0",
       },
       "devDependencies": {
+        "@space/desktop-platform-linux": "workspace:*",
         "@space/media-deps": "workspace:*",
         "vitest": "^5.1.0",
       },
@@ -653,6 +677,7 @@
       "devDependencies": {
         "react": "19.3.1",
         "react-native": "npm:react-native-tvos@0.88.1-0",
+        "vitest": "^5.1.0",
       },
       "peerDependencies": {
         "react-native": "^0.88.0",
@@ -717,6 +742,7 @@
       },
       "devDependencies": {
         "@react-native/typescript-config": "0.88.1",
+        "@space/media-deps": "workspace:*",
         "@types/react": "^19.3.0",
         "react": "19.3.1",
         "react-native": "npm:react-native-tvos@0.88.1-0",
@@ -756,6 +782,7 @@
         "@space/library-db-definition": "workspace:*",
         "@space/metadata-client": "workspace:*",
         "@space/mobile-media-proxy": "workspace:*",
+        "@space/notify-core": "workspace:*",
         "@space/pairing-crypto": "workspace:*",
         "@space/profile-avatars": "workspace:*",
         "@space/shared": "workspace:*",
@@ -809,6 +836,15 @@
         "vitest": "^5.1.0",
       },
     },
+    "packages/notify-core": {
+      "name": "@space/notify-core",
+      "dependencies": {
+        "@space/shared": "workspace:*",
+      },
+      "devDependencies": {
+        "vitest": "^5.1.0",
+      },
+    },
     "packages/pairing-crypto": {
       "name": "@space/pairing-crypto",
       "dependencies": {
@@ -839,12 +875,15 @@
         "@space/media-crypto": "workspace:*",
         "@space/parrot-core": "workspace:*",
         "@space/parrot-library-db-definition": "workspace:*",
+        "@space/runtime-jobs": "workspace:*",
+        "@space/runtime-jobs-engine": "workspace:*",
         "@space/shared": "workspace:*",
         "jpeg-js": "^0.4.4",
         "music-metadata": "^12.5.0",
         "pngjs": "^7.0.0",
       },
       "devDependencies": {
+        "@space/content-core": "workspace:*",
         "@space/shared": "workspace:*",
       },
     },
@@ -931,6 +970,16 @@
         "typescript": "^6.0.3",
       },
     },
+    "packages/runtime-jobs-engine": {
+      "name": "@space/runtime-jobs-engine",
+      "dependencies": {
+        "@space/library-db-runtime": "workspace:*",
+        "@space/runtime-contracts": "workspace:*",
+        "@space/runtime-jobs": "workspace:*",
+        "@space/runtime-jobs-db": "workspace:*",
+        "@space/shared": "workspace:*",
+      },
+    },
     "packages/sdk": {
       "name": "@space/sdk",
       "devDependencies": {
@@ -987,6 +1036,7 @@
         "@radix-ui/react-slot": "^1.5.0",
         "@radix-ui/react-switch": "^1.4.1",
         "@space/error-report": "workspace:*",
+        "@space/notify-core": "workspace:*",
         "@space/parrot-core": "workspace:*",
         "@space/profile-avatars": "workspace:*",
         "@space/shared": "workspace:*",
@@ -2026,6 +2076,8 @@
 
     "@space/mpv-protocol": ["@space/mpv-protocol@workspace:packages/mpv-protocol"],
 
+    "@space/notify-core": ["@space/notify-core@workspace:packages/notify-core"],
+
     "@space/pairing-crypto": ["@space/pairing-crypto@workspace:packages/pairing-crypto"],
 
     "@space/parrot-core": ["@space/parrot-core@workspace:packages/parrot-core"],
@@ -2055,6 +2107,8 @@
     "@space/runtime-jobs": ["@space/runtime-jobs@workspace:packages/runtime-jobs"],
 
     "@space/runtime-jobs-db": ["@space/runtime-jobs-db@workspace:packages/runtime-jobs-db"],
+
+    "@space/runtime-jobs-engine": ["@space/runtime-jobs-engine@workspace:packages/runtime-jobs-engine"],
 
     "@space/sdk": ["@space/sdk@workspace:packages/sdk"],
 

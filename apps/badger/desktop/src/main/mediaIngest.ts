@@ -7,7 +7,7 @@ import {
   processMediaJob,
   uploadEncryptedFile,
   type ProducedMedia,
-} from "../../../../../packages/ingest-core/src/mediaProcessor";
+} from "@space/ingest-core/mediaProcessor";
 import { encryptMediaObject } from "./mediaCrypto";
 import { headStorageObjectsViaApi, uploadStorageObjectViaTunnel } from "./api";
 

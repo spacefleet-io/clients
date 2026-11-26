@@ -82,6 +82,29 @@ const accountCall = (token: string | null | undefined, appId: SpaceAppId) => ({
 });
 
 const tunnelLogger = scopeLogger("storage-tunnel");
+/**
+ * The tunnel events that explain a slow or failed transfer: a retried session, a resumed upload, a fallback off the
+ * reused session, a moving placement, a failed address. An app's main log keeps them (PAR-UP-12); the rest stay debug.
+ */
+export const LIBRARY_TUNNEL_WARNING_EVENTS: ReadonlySet<string> = new Set([
+  "tunnel.session_open.retry",
+  "tunnel.upload.resume",
+  "tunnel.upload.resumed",
+  "tunnel.upload_session.fallback",
+  "tunnel.download_session.fallback",
+  "tunnel.media_placement.moving_retry",
+  "tunnel.resolve_gateway.fallback",
+  "tunnel.resolve_gateway.no_shards",
+  "tunnel.resolve_gateway.no_active_shards",
+  "tunnel.waterfall.attempt_failed",
+  "tunnel.waterfall.all_failed",
+]);
+const tunnelWarningWatchers = new Set<(event: string, payload: Record<string, unknown>) => void>();
+/** Hears every LIBRARY_TUNNEL_WARNING_EVENTS event of every app's tunnel; returns the call that stops it. */
+export const watchLibraryTunnelWarnings = (watcher: (event: string, payload: Record<string, unknown>) => void) => {
+  tunnelWarningWatchers.add(watcher);
+  return () => void tunnelWarningWatchers.delete(watcher);
+};
 let tunnelMode: "direct" | "waterfall" | undefined;
 /** One tunnel client per app: the client sends its app's `x-space-app` on every session (Badger's and Parrot's libraries share the transport, never the scope). */
 const storageTunnelClients = new Map<SpaceAppId, UserStorageTunnelClient>();
@@ -92,7 +115,10 @@ const tunnelClientFor = (appId: SpaceAppId) => {
       getApiBaseUrl,
       getAppId: () => appId,
       ...(tunnelMode ? { tunnelMode } : {}),
-      log: (event, payload) => tunnelLogger.debug(payload, event),
+      log: (event, payload) => {
+        tunnelLogger.debug(payload, event);
+        if (LIBRARY_TUNNEL_WARNING_EVENTS.has(event)) for (const watcher of tunnelWarningWatchers) watcher(event, payload);
+      },
     });
     storageTunnelClients.set(appId, client);
   }

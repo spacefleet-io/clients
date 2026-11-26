@@ -84,7 +84,7 @@ import type {
   BadgerIngestShowSkipCache,
 } from "@space/runtime-contracts/badger/ingest";
 import type { BadgerLibraryDbService } from "../../badgerLibraryDb";
-import type { EngineV2 } from "../../../core/jobs/engineV2";
+import type { EngineV2 } from "@space/runtime-jobs-engine/engineV2";
 import {
   warmStorageCache,
   type WarmStorageCacheArgs,

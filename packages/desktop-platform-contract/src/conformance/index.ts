@@ -790,6 +790,7 @@ check("shell", "shell hooks configure the app and report display availability", 
   if (platform.id !== "linux") assert(platform.shell.hasDisplay({}) === true, "desktop OSes always have a display");
   const window = platform.shell.mpvWindow({ appId: "io.example.app", env: { DISPLAY: ":0" } });
   assert(window.defaultVo.length > 0 && Array.isArray(window.args), "mpvWindow names a default vo and an args list", window);
+  assert(Array.isArray(window.unsetEnv), "mpvWindow lists the variables to take out of mpv's environment", window);
   assert(
     window.cpuVo === null || (window.cpuVo.length > 0 && window.defaultVo.split(",").includes(window.cpuVo)),
     "mpvWindow's CPU vo is null or the CPU entry of the default vo list",

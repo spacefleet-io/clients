@@ -11,7 +11,7 @@ export const windowsShell: ShellLayer = {
   // d3d11 GPU vo (#25): with no usable GPU it renders on a WARP (software)
   // device, which is the CPU fallback, so the list needs no second vo and
   // there is no separate CPU vo to launch straight on.
-  mpvWindow: () => ({ defaultVo: "gpu", cpuVo: null, args: [], noWindow: null }),
+  mpvWindow: () => ({ defaultVo: "gpu", cpuVo: null, args: [], unsetEnv: [], noWindow: null }),
   quitWhenAllWindowsClosed: true,
   hasDisplay: () => true,
   // Same name as Linux and every existing install (the AppUserModelId carries the product identity).

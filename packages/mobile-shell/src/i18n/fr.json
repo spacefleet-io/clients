@@ -727,6 +727,7 @@
       }
     },
     "access": {
+      "unpaidSign": "Abonnement terminé",
       "unpaidBanner": "Votre abonnement est terminé. La lecture et les envois sont arrêtés. Vos fichiers seront supprimés le {{date}}.",
       "unpaidBannerNoDate": "Votre abonnement est terminé. La lecture et les envois sont arrêtés. Vos fichiers seront supprimés après un délai limité.",
       "playbackBlocked": "La lecture est arrêtée car votre abonnement est terminé. Vos fichiers seront supprimés le {{date}}.",
@@ -1003,7 +1004,6 @@
     "validate": "Valider la clé",
     "signOut": "Se déconnecter",
     "errors": {
-      "checkStatus": "Impossible de vérifier l'état de la médiathèque.",
       "generate": "Impossible de générer une nouvelle clé.",
       "initialize": "Impossible d'initialiser votre médiathèque.",
       "noLibrary": "Aucune médiathèque trouvée pour ce compte.",
@@ -1025,7 +1025,11 @@
       "recentlyAdded": "Ajoutés récemment",
       "movies": "Films",
       "shows": "Séries TV",
-      "favorites": "Favoris"
+      "favorites": "Favoris",
+      "unwatched": "À découvrir",
+      "rewatch": "Revoir",
+      "playlist": "Playlist",
+      "genre": "Genre"
     },
     "seeAll": "Tout voir",
     "hero": {

@@ -61,7 +61,7 @@ vi.mock("@space/mobile-shell/theme", async (importOriginal) => {
 // The real shared form; the rest of the components barrel pulls native animation modules. (vi.mock factories are
 // hoisted above the static imports, so the form module is loaded inside the factory.)
 vi.mock("@space/mobile-shell/components", async () => {
-  const { MobileFeedbackForm } = await import("../../../../packages/mobile-shell/src/components/mobile-feedback-form");
+  const { MobileFeedbackForm } = await import("@space/mobile-shell/feedback-form");
   // Settings → About credits the outside data sources (UX-SET-02); not under test here.
   return {
     MobileFeedbackForm,

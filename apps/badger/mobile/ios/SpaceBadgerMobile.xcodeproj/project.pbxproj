@@ -20,6 +20,7 @@
 		A1B2C3D4E5F60718293A4B5D /* LibrarySync.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B5C /* LibrarySync.swift */; };
 		A1B2C3D4E5F60718293A4B5F /* LibrarySync.m in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B5E /* LibrarySync.m */; };
 		BD2B22418FA5442EC48040DA /* SpaceBadgerTVUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69896722A7685A3196E3584B /* SpaceBadgerTVUITests.swift */; };
+		E74D62D9C3E9456EEA680DB7 /* SpaceBadgerMobileUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7DD03A96EAA19BCED3C6060 /* SpaceBadgerMobileUITests.swift */; };
 		CB1360AE074A8490092A1BE3 /* LibrarySync.m in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B5E /* LibrarySync.m */; };
 		E8809EED1122F1ED285DD293 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BBD28A893D8462BAB519F430 /* Foundation.framework */; };
 		DD0A1B2C3D4E5F6071829313 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = DD0A1B2C3D4E5F6071829312 /* InfoPlist.strings */; };
@@ -77,6 +78,13 @@
 			remoteGlobalIDString = F08858A1F9C735E64B116A62;
 			remoteInfo = SpaceBadgerTV;
 		};
+		6800E7AD5333AA4831326465 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 83CBB9F71A601CBA00E9B192 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 13B07F861A680F5B00A75B9A;
+			remoteInfo = SpaceBadgerMobile;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
@@ -92,6 +100,8 @@
 		5DCACB8F33CDC322A6C60F78 /* libPods-SpaceBadgerMobile.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-SpaceBadgerMobile.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		6857EBF090C12A8DE5498F2F /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		69896722A7685A3196E3584B /* SpaceBadgerTVUITests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SpaceBadgerTVUITests.swift; sourceTree = "<group>"; };
+		95C6D14FE5AC4DFD09513CC6 /* SpaceBadgerMobileUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SpaceBadgerMobileUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		D7DD03A96EAA19BCED3C6060 /* SpaceBadgerMobileUITests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SpaceBadgerMobileUITests.swift; sourceTree = "<group>"; };
 		761780EC2CA45674006654EE /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = SpaceBadgerMobile/AppDelegate.swift; sourceTree = "<group>"; };
 		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = SpaceBadgerMobile/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		86B49074676C1264A88BD1C0 /* SpaceBadgerTV.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SpaceBadgerTV.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -164,6 +174,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		B6CDA8AACEA5D4D6BFF48416 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -214,6 +231,15 @@
 			path = "../e2e-tv/apple-tv/SpaceBadgerTVUITests";
 			sourceTree = "<group>";
 		};
+		19D4EF33C1273816460DA01C /* SpaceBadgerMobileUITests */ = {
+			isa = PBXGroup;
+			children = (
+				D7DD03A96EAA19BCED3C6060 /* SpaceBadgerMobileUITests.swift */,
+			);
+			name = SpaceBadgerMobileUITests;
+			path = "../e2e-phone/apple-ios/SpaceBadgerMobileUITests";
+			sourceTree = "<group>";
+		};
 		2D16E6871FA4F8E400B85C8A /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
@@ -243,6 +269,7 @@
 				BBD78D7AC51CEA395F1C20DB /* Pods */,
 				BD7E00EB5ECD910D25C9B0B5 /* SpaceBadgerTV */,
 				1788A0463DB6690BF1D05794 /* SpaceBadgerTVUITests */,
+				19D4EF33C1273816460DA01C /* SpaceBadgerMobileUITests */,
 				60DB7969FB0350EC4D6B0E9A /* SpaceBadgerLibraryTests */,
 			);
 			indentWidth = 2;
@@ -256,6 +283,7 @@
 				13B07F961A680F5B00A75B9A /* SpaceBadgerMobile.app */,
 				86B49074676C1264A88BD1C0 /* SpaceBadgerTV.app */,
 				5793CD4E4E3C536EBEF7A51C /* SpaceBadgerTVUITests.xctest */,
+				95C6D14FE5AC4DFD09513CC6 /* SpaceBadgerMobileUITests.xctest */,
 				BD4FCFFB884B0CAC582F6892 /* SpaceBadgerLibraryTests.xctest */,
 			);
 			name = Products;
@@ -364,6 +392,24 @@
 			productReference = 5793CD4E4E3C536EBEF7A51C /* SpaceBadgerTVUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		E6CC7A1FABDFE133C57CDD7D /* SpaceBadgerMobileUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 66DA0E2F3382ECA795E43924 /* Build configuration list for PBXNativeTarget "SpaceBadgerMobileUITests" */;
+			buildPhases = (
+				20BC8DB8924A1A9074949243 /* Sources */,
+				B6CDA8AACEA5D4D6BFF48416 /* Frameworks */,
+				003BB34C4BAB7B4E657B56FB /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				BDBDBA6701F1AA93A2D72BA8 /* PBXTargetDependency */,
+			);
+			name = SpaceBadgerMobileUITests;
+			productName = SpaceBadgerMobileUITests;
+			productReference = 95C6D14FE5AC4DFD09513CC6 /* SpaceBadgerMobileUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 		F08858A1F9C735E64B116A62 /* SpaceBadgerTV */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 04C43B4546C563B440F725A7 /* Build configuration list for PBXNativeTarget "SpaceBadgerTV" */;
@@ -419,6 +465,7 @@
 				13B07F861A680F5B00A75B9A /* SpaceBadgerMobile */,
 				F08858A1F9C735E64B116A62 /* SpaceBadgerTV */,
 				DA30771E4DD11CE87518BB4E /* SpaceBadgerTVUITests */,
+				E6CC7A1FABDFE133C57CDD7D /* SpaceBadgerMobileUITests */,
 				1C79998FDCC28DBB55131A44 /* SpaceBadgerLibraryTests */,
 			);
 		};
@@ -474,6 +521,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		84DEDF9C20DDA69044EB83AA /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		003BB34C4BAB7B4E657B56FB /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -719,6 +773,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		20BC8DB8924A1A9074949243 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E74D62D9C3E9456EEA680DB7 /* SpaceBadgerMobileUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		394F4720A870D7DBD7016F51 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -755,6 +817,12 @@
 			name = SpaceBadgerTV;
 			target = F08858A1F9C735E64B116A62 /* SpaceBadgerTV */;
 			targetProxy = 6EE9AE7ABE15BE0111AA433D /* PBXContainerItemProxy */;
+		};
+		BDBDBA6701F1AA93A2D72BA8 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = SpaceBadgerMobile;
+			target = 13B07F861A680F5B00A75B9A /* SpaceBadgerMobile */;
+			targetProxy = 6800E7AD5333AA4831326465 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 /* Begin PBXVariantGroup section */
@@ -1123,6 +1191,57 @@
 			};
 			name = Release;
 		};
+		6C6B076FBC21DA8EAA509AD8 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 8766H6KW4V;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.spacebadger.mobile.uitests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_ENABLE_EXPLICIT_MODULES = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_TARGET_NAME = SpaceBadgerMobile;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		CBEBA3AF2C932DC90C1CBD11 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 8766H6KW4V;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.spacebadger.mobile.uitests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_ENABLE_EXPLICIT_MODULES = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_TARGET_NAME = SpaceBadgerMobile;
+			};
+			name = Debug;
+		};
 		8F3FA5CC7C92BD781BF0285D /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -1190,6 +1309,15 @@
 			buildConfigurations = (
 				CC1C24DAA8F31DB98AB0E2B8 /* Release */,
 				6A4C1D961E989863F949F20C /* Debug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		66DA0E2F3382ECA795E43924 /* Build configuration list for PBXNativeTarget "SpaceBadgerMobileUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				6C6B076FBC21DA8EAA509AD8 /* Release */,
+				CBEBA3AF2C932DC90C1CBD11 /* Debug */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

@@ -1,16 +1,18 @@
 /**
  * @test-id TV-FOUNDER-NOTICE-001
  * @level unit
- * @req WAIT-FOUND-04[badger-tv]
+ * @req WAIT-FOUND-04[badger-tv], UX-NOTICE-09[badger-tv]
  * @why Founder launch 2026-11-18: a founder signing in on the TV sees the one-time "🎫 Founder ticket recognised." notice
- *   once, in the shell's floating notice slot (UX-NOTICE-01). Unlike the new-device notice it takes the remote's focus as
- *   it shows, so its timer waits while the user reads it; OK or Back closes it, and however it leaves the TV tells the API
+ *   once, in the shell's floating notice slot (UX-NOTICE-01). Chris 2026-11-26 (UX-NOTICE-09): it never takes the remote's
+ *   focus and has no timer, so it can't go unread; OK on it closes it, and so does Back on Home, while on another section
+ *   Back keeps its meaning (go Home) and the notice stays. However it leaves the TV tells the API
  *   (`POST /account/founder/notice-seen`) so no device shows it again. While the player covers the shell it waits unseen.
  */
 import React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, create, type ReactTestInstance, type ReactTestRenderer } from "react-test-renderer";
 import { founderWatch } from "@space/mobile-shell/founder";
+import { requestTvSection } from "@space/mobile-shell/tv/tvSection";
 import { TvMainShell } from "./TvMainShell";
 
 const state = vi.hoisted(() => {
@@ -79,7 +81,6 @@ vi.mock("@space/mobile-shell/i18n", () => ({
   useTranslation: () => ({ t: (key: string) => key, i18n: { language: state.language } }),
   translate: (key: string) => key,
 }));
-vi.mock("@space/mobile-shell/unpaid-access-banner", () => ({ UnpaidAccessBanner: () => null }));
 vi.mock("../../lib/pairing/deviceWatch", () => ({ checkForNewDevices: () => undefined, markDeviceSeen: async () => undefined }));
 vi.mock("../../store/auth", () => ({ useAuth: () => ({ token: "tv-tok" }) }));
 vi.mock("../../store/library", () => ({
@@ -130,13 +131,13 @@ describe("the TV's founder notice (TV-FOUNDER-NOTICE-001)", () => {
     vi.useRealTimers();
   });
 
-  it("shows once at sign-in, takes the remote's focus, and OK closes it; it is seen", async () => {
+  it("shows once at sign-in without taking the remote's focus, and OK closes it; it is seen", async () => {
     const tree = await render();
     const [card] = banner(tree);
     log("shown", { fetched: state.fetched, text: card && textOf(card), focus: card?.props.hasTVPreferredFocus, label: card?.props.accessibilityLabel });
     expect(state.fetched).toEqual(["tv-tok"]);
     expect(textOf(card)).toBe("🎫 Founder ticket recognised.|Your 30% for life is applied to your plan.|Got it");
-    expect(card.props.hasTVPreferredFocus).toBe(true);
+    expect(card.props.hasTVPreferredFocus).toBeFalsy();
     await act(async () => card.props.onPress());
     log("after OK", { banners: banner(tree).length, seen: state.seen, settings: tree.root.findAll(isType("TvSettingsScreen")).length });
     expect(banner(tree)).toHaveLength(0);
@@ -157,6 +158,30 @@ describe("the TV's founder notice (TV-FOUNDER-NOTICE-001)", () => {
     expect(banner(tree)).toHaveLength(0);
     expect(tree.root.findAll(isType("TvHomeScreen"))).toHaveLength(1);
     expect(state.seen).toEqual(["tv-tok"]);
+  });
+
+  it("on another section, Back goes Home and the notice stays; Back on Home then closes it", async () => {
+    const tree = await render();
+    await act(async () => requestTvSection("search"));
+    expect(tree.root.findAll(isType("TvSearchScreen"))).toHaveLength(1);
+    await act(async () => void state.back.at(-1)!());
+    log("Back on Search", { home: tree.root.findAll(isType("TvHomeScreen")).length, banners: banner(tree).length, seen: state.seen });
+    expect(tree.root.findAll(isType("TvHomeScreen"))).toHaveLength(1);
+    expect(banner(tree)).toHaveLength(1);
+    expect(state.seen).toEqual([]);
+    await act(async () => void state.back.at(-1)!());
+    log("Back on Home", { banners: banner(tree).length, seen: state.seen });
+    expect(banner(tree)).toHaveLength(0);
+    expect(state.seen).toEqual(["tv-tok"]);
+  });
+
+  it("has no timer: it is still there after a minute, the remote elsewhere", async () => {
+    vi.useFakeTimers();
+    const tree = await render();
+    act(() => void vi.advanceTimersByTime(60_000));
+    log("after a minute unfocused", { banners: banner(tree).length, seen: state.seen });
+    expect(banner(tree)).toHaveLength(1);
+    expect(state.seen).toEqual([]);
   });
 
   it("stays while the remote is on it", async () => {
