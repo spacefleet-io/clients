@@ -1024,7 +1024,11 @@
       "recentlyAdded": "Kürzlich hinzugefügt",
       "movies": "Filme",
       "shows": "Serien",
-      "favorites": "Favoriten"
+      "favorites": "Favoriten",
+      "unwatched": "Noch nicht gesehen",
+      "rewatch": "Nochmal schauen",
+      "playlist": "Playlist",
+      "genre": "Genre"
     },
     "seeAll": "Alle ansehen",
     "hero": {

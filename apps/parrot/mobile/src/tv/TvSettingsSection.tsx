@@ -2,7 +2,7 @@
 // (the one under the focus opens), the open group's rows at the right. Parrot's groups are the phone's, less what needs
 // a keyboard or a camera: Profiles, Account (who is signed in, Sign out), Playback (Even out volume), Privacy (error
 // reports, where offered), Language and About.
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ScrollView, StyleSheet, Text, TVFocusGuideView, View } from "react-native";
 import { ChevronRight, Globe, Info, LogOut, ShieldCheck, SlidersHorizontal, UserRound, Users } from "lucide-react-native";
 import type { LucideIcon } from "lucide-react-native";
@@ -10,6 +10,7 @@ import { MobileCreditsPanel, MobileOpenSourceNotice, useSkyScroll } from "@space
 import { errorReportsOffered } from "@space/mobile-shell/error-reports-offered";
 import { MobileFlag } from "@space/mobile-shell/flag";
 import { getCurrentLanguage, MOBILE_UI_LANGUAGES, useTranslation } from "@space/mobile-shell/i18n";
+import { asksKeySavedBeforeSigningOut } from "@space/mobile-shell/libraryKey";
 import { scopeLogger } from "@space/mobile-shell/logger";
 import { TvSegmented } from "@space/mobile-shell/tv/TvChip";
 import { TvFocusable } from "@space/mobile-shell/tv/TvFocusable";
@@ -18,6 +19,7 @@ import { TvBody, TvTitle } from "@space/mobile-shell/tv/TvText";
 import { TV_COLOR, TV_SPACE, TV_TYPE, useTvAccent } from "@space/mobile-shell/tv/tokens";
 import { focusDestination, type TvViewInstance } from "@space/mobile-shell/tv/tvViewInstance";
 import { useTvScale, useTvStyles } from "@space/mobile-shell/tv/tvScale";
+import { TvSignOutKeyDialog } from "@space/mobile-shell/tv/TvSignOutKeyDialog";
 import { nativeAppInfo } from "@space/mobile-media-proxy/app-info";
 import { SelfUpdateSettings } from "@space/mobile-self-update";
 import { PARROT_EVEN_VOLUME_LEVELS, type ParrotEvenVolume, type ParrotEvenVolumeLevel } from "@space/parrot-core";
@@ -26,8 +28,8 @@ import { getErrorReportsSetting, setErrorReports, subscribeErrorReportsSetting }
 import { getEvenVolume, setEvenVolume, subscribeEvenVolume } from "../lib/evenVolume";
 import { parrotCreditsSource } from "../lib/lookup";
 import { useProfiles } from "../lib/profiles";
+import { libraryKeyStore } from "../lib/stores";
 import { useSession } from "../state/session";
-import { useSignOut } from "../state/useSignOut";
 import { tvSettingsGroupIds, type TvSettingsGroupId } from "./tvModel";
 import { useTvPages } from "./tvPages";
 
@@ -68,9 +70,8 @@ const useErrorReports = (): [boolean, (on: boolean) => void] => {
 
 export const TvSettingsSection = () => {
   const { t, i18n } = useTranslation();
-  const { session } = useSession();
+  const { session, signOut } = useSession();
   const token = session?.token ?? null;
-  const signOut = useSignOut();
   const { push } = useTvPages();
   const { profiles, activeId } = useProfiles();
   const activeProfile = profiles.find((profile) => profile.id === activeId) ?? null;
@@ -78,6 +79,9 @@ export const TvSettingsSection = () => {
   const [errorReports, saveErrorReports] = useErrorReports();
   const [language, setLanguage] = useState(() => getCurrentLanguage());
   const [signingOut, setSigningOut] = useState(false);
+  // ACCT-DEV-03: the key question, open over Settings; Cancel gives the focus back to the Sign out row.
+  const [askingKey, setAskingKey] = useState(false);
+  const [signOutFocus, setSignOutFocus] = useState(false);
   const scale = useTvScale();
   const styles = useTvStyles(baseStyles);
   const accent = useTvAccent().color;
@@ -97,6 +101,26 @@ export const TvSettingsSection = () => {
   }, []);
   const openGroupNode = groupsMounted ? (groupRefs.current.get(group) ?? null) : null;
   const openLabel = t(groups.find((item) => item.id === group)?.labelKey ?? "");
+
+  const keyText = useMemo(
+    () => ({
+      title: t("parrot.settings.signOutKey.title"),
+      body: t("parrot.settings.signOutKey.body"),
+      cancel: t("parrot.settings.signOutKey.cancel"),
+      confirm: t("parrot.settings.signOutKey.confirm"),
+    }),
+    [t],
+  );
+  const cancelSignOutKey = useCallback(() => {
+    log.info("sign_out_key", { answer: "cancel" });
+    setAskingKey(false);
+    setSignOutFocus(true);
+  }, []);
+  const confirmSignOutKey = useCallback(() => {
+    log.info("sign_out_key", { answer: "confirm" });
+    setAskingKey(false);
+    signOut().catch((error: unknown) => log.warn("sign_out.failed", { message: failure(error) }));
+  }, [signOut]);
 
   const renderGroup = () => {
     switch (group) {
@@ -122,13 +146,19 @@ export const TvSettingsSection = () => {
               title={t("parrot.settings.signOut")}
               danger
               disabled={signingOut}
+              hasTVPreferredFocus={signOutFocus}
               end={{ kind: "none" }}
               onPress={() => {
-                log.info("sign_out", {});
                 setSigningOut(true);
-                // With a library key on the TV, signOut resolves as soon as the key question shows (ACCT-DEV-03); the
-                // row must come back then, or Cancel leaves Sign out disabled (#3350 S49).
-                signOut()
+                setSignOutFocus(false);
+                // A TV that holds the library key asks first, in the TV dialog Badger TV uses (ACCT-DEV-03); the row
+                // comes back once the question shows, or Cancel would leave Sign out disabled (#3350 S49).
+                asksKeySavedBeforeSigningOut(libraryKeyStore.get)
+                  .then((asks) => {
+                    log.info("sign_out", { asks });
+                    if (asks) setAskingKey(true);
+                    else return signOut();
+                  })
                   .catch((error: unknown) => log.warn("sign_out.failed", { message: failure(error) }))
                   .finally(() => setSigningOut(false));
               }}
@@ -255,6 +285,7 @@ export const TvSettingsSection = () => {
           {renderGroup()}
         </ScrollView>
       </TVFocusGuideView>
+      {askingKey ? <TvSignOutKeyDialog text={keyText} onCancel={cancelSignOutKey} onConfirm={confirmSignOutKey} /> : null}
     </View>
   );
 };

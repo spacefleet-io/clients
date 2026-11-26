@@ -4,9 +4,12 @@ import { decryptBase64ToBytes } from "@/lib/crypto";
 import { LibraryDb } from "@/lib/libraryDb";
 import { isDecryptFailureMessage } from "@/lib/libraryContext";
 import { acknowledgeLibraryKey, storeLibraryKey } from "@/lib/onboarding";
+import { rendererLogger } from "@/logger";
 import type { PairedKeyCheckDeps, PairedSignInDeps } from "./pairedSignIn";
 
-/** Production wiring for `verifyPairedKey`: the checks the manual key entry screen runs. */
+const keyLog = rendererLogger.child({ scope: "account-key" });
+
+/** Production wiring for Badger's side of the account key check (typed key, key from another device, paired sign-in). */
 export const pairedKeyCheckDeps: PairedKeyCheckDeps = {
   getLibraryMeta: (token) => getLibraryMetaForKeyStep(token),
   decryptProbe: decryptBase64ToBytes,
@@ -14,6 +17,7 @@ export const pairedKeyCheckDeps: PairedKeyCheckDeps = {
     (await LibraryDb.open(token, key, userId)).close();
   },
   isDecryptFailure: isDecryptFailureMessage,
+  log: (message, extra) => keyLog.info(extra ?? {}, message),
 };
 
 /** Production wiring for `completePairedSignIn`: the same helpers the manual key entry screen uses. */

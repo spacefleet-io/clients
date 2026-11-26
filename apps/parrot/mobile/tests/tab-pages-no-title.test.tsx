@@ -46,7 +46,7 @@ vi.mock("@space/mobile-shell/theme", () => ({
   UNAVAILABLE_LOOK: { opacity: 0.4 },
   useMobileShellTheme: () => ({ colors: { accent: "#40dd8f", textMuted: "#b6bace", textDim: "#555" }, font: { family: { sans: "Inter" } } }),
 }));
-vi.mock("../../../../packages/mobile-shell/src/components/mobile-sky-cover", () => ({
+vi.mock("@space/mobile-shell/sky-cover", () => ({
   SkyCover: ({ children, ...props }: { children?: unknown }) => createElement("SkyCover", props, children as never),
   useSkyScroll: () => ({}),
 }));
@@ -57,7 +57,7 @@ vi.mock("@space/mobile-shell/i18n", () => ({
 vi.mock("@space/mobile-shell/components", async () => ({
   SkyCover: "SkyCover",
   useSkyScroll: () => ({}),
-  MobileTabPager: (await vi.importActual<typeof import("../../../../packages/mobile-shell/src/components/mobile-tab-pager")>(
+  MobileTabPager: (await vi.importActual<typeof import("@space/mobile-shell/tab-pager")>(
     "../../../../packages/mobile-shell/src/components/mobile-tab-pager"
   )).MobileTabPager,
   MobileFounderNoticeHost: () => null,

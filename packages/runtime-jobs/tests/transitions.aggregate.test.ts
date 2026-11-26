@@ -5,7 +5,7 @@ import {
   type IngestJobRecord,
   type IngestJobStatus,
   type IngestJobStepRecord,
-} from "../index";
+} from "../src/index";
 
 const SUITE = "runtime-jobs-transitions-aggregate";
 

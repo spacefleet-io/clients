@@ -232,11 +232,11 @@ describe("pushHandler", () => {
     // bundle a module that throws while loading kills the app before any catch runs (issue #2497), so the stand-in must
     // load and the receiver must read its marker.
     console.info("[push-handler:foss-stub] resolving firebase messaging to the Google-free stand-in");
-    vi.doMock("@react-native-firebase/messaging", () => import("../../../../packages/mobile-shell/src/foss/notInThisBuild"));
+    vi.doMock("@react-native-firebase/messaging", () => import("@space/mobile-shell/foss/notInThisBuild"));
     vi.resetModules();
     const fetchMock = vi.fn(async (_request: Request) => Response.json({ ok: true }));
     globalThis.fetch = fetchMock as unknown as typeof fetch;
-    const stub = await import("../../../../packages/mobile-shell/src/foss/notInThisBuild");
+    const stub = await import("@space/mobile-shell/foss/notInThisBuild");
     expect(stub.notInThisBuild).toBe(true);
 
     const { initializePushNotifications, __pushHandlerTestSeam } = await import("../src/native/pushHandler");

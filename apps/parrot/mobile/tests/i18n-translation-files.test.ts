@@ -18,10 +18,10 @@
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import sharedEn from "../../../../packages/mobile-shell/src/i18n/en.json";
-import { SHELL_EN } from "../../../../packages/parrot-core/src/shellStrings";
-import { profilesTexts } from "../../../../packages/shared/src/profileTexts";
-import { withAccountDeletionLabels } from "../../../../packages/shared/src/accountDeletionLabels";
+import sharedEn from "@space/mobile-shell/i18n/en.json";
+import { SHELL_EN } from "@space/parrot-core/shell-strings";
+import { profilesTexts } from "@space/shared/profileTexts";
+import { withAccountDeletionLabels } from "@space/shared/accountDeletionLabels";
 import de from "../src/i18n/de.json";
 import en from "../src/i18n/en.json";
 import es from "../src/i18n/es.json";

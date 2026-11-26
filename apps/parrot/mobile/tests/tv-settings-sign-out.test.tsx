@@ -2,19 +2,25 @@
  * @test-id PARROT-TV-SETTINGS-SIGN-OUT-001
  * @level unit
  * @req ACCT-DEV-03[parrot]
- * @bugfix #3350 S49: on a TV that holds the library key, Sign out asks whether the key was saved
- *   (`signOutAskingForSavedKey` resolves "asked" as soon as the question is shown). The row stayed disabled until a
- *   failure, so Cancel left Sign out dead until the app restarted.
+ * @bugfix #3350 S49: on a TV that holds the library key, Sign out asks whether the key was saved. The row stayed
+ *   disabled until a failure, so Cancel left Sign out dead until the app restarted.
  * @covers apps/parrot/mobile/src/tv/TvSettingsSection.tsx
+ *
+ * REL-FAM-05: Parrot TV asks in the shared TV dialog (`@space/mobile-shell/tv/TvSignOutKeyDialog`, Badger TV's), not
+ * the phone `Alert.alert`.
  */
 import React from "react";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
+type DialogProps = { text: { title: string; body: string; cancel: string; confirm: string }; onCancel: () => void; onConfirm: () => void };
+
 const h = vi.hoisted(() => ({
-  signOut: (() => Promise.resolve()) as () => Promise<void>,
-  rows: new Map<string, { disabled?: boolean; onPress?: () => void }>(),
+  signOut: vi.fn((): Promise<void> => Promise.resolve()),
+  key: (() => Promise.resolve("user-1")) as () => Promise<string | null>,
+  rows: new Map<string, { disabled?: boolean; hasTVPreferredFocus?: boolean; onPress?: () => void }>(),
   groups: new Map<string, { onPress?: () => void }>(),
+  dialog: null as DialogProps | null,
   /** Draws its children only: the layout views and text the test does not look at. */
   Pass: ({ children }: { children?: React.ReactNode }) => children ?? null,
 }));
@@ -44,11 +50,17 @@ vi.mock("@space/mobile-shell/tv/TvFocusable", () => ({
   },
 }));
 vi.mock("@space/mobile-shell/tv/TvRow", () => ({
-  TvRow: (props: { testID: string; disabled?: boolean; onPress?: () => void }) => {
+  TvRow: (props: { testID: string; disabled?: boolean; hasTVPreferredFocus?: boolean; onPress?: () => void }) => {
     h.rows.set(props.testID, props);
     return null;
   },
   TvRowList: h.Pass,
+}));
+vi.mock("@space/mobile-shell/tv/TvSignOutKeyDialog", () => ({
+  TvSignOutKeyDialog: (props: DialogProps) => {
+    h.dialog = props;
+    return null;
+  },
 }));
 vi.mock("@space/mobile-shell/tv/TvText", () => ({ TvBody: h.Pass, TvTitle: h.Pass }));
 vi.mock("@space/mobile-shell/tv/tokens", () => ({ TV_COLOR: {}, TV_SPACE: {}, TV_TYPE: { body: {} }, useTvAccent: () => ({ color: "#0f0" }) }));
@@ -62,8 +74,8 @@ vi.mock("../src/lib/errorReports", () => ({ getErrorReportsSetting: () => ({ err
 vi.mock("../src/lib/evenVolume", () => ({ getEvenVolume: () => ({ on: false }), setEvenVolume: async () => {}, subscribeEvenVolume: () => () => {} }));
 vi.mock("../src/lib/lookup", () => ({ parrotCreditsSource: {} }));
 vi.mock("../src/lib/profiles", () => ({ useProfiles: () => ({ profiles: [], activeId: null }) }));
-vi.mock("../src/state/session", () => ({ useSession: () => ({ session: { token: "t", user: { email: "a@b.c" } } }) }));
-vi.mock("../src/state/useSignOut", () => ({ useSignOut: () => () => h.signOut() }));
+vi.mock("../src/lib/stores", () => ({ libraryKeyStore: { get: () => h.key() } }));
+vi.mock("../src/state/session", () => ({ useSession: () => ({ session: { token: "t", user: { email: "a@b.c" } }, signOut: () => h.signOut() }) }));
 vi.mock("../src/tv/tvModel", () => ({ tvSettingsGroupIds: () => ["profiles", "account"] }));
 vi.mock("../src/tv/tvPages", () => ({ useTvPages: () => ({ push: () => {} }) }));
 
@@ -81,6 +93,10 @@ afterEach(() => {
   renderer = null;
   h.rows.clear();
   h.groups.clear();
+  h.dialog = null;
+  h.signOut.mockReset();
+  h.signOut.mockImplementation(() => Promise.resolve());
+  h.key = () => Promise.resolve("user-1");
 });
 
 const openAccount = async () => {
@@ -90,27 +106,65 @@ const openAccount = async () => {
   await act(async () => h.groups.get("tv-settings-group-account")?.onPress?.());
 };
 const signOutRow = () => h.rows.get("tv-settings-sign-out")!;
+const pressSignOut = () => act(async () => signOutRow().onPress?.());
 
-describe(`${SUITE} Parrot TV Sign out row`, () => {
-  it("comes back after the key question is shown, so Cancel never leaves it disabled", async () => {
-    const asked = Promise.withResolvers<void>();
-    h.signOut = () => asked.promise;
+describe(`${SUITE} Parrot TV Sign out`, () => {
+  it("asks in the shared TV dialog when the TV holds the key, and the row comes back", async () => {
     await openAccount();
     expect(signOutRow().disabled).toBe(false);
-
-    await act(async () => signOutRow().onPress?.());
-    console.info(SUITE, "while asking", { disabled: signOutRow().disabled });
-    expect(signOutRow().disabled).toBe(true);
-
-    await act(async () => asked.resolve());
-    console.info(SUITE, "after the question", { disabled: signOutRow().disabled });
+    await pressSignOut();
+    console.info(SUITE, "asked", { dialog: h.dialog?.text, disabled: signOutRow().disabled });
+    expect(h.dialog?.text).toEqual({
+      title: "parrot.settings.signOutKey.title",
+      body: "parrot.settings.signOutKey.body",
+      cancel: "parrot.settings.signOutKey.cancel",
+      confirm: "parrot.settings.signOutKey.confirm",
+    });
+    expect(h.signOut).not.toHaveBeenCalled();
     expect(signOutRow().disabled).toBe(false);
   });
 
-  it("comes back after a failed sign-out", async () => {
-    h.signOut = () => Promise.reject(new Error("offline"));
+  it("Cancel closes the question, keeps the session and gives the focus back to Sign out", async () => {
     await openAccount();
-    await act(async () => signOutRow().onPress?.());
+    await pressSignOut();
+    await act(async () => h.dialog?.onCancel());
+    expect(h.signOut).not.toHaveBeenCalled();
+    expect(signOutRow().hasTVPreferredFocus).toBe(true);
+    expect(signOutRow().disabled).toBe(false);
+    h.dialog = null;
+    await act(async () => {});
+    expect(h.dialog).toBeNull();
+  });
+
+  it("Confirm signs out", async () => {
+    await openAccount();
+    await pressSignOut();
+    await act(async () => h.dialog?.onConfirm());
+    expect(h.signOut).toHaveBeenCalledTimes(1);
+  });
+
+  it("signs out at once on a TV without the key", async () => {
+    h.key = () => Promise.resolve(null);
+    await openAccount();
+    await pressSignOut();
+    expect(h.dialog).toBeNull();
+    expect(h.signOut).toHaveBeenCalledTimes(1);
+    expect(signOutRow().disabled).toBe(false);
+  });
+
+  it("asks when the key store cannot be read", async () => {
+    h.key = () => Promise.reject(new Error("keychain locked"));
+    await openAccount();
+    await pressSignOut();
+    expect(h.dialog).not.toBeNull();
+    expect(h.signOut).not.toHaveBeenCalled();
+  });
+
+  it("comes back after a failed sign-out", async () => {
+    h.key = () => Promise.resolve(null);
+    h.signOut.mockImplementation(() => Promise.reject(new Error("offline")));
+    await openAccount();
+    await pressSignOut();
     expect(signOutRow().disabled).toBe(false);
   });
 });

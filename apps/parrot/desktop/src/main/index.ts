@@ -86,14 +86,14 @@ import {
   publishLibrarySnapshot,
   reencryptLibrariesForRotation,
   sealLibrarySnapshot,
-  type FetchedLibrarySnapshot,
 } from "@space/library-db-runtime/snapshotTransport";
 import { rewriteLibraryBytesForReseal } from "@space/library-db-runtime/resealSnapshot";
 import { registerNodeSqlite } from "@space/library-db-runtime/nodeSqlite";
 import { createParrotKeyChange } from "./keyChange";
 import { deleteStorageObjects, downloadStorageObjectViaTunnel, uploadStorageObjectViaTunnel } from "@space/library-db-runtime/api";
 import { decryptBase64ToBytes } from "@space/library-db-runtime/crypto";
-import { checkKeyAgainstAccount, makeAccountKey } from "./libraryKeyCheck";
+import { KEY_CHECK_APP_IDS, makeAccountKey } from "./makeAccountKey";
+import { checkKeyAgainstAccount, type AccountKeyResult } from "@space/desktop-shell/account-key-check";
 import { createParrotExportJobs } from "./exportJobs";
 import { checkKeptLibraryKey } from "@space/desktop-shell/library-kept-key";
 import { serveStorageUnitBase } from "@space/desktop-shell/storage-units";
@@ -219,7 +219,6 @@ import {
   type ParrotImportPicture,
   type ParrotImportSelection,
   type ParrotImportStatus,
-  type ParrotKeyResult,
   type ParrotDeletePreview,
   type ParrotEditValues,
   type ParrotFetchLyricsResult,
@@ -284,7 +283,13 @@ setApiClientType(CLIENT_TYPE);
 // REL-CD-29: every API call says which build is calling (`parrot/desktop/0.1.3`, `+flatpak`/`+appimage`/`+system` on
 // Linux). The window reaches the API only through this process, so the main process alone states it.
 setClientIdentity(
-  desktopClientIdentity({ app: "parrot", version: app.getVersion(), packaged: app.isPackaged, os: process.platform, env: process.env }),
+  desktopClientIdentity({
+    app: "parrot",
+    version: app.getVersion(),
+    packaged: app.isPackaged,
+    os: getDesktopPlatform().id,
+    env: process.env,
+  }),
 );
 
 // PLAT-DESK-14: every release keeps `<appData>/spaceparrot` (the dir existing installs use, on every OS); a development
@@ -329,7 +334,7 @@ const fail = (line: string) => {
 log(`[parrot] start v${app.getVersion()} ${process.platform}-${process.arch} api=${apiBaseUrl} devBuild=${isDevBuild} userData=${userDataDir}`);
 // STOR-UNIT-01: storage figures follow this computer's file manager (1024 on Windows and KDE, 1000 elsewhere); the
 // preload reads the base synchronously so the window sets it before its first render.
-serveStorageUnitBase(ipcMain, { platform: process.platform, desktop: process.env.XDG_CURRENT_DESKTOP, log });
+serveStorageUnitBase(ipcMain, { platform: getDesktopPlatform().id, desktop: process.env.XDG_CURRENT_DESKTOP, log });
 // REL-ENV-36: an agent's lane run or a test launch (SF_SILENT=1) never sends a sound stream to the sound server, even
 // when started without the harness's Chromium flags (an AppImage by hand). The user's own run is untouched.
 const silentSwitches = applySilentAudio(app.commandLine, process.env);
@@ -2396,43 +2401,36 @@ const confirmImport = (selection: ParrotImportSelection): ParrotImportStatus => 
 };
 
 /**
- * Whether `key` is the account's key, checked with `token` (see `checkKeyAgainstAccount`); stores nothing, except
- * that an account with no key at all is claimed: Parrot's first (empty) library is published with the key, which
- * writes the account's key probe, so Badger and every other device check their keys against it (PRIV-KEY-01).
- * `onParrotLibrary` gets the opened Parrot library when there is one (the key step keeps it open).
+ * Whether `key` is the account's key, checked with `token` (the desktops' shared `checkKeyAgainstAccount`); stores
+ * nothing, except that an account with no key at all is claimed: Parrot's first (empty) library is published with the
+ * key, which writes the account's key probe, so Badger and every other device check their keys against it
+ * (PRIV-KEY-01). The library itself is opened later, by `loadLibrary`, once the key is kept.
  */
-const verifyLibraryKey = (
-  token: string,
-  key: string,
-  onParrotLibrary?: (snapshot: FetchedLibrarySnapshot) => void,
-): Promise<ParrotKeyResult> =>
-  checkKeyAgainstAccount(
-    key,
-    {
-      fetchSnapshot: (appId) => fetchLibrarySnapshot({ token, keyBase64: key, appId }),
-      fetchKeyProbe: async () => (await getLibraryMetaForKeyStep(token, PARROT_APP_ID)).keyProbe ?? null,
-      decryptProbe: decryptBase64ToBytes,
-      claimAccount: async (claimed) => {
-        const empty = openParrotLibrary(null);
-        try {
-          const published = await publishLibrarySnapshot({
-            token,
-            keyBase64: claimed,
-            dbBytes: serializeParrotLibrary(empty),
-            baseVersion: 0,
-            appId: PARROT_APP_ID,
-            opStreamVersion: PARROT_OP_STREAM_VERSION,
-          });
-          log(`[key] first Parrot library published as v${published.version}: the account's key probe is written`);
-        } finally {
-          empty.close();
-        }
-      },
-      log,
-      fail,
+const verifyLibraryKey = (token: string, key: string): Promise<AccountKeyResult> =>
+  checkKeyAgainstAccount(key, {
+    appIds: KEY_CHECK_APP_IDS,
+    fetchSnapshot: (appId) => fetchLibrarySnapshot({ token, keyBase64: key, appId }),
+    fetchKeyProbe: async () => (await getLibraryMetaForKeyStep(token, PARROT_APP_ID)).keyProbe ?? null,
+    decryptProbe: decryptBase64ToBytes,
+    claimAccount: async (claimed) => {
+      const empty = openParrotLibrary(null);
+      try {
+        const published = await publishLibrarySnapshot({
+          token,
+          keyBase64: claimed,
+          dbBytes: serializeParrotLibrary(empty),
+          baseVersion: 0,
+          appId: PARROT_APP_ID,
+          opStreamVersion: PARROT_OP_STREAM_VERSION,
+        });
+        log(`[key] first Parrot library published as v${published.version}: the account's key probe is written`);
+      } finally {
+        empty.close();
+      }
     },
-    onParrotLibrary,
-  );
+    log,
+    fail,
+  });
 
 const storeLibraryKey = async (key: string) => {
   await store.setLibraryKey(key);
@@ -2440,13 +2438,11 @@ const storeLibraryKey = async (key: string) => {
   readingChunkLoader.clear();
 };
 
-const checkLibraryKey = async (raw: string): Promise<ParrotKeyResult> => {
+const checkLibraryKey = async (raw: string): Promise<AccountKeyResult> => {
   const token = store.token();
   if (!token) return { ok: false, error: "network", message: "not signed in" };
   const key = raw.replace(/\s+/g, "");
-  const verdict = await verifyLibraryKey(token, key, (snapshot) => {
-    setLibrary({ db: openParrotLibrary(snapshot.dbBytes), version: snapshot.snapshotVersion });
-  });
+  const verdict = await verifyLibraryKey(token, key);
   if (!verdict.ok) return verdict;
   await storeLibraryKey(key);
   return { ok: true };
@@ -2771,7 +2767,7 @@ const registerIpc = () => {
     try {
       const session = await login(email, input.password, input.twoFactorCode?.trim() || undefined, undefined, {
         deviceType: "desktop",
-        deviceName: resolveDeviceName(hostname()),
+        deviceName: resolveDeviceName(hostname(), getDesktopPlatform().id),
       });
       const user = await acceptSession(session);
       log(`[auth] signed in as user ${session.user.id}`);
@@ -2886,7 +2882,7 @@ const registerIpc = () => {
           String(input.verifier),
           input.twoFactorCode?.trim() || undefined,
           input.resendTwoFactor === true ? true : undefined,
-          { deviceType: "desktop", deviceName: resolveDeviceName(hostname()) }
+          { deviceType: "desktop", deviceName: resolveDeviceName(hostname(), getDesktopPlatform().id) }
         );
         const user = await acceptSession(session);
         log(`[provider-sign-in] signed in as user ${session.user.id}`);
@@ -2908,6 +2904,7 @@ const registerIpc = () => {
   const signInPairing = createDesktopPairingClient({
     getApiBaseUrl: () => apiBaseUrl,
     appId: PARROT_APP_ID,
+    platform: getDesktopPlatform().id,
     log: (message, extra) => log(`[pairing] ${message} ${JSON.stringify(extra ?? {})}`),
     sessionToken: () => store.token(),
   });

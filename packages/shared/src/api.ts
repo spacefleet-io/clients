@@ -571,7 +571,6 @@ export type TitleSearchResult = {
   originalLanguage: string | null;
   overview: string | null;
   year: string | null;
-  rating: number | null;
   posterPath: string | null;
   backdropPath: string | null;
   posterUrl?: string | null;

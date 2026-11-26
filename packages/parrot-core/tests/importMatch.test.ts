@@ -587,6 +587,9 @@ describe(`${T} albums asked by id`, () => {
       { artist: "Linnet Park", album: "Hollow Signal", id: "hollow-rg" },
       { artist: "Linnet Park", album: "Hollow Signal", limit: 5 },
     ]);
-    expect(result.albums.map((found) => [found.album.title, found.files.map((placed) => placed.number)])).toEqual([["Hollow Signal (Deluxe Edition)", [1, 2, 3, 4]]]);
+    // The bonus song no recording answer names sits in the same folder as four songs sure on the deluxe edition, whose
+    // free fifth track carries its title and length: it joins them (PAR-UP-10).
+    expect(result.albums.map((found) => [found.album.title, found.files.map((placed) => placed.number)])).toEqual([["Hollow Signal (Deluxe Edition)", [1, 2, 3, 4, 5]]]);
+    expect(result.unidentified).toEqual([]);
   });
 });

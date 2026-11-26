@@ -1,6 +1,6 @@
 import { Database } from "bun:sqlite";
 import { describe, expect, it } from "bun:test";
-import { runRuntimeJobsDbMigrations, type SqliteDb } from "../migrations";
+import { runRuntimeJobsDbMigrations, type SqliteDb } from "../src/migrations";
 
 const openDb = (): { raw: Database; db: SqliteDb } => {
   const raw = new Database(":memory:");

@@ -162,6 +162,8 @@ type LibraryActionsValue = {
   /** Deletes a title with everything attached to it (files, progress, playlist entries) and syncs the deletion. */
   deleteMedia: (mediaId: string) => Promise<void>;
   getSystemPlaylistId: (slug: "favorites" | "watchlist") => Promise<string | null>;
+  /** A library-wide setting (never a profile's `p:` key), e.g. the Home layout the computer saves (UX-HOME-06); null when none. */
+  readSetting: (key: string) => Promise<string | null>;
   setProgress: (mediaId: string, progressPct: number) => Promise<void>;
   /** `final` (pause/exit/background) also refreshes list state + rebuilds the snapshot cache. */
   setPlaybackProgress: (
@@ -1653,6 +1655,14 @@ export const LibraryProvider = ({ children }: { children: React.ReactNode }) => 
     [db]
   );
 
+  const readSetting = useCallback(
+    async (key: string) => {
+      if (!db) return null;
+      return await db.readSetting(key);
+    },
+    [db]
+  );
+
   const setProgress = useCallback(
     async (mediaId: string, progressPct: number) => {
       if (!db) return;
@@ -1832,6 +1842,7 @@ export const LibraryProvider = ({ children }: { children: React.ReactNode }) => 
       removeFromPlaylist,
       deleteMedia,
       getSystemPlaylistId,
+      readSetting,
       setProgress,
       setPlaybackProgress,
       acknowledgeKey,
@@ -1860,6 +1871,7 @@ export const LibraryProvider = ({ children }: { children: React.ReactNode }) => 
       deleteMedia,
       removeFromPlaylist,
       getSystemPlaylistId,
+      readSetting,
       setProgress,
       setPlaybackProgress,
       acknowledgeKey,

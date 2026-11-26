@@ -464,6 +464,15 @@ const confidences = (scores: number[]): number[] => {
 const FOLDER_ROUNDS = 2;
 
 /**
+ * Set coherence (PAR-UP-10): a folder of at least COHERENT_FOLDER_MIN files, COHERENT_SHARE of them placed sure on
+ * one album, is that album; its files left unsure elsewhere or unidentified go on its free tracks when their title
+ * and length fit one (parrotImportLooseTracks). At 0.8 at most one file in five is in doubt; the pairing (a free track,
+ * a title within a few letters, the track's length) is what keeps an unrelated song off the album.
+ */
+const COHERENT_FOLDER_MIN = 4;
+const COHERENT_SHARE = 0.8;
+
+/**
  * Matches compilations as a whole first (matchCompilations), then asks about every other file on its own, a few
  * lookups at a time, then asks every album in reach once for its full tracklist. Each file's places are weighed
  * (ParrotImportMatchWeights, PAR-META-03), the folder's agreement weighed in a few rounds, and the files are placed
@@ -780,6 +789,53 @@ export const matchParrotImport = async (questions: ParrotImportFileQuestion[], l
     );
   }
 
+  // Set coherence (PAR-UP-10): a folder that nearly fills one album keeps its leftovers on that album's free tracks.
+  // Single-file scores cannot see that the album's missing tracks are exactly the folder's leftovers ("The Man I Love"
+  // listed as "A Man I Love"). A file placed sure elsewhere is never moved: that is strong evidence of its own.
+  const questionOf = new Map(questions.map((question) => [question.file, question]));
+  const inFolder = new Map<string, Set<string>>();
+  for (const question of questions) inFolder.set(folderOf(question.file), (inFolder.get(folderOf(question.file)) ?? new Set<string>()).add(question.file));
+  for (const [folder, names] of inFolder) {
+    if (names.size < COHERENT_FOLDER_MIN) continue;
+    const [key, sureCount] = [...placedOn]
+      .map(([one, placed]) => [one, placed.filter((file) => file.sure && names.has(file.file)).length] as const)
+      .sort((a, b) => b[1] - a[1])[0] ?? ["", 0];
+    if (!key || sureCount < names.size * COHERENT_SHARE) continue;
+    const leftovers = [
+      ...[...placedOn].flatMap(([from, placed]) => (from === key ? [] : placed.filter((file) => !file.sure && names.has(file.file)).map((file) => ({ file: file.file, from })))),
+      ...unidentified.filter((file) => names.has(file.file) && (file.reason === "no-match" || file.reason === "no-track")).map((file) => ({ file: file.file, from: null })),
+    ];
+    if (leftovers.length === 0) continue;
+    const owned = library.get(key);
+    const free = reach
+      .get(key)!
+      .album.tracks.filter((track) => !taken.has(`${key}|${track.disc}:${track.number}`) && !owned?.owned.some((slot) => slot.disc === track.disc && slot.number === track.number));
+    const paired = parrotImportLooseTracks(
+      leftovers.map(({ file }) => ({ file, title: questionOf.get(file)!.title, durationMs: questionOf.get(file)!.durationMs })),
+      free
+    );
+    log(`[import-match] coherence: ${folder} is ${reach.get(key)!.album.title} (${key}), ${sureCount} of ${names.size} sure; ${leftovers.length} leftover(s), ${free.length} free track(s), ${paired.size} paired`);
+    for (const { file, from } of leftovers) {
+      const track = paired.get(file);
+      if (!track) {
+        log(`[import-match] coherence: ${file} stays ${from ? `on ${reach.get(from)!.album.title}` : "unidentified"}: no free track of ${reach.get(key)!.album.title} fits its title and length`);
+        continue;
+      }
+      if (from) {
+        const old = placedOn.get(from)!.find((placed) => placed.file === file)!;
+        taken.delete(`${from}|${old.disc}:${old.number}`);
+        const rest = placedOn.get(from)!.filter((placed) => placed.file !== file);
+        if (rest.length > 0) placedOn.set(from, rest);
+        else placedOn.delete(from);
+      } else {
+        unidentified.splice(unidentified.findIndex((one) => one.file === file), 1);
+      }
+      taken.add(`${key}|${track.disc}:${track.number}`);
+      placedOn.get(key)!.push({ file, disc: track.disc, number: track.number, sure: true });
+      log(`[import-match] coherence: ${file} moved ${from ? `from ${reach.get(from)!.album.title}` : "from unidentified"} to ${reach.get(key)!.album.title} ${track.disc}-${track.number} "${track.title}"`);
+    }
+  }
+
   const albums: ParrotImportMatchedAlbum[] = [];
   for (const [key, placed] of placedOn) {
     const { album, tracklistKnown } = reach.get(key)!;
@@ -799,11 +855,65 @@ export const parrotImportMissingTracks = (album: MusicAlbum, placed: Array<{ dis
 };
 
 /** A song of the review, as far as pairing it with a track goes. */
-export type ParrotImportSong = { file: string; title: string; disc: number; number: number };
+export type ParrotImportSong = { file: string; title: string; disc: number; number: number; durationMs?: number | null };
+
+/** A leading article, which listings swap freely ("The Man I Love" listed as "A Man I Love"). */
+const LEADING_ARTICLE = /^\s*(?:the|an?|l[ae]s?|l['’]|une?|el|los|las|die|der|das|de|het|een)\s*(?<=\s|['’])/iu;
 
 /**
- * Pairs songs the user moved to an album with its tracks: first by title, then by disc and track number; each track
- * is used once. A song left without a track maps to null.
+ * How alike two titles read, 0 to 1: one minus their edit distance over the longer, bracketed parts and a leading
+ * article left out.
+ */
+export const parrotTitleLikeness = (a: string, b: string): number => {
+  const [left, right] = [baseTitle(a.replace(LEADING_ARTICLE, "")), baseTitle(b.replace(LEADING_ARTICLE, ""))];
+  if (!left || !right) return 0;
+  let row = Array.from({ length: right.length + 1 }, (_, index) => index);
+  for (let i = 1; i <= left.length; i += 1) {
+    const next = [i];
+    for (let j = 1; j <= right.length; j += 1) next[j] = Math.min(row[j]! + 1, next[j - 1]! + 1, row[j - 1]! + (left[i - 1] === right[j - 1] ? 0 : 1));
+    row = next;
+  }
+  return 1 - row[right.length]! / Math.max(left.length, right.length);
+};
+
+/** The least title likeness for a loose pairing ("Just Floatin' Along" / "Just Floating' Along" is about 0.93). */
+const LOOSE_TITLE = 0.75;
+/** The least title likeness when either length is unknown, so the title alone has to carry it. */
+const LOOSE_TITLE_NO_LENGTH = 0.85;
+
+/**
+ * Pairs songs with free tracks whose titles read nearly the same and whose lengths agree, likeliest pairs first, each
+ * track once (PAR-UP-10): a spelling the metadata lists otherwise ("Just Floatin' Along" / "Just Floating' Along").
+ * The length may be off by the scoring's own unit (lengthScaleMs, or lengthShare of the track). Unpaired songs are absent.
+ */
+export const parrotImportLooseTracks = (songs: Array<{ file: string; title: string; durationMs?: number | null }>, free: Iterable<MusicAlbumTrack>): Map<string, MusicAlbumTrack> => {
+  const { lengthScaleMs, lengthShare } = PARROT_IMPORT_MATCH_WEIGHTS;
+  const candidates: Array<{ file: string; track: MusicAlbumTrack; likeness: number }> = [];
+  const tracks = [...free];
+  for (const song of songs) {
+    for (const track of tracks) {
+      const likeness = parrotTitleLikeness(song.title, track.title);
+      const known = song.durationMs != null && track.durationMs != null;
+      if (likeness < (known ? LOOSE_TITLE : LOOSE_TITLE_NO_LENGTH)) continue;
+      if (known && Math.abs(song.durationMs! - track.durationMs!) > Math.max(lengthScaleMs, lengthShare * track.durationMs!)) continue;
+      candidates.push({ file: song.file, track, likeness });
+    }
+  }
+  candidates.sort((a, b) => b.likeness - a.likeness);
+  const paired = new Map<string, MusicAlbumTrack>();
+  const used = new Set<MusicAlbumTrack>();
+  for (const { file, track } of candidates) {
+    if (paired.has(file) || used.has(track)) continue;
+    paired.set(file, track);
+    used.add(track);
+  }
+  return paired;
+};
+
+/**
+ * Pairs songs the user moved to an album with its tracks: first by title, then by disc and track number, then by a
+ * title that reads nearly the same with a fitting length (parrotImportLooseTracks); each track is used once. A song
+ * left without a track maps to null.
  */
 export const matchParrotImportTracks = (songs: ParrotImportSong[], album: MusicAlbum, taken: Array<{ disc: number; number: number }> = []): Map<string, MusicAlbumTrack | null> => {
   const busy = new Set(taken.map((track) => `${track.disc}:${track.number}`));
@@ -819,11 +929,14 @@ export const matchParrotImportTracks = (songs: ParrotImportSong[], album: MusicA
     matched.set(song.file, track);
   }
   for (const song of songs) {
-    if (matched.has(song.file)) continue;
-    const track = song.number > 0 ? [...free].find((candidate) => candidate.disc === (song.disc || 1) && candidate.number === song.number) : undefined;
-    if (track) free.delete(track);
-    matched.set(song.file, track ?? null);
+    if (matched.has(song.file) || !(song.number > 0)) continue;
+    const track = [...free].find((candidate) => candidate.disc === (song.disc || 1) && candidate.number === song.number);
+    if (!track) continue;
+    free.delete(track);
+    matched.set(song.file, track);
   }
+  const loose = parrotImportLooseTracks(songs.filter((song) => !matched.has(song.file)), free);
+  for (const song of songs) if (!matched.has(song.file)) matched.set(song.file, loose.get(song.file) ?? null);
   return matched;
 };
 

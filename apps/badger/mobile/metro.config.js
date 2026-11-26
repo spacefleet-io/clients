@@ -2,7 +2,7 @@ const { getDefaultConfig, mergeConfig } = require('@react-native/metro-config');
 const path = require('path');
 // The Google-free Android build (SF_FOSS=1, PLAT-MOBILE-06): Google Cast and Firebase imports resolve to stand-ins.
 // Outside it (Play, iOS), @space/mobile-self-update resolves to its stand-in (REL-UPD-06).
-const { withFossStubs, withSelfUpdate } = require('../../../packages/mobile-shell/foss.cjs');
+const { withFossStubs, withSelfUpdate } = require('@space/mobile-shell/foss');
 
 /**
  * Metro configuration

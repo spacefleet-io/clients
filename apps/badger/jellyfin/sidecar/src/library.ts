@@ -225,7 +225,6 @@ export type IntegrationMovie = {
   originalLanguage: string | null;
   year: number | null;
   overview: string | null;
-  rating: number | null;
   genres: string[];
   addedAt: string;
   posterPath: string | null;
@@ -388,7 +387,6 @@ const commonFields = (row: MediaRow, details: MediaDetails, prefs: TrackPrefs | 
   originalLanguage: row.originalLanguage,
   year: parseYear(row.year),
   overview: row.overview,
-  rating: row.rating,
   genres: (row.genres ?? []).map((id) => CATALOG_GENRES[id]).filter((name): name is string => Boolean(name)),
   addedAt: row.addedAt,
   posterPath: row.posterPath,

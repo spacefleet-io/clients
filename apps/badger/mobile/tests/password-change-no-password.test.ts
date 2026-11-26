@@ -13,7 +13,7 @@ import i18next, { type i18n as I18n } from "i18next";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type * as SharedApi from "@space/shared/api";
 import { withSignInErrorTexts } from "@space/shared/signInError";
-import en from "../../../../packages/mobile-shell/src/i18n/en.json";
+import en from "@space/mobile-shell/i18n/en.json";
 
 const h = vi.hoisted(() => ({ i18n: null as I18n | null, changePassword: vi.fn() }));
 

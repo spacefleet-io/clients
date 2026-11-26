@@ -87,6 +87,7 @@
     "./format": "./src/format.ts",
     "./frenchTypography": "./src/frenchTypography.ts",
     "./continueWatching": "./src/continueWatching.ts",
+    "./homeLayout": "./src/homeLayout.ts",
     "./websiteLinks": "./src/websiteLinks.ts",
     "./offlineFilename": "./src/offlineFilename.ts",
     "./exportLayout": "./src/exportLayout.ts",
@@ -115,7 +116,9 @@
     "./keptLibraryKey": "./src/keptLibraryKey.ts",
     "./accountDeletionLabels": "./src/accountDeletionLabels.ts",
     "./subtitleFetchFlow": "./src/subtitleFetchFlow.ts",
-    "./libraryKeyWords": "./src/libraryKeyWords.ts"
+    "./libraryKeyWords": "./src/libraryKeyWords.ts",
+    "./subtitleFetchCopy/en.json": "./src/subtitleFetchCopy/en.json",
+    "./personalTokenScopes": "./src/personalTokenScopes.ts"
   },
   "dependencies": {
     "@noble/hashes": "^2.4.0",

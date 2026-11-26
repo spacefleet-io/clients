@@ -647,7 +647,6 @@
         "originalTitle": "Titre original",
         "originalLanguage": "Langue d’origine",
         "year": "Année de sortie",
-        "rating": "Note",
         "genres": "Genres",
         "overview": "Synopsis",
         "poster": "Affiche",
@@ -2011,7 +2010,7 @@
       "title": "Autoriser «\u202f{{name}}\u202f» à utiliser votre bibliothèque\u202f?",
       "description": {
         "read": "Cet outil veut consulter votre bibliothèque\u202f: titres, détails, listes de lecture, progression et ce qui est téléchargé sur cet ordinateur. Il ne peut rien modifier.",
-        "write": "Cet outil veut consulter votre bibliothèque et en modifier une partie\u202f: la progression de lecture, les détails des titres (nom, résumé, année, note) et vos listes de lecture. Il ne peut pas supprimer de titres ni toucher aux réglages ou aux clés."
+        "write": "Cet outil veut consulter votre bibliothèque et en modifier une partie\u202f: la progression de lecture, les détails des titres (nom, résumé, année) et vos listes de lecture. Il ne peut pas supprimer de titres ni toucher aux réglages ou aux clés."
       },
       "selfDeclared": "Le nom vient de l'outil lui-même et n'est pas vérifié. N'autorisez qu'un outil que vous venez de lancer.",
       "reason": "Raison donnée\u202f: {{reason}}",

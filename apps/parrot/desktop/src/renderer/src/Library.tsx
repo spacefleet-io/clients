@@ -853,6 +853,7 @@ export default function Library({ t, state, onState }: Props) {
       return (
         <ClockedNowPlaying
           like={like(playingTrack)}
+          back={{ label: t("back"), onClick: back }}
           track={playingTrack}
           lyrics={lyrics?.trackId === playingTrack.id ? lyrics.lyrics : undefined}
           fetchLyrics={{

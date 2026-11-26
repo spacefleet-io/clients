@@ -30,7 +30,7 @@ vi.mock("electron", () => ({
 const runFfmpegMock = vi.fn();
 // ingest-core resolves @space/ffmpeg to the workspace package source (not the
 // desktop's installed copy), so mock that file: no real ffmpeg runs here.
-vi.mock("../../../../packages/ffmpeg/src/index.ts", () => ({
+vi.mock("@space/ffmpeg", () => ({
   runFfmpeg: runFfmpegMock,
   runFfprobe: vi.fn(),
   createFfmpegTask: vi.fn(),

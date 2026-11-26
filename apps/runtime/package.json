@@ -33,6 +33,7 @@
     "@space/tool-access": "workspace:*"
   },
   "devDependencies": {
+    "@space/runtime-host": "workspace:*",
     "bun-types": "1.4.5",
     "typescript": "^6.0.3",
     "vitest": "^5.1.0"

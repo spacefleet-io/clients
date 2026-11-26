@@ -647,7 +647,6 @@
         "originalTitle": "Original title",
         "originalLanguage": "Original language",
         "year": "Release year",
-        "rating": "Rating",
         "genres": "Genres",
         "overview": "Overview",
         "poster": "Poster",
@@ -2011,7 +2010,7 @@
       "title": "Allow \"{{name}}\" to use your library?",
       "description": {
         "read": "This tool wants to see your library: titles, details, playlists, progress and what is downloaded on this computer. It cannot change anything.",
-        "write": "This tool wants to see your library and change some of it: watch progress, title details (name, overview, year, rating) and your playlists. It cannot delete titles or touch settings or keys."
+        "write": "This tool wants to see your library and change some of it: watch progress, title details (name, overview, year) and your playlists. It cannot delete titles or touch settings or keys."
       },
       "selfDeclared": "The name comes from the tool itself and is not verified. Only approve a tool you just started.",
       "reason": "Reason given: {{reason}}",

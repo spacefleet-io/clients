@@ -59,7 +59,7 @@ vi.mock("@space/mobile-shell/theme", () => ({
 }));
 vi.mock("@space/mobile-shell/i18n", () => ({ useTranslation: () => ({ t: (key: string) => key, i18n: { language: "en" } }) }));
 vi.mock("@space/mobile-shell/components", async () => ({
-  MobileTabPager: (await vi.importActual<typeof import("../../../../packages/mobile-shell/src/components/mobile-tab-pager")>(
+  MobileTabPager: (await vi.importActual<typeof import("@space/mobile-shell/tab-pager")>(
     "../../../../packages/mobile-shell/src/components/mobile-tab-pager"
   )).MobileTabPager,
   MobileFounderNoticeHost: () => null,

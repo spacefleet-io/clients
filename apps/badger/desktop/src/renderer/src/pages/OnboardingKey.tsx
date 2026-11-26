@@ -45,7 +45,8 @@ import {
   type LibraryKeyTyped,
 } from "@space/desktop-shell/components";
 import mascotWebp from "@/assets/mascot.webp";
-import { verifyPairedKey, type ApprovedPairing, type PairedKeyCheck } from "@/lib/pairedSignIn";
+import type { PairedKeyCheck } from "@space/desktop-shell/pairing";
+import { checkKeyForBadger, verifyPairedKey, type ApprovedPairing } from "@/lib/pairedSignIn";
 import { pairedKeyCheckDeps } from "@/lib/pairedSignInDeps";
 import { rendererLogger } from "@/logger";
 import { loadFirstSetup } from "../components/firstSetupSteps";
@@ -434,46 +435,29 @@ export default function OnboardingKey() {
     return check;
   };
 
-  /** The step's Continue: the step keeps the typed words and shows "Validating…" until this settles. */
+  /**
+   * The step's Continue: the step keeps the typed words and shows "Validating…" until this settles. The key goes
+   * through the desktops' one account key check (PRIV-KEY-01), like a key from another device.
+   */
   // tla: VaultKeys/Enter
   const submitEnteredKey = async ({ keyBase64, words }: LibraryKeyTyped) => {
     if (!token) return;
     setEnterError(null);
     try {
-      // Lightweight validation: ensure the API has a DB and that we can decrypt it later.
+      if (!user) throw new Error("LIBRARY_USER_MISSING");
       const meta = await getLibraryMetaForKeyStep(token);
-      // The account's key probe decides first (PRIV-KEY-01: one key per account, the probe is the account's): with
-      // no Badger library yet, a key made in Parrot is still the only right one, and a wrong key here would encrypt
-      // Badger's library under it and split the apps for good. WebCrypto rejects a wrong key with a bare
-      // OperationError, so any failure to open the probe is a wrong key.
-      if (meta.keyProbe) {
-        const opened = await decryptBase64ToBytes(keyBase64, meta.keyProbe).then(
-          () => true,
-          () => false,
-        );
-        if (!opened) {
-          setEnterError(libraryKeyStepText(pairLanguage, "badger")("wrongKey"));
-          return;
-        }
+      const result = await checkKeyForBadger(pairedKeyCheckDeps, token, keyBase64, user.id, meta);
+      if (!result.ok) {
+        setEnterError(result.error === "network" ? t("onboarding.key.errorValidate") : libraryKeyStepText(pairLanguage, "badger")("wrongKey"));
+        return;
       }
-      if (!meta.exists) {
-        if (meta.bootstrapRequired) {
-          await keepKeyAndOpenLibrary(token, keyBase64, words);
-          return;
-        }
+      if (!meta.exists && !meta.bootstrapRequired) {
         // Keep typed key in local state and avoid wiping stored key on transient/remote issues.
         setMode("enter");
         setPromptReason("missing");
         setEnterError(t("onboarding.key.errorNoRemote"));
         return;
       }
-
-      if (!meta.keyProbe) {
-        if (!user) throw new Error("LIBRARY_USER_MISSING");
-        const testDb = await LibraryDb.open(token, keyBase64, user.id);
-        testDb.close();
-      }
-
       await keepKeyAndOpenLibrary(token, keyBase64, words);
     } catch (err) {
       setEnterError(isDecryptFailureMessage(err) ? libraryKeyStepText(pairLanguage, "badger")("wrongKey") : t("onboarding.key.errorValidate"));

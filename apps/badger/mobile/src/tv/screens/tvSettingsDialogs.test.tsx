@@ -17,7 +17,7 @@ import { act, create, type ReactTestInstance, type ReactTestRenderer } from "rea
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { initI18n, translate } from "@space/mobile-shell/i18n";
 import type { Session } from "@space/shared/api";
-import { dialogInitialFocusIndex } from "../components/TvListDialog";
+import { dialogInitialFocusIndex } from "@space/mobile-shell/tv/TvListDialog";
 import { choiceOpensWindow, INLINE_CHOICE_LIMIT } from "../../lib/choiceLayout";
 import { rememberTvSettingsGroup, resetTvSettingsGroup, type TvSettingsGroupId } from "../lib/tvSettingsGroups";
 import { TvSettingsScreen } from "./TvSettingsScreen";

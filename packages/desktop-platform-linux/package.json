@@ -7,7 +7,11 @@
   "exports": {
     ".": "./src/index.ts",
     "./paths": "./src/paths.ts",
-    "./legacyMigration": "./src/legacyMigration.ts"
+    "./legacyMigration": "./src/legacyMigration.ts",
+    "./packaging/file-modes": "./packaging/file-modes.mjs",
+    "./packaging/linux-packages": "./packaging/linux-packages.mjs",
+    "./testing/linux-builder-checks": "./testing/linuxBuilderChecks.ts",
+    "./packaging/system-update": "./packaging/system-update.mjs"
   },
   "scripts": {
     "test": "bunx vitest run"

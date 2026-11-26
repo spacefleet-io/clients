@@ -39,6 +39,7 @@
     "./updater-prompt": "./src/updater/DesktopUpdatePrompt.tsx",
     "./updater-strings": "./src/updater/strings.ts",
     "./tour": "./src/tour/index.ts",
+    "./account-key-check": "./src/accountKeyCheck.ts",
     "./library-key-erase": "./src/libraryKeyErase.ts",
     "./library-kept-key": "./src/libraryKeptKey.ts",
     "./storage-units": "./src/storageUnits.ts",
@@ -46,18 +47,24 @@
     "./client-identity": "./src/clientIdentity.ts",
     "./sibling": "./src/sibling/types.ts",
     "./sibling-main": "./src/sibling/index.ts",
-    "./test-keychain-args": "./src/testKeychainArgs.mjs"
+    "./test-keychain-args": "./src/testKeychainArgs.mjs",
+    "./main-shell/userDataDir": "./src/main-shell/userDataDir.ts",
+    "./pair-with-phone": "./src/components/pair-with-phone.tsx",
+    "./desktop-job-card": "./src/components/desktop-job-card.tsx"
   },
   "devDependencies": {
-    "typescript": "^6.0.3",
-    "vitest": "^5.1.0",
+    "@space/desktop-platform-linux": "workspace:*",
+    "@space/desktop-platform-macos": "workspace:*",
+    "@space/desktop-platform-windows": "workspace:*",
+    "@testing-library/react": "^16.3.3",
+    "@types/node": "^24.19.1",
+    "@types/qrcode": "^1.5.5",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
-    "@testing-library/react": "^16.3.3",
     "jsdom": "^31.0.1",
     "react-dom": "^19.3.1",
-    "@types/qrcode": "^1.5.5",
-    "@types/node": "^24.19.1"
+    "typescript": "^6.0.3",
+    "vitest": "^5.1.0"
   },
   "dependencies": {
     "@space/legal": "workspace:*",

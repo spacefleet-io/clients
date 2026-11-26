@@ -8,7 +8,8 @@
  * window: it only learns "verified" or "mismatch".
  */
 import type { PairedKeyCheck, PairingHandOver } from "@space/desktop-shell/pairing";
-import type { ParrotKeyResult, ParrotUser } from "../shared/ipc";
+import type { AccountKeyResult } from "@space/desktop-shell/account-key-check";
+import type { ParrotUser } from "../shared/ipc";
 
 export type ParrotPairedSignInDeps = {
   /** The account this computer was signed in to before, if any. */
@@ -16,7 +17,7 @@ export type ParrotPairedSignInDeps = {
   /** A different account takes over: save its queued edits, then forget its session, key, library and covers. */
   forgetPreviousAccount: () => Promise<void>;
   /** Whether `key` opens the account's library (Parrot's, else Badger's), checked with `token`; stores nothing. */
-  verifyKey: (token: string, key: string) => Promise<ParrotKeyResult>;
+  verifyKey: (token: string, key: string) => Promise<AccountKeyResult>;
   signIn: (user: ParrotUser, token: string) => Promise<void>;
   storeKey: (key: string) => Promise<void>;
   log: (line: string) => void;
@@ -48,7 +49,7 @@ export const completeParrotPairedSignIn = async (deps: ParrotPairedSignInDeps, h
  * typed key (`setLibraryKey`), so a key that does not open the library is never stored.
  */
 export const completeParrotKeyPairing = async (
-  setLibraryKey: (key: string) => Promise<ParrotKeyResult>,
+  setLibraryKey: (key: string) => Promise<AccountKeyResult>,
   handOver: PairingHandOver,
   log: (line: string) => void,
 ): Promise<PairedKeyCheck> => {

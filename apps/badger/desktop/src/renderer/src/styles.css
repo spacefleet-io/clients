@@ -5,24 +5,6 @@
 @import "@space/ui/styles/float.css";
 @config "../../../tailwind.config.cjs";
 
-/* UI fonts ship with the app (variable woff2, SIL OFL): first paint must never
-   wait on a third-party fetch (run 7950 movie-playback stalled on Google Fonts). */
-@font-face {
-  font-family: "Inter";
-  font-style: normal;
-  font-weight: 100 900;
-  font-display: swap;
-  src: url("./assets/fonts/InterVariable.woff2") format("woff2");
-}
-
-@font-face {
-  font-family: "Space Grotesk";
-  font-style: normal;
-  font-weight: 300 700;
-  font-display: swap;
-  src: url("./assets/fonts/SpaceGroteskVariable.woff2") format("woff2");
-}
-
 @layer base {
   a {
     cursor: pointer;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolveTerminalCAS } from "../index";
+import { resolveTerminalCAS } from "../src/index";
 
 const SUITE = "runtime-jobs-transitions-cas";
 

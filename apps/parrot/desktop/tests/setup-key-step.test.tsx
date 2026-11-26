@@ -13,7 +13,8 @@ import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { generateLibraryKeyWords } from "@space/shared/libraryKeyWords";
-import type { ParrotCreateKeyResult, ParrotKeyResult, ParrotState } from "../src/shared/ipc";
+import type { AccountKeyResult } from "@space/desktop-shell/account-key-check";
+import type { ParrotCreateKeyResult, ParrotState } from "../src/shared/ipc";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -43,7 +44,7 @@ describe("@req UX-KEY-01 Parrot desktop setup key step (shared LibraryKeyStep)",
   let root: Root;
   let current: ParrotState;
   const createLibraryKey = vi.fn(async (): Promise<ParrotCreateKeyResult> => ({ ok: false, error: "hasLibrary" }));
-  const setLibraryKey = vi.fn(async (_key: string): Promise<ParrotKeyResult> => ({ ok: true }));
+  const setLibraryKey = vi.fn(async (_key: string): Promise<AccountKeyResult> => ({ ok: true }));
   const eraseLibrary = vi.fn(async (_password: string, _code?: string) => ({ status: "erased" as const }));
   const getState = vi.fn(async () => ({ ...state, hasLibraryKey: true }));
   const saveSetup = vi.fn(async (patch: Partial<ParrotState["setup"]>) => ({ ...current, setup: { ...current.setup, ...patch } }));

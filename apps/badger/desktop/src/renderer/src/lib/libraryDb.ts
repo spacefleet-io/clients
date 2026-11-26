@@ -251,7 +251,6 @@ export class LibraryDb {
       originalLanguage?: string | null;
       overview?: string | null;
       year?: string | null;
-      rating?: number | null;
       posterPath?: string | null;
       backdropPath?: string | null;
       genres?: number[];

@@ -27,11 +27,11 @@ import { withProviderSignInTexts } from "@space/shared/providerSignIn";
 import { withAccountDeletionLabels } from "@space/shared/accountDeletionLabels";
 import { BARE_LIBRARY as SHARED_BARE_LIBRARY, bareLibraryOutside } from "@space/shared/libraryName";
 import { keySavedWarningText } from "@space/shared/keySavedWarning";
-import de from "../../../../packages/mobile-shell/src/i18n/de.json";
-import en from "../../../../packages/mobile-shell/src/i18n/en.json";
-import es from "../../../../packages/mobile-shell/src/i18n/es.json";
-import fr from "../../../../packages/mobile-shell/src/i18n/fr.json";
-import nl from "../../../../packages/mobile-shell/src/i18n/nl.json";
+import de from "@space/mobile-shell/i18n/de.json";
+import en from "@space/mobile-shell/i18n/en.json";
+import es from "@space/mobile-shell/i18n/es.json";
+import fr from "@space/mobile-shell/i18n/fr.json";
+import nl from "@space/mobile-shell/i18n/nl.json";
 
 type Tree = { [key: string]: string | Tree };
 

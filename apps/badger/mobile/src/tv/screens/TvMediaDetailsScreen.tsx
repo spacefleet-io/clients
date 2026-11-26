@@ -22,7 +22,7 @@ import type { RootStackParamList } from "../../navigation/AppNavigator";
 import { useLibraryActions, useLibraryData } from "../../store/library";
 import { theme } from "../../theme/theme";
 import { TvFocusable } from "@space/mobile-shell/tv/TvFocusable";
-import { TvListDialog, type TvListDialogItem } from "../components/TvListDialog";
+import { TvListDialog, type TvListDialogItem } from "@space/mobile-shell/tv/TvListDialog";
 import { TvPosterCard } from "../components/TvPosterCard";
 import { TvDetailsCast } from "../components/details/TvDetailsCast";
 import { TvDetailsEpisodes } from "../components/details/TvDetailsEpisodes";
@@ -31,7 +31,6 @@ import { TvTrailerQr, trailerShownAsQr } from "../components/details/TvTrailerQr
 import { TvMediaTracksBlock } from "../components/details/TvMediaTracksBlock";
 import {
   episodeMediaBlocks,
-  formatStarRating,
   minutesLeft,
   movieMediaBlock,
   runtimeParts,
@@ -416,7 +415,7 @@ export const TvMediaDetailsScreen = () => {
       })
     : t("details.play");
 
-  // UX-TV-06: the year, then a movie's length or a show's seasons, the catalog rating, and the original language.
+  // UX-TV-06: the year, then a movie's length or a show's seasons, and the original language; never a rating (META-SRC-05).
   const runtime = show ? null : runtimeParts(movieBlock?.durationSeconds ?? null);
   const seasonCount = details.seasons.filter((season) => season.seasonNumber > 0).length;
   const languageCode = details.originalLanguage?.toLowerCase() ?? null;
@@ -431,7 +430,6 @@ export const TvMediaDetailsScreen = () => {
           ? t("tvShell.details.runtimeHours", runtime)
           : t("tvShell.details.runtimeMinutes", { minutes: runtime.minutes })
         : null,
-    typeof details.rating === "number" && details.rating > 0 ? formatStarRating(details.rating) : null,
     languageCode ? t(`languageNames.${languageCode}`, { defaultValue: languageCode.toUpperCase() }) : null,
   ]
     .filter(Boolean)

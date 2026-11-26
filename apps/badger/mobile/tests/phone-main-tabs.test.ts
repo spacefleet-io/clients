@@ -14,7 +14,7 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { changeLanguage, initI18n } from "@space/mobile-shell/i18n";
 import { MainShellScreen } from "../src/screens/MainShellScreen";
 import type { SeeAllTarget } from "../src/lib/phoneHome";
-import { tabBarHalfFits, tabBarHalfWidth } from "../../../../packages/mobile-shell/src/components/mobile-tab-bar-geometry";
+import { tabBarHalfFits, tabBarHalfWidth } from "@space/mobile-shell/tab-bar-geometry";
 
 /**
  * Each shipped tab label's width in points as the bar draws it (Inter semibold 11 pt, as written), measured on an iOS

@@ -1024,7 +1024,11 @@
       "recentlyAdded": "Recent toegevoegd",
       "movies": "Films",
       "shows": "Series",
-      "favorites": "Favorieten"
+      "favorites": "Favorieten",
+      "unwatched": "Nog niet gezien",
+      "rewatch": "Opnieuw kijken",
+      "playlist": "Afspeellijst",
+      "genre": "Genre"
     },
     "seeAll": "Alles bekijken",
     "hero": {

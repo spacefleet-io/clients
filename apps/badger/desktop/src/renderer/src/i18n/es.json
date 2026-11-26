@@ -647,7 +647,6 @@
         "originalTitle": "Título original",
         "originalLanguage": "Idioma original",
         "year": "Año de estreno",
-        "rating": "Valoración",
         "genres": "Géneros",
         "overview": "Sinopsis",
         "poster": "Póster",
@@ -2011,7 +2010,7 @@
       "title": "¿Permitir que «{{name}}» use tu mediateca?",
       "description": {
         "read": "Esta herramienta quiere ver tu mediateca: títulos, detalles, listas, progreso y lo que está descargado en esta computadora. No puede cambiar nada.",
-        "write": "Esta herramienta quiere ver tu mediateca y cambiar parte de ella: el progreso de visualización, los detalles de los títulos (nombre, sinopsis, año, valoración) y tus listas. No puede eliminar títulos ni tocar los ajustes ni las claves."
+        "write": "Esta herramienta quiere ver tu mediateca y cambiar parte de ella: el progreso de visualización, los detalles de los títulos (nombre, sinopsis, año) y tus listas. No puede eliminar títulos ni tocar los ajustes ni las claves."
       },
       "selfDeclared": "El nombre lo indica la propia herramienta y no está verificado. Autoriza solo una herramienta que acabes de iniciar.",
       "reason": "Motivo indicado: {{reason}}",

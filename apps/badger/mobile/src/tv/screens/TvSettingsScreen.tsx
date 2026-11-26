@@ -46,7 +46,8 @@ import { useProfiles } from "../../lib/profiles/profileStore";
 import { mobileCreditsSource } from "../../lib/metadata/runtime";
 import type { RootStackParamList } from "../../navigation/AppNavigator";
 import { useAuth } from "../../store/auth";
-import { TvListDialog, type TvListDialogItem } from "../components/TvListDialog";
+import { TvListDialog, type TvListDialogItem } from "@space/mobile-shell/tv/TvListDialog";
+import { TvSignOutKeyDialog } from "@space/mobile-shell/tv/TvSignOutKeyDialog";
 import { rememberTvSettingsGroup, tvSettingsGroups, tvSettingsOpenGroup, type TvSettingsGroupId } from "../lib/tvSettingsGroups";
 import { focusDestination, type TvViewInstance } from "@space/mobile-shell/tv/tvViewInstance";
 import { useTvScale, useTvStyles } from "@space/mobile-shell/tv/tvScale";
@@ -312,24 +313,20 @@ const TvSettingsContent = ({ token, email }: { token: string; email: string | nu
     ];
   }, [closeDialog, dialog, logout, signOutDevice, t]);
 
-  const keyItems = useMemo<TvListDialogItem[]>(() => {
-    if (dialog?.kind !== "signOutKey") return [];
-    const { from } = dialog;
-    return [
-      { key: "cancel", label: t("account.signOutKey.cancel"), testID: "tv-signout-key-cancel", onPress: closeDialog },
-      {
-        key: "confirm",
-        label: t("account.signOutKey.confirm"),
-        danger: true,
-        testID: "tv-signout-key-confirm",
-        onPress: () => {
-          log("signOutKey.confirmed", { from });
-          setDialog(null);
-          void logout("signOut");
-        },
-      },
-    ];
-  }, [closeDialog, dialog, logout, t]);
+  const keyText = useMemo(
+    () => ({
+      title: t("account.signOutKey.title"),
+      body: t("account.signOutKey.body"),
+      cancel: t("account.signOutKey.cancel"),
+      confirm: t("account.signOutKey.confirm"),
+    }),
+    [t],
+  );
+  const confirmSignOutKey = useCallback(() => {
+    log("signOutKey.confirmed", { from: dialog?.kind === "signOutKey" ? dialog.from : null });
+    setDialog(null);
+    void logout("signOut");
+  }, [dialog, logout]);
 
   const devicesSummary =
     devices.sessions.length === 0
@@ -685,16 +682,7 @@ const TvSettingsContent = ({ token, email }: { token: string; email: string | nu
           onClose={closeDialog}
         />
       ) : null}
-      {dialog?.kind === "signOutKey" ? (
-        <TvListDialog
-          testID="tv-signout-key-dialog"
-          title={t("account.signOutKey.title")}
-          message={t("account.signOutKey.body")}
-          items={keyItems}
-          initialFocusKey="cancel"
-          onClose={closeDialog}
-        />
-      ) : null}
+      {dialog?.kind === "signOutKey" ? <TvSignOutKeyDialog text={keyText} onCancel={closeDialog} onConfirm={confirmSignOutKey} /> : null}
     </View>
   );
 };

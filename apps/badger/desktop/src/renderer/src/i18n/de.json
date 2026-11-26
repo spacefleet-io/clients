@@ -647,7 +647,6 @@
         "originalTitle": "Originaltitel",
         "originalLanguage": "Originalsprache",
         "year": "Erscheinungsjahr",
-        "rating": "Bewertung",
         "genres": "Genres",
         "overview": "Handlung",
         "poster": "Poster",
@@ -2011,7 +2010,7 @@
       "title": "„{{name}}“ Zugriff auf deine Mediathek erlauben?",
       "description": {
         "read": "Dieses Tool möchte deine Mediathek sehen: Titel, Details, Playlists, Fortschritt und was auf diesem Computer heruntergeladen ist. Es kann nichts ändern.",
-        "write": "Dieses Tool möchte deine Mediathek sehen und Teile davon ändern: Wiedergabefortschritt, Titeldetails (Name, Beschreibung, Jahr, Bewertung) und deine Playlists. Es kann keine Titel löschen und keine Einstellungen oder Schlüssel anfassen."
+        "write": "Dieses Tool möchte deine Mediathek sehen und Teile davon ändern: Wiedergabefortschritt, Titeldetails (Name, Beschreibung, Jahr) und deine Playlists. Es kann keine Titel löschen und keine Einstellungen oder Schlüssel anfassen."
       },
       "selfDeclared": "Der Name stammt vom Tool selbst und ist nicht überprüft. Erlaube nur ein Tool, das du gerade selbst gestartet hast.",
       "reason": "Angegebener Grund: {{reason}}",

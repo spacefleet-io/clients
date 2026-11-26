@@ -647,7 +647,6 @@
         "originalTitle": "Originele titel",
         "originalLanguage": "Originele taal",
         "year": "Jaar van uitgave",
-        "rating": "Beoordeling",
         "genres": "Genres",
         "overview": "Samenvatting",
         "poster": "Poster",
@@ -2011,7 +2010,7 @@
       "title": "\"{{name}}\" toegang geven tot je mediatheek?",
       "description": {
         "read": "Deze tool wil je mediatheek bekijken: titels, details, afspeellijsten, voortgang en wat er op deze computer is gedownload. Hij kan niets wijzigen.",
-        "write": "Deze tool wil je mediatheek bekijken en deels wijzigen: kijkvoortgang, titeldetails (naam, beschrijving, jaar, beoordeling) en je afspeellijsten. Hij kan geen titels verwijderen en niet aan instellingen of sleutels komen."
+        "write": "Deze tool wil je mediatheek bekijken en deels wijzigen: kijkvoortgang, titeldetails (naam, beschrijving, jaar) en je afspeellijsten. Hij kan geen titels verwijderen en niet aan instellingen of sleutels komen."
       },
       "selfDeclared": "De naam komt van de tool zelf en is niet gecontroleerd. Keur alleen een tool goed die je net zelf hebt gestart.",
       "reason": "Opgegeven reden: {{reason}}",

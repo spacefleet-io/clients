@@ -1,14 +1,17 @@
 import React, { useEffect, useMemo, useRef } from "react";
 import { BackHandler, ScrollView, StyleSheet, Text, TVFocusGuideView, View } from "react-native";
 import { Check } from "lucide-react-native";
-import { SkyCover } from "@space/mobile-shell/components";
-import { useTranslation } from "@space/mobile-shell/i18n";
-import { theme } from "../../theme/theme";
-import { useTvMenuKeyHold } from "@space/mobile-shell/tv/useTvMenuKey";
-import { TV_SAFE_MARGIN_X, TV_SAFE_MARGIN_Y } from "@space/mobile-shell/tv/layout";
-import { TvFocusable } from "@space/mobile-shell/tv/TvFocusable";
-import { TV_RADIUS } from "../lib/tvLook";
-import { useTvScale, useTvStyles } from "@space/mobile-shell/tv/tvScale";
+import { SkyCover } from "../components";
+import { useTranslation } from "../i18n";
+import { defaultMobileShellTheme, useMobileShellTheme } from "../theme";
+import { useTvMenuKeyHold } from "./useTvMenuKey";
+import { TV_SAFE_MARGIN_X, TV_SAFE_MARGIN_Y } from "./layout";
+import { TvFocusable } from "./TvFocusable";
+import { TV_RADII } from "./tokens";
+import { useTvScale, useTvStyles } from "./tvScale";
+
+/** The fleet's shared dark surfaces (the same in every app); the accent comes from the app's shell theme. */
+const theme = defaultMobileShellTheme;
 
 export type TvListDialogItem = {
   key: string;
@@ -46,12 +49,14 @@ export const dialogInitialFocusIndex = (items: readonly Pick<TvListDialogItem, "
 
 /**
  * A TV window over the page that holds a list and scrolls on its own (UX-LIST-01): a long choice (the default audio
- * language), a list that grows with the user's data ("Your devices") or a confirmation. The focus is trapped inside it,
- * starts on the current choice, and Back (Menu on Apple TV) or the Close button closes it (UX-TV-01, UX-A11Y-04). Render
- * it as the last child of a full-size container: it covers that container.
+ * language), a list that grows with the user's data ("Your devices") or a confirmation (the sign-out key question,
+ * ACCT-DEV-03, in Badger TV and Parrot TV). The focus is trapped inside it, starts on the current choice, and Back (Menu
+ * on Apple TV) or the Close button closes it (UX-TV-01, UX-A11Y-04). Render it as the last child of a full-size
+ * container: it covers that container. The current choice is drawn in the app's accent (`useMobileShellTheme`).
  */
 export const TvListDialog = ({ title, message, error, items, initialFocusKey, onClose, testID }: TvListDialogProps) => {
   const { t } = useTranslation();
+  const { colors } = useMobileShellTheme();
   const scale = useTvScale();
   const styles = useTvStyles(baseStyles);
   const focusIndex = useMemo(() => dialogInitialFocusIndex(items, initialFocusKey), [initialFocusKey, items]);
@@ -88,7 +93,7 @@ export const TvListDialog = ({ title, message, error, items, initialFocusKey, on
           {items.map((item, index) => (
             <TvFocusable
               key={item.key}
-              style={[styles.row, item.selected && styles.rowSelected]}
+              style={[styles.row, item.selected && { backgroundColor: colors.accentSoft }]}
               scale={1.02}
               hasTVPreferredFocus={index === focusIndex}
               onPress={item.onPress}
@@ -97,7 +102,7 @@ export const TvListDialog = ({ title, message, error, items, initialFocusKey, on
               accessibilityState={{ selected: item.selected === true }}
             >
               <View style={styles.rowText}>
-                <Text style={[styles.rowLabel, item.selected && styles.rowLabelSelected, item.danger && styles.rowLabelDanger]} numberOfLines={1}>
+                <Text style={[styles.rowLabel, item.selected && { color: colors.accent }, item.danger && styles.rowLabelDanger]} numberOfLines={1}>
                   {item.label}
                 </Text>
                 {item.detail ? (
@@ -106,7 +111,7 @@ export const TvListDialog = ({ title, message, error, items, initialFocusKey, on
                   </Text>
                 ) : null}
               </View>
-              {item.selected ? <Check size={22 * scale} color={theme.colors.accent} /> : null}
+              {item.selected ? <Check size={22 * scale} color={colors.accent} /> : null}
             </TvFocusable>
           ))}
         </ScrollView>
@@ -140,7 +145,7 @@ const baseStyles = StyleSheet.create({
     maxWidth: 760,
     maxHeight: "100%",
     // A square window, like desktop dialogs (UX-TV-04); opaque, as it sits over the dimmed page.
-    borderRadius: TV_RADIUS.panel,
+    borderRadius: TV_RADII.card,
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
     borderColor: theme.colors.border,
@@ -154,7 +159,7 @@ const baseStyles = StyleSheet.create({
   list: { flexGrow: 0, flexShrink: 1 },
   listContent: { gap: 6, paddingVertical: 6 },
   row: {
-    borderRadius: TV_RADIUS.button,
+    borderRadius: TV_RADII.control,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -163,17 +168,15 @@ const baseStyles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
   },
-  rowSelected: { backgroundColor: theme.colors.accentSoft },
   rowText: { flex: 1, gap: 2 },
   rowLabel: { fontSize: 18, fontWeight: "700", color: theme.colors.text },
-  rowLabelSelected: { color: theme.colors.accent },
   rowLabelDanger: { color: theme.colors.danger },
   rowDetail: { fontSize: 14, lineHeight: 20, color: theme.colors.textMuted },
   close: {
     alignSelf: "flex-end",
     paddingHorizontal: 28,
     paddingVertical: 10,
-    borderRadius: TV_RADIUS.button,
+    borderRadius: TV_RADII.control,
     backgroundColor: theme.colors.surfaceRaised,
   },
   closeLabel: { fontSize: 18, fontWeight: "700", color: theme.colors.text },

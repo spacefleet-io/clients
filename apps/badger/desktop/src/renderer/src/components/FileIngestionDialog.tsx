@@ -2682,7 +2682,8 @@ export default function FileIngestionDialog({ paths: initialPaths, pathsNonce, o
             originalLanguage: details.originalLanguage ?? null,
             overview: details.overview ?? null,
             year: details.year ?? null,
-            rating: details.rating ?? null,
+            // META-SRC-05: the metadata service sends no rating.
+            rating: null,
             posterPath: details.posterPath ?? null,
             backdropPath: details.backdropPath ?? null,
             genres: details.genres ?? [],

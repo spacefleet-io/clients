@@ -1,6 +1,7 @@
 import type { ErrorReportsBridge } from "@space/error-report/desktop";
 import type { UpdaterBridge } from "@space/desktop-shell/updater";
 import type { LibraryKeyEraseOutcome } from "@space/desktop-shell/library-key-erase";
+import type { AccountKeyResult } from "@space/desktop-shell/account-key-check";
 import type { DesktopPasswordResetActions } from "@space/desktop-shell/password-reset";
 import type { DesktopFeedbackInput } from "@space/error-report/desktop-feedback";
 import type { SignInFailure } from "@space/shared/signInError";
@@ -146,8 +147,6 @@ export type ParrotProviderSignInBridge = ProviderReturnBridge & {
 
 /** What an approved phone sign-in tells the window: main keeps the token and the key, the window only learns the check. */
 export type ParrotPairedSignIn = { check: PairedKeyCheck };
-
-export type ParrotKeyResult = { ok: true } | { ok: false; error: "format" | "wrongKey" | "network"; message?: string };
 
 export type ParrotImportStatus = {
   running: boolean;
@@ -410,7 +409,7 @@ export type ParrotBridge = {
    * The key as base64 (typed words' `keyBase64`, or a new key once written down). Checked against the account; on an
    * account with no key yet it becomes the account's (its probe written) and is kept.
    */
-  setLibraryKey(keyBase64: string): Promise<ParrotKeyResult>;
+  setLibraryKey(keyBase64: string): Promise<AccountKeyResult>;
   /**
    * The key step's first question: an account with no library and no key probe gets a new key's 12 words to show
    * (nothing kept until `setLibraryKey`); an account that has a key answers "hasLibrary" and the step asks for it.
