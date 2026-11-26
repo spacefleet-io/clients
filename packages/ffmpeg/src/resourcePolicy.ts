@@ -14,7 +14,7 @@ import { getEffectiveCpuCount } from "./hostCpu";
  *   2. is capped to `cores - 2` worker threads (decoder, filter graph and
  *      encoder), so two cores are never claimed by the encode;
  * and the engine additionally limits concurrent encodes on low core counts
- * (see `clampLaneCapsForHost` in apps/runtime/src/core/jobs/engineV2Lanes.ts).
+ * (see `clampLaneCapsForHost` in packages/runtime-jobs-engine/src/engineV2Lanes.ts).
  */
 
 /**

@@ -18,7 +18,7 @@ import {
   createEngineV2,
   type EngineV2,
   type RuntimeJobEvent,
-} from "../src/core/jobs/engineV2";
+} from "@space/runtime-jobs-engine/engineV2";
 import {
   runtimeJobsCancelledEventSchema,
   runtimeJobsCreatedEventSchema,

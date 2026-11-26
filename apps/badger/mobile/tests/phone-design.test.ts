@@ -16,32 +16,40 @@ vi.mock("../src/lib/onboarding", () => ({ setLibraryKeyAcknowledged: async () =>
 import { phoneDeviceName } from "../src/lib/phonePairing";
 import { continueHeroProgress, phoneHomeLayout, seeAllTarget, unitDurationSeconds } from "../src/lib/phoneHome";
 import i18next from "i18next";
-import fr from "../../../../packages/mobile-shell/src/i18n/fr.json";
-import en from "../../../../packages/mobile-shell/src/i18n/en.json";
+import fr from "@space/mobile-shell/i18n/fr.json";
+import en from "@space/mobile-shell/i18n/en.json";
 import { HERO_FADE_STOPS, filmPlayLabelKey, filmRuntime, heroArtwork, versionChips } from "../src/lib/phoneDetails";
 import { websiteUrl } from "@space/shared/websiteLinks";
 
 const row = (id: string) => ({ id }) as never;
+const started = (id: string, lastWatchedAt: string) => ({ id, type: "movie", hasFiles: true, progressPct: 30, lastWatchedAt }) as never;
+const section = (type: string, libraries = ["movies", "tv"], genreType: "movie" | "tv" | null = null) =>
+  ({ id: `section-${type}`, type, playlistId: null, genreId: null, genreType, libraries, styleId: 0 }) as never;
 
 describe("phone Home", () => {
-  /** @req UX-PHONE-01 */
+  /** @req UX-PHONE-01 @req UX-HOME-06 */
   it("the first continue-watching title becomes the hero and leaves its row; an emptied row is dropped", () => {
-    const layout = phoneHomeLayout([
-      { id: "continueWatching", items: [row("a")] } as never,
-      { id: "movies", items: [row("b")] } as never,
+    console.info("[phone-home-hero] phase=start");
+    const media = [started("a", "2026-03-01T00:00:00.000Z"), started("c", "2026-02-01T00:00:00.000Z")];
+    const layout = phoneHomeLayout([media[0]!], [
+      { id: "s1", section: section("continue"), items: [row("a")] } as never,
+      { id: "s2", section: section("recent"), items: [row("b")] } as never,
     ]);
-    expect(layout.hero).toEqual({ id: "a" });
-    expect(layout.rails.map((r) => r.id)).toEqual(["movies"]);
-    const kept = phoneHomeLayout([{ id: "continueWatching", items: [row("a"), row("c")] } as never]);
+    console.info("[phone-home-hero] phase=layout", JSON.stringify(layout));
+    expect(layout.hero).toMatchObject({ id: "a" });
+    expect(layout.rails.map((r) => r.id)).toEqual(["s2"]);
+    const kept = phoneHomeLayout(media, [{ id: "s1", section: section("continue"), items: [row("a"), row("c")] } as never]);
     expect(kept.rails[0]!.items).toEqual([{ id: "c" }]);
   });
 
-  /** @req UX-PHONE-01 @req UX-PHONE-07 */
-  it("See all opens the matching Library scope, and Favorites (a playlist) the Playlists tab", () => {
-    expect(seeAllTarget("shows" as never)).toEqual({ tab: "library", scope: "tv" });
-    expect(seeAllTarget("favorites" as never)).toEqual({ tab: "playlists" });
-    expect(seeAllTarget("movies" as never)).toEqual({ tab: "library", scope: "movies" });
-    expect(seeAllTarget("recent" as never)).toEqual({ tab: "library", scope: "movies" });
+  /** @req UX-PHONE-01 @req UX-PHONE-07 @req UX-HOME-06 */
+  it("See all opens the matching Library scope, and Favorites and playlists the Playlists tab", () => {
+    expect(seeAllTarget(section("recent", ["tv"]))).toEqual({ tab: "library", scope: "tv" });
+    expect(seeAllTarget(section("genre", ["tv"], "tv"))).toEqual({ tab: "library", scope: "tv" });
+    expect(seeAllTarget(section("favorites"))).toEqual({ tab: "playlists" });
+    expect(seeAllTarget(section("playlist"))).toEqual({ tab: "playlists" });
+    expect(seeAllTarget(section("unwatched", ["movies"]))).toEqual({ tab: "library", scope: "movies" });
+    expect(seeAllTarget(section("recent"))).toEqual({ tab: "library", scope: "movies" });
   });
 });
 

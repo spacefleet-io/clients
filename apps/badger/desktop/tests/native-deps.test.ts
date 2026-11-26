@@ -9,7 +9,7 @@ import {
 } from "../src/main/nativeDeps";
 import { getActionableDesktopErrorMessage } from "../src/renderer/src/lib/actionableErrors";
 import { createBuilderConfig } from "../electron-builder.config.mjs";
-import { SIGNED_WINDOWS_ENV } from "../../../../packages/desktop-platform-windows/packaging/signedWindowsEnv";
+import { SIGNED_WINDOWS_ENV } from "@space/desktop-platform-windows/packaging/signedWindowsEnv";
 
 const desktopRequire = createRequire(join(__dirname, "..", "package.json"));
 const betterSqliteDir = dirname(desktopRequire.resolve("better-sqlite3/package.json"));

@@ -30,6 +30,7 @@
     "@space/mobile-media-volume": "workspace:*",
     "@space/mobile-self-update": "workspace:*",
     "@space/mobile-shell": "workspace:*",
+    "@space/notify-core": "workspace:*",
     "@space/pairing-crypto": "workspace:*",
     "@space/parrot-core": "workspace:*",
     "@space/parrot-library-db-definition": "workspace:*",

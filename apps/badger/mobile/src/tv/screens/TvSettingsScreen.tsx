@@ -46,7 +46,11 @@ import { useProfiles } from "../../lib/profiles/profileStore";
 import { mobileCreditsSource } from "../../lib/metadata/runtime";
 import type { RootStackParamList } from "../../navigation/AppNavigator";
 import { useAuth } from "../../store/auth";
-import { TvListDialog, type TvListDialogItem } from "../components/TvListDialog";
+import { TvListDialog, type TvListDialogItem } from "@space/mobile-shell/tv/TvListDialog";
+import { TvSignOutKeyDialog } from "@space/mobile-shell/tv/TvSignOutKeyDialog";
+import { TvNoticeHistoryDialog, TvNotificationsRow } from "@space/mobile-shell/tv/TvNoticeHistory";
+import type { NoticeHistory } from "@space/notify-core/history";
+import { DEVICES_TARGET } from "../../lib/pairing/newDevice";
 import { rememberTvSettingsGroup, tvSettingsGroups, tvSettingsOpenGroup, type TvSettingsGroupId } from "../lib/tvSettingsGroups";
 import { focusDestination, type TvViewInstance } from "@space/mobile-shell/tv/tvViewInstance";
 import { useTvScale, useTvStyles } from "@space/mobile-shell/tv/tvScale";
@@ -78,6 +82,7 @@ type SettingsDialog =
   | { kind: "subtitleLanguage" }
   | { kind: "titleLanguage" }
   | { kind: "devices" }
+  | { kind: "notifications" }
   | { kind: "signOutDevice"; session: Session }
   | { kind: "signOutKey"; from: "settings" | "devices" }
   | null;
@@ -91,14 +96,14 @@ const log = (event: string, payload: Record<string, unknown>) => console.info(`t
  * (nothing to type with a remote). Long lists (the quality, the default audio and subtitle languages, the signed-in
  * devices) are one row each and open in a `TvListDialog` (UX-LIST-01).
  */
-export const TvSettingsScreen = memo(() => {
+export const TvSettingsScreen = memo(({ history }: { history: NoticeHistory | null }) => {
   const { user, token } = useAuth();
   // Settings is only shown signed in; the guard keeps the devices hook from calling the API without a session.
-  return token ? <TvSettingsContent token={token} email={user?.email ?? null} /> : null;
+  return token ? <TvSettingsContent token={token} email={user?.email ?? null} history={history} /> : null;
 });
 TvSettingsScreen.displayName = "TvSettingsScreen";
 
-const TvSettingsContent = ({ token, email }: { token: string; email: string | null }) => {
+const TvSettingsContent = ({ token, email, history }: { token: string; email: string | null; history: NoticeHistory | null }) => {
   const { t, i18n } = useTranslation();
   const { logout } = useAuth();
   const navigation = useNavigation<Nav>();
@@ -110,7 +115,7 @@ const TvSettingsContent = ({ token, email }: { token: string; email: string | nu
   const [dialog, setDialog] = useState<SettingsDialog>(null);
   // The row a closed dialog hands the focus back to.
   const [returnFocus, setReturnFocus] = useState<
-    "quality" | "audioLanguage" | "subtitleLanguage" | "titleLanguage" | "devices" | "signOut" | null
+    "quality" | "audioLanguage" | "subtitleLanguage" | "titleLanguage" | "devices" | "notifications" | "signOut" | null
   >(null);
   // UX-TV-42: the open group (the one last opened in this app session) and, until the remote moves, the focus on its
   // first row (the mockup's starting focus).
@@ -157,7 +162,8 @@ const TvSettingsContent = ({ token, email }: { token: string; email: string | nu
       dialog?.kind === "quality" ||
         dialog?.kind === "audioLanguage" ||
         dialog?.kind === "subtitleLanguage" ||
-        dialog?.kind === "titleLanguage"
+        dialog?.kind === "titleLanguage" ||
+        dialog?.kind === "notifications"
         ? dialog.kind
         : dialog?.kind === "signOutKey"
           ? "signOut"
@@ -312,24 +318,20 @@ const TvSettingsContent = ({ token, email }: { token: string; email: string | nu
     ];
   }, [closeDialog, dialog, logout, signOutDevice, t]);
 
-  const keyItems = useMemo<TvListDialogItem[]>(() => {
-    if (dialog?.kind !== "signOutKey") return [];
-    const { from } = dialog;
-    return [
-      { key: "cancel", label: t("account.signOutKey.cancel"), testID: "tv-signout-key-cancel", onPress: closeDialog },
-      {
-        key: "confirm",
-        label: t("account.signOutKey.confirm"),
-        danger: true,
-        testID: "tv-signout-key-confirm",
-        onPress: () => {
-          log("signOutKey.confirmed", { from });
-          setDialog(null);
-          void logout("signOut");
-        },
-      },
-    ];
-  }, [closeDialog, dialog, logout, t]);
+  const keyText = useMemo(
+    () => ({
+      title: t("account.signOutKey.title"),
+      body: t("account.signOutKey.body"),
+      cancel: t("account.signOutKey.cancel"),
+      confirm: t("account.signOutKey.confirm"),
+    }),
+    [t],
+  );
+  const confirmSignOutKey = useCallback(() => {
+    log("signOutKey.confirmed", { from: dialog?.kind === "signOutKey" ? dialog.from : null });
+    setDialog(null);
+    void logout("signOut");
+  }, [dialog, logout]);
 
   const devicesSummary =
     devices.sessions.length === 0
@@ -404,6 +406,12 @@ const TvSettingsContent = ({ token, email }: { token: string; email: string | nu
               description={devicesSummary}
               hasTVPreferredFocus={first || returnFocus === "devices"}
               onPress={() => openDialog({ kind: "devices" })}
+            />
+            {/* UX-NOTICE-04 / UX-NOTICE-12: the TV's notice history, with the unread count at the row's end. */}
+            <TvNotificationsRow
+              history={history}
+              hasTVPreferredFocus={returnFocus === "notifications"}
+              onPress={() => openDialog({ kind: "notifications" })}
             />
             <TvRow
               testID="tv-settings-pair"
@@ -671,6 +679,13 @@ const TvSettingsContent = ({ token, email }: { token: string; email: string | nu
           onClose={closeDialog}
         />
       ) : null}
+      {dialog?.kind === "notifications" ? (
+        <TvNoticeHistoryDialog
+          history={history}
+          onClose={closeDialog}
+          onOpenTarget={(target) => (target === DEVICES_TARGET ? openDialog({ kind: "devices" }) : closeDialog())}
+        />
+      ) : null}
       {dialog?.kind === "signOutDevice" ? (
         <TvListDialog
           testID="tv-device-signout-dialog"
@@ -685,16 +700,7 @@ const TvSettingsContent = ({ token, email }: { token: string; email: string | nu
           onClose={closeDialog}
         />
       ) : null}
-      {dialog?.kind === "signOutKey" ? (
-        <TvListDialog
-          testID="tv-signout-key-dialog"
-          title={t("account.signOutKey.title")}
-          message={t("account.signOutKey.body")}
-          items={keyItems}
-          initialFocusKey="cancel"
-          onClose={closeDialog}
-        />
-      ) : null}
+      {dialog?.kind === "signOutKey" ? <TvSignOutKeyDialog text={keyText} onCancel={closeDialog} onConfirm={confirmSignOutKey} /> : null}
     </View>
   );
 };

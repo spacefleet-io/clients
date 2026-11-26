@@ -4,16 +4,19 @@
  * @level unit
  * @req UX-KEY-01[parrot]
  * @req PRIV-KEY-01[parrot]
+ * @req UX-KEY-02[parrot]
  * @why Chris (2026-11-12): "the setup step to enter/save the key should be the same shared one between the 2 apps".
  *   Parrot's setup key step is the shared LibraryKeyStep: the account's 12 words open the library, wrong words say
- *   so and keep the user on the step, an offline check still lets a new account make its key, and the lost-key erase
+ *   so and keep the user on the step, a key load that fails or runs out of time (UX-KEY-02, the 0.1.72 smoke that hung
+ *   on "Loading key…") says why and offers Retry, which shows the new key once main can tell, and the lost-key erase
  *   (the whole account's vault) brings the step back to a fresh key to write down.
  */
 import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { generateLibraryKeyWords } from "@space/shared/libraryKeyWords";
-import type { ParrotCreateKeyResult, ParrotKeyResult, ParrotState } from "../src/shared/ipc";
+import type { AccountKeyResult } from "@space/desktop-shell/account-key-check";
+import type { ParrotCreateKeyResult, ParrotState } from "../src/shared/ipc";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -43,7 +46,7 @@ describe("@req UX-KEY-01 Parrot desktop setup key step (shared LibraryKeyStep)",
   let root: Root;
   let current: ParrotState;
   const createLibraryKey = vi.fn(async (): Promise<ParrotCreateKeyResult> => ({ ok: false, error: "hasLibrary" }));
-  const setLibraryKey = vi.fn(async (_key: string): Promise<ParrotKeyResult> => ({ ok: true }));
+  const setLibraryKey = vi.fn(async (_key: string): Promise<AccountKeyResult> => ({ ok: true }));
   const eraseLibrary = vi.fn(async (_password: string, _code?: string) => ({ status: "erased" as const }));
   const getState = vi.fn(async () => ({ ...state, hasLibraryKey: true }));
   const saveSetup = vi.fn(async (patch: Partial<ParrotState["setup"]>) => ({ ...current, setup: { ...current.setup, ...patch } }));
@@ -126,13 +129,18 @@ describe("@req UX-KEY-01 Parrot desktop setup key step (shared LibraryKeyStep)",
     expect(getState).not.toHaveBeenCalled();
   });
 
-  it("offline, the step says so and still offers to make a key, which shows the new one once main can tell", async () => {
-    createLibraryKey.mockResolvedValueOnce({ ok: false, error: "network", message: "offline" });
+  // @bugfix @regression-proof @req UX-KEY-02[parrot]
+  it("a key load that ran out of time says so with Retry, deciding nothing, and Retry shows the new key once main can tell", async () => {
+    createLibraryKey.mockResolvedValueOnce({ ok: false, error: "network", message: "timeout", errorClass: "timeout" });
     await mount();
-    expect(q("library-key-step-error")?.textContent).toBe(t("key.error.network"));
-    expect(q("key-create")).not.toBeNull();
+    dump("load-failed");
+    expect(q("key-load-failed")?.getAttribute("data-error-class")).toBe("timeout");
+    expect(host.textContent).toContain("Your key could not be loaded");
+    expect(host.textContent).toContain("The server is taking too long to answer.");
+    expect(q("key-checking")).toBeNull();
+    expect(q("key-created")).toBeNull();
     createLibraryKey.mockResolvedValueOnce({ ok: true, ...freshKey });
-    await act(async () => q("key-create")!.click());
+    await act(async () => q("key-load-retry")!.click());
     await flush();
     dump("created-after-offline");
     const words = Array.from(host.querySelectorAll('[data-testid="key-created"] [data-testid="library-key-word"]')).map(

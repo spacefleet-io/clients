@@ -7,7 +7,7 @@
  * any submitted job will progress through the scheduler and the cancellation
  * cascade and only fail at step dispatch with a deterministic error code.
  */
-import type { EngineV2 } from "../../../core/jobs/engineV2";
+import type { EngineV2 } from "@space/runtime-jobs-engine/engineV2";
 import { probeStepHandler } from "./probe";
 import { identifyStepHandler } from "./identify";
 import { extractStepHandler } from "./extract";

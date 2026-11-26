@@ -18,8 +18,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import path from "node:path";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { createEngineV2, type EngineV2 } from "../src/core/jobs/engineV2";
-import { createSqliteRuntimeJobsStore } from "../src/core/jobs/sqliteStore";
+import { createEngineV2, type EngineV2 } from "@space/runtime-jobs-engine/engineV2";
+import { createSqliteRuntimeJobsStore } from "@space/runtime-jobs-engine/sqliteStore";
 import type { IngestJobRecord } from "@space/runtime-jobs";
 
 const SUITE = "engine-v2-shutdown-requeue";

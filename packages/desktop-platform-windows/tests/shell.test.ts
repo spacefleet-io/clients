@@ -21,7 +21,7 @@ describe("windows shell", () => {
 
   // #25: the CPU path is a WARP device inside the gpu vo, so there is no separate CPU vo to launch straight on.
   it("mpvWindow uses the gpu vo, no separate CPU vo and no app-id flags", () => {
-    expect(windowsShell.mpvWindow({ appId: "io.example.app", env: { DISPLAY: ":0" } })).toEqual({ defaultVo: "gpu", cpuVo: null, args: [], noWindow: null });
+    expect(windowsShell.mpvWindow({ appId: "io.example.app", env: { DISPLAY: ":0" } })).toEqual({ defaultVo: "gpu", cpuVo: null, args: [], unsetEnv: [], noWindow: null });
   });
 
   it("quits with the last window and always has a display", () => {

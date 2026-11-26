@@ -3,9 +3,10 @@ import { dockerBuildArgs, ffmpegConfigureFlags, mpvMesonOptions } from "../src/p
 import { loadDesktopTarget as loadTarget } from "../src/targets";
 
 /**
- * #25: the app runs mpv with `--vo=gpu,x11 --hwdec=auto-safe` (Linux) / `--vo=gpu --hwdec=auto-safe` (Windows).
- * The linux-x64 bundle fl1-f276664a7bd1 had NO OpenGL context (`--gpu-context=help` = auto only) and NVDEC as its
- * only decoder, so vo=gpu could never initialise and every frame was decoded and drawn on the CPU.
+ * #25: the app runs mpv with `--vo=gpu,x11 --hwdec=auto-safe` (Linux X11), `--vo=gpu,wlshm` (Linux Wayland,
+ * MPV-GPU-04) / `--vo=gpu --hwdec=auto-safe` (Windows). The linux-x64 bundle fl1-f276664a7bd1 had NO OpenGL
+ * context (`--gpu-context=help` = auto only) and NVDEC as its only decoder, so vo=gpu could never initialise and
+ * every frame was decoded and drawn on the CPU.
  */
 const mesonValues = (options: readonly string[]) => {
   const values: Record<string, string> = {};
@@ -25,18 +26,37 @@ describe("@bugfix @regression-proof linux-x64 mpv renders on the GPU and decodes
     const options = mpvMesonOptions(target);
     const { values, duplicates } = mesonValues(options);
     console.info(`[media-deps:gpu] linux-x64 mpv meson options: ${options.join(" ")}`);
-    expect(duplicates).toEqual([]);
+    // The only repeats are linux-x64's Wayland switches over the shared list's `disabled` (meson keeps the last -D).
+    expect(duplicates).toEqual(["wayland", "dmabuf-wayland"]);
     for (const feature of ["gl", "egl", "egl-x11", "vaapi", "vaapi-x11", "cuda-hwaccel", "cuda-interop", "x11"]) {
       expect(`${feature}=${values[feature]}`).toBe(`${feature}=enabled`);
     }
     // libdrm is found (headers: dmabuf-interop-gl) while the `drm` feature itself needs libdisplay-info, which is not
     // forked: `auto` builds the interop without vo=drm.
     expect(values.drm).toBe("auto");
-    // No Vulkan, no DRM/KMS outputs, no native Wayland (mpv 0.41 needs wayland >= 1.21 / protocols >= 1.31; jammy has
-    // 1.20 / 1.25): Wayland sessions run the X11 path through XWayland.
-    for (const feature of ["vulkan", "egl-drm", "vaapi-drm", "gbm", "wayland", "egl-wayland", "vaapi-wayland", "dmabuf-wayland"]) {
+    // No Vulkan, no DRM/KMS outputs.
+    for (const feature of ["vulkan", "egl-drm", "vaapi-drm", "gbm"]) {
       expect(`${feature}=${values[feature]}`).toBe(`${feature}=disabled`);
     }
+  });
+
+  it("builds native Wayland next to X11: EGL, VA-API and dmabuf outputs on Wayland @req MPV-GPU-04[badger-desktop]", async () => {
+    // mpv 0.41 needs wayland >= 1.21 / protocols >= 1.31 and jammy has 1.20 / 1.25: the recipe builds the pinned
+    // wayland / wayland-protocols forks, so a Wayland session never draws through XWayland.
+    const target = await loadTarget("linux-x64");
+    const { values } = mesonValues(mpvMesonOptions(target));
+    console.info(`[media-deps:gpu] linux-x64 wayland options: ${["wayland", "egl-wayland", "vaapi-wayland", "dmabuf-wayland", "x11"].map((f) => `${f}=${values[f]}`).join(" ")}`);
+    for (const feature of ["wayland", "egl-wayland", "vaapi-wayland", "dmabuf-wayland", "x11", "egl-x11"]) {
+      expect(`${feature}=${values[feature]}`).toBe(`${feature}=enabled`);
+    }
+    expect(target.mpvRequiredFeatures).toEqual(expect.arrayContaining(["wayland", "egl-wayland", "vaapi-wayland", "dmabuf-wayland"]));
+    expect(target.mpvRequiredGpuContexts).toEqual(["x11egl", "wayland"]);
+    expect(target.mpvRequiredVideoOutputs).toEqual(expect.arrayContaining(["x11", "wlshm", "dmabuf-wayland"]));
+    expect(target.sources).toEqual(expect.arrayContaining(["wayland", "wayland-protocols"]));
+    // libwayland is bundled (jammy's 1.20 aborts on wl_surface v6 events: "interface 'wl_surface' has no event 2");
+    // libxkbcommon stays the host's (Electron needs it too).
+    expect(target.hostLibraries).toContain("libxkbcommon.so*");
+    expect(target.hostLibraries?.some((glob) => glob.startsWith("libwayland"))).toBe(false);
     expect(values.libmpv).toBe("false");
   });
 
@@ -50,7 +70,7 @@ describe("@bugfix @regression-proof linux-x64 mpv renders on the GPU and decodes
       expect.arrayContaining(["gl", "egl", "egl-x11", "vaapi", "vaapi-x11", "dmabuf-interop-gl", "cuda-hwaccel", "cuda-interop"])
     );
     expect(target.mpvRequiredHwdecs).toEqual(expect.arrayContaining(["vaapi", "vaapi-copy", "nvdec", "nvdec-copy"]));
-    expect(target.mpvRequiredGpuContexts).toEqual(["x11egl"]);
+    expect(target.mpvRequiredGpuContexts).toEqual(expect.arrayContaining(["x11egl"]));
     expect(target.mpvRequiredVideoOutputs).toEqual(expect.arrayContaining(["x11"]));
     expect(target.ffmpegRequiredHwaccelMethods).toEqual(expect.arrayContaining(["vaapi", "cuda"]));
   });

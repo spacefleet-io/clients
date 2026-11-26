@@ -134,7 +134,6 @@ type LibraryContextValue = {
       originalLanguage?: string | null;
       overview?: string | null;
       year?: string | null;
-      rating?: number | null;
       posterPath?: string | null;
       backdropPath?: string | null;
       genres?: number[];
@@ -2538,7 +2537,6 @@ export const LibraryProvider = ({
         originalLanguage?: string | null;
         overview?: string | null;
         year?: string | null;
-        rating?: number | null;
         posterPath?: string | null;
         backdropPath?: string | null;
         totalEpisodes?: number | null;
@@ -2586,7 +2584,6 @@ export const LibraryProvider = ({
           originalLanguage: withAssets.originalLanguage,
           overview: withAssets.overview,
           year: withAssets.year,
-          rating: withAssets.rating,
           posterPath: withAssets.posterPath,
           backdropPath: withAssets.backdropPath,
           genres: Array.isArray(withAssets.genres) ? withAssets.genres : [],

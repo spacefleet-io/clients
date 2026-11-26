@@ -51,8 +51,8 @@ import { SubscriptionScreen } from "../screens/SubscriptionScreen";
 import { DeleteAccountScreen } from "../screens/DeleteAccountScreen";
 import { FeedbackScreen } from "../screens/FeedbackScreen";
 import { theme } from "../theme/theme";
-import { MobileRenderBoundary } from "@space/mobile-shell/render-boundary";
-import { MobileSkyScreenLayout, mobileNavigationTheme } from "@space/mobile-shell/components";
+import { mobileNavigationTheme } from "@space/mobile-shell/components";
+import { ScreenLayout } from "./ScreenLayout";
 
 import { TvRemoteScreen } from "../screens/TvRemoteScreen";
 import { usePlayOnTvReceiver } from "../tv/lib/usePlayOnTvReceiver";
@@ -324,15 +324,11 @@ export const AppNavigator = () => {
     >
       <Stack.Navigator
         screenOptions={{ headerShown: false }}
-        // UX-SKY-04: every screen over the desktop's sky, except the phone's details sheet (it shows the page below
-        // through its scrim and draws its own) and the player (black behind the video).
-        // UX-CRASH-01: a screen that throws shows Retry in its place; the rest of the app keeps running.
+        // UX-SKY-04, ACCT-UNPAID-05, UX-CRASH-01: the sky, the unpaid notice and Retry around every screen.
         screenLayout={({ children, route, navigation }) => (
-          <MobileSkyScreenLayout navigation={navigation} sky={!(route.name === "Player" || (route.name === "MediaDetails" && !IS_TV))}>
-            <MobileRenderBoundary name={`screen:${route.name}`} resetKey={route.key}>
-              {children}
-            </MobileRenderBoundary>
-          </MobileSkyScreenLayout>
+          <ScreenLayout route={route} navigation={navigation}>
+            {children}
+          </ScreenLayout>
         )}
       >
         {screen === "setup" ? (

@@ -5,7 +5,9 @@
   "type": "module",
   "sideEffects": false,
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./packaging/signedWindowsEnv": "./packaging/signedWindowsEnv.ts",
+    "./packaging/windows-signing-lib": "./packaging/windows-signing-lib.mjs"
   },
   "scripts": {
     "test": "bunx vitest run"
