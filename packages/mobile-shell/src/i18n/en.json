@@ -727,6 +727,7 @@
       }
     },
     "access": {
+      "unpaidSign": "Plan ended",
       "unpaidBanner": "Your subscription ended. Playback and uploads are stopped. Your files are deleted on {{date}}.",
       "unpaidBannerNoDate": "Your subscription ended. Playback and uploads are stopped. Your files will be deleted after a limited time.",
       "playbackBlocked": "Playback is stopped because your subscription ended. Your files are deleted on {{date}}.",
@@ -1002,7 +1003,6 @@
     "validate": "Validate key",
     "signOut": "Sign out",
     "errors": {
-      "checkStatus": "Could not check media library status.",
       "generate": "Could not generate a new key.",
       "initialize": "Could not initialize your media library.",
       "noLibrary": "No media library was found for this account.",
@@ -1024,7 +1024,11 @@
       "recentlyAdded": "Recently added",
       "movies": "Movies",
       "shows": "TV Shows",
-      "favorites": "Favorites"
+      "favorites": "Favorites",
+      "unwatched": "Unwatched picks",
+      "rewatch": "Rewatch",
+      "playlist": "Playlist",
+      "genre": "Genre"
     },
     "seeAll": "See all",
     "hero": {

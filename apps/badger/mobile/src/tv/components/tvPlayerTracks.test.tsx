@@ -19,8 +19,8 @@ import {
   type PlayerControlsHandle,
   type PlayerControlsLabels,
   type PlayerControlsProps,
-} from "../../../../../../packages/mobile-mpv-playback/src/components/PlayerControls";
-import type { AudioTrack, SubtitleTrack } from "../../../../../../packages/mobile-mpv-playback/src/types";
+} from "@space/mobile-mpv-playback/PlayerControls";
+import type { AudioTrack, SubtitleTrack } from "@space/mobile-mpv-playback/types";
 
 const TAG = "[tv-player-tracks]";
 
@@ -82,7 +82,7 @@ vi.mock("react-native", async () => {
     BackHandler: { addEventListener: () => ({ remove: () => undefined }) },
   };
 });
-vi.mock("../../../../../../packages/mobile-mpv-playback/src/MpvControl", () => ({
+vi.mock("@space/mobile-mpv-playback/MpvControl", () => ({
   MpvControl: {
     getTrackList: async () => [
       { id: 1, type: "audio", selected: true, lang: "eng", title: null },

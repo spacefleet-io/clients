@@ -10,7 +10,8 @@
     "./gapless": "./src/gapless.ts",
     "./limiter": "./src/limiter.ts",
     "./shell-strings": "./src/shellStrings.ts",
-    "./mascot.webp": "./assets/mascot.webp"
+    "./mascot.webp": "./assets/mascot.webp",
+    "./importMatch": "./src/importMatch.ts"
   },
   "scripts": {
     "test": "bun test"

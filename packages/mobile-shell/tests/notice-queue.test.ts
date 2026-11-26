@@ -3,12 +3,16 @@
  * @level unit
  * @req UX-NOTICE-01[badger-mobile,badger-tv]
  * @why Chris 2026-11-12 (chat): an in-app notice never moves the page; it floats over it and goes away after a fixed time
- *   or as soon as the user acts on it. The queue is the timing half shared by the phone and TV shells: one notice at a
- *   time, gone after `NOTICE_DURATION_MS`, held while paused (TV focus), and `onDismiss` once per notice with the reason,
- *   which is where the shells mark the device seen. Fake timers, no real waiting.
+ *   or as soon as the user acts on it. The shells draw the shared queue (`@space/notify-core/queue`) with one card at a
+ *   time: gone after the heads-up time (`NOTICE_TIMINGS.headsUpMs`), held while paused (TV focus), a repeat replaces
+ *   its earlier copy instead of stacking (UX-NOTICE-11), and `onDismiss` once per notice with the reason, which is where
+ *   the shells mark the device seen. Fake timers, no real waiting.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createNoticeQueue, NOTICE_DURATION_MS, type NoticeDismissReason } from "../src/notice-queue";
+import { NOTICE_TIMINGS } from "@space/notify-core/kinds";
+import { createNoticeQueue, type NoticeDismissReason } from "@space/notify-core/queue";
+
+const NOTICE_DURATION_MS = NOTICE_TIMINGS.headsUpMs;
 
 type Item = { id: string };
 const trail: string[] = [];
@@ -61,7 +65,7 @@ describe("notice queue (UX-NOTICE-01)", () => {
     expect(dismissed).toEqual([{ id: "a", reason: "opened" }]);
   });
 
-  it("shows queued notices one after the other and drops a repeat of one already waiting or shown", () => {
+  it("shows queued notices one after the other, a repeat of one waiting or shown replacing it rather than stacking", () => {
     const { queue, dismissed } = setup();
     queue.show({ id: "a" });
     queue.show({ id: "b" });

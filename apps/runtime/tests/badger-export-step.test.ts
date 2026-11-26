@@ -15,9 +15,9 @@ vi.mock("@space/ffmpeg", () => ({ runFfmpeg: runFfmpegMock, runFfprobe: vi.fn(),
 import { exportFileStepHandler } from "../src/modules/badger/steps/exportFile";
 import { configureBadgerOfflineDeps, __resetBadgerOfflineDeps, type BadgerOfflineDeps } from "../src/modules/badger/offlineDownloadDeps";
 import type { ExportJobPayload } from "../src/modules/badger/export";
-import type { StepHandlerCtx } from "../src/core/jobs/engineV2";
+import type { StepHandlerCtx } from "@space/runtime-jobs-engine/engineV2";
 import type { IngestJobRecord } from "@space/runtime-jobs";
-import type { StoredStepRecord } from "../src/core/jobs/stepStore";
+import type { StoredStepRecord } from "@space/runtime-jobs-engine/stepStore";
 
 const SUITE = "badger-export-step";
 const log = (phase: string, data?: unknown) =>

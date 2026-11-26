@@ -1,13 +1,18 @@
 import React, { useEffect, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { AppState, BackHandler, StyleSheet, Text, View } from "react-native";
 import { useIsFocused } from "@react-navigation/native";
 import { SkyCover, SkyRegion } from "@space/mobile-shell/components";
 import { useTranslation } from "@space/mobile-shell/i18n";
 import { useNoticeQueue } from "@space/mobile-shell/notice-queue";
+import { useAccountNoticeHistory } from "@space/mobile-shell/notice-history";
+import { useAccountNews } from "@space/mobile-shell/account-news";
+import { historyStorageKey } from "@space/notify-core/history";
+import { NOTICE_TIMINGS } from "@space/notify-core/kinds";
 import { founderNoticeText, founderWatch, useFounderWatch } from "@space/mobile-shell/founder";
-import { UnpaidAccessBanner } from "@space/mobile-shell/unpaid-access-banner";
 import { checkForNewDevices, markDeviceSeen } from "../../lib/pairing/deviceWatch";
 import {
+  newDeviceHistoryNotice,
   newDeviceKey,
   newDeviceMessage,
   subscribeNewDevice,
@@ -20,7 +25,7 @@ import { theme } from "../../theme/theme";
 import { TvFocusable } from "@space/mobile-shell/tv/TvFocusable";
 import { TvOfflineNotice } from "../components/TvOfflineNotice";
 import { TV_SAFE_MARGIN_X, TV_SAFE_MARGIN_Y } from "@space/mobile-shell/tv/layout";
-import { useTvScale, useTvStyles } from "@space/mobile-shell/tv/tvScale";
+import { useTvStyles } from "@space/mobile-shell/tv/tvScale";
 import { setCurrentTvSection, subscribeTvSectionRequest, type TvSectionId } from "@space/mobile-shell/tv/tvSection";
 import { TvSky } from "@space/mobile-shell/tv/TvSky";
 import { BadgerTvTopBar } from "../ui/BadgerTvTopBar";
@@ -45,6 +50,10 @@ export const TvMainShell = () => {
   const hasLibraryMedia = media.length > 0;
   const isFocused = useIsFocused();
   const { token, user } = useAuth();
+  // UX-NOTICE-04: the account's notice history, behind the "Notifications" row in Settings.
+  const history = useAccountNoticeHistory(user ? historyStorageKey(user.id) : null, AsyncStorage);
+  // UX-NOTICE-05: the account's news from any device (another sign-in, a payment, storage over its limit) joins it.
+  useAccountNews(history, token);
   const [activeTab, setActiveTab] = useState<TvSectionId>("home");
   // UX-LIBTAB-01: an empty library cannot be opened, nor its playlists, as on the phone; a request for either (a title
   // page's tab) lands on Home.
@@ -55,10 +64,12 @@ export const TvMainShell = () => {
   // the tabs and the rows. It leaves on its own after a fixed time (held while it has the remote's focus), at once when
   // selected (it opens Settings) or on Back; however it leaves, the device counts as seen. It is drawn in this shell, so
   // while another screen (the player, a title page) covers the shell it waits, unseen and without a timer.
-  // WAIT-FOUND-04: the one-time "Founder ticket recognised" notice takes the same slot; it takes the remote's focus (so
-  // it stays until read), OK or Back closes it, and however it leaves no device shows it again.
+  // WAIT-FOUND-04 / UX-NOTICE-09: the one-time "Founder ticket recognised" notice takes the same slot. It never takes the
+  // remote's focus and has no timer: it stays until the user moves to it and presses OK, or presses Back on Home (on
+  // another section Back still goes Home first); however it leaves, no device shows it again.
   const notices = useNoticeQueue<TvNotice>({
     keyOf: (notice) => (notice.kind === "device" ? newDeviceKey(notice.info) : FOUNDER_NOTICE_KEY),
+    durationOf: (notice) => (notice.kind === "founder" ? null : NOTICE_TIMINGS.headsUpMs),
     onDismiss: (notice, reason) => {
       if (notice.kind === "founder") {
         console.info("tv.founder.dismissed", JSON.stringify({ reason }));
@@ -72,7 +83,6 @@ export const TvMainShell = () => {
   const notice = notices.current;
   const showNotice = notices.show;
   const dismissNotice = notices.dismiss;
-  const scale = useTvScale();
   const styles = useTvStyles(baseStyles);
 
   // A title page opened from here names this section on its Back button (UX-TV-06).
@@ -80,24 +90,32 @@ export const TvMainShell = () => {
   // The title page shows the top bar too; a tab picked there opens that section here before it goes back.
   useEffect(() => subscribeTvSectionRequest(setActiveTab), []);
 
-  // Back closes the notice while it shows; otherwise, on a section other than Home it returns to Home, and on Home it
-  // leaves the app as usual.
-  const backHandled = isFocused && (notice !== null || activeTab !== "home");
+  // Back closes the new-device notice while it shows, and the founder notice on Home (UX-NOTICE-09); otherwise, on a
+  // section other than Home it returns to Home, and on Home it leaves the app as usual.
+  const backClosesNotice = notice !== null && (notice.kind === "device" || activeTab === "home");
+  const backHandled = isFocused && (backClosesNotice || activeTab !== "home");
   useEffect(() => {
     if (!backHandled) return undefined;
     const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
-      if (notice !== null) dismissNotice("back");
+      if (backClosesNotice) dismissNotice("back");
       else setActiveTab("home");
       return true;
     });
     return () => subscription.remove();
-  }, [backHandled, notice, dismissNotice]);
+  }, [backHandled, backClosesNotice, dismissNotice]);
   // Apple TV delivers Menu to the handler above only while the key is held; on Home the system keeps it (-> Apple TV home).
   useTvMenuKeyHold("tv-tab", backHandled);
 
   const holdNotices = notices.setHeld;
   useEffect(() => holdNotices(!isFocused), [holdNotices, isFocused]);
-  useEffect(() => subscribeNewDevice((info) => showNotice({ kind: "device", info })), [showNotice]);
+  useEffect(
+    () =>
+      subscribeNewDevice((info) => {
+        history?.record(newDeviceHistoryNotice(info));
+        showNotice({ kind: "device", info });
+      }),
+    [history, showNotice],
+  );
   useEffect(() => subscribeOpenDevices(() => setActiveTab("settings")), []);
   useEffect(() => {
     if (!token) return undefined;
@@ -126,11 +144,6 @@ export const TvMainShell = () => {
             ) : null
           }
         />
-        {/* ACCT-UNPAID-03: while the account is unpaid, every main screen says playback is stopped and when the files
-            go. It only informs and is not focusable: nothing on the TV links to paying (ACCT-PAY-02). */}
-        <View style={styles.unpaid}>
-          <UnpaidAccessBanner access={user?.access} scale={scale} />
-        </View>
         <SkyRegion style={styles.content}>
           {activeTab === "home" ? (
             <TvHomeScreen />
@@ -141,7 +154,7 @@ export const TvMainShell = () => {
           ) : activeTab === "search" ? (
             <TvSearchScreen />
           ) : (
-            <TvSettingsScreen />
+            <TvSettingsScreen history={history} />
           )}
         </SkyRegion>
         {notice?.kind === "device" ? (
@@ -176,8 +189,7 @@ export const TvMainShell = () => {
 
 /**
  * WAIT-FOUND-04: "🎫 Founder ticket recognised." over "Your 30% for life is applied to your plan." and "Got it", in the
- * app's language. It takes the remote's focus as it shows (so its timer waits until the user has read it); OK or Back
- * closes it.
+ * app's language. It never takes the remote's focus (UX-NOTICE-09); OK on it, or Back on Home, closes it.
  */
 const TvFounderNotice = ({ onPress, onFocus, onBlur }: { onPress: () => void; onFocus: () => void; onBlur: () => void }) => {
   const { i18n } = useTranslation();
@@ -189,7 +201,6 @@ const TvFounderNotice = ({ onPress, onFocus, onBlur }: { onPress: () => void; on
         testID="tv-founder-banner"
         style={styles.newDevice}
         scale={1.02}
-        hasTVPreferredFocus
         onFocus={onFocus}
         onBlur={onBlur}
         onPress={onPress}
@@ -205,8 +216,6 @@ const TvFounderNotice = ({ onPress, onFocus, onBlur }: { onPress: () => void; on
 
 const baseStyles = StyleSheet.create({
   shell: { flex: 1 },
-  // Margins, not paddings, around covered blocks: a `SkyCover` hides the sky over its whole box.
-  unpaid: { paddingHorizontal: TV_SAFE_MARGIN_X - 4 },
   // The offline notice may shrink (its title then ends in "…"), so it never reaches the centred tabs (UX-TV-14).
   offline: { flexShrink: 1, minWidth: 0 },
   // UX-NOTICE-01: over the page's top-right corner, under Settings (DOWN from it reaches the notice), out of the flow.

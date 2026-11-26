@@ -112,22 +112,6 @@
       },
       "clearFinished": "Effacer les tâches terminées"
     },
-    "notifications": {
-      "title": "Notifications",
-      "subtitle_one": "{{count}} élément récent",
-      "subtitle_other": "{{count}} éléments récents",
-      "subtitle_many": "{{count}} éléments récents",
-      "empty": "Aucune notification pour le moment.",
-      "open": "Ouvrir",
-      "filterAll": "Tout",
-      "filterError": "Erreur",
-      "filterWarning": "Alerte",
-      "filterInfo": "Info",
-      "filterSuccess": "Succès",
-      "clearAll": "Tout effacer",
-      "dismiss": "Ignorer",
-      "subtitle": "{{count}} éléments récents"
-    },
     "account": "Compte"
   },
   "authApiHost": {
@@ -647,7 +631,6 @@
         "originalTitle": "Titre original",
         "originalLanguage": "Langue d’origine",
         "year": "Année de sortie",
-        "rating": "Note",
         "genres": "Genres",
         "overview": "Synopsis",
         "poster": "Affiche",
@@ -1081,6 +1064,7 @@
       "devices": "Appareils connectés",
       "connectedTools": "Outils connectés",
       "system": "Système",
+      "support": "Aide et avis",
       "about": "À propos et mises à jour"
     },
     "sectionDesc": {
@@ -1098,7 +1082,12 @@
       "devices": "Voir les appareils connectés à votre compte et les déconnecter.",
       "connectedTools": "Les outils que vous avez autorisés à utiliser votre bibliothèque, et ce que chacun peut faire.",
       "system": "Service en arrière-plan et rapports d'erreur.",
+      "support": "Envoyez-nous un message sur l'application.",
       "about": "Votre version et les mises à jour, puis qui fournit les données de films et de séries affichées par l'application."
+    },
+    "support": {
+      "feedback": "Donner votre avis",
+      "feedbackBody": "Dites-nous ce qui marche et ce qui ne marche pas."
     },
     "system": {
       "runtime": {
@@ -1954,6 +1943,8 @@
       "unpaidBanner": "Votre abonnement est terminé. Vous pouvez encore télécharger vos fichiers jusqu'au {{date}}\u202f; passé cette date, ils sont supprimés.",
       "unpaidBannerNoDate": "Votre abonnement est terminé. Vous pouvez encore télécharger vos fichiers pendant une durée limitée\u202f; ensuite, ils sont supprimés.",
       "unpaidBannerHint": "Utilisez «\u202fConserver hors ligne\u202f» sur un titre pour le télécharger sur cet ordinateur.",
+      "unpaidSign": "Abonnement terminé",
+      "unpaidHeadsUpTitle": "Votre abonnement est terminé",
       "playbackBlocked": "La lecture est suspendue car votre abonnement est terminé. Vous pouvez encore télécharger vos fichiers jusqu'au {{date}}.",
       "playbackBlockedNoDate": "La lecture est suspendue car votre abonnement est terminé. Vous pouvez encore télécharger vos fichiers pendant une durée limitée.",
       "uploadBlocked": "Les envois sont suspendus car votre abonnement est terminé. Vous pouvez encore télécharger vos fichiers jusqu'au {{date}}\u202f; passé cette date, ils sont supprimés.",
@@ -1966,8 +1957,9 @@
       "removedBanner_one": "{{count}} titre a été supprimé pour dépassement du stockage.",
       "removedBanner_other": "{{count}} titres ont été supprimés pour dépassement du stockage.",
       "upgrade": "Changer de forfait",
-      "seeTitles": "Voir les titres",
       "dismiss": "Masquer",
+      "sign": "Stockage dépassé",
+      "removedSign": "Titres supprimés",
       "dialogTitle": "Bibliothèque au-delà du stockage",
       "options": "Passez à un forfait adapté à votre bibliothèque, ou supprimez des titres de votre bibliothèque jusqu'à ce qu'elle tienne. Vous pouvez d'abord télécharger un titre pour en garder une copie.",
       "loading": "Recherche des titres dans votre bibliothèque…",
@@ -2011,7 +2003,7 @@
       "title": "Autoriser «\u202f{{name}}\u202f» à utiliser votre bibliothèque\u202f?",
       "description": {
         "read": "Cet outil veut consulter votre bibliothèque\u202f: titres, détails, listes de lecture, progression et ce qui est téléchargé sur cet ordinateur. Il ne peut rien modifier.",
-        "write": "Cet outil veut consulter votre bibliothèque et en modifier une partie\u202f: la progression de lecture, les détails des titres (nom, résumé, année, note) et vos listes de lecture. Il ne peut pas supprimer de titres ni toucher aux réglages ou aux clés."
+        "write": "Cet outil veut consulter votre bibliothèque et en modifier une partie\u202f: la progression de lecture, les détails des titres (nom, résumé, année) et vos listes de lecture. Il ne peut pas supprimer de titres ni toucher aux réglages ou aux clés."
       },
       "selfDeclared": "Le nom vient de l'outil lui-même et n'est pas vérifié. N'autorisez qu'un outil que vous venez de lancer.",
       "reason": "Raison donnée\u202f: {{reason}}",

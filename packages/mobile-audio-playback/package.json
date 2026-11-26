@@ -17,10 +17,14 @@
     "AudioPlayback.podspec",
     "react-native.config.js"
   ],
+  "scripts": {
+    "test": "bunx vitest run"
+  },
   "peerDependencies": {
     "react-native": "^0.88.0"
   },
   "devDependencies": {
+    "vitest": "^5.1.0",
     "react": "19.3.1",
     "react-native": "npm:react-native-tvos@0.88.1-0"
   }

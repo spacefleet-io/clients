@@ -45,7 +45,8 @@ import { AccountLanguagePromptHost } from "@space/mobile-shell/account-language-
 import { MobileRenderBoundary } from "@space/mobile-shell/render-boundary";
 import { MobileUpdateRequiredScreen, useAppUpdateRequired } from "@space/mobile-shell/update-required";
 import { SelfUpdateConsent, SelfUpdateDialog, startSelfUpdate } from "@space/mobile-self-update";
-import { MobileSkyLayer, MobileSkyScreenLayout, mobileNavigationTheme } from "@space/mobile-shell/components";
+import { MobileSkyLayer, mobileNavigationTheme } from "@space/mobile-shell/components";
+import { ScreenLayout } from "./src/navigation/ScreenLayout";
 import { colors, parrotShellTheme } from "./src/theme";
 import { PARROT_MASCOT } from "./src/brand";
 import { startI18n } from "./src/lib/i18n";
@@ -102,15 +103,11 @@ const Library = ({ profile }: { profile: ApiProfile | null }) => {
         }}
       >
         <Stack.Navigator
-          // UX-CRASH-01: a screen that throws shows Retry in its place; the rest of the app keeps running.
-          // UX-SKY-04: every screen stands on the sky (a screen with its own `ParrotSky` takes it over).
-          // The player paints its own sky and slides as a whole when dragged down (UX-SHEET-01), so none under it.
+          // UX-SKY-04, ACCT-UNPAID-05, UX-CRASH-01: the sky, the unpaid notice and Retry around every screen.
           screenLayout={({ children, route, navigation }) => (
-            <MobileSkyScreenLayout navigation={navigation} sky={route.name !== "Player"}>
-              <MobileRenderBoundary name={`screen:${route.name}`} resetKey={route.key}>
-                {children}
-              </MobileRenderBoundary>
-            </MobileSkyScreenLayout>
+            <ScreenLayout route={route} navigation={navigation}>
+              {children}
+            </ScreenLayout>
           )}
           // No screen shows the navigator's header: each one draws its own top over the sky. A pushed page floats a
           // round back button (`PageBackButton`); a native header would paint a bar over the sky and, on iOS, wrap the

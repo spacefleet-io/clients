@@ -1,6 +1,6 @@
 const path = require("path");
 // The Google-free Android build (SF_FOSS=1, PLAT-MOBILE-06) unlinks the libraries that pull in Google Play services.
-const { fossAutolinkExclusions, selfUpdateAutolink } = require("../../../packages/mobile-shell/foss.cjs");
+const { fossAutolinkExclusions, selfUpdateAutolink } = require("@space/mobile-shell/foss");
 
 // The Apple TV target's Podfile block runs autolinking with PARROT_APPLE_TV=1 (ios/Podfile, PAR-TV-02). These modules
 // stay out of that app: a TV has no camera (QR scanning is the phone's job) and no photo library to pick a profile

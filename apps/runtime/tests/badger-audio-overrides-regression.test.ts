@@ -29,7 +29,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createEngineV2,
   type EngineV2,
-} from "../src/core/jobs/engineV2";
+} from "@space/runtime-jobs-engine/engineV2";
 import { registerBadgerStepHandlers } from "../src/modules/badger/steps";
 import { createBadgerIngestSubmitHandler } from "../src/modules/badger/ingestSubmit";
 import { extractStepHandler } from "../src/modules/badger/steps";
@@ -49,9 +49,9 @@ import {
   __resetBadgerStepDepsAdapter,
   type ProcessMediaJobFn,
 } from "../src/modules/badger/steps/deps-adapter";
-import type { StepHandlerCtx } from "../src/core/jobs/engineV2";
+import type { StepHandlerCtx } from "@space/runtime-jobs-engine/engineV2";
 import type { IngestJobRecord } from "@space/runtime-jobs";
-import type { StoredStepRecord } from "../src/core/jobs/stepStore";
+import type { StoredStepRecord } from "@space/runtime-jobs-engine/stepStore";
 
 const ts = "2026-01-01T00:00:00.000Z";
 

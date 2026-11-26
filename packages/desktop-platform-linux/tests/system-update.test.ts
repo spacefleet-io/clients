@@ -10,8 +10,6 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { createBuilderConfig as badgerBuilderConfig } from "../../../apps/badger/desktop/electron-builder.config.mjs";
-import { createBuilderConfig as parrotBuilderConfig } from "../../../apps/parrot/desktop/electron-builder.config.mjs";
 import {
   SYSTEM_UPDATE_EXIT,
   systemUpdateActionId,
@@ -264,18 +262,5 @@ describe("packaging (REL-UPD-07)", () => {
     expect(readFileSync(helper[0], "utf8")).toBe(script());
   });
 
-  it("both apps' .deb/.rpm/.pacman carry their own helper and policy last in fpm's arguments", () => {
-    for (const [app, pkg, config] of [
-      ["badger", "spacebadger", badgerBuilderConfig({ targetId: "linux-x64" })],
-      ["parrot", "spaceparrot", parrotBuilderConfig({ targetId: "linux-x64" })],
-    ] as const) {
-      const formats = config as unknown as Record<"deb" | "rpm" | "pacman", { fpm: string[] }>;
-      for (const format of ["deb", "rpm", "pacman"] as const) {
-        const tail = formats[format].fpm.slice(-2);
-        log(`${app} ${format} fpm tail`, tail);
-        expect(tail[0], `${app} ${format}`).toMatch(new RegExp(`=/usr/lib/${pkg}/system-update$`));
-        expect(tail[1], `${app} ${format}`).toMatch(new RegExp(`=/usr/share/polkit-1/actions/io\\.spacefleet\\.${pkg}\\.update\\.policy$`));
-      }
-    }
-  });
+  // Each app's tests check that its .deb/.rpm/.pacman carry its own helper and policy (testing/linuxBuilderChecks.ts).
 });

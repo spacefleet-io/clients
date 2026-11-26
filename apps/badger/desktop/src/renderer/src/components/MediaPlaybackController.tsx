@@ -1153,7 +1153,7 @@ export default function MediaPlaybackController({
         hideLoading(loadingTokenRef.current);
         loadingTokenRef.current = null;
       }
-      notifyError(t("player.abrLaunchFailed"));
+      notifyError(t("player.abrLaunchFailed"), undefined, { key: "playback-failed:launch-timeout" });
       onLaunchFailedRef.current?.("launch_timeout");
     }, 60000);
     return () => {
@@ -1185,12 +1185,16 @@ export default function MediaPlaybackController({
     // 402 `account_over_quota` (ACCT-OVER-02); mpv only reports a generic load failure, so say what actually happened (#145).
     const unpaidAccess = getUnpaidAccessInfo(user?.access);
     const frozen = user?.access?.overQuota?.phase === "frozen" ? user.access.overQuota : null;
+    // UX-NOTICE-11: the same failure replaces its earlier notice and bell entry instead of adding another.
+    const reason = unpaidAccess.unpaid ? "unpaid" : frozen ? "frozen" : (playback.streamError ?? "stream");
     notifyError(
       unpaidAccess.unpaid
         ? unpaidMessage(t, "playbackBlocked", unpaidAccess.wipeAt, i18n?.language)
         : frozen
           ? t("account.overQuota.playbackBlocked", { date: formatAccessDate(frozen.deletionAt, i18n?.language) })
-          : (playback.streamError ?? "Stream error")
+          : (playback.streamError ?? t("player.abrLaunchFailed")),
+      undefined,
+      { key: `playback-failed:${reason}` },
     );
     playTraceLog.info({ closeCause: "stream-error", streamError: playback.streamError }, "MediaPlaybackController: closing playback");
     onLaunchFailedRef.current?.(`stream_error: ${playback.streamError}`);

@@ -10,7 +10,7 @@ import {
   type PlayerControlsHandle,
   type PlayerControlsLabels,
   type PlayerControlsProps,
-} from "../../../../packages/mobile-mpv-playback/src/components/PlayerControls";
+} from "@space/mobile-mpv-playback/PlayerControls";
 
 const TAG = "[player-controls-overlay]";
 
@@ -72,7 +72,7 @@ vi.mock("react-native", () => {
     NativeModules: {},
   };
 });
-vi.mock("../../../../packages/mobile-mpv-playback/src/MpvControl", () => ({
+vi.mock("@space/mobile-mpv-playback/MpvControl", () => ({
   MpvControl: new Proxy({}, { get: () => () => Promise.resolve([]) }),
 }));
 

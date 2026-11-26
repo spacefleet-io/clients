@@ -198,6 +198,22 @@ class KodiItemsCarryLibraryMetadata(unittest.TestCase):
         self.assertNotIn("<uniqueid", nfo)
         self.assertIn("<title>Interstellar</title>", nfo)
 
+    def test_no_rating_reaches_kodi(self):
+        # @req META-SRC-05[badger-kodi]: the synced movie row holds rating 8.8; no Kodi item or exported NFO carries it.
+        rating = self.conn.execute("SELECT rating FROM media_items WHERE id = 'movie-1'").fetchone()[0]
+        movies = self.listed(router.list_movies)
+        shows = self.listed(router.list_shows)
+        episodes = self.listed(router.list_episodes, "tv-1", 1)
+        nfos = [export.movie_nfo(self.ctx.lib.get_media("movie-1")), export.tvshow_nfo(self.ctx.lib.get_media("tv-1"))]
+        log("state", "META-SRC-05", {"stored": rating, "movies": movies, "shows": shows, "episodes": episodes, "nfos": nfos})
+        self.assertEqual(rating, 8.8)
+        for item in movies + shows + episodes:
+            self.assertFalse([key for key in item["info"] if "rating" in key.lower() or "votes" in key.lower()], item["info"])
+            self.assertNotIn("8.8", json.dumps(item))
+        for nfo in nfos:
+            self.assertNotIn("<rating", nfo)
+            self.assertNotIn("8.8", nfo)
+
 
 if __name__ == "__main__":
     unittest.main()

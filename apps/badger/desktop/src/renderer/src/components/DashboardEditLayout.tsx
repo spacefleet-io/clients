@@ -5,10 +5,10 @@ import { CSS } from "@dnd-kit/utilities";
 import { Film, Pencil, Plus, Tv, X } from "lucide-react";
 
 import { Button, Card, CardContent, CardHeader } from "@space/ui";
-import type { DashboardSectionConfig, LibraryScope } from "@/lib/dashboardLayoutTypes";
+import type { HomeLibraryScope, HomeSectionConfig } from "@space/shared/homeLayout";
 
 type SortableSectionProps = {
-  section: DashboardSectionConfig;
+  section: HomeSectionConfig;
   title: string;
   icon: ReactNode;
   isEditing: boolean;
@@ -17,26 +17,26 @@ type SortableSectionProps = {
   tvLabel: string;
   onRemove: (id: string) => void;
   onEdit: (id: string) => void;
-  onToggleLibrary: (section: DashboardSectionConfig, library: LibraryScope) => void;
-  onSetStyle: (section: DashboardSectionConfig, styleId: number) => void;
+  onToggleLibrary: (section: HomeSectionConfig, library: HomeLibraryScope) => void;
+  onSetStyle: (section: HomeSectionConfig, styleId: number) => void;
   styleOptions: { id: number; label: string }[];
 };
 
 type DashboardEditLayoutProps = {
-  sections: DashboardSectionConfig[];
+  sections: HomeSectionConfig[];
   editingSectionId: string | null;
   moviesLabel: string;
   tvLabel: string;
   styleOptions: { id: number; label: string }[];
   openAddSection: (index: number) => void;
   onRemoveSection: (id: string) => void;
-  onToggleLibrary: (section: DashboardSectionConfig, library: LibraryScope) => void;
-  onSetStyle: (section: DashboardSectionConfig, styleId: number) => void;
+  onToggleLibrary: (section: HomeSectionConfig, library: HomeLibraryScope) => void;
+  onSetStyle: (section: HomeSectionConfig, styleId: number) => void;
   onToggleEditingSection: (id: string) => void;
-  onReorderSections: (updater: (items: DashboardSectionConfig[]) => DashboardSectionConfig[]) => void;
-  sectionLabel: (section: DashboardSectionConfig) => string;
-  sectionIcon: (section: DashboardSectionConfig) => ReactNode;
-  renderSectionRows: (section: DashboardSectionConfig) => ReactNode;
+  onReorderSections: (updater: (items: HomeSectionConfig[]) => HomeSectionConfig[]) => void;
+  sectionLabel: (section: HomeSectionConfig) => string;
+  sectionIcon: (section: HomeSectionConfig) => ReactNode;
+  renderSectionRows: (section: HomeSectionConfig) => ReactNode;
 };
 
 const SortableSection = ({

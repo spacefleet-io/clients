@@ -20,9 +20,9 @@ import {
   openSigningKeychain,
   removeAppCopy,
   resolveMacSigning,
-} from "../../desktop-platform-macos/packaging/mac-signing-lib.mjs";
-import { PACKAGING_UMASK } from "../../desktop-platform-linux/packaging/file-modes.mjs";
-import { LINUX_TOOL_PACKAGES, missingLinuxPackageTools } from "../../desktop-platform-linux/packaging/linux-packages.mjs";
+} from "@space/desktop-platform-macos/packaging/mac-signing-lib";
+import { PACKAGING_UMASK } from "@space/desktop-platform-linux/packaging/file-modes";
+import { LINUX_TOOL_PACKAGES, missingLinuxPackageTools } from "@space/desktop-platform-linux/packaging/linux-packages";
 import {
   assertWindowsSigningHost,
   authenticodeCheckScript,
@@ -31,7 +31,7 @@ import {
   resolveWindowsSigning,
   windowsSigningLogLine,
   windowsUpdatePublisherFor,
-} from "../../desktop-platform-windows/packaging/windows-signing-lib.mjs";
+} from "@space/desktop-platform-windows/packaging/windows-signing-lib";
 import { checkPackagedLocales } from "./packaged-locales-lib.mjs";
 import { TEST_BUILD_ENV } from "./test-build-lib.mjs";
 

@@ -4,6 +4,7 @@ import type { TrayLabels } from "./tray";
 
 export * from "./appIdentity";
 export * from "./appLinks";
+export * from "./hiddenJobNotices";
 export * from "./menu";
 export * from "./protocolClient";
 export * from "./silentAudio";

@@ -2,9 +2,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import path from "node:path";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { createEngineV2, JOB_HISTORY_RETENTION_DAYS, type EngineV2 } from "../src/core/jobs/engineV2";
-import { createSqliteRuntimeJobsStore } from "../src/core/jobs/sqliteStore";
-import { createSqliteEventLogDeps } from "../src/core/jobs/sqliteEventLogDeps";
+import { createEngineV2, JOB_HISTORY_RETENTION_DAYS, type EngineV2 } from "@space/runtime-jobs-engine/engineV2";
+import { createSqliteRuntimeJobsStore } from "@space/runtime-jobs-engine/sqliteStore";
+import { createSqliteEventLogDeps } from "@space/runtime-jobs-engine/sqliteEventLogDeps";
 import type { IngestJobRecord } from "@space/runtime-jobs";
 
 const DAY = 24 * 3_600_000;

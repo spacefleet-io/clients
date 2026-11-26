@@ -23,7 +23,7 @@
  * (the field that actually violates the column).
  */
 import { describe, expect, it, vi } from "vitest";
-import type { EngineV2 } from "../src/core/jobs/engineV2";
+import type { EngineV2 } from "@space/runtime-jobs-engine/engineV2";
 import type { BadgerLibraryDbService } from "../src/modules/badgerLibraryDb";
 import { createBadgerMediaReplanQualitiesHandler } from "../src/modules/badger/mediaReplan";
 import type { IngestJobRecord } from "@space/runtime-jobs";

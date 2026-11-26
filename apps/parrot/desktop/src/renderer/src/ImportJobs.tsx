@@ -3,6 +3,7 @@ import {
   DesktopCompletedJobRow,
   DesktopFailedJobDetail,
   DesktopJobActionButton,
+  DesktopJobBucketHeader,
   DesktopJobFailureGroups,
   DesktopJobGroupCard,
   DesktopJobProgress,
@@ -26,6 +27,8 @@ import {
   type ParrotBackgroundWork,
   type ParrotImportJob,
   type ParrotImportRetry,
+  type ParrotImportRow,
+  type ParrotImportSong,
   type ParrotImportStatus,
   type ParrotLanguage,
 } from "../../shared/ipc";
@@ -245,18 +248,23 @@ export type ImportJobAlbum = { title: string; cover: string | null };
  * Badger's, listing this account's imports (running, ready to review, finished, stopped, failed) with what each added,
  * found already there, or could not import and why. Each import is a group card like a Badger title (cover, title,
  * count, pill, X or bin, chevron) opening onto its row. A running import has the X (it stops the uploads left; songs
- * already in stay), an ended one the bin; one ready to review opens the review on a click.
+ * already in stay), an ended one the bin; one ready to review opens the review on a click. `open` lets a failed job's
+ * notice lead here (UX-NOTICE-10).
  */
 export function ImportJobs({
   t,
   language,
   onReview,
   albumFor,
+  open,
+  onOpenChange,
 }: {
   t: Translate;
   language: ParrotLanguage;
   onReview: () => void;
   albumFor: (albumId: string) => ImportJobAlbum | undefined;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
   const jobs = useImportJobs();
   const background = useBackgroundWork();
@@ -271,7 +279,16 @@ export function ImportJobs({
   useAppBusyMark(activeCount > 0);
 
   return (
-    <DesktopJobsSheet title={t("jobs.title")} subtitle={t("jobs.subtitle")} activeCount={activeCount} jobCount={list.length + exports.length} triggerClassName={desktopTopNavIconActionClassName} testId="nav-jobs">
+    <DesktopJobsSheet
+      title={t("jobs.title")}
+      subtitle={t("jobs.subtitle")}
+      activeCount={activeCount}
+      jobCount={list.length + exports.length}
+      triggerClassName={desktopTopNavIconActionClassName}
+      testId="nav-jobs"
+      open={open}
+      onOpenChange={onOpenChange}
+    >
       <div className="flex flex-col gap-4 p-4" data-testid="import-jobs">
         {background.map((work) => (
           <DesktopJobsBackgroundLine key={work.kind} testId={`import-background-${work.kind}`}>
@@ -467,7 +484,131 @@ function ImportJobItem({
         ) : (
           <DesktopJobRow title={started} filename={name} badge={null} progress={progress} extra={extra} action={null} />
         )}
+        {job.songs && job.songs.length > 0 ? <ImportSongBuckets t={t} language={language} songs={job.songs} running={status.running} /> : null}
       </DesktopJobGroupCard>
     </li>
+  );
+}
+
+/** The steps a song's jobs go through (PAR-UP-13), each with its words and its pill colour. */
+const SONG_STAGES: Record<string, { key: ParrotStringKey; tone: DesktopJobTone }> = {
+  probe: { key: "jobs.stage.probe", tone: "blue" },
+  identify: { key: "jobs.stage.identify", tone: "blue" },
+  extract: { key: "jobs.stage.extract", tone: "blue" },
+  transcode: { key: "jobs.stage.transcode", tone: "purple" },
+  upload: { key: "jobs.stage.upload", tone: "cyan" },
+  commit: { key: "jobs.stage.commit", tone: "cyan" },
+};
+
+/** A row still to run or running: its X stops it. An interrupted row runs again once the import resumes. */
+const songRowLive = (row: ParrotImportRow) => row.status === "queued" || row.status === "running" || row.status === "interrupted";
+
+/** UX-JOBS-02: a song row's pill, in Badger's words: waiting with its place in line, the step it is at, or how it ended. */
+const songRowPill = (t: Translate, row: ParrotImportRow): { text: string; tone: DesktopJobTone } => {
+  switch (row.status) {
+    case "running": {
+      const stage = SONG_STAGES[row.stage];
+      return stage ? { text: t(stage.key), tone: stage.tone } : { text: t("jobs.status.uploading"), tone: "cyan" };
+    }
+    case "succeeded":
+      return { text: t("jobs.status.done"), tone: "emerald" };
+    case "failed":
+      return { text: t("jobs.status.failed"), tone: "destructive" };
+    case "cancelled":
+      return { text: t("jobs.status.cancelled"), tone: "neutral" };
+    default:
+      return { text: row.placeInLine !== null ? t("jobs.song.waitingInLine", { n: row.placeInLine }) : t("jobs.status.queued"), tone: "neutral" };
+  }
+};
+
+/** Which row speaks for its song on the bucket's pill: the one at work, then a failure, then the one waiting. */
+const SONG_ROW_WEIGHT: Record<ParrotImportRow["status"], number> = { running: 5, failed: 4, interrupted: 3, queued: 3, cancelled: 2, succeeded: 1 };
+
+const songRows = (song: ParrotImportSong): { kind: "source" | "light"; row: ParrotImportRow }[] =>
+  song.light ? [{ kind: "source", row: song.source }, { kind: "light", row: song.light }] : [{ kind: "source", row: song.source }];
+
+/**
+ * UX-JOBS-02 / PAR-UP-13: a running import's songs, one bucket each (Badger's episode sub-group) holding the song's
+ * own job and its light copy, each with its pill, progress, X and "Try again". A song at work or that failed is open;
+ * one done or still waiting stays closed, its pill on the bucket. "Try again" and the X act only while the import runs.
+ */
+function ImportSongBuckets({ t, language, songs, running }: { t: Translate; language: ParrotLanguage; songs: ParrotImportSong[]; running: boolean }) {
+  const [open, setOpen] = useState<Record<string, boolean>>({});
+  return (
+    <div className="mt-2" data-testid="import-songs">
+      {songs.map((song, index) => {
+        const rows = songRows(song);
+        const lead = rows.reduce((best, entry) => (SONG_ROW_WEIGHT[entry.row.status] > SONG_ROW_WEIGHT[best.row.status] ? entry : best));
+        const leadPill = songRowPill(t, lead.row);
+        const expanded = open[song.file] ?? rows.some(({ row }) => row.status === "running" || row.status === "failed");
+        return (
+          <div key={song.file} className={index > 0 ? "border-t border-border/50" : undefined} data-testid="import-song">
+            <DesktopJobBucketHeader
+              expanded={expanded}
+              onToggle={() => setOpen((current) => ({ ...current, [song.file]: !expanded }))}
+              title={fileName(song.file)}
+              countLabel={t(`jobs.song.jobs.${pluralForm(language, rows.length)}`, { n: rows.length })}
+              badge={
+                <DesktopJobStatusPill tone={leadPill.tone} testId="import-song-badge">
+                  {leadPill.text}
+                </DesktopJobStatusPill>
+              }
+            />
+            {expanded ? (
+              <div className="space-y-3 pb-2 pl-5">
+                {rows.map(({ kind, row }) => (
+                  <ImportSongRow key={row.jobId} t={t} kind={kind} row={row} running={running} />
+                ))}
+              </div>
+            ) : null}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function ImportSongRow({ t, kind, row, running }: { t: Translate; kind: "source" | "light"; row: ParrotImportRow; running: boolean }) {
+  const [busy, setBusy] = useState(false);
+  const pill = songRowPill(t, row);
+  const act = async (what: "retry" | "cancel") => {
+    setBusy(true);
+    try {
+      const done = what === "retry" ? await window.parrot.retryImportSong(row.jobId) : await window.parrot.cancelImportSong(row.jobId);
+      console.info(`[parrot-jobs] ${what} song job ${row.jobId}: ${done}`);
+    } catch (error) {
+      console.warn(`[parrot-jobs] ${what} song job ${row.jobId} failed: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setBusy(false);
+    }
+  };
+  const ended = row.status === "failed" || row.status === "cancelled";
+  const detail =
+    ended && (row.status === "failed" || running) ? (
+      <DesktopFailedJobDetail
+        testId="import-song-failed"
+        what={row.status === "failed" ? t(`jobs.reason.${importFailureReason(row.error ?? "")}.one`, { n: 1 }) : t("jobs.status.cancelled")}
+        meaning={running ? t("jobs.song.retryMeaning") : t("jobs.failed.meaningRetry")}
+        action={running ? { label: t("jobs.song.retry"), onClick: () => void act("retry"), busy, testId: "import-song-retry" } : undefined}
+      />
+    ) : null;
+  return (
+    <div data-testid="import-song-row" data-kind={kind} data-status={row.status}>
+      <DesktopJobRow
+        title={t(kind === "source" ? "jobs.song.source" : "jobs.song.light")}
+        badge={
+          <DesktopJobStatusPill tone={pill.tone} testId="import-song-status">
+            {pill.text}
+          </DesktopJobStatusPill>
+        }
+        progress={row.status === "running" && row.progressPct > 0 ? <DesktopJobProgress percent={row.progressPct} testId="import-song-bar" /> : null}
+        extra={detail}
+        action={
+          running && songRowLive(row) ? (
+            <DesktopJobActionButton kind="cancel" label={t("jobs.song.cancel")} onClick={() => void act("cancel")} disabled={busy} testId="import-song-cancel" />
+          ) : null
+        }
+      />
+    </div>
   );
 }

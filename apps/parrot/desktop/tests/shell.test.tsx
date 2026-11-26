@@ -91,6 +91,7 @@ describe("Parrot desktop shell", () => {
         ...streamBridgeStub(),
         ...exportBridgeStub(),
         getLibrary: vi.fn(async () => ({ ok: true, library })),
+        sendFeedback: vi.fn(async () => ({ ok: true })),
         getImportStatus: vi.fn(async () => ({ running: false, phase: "idle", done: 0, total: 0, imported: 0, skipped: 0, failed: 0 })),
         getImportScan: vi.fn(async () => null),
         sourceCredits: vi.fn(async (product: "badger" | "parrot", language: string) => ({
@@ -259,6 +260,55 @@ describe("Parrot desktop shell", () => {
     expect(q("now-playing-about")[0]?.textContent).toContain("3:00");
   });
 
+  // @req PAR-NAV-07
+  // @bugfix Chris 2026-11-26: the now-playing page ("Up next") had no Back, unlike every other page.
+  it("the now-playing page has Back, which returns to the page it was opened from", async () => {
+    await mount();
+    const where = () => ({
+      nowPlaying: q("now-playing").length,
+      album: q("album-title")[0]?.textContent ?? null,
+      home: q("home").length,
+      back: q("library-back").map((el) => el.textContent),
+    });
+    // Home → First Light's page → play Lantern → Up next.
+    await act(async () => q("home-album").find((el) => el.textContent?.includes("First Light"))!.click());
+    await flush();
+    console.info(SUITE, "album page", where());
+    expect(where().album).toBe("First Light");
+    const row = q("library-track").find((el) => el.textContent?.includes("Lantern"));
+    await act(async () => row!.querySelector<HTMLElement>("button")!.click());
+    await flush();
+    await click("player-queue");
+    console.info(SUITE, "up next", where());
+    expect(where().nowPlaying).toBe(1);
+    expect(q("now-playing-queue")).toHaveLength(1);
+    // The Back of every other page, at the top of the page, above the cover and the tabs.
+    const back = q("library-back")[0];
+    expect(back?.textContent).toBe("Back");
+    expect(back?.compareDocumentPosition(q("now-playing-cover")[0]!) ?? 0).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    await click("library-back");
+    console.info(SUITE, "after back", where());
+    expect(where().nowPlaying).toBe(0);
+    expect(where().album).toBe("First Light");
+
+    // Now playing → its album (the cover) → Back comes back to Now playing, and Back again to where that was opened from.
+    await click("player-queue");
+    await click("now-playing-cover");
+    console.info(SUITE, "cover opened", where());
+    expect(where().album).toBe("First Light");
+    expect(where().nowPlaying).toBe(0);
+    await click("library-back");
+    console.info(SUITE, "back to now playing", where());
+    expect(where().nowPlaying).toBe(1);
+    await click("library-back");
+    console.info(SUITE, "back again", where());
+    expect(where().nowPlaying).toBe(0);
+    expect(where().album).toBe("First Light");
+    await click("library-back");
+    console.info(SUITE, "back home", where());
+    expect(where().home).toBe(1);
+  });
+
   // @req PAR-NAV-01
   // @req UX-SET-01
   it("Settings has Badger's category rail: General (language, Refresh), Manage offline content, Help & feedback, About & updates (version, open source, credits), and Account (Plan, Pair a device)", async () => {
@@ -273,6 +323,21 @@ describe("Parrot desktop shell", () => {
     expect(window.parrot.getLibrary).toHaveBeenLastCalledWith(true);
     await click("settings-nav-support");
     expect(q("library-feedback")).toHaveLength(1);
+    // @req UX-SUP-05[parrot] @req REL-FAM-05[ci] the button opens the shared desktop form (@space/desktop-shell),
+    // which sends through this window's bridge to main.
+    await click("library-feedback");
+    expect(q("feedback-dialog")).toHaveLength(1);
+    const message = q("feedback-message")[0] as HTMLTextAreaElement;
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")!.set!.call(message, "shell feedback");
+      message.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    await click("feedback-send");
+    console.info(SUITE, "feedback form", q("feedback-dialog")[0]?.textContent);
+    expect(window.parrot.sendFeedback).toHaveBeenCalledWith({ message: "shell feedback", attachLog: false });
+    expect(q("feedback-dialog")[0]?.textContent).toContain("Thanks, we got it.");
+    await act(async () => [...q("feedback-dialog")[0]!.querySelectorAll("button")].find((b) => b.textContent === "Cancel")!.click());
+    expect(q("feedback-dialog")).toHaveLength(0);
     expect(q("settings-open-source")).toHaveLength(0);
     await click("settings-nav-about");
     // @req REL-UPD-05[parrot] the section opens on the installed version; the updater itself is tested in updates.test.tsx.
@@ -303,7 +368,7 @@ describe("Parrot desktop shell", () => {
     await mount();
     const listener = vi.mocked(window.parrot.onImportStatus).mock.calls[0]![0];
     await act(async () => listener({ running: false, phase: "failed", done: 0, total: 0, imported: 0, skipped: 0, failed: 0, error: "disk full" }));
-    expect(q("nav-notifications-unread")).toHaveLength(1);
+    expect(q("nav-notifications-count")[0]?.textContent).toBe("1");
     await click("nav-notifications");
     console.info(SUITE, "tray", document.body.textContent?.includes("Import failed"));
     expect(document.body.textContent).toContain("Import failed");

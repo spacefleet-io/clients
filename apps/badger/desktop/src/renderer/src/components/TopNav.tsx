@@ -19,8 +19,8 @@ import TopNavJobsSidebar from "@/components/TopNavJobsSidebar";
 import { DesktopOfflineIndicator } from "@/components/DesktopOfflineIndicator";
 import { FounderNotice } from "@/components/FounderNotice";
 import { SkipCatchUpNotice } from "@/components/SkipCatchUpNotice";
-import { UnpaidAccessBanner } from "@/components/UnpaidAccessBanner";
-import { OverQuotaBanner } from "@/components/OverQuotaBanner";
+import { UnpaidAccessSign } from "@/components/UnpaidAccessSign";
+import { OverQuotaSign } from "@/components/OverQuotaSign";
 import { useSignOutWithKeyCheck } from "@/components/SignOutKeyCheck";
 import TopNavSearch from "@/components/TopNavSearch";
 
@@ -89,11 +89,13 @@ function TopNav() {
         logoSrc={iconSrc}
         logoAlt={t("brand.app")}
         title={t("brand.app")}
-        // UX-NOTICE-02: offline and the first sync are normal states, said by small signs inside the fixed bar, never
-        // by a bar under it that pushes the page down.
+        // UX-NOTICE-02, UX-NOTICE-08: offline, the first sync, an unpaid account and a library over its storage are
+        // said by small signs inside the fixed bar, never by a bar under it that pushes the page down.
         status={
           <>
             <DesktopOfflineIndicator />
+            <UnpaidAccessSign />
+            <OverQuotaSign />
             {showLibrarySyncBanner ? (
               <span
                 role="status"
@@ -185,8 +187,6 @@ function TopNav() {
         }
       />
       {signOutKeyCheckDialog}
-      <UnpaidAccessBanner />
-      <OverQuotaBanner />
       <FounderNotice />
       {user ? <SkipCatchUpNotice /> : null}
       <SyncBannerSurface

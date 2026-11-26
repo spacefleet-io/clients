@@ -22,7 +22,12 @@ export default function TopNavJobsSidebar() {
   useEffect(() => {
     const openPanel = () => setOpen(true);
     window.addEventListener(OPEN_JOBS_EVENT, openPanel);
-    return () => window.removeEventListener(OPEN_JOBS_EVENT, openPanel);
+    // UX-NOTICE-06: a click on the system notification of a job that ended while the window was hidden.
+    const stopNoticeOpens = window.sf?.hiddenJobNotices?.onOpenJobs(openPanel);
+    return () => {
+      window.removeEventListener(OPEN_JOBS_EVENT, openPanel);
+      stopNoticeOpens?.();
+    };
   }, []);
 
   return (

@@ -13,10 +13,10 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { TEST_BUILD_ENV, testBuildVersion } from "../../../packages/desktop-platform/packaging/test-build-lib.mjs";
-import { resolveWindowsSigning, windowsSigningBuilderOptions, windowsUpdatePublisherFor } from "../../../packages/desktop-platform-windows/packaging/windows-signing-lib.mjs";
-import { nativeLinuxPackageOptions } from "../../../packages/desktop-platform-linux/packaging/linux-packages.mjs";
-import { linuxAfterInstallScript, withLinuxModes } from "../../../packages/desktop-platform-linux/packaging/file-modes.mjs";
+import { TEST_BUILD_ENV, testBuildVersion } from "@space/desktop-platform/packaging/test-build-lib";
+import { resolveWindowsSigning, windowsSigningBuilderOptions, windowsUpdatePublisherFor } from "@space/desktop-platform-windows/packaging/windows-signing-lib";
+import { nativeLinuxPackageOptions } from "@space/desktop-platform-linux/packaging/linux-packages";
+import { linuxAfterInstallScript, withLinuxModes } from "@space/desktop-platform-linux/packaging/file-modes";
 import { ELECTRON_LANGUAGES, MAC_MINIMUM_SYSTEM_VERSION, PRODUCT_NAME, resolveLinuxFormats, resolvePackageTarget } from "./scripts/package-targets.mjs";
 
 const appDir = import.meta.dirname;
