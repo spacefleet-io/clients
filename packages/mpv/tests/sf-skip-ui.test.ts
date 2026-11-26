@@ -6,12 +6,14 @@
 import { describe, expect, it } from "vitest";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { requireMediaBinary } from "@space/media-deps";
 
 const TAG = "[sf-skip-ui]";
 const sfLua = fileURLToPath(new URL("../resources/osc/sf.lua", import.meta.url));
 const driver = fileURLToPath(new URL("./lua/sf_skip_ui_scenario.lua", import.meta.url));
 const LUA_CANDIDATES = ["luajit", "lua5.1", "lua5.2", "lua"];
 const lua = LUA_CANDIDATES.find((bin) => spawnSync(bin, ["-v"]).status === 0) ?? null;
+requireMediaBinary("a Lua interpreter (luajit, lua5.1, lua5.2 or lua)", lua !== null);
 if (!lua) console.warn(`${TAG} SKIP: no Lua interpreter on PATH (tried ${LUA_CANDIDATES.join(", ")})`);
 
 type Checkpoint = { label: string; media: number; paused: boolean; skip: string; pill: string };

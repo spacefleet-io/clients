@@ -282,7 +282,7 @@ const clientIdentity = desktopClientIdentity({
   app: "badger",
   version: app.getVersion(),
   packaged: app.isPackaged,
-  os: process.platform,
+  os: getDesktopPlatform().id,
   env: process.env,
 });
 setClientIdentity(clientIdentity);
@@ -448,7 +448,7 @@ const deviceSettings = registerDeviceSettingsIpc();
 // STOR-UNIT-01: storage figures follow this computer's file manager (1024 on Windows and KDE, 1000 elsewhere); the
 // preload reads the base synchronously so the window sets it before its first render.
 serveStorageUnitBase(ipcMain, {
-  platform: process.platform,
+  platform: getDesktopPlatform().id,
   desktop: process.env.XDG_CURRENT_DESKTOP,
   log: (line) => logger.info(line),
 });
