@@ -1,27 +1,35 @@
 /**
  * @test-id MOBILE-NEW-DEVICE-NOTICE-OVERLAY-001
  * @level unit
- * @req ACCT-PAIR-03[badger-mobile] @req UX-NOTICE-01[badger-mobile]
+ * @req ACCT-PAIR-03[badger-mobile] @req UX-NOTICE-01[badger-mobile] @req UX-NOTICE-04[badger-mobile] @req UX-NOTICE-11[badger-mobile]
  * @why Chris 2026-11-12 (chat): the "New device added" notice sat above the Settings title (and Home's rows) and pushed
  *   the page down. It now floats over the page: `MainShellScreen` hands it to the frame's `overlay`, never to a page. It
  *   leaves after `NOTICE_DURATION_MS`, at once when tapped (which opens Settings, where "Your devices" is) or closed,
  *   and whatever ends it marks the device seen. Real screen, real queue and real translations; the frame is a stand-in
- *   that renders the active page and the overlay side by side, fake timers for the auto-dismiss.
+ *   that renders the active page and the overlay side by side, fake timers for the auto-dismiss. The notice is also kept
+ *   in the bell's history (UX-NOTICE-04) of the signed-in user, once per device however often it is announced
+ *   (UX-NOTICE-11), and the entry's button opens the device list like the notice.
  */
 import { createElement, type ReactNode } from "react";
 import { act, create, type ReactTestInstance, type ReactTestRenderer } from "react-test-renderer";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { initI18n } from "@space/mobile-shell/i18n";
 import type * as I18nModule from "@space/mobile-shell/i18n";
-import { NOTICE_DURATION_MS } from "@space/mobile-shell/notice-queue";
+import type { NoticeHistory } from "@space/notify-core/history";
+import { NOTICE_TIMINGS } from "@space/notify-core/kinds";
 import { announceNewDevice } from "../src/lib/pairing/newDevice";
 import { MainShellScreen } from "../src/screens/MainShellScreen";
+
+const NOTICE_DURATION_MS = NOTICE_TIMINGS.headsUpMs;
 
 const state = vi.hoisted(() => ({
   frame: { activeTab: "", overlay: null as ReactNode },
   seen: [] as (string | null)[],
   // False while another stack screen (the player) covers the shell.
   focused: true,
+  user: null as { id: string } | null,
+  bell: null as { history: NoticeHistory | null; onOpenTarget?: (target: string) => void } | null,
+  stored: new Map<string, string>(),
 }));
 
 vi.mock("react-native", async () => {
@@ -39,17 +47,19 @@ vi.mock("@space/mobile-shell/i18n", async (importOriginal) => {
   const actual = await importOriginal<typeof I18nModule>();
   return { ...actual, useTranslation: () => ({ t: actual.translate, i18n: { language: actual.getCurrentLanguage() } }) };
 });
-vi.mock("@react-navigation/native", () => ({ useIsFocused: () => state.focused }));
+vi.mock("@react-navigation/native", () => ({ useIsFocused: () => state.focused, useNavigation: () => ({ navigate: () => undefined }) }));
+vi.mock("@space/mobile-shell/account-news", () => ({ useAccountNews: () => undefined }));
 vi.mock("lucide-react-native", () => ({ Home: "Icon", LibraryBig: "Icon", ListVideo: "Icon", Search: "Icon", Settings: "Icon" }));
 vi.mock("@space/mobile-shell/components", () => {
   const passthrough = (props: { children?: ReactNode }) => createElement("Region", null, props.children);
   return {
     // The frame's contract: pages in the pager, `overlay` beside them (MOBILE-SHELL-NOTICE-OVERLAY-001 pins the real one).
-    MobileShellFrame: (props: { activeTab: string; overlay?: ReactNode; children: (tabId: string) => ReactNode }) => {
+    MobileShellFrame: (props: { activeTab: string; overlay?: ReactNode; header?: ReactNode; children: (tabId: string) => ReactNode }) => {
       state.frame = { activeTab: props.activeTab, overlay: props.overlay ?? null };
       return createElement(
         "Frame",
         null,
+        props.header ? createElement("HeaderSlot", null, props.header) : null,
         createElement("Pager", null, props.children(props.activeTab)),
         props.overlay ? createElement("OverlaySlot", null, props.overlay) : null,
       );
@@ -60,7 +70,24 @@ vi.mock("@space/mobile-shell/components", () => {
     SkyRegion: passthrough,
   };
 });
-vi.mock("../src/store/auth", () => ({ useAuth: () => ({ token: null }) }));
+vi.mock("../src/store/auth", () => ({ useAuth: () => ({ token: null, user: state.user }) }));
+// The bell's own drawing is MOBILE-SHELL-NOTICE-HISTORY-001; here only the history the screen hands it.
+vi.mock("@space/mobile-shell/notice-bell", () => ({
+  MobileNoticeBell: (props: { history: NoticeHistory | null; onOpenTarget?: (target: string) => void }) => {
+    state.bell = props;
+    return null;
+  },
+}));
+vi.mock("@react-native-async-storage/async-storage", () => ({
+  default: {
+    getItem: async (key: string) => state.stored.get(key) ?? null,
+    setItem: async (key: string, value: string) => {
+      state.stored.set(key, value);
+    },
+  },
+}));
+// The tab bar's unpaid sign (tested in mobile-shell) loads the real safe-area module, which plain node cannot load.
+vi.mock("@space/mobile-shell/unpaid-access-sign", () => ({ UnpaidAccessSign: () => null }));
 vi.mock("../src/store/library", () => ({
   useLibraryData: () => ({ media: [] }),
   useLibraryStatus: () => ({ loadStatus: { kind: "ready" }, syncState: { kind: "idle" }, reload: () => undefined }),
@@ -71,7 +98,6 @@ vi.mock("../src/lib/pairing/deviceWatch", () => ({
     state.seen.push(sessionId);
   },
 }));
-vi.mock("@space/mobile-shell/unpaid-access-banner", () => ({ UnpaidAccessBanner: () => null }));
 vi.mock("../src/screens/HomeScreen", () => ({ HomeScreen: () => createElement("HomeScreen") }));
 vi.mock("../src/screens/LibraryScreen", () => ({ LibraryScreen: () => null }));
 vi.mock("../src/components/PlaylistsPanel", () => ({ PlaylistsPanel: () => null }));
@@ -114,6 +140,9 @@ describe("the phone's new device notice floats over the page (UX-NOTICE-01)", ()
     vi.useFakeTimers();
     state.seen = [];
     state.focused = true;
+    state.user = null;
+    state.bell = null;
+    state.stored.clear();
   });
   afterEach(() => {
     act(() => mounted.splice(0).forEach((tree) => tree.unmount()));
@@ -201,5 +230,35 @@ describe("the phone's new device notice floats over the page (UX-NOTICE-01)", ()
     });
     expect(notices(tree)).toHaveLength(0);
     expect(state.seen).toEqual(["s-den"]);
+  });
+
+  it("is kept in the signed-in user's bell history once per device, and the entry's button opens the device list", async () => {
+    state.user = { id: "user-1" };
+    const tree = render();
+    const history = state.bell?.history;
+    if (!history) throw new Error("no history handed to the bell");
+    await history.ready;
+    act(() => announceNewDevice(DEN_TV));
+    act(() => announceNewDevice(DEN_TV));
+    const entries = history.getAll();
+    log("history", entries.map((e) => ({ key: e.key, title: e.title, message: e.message, action: e.action, read: e.read })));
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatchObject({
+      // The key the account's news gives this sign-in (UX-NOTICE-05), so the two are one entry.
+      key: "new-device-s-den",
+      scope: "account",
+      read: false,
+      title: { key: "notify.account.newDevice" },
+      message: { key: "notify.account.newDeviceMessage", vars: { name: "Den TV", type: { key: "notify.account.deviceType.tv" } } },
+      action: { label: { key: "account.devices.title" }, target: "devices" },
+    });
+    expect(history.unreadCount()).toBe(1);
+    await vi.waitFor(() => expect(state.stored.get("sf.notifications.user-1")).toContain("new-device-s-den"));
+
+    act(() => (notices(tree)[0].props.onClose as () => void)());
+    expect(state.frame.activeTab).toBe("home");
+    act(() => state.bell?.onOpenTarget?.("devices"));
+    log("entry opened", { activeTab: state.frame.activeTab });
+    expect(state.frame.activeTab).toBe("settings");
   });
 });

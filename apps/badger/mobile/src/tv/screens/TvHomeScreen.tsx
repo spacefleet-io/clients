@@ -6,9 +6,9 @@ import { MobileLibraryLoading, useSkyScroll } from "@space/mobile-shell/componen
 import { useTranslation } from "@space/mobile-shell/i18n";
 import type { MediaRow } from "@space/shared/libraryTypes";
 import { libraryContent } from "@space/shared/libraryContent";
-import { homeRailEntries, selectHomeRails, type HomeRailEntry } from "../../lib/homeRails";
+import { phoneHomeLayout } from "../../lib/phoneHome";
 import { getLastPlayedEpisodeId } from "../../lib/resume";
-import { useFavoriteIds } from "../../lib/useFavoriteIds";
+import { useHomeRails } from "../../lib/useHomeRails";
 import type { RootStackParamList } from "../../navigation/AppNavigator";
 import { useLibraryActions, useLibraryData, useLibraryStatus } from "../../store/library";
 import { TvContinueHero, type TvHeroAction } from "../components/TvContinueHero";
@@ -24,17 +24,11 @@ type Nav = NativeStackNavigationProp<RootStackParamList>;
 const MASCOT = require("../../assets/mascot.webp");
 
 /**
- * The one row under the Continue watching card (UX-TV-05, Chris 2026-11-12 (chat)): "Recently added", or nothing when
- * the library is empty. The other phone rows (movies, TV shows, favorites) live in Library on TV.
- */
-export const homeRows = (rails: readonly HomeRailEntry[]): HomeRailEntry[] =>
-  rails.filter((rail) => rail.id === "recent" && rail.items.length > 0);
-
-/**
- * TV Home (UX-TV-05): the Continue watching card (Resume takes the focus), then one "Recently added" row of posters on
- * the sky. Without a title in progress, the first poster takes the focus (UX-TV-01). An empty library shows the
- * freestanding Badger and "Check again" (UX-TV-18), only once it is known to be empty; until then the app's opening
- * screen says "Loading library" (UX-WAIT-04).
+ * TV Home (UX-TV-05, UX-HOME-06): the Continue watching card (Resume takes the focus), then the rows of the Home layout
+ * set on the computer, in its order, on the sky (the same rows as the phone; the card's title is left out of the
+ * Continue watching row). Without a title in progress, the first poster takes the focus (UX-TV-01). An empty library
+ * shows the freestanding Badger and "Check again" (UX-TV-18), only once it is known to be empty; until then the app's
+ * opening screen says "Loading library" (UX-WAIT-04).
  */
 export const TvHomeScreen = memo(() => {
   const { t } = useTranslation();
@@ -42,7 +36,7 @@ export const TvHomeScreen = memo(() => {
   const { settled, error, loadStatus, reload } = useLibraryStatus();
   const { getMediaDetails } = useLibraryActions();
   const navigation = useNavigation<Nav>();
-  const favoriteIds = useFavoriteIds();
+  const homeRails = useHomeRails(media);
   const skyScroll = useSkyScroll();
   const scale = useTvScale();
   const styles = useTvStyles(baseStyles);
@@ -50,9 +44,7 @@ export const TvHomeScreen = memo(() => {
 
   const openMedia = useCallback((mediaId: string) => navigation.navigate("MediaDetails", { mediaId }), [navigation]);
 
-  const homeRails = useMemo(() => selectHomeRails(media, favoriteIds), [favoriteIds, media]);
-  const hero = homeRails.continueWatching[0] ?? null;
-  const rails = useMemo(() => homeRows(homeRailEntries(homeRails)), [homeRails]);
+  const { hero, rails } = useMemo(() => phoneHomeLayout(media, homeRails), [homeRails, media]);
 
   const onHeroAction = useCallback(
     (action: TvHeroAction, item: MediaRow) => {
@@ -101,7 +93,7 @@ export const TvHomeScreen = memo(() => {
       {rails.map((rail, railIndex) => (
         <View key={rail.id} style={styles.row}>
           <TvRail
-            title={t(rail.titleKey)}
+            title={rail.title}
             titleTestID={`tv-rail-title-${rail.id}`}
             items={rail.items}
             cardWidth={cardWidth}

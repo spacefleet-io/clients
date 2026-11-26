@@ -23,6 +23,8 @@ vi.mock("@space/mobile-shell/setup-flow", () => ({ PhoneSetupFlow: () => null })
 vi.mock("@space/mobile-shell/library-key-step", () => ({ MobileLibraryKeyStep: () => null }));
 vi.mock("@space/mobile-shell/i18n", () => ({ useTranslation: () => ({ t: (key: string) => key, i18n: { language: "en" } }) }));
 vi.mock("@space/mobile-shell/key-saved-warning", () => ({ MobileKeySavedWarning: () => null }));
+vi.mock("@space/mobile-shell/unpaid-setup-step", () => ({ MobileUnpaidSetupStep: () => null }));
+vi.mock("@space/mobile-shell/key-load-failed-step", () => ({ MobileKeyLoadFailedStep: () => null }));
 vi.mock("@space/mobile-shell/mascot-loader", () => ({ MobileMascotLoader: () => null }));
 vi.mock("@space/mobile-shell/logger", () => ({ scopeLogger: () => ({ info: () => undefined, warn: () => undefined }) }));
 vi.mock("@space/mobile-shell/libraryEnvelope", () => ({ decryptBase64ToBytes: async () => new Uint8Array() }));

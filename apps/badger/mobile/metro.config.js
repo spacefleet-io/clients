@@ -2,7 +2,7 @@ const { getDefaultConfig, mergeConfig } = require('@react-native/metro-config');
 const path = require('path');
 // The Google-free Android build (SF_FOSS=1, PLAT-MOBILE-06): Google Cast and Firebase imports resolve to stand-ins.
 // Outside it (Play, iOS), @space/mobile-self-update resolves to its stand-in (REL-UPD-06).
-const { withFossStubs, withSelfUpdate } = require('../../../packages/mobile-shell/foss.cjs');
+const { withFossStubs, withSelfUpdate } = require('@space/mobile-shell/foss');
 
 /**
  * Metro configuration
@@ -34,6 +34,7 @@ const legalRoot = path.resolve(repoRoot, 'packages/legal');
 const streamSlotsRoot = path.resolve(repoRoot, 'packages/stream-slots');
 const profileAvatarsRoot = path.resolve(repoRoot, 'packages/profile-avatars');
 const ingestCoreRoot = path.resolve(repoRoot, 'packages/ingest-core');
+const notifyCoreRoot = path.resolve(repoRoot, 'packages/notify-core');
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 // Workspace packages whose node_modules should be invisible to Metro.
@@ -41,11 +42,11 @@ const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 // can point to different versions than the app's copies (e.g. react@19.2.4 vs
 // react@19.2.3), causing dual-instance crashes. Blocking these directories
 // forces Metro to resolve everything from the app's node_modules instead.
-const workspaceNodeModulesBlockList = [sharedRoot, libraryDbRoot, libraryDbDefinitionRoot, mobileShellRoot, mobileMpvPlaybackRoot, mobileMediaProxyRoot, mobileMediaVolumeRoot, mobileSelfUpdateRoot, mobileMediaSessionRoot, mediaSessionRoot, playbackAbrRoot, mediaResealRoot, errorReportRoot, metadataClientRoot, privacyPassRoot, sdkRoot, streamSlotsRoot, profileAvatarsRoot, ingestCoreRoot]
+const workspaceNodeModulesBlockList = [sharedRoot, libraryDbRoot, libraryDbDefinitionRoot, mobileShellRoot, mobileMpvPlaybackRoot, mobileMediaProxyRoot, mobileMediaVolumeRoot, mobileSelfUpdateRoot, mobileMediaSessionRoot, mediaSessionRoot, playbackAbrRoot, mediaResealRoot, errorReportRoot, metadataClientRoot, privacyPassRoot, sdkRoot, streamSlotsRoot, profileAvatarsRoot, ingestCoreRoot, notifyCoreRoot]
   .map((dir) => new RegExp(`${escapeRegex(path.join(dir, 'node_modules'))}(/.*)?$`));
 
 const config = {
-  watchFolders: [repoRoot, sharedRoot, libraryDbRoot, libraryDbDefinitionRoot, mobileShellRoot, mobileMpvPlaybackRoot, mobileMediaProxyRoot, mobileMediaVolumeRoot, mobileMediaSessionRoot, mediaSessionRoot, playbackAbrRoot, pairingCryptoRoot, mediaCryptoRoot, mediaResealRoot, errorReportRoot, metadataClientRoot, privacyPassRoot, sdkRoot, legalRoot, streamSlotsRoot, profileAvatarsRoot, ingestCoreRoot, bunModules],
+  watchFolders: [repoRoot, sharedRoot, libraryDbRoot, libraryDbDefinitionRoot, mobileShellRoot, mobileMpvPlaybackRoot, mobileMediaProxyRoot, mobileMediaVolumeRoot, mobileMediaSessionRoot, mediaSessionRoot, playbackAbrRoot, pairingCryptoRoot, mediaCryptoRoot, mediaResealRoot, errorReportRoot, metadataClientRoot, privacyPassRoot, sdkRoot, legalRoot, streamSlotsRoot, profileAvatarsRoot, ingestCoreRoot, notifyCoreRoot, bunModules],
   resolver: {
     blockList: [
       // Gradle plugin contains Kotlin build artifacts with missing dirs that crash Metro's watcher
@@ -89,6 +90,8 @@ const config = {
       // An added subtitle file's language (franc, PLAY-SUBGET-23); only `@space/ingest-core/subtitleLanguageDetection`
       // is imported, none of the ingest's Node code.
       '@space/ingest-core': ingestCoreRoot,
+      // Shared notices: kinds, queue, history and their texts (UX-NOTICE-01..14).
+      '@space/notify-core': notifyCoreRoot,
     },
     // Shared packages also run on desktop/server and import Node's crypto
     // (e.g. randomUUID in library-db-definition migrations). On device that
@@ -110,10 +113,11 @@ const config = {
       path.resolve(repoRoot, 'node_modules'),
     ],
   },
-  // The inlined SF_DEV_TICKET_KEY, SF_DEV_API_BASE_URL, SF_METADATA_TICKETS and EXPO_PUBLIC_METADATA_URL
-  // (babel-plugin-dev-ticket-key.js, which also reads SF_LOCAL_METADATA) change the transformed code, so they are part of
-  // the transform cache key: a cached dev-key module never lands in a production-key bundle, or the other way round.
-  cacheVersion: `dev-ticket-key:${(process.env.SF_DEV_TICKET_KEY ?? '').trim()}|${(process.env.SF_DEV_API_BASE_URL ?? '').trim()}|${(process.env.SF_METADATA_TICKETS ?? '').trim()}|${(process.env.EXPO_PUBLIC_METADATA_URL ?? '').trim()}|${(process.env.SF_LOCAL_METADATA ?? '').trim()}`,
+  // The inlined SF_DEV_TICKET_KEY, SF_DEV_API_BASE_URL, SF_METADATA_TICKETS, EXPO_PUBLIC_METADATA_URL and
+  // SF_SIMULATOR_BUILD (babel-plugin-dev-ticket-key.js, which also reads SF_LOCAL_METADATA and Xcode's PLATFORM_NAME)
+  // change the transformed code, so they are part of the transform cache key: a cached dev-key module never lands in a
+  // production-key bundle, nor a simulator bundle's module in a device archive, or the other way round.
+  cacheVersion: `dev-ticket-key:${(process.env.SF_DEV_TICKET_KEY ?? '').trim()}|${(process.env.SF_DEV_API_BASE_URL ?? '').trim()}|${(process.env.SF_METADATA_TICKETS ?? '').trim()}|${(process.env.EXPO_PUBLIC_METADATA_URL ?? '').trim()}|${(process.env.SF_LOCAL_METADATA ?? '').trim()}|${(process.env.PLATFORM_NAME ?? '').trim()}`,
   serializer: {
     // The default resolves InitializeCore from wherever Bun hoisted a `react-native` (the plain npm package, or none),
     // not the react-native-tvos fork the app imports; two cores in one bundle crash at launch.

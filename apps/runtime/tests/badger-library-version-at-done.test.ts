@@ -32,7 +32,7 @@ import {
   createEngineV2,
   type EngineV2,
   type RuntimeJobEvent,
-} from "../src/core/jobs/engineV2";
+} from "@space/runtime-jobs-engine/engineV2";
 import type { IngestJobRecord } from "@space/runtime-jobs";
 import {
   configureBadgerStepDeps,
@@ -47,8 +47,8 @@ import {
   type UploadResult,
 } from "../src/modules/badger/steps/deps";
 import { commitStepHandler } from "../src/modules/badger/steps";
-import type { StepHandlerCtx } from "../src/core/jobs/engineV2";
-import type { StoredStepRecord } from "../src/core/jobs/stepStore";
+import type { StepHandlerCtx } from "@space/runtime-jobs-engine/engineV2";
+import type { StoredStepRecord } from "@space/runtime-jobs-engine/stepStore";
 
 const SUITE = "badger-library-version-at-done";
 

@@ -12,10 +12,15 @@ export const desktopShellComponents: DesktopShellComponentBoundary[] = [
   { id: "DesktopStartupCard", description: "Shared startup card shell for auth, verification, and library-key flows." },
   { id: "DesktopAuthForm", description: "Shared auth-form field, button, and prompt chrome for desktop apps." },
   { id: "DesktopAppTopNav", description: "Shared desktop app top-nav shell with brand, nav, and action slots." },
+  { id: "DesktopStatusChip", description: "Shared top-bar status chip for a lasting account state: unpaid, over storage (UX-NOTICE-08)." },
+  { id: "DesktopUnpaidSetupStep", description: "Shared setup step shown in place of the library creation for an unpaid account (ACCT-UNPAID-06)." },
+  { id: "DesktopKeyLoadFailedStep", description: "Shared key step shown in place of \"Loading key…\" when the library meta read failed, with Retry (UX-KEY-02)." },
+  { id: "DesktopKeyLoadFailedRetry", description: "Shared Retry row of the failed key load, for a setup card that already shows its title and sentence (UX-KEY-02)." },
   { id: "DesktopTopNav", description: "Shared desktop top navigation frame." },
   { id: "DesktopTopNavActions", description: "Shared top-nav icon and text action shells." },
   { id: "DesktopTopNavStyles", description: "Shared top-nav spacing and typography helpers." },
   { id: "DesktopNotificationTray", description: "Shared right-side notifications tray shell for desktop apps." },
+  { id: "NoticeBell", description: "Shared top-bar bell with the unread count and the notice history tray (UX-NOTICE-04, UX-NOTICE-12)." },
   { id: "DesktopJobsSheet", description: "Shared top-bar Jobs item (flask) and its right-side jobs panel, with filter chips and empty state." },
   { id: "DesktopJobCard", description: "Shared job cards inside the Jobs panel and a title's Jobs tab: group card, job rows, status pill, X/bin, progress, loading skeleton, background line (UX-JOBS-02)." },
   { id: "AnimatedDismissRow", description: "Shared list-row wrapper that animates removal with collapse + slide + fade so neighbours glide up smoothly." },
@@ -47,6 +52,9 @@ export { DesktopAppTopNav } from "./components/desktop-app-top-nav";
 export { DesktopStartupControls } from "./components/desktop-startup-controls";
 export { DesktopStartupCard } from "./components/desktop-startup-card";
 export { DesktopStartupPage } from "./components/desktop-startup-page";
+export { DesktopUnpaidSetupStep } from "./components/desktop-unpaid-setup-step";
+export { DesktopKeyLoadFailedRetry, DesktopKeyLoadFailedStep } from "./components/desktop-key-load-failed-step";
+export { DesktopStatusChip } from "./components/desktop-status-chip";
 export {
   DesktopAuthPrimaryButton,
   DesktopAuthPrompt,
@@ -90,7 +98,8 @@ export {
   type DesktopJobFailureGroup,
   type DesktopJobTone,
 } from "./components/desktop-job-card";
-export { NotificationTrayContent, type NotificationTrayLabels, type NotificationTrayContentProps } from "./components/desktop-notification-tray-content";
+export { NotificationTrayContent, type NotificationTrayContentProps } from "./components/desktop-notification-tray-content";
+export { NoticeBell, type NoticeBellProps } from "./components/notice-bell";
 export {
   AnimatedDismissRow,
   useStaggeredDismiss,
@@ -128,6 +137,8 @@ export { SameDeviceSignIn, type SameDeviceSignInProps } from "./components/same-
 export { sameDeviceSignInStrings, sameDeviceSignInText, type SameDeviceSignInStringKey } from "./components/same-device-sign-in-strings";
 export { DesktopForgotPasswordLink, DesktopPasswordResetDialog } from "./components/desktop-password-reset";
 export { passwordResetStrings, passwordResetText, type PasswordResetStringKey } from "./components/password-reset-strings";
+export { DesktopFeedbackDialog, type DesktopFeedbackDialogProps, type DesktopFeedbackInput } from "./components/desktop-feedback";
+export { desktopFeedbackStrings, type DesktopFeedbackStringKey } from "./components/desktop-feedback-strings";
 export {
   LIBRARY_KEY_STEP_FIT,
   LibraryKeyStep,

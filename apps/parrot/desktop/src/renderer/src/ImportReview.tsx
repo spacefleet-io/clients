@@ -538,6 +538,18 @@ export default function ImportReview({ t, language, scan, onDone, suggest }: Pro
   );
   const current = (selectedFile ? cardOf.get(selectedFile) : undefined) ?? cards[0] ?? null;
   const looking = cards.filter((card) => card.state === "searching").length;
+  /** A found album some of whose songs the lookup was unsure of, which the user has not answered yet ("Check"). */
+  const isCheck = (card: Card) => card.kind === "library" && card.files.some((entry) => !places[entry.file]?.sure) && !confirmed.has(parrotAlbumKey(card.found.album));
+  /** How many of a found album's tracks the review's songs sit on. */
+  const onTracksOf = (card: Card) => (card.kind === "library" ? card.files.filter((entry) => places[entry.file]?.number != null).length : 0);
+  /** The checks Import waits on (PAR-UP-10): each Check card with a ticked song, in the list's order. */
+  const pending = cards.filter((card) => isCheck(card) && card.files.some((entry) => !unticked.has(entry.file)));
+  /** The pending check after `card` in the list, else the first other one, else none. */
+  const checkAfter = (card: Card | null) => {
+    const at = card ? pending.findIndex((one) => one.key === card.key) : -1;
+    const rest = pending.filter((one) => one.key !== card?.key);
+    return rest[Math.max(at, 0)] ?? rest[0] ?? null;
+  };
 
   // Each card's pictures (the covers built into its files) are asked once, one card at a time.
   const cardKeys = cards.map((card) => card.key).join("|");
@@ -673,32 +685,57 @@ export default function ImportReview({ t, language, scan, onDone, suggest }: Pro
       .filter(([file, placed]) => placed.albumKey === albumKey && placed.number !== null && !except.includes(file))
       .map(([, placed]) => ({ disc: placed.disc, number: placed.number as number }));
 
-  /** "Wrong album? Search": the card's songs move onto the picked album's tracks; one with no track stays as is. */
+  /**
+   * "Wrong album? Search", or one of this import's own albums (PAR-UP-10): the card's songs move onto the picked
+   * album, each on the track its title, number or a near-same title with a fitting length gives it, or with no number
+   * when none fits. Picking an album the review already shows merges the two: its songs and these make one card.
+   */
   const chooseAlbum = (card: Card, found: ParrotImportFoundAlbum) => {
     const target: FoundAlbum = { ...found, tracklistKnown: true };
     const albumKey = parrotAlbumKey(target.album);
-    const songs = card.files.map((entry) => ({ file: entry.file, title: named(entry, card).title, disc: entry.disc, number: entry.number }));
+    const songs = card.files.map((entry) => ({ file: entry.file, title: named(entry, card).title, disc: entry.disc, number: entry.number, durationMs: entry.durationMs }));
     const paired = matchParrotImportTracks(songs, target.album, takenOn(albumKey, card.files.map((entry) => entry.file)));
     const onTracks = [...paired].flatMap(([file, track]) => (track ? [{ file, disc: track.disc, number: track.number }] : []));
-    const off = [...paired].flatMap(([file, track]) => (track ? [] : [file]));
-    console.info(`[import-review] ${card.key} replaced by search: ${albumKey}, ${onTracks.length} song(s) on its tracks, ${off.length} as is`);
+    const loose = [...paired].flatMap(([file, track]) => (track ? [] : [file]));
+    const merged = albums[albumKey] !== undefined && Object.values(places).some((place) => place.albumKey === albumKey);
+    console.info(
+      `[import-review] ${card.key} moved to ${albumKey}${merged ? " (already in this import: merged)" : ""}: ${onTracks.length} song(s) on its tracks, ${loose.length} with no track`,
+    );
     setTyped((previous) => Object.fromEntries(Object.entries(previous).filter(([file]) => !onTracks.some((placed) => placed.file === file))));
     setAlbums((previous) => ({ ...previous, [albumKey]: previous[albumKey] ?? target }));
     setPlaces((previous) => {
-      const next = Object.fromEntries(Object.entries(previous).filter(([file]) => !off.includes(file)));
+      const next = { ...previous };
       for (const { file, disc, number } of onTracks) next[file] = { albumKey, disc, number, sure: true };
+      for (const file of loose) next[file] = { albumKey, disc: 1, number: null, sure: true };
       return next;
     });
-    setLost((previous) => new Set([...previous].filter((file) => !onTracks.some((placed) => placed.file === file))));
+    setLost((previous) => new Set([...previous].filter((file) => !paired.has(file))));
     setConfirmed((previous) => new Set(previous).add(albumKey));
-    if (onTracks[0]) setSelectedFile(onTracks[0].file);
+    setSelectedFile(card.files[0]?.file ?? null);
   };
   /** "Not this album": the songs go back to their file albums, as is, to be identified later. */
   const clearMatch = (card: Card) => {
     const files = card.files.map((entry) => entry.file);
-    console.info(`[import-review] match ${card.key} cleared: ${files.length} song(s) back as is`);
+    const next = checkAfter(card);
+    console.info(`[import-review] match ${card.key} cleared: ${files.length} song(s) back as is; next check ${next?.key ?? "none"}`);
     setPlaces((previous) => Object.fromEntries(Object.entries(previous).filter(([file]) => !files.includes(file))));
     setLost((previous) => new Set([...previous, ...files]));
+    if (next) select(next);
+  };
+  /** "Looks right": the user vouches for the album; the next check shows. */
+  const confirmMatch = (card: Card) => {
+    if (card.kind !== "library") return;
+    const next = checkAfter(card);
+    console.info(`[import-review] match ${card.key} confirmed by the user; next check ${next?.key ?? "none"}`);
+    setConfirmed((previous) => new Set(previous).add(parrotAlbumKey(card.found.album)));
+    if (next) select(next);
+  };
+  /** "Check N albums": shows the next album waiting on the user's answer. */
+  const walkChecks = () => {
+    const next = current && pending.some((one) => one.key === current.key) ? (checkAfter(current) ?? current) : pending[0];
+    if (!next) return;
+    console.info(`[import-review] walk: ${pending.length} check(s) left, showing ${next.key}`);
+    select(next);
   };
   /** Moves a file album's song to `to` (an index between its songs); the numbers follow the order. */
   const moveSong = (card: Card, file: string, to: number) => {
@@ -718,7 +755,7 @@ export default function ImportReview({ t, language, scan, onDone, suggest }: Pro
     onDone();
   };
   const confirm = async () => {
-    if (busy || looking > 0) return;
+    if (busy || looking > 0 || pending.length > 0) return;
     setBusy(true);
     const selection = importing.flatMap((entry) => {
       const card = cardOf.get(entry.file);
@@ -1137,7 +1174,13 @@ export default function ImportReview({ t, language, scan, onDone, suggest }: Pro
 
   const albumDetail = (card: Card) => {
     if (card.state === "searching") return searchingDetail(card);
-    const check = card.kind === "library" && card.files.some((entry) => !places[entry.file]?.sure) && !confirmed.has(parrotAlbumKey(card.found.album));
+    const check = isCheck(card);
+    // This import's other albums with free tracks, one click away (PAR-UP-10).
+    const here = cards.flatMap((other) =>
+      other.kind === "library" && other.key !== card.key && other.found.tracklistKnown && onTracksOf(other) < other.found.album.tracks.length
+        ? [{ key: other.key, found: other.found, cover: coverOf(other), have: onTracksOf(other), total: other.found.album.tracks.length }]
+        : [],
+    );
     return (
       <div className="space-y-5" data-testid="import-album-detail" data-state={card.state} data-album={cardTitle(card)}>
         <div className="flex gap-5">
@@ -1180,10 +1223,7 @@ export default function ImportReview({ t, language, scan, onDone, suggest }: Pro
               {check ? (
                 <Button
                   size="sm"
-                  onClick={() => {
-                    console.info(`[import-review] match ${card.key} confirmed by the user`);
-                    setConfirmed((previous) => new Set(previous).add(parrotAlbumKey(card.found.album)));
-                  }}
+                  onClick={() => confirmMatch(card)}
                   data-testid="import-match-confirm"
                 >
                   {t("import.match.looksRight")}
@@ -1201,7 +1241,17 @@ export default function ImportReview({ t, language, scan, onDone, suggest }: Pro
           </>
         )}
         {songsBox(card)}
-        <AlbumSearch key={card.key} t={t} label={t("import.match.search")} artist={cardArtist(card)} album={cardTitle(card)} onChoose={(picked) => chooseAlbum(card, picked)} />
+        <AlbumSearch
+          key={card.key}
+          t={t}
+          language={language}
+          label={t("import.match.search")}
+          artist={cardArtist(card)}
+          album={cardTitle(card)}
+          here={here}
+          startOpen={check && here.length > 0}
+          onChoose={(picked) => chooseAlbum(card, picked)}
+        />
       </div>
     );
   };
@@ -1239,8 +1289,8 @@ export default function ImportReview({ t, language, scan, onDone, suggest }: Pro
               {cards.map((card) => {
                 const paths = card.files.map((entry) => entry.file);
                 const shown = coverOf(card);
-                const check = card.kind === "library" && card.files.some((entry) => !places[entry.file]?.sure) && !confirmed.has(parrotAlbumKey(card.found.album));
-                const onTracks = card.kind === "library" ? card.files.filter((entry) => places[entry.file]?.number != null).length : 0;
+                const check = isCheck(card);
+                const onTracks = onTracksOf(card);
                 const incomplete = card.kind === "library" && card.found.tracklistKnown && onTracks < card.found.album.tracks.length;
                 const year = cardYear(card);
                 return (
@@ -1330,12 +1380,22 @@ export default function ImportReview({ t, language, scan, onDone, suggest }: Pro
               {t(looking === 1 ? "import.review.stillLooking.one" : "import.review.stillLooking.other", { n: looking })}
             </div>
           ) : null}
+          {pending.length > 0 ? (
+            <div className="text-xs text-amber-300" data-testid="import-review-to-check">
+              {t(`import.review.toCheck.${pluralForm(language, pending.length)}`, { n: pending.length })}
+            </div>
+          ) : null}
         </ImportReviewSummary>
         <ImportReviewActions>
           <Button variant="ghost" disabled={busy} onClick={() => void cancel()} data-testid="import-review-cancel">
             {t("import.review.cancel")}
           </Button>
-          <Button disabled={busy || importing.length === 0 || looking > 0} onClick={() => void confirm()} data-testid="import-review-confirm">
+          {pending.length > 0 ? (
+            <Button className="bg-amber-400 text-amber-950 hover:bg-amber-300" disabled={busy} onClick={walkChecks} data-testid="import-review-walk">
+              {t(`import.review.walk.${pluralForm(language, pending.length)}`, { n: pending.length })}
+            </Button>
+          ) : null}
+          <Button disabled={busy || importing.length === 0 || looking > 0 || pending.length > 0} onClick={() => void confirm()} data-testid="import-review-confirm">
             {t(`import.review.confirm.${new Intl.PluralRules(language).select(importing.length) === "one" ? "one" : "other"}`, { n: importing.length })}
           </Button>
         </ImportReviewActions>
@@ -1360,12 +1420,34 @@ export default function ImportReview({ t, language, scan, onDone, suggest }: Pro
   );
 }
 
+/** One of this import's own albums with free tracks, offered as a one-click target (PAR-UP-10). */
+type HereAlbum = { key: string; found: FoundAlbum; cover: { src: string | null; crop: ParrotCoverCrop | null }; have: number; total: number };
+
 /**
  * "Wrong album? Search" (PAR-UP-05): the user types an artist and an album, our music library answers a few albums
- * with their covers, and Select puts the card's songs on the picked album.
+ * with their covers, and Select puts the card's songs on the picked album. Above it, this import's other albums with
+ * free tracks are one click away (PAR-UP-10); the fold starts open on a Check that has some.
  */
-function AlbumSearch({ t, label, artist: startArtist, album: startAlbum, onChoose }: { t: Translate; label: string; artist: string; album: string; onChoose: (found: ParrotImportFoundAlbum) => void }) {
-  const [open, setOpen] = useState(false);
+function AlbumSearch({
+  t,
+  language,
+  label,
+  artist: startArtist,
+  album: startAlbum,
+  here,
+  startOpen,
+  onChoose,
+}: {
+  t: Translate;
+  language: ParrotLanguage;
+  label: string;
+  artist: string;
+  album: string;
+  here: HereAlbum[];
+  startOpen: boolean;
+  onChoose: (found: ParrotImportFoundAlbum) => void;
+}) {
+  const [open, setOpen] = useState(startOpen);
   const [artist, setArtist] = useState(startArtist);
   const [album, setAlbum] = useState(startAlbum);
   const [searching, setSearching] = useState(false);
@@ -1426,6 +1508,29 @@ function AlbumSearch({ t, label, artist: startArtist, album: startAlbum, onChoos
         </>
       }
     >
+      {here.length > 0 ? (
+        <div className="mt-4 space-y-2" data-testid="import-match-here">
+          <div className="text-xs font-medium uppercase tracking-[0.15em] text-muted-foreground">{t("import.match.here")}</div>
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+            {here.map(({ key, found, cover, have, total }) => (
+              <ImportReviewMatchResult
+                key={key}
+                artworkShape="square"
+                artwork={<FramedCover src={cover.src} crop={cover.crop} className="h-full w-full" />}
+                title={found.album.title}
+                meta={t(`import.match.incomplete.${pluralForm(language, total)}`, { have, total })}
+                selectLabel={t("import.match.moveHere")}
+                onSelect={() => {
+                  console.info(`[import-review] move to ${key}, already in this import (${have} of ${total} tracks)`);
+                  choose({ album: found.album, cover: found.cover });
+                }}
+                data-testid="import-match-here-result"
+                data-album={found.album.title}
+              />
+            ))}
+          </div>
+        </div>
+      ) : null}
       {searching ? (
         <ImportReviewSearching className="mt-4" icon={<Spinner size="sm" />} title={t("manage.searching")} data-testid="import-match-search-searching" />
       ) : answer?.kind === "failed" ? (

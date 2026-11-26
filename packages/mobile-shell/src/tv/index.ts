@@ -27,3 +27,5 @@ export * from "./PairingButton";
 export * from "./TvSignIn";
 export * from "./TvProfiles";
 export * from "./TvLanguage";
+export * from "./TvListDialog";
+export * from "./TvSignOutKeyDialog";

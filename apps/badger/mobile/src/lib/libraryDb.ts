@@ -2804,7 +2804,7 @@ export class LibraryDb {
         item.originalLanguage,
         item.overview,
         item.year,
-        item.rating,
+        null, // rating: none is sent (META-SRC-05)
         item.posterPath,
         item.backdropPath,
         createdAt,

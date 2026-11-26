@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { selectTrailersByLanguage } from "../src/renderer/src/lib/trailers";
+import { selectTrailersByLanguage, trailerEmbedUrl } from "../src/renderer/src/lib/trailers";
 
 // On failure, dump the input trailer set, the requested languages, and the
 // resulting key order so a selection/ordering regression is diagnosable in CI.
@@ -62,5 +62,32 @@ describe("trailer selection", () => {
       dumpTrailerSnapshot("fallback", { input, langs, observedKeys, expectedKeys });
 
     expect(observedKeys).toEqual(expectedKeys);
+  });
+});
+
+// One trailer URL builder for the ingestion and media details dialogs (REL-FAM-05).
+describe("trailerEmbedUrl", () => {
+  const cases: Array<[label: string, source: Parameters<typeof trailerEmbedUrl>[0], expected: string]> = [
+    ["youtube", { provider: "youtube", invidiousUrl: "", validated: false }, "https://www.youtube.com/embed/abc"],
+    [
+      "validated invidious, trailing slashes trimmed",
+      { provider: "invidious", invidiousUrl: " https://inv.example// ", validated: true },
+      "https://inv.example/embed/abc",
+    ],
+    [
+      "unvalidated invidious falls back to youtube",
+      { provider: "invidious", invidiousUrl: "https://inv.example", validated: false },
+      "https://www.youtube.com/embed/abc",
+    ],
+    [
+      "invidious without a URL falls back to youtube",
+      { provider: "invidious", invidiousUrl: "   ", validated: true },
+      "https://www.youtube.com/embed/abc",
+    ],
+  ];
+  it.each(cases)("%s", (label, source, expected) => {
+    const actual = trailerEmbedUrl(source, "abc");
+    if (actual !== expected) console.error(`[trailers:embed-url] ${label}: source=${JSON.stringify(source)} got=${actual} want=${expected}`);
+    expect(actual).toBe(expected);
   });
 });

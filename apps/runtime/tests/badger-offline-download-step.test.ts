@@ -25,9 +25,9 @@ import {
   FREE_DISK_SAFETY_MARGIN_BYTES,
   type BadgerOfflineDeps,
 } from "../src/modules/badger/offlineDownloadDeps";
-import type { StepHandlerCtx } from "../src/core/jobs/engineV2";
+import type { StepHandlerCtx } from "@space/runtime-jobs-engine/engineV2";
 import type { IngestJobRecord } from "@space/runtime-jobs";
-import type { StoredStepRecord } from "../src/core/jobs/stepStore";
+import type { StoredStepRecord } from "@space/runtime-jobs-engine/stepStore";
 import type { OfflineDownloadManifest } from "../src/modules/badger/steps/offlineDownload";
 
 const SUITE = "badger-offline-download-step";

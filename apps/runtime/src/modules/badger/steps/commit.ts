@@ -17,7 +17,7 @@
  * race past it.
  */
 
-import type { StepHandler } from "../../../core/jobs/engineV2";
+import type { StepHandler } from "@space/runtime-jobs-engine/engineV2";
 import { getBadgerStepDeps, type BadgerStepDeps, type CommitInput } from "./deps";
 import type { ProducedMedia } from "@space/ingest-core/mediaProcessor";
 import type {

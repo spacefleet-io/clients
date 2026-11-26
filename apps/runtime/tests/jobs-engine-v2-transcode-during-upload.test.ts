@@ -25,7 +25,7 @@ import {
   type EngineV2,
   type RuntimeJobEvent,
   type StepHandlerCtx,
-} from "../src/core/jobs/engineV2";
+} from "@space/runtime-jobs-engine/engineV2";
 import type { IngestJobRecord } from "@space/runtime-jobs";
 
 const SUITE = "jobs-engine-v2-transcode-during-upload";

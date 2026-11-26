@@ -1,22 +1,24 @@
+import { continueWatchingTitles } from "@space/shared/continueWatching";
+import type { HomeSectionConfig } from "@space/shared/homeLayout";
 import type { MediaDetails, MediaEpisode, MediaRow } from "@space/shared/libraryTypes";
 import type { EpisodeResume } from "@space/shared/playbackResume";
 import { minutesLeft } from "../tv/lib/detailsMedia";
-import type { HomeRailEntry, HomeRailId } from "./homeRails";
+import type { HomeRailEntry } from "./homeRails";
 import type { LibraryScope } from "./libraryScreenState";
 
-/** The phone's Home (UX-PHONE-01): the latest started title as the hero card, then the rails below it. */
+/** The phone's and the TV's Home (UX-PHONE-01, UX-TV-05, UX-HOME-06): the latest started title as the hero card, then the layout's rails. */
 export type PhoneHomeLayout = { hero: MediaRow | null; rails: HomeRailEntry[] };
 
 /**
- * The first "Continue watching" title becomes the hero; the rail keeps the others and is dropped when the hero was its
- * only title, so no title shows twice in a row of the page. The other rails are unchanged (shared with the TV).
+ * The hero is every Badger app's Continue watching pick (UX-HOME-01), whatever the layout holds, as on the computer.
+ * The layout's Continue watching rail leaves the hero out and is dropped when the hero was its only title, so no
+ * title shows twice in a row of the page; the other rails keep the layout's order.
  */
-export const phoneHomeLayout = (entries: readonly HomeRailEntry[]): PhoneHomeLayout => {
-  const continueWatching = entries.find((entry) => entry.id === "continueWatching");
-  const hero = continueWatching?.items[0] ?? null;
+export const phoneHomeLayout = (media: readonly MediaRow[], entries: readonly HomeRailEntry[]): PhoneHomeLayout => {
+  const hero = continueWatchingTitles(media)[0] ?? null;
   const rails = entries.flatMap((entry) => {
-    if (entry.id !== "continueWatching") return [entry];
-    const rest = entry.items.slice(1);
+    if (entry.section.type !== "continue" || !hero) return [entry];
+    const rest = entry.items.filter((item) => item.id !== hero.id);
     return rest.length > 0 ? [{ ...entry, items: rest }] : [];
   });
   return { hero, rails };
@@ -25,9 +27,15 @@ export const phoneHomeLayout = (entries: readonly HomeRailEntry[]): PhoneHomeLay
 /** Where a rail's "See all" goes: the Playlists tab or the Library on one of its scopes (UX-PHONE-01, UX-PHONE-07). */
 export type SeeAllTarget = { tab: "library"; scope: LibraryScope } | { tab: "playlists" };
 
-/** Favorites (a playlist) opens the Playlists tab; TV shows the Library's TV shows, every other rail its films. */
-export const seeAllTarget = (railId: HomeRailId): SeeAllTarget =>
-  railId === "favorites" ? { tab: "playlists" } : { tab: "library", scope: railId === "shows" ? "tv" : "movies" };
+/**
+ * Favorites and a playlist open the Playlists tab; a row of shows alone (a TV genre, or a section set to TV shows only)
+ * the Library's TV shows; every other row its films.
+ */
+export const seeAllTarget = (section: Pick<HomeSectionConfig, "type" | "genreType" | "libraries">): SeeAllTarget => {
+  if (section.type === "favorites" || section.type === "playlist") return { tab: "playlists" };
+  const showsOnly = section.type === "genre" ? section.genreType === "tv" : !section.libraries.includes("movies");
+  return { tab: "library", scope: showsOnly ? "tv" : "movies" };
+};
 
 /**
  * Longest playable length of a film, or of one episode of a show, in seconds, from its formats; null when no format

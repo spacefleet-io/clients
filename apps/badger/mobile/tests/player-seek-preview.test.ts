@@ -15,9 +15,9 @@ import {
   PlayerControls,
   type PlayerControlsHandle,
   type PlayerControlsLabels,
-} from "../../../../packages/mobile-mpv-playback/src/components/PlayerControls";
-import type { SeekPreviewFrame, SeekPreviewSource } from "../../../../packages/mobile-mpv-playback/src/seekPreview";
-import type { PlaybackSnapshot } from "../../../../packages/mobile-mpv-playback/src/types";
+} from "@space/mobile-mpv-playback/PlayerControls";
+import type { SeekPreviewFrame, SeekPreviewSource } from "@space/mobile-mpv-playback/seekPreview";
+import type { PlaybackSnapshot } from "@space/mobile-mpv-playback/types";
 
 const TAG = "[player-seek-preview]";
 
@@ -57,7 +57,7 @@ vi.mock("react-native", async () => {
     BackHandler: { addEventListener: () => ({ remove: () => undefined }) },
   };
 });
-vi.mock("../../../../packages/mobile-mpv-playback/src/MpvControl", () => ({
+vi.mock("@space/mobile-mpv-playback/MpvControl", () => ({
   MpvControl: new Proxy({}, { get: () => () => Promise.resolve(0) }),
 }));
 

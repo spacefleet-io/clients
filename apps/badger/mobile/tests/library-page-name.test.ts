@@ -46,6 +46,7 @@ vi.mock("@space/mobile-shell/i18n", async (importOriginal) => {
   return { ...actual, useTranslation: () => ({ t: actual.translate, i18n: { language: actual.getCurrentLanguage() } }) };
 });
 vi.mock("@react-navigation/native", () => ({ useNavigation: () => ({ navigate: () => undefined }), useIsFocused: () => true }));
+vi.mock("@space/mobile-shell/account-news", () => ({ useAccountNews: () => undefined }));
 vi.mock("lucide-react-native", () => {
   const icon = () => null;
   return { Home: icon, LibraryBig: icon, Settings: icon, Film: icon, ListVideo: icon, ArrowDownWideNarrow: icon, Search: icon, Tv: icon, X: icon, ListFilter: icon, ArrowDownUp: icon, SlidersHorizontal: icon };
@@ -76,6 +77,8 @@ vi.mock("@space/mobile-shell/theme", async (importOriginal) => {
   return { ...actual, useMobileShellTheme: () => actual.defaultMobileShellTheme };
 });
 vi.mock("../src/store/auth", () => ({ useAuth: () => ({ token: null }) }));
+// The tab bar's unpaid sign (tested in mobile-shell) loads the real safe-area module, which plain node cannot load.
+vi.mock("@space/mobile-shell/unpaid-access-sign", () => ({ UnpaidAccessSign: () => null }));
 vi.mock("../src/store/library", () => ({
   useLibraryData: () => ({ media: [] }),
   useLibraryStatus: () => ({ loadStatus: { kind: "ready" }, syncState: { kind: "idle" }, loading: false, error: null, reload: () => undefined, refresh: () => undefined }),
@@ -90,6 +93,9 @@ vi.mock("../src/lib/pairing/newDevice", () => ({
 }));
 vi.mock("../src/screens/HomeScreen", () => ({ HomeScreen: () => null }));
 vi.mock("../src/screens/SettingsScreen", () => ({ SettingsScreen: () => null }));
+// The header bell (MOBILE-SHELL-NOTICE-HISTORY-001) and its device storage load native modules plain node cannot load.
+vi.mock("@space/mobile-shell/notice-bell", () => ({ MobileNoticeBell: () => null }));
+vi.mock("@react-native-async-storage/async-storage", () => ({ default: { getItem: async () => null, setItem: async () => undefined } }));
 vi.mock("../src/components/PosterGrid", () => ({ PosterGrid: () => null }));
 vi.mock("../src/components/PlaylistsPanel", () => ({ PlaylistsPanel: () => null }));
 // The phone Search overlay (UX-PHONE-12) pulls react-native-fs and the real shell components, which plain node cannot load.

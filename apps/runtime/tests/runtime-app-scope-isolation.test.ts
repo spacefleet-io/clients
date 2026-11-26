@@ -11,9 +11,9 @@ import { runtimeState } from "../src/runtime";
 import { RuntimeState } from "../src/state";
 import { __resetEngineV2BootStatusForTests, setEngineV2BootStatus } from "../src/core/jobs/engineV2BootStatus";
 import { createRuntimeJobsV2Handler, registerRuntimeJobsV2Routes, type RuntimeJobsV2Handler } from "../src/routes/runtimeJobsV2";
-import { createEventLog, type EventLogDeps, type EventRow } from "../src/core/jobs/eventLog";
-import type { EngineV2, RuntimeJobEvent } from "../src/core/jobs/engineV2";
-import { DEFAULT_LANE_CAPS } from "../src/core/jobs/engineV2Lanes";
+import { createEventLog, type EventLogDeps, type EventRow } from "@space/runtime-jobs-engine/eventLog";
+import type { EngineV2, RuntimeJobEvent } from "@space/runtime-jobs-engine/engineV2";
+import { DEFAULT_LANE_CAPS } from "@space/runtime-jobs-engine/engineV2Lanes";
 import type { IngestJobRecord } from "@space/runtime-jobs";
 import type { RuntimeEventFrame } from "../src/types";
 

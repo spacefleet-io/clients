@@ -8,7 +8,7 @@
  *   - DELETE /push/unregister on teardown
  * Fakes `@react-native-firebase/messaging` and global.fetch — no native.
  */
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { createFakeAsyncStorage } from "./harness";
 
 const fakeStorage = createFakeAsyncStorage();
@@ -57,6 +57,16 @@ vi.mock("@react-native-firebase/messaging", () => ({
   getInitialNotification: async (_m: unknown) => null,
   setBackgroundMessageHandler: vi.fn(),
 }));
+
+// The first import of the receiver transforms its whole graph (@space/shared/api, the five i18n files, pairing): on a
+// loaded CI runner that alone took over the 15 s test budget (run 52178), so the first test timed out before its first
+// assertion. Load it once here, under its own budget. Dynamic, like every import of it below: each test re-evaluates a
+// fresh copy after `resetModules`, which a static import cannot give.
+beforeAll(async () => {
+  const started = Date.now();
+  await import("../src/native/pushHandler");
+  console.info(`[push-handler:setup] first import of pushHandler took ${Date.now() - started} ms`);
+}, 120_000);
 
 beforeEach(() => {
   console.info("[push-handler:setup] clearing fake storage + resetting messaging mocks");
@@ -232,11 +242,11 @@ describe("pushHandler", () => {
     // bundle a module that throws while loading kills the app before any catch runs (issue #2497), so the stand-in must
     // load and the receiver must read its marker.
     console.info("[push-handler:foss-stub] resolving firebase messaging to the Google-free stand-in");
-    vi.doMock("@react-native-firebase/messaging", () => import("../../../../packages/mobile-shell/src/foss/notInThisBuild"));
+    vi.doMock("@react-native-firebase/messaging", () => import("@space/mobile-shell/foss/notInThisBuild"));
     vi.resetModules();
     const fetchMock = vi.fn(async (_request: Request) => Response.json({ ok: true }));
     globalThis.fetch = fetchMock as unknown as typeof fetch;
-    const stub = await import("../../../../packages/mobile-shell/src/foss/notInThisBuild");
+    const stub = await import("@space/mobile-shell/foss/notInThisBuild");
     expect(stub.notInThisBuild).toBe(true);
 
     const { initializePushNotifications, __pushHandlerTestSeam } = await import("../src/native/pushHandler");

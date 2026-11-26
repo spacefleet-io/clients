@@ -12,12 +12,12 @@
  */
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createRuntimeJobsV2Handler } from "../src/routes/runtimeJobsV2";
-import type { EventLog } from "../src/core/jobs/eventLog";
+import type { EventLog } from "@space/runtime-jobs-engine/eventLog";
 import type {
   EngineV2,
   ListFilter,
   RuntimeJobEvent,
-} from "../src/core/jobs/engineV2";
+} from "@space/runtime-jobs-engine/engineV2";
 import type { IngestJobRecord } from "@space/runtime-jobs";
 
 const ts = "2026-01-01T00:00:00.000Z";

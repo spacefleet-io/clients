@@ -29,7 +29,7 @@ vi.mock("react-native", () => ({
 vi.mock("react-native-safe-area-context", () => ({ SafeAreaView: "SafeAreaView" }));
 vi.mock("lucide-react-native", () => ({ Check: "Check", ChevronLeft: "ChevronLeft", Plus: "Plus" }));
 vi.mock("@react-native-async-storage/async-storage", () => ({ default: {} }));
-vi.mock("../../../../packages/mobile-shell/src/components/mobile-button", () => ({ MobileButton: "MobileButton" }));
+vi.mock("@space/mobile-shell/button", () => ({ MobileButton: "MobileButton" }));
 vi.mock("@space/mobile-shell/theme", () => ({
   useMobileShellTheme: () => ({
     colors: {

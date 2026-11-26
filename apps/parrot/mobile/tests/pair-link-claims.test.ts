@@ -26,7 +26,9 @@ describe("Parrot claims only its own pairing links", () => {
     expect(entitlements).toContain("<string>applinks:spacefleet.io</string>");
     // Under the UIScene lifecycle (PLAT-MOBILE-09) a Universal Link reaches the scene, not the AppDelegate: while the app
     // runs through scene(_:continue:), on a cold start in the scene's connection options, handed to JS as launch options.
-    const swift = read("ios/Parrot/AppDelegate.swift");
+    // The scene code is the shared SpaceSceneDelegate (SiblingSignIn pod); the app's SceneDelegate only subclasses it.
+    expect(read("ios/Parrot/AppDelegate.swift")).toMatch(/class SceneDelegate: SpaceSceneDelegate \{\}/u);
+    const swift = read("../../../packages/mobile-sibling/ios/SiblingSignIn/SpaceSceneDelegate.swift");
     expect(swift).toMatch(/func scene\(\s*_ scene: UIScene,\s*continue userActivity: NSUserActivity\s*\)/u);
     expect(swift).toContain("RCTLinkingManager.scene(scene, continue: userActivity)");
     expect(swift).toContain("options.userActivities.first");

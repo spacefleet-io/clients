@@ -5,6 +5,7 @@ import { useErrorReportsSetting } from "@space/error-report/react";
 import { errorReports, errorReportsLog } from "@/lib/errorReports";
 import { SettingGroup, SettingHint, SettingPanel, SettingRow } from "../kit";
 import { ErrorReportsLink } from "@space/desktop-shell/components";
+import { useHiddenJobNoticesSetting } from "@space/desktop-shell/hooks";
 
 const RUNTIME_STATUS: Record<RuntimeStatusValue, StatusBadgeStatus> = {
   ready: "ok",
@@ -18,6 +19,8 @@ export default function SystemSection() {
   // REL-LOG-06: undefined = no bridge (web/tests) → row hidden; null = loading.
   const { value: errorReportsOn, set: setErrorReportsOn } = useErrorReportsSetting(errorReports, errorReportsLog);
   const { status: runtimeStatus, restart: restartRuntime, restarting: runtimeRestarting } = useRuntimeStatus();
+  // UX-NOTICE-06: system notification for a job that ends while the window is hidden; on by default.
+  const hiddenJobNotices = useHiddenJobNoticesSetting(window.sf?.hiddenJobNotices);
 
   return (
     <div className="space-y-4">
@@ -58,6 +61,23 @@ export default function SystemSection() {
                 checked={errorReportsOn === true}
                 disabled={errorReportsOn === null}
                 onCheckedChange={setErrorReportsOn}
+              />
+            }
+          />
+        </SettingGroup>
+      ) : null}
+      {hiddenJobNotices.value !== undefined ? (
+        <SettingGroup>
+          <SettingRow
+            title={t("notify.system.hiddenJobsSetting")}
+            description={t("notify.system.hiddenJobsHint")}
+            control={
+              <Switch
+                data-testid="settings-hidden-job-notices-switch"
+                aria-label={t("notify.system.hiddenJobsSetting")}
+                checked={hiddenJobNotices.value === true}
+                disabled={hiddenJobNotices.value === null}
+                onCheckedChange={hiddenJobNotices.set}
               />
             }
           />

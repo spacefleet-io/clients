@@ -16,7 +16,7 @@ vi.mock("@react-native-async-storage/async-storage", () => ({ default: { getItem
 vi.mock("@space/mobile-shell/i18n", () => ({ addAppTranslations: () => undefined, changeLanguage: async () => undefined, initI18n: async () => undefined, isMobileUiLanguage: () => true }));
 vi.mock("@space/mobile-shell/i18n/deviceLanguage", () => ({ pickStartLanguage: () => "en", readDeviceLocale: () => "en" }));
 
-import { tabBarHalfFits, tabBarHalfWidth } from "../../../../packages/mobile-shell/src/components/mobile-tab-bar-geometry";
+import { tabBarHalfFits, tabBarHalfWidth } from "@space/mobile-shell/tab-bar-geometry";
 import { PARROT_TRANSLATIONS } from "../src/lib/i18n";
 
 /**

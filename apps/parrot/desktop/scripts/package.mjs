@@ -35,9 +35,9 @@
 import { existsSync } from "node:fs";
 import { join, resolve } from "node:path";
 
-import { listAsarEntries } from "../../../../packages/desktop-platform/packaging/asar-entries.mjs";
-import { createPackageRun } from "../../../../packages/desktop-platform/packaging/package-steps.mjs";
-import { TEST_BUILD_FLAG, packageBuildEnv } from "../../../../packages/desktop-platform/packaging/test-build-lib.mjs";
+import { listAsarEntries } from "@space/desktop-platform/packaging/asar-entries";
+import { createPackageRun } from "@space/desktop-platform/packaging/package-steps";
+import { TEST_BUILD_FLAG, packageBuildEnv } from "@space/desktop-platform/packaging/test-build-lib";
 import { checkParrotAsarEntries, linuxArtifactPatterns, resolveLinuxFormats, resolvePackageTarget } from "./package-targets.mjs";
 
 const appDir = resolve(import.meta.dirname, "..");
