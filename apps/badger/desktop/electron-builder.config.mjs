@@ -15,11 +15,11 @@ import { join, resolve } from "node:path";
 
 import { MAC_MINIMUM_SYSTEM_VERSION, resolvePackageTarget, stageDirFor } from "./scripts/package-targets.mjs";
 import { asarFileExcludes } from "./scripts/packaged-asar-lib.mjs";
-import { LINUX_FORMATS, nativeLinuxPackageOptions } from "@space/desktop-platform-linux/packaging/linux-packages";
-import { linuxAfterInstallScript, withLinuxModes } from "@space/desktop-platform-linux/packaging/file-modes";
-import { ELECTRON_LANGUAGES } from "@space/desktop-platform/packaging/packaged-locales-lib";
-import { TEST_BUILD_ENV, testBuildVersion } from "@space/desktop-platform/packaging/test-build-lib";
-import { resolveWindowsSigning, windowsSigningBuilderOptions, windowsUpdatePublisherFor } from "@space/desktop-platform-windows/packaging/windows-signing-lib";
+import { LINUX_FORMATS, nativeLinuxPackageOptions } from "../../../packages/desktop-platform-linux/packaging/linux-packages.mjs";
+import { linuxAfterInstallScript, withLinuxModes } from "../../../packages/desktop-platform-linux/packaging/file-modes.mjs";
+import { ELECTRON_LANGUAGES } from "../../../packages/desktop-platform/packaging/packaged-locales-lib.mjs";
+import { TEST_BUILD_ENV, testBuildVersion } from "../../../packages/desktop-platform/packaging/test-build-lib.mjs";
+import { resolveWindowsSigning, windowsSigningBuilderOptions, windowsUpdatePublisherFor } from "../../../packages/desktop-platform-windows/packaging/windows-signing-lib.mjs";
 
 const appDir = import.meta.dirname;
 const repoRoot = resolve(appDir, "..", "..", "..");

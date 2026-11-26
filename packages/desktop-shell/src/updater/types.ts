@@ -18,34 +18,12 @@ export const UPDATER_CHANNELS = {
   setAuto: "sf-updater-set-auto",
   /** invoke: current `UpdaterState`, so a window opened late still shows a finished download. */
   state: "sf-updater-state",
-  /** invoke: "Remind me later" in the update modal: the offered version is not prompted again for a day (this run only). */
-  remindLater: "sf-updater-remind-later",
-  /** invoke: "Ignore" in the update modal: the offered version is never prompted nor installed on quit (kept on disk). */
-  ignore: "sf-updater-ignore",
   /** main → renderer: one `UpdaterEvent`. */
   event: "sf-updater-event",
 } as const;
 
-/** The 4-hour cadence of the automatic background check (REL-UPD-01). */
-export const AUTO_UPDATE_INTERVAL_MS = 4 * 60 * 60 * 1000;
-
-/** REL-UPD-08: the first automatic check waits this long after launch, so it never competes with the app starting up. */
-export const AUTO_UPDATE_START_DELAY_MS = 30 * 1000;
-
-/**
- * REL-UPD-08: the computer woke up from sleep: check again when the last automatic check is at least this old, so a
- * laptop closed overnight learns of a release the moment it opens.
- */
-export const AUTO_UPDATE_MIN_GAP_MS = 30 * 60 * 1000;
-
-/**
- * REL-UPD-08: the window coming back to the front checks again only when the user was away from it (no window of the
- * app focused) at least this long.
- */
-export const AUTO_UPDATE_FOCUS_GAP_MS = 60 * 60 * 1000;
-
-/** REL-UPD-08: "Remind me later" hides the update modal for this version this long (or until the app restarts). */
-export const UPDATE_REMIND_LATER_MS = 24 * 60 * 60 * 1000;
+/** The 6-hour cadence of the automatic background check (REL-UPD-01). */
+export const AUTO_UPDATE_INTERVAL_MS = 6 * 60 * 60 * 1000;
 
 /** Lifecycle events forwarded to the renderer over `UPDATER_CHANNELS.event`. */
 export type UpdaterEvent =
@@ -60,28 +38,18 @@ export type UpdaterEvent =
   | { kind: "mandatory-update"; latestVersion: string; minClientVersion: string }
   // E2E only (SF_UPDATER_TEST_MODE): the install IPC fired; the real quitAndInstall would kill the test's connection.
   | { kind: "restart-requested" }
-  // REL-UPD-07 (channels "system" and "flatpak"): the password dialog (or Flatpak's "Update {app}?" question) is up,
-  // or the package manager / the Flatpak portal is updating.
+  // REL-UPD-07 (channel "system"): the password dialog is up / the package manager is updating.
   | { kind: "system-installing" }
-  // Channel "flatpak": the portal's progress of the whole update (0–100).
-  | { kind: "system-progress"; percent: number }
-  // The update installed `version`; the app quits and starts it by itself ("Restart {app}" in Settings if not).
+  // The package manager installed `version`; the app quits and starts it by itself ("Restart {app}" in Settings if not).
   | { kind: "system-installed"; version: string }
-  // The user closed the password dialog (or refused Flatpak's question): back to "available", nothing changed.
+  // The user closed the password dialog: back to "available", nothing changed.
   | { kind: "system-dismissed" }
-  | { kind: "system-failed"; failure: SystemUpdateFailure; detail: string | null; manualCommand: string | null }
-  // REL-UPD-08: "Remind me later" in the update modal: `version` is not prompted again before `until` (epoch ms).
-  | { kind: "prompt-snoozed"; version: string; until: number }
-  // REL-UPD-08: "Ignore" in the update modal: `version` is never prompted again nor installed on quit.
-  | { kind: "prompt-ignored"; version: string }
-  // REL-UPD-01: the automatic-updates setting the main process applied. The renderer's first state snapshot can be
-  // taken before the window pushed its stored setting; without this the modal would read it as off for the session.
-  | { kind: "auto-update"; enabled: boolean };
+  | { kind: "system-failed"; failure: SystemUpdateFailure; detail: string | null; manualCommand: string | null };
 
 /**
  * How this copy gets a new version (REL-UPD-07): `self` electron-updater (AppImage, Windows, macOS); `system` the
- * system's package manager through the password dialog (.deb, .rpm, .pacman); `flatpak` the Flatpak portal
- * (flatpakPortal.ts), or `flatpak update` by hand when the portal can't.
+ * system's package manager through the password dialog (.deb, .rpm, .pacman); `flatpak` `flatpak update`, which the
+ * app only points to.
  */
 export type UpdateChannel = "self" | "system" | "flatpak";
 
@@ -126,7 +94,7 @@ export type UpdaterState = {
   /** Available/downloaded version, when known. */
   version: string | null;
   releaseNotes: string | null;
-  /** 0–100 while downloading, and while a Flatpak installs its update. */
+  /** 0–100 while downloading. */
   progress: number;
   errorMessage: string | null;
   /** Latched once release-status reported this build below `minClientVersion`; never cleared by a dismiss. */
@@ -139,20 +107,13 @@ export type UpdaterState = {
   lastCheckedAt: number | null;
   /** How this copy updates (REL-UPD-07). */
   channel: UpdateChannel;
-  /**
-   * Channel `system`: the app can open the password dialog itself (pkexec and a display are there). Channel `flatpak`:
-   * the Flatpak portal can update the app (portal version 2 or later).
-   */
+  /** Channel `system`: the app can open the password dialog itself (pkexec and a display are there). */
   canInstall: boolean;
   /** Channels `system`/`flatpak`: the terminal command that does the update by hand (shown with a copy button). */
   manualCommand: string | null;
   /** Channel `system`, phase `error`: why the update did not happen, and the package manager's last lines. */
   failure: SystemUpdateFailure | null;
   failureDetail: string | null;
-  /** REL-UPD-08: "Remind me later" holds the modal for this version until `until` (epoch ms); in memory, so a restart asks again. */
-  remindLater: { version: string; until: number } | null;
-  /** REL-UPD-08: the version the user chose to ignore (kept across restarts); a newer version prompts again. */
-  ignoredVersion: string | null;
 };
 
 export const INITIAL_UPDATER_STATE: UpdaterState = {
@@ -170,8 +131,6 @@ export const INITIAL_UPDATER_STATE: UpdaterState = {
   manualCommand: null,
   failure: null,
   failureDetail: null,
-  remindLater: null,
-  ignoredVersion: null,
 };
 
 /** Phases that wait for a restart: a background check or failure never replaces them. */
@@ -210,9 +169,7 @@ export const reduceUpdaterState = (prev: UpdaterState, event: UpdaterEvent): Upd
     case "restart-requested":
       return prev;
     case "system-installing":
-      return { ...prev, phase: "installing", progress: 0, errorMessage: null, failure: null, failureDetail: null };
-    case "system-progress":
-      return prev.phase === "installing" ? { ...prev, progress: event.percent } : prev;
+      return { ...prev, phase: "installing", errorMessage: null, failure: null, failureDetail: null };
     case "system-installed":
       return { ...prev, phase: "installed", version: event.version, errorMessage: null, failure: null, failureDetail: null };
     case "system-dismissed":
@@ -226,12 +183,6 @@ export const reduceUpdaterState = (prev: UpdaterState, event: UpdaterEvent): Upd
         failureDetail: event.detail,
         manualCommand: event.manualCommand ?? prev.manualCommand,
       };
-    case "prompt-snoozed":
-      return { ...prev, remindLater: { version: event.version, until: event.until } };
-    case "prompt-ignored":
-      return { ...prev, ignoredVersion: event.version };
-    case "auto-update":
-      return { ...prev, autoUpdate: event.enabled };
   }
 };
 
@@ -243,8 +194,4 @@ export type UpdaterBridge = {
   setAutoUpdate: (enabled: boolean) => Promise<{ ok: boolean }>;
   getState: () => Promise<UpdaterState>;
   onEvent: (listener: (event: UpdaterEvent) => void) => () => void;
-  /** REL-UPD-08: "Remind me later" for the offered version (refused for a mandatory update). */
-  remindLater: () => Promise<{ ok: boolean }>;
-  /** REL-UPD-08: "Ignore" the offered version (refused for a mandatory update). */
-  ignoreVersion: () => Promise<{ ok: boolean }>;
 };

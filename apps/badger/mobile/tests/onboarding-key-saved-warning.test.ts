@@ -38,8 +38,8 @@ vi.mock("react-native", async () => ({
 vi.mock("@space/mobile-shell/library-key-step", () => ({
   MobileLibraryKeyStep: (props: { overlay?: React.ReactNode }) => React.createElement("MobileLibraryKeyStep", props, props.overlay),
 }));
-vi.mock("@space/mobile-shell/components", () => ({
-  MobileScreen: ({ children }: { children: React.ReactNode }) => children,
+vi.mock("../src/components/Screen", () => ({
+  Screen: ({ children }: { children: React.ReactNode }) => children,
 }));
 vi.mock("@space/mobile-shell/keyboard", () => ({
   KeyboardAvoidingForm: ({ children }: { children: React.ReactNode }) => children,

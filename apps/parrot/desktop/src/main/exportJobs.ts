@@ -51,8 +51,6 @@ export type ParrotExportJobsDeps = {
   run: ParrotExportRun;
   /** Sends the account's list to the window. */
   emit: (jobs: ParrotExportJob[]) => void;
-  /** Each export that ends (done, failed or cancelled), once. */
-  onEnded?: (job: ParrotExportJob) => void;
   log: (line: string) => void;
   now?: () => number;
 };
@@ -123,7 +121,6 @@ export const createParrotExportJobs = (deps: ParrotExportJobsDeps): ParrotExport
     job.current = null;
     job.finishedAt = now();
     deps.log(`[export] job ${job.id} ${phase}${error ? ` (${error})` : ""}: ${job.doneSongs}/${job.totalSongs} songs, ${job.failures.length} failed`);
-    deps.onEnded?.(view(job));
   };
 
   const runOne = async (job: StoredExportJob) => {

@@ -16,16 +16,14 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { House, LibraryBig, ListMusic, Search, Settings } from "lucide-react-native";
 import { MobileTabBar, type MobileTabBarAction, type MobileTabDefinition } from "@space/mobile-shell/tab-bar";
 import { MobileFounderNoticeHost, MobileTabPager } from "@space/mobile-shell/components";
-import { getUnpaidAccessInfo } from "@space/mobile-shell/unpaid-access";
-import { UnpaidAccessSign } from "@space/mobile-shell/unpaid-access-sign";
 import { useTranslation } from "@space/mobile-shell/i18n";
+import { UnpaidAccessBanner } from "@space/mobile-shell/unpaid-access-banner";
 import { HomeScreen } from "./HomeScreen";
 import { LibraryScreen, type LibraryRequest, type LibraryView } from "./LibraryScreen";
 import { PlaylistsView } from "./PlaylistsView";
 import { SettingsScreen } from "./SettingsScreen";
 import { NowPlayingBar } from "./NowPlayingBar";
 import { PhoneSearch } from "./PhoneSearch";
-import { ParrotNoticeBell } from "./NoticeBell";
 import { ParrotSky } from "./sky";
 import type { RootStack } from "./routes";
 import { useSession } from "../state/session";
@@ -79,7 +77,6 @@ export const MainScreen = ({ navigation }: NativeStackScreenProps<RootStack, "Ma
     [libraryClosed]
   );
   const closeSearch = useCallback(() => setSearchOpen(false), []);
-  const openSettings = useCallback(() => setTab("settings"), []);
   const searchAction: MobileTabBarAction = {
     id: "search",
     label: phoneSearchStrings("parrot", i18n.language).button,
@@ -91,8 +88,8 @@ export const MainScreen = ({ navigation }: NativeStackScreenProps<RootStack, "Ma
   return (
     <ParrotSky>
       <View style={[styles.content, { paddingTop: insets.top }]}>
-        {/* UX-NOTICE-04: the bell sits above every tab page, as on Badger's phone; its entries open Settings. */}
-        <ParrotNoticeBell onOpenSettings={openSettings} />
+        {/* ACCT-UNPAID-03: while the account is unpaid, every main tab says playback is stopped and when the files go. */}
+        <UnpaidAccessBanner access={access} />
         {/* A swipe left or right moves between the tabs, as on Badger's phone (UX-PHONE-09). */}
         <MobileTabPager tabIds={libraryClosed ? OPEN_WITHOUT_LIBRARY : TAB_IDS} activeTab={tab} onTabChange={changeTab}>
           {(id) =>
@@ -110,8 +107,7 @@ export const MainScreen = ({ navigation }: NativeStackScreenProps<RootStack, "Ma
       </View>
       <NowPlayingBar onOpen={() => navigation.navigate("Player")} />
       {/* In the layout flow, not over the lists: the mini player sits on top of it. The app's safe area already keeps it
-          above Android's navigation bar. ACCT-UNPAID-05, UX-NOTICE-08: the unpaid sign sits on its top edge (the
-          screen layout leaves its floating one out on the tab pages). */}
+          above Android's navigation bar. */}
       <MobileTabBar
         tabs={tabs}
         activeTab={tab}
@@ -119,7 +115,6 @@ export const MainScreen = ({ navigation }: NativeStackScreenProps<RootStack, "Ma
         disabledTabs={libraryClosed ? DISABLED_WITHOUT_LIBRARY : undefined}
         style={styles.tabBar}
         action={searchAction}
-        badge={getUnpaidAccessInfo(access).unpaid ? <UnpaidAccessSign access={access} inline /> : undefined}
       />
       <PhoneSearch visible={searchOpen} onClose={closeSearch} />
       {/* WAIT-FOUND-04 / UX-NOTICE-01: the one-time "Founder ticket recognised" notice floats over the page, as on

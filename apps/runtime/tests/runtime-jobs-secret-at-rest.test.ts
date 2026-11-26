@@ -17,8 +17,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createBadgerOfflineSubmitHandler } from "../src/modules/badger/offlineDownload";
 import type { BadgerLibraryDbService } from "../src/modules/badgerLibraryDb";
-import { createEngineV2, type EngineV2 } from "@space/runtime-jobs-engine/engineV2";
-import { createSqliteRuntimeJobsStore } from "@space/runtime-jobs-engine/sqliteStore";
+import { createEngineV2, type EngineV2 } from "../src/core/jobs/engineV2";
+import { createSqliteRuntimeJobsStore } from "../src/core/jobs/sqliteStore";
 import type { IngestJobRecord } from "@space/runtime-jobs";
 
 const SUITE = "runtime-jobs-secret-at-rest";

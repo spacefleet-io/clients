@@ -10,10 +10,6 @@ describe("windows paths", () => {
     expect(windowsPaths.runtimeDataDir({ LOCALAPPDATA: "C:\\Users\\Ada\\AppData\\Local" })).toBe("C:\\Users\\Ada\\AppData\\Local\\SpaceFleet\\runtime");
   });
 
-  it("knows no trash location (the Recycle Bin renames what it holds)", () => {
-    expect(windowsPaths.trashPaths("C:\\media\\Movie.mkv")).toEqual([]);
-  });
-
   it("reads LOCALAPPDATA ignoring case and whitespace", () => {
     expect(windowsPaths.runtimeDataDir({ LocalAppData: "  D:\\Data  " })).toBe("D:\\Data\\SpaceFleet\\runtime");
   });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cancelJobCascade, type CancelDeps } from "@space/runtime-jobs-engine/cancellation";
+import { cancelJobCascade, type CancelDeps } from "../src/core/jobs/cancellation";
 import type { IngestJobRecord, IngestJobStatus } from "@space/runtime-jobs";
 
 // ---------------------------------------------------------------------------

@@ -11,7 +11,7 @@
  *    payload merging, child cancellation, and add-job-mid-flight is enough.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createEngineV2, type EngineV2 } from "@space/runtime-jobs-engine/engineV2";
+import { createEngineV2, type EngineV2 } from "../src/core/jobs/engineV2";
 import {
   createBadgerIngestSubmitHandler,
   createBadgerIngestAttachMetadataHandler,

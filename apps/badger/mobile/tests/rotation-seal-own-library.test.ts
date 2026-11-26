@@ -94,7 +94,7 @@ describe("the phone seals its own library for a key rotation", () => {
     seedSplitCache({ version: 10 });
     const db = await LibraryDb.open("token", "old-key");
     try {
-      const sealed = await db.sealForRotation("new-key", new Map());
+      const sealed = await db.sealForRotation("new-key");
       const manifest = JSON.parse(Buffer.from(sealed.manifestBase64, "base64").toString("utf8"));
       log("state", { sealed, manifest, rec, encryptTargets: fx.encryptTargets, putDbCalls: fx.putDbCalls });
       expect(sealed).toEqual({

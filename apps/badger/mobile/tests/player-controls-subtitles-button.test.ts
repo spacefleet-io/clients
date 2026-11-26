@@ -14,8 +14,8 @@ import {
   PlayerControls,
   type PlayerControlsHandle,
   type PlayerControlsLabels,
-} from "@space/mobile-mpv-playback/PlayerControls";
-import type { SubtitleTrack } from "@space/mobile-mpv-playback/types";
+} from "../../../../packages/mobile-mpv-playback/src/components/PlayerControls";
+import type { SubtitleTrack } from "../../../../packages/mobile-mpv-playback/src/types";
 
 const TAG = "[player-controls-subtitles-button]";
 const log = (label: string, value?: unknown) => console.info(`${TAG} ${label}${value === undefined ? "" : `: ${JSON.stringify(value)}`}`);
@@ -65,7 +65,7 @@ vi.mock("react-native", async () => {
     BackHandler: { addEventListener: () => ({ remove: () => undefined }) },
   };
 });
-vi.mock("@space/mobile-mpv-playback/MpvControl", () => ({
+vi.mock("../../../../packages/mobile-mpv-playback/src/MpvControl", () => ({
   MpvControl: new Proxy({}, { get: () => () => Promise.resolve([]) }),
 }));
 

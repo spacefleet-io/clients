@@ -1,7 +1,0 @@
-{
-  "extends": "../../tsconfig.base.json",
-  "compilerOptions": {
-    "types": ["vitest/globals", "bun-types"]
-  },
-  "include": ["src", "tests", "*.ts"]
-}

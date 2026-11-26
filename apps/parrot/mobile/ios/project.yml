@@ -217,25 +217,6 @@ targets:
         SWIFT_VERSION: "5.0"
         TARGETED_DEVICE_FAMILY: "1"
         TEST_TARGET_NAME: Parrot
-  # The Apple TV app's UI tests: today only the release smoke's new-account pairing (REL-TEST-36), run by
-  # scripts/release-smoke/ios.ts --device tv against a dev-stack lane before TestFlight.
-  ParrotTVUITests:
-    type: bundle.ui-testing
-    platform: tvOS
-    deploymentTarget: "15.1"
-    sources:
-      - path: ParrotTVUITests
-    dependencies:
-      - target: ParrotTV
-    settings:
-      base:
-        CODE_SIGN_STYLE: Automatic
-        DEVELOPMENT_TEAM: 8766H6KW4V
-        GENERATE_INFOPLIST_FILE: YES
-        PRODUCT_BUNDLE_IDENTIFIER: io.spacefleet.parrot.tvuitests
-        SWIFT_VERSION: "5.0"
-        TARGETED_DEVICE_FAMILY: "3"
-        TEST_TARGET_NAME: ParrotTV
 schemes:
   Parrot:
     build:
@@ -268,26 +249,3 @@ schemes:
       config: Debug
     archive:
       config: Release
-  # Release smoke (REL-TEST-36): `xcodebuild build-for-testing` of the Release app for the simulator plus its UI tests,
-  # built by the release smoke build script before the TestFlight archive; scripts/release-smoke/ios.ts runs
-  # only the smoke test of the bundle (-only-testing). Release, so the tested app is the configuration users get.
-  ParrotReleaseSmoke:
-    build:
-      targets:
-        Parrot: all
-        ParrotUITests: [test]
-    test:
-      config: Release
-      gatherCoverageData: false
-      targets:
-        - ParrotUITests
-  ParrotTVReleaseSmoke:
-    build:
-      targets:
-        ParrotTV: all
-        ParrotTVUITests: [test]
-    test:
-      config: Release
-      gatherCoverageData: false
-      targets:
-        - ParrotTVUITests

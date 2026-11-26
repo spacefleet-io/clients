@@ -6,7 +6,7 @@
 import React from "react";
 import { act, create, type ReactTestInstance, type ReactTestRenderer } from "react-test-renderer";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { PlayerControls, type PlayerControlsLabels } from "@space/mobile-mpv-playback/PlayerControls";
+import { PlayerControls, type PlayerControlsLabels } from "../../../../packages/mobile-mpv-playback/src/components/PlayerControls";
 
 const TAG = "[player-controls-fade]";
 
@@ -61,7 +61,7 @@ vi.mock("react-native", async () => {
     BackHandler: { addEventListener: () => ({ remove: () => undefined }) },
   };
 });
-vi.mock("@space/mobile-mpv-playback/MpvControl", () => ({
+vi.mock("../../../../packages/mobile-mpv-playback/src/MpvControl", () => ({
   MpvControl: new Proxy({}, { get: () => () => Promise.resolve(0) }),
 }));
 

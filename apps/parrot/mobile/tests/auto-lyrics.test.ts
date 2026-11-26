@@ -55,7 +55,7 @@ vi.mock("@space/library-db-definition/storageFormat", () => ({ STORAGE_FORMAT_VE
 // Cover copies use React Native's Image; no cover is made here.
 vi.mock("../src/lib/coverCopies", () => ({ phoneCoverCopies: async () => null }));
 vi.mock("../src/config", () => ({ API_BASE_URL: "http://localhost:8000" }));
-// Platform picks where the library file lives (@space/mobile-shell/app-data).
+// Platform picks where the library file lives (src/lib/dbPath.ts).
 vi.mock("react-native", () => ({ Platform: { OS: "android" } }));
 // The save queue: the ops are applied to the open library as the real one does, the upload is left out.
 vi.mock("../src/lib/saveEdits", async () => {

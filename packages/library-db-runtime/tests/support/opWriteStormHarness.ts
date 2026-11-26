@@ -277,6 +277,7 @@ export const seedMovie = async (db: Db, catalogId: number, title: string) =>
     originalLanguage: "en",
     overview: "A long enough overview so the media details look like a real title. ".repeat(4),
     year: "2026",
+    rating: null,
     posterPath: null,
     backdropPath: null,
     genres: [],

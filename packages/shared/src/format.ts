@@ -12,12 +12,12 @@ export const PLAN_GB_BYTES = 1024 ** 3;
 export const planGbToBytes = (gb: number): number => gb * PLAN_GB_BYTES;
 
 /**
- * The base the device's own file manager uses (STOR-UNIT-01). `os` is a desktop system as the platform layer names it
- * ("windows", "macos", "linux") or a React Native `Platform.OS` ("ios", "android"); `desktop` is Linux's
- * `XDG_CURRENT_DESKTOP` ("KDE", "GNOME", "ubuntu:GNOME"): KDE means 1024, any other or unknown desktop 1000.
+ * The base the device's own file manager uses (STOR-UNIT-01). `os` is `process.platform` style ("win32", "darwin",
+ * "linux") or a React Native `Platform.OS` ("ios", "android"); `desktop` is Linux's `XDG_CURRENT_DESKTOP`
+ * ("KDE", "GNOME", "ubuntu:GNOME"): KDE means 1024, any other or unknown desktop 1000.
  */
 export const storageUnitBaseFor = (os: string, desktop?: string | null): StorageUnitBase => {
-  if (os === "windows") return 1024;
+  if (os === "win32" || os === "windows") return 1024;
   if (os === "linux") return (desktop ?? "").split(":").some((part) => part.trim().toUpperCase() === "KDE") ? 1024 : 1000;
   return 1000;
 };
@@ -228,6 +228,13 @@ const decimalFormatter = (locale: string, digits: number): Intl.NumberFormat => 
 /** A number with exactly `digits` decimals, written the way `locale` writes it ("6,3" in German, "6.3" in English). */
 export const localizedDecimal = (value: number, locale: string, digits = 1): string =>
   decimalFormatter(locale, digits).format(Number.isFinite(value) ? value : 0);
+
+/** A title's rating with one decimal in `locale`'s number style (UX-I18N-01): "7.5" in English, "7,5" in French, Dutch
+ * and German. */
+export const formatRating = (value: number, locale: string): string => localizedDecimal(value, locale, 1);
+
+/** The rating as a poster card's meta shows it, after a star: "★ 7.5" (UX-LIB-02). */
+export const formatStarRating = (value: number, locale: string): string => `★ ${formatRating(value, locale)}`;
 
 export type RelativeTimeUnit = "just_now" | "seconds" | "minutes" | "hours" | "days";
 

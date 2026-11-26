@@ -1,47 +1,52 @@
-import { homeSectionLabel, homeSectionRows, type HomeSectionConfig, type HomeSectionType } from "@space/shared/homeLayout";
-import type { MediaRow, PlaylistRow } from "@space/shared/libraryTypes";
+import { continueWatchingTitles } from "@space/shared/continueWatching";
+import type { MediaRow } from "@space/shared/libraryTypes";
 
 /** Titles per Home rail. */
 export const RAIL_LIMIT = 12;
 
-/** One Home rail to render: its section, its heading, its titles (never empty) and whether cards show watch progress. */
+export type HomeRailId = "continueWatching" | "recent" | "movies" | "shows" | "favorites";
+
+export type HomeRails = Record<HomeRailId, MediaRow[]>;
+
+/** One Home rail to render: its i18n title key, its titles (never empty) and whether cards show watch progress. */
 export type HomeRailEntry = {
-  id: string;
-  section: HomeSectionConfig;
-  title: string;
+  id: HomeRailId;
+  titleKey: string;
   items: MediaRow[];
   showProgress: boolean;
 };
 
-/** The phone's heading key of each section type (a playlist or genre row is headed by its own name). */
-const TITLE_KEYS: Record<HomeSectionType, string> = {
-  continue: "home.sections.continueWatching",
+const RAIL_TITLE_KEYS: Record<HomeRailId, string> = {
+  continueWatching: "home.sections.continueWatching",
   recent: "home.sections.recentlyAdded",
-  unwatched: "home.sections.unwatched",
-  rewatch: "home.sections.rewatch",
+  movies: "home.sections.movies",
+  shows: "home.sections.shows",
   favorites: "home.sections.favorites",
-  playlist: "home.sections.playlist",
-  genre: "home.sections.genre",
 };
 
-export type HomeRailInputs = {
-  /** The layout the computer saved (`parseHomeLayout`), the same sections in the same order on every app (UX-HOME-06). */
-  layout: readonly HomeSectionConfig[];
-  favoriteIds: ReadonlySet<string>;
-  playlistItems: ReadonlyMap<string, ReadonlySet<string>>;
-  playlists: readonly Pick<PlaylistRow, "id" | "name">[];
-  language: string;
-  t: (key: string) => string;
+/** Home rails in display order. */
+const RAIL_ORDER: readonly HomeRailId[] = ["continueWatching", "recent", "movies", "shows", "favorites"];
+
+/**
+ * The Home rails shared by the phone and the TV app: continue watching (started, not finished, latest first),
+ * recently added, movies, TV shows (newest first) and the favorites playlist.
+ */
+export const selectHomeRails = (media: readonly MediaRow[], favoriteIds: ReadonlySet<string>): HomeRails => {
+  const byAdded = [...media].sort((a, b) => (a.addedAt < b.addedAt ? 1 : -1));
+  return {
+    continueWatching: continueWatchingTitles(media).slice(0, RAIL_LIMIT),
+    recent: byAdded.slice(0, RAIL_LIMIT),
+    movies: byAdded.filter((item) => item.type === "movie").slice(0, RAIL_LIMIT),
+    shows: byAdded.filter((item) => item.type === "tv").slice(0, RAIL_LIMIT),
+    favorites: media.filter((item) => favoriteIds.has(item.id)).slice(0, RAIL_LIMIT),
+  };
 };
 
-/** The phone's and the TV's Home rails: the layout's sections that have titles, in its order. */
-export const homeRailEntries = (media: readonly MediaRow[], inputs: HomeRailInputs): HomeRailEntry[] =>
-  homeSectionRows(inputs.layout, media, { favorites: inputs.favoriteIds, playlistItems: inputs.playlistItems, limit: RAIL_LIMIT }).map(
-    ({ section, items }) => ({
-      id: section.id,
-      section,
-      title: homeSectionLabel(section, inputs.playlists, inputs.language, (type) => inputs.t(TITLE_KEYS[type])),
-      items,
-      showProgress: section.type === "continue",
-    }),
-  );
+/** The rails that have titles, in display order (an empty rail is not shown). */
+export const homeRailEntries = (rails: HomeRails): HomeRailEntry[] =>
+  RAIL_ORDER.filter((id) => rails[id].length > 0).map((id) => ({
+    id,
+    titleKey: RAIL_TITLE_KEYS[id],
+    items: rails[id],
+    showProgress: id === "continueWatching",
+  }));

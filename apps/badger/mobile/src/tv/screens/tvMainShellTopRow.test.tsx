@@ -65,6 +65,7 @@ vi.mock("@space/mobile-shell/components", () => ({
   formatPendingOpsLabel: (count: number) => `${count} changes will sync when reconnected`,
 }));
 vi.mock("@space/mobile-shell/i18n", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
+vi.mock("@space/mobile-shell/unpaid-access-banner", () => ({ UnpaidAccessBanner: () => null }));
 vi.mock("../../lib/pairing/deviceWatch", () => ({ checkForNewDevices: () => undefined, markDeviceSeen: async () => undefined }));
 vi.mock("../../lib/pairing/newDevice", () => ({
   newDeviceKey: () => "",

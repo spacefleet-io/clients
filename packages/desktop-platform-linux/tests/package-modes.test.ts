@@ -6,11 +6,13 @@
  * world-writable, setuid or setgid entry (check-package-modes.mjs).
  */
 import { spawnSync } from "node:child_process";
-import { chmodSync, lstatSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
+import { createBuilderConfig as badgerBuilderConfig } from "../../../apps/badger/desktop/electron-builder.config.mjs";
+import { createBuilderConfig as parrotBuilderConfig } from "../../../apps/parrot/desktop/electron-builder.config.mjs";
 import {
   LEGACY_MODES_REPAIR,
   listPackageEntries,
@@ -21,10 +23,10 @@ import {
   parseRpmModes,
   withLinuxModes,
 } from "../packaging/file-modes.mjs";
-import { modeOf, writeUmask000Tree } from "../testing/linuxBuilderChecks";
 
 const CHECK = resolve(import.meta.dirname, "..", "packaging", "check-package-modes.mjs");
 const log = (line: string, data?: unknown) => console.info(`[package-modes] ${line}${data === undefined ? "" : ` ${JSON.stringify(data)}`}`);
+const modeOf = (path: string) => (lstatSync(path).mode & 0o7777).toString(8);
 
 const roots: string[] = [];
 const tmp = () => {
@@ -35,6 +37,21 @@ const tmp = () => {
 afterEach(() => {
   for (const dir of roots.splice(0)) rmSync(dir, { recursive: true, force: true });
 });
+
+/** The tree a umask-000 build leaves (what Parrot 0.1.2 shipped): 777 folders, 666 files, one 777 executable. */
+const writeUmask000Tree = (root: string) => {
+  mkdirSync(join(root, "opt", "Parrot", "resources"), { recursive: true });
+  writeFileSync(join(root, "opt", "Parrot", "resources", "app.asar"), "asar");
+  writeFileSync(join(root, "opt", "Parrot", "resources", "app-update.yml"), "provider: generic\n");
+  writeFileSync(join(root, "opt", "Parrot", "spaceparrot"), "#!/bin/sh\n");
+  writeFileSync(join(root, "opt", "Parrot", "chrome-sandbox"), "elf");
+  symlinkSync("spaceparrot", join(root, "opt", "Parrot", "link"));
+  for (const dir of ["opt", "opt/Parrot", "opt/Parrot/resources"]) chmodSync(join(root, dir), 0o777);
+  chmodSync(join(root, "opt", "Parrot", "resources", "app.asar"), 0o666);
+  chmodSync(join(root, "opt", "Parrot", "resources", "app-update.yml"), 0o664);
+  chmodSync(join(root, "opt", "Parrot", "spaceparrot"), 0o777);
+  chmodSync(join(root, "opt", "Parrot", "chrome-sandbox"), 0o4755);
+};
 
 /** A tree a correct build leaves: 755 folders and executables, 644 files. */
 const writeGoodTree = (root: string) => {
@@ -63,8 +80,21 @@ describe("normalizing the packed app (REL-DIST-13)", () => {
     expect(normalizeTreeModes(root)).toBe(0);
   });
 
-  // Each app's tests run its own afterPack on Linux (testing/linuxBuilderChecks.ts).
-  it("withLinuxModes hands any other platform to the app's own hook", async () => {
+  it("both apps' afterPack normalizes on Linux and hands any other platform to the app's own hook", async () => {
+    for (const [app, config] of [
+      ["badger", badgerBuilderConfig({ targetId: "linux-x64" })],
+      ["parrot", parrotBuilderConfig({ targetId: "linux-x64" })],
+    ] as const) {
+      const afterPack = "afterPack" in config ? config.afterPack : undefined;
+      if (typeof afterPack !== "function") throw new Error(`${app}: afterPack is ${typeof afterPack}, not a hook function`);
+      const root = tmp();
+      writeUmask000Tree(root);
+      await afterPack({ electronPlatformName: "linux", appOutDir: root });
+      log(`${app} afterPack linux`, { asar: modeOf(join(root, "opt", "Parrot", "resources", "app.asar")), dir: modeOf(join(root, "opt")) });
+      expect(modeOf(join(root, "opt", "Parrot", "resources", "app.asar")), app).toBe("644");
+      expect(modeOf(join(root, "opt")), app).toBe("755");
+    }
+
     const hookDir = tmp();
     const hook = join(hookDir, "hook.mjs");
     writeFileSync(hook, "export default async (context) => { context.calls.push(context.electronPlatformName); };\n");
@@ -77,7 +107,25 @@ describe("normalizing the packed app (REL-DIST-13)", () => {
 
 // @req REL-DIST-13[badger-desktop,parrot] an update from an affected package drops the write bits on the folders it left 777
 describe("after-install repair of earlier packages' folders (REL-DIST-13)", () => {
-  // Each app's tests check that its .deb/.rpm/.pacman run the repair first (testing/linuxBuilderChecks.ts).
+  it("both apps' .deb/.rpm/.pacman run electron-builder's after-install script with the repair first", () => {
+    for (const [app, config] of [
+      ["badger", badgerBuilderConfig({ targetId: "linux-x64" })],
+      ["parrot", parrotBuilderConfig({ targetId: "linux-x64" })],
+    ] as const) {
+      const formats = config as unknown as Record<"deb" | "rpm" | "pacman", { afterInstall?: string }>;
+      const scripts = new Set([formats.deb.afterInstall, formats.rpm.afterInstall, formats.pacman.afterInstall]);
+      expect(scripts.size, app).toBe(1);
+      const [path] = [...scripts];
+      if (typeof path !== "string") throw new Error(`${app}: no afterInstall`);
+      const lines = readFileSync(path, "utf8").split("\n");
+      log(`${app} after-install`, { path, head: lines.slice(0, 4) });
+      expect(lines.slice(0, 3), app).toEqual(["#!/bin/bash", ...LEGACY_MODES_REPAIR]);
+      // electron-builder's own steps follow unchanged.
+      expect(lines.join("\n"), app).toContain("chrome-sandbox");
+      expect(lines.join("\n"), app).toContain("update-alternatives --install");
+    }
+  });
+
   it("the repair clears group/world write bits under the app folder and keeps chrome-sandbox setuid", () => {
     const root = tmp();
     writeUmask000Tree(root);

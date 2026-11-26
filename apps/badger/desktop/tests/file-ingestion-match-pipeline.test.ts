@@ -272,11 +272,6 @@ vi.mock("react-router-dom", () => ({
   useNavigate: () => vi.fn(),
 }));
 
-// The dialog prefetches the Library page (`void import("@/pages/Library")`) and never awaits it. Its real module graph
-// is large: on a loaded runner the prefetch was still loading at teardown and failed the run with three
-// EnvironmentTeardownError rejections (run 47404). The page plays no part in matching.
-vi.mock("../src/renderer/src/pages/Library", () => ({ default: () => null }));
-
 vi.mock("../src/renderer/src/components/LoadingModalProvider", () => ({
   useLoadingModal: () => ({
     showLoading: vi.fn().mockReturnValue("loading-token"),

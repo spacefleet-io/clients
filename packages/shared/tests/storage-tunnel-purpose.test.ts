@@ -57,8 +57,7 @@ const installBackend = (options: { unpaid?: boolean } = {}) => {
       });
     }
     if (url.endsWith("/storage/tunnel/session")) {
-      // Like the gateway: an unpaid account keeps `export` and `reseal` (copies only, STOR-RESEAL-03).
-      if (options.unpaid && body.purpose !== "export" && body.purpose !== "reseal") {
+      if (options.unpaid && body.purpose !== "export") {
         return Response.json({ error: "subscription_unpaid", wipeAt: WIPE_AT }, { status: 402 });
       }
       seq += 1;
@@ -176,30 +175,6 @@ describe("storage tunnel session purpose", () => {
 
     const bytes = await client.downloadObject("token-1", "library/chunks/abc", { downloadId: "d1", purpose: "export" });
     expect(Array.from(bytes)).toEqual(Array.from(payload));
-  });
-
-  it("@req STOR-RESEAL-03[storage-gateway] uploads a re-sealed copy over a reseal session, with its run and old key on upload.open", async () => {
-    // An unpaid account may still re-seal (STOR-RESEAL-03): the backend refuses `upload` but serves `reseal`.
-    installBackend({ unpaid: true });
-    const client = newClient({ tunnelMode: "direct" });
-    const copyKey = "shards/gw-1/assets/0b7e9a52-8f8c-4c51-9d6e-5d2d4f0a1b11";
-    const stored = await client.uploadObject("token-1", copyKey, new Uint8Array([1, 2]), {
-      uploadId: "u-copy",
-      objectNamespace: "media",
-      reseal: { runId: "run-1", of: "shards/gw-1/assets/old" },
-    });
-    dump("reseal");
-    expect(stored).toBe(copyKey);
-    expect(sessionCalls().map((c) => c.body?.purpose)).toEqual(["reseal"]);
-    const opens = calls()
-      .map((c) => (c.body?.frame ?? null) as Record<string, unknown> | null)
-      .filter((frame) => frame?.kind === "upload.open");
-    expect(opens).toEqual([expect.objectContaining({ objectKey: copyKey, resealRunId: "run-1", resealOf: "shards/gw-1/assets/old" })]);
-    // An ordinary upload of the same unpaid account is still refused.
-    fetchMock.mockClear();
-    const refused = await client.uploadObject("token-1", "assets/new", new Uint8Array([1]), { uploadId: "u2" }).catch((e: unknown) => e);
-    expect(isSubscriptionUnpaidError(refused)).toBe(true);
-    expect(calls().some((c) => (c.body?.frame as Record<string, unknown> | undefined)?.resealRunId !== undefined)).toBe(false);
   });
 
   it("treats a 402 as final in waterfall mode: no other address, never the API", async () => {

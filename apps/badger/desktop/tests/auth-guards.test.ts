@@ -1,5 +1,4 @@
 import { describe, expect, it, vi } from "vitest";
-import { ApiError } from "@space/shared/api";
 import { shouldLogoutAfterAuthProbe } from "../src/renderer/src/lib/authGuards";
 
 // On a logout-decision mismatch, dump the probe call count + actual/expected
@@ -28,7 +27,9 @@ describe("shouldLogoutAfterAuthProbe", () => {
     const probe = vi.fn(async () => {
       calls += 1;
       if (calls === 1) {
-        throw new ApiError(401, { error: "unauthorized_once" });
+        const error = new Error("unauthorized_once") as Error & { status?: number };
+        error.status = 401;
+        throw error;
       }
       return { ok: true };
     });
@@ -51,7 +52,9 @@ describe("shouldLogoutAfterAuthProbe", () => {
 
   it("logs out when probe keeps returning unauthorized", async () => {
     const probe = vi.fn(async () => {
-      throw new ApiError(401, { error: "unauthorized" });
+      const error = new Error("unauthorized") as Error & { status?: number };
+      error.status = 401;
+      throw error;
     });
     console.info(`[auth-guards:persistent-401] attempts=2 delayMs=0 (always 401)`);
     const result = await shouldLogoutAfterAuthProbe({ probe, attempts: 2, delayMs: 0 });
@@ -72,7 +75,9 @@ describe("shouldLogoutAfterAuthProbe", () => {
 
   it("does not logout on non-auth errors", async () => {
     const probe = vi.fn(async () => {
-      throw new ApiError(500, { error: "server_error" });
+      const error = new Error("server_error") as Error & { status?: number };
+      error.status = 500;
+      throw error;
     });
     console.info(`[auth-guards:non-auth-error] attempts=2 delayMs=0 (always 500)`);
     const result = await shouldLogoutAfterAuthProbe({ probe, attempts: 2, delayMs: 0 });

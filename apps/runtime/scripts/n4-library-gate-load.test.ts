@@ -27,9 +27,9 @@ import { randomBytes } from "node:crypto";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it, mock } from "bun:test";
-import * as realApi from "@space/library-db-runtime/api";
-import type { LibraryMeta } from "@space/library-db-runtime/api";
-import { encryptBytesToBytes } from "@space/library-db-runtime/crypto";
+import * as realApi from "../../../packages/library-db-runtime/src/api";
+import type { LibraryMeta } from "../../../packages/library-db-runtime/src/api";
+import { encryptBytesToBytes } from "../../../packages/library-db-runtime/src/crypto";
 // The service loads LibraryDb lazily on open(), i.e. after mock.module below.
 import { BadgerLibraryDbService } from "../src/modules/badgerLibraryDb";
 

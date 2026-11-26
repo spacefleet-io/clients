@@ -44,8 +44,8 @@ vi.mock("@/components/TopNavJobsSidebar", () => ({ default: () => <span data-tes
 vi.mock("@/components/DesktopOfflineIndicator", () => ({
   DesktopOfflineIndicator: () => <span data-testid="desktop-offline-indicator" />,
 }));
-vi.mock("@/components/UnpaidAccessSign", () => ({ UnpaidAccessSign: () => null }));
-vi.mock("@/components/OverQuotaSign", () => ({ OverQuotaSign: () => null }));
+vi.mock("@/components/UnpaidAccessBanner", () => ({ UnpaidAccessBanner: () => null }));
+vi.mock("@/components/OverQuotaBanner", () => ({ OverQuotaBanner: () => null }));
 vi.mock("@/components/SignOutKeyCheck", () => ({ useSignOutWithKeyCheck: () => ({ requestSignOut, dialog: null }) }));
 vi.mock("@/logger", () => {
   const logger = { info: () => undefined, warn: () => undefined, error: () => undefined, debug: () => undefined, child: () => logger };

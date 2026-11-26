@@ -7,7 +7,7 @@ import React from "react";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ApiError, type Session } from "@space/shared/api";
+import type { Session } from "@space/shared/api";
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -30,11 +30,8 @@ const i18n = vi.hoisted(() => ({
     vars ? `${key}|${Object.entries(vars).map(([k, v]) => `${k}=${v}`).join(",")}` : key,
 }));
 vi.mock("react-i18next", () => ({ useTranslation: () => i18n }));
-// The shared notify (`@/lib/notify`) translates through i18next itself.
-vi.mock("i18next", () => ({ default: i18n }));
 // The real Dialog (Radix) renders through a portal into document.body, so the open/closed behaviour is exercised.
 vi.mock("@space/ui", async (importOriginal) => ({ ...(await importOriginal<typeof import("@space/ui")>()), toast }));
-import { toastDuration } from "@space/ui";
 vi.mock("@/logger", () => {
   const log = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn(), child: () => log };
   return { rendererLogger: log };
@@ -42,6 +39,7 @@ vi.mock("@/logger", () => {
 import DevicesSection from "../src/renderer/src/components/settings/sections/DevicesSection";
 import NewDeviceNotifier, {
   DEVICES_SETTINGS_PATH,
+  NEW_DEVICE_NOTICE_DURATION_MS,
   NEW_DEVICE_POLL_INTERVAL_MS,
 } from "../src/renderer/src/components/NewDeviceNotifier";
 import { announceNewDevices, DEVICES_CHANGED_EVENT, deviceKind, findNewDevices, readKnownDeviceIds, sortDevices } from "../src/renderer/src/lib/devices";
@@ -338,14 +336,14 @@ describe("NewDeviceNotifier", () => {
     expect(toast).toHaveBeenCalledTimes(1);
     expect(toast).toHaveBeenCalledWith(
       "account.devices.newDevice|name=Living room,type=account.devices.type.kodi",
-      expect.objectContaining({ id: "new-device-kodi-1", kind: "headsUp" }),
+      expect.objectContaining({ id: "new-device-kodi-1", duration: NEW_DEVICE_NOTICE_DURATION_MS }),
     );
 
     await act(async () => vi.advanceTimersByTimeAsync(NEW_DEVICE_POLL_INTERVAL_MS));
     expect(toast).toHaveBeenCalledTimes(1);
   });
 
-  it("@req ACCT-PAIR-03 @req UX-NOTICE-01[badger-desktop] @req UX-NOTICE-03[badger-desktop] the toast leaves after the shared time, and its action closes it and opens the device list", async () => {
+  it("@req ACCT-PAIR-03 @req UX-NOTICE-01[badger-desktop] the toast leaves after a fixed time, and its action closes it and opens the device list", async () => {
     api.listDevices.mockResolvedValue({ sessions: [session({ id: "me", current: true })] });
     await act(async () => root.render(<NewDeviceNotifier />));
     await act(async () => vi.advanceTimersByTimeAsync(0));
@@ -356,13 +354,11 @@ describe("NewDeviceNotifier", () => {
     expect(toast).toHaveBeenCalledTimes(1);
     const options = toast.mock.calls[0][1] as {
       id: string;
-      kind: "headsUp";
+      duration: number;
       action: { label: string; onClick: () => void };
     };
-    const duration = toastDuration("default", options);
-    console.info("[UX-NOTICE-01] desktop toast options", JSON.stringify({ id: options.id, kind: options.kind, duration, label: options.action.label }));
-    // A notice with a button: 8 s without the pointer or focus on it (UX-NOTICE-03).
-    expect(duration).toBe(8_000);
+    console.info("[UX-NOTICE-01] desktop toast options", JSON.stringify({ id: options.id, duration: options.duration, label: options.action.label }));
+    expect(options.duration).toBe(8_000);
     expect(options.action.label).toBe("account.devices.newDeviceOpen");
     options.action.onClick();
     expect(toast.dismiss).toHaveBeenCalledWith("new-device-tv-1");
@@ -378,8 +374,8 @@ describe("NewDeviceNotifier", () => {
   });
 
   it("@req ACCT-DEV-01 signs this computer out when the device check is refused because its session was revoked", async () => {
-    api.listDevices.mockRejectedValue(new ApiError(401, { error: "unauthorized" }));
-    api.getMe.mockRejectedValue(new ApiError(401, { error: "unauthorized" }));
+    api.listDevices.mockRejectedValue(Object.assign(new Error("unauthorized"), { status: 401 }));
+    api.getMe.mockRejectedValue(Object.assign(new Error("unauthorized"), { status: 401 }));
     await act(async () => root.render(<NewDeviceNotifier />));
     await act(async () => vi.advanceTimersByTimeAsync(1_000));
     expect(api.getMe).toHaveBeenCalledWith("tok-1");
@@ -389,7 +385,7 @@ describe("NewDeviceNotifier", () => {
   });
 
   it("@req ACCT-DEV-01 stays signed in when the refused device check turns out to be a blip", async () => {
-    api.listDevices.mockRejectedValue(new ApiError(401, { error: "unauthorized" }));
+    api.listDevices.mockRejectedValue(Object.assign(new Error("unauthorized"), { status: 401 }));
     api.getMe.mockResolvedValue({ user: { id: "u1" } });
     await act(async () => root.render(<NewDeviceNotifier />));
     await act(async () => vi.advanceTimersByTimeAsync(1_000));
@@ -449,7 +445,7 @@ describe("NewDeviceNotifier", () => {
     expect(toast).toHaveBeenCalledTimes(1);
     expect(toast).toHaveBeenCalledWith(
       "account.devices.newDevice|name=Den,type=account.devices.type.tv",
-      expect.objectContaining({ id: "new-device-tv-1", kind: "headsUp" }),
+      expect.objectContaining({ id: "new-device-tv-1", duration: NEW_DEVICE_NOTICE_DURATION_MS }),
     );
   });
 

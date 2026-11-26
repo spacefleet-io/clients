@@ -1,13 +1,12 @@
 // @vitest-environment jsdom
 /**
  * @test-id PARROT-DESKTOP-IMPORT-NOTIFICATIONS-001
- * @level integration (real Library shell, toasts and notification history, real translators; `window.parrot` mocked)
+ * @level integration (real Library shell and notification tray, real translator; `window.parrot` mocked)
  * @why UX-JOBS-01 / UX-I18N-01 @bugfix: each import put "Import finished" in the tray twice (main sent "done" twice),
- *   the tray kept every notification in the language it was made in, and a publish other saves kept beating showed the
- *   server's "version_conflict". UX-NOTICE-10/12/13: a finished import is a toast only, a failed one is kept once
- *   (same key) with "Open Jobs", the bell counts it, and the entry follows a language change.
+ *   the tray kept every notification in the language it was made in ("Import finished", "Added to Road trip" after
+ *   switching to French), and a publish other saves kept beating showed the server's "version_conflict".
  * @covers apps/parrot/desktop/src/renderer/src/Library.tsx
- * @covers apps/parrot/desktop/src/renderer/src/noticeText.ts
+ * @covers apps/parrot/desktop/src/renderer/src/notificationText.ts
  * @covers apps/parrot/desktop/src/renderer/src/ImportJobs.tsx
  */
 import React, { act } from "react";
@@ -63,8 +62,7 @@ describe("import notifications", () => {
       for (let i = 0; i < 5; i += 1) await new Promise((r) => setTimeout(r, 0));
     });
   };
-  // The tray and the toasts may sit in portals, outside the container.
-  const q = (id: string) => [...document.body.querySelectorAll<HTMLElement>(`[data-testid="${id}"]`)];
+  const q = (id: string) => [...container.querySelectorAll<HTMLElement>(`[data-testid="${id}"]`)];
   const render = async (language: ParrotLanguage) => {
     await act(async () => root.render(<Library t={translator(language)} state={stateIn(language)} onState={() => undefined} />));
     await flush();
@@ -73,6 +71,7 @@ describe("import notifications", () => {
     await act(async () => q("nav-notifications")[0]!.click());
     await flush();
   };
+  const count = (text: string) => (document.body.textContent ?? "").split(text).length - 1;
   const send = async (next: ParrotImportStatus) => {
     const listener = vi.mocked(window.parrot.onImportStatus).mock.calls[0]![0];
     await act(async () => listener(next));
@@ -119,54 +118,23 @@ describe("import notifications", () => {
     vi.restoreAllMocks();
   });
 
-  // @req UX-JOBS-01 @req UX-I18N-01 @req UX-NOTICE-10[parrot] @req UX-NOTICE-12[parrot] @req UX-NOTICE-13[parrot]
-  it("keeps a failed import once, never a finished one, counts it on the bell and shows it in the language picked afterwards", async () => {
-    // Two finished imports; the first one's "done" arrives twice, as main sent it before the fix.
+  // @req UX-JOBS-01 @req UX-I18N-01
+  it("puts one notification per import in the tray, and shows it in the language picked afterwards", async () => {
+    // Two imports; the first one's "done" arrives twice, as main sent it before the fix.
     for (const imported of [14, 3]) {
       await send(status({ running: true, phase: "uploading", total: imported, done: 1 }));
       await send(status({ running: true, phase: "publishing", total: imported, done: imported }));
       await send(status({ phase: "done", total: imported, done: imported, imported }));
       if (imported === 14) await send(status({ phase: "done", total: imported, done: imported, imported }));
     }
-    const toasts = q("sf-notice-import");
-    console.info(SUITE, "after done: toasts", toasts.map((n) => n.textContent), "badge", q("nav-notifications-count").length);
-    // One toast for both imports (same key, replaced in place); it says the latest import's counts.
-    expect(toasts).toHaveLength(1);
-    expect(toasts[0]!.textContent).toContain("Added: 3");
-    expect(q("nav-notifications-count")).toHaveLength(0);
-
-    // Two failures of the same import: one entry, one on the bell.
-    await send(status({ phase: "failed", error: "disk full" }));
-    await send(status({ phase: "failed", error: "disk full" }));
-    console.info(SUITE, "after failed: badge", q("nav-notifications-count")[0]?.textContent);
-    expect(q("nav-notifications-count")[0]?.textContent).toBe("1");
     await openTray();
-    const entries = q("notice-entry-import");
-    console.info(SUITE, "tray (en)", entries.map((n) => n.textContent));
-    expect(entries).toHaveLength(1);
-    expect(entries[0]!.textContent).toContain("Import failed");
-    expect(q("nav-notifications-count")).toHaveLength(0);
+    console.info(SUITE, "tray (en)", document.body.textContent);
+    expect(count("Import finished")).toBe(2);
 
     await render("fr");
-    const fr = q("notice-entry-import");
-    console.info(SUITE, "tray (fr)", fr.map((n) => n.textContent));
-    expect(fr[0]!.textContent).toContain("Échec de l’import");
-    expect(fr[0]!.textContent).not.toContain("Import failed");
-  });
-
-  // @req UX-NOTICE-10[parrot]
-  it("a failed import's entry leads to the Jobs panel", async () => {
-    await send(status({ phase: "failed", error: "disk full" }));
-    await openTray();
-    await act(async () => q("notice-entry-import")[0]!.click());
-    await flush();
-    const open = q("notice-entry-open-import");
-    console.info(SUITE, "open button", open.map((n) => n.textContent));
-    expect(open[0]!.textContent).toBe("Open Jobs");
-    await act(async () => open[0]!.click());
-    await flush();
-    console.info(SUITE, "jobs panel open", q("import-jobs").length);
-    expect(q("import-jobs")).toHaveLength(1);
+    console.info(SUITE, "tray (fr)", document.body.textContent);
+    expect(count("Import finished")).toBe(0);
+    expect(count("Import terminé")).toBe(2);
   });
 
   // @req PAR-UP-03
@@ -174,7 +142,8 @@ describe("import notifications", () => {
     await send(status({ running: true, phase: "publishing" }));
     await send(status({ phase: "failed", error: "version_conflict" }));
     await openTray();
-    await act(async () => q("notice-entry-import")[0]!.click());
+    const title = [...document.body.querySelectorAll("div")].find((node) => node.textContent === "Import failed");
+    await act(async () => title?.click());
     await flush();
     console.info(SUITE, "tray", document.body.textContent);
     expect(document.body.textContent).toContain("Other changes to your library kept arriving at the same time.");

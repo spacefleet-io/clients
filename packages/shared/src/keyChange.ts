@@ -9,27 +9,19 @@
 /** What `GET /library/recovery/rotate` answers (`getKeyRotationReadiness`). */
 export type KeyRotationReadiness = { needsMediaReseal: boolean };
 
-/** The apps that can change the key, each on its own release track. */
-export type KeyChangeSurface = "badger-desktop" | "badger-mobile" | "parrot-desktop" | "parrot-mobile";
+/**
+ * Whether this client release re-seals media during a key change. It becomes true in the release whose Badger and
+ * Parrot re-seal media end to end, never before.
+ */
+export const KEY_CHANGE_RELEASED: boolean = false;
 
 /**
- * Whether this client release re-seals media during a key change, per surface. A surface turns true in the release
- * whose key change re-seals media end to end there, never before. Badger's phone re-seals with the mobile-data pause
- * (ACCT-KEYCHG-05, Main 2026-11-23, option A); Parrot's phone has no key change entry yet.
+ * A key change from a device that holds the current key (Badger desktop Settings, Badger phone Settings): offered when
+ * the account stores no media, or once this release re-seals it. Readiness not known yet (loading, offline, failed):
+ * not offered.
  */
-export const KEY_CHANGE_RELEASED: Readonly<Record<KeyChangeSurface, boolean>> = {
-  "badger-desktop": true,
-  "parrot-desktop": true,
-  "badger-mobile": true,
-  "parrot-mobile": false,
-};
-
-/**
- * A key change from a device that holds the current key (Settings): offered when the account stores no media, or
- * once `surface`'s release re-seals it. Readiness not known yet (loading, offline, failed): not offered.
- */
-export const keyChangeOffered = (surface: KeyChangeSurface, readiness: KeyRotationReadiness | null): boolean =>
-  readiness !== null && (KEY_CHANGE_RELEASED[surface] || !readiness.needsMediaReseal);
+export const keyChangeOffered = (readiness: KeyRotationReadiness | null): boolean =>
+  readiness !== null && (KEY_CHANGE_RELEASED || !readiness.needsMediaReseal);
 
 /**
  * Recovering with a new key after the current one is lost (Badger desktop onboarding, from the local library copy):

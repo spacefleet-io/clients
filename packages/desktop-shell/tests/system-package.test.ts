@@ -10,7 +10,7 @@ import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { describe, expect, it, vi } from "vitest";
 
-import { SYSTEM_UPDATE_EXIT as PACKAGING_EXIT } from "@space/desktop-platform-linux/packaging/system-update";
+import { SYSTEM_UPDATE_EXIT as PACKAGING_EXIT } from "../../desktop-platform-linux/packaging/system-update.mjs";
 import {
   SYSTEM_UPDATE_EXIT,
   canAskPassword,
@@ -158,14 +158,14 @@ describe("relaunch after a system update (REL-UPD-07)", () => {
     const driver = join(dir, "driver.mts");
     const moduleUrl = pathToFileURL(resolve(__dirname, "../src/updater/systemPackage.ts")).href;
     // The "app" arms the relaunch, says so, and exits when the test closes its stdin. The "new binary" is a shell that
-    // writes into `marker` whether the app's pid was still alive when it started, so no timing is guessed. It reads the
-    // app's `/proc` status once: missing (reaped), Z (zombie: exited, not reaped yet by this test, its parent) or X
-    // (being reaped) is gone. Two reads (`kill -0`, then the status file) raced this test's own reap between them.
+    // writes into `marker` whether the app's pid was still alive when it started, so no timing is guessed. An app that
+    // has exited but that this test (its parent) has not reaped yet is a zombie: `kill -0` still answers for it, so a
+    // zombie counts as gone (on a busy runner the reap comes after the new binary starts).
     writeFileSync(
       driver,
       [
         `import { nodeSystemProbe } from ${JSON.stringify(moduleUrl)};`,
-        `nodeSystemProbe.relaunchAfterExit("/bin/sh", ["-c", 'case "$(sed -n "s/^State:[[:space:]]*//p" "/proc/$1/status" 2>/dev/null)" in ""|Z*|X*) echo gone;; *) echo alive;; esac > "$2.tmp" && mv "$2.tmp" "$2"', "sh", String(process.pid), ${JSON.stringify(marker)}]);`,
+        `nodeSystemProbe.relaunchAfterExit("/bin/sh", ["-c", 'if kill -0 "$1" 2>/dev/null && ! grep -q "^State:.Z" "/proc/$1/status" 2>/dev/null; then echo alive; else echo gone; fi > "$2.tmp" && mv "$2.tmp" "$2"', "sh", String(process.pid), ${JSON.stringify(marker)}]);`,
         `process.stdout.write("armed\\n");`,
         `process.stdin.resume();`,
         `process.stdin.on("end", () => process.exit(0));`,

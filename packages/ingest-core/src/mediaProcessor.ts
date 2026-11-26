@@ -23,11 +23,8 @@ import { finalizeMediaJob, type ProducedMedia, type ProducedAudioTrack, type Pro
 import { defaultCodecForQuality, normalizeSourceCodec, QUALITY_ORDER, type CodecPreset, type QualityPreset, type SourceCodec } from "./quality";
 import { UploadSessionManager, uploadEncryptedObjectFile } from "@space/content-core/storageTransport";
 import { reclaimOrphanEncoder, releaseEncoderLease, writeEncoderLease } from "./encoderLease";
-import { generatePreviewSheets, generateSkipPicture, type PreviewHardwareDecode } from "./previewSheets";
-import { PREVIEW_SHEETS_VERSION, type MediaPreviewSheets, type MediaSkipSignatureRef } from "@space/shared/previewSheets";
-import type { SkipAudioAnalysisPayload } from "./skipDetect/audio";
-import type { SkipPicturePayload } from "./skipDetect/picture";
-import { SKIP_SIGNATURE_VERSION, encodeSkipSignatureAsync, type SkipSignature } from "./skipDetect/signature";
+import { generatePreviewSheets, type PreviewHardwareDecode } from "./previewSheets";
+import { PREVIEW_SHEETS_VERSION, type MediaPreviewSheets } from "@space/shared/previewSheets";
 import type { StorageObjectCounting } from "@space/shared/storageCounting";
 import { readAacChannelConfiguration, readAacPceLayout, standardAacLayoutFor } from "./aacChannelLayout";
 
@@ -227,24 +224,11 @@ const previewHardwareDecodeFor = (encoder: Exclude<VideoEncoder, "copy">): Previ
 };
 
 /**
- * What the preview pass also makes for skip detection (META-SKIP-04). `analyzeAudio` decodes the sound windows
- * (the runtime's mpv pass); its failure leaves the signature without sound. Only episodes get one: films have no
- * intro or credits markers (Chris 2026-11-24). `onSignature` hands the
- * caller the signature it stored, so the caller caches it once the record lands, without downloading it again.
- */
-export type SkipSignatureRequest = {
-  analyzeAudio?: (signal?: AbortSignal) => Promise<SkipAudioAnalysisPayload | null>;
-  onSignature?: (signature: SkipSignature) => void;
-};
-
-/**
  * Seek-bar preview sheets (MPV-PREV-01) of a committed source: made from the local file, then each sheet is
  * encrypted and uploaded on the media's placement (same uploader, pool and retries as the video chunks). Runs after
  * the source commit, so the video is playable before the decode starts. The ffmpeg runs at the encoders' background
  * priority under the playback policy (INGS-LANE-01/02). `onSheetUploaded` reports every stored key as it lands so
  * the caller can release them when this throws (any failure, cancel included); `workDir` is removed either way.
- * With `skip`, the same decode writes the skip-detection picture windows and the signature is stored next to the
- * sheets (`skipSignature`); windows that cannot be read leave the sheets without a signature.
  */
 export const producePreviewSheets = async (args: {
   token: string;
@@ -255,7 +239,6 @@ export const producePreviewSheets = async (args: {
   signal?: AbortSignal;
   onLog?: (line: string) => void;
   onSheetUploaded?: (key: string) => void;
-  skip?: SkipSignatureRequest | null;
 }): Promise<MediaPreviewSheets> => {
   try {
     const generated = await generatePreviewSheets({
@@ -266,8 +249,17 @@ export const producePreviewSheets = async (args: {
       hardware: previewHardwareDecodeFor(await detectEncoder()),
       signal: args.signal,
       onLog: args.onLog,
-      skipPicture: args.skip !== null && args.skip !== undefined,
-      run: previewFfmpegRunner(args),
+      run: (ffmpegArgs) =>
+        runFfmpegWithSignal(
+          ffmpegArgs,
+          {
+            ffmpegPath: resolveFfmpegPath(),
+            playbackGated: true,
+            progress: { enabled: false },
+            log: { onLine: (line) => args.onLog?.(`[preview-sheets] ffmpeg: ${line}`) },
+          },
+          args.signal
+        ),
     });
     const sheets: MediaPreviewSheets["sheets"] = [];
     for (const sheet of generated.sheets) {
@@ -286,10 +278,6 @@ export const producePreviewSheets = async (args: {
       });
     }
     args.onLog?.(`[preview-sheets] uploaded sheets=${sheets.length} pictures=${generated.pictureCount}`);
-    const skipSignature =
-      args.skip && generated.skipPicture && args.durationSeconds
-        ? await storeSkipSignature({ ...args, skip: args.skip, durationSeconds: args.durationSeconds, picture: generated.skipPicture })
-        : null;
     return {
       version: PREVIEW_SHEETS_VERSION,
       intervalSeconds: generated.intervalSeconds,
@@ -299,102 +287,10 @@ export const producePreviewSheets = async (args: {
       rows: generated.rows,
       pictureCount: generated.pictureCount,
       sheets,
-      ...(skipSignature ? { skipSignature } : {}),
     };
   } finally {
     await fs.rm(args.workDir, { recursive: true, force: true });
   }
-};
-
-/**
- * Signatures-only run (MPV-PREV-03 catch-up of a video that already has its sheets): one decode of the picture
- * windows, the sound pass, then the stored signature. Throws on any failure; `workDir` is removed either way.
- */
-export const produceSkipSignature = async (args: {
-  token: string;
-  inputPath: string;
-  durationSeconds: number;
-  workDir: string;
-  placementId?: string;
-  signal?: AbortSignal;
-  onLog?: (line: string) => void;
-  onSheetUploaded?: (key: string) => void;
-  skip: SkipSignatureRequest;
-}): Promise<MediaSkipSignatureRef> => {
-  try {
-    const picture = await generateSkipPicture({
-      inputPath: args.inputPath,
-      workDir: joinPath(args.workDir, "skip"),
-      durationSeconds: args.durationSeconds,
-      threads: buildFfmpegThreadArgs({ softwareEncoder: true }),
-      hardware: previewHardwareDecodeFor(await detectEncoder()),
-      signal: args.signal,
-      onLog: args.onLog,
-      run: previewFfmpegRunner(args),
-    });
-    const stored = await storeSkipSignature({ ...args, picture });
-    if (!stored) throw new Error("SKIP_SIGNATURE_NOT_STORED");
-    return stored;
-  } finally {
-    await fs.rm(args.workDir, { recursive: true, force: true });
-  }
-};
-
-const previewFfmpegRunner =
-  (args: { signal?: AbortSignal; onLog?: (line: string) => void }) =>
-  (ffmpegArgs: string[]) =>
-    runFfmpegWithSignal(
-      ffmpegArgs,
-      {
-        ffmpegPath: resolveFfmpegPath(),
-        playbackGated: true,
-        progress: { enabled: false },
-        log: { onLine: (line) => args.onLog?.(`[preview-sheets] ffmpeg: ${line}`) },
-      },
-      args.signal
-    );
-
-/** Sound pass, then encrypt and upload the signature blob. Null when the upload is not possible (logged). */
-const storeSkipSignature = async (args: {
-  token: string;
-  durationSeconds: number;
-  workDir: string;
-  placementId?: string;
-  signal?: AbortSignal;
-  onLog?: (line: string) => void;
-  onSheetUploaded?: (key: string) => void;
-  skip: SkipSignatureRequest;
-  picture: SkipPicturePayload;
-}): Promise<MediaSkipSignatureRef | null> => {
-  let audio: SkipAudioAnalysisPayload | null = null;
-  if (args.skip.analyzeAudio) {
-    try {
-      audio = await args.skip.analyzeAudio(args.signal);
-    } catch (error) {
-      throwIfAborted(args.signal);
-      args.onLog?.(`[skip-detect] audio failed, signature without sound: ${error instanceof Error ? error.message : String(error)}`);
-    }
-  }
-  throwIfAborted(args.signal);
-  const signature: SkipSignature = {
-    version: SKIP_SIGNATURE_VERSION,
-    durationSeconds: args.durationSeconds,
-    audio,
-    picture: args.picture,
-  };
-  const blobPath = joinPath(args.workDir, "skip-signature.json.gz");
-  await fs.mkdir(args.workDir, { recursive: true });
-  await fs.writeFile(blobPath, await encodeSkipSignatureAsync(signature));
-  const uploaded = await uploadEncryptedFile(args.token, blobPath, {
-    signal: args.signal,
-    placementId: args.placementId,
-    counting: { role: "preview" },
-  });
-  args.onSheetUploaded?.(uploaded.key);
-  await fs.rm(blobPath, { force: true });
-  args.skip.onSignature?.(signature);
-  args.onLog?.(`[skip-detect] signature.made bytes=${uploaded.sizeBytes} audio=${audio ? "yes" : "no"}`);
-  return { objectKey: uploaded.key, sizeBytes: uploaded.sizeBytes, version: SKIP_SIGNATURE_VERSION };
 };
 
 const throwIfAborted = (signal?: AbortSignal) => {

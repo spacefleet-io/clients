@@ -4,7 +4,6 @@
  */
 const ICONS = [
   "AudioLines",
-  "Bell",
   "Bug",
   "Captions",
   "Check",

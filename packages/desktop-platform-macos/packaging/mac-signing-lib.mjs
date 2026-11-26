@@ -230,9 +230,7 @@ export const notaryAccepted = (output) => {
 
 /**
  * Imports the Developer ID .p12 and Apple's G2 intermediate into a throwaway keychain and writes the notary key.
- * The keychain goes first in the user's CURRENT keychain search list; `close()` takes only it back out of the list as
- * the list is then (never an older copy: another build on this Mac user, a desktop package or a TestFlight build, may
- * have added its own keychain meanwhile and still need it), and deletes the keychain and the key. package.mjs calls it
+ * `close()` puts the user's keychain search list back and deletes the keychain and the key; package.mjs calls it
  * however the build ends.
  * @param {ReturnType<typeof resolveMacSigning> & { configured: true }} signing
  * @param {{ run: (command: string, args: string[]) => string; intermediateCert: string }} options
@@ -243,11 +241,11 @@ export const openSigningKeychain = (signing, { run, intermediateCert }) => {
   const keychainPassword = randomBytes(24).toString("hex");
   const p12 = join(dir, "devid.p12");
   const notaryKey = join(dir, `AuthKey_${signing.notaryKeyId}.p8`);
-  const userSearchList = () => parseKeychainList(run("security", ["list-keychains", "-d", "user"]));
+  const searchList = parseKeychainList(run("security", ["list-keychains", "-d", "user"]));
   let listChanged = false;
   const close = () => {
     try {
-      if (listChanged) run("security", ["list-keychains", "-d", "user", "-s", ...userSearchList().filter((path) => path !== keychain)]);
+      if (listChanged) run("security", ["list-keychains", "-d", "user", "-s", ...searchList]);
       run("security", ["delete-keychain", keychain]);
     } finally {
       rmSync(dir, { recursive: true, force: true });
@@ -263,7 +261,7 @@ export const openSigningKeychain = (signing, { run, intermediateCert }) => {
     run("security", ["import", intermediateCert, "-k", keychain]);
     run("security", ["set-key-partition-list", "-S", "apple-tool:,apple:,codesign:", "-s", "-k", keychainPassword, keychain]);
     rmSync(p12, { force: true });
-    run("security", ["list-keychains", "-d", "user", "-s", keychain, ...userSearchList().filter((path) => path !== keychain)]);
+    run("security", ["list-keychains", "-d", "user", "-s", keychain, ...searchList.filter((path) => path !== keychain)]);
     listChanged = true;
     const identity = pickDeveloperIdIdentity(run("security", ["find-identity", "-v", "-p", "codesigning", keychain]), signing.teamId);
     return { keychain, identity, notaryKey, close };

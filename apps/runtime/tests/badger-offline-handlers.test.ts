@@ -21,7 +21,7 @@ import {
   type BadgerOfflineHandlerDeps,
 } from "../src/modules/badger/offlineDownload";
 import type { BadgerLibraryDbService } from "../src/modules/badgerLibraryDb";
-import type { EngineV2 } from "@space/runtime-jobs-engine/engineV2";
+import type { EngineV2 } from "../src/core/jobs/engineV2";
 import type { IngestJobRecord } from "@space/runtime-jobs";
 import {
   OFFLINE_PIECES_MANIFEST_VERSION,

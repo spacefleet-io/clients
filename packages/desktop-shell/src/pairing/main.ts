@@ -20,7 +20,6 @@ import { PairingHttpError, clampDeviceName, createPairingClientCore, type Pairin
 import type { SpaceAppId } from "@space/shared/appScope";
 import { retryAfterSecondsToMinutes } from "@space/shared/signInError";
 import type { PairingMode, PairingPoll, PairingRefusal, PairingStart, PairingStartOptions } from "./types";
-import type { DesktopSystem } from "../clientIdentity";
 
 export const PAIRING_DEVICE_TYPE = "desktop";
 
@@ -32,8 +31,7 @@ export type DesktopPairingClientDeps = {
   appId: SpaceAppId;
   fetchImpl?: typeof fetch;
   hostname?: () => string;
-  /** This computer's system, from the platform layer (`getDesktopPlatform().id`). */
-  platform: DesktopSystem;
+  platform?: NodeJS.Platform;
   log?: (message: string, extra?: Record<string, unknown>) => void;
   /** The session this computer is signed in with (key mode only); null when signed out. */
   sessionToken?: () => string | null;
@@ -47,12 +45,12 @@ export type DesktopPairingClient = {
   deliverLocalKey: (requestId: string, sealedKey: SealedKey) => boolean;
 };
 
-const SYSTEM_NAMES: Record<DesktopSystem, string> = { linux: "Linux", macos: "macOS", windows: "Windows" };
+const SYSTEM_NAMES: Partial<Record<NodeJS.Platform, string>> = { linux: "Linux", darwin: "macOS", win32: "Windows" };
 
 /** "Linux (chris-pc)": the system first, so the phone reads "Parrot on Linux (chris-pc) wants to sign in". */
-export const resolveDeviceName = (rawHostname: string, platform: DesktopSystem): string => {
+export const resolveDeviceName = (rawHostname: string, platform: NodeJS.Platform = process.platform): string => {
   const host = rawHostname.trim().replace(/\.local$/i, "");
-  const system = SYSTEM_NAMES[platform];
+  const system = SYSTEM_NAMES[platform] ?? "Computer";
   return clampDeviceName(host ? `${system} (${host})` : system, "Computer");
 };
 

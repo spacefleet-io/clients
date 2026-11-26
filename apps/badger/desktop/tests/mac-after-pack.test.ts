@@ -10,7 +10,7 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { signingOrder } from "@space/desktop-platform-macos/packaging/mac-after-pack-lib";
+import { signingOrder } from "../../../../packages/desktop-platform-macos/packaging/mac-after-pack-lib.mjs";
 import afterPack, { depsProblems, PLAYER_HELPER_APP } from "../scripts/mac-after-pack.mjs";
 
 const tmpDirs: string[] = [];

@@ -9,7 +9,7 @@ export const macosShell: ShellLayer = {
   // gpu-next through Vulkan on Metal (MoltenVK), not Apple's deprecated OpenGL (MPV-GPU-03). The
   // window's app id comes from the helper app bundle, so there is no id flag.
   // No CPU vo: every Mac has a Metal GPU, and mpv's other macOS vo (libmpv/cocoa-cb) is not used.
-  mpvWindow: () => ({ defaultVo: "gpu-next", cpuVo: null, args: ["--gpu-api=vulkan", "--gpu-context=macvk"], unsetEnv: [], noWindow: null }),
+  mpvWindow: () => ({ defaultVo: "gpu-next", cpuVo: null, args: ["--gpu-api=vulkan", "--gpu-context=macvk"], noWindow: null }),
   // PLAT-DESK-06: closing the last window keeps Badger running in the Dock and the menu bar.
   // Every explicit quit (Cmd+Q, app menu, menu-bar Quit) calls app.quit() itself, so the
   // window-all-closed handler never has to.

@@ -2,7 +2,7 @@ const { getDefaultConfig, mergeConfig } = require('@react-native/metro-config');
 const path = require('path');
 // The Google-free Android build (SF_FOSS=1, PLAT-MOBILE-06): the pairing screen's QR scanner is left out.
 // Outside it (Play, iOS), @space/mobile-self-update resolves to its stand-in (REL-UPD-06).
-const { withFossStubs, withSelfUpdate } = require('@space/mobile-shell/foss');
+const { withFossStubs, withSelfUpdate } = require('../../../packages/mobile-shell/foss.cjs');
 
 const repoRoot = path.resolve(__dirname, '../../..');
 const bunModules = path.resolve(repoRoot, 'node_modules/.bun');
@@ -28,7 +28,6 @@ const workspacePackages = {
   '@space/privacy-pass': 'packages/privacy-pass',
   '@space/stream-slots': 'packages/stream-slots',
   '@space/profile-avatars': 'packages/profile-avatars',
-  '@space/notify-core': 'packages/notify-core',
 };
 const workspaceRoots = Object.values(workspacePackages).map((dir) => path.resolve(repoRoot, dir));
 
@@ -66,10 +65,9 @@ const config = {
     })),
     nodeModulesPaths: [path.resolve(__dirname, 'node_modules'), path.resolve(repoRoot, 'node_modules')],
   },
-  // The inlined PARROT_API_BASE_URL, PARROT_METADATA_TICKETS, EXPO_PUBLIC_METADATA_URL and SF_SIMULATOR_BUILD
-  // (babel-plugin-api-base-url.js, which also reads SF_LOCAL_METADATA and Xcode's PLATFORM_NAME) change the transformed
-  // code: a device archive must never reuse a simulator bundle's module, which honours the release smoke's lane.
-  cacheVersion: `api-base-url:${(process.env.PARROT_API_BASE_URL ?? '').trim()}:tickets:${(process.env.PARROT_METADATA_TICKETS ?? '').trim()}:metadata:${(process.env.EXPO_PUBLIC_METADATA_URL ?? '').trim()}:local:${(process.env.SF_LOCAL_METADATA ?? '').trim()}:platform:${(process.env.PLATFORM_NAME ?? '').trim()}`,
+  // The inlined PARROT_API_BASE_URL, PARROT_METADATA_TICKETS and EXPO_PUBLIC_METADATA_URL (babel-plugin-api-base-url.js,
+  // which also reads SF_LOCAL_METADATA) change the transformed code.
+  cacheVersion: `api-base-url:${(process.env.PARROT_API_BASE_URL ?? '').trim()}:tickets:${(process.env.PARROT_METADATA_TICKETS ?? '').trim()}:metadata:${(process.env.EXPO_PUBLIC_METADATA_URL ?? '').trim()}:local:${(process.env.SF_LOCAL_METADATA ?? '').trim()}`,
   serializer: {
     getModulesRunBeforeMainModule: () => [
       require.resolve('react-native/setup-env', { paths: [__dirname] }),

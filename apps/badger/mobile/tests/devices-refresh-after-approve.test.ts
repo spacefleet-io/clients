@@ -45,7 +45,7 @@ vi.mock("@space/mobile-shell/bottom-sheet", () => ({
   useMobileSheetClose: () => (after?: () => void) => after?.(),
 }));
 vi.mock("@space/mobile-shell/i18n", async () => {
-  const enDict = (await import("@space/mobile-shell/i18n/en.json")).default;
+  const enDict = (await import("../../../../packages/mobile-shell/src/i18n/en.json")).default;
   await i18next.init({
     resources: { en: { translation: enDict } },
     lng: "en",
@@ -60,12 +60,12 @@ vi.mock("@space/mobile-shell/theme", () => {
   return { defaultMobileShellTheme: { colors }, useMobileShellTheme: () => ({ colors }) };
 });
 vi.mock("../src/components/BottomSheet", () => ({ BottomSheet: () => null }));
-vi.mock("@space/mobile-shell/components", async () => {
+vi.mock("../src/components/ui", async () => {
   const React = await import("react");
   return {
-    MobileButton: ({ label, onPress }: { label: string; onPress?: () => void }) =>
+    Button: ({ label, onPress }: { label: string; onPress?: () => void }) =>
       React.createElement("Pressable", { accessibilityRole: "button", accessibilityLabel: label, onPress }),
-    MobileCard: ({ children }: { children: React.ReactNode }) => React.createElement("View", null, children),
+    Card: ({ children }: { children: React.ReactNode }) => React.createElement("View", null, children),
   };
 });
 vi.mock("@space/shared/api", () => ({

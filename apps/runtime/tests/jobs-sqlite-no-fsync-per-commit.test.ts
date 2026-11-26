@@ -17,7 +17,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { afterEach, describe, expect, it } from "vitest";
-import { createSqliteRuntimeJobsStore, type SqliteRuntimeJobsStore } from "@space/runtime-jobs-engine/sqliteStore";
+import { createSqliteRuntimeJobsStore, type SqliteRuntimeJobsStore } from "../src/core/jobs/sqliteStore";
 
 const SUITE = "jobs-sqlite-no-fsync-per-commit";
 

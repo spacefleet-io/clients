@@ -44,6 +44,7 @@ describe("setProgress and the details clock", () => {
         originalLanguage: "en",
         overview: "overview",
         year: "2026",
+        rating: null,
         posterPath: null,
         backdropPath: null,
         genres: [],

@@ -11,7 +11,7 @@
  *     13:09:56).
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createEngineV2, type EngineV2, type RuntimeJobEvent } from "@space/runtime-jobs-engine/engineV2";
+import { createEngineV2, type EngineV2, type RuntimeJobEvent } from "../src/core/jobs/engineV2";
 import { userRequestedFormatPriority } from "../src/modules/badger/mediaReplan";
 import type { IngestJobRecord } from "@space/runtime-jobs";
 

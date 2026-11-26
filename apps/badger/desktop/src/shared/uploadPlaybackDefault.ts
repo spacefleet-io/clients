@@ -14,11 +14,10 @@
  *  - pause:    nothing new starts while a video plays; the pieces already in
  *              flight finish and uploads resume when the video stops.
  *
- * Pure, dependency-free helpers shared by main (enforcement) and renderer (dialog,
- * Settings). The hardware decision itself is `decideUploadsDuringPlayback` in
- * `@space/shared/transcodeHardware`, which Parrot applies to its imports too (PAR-UP-15).
+ * Pure, dependency-free helpers shared by main (decision, enforcement) and
+ * renderer (dialog, Settings).
  */
-import type { TranscodeHardware, UploadsDuringPlaybackReason } from "@space/shared/transcodeHardware";
+import type { TranscodeHardware } from "@space/shared/transcodeHardware";
 
 export type UploadsDuringPlayback = "full" | "throttle" | "pause";
 
@@ -26,6 +25,41 @@ export const UPLOADS_DURING_PLAYBACK_VALUES: readonly UploadsDuringPlayback[] = 
 
 export const isUploadsDuringPlayback = (value: unknown): value is UploadsDuringPlayback =>
   value === "full" || value === "throttle" || value === "pause";
+
+/**
+ * Thresholds, on LOGICAL cores (affinity-aware) and usable RAM (cgroup-aware) —
+ * the same numbers the 480p rule uses. A hardware video encoder is deliberately
+ * NOT considered: uploads hash and encrypt on the CPU whatever the GPU does.
+ *
+ *  - full: ≥ 8 cores AND ≥ 12 GB. Same floor as the 480p "strong CPU" case: the
+ *    upload work fits next to playback.
+ *  - pause: ≤ 2 cores OR < 6 GB. Nothing is left over for uploads (an "8 GB"
+ *    computer reports ~7.7 GB usable, so 6 GB only catches 4 GB-class machines).
+ *  - throttle: everything in between — includes the reference box of issue #25
+ *    (4-core i5, 8-16 GB, no GPU), where playback was dropping frames.
+ */
+export const UPLOADS_FULL_MIN_CORES = 8;
+export const UPLOADS_FULL_MIN_RAM_GB = 12;
+export const UPLOADS_PAUSE_MAX_CORES = 2;
+export const UPLOADS_PAUSE_BELOW_RAM_GB = 6;
+
+/** Plain-language bucket for the dialog text: strong → full, modest → throttle, weak → pause. */
+export type UploadsDuringPlaybackReason = "strong" | "modest" | "weak";
+
+export const uploadsDuringPlaybackReason = (hw: Pick<TranscodeHardware, "cores" | "ramGB">): UploadsDuringPlaybackReason => {
+  if (hw.cores <= UPLOADS_PAUSE_MAX_CORES || hw.ramGB < UPLOADS_PAUSE_BELOW_RAM_GB) return "weak";
+  if (hw.cores >= UPLOADS_FULL_MIN_CORES && hw.ramGB >= UPLOADS_FULL_MIN_RAM_GB) return "strong";
+  return "modest";
+};
+
+const MODE_FOR_REASON: Record<UploadsDuringPlaybackReason, UploadsDuringPlayback> = {
+  strong: "full",
+  modest: "throttle",
+  weak: "pause",
+};
+
+export const decideUploadsDuringPlayback = (hw: Pick<TranscodeHardware, "cores" | "ramGB">): UploadsDuringPlayback =>
+  MODE_FOR_REASON[uploadsDuringPlaybackReason(hw)];
 
 export const formatUploadsDefaultLog = (hw: TranscodeHardware, mode: UploadsDuringPlayback, note: string): string =>
   `[uploads-playback-default] cores=${hw.cores} ramGB=${Math.round(hw.ramGB * 10) / 10} -> uploadsDuringPlayback=${mode} (${note})`;

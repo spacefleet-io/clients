@@ -1,8 +1,7 @@
-import type { DesktopPlatform } from "@space/desktop-platform-contract";
+import type { DesktopPlatform, PlatformId } from "@space/desktop-platform-contract";
 import { platform as linux } from "@space/desktop-platform-linux";
 import { platform as macos } from "@space/desktop-platform-macos";
 import { platform as windows } from "@space/desktop-platform-windows";
-import { HOST_PLATFORM_IDS } from "@space/desktop-platform-contract/host";
 
 export type * from "@space/desktop-platform-contract";
 export {
@@ -13,9 +12,26 @@ export {
   normalizeGpuVendor,
   pickHardwareEncoder,
 } from "@space/desktop-platform-contract";
-export { getHostPlatformId } from "@space/desktop-platform-contract/host";
 
 let forced: DesktopPlatform | null = null;
+
+const HOST_PLATFORM_IDS: Partial<Record<NodeJS.Platform, PlatformId>> = {
+  linux: "linux",
+  win32: "windows",
+  darwin: "macos",
+};
+
+/**
+ * The id of the OS this process runs on, WITHOUT requiring an implementation
+ * package for it. Use this when only the host's name is needed (e.g. choosing
+ * which per-OS setup script applies); it never throws for linux/windows/macos.
+ * Throws only for an OS the contract has no id for at all.
+ */
+export const getHostPlatformId = (platform: NodeJS.Platform = process.platform): PlatformId => {
+  const id = HOST_PLATFORM_IDS[platform];
+  if (!id) throw new Error(`Unknown host OS "${platform}" (expected linux, win32 or darwin)`);
+  return id;
+};
 
 /**
  * The platform implementation of the OS this process runs on. This module and

@@ -15,7 +15,7 @@ import {
   type EngineV2,
   type RuntimeJobEvent,
   WAITING_STAGE_CODE,
-} from "@space/runtime-jobs-engine/engineV2";
+} from "../src/core/jobs/engineV2";
 import type { IngestJobRecord } from "@space/runtime-jobs";
 
 const T = "[engine-v2-waiting-between-steps]";

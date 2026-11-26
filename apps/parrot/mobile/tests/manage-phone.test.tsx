@@ -91,15 +91,13 @@ vi.mock("@space/mobile-shell/i18n", () => ({
     },
   }),
 }));
-vi.mock("@space/mobile-shell/components", async () => {
-  const react = await vi.importActual<typeof import("react")>("react");
-  return {
-    MobileNoticeBanner: ({ message, tone }: { message: string; tone: string }) => `${tone}:${message}`,
-    MobileSkeletonPulse: (props: Record<string, unknown>) => react.createElement("Shimmer", props),
-  };
-});
+vi.mock("@space/mobile-shell/components", () => ({ MobileNoticeBanner: ({ message, tone }: { message: string; tone: string }) => `${tone}:${message}` }));
 vi.mock("@space/mobile-shell/render-boundary", () => ({ MobileRenderBoundary: ({ children }: { children: React.ReactNode }) => children }));
 vi.mock("../src/screens/art", () => ({ ParrotArt: () => null }));
+vi.mock("../src/screens/shimmer", async () => {
+  const react = await vi.importActual<typeof import("react")>("react");
+  return { Shimmer: (props: Record<string, unknown>) => react.createElement("Shimmer", props) };
+});
 vi.mock("../src/theme", () => ({ colors: { textMuted: "#888", accent: "#0f0" }, spacing: { xs: 2, sm: 4, md: 8, lg: 16 } }));
 vi.mock("../src/lib/lookup", () => ({
   lookupClient: async () => ({

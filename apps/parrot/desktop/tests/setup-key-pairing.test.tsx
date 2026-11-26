@@ -27,7 +27,7 @@ const pair = vi.hoisted(() => ({
 
 vi.mock("../src/renderer/src/SignOutKeyCheck", () => ({ useSignOutWithKeyCheck: () => ({ requestSignOut: vi.fn(), dialog: null }) }));
 // The shared step renders the pairing view itself; only the props it gets matter here.
-vi.mock("@space/desktop-shell/pair-with-phone", async (importOriginal) => ({
+vi.mock("../../../../packages/desktop-shell/src/components/pair-with-phone", async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   default: (props: NonNullable<typeof pair.props>) => {
     pair.props = props;

@@ -1,11 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  MEDIA_BINARIES_REQUIRED_ENV,
-  REAL_MEDIA_TESTS_ENV,
-  mediaBinariesRequired,
-  realMediaTestsRequested,
-  requireMediaBinary,
-} from "../src/requireBinaries";
+import { MEDIA_BINARIES_REQUIRED_ENV, mediaBinariesRequired, requireMediaBinary } from "../src/requireBinaries";
 
 // @bugfix @regression-proof: the binary-backed unit suites (ffmpeg, ffprobe, mpv, luajit, xvfb-run) used
 // `skipIf(!available)`, so a CI image without them reported green while the suites ran nowhere (issue #273).
@@ -33,18 +27,5 @@ describe("requireMediaBinary @bugfix @regression-proof", () => {
     expect(mediaBinariesRequired(required)).toBe(true);
     expect(mediaBinariesRequired({})).toBe(false);
     expect(mediaBinariesRequired({ [MEDIA_BINARIES_REQUIRED_ENV]: "true" })).toBe(false);
-  });
-});
-
-// The real-mpv OSC suites and the real-ffmpeg playback gate fail on a loaded shared runner (blank captures,
-// multi-second stalls) although the code is right, so they run only in the dedicated media-real-test job.
-describe("realMediaTestsRequested", () => {
-  it("is true only for the exact value 1", () => {
-    console.info(`[requireBinaries:real-media] flag=${REAL_MEDIA_TESTS_ENV}`);
-    expect(REAL_MEDIA_TESTS_ENV).toBe("SF_REAL_MEDIA_TESTS");
-    expect(realMediaTestsRequested({ [REAL_MEDIA_TESTS_ENV]: "1" })).toBe(true);
-    expect(realMediaTestsRequested({})).toBe(false);
-    expect(realMediaTestsRequested({ [REAL_MEDIA_TESTS_ENV]: "true" })).toBe(false);
-    expect(realMediaTestsRequested({ [MEDIA_BINARIES_REQUIRED_ENV]: "1" })).toBe(false);
   });
 });

@@ -73,10 +73,6 @@ const openPaymentPage = (url: string) => {
 /** ACCT-PAY-05: main hands over `parrot://billing/return` links; the plan change then checks that payment at once. */
 const subscribePaymentReturn = (listener: (paymentId: string) => void) => window.parrot.onPaymentReturn(listener);
 
-/** The shared plan change bound to main's billing calls: the plan screen and setup's Renew (ACCT-UNPAID-06) use it. */
-export const useParrotPlanChange = () =>
-  usePlanChange({ api, openUrl: openPaymentPage, onPaymentReturn: subscribePaymentReturn, log });
-
 const UNAVAILABLE_KEYS: Record<PlanUnavailableReason, ParrotStringKey> = {
   billing_unknown: "plan.unavailable.billingUnknown",
   renewal_pending: "plan.unavailable.renewalPending",
@@ -143,7 +139,7 @@ export default function Plans({ t, language, onClose }: Props) {
   const [message, setMessage] = useState<string | null>(null);
   /** Launch without payments (ACCT-PAY-07): the "free until payments open" confirmation is showing for `pending`. */
   const [prelaunchAsk, setPrelaunchAsk] = useState(false);
-  const planChange = useParrotPlanChange();
+  const planChange = usePlanChange({ api, openUrl: openPaymentPage, onPaymentReturn: subscribePaymentReturn, log });
 
   const refresh = useCallback(async () => {
     const [sub, status] = await Promise.all([window.parrot.getSubscription(), window.parrot.getBillingStatus()]);

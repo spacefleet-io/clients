@@ -255,21 +255,6 @@ export const unpackChunkList = (list: PackedChunkList): ChunkRef[] => {
   return keys.map((key, i) => ({ key, sizeBytes: sizes[i]!, startSeconds: starts[i]! }));
 };
 
-// --- Hex (drivers that carry no BLOB bytes, e.g. react-native-sqlite-storage: read `hex()`, write `X'..'`) -------------
-
-export const bytesToHex = (bytes: Uint8Array): string => {
-  let out = "";
-  for (const byte of bytes) out += HEX[byte >> 4] + HEX[byte & 15];
-  return out;
-};
-
-export const hexToBytes = (hex: string): Uint8Array => {
-  if (hex.length % 2 !== 0 || !/^[0-9a-fA-F]*$/.test(hex)) throw new ChunkListFormatError("BLOB hex is malformed");
-  const out = new Uint8Array(hex.length / 2);
-  for (let i = 0; i < out.length; i += 1) out[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
-  return out;
-};
-
 // --- JSON (op stream 4) ---------------------------------------------------------------------------------------------
 
 export const base64ToBytes = (value: string): Uint8Array => {

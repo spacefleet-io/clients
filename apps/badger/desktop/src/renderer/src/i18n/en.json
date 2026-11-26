@@ -16,8 +16,8 @@
     "addMedia": "Add media",
     "signOut": "Sign out",
     "signOutKeyCheck": {
-      "title": "Have you saved your media library key?",
-      "body": "Signing out removes your media library key from this computer. To sign back in you will have to type it, because signing in with a QR code only works while another of your devices still has the key. Without the key, your media library can't be opened.",
+      "title": "Have you saved your library key?",
+      "body": "Signing out removes your library key from this computer. To sign back in you will have to type it, because signing in with a QR code only works while another of your devices still has the key. Without the key, your library can't be opened.",
       "cancel": "Cancel",
       "showKey": "Show my key",
       "confirm": "I saved it, sign out"
@@ -36,81 +36,20 @@
       "filterFailed": "Failed",
       "downloadsHeld": "Downloads are on hold while traffic is very high. They resume on their own as soon as it drops.",
       "downloadsSlowed": "Downloads are slower because we're in a high-traffic period.",
-      "crewBackfill": "Adding directors and writers to your titles ({{handled}} of {{total}})",
-      "failed": {
-        "whatUploadStopped": "The upload did not finish.",
-        "whatImportStopped": "The import did not finish.",
-        "whatPlanFull": "The upload stopped: the storage plan is full.",
-        "whatDiskFull": "Processing stopped: this computer's disk is full.",
-        "meaningKeptOutputs": "The video is already processed and kept on this computer until {{date}}. Only the upload runs again.",
-        "meaningSourceUnchanged": "The original file is still here. Processing starts over from it.",
-        "meaningKeptRemovedLowDisk": "The processed copy was removed to free disk space. The original file is still here, so processing starts over.",
-        "meaningKeptRemovedExpired": "The processed copy was removed after 14 days. The original file is still here, so processing starts over.",
-        "meaningSourceChanged": "The original file changed since the import. Pick the original file to import it again.",
-        "meaningSourceMissing": "The original file is no longer where it was. Find it to import it again.",
-        "meaningPickedMismatch": "The file you picked is not the same video. Pick the original file.",
-        "meaningSourceDeleted": "The original file was moved to the trash. There is nothing left to import, so you can remove this job.",
-        "meaningNoSourcePath": "There is no file to import again, so you can remove this job.",
-        "meaningReimported": "This video was imported again since, and it is in the library. You can remove this job.",
-        "meaningPlanFull": "Upgrade the plan at the top of this list. Nothing was lost: the job can run again after.",
-        "meaningPlanHasRoom": "The plan has room now. Nothing was lost: the job can run again.",
-        "meaningDiskFull": "Free up space on this computer. Nothing was lost: the job can run again after.",
-        "meaningParentFailed": "This part stopped because the main import did not finish. Retry the main import instead.",
-        "meaningNotRetryable": "This job cannot run again, so you can remove it.",
-        "actionUploadAgain": "Upload again",
-        "actionProcessAgain": "Process again",
-        "actionFindFile": "Find the file",
-        "actionUpgradePlan": "Upgrade plan",
-        "keptCopies": "Kept copies of failed imports use {{size}} on this computer. Each is removed after 14 days, or sooner when the disk runs low."
-      },
-      "skipCatchUp": {
-        "state": {
-          "paused_playback": "Paused while you watch",
-          "paused_import": "Paused during import",
-          "offline": "Waiting for connection",
-          "retry_wait": "Trying again at {{time}}"
-        },
-        "offlineHint": "Resumes on its own when the connection is back",
-        "list": {
-          "step": {
-            "download": "Downloading {{done}} of {{total}} MB",
-            "pictures": "Reading pictures",
-            "sound": "Reading sound",
-            "waiting": "Starting"
-          },
-          "result": {
-            "found_both": "Intro and credits found",
-            "found_intro": "Intro found",
-            "found_credits": "Credits found",
-            "waiting_other_episode": "Waiting for another episode",
-            "nothing_found": "Nothing found",
-            "previews_made": "Seek-bar previews ready"
-          },
-          "failedStep": {
-            "download": "Could not download the stored copy",
-            "read": "Could not read the video",
-            "room": "Not enough free disk space"
-          },
-          "tryAgain": "Try again",
-          "tryAgainNow": "Try again now",
-          "retryAt": "Trying again at {{time}}",
-          "stepShort": {
-            "download": "Downloading",
-            "pictures": "Pictures",
-            "sound": "Sound",
-            "waiting": "Starting"
-          },
-          "waitingImport": "Waiting for your import"
-        }
-      },
-      "skipDetect": {
-        "whatCancelled": "You cancelled it.",
-        "meaningCancelled": "This video is left out until you try again.",
-        "meaningFailed": "This video has no intro or credits times until it runs again.",
-        "meaningFailedFilm": "This film has no seek-bar previews until it runs again.",
-        "meaningRetryWait": "Badger tries this video again on its own at {{time}}."
-      },
-      "clearFinished": "Clear finished"
+      "crewBackfill": "Adding directors and writers to your titles ({{handled}} of {{total}})"
+    },
+    "notifications": {
+      "title": "Notifications",
+      "subtitle": "{{count}} recent items",
+      "empty": "No notifications yet.",
+      "open": "Open",
+      "filterAll": "All",
+      "filterError": "Error",
+      "filterWarning": "Warning",
+      "filterInfo": "Info",
+      "filterSuccess": "Success",
+      "clearAll": "Clear all",
+      "dismiss": "Dismiss"
     },
     "account": "Account"
   },
@@ -148,7 +87,19 @@
     "resendSuccess": "A new verification code was sent.",
     "resendError": "Could not resend the code.",
     "provider": {
-      "continueInBrowser": "Finish signing in in your browser. Badger comes back once you're done."
+      "signInWith": "Sign in with {{provider}}",
+      "signUpWith": "Sign up with {{provider}}",
+      "or": "or",
+      "continueInBrowser": "Finish signing in in your browser. Badger comes back once you're done.",
+      "errorStart": "Could not start the sign-in. Please try again.",
+      "errors": {
+        "email_unverified": "This account's email address is not confirmed. Confirm it with the provider, or sign in with your email and password.",
+        "email_domain_disallowed": "Accounts with this email address cannot be created.",
+        "account_deletion_pending": "This account is scheduled for deletion.",
+        "provider_failed": "The sign-in did not go through. Please try again.",
+        "cancelled": "The sign-in was cancelled.",
+        "invalid_code": "This sign-in has expired or was started elsewhere. Please try again."
+      }
     }
   },
   "signup": {
@@ -238,7 +189,7 @@
       "searchFailed": "Search failed. Please try again.",
       "addFailed": "Could not add this media. Please try again.",
       "libraryLoading": "Library is still loading. Try again in a moment.",
-      "libraryUnavailable": "Media library is unavailable. Check your media library key and sync status.",
+      "libraryUnavailable": "Library is unavailable. Check your library key and sync status.",
       "libraryNotReady": "Library is not ready yet. Try again in a moment.",
       "libraryMissing": "Library database is missing. Reconnect and sync again.",
       "librarySaveFailed": "Could not save the library update. Please try again.",
@@ -290,7 +241,7 @@
     "addMedia": "Add new media to library",
     "errorTitle": "Library unavailable",
     "retrySync": "Retry sync",
-    "manageKey": "Manage media library key",
+    "manageKey": "Manage library key",
     "browseTitle": "Browse",
     "browseSubtitle": "Media without uploaded files is greyed out, but you can still view its metadata.",
     "stats": {
@@ -421,9 +372,6 @@
     "labels": {
       "audio": "Audio",
       "subtitles": "Subtitles",
-      "episodeShort_one": "{{count}} ep",
-      "episodeShort_other": "{{count}} eps",
-      "episodeShort_many": "{{count}} eps",
       "episodeShort": "{{count}} eps"
     },
     "availableQualities": "Available qualities",
@@ -443,22 +391,16 @@
       "addModalSource": "Source: {{quality}}",
       "addModalSize": "~{{size}}",
       "addModalSizeUnknown": "Size unknown",
-      "addModalConfirm_one": "Queue {{count}} transcode",
-      "addModalConfirm_other": "Queue {{count}} transcodes",
-      "addModalConfirm_many": "Queue {{count}} transcodes",
+      "addModalConfirm": "Queue {{count}} transcode(s)",
       "addModalCancel": "Cancel",
-      "addModalSubmittedToast_one": "Queued {{count}} transcode — track it in Jobs.",
-      "addModalSubmittedToast_other": "Queued {{count}} transcodes — track them in Jobs.",
-      "addModalSubmittedToast_many": "Queued {{count}} transcodes — track them in Jobs.",
+      "addModalSubmittedToast": "Queued {{count}} transcode(s) — track them in Jobs.",
       "addModalFailedToast": "Couldn't queue the new qualities: {{reason}}",
       "errors": {
         "source-protected": "You can't delete the source quality.",
         "quality-exists": "That quality is already on this file.",
         "cannot-transcode-up": "Can't transcode to a higher resolution than what's stored.",
         "media-not-found": "That media file no longer exists."
-      },
-      "addModalConfirm": "Queue {{count}} transcode(s)",
-      "addModalSubmittedToast": "Queued {{count}} transcode(s) — track them in Jobs."
+      }
     },
     "hideMissing": {
       "title": "Hide missing files",
@@ -483,9 +425,6 @@
         "show": "{{title}} — entire show",
         "season": "{{title}} — season {{season}}",
         "episode": "{{title}} — S{{season}}E{{episode}}{{episodeTitle, mustache}}",
-        "missingEpisodes_one": "{{count}} missing episode",
-        "missingEpisodes_other": "{{count}} missing episodes",
-        "missingEpisodes_many": "{{count}} missing episodes",
         "missingEpisodes": "{{count}} missing episode(s)"
       },
       "modal": {
@@ -498,31 +437,22 @@
         "size": "Total size",
         "includesAudioSubs": "All audio tracks and subtitles are included.",
         "expectedFilename": "Saved as",
-        "expectedFilenamePlusN_one": "and {{count}} more file",
-        "expectedFilenamePlusN_other": "and {{count}} more files",
-        "expectedFilenamePlusN_many": "and {{count}} more files",
+        "expectedFilenamePlusN": "and {{count}} more file(s)",
         "estimating": "Computing size and disk space…",
         "estimateFailedToast": "Could not estimate the download: {{reason}}",
         "skippedSubsWarning": "MP4 cannot embed these subtitle tracks — they will be skipped: {{tracks}}",
-        "skippedItems_one": "{{count}} item will be skipped (no compatible quality or no file).",
-        "skippedItems_other": "{{count}} items will be skipped (no compatible quality or no file).",
-        "skippedItems_many": "{{count}} items will be skipped (no compatible quality or no file).",
+        "skippedItems": "{{count}} item(s) will be skipped (no compatible quality or no file).",
         "diskWarning": "Not enough free disk space.",
         "diskWarningDetail": "Need {{required}}, only {{free}} free.",
         "confirm": "Start download",
         "cancel": "Cancel",
-        "submittedToast_one": "Queued {{count}} offline download — track it in Jobs.",
-        "submittedToast_other": "Queued {{count}} offline downloads — track them in Jobs.",
-        "submittedToast_many": "Queued {{count}} offline downloads — track them in Jobs.",
+        "submittedToast": "Queued {{count}} offline download(s) — track them in Jobs.",
         "submitFailedToast": "Could not start the download: {{reason}}",
         "errors": {
           "insufficient_disk_space": "Not enough free disk space ({{required}} needed, {{free}} free).",
           "library_db_not_open": "Library is not open. Re-open it and try again.",
           "not_authenticated": "Sign in and try again."
-        },
-        "expectedFilenamePlusN": "and {{count}} more file(s)",
-        "skippedItems": "{{count}} item(s) will be skipped (no compatible quality or no file).",
-        "submittedToast": "Queued {{count}} offline download(s) — track them in Jobs."
+        }
       },
       "button": {
         "save": "Save offline",
@@ -532,11 +462,8 @@
         "deleteConfirmDescription": "This removes the saved files from this device. Streaming still works.",
         "deleteConfirm": "Delete",
         "deleteCancel": "Cancel",
-        "deletedToast_one": "Removed {{count}} offline file.",
-        "deletedToast_other": "Removed {{count}} offline files.",
-        "deletedToast_many": "Removed {{count}} offline files.",
-        "deleteFailedToast": "Could not delete the offline files: {{reason}}",
-        "deletedToast": "Removed {{count}} offline file(s)."
+        "deletedToast": "Removed {{count}} offline file(s).",
+        "deleteFailedToast": "Could not delete the offline files: {{reason}}"
       },
       "badge": {
         "savedOffline": "Saved offline",
@@ -560,9 +487,6 @@
     "sections": {
       "movies": "Movies",
       "tv": "TV Shows",
-      "count_one": "{{count}} item",
-      "count_other": "{{count}} items",
-      "count_many": "{{count}} items",
       "count": "{{count}} items"
     },
     "media": {
@@ -631,6 +555,7 @@
         "originalTitle": "Original title",
         "originalLanguage": "Original language",
         "year": "Release year",
+        "rating": "Rating",
         "genres": "Genres",
         "overview": "Overview",
         "poster": "Poster",
@@ -655,13 +580,10 @@
     "seasons": {
       "title": "Seasons",
       "empty": "No seasons loaded yet.",
-      "episodeCount_one": "{{count}} episode",
-      "episodeCount_other": "{{count}} episodes",
-      "episodeCount_many": "{{count}} episodes",
+      "episodeCount": "{{count}} episodes",
       "available": "Available",
       "missing": "Missing files",
-      "specials": "Specials",
-      "episodeCount": "{{count}} episodes"
+      "specials": "Specials"
     },
     "episodes": {
       "title": "Episodes · Season {{season}}",
@@ -725,22 +647,6 @@
       "back": "Library",
       "playsThisVersion": "Play starts on this version",
       "more": "More actions"
-    },
-    "skipTimes": {
-      "menu": "Intro and credits",
-      "setIntro": "Set intro times",
-      "setCredits": "Set credits times",
-      "introChip": "Intro {{start}}–{{end}}",
-      "creditsChip": "Credits {{start}}",
-      "creditsStart": "Credits start",
-      "creditsHint": "Drag the handle: the picture follows it.  ← → move it by 1 s",
-      "noPicture": "No picture yet",
-      "failed": "The times could not be saved.",
-      "back": "Back  [Esc]",
-      "episodeLine": "{{show}} · S{{season}} E{{episode}} · {{title}}",
-      "leftOut": "Left out",
-      "tryAgain": "Try again",
-      "tryAgainAll": "Try again for all left-out episodes"
     }
   },
   "playlists": {
@@ -756,13 +662,10 @@
     "selectTitle": "Select a playlist",
     "selectSubtitle": "Choose a playlist to view its items.",
     "selectPrompt": "Select a playlist to see its items.",
-    "itemsCount_one": "{{count}} item",
-    "itemsCount_other": "{{count}} items",
-    "itemsCount_many": "{{count}} items",
+    "itemsCount": "{{count}} items",
     "noItems": "No items yet.",
     "missing": "Missing file",
-    "remove": "Remove",
-    "itemsCount": "{{count}} items"
+    "remove": "Remove"
   },
   "settings": {
     "subtitle": "Everything for this app and your account.",
@@ -990,13 +893,13 @@
     },
     "recovery": {
       "title": "Library access",
-      "subtitle": "Manage your media library key or erase all media library data.",
+      "subtitle": "Manage your library key or erase all library data.",
       "show": {
-        "title": "Show media library key",
+        "title": "Show library key",
         "subtitle": "Reveal your current key after confirming your identity.",
         "button": "Show key",
-        "dialogTitle": "Show your media library key",
-        "keyLabel": "Media library key",
+        "dialogTitle": "Show your library key",
+        "keyLabel": "Library key",
         "passwordLabel": "Account password",
         "codeLabel": "Verification code",
         "codeHintEmail": "Enter the code we sent to your email.",
@@ -1008,12 +911,35 @@
         "errorInvalidPassword": "Incorrect password.",
         "errorTwoFactorInvalid": "Verification code is invalid.",
         "errorGeneric": "Could not verify your session. Please try again.",
-        "errorMissing": "No media library key is stored on this device."
+        "errorMissing": "No library key is stored on this device."
       },
       "rotate": {
+        "title": "Replace library key",
+        "subtitle": "Create a new key and re-lock your library data.",
+        "button": "Create new key",
+        "dialogTitle": "Replace your library key",
+        "keyLabel": "New library key",
+        "keyHint": "Store this key safely before continuing.",
         "copyButton": "Copy key",
-        "copySuccess": "Media library key copied.",
-        "copyFail": "Could not copy key."
+        "copySuccess": "Library key copied.",
+        "copyFail": "Could not copy key.",
+        "confirmLabel": "I understand this will end other sessions",
+        "passwordLabel": "Account password",
+        "codeLabel": "Verification code",
+        "codeHintEmail": "Enter the code we sent to your email.",
+        "codeHintTotp": "Enter your authenticator code.",
+        "submit": "Replace key",
+        "working": "Replacing…",
+        "cancel": "Cancel",
+        "codeSent": "We sent a verification code. Check your email or authenticator.",
+        "errorInvalidPassword": "Incorrect password.",
+        "errorTwoFactorInvalid": "Verification code is invalid.",
+        "errorGeneric": "Could not rotate the key. Please try again.",
+        "errorNotReencrypted": "Your Parrot library could not be re-locked with the new key from here, so nothing changed. Replace the key from Settings on a computer that has your current key.",
+        "errorUnreadable": "Your current key does not open your Parrot library, so nothing changed.",
+        "errorNotSnapshotted": "Your Parrot library has changes that are not saved yet. Open Parrot, let it finish syncing, then try again. Nothing changed.",
+        "errorReencryptFailed": "Could not re-lock your Parrot library with the new key. Nothing changed. Please try again.",
+        "errorChanged": "Your library changed while the key was being replaced. Nothing changed. Please try again."
       },
       "reset": {
         "title": "Erase library data",
@@ -1064,7 +990,6 @@
       "devices": "Signed-in devices",
       "connectedTools": "Connected tools",
       "system": "System",
-      "support": "Help & feedback",
       "about": "About & updates"
     },
     "sectionDesc": {
@@ -1082,12 +1007,7 @@
       "devices": "See the devices signed in to your account and sign them out.",
       "connectedTools": "Tools you approved to use your library, and what each can do.",
       "system": "Background service and error reports.",
-      "support": "Send us a message about the app.",
       "about": "Your version and updates, then who provides the film and series data the app shows."
-    },
-    "support": {
-      "feedback": "Send feedback",
-      "feedbackBody": "Tell us what works and what doesn't."
     },
     "system": {
       "runtime": {
@@ -1229,11 +1149,11 @@
   },
   "onboarding": {
     "key": {
-      "title": "Your media library key",
-      "enterTitle": "Enter your media library key",
+      "title": "Your library key",
+      "enterTitle": "Enter your library key",
       "enterSubtitle": "Type the 12 words you saved when you created your library.",
       "loading": "Loading key…",
-      "errorLoad": "Could not load your media library key.",
+      "errorLoad": "Could not load your library key.",
       "errorDecrypt": "Your saved key could not unlock the library. Please enter the correct key.",
       "errorNoRemote": "This account has no library on the server yet. Create a new key instead.",
       "errorValidate": "Could not validate the key right now. Please try again.",
@@ -1246,7 +1166,7 @@
       "button": "Recovery",
       "title": "Recover library from local data",
       "subtitle": "We will re-encrypt your local library and sync it to the cloud. This ends other sessions.",
-      "keyLabel": "New media library key",
+      "keyLabel": "New library key",
       "keyHint": "Store this key safely before continuing.",
       "copy": "Copy key",
       "copied": "Copied",
@@ -1348,37 +1268,7 @@
       "noDisplay": "Video can't play in this session: this session uses Wayland only, and the video player needs X11. Turn on XWayland (X11 compatibility) or sign in to an X11 session, then try again.",
       "sourceUnreachable": "This title isn't saved offline and the server can't be reached. Connect to the internet, or download it for offline viewing."
     },
-    "preparingPlayback": "Preparing playback",
-    "skipUi": {
-      "skipIntro": "Skip intro",
-      "skipCredits": "Skip credits",
-      "nextEpisode": "Next episode",
-      "nextEpisodeIn": "Next episode will start in",
-      "openingNextEpisode": "Opening next episode",
-      "enterKey": "[Enter]",
-      "askedIntro": "Intro skipped. Was it right?",
-      "askedCredits": "Credits skipped. Was it right?",
-      "yes": "Yes",
-      "changeTimes": "Change times",
-      "thanks": "Thanks",
-      "changeIntroTimes": "Change intro times",
-      "changeCreditsTimes": "Change credits times",
-      "start": "Start",
-      "end": "End",
-      "hint": "Drag a handle: the picture follows it.  ← → move the selected one by 1 s",
-      "save": "Save  [Enter]",
-      "cancel": "Cancel  [Esc]",
-      "back": "Back",
-      "scopeQuestion": "Use these times for",
-      "thisSeason": "This season",
-      "onlyThisEpisode": "Only this episode",
-      "farNote": "These times are far from the rest of this season.",
-      "savedSeason": "Saved for this season",
-      "savedEpisode": "Saved for this episode",
-      "menuPrompt": "Intro and credits",
-      "introEndsHere": "Intro ends here",
-      "creditsStartHere": "Credits start here"
-    }
+    "preparingPlayback": "Preparing playback"
   },
   "dashboard": {
     "title": "Home",
@@ -1389,11 +1279,8 @@
       "resume": "Resume {{time}}",
       "resumeShort": "Resume",
       "details": "Details",
-      "minutesLeft_one": "{{count}} min left",
-      "minutesLeft_other": "{{count}} min left",
-      "minutesLeft_many": "{{count}} min left",
-      "seeAll": "See all",
-      "minutesLeft": "{{count}} min left"
+      "minutesLeft": "{{count}} min left",
+      "seeAll": "See all"
     },
     "empty": {
       "eyebrow": "Your library",
@@ -1520,15 +1407,9 @@
         "tv": "TV"
       },
       "empty": "No files uploaded yet",
-      "fileCount_one": "{{count}} file",
-      "fileCount_other": "{{count}} files",
-      "fileCount_many": "{{count}} files",
-      "episodeFileCount_one": "{{count}} episode file",
-      "episodeFileCount_other": "{{count}} episode files",
-      "episodeFileCount_many": "{{count}} episode files",
-      "episodeShort_one": "{{count}} ep",
-      "episodeShort_other": "{{count}} eps",
-      "episodeShort_many": "{{count}} eps",
+      "fileCount": "{{count}} file",
+      "episodeFileCount": "{{count}} episode files",
+      "episodeShort": "{{count}} eps",
       "apply": "Apply changes",
       "delete": "Delete file",
       "applyTitle": "Apply format changes?",
@@ -1540,10 +1421,7 @@
       "cancel": "Cancel",
       "queued": "Queued transcode updates for {{label}}.",
       "cleanupMessage": "Removed {{removed}} orphaned files. Cleared {{missing}} missing references.",
-      "cleanupFailed": "Cleanup failed. Please try again.",
-      "fileCount": "{{count}} file",
-      "episodeFileCount": "{{count}} episode files",
-      "episodeShort": "{{count}} eps"
+      "cleanupFailed": "Cleanup failed. Please try again."
     },
     "status": {
       "waiting": "Waiting",
@@ -1554,8 +1432,7 @@
       "transcoding": "Transcoding",
       "uploading": "Uploading",
       "done": "Done",
-      "failed": "Failed",
-      "cancelled": "Cancelled"
+      "failed": "Failed"
     },
     "queue": {
       "remove": "Remove from queue",
@@ -1581,9 +1458,7 @@
       "subtitleTracks": "Subtitles",
       "tracksOnly": "Tracks only",
       "noVideoOutputs": "No video outputs.",
-      "jobCount_one": "{{count}} job",
-      "jobCount_other": "{{count}} jobs",
-      "jobCount_many": "{{count}} jobs",
+      "jobCount": "{{count}} job",
       "sourceIngest": "Source ingest",
       "transcode": "Transcode",
       "tracks": "Tracks",
@@ -1602,13 +1477,8 @@
         "tracks": "We prepare audio and subtitle tracks so viewers can switch language and captions.",
         "job": "This step prepares media files for playback and sync.",
         "offlineDownloading": "We fetch every chunk, decrypt it, and mux all tracks into a single file you can play offline.",
-        "exportDownloading": "We fetch the best quality you have, decrypt it, and save one video file with every track in the folder you picked.",
-        "skipDetect": "We look for where the intro ends and the credits start, so you can skip them.",
-        "skipPreviews": "We make the pictures you see when you move along the seek bar."
-      },
-      "jobCount": "{{count}} job",
-      "skipDetect": "Finding intro and credits",
-      "skipPreviews": "Making seek-bar previews"
+        "exportDownloading": "We fetch the best quality you have, decrypt it, and save one video file with every track in the folder you picked."
+      }
     },
     "transcodePlan": "Transcode plan",
     "audio": "Audio",
@@ -1808,9 +1678,7 @@
       "recomputeRunning": "Checking…",
       "lastVerified": "Last verified: {{relative}}",
       "reclaimableHint": "{{bytes}} reclaimable",
-      "confirmTitle_one": "Found {{count}} orphaned chunk taking ~{{bytes}}. Reclaim it?",
-      "confirmTitle_other": "Found {{count}} orphaned chunks taking ~{{bytes}}. Reclaim them?",
-      "confirmTitle_many": "Found {{count}} orphaned chunks taking ~{{bytes}}. Reclaim them?",
+      "confirmTitle": "Found {{count}} orphaned chunks taking ~{{bytes}}. Reclaim them?",
       "confirmAccept": "Reclaim",
       "confirmCancel": "Cancel",
       "resultReclaimed": "Reclaimed {{bytes}}",
@@ -1820,8 +1688,7 @@
       "relativeSeconds": "{{value}}s ago",
       "relativeMinutes": "{{value}}m ago",
       "relativeHours": "{{value}}h ago",
-      "relativeDays": "{{value}}d ago",
-      "confirmTitle": "Found {{count}} orphaned chunks taking ~{{bytes}}. Reclaim them?"
+      "relativeDays": "{{value}}d ago"
     },
     "sponsorships": {
       "title": "Sponsorships",
@@ -1943,8 +1810,6 @@
       "unpaidBanner": "Your subscription ended. You can still download your files until {{date}}; after that they're deleted.",
       "unpaidBannerNoDate": "Your subscription ended. You can still download your files for a limited time; after that they're deleted.",
       "unpaidBannerHint": "Use “Save offline” on a title to download it to this computer.",
-      "unpaidSign": "Plan ended",
-      "unpaidHeadsUpTitle": "Your subscription ended",
       "playbackBlocked": "Playback is paused because your subscription ended. You can still download your files until {{date}}.",
       "playbackBlockedNoDate": "Playback is paused because your subscription ended. You can still download your files for a limited time.",
       "uploadBlocked": "Uploads are paused because your subscription ended. You can still download your files until {{date}}; after that they're deleted.",
@@ -1957,9 +1822,8 @@
       "removedBanner_one": "{{count}} title was removed for exceeding your storage.",
       "removedBanner_other": "{{count}} titles were removed for exceeding your storage.",
       "upgrade": "Upgrade plan",
+      "seeTitles": "See titles",
       "dismiss": "Dismiss",
-      "sign": "Over storage",
-      "removedSign": "Titles removed",
       "dialogTitle": "Library over storage",
       "options": "Upgrade to a plan that fits your library, or delete titles from your library until it fits. You can download a title first to keep a copy.",
       "loading": "Finding the titles in your library…",
@@ -2003,7 +1867,7 @@
       "title": "Allow \"{{name}}\" to use your library?",
       "description": {
         "read": "This tool wants to see your library: titles, details, playlists, progress and what is downloaded on this computer. It cannot change anything.",
-        "write": "This tool wants to see your library and change some of it: watch progress, title details (name, overview, year) and your playlists. It cannot delete titles or touch settings or keys."
+        "write": "This tool wants to see your library and change some of it: watch progress, title details (name, overview, year, rating) and your playlists. It cannot delete titles or touch settings or keys."
       },
       "selfDeclared": "The name comes from the tool itself and is not verified. Only approve a tool you just started.",
       "reason": "Reason given: {{reason}}",
@@ -2097,15 +1961,13 @@
       "viewMovies": "View movies",
       "pickExistingTitle": "Pick a title already in your library or in this import batch.",
       "signInAddDummy": "Sign in to add dummy media.",
-      "missingLibraryKey": "Media library key is missing. Finish onboarding first.",
+      "missingLibraryKey": "Library key is missing. Finish onboarding first.",
       "dummyUnavailable": "Dummy ingest is unavailable.",
       "dummyAdded": "Added with dummy data.",
       "dummyStartFailed": "Failed to start dummy ingest.",
       "audioSampleFailed": "Couldn't generate audio sample.",
       "setTrackLanguages": "Set a language for every track, or use 'Ignore and keep tracks undefined'.",
-      "removedDuplicates_one": "Removed {{count}} duplicate file.",
-      "removedDuplicates_other": "Removed {{count}} duplicate files.",
-      "removedDuplicates_many": "Removed {{count}} duplicate files.",
+      "removedDuplicates": "Removed {{count}} duplicate file.",
       "addMetadataFailedSingle": "1 title could not be added: the metadata service did not answer. It is still here, try again in a moment.",
       "addMetadataFailedMany": "{{count}} titles could not be added: the metadata service did not answer. They are still here, try again in a moment.",
       "mediaNotInLibrary": "\"{{title}}\" is not in your library yet. Add a video file first.",
@@ -2116,8 +1978,7 @@
       "skippedDuplicateMany": "Skipped {{count}} duplicate-quality videos already in your library.",
       "subtitleTrackAddedSingle": "Subtitle track added.",
       "subtitleTrackAddedMany": "Added {{count}} subtitle tracks.",
-      "queueFailed": "Failed to queue jobs. Please try again.",
-      "removedDuplicates": "Removed {{count}} duplicate file."
+      "queueFailed": "Failed to queue jobs. Please try again."
     },
     "samples": {
       "noSubtitleSample": "No subtitle sample available.",
@@ -2215,9 +2076,7 @@
       "loadingMore": "Loading more…",
       "moreResults": "More results",
       "selectFileToReview": "Select a file to review details",
-      "readyToImportCount_one": "{{count}} ready to import",
-      "readyToImportCount_other": "{{count}} ready to import",
-      "readyToImportCount_many": "{{count}} ready to import",
+      "readyToImportCount": "{{count}} ready to import",
       "sameQualityOverlapIgnoredSingle": "{{count}} same-quality video overlap ignored",
       "sameQualityOverlapIgnoredMany": "{{count}} same-quality video overlaps ignored",
       "addWithDummyData": "Add with dummy data",
@@ -2229,24 +2088,12 @@
       "storageBlocked": "Your storage is full. Upgrade your plan to add more media.",
       "storageWarning": "You're using over 90% of your storage. Consider upgrading your plan.",
       "resolveBeforeAddingTitle": "Resolve before adding",
-      "blockerMatchOrRemove_one": "Match or remove {{count}} unmatched file.",
-      "blockerMatchOrRemove_other": "Match or remove {{count}} unmatched files.",
-      "blockerMatchOrRemove_many": "Match or remove {{count}} unmatched files.",
-      "blockerWaitSearch_one": "Wait for {{count}} file to finish searching for details.",
-      "blockerWaitSearch_other": "Wait for {{count}} files to finish searching for details.",
-      "blockerWaitSearch_many": "Wait for {{count}} files to finish searching for details.",
-      "blockerResolveVideo_one": "Resolve {{count}} video quality decision.",
-      "blockerResolveVideo_other": "Resolve {{count}} video quality decisions.",
-      "blockerResolveVideo_many": "Resolve {{count}} video quality decisions.",
-      "blockerWaitMetadata_one": "Wait for {{count}} file to finish metadata scan.",
-      "blockerWaitMetadata_other": "Wait for {{count}} files to finish metadata scan.",
-      "blockerWaitMetadata_many": "Wait for {{count}} files to finish metadata scan.",
-      "blockerClickInput_one": "Click \"Your input is needed\" and answer {{count}} item.",
-      "blockerClickInput_other": "Click \"Your input is needed\" and answer {{count}} items.",
-      "blockerClickInput_many": "Click \"Your input is needed\" and answer {{count}} items.",
-      "blockerSkipDataLoading_one": "Fetching skip data for {{count}} episode — hold on a moment.",
-      "blockerSkipDataLoading_other": "Fetching skip data for {{count}} episodes — hold on a moment.",
-      "blockerSkipDataLoading_many": "Fetching skip data for {{count}} episodes — hold on a moment.",
+      "blockerMatchOrRemove": "Match or remove {{count}} unmatched file(s).",
+      "blockerWaitSearch": "Wait for {{count}} file(s) to finish searching for details.",
+      "blockerResolveVideo": "Resolve {{count}} video quality decision(s).",
+      "blockerWaitMetadata": "Wait for {{count}} file(s) to finish metadata scan.",
+      "blockerClickInput": "Click \"Your input is needed\" and answer {{count}} item(s).",
+      "blockerSkipDataLoading": "Fetching skip data for {{count}} episode(s) — hold on a moment.",
       "yourInputNeededProgress": "Your input is needed ({{current}}/{{total}})",
       "setLanguageAndNameAudioTracks": "Set language and name for audio tracks",
       "setLanguageAndNameSubtitleTracks": "Set language and name for subtitle tracks",
@@ -2271,24 +2118,14 @@
       "alreadyAvailable": "Already available",
       "skipQuality": "Skip quality",
       "addQuality": "Add quality",
-      "videoDecisionsPending_one": "{{count}} video decision pending",
-      "videoDecisionsPending_other": "{{count}} video decisions pending",
-      "videoDecisionsPending_many": "{{count}} video decisions pending",
+      "videoDecision": "video decision",
+      "videoDecisions": "video decisions",
+      "videoDecisionsPending": "{{count}} {{decisionLabel}} pending",
       "needsInputToContinue": "Needs input to continue",
       "undefined": "Undefined",
       "unknownMedia": "Unknown media",
       "file": "file",
-      "files": "files",
-      "readyToImportCount": "{{count}} ready to import",
-      "blockerMatchOrRemove": "Match or remove {{count}} unmatched file(s).",
-      "blockerWaitSearch": "Wait for {{count}} file(s) to finish searching for details.",
-      "blockerResolveVideo": "Resolve {{count}} video quality decision(s).",
-      "blockerWaitMetadata": "Wait for {{count}} file(s) to finish metadata scan.",
-      "blockerClickInput": "Click \"Your input is needed\" and answer {{count}} item(s).",
-      "blockerSkipDataLoading": "Fetching skip data for {{count}} episode(s) — hold on a moment.",
-      "videoDecision": "video decision",
-      "videoDecisions": "video decisions",
-      "videoDecisionsPending": "{{count}} {{decisionLabel}} pending"
+      "files": "files"
     }
   },
   "pairApprove": {
@@ -2300,12 +2137,5 @@
     "checksum": "These words don’t form a valid key. Check each word against the ones you saved.",
     "unknownMark": "not a key word",
     "pairedNoWords": "This computer received the key from another device, so it does not have the key’s 12 words. They are on the device where the key was made, or in the copy you saved."
-  },
-  "skipCatchUpNotice": {
-    "title": "Badger now finds intros and credits",
-    "what": "Version {{version}} finds intros and credits on its own for videos we have no information about.",
-    "background": "Your existing library is now being processed in the background on this computer. You can follow the progress in the Jobs tab. It pauses whenever you import or play something, so it won't get in the way.",
-    "close": "Close",
-    "openJobs": "Open Jobs"
   }
 }

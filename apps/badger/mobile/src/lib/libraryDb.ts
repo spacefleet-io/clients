@@ -19,8 +19,6 @@ import { LIBRARY_SYNC_STUCK_AFTER_409S, LIBRARY_SYNC_STUCK_RETRY_MS, libraryRefu
 import { fetchLibraryOpsPage, type LibraryOpsPage } from "./library/opsPage";
 import { readLibraryMeta } from "./library/libraryReads";
 import { inlineBlobParams, PACKED_LIST_SELECT, packedListFromRow, packedRowWithBytes } from "./library/packedChunkRows";
-import { sqliteStorageResealDb } from "./library/resealDb";
-import { rewriteBadgerReferences } from "@space/media-reseal";
 import { chunkListToJson, unpackChunkList, type PackedChunkList } from "@space/library-db-definition/chunkLists";
 import { convertChunkLists } from "../native/LibrarySync";
 import {
@@ -1093,12 +1091,8 @@ export class LibraryDb {
           undefined,
           chunkIndex.chunks.map((entry) => entry.hash),
           MOBILE_CHUNK_REFS_SOURCE,
-          // An empty library holds no playback rows: it is as valid in op stream 4 as in 3, so it declares what the
-          // account's writers declare (a switched account refuses a version-3 write, LIB-FMT-13).
-          {
-            storageFormatVersion: MOBILE_LIBRARY_SUPPORT.storageFormatVersion,
-            opStreamVersion: writeOpStreamVersion(metaTargetOpStreamVersion(selection.meta)),
-          },
+          // A new library is never switched yet: it writes the op stream this build starts on (LIB-FMT-13).
+          { storageFormatVersion: MOBILE_LIBRARY_SUPPORT.storageFormatVersion, opStreamVersion: OP_STREAM_VERSION },
           checkedKeyProbe
         );
         await saveCache({
@@ -1121,8 +1115,6 @@ export class LibraryDb {
           pending,
           pendingOps
         );
-        // Packs the new playback copy on a switched account, so its first ops declare 4 too.
-        await instance.adoptTargetOpStreamVersion(selection.meta);
         if (pendingOps.length) {
           await instance.applyLibraryOps(pendingOps as LibraryOp[]);
         }
@@ -2804,7 +2796,7 @@ export class LibraryDb {
         item.originalLanguage,
         item.overview,
         item.year,
-        null, // rating: none is sent (META-SRC-05)
+        item.rating,
         item.posterPath,
         item.backdropPath,
         createdAt,
@@ -3945,18 +3937,14 @@ export class LibraryDb {
 
   /**
    * PRIV-KEY-13: this library sealed under the new key for a rotation exactly as `uploadSnapshot` publishes it (chunks
-   * uploaded, a manifest naming them), with the formats this device writes; the rotation writes the manifest. Its media
-   * references are renamed to the re-sealed copies (`copies`: old key → copy, STOR-RESEAL-01) in the snapshot only;
-   * the local library follows when the switched library is read back after sign-in.
+   * uploaded, a manifest naming them), with the formats this device writes; the rotation writes the manifest.
    */
-  async sealForRotation(newKeyBase64: string, copies: ReadonlyMap<string, string>): Promise<RotationOwnLibrary> {
+  async sealForRotation(newKeyBase64: string): Promise<RotationOwnLibrary> {
     await ensureLibraryDir();
     return await withSnapshotLock(async () => {
       const snapshotDb = await this.buildSnapshotDb();
       const snapshotPath = getRotationSnapshotPath();
       try {
-        // The snapshot left WAL when it was built (leaveWalForExport), so each rewrite lands in the file read below.
-        await rewriteBadgerReferences(sqliteStorageResealDb(snapshotDb), copies);
         await encryptDbToBinaryFile(getSnapshotDbPath(), newKeyBase64, snapshotPath);
         const dbHash = await hashDbFile(getSnapshotDbPath());
         const chunkIndex = await buildChunkIndexFromFile(snapshotPath);

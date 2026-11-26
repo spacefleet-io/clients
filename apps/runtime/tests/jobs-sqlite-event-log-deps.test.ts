@@ -2,9 +2,9 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   createSqliteRuntimeJobsStore,
   type SqliteRuntimeJobsStore,
-} from "@space/runtime-jobs-engine/sqliteStore";
-import { createSqliteEventLogDeps } from "@space/runtime-jobs-engine/sqliteEventLogDeps";
-import { createEventLog } from "@space/runtime-jobs-engine/eventLog";
+} from "../src/core/jobs/sqliteStore";
+import { createSqliteEventLogDeps } from "../src/core/jobs/sqliteEventLogDeps";
+import { createEventLog } from "../src/core/jobs/eventLog";
 
 const dumpSqliteEventLogSnapshot = (label: string, store: SqliteRuntimeJobsStore | null) => {
   try {

@@ -22,7 +22,7 @@
  *      quality) row already exists and returns the existing format id.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createEngineV2, type EngineV2 } from "@space/runtime-jobs-engine/engineV2";
+import { createEngineV2, type EngineV2 } from "../src/core/jobs/engineV2";
 import type { BadgerLibraryDbService } from "../src/modules/badgerLibraryDb";
 import { createBadgerMediaReplanQualitiesHandler } from "../src/modules/badger/mediaReplan";
 import { buildBadgerStepDeps } from "../src/modules/badger/steps/deps-adapter";

@@ -1,6 +1,6 @@
 import * as sdk from "@space/sdk";
 import { ApiError, apiErrorFromResponse, createSpaceClient, unwrap, type ApiErrorPayload } from "@space/sdk";
-import { createUserStorageTunnelClient, type StorageResealCopy, type StorageTunnelPurpose, type TunnelUploadSource } from "./storageTunnel";
+import { createUserStorageTunnelClient, type StorageTunnelPurpose, type TunnelUploadSource } from "./storageTunnel";
 import type { StorageObjectCounting } from "./storageCounting";
 import { DEFAULT_SPACE_APP_ID, SPACE_APP_HEADER, type SpaceAppId } from "./appScope";
 import { clientIdentityHeaders } from "./appVersion";
@@ -14,7 +14,6 @@ import type { ProfileAvatarId } from "./profileAvatars";
 import type { ProfileFeatures } from "./appFeatures";
 import type { AccountLanguage } from "./i18n";
 import { REQUEST_TIMEOUT_ERROR, SIGN_IN_TIMEOUT_MS } from "./signInError";
-import { KEY_STEP_META_TIMEOUT_MS, keyStepMetaErrorClass, type KeyStepMetaRead } from "./keyStepMetaRead";
 import { FOUNDER_NOTICE_SEEN_PATH, FOUNDER_STATUS_PATH, type FounderStatusResponse } from "./founder";
 
 // One error class for the whole workspace: the SDK's (DEV-API-02), so `instanceof ApiError` works
@@ -165,10 +164,10 @@ export const signup = (
 export type LoginDevice = { deviceType?: string; deviceName?: string };
 
 /**
- * Runs one request and gives up after `timeoutMs` with `ApiError(0, { error: "timeout" })`, so a server that never
- * answers ends in "the server did not answer", not an endless spinner (sign-in: ACCT-AUTH-11, key step: UX-KEY-02).
+ * Runs one sign-in request and gives up after `timeoutMs` with `ApiError(0, { error: "timeout" })`, so a server that
+ * never answers ends in "the server did not answer", not an endless spinner (ACCT-AUTH-11).
  */
-const withRequestTimeout = async <T>(send: (signal: AbortSignal) => Promise<T>, timeoutMs: number): Promise<T> => {
+const withSignInTimeout = async <T>(send: (signal: AbortSignal) => Promise<T>, timeoutMs: number): Promise<T> => {
   const controller = new AbortController();
   let timer: ReturnType<typeof setTimeout> | undefined;
   // Race the request against the clock as well as aborting it: a fetch that ignores the abort still ends here.
@@ -203,7 +202,7 @@ export const login = (
   device?: LoginDevice,
   timeoutMs: number = SIGN_IN_TIMEOUT_MS
 ): Promise<{ token: string; user: User }> =>
-  withRequestTimeout(
+  withSignInTimeout(
     (signal) =>
       unwrap(
         sdk.login({
@@ -300,11 +299,6 @@ export type AccountOverQuotaTitles = sdk.AccountOverQuotaTitles;
 
 export const getAccountOverQuotaTitles = (token: string): Promise<AccountOverQuotaTitles> =>
   unwrap(sdk.getAccountOverQuotaTitles(scoped(token)));
-
-/** UX-NOTICE-05: the account's news for the notice history (merged by `startAccountNewsSync` of `@space/notify-core`). */
-export type AccountNoticesList = sdk.ListAccountNoticesResponse;
-
-export const listAccountNotices = (token: string): Promise<AccountNoticesList> => unwrap(sdk.listAccountNotices(scoped(token)));
 
 export type AccountStorageAppUsage = {
   appId: string;
@@ -577,6 +571,7 @@ export type TitleSearchResult = {
   originalLanguage: string | null;
   overview: string | null;
   year: string | null;
+  rating: number | null;
   posterPath: string | null;
   backdropPath: string | null;
   posterUrl?: string | null;
@@ -847,74 +842,35 @@ const libraryReadScope = (token: string, appId: SpaceAppId, readOpStreamVersion:
 export const getLibraryMeta = (
   token: string,
   appId: SpaceAppId = DEFAULT_SPACE_APP_ID,
-  readOpStreamVersion?: number,
-  signal?: AbortSignal
-): Promise<LibraryMeta> =>
-  unwrap(sdk.getLibraryMeta({ ...libraryReadScope(token, appId, readOpStreamVersion), ...(signal ? { signal } : {}) }));
+  readOpStreamVersion?: number
+): Promise<LibraryMeta> => unwrap(sdk.getLibraryMeta(libraryReadScope(token, appId, readOpStreamVersion)));
 
 /** The waits between tries of the key step's meta read: about 7 s in all, which covers one server copy restarting. */
 export const KEY_STEP_META_RETRY_DELAYS_MS: readonly number[] = [1_000, 2_000, 4_000];
 
-export type KeyStepMetaOptions = {
-  /** As `getLibraryMeta`'s `readOpStreamVersion` (LIB-FMT-13). */
-  readOpStreamVersion?: number;
-  /** Waits between tries after a 502/503 or no connection; default {@link KEY_STEP_META_RETRY_DELAYS_MS}. */
-  delaysMs?: readonly number[];
-  /** The whole read's bound, retries included; default {@link KEY_STEP_META_TIMEOUT_MS} (UX-KEY-02). */
-  timeoutMs?: number;
-  /** Called once per read with its anonymous outcome, for the app's log (`KEY_STEP_META_LOG_EVENT`). */
-  onRead?: (read: KeyStepMetaRead) => void;
-};
-
 /**
- * `getLibraryMeta` for the library key step (STOR-GATEWAY-01, UX-KEY-02). An update restarts the API and the storage
- * gateway one copy at a time, and a request that lands on a copy just going away gets a 502/503 or no answer at all.
- * The key step would read that as "the key cannot be checked" and show its error, so such a failure is tried again
- * after each of `delaysMs` first. Any other answer, a refused session (401/403) above all, is final at once. The whole
- * read, retries included, gives up after `timeoutMs` with `ApiError(0, { error: "timeout" })`: a server that never
- * answers (a stalled database, 2026-11-26) ends in the key step's Retry screen, never an endless "Loading key…".
+ * `getLibraryMeta` for the library key step (STOR-GATEWAY-01). An update restarts the API and the storage gateway one
+ * copy at a time, and a request that lands on a copy just going away gets a 502/503 or no answer at all. The key step
+ * would read that as "the key cannot be checked" and show its error, so such a failure is tried again after each of
+ * `delaysMs` first. Any other answer, a refused session (401/403) above all, is final at once.
  */
 // tla: VaultKeys/SpinFailed
 export const getLibraryMetaForKeyStep = async (
   token: string,
   appId: SpaceAppId = DEFAULT_SPACE_APP_ID,
-  { readOpStreamVersion, delaysMs = KEY_STEP_META_RETRY_DELAYS_MS, timeoutMs = KEY_STEP_META_TIMEOUT_MS, onRead }: KeyStepMetaOptions = {}
+  delaysMs: readonly number[] = KEY_STEP_META_RETRY_DELAYS_MS,
+  readOpStreamVersion?: number
 ): Promise<LibraryMeta> => {
-  const startedAt = Date.now();
-  const deadline = startedAt + timeoutMs;
-  let attempts = 0;
-  try {
-    for (let attempt = 0; ; attempt++) {
-      attempts++;
-      try {
-        const meta = await withRequestTimeout(
-          (signal) => getLibraryMeta(token, appId, readOpStreamVersion, signal),
-          Math.max(0, deadline - Date.now())
-        );
-        onRead?.({ step: "library_meta", outcome: "ok", durationMs: Date.now() - startedAt, attempts, errorClass: null, status: null });
-        return meta;
-      } catch (error) {
-        // The bound itself (a timeout) is never waited out again.
-        const transient =
-          error instanceof ApiError
-            ? (error.status === 0 && error.payload.error !== REQUEST_TIMEOUT_ERROR) || error.status === 502 || error.status === 503
-            : error instanceof TypeError;
-        const delayMs = delaysMs[attempt];
-        // A wait that would run past the bound is not taken: the read fails now with what it got.
-        if (!transient || delayMs === undefined || Date.now() + delayMs >= deadline) throw error;
-        await new Promise((resolve) => setTimeout(resolve, delayMs));
-      }
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await getLibraryMeta(token, appId, readOpStreamVersion);
+    } catch (error) {
+      const transient =
+        error instanceof ApiError ? error.status === 0 || error.status === 502 || error.status === 503 : error instanceof TypeError;
+      const delayMs = delaysMs[attempt];
+      if (!transient || delayMs === undefined) throw error;
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
     }
-  } catch (error) {
-    onRead?.({
-      step: "library_meta",
-      outcome: "failed",
-      durationMs: Date.now() - startedAt,
-      attempts,
-      errorClass: keyStepMetaErrorClass(error),
-      status: error instanceof ApiError ? error.status : null,
-    });
-    throw error;
   }
 };
 
@@ -1076,9 +1032,6 @@ export const putLibraryDbBinary = async (
 /** Another app's library, re-encrypted under the new key by the rotating device (PRIV-KEY-06). */
 export type RotationLibraryCopy = NonNullable<sdk.RotateLibraryKeyData["body"]["otherLibraries"]>[number];
 
-/** The media reseal run a rotation switches to (STOR-RESEAL-04); `switchNow` cancels other devices' uploads (STOR-RESEAL-10). */
-export type RotationMediaReseal = NonNullable<sdk.RotateLibraryKeyData["body"]["mediaReseal"]>;
-
 /**
  * PRIV-KEY-13: the rotating device's own library, as a snapshot under the new key (chunks uploaded, a manifest naming
  * them) with the storage format and op stream it is written in; the server refuses a whole blob and a downgrade.
@@ -1090,23 +1043,19 @@ export type RotationOwnLibrary = Pick<
 
 /**
  * PRIV-KEY-06: rotates the key. `otherLibraries` carries every other app's library re-encrypted under the new key; an
- * app with a library and no copy is refused (409 `library_not_reencrypted`), never emptied. `mediaReseal` names the run
- * whose copies replace the media sealed with the old key, in the same step. `appId`: the app `library` belongs to.
+ * app with a library and no copy is refused (409 `library_not_reencrypted`), never emptied.
  */
 export const rotateLibraryKey = (
   token: string,
   library: RotationOwnLibrary,
   keyProbe: string,
-  /** Undefined when `mediaReseal` names a run this session re-authenticated when it opened it (ACCT-KEYCHG-03). */
-  password: string | undefined,
+  password: string,
   twoFactorCode?: string,
-  otherLibraries: RotationLibraryCopy[] = [],
-  mediaReseal?: RotationMediaReseal,
-  appId: SpaceAppId = DEFAULT_SPACE_APP_ID
+  otherLibraries: RotationLibraryCopy[] = []
 ): Promise<{ version: number }> =>
   unwrap(
     sdk.rotateLibraryKey({
-      ...scoped(token, appId),
+      ...scoped(token),
       body: {
         manifestBase64: library.manifestBase64,
         snapshotId: library.snapshotId,
@@ -1119,7 +1068,6 @@ export const rotateLibraryKey = (
         password,
         twoFactorCode,
         otherLibraries,
-        ...(mediaReseal ? { mediaReseal } : {}),
       },
     })
   );
@@ -1176,8 +1124,6 @@ export const uploadStorageObjectViaTunnel = (
     placementId?: string;
     /** How the object counts toward the allowance (STOR-USE-02). */
     counting?: StorageObjectCounting;
-    /** A re-sealed copy (STOR-RESEAL-03): uploaded over a `reseal` session with its run and old key. */
-    reseal?: StorageResealCopy;
   }
 ) => getStorageTunnelClient().uploadObject(token, objectKey, payload, options);
 
@@ -1194,45 +1140,6 @@ export const downloadStorageObjectViaTunnel = (
     profileId?: string | null;
   }
 ) => getStorageTunnelClient().downloadObject(token, objectKey, options);
-
-/** A media reseal run's progress (STOR-RESEAL-02): totals, done, kept, and one page of the objects still waiting. */
-export type MediaResealProgress = sdk.GetMediaResealRunResponses[200];
-/** One page of a run's copies and kept objects (STOR-RESEAL-01/05). */
-export type MediaResealCopies = sdk.ListMediaResealCopiesResponses[200];
-
-/**
- * Opens the account's media reseal run, or resumes the open one (STOR-RESEAL-02), after the password and code are
- * checked; the run is bound to this session, so the switch that ends it asks nothing again (ACCT-KEYCHG-03).
- * `restart` abandons a run left open by an earlier key change, whose key this device no longer holds.
- */
-export const openMediaResealRun = (token: string, body: sdk.OpenMediaResealRunData["body"]) =>
-  unwrap(sdk.openMediaResealRun({ ...scoped(token), body }));
-
-export const getMediaResealRun = (token: string, runId: string, page: { after?: string | null; limit?: number } = {}): Promise<MediaResealProgress> =>
-  unwrap(
-    sdk.getMediaResealRun({
-      ...scoped(token),
-      path: { id: runId },
-      query: { ...(page.after ? { after: page.after } : {}), ...(page.limit ? { limit: page.limit } : {}) },
-    })
-  );
-
-export const listMediaResealCopies = (token: string, runId: string, page: { after?: string | null; limit?: number } = {}): Promise<MediaResealCopies> =>
-  unwrap(
-    sdk.listMediaResealCopies({
-      ...scoped(token),
-      path: { id: runId },
-      query: { ...(page.after ? { after: page.after } : {}), ...(page.limit ? { limit: page.limit } : {}) },
-    })
-  );
-
-/** Marks objects the old key cannot open as kept (STOR-RESEAL-05); at most 500 keys per call. */
-export const markMediaResealKept = (token: string, runId: string, keys: string[]): Promise<{ kept: number }> =>
-  unwrap(sdk.markMediaResealKept({ ...scoped(token), path: { id: runId }, body: { keys } }));
-
-/** Stops the key change: the run's copies are deleted, the library stays as it was (STOR-RESEAL-07). */
-export const abandonMediaResealRun = (token: string, runId: string): Promise<{ abandoned: boolean; purgeQueued: number }> =>
-  unwrap(sdk.abandonMediaResealRun({ ...scoped(token), path: { id: runId } }));
 
 /**
  * Per-media silo placement (#145): the silo serving `media/<placementId>/…`

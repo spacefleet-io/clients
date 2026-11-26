@@ -15,9 +15,7 @@ import type { FounderStatusResponse } from "@space/shared/founder";
 import { getFounderStatus, markFounderNoticeSeen } from "@space/shared/api";
 import { createFounderWatch, founderWatch } from "../src/founder";
 import { MobileFounderBadge, MobileFounderNotice, MobileFounderNoticeHost } from "../src/components/mobile-founder";
-import { NOTICE_TIMINGS } from "@space/notify-core/kinds";
-
-const NOTICE_DURATION_MS = NOTICE_TIMINGS.headsUpMs;
+import { NOTICE_DURATION_MS } from "../src/notice-queue";
 
 const i18nState = vi.hoisted(() => ({ language: "en" }));
 

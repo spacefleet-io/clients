@@ -19,8 +19,7 @@ import jpeg from "jpeg-js";
 import { openParrotCover } from "../src/covers";
 import { parrotAudioFormatFor } from "../src/formats";
 import { parrotChunkKey, parrotPlacementId, parrotTagsKey, parrotTrackIds, sha256Hex } from "../src/ids";
-import { PARROT_APP_ID, type ParrotImportProgress, type ParrotImportTransport } from "../src/importer";
-import { importParrotFiles } from "../src/importJobs";
+import { importParrotFiles, PARROT_APP_ID, type ParrotImportProgress, type ParrotImportTransport } from "../src/importer";
 import { getParrotFile, listParrotAlbums, listParrotTracks, openParrotLibrary, serializeParrotLibrary } from "../src/library";
 import { readParrotTrackInfo, type ParrotTrackInfo } from "../src/readTrack";
 import { PARROT_FIRST_PAYLOAD_PIECE_BYTES, splitParrotOriginal } from "../src/splitOriginal";
@@ -199,8 +198,7 @@ describe("importParrotFiles", () => {
     log("importer log", messages);
     log("progress", progress);
 
-    // PAR-UP-14: both songs, stored side by side, go out in one publish.
-    expect(result).toEqual({ imported: [nookMp3, nookFlac], skipped: [], failed: [], snapshotVersion: 1 });
+    expect(result).toEqual({ imported: [nookMp3, nookFlac], skipped: [], failed: [], snapshotVersion: 2 });
     expect(server.fetches).toEqual([{ token: TOKEN, keyBase64, appId: PARROT_APP_ID }]);
     // PAR-FMT-01: each file goes up split: its header (none for an MP3), its sound, and its own tags in an object.
     expect(server.uploads).toHaveLength(5);
@@ -234,14 +232,14 @@ describe("importParrotFiles", () => {
       expect(tags).toEqual(split.tags);
     }
 
-    // PAR-UP-03 / PAR-UP-14: one publish for the batch, with both songs.
-    expect(server.publishes.map((call) => call.baseVersion)).toEqual([0]);
-    expect(listParrotTracks(openParrotLibrary(server.publishes[0]!.dbBytes)).map((track) => track.title).sort()).toEqual(["Nook", "Nook (Lossless)"]);
-    const publish = server.publishes[0]!;
+    // PAR-UP-03: one publish per stored song, the first with one song, the second with both.
+    expect(server.publishes.map((call) => call.baseVersion)).toEqual([0, 1]);
+    expect(listParrotTracks(openParrotLibrary(server.publishes[0]!.dbBytes)).map((track) => track.title)).toEqual(["Nook"]);
+    const publish = server.publishes[1]!;
     expect({ token: publish.token, keyBase64: publish.keyBase64, baseVersion: publish.baseVersion, appId: publish.appId }).toEqual({
       token: TOKEN,
       keyBase64,
-      baseVersion: 0,
+      baseVersion: 1,
       appId: PARROT_APP_ID,
     });
 
@@ -253,23 +251,22 @@ describe("importParrotFiles", () => {
       ["Linnet Park", "Meltway", 13, "Nook (Lossless)", "audio/flac"],
     ]);
     const file = getParrotFile(db, tracks[0]!.fileId!);
-    const placementOf = (fileId: string) => server.uploads.find((call) => call.objectKey.startsWith(`${fileId}/`))!.options.placementId;
     log("nook file row", file);
     // The players read header then sound: the stored size is theirs, the user's file size is kept beside it.
     const nookBytes = new Uint8Array(await fs.readFile(nookMp3));
     const nookSplit = splitParrotOriginal(nookBytes, "mp3");
     if (nookSplit.kind !== "split") throw new Error(nookSplit.reason);
-    expect(file!).toMatchObject({ sizeBytes: nookSplit.payload.length, headerBytes: 0, sourceSizeBytes: nookBytes.length, tagsObjectKey: `media/${placementOf(file!.id)}/${parrotTagsKey(file!.id)}` });
-    expect(file!.chunks).toEqual([{ idx: 0, objectKey: `media/${placementOf(file!.id)}/${parrotChunkKey(file!.id, 0)}`, plainOffset: 0, plainSize: file!.sizeBytes }]);
+    expect(file!).toMatchObject({ sizeBytes: nookSplit.payload.length, headerBytes: 0, sourceSizeBytes: nookBytes.length, tagsObjectKey: `media/${server.uploads[0]!.options.placementId}/${parrotTagsKey(file!.id)}` });
+    expect(file!.chunks).toEqual([{ idx: 0, objectKey: `media/${server.uploads[0]!.options.placementId}/${parrotChunkKey(file!.id, 0)}`, plainOffset: 0, plainSize: file!.sizeBytes }]);
     db.close();
 
-    // PAR-UP-04: the bytes go up as each file is through; `published` counts the library versions (one batch here, PAR-UP-14).
+    // PAR-UP-04: the bytes go up as each file is through; `published` counts the library versions.
     const sizes = [(await fs.stat(nookMp3)).size, (await fs.stat(nookFlac)).size];
     const bytesTotal = sizes[0]! + sizes[1]!;
     expect(progress.every((event) => event.bytesTotal === bytesTotal)).toBe(true);
     const afterFirst = progress.find((event) => event.done === 1)!;
-    expect(afterFirst).toMatchObject({ imported: 1, published: 1 });
-    expect(afterFirst.bytesDone).toBeGreaterThanOrEqual(Math.min(...sizes));
+    expect(afterFirst).toMatchObject({ imported: 1, bytesDone: sizes[0], published: 0 });
+    expect(progress.find((event) => event.published === 1)).toMatchObject({ done: 1, bytesDone: sizes[0] });
     const bytesSeen = progress.map((event) => event.bytesDone);
     expect(bytesSeen).toEqual([...bytesSeen].sort((a, b) => a - b));
     expect(progress.at(-1)).toEqual({
@@ -282,7 +279,7 @@ describe("importParrotFiles", () => {
       currentFile: null,
       bytesDone: bytesTotal,
       bytesTotal,
-      published: 1,
+      published: 2,
     });
     expect(messages.some((message) => message.includes("no library snapshot yet"))).toBe(true);
     expect(messages.some((message) => message.includes("published library snapshot v1"))).toBe(true);
@@ -435,8 +432,7 @@ describe("importParrotFiles", () => {
     expect(server.publishes).toHaveLength(2);
   });
 
-  // @req PAR-UP-14
-  it("publishes songs in batches, each batch as soon as it is full, so an interrupted import keeps what it uploaded", async () => {
+  it("publishes every N new songs so an interrupted import keeps what it uploaded", async () => {
     const server = createFakeServer();
     const shown: Array<{ version: number; songs: number }> = [];
     const files = [nookMp3, nookFlac, bigFile];
@@ -446,56 +442,57 @@ describe("importParrotFiles", () => {
       libraryKeyBase64: keyBase64,
       clientType: CLIENT_TYPE,
       transport: server.transport,
-      publishBatchSongs: 2,
-      // Only a full batch (or the end of the import) publishes.
-      publishBatchMs: 60_000,
+      publishEvery: 2,
       readInfo: async (file) => info(file, { number: files.indexOf(file) + 1 }),
       // #2509: the app shows each publish from the importer's own library, so it hears of each with its songs.
       onPublished: ({ version, db }) => shown.push({ version, songs: listParrotTracks(db).length }),
     });
     log("result", result);
     log("server", server.dump());
-    expect(result.imported).toEqual(files);
-    expect(server.publishes.length).toBeLessThanOrEqual(2);
-    expect(result.snapshotVersion).toBe(server.publishes.length);
-    const songs = server.publishes.map((call) => listParrotTracks(openParrotLibrary(call.dbBytes)).length);
-    expect(songs.at(-1)).toBe(3);
-    if (songs.length === 2) expect(songs[0]).toBeGreaterThanOrEqual(2);
-    expect(shown).toEqual(songs.map((count, index) => ({ version: index + 1, songs: count })));
+    expect(result.snapshotVersion).toBe(2);
+    expect(server.publishes.map((call) => call.baseVersion)).toEqual([0, 1]);
+    expect(listParrotTracks(openParrotLibrary(server.publishes[0]!.dbBytes))).toHaveLength(2);
+    expect(listParrotTracks(openParrotLibrary(server.publishes[1]!.dbBytes))).toHaveLength(3);
+    expect(shown).toEqual([
+      { version: 1, songs: 2 },
+      { version: 2, songs: 3 },
+    ]);
   });
 
-  // @req PAR-UP-02 PAR-UP-13
-  it("uploads the songs side by side and publishes them together once nothing else can join", async () => {
+  // @req PAR-UP-02
+  it("uploads the next file while the song before it is still being published", async () => {
     const server = createFakeServer();
     const files = [nookMp3, nookFlac];
     const events: string[] = [];
     const ids = await Promise.all(
       files.map(async (file) => parrotTrackIds({ ...info(file, { number: files.indexOf(file) + 1 }), fileHash: sha256Hex(new Uint8Array(await fs.readFile(file))) }).fileId)
     );
-    // The first song's upload waits until the second is uploading: run one after the other, the import never ends.
+    // The first publish waits until the second file is uploading: run one after the other, the import never ends.
     const secondUploading = Promise.withResolvers<void>();
     const upload: typeof server.transport.upload = async (token, objectKey, payload, options, appId) => {
       events.push(`upload ${objectKey.split("/")[0]}`);
       if (objectKey.startsWith(ids[1]!)) secondUploading.resolve();
-      else await secondUploading.promise;
       return server.transport.upload(token, objectKey, payload, options, appId);
     };
     const publishSnapshot: typeof server.transport.publishSnapshot = async (input) => {
-      events.push(`publish ${listParrotTracks(openParrotLibrary(input.dbBytes)).length}`);
+      const tracks = listParrotTracks(openParrotLibrary(input.dbBytes)).length;
+      events.push(`publish ${tracks} start`);
+      if (tracks === 1) await secondUploading.promise;
+      events.push(`publish ${tracks} end`);
       return server.transport.publishSnapshot(input);
     };
-    const result = await importParrotFiles(files, {
+    await importParrotFiles(files, {
       token: TOKEN,
       userId: USER_ID,
       libraryKeyBase64: keyBase64,
       clientType: CLIENT_TYPE,
       transport: { ...server.transport, upload, openUploadSession: undefined, publishSnapshot },
-      publishBatchMs: 60_000,
       readInfo: async (file) => info(file, { number: files.indexOf(file) + 1 }),
     });
     log("events", events);
-    expect(result.imported).toEqual(files);
-    expect(events.filter((event) => event.startsWith("publish"))).toEqual(["publish 2"]);
+    expect(events.indexOf(`upload ${ids[1]}`)).toBeGreaterThan(events.indexOf(`upload ${ids[0]}`));
+    expect(events.indexOf(`upload ${ids[1]}`)).toBeLessThan(events.indexOf("publish 1 end"));
+    expect(events.slice(-2)).toEqual(["publish 2 start", "publish 2 end"]);
   });
 
   // @bugfix: the picked folders reach readInfo, so folder names above them never become album or artist names.
@@ -516,10 +513,9 @@ describe("importParrotFiles", () => {
       },
     });
     log("readInfo calls", seen);
-    // Songs are probed side by side (PAR-UP-13): which one reaches readInfo first is not part of the contract.
-    expect([...seen].sort(([a], [b]) => a.localeCompare(b))).toEqual([
-      ["big.mp3", ""],
+    expect(seen).toEqual([
       [path.relative(root, nookMp3), path.join("Linnet Park", "Meltway")],
+      ["big.mp3", ""],
     ]);
   });
 
@@ -651,10 +647,8 @@ describe("importParrotFiles", () => {
     log("abort error", String(thrown));
     log("server", server.dump());
     expect(String(thrown)).toContain("user cancelled");
-    // How many chunks were in flight when the cancel came depends on the machine's load and on how many songs upload
-    // at once (PAR-UP-13), so only the cancel itself and the missing publish are fixed; that no chunk starts after a
-    // cancel is [PARROT-INGEST-PLAYBACK-GATE-001]'s slots test.
-    expect(server.uploads.length).toBeGreaterThanOrEqual(1);
+    // The three lanes had their chunks in flight when the cancel came; none takes a new one after it.
+    expect(server.uploads).toHaveLength(3);
     expect(server.publishes).toHaveLength(0);
   });
 });
@@ -743,8 +737,8 @@ describe("importParrotFiles album covers", () => {
     messages.length = 0;
     const second = await importParrotFiles([withPicture, withoutPicture], options);
     clog("second run", { second, messages, server: server.dump() });
-    // The first run published its two songs together (v1); the cover found now is v2.
-    expect(second).toEqual({ imported: [], skipped: [withPicture, withoutPicture], failed: [], snapshotVersion: 2 });
+    // The first run published once per song (v1, v2); the cover found now is v3.
+    expect(second).toEqual({ imported: [], skipped: [withPicture, withoutPicture], failed: [], snapshotVersion: 3 });
     const album = albumOf(server.state.dbBytes!);
     expect(album.coverObjectKey).toMatch(/^assets\//);
     expect(server.objects.has(album.coverObjectKey!)).toBe(true);
@@ -882,20 +876,14 @@ describe("importParrotFiles lyrics and artist photos", () => {
     llog("result", result);
     llog("questions", asked);
     expect(result.imported).toEqual([nook, fable]);
-    // The songs are identified side by side (PAR-UP-13): each is asked once, in either order.
-    expect(asked).toHaveLength(2);
-    expect(asked).toEqual(
-      expect.arrayContaining([
-        { artist: "Linnet Park", title: "Nook", album: "Meltway", durationMs: expect.any(Number) },
-        { artist: "Linnet Park", title: "Fable", album: "Meltway", durationMs: expect.any(Number) },
-      ])
-    );
-    // The first publish of each song already carries its lyrics: it is never playable without them.
-    for (const call of server.publishes) {
-      const published = lyricsIn(call.dbBytes);
-      llog("publish", published);
-      for (const row of published as Array<{ title: string; source: string | null }>) expect({ title: row.title, source: row.source }).toEqual({ title: row.title, source: row.title === "Nook" ? "fetched" : "none" });
-    }
+    expect(asked).toEqual([
+      { artist: "Linnet Park", title: "Nook", album: "Meltway", durationMs: expect.any(Number) },
+      { artist: "Linnet Park", title: "Fable", album: "Meltway", durationMs: expect.any(Number) },
+    ]);
+    // The first publish (Nook alone) already carries Nook's lyrics: it is never playable without them.
+    const first = lyricsIn(server.publishes[0]!.dbBytes);
+    llog("first publish", first);
+    expect(first).toEqual([{ title: "Nook", plain: "Fake plain lyric for a nook test tone", source: "fetched" }]);
     const last = lyricsIn(server.state.dbBytes!);
     llog("last publish", last);
     expect(last).toEqual([

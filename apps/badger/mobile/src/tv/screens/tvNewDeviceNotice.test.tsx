@@ -11,11 +11,9 @@
 import React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, create, type ReactTestInstance, type ReactTestRenderer } from "react-test-renderer";
-import { NOTICE_TIMINGS } from "@space/notify-core/kinds";
+import { NOTICE_DURATION_MS } from "@space/mobile-shell/notice-queue";
 import { announceNewDevice } from "../../lib/pairing/newDevice";
 import { TvMainShell } from "./TvMainShell";
-
-const NOTICE_DURATION_MS = NOTICE_TIMINGS.headsUpMs;
 
 const state = vi.hoisted(() => {
   // Metro turns `require("../../assets/badger-icon.png")` into an image reference; plain node would parse the bytes as JS.
@@ -67,6 +65,7 @@ vi.mock("@space/mobile-shell/components", () => ({
   formatPendingOpsLabel: (count: number) => `${count} changes`,
 }));
 vi.mock("@space/mobile-shell/i18n", () => ({ useTranslation: () => ({ t: (key: string) => key }), translate: (key: string) => key }));
+vi.mock("@space/mobile-shell/unpaid-access-banner", () => ({ UnpaidAccessBanner: () => null }));
 vi.mock("../../lib/pairing/deviceWatch", () => ({
   checkForNewDevices: () => undefined,
   markDeviceSeen: async (sessionId: string | null) => {

@@ -2,8 +2,8 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   createSqliteRuntimeJobsStore,
   type SqliteRuntimeJobsStore,
-} from "@space/runtime-jobs-engine/sqliteStore";
-import type { StoredStepRecord } from "@space/runtime-jobs-engine/stepStore";
+} from "../src/core/jobs/sqliteStore";
+import type { StoredStepRecord } from "../src/core/jobs/stepStore";
 import type { IngestJobRecord } from "@space/runtime-jobs";
 
 const ts = "2026-01-01T00:00:00.000Z";

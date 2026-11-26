@@ -10,7 +10,7 @@
  *   which claims the account). It opens a plain warning: only "Yes, I understand" moves on; "Go back" keeps the
  *   same key on screen.
  *   Chris (2026-11-12): "It asks for a key but lists the words underneath the input field? … None of these makes
- *   sense." So the screen that shows a new key is titled "Your media library key" (never "Enter your media library key") and has
+ *   sense." So the screen that shows a new key is titled "Your library key" (never "Enter your library key") and has
  *   no input field (UX-KEY-01).
  */
 import React, { act } from "react";
@@ -134,8 +134,8 @@ describe("@req ACCT-DEV-04 Parrot desktop new key: I've written it down, then th
     const fields = host.querySelectorAll("input, textarea").length;
     console.info(`${SUITE} show screen text=${JSON.stringify(host.textContent?.slice(0, 80))} fields=${fields}`);
     // UX-KEY-01: the show screen never looks like the enter screen: its own title, and nothing to type into.
-    expect(host.textContent).toContain("Your media library key");
-    expect(host.textContent).not.toContain("Enter your media library key");
+    expect(host.textContent).toContain("Your library key");
+    expect(host.textContent).not.toContain("Enter your library key");
     expect(fields).toBe(0);
     expect(q("library-key-input")).toBeNull();
     expect(q("key-saved")?.textContent).toBe("I've written it down");

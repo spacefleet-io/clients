@@ -173,7 +173,7 @@ def play(ctx, handle, media_id, episode_id=None, from_library=False):
     """Resolve a plugin://.../play URL. Always calls setResolvedUrl exactly once."""
     base = get_prop("server")
     if not ctx.ready:
-        ok_dialog("Badger", "Not set up yet: sign in and enter your media library key in the addon settings.")
+        ok_dialog("Badger", "Not set up yet: sign in and enter your library key in the addon settings.")
         xbmcplugin.setResolvedUrl(handle, False, xbmcgui.ListItem())
         return
     if not base:

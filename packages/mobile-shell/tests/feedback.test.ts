@@ -8,9 +8,13 @@
  */
 import { describe, expect, it } from "vitest";
 import { ApiError } from "@space/shared/api";
-import { clampLog } from "@space/error-report/error-log";
-import { FEEDBACK_LOG_MAX_BYTES, FEEDBACK_MESSAGE_MAX } from "@space/shared/feedback";
-import { buildFeedback, feedbackFailure, type FeedbackDevice } from "../src/feedback";
+import { FEEDBACK_LOG_MAX_BYTES, clampLog } from "@space/error-report/error-log";
+import {
+  FEEDBACK_MESSAGE_MAX,
+  buildFeedback,
+  feedbackFailure,
+  type FeedbackDevice,
+} from "../src/feedback";
 
 const device: FeedbackDevice = { app: "badger-mobile", appVersion: "1.2.3", platform: "android 15", deviceModel: "Google Pixel 8" };
 

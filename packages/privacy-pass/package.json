@@ -5,7 +5,7 @@
   "type": "module",
   "sideEffects": false,
   "scripts": {
-    "test": "bunx vitest run",
+    "test": "bunx --bun vitest run",
     "typecheck": "bunx tsc --noEmit -p tsconfig.json"
   },
   "exports": {

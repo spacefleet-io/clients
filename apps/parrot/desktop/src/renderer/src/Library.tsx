@@ -1,10 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Download, House, LibraryBig, ListEnd, ListMusic, Loader2, Pencil, Play, Search, Settings, Shuffle, Trash2 } from "lucide-react";
-import { DesktopAppTopNav, DesktopFeedbackDialog, desktopTopNavIconActionClassName, desktopTopNavItemClassName, NoticeBell } from "@space/desktop-shell/components";
-import { createDesktopNoticeHistory } from "@space/desktop-shell/services/notifications";
-import { createNotify } from "@space/desktop-shell/services/notify";
-import type { JobOutcome, NoticeAction, NoticePart } from "@space/notify-core/kinds";
-import { useAccountNews, useOnline } from "@space/desktop-shell/hooks";
+import { Bell, Download, House, LibraryBig, ListEnd, ListMusic, Loader2, Pencil, Play, Search, Settings, Shuffle, Trash2 } from "lucide-react";
+import { DesktopAppTopNav, DesktopNotificationTray, desktopTopNavIconActionClassName, desktopTopNavItemClassName, NotificationTrayContent } from "@space/desktop-shell/components";
+import { createNotificationStore, useNotificationStore } from "@space/desktop-shell/services/notifications";
+import { useOnline } from "@space/desktop-shell/hooks";
 import { useWindowFileDrop, WindowDropOverlay } from "@space/desktop-shell/window-drop";
 import { DesktopTourHost, startDesktopTour } from "@space/desktop-shell/tour";
 import tourDropVideo from "./assets/tour-drop.webm";
@@ -18,7 +16,7 @@ import { libraryContent } from "@space/shared/libraryContent";
 import { ImportJobList, ImportJobs, importErrorPart, useImportJobs } from "./ImportJobs";
 import { useExportNotifications, type ExportNotify } from "./ExportJobs";
 import { MediaDetailTabs } from "@space/ui/badger/media-detail";
-import { noticeTranslator } from "./noticeText";
+import { keyedNotification, shownNotification } from "./notificationText";
 import {
   ParrotAlbumPageCover,
   ParrotAlbumTile,
@@ -40,7 +38,6 @@ import { ParrotKeepButton, ParrotKeepChoiceDialog, ParrotKeptLine, type ParrotKe
 import { ParrotEditMetadataDialog, type ParrotCoverInput, type ParrotEditFields } from "@space/ui/parrot/manage";
 import { ParrotNowPlaying, type ParrotLyricsFetchControl, type ParrotNowPlayingTab } from "@space/ui/parrot/screens";
 import { ParrotSearchPalette } from "@space/ui/parrot/search-palette";
-import { UnpaidAccessSign } from "./UnpaidAccessSign";
 import { useSearchPaletteShortcut } from "@space/ui";
 import { searchPaletteStrings } from "@space/shared/searchPaletteStrings";
 import {
@@ -82,11 +79,11 @@ import type { ParrotLibraryTrack } from "@space/parrot-ingest";
 import type { ParrotImportScan, ParrotImportStatus, ParrotLibrary, ParrotState } from "../../shared/ipc";
 import { applyParrotLibraryPatch } from "../../shared/libraryPatch";
 import { SettingsPage, type ParrotSettingsSection } from "./AccountSettings";
-import { ParrotProfileSetupOverlays, profilesLog, useParrotDesktopProfileStore } from "./profiles";
-import { ParrotProfileMenu } from "@space/ui/profiles";
+import { ParrotProfileMenu, ParrotProfileSetupOverlays, useParrotDesktopProfileStore } from "./profiles";
 import { FounderBanner } from "@space/ui/founder";
 import { useParrotFounderStatus } from "./founder";
 import AddMusic from "./AddMusic";
+import { Feedback } from "./Feedback";
 import Home, { EmptyMusicLibrary } from "./Home";
 import { countText, type ParrotStringKey, type Translate } from "./i18n";
 import { editLyricsLabels, useEditLyrics } from "./editLookups";
@@ -101,27 +98,11 @@ import { startLoudnessPass } from "./loudness";
 import { useNoteScreen } from "./noteScreen";
 import { formatLocalizedStorage } from "@space/shared/format";
 import { useAppPlaybackMark } from "@space/ui/app-playback-mark";
-import { usePlaybackUploadsLease } from "./playbackUploads";
 
+export { Feedback } from "./Feedback";
 export { waveBarsFor } from "@space/ui/parrot/screens";
 
 type Props = { t: Translate; state: ParrotState; onState: (state: ParrotState) => void };
-
-/** Where a failed job's notice leads: the Jobs panel (UX-NOTICE-10). */
-const JOBS_TARGET = "jobs";
-const OPEN_JOBS: NoticeAction = { label: { key: "notify.job.openJobs" }, target: JOBS_TARGET };
-/**
- * The account news' neutral targets (UX-NOTICE-05). Parrot keeps a new device, the plan and the storage under
- * Settings ▸ Account: pairing another device, the plan panel and its storage.
- */
-const ACCOUNT_NEWS_TARGETS = new Set(["devices", "billing", "storage"]);
-/** The account's news through main, which holds the session; a refused read throws its code for the log. */
-const fetchAccountNews = async () => {
-  const result = await window.parrot.listAccountNotices();
-  if (!result.ok) throw new Error(result.code);
-  return result.value;
-};
-const onAccountNewsError = (message: string, error: unknown) => console.warn(`[parrot:account-news] ${message}`, error instanceof Error ? error.message : String(error));
 
 /** A queued song is the same song as another when the ids match: the library hands out fresh rows (PAR-CARD-02). */
 const songId = (track: ParrotLibraryTrack) => track.id;
@@ -197,43 +178,20 @@ export default function Library({ t, state, onState }: Props) {
   const [queue, setQueue] = useState<PlayQueue<ParrotLibraryTrack>>(emptyQueue);
   // The shooting stars behind every page (Home included: it renders inside this component) pause while music plays.
   useAppPlaybackMark(playing);
-  // PAR-UP-15: imports slow down or pause while a song plays, as this computer's setting says.
-  usePlaybackUploadsLease(playing);
   const [startAt, setStartAt] = useState<{ key: number; ms: number } | null>(null);
   const [history, setHistory] = useState<ListeningHistory>(() => parseHistory(localStorage.getItem(historyStorageKey(userId))));
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [planOpen, setPlanOpen] = useState(false);
   const [pairOpen, setPairOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
-  const [jobsOpen, setJobsOpen] = useState(false);
-  // UX-NOTICE-06: a click on the system notification of a job that ended while the window was hidden opens Jobs.
-  useEffect(() => window.parrot.hiddenJobNotices?.onOpenJobs(() => setJobsOpen(true)), []);
+  const [trayOpen, setTrayOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   useSearchPaletteShortcut(() => setSearchOpen(true), true);
-  // UX-NOTICE-04: the history behind the bell, one per user (the key an older version saved it under).
-  const noticeHistory = useMemo(() => createDesktopNoticeHistory(notificationsStorageKey(userId)), [userId]);
-  // UX-NOTICE-13: entries keep their text keys, so the tray and the toasts follow a language change.
-  const noticeT = useMemo(() => noticeTranslator(language, t), [language, t]);
-  /**
-   * A notice's button or history entry leads here: "jobs" opens the Jobs panel (UX-NOTICE-10), the account's news
-   * opens Settings ▸ Account (UX-NOTICE-05).
-   */
-  const openNoticeTarget = useCallback((target: string) => {
-    if (target === JOBS_TARGET) setJobsOpen(true);
-    if (!ACCOUNT_NEWS_TARGETS.has(target)) return;
-    settingsVisits.current += 1;
-    setPrevious([]);
-    setRoute({ kind: "settings", section: "account", visit: settingsVisits.current });
-  }, []);
-  // UX-NOTICE-05: the account's news joins the history now, every minute and when the window comes back.
-  useAccountNews({ history: noticeHistory, fetchNews: fetchAccountNews, onError: onAccountNewsError });
-  const notices = useMemo(() => createNotify({ history: noticeHistory, t: noticeT, openTarget: openNoticeTarget }), [noticeHistory, noticeT, openNoticeTarget]);
-  // The import and export listeners are set up once; they reach the notices of the moment through this.
-  const noticesRef = useRef(notices);
-  noticesRef.current = notices;
-  /** A job's end: a toast either way; a failure also goes in the history with "Open Jobs" (UX-NOTICE-10). */
-  const notifyJob = (key: string, outcome: JobOutcome, title: NoticePart, message: NoticePart) =>
-    noticesRef.current.notify({ key, outcome, level: outcome === "done" ? "success" : "error", title, message, ...(outcome === "failed" ? { action: OPEN_JOBS } : {}) });
+  const notifications = useMemo(() => createNotificationStore({ storageKey: notificationsStorageKey(userId) }), [userId]);
+  const storedNotifications = useNotificationStore(notifications);
+  // UX-I18N-01: each notification is translated when shown, so the tray follows a language change.
+  const notificationList = useMemo(() => storedNotifications.map((item) => shownNotification(t, item)), [storedNotifications, t]);
+  const unread = notificationList.filter((item) => !item.read).length;
   const { requestSignOut, dialog: signOutKeyCheckDialog } = useSignOutWithKeyCheck({ t, state, onSignedOut: onState });
   /** The song, album or artist waiting in the delete confirm, with what the delete would remove (PAR-LIB-03). */
   const [removing, setRemoving] = useState<{ target: ParrotManageTarget; title: string; trackCount: number } | null>(null);
@@ -340,13 +298,13 @@ export default function Library({ t, state, onState }: Props) {
       // end shows the library main holds, read back from the server no more. A stopped import (UX-JOBS-02) keeps
       // what it already published, so its end shows the library too.
       if (status.phase === "done" || status.phase === "cancelled") void load(false);
-      // A finished import says so once (UX-JOBS-01); a failed one stays in the history (UX-NOTICE-10).
+      // A finished import says so in the tray, once (UX-JOBS-01).
       if (!phaseChanged) return;
       if (status.phase === "done") {
         const counts = { imported: status.imported, skipped: status.skipped, failed: status.failed };
-        notifyJob("import", "done", { key: "notify.job.importDone" }, { key: "import.done", vars: counts });
+        notifications.push(keyedNotification(t, "success", { key: "notifications.importDone" }, { key: "import.done", vars: counts }));
       }
-      if (status.phase === "failed") notifyJob("import", "failed", { key: "notify.job.importFailed" }, importErrorPart(status.error ?? ""));
+      if (status.phase === "failed") notifications.push(keyedNotification(t, "error", { key: "notifications.importFailed" }, importErrorPart(status.error ?? "")));
     });
   }, []);
   useEffect(() => {
@@ -522,7 +480,8 @@ export default function Library({ t, state, onState }: Props) {
     },
     t: (key, vars) => t(key as Parameters<Translate>[0], vars),
     detail: (playlist) => countText(language, t, "song", playlistSongs(playlist).length),
-    notify: ({ level, title, message, titleKey, titleVars }) => notices.notify({ level, title: titleKey ? { key: titleKey, vars: titleVars } : title, message }),
+    notify: ({ level, title, message, titleKey, titleVars }) =>
+      notifications.push(titleKey ? keyedNotification(t, level, { key: titleKey as ParrotStringKey, vars: titleVars }, message) : { level, title, message }),
     onCreated: (id) => open({ kind: "playlist", id }),
     onDeleted: (id) => {
       if (route.kind === "playlist" && route.id === id) back();
@@ -530,8 +489,8 @@ export default function Library({ t, state, onState }: Props) {
   });
   const playlistName = playlistEditor.name;
   const like = (track: { id: string }) => playlistEditor.heart(track.id);
-  /** "Download everything" (Settings, OFFL-FILE-01) runs in the background: its end shows as a notice. */
-  const notifyExport: ExportNotify = ({ key, outcome, title, message }) => notifyJob(key, outcome, title, message);
+  /** "Download everything" (Settings, OFFL-FILE-01) runs in the background: its end shows in the tray. */
+  const notifyExport: ExportNotify = (level, title, message) => notifications.push(keyedNotification(t, level, title, message));
   useExportNotifications(language, notifyExport);
   /**
    * A song row's "Add to queue" (PAR-CARD-02), heart and "Add to playlist", plus edit (PAR-META-16) and delete outside a
@@ -560,7 +519,7 @@ export default function Library({ t, state, onState }: Props) {
   const askDelete = async (target: ParrotManageTarget, title: string) => {
     const preview = await window.parrot.previewDelete(target);
     if (!preview.ok) {
-      notices.notifyError(preview.error, { key: "manage.deleteFailed", vars: { reason: preview.error } }, { key: `delete-failed:${target.kind}:${target.id}` });
+      notifications.push(keyedNotification(t, "error", { key: "manage.deleteFailed", vars: { reason: preview.error } }, preview.error));
       return;
     }
     setRemoving({ target, title, trackCount: preview.trackCount });
@@ -571,7 +530,7 @@ export default function Library({ t, state, onState }: Props) {
     setRemoving(null);
     const result = await window.parrot.deleteFromLibrary(target);
     if (!result.ok) {
-      notices.notifyError(result.error, { key: "manage.deleteFailed", vars: { reason: result.error } }, { key: `delete-failed:${target.kind}:${target.id}` });
+      notifications.push(keyedNotification(t, "error", { key: "manage.deleteFailed", vars: { reason: result.error } }, result.error));
       return;
     }
     setLibrary(result.library);
@@ -585,7 +544,7 @@ export default function Library({ t, state, onState }: Props) {
   const askEdit = async (target: ParrotManageTarget & { kind: "track" | "album" }, coverUrl: string | null = null) => {
     const values = await window.parrot.getEditValues(target);
     if (!values) {
-      notices.notifyError(target.id, { key: "manage.saveFailed", vars: { reason: "not found" } }, { key: `save-failed:${target.kind}:${target.id}` });
+      notifications.push(keyedNotification(t, "error", { key: "manage.saveFailed", vars: { reason: "not found" } }, target.id));
       return;
     }
     setEditError(null);
@@ -686,8 +645,7 @@ export default function Library({ t, state, onState }: Props) {
     album: t("library.album"),
     time: t("library.time"),
     unknownArtist: t("library.unknownArtist"),
-    play: (title: string) => t("library.playSong", { title }),
-    pause: (title: string) => t("library.pauseSong", { title }),
+    play: () => t("player.play"),
     missing: t("library.missingTrack"),
     unidentified: t("library.unidentified"),
   };
@@ -802,7 +760,6 @@ export default function Library({ t, state, onState }: Props) {
               showAlbum
               labels={songLabels}
               onPlay={(i) => play(shown.shownSongs, i)}
-              onToggle={() => toggleRef.current?.()}
               actions={songActions()}
               unavailable={songAway}
               links={nameLinks}
@@ -893,7 +850,6 @@ export default function Library({ t, state, onState }: Props) {
       return (
         <ClockedNowPlaying
           like={like(playingTrack)}
-          back={{ label: t("back"), onClick: back }}
           track={playingTrack}
           lyrics={lyrics?.trackId === playingTrack.id ? lyrics.lyrics : undefined}
           fetchLyrics={{
@@ -916,7 +872,6 @@ export default function Library({ t, state, onState }: Props) {
           entries={queue.entries}
           position={queue.position}
           onJump={(index) => setQueue((current) => jumpTo(current, index))}
-          onToggle={() => toggleRef.current?.()}
           coverFor={(albumId) => coverFor(albumId)?.coverThumbUrl}
           onOpenAlbum={() => open({ kind: "album", id: playingTrack.albumId })}
           onOpenArtist={(id) => open({ kind: "artist", id })}
@@ -1014,7 +969,7 @@ export default function Library({ t, state, onState }: Props) {
           ) : null}
           {jobsTab ? (
             <div className="mt-6" data-testid="album-jobs">
-              <ImportJobList t={t} language={language} jobs={albumJobs} onReview={reviewImport} variant="row" />
+              <ImportJobList t={t} language={language} jobs={albumJobs} onReview={reviewImport} />
             </div>
           ) : (
             // The album's songs the user does not have sit greyed between them, never played (PAR-LIB-05).
@@ -1026,7 +981,6 @@ export default function Library({ t, state, onState }: Props) {
               showAlbum={false}
               labels={songLabels}
               onPlay={(i) => play(songs, i)}
-              onToggle={() => toggleRef.current?.()}
               actions={songActions()}
               unavailable={songAway}
               links={nameLinks}
@@ -1135,7 +1089,6 @@ export default function Library({ t, state, onState }: Props) {
               showAlbum
               labels={songLabels}
               onPlay={(i) => play(songs, i)}
-              onToggle={() => toggleRef.current?.()}
               actions={songActions((track, index) => playlistEditor.removeSong(playlist, track.id, entries[index]?.position ?? index))}
               testId="playlist-tracks"
               unavailable={songAway}
@@ -1192,16 +1145,6 @@ export default function Library({ t, state, onState }: Props) {
         logoAlt=""
         title="Parrot"
         desktopLayout="balanced"
-        // ACCT-UNPAID-05, UX-NOTICE-08: an unpaid account is said by a small sign inside the fixed bar, on every page.
-        status={
-          <UnpaidAccessSign
-            language={language}
-            onOpen={() => {
-              settingsVisits.current += 1;
-              go({ kind: "settings", section: "account", visit: settingsVisits.current });
-            }}
-          />
-        }
         desktopNav={
           <nav className="flex items-center gap-1">
             {tab("home", t("nav.home"), House, "home-tab")}
@@ -1221,28 +1164,49 @@ export default function Library({ t, state, onState }: Props) {
               testId="library-import"
             />
             {/* UX-JOBS-01: imports and how they went live in the Jobs panel, as in Badger, not in a strip. */}
-            <ImportJobs
-              t={t}
-              language={language}
-              onReview={reviewImport}
-              albumFor={(albumId) => {
-                const album = coverFor(albumId);
-                return album ? { title: album.title, cover: album.coverThumbUrl ?? album.coverUrl } : undefined;
-              }}
-              open={jobsOpen}
-              onOpenChange={setJobsOpen}
-            />
+            <ImportJobs t={t} language={language} onReview={reviewImport} />
           </>
         }
         notificationAction={
-          <NoticeBell history={noticeHistory} t={noticeT} onOpenTarget={openNoticeTarget} />
+          <DesktopNotificationTray
+            open={trayOpen}
+            onOpenChange={(next) => {
+              setTrayOpen(next);
+              if (next) notifications.markAllRead();
+            }}
+            title={t("nav.notifications")}
+            subtitle={t("notifications.subtitle")}
+            emptyMessage={t("notifications.empty")}
+            trigger={
+              <Button variant="ghost" size="icon" className={desktopTopNavIconActionClassName} aria-label={t("nav.notifications")} title={t("nav.notifications")} data-testid="nav-notifications">
+                <Bell className="size-4" aria-hidden />
+                {unread > 0 && <span className="absolute right-1.5 top-1.5 size-2 rounded-full bg-primary" data-testid="nav-notifications-unread" />}
+              </Button>
+            }
+          >
+            {notificationList.length > 0 ? (
+              <NotificationTrayContent
+                notifications={notificationList}
+                onRemove={notifications.remove}
+                onClearAll={notifications.clearAll}
+                labels={{
+                  filterAll: t("notifications.filterAll"),
+                  filterError: t("notifications.filterError"),
+                  filterWarning: t("notifications.filterWarning"),
+                  filterInfo: t("notifications.filterInfo"),
+                  filterSuccess: t("notifications.filterSuccess"),
+                  clearAll: t("notifications.clearAll"),
+                  dismiss: t("notifications.dismiss"),
+                }}
+              />
+            ) : null}
+          </DesktopNotificationTray>
         }
         accountAction={iconAction(t("nav.settings"), Settings, () => go({ kind: "settings" }), "nav-settings", { active: route.kind === "settings" })}
         signOutAction={
           profileStore ? (
             <ParrotProfileMenu
               store={profileStore}
-              log={profilesLog}
               language={language}
               signOutLabel={t("library.signOut")}
               onSignOut={() => void requestSignOut()}
@@ -1320,7 +1284,7 @@ export default function Library({ t, state, onState }: Props) {
       <StreamSlotPrompt language={language} closeLabel={t("close")} />
       {feedbackOpen && (
         <RenderBoundary name="feedback" variant="overlay">
-          <DesktopFeedbackDialog language={language} send={(input) => window.parrot.sendFeedback(input)} onClose={() => setFeedbackOpen(false)} />
+          <Feedback t={t} onClose={() => setFeedbackOpen(false)} />
         </RenderBoundary>
       )}
       {planOpen && (

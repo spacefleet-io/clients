@@ -33,8 +33,7 @@ vi.mock("@space/error-report/electron-main", () => ({
 }));
 
 import { createConsentFile } from "@space/error-report/consent-file";
-import { createDesktopErrorReports } from "@space/error-report/desktop-main-reports";
-import { createSetupSaver } from "../src/main/errorReports";
+import { createParrotErrorReports, createSetupSaver } from "../src/main/errorReports";
 
 const VALID_DSN = "https://publickey@bugsink.example.com/7";
 
@@ -85,7 +84,7 @@ describe("@req REL-LOG-06[parrot] error reports on the shared desktop controller
   afterEach(() => rmSync(dir, { recursive: true, force: true }));
 
   it("is off by default: a fresh userData is undecided and the SDK is never enabled", async () => {
-    const controller = createDesktopErrorReports({ app: "parrot", userDataDir: dir, dsn: VALID_DSN, release: "0.1.0", forcedRaw: undefined, log, logError: fail });
+    const controller = createParrotErrorReports({ userDataDir: dir, dsn: VALID_DSN, release: "0.1.0", forcedRaw: undefined, log, fail });
     await controller.start();
     dump("fresh start");
     expect(controller.getState()).toEqual({ decision: "undecided", available: true, release: "0.1.0" });
@@ -95,7 +94,7 @@ describe("@req REL-LOG-06[parrot] error reports on the shared desktop controller
   });
 
   it("stores the setup answer through the shared controller in <userData>/error-reports.json and starts reporting", async () => {
-    const controller = createDesktopErrorReports({ app: "parrot", userDataDir: dir, dsn: VALID_DSN, release: "0.1.0", forcedRaw: undefined, log, logError: fail });
+    const controller = createParrotErrorReports({ userDataDir: dir, dsn: VALID_DSN, release: "0.1.0", forcedRaw: undefined, log, fail });
     await controller.start();
     const store = fakeStore();
     const setDecision = vi.spyOn(controller, "setDecision");
@@ -110,7 +109,7 @@ describe("@req REL-LOG-06[parrot] error reports on the shared desktop controller
     expect(store.setup.errorReports).toBe(true);
 
     console.info(`${SUITE} phase: a second start reads the stored answer`);
-    const again = createDesktopErrorReports({ app: "parrot", userDataDir: dir, dsn: VALID_DSN, release: "0.1.0", forcedRaw: undefined, log, logError: fail });
+    const again = createParrotErrorReports({ userDataDir: dir, dsn: VALID_DSN, release: "0.1.0", forcedRaw: undefined, log, fail });
     await again.start();
     dump("restart");
     expect(again.getState().decision).toBe("on");
@@ -126,7 +125,7 @@ describe("@req REL-LOG-06[parrot] error reports on the shared desktop controller
 
   it("keeps an answer Parrot stored before the cutover (same file, same format)", async () => {
     createConsentFile(consentPath()).write("on");
-    const controller = createDesktopErrorReports({ app: "parrot", userDataDir: dir, dsn: VALID_DSN, release: "0.1.0", forcedRaw: undefined, log, logError: fail });
+    const controller = createParrotErrorReports({ userDataDir: dir, dsn: VALID_DSN, release: "0.1.0", forcedRaw: undefined, log, fail });
     await controller.start();
     dump("pre-existing answer");
     expect(controller.getState().decision).toBe("on");
@@ -134,7 +133,7 @@ describe("@req REL-LOG-06[parrot] error reports on the shared desktop controller
   });
 
   it("never starts reporting in a build without a reporting address, even after yes", async () => {
-    const controller = createDesktopErrorReports({ app: "parrot", userDataDir: dir, dsn: "", release: "0.1.0", forcedRaw: undefined, log, logError: fail });
+    const controller = createParrotErrorReports({ userDataDir: dir, dsn: "", release: "0.1.0", forcedRaw: undefined, log, fail });
     await controller.start();
     const save = createSetupSaver({ store: fakeStore(), errorReports: controller, applyStartAtLogin: () => undefined, log, fail });
     await save({ errorReports: true, done: true });
@@ -144,7 +143,7 @@ describe("@req REL-LOG-06[parrot] error reports on the shared desktop controller
   });
 
   it("SF_ERROR_REPORTS=off answers for the run without touching the file", async () => {
-    const controller = createDesktopErrorReports({ app: "parrot", userDataDir: dir, dsn: VALID_DSN, release: "0.1.0", forcedRaw: "off", log, logError: fail });
+    const controller = createParrotErrorReports({ userDataDir: dir, dsn: VALID_DSN, release: "0.1.0", forcedRaw: "off", log, fail });
     await controller.start();
     const save = createSetupSaver({ store: fakeStore(), errorReports: controller, applyStartAtLogin: () => undefined, log, fail });
     await save({ errorReports: true, done: true });

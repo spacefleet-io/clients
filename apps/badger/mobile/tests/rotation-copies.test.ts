@@ -3,134 +3,111 @@
  * @level unit
  * @req PRIV-KEY-12[badger-mobile,badger-tv]
  * @req PRIV-KEY-13[badger-mobile,badger-tv]
- * @req STOR-RESEAL-01[badger-mobile]
- * @why Chris (2026-11-23, chat: re-encrypt Parrot's library on rotation): a key change from the phone re-encrypts
+ * @why Chris (2026-11-23, chat: re-encrypt Parrot's library on rotation): a key rotation from the phone re-encrypts
  *   Parrot's library under the new key and never deletes it. What the phone cannot re-encrypt whole (old key does not
- *   open it, changes after its snapshot) stops the key change before anything is sent, with the error
- *   `keyChangeFailureOf` words. With media re-sealed, the published Parrot library names the copies (the switch
- *   deletes the old objects): the phone renames its references in a temporary SQLite file, then removes it.
+ *   open it, changes after its snapshot) is refused before anything is sent; a library that changed since it was read
+ *   is refused (the user tries again, which reads it again), never written back from the old read; the request is
+ *   sent once, since its 2FA code is single-use.
  */
-import { DatabaseSync } from "node:sqlite";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { keyChangeFailureOf } from "@space/shared/keyChangeFailure";
-import { reencryptParrotLibrary } from "../src/lib/rotationCopies";
-
-const dir = mkdtempSync(join(tmpdir(), "rotation-copies-"));
-const DB_PATH = join(dir, "rotation.parrot.sqlite");
+import { describe, expect, it, vi, beforeEach } from "vitest";
+import { ApiError } from "@space/shared/api";
+import { rotateWithParrotLibrary, rotationRefusal } from "../src/lib/rotationCopies";
 
 const mocks = vi.hoisted(() => ({
   meta: { exists: true, version: 2, snapshotVersion: 2, opStreamVersion: 3 },
+  metaReads: 0,
   open: vi.fn(),
-  reencrypt: vi.fn(),
+  rotate: vi.fn(),
 }));
 
 vi.mock("react-native-quick-crypto", async () => (await import("./library-db-fixture")).quickCryptoMock());
-vi.mock("react-native-fs", () => ({
-  default: {
-    writeFile: async (path: string, data: string) => writeFileSync(path, Buffer.from(data, "base64")),
-    readFile: async (path: string) => readFileSync(path).toString("base64"),
-  },
-}));
 vi.mock("@space/shared/api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@space/shared/api")>()),
-  getLibraryMeta: vi.fn(async () => ({ ...mocks.meta })),
+  getLibraryMeta: vi.fn(async () => {
+    mocks.metaReads += 1;
+    return { ...mocks.meta };
+  }),
   getLibraryDb: vi.fn(),
   downloadStorageObjectViaTunnel: vi.fn(),
   uploadStorageObjectViaTunnel: vi.fn(async () => undefined),
+  rotateLibraryKey: mocks.rotate,
 }));
 vi.mock("@space/mobile-shell/librarySnapshot", () => ({ openRemoteLibrarySnapshot: mocks.open }));
-vi.mock("@space/library-db-definition/snapshotPublish", () => ({ reencryptLibrarySnapshotWith: mocks.reencrypt }));
-vi.mock("../src/lib/crypto", () => ({ decryptBytesToBytes: vi.fn(), encryptBytesToBytes: vi.fn() }));
-vi.mock("../src/lib/libraryStorage", () => ({ ROTATION_PARROT_DB_NAME: "rotation.parrot.sqlite", getRotationParrotDbPath: () => DB_PATH }));
-// react-native-sqlite-storage over the real file: `executeSql` and `close`, the calls the rename makes.
-vi.mock("../src/lib/library/dbFiles", () => ({
-  removeDbFile: async (path: string) => rmSync(path, { force: true }),
-  openSqliteDb: async () => {
-    const db = new DatabaseSync(DB_PATH);
-    return {
-      executeSql: async (sql: string, params: Array<string | number | null> = []) => {
-        const statement = db.prepare(sql);
-        const rows = statement.columns().length > 0 ? statement.all(...params) : (statement.run(...params), []);
-        return [{ rows: { length: rows.length, item: (i: number) => rows[i] } }];
-      },
-      close: async () => db.close(),
-    };
-  },
-}));
-
-const SUITE = "[BADGER-MOBILE-ROTATION-COPIES-001]";
-const OLD_COVER = "media/p/00000000-0000-4000-8000-000000000001";
-const NEW_COVER = "media/p/00000000-0000-4000-8000-000000000101";
-
-/** A Parrot library file holding one album cover reference. */
-const parrotBytes = () => {
-  const path = join(dir, "source.sqlite");
-  rmSync(path, { force: true });
-  const db = new DatabaseSync(path);
-  db.exec("CREATE TABLE albums (id TEXT PRIMARY KEY, cover_object_key TEXT, cover_thumb_object_key TEXT)");
-  db.prepare("INSERT INTO albums (id, cover_object_key, cover_thumb_object_key) VALUES ('a1', ?, NULL)").run(OLD_COVER);
-  db.close();
-  return new Uint8Array(readFileSync(path));
-};
-
-const coverIn = (bytes: Uint8Array) => {
-  const path = join(dir, "published.sqlite");
-  writeFileSync(path, bytes);
-  const db = new DatabaseSync(path);
-  try {
-    return db.prepare("SELECT cover_object_key FROM albums WHERE id = 'a1'").get()?.cover_object_key;
-  } finally {
-    db.close();
-  }
-};
-
-const failureOf = (p: Promise<unknown>) => p.then(() => "reencrypted", (err: unknown) => keyChangeFailureOf(err));
-
-beforeEach(() => {
-  mocks.meta = { exists: true, version: 2, snapshotVersion: 2, opStreamVersion: 3 };
-  mocks.open.mockReset().mockResolvedValue({ dbBytes: parrotBytes(), snapshotVersion: 2 });
-  mocks.reencrypt.mockReset().mockImplementation(async (_bytes: Uint8Array, baseVersion: number) => ({
+vi.mock("@space/library-db-definition/snapshotPublish", () => ({
+  reencryptLibrarySnapshotWith: vi.fn(async (_bytes: Uint8Array, baseVersion: number) => ({
     baseVersion,
     manifestBase64: "bWFuaWZlc3Q=",
     snapshotId: "new-key-snapshot",
     chunkSize: 4194304,
     chunkRefs: ["chunk-1"],
-  }));
+  })),
+}));
+vi.mock("../src/lib/crypto", () => ({ decryptBytesToBytes: vi.fn(), encryptBytesToBytes: vi.fn() }));
+
+const SUITE = "[BADGER-MOBILE-ROTATION-COPIES-001]";
+/** This phone's own library as `LibraryDb.sealForRotation` returns it (PRIV-KEY-13). */
+const OWN = {
+  manifestBase64: "b3du",
+  snapshotId: "own-1",
+  chunkSize: 4194304,
+  chunkRefs: ["c0ffee01"],
+  chunkRefsSource: { client: "badger-mobile", refsVersion: 1 },
+  storageFormatVersion: 2,
+  opStreamVersion: 3,
+};
+const input = { token: "t", oldKey: "old", newKey: "new", library: OWN, keyProbe: "probe", password: "pw" };
+const refusalOf = (p: Promise<unknown>) => p.then(() => "rotated", (err: unknown) => rotationRefusal(err));
+const sentCopies = (call: number) => mocks.rotate.mock.calls[call]![5] as { appId: string; baseVersion: number; opStreamVersion: number }[];
+
+beforeEach(() => {
+  mocks.meta = { exists: true, version: 2, snapshotVersion: 2, opStreamVersion: 3 };
+  mocks.metaReads = 0;
+  mocks.open.mockReset().mockResolvedValue({ dbBytes: new Uint8Array([1]), snapshotVersion: 2 });
+  mocks.rotate.mockReset().mockResolvedValue({ version: 5 });
 });
 
-afterAll(() => rmSync(dir, { recursive: true, force: true }));
-
-describe(`${SUITE} reencryptParrotLibrary`, () => {
-  it("re-encrypts Parrot's library at the version it was read at, with its stored op-stream version", async () => {
-    const copies = await reencryptParrotLibrary("t", "old", "new", new Map());
-    expect(copies).toEqual([expect.objectContaining({ appId: "parrot", baseVersion: 2, opStreamVersion: 3, snapshotId: "new-key-snapshot" })]);
-    expect(coverIn(mocks.reencrypt.mock.calls[0]![0])).toBe(OLD_COVER);
+describe(`${SUITE} rotateWithParrotLibrary`, () => {
+  it("sends Parrot's library re-encrypted, at the version it was read at, with its stored op-stream version", async () => {
+    await rotateWithParrotLibrary(input);
+    expect(mocks.rotate).toHaveBeenCalledTimes(1);
+    // PRIV-KEY-13: the own library goes as its snapshot with its formats, never a whole blob.
+    expect(mocks.rotate.mock.calls[0]!.slice(0, 4)).toEqual(["t", OWN, "probe", "pw"]);
+    expect(sentCopies(0)).toEqual([expect.objectContaining({ appId: "parrot", baseVersion: 2, opStreamVersion: 3, snapshotId: "new-key-snapshot" })]);
   });
 
-  it("publishes Parrot's library naming the re-sealed copies, and leaves no temporary file", async () => {
-    await reencryptParrotLibrary("t", "old", "new", new Map([[OLD_COVER, NEW_COVER]]));
-    expect(coverIn(mocks.reencrypt.mock.calls[0]![0])).toBe(NEW_COVER);
-    expect(existsSync(DB_PATH)).toBe(false);
-  });
-
-  it("stops before re-encrypting when Parrot has changes after its latest snapshot", async () => {
+  it("refuses before sending anything when Parrot has changes after its latest snapshot", async () => {
     mocks.meta = { exists: true, version: 3, snapshotVersion: 2, opStreamVersion: 3 };
-    expect(await failureOf(reencryptParrotLibrary("t", "old", "new", new Map()))).toEqual({ status: "failed", reason: "notSnapshotted" });
+    expect(await refusalOf(rotateWithParrotLibrary(input))).toBe("notSnapshotted");
     expect(mocks.open).not.toHaveBeenCalled();
-    expect(mocks.reencrypt).not.toHaveBeenCalled();
+    expect(mocks.rotate).not.toHaveBeenCalled();
   });
 
-  it("stops before re-encrypting when the old key does not open Parrot's library", async () => {
+  it("refuses before sending anything when the old key does not open Parrot's library", async () => {
     mocks.open.mockRejectedValue(new Error("DECRYPT_FAILED"));
-    expect(await failureOf(reencryptParrotLibrary("t", "old", "new", new Map()))).toEqual({ status: "failed", reason: "unreadable" });
-    expect(mocks.reencrypt).not.toHaveBeenCalled();
+    expect(await refusalOf(rotateWithParrotLibrary(input))).toBe("unreadable");
+    expect(mocks.rotate).not.toHaveBeenCalled();
   });
 
-  it("sends nothing when Parrot has no library", async () => {
-    mocks.meta = { exists: false, version: 0, snapshotVersion: 0, opStreamVersion: 3 };
-    expect(await reencryptParrotLibrary("t", "old", "new", new Map())).toEqual([]);
+  it("a version conflict is refused as 'changed', sent once (the 2FA code is single-use), and the next try reads again", async () => {
+    mocks.rotate.mockRejectedValueOnce(new ApiError(409, { error: "version_conflict" }));
+    mocks.open.mockResolvedValueOnce({ dbBytes: new Uint8Array([1]), snapshotVersion: 2 });
+    mocks.open.mockResolvedValueOnce({ dbBytes: new Uint8Array([2]), snapshotVersion: 3 });
+    expect(await refusalOf(rotateWithParrotLibrary(input))).toBe("changed");
+    expect(mocks.rotate).toHaveBeenCalledTimes(1);
+    await rotateWithParrotLibrary(input);
+    expect(mocks.metaReads).toBe(2);
+    expect([sentCopies(0)[0]!.baseVersion, sentCopies(1)[0]!.baseVersion]).toEqual([2, 3]);
+  });
+
+  it("without the old key sends no copy: the server refuses when Parrot has a library, nothing is deleted", async () => {
+    mocks.rotate.mockRejectedValue(new ApiError(409, { error: "library_not_reencrypted", appId: "parrot" }));
+    expect(await refusalOf(rotateWithParrotLibrary({ ...input, oldKey: null }))).toBe("notReencrypted");
+    expect(sentCopies(0)).toEqual([]);
+  });
+
+  it("@req ACCT-KEYCHG-04[badger-mobile] gives the media refusal no words of its own, sent once", async () => {
+    mocks.rotate.mockRejectedValue(new ApiError(409, { error: "rotation_needs_media_reseal" }));
+    expect(await refusalOf(rotateWithParrotLibrary(input))).toBeNull();
+    expect(mocks.rotate).toHaveBeenCalledTimes(1);
   });
 });

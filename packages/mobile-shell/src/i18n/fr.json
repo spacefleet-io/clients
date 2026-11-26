@@ -100,7 +100,19 @@
       "body": "Affichez un code à approuver dans Badger ou Parrot sur un ordinateur, un téléphone ou une TV déjà connectés."
     },
     "provider": {
-      "continueInBrowser": "Terminez la connexion dans votre navigateur. Vous reviendrez ici une fois terminé."
+      "signInWith": "Se connecter avec {{provider}}",
+      "signUpWith": "S'inscrire avec {{provider}}",
+      "or": "ou",
+      "continueInBrowser": "Terminez la connexion dans votre navigateur. Vous reviendrez ici une fois terminé.",
+      "errorStart": "Impossible de lancer la connexion. Veuillez réessayer.",
+      "errors": {
+        "email_unverified": "L'adresse e-mail de ce compte n'est pas confirmée. Confirmez-la auprès du fournisseur, ou connectez-vous avec votre e-mail et votre mot de passe.",
+        "email_domain_disallowed": "Impossible de créer un compte avec cette adresse e-mail.",
+        "account_deletion_pending": "La suppression de ce compte est programmée.",
+        "provider_failed": "La connexion n'a pas abouti. Veuillez réessayer.",
+        "cancelled": "La connexion a été annulée.",
+        "invalid_code": "Cette connexion a expiré ou a été lancée ailleurs. Veuillez réessayer."
+      }
     },
     "pairing": {
       "title": "Se connecter avec un autre appareil"
@@ -669,6 +681,10 @@
       "saveHost": "Enregistrer l'hôte",
       "hostSaved": "Enregistré",
       "libraryKey": "Clé de médiathèque",
+      "resetKey": {
+        "title": "Réinitialiser la clé de chiffrement",
+        "description": "Renouvelez la clé qui protège votre médiathèque."
+      },
       "animatedBackground": {
         "title": "Arrière-plan animé",
         "description": "Des étoiles filantes traversent le ciel étoilé derrière l'application toutes les quelques secondes. Automatique les désactive sur les téléphones dotés de peu de mémoire.",
@@ -727,7 +743,6 @@
       }
     },
     "access": {
-      "unpaidSign": "Abonnement terminé",
       "unpaidBanner": "Votre abonnement est terminé. La lecture et les envois sont arrêtés. Vos fichiers seront supprimés le {{date}}.",
       "unpaidBannerNoDate": "Votre abonnement est terminé. La lecture et les envois sont arrêtés. Vos fichiers seront supprimés après un délai limité.",
       "playbackBlocked": "La lecture est arrêtée car votre abonnement est terminé. Vos fichiers seront supprimés le {{date}}.",
@@ -1004,11 +1019,36 @@
     "validate": "Valider la clé",
     "signOut": "Se déconnecter",
     "errors": {
+      "checkStatus": "Impossible de vérifier l'état de la médiathèque.",
       "generate": "Impossible de générer une nouvelle clé.",
       "initialize": "Impossible d'initialiser votre médiathèque.",
       "noLibrary": "Aucune médiathèque trouvée pour ce compte.",
       "unavailable": "Votre médiathèque est momentanément inaccessible. Veuillez réessayer dans un instant.",
       "validate": "Impossible de valider votre clé."
+    }
+  },
+  "resetKey": {
+    "title": "Renouveler la clé de médiathèque",
+    "subtitle": "Générez une nouvelle clé et rechiffrez votre médiathèque.",
+    "newKey": "Nouvelle clé",
+    "generateAnother": "Générer une autre clé",
+    "password": "Mot de passe du compte",
+    "code": "Code d'authentification à deux facteurs (facultatif)",
+    "confirmLabel": "J'ai enregistré la nouvelle clé.",
+    "confirm": "Confirmer",
+    "confirmed": "Confirmé",
+    "rotate": "Renouveler la clé",
+    "rotating": "Renouvellement…",
+    "success": "Clé renouvelée. Rechargement de la médiathèque…",
+    "errors": {
+      "confirmRequired": "Confirmez que vous avez enregistré la nouvelle clé.",
+      "passwordRequired": "Mot de passe requis.",
+      "notReady": "La médiathèque n'est pas prête.",
+      "rotate": "Impossible de renouveler la clé. Vérifiez votre mot de passe et votre code.",
+      "notReencrypted": "La médiathèque d'une autre app n'a pas pu passer à la nouvelle clé. Rien n'a changé. Renouvelez depuis un appareil qui a la clé actuelle.",
+      "unreadable": "La clé de ce téléphone n'ouvre pas la médiathèque d'une autre app. Rien n'a changé. Renouvelez depuis un appareil qui a la clé actuelle.",
+      "notSnapshotted": "La médiathèque d'une autre app est encore en cours d'enregistrement. Rien n'a changé. Ouvrez cette app, laissez-la se synchroniser, puis réessayez.",
+      "changed": "Une médiathèque a changé pendant le renouvellement. Rien n'a changé. Réessayez."
     }
   },
   "libraryFormat": {
@@ -1025,11 +1065,7 @@
       "recentlyAdded": "Ajoutés récemment",
       "movies": "Films",
       "shows": "Séries TV",
-      "favorites": "Favoris",
-      "unwatched": "À découvrir",
-      "rewatch": "Revoir",
-      "playlist": "Playlist",
-      "genre": "Genre"
+      "favorites": "Favoris"
     },
     "seeAll": "Tout voir",
     "hero": {

@@ -251,8 +251,8 @@ describe("Parrot desktop: sign-in first, then setup", () => {
     expect(next()?.disabled).toBe(true);
     expect(host.querySelectorAll('[data-testid="library-key-box"]')).toHaveLength(12);
     // UX-KEY-01: entering a key is titled for entering, and shows no key word the user did not type.
-    say("enter screen", { entering: host.textContent?.includes("Enter your media library key"), grid: host.querySelector('[data-testid="library-key-words"]') !== null });
-    expect(host.textContent).toContain("Enter your media library key");
+    say("enter screen", { entering: host.textContent?.includes("Enter your library key"), grid: host.querySelector('[data-testid="library-key-words"]') !== null });
+    expect(host.textContent).toContain("Enter your library key");
     expect(host.querySelector('[data-testid="library-key-words"]')).toBeNull();
     await type(key.words[0], 0);
     await type("zzzzq", 1);

@@ -4,8 +4,8 @@
  * state as a stable snapshot. Replaces the 7 lifecycle refs scattered
  * across `useMpvPlaybackEngine.ts` with one explicit subscription.
  *
- * Precedent: `useNoticeHistory` in
- * `packages/desktop-shell/src/services/notifications.ts`.
+ * Precedent: `useNotificationStore` at
+ * `packages/desktop-shell/src/services/notifications.ts:131-136`.
  *
  * Snapshot identity: the underlying client caches the latest
  * `LifecycleState` object and re-delivers it by reference on no-op

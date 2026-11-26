@@ -21,8 +21,7 @@
     "./client": "./src/client.ts",
     "./lifecycle": "./src/lifecycle.ts",
     "./renderPath": "./src/renderPath.ts",
-    "./tests/client-contract": "./tests/client-contract.ts",
-    "./tests/track-list-corpus": "./tests/track-list-corpus.ts"
+    "./tests/client-contract": "./tests/client-contract.ts"
   },
   "dependencies": {
     "zod": "^4.6.7"

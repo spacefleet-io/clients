@@ -1,14 +1,12 @@
 import i18n from "i18next";
 import { initReactI18next, useTranslation } from "react-i18next";
 import { withSignInErrorTexts } from "@space/shared/signInError";
-import { withProviderSignInTexts } from "@space/shared/providerSignIn";
 import { withSubtitleLanguageTexts } from "@space/shared/profileSettings";
 import { withTitleLanguageTexts } from "@space/shared/titleLanguage";
 import { withProfilesTexts } from "@space/shared/profileTexts";
 import { withAccountDeletionLabels } from "@space/shared/accountDeletionLabels";
 import { CLIENT_UI_LANGUAGES, isClientUiLanguage, type ClientUiLanguage, type ClientUiLanguageOption } from "@space/shared/i18n";
 import { installClientPluralRules } from "@space/shared/pluralRules";
-import { withNotifyTexts } from "@space/notify-core/texts";
 import de from "./de.json";
 import en from "./en.json";
 import es from "./es.json";
@@ -38,25 +36,17 @@ export const DEFAULT_MOBILE_UI_LANGUAGE: MobileUiLanguage = "en";
 export const isMobileUiLanguage = isClientUiLanguage;
 
 /**
- * The sign-in error sentences (`login.errors`) come from `@space/shared/signInError`, the Google, Apple and Microsoft
- * sign-in words (`login.provider`, ACCT-SIGNIN-05) from `@space/shared/providerSignIn`, the title-language choice
+ * The sign-in error sentences (`login.errors`) come from `@space/shared/signInError`, the title-language choice
  * (`titleLanguage`, ACCT-PROF-03) from `@space/shared/titleLanguage`, the Subtitle language setting (`subtitleLanguage`) from `@space/shared/profileSettings`, the profile texts from `@space/shared/profileTexts`, and the labels on the way to account deletion from
- * `@space/shared/accountDeletionLabels` (the legal page prints them too, WEB-LEGAL-04), shared by every app. The notices'
- * own words (`notify`: the bell, the history, the account's messages; UX-NOTICE-13) come from `@space/notify-core/texts`.
+ * `@space/shared/accountDeletionLabels` (the legal page prints them too, WEB-LEGAL-04), shared by every app.
  */
 export const withSharedTexts = <T extends Record<string, unknown>>(translation: T, language: MobileUiLanguage): T =>
-  withNotifyTexts(
-    withAccountDeletionLabels(
-      withProfilesTexts(
-        withSubtitleLanguageTexts(
-          withTitleLanguageTexts(withProviderSignInTexts(withSignInErrorTexts(translation, language), language), language),
-          language,
-        ),
-        language,
-      ),
-      "mobile",
+  withAccountDeletionLabels(
+    withProfilesTexts(
+      withSubtitleLanguageTexts(withTitleLanguageTexts(withSignInErrorTexts(translation, language), language), language),
       language,
     ),
+    "mobile",
     language,
   );
 

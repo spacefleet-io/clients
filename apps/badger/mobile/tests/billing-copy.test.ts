@@ -4,8 +4,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import i18next from "i18next";
 import { changeLanguage } from "@space/mobile-shell/i18n";
 import { getStorageUnitBase, setStorageUnitBase } from "@space/shared/format";
-import en from "@space/mobile-shell/i18n/en.json";
-import fr from "@space/mobile-shell/i18n/fr.json";
+import en from "../../../../packages/mobile-shell/src/i18n/en.json";
+import fr from "../../../../packages/mobile-shell/src/i18n/fr.json";
 import { SubscriptionScreen } from "../src/screens/SubscriptionScreen";
 
 const ctl = vi.hoisted(() => ({
@@ -37,8 +37,8 @@ vi.mock("react-native", () => ({
 // The real i18n module wires react-i18next, which resolves a second copy of React under bun's layout and cannot
 // run next to react-test-renderer. Same dictionaries and the same i18next lookups, minus the React binding.
 vi.mock("@space/mobile-shell/i18n", async () => {
-  const enDict = (await import("@space/mobile-shell/i18n/en.json")).default;
-  const frDict = (await import("@space/mobile-shell/i18n/fr.json")).default;
+  const enDict = (await import("../../../../packages/mobile-shell/src/i18n/en.json")).default;
+  const frDict = (await import("../../../../packages/mobile-shell/src/i18n/fr.json")).default;
   await i18next.init({
     resources: { en: { translation: enDict }, fr: { translation: frDict } },
     lng: "en",
@@ -58,15 +58,8 @@ vi.mock("lucide-react-native", () => ({ ArrowLeft: () => null }));
 vi.mock("@react-navigation/native", () => ({
   useNavigation: () => navigationStub,
 }));
-// The founder badge (WAIT-FOUND-04) has its own test in mobile-shell; the shared plan panel imports it from its own
-// folder. Leaf UI components pull in native-only modules (SVG sky, Animated), so stand-ins keep their labels and children.
-vi.mock("@space/mobile-shell/founder-badge", () => ({ MobileFounderBadge: () => null }));
-vi.mock("@space/mobile-shell/components", () => ({
-  MobileIconButton: ({ label, onPress }: { label: string; onPress: () => void }) =>
-    React.createElement("Pressable", { accessibilityLabel: label, onPress }),
-  MobileSkeletonBlock: () => null,
-  MobileSkeletonPulse: ({ children }: { children: React.ReactNode }) => React.createElement("View", null, children),
-}));
+// The founder badge (WAIT-FOUND-04) has its own test in mobile-shell; not under test here.
+vi.mock("@space/mobile-shell/components", () => ({ MobileFounderBadge: () => null }));
 vi.mock("../src/store/auth", () => ({ useAuth: () => authStub }));
 vi.mock("@space/shared/api", () => ({
   getSubscription: async () => {
@@ -75,7 +68,16 @@ vi.mock("@space/shared/api", () => ({
   },
   getAccountStorage: async () => ctl.storage,
 }));
+// Leaf UI components pull in native-only modules (SVG sky, Animated); stand-ins keep their labels and children.
+vi.mock("../src/components/IconButton", () => ({
+  IconButton: ({ label, onPress }: { label: string; onPress: () => void }) =>
+    React.createElement("Pressable", { accessibilityLabel: label, onPress }),
+}));
 vi.mock("../src/components/PosterCard", () => ({ RIPPLE: {} }));
+vi.mock("../src/components/Skeleton", () => ({
+  SkeletonBlock: () => null,
+  SkeletonPulse: ({ children }: { children: React.ReactNode }) => React.createElement("View", null, children),
+}));
 vi.mock("../src/components/SettingsRows", () => ({
   SettingsGroup: ({ title, children }: { title: string; children: React.ReactNode }) =>
     React.createElement("View", null, React.createElement("Text", null, title), children),

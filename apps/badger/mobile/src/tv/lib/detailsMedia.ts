@@ -8,7 +8,7 @@
  */
 import type { MediaDetails, MediaEpisode, MediaFile, MediaFormat, MediaRow, MediaTrailer, MediaType } from "@space/shared/libraryTypes";
 import { isOcrTwin } from "@space/shared/subtitleTwins";
-import { formatLocalizedStorage } from "@space/shared/format";
+import { formatLocalizedStorage, formatRating as formatRatingIn, formatStarRating as formatStarRatingIn } from "@space/shared/format";
 import { getCurrentLanguage } from "@space/mobile-shell/i18n";
 import { selectFileTracks } from "../../lib/downloads/planner";
 import { episodeFileKey } from "../../lib/playback/episodeSelection";
@@ -51,7 +51,7 @@ export const TV_SIMILAR_LIMIT = 12;
 
 /**
  * More like this (UX-TV-40): the other titles of the same kind in the library that share a genre with this one, the most
- * shared genres first, then the newest added; never ordered by a rating (META-SRC-05). Built from the library alone: nothing is fetched.
+ * shared genres first, then the best rated, then the newest added. Built from the library alone: nothing is fetched.
  */
 export const similarTitles = (
   details: Pick<MediaDetails, "id" | "type" | "genres">,
@@ -68,7 +68,7 @@ export const similarTitles = (
     })
     .sort(
       (a, b) =>
-        b.shared - a.shared || b.row.addedAt.localeCompare(a.row.addedAt) || a.row.id.localeCompare(b.row.id),
+        b.shared - a.shared || (b.row.rating ?? 0) - (a.row.rating ?? 0) || b.row.addedAt.localeCompare(a.row.addedAt) || a.row.id.localeCompare(b.row.id),
     )
     .slice(0, limit)
     .map(({ row }) => row);
@@ -119,6 +119,10 @@ export const formatSizeMb = (sizeMb: number | null | undefined): string | null =
   if (typeof sizeMb !== "number" || !Number.isFinite(sizeMb) || sizeMb <= 0) return null;
   return formatLocalizedStorage(sizeMb * 1024 ** 2, getCurrentLanguage(), { minUnit: "MB", maxUnit: "GB" });
 };
+
+/** The shared rating formats (`@space/shared/format`) in the UI language: "7,4" and "★ 7,4" in German. */
+export const formatRating = (rating: number): string => formatRatingIn(rating, getCurrentLanguage());
+export const formatStarRating = (rating: number): string => formatStarRatingIn(rating, getCurrentLanguage());
 
 /** Lines of a quality label ("2160p" → 2160), 0 when it has none. */
 const qualityHeight = (quality: string): number => {

@@ -21,7 +21,7 @@ import type {
 import { offlineQualityHeight } from "@space/shared/offlineQualityChoice";
 import { buildOfflineFilename } from "@space/shared/offlineFilename";
 import type { IngestJobRecord } from "@space/runtime-jobs";
-import type { EngineV2 } from "@space/runtime-jobs-engine/engineV2";
+import type { EngineV2 } from "../../core/jobs/engineV2";
 import type { BadgerLibraryDbService } from "../badgerLibraryDb";
 
 // Same margin as offline saves (OFFL-SAFE-02): never fill the destination disk to the last byte.
@@ -248,8 +248,7 @@ const collectItems = async (
   return { items, skipped };
 };
 
-/** Free bytes on the volume holding `dir` (0 when unknown); also used for the kept failed-import copies. */
-export const defaultFreeBytesAt = (dir: string): number => {
+const defaultFreeBytesAt = (dir: string): number => {
   // `statfsSync` needs an existing path: walk up to the nearest one (the picked folder normally exists).
   let probe = dir;
   for (;;) {

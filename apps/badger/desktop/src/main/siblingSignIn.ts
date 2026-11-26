@@ -46,15 +46,10 @@ export const createBadgerSiblingHost = (options: { onAnswered?: () => void } = {
       namedPipe: platform.id === "windows",
     },
     launch: siblingLaunchTarget({ execPath: process.execPath, argv: process.argv, defaultApp: Boolean(process.defaultApp), env: process.env }),
-    deviceName: resolveDeviceName(osHostname(), platform.id),
+    deviceName: resolveDeviceName(osHostname()),
     api: { lookup: lookupPairing, approveLocal: approvePairingLocal, deny: denyPairing },
     // Its own pairing client: the "Sign in with another device" screen keeps its own request.
-    pairing: createDesktopPairingClient({
-      getApiBaseUrl,
-      appId: "badger",
-      platform: platform.id,
-      log: (message, extra) => logger.info(extra ?? {}, message),
-    }),
+    pairing: createDesktopPairingClient({ getApiBaseUrl, appId: "badger", log: (message, extra) => logger.info(extra ?? {}, message) }),
     log: (message, extra) => logger.info(extra ?? {}, message),
     onAnswered: options.onAnswered,
   });

@@ -1,4 +1,4 @@
-import { platform as linux } from "@space/desktop-platform-linux";
+import { platform as linux } from "../../../desktop-platform-linux/src/index";
 
 /**
  * The VAAPI / QSV / NVENC recipes, probes and CPU fallbacks in mediaProcessor

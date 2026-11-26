@@ -8,8 +8,7 @@
     "test": "bunx vitest run"
   },
   "exports": {
-    ".": "./src/index.ts",
-    "./logRotation": "./src/logRotation.ts"
+    ".": "./src/index.ts"
   },
   "dependencies": {
     "@space/ffmpeg": "workspace:*",

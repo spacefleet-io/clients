@@ -27,7 +27,7 @@ import { BadgerModule } from "../src/modules/badger";
 import { TOOL_ACCESS_LIMITS } from "../src/core/toolAccess";
 
 // A library that can be opened and closed without SQLite, for the "closing the library ends the grants" case.
-vi.mock("@space/library-db-runtime/libraryDb", () => {
+vi.mock("../../../packages/library-db-runtime/src/libraryDb", () => {
   const open = () => ({
     setSyncEnabled: () => undefined,
     getSnapshot: () => ({ media: [], playlists: [] }),
@@ -409,19 +409,6 @@ describe("what an approved tool can do", () => {
     const text = await (await callTool(token, "getMediaDetails", { mediaId: "m1" })).text();
     expect(text).toContain("Alien");
     expect(text).not.toMatch(/secret\/object|initKey|chunks|objectKey/);
-  });
-
-  it("@req META-SRC-05[badger-desktop] hands an AI tool no rating, in the list or the title details", async () => {
-    openLibrary();
-    const appSide = connectApp();
-    const { token } = await grantTool(appSide.token);
-    // The library row holds `rating: 8.4` (MEDIA); neither answer may carry it.
-    const list = (await (await callTool(token, "listMedia")).json()) as { items: Array<Record<string, unknown>> };
-    const details = (await (await callTool(token, "getMediaDetails", { mediaId: "m1" })).json()) as Record<string, unknown>;
-    console.info("[META-SRC-05] tool answers", JSON.stringify({ listKeys: Object.keys(list.items[0] ?? {}), detailKeys: Object.keys(details) }));
-    expect(list.items[0]).toMatchObject({ title: "Alien", year: "1979" });
-    expect(list.items[0]).not.toHaveProperty("rating");
-    expect(JSON.stringify(details)).not.toMatch(/rating|8\.4/i);
   });
 
   it("lets a read grant read but not write, and a write grant do both @req DEV-LIB-01[runtime]", async () => {

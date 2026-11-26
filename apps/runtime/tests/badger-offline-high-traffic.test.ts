@@ -32,9 +32,9 @@ import {
   configureBadgerOfflineDeps,
   type BadgerOfflineDeps,
 } from "../src/modules/badger/offlineDownloadDeps";
-import type { StepHandlerCtx } from "@space/runtime-jobs-engine/engineV2";
+import type { StepHandlerCtx } from "../src/core/jobs/engineV2";
 import type { IngestJobRecord } from "@space/runtime-jobs";
-import type { StoredStepRecord } from "@space/runtime-jobs-engine/stepStore";
+import type { StoredStepRecord } from "../src/core/jobs/stepStore";
 
 const ts = "2026-01-01T00:00:00.000Z";
 const POLL_MS = 60_000;

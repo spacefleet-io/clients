@@ -159,31 +159,6 @@ describe("useWindowFileDrop + WindowDropOverlay", () => {
     expect(overlay().dataset.state).toBe("hidden");
   });
 
-  it("[@bugfix][@regression-proof] takes a file manager drag that lists only text/uri-list, deciding at the drop", () => {
-    // Parrot 0.1.70 on KDE Wayland, 2026-11-26: drops of a music folder did nothing, about 9 tries in 10, with no log line.
-    const onDrop = vi.fn();
-    act(() => root.render(<Harness onDrop={onDrop} />));
-    const folder = transfer({ uris: "file:///home/me/Musique/Ella%20and%20Louis" });
-    const over = dragEvent("dragover", folder);
-    act(() => {
-      document.body.dispatchEvent(dragEvent("dragenter", folder));
-      document.body.dispatchEvent(over);
-    });
-    expect(over.defaultPrevented).toBe(true);
-    expect(folder.dropEffect).toBe("copy");
-    act(() => {
-      document.body.dispatchEvent(dragEvent("drop", folder));
-    });
-    expect(onDrop).toHaveBeenCalledWith(["/home/me/Musique/Ella and Louis"]);
-
-    // A web link still drops to nothing.
-    onDrop.mockClear();
-    act(() => {
-      document.body.dispatchEvent(dragEvent("drop", transfer({ uris: "https://example.com/photo.jpg" })));
-    });
-    expect(onDrop).not.toHaveBeenCalled();
-  });
-
   it("hides the overlay once every dragenter has its dragleave, and ignores non-file drags", () => {
     const onDrop = vi.fn();
     act(() => root.render(<Harness onDrop={onDrop} />));
@@ -340,105 +315,6 @@ describe("useWindowFileDrop + WindowDropOverlay", () => {
     cast.remove();
     link.remove();
     row.remove();
-  });
-
-  it("[@bugfix][@regression-proof] takes a drop from the file manager after an in-app drag that never got its dragend (UX-ADD-01)", () => {
-    // Chris, Parrot 0.1.69 on KDE Wayland: "drag and drop doesn't work anymore". A drag that starts in the window and
-    // ends somewhere Chromium sends no dragend (outside the window, over a dialog, a compositor-cancelled drag) used
-    // to leave the hook thinking every later drag was its own: the file manager's files got "none" and no drop.
-    const onDrop = vi.fn();
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    act(() => root.render(<Harness onDrop={onDrop} getPathForFile={(file) => `/drop/${file.name}`} />));
-    const row = document.createElement("div");
-    document.body.append(row);
-    act(() => {
-      row.dispatchEvent(new Event("dragstart", { bubbles: true, cancelable: true }));
-    });
-    // No dragend. The pointer moves again: mouse events never fire during a drag, so that drag is over.
-    act(() => {
-      document.body.dispatchEvent(new MouseEvent("mousemove", { bubbles: true }));
-    });
-
-    const dt = transfer({ files: [new File(["a"], "Album")], folders: ["Album"] });
-    const over = dragEvent("dragover", dt);
-    act(() => {
-      document.body.dispatchEvent(dragEvent("dragenter", dt));
-      document.body.dispatchEvent(over);
-    });
-    console.log("[window-drop.test] after stale dragstart: overlay", overlay().dataset.state, "dropEffect", dt.dropEffect);
-    expect(overlay().dataset.state).toBe("dragging");
-    expect(dt.dropEffect).toBe("copy");
-    act(() => {
-      document.body.dispatchEvent(dragEvent("drop", dt));
-    });
-    console.log("[window-drop.test] onDrop calls", JSON.stringify(onDrop.mock.calls), "warnings", JSON.stringify(warn.mock.calls));
-    expect(onDrop).toHaveBeenCalledWith(["/drop/Album"]);
-    warn.mockRestore();
-    row.remove();
-  });
-
-  it("says in a warning (forwarded to the main log) why a file drag is not taken, once per reason, and what a drop held", () => {
-    const onDrop = vi.fn();
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    let aside = false;
-    act(() => root.render(<Harness onDrop={onDrop} standAside={() => aside} getPathForFile={(file) => `/drop/${file.name}`} />));
-    const dt = transfer({ files: [video("ep.mkv")] });
-    const lines = () => warn.mock.calls.map((call) => String(call[0]));
-
-    // A dialog that takes its own drops is on screen.
-    const dialog = document.createElement("div");
-    dialog.setAttribute("role", "dialog");
-    dialog.dataset.testid = "edit-dialog";
-    document.body.append(dialog);
-    act(() => {
-      document.body.dispatchEvent(dragEvent("dragenter", dt));
-      document.body.dispatchEvent(dragEvent("dragover", dt));
-      document.body.dispatchEvent(dragEvent("dragover", dt));
-    });
-    console.log("[window-drop.test] dialog warnings", JSON.stringify(lines()));
-    expect(lines().filter((line) => line.includes("stands aside"))).toHaveLength(1);
-    expect(lines()[0]).toContain('role="dialog"');
-    expect(lines()[0]).toContain("edit-dialog");
-    dialog.remove();
-    act(() => {
-      document.body.dispatchEvent(new MouseEvent("mousemove", { bubbles: true }));
-    });
-
-    // The app asks the window drop to stand aside (an import already running).
-    aside = true;
-    act(() => {
-      document.body.dispatchEvent(dragEvent("dragenter", dt));
-    });
-    console.log("[window-drop.test] standAside warnings", JSON.stringify(lines()));
-    expect(lines().at(-1)).toContain("the app asked it to stand aside");
-    aside = false;
-    act(() => {
-      document.body.dispatchEvent(new MouseEvent("mousemove", { bubbles: true }));
-    });
-
-    // A drag that started in the window.
-    const row = document.createElement("div");
-    document.body.append(row);
-    act(() => {
-      row.dispatchEvent(new Event("dragstart", { bubbles: true, cancelable: true }));
-      row.dispatchEvent(dragEvent("dragenter", dt));
-    });
-    console.log("[window-drop.test] internal warnings", JSON.stringify(lines()));
-    expect(lines().at(-1)).toContain("started inside the window");
-    act(() => {
-      row.dispatchEvent(new Event("dragend", { bubbles: true }));
-    });
-    row.remove();
-
-    // A taken drop says what it held.
-    act(() => {
-      document.body.dispatchEvent(dragEvent("dragenter", dt));
-      document.body.dispatchEvent(dragEvent("drop", dt));
-    });
-    console.log("[window-drop.test] drop warnings", JSON.stringify(lines()));
-    expect(onDrop).toHaveBeenCalledWith(["/drop/ep.mkv"]);
-    expect(lines().at(-1)).toContain("[window-drop] 1 importable");
-    warn.mockRestore();
   });
 
   it("startProcessing/stopProcessing drive the overlay for drops that arrive another way", () => {

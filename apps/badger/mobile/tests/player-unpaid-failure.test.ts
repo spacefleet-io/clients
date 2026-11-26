@@ -12,7 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import i18next from "i18next";
 import type { AccountAccess } from "@space/shared/accountAccess";
 import { translate } from "@space/mobile-shell/i18n";
-import en from "@space/mobile-shell/i18n/en.json";
+import en from "../../../../packages/mobile-shell/src/i18n/en.json";
 import { usePlayerSession, type PlayerSession } from "../src/screens/player/usePlayerSession";
 import { setViewingScope } from "../src/lib/profiles/activeViewingScope";
 import { playerFailureMessage } from "@space/mobile-shell/unpaid-access";
@@ -52,7 +52,7 @@ vi.mock("@space/mobile-mpv-playback", () => ({
 }));
 // vi.mock factories are hoisted above every import, so this one loads the dictionary itself.
 vi.mock("@space/mobile-shell/i18n", async () => {
-  const enDict = (await import("@space/mobile-shell/i18n/en.json")).default;
+  const enDict = (await import("../../../../packages/mobile-shell/src/i18n/en.json")).default;
   await i18next.init({
     resources: { en: { translation: enDict } },
     lng: "en",

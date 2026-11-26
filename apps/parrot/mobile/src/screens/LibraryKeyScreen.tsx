@@ -17,15 +17,6 @@ import { useTranslation } from "@space/mobile-shell/i18n";
 import { MobileKeySavedWarning } from "@space/mobile-shell/key-saved-warning";
 import { MobileMascotLoader } from "@space/mobile-shell/mascot-loader";
 import { MobileLibraryKeyStep, type MobileLibraryKeyStepProps } from "@space/mobile-shell/library-key-step";
-import { MobileUnpaidSetupStep } from "@space/mobile-shell/unpaid-setup-step";
-import { MobileKeyLoadFailedStep } from "@space/mobile-shell/key-load-failed-step";
-import {
-  KEY_STEP_META_LOG_EVENT,
-  keyStepMetaErrorClass,
-  type KeyStepMetaErrorClass,
-  type KeyStepMetaRead,
-} from "@space/shared/keyStepMetaRead";
-import { isUnpaidLibrarySetupRefusal, unpaidLibrarySetupText } from "@space/shared/unpaidLibrarySetup";
 import { PARROT_MASCOT } from "../brand";
 import { useSession } from "../state/session";
 import { useSignOut } from "../state/useSignOut";
@@ -34,12 +25,6 @@ import { scopeLogger } from "@space/mobile-shell/logger";
 import { claimAccountKey } from "../lib/library";
 
 const log = scopeLogger("library-key");
-
-// UX-KEY-02: every key-step meta read is logged with anonymous fields (step, outcome, duration, attempts, class).
-const logMetaRead = (read: KeyStepMetaRead) =>
-  read.outcome === "ok" ? log.info(KEY_STEP_META_LOG_EVENT, { ...read }) : log.warn(KEY_STEP_META_LOG_EVENT, { ...read });
-
-const readMeta = (token: string) => getLibraryMetaForKeyStep(token, "parrot", { onRead: logMetaRead });
 
 /** `checking` until the account's meta says whether a key exists; `enter` types it; `create` shows a new one. */
 type KeyStepMode = "checking" | "enter" | "create";
@@ -61,16 +46,6 @@ export const useLibraryKeyEntry = () => {
   const [error, setError] = useState<string | null>(null);
   /** A "Yes, I understand" is running: a second tap before `busy` disables the button does nothing (#3350 S15). */
   const keeping = useRef(false);
-  /**
-   * ACCT-UNPAID-06: the account's first library (the new key's claim) was refused because the plan has ended. The step
-   * says so in its place and keeps the new key; Try again claims with it again. `unpaidNote`: still not renewed.
-   */
-  const [unpaid, setUnpaid] = useState(false);
-  const [unpaidNote, setUnpaidNote] = useState<string | null>(null);
-  // UX-KEY-02: the first meta read failed (no answer in time, no connection, a server error): the Retry screen, never
-  // a new key nor the boxes; Retry (`retryLoad`) reads again.
-  const [loadFailed, setLoadFailed] = useState<KeyStepMetaErrorClass | null>(null);
-  const [loadAttempt, setLoadAttempt] = useState(0);
 
   const setValue = (_text: string, result: LibraryKeyInput) => {
     setInput(result);
@@ -90,9 +65,7 @@ export const useLibraryKeyEntry = () => {
   useEffect(() => {
     if (!token) return;
     let cancelled = false;
-    setLoadFailed(null);
-    setMode("checking");
-    void readMeta(token).then(
+    void getLibraryMetaForKeyStep(token, "parrot").then(
       (meta) => {
         if (cancelled) return;
         log.info("library_key.start", { hasKeyProbe: Boolean(meta.keyProbe) });
@@ -101,16 +74,17 @@ export const useLibraryKeyEntry = () => {
       },
       (err: unknown) => {
         if (cancelled) return;
-        // Unknown: never make a key that could replace the account's real one; say why, and read again on Retry.
-        setLoadFailed(keyStepMetaErrorClass(err));
+        // Unknown: never make a key that could replace the account's real one; ask for it, saying why.
+        log.warn("library_key.meta_failed", { message: err instanceof Error ? err.message : String(err) });
+        setError(t("parrot.key.errors.unavailable"));
+        setMode("enter");
       },
     );
     return () => {
       cancelled = true;
     };
-    // On the session and Retry only: `makeKey` follows the language, and a language change must not replace a key
-    // already shown.
-  }, [token, loadAttempt]);
+    // On the session only: `makeKey` follows the language, and a language change must not replace a key already shown.
+  }, [token]);
 
   /** Enter mode. True once the key is saved. */
   // tla: VaultKeys/Enter
@@ -119,7 +93,7 @@ export const useLibraryKeyEntry = () => {
     setError(null);
     setBusy(true);
     try {
-      const meta = await readMeta(token);
+      const meta = await getLibraryMetaForKeyStep(token, "parrot");
       const result = await checkLibraryKey(input.keyBase64, meta.keyProbe, decryptBase64ToBytes);
       if (result === "ok") {
         await saveLibraryKey(input.keyBase64);
@@ -167,11 +141,10 @@ export const useLibraryKeyEntry = () => {
     const madeElsewhere = () => {
       log.info("library_key.made_elsewhere");
       setNewKey(null);
-      setUnpaid(false);
       setMode("enter");
     };
     try {
-      const meta = await readMeta(token);
+      const meta = await getLibraryMetaForKeyStep(token, "parrot");
       if (meta.keyProbe) {
         madeElsewhere();
         return false;
@@ -182,14 +155,8 @@ export const useLibraryKeyEntry = () => {
           await claimAccountKey(token, newKey.keyBase64);
         } catch (claimErr) {
           log.warn("library_key.claim_failed", { message: claimErr instanceof Error ? claimErr.message : String(claimErr) });
-          if (isUnpaidLibrarySetupRefusal(claimErr)) {
-            log.warn("library_key.claim_unpaid", { retry: unpaid });
-            setUnpaidNote(unpaid ? unpaidLibrarySetupText(language, "parrot", "phone").notRenewed : null);
-            setUnpaid(true);
-            return false;
-          }
           // Another device may have made the account's key first (the PUT over version 0 then fails): ask for it.
-          const after = await readMeta(token).catch(() => null);
+          const after = await getLibraryMetaForKeyStep(token, "parrot").catch(() => null);
           if (after?.keyProbe) {
             madeElsewhere();
             return false;
@@ -198,8 +165,6 @@ export const useLibraryKeyEntry = () => {
         }
       }
       await saveLibraryKey(newKey.keyBase64);
-      setUnpaid(false);
-      setUnpaidNote(null);
       log.info("library_key.created", { claimed: !meta.exists });
       return true;
     } catch (err) {
@@ -222,16 +187,12 @@ export const useLibraryKeyEntry = () => {
 
   return {
     mode,
-    loadFailed,
-    retryLoad: () => setLoadAttempt((attempt) => attempt + 1),
     words: newKey?.words ?? [],
     language,
     setValue,
     ready: input.status === "ok",
     busy,
     error,
-    unpaid,
-    unpaidNote,
     submit,
     keepNewKey,
     regenerate: makeKey,
@@ -250,35 +211,7 @@ export const ParrotLibraryKeyStep = ({
   const signOut = useSignOut();
   const entry = useLibraryKeyEntry();
   const [warningOpen, setWarningOpen] = useState(false);
-  if (entry.loadFailed) {
-    return (
-      <MobileKeyLoadFailedStep
-        language={entry.language}
-        errorClass={entry.loadFailed}
-        step={rest.step}
-        total={rest.total}
-        header={rest.header}
-        onBack={() => void signOut()}
-        onRetry={entry.retryLoad}
-      />
-    );
-  }
   if (entry.mode === "checking") return <MobileMascotLoader app="parrot" source={PARROT_MASCOT} size={120} />;
-  if (entry.unpaid) {
-    return (
-      <MobileUnpaidSetupStep
-        language={entry.language}
-        app="parrot"
-        step={rest.step}
-        total={rest.total}
-        header={rest.header}
-        onBack={() => void signOut()}
-        onTryAgain={() => void entry.keepNewKey().then((saved) => (saved ? onKeySaved?.() : undefined))}
-        tryingAgain={entry.busy}
-        message={entry.unpaidNote}
-      />
-    );
-  }
   const show = entry.mode === "create";
   // ACCT-DEV-04: the new key's line and the warning before leaving it, in Parrot's word for the library.
   const warning = keySavedWarningText(entry.language, "parrot");

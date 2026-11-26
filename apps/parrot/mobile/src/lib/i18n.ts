@@ -16,7 +16,7 @@ import nl from "../i18n/nl.json";
  * The language this phone shows, remembered for the next starts: the one picked before sign-in, then the account's one
  * language while signed in (UX-I18N-07, `./accountLanguage`).
  */
-export const PARROT_LANGUAGE_KEY = "parrot.uiLanguage";
+const LANGUAGE_KEY = "parrot.uiLanguage";
 
 type Tree = { [key: string]: string | Tree };
 
@@ -45,7 +45,7 @@ export const PARROT_TRANSLATIONS = {
 };
 
 const readSavedLanguage = async (): Promise<string | null> => {
-  const saved = await AsyncStorage.getItem(PARROT_LANGUAGE_KEY).catch(() => null);
+  const saved = await AsyncStorage.getItem(LANGUAGE_KEY).catch(() => null);
   return isMobileUiLanguage(saved) ? saved : null;
 };
 
@@ -60,5 +60,5 @@ export const startI18n = async (): Promise<void> => {
 export const setParrotLanguage = async (code: string): Promise<void> => {
   if (!isMobileUiLanguage(code)) return;
   await changeLanguage(code);
-  await AsyncStorage.setItem(PARROT_LANGUAGE_KEY, code);
+  await AsyncStorage.setItem(LANGUAGE_KEY, code);
 };

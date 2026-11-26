@@ -75,8 +75,8 @@ describe("desktop decoder fallback wiring (PLAY-CODEC-01/02/03)", () => {
     expect(found).toEqual(allTrue(found));
   });
 
-  /** @req PLAY-CODEC-03[badger-desktop] @req PLAY-QUAL-03[badger-desktop] @req UX-NOTICE-11[badger-desktop] */
-  it("nothing lighter left (or pinned): a 'not powerful enough' notice with Keep watching that leaves on its time and replaces itself, never a pause", () => {
+  /** @req PLAY-CODEC-03[badger-desktop] @req PLAY-QUAL-03[badger-desktop] */
+  it("nothing lighter left (or pinned): a lasting 'not powerful enough' notice with Keep watching, never a pause", () => {
     const tooWeak = engine.slice(engine.indexOf('if (action.kind === "too-weak")'), engine.indexOf('if (action.kind !== "switch") return;'));
     console.info(`${LOG} phase=too-weak-branch length=${tooWeak.length}`);
     const checks = {
@@ -85,9 +85,7 @@ describe("desktop decoder fallback wiring (PLAY-CODEC-01/02/03)", () => {
       message: tooWeak.includes('t("player.deviceTooWeak.message")'),
       pinnedHint: /action\.pinned \? `\$\{message\} \$\{t\("player\.deviceTooWeak\.pinnedHint"\)\}` : message/.test(tooWeak),
       keepWatching: tooWeak.includes('label: t("player.deviceTooWeak.keepWatching")'),
-      // UX-NOTICE-11: no notice stays for good; one key per file so a repeat replaces it.
-      leaves: !tooWeak.includes("duration"),
-      keyed: tooWeak.includes("key: `abr-too-weak:${currentFmt.id}`"),
+      lasts: tooWeak.includes("duration: Infinity"),
       neverSwitchesOrPauses: !/selectFixedFormatRef|"pause"|cycle pause/.test(tooWeak),
     };
     console.info(`${LOG} phase=too-weak ${JSON.stringify(checks)}`);

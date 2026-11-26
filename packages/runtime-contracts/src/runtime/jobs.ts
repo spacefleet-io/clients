@@ -291,99 +291,14 @@ export const runtimeJobsDismissCommand = {
   resultSchema: runtimeJobsDismissResultSchema,
 } as const;
 
-/**
- * The one action a failed import offers (UX-JOBS-03), decided from what is
- * still on disk when the panel asks:
- * - `upload_again`: the processed copy is kept, only the upload failed.
- * - `process_again`: no processed copy, the original file is there unchanged.
- * - `find_file`: the original file is not where it was, or it changed.
- * - `remove_only`: the original file was deleted, or there is nothing to run again.
- * - `already_in_library`: the same video was imported since.
- * - `upgrade_plan`: the storage plan is full.
- * - `free_space`: this computer's disk is full.
- */
-export const failedJobActionSchema = z.enum([
-  "upload_again",
-  "process_again",
-  "find_file",
-  "remove_only",
-  "already_in_library",
-  "upgrade_plan",
-  "free_space",
-]);
-export type FailedJobAction = z.infer<typeof failedJobActionSchema>;
-
-/** Why the action was chosen; the panel words its "what it means" line from it. */
-export const failedJobReasonSchema = z.enum([
-  "upload_quota",
-  "disk_full",
-  "reimported",
-  "kept_outputs",
-  "source_unchanged",
-  "kept_removed_low_disk",
-  "kept_removed_expired",
-  "source_changed",
-  "source_missing",
-  "picked_mismatch",
-  "source_deleted",
-  "no_source_path",
-  "parent_failed",
-  "not_retryable",
-]);
-export type FailedJobReason = z.infer<typeof failedJobReasonSchema>;
-
-export const failedJobAvailabilitySchema = z.object({
-  jobId: z.string().min(1),
-  action: failedJobActionSchema,
-  reason: failedJobReasonSchema,
-  /** For `upgrade_plan` / `free_space`: the action once the plan or disk has room. */
-  nextAction: failedJobActionSchema.nullable(),
-  /** Bytes of the kept processed copy on this computer, or null when none is kept. */
-  keptBytes: z.number().int().nonnegative().nullable(),
-  /** ISO time the kept copy is removed at the latest (14 days after the failure). */
-  keptUntil: z.string().nullable(),
-});
-export type FailedJobAvailability = z.infer<typeof failedJobAvailabilitySchema>;
-
-export const runtimeJobsAvailabilityPayloadSchema = z.object({
-  jobIds: z.array(z.string().min(1)).max(500),
-});
-
-export const runtimeJobsAvailabilityResultSchema = z.object({
-  jobs: z.array(failedJobAvailabilitySchema),
-  /** Sum of `keptBytes` over the answered jobs. */
-  keptBytesTotal: z.number().int().nonnegative(),
-});
-export type RuntimeJobsAvailabilityResult = z.infer<typeof runtimeJobsAvailabilityResultSchema>;
-
-export const runtimeJobsAvailabilityCommand = {
-  name: "runtime.jobs.availability" as const,
-  payloadSchema: runtimeJobsAvailabilityPayloadSchema,
-  resultSchema: runtimeJobsAvailabilityResultSchema,
-} as const;
-
-/**
- * `mode` picks what runs again (UX-JOBS-03): `upload` resumes from the kept
- * processed copy, `process` processes the original file again, `relocate`
- * uses the file at `path` after checking it is the same video. Omitted: the
- * mode the job's current action calls for.
- */
 export const runtimeJobsRetryPayloadSchema = z.object({
   jobId: z.string().min(1),
-  mode: z.enum(["upload", "process", "relocate"]).optional(),
-  path: z.string().min(1).optional(),
 });
-export type RuntimeJobsRetryPayload = z.infer<typeof runtimeJobsRetryPayloadSchema>;
 
 export const runtimeJobsRetryResultSchema = z.object({
   retried: z.boolean(),
-  /** The retried job's id; a retry runs in place, so it equals the asked jobId. */
   newJobId: z.string().min(1).optional(),
-  /** When refused: the action that fits now (the files changed since the panel asked). */
-  action: failedJobActionSchema.optional(),
-  reason: failedJobReasonSchema.optional(),
 });
-export type RuntimeJobsRetryResult = z.infer<typeof runtimeJobsRetryResultSchema>;
 
 export const runtimeJobsRetryCommand = {
   name: "runtime.jobs.retry" as const,

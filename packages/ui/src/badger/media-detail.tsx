@@ -67,7 +67,7 @@ type MediaDetailPageProps = {
   title: ReactNode;
   /** Under the title: original title. */
   subtitle?: ReactNode;
-  /** "1927 · 2h 33m": year, runtime; never a rating (META-SRC-05). */
+  /** "1927 · 7.4 · 2h 33m": year, rating, runtime. */
   meta: ReactNode;
   /** Just under the meta line: the title's genres as icon pills (`MediaDetailGenres`). */
   genres?: ReactNode;

@@ -161,15 +161,11 @@ describe("makeParrotCoverCopies", () => {
     return { width: image.width, height: image.height, mime: parrotCoverMime(bytes) };
   };
 
-  // Pure-JS JPEG work on a 7.2 MP picture: about 1.5 s alone, past 5 s with three other suites on the CI runner
-  // (quick-checks run 52346: 2.2 s in makeParrotCoverCopies alone). CPU-bound, no waiting on anything, so it gets
-  // the same budget as the 4 MiB case below instead of bun's 5 s default.
   it("shrinks a print-size JPEG to a 1200 px large copy and a 500 px small copy, both far smaller", () => {
-    const fixtureStarted = performance.now();
     const original = new Uint8Array(jpeg.encode(solid(3000, 2400, [200, 40, 40, 255]), 95).data);
     const started = performance.now();
     const copies = makeParrotCoverCopies(original, (m) => clog(m))!;
-    clog("copies", { fixtureMs: Math.round(started - fixtureStarted), ms: Math.round(performance.now() - started), original: original.length, large: copies.large.length, thumb: copies.thumb?.length });
+    clog("copies", { ms: Math.round(performance.now() - started), original: original.length, large: copies.large.length, thumb: copies.thumb?.length });
     expect(size(copies.large)).toEqual({ width: PARROT_COVER_LARGE_WIDTH, height: 960, mime: "image/jpeg" });
     expect(size(copies.thumb!)).toEqual({ width: PARROT_COVER_THUMB_WIDTH, height: 400, mime: "image/jpeg" });
     expect(copies.large.length).toBeLessThan(original.length);
@@ -179,7 +175,7 @@ describe("makeParrotCoverCopies", () => {
     clog("thumb first pixel", Array.from(pixel.subarray(0, 4)));
     expect(Math.abs(pixel[0]! - 200)).toBeLessThan(8);
     expect(Math.abs(pixel[1]! - 40)).toBeLessThan(8);
-  }, 30_000);
+  });
 
   it("keeps a picture no wider than 1200 px as it is and adds a small copy only when it is wider than 500 px", () => {
     const medium = new Uint8Array(jpeg.encode(solid(800, 800, [10, 200, 10, 255]), 90).data);

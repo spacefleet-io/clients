@@ -10,16 +10,13 @@ import { Check, ChevronDown, Plus } from "lucide-react";
 import { PROFILE_AVATAR_URLS } from "@space/profile-avatars/web";
 import { PROFILE_AVATAR_IDS, nextProfileAvatarId, profileAvatarIdOf, type ProfileAvatarId } from "@space/shared/profileAvatars";
 import { MAX_PROFILES_FREE, MAX_PROFILES_PAID, PROFILE_ERRORS, canCreateProfile, canDeleteProfile, normalizeProfileName, type ApiProfile } from "@space/shared/profiles";
-import { isClientUiLanguage } from "@space/shared/i18n";
 import {
-  NO_LIBRARY_MOVES,
   ProfileActionError,
   profileErrorKey,
   type ProfileErrorCode,
   type ProfileStore,
   type ProfilesSnapshot,
 } from "@space/shared/profileStore";
-import { profilesTranslator } from "@space/shared/profileTexts";
 import { Button } from "./button";
 import { Input } from "./input";
 import { cn } from "./utils";
@@ -722,75 +719,5 @@ export function ProfileMenuItems({
         {signOutLabel}
       </button>
     </>
-  );
-}
-
-/**
- * Where nobody is asked "Who's listening?" (Parrot desktop and web player: playback names the account's main
- * profile, STOR-BW-11): when the store would ask (several profiles, none kept), the main profile becomes the current
- * one until another is picked in the top bar's menu.
- */
-export const useMainProfileWhenUnchosen = (store: ProfileStore | null, log: ProfilesLog): void => {
-  useEffect(() => {
-    if (!store) return;
-    const settle = () => {
-      const snapshot = store.getSnapshot();
-      if (snapshot.status !== "ready" || !snapshot.needsChoice) return;
-      const main = snapshot.profiles.find((profile) => profile.isMain) ?? snapshot.profiles[0];
-      if (!main) return;
-      log("profiles.main_current", { profileId: main.id, count: snapshot.profiles.length });
-      void store.selectProfile(main.id);
-    };
-    settle();
-    return store.subscribe(settle);
-  }, [store, log]);
-};
-
-/** Parrot's profile words ("Who's listening?", the listening delete warning) in `language`, English for one it lacks. */
-export const parrotProfilesT = (language: string): ProfilesText =>
-  profilesTranslator(isClientUiLanguage(language) ? language : "en", { listening: true });
-
-/** Parrot's top bar avatar menu (UX-TOP-02) on desktop and the web player: the shared menu in Parrot's words. */
-export function ParrotProfileMenu({ language, ...props }: Omit<ProfileMenuProps, "t"> & { language: string }) {
-  return <ProfileMenu {...props} t={parrotProfilesT(language)} />;
-}
-
-/**
- * Parrot's Settings ▸ Account ▸ Profiles on desktop and the web player: the account's profiles with their avatars,
- * added, edited (ACCT-PROF-05) and deleted with the API's limits; a delete moves nothing (`NO_LIBRARY_MOVES`).
- * `startWith: "add"` opens straight on a new profile (the menu's "Add profile"). The list is read again when the page
- * opens, so a profile changed on another device or the website shows here, and again when the plan dialog over the
- * page (`planOpen`, desktop) closes, so its limit follows a plan change.
- */
-export function ParrotProfilesSection({
-  store,
-  language,
-  log,
-  planOpen = false,
-  startWith,
-}: {
-  store: ProfileStore;
-  language: string;
-  log: ProfilesLog;
-  planOpen?: boolean;
-  startWith?: "add";
-}) {
-  const refreshed = useRef(false);
-  useEffect(() => {
-    if (refreshed.current) return;
-    refreshed.current = true;
-    if (store.getSnapshot().status === "ready") void store.refresh();
-  }, [store]);
-  const planWasOpen = useRef(planOpen);
-  useEffect(() => {
-    if (planWasOpen.current && !planOpen) void store.refresh();
-    planWasOpen.current = planOpen;
-  }, [store, planOpen]);
-  const t = parrotProfilesT(language);
-  return (
-    <section data-testid="settings-profiles" className="mt-6 space-y-2">
-      <h3 className="text-sm font-semibold">{t("profiles.settingsGroup")}</h3>
-      <ProfilesManager store={store} deleteProfile={(profileId) => store.deleteProfile(profileId, NO_LIBRARY_MOVES)} log={log} t={t} startWith={startWith} />
-    </section>
   );
 }

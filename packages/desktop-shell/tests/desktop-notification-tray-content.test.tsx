@@ -63,10 +63,9 @@ describe("desktop notification tray content", () => {
     expectContains("render-actions-slot", source, "renderActions?.(n)");
   });
 
-  it("@req UX-NOTICE-13[badger-desktop,parrot,parrot-web-player] takes its words from the shared notify texts, in the app's language", () => {
-    expectContains("i18n-shared", source, "filterLabel(level, t)");
-    expectContains("i18n-shared", source, 't("notify.filterAll")');
-    expectContains("i18n-shared", source, "titleText(t, n)");
+  it("accepts labels prop for i18n instead of a translation function", () => {
+    expectContains("i18n-labels", source, "NotificationTrayLabels");
+    expectContains("i18n-labels", source, "filterLabel(level, labels)");
   });
 
   it("[@bugfix][@regression-proof] defers the actual remove call through the shared dismiss scheduler", () => {

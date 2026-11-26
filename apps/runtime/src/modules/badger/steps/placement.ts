@@ -16,7 +16,7 @@
  */
 import { randomUUID } from "node:crypto";
 import { isValidPlacementId } from "@space/shared/storagePlacement";
-import type { IngestJobRecord } from "@space/runtime-jobs-engine/engineV2";
+import type { IngestJobRecord } from "../../../core/jobs/engineV2";
 import type { BadgerStepDeps } from "./deps";
 
 type PlacementDeps = Pick<BadgerStepDeps, "lookupJobPlacementId" | "persistJobPlacementId">;

@@ -23,7 +23,7 @@
  */
 /// <reference path="./pngjs.d.ts" />
 import { promises as fs } from "node:fs";
-import { dirname, join as joinPath } from "node:path";
+import { join as joinPath } from "node:path";
 import { PNG } from "pngjs";
 import {
   PREVIEW_INTERVAL_SECONDS,
@@ -31,17 +31,6 @@ import {
   PREVIEW_SHEET_COLUMNS,
   PREVIEW_SHEET_ROWS,
 } from "@space/shared/previewSheets";
-import {
-  SKIP_PICTURE_FPS,
-  SKIP_PICTURE_HEIGHT,
-  SKIP_PICTURE_WIDTH,
-  skipPictureFrame,
-  skipPictureHeadSeconds,
-  skipPictureTailOffset,
-  skipPictureWindowToPayload,
-  type SkipPicturePayload,
-  type SkipPictureWindow,
-} from "./skipDetect/picture";
 
 /** JPEG quantiser of a sheet (`mjpeg -q:v`), agent reading approved by Main (2026-10-30, MPV-PREV-01 notes). */
 export const PREVIEW_JPEG_QSCALE = 10;
@@ -65,8 +54,6 @@ export type GeneratedPreviewSheets = {
   /** Pictures ffmpeg actually wrote (the plan pads or trims to `pictureCount`). */
   decodedPictures: number;
   sheets: GeneratedPreviewSheet[];
-  /** The skip-detection picture windows written by the same decode; null when not asked or not readable. */
-  skipPicture: SkipPicturePayload | null;
 };
 
 export type PreviewFfmpegRunner = (args: string[]) => Promise<unknown>;
@@ -138,90 +125,14 @@ const previewDecodeArgs = (hardware: PreviewHardwareDecode | null): { input: str
   }
 };
 
-/**
- * The skip-detection picture windows (META-SKIP-04) the same decode writes as extra outputs: 160x90 grey PNGs, 4 per
- * second, of the head window (`-t headSeconds`) and the tail window (`-ss tailOffsetSeconds`).
- * Frame k of a window shows the video at `offset + k / 4`.
- */
-export type SkipPictureOutputs = {
-  headPattern: string;
-  headSeconds: number;
-  tailPattern: string;
-  tailOffsetSeconds: number;
-};
-
-const skipPictureFilter = (hardware: PreviewHardwareDecode | null, decodeFilter: string) => {
-  const grey = `scale=${SKIP_PICTURE_WIDTH}:${SKIP_PICTURE_HEIGHT}:flags=fast_bilinear,format=gray`;
-  // CUDA scales straight to the skip size with nearest sampling, which keeps credits text as sharp as the CPU path's
-  // `fast_bilinear`: the card's bilinear averages the thin white letters away, and the credits test then sees no text
-  // on the dark frames (Parks and Recreation S2E01–E04 lost every credits start that way).
-  if (hardware?.kind === "cuda") {
-    return `hwupload,scale_cuda=${SKIP_PICTURE_WIDTH}:${SKIP_PICTURE_HEIGHT}:interp_algo=nearest:format=nv12,hwdownload,format=nv12,format=gray`;
-  }
-  // VA-API frames stay on the card until the decode chain's `hwdownload`; the CPU path scales once.
-  return hardware?.kind === "vaapi" ? `${decodeFilter},${grey}` : grey;
-};
-
-const skipPictureOutputArgs = (filter: string, threadsOutput: string[], window: string[], pattern: string) => [
-  "-map",
-  "0:V:0",
-  "-an",
-  "-sn",
-  "-dn",
-  "-vf",
-  filter,
-  ...threadsOutput,
-  ...window,
-  "-r",
-  String(SKIP_PICTURE_FPS),
-  "-c:v",
-  "png",
-  "-f",
-  "image2",
-  pattern,
-];
-
-/**
- * ffmpeg arguments of the sampling pass (exported for the arg-shape tests). `hardware` null decodes on the CPU.
- * `framePattern` null writes only the skip-detection windows (a signatures-only run); every output shares one decode.
- */
+/** ffmpeg arguments of the sampling pass (exported for the arg-shape tests). `hardware` null decodes on the CPU. */
 export const buildPreviewSampleArgs = (args: {
   inputPath: string;
-  framePattern: string | null;
+  framePattern: string;
   threads: { input: string[]; output: string[] };
   hardware?: PreviewHardwareDecode | null;
-  skipPicture?: SkipPictureOutputs | null;
 }) => {
-  const hardware = args.hardware ?? null;
-  const decode = previewDecodeArgs(hardware);
-  const outputs: string[] = [];
-  if (args.framePattern) {
-    outputs.push(
-      // `V` (capital) skips attached cover pictures, which Matroska / MP4 list as video streams.
-      "-map",
-      "0:V:0",
-      "-an",
-      "-sn",
-      "-dn",
-      "-vf",
-      decode.filter,
-      ...args.threads.output,
-      "-r",
-      `1/${PREVIEW_INTERVAL_SECONDS}`,
-      "-c:v",
-      "png",
-      "-f",
-      "image2",
-      args.framePattern
-    );
-  }
-  const skip = args.skipPicture;
-  if (skip) {
-    const filter = skipPictureFilter(hardware, decode.filter);
-    outputs.push(...skipPictureOutputArgs(filter, args.threads.output, ["-t", skip.headSeconds.toFixed(3)], skip.headPattern));
-    outputs.push(...skipPictureOutputArgs(filter, args.threads.output, ["-ss", skip.tailOffsetSeconds.toFixed(3)], skip.tailPattern));
-  }
-  if (outputs.length === 0) throw new Error("PREVIEW_NO_OUTPUT");
+  const decode = previewDecodeArgs(args.hardware ?? null);
   return [
     "-nostdin",
     "-y",
@@ -236,97 +147,23 @@ export const buildPreviewSampleArgs = (args: {
     "all",
     "-i",
     args.inputPath,
-    ...outputs,
+    // `V` (capital) skips attached cover pictures, which Matroska / MP4 list as video streams.
+    "-map",
+    "0:V:0",
+    "-an",
+    "-sn",
+    "-dn",
+    "-vf",
+    decode.filter,
+    ...args.threads.output,
+    "-r",
+    `1/${PREVIEW_INTERVAL_SECONDS}`,
+    "-c:v",
+    "png",
+    "-f",
+    "image2",
+    args.framePattern,
   ];
-};
-
-/** The windows of a video of `durationSeconds`, under `dir`. */
-export const planSkipPictureOutputs = (dir: string, durationSeconds: number): SkipPictureOutputs => ({
-  headPattern: joinPath(dir, "head", "%06d.png"),
-  headSeconds: skipPictureHeadSeconds(durationSeconds),
-  tailPattern: joinPath(dir, "tail", "%06d.png"),
-  tailOffsetSeconds: skipPictureTailOffset(durationSeconds),
-});
-
-const prepareSkipPictureDirs = async (outputs: SkipPictureOutputs) => {
-  for (const pattern of [outputs.headPattern, outputs.tailPattern]) {
-    await fs.rm(dirname(pattern), { recursive: true, force: true });
-    await fs.mkdir(dirname(pattern), { recursive: true });
-  }
-};
-
-/** Hash every grey picture of one window directory, in order (one picture in memory at a time). */
-const readSkipPictureWindow = async (dir: string, offsetSeconds: number): Promise<SkipPictureWindow> => {
-  const names = (await fs.readdir(dir)).filter((name) => name.endsWith(".png")).sort();
-  const hashes = new Uint32Array(names.length * 2);
-  const flags = new Uint8Array(names.length);
-  const gray = new Uint8Array(SKIP_PICTURE_WIDTH * SKIP_PICTURE_HEIGHT);
-  for (const [index, name] of names.entries()) {
-    const picture = PNG.sync.read(await fs.readFile(joinPath(dir, name)));
-    if (picture.width !== SKIP_PICTURE_WIDTH || picture.height !== SKIP_PICTURE_HEIGHT) {
-      throw new Error(`SKIP_PICTURE_SIZE:${name}:${picture.width}x${picture.height}`);
-    }
-    for (let i = 0; i < gray.length; i++) gray[i] = picture.data[i * 4]!;
-    const frame = skipPictureFrame(gray);
-    hashes[index * 2] = frame.lo;
-    hashes[index * 2 + 1] = frame.hi;
-    flags[index] = frame.flags;
-  }
-  return { offsetSeconds, hashes, flags };
-};
-
-/** The picture half of a skip signature from the windows a sampling pass wrote. Throws when a window is empty. */
-const readSkipPicture = async (outputs: SkipPictureOutputs): Promise<SkipPicturePayload> => {
-  const head = await readSkipPictureWindow(dirname(outputs.headPattern), 0);
-  const tail = await readSkipPictureWindow(dirname(outputs.tailPattern), outputs.tailOffsetSeconds);
-  if (head.flags.length === 0 || tail.flags.length === 0) throw new Error("SKIP_PICTURE_EMPTY");
-  return { fps: SKIP_PICTURE_FPS, head: skipPictureWindowToPayload(head), tail: skipPictureWindowToPayload(tail) };
-};
-
-const removeSkipPictureDirs = async (outputs: SkipPictureOutputs | null) => {
-  if (!outputs) return;
-  for (const pattern of [outputs.headPattern, outputs.tailPattern]) await fs.rm(dirname(pattern), { recursive: true, force: true });
-};
-
-/**
- * Signatures-only run (a video that already has its preview sheets): one decode writes only the two windows.
- * Falls back to the CPU like `generatePreviewSheets`.
- */
-export const generateSkipPicture = async (args: {
-  inputPath: string;
-  workDir: string;
-  durationSeconds: number;
-  run: PreviewFfmpegRunner;
-  threads: { input: string[]; output: string[] };
-  hardware?: PreviewHardwareDecode | null;
-  signal?: AbortSignal;
-  onLog?: (line: string) => void;
-}): Promise<SkipPicturePayload> => {
-  const outputs = planSkipPictureOutputs(args.workDir, args.durationSeconds);
-  const sample = async (hardware: PreviewHardwareDecode | null) => {
-    await prepareSkipPictureDirs(outputs);
-    const startedAt = Date.now();
-    await args.run(buildPreviewSampleArgs({ inputPath: args.inputPath, framePattern: null, threads: args.threads, hardware, skipPicture: outputs }));
-    // A pass told to give way (MPV-PREV-07) does not hash the pictures of a decode that ended as it was told.
-    if (args.signal?.aborted) throw new Error("CANCELLED");
-    return readSkipPicture(outputs).then((picture) => ({ picture, ms: Date.now() - startedAt }));
-  };
-  try {
-    const hardware = args.hardware ?? null;
-    try {
-      const { picture, ms } = await sample(hardware);
-      args.onLog?.(`[skip-detect] picture.sampled decode=${hardware?.kind ?? "cpu"} ms=${ms}`);
-      return picture;
-    } catch (error) {
-      if (!hardware || args.signal?.aborted) throw error;
-      args.onLog?.(`[skip-detect] ${hardware.kind} decode failed, sampling again on the CPU: ${error instanceof Error ? error.message : String(error)}`);
-      const { picture, ms } = await sample(null);
-      args.onLog?.(`[skip-detect] picture.sampled decode=cpu ms=${ms}`);
-      return picture;
-    }
-  } finally {
-    await removeSkipPictureDirs(outputs);
-  }
 };
 
 /** ffmpeg arguments that turn one raw RGB sheet into the stored JPEG. */
@@ -374,25 +211,16 @@ export const generatePreviewSheets = async (args: {
   hardware?: PreviewHardwareDecode | null;
   signal?: AbortSignal;
   onLog?: (line: string) => void;
-  /** Also write the skip-detection picture windows (META-SKIP-04): an episode's run. */
-  skipPicture?: boolean;
 }): Promise<GeneratedPreviewSheets> => {
   const log = (line: string) => args.onLog?.(`[preview-sheets] ${line}`);
   const framesDir = joinPath(args.workDir, "frames");
   await fs.rm(args.workDir, { recursive: true, force: true });
   await fs.mkdir(framesDir, { recursive: true });
-  const skipOutputs =
-    args.skipPicture && args.durationSeconds && args.durationSeconds >= 60
-      ? planSkipPictureOutputs(joinPath(args.workDir, "skip"), args.durationSeconds)
-      : null;
   try {
     const framePattern = joinPath(framesDir, "%06d.png");
     const sample = async (hardware: PreviewHardwareDecode | null) => {
-      if (skipOutputs) await prepareSkipPictureDirs(skipOutputs);
       const startedAt = Date.now();
-      await args.run(
-        buildPreviewSampleArgs({ inputPath: args.inputPath, framePattern, threads: args.threads, hardware, skipPicture: skipOutputs })
-      );
+      await args.run(buildPreviewSampleArgs({ inputPath: args.inputPath, framePattern, threads: args.threads, hardware }));
       return Date.now() - startedAt;
     };
     const hardware = args.hardware ?? null;
@@ -414,19 +242,6 @@ export const generatePreviewSheets = async (args: {
     const frames = (await fs.readdir(framesDir)).filter((name) => name.endsWith(".png")).sort();
     log(`sampled pictures=${frames.length} decode=${decodedOn} ms=${sampleMs} durationSeconds=${args.durationSeconds ?? "unknown"}`);
     if (frames.length === 0) throw new Error("PREVIEW_NO_PICTURES");
-
-    // The skip windows are optional on top of the sheets: one that cannot be read leaves the sheets as they are.
-    let skipPicture: SkipPicturePayload | null = null;
-    if (skipOutputs) {
-      try {
-        skipPicture = await readSkipPicture(skipOutputs);
-        log(`skip pictures head=${skipPicture.head.flags.length ? Buffer.from(skipPicture.head.flags, "base64").byteLength : 0} tail=${Buffer.from(skipPicture.tail.flags, "base64").byteLength}`);
-      } catch (error) {
-        log(`skip pictures unreadable: ${error instanceof Error ? error.message : String(error)}`);
-      } finally {
-        await removeSkipPictureDirs(skipOutputs);
-      }
-    }
 
     // The duration decides the count (one per started 5 s); ffmpeg's output-rate sampling can land one picture
     // over or under it at the end, which is trimmed or padded with the last picture.
@@ -484,10 +299,8 @@ export const generatePreviewSheets = async (args: {
       pictureCount,
       decodedPictures: frames.length,
       sheets,
-      skipPicture,
     };
   } finally {
     await fs.rm(framesDir, { recursive: true, force: true });
-    await removeSkipPictureDirs(skipOutputs);
   }
 };

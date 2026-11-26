@@ -3,7 +3,7 @@
  * desktop app and the web player (REL-FAM-02). Texts arrive translated and posters as elements, like the poster grid.
  */
 import type { ReactNode } from "react";
-import { Loader2, PlayCircle } from "lucide-react";
+import { Loader2, PlayCircle, Star } from "lucide-react";
 import { Button } from "../button";
 import { RenderBoundary } from "../render-boundary";
 import { UNAVAILABLE_CLASS } from "../unavailable";
@@ -18,6 +18,8 @@ export type BadgerLibraryListRow = {
   posterBadge?: ReactNode;
   /** Details line: year, seasons, runtime, already formatted. */
   meta: string[];
+  /** The rating as shown ("7.8"), null when unknown. */
+  ratingText: string | null;
   /** Localised genre names. */
   genres: string[];
   /** Details view's summary; null draws none. */
@@ -104,6 +106,12 @@ export function BadgerLibraryList({
                       {row.meta.map((entry) => (
                         <span key={entry}>{entry}</span>
                       ))}
+                      {row.ratingText ? (
+                        <span className="inline-flex items-center gap-1 text-[#ffaa54]">
+                          <Star className="h-3.5 w-3.5 fill-current" />
+                          {row.ratingText}
+                        </span>
+                      ) : null}
                     </div>
                     {row.genres.length > 0 ? (
                       <div className="mt-2 flex flex-wrap gap-1.5">
@@ -138,6 +146,10 @@ export function BadgerLibraryList({
                   </div>
                 ) : null}
               </div>
+
+              {compact && row.ratingText ? (
+                <span className="shrink-0 rounded-full bg-[#ffaa54] px-2 py-0.5 text-[11px] font-semibold text-[#0d1117]">{row.ratingText}</span>
+              ) : null}
 
               {onPlay && !inert && !row.disabled ? (
                 <Button

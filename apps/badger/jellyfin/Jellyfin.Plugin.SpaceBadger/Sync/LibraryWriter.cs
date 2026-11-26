@@ -375,6 +375,11 @@ public sealed class LibraryWriter
             root.Add(new XElement("year", title.Year));
         }
 
+        if (title.Rating is { } rating)
+        {
+            root.Add(new XElement("rating", rating.ToString("0.0", CultureInfo.InvariantCulture)));
+        }
+
         foreach (var genre in title.Genres)
         {
             root.Add(new XElement("genre", genre));

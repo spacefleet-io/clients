@@ -1,40 +1,25 @@
 /**
  * Tests for the shared main-process updater `createDesktopUpdater` (packages/desktop-shell/src/updater/main.ts),
- * used by Badger and Parrot desktop (REL-UPD-01, REL-UPD-02, REL-UPD-08).
+ * used by Badger and Parrot desktop (REL-UPD-01, REL-UPD-02).
  *
  * Everything is injected: a fake Electron `app` / `ipcMain`, a fake electron-updater `autoUpdater` (event emitter +
- * spies), a fake window, logger, ignored-version store and callbacks. Global `fetch` is stubbed for release-status;
- * fake timers drive the 4-hour automatic check and the wake / focus nudges.
+ * spies), a fake window, logger and callbacks. Global `fetch` is stubbed for release-status; fake timers drive the
+ * 6-hour automatic check.
  *
  * Diagnostic logging (tests-log-generously): suite id `updater-main`, phase markers `[updater-main:<test>:<phase>]`,
  * `harness.dump(label)` prints the full fake state before assertions.
  */
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createDesktopUpdater,
-  ignoredVersionFileStore,
   SYSTEM_RELAUNCH_DELAY_MS,
   SYSTEM_UPDATE_HOLD_MS,
   type AutoUpdaterLike,
   type DesktopUpdaterOptions,
-  type IgnoredVersionStore,
   type UpdaterWindow,
 } from "../src/updater/main";
-import type { SystemProbe, SystemUpdateOutcome } from "../src/updater/systemPackage";
-import type { FlatpakPortal, FlatpakUpdateProgress } from "../src/updater/flatpakPortal";
-import {
-  AUTO_UPDATE_FOCUS_GAP_MS,
-  AUTO_UPDATE_INTERVAL_MS,
-  AUTO_UPDATE_MIN_GAP_MS,
-  AUTO_UPDATE_START_DELAY_MS,
-  UPDATE_REMIND_LATER_MS,
-  UPDATER_CHANNELS,
-  type UpdaterEvent,
-  type UpdaterState,
-} from "../src/updater/types";
+import type { SystemProbe } from "../src/updater/systemPackage";
+import { AUTO_UPDATE_INTERVAL_MS, UPDATER_CHANNELS, type UpdaterEvent, type UpdaterState } from "../src/updater/types";
 
 type Handler = (event: unknown, ...args: unknown[]) => unknown;
 type FetchAnswer = { ok: boolean; json?: () => Promise<unknown> } | Error;
@@ -68,25 +53,6 @@ const fakeProbe = (
   return { probe, run, relaunchAfterExit };
 };
 
-/**
- * A fake Flatpak portal: `version` (0 = missing), the progress steps `update` reports before `outcome`, and whether
- * `spawnLatest` fails.
- */
-const fakePortal = (
-  o: { version?: number; steps?: FlatpakUpdateProgress[]; outcome?: SystemUpdateOutcome; spawnError?: string } = {},
-) => {
-  const update = vi.fn(async (onProgress: (progress: FlatpakUpdateProgress) => void): Promise<SystemUpdateOutcome> => {
-    for (const step of o.steps ?? []) onProgress(step);
-    return o.outcome ?? { result: "updated", before: null, after: null };
-  });
-  const spawnLatest = vi.fn(async (_argv: readonly string[]): Promise<number> => {
-    if (o.spawnError) throw new Error(o.spawnError);
-    return 4242;
-  });
-  const portal: FlatpakPortal = { version: vi.fn(async () => o.version ?? 0), update, spawnLatest };
-  return { portal, update, spawnLatest };
-};
-
 const flush = async (): Promise<void> => {
   for (let i = 0; i < 10; i += 1) await Promise.resolve();
 };
@@ -102,10 +68,6 @@ const makeHarness = (
     fetchAnswer?: FetchAnswer;
     withWindow?: boolean;
     probe?: SystemProbe;
-    portal?: FlatpakPortal;
-    ignoredVersionStore?: IgnoredVersionStore;
-    /** Keep the real 30-second launch delay (the option left out); the other tests check from the start. */
-    realStartDelay?: boolean;
   } = {},
 ) => {
   const appId = opts.app ?? "badger";
@@ -113,7 +75,6 @@ const makeHarness = (
     isPackaged: opts.packaged ?? true,
     getVersion: vi.fn(() => opts.version ?? "1.0.0"),
     quit: vi.fn(),
-    getPath: vi.fn((_name: "userData") => "/home/u/.var/app/io.spacefleet.Badger/config/SpaceBadger"),
   };
   const handlers = new Map<string, Handler>();
   const handleCalls: string[] = [];
@@ -182,10 +143,6 @@ const makeHarness = (
     linuxPackageName: "spacebadger",
     // Default: a Linux copy without SpaceFleet's update helper (unpacked folder, package built elsewhere).
     systemProbe: opts.probe ?? fakeProbe().probe,
-    // Default: no Flatpak portal (outside a Flatpak, or flatpak older than 1.5).
-    flatpakPortal: opts.portal ?? fakePortal().portal,
-    ignoredVersionStore: opts.ignoredVersionStore,
-    ...(opts.realStartDelay ? {} : { startDelayMs: 0 }),
   };
   const updater = createDesktopUpdater(options);
 
@@ -325,7 +282,7 @@ describe("createDesktopUpdater — Linux copies the package manager installed (R
   });
 
   // @req REL-UPD-07[badger-desktop,parrot] a package-manager copy checks the feed, asks, and updates through pkexec
-  it("pacman copy, automatic updates on: checks release-status at once and every 4 h, never builds electron-updater", async () => {
+  it("pacman copy, automatic updates on: checks release-status at once and every 6 h, never builds electron-updater", async () => {
     vi.stubEnv("APPIMAGE", "");
     const { probe } = pacmanInstall();
     const h = makeHarness({ platform: "linux", version: "0.1.5", probe, fetchAnswer: LATEST_0_1_9 });
@@ -503,116 +460,18 @@ describe("createDesktopUpdater — Linux copies the package manager installed (R
     expect(((await h.invoke(UPDATER_CHANNELS.state)) as UpdaterState).failure).toBe("noPasswordDialog");
   });
 
-  // @req REL-UPD-07[badger-desktop,parrot] without the Flatpak portal a Flatpak is told the flatpak update command
-  it("Flatpak without the portal (flatpak < 1.5): checks the feed and offers `flatpak update <id>`, never pkexec", async () => {
+  // @req REL-UPD-07[badger-desktop,parrot] a Flatpak is told the flatpak update command
+  it("Flatpak: checks the feed and offers `flatpak update <id>`, never pkexec", async () => {
     vi.stubEnv("APPIMAGE", "");
     const { probe, run } = fakeProbe({ env: { FLATPAK_ID: "io.spacefleet.Badger", DISPLAY: ":0" }, path: ["pkexec"] });
-    const { portal, update } = fakePortal({ version: 1 });
-    const h = makeHarness({ platform: "linux", version: "0.1.5", probe, portal, fetchAnswer: LATEST_0_1_9 });
+    const h = makeHarness({ platform: "linux", version: "0.1.5", probe, fetchAnswer: LATEST_0_1_9 });
     h.updater.setAutoUpdate(true);
     h.register();
     await settle();
     const state = (await h.invoke(UPDATER_CHANNELS.state)) as UpdaterState;
-    console.log(`[updater-main:flatpak-no-portal] ${JSON.stringify({ canInstall: state.canInstall, manualCommand: state.manualCommand })}`);
     expect(state).toMatchObject({ phase: "available", version: "0.1.9", channel: "flatpak", canInstall: false, manualCommand: "flatpak update io.spacefleet.Badger" });
     expect(await h.invoke(UPDATER_CHANNELS.download)).toEqual({ ok: false, message: "manual" });
     expect(run).not.toHaveBeenCalled();
-    expect(update).not.toHaveBeenCalled();
-  });
-
-  // @req REL-UPD-07[badger-desktop,parrot] a Flatpak updates itself through the portal, then starts its new version
-  it("Flatpak with the portal: Install updates through the portal with progress, then spawns the newest commit and quits", async () => {
-    vi.stubEnv("APPIMAGE", "");
-    const { probe, run, relaunchAfterExit } = fakeProbe({ env: { FLATPAK_ID: "io.spacefleet.Badger", DISPLAY: ":0" }, path: ["pkexec"] });
-    const steps = [
-      { op: 0, nOps: 2, progress: 0, status: 0 },
-      { op: 0, nOps: 2, progress: 50, status: 0 },
-      { op: 0, nOps: 2, progress: 50, status: 0 },
-      { op: 1, nOps: 2, progress: 100, status: 0 },
-    ];
-    const { portal, update, spawnLatest } = fakePortal({ version: 8, steps });
-    const h = makeHarness({ platform: "linux", version: "0.1.5", probe, portal, fetchAnswer: LATEST_0_1_9 });
-    h.register();
-    await settle();
-    const before = (await h.invoke(UPDATER_CHANNELS.state)) as UpdaterState;
-    await h.invoke(UPDATER_CHANNELS.check);
-    const result = await h.invoke(UPDATER_CHANNELS.download);
-    const state = (await h.invoke(UPDATER_CHANNELS.state)) as UpdaterState;
-    console.log(`[updater-main:flatpak-portal:installed] ${JSON.stringify({ result, sent: h.sent.map((e) => e.kind), phase: state.phase })}`);
-    await checked(h, "flatpak-portal-install", async () => {
-      expect(before).toMatchObject({ channel: "flatpak", canInstall: true });
-      expect(result).toEqual({ ok: true });
-      expect(update).toHaveBeenCalledTimes(1);
-      expect(run).not.toHaveBeenCalled();
-      // Repeated percentages are sent once.
-      expect(h.sent.filter((e) => e.kind === "system-progress")).toEqual([
-        { kind: "system-progress", percent: 0 },
-        { kind: "system-progress", percent: 25 },
-        { kind: "system-progress", percent: 100 },
-      ]);
-      expect(h.sent.at(-1)).toEqual({ kind: "system-installed", version: "0.1.9" });
-      expect(state).toMatchObject({ phase: "installed", version: "0.1.9" });
-      expect(spawnLatest).not.toHaveBeenCalled();
-      vi.advanceTimersByTime(SYSTEM_RELAUNCH_DELAY_MS);
-      await settle();
-      // The new commit starts in a new sandbox once this copy's single-instance lock is gone; never the old binary.
-      expect(spawnLatest).toHaveBeenCalledTimes(1);
-      const argv = spawnLatest.mock.calls[0]![0];
-      expect(argv.slice(-2)).toEqual(["/home/u/.var/app/io.spacefleet.Badger/config/SpaceBadger/SingletonLock", "badger"]);
-      expect(relaunchAfterExit).not.toHaveBeenCalled();
-      expect(spawnLatest.mock.invocationCallOrder[0]).toBeLessThan(h.onQuitForUpdate.mock.invocationCallOrder[0]!);
-      expect(h.onQuitForUpdate.mock.invocationCallOrder[0]).toBeLessThan(h.electronApp.quit.mock.invocationCallOrder[0]!);
-      expect(h.electronApp.quit).toHaveBeenCalledTimes(1);
-      expect(await h.invoke(UPDATER_CHANNELS.install)).toEqual({ ok: true });
-      expect(spawnLatest).toHaveBeenCalledTimes(1);
-    });
-  });
-
-  // @req REL-UPD-07[badger-desktop,parrot] a failed relaunch never quits: Settings' Restart tries again
-  it("Flatpak: when the portal can't start the new version, the app stays open and Restart tries again", async () => {
-    vi.stubEnv("APPIMAGE", "");
-    const { probe } = fakeProbe({ env: { FLATPAK_ID: "io.spacefleet.Parrot" } });
-    const { portal, spawnLatest } = fakePortal({ version: 2, spawnError: "org.freedesktop.DBus.Error.Failed: no" });
-    const h = makeHarness({ app: "parrot", platform: "linux", version: "0.1.5", probe, portal, fetchAnswer: LATEST_0_1_9 });
-    h.register();
-    await settle();
-    await h.invoke(UPDATER_CHANNELS.check);
-    expect(await h.invoke(UPDATER_CHANNELS.download)).toEqual({ ok: true });
-    vi.advanceTimersByTime(SYSTEM_RELAUNCH_DELAY_MS);
-    await settle();
-    console.log(`[updater-main:flatpak-spawn-fail] spawn=${spawnLatest.mock.calls.length} quit=${h.electronApp.quit.mock.calls.length}`);
-    await checked(h, "flatpak-spawn-fail", async () => {
-      expect(spawnLatest.mock.calls[0]![0].at(-1)).toBe("parrot");
-      expect(h.electronApp.quit).not.toHaveBeenCalled();
-      expect(h.onQuitForUpdate).not.toHaveBeenCalled();
-      expect(h.logger.error).toHaveBeenCalled();
-      expect(((await h.invoke(UPDATER_CHANNELS.state)) as UpdaterState).phase).toBe("installed");
-      expect(await h.invoke(UPDATER_CHANNELS.install)).toEqual({ ok: false });
-      expect(spawnLatest).toHaveBeenCalledTimes(2);
-    });
-  });
-
-  // @req REL-UPD-07[badger-desktop,parrot] refusing Flatpak's question changes nothing; a failure shows the command
-  it.each<[string, SystemUpdateOutcome, Partial<UpdaterState>]>([
-    ["refused", { result: "dismissed" }, { phase: "available", failure: null }],
-    ["failed", { result: "failed", failure: "network", detail: "Could not connect" }, { phase: "error", failure: "network", manualCommand: "flatpak update io.spacefleet.Badger" }],
-    ["not on the remote yet", { result: "failed", failure: "notNewer", detail: "" }, { phase: "error", failure: "notNewer" }],
-  ])("Flatpak portal %s", async (label, outcome, expected) => {
-    vi.stubEnv("APPIMAGE", "");
-    const { probe } = fakeProbe({ env: { FLATPAK_ID: "io.spacefleet.Badger" } });
-    const { portal, spawnLatest } = fakePortal({ version: 8, outcome });
-    const h = makeHarness({ platform: "linux", version: "0.1.5", probe, portal, fetchAnswer: LATEST_0_1_9 });
-    h.register();
-    await settle();
-    await h.invoke(UPDATER_CHANNELS.check);
-    const result = await h.invoke(UPDATER_CHANNELS.download);
-    const state = (await h.invoke(UPDATER_CHANNELS.state)) as UpdaterState;
-    console.log(`[updater-main:flatpak-outcome:${label}] ${JSON.stringify({ result, phase: state.phase, failure: state.failure })}`);
-    await checked(h, `flatpak-outcome-${label}`, () => {
-      expect(result).toMatchObject({ ok: false });
-      expect(state).toMatchObject(expected);
-      expect(spawnLatest).not.toHaveBeenCalled();
-    });
   });
 
   // @req REL-DIST-10
@@ -645,7 +504,7 @@ describe("createDesktopUpdater — Linux copies the package manager installed (R
 
 describe("createDesktopUpdater — registration", () => {
   // @req REL-UPD-01
-  it("registers check / download / install / set-auto / state / remind-later / ignore once; a second register is a no-op", async () => {
+  it("registers check / download / install / set-auto / state once; a second register is a no-op", async () => {
     const h = makeHarness();
     console.log("[updater-main:register:start] packaged=true version=1.0.0");
     h.register();
@@ -653,15 +512,7 @@ describe("createDesktopUpdater — registration", () => {
     h.dump("register:after");
     await checked(h, "register", () => {
       expect(h.handleCalls.sort()).toEqual(
-        [
-          UPDATER_CHANNELS.check,
-          UPDATER_CHANNELS.download,
-          UPDATER_CHANNELS.install,
-          UPDATER_CHANNELS.setAuto,
-          UPDATER_CHANNELS.state,
-          UPDATER_CHANNELS.remindLater,
-          UPDATER_CHANNELS.ignore,
-        ].sort(),
+        [UPDATER_CHANNELS.check, UPDATER_CHANNELS.download, UPDATER_CHANNELS.install, UPDATER_CHANNELS.setAuto, UPDATER_CHANNELS.state].sort(),
       );
       expect(h.loadAutoUpdater).toHaveBeenCalledTimes(1);
       expect(h.au.on.mock.calls.map(([event]) => event).sort()).toEqual(
@@ -673,17 +524,9 @@ describe("createDesktopUpdater — registration", () => {
     });
   });
 
-  // @req REL-UPD-08
-  it("the first check waits 30 s after launch, then every 4 hours; a wake checks after 30 minutes, the window back after an hour away", () => {
-    const cadence = { AUTO_UPDATE_START_DELAY_MS, AUTO_UPDATE_INTERVAL_MS, AUTO_UPDATE_MIN_GAP_MS, AUTO_UPDATE_FOCUS_GAP_MS, UPDATE_REMIND_LATER_MS };
-    console.log(`[updater-main:interval] ${JSON.stringify(cadence)}`);
-    expect(cadence).toEqual({
-      AUTO_UPDATE_START_DELAY_MS: 30 * 1000,
-      AUTO_UPDATE_INTERVAL_MS: 4 * 60 * 60 * 1000,
-      AUTO_UPDATE_MIN_GAP_MS: 30 * 60 * 1000,
-      AUTO_UPDATE_FOCUS_GAP_MS: 60 * 60 * 1000,
-      UPDATE_REMIND_LATER_MS: 24 * 60 * 60 * 1000,
-    });
+  it("the automatic-check cadence is 6 hours", () => {
+    console.log(`[updater-main:interval] AUTO_UPDATE_INTERVAL_MS=${AUTO_UPDATE_INTERVAL_MS}`);
+    expect(AUTO_UPDATE_INTERVAL_MS).toBe(6 * 60 * 60 * 1000);
   });
 
   // @req REL-UPD-02 @bugfix @regression-proof
@@ -1140,7 +983,7 @@ describe("createDesktopUpdater — automatic updates (REL-UPD-01)", () => {
   });
 
   // @req REL-UPD-01
-  it("set-auto IPC applies the setting, sends it to the window and through onAutoUpdateChange; state IPC returns autoUpdate", async () => {
+  it("set-auto IPC applies the setting and reports it through onAutoUpdateChange; state IPC returns autoUpdate", async () => {
     const h = makeHarness();
     h.register();
     const initial = (await h.invoke(UPDATER_CHANNELS.state)) as UpdaterState;
@@ -1161,11 +1004,6 @@ describe("createDesktopUpdater — automatic updates (REL-UPD-01)", () => {
       expect(off).toEqual({ ok: true });
       expect(disarmed.autoUpdate).toBe(false);
       expect(h.onAutoUpdateChange.mock.calls).toEqual([[true], [false]]);
-      // The window's first snapshot can predate its own push: the event carries the setting to it.
-      expect(h.sent.filter((event) => event.kind === "auto-update")).toEqual([
-        { kind: "auto-update", enabled: true },
-        { kind: "auto-update", enabled: false },
-      ]);
       expect(h.au.checkForUpdates).toHaveBeenCalledTimes(1);
     });
   });
@@ -1214,291 +1052,5 @@ describe("createDesktopUpdater — release-status (mandatory update)", () => {
         expect(h.logger.warn).toHaveBeenCalledWith({ message: "ECONNREFUSED" }, "release-status check failed");
       }
     });
-  });
-});
-
-describe("createDesktopUpdater — proactive checks and the update modal's choices (REL-UPD-08)", () => {
-  const MINUTE = 60 * 1000;
-  const memoryStore = (initial: string | null = null) => {
-    let value = initial;
-    return {
-      read: vi.fn(() => value),
-      write: vi.fn((version: string) => {
-        value = version;
-      }),
-    } satisfies IgnoredVersionStore;
-  };
-  const checks = (h: Harness) => h.au.checkForUpdates.mock.calls.length;
-
-  // @req REL-UPD-08
-  it("the first automatic check waits 30 s after launch, a wake during it does not jump ahead, then every 4 hours", async () => {
-    const h = makeHarness({ realStartDelay: true });
-    h.updater.setAutoUpdate(true);
-    h.register();
-    await flush();
-    const atLaunch = checks(h);
-    h.updater.nudge("resume");
-    await flush();
-    const wakeDuringDelay = checks(h);
-    await vi.advanceTimersByTimeAsync(AUTO_UPDATE_START_DELAY_MS - 1);
-    const before30s = checks(h);
-    await vi.advanceTimersByTimeAsync(1);
-    const at30s = checks(h);
-    await vi.advanceTimersByTimeAsync(AUTO_UPDATE_INTERVAL_MS - 1);
-    const beforeTick = checks(h);
-    await vi.advanceTimersByTimeAsync(1);
-    const atTick = checks(h);
-    const counts = { atLaunch, wakeDuringDelay, before30s, at30s, beforeTick, atTick };
-    console.log(`[updater-main:start-delay:counts] ${JSON.stringify(counts)}`);
-    h.dump("start-delay:after");
-    await checked(h, "start-delay", () => {
-      expect(counts).toEqual({ atLaunch: 0, wakeDuringDelay: 0, before30s: 0, at30s: 1, beforeTick: 1, atTick: 2 });
-      expect(h.logger.info).toHaveBeenCalledWith(expect.objectContaining({ startInMs: AUTO_UPDATE_START_DELAY_MS }), "automatic update checks armed");
-    });
-  });
-
-  // @req REL-UPD-08
-  it("automatic updates turned on after the launch delay check at once; the e2e cadence hook shortens the delay", async () => {
-    const late = makeHarness({ realStartDelay: true });
-    late.register();
-    await flush();
-    await vi.advanceTimersByTimeAsync(10 * MINUTE);
-    late.updater.setAutoUpdate(true);
-    await flush();
-    const lateArm = checks(late);
-    vi.stubEnv("SF_UPDATER_CHECK_INTERVAL_MS", "5000");
-    const hooked = makeHarness({ realStartDelay: true });
-    hooked.updater.setAutoUpdate(true);
-    hooked.register();
-    await vi.advanceTimersByTimeAsync(4_999);
-    const hookedBefore = checks(hooked);
-    await vi.advanceTimersByTimeAsync(1);
-    const hookedAt5s = checks(hooked);
-    const counts = { lateArm, hookedBefore, hookedAt5s };
-    console.log(`[updater-main:start-delay-late:counts] ${JSON.stringify(counts)}`);
-    late.dump("start-delay-late:after");
-    hooked.dump("start-delay-hook:after");
-    expect(counts).toEqual({ lateArm: 1, hookedBefore: 0, hookedAt5s: 1 });
-  });
-
-  // @req REL-UPD-08
-  it("a wake checks once the last automatic check is 30 minutes old", async () => {
-    const h = makeHarness();
-    h.updater.setAutoUpdate(true);
-    h.register();
-    await flush();
-    const atStart = checks(h);
-    await vi.advanceTimersByTimeAsync(29 * MINUTE);
-    h.updater.nudge("resume");
-    await flush();
-    const resumeAt29 = checks(h);
-    await vi.advanceTimersByTimeAsync(MINUTE);
-    h.updater.nudge("resume");
-    await flush();
-    const resumeAt30 = checks(h);
-    const counts = { atStart, resumeAt29, resumeAt30 };
-    console.log(`[updater-main:nudge:counts] ${JSON.stringify(counts)}`);
-    h.dump("nudge:after");
-    await checked(h, "nudge", () => {
-      expect(counts).toEqual({ atStart: 1, resumeAt29: 1, resumeAt30: 2 });
-      expect(h.logger.info).toHaveBeenCalledWith(expect.objectContaining({ trigger: "resume", gapMs: AUTO_UPDATE_MIN_GAP_MS }), "automatic update check skipped — checked recently");
-    });
-  });
-
-  // @req REL-UPD-08
-  it("the window back in front checks only after the app was out of focus an hour, never on a quick switch", async () => {
-    const h = makeHarness();
-    h.updater.setAutoUpdate(true);
-    h.register();
-    await flush();
-    const atStart = checks(h);
-    // Away 59 minutes: no check.
-    h.updater.nudge("blur");
-    await vi.advanceTimersByTimeAsync(59 * MINUTE);
-    h.updater.nudge("focus");
-    await flush();
-    const away59 = checks(h);
-    // Away 60 minutes: check.
-    h.updater.nudge("blur");
-    await vi.advanceTimersByTimeAsync(60 * MINUTE);
-    h.updater.nudge("focus");
-    await flush();
-    const away60 = checks(h);
-    // An hour after that check, a quick switch away and back (or between the app's windows) never checks.
-    await vi.advanceTimersByTimeAsync(61 * MINUTE);
-    h.updater.nudge("blur");
-    h.updater.nudge("focus");
-    await flush();
-    const quickSwitch = checks(h);
-    // A focus with no blur before it (the window shown at start) never checks either.
-    h.updater.nudge("focus");
-    await flush();
-    const focusWithoutBlur = checks(h);
-    // Away an hour, but the 4-hour timer checked a minute ago: the 30-minute floor holds.
-    h.updater.nudge("blur");
-    await vi.advanceTimersByTimeAsync(60 * MINUTE);
-    const afterTimer = checks(h);
-    h.updater.nudge("focus");
-    await flush();
-    const focusAfterTimer = checks(h);
-    const counts = { atStart, away59, away60, quickSwitch, focusWithoutBlur, afterTimer, focusAfterTimer };
-    console.log(`[updater-main:focus-away:counts] ${JSON.stringify(counts)}`);
-    h.dump("focus-away:after");
-    await checked(h, "focus-away", () => {
-      expect(counts).toEqual({ atStart: 1, away59: 1, away60: 2, quickSwitch: 2, focusWithoutBlur: 2, afterTimer: 3, focusAfterTimer: 3 });
-      expect(h.logger.info).toHaveBeenCalledWith(
-        expect.objectContaining({ trigger: "focus", awayMs: 59 * MINUTE, minAwayMs: AUTO_UPDATE_FOCUS_GAP_MS }),
-        "automatic update check skipped — not away long enough",
-      );
-      expect(h.logger.info).toHaveBeenCalledWith(expect.objectContaining({ trigger: "focus", awayMs: null }), "automatic update check skipped — not away long enough");
-      expect(h.logger.info).toHaveBeenCalledWith(expect.objectContaining({ trigger: "focus" }), "automatic update check");
-      expect(h.logger.info).toHaveBeenCalledWith(expect.objectContaining({ trigger: "focus", gapMs: AUTO_UPDATE_MIN_GAP_MS }), "automatic update check skipped — checked recently");
-    });
-  });
-
-  // @req REL-UPD-08
-  it("the 4-hour timer counts from the last automatic check, so a wake just before it does not check twice", async () => {
-    const h = makeHarness();
-    h.updater.setAutoUpdate(true);
-    h.register();
-    await flush();
-    await vi.advanceTimersByTimeAsync(AUTO_UPDATE_INTERVAL_MS - 10 * MINUTE);
-    h.updater.nudge("resume");
-    await flush();
-    const afterWake = checks(h);
-    await vi.advanceTimersByTimeAsync(10 * MINUTE);
-    const afterTimer = checks(h);
-    console.log(`[updater-main:nudge-timer:counts] ${JSON.stringify({ afterWake, afterTimer })}`);
-    await checked(h, "nudge-timer", () => {
-      expect([afterWake, afterTimer]).toEqual([2, 2]);
-    });
-  });
-
-  // @req REL-UPD-08
-  it("automatic updates off: a wake or the window back in front never checks; a check by hand still does", async () => {
-    const h = makeHarness();
-    h.register();
-    await flush();
-    h.updater.nudge("resume");
-    h.updater.nudge("focus");
-    await vi.advanceTimersByTimeAsync(AUTO_UPDATE_INTERVAL_MS * 2);
-    h.updater.nudge("resume");
-    await flush();
-    const nudged = checks(h);
-    await h.invoke(UPDATER_CHANNELS.check);
-    const byHand = checks(h);
-    console.log(`[updater-main:nudge-off:counts] ${JSON.stringify({ nudged, byHand })}`);
-    await checked(h, "nudge-off", () => {
-      expect([nudged, byHand]).toEqual([0, 1]);
-    });
-  });
-
-  // @req REL-UPD-08
-  it("Remind me later holds the offered version for 24 hours in memory; nothing is written", async () => {
-    const store = memoryStore();
-    const h = makeHarness({ ignoredVersionStore: store });
-    h.updater.setAutoUpdate(true);
-    h.register();
-    await flush();
-    const noVersion = await h.invoke(UPDATER_CHANNELS.remindLater);
-    h.au.emit("update-available", { version: "2.0.0" });
-    h.au.emit("update-downloaded", { version: "2.0.0" });
-    const now = Date.now();
-    const answer = await h.invoke(UPDATER_CHANNELS.remindLater);
-    const state = (await h.invoke(UPDATER_CHANNELS.state)) as UpdaterState;
-    h.dump("remind-later:after");
-    await checked(h, "remind-later", () => {
-      expect(noVersion).toEqual({ ok: false });
-      expect(answer).toEqual({ ok: true });
-      expect(h.sent.filter((e) => e.kind === "prompt-snoozed")).toEqual([{ kind: "prompt-snoozed", version: "2.0.0", until: now + UPDATE_REMIND_LATER_MS }]);
-      expect(state.remindLater).toEqual({ version: "2.0.0", until: now + UPDATE_REMIND_LATER_MS });
-      expect(store.write).not.toHaveBeenCalled();
-      // Later still installs on quit: it only quiets the modal.
-      expect(h.au.autoInstallOnAppQuit).toBe(true);
-    });
-  });
-
-  // @req REL-UPD-08
-  it("Ignore keeps the version in the store and stops it installing on quit; a newer version installs again", async () => {
-    const store = memoryStore();
-    const h = makeHarness({ ignoredVersionStore: store });
-    h.updater.setAutoUpdate(true);
-    h.register();
-    await flush();
-    h.au.emit("update-available", { version: "2.0.0" });
-    h.au.emit("update-downloaded", { version: "2.0.0" });
-    const beforeIgnore = h.au.autoInstallOnAppQuit;
-    const answer = await h.invoke(UPDATER_CHANNELS.ignore);
-    const afterIgnore = h.au.autoInstallOnAppQuit;
-    const state = (await h.invoke(UPDATER_CHANNELS.state)) as UpdaterState;
-    h.au.emit("update-available", { version: "2.1.0" });
-    const newer = h.au.autoInstallOnAppQuit;
-    console.log(`[updater-main:ignore:flags] ${JSON.stringify({ beforeIgnore, afterIgnore, newer })}`);
-    h.dump("ignore:after");
-    await checked(h, "ignore", () => {
-      expect(answer).toEqual({ ok: true });
-      expect(store.write.mock.calls).toEqual([["2.0.0"]]);
-      expect(h.sent.filter((e) => e.kind === "prompt-ignored")).toEqual([{ kind: "prompt-ignored", version: "2.0.0" }]);
-      expect(state.ignoredVersion).toBe("2.0.0");
-      expect({ beforeIgnore, afterIgnore, newer }).toEqual({ beforeIgnore: true, afterIgnore: false, newer: true });
-    });
-  });
-
-  // @req REL-UPD-08
-  it("an ignored version read at start is reported and never installs on quit", async () => {
-    const h = makeHarness({ ignoredVersionStore: memoryStore("2.0.0") });
-    h.updater.setAutoUpdate(true);
-    h.register();
-    await flush();
-    h.au.emit("update-available", { version: "2.0.0" });
-    const state = (await h.invoke(UPDATER_CHANNELS.state)) as UpdaterState;
-    h.dump("ignored-at-start:after");
-    await checked(h, "ignored-at-start", () => {
-      expect(state.ignoredVersion).toBe("2.0.0");
-      expect(h.au.autoInstallOnAppQuit).toBe(false);
-    });
-  });
-
-  // @req REL-UPD-08
-  it("a mandatory update refuses Remind me later and Ignore", async () => {
-    const store = memoryStore();
-    const h = makeHarness({
-      ignoredVersionStore: store,
-      fetchAnswer: { ok: true, json: async () => ({ mandatory: true, latestVersion: "2.0.0", minClientVersion: "1.5.0" }) },
-    });
-    h.register();
-    await h.invoke(UPDATER_CHANNELS.check);
-    await flush();
-    const later = await h.invoke(UPDATER_CHANNELS.remindLater);
-    const ignore = await h.invoke(UPDATER_CHANNELS.ignore);
-    const state = (await h.invoke(UPDATER_CHANNELS.state)) as UpdaterState;
-    h.dump("mandatory-choices:after");
-    await checked(h, "mandatory-choices", () => {
-      expect(state.mandatory).toBe(true);
-      expect([later, ignore]).toEqual([{ ok: false }, { ok: false }]);
-      expect(store.write).not.toHaveBeenCalled();
-      expect(h.sent.filter((e) => e.kind === "prompt-snoozed" || e.kind === "prompt-ignored")).toEqual([]);
-    });
-  });
-
-  // @req REL-UPD-08
-  it("ignoredVersionFileStore keeps the version in a JSON file; missing or broken files read as nothing ignored", () => {
-    const dir = mkdtempSync(join(tmpdir(), "sf-updater-ignored-"));
-    const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
-    try {
-      const path = join(dir, "nested", "updater-ignored-version.json");
-      const store = ignoredVersionFileStore(path, logger);
-      const missing = store.read();
-      store.write("3.2.1");
-      const roundTrip = ignoredVersionFileStore(path, logger).read();
-      const broken = join(dir, "broken.json");
-      writeFileSync(broken, "{not json", "utf8");
-      const brokenRead = ignoredVersionFileStore(broken, logger).read();
-      console.log(`[updater-main:file-store] ${JSON.stringify({ missing, roundTrip, brokenRead, warn: logger.warn.mock.calls })}`);
-      expect({ missing, roundTrip, brokenRead }).toEqual({ missing: null, roundTrip: "3.2.1", brokenRead: null });
-      expect(logger.warn).toHaveBeenCalledWith(expect.objectContaining({ path: broken }), "ignored update version file unreadable — nothing ignored");
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
   });
 });

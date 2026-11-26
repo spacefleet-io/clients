@@ -73,7 +73,7 @@ vi.mock("@react-navigation/native", () => ({
   useNavigation: () => ({ navigate: (...args: unknown[]) => void fake.navigated.push(args), goBack: () => void (fake.wentBack += 1) }),
 }));
 vi.mock("@space/mobile-shell/i18n", () => ({ useTranslation: () => ({ t: (key: string) => key, i18n: { language: "en" } }) }));
-vi.mock("@space/mobile-shell/components", () => ({ SkyCover: "SkyCover", MobileSkeletonPulse: "Shimmer", MobileIconButton: "MobileIconButton", MOBILE_ICON_BUTTON_SIZE: 48, useSkyScroll: () => ({}) }));
+vi.mock("@space/mobile-shell/components", () => ({ SkyCover: "SkyCover", useSkyScroll: () => ({}) }));
 vi.mock("@space/mobile-shell/render-boundary", () => ({ guardRenderItem: (_name: string, render: unknown) => render }));
 vi.mock("@space/mobile-audio-playback", () => ({
   AudioPlayback: { canShowOutputSwitcher: async () => false },
@@ -115,6 +115,7 @@ vi.mock("../src/screens/sky", () => ({ ParrotSky: "ParrotSky", PLAYER_TINT: "tin
 vi.mock("../src/screens/art", () => ({ ParrotArt: "ParrotArt", WaveSeek: "WaveSeek" }));
 vi.mock("../src/screens/PlayerLyrics", () => ({ PlayerLyrics: "PlayerLyrics" }));
 vi.mock("../src/screens/AlbumGrid", () => ({ AlbumGrid: "AlbumGrid" }));
+vi.mock("../src/screens/shimmer", () => ({ Shimmer: "Shimmer" }));
 vi.mock("../src/screens/pageBack", () => ({ PageBackButton: "PageBackButton", PAGE_BACK_ROW: 60, usePageTop: () => 100 }));
 vi.mock("../src/screens/SongListRow", () => ({ SongListRow: "SongListRow", songRowNames: () => [] }));
 

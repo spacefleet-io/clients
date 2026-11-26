@@ -134,6 +134,7 @@ type LibraryContextValue = {
       originalLanguage?: string | null;
       overview?: string | null;
       year?: string | null;
+      rating?: number | null;
       posterPath?: string | null;
       backdropPath?: string | null;
       genres?: number[];
@@ -177,17 +178,6 @@ type LibraryContextValue = {
     chunks: Array<{ key: string; sizeBytes?: number | null; startSeconds?: number | null }> | string[]
   ) => Promise<void>;
   replaceSkipMarkers: (
-    mediaId: string,
-    episodeId: string | null,
-    markers: Array<{
-      type: MediaSkipMarkerType;
-      startSeconds: number;
-      endSeconds: number;
-      source: string;
-      confidence?: number | null;
-    }>
-  ) => Promise<void>;
-  mergeSkipMarkers: (
     mediaId: string,
     episodeId: string | null,
     markers: Array<{
@@ -289,8 +279,7 @@ type LibraryContextValue = {
   purgeMissingObjects: (missingKeys: string[]) => Promise<void>;
   syncFromRemote: () => Promise<void>;
   resetKey: () => Promise<void>;
-  /** PRIV-KEY-13; STOR-RESEAL-01: `resealCopies` (old media key → copy) renames the media references in the sealed bytes. */
-  sealLibraryForRotation: (newKeyBase64: string, resealCopies?: ReadonlyMap<string, string>) => Promise<RotationOwnLibrary>;
+  sealLibraryForRotation: (newKeyBase64: string) => Promise<RotationOwnLibrary>;
   clearLocalCache: () => Promise<void>;
   getDebugSnapshot: () => Promise<Record<string, unknown> | null>;
   debugRevision: number;
@@ -2537,6 +2526,7 @@ export const LibraryProvider = ({
         originalLanguage?: string | null;
         overview?: string | null;
         year?: string | null;
+        rating?: number | null;
         posterPath?: string | null;
         backdropPath?: string | null;
         totalEpisodes?: number | null;
@@ -2584,6 +2574,7 @@ export const LibraryProvider = ({
           originalLanguage: withAssets.originalLanguage,
           overview: withAssets.overview,
           year: withAssets.year,
+          rating: withAssets.rating,
           posterPath: withAssets.posterPath,
           backdropPath: withAssets.backdropPath,
           genres: Array.isArray(withAssets.genres) ? withAssets.genres : [],
@@ -2879,25 +2870,6 @@ export const LibraryProvider = ({
     ) => {
       if (!db) throw new Error("LIBRARY_NOT_READY");
       await db.replaceSkipMarkers(mediaId, episodeId, markers);
-      await requestSnapshotRefresh(db);
-    },
-    [db, requestSnapshotRefresh]
-  );
-
-  const mergeSkipMarkers = useCallback(
-    async (
-      mediaId: string,
-      episodeId: string | null,
-      markers: Array<{
-        type: MediaSkipMarkerType;
-        startSeconds: number;
-        endSeconds: number;
-        source: string;
-        confidence?: number | null;
-      }>
-    ) => {
-      if (!db) throw new Error("LIBRARY_NOT_READY");
-      await db.mergeSkipMarkers(mediaId, episodeId, markers);
       await requestSnapshotRefresh(db);
     },
     [db, requestSnapshotRefresh]
@@ -3234,9 +3206,9 @@ export const LibraryProvider = ({
   }, [reload, syncMediaKey]);
 
   const sealLibraryForRotation = useCallback(
-    async (newKeyBase64: string, resealCopies?: ReadonlyMap<string, string>) => {
+    async (newKeyBase64: string) => {
       if (!db) throw new Error("LIBRARY_NOT_READY");
-      return await db.sealForRotation(newKeyBase64, resealCopies);
+      return await db.sealForRotation(newKeyBase64);
     },
     [db]
   );
@@ -3369,7 +3341,6 @@ export const LibraryProvider = ({
       addMediaFormat: guardWriteAction(addMediaFormat),
       setMediaFormatChunks: guardWriteAction(setMediaFormatChunks),
       replaceSkipMarkers: guardWriteAction(replaceSkipMarkers),
-      mergeSkipMarkers: guardWriteAction(mergeSkipMarkers),
       upsertSkipAnalysis: guardWriteAction(upsertSkipAnalysis),
       listSkipAnalysis,
       removeMediaFormat: guardWriteAction(removeMediaFormat),
@@ -3431,7 +3402,6 @@ export const LibraryProvider = ({
       addMediaFormat,
       setMediaFormatChunks,
       replaceSkipMarkers,
-      mergeSkipMarkers,
       upsertSkipAnalysis,
       listSkipAnalysis,
       removeMediaFormat,

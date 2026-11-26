@@ -6,7 +6,6 @@ import { tmpdir } from "node:os";
 import { join as joinPath } from "node:path";
 import { join } from "node:path";
 import {
-  applyMpvWindowEnv,
   buildExternalMpvArgs,
   buildExternalMpvEnv,
   buildExternalMpvTargetEnv,
@@ -530,7 +529,7 @@ export const registerExternalMpv = (
       const bin = target.bin;
       const socketPath = getDesktopPlatform().mpvIpc.endpoint(`${process.pid}-${Date.now()}`);
       const appId = process.env.SF_MPV_APP_ID?.trim() || "spacebadger";
-      // A Wayland-only session with an mpv that has no Wayland (a system mpv built without it) cannot open any
+      // A Wayland-only session with an mpv that has no Wayland (the bundled one) cannot open any
       // window: mpv would exit at once and the play would fail with nothing said. Tell the user why.
       const mpvWindow = resolveExternalMpvWindow({ appId, target });
       if (mpvWindow.noWindow) {
@@ -546,19 +545,8 @@ export const registerExternalMpv = (
       }
       const envResult = buildExternalMpvEnv({ appId });
       const dataDir = envResult.dataDir ?? null;
-      // The bundle gets its lib dirs; MPV-GPU-04: on a Wayland session with a Wayland mpv, DISPLAY is taken out so
-      // mpv opens a native Wayland window and never an XWayland one.
-      const env = applyMpvWindowEnv(buildExternalMpvTargetEnv(target, envResult), mpvWindow);
-      logger.info({
-        bin,
-        kind: target.kind,
-        defaultVo: mpvWindow.defaultVo,
-        cpuVo: mpvWindow.cpuVo,
-        windowArgs: mpvWindow.args,
-        unsetEnv: mpvWindow.unsetEnv,
-        WAYLAND_DISPLAY: process.env.WAYLAND_DISPLAY ?? null,
-        XDG_SESSION_TYPE: process.env.XDG_SESSION_TYPE ?? null,
-      }, "mpv window plan");
+      // The bundle gets its lib dirs.
+      const env = buildExternalMpvTargetEnv(target, envResult);
       const extra = process.env.SF_MPV_EXTERNAL_ARGS?.trim();
       const logFileEnv = process.env.SF_MPV_EXTERNAL_LOG_FILE?.trim();
       const debugEnabled = process.env.SF_MPV_DEBUG === "1" || process.env.VITE_DEBUG === "1";

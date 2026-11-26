@@ -35,9 +35,9 @@ afterEach(() => {
 
 describe("desktop storage unit bridge (STOR-UNIT-01)", () => {
   it.each([
-    { platform: "windows", desktop: undefined, want: 1024, gb: "5.0 GB" },
+    { platform: "win32", desktop: undefined, want: 1024, gb: "5.0 GB" },
     { platform: "linux", desktop: "KDE", want: 1024, gb: "5.0 GB" },
-    { platform: "macos", desktop: undefined, want: 1000, gb: "5.4 GB" },
+    { platform: "darwin", desktop: undefined, want: 1000, gb: "5.4 GB" },
     { platform: "linux", desktop: "ubuntu:GNOME", want: 1000, gb: "5.4 GB" },
   ])("the renderer picks $want on $platform ($desktop)", ({ platform, desktop, want, gb }) => {
     const { ipcMain, ipcRenderer } = fakeIpc();

@@ -10,7 +10,6 @@
   "exports": {
     ".": "./src/index.ts",
     "./storageTransport": "./src/storageTransport/index.ts",
-    "./uploadPlaybackGate": "./src/storageTransport/uploadPlaybackGate.ts",
     "./storageTransport/v2": "./src/storageTransport/v2/index.ts"
   },
   "dependencies": {

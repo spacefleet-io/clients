@@ -30,7 +30,7 @@ import {
   createEngineV2,
   type EngineV2,
   type RuntimeJobEvent,
-} from "@space/runtime-jobs-engine/engineV2";
+} from "../src/core/jobs/engineV2";
 import type { IngestJobRecord } from "@space/runtime-jobs";
 
 const ts = "2026-01-01T00:00:00.000Z";

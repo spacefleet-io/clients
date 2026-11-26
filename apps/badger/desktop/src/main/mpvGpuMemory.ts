@@ -1,10 +1,9 @@
 /**
  * Per-machine memory of a failed mpv GPU probe (#25).
  *
- * mpv launches with the platform's GPU-first vo list (Linux `gpu,x11`, or
- * `gpu,wlshm` in a Wayland session). On a machine with no usable GPU every
- * launch paid for the `gpu` probe before mpv fell back to the CPU vo
- * (`x11` / `wlshm`): ~80 MB more resident memory for the whole playback and
+ * mpv launches with the platform's GPU-first vo list (Linux `gpu,x11`). On a
+ * machine with no usable GPU every launch paid for the `gpu` probe before mpv
+ * fell back to `x11`: ~80 MB more resident memory for the whole playback and
  * 80-100 ms more to the first frame (lowend A/B, PR #313). The first launch's
  * render path (mpvRenderPathLog.ts) now tells this store whether the GPU vo
  * worked. When it did not, later launches go straight to the platform's CPU vo

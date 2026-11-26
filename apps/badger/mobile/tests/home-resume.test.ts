@@ -46,7 +46,7 @@ vi.mock("@react-navigation/native", () => ({
 }));
 vi.mock("@space/mobile-shell/components", async () => {
   // The real shared screen, so the test sees its texts and testIDs; the barrel would pull in every shell component.
-  const shared = await import("@space/mobile-shell/empty-library");
+  const shared = await import("../../../../packages/mobile-shell/src/components/mobile-empty-library");
   return { MobileEmptyLibrary: shared.MobileEmptyLibrary, MobileEmptyLibraryAction: shared.MobileEmptyLibraryAction, useSkyScroll: () => ({}) };
 });
 vi.mock("@space/mobile-shell/i18n", () => ({ useTranslation: () => ({ t: (key: string) => key }), getCurrentLanguage: () => "fr" }));
@@ -64,8 +64,9 @@ vi.mock("../src/store/library", () => ({
 vi.mock("../src/lib/resume", () => ({ getLastPlayedEpisodeId: async () => "e2" }));
 vi.mock("../src/components/PosterRail", () => ({ PosterRail: "PosterRail" }));
 vi.mock("../src/components/ContinueHero", () => ({ ContinueHero: "ContinueHero" }));
-vi.mock("../src/lib/useHomeRails", () => ({ useHomeRails: () => [] }));
+vi.mock("../src/lib/homeRails", () => ({ homeRailEntries: () => [], selectHomeRails: () => [] }));
 vi.mock("../src/lib/phoneHome", () => ({ phoneHomeLayout: () => ({ hero: show, rails: [] }), seeAllTarget: () => ({ tab: "library", scope: "movies" }) }));
+vi.mock("../src/lib/useFavoriteIds", () => ({ useFavoriteIds: () => new Set<string>() }));
 vi.mock("../src/lib/usePullToRefresh", () => ({
   usePullToRefresh: () => ({ refreshing: false, onRefresh: () => undefined }),
   usePullRefreshScroll: (_pull: unknown, scroll: unknown) => scroll,

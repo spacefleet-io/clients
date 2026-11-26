@@ -7,7 +7,7 @@
  * any submitted job will progress through the scheduler and the cancellation
  * cascade and only fail at step dispatch with a deterministic error code.
  */
-import type { EngineV2 } from "@space/runtime-jobs-engine/engineV2";
+import type { EngineV2 } from "../../../core/jobs/engineV2";
 import { probeStepHandler } from "./probe";
 import { identifyStepHandler } from "./identify";
 import { extractStepHandler } from "./extract";
@@ -19,7 +19,6 @@ import { offlineDownloadStepHandler } from "./offlineDownload";
 import { exportFileStepHandler } from "./exportFile";
 import { registerFormatCancelCleanup } from "./discardOnCancel";
 import { registerIngestSuccessCleanup } from "./cleanupOnSuccess";
-import { registerFailedJobDismissCleanup } from "../failedJobs";
 
 export {
   probeStepHandler,
@@ -60,6 +59,4 @@ export const registerBadgerStepHandlers = (engine: EngineV2): void => {
   // A succeeded ingest job's transcode directory (a full copy of the encode,
   // about the media's size) has no further use: drop it.
   registerIngestSuccessCleanup(engine);
-  // A failed import removed from the Jobs panel drops its kept processed copy (UX-JOBS-03).
-  registerFailedJobDismissCleanup(engine);
 };

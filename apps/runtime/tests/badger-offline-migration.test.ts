@@ -13,7 +13,7 @@ import { join as joinPath } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { IngestJobRecord } from "@space/runtime-jobs";
-import type { EngineV2 } from "@space/runtime-jobs-engine/engineV2";
+import type { EngineV2 } from "../src/core/jobs/engineV2";
 import type { BadgerLibraryDbService } from "../src/modules/badgerLibraryDb";
 import type { BadgerOfflineHandlerDeps } from "../src/modules/badger/offlineDownload";
 import { migrateLegacyOfflineFiles } from "../src/modules/badger/offlineMigration";

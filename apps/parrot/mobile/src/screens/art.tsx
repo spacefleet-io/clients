@@ -8,7 +8,7 @@ import Svg, { Circle, Defs, LinearGradient, Rect, Stop } from "react-native-svg"
 import { parrotCoverArt, parrotWaveBars } from "@space/parrot-core/art";
 import { albumCoversWaiting, artistPicturesWaiting } from "../lib/picturesWaiting";
 import { phoneCoverFace, phoneCoverSource } from "../lib/covers";
-import { MobileSkeletonPulse } from "@space/mobile-shell/components";
+import { Shimmer } from "./shimmer";
 import { colors, spacing } from "../theme";
 
 /** How long a cover that just arrived takes to fade in over the drawn picture. */
@@ -152,7 +152,7 @@ export const ParrotArt = ({ seed, size, radius = 12, label, playing = false, sty
       style={[{ width: size, height: size, borderRadius: radius }, styles.art, playing && styles.playing, style]}
     >
       {shimmer ? (
-        <MobileSkeletonPulse testID="parrot-art-shimmer" style={StyleSheet.absoluteFill} />
+        <Shimmer testID="parrot-art-shimmer" style={StyleSheet.absoluteFill} />
       ) : (
         <>
           <Svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none">

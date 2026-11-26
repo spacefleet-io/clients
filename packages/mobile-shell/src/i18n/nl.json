@@ -100,7 +100,19 @@
       "body": "Toon een code om goed te keuren in Badger of Parrot op een ingelogde computer, telefoon of tv."
     },
     "provider": {
-      "continueInBrowser": "Rond het inloggen af in je browser. Daarna kom je hier terug."
+      "signInWith": "Inloggen met {{provider}}",
+      "signUpWith": "Registreren met {{provider}}",
+      "or": "of",
+      "continueInBrowser": "Rond het inloggen af in je browser. Daarna kom je hier terug.",
+      "errorStart": "Inloggen kon niet starten. Probeer het opnieuw.",
+      "errors": {
+        "email_unverified": "Het e-mailadres van dit account is niet bevestigd. Bevestig het bij de aanbieder, of log in met je e-mailadres en wachtwoord.",
+        "email_domain_disallowed": "Met dit e-mailadres kan geen account worden aangemaakt.",
+        "account_deletion_pending": "Dit account wordt binnenkort verwijderd.",
+        "provider_failed": "Inloggen is niet gelukt. Probeer het opnieuw.",
+        "cancelled": "Inloggen is geannuleerd.",
+        "invalid_code": "Deze inlogpoging is verlopen of ergens anders gestart. Probeer het opnieuw."
+      }
     },
     "pairing": {
       "title": "Inloggen met een ander apparaat"
@@ -669,6 +681,10 @@
       "saveHost": "Host opslaan",
       "hostSaved": "Opgeslagen",
       "libraryKey": "Mediatheeksleutel",
+      "resetKey": {
+        "title": "Versleutelingssleutel vernieuwen",
+        "description": "Vernieuw de sleutel die je mediatheek beschermt."
+      },
       "animatedBackground": {
         "title": "Geanimeerde achtergrond",
         "description": "Om de paar seconden schieten er vallende sterren langs de sterrenhemel achter de app. Met Automatisch gaan ze uit op telefoons met weinig geheugen.",
@@ -727,7 +743,6 @@
       }
     },
     "access": {
-      "unpaidSign": "Abonnement beëindigd",
       "unpaidBanner": "Je abonnement is beëindigd. Afspelen en uploaden zijn gestopt. Je bestanden worden verwijderd op {{date}}.",
       "unpaidBannerNoDate": "Je abonnement is beëindigd. Afspelen en uploaden zijn gestopt. Je bestanden worden na een beperkte tijd verwijderd.",
       "playbackBlocked": "Afspelen is gestopt omdat je abonnement is beëindigd. Je bestanden worden verwijderd op {{date}}.",
@@ -1003,11 +1018,36 @@
     "validate": "Sleutel controleren",
     "signOut": "Uitloggen",
     "errors": {
+      "checkStatus": "De status van de mediatheek kon niet worden gecontroleerd.",
       "generate": "Er kon geen nieuwe sleutel worden aangemaakt.",
       "initialize": "Je mediatheek kon niet worden ingesteld.",
       "noLibrary": "Er is geen mediatheek gevonden voor dit account.",
       "unavailable": "Je mediatheek is nu niet bereikbaar. Probeer het zo meteen opnieuw.",
       "validate": "Je sleutel kon niet worden gecontroleerd."
+    }
+  },
+  "resetKey": {
+    "title": "Mediatheeksleutel vernieuwen",
+    "subtitle": "Maak een nieuwe sleutel aan en versleutel je mediatheek opnieuw.",
+    "newKey": "Nieuwe sleutel",
+    "generateAnother": "Nog een sleutel aanmaken",
+    "password": "Accountwachtwoord",
+    "code": "Tweestapsverificatiecode (optioneel)",
+    "confirmLabel": "Ik heb de nieuwe sleutel bewaard.",
+    "confirm": "Bevestigen",
+    "confirmed": "Bevestigd",
+    "rotate": "Sleutel vernieuwen",
+    "rotating": "Vernieuwen…",
+    "success": "Sleutel vernieuwd. Mediatheek opnieuw laden…",
+    "errors": {
+      "confirmRequired": "Bevestig dat je de nieuwe sleutel hebt bewaard.",
+      "passwordRequired": "Wachtwoord is verplicht.",
+      "notReady": "De mediatheek is nog niet klaar.",
+      "rotate": "De sleutel kon niet worden vernieuwd. Controleer je wachtwoord en code.",
+      "notReencrypted": "De mediatheek van een andere app kon niet naar de nieuwe sleutel. Er is niets veranderd. Vernieuw vanaf een apparaat met de huidige sleutel.",
+      "unreadable": "De sleutel van deze telefoon opent de mediatheek van een andere app niet. Er is niets veranderd. Vernieuw vanaf een apparaat met de huidige sleutel.",
+      "notSnapshotted": "De mediatheek van een andere app wordt nog opgeslagen. Er is niets veranderd. Open die app, laat hem synchroniseren en probeer het opnieuw.",
+      "changed": "Een mediatheek veranderde tijdens het vernieuwen. Er is niets veranderd. Probeer het opnieuw."
     }
   },
   "libraryFormat": {
@@ -1024,11 +1064,7 @@
       "recentlyAdded": "Recent toegevoegd",
       "movies": "Films",
       "shows": "Series",
-      "favorites": "Favorieten",
-      "unwatched": "Nog niet gezien",
-      "rewatch": "Opnieuw kijken",
-      "playlist": "Afspeellijst",
-      "genre": "Genre"
+      "favorites": "Favorieten"
     },
     "seeAll": "Alles bekijken",
     "hero": {

@@ -20,7 +20,7 @@ import { publishLibrarySnapshotWith, type LibrarySnapshotPublishDeps } from "@sp
 import { PARROT_OP_STREAM_VERSION, parseParrotTracklist, type ParrotListedTrack, type ParrotPhotoCredit } from "@space/parrot-library-db-definition/ops";
 import { createPhoneOpsSaver, type PhoneLibraryState } from "./saveEdits";
 import { phoneCoverCopies } from "./coverCopies";
-import { appSqliteDb } from "@space/mobile-shell/app-data";
+import { sqliteDb } from "./dbPath";
 import * as sdk from "@space/sdk";
 import { API_BASE_URL } from "../config";
 import { SPACE_APP_HEADER } from "@space/shared/appScope";
@@ -104,7 +104,7 @@ SQLite.enablePromise(true);
 const DB_NAME = "parrot.library.sqlite";
 /** Where the SQLite plugin keeps a database on this device (Android `databases/`, iPhone `Library/LocalDatabase`, Apple TV Caches). */
 const deviceDb = (name: string) =>
-  appSqliteDb(Platform.OS, Platform.isTV, { document: RNFS.DocumentDirectoryPath, library: RNFS.LibraryDirectoryPath, caches: RNFS.CachesDirectoryPath }, name, "localDatabase");
+  sqliteDb(Platform.OS, Platform.isTV, { document: RNFS.DocumentDirectoryPath, library: RNFS.LibraryDirectoryPath, caches: RNFS.CachesDirectoryPath }, name);
 const dbPath = () => deviceDb(DB_NAME).path;
 const openLibraryFile = () => SQLite.openDatabase({ name: DB_NAME, location: deviceDb(DB_NAME).location });
 

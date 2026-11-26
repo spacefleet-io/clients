@@ -10,7 +10,7 @@ const BASE_OPTIONS = {
 // which does not honour vi.resetModules(). Vitest 4's ESM resolver requires
 // a fully-qualified URL for dynamic imports (relative strings no longer
 // auto-resolve from the test file or auto-append the .ts extension).
-const MPV_EXTERNAL = "@space/mpv/external";
+const MPV_EXTERNAL = new URL("../../../../packages/mpv/src/external.ts", import.meta.url).href;
 
 // Dump the full computed mpv arg list on assertion failure. try/catch so a
 // dump failure can't mask the real expect().

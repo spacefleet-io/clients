@@ -19,8 +19,8 @@ import {
   type EngineV2,
   type RuntimeJobEvent,
   type StepHandler,
-} from "@space/runtime-jobs-engine/engineV2";
-import { createRunnableSet } from "@space/runtime-jobs-engine/engineV2Runnable";
+} from "../src/core/jobs/engineV2";
+import { createRunnableSet } from "../src/core/jobs/engineV2Runnable";
 
 const ts = "2026-01-01T00:00:00.000Z";
 const T = "jobs-engine-v2-runnable-set";

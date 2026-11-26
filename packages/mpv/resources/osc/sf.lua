@@ -3,7 +3,6 @@ local mp = require("mp")
 local msg = require("mp.msg")
 local utils = require("mp.utils")
 local opts = require("mp.options")
-local input = require("mp.input")
 
 local user_opts = {
   subtitles = "",
@@ -322,60 +321,9 @@ local AUTO_SKIP_DELAY_SECONDS = 5
 local AUTO_SKIP_TICK_SECONDS = 0.25
 -- How long the boxed "Opening next episode" notice stays on screen.
 local NEXT_EPISODE_NOTICE_SECONDS = 2
--- Colours are written in ASS byte order (&HBBGGRR&), from the app's tokens:
--- amber #FFB357, fill #1F2430, neutral #C8CCD4, text #F2F4F8 (PLAY-SKIP-06:
--- the outline was drawn light blue because RGB was written as BGR).
-local AMBER = "57B3FF"
-local AMBER_HOVER = "8BD3FF"
-local AMBER_PRESSED = "3A9CE4"
-local FILL = "30241F"
-local NEUTRAL = "D4CCC8"
-local TEXT = "F8F4F2"
-local MUTED = "CEBAB6"
-local DARK = "1A1A1A"
 -- The notice uses the pill's box and fill but a neutral outline: the amber
 -- outline marks a clickable action, the notice is status only.
-local NOTICE_OUTLINE = NEUTRAL
-
--- Characters, not bytes: French labels carry accents (é is two bytes).
-local function ulen(s)
-  local _, count = tostring(s):gsub("[^\128-\191]", "")
-  return count
-end
-
--- Width estimate of `s` at an ASS font size (Inter, bold included).
-local function text_width(s, fs)
-  return ulen(s) * fs * 0.36
-end
-
--- Rounded rectangle (radius rr) as an ASS drawing path.
-local function ass_round_path(l, t, r, b, rr)
-  rr = math.min(rr, (b - t) / 2, (r - l) / 2)
-  local k = rr * 0.4477
-  return string.format(
-    "m %.1f %.1f l %.1f %.1f b %.1f %.1f %.1f %.1f %.1f %.1f l %.1f %.1f b %.1f %.1f %.1f %.1f %.1f %.1f l %.1f %.1f b %.1f %.1f %.1f %.1f %.1f %.1f l %.1f %.1f b %.1f %.1f %.1f %.1f %.1f %.1f",
-    l + rr, t, r - rr, t,
-    r - k, t, r, t + k, r, t + rr,
-    r, b - rr,
-    r, b - k, r - k, b, r - rr, b,
-    l + rr, b,
-    l + k, b, l, b - k, l, b - rr,
-    l, t + rr,
-    l, t + k, l + k, t, l + rr, t)
-end
-
-local function ass_circle_path(cx, cy, r)
-  return ass_round_path(cx - r, cy - r, cx + r, cy + r, r)
-end
-
-local function ass_shape(path, fill, outline, bord, alpha)
-  return string.format("{\\p1\\an7\\pos(0,0)\\1c&H%s&\\3c&H%s&\\1a&H%s&\\bord%s\\shad0}%s{\\p0}",
-    fill, outline or fill, alpha or "22", bord or 0, path)
-end
-
-local function ass_text(x, y, an, fs, color, bold, s)
-  return string.format("{\\an%d\\pos(%.1f,%.1f)\\bord0\\shad0\\fs%d\\1c&H%s&\\b%d}%s", an, x, y, fs, color, bold and 1 or 0, s)
-end
+local NOTICE_OUTLINE = "C8CCD4"
 
 local pill_state = {
   active = nil,
@@ -406,34 +354,6 @@ local pill_state = {
   reload_hold = false,
 }
 
--- PLAY-SKIP-03/04/10: the skip UI (asked line, change panel, save scope),
--- drawn by the functions after announce_osc_seek. `mode` is nil, "asked",
--- "panel" or "scope"; times are in seconds; regions/areas are logical px.
-local skip_ui = {
-  osd = mp.create_osd_overlay("ass-events"),
-  mode = nil,
-  kind = "intro",
-  start = 0,
-  stop = 0,
-  sel = "end",
-  drag = false,
-  hover = nil,
-  pressed = nil,
-  regions = {},
-  areas = {},
-  track = nil,
-  seekbar = nil,
-  asked_at = 0,
-  asked_timer = nil,
-  scope = "season",
-  far = false,
-  awaiting = nil,
-  answer_timer = nil,
-  return_pos = nil,
-  was_paused = false,
-  last_drag_seek = 0,
-}
-
 local PILL_MARGIN_X = 28
 local PILL_MARGIN_Y = 28
 local PILL_PADDING_X = 24
@@ -450,23 +370,9 @@ local PILL_MIN_WIDTH = 280
 -- them.
 local PILL_RECT_PROPERTY = "user-data/sf/pill-rect"
 local published_pill_rect_key = nil
--- The pill's rect and the skip UI's (OSD px); tog4in1 reads one rect, so the
--- rect covering both is published (the pill hides while the skip UI shows).
-local pill_hit_rect = nil
-local skip_hit_rect = nil
 
-local function publish_hit_rects()
-  local rect = pill_hit_rect
-  if skip_hit_rect then
-    rect = rect and {
-      left = math.min(rect.left, skip_hit_rect.left),
-      top = math.min(rect.top, skip_hit_rect.top),
-      right = math.max(rect.right, skip_hit_rect.right),
-      bottom = math.max(rect.bottom, skip_hit_rect.bottom),
-    } or skip_hit_rect
-  end
-  local key = rect and string.format("%d,%d,%d,%d",
-    math.floor(rect.left), math.floor(rect.top), math.floor(rect.right), math.floor(rect.bottom)) or "none"
+local function publish_pill_rect(rect)
+  local key = rect and string.format("%d,%d,%d,%d", rect.left, rect.top, rect.right, rect.bottom) or "none"
   if key == published_pill_rect_key then
     return
   end
@@ -480,11 +386,6 @@ local function publish_hit_rects()
   end
   mp.set_property_native(PILL_RECT_PROPERTY, value)
   msg.info("[sf-pill] published hit rect " .. key)
-end
-
-local function publish_pill_rect(rect)
-  pill_hit_rect = rect
-  publish_hit_rects()
 end
 
 local function clamp(value, min_value, max_value)
@@ -616,38 +517,6 @@ local audio_text = {
   audioOutputLabel = "Sound output:",
 }
 local AUDIO_RETRY_NOTICE_SECONDS = 2
--- The skip texts (PLAY-SKIP-07), English until the app pushes the UI language
--- in `sf-labels-json` `skip` (i18n `player.skipUi.*`, OSC_SKIP_LABEL_KEYS).
-local skip_text = {
-  skipIntro = "Skip intro",
-  skipCredits = "Skip credits",
-  nextEpisode = "Next episode",
-  nextEpisodeIn = "Next episode will start in",
-  openingNextEpisode = "Opening next episode",
-  enterKey = "[Enter]",
-  askedIntro = "Intro skipped. Was it right?",
-  askedCredits = "Credits skipped. Was it right?",
-  yes = "Yes",
-  changeTimes = "Change times",
-  thanks = "Thanks",
-  changeIntroTimes = "Change intro times",
-  changeCreditsTimes = "Change credits times",
-  start = "Start",
-  ["end"] = "End",
-  hint = "Drag a handle: the picture follows it.  ← → move the selected one by 1 s",
-  save = "Save  [Enter]",
-  cancel = "Cancel  [Esc]",
-  back = "Back",
-  scopeQuestion = "Use these times for",
-  thisSeason = "This season",
-  onlyThisEpisode = "Only this episode",
-  farNote = "These times are far from the rest of this season.",
-  savedSeason = "Saved for this season",
-  savedEpisode = "Saved for this episode",
-  menuPrompt = "Intro and credits",
-  introEndsHere = "Intro ends here",
-  creditsStartHere = "Credits start here",
-}
 
 local function current_pill_action()
   -- The frozen-audio notice wins over skip markers: without it the user hears
@@ -662,7 +531,7 @@ local function current_pill_action()
     if marker.type == "intro" then
       return {
         kind = "skip_intro",
-        label = skip_text.skipIntro,
+        label = "Skip intro",
         marker = marker,
         autoSkip = marker.autoSkip == true,
         countdown = math.max(0, (marker.endSeconds or 0) - (time_pos or 0)),
@@ -679,7 +548,7 @@ local function current_pill_action()
           remaining <= playback_state.fallback_countdown_seconds
         return {
           kind = "next_episode",
-          label = skip_text.nextEpisode,
+          label = "Next episode",
           -- Carry the credits marker through so refresh_pill can apply the
           -- creditsSkipEnabled auto-skip to this pill too. Without this, the
           -- "Next episode" pill would only auto-fire via the legacy end-of-
@@ -694,10 +563,9 @@ local function current_pill_action()
       end
       return {
         kind = "skip_credits",
-        label = skip_text.skipCredits,
+        label = "Skip credits",
         marker = marker,
-        -- PLAY-SKIP-02: credits are never skipped on their own; the user presses.
-        autoSkip = false,
+        autoSkip = marker.autoSkip == true,
         countdown = math.max(0, (marker.endSeconds or 0) - (time_pos or 0)),
       }
     end
@@ -725,7 +593,7 @@ local function current_pill_action()
       -- whether the metadata service has a credits marker.
       return {
         kind = "next_episode",
-        label = skip_text.nextEpisode,
+        label = "Next episode",
         autoSkip = playback_state.auto_skip_next_episode == true
           and playback_state.autoplay_next_episode == true,
         endOfMediaFallback = true,
@@ -743,7 +611,7 @@ end
 -- (pill_rect_to_osd), so clicks follow the drawn pill.
 local function pill_box_rect(label)
   local char_width = 13
-  local box_width = math.max(PILL_MIN_WIDTH, (ulen(label) * char_width) + PILL_PADDING_X * 2)
+  local box_width = math.max(PILL_MIN_WIDTH, (#label * char_width) + PILL_PADDING_X * 2)
   local left = PILL_MARGIN_X
   local top = PILL_MARGIN_Y
   if pill_state.top_band_bottom then
@@ -752,12 +620,24 @@ local function pill_box_rect(label)
   return { left = left, top = top, right = left + box_width, bottom = top + PILL_HEIGHT }
 end
 
--- ASS for the pill box (filled, outlined, rounded rectangle) with `label`
--- inside. Shared by the clickable pill and the transient notice so both read
--- the same way on busy video. On an amber fill the text turns dark.
+-- ASS for the pill box (filled, outlined rectangle) with `label` inside. Shared
+-- by the clickable pill and the transient notice so both read the same way on
+-- busy video.
 local function pill_box_ass(rect, label, fill, outline)
-  local text_color = (fill == AMBER or fill == AMBER_HOVER or fill == AMBER_PRESSED) and DARK or TEXT
-  local draw = ass_shape(ass_round_path(rect.left, rect.top, rect.right, rect.bottom, 12), fill, outline, 2, "22")
+  local text_color = "F2F4F8"
+  local draw = string.format(
+    "{\\p1\\an7\\pos(0,0)\\1c&H%s&\\3c&H%s&\\1a&H22&\\bord2\\shad0}m %.1f %.1f l %.1f %.1f l %.1f %.1f l %.1f %.1f{\\p0}",
+    fill,
+    outline,
+    rect.left,
+    rect.top,
+    rect.right,
+    rect.top,
+    rect.right,
+    rect.bottom,
+    rect.left,
+    rect.bottom
+  )
   local text = string.format(
     "{\\an4\\pos(%.1f,%.1f)\\bord0\\shad0\\fs26\\1c&H%s&\\b1}%s",
     rect.left + PILL_PADDING_X,
@@ -783,7 +663,7 @@ local function render_pill()
     return
   end
   local action = pill_state.active
-  if pill_state.notice or not action or pill_state.next_requested or skip_ui.mode ~= nil then
+  if pill_state.notice or not action or pill_state.next_requested then
     pill_state.rect = nil
     publish_pill_rect(nil)
     pill_state.hover = false
@@ -791,7 +671,7 @@ local function render_pill()
     if pill_state.notice then
       -- Non-interactive status: no hit rect is published, so clicks pass
       -- through, and the outline is neutral rather than the action amber.
-      show_pill_osd(pill_box_ass(pill_box_rect(pill_state.notice), pill_state.notice, FILL, NOTICE_OUTLINE))
+      show_pill_osd(pill_box_ass(pill_box_rect(pill_state.notice), pill_state.notice, "1F2430", NOTICE_OUTLINE))
     else
       pill_state.osd.data = ""
       pill_state.osd:update()
@@ -802,9 +682,9 @@ local function render_pill()
   local countdown = type(action.countdown) == "number" and action.countdown or nil
   local hint = action.label
   if countdown ~= nil then
-    hint = string.format("%s  %s  %s", action.label, format_pill_countdown(countdown), skip_text.enterKey)
+    hint = string.format("%s  %s  [Enter]", action.label, format_pill_countdown(countdown))
   else
-    hint = string.format("%s  %s", action.label, skip_text.enterKey)
+    hint = string.format("%s  [Enter]", action.label)
   end
 
   local rect = pill_box_rect(hint)
@@ -814,8 +694,8 @@ local function render_pill()
     pill_state.mouse_x >= pill_state.rect.left and pill_state.mouse_x <= pill_state.rect.right and
     pill_state.mouse_y >= pill_state.rect.top and pill_state.mouse_y <= pill_state.rect.bottom
 
-  local fill = pill_state.pressed and AMBER_PRESSED or (pill_state.hover and AMBER or FILL)
-  local outline = pill_state.hover and AMBER_HOVER or AMBER
+  local fill = pill_state.pressed and "E49C3A" or (pill_state.hover and "F6B04E" or "1F2430")
+  local outline = pill_state.hover and "FFD38B" or "F6B04E"
   local data = pill_box_ass(rect, hint, fill, outline)
   if action.kind == "audio_retry" and pill_state.audio_stall then
     -- The why, under the action: status text, not part of the hit rect.
@@ -826,7 +706,7 @@ local function render_pill()
       detail = detail .. "\\N" .. audio_text.audioOutputLabel .. " " .. device
     end
     data = data .. "\n" .. string.format(
-      "{\\an7\\pos(%.1f,%.1f)\\bord2\\shad0\\3c&H000000&\\fs22\\1c&H" .. TEXT .. "&}%s",
+      "{\\an7\\pos(%.1f,%.1f)\\bord2\\shad0\\3c&H000000&\\fs22\\1c&HF2F4F8&}%s",
       rect.left,
       rect.bottom + 12,
       detail
@@ -859,705 +739,6 @@ local function announce_osc_seek(seconds)
   mp.commandv("script-message", "sf-osc-seek", string.format("%.3f", seconds))
 end
 
--- ---------------------------------------------------------------------------
--- Skip UI (PLAY-SKIP-03/04/10): the "Intro skipped. Was it right?" line after
--- an intro skip, the control bar's intro / credits menu, and the change panel:
--- two handles on the seek bar (dragging one shows that frame), -1 s / +1 s,
--- arrow keys, Cancel [Esc], Save [Enter], then where the times apply. Drawn on
--- its own overlay above the pill, in logical pixels like the pill
--- (MPV-OSC-05). The app stores the times: this script sends `sf-skip-edit`
--- (LUA_OUTBOUND_CHANNELS.SKIP_EDIT, string args, seconds) and the app answers
--- on `sf-skip-edit-json` (skipEditAnswerSchema in @space/mpv-protocol).
-local SKIP_ASKED_SECONDS = 6
-local SKIP_NOTICE_SECONDS = 2.5
-local SKIP_ANSWER_TIMEOUT_SECONDS = 5
-local SKIP_PANEL_WIDTH = 960
-local SKIP_PANEL_HEIGHT = 214
-local SKIP_MIN_LENGTH_SECONDS = 1
-local SKIP_DRAG_SEEK_INTERVAL_SECONDS = 0.08
-
-local function skip_marker_of(kind)
-  for _, marker in ipairs(playback_state.markers) do
-    if marker.type == kind then
-      return marker
-    end
-  end
-  return nil
-end
-
-local function skip_seconds(value)
-  return string.format("%.3f", value)
-end
-
-local function skip_duration()
-  return mp.get_property_number("duration", 0) or 0
-end
-
-local function send_skip_edit(...)
-  local args = { ... }
-  msg.info("[sf-skip] sf-skip-edit " .. table.concat(args, " "))
-  mp.commandv("script-message", "sf-skip-edit", ...)
-end
-
--- The seek track tog4in1 publishes (user-data/sf/seekbar, OSD px) in logical
--- px; while the controls are hidden a track of our own is drawn instead.
-local function skip_track(w, h)
-  local s = pill_state.ui_scale or 1
-  local bar = skip_ui.seekbar
-  if type(bar) == "table" and bar.visible == true and type(bar.x1) == "number" and type(bar.x2) == "number"
-    and type(bar.y) == "number" and bar.x2 > bar.x1
-  then
-    return { x1 = bar.x1 / s, x2 = bar.x2 / s, y = bar.y / s, own = false }
-  end
-  return { x1 = 60, x2 = w - 60, y = h - 110, own = true }
-end
-
-local function skip_time_x(track, t)
-  local d = skip_duration()
-  local frac = d > 0 and clamp(t / d, 0, 1) or 0
-  return track.x1 + (track.x2 - track.x1) * frac
-end
-
-local function skip_x_time(track, x)
-  local frac = clamp((x - track.x1) / (track.x2 - track.x1), 0, 1)
-  return frac * skip_duration()
-end
-
-local function skip_region(id, l, t, r, b)
-  table.insert(skip_ui.regions, { id = id, left = l, top = t, right = r, bottom = b })
-end
-
--- The topmost region under (x, y): later regions are drawn above earlier ones.
-local function skip_region_at(x, y)
-  for i = #skip_ui.regions, 1, -1 do
-    local r = skip_ui.regions[i]
-    if x >= r.left and x <= r.right and y >= r.top and y <= r.bottom then
-      return r.id
-    end
-  end
-  return nil
-end
-
-local function skip_in_area(x, y)
-  for _, r in ipairs(skip_ui.areas) do
-    if x >= r.left and x <= r.right and y >= r.top and y <= r.bottom then
-      return true
-    end
-  end
-  return false
-end
-
--- A rounded button; returns its right edge. Primary = amber with dark text.
-local function skip_button(out, id, l, cy, label, fs, primary)
-  local w = text_width(label, fs) + 34
-  local bh = fs + 18
-  local hover = skip_ui.hover == id
-  local fill, outline, color
-  if primary then
-    fill = hover and AMBER_HOVER or AMBER
-    outline = fill
-    color = DARK
-  else
-    fill = FILL
-    outline = hover and AMBER or NEUTRAL
-    color = TEXT
-  end
-  table.insert(out, ass_shape(ass_round_path(l, cy - bh / 2, l + w, cy + bh / 2, bh / 2), fill, outline, 1.5, "00"))
-  table.insert(out, ass_text(l + w / 2, cy, 5, fs, color, true, label))
-  skip_region(id, l, cy - bh / 2, l + w, cy + bh / 2)
-  return l + w
-end
-
--- The asked line, in the pill's place; a strip along its bottom shows the
--- time left before it goes away.
-local function draw_skip_asked(out)
-  local fs, bh = 24, 62
-  local s = pill_state.ui_scale or 1
-  local left = PILL_MARGIN_X
-  local top = pill_state.top_band_bottom and (pill_state.top_band_bottom / s + PILL_MARGIN_Y / 2) or PILL_MARGIN_Y
-  local tx = left + PILL_PADDING_X
-  local cy = top + bh / 2
-  local buttons = {}
-  local asked = skip_ui.kind == "credits" and skip_text.askedCredits or skip_text.askedIntro
-  local r1 = skip_button(buttons, "yes", tx + text_width(asked, fs) + 22, cy, skip_text.yes, 22, true)
-  local right = skip_button(buttons, "change", r1 + 10, cy, skip_text.changeTimes, 22, false) + 14
-  table.insert(out, ass_shape(ass_round_path(left, top, right, top + bh, 14), FILL, NEUTRAL, 1.5, "22"))
-  table.insert(out, ass_text(tx, cy, 4, fs, TEXT, false, asked))
-  for _, part in ipairs(buttons) do
-    table.insert(out, part)
-  end
-  local left_frac = clamp(1 - (mp.get_time() - skip_ui.asked_at) / SKIP_ASKED_SECONDS, 0, 1)
-  if left_frac > 0.01 then
-    table.insert(out, ass_shape(ass_round_path(left + 12, top + bh - 6, left + 12 + (right - left - 24) * left_frac, top + bh - 3, 1.5),
-      NEUTRAL, NEUTRAL, 0, "60"))
-  end
-  table.insert(skip_ui.areas, { left = left, top = top, right = right, bottom = top + bh })
-end
-
--- The range on the seek track, a handle at each end; the selected handle is
--- amber with its time above it, with a halo while dragged.
-local function draw_skip_range(out, track)
-  local y = track.y
-  if track.own then
-    table.insert(out, ass_shape(ass_round_path(track.x1, y - 3, track.x2, y + 3, 3), NEUTRAL, NEUTRAL, 0, "60"))
-  end
-  local xs, xe = skip_time_x(track, skip_ui.start), skip_time_x(track, skip_ui.stop)
-  table.insert(out, ass_shape(ass_round_path(xs, y - 12, xe, y + 12, 6), TEXT, AMBER_HOVER, 2, "A8"))
-  skip_region("track", track.x1 - 10, y - 20, track.x2 + 10, y + 20)
-  local chip_top = y
-  local fs = 22
-  local labels = { start = format_pill_countdown(skip_ui.start), ["end"] = format_pill_countdown(skip_ui.stop) }
-  local widths = { start = text_width(labels.start, fs) + 20, ["end"] = text_width(labels["end"], fs) + 20 }
-  -- Each time chip is centred on its handle; when the handles are too close for that, the two chips sit
-  -- side by side around the middle of the range, start on the left, so neither covers the other.
-  local centres = { start = xs, ["end"] = xe }
-  local gap = 6
-  if xe - xs < (widths.start + widths["end"]) / 2 + gap then
-    local mid = (xs + xe) / 2
-    centres.start = mid - gap / 2 - widths.start / 2
-    centres["end"] = mid + gap / 2 + widths["end"] / 2
-  end
-  local function handle(which, x)
-    local selected = skip_ui.sel == which
-    local hw, hh = selected and 16 or 12, selected and 44 or 36
-    if selected and skip_ui.drag then
-      table.insert(out, ass_shape(ass_circle_path(x, y, 34), AMBER, AMBER, 0, "B0"))
-    end
-    table.insert(out, ass_shape(ass_round_path(x - hw / 2, y - hh / 2, x + hw / 2, y + hh / 2, 5),
-      selected and AMBER or TEXT, selected and AMBER_HOVER or AMBER, selected and 3 or 2, "00"))
-    local cw, cx = widths[which], centres[which]
-    local ct = y - hh / 2 - 44
-    chip_top = math.min(chip_top, ct)
-    table.insert(out, ass_shape(ass_round_path(cx - cw / 2, ct, cx + cw / 2, ct + 34, 8),
-      selected and AMBER or FILL, selected and AMBER or NEUTRAL, 1.5, "10"))
-    table.insert(out, ass_text(cx, ct + 17, 5, fs, selected and DARK or TEXT, true, labels[which]))
-    skip_region("h-" .. which, x - 20, ct, x + 20, y + hh / 2 + 4)
-  end
-  -- The selected handle last, so it wins where both overlap.
-  if skip_ui.sel == "start" then
-    handle("end", xe)
-    handle("start", xs)
-  else
-    handle("start", xs)
-    handle("end", xe)
-  end
-  table.insert(skip_ui.areas, { left = track.x1 - 24, top = chip_top, right = track.x2 + 24, bottom = y + 30 })
-end
-
-local function draw_skip_panel_box(out, w, track)
-  local pw = math.min(SKIP_PANEL_WIDTH, w - 40)
-  local left = (w - pw) / 2
-  local top = math.max(10, track.y - 90 - SKIP_PANEL_HEIGHT)
-  table.insert(out, ass_shape(ass_round_path(left, top, left + pw, top + SKIP_PANEL_HEIGHT, 16), FILL, NEUTRAL, 1.5, "00"))
-  table.insert(skip_ui.areas, { left = left, top = top, right = left + pw, bottom = top + SKIP_PANEL_HEIGHT })
-  return left, top, pw
-end
-
--- Cancel or Back, then Save, at the panel's bottom right.
-local function draw_skip_footer(out, left, top, pw, first_id, first_label)
-  local by = top + SKIP_PANEL_HEIGHT - 36
-  local fs = 22
-  local save_left = left + pw - PILL_PADDING_X - (text_width(skip_text.save, fs) + 34)
-  local first_left = save_left - 12 - (text_width(first_label, fs) + 34)
-  skip_button(out, first_id, first_left, by, first_label, fs, false)
-  skip_button(out, "save", save_left, by, skip_text.save, fs, true)
-end
-
-local function draw_skip_change(out, w, track)
-  local left, top, pw = draw_skip_panel_box(out, w, track)
-  local title = skip_ui.kind == "credits" and skip_text.changeCreditsTimes or skip_text.changeIntroTimes
-  table.insert(out, ass_text(left + PILL_PADDING_X, top + 36, 4, 28, TEXT, true, title))
-  local ry = top + 92
-  local function readout(id, x, label, value, selected)
-    table.insert(out, ass_text(x, ry, 4, 22, MUTED, false, label))
-    local vx = x + text_width(label, 22) + 16
-    local vw = text_width(value, 30) + 24
-    if selected then
-      table.insert(out, ass_shape(ass_round_path(vx - 4, ry - 24, vx + vw, ry + 24, 10), FILL, AMBER, 2, "00"))
-    end
-    table.insert(out, ass_text(vx + 8, ry, 4, 30, selected and AMBER or TEXT, true, value))
-    skip_region(id, x, ry - 24, vx + vw, ry + 24)
-    return vx + vw
-  end
-  local e1 = readout("sel-start", left + PILL_PADDING_X, skip_text.start, format_pill_countdown(skip_ui.start), skip_ui.sel == "start")
-  readout("sel-end", e1 + 40, skip_text["end"], format_pill_countdown(skip_ui.stop), skip_ui.sel == "end")
-  local minus, plus = "−1 s", "+1 s"
-  local plus_left = left + pw - PILL_PADDING_X - (text_width(plus, 24) + 34)
-  local minus_left = plus_left - 12 - (text_width(minus, 24) + 34)
-  skip_button(out, "minus", minus_left, ry, minus, 24, false)
-  skip_button(out, "plus", plus_left, ry, plus, 24, false)
-  table.insert(out, ass_text(left + PILL_PADDING_X, top + 142, 4, 19, MUTED, false, skip_text.hint))
-  draw_skip_footer(out, left, top, pw, "cancel", skip_text.cancel)
-end
-
--- Save, second step: where the new times apply. "This season" is preselected
--- unless the app found them far from the rest of the season.
-local function draw_skip_scope(out, w, track)
-  local left, top, pw = draw_skip_panel_box(out, w, track)
-  table.insert(out, ass_text(left + PILL_PADDING_X, top + 36, 4, 28, TEXT, true, skip_text.scopeQuestion))
-  local ry = top + 96
-  local function option(id, l, label, on)
-    local fs = 24
-    local ow = 56 + text_width(label, fs) + 24
-    local hover = skip_ui.hover == id
-    table.insert(out, ass_shape(ass_round_path(l, ry - 28, l + ow, ry + 28, 14), FILL,
-      (on or hover) and AMBER or NEUTRAL, on and 2.5 or 1.5, "00"))
-    table.insert(out, ass_shape(ass_circle_path(l + 28, ry, 11), FILL, on and AMBER or NEUTRAL, 2, "00"))
-    if on then
-      table.insert(out, ass_shape(ass_circle_path(l + 28, ry, 5.5), AMBER, AMBER, 0, "00"))
-    end
-    table.insert(out, ass_text(l + 50, ry, 4, fs, on and AMBER or TEXT, true, label))
-    skip_region(id, l, ry - 28, l + ow, ry + 28)
-    return l + ow
-  end
-  local e1 = option("scope-season", left + PILL_PADDING_X, skip_text.thisSeason, skip_ui.scope == "season")
-  option("scope-episode", e1 + 16, skip_text.onlyThisEpisode, skip_ui.scope == "episode")
-  if skip_ui.far then
-    table.insert(out, ass_text(left + PILL_PADDING_X, top + 142, 4, 20, AMBER, false, skip_text.farNote))
-  end
-  draw_skip_footer(out, left, top, pw, "back", skip_text.back)
-end
-
-local function render_skip_ui()
-  update_pill_dimensions()
-  local s = pill_state.ui_scale or 1
-  local w, h = pill_state.width / s, pill_state.height / s
-  skip_ui.regions = {}
-  skip_ui.areas = {}
-  local out = {}
-  if skip_ui.mode and w > 0 and h > 0 then
-    if skip_ui.mode == "asked" then
-      draw_skip_asked(out)
-    else
-      local track = skip_track(w, h)
-      skip_ui.track = track
-      draw_skip_range(out, track)
-      if skip_ui.mode == "panel" then
-        draw_skip_change(out, w, track)
-      else
-        draw_skip_scope(out, w, track)
-      end
-    end
-  end
-  if w > 0 and h > 0 then
-    skip_ui.osd.res_x = w
-    skip_ui.osd.res_y = h
-  end
-  skip_ui.osd.z = 1001
-  skip_ui.osd.data = table.concat(out, "\n")
-  skip_ui.osd:update()
-  local union = nil
-  for _, r in ipairs(skip_ui.areas) do
-    union = union and {
-      left = math.min(union.left, r.left),
-      top = math.min(union.top, r.top),
-      right = math.max(union.right, r.right),
-      bottom = math.max(union.bottom, r.bottom),
-    } or { left = r.left, top = r.top, right = r.right, bottom = r.bottom }
-  end
-  skip_hit_rect = union and pill_rect_to_osd(union) or nil
-  publish_hit_rects()
-end
-
-local function stop_skip_asked_timer()
-  if skip_ui.asked_timer then
-    skip_ui.asked_timer:kill()
-    skip_ui.asked_timer = nil
-  end
-end
-
-local function close_skip_asked(reason)
-  if skip_ui.mode ~= "asked" then
-    return
-  end
-  stop_skip_asked_timer()
-  skip_ui.mode = nil
-  skip_ui.hover = nil
-  msg.info("[sf-skip] asked line closed: " .. reason)
-  render_skip_ui()
-  render_pill()
-end
-
--- After a skip (automatic, or the user's press) of times this device detected
--- and is unsure of (marker.ask), ask whether they were right (PLAY-SKIP-03).
--- Gone after SKIP_ASKED_SECONDS, a seek, a pause or the menu.
-local function show_skip_asked(marker)
-  stop_skip_asked_timer()
-  skip_ui.mode = "asked"
-  skip_ui.kind = marker.type == "credits" and "credits" or "intro"
-  skip_ui.start = marker.startSeconds or 0
-  skip_ui.stop = marker.endSeconds or 0
-  skip_ui.asked_at = mp.get_time()
-  skip_ui.hover = nil
-  skip_ui.asked_timer = mp.add_periodic_timer(0.2, function()
-    if mp.get_time() - skip_ui.asked_at >= SKIP_ASKED_SECONDS then
-      close_skip_asked("timeout")
-    else
-      render_skip_ui()
-    end
-  end)
-  msg.info(string.format("[sf-skip] asked line shown: %s %.2f-%.2f", skip_ui.kind, skip_ui.start, skip_ui.stop))
-  render_skip_ui()
-  render_pill()
-end
-
--- Show the frame at the selected handle.
-local function skip_show_frame()
-  local t = skip_ui.sel == "start" and skip_ui.start or skip_ui.stop
-  mp.commandv("seek", skip_seconds(t), "absolute", "exact")
-  announce_osc_seek(t)
-end
-
-local function skip_move_handle(which, t)
-  if which == "start" then
-    skip_ui.start = clamp(t, 0, math.max(0, skip_ui.stop - SKIP_MIN_LENGTH_SECONDS))
-  else
-    skip_ui.stop = clamp(t, math.min(skip_duration(), skip_ui.start + SKIP_MIN_LENGTH_SECONDS), skip_duration())
-  end
-end
-
-local function skip_select_handle(which)
-  skip_ui.sel = which
-  skip_show_frame()
-  render_skip_ui()
-end
-
-local function skip_nudge(delta)
-  local current = skip_ui.sel == "start" and skip_ui.start or skip_ui.stop
-  skip_move_handle(skip_ui.sel, current + delta)
-  msg.info(string.format("[sf-skip] %s moved by %+d s: %.2f-%.2f", skip_ui.sel, delta, skip_ui.start, skip_ui.stop))
-  skip_show_frame()
-  render_skip_ui()
-end
-
-local function stop_skip_answer_timer()
-  if skip_ui.answer_timer then
-    skip_ui.answer_timer:kill()
-    skip_ui.answer_timer = nil
-  end
-end
-
-local function close_skip_panel(reason, restore)
-  if skip_ui.mode ~= "panel" and skip_ui.mode ~= "scope" then
-    return
-  end
-  skip_ui.mode = nil
-  skip_ui.drag = false
-  skip_ui.hover = nil
-  skip_ui.awaiting = nil
-  stop_skip_answer_timer()
-  mp.remove_key_binding("sf-skip-edit-tab")
-  msg.info("[sf-skip] change panel closed: " .. reason)
-  if restore ~= false then
-    if type(skip_ui.return_pos) == "number" then
-      mp.commandv("seek", skip_seconds(skip_ui.return_pos), "absolute", "exact")
-      announce_osc_seek(skip_ui.return_pos)
-    end
-    if not skip_ui.was_paused then
-      mp.set_property_bool("pause", false)
-    end
-  end
-  skip_ui.return_pos = nil
-  render_skip_ui()
-  render_pill()
-end
-
--- Open the change panel on `kind` with these times. Playback pauses (the
--- controls stay up) and comes back where it was on close.
-local function open_skip_panel(kind, start, stop)
-  local d = skip_duration()
-  if d <= 0 then
-    msg.warn("[sf-skip] change panel not opened: duration unknown")
-    return
-  end
-  stop_skip_asked_timer()
-  if skip_ui.mode ~= "panel" and skip_ui.mode ~= "scope" then
-    skip_ui.return_pos = mp.get_property_number("time-pos", nil)
-    skip_ui.was_paused = mp.get_property_bool("pause", false) == true
-  end
-  skip_ui.kind = kind
-  skip_ui.start = clamp(start or 0, 0, d)
-  skip_ui.stop = clamp(stop or d, 0, d)
-  if skip_ui.stop - skip_ui.start < SKIP_MIN_LENGTH_SECONDS then
-    if kind == "intro" then
-      skip_ui.stop = math.min(d, skip_ui.start + SKIP_MIN_LENGTH_SECONDS)
-    else
-      skip_ui.start = math.max(0, skip_ui.stop - SKIP_MIN_LENGTH_SECONDS)
-    end
-  end
-  skip_ui.mode = "panel"
-  skip_ui.sel = kind == "intro" and "end" or "start"
-  skip_ui.drag = false
-  skip_ui.hover = nil
-  skip_ui.awaiting = nil
-  mp.set_property_bool("pause", true)
-  mp.add_forced_key_binding("TAB", "sf-skip-edit-tab", function()
-    if skip_ui.mode == "panel" then
-      skip_select_handle(skip_ui.sel == "start" and "end" or "start")
-    end
-  end)
-  msg.info(string.format("[sf-skip] change panel opened: %s %.2f-%.2f", kind, skip_ui.start, skip_ui.stop))
-  skip_show_frame()
-  render_skip_ui()
-  render_pill()
-end
-
-local function open_skip_scope(scope)
-  skip_ui.mode = "scope"
-  skip_ui.scope = scope == "episode" and "episode" or "season"
-  skip_ui.far = skip_ui.scope == "episode"
-  skip_ui.awaiting = nil
-  skip_ui.hover = nil
-  stop_skip_answer_timer()
-  msg.info("[sf-skip] save scope step: preselected " .. skip_ui.scope)
-  render_skip_ui()
-end
-
--- Save, first step: ask the app which scope to preselect (PLAY-SKIP-05).
-local function skip_ask_scope()
-  skip_ui.awaiting = "preselect"
-  send_skip_edit("preselect", skip_ui.kind, skip_seconds(skip_ui.start), skip_seconds(skip_ui.stop))
-  stop_skip_answer_timer()
-  skip_ui.answer_timer = mp.add_timeout(SKIP_ANSWER_TIMEOUT_SECONDS, function()
-    skip_ui.answer_timer = nil
-    if skip_ui.awaiting == "preselect" then
-      msg.warn("[sf-skip] no preselect answer from the app; offering this season")
-      open_skip_scope("season")
-    end
-  end)
-end
-
-local function skip_save()
-  skip_ui.awaiting = "save"
-  send_skip_edit("save", skip_ui.kind, skip_seconds(skip_ui.start), skip_seconds(skip_ui.stop), skip_ui.scope,
-    skip_seconds(skip_duration()))
-  stop_skip_answer_timer()
-  skip_ui.answer_timer = mp.add_timeout(SKIP_ANSWER_TIMEOUT_SECONDS, function()
-    skip_ui.answer_timer = nil
-    if skip_ui.awaiting == "save" then
-      msg.warn("[sf-skip] no save answer from the app; closing the panel")
-      close_skip_panel("save not answered")
-    end
-  end)
-end
-
-local function skip_ui_action(id)
-  local mode = skip_ui.mode
-  msg.info("[sf-skip] ui action " .. id .. " mode=" .. tostring(mode))
-  if mode == "asked" then
-    if id == "yes" then
-      send_skip_edit("verdict", skip_ui.kind, skip_seconds(skip_ui.start), skip_seconds(skip_ui.stop),
-        skip_seconds(skip_duration()))
-      close_skip_asked("yes")
-      show_pill_notice("✓  " .. skip_text.thanks, SKIP_NOTICE_SECONDS)
-    elseif id == "change" then
-      skip_ui.mode = nil
-      open_skip_panel(skip_ui.kind, skip_ui.start, skip_ui.stop)
-    end
-    return
-  end
-  if mode == "panel" then
-    if id == "sel-start" then
-      skip_select_handle("start")
-    elseif id == "sel-end" then
-      skip_select_handle("end")
-    elseif id == "minus" then
-      skip_nudge(-1)
-    elseif id == "plus" then
-      skip_nudge(1)
-    elseif id == "cancel" then
-      close_skip_panel("cancel")
-    elseif id == "save" and skip_ui.awaiting == nil then
-      skip_ask_scope()
-    end
-    return
-  end
-  if mode == "scope" then
-    if id == "scope-season" or id == "scope-episode" then
-      skip_ui.scope = id == "scope-episode" and "episode" or "season"
-      render_skip_ui()
-    elseif id == "back" then
-      skip_ui.mode = "panel"
-      render_skip_ui()
-    elseif id == "save" and skip_ui.awaiting == nil then
-      skip_save()
-    end
-  end
-end
-
--- Keys while the panel is open; true when the key was the panel's.
-local function skip_ui_key(key)
-  local mode = skip_ui.mode
-  if mode ~= "panel" and mode ~= "scope" then
-    return false
-  end
-  if key == "ESC" then
-    if mode == "scope" then
-      skip_ui_action("back")
-    else
-      skip_ui_action("cancel")
-    end
-  elseif key == "ENTER" then
-    skip_ui_action("save")
-  elseif key == "LEFT" or key == "RIGHT" then
-    if mode == "panel" then
-      skip_nudge(key == "LEFT" and -1 or 1)
-    else
-      skip_ui_action(key == "LEFT" and "scope-season" or "scope-episode")
-    end
-  end
-  return true
-end
-
--- MBTN_LEFT down / up for the skip UI; true when it was the skip UI's.
-local function skip_ui_mouse(event)
-  if not skip_ui.mode then
-    return false
-  end
-  local s = pill_state.ui_scale or 1
-  local mx, my = mp.get_mouse_pos()
-  local x, y = (mx or -1) / s, (my or -1) / s
-  if skip_ui.drag then
-    if event.event == "up" or event.event == "cancel" then
-      skip_ui.drag = false
-      msg.info(string.format("[sf-skip] drag ended: %.2f-%.2f", skip_ui.start, skip_ui.stop))
-      skip_show_frame()
-      render_skip_ui()
-    end
-    return true
-  end
-  local id = skip_region_at(x, y)
-  if id == nil and not skip_in_area(x, y) then
-    return false
-  end
-  if event.event == "down" then
-    skip_ui.pressed = id
-    if skip_ui.mode ~= "asked" and skip_ui.track and (id == "h-start" or id == "h-end" or id == "track") then
-      if id == "track" then
-        skip_move_handle(skip_ui.sel, skip_x_time(skip_ui.track, x))
-      else
-        skip_ui.sel = id == "h-start" and "start" or "end"
-      end
-      if skip_ui.mode == "scope" then
-        skip_ui.mode = "panel"
-      end
-      skip_ui.drag = true
-      skip_ui.pressed = nil
-      msg.info("[sf-skip] drag started on " .. skip_ui.sel)
-      skip_show_frame()
-      render_skip_ui()
-    end
-    return true
-  end
-  if event.event == "up" then
-    local pressed = skip_ui.pressed
-    skip_ui.pressed = nil
-    if id and pressed == id then
-      skip_ui_action(id)
-    end
-  end
-  return true
-end
-
--- Pointer moves: drag the selected handle (the picture follows, a seek at most
--- every SKIP_DRAG_SEEK_INTERVAL_SECONDS) and hover highlights.
-local function skip_ui_pointer(pos)
-  if not skip_ui.mode or type(pos) ~= "table" or type(pos.x) ~= "number" then
-    return
-  end
-  local s = pill_state.ui_scale or 1
-  local x, y = pos.x / s, pos.y / s
-  if skip_ui.drag and skip_ui.track then
-    skip_move_handle(skip_ui.sel, skip_x_time(skip_ui.track, x))
-    local now = mp.get_time()
-    if now - skip_ui.last_drag_seek >= SKIP_DRAG_SEEK_INTERVAL_SECONDS then
-      skip_ui.last_drag_seek = now
-      skip_show_frame()
-    end
-    render_skip_ui()
-    return
-  end
-  local id = skip_region_at(x, y)
-  if id ~= skip_ui.hover then
-    skip_ui.hover = id
-    render_skip_ui()
-  end
-end
-
--- The control bar's intro / credits button (tog4in1 cy_skip, PLAY-SKIP-10):
--- with times, change them; without, mark the current moment.
-local function open_skip_menu()
-  close_skip_asked("menu")
-  if skip_ui.mode then
-    msg.info("[sf-skip] menu ignored: change panel open")
-    return
-  end
-  local now = mp.get_property_number("time-pos", 0) or 0
-  local d = skip_duration()
-  if d <= 0 then
-    msg.warn("[sf-skip] menu ignored: duration unknown")
-    return
-  end
-  local items, actions = {}, {}
-  local intro, credits = skip_marker_of("intro"), skip_marker_of("credits")
-  if intro then
-    table.insert(items, skip_text.changeIntroTimes)
-    table.insert(actions, function() open_skip_panel("intro", intro.startSeconds, intro.endSeconds) end)
-  else
-    table.insert(items, skip_text.introEndsHere)
-    table.insert(actions, function() open_skip_panel("intro", 0, now) end)
-  end
-  if credits then
-    table.insert(items, skip_text.changeCreditsTimes)
-    table.insert(actions, function() open_skip_panel("credits", credits.startSeconds, credits.endSeconds) end)
-  else
-    table.insert(items, skip_text.creditsStartHere)
-    table.insert(actions, function() open_skip_panel("credits", now, d) end)
-  end
-  msg.info(string.format("[sf-skip] menu opened at %.2f: intro=%s credits=%s", now, tostring(intro ~= nil), tostring(credits ~= nil)))
-  input.select({
-    prompt = skip_text.menuPrompt .. "  (" .. format_pill_countdown(now) .. ")",
-    items = items,
-    default_item = 1,
-    submit = function(index)
-      local action = actions[index]
-      if action then
-        action()
-      end
-    end,
-  })
-end
-
--- The app's answers to sf-skip-edit (skipEditAnswerSchema).
-local function on_skip_edit_answer(payload)
-  local ok, parsed = pcall(utils.parse_json, payload or "")
-  if not ok or type(parsed) ~= "table" then
-    msg.warn("[sf-skip] unreadable sf-skip-edit-json: " .. tostring(payload))
-    return
-  end
-  msg.info("[sf-skip] answer " .. tostring(parsed.kind) .. " scope=" .. tostring(parsed.scope) .. " awaiting=" .. tostring(skip_ui.awaiting))
-  if parsed.kind == "preselect" and skip_ui.awaiting == "preselect" then
-    open_skip_scope(parsed.scope)
-  elseif parsed.kind == "saved" and skip_ui.awaiting == "save" then
-    close_skip_panel("saved")
-    show_pill_notice("✓  " .. (parsed.scope == "episode" and skip_text.savedEpisode or skip_text.savedSeason), SKIP_NOTICE_SECONDS)
-  elseif parsed.kind == "failed" and skip_ui.awaiting ~= nil then
-    close_skip_panel("the app could not save")
-  end
-end
-
--- A new file: the asked line and the panel belonged to the previous one.
-local function reset_skip_ui()
-  stop_skip_asked_timer()
-  stop_skip_answer_timer()
-  if skip_ui.mode == "panel" or skip_ui.mode == "scope" then
-    close_skip_panel("new file", false)
-  end
-  skip_ui.mode = nil
-  skip_ui.awaiting = nil
-  render_skip_ui()
-end
-
 local function trigger_active_action()
   local action = pill_state.active
   if not action then
@@ -1571,9 +752,7 @@ local function trigger_active_action()
     local end_pos = clamp(marker.endSeconds or 0, 0, mp.get_property_number("duration", 0) or 0)
     mp.commandv("seek", tostring(end_pos), "absolute", "exact")
     announce_osc_seek(end_pos)
-    if marker.ask == true then
-      show_skip_asked(marker)
-    end
+    mp.osd_message(action.kind == "skip_intro" and "Skipped intro" or "Skipped credits", 1.0)
     return true
   end
   if action.kind == "audio_retry" then
@@ -1588,7 +767,7 @@ local function trigger_active_action()
   if action.kind == "next_episode" then
     pill_state.next_requested = true
     write_next_episode_action()
-    show_pill_notice(skip_text.openingNextEpisode, NEXT_EPISODE_NOTICE_SECONDS)
+    show_pill_notice("Opening next episode", NEXT_EPISODE_NOTICE_SECONDS)
     return true
   end
   return false
@@ -1886,7 +1065,7 @@ local function refresh_pill()
       local auto_remaining = math.max(0, AUTO_SKIP_DELAY_SECONDS - elapsed)
       action.countdown = auto_remaining
       if action.kind == "next_episode" then
-        action.label = skip_text.nextEpisodeIn
+        action.label = "Next episode will start in"
       end
       -- Never fire while paused; the 1e-6 absorbs float drift from summing
       -- per-frame deltas.
@@ -1946,9 +1125,7 @@ local function apply_playback_json(payload)
           type = marker.type,
           startSeconds = marker.startSeconds,
           endSeconds = marker.endSeconds,
-          -- PLAY-SKIP-02: credits are never skipped on their own.
-          autoSkip = marker.autoSkip == true and marker.type ~= "credits",
-          ask = marker.ask == true,
+          autoSkip = marker.autoSkip == true,
         })
         msg.info(string.format(
           "[sf-skip] envelope marker: type=%s start=%.2f end=%.2f autoSkip=%s",
@@ -2018,19 +1195,12 @@ local function apply_playback_json(payload)
   else
     playback_state.fallback_countdown_seconds = 15
   end
-  -- PLAY-SKIP-10: the control bar's intro / credits button shows on episodes.
-  playback_state.skip_menu = parsed.skipMenu == true
-  mp.set_property_native("user-data/sf/skip-menu", playback_state.skip_menu)
-  msg.info("[sf-skip] skip-menu=" .. tostring(playback_state.skip_menu))
   pill_state.next_requested = false
   refresh_pill()
 end
 
 -- Escape exits fullscreen first, otherwise exits playback
 mp.add_forced_key_binding("ESC", "sf-esc", function()
-  if skip_ui_key("ESC") then
-    return
-  end
   if mp.get_property_bool("fullscreen") then
     mp.commandv("cycle", "fullscreen")
   else
@@ -2043,31 +1213,19 @@ mp.add_forced_key_binding("SPACE", "sf-toggle-pause", function()
   mp.commandv("cycle", "pause")
 end)
 mp.add_forced_key_binding("ENTER", "sf-toggle-pause-enter", function()
-  if skip_ui_key("ENTER") then
-    return
-  end
   if not trigger_active_action() then
     mp.commandv("cycle", "pause")
   end
 end)
 mp.add_forced_key_binding("KP_ENTER", "sf-toggle-pause-kp-enter", function()
-  if skip_ui_key("ENTER") then
-    return
-  end
   if not trigger_active_action() then
     mp.commandv("cycle", "pause")
   end
 end)
 mp.add_forced_key_binding("LEFT", "sf-seek-back-10", function()
-  if skip_ui_key("LEFT") then
-    return
-  end
   mp.commandv("seek", -10, "relative")
 end)
 mp.add_forced_key_binding("RIGHT", "sf-seek-forward-10", function()
-  if skip_ui_key("RIGHT") then
-    return
-  end
   mp.commandv("seek", 10, "relative")
 end)
 mp.add_forced_key_binding("UP", "sf-volume-up", function()
@@ -2254,7 +1412,6 @@ mp.register_event("start-file", function()
   end
   pill_state.next_requested = false
   set_countdown_ticking(false)
-  reset_skip_ui()
 end)
 
 local function ensure_subtitles_applied()
@@ -2499,15 +1656,6 @@ mp.register_script_message("sf-labels-json", function(payload)
       audio_text[key] = parsed[key]
     end
   end
-  if type(parsed.skip) == "table" then
-    for key in pairs(skip_text) do
-      if type(parsed.skip[key]) == "string" and parsed.skip[key] ~= "" then
-        skip_text[key] = parsed.skip[key]
-      end
-    end
-    msg.info("[sf-skip] skip texts from the app: " .. skip_text.skipIntro)
-    render_skip_ui()
-  end
   refresh_pill()
 end)
 -- tog4in1's centre previous / next episode buttons (PLAY-OVL-03).
@@ -2556,9 +1704,6 @@ local TOGGLE_CLICK_MAX_PIXELS = 4
 local TOGGLE_CLICK_MAX_SECONDS = 0.25
 
 local function handle_pill_mouse(event)
-  if skip_ui_mouse(event) then
-    return
-  end
   local pill_active = pill_state.active and pill_state.rect
   local mx, my = mp.get_mouse_pos()
   mx = mx or -1
@@ -2661,39 +1806,7 @@ mp.observe_property("user-data/sf/osc-top-band", "native", function(_, band)
   pill_state.top_band_bottom = bottom
   msg.info("[sf-pill] controls top band " .. (bottom and ("shown, pill below y=" .. bottom) or "hidden, pill in the corner"))
   render_pill()
-  render_skip_ui()
 end)
-
--- PLAY-SKIP-04: tog4in1 publishes where its seek track runs; the change
--- panel's handles sit on it.
-mp.observe_property("user-data/sf/seekbar", "native", function(_, bar)
-  skip_ui.seekbar = type(bar) == "table" and bar or nil
-  if skip_ui.mode == "panel" or skip_ui.mode == "scope" then
-    render_skip_ui()
-  end
-end)
-
-mp.observe_property("mouse-pos", "native", function(_, pos)
-  skip_ui_pointer(pos)
-end)
-
--- The asked line goes away on a pause or a seek (not the skip's own seek,
--- which lands just after it shows).
-mp.observe_property("pause", "bool", function(_, paused)
-  if paused == true then
-    close_skip_asked("pause")
-  end
-end)
-mp.register_event("seek", function()
-  if skip_ui.mode == "asked" and mp.get_time() - skip_ui.asked_at > 1.0 then
-    close_skip_asked("seek")
-  end
-end)
-
--- tog4in1's cy_skip button (PLAY-SKIP-10).
-mp.register_script_message("sf-skip-menu", open_skip_menu)
--- The app's answers to sf-skip-edit (LUA_CHANNELS.SKIP_EDIT_JSON).
-mp.register_script_message("sf-skip-edit-json", on_skip_edit_answer)
 
 mp.observe_property("duration", "number", function()
   refresh_pill()
@@ -2709,12 +1822,10 @@ end)
 
 mp.observe_property("osd-width", "number", function()
   render_pill()
-  render_skip_ui()
 end)
 
 mp.observe_property("osd-height", "number", function()
   render_pill()
-  render_skip_ui()
 end)
 
 -- MPV-OSC-05: subtitles and mpv's own messages keep one on-screen size
