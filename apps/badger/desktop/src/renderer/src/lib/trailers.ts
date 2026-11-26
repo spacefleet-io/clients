@@ -1,8 +1,21 @@
 import { useEffect, useRef } from "react";
 import { TitleDetails } from "@/api";
+import type { TrailerSource } from "@/lib/config";
 import { rendererLogger } from "@/logger";
 
 const trailerLog = rendererLogger.child({ scope: "trailer" });
+
+/**
+ * The trailer player URL for a YouTube key: the user's Invidious instance once it has been validated, else YouTube's
+ * embed. One builder for the ingestion and media details dialogs (REL-FAM-05).
+ */
+export const trailerEmbedUrl = (source: TrailerSource, key: string) => {
+  const invidious = source.invidiousUrl.trim();
+  if (source.provider === "invidious" && source.validated && invidious) {
+    return `${invidious.replace(/\/+$/, "")}/embed/${key}`;
+  }
+  return `https://www.youtube.com/embed/${key}`;
+};
 
 export const selectTrailersByLanguage = (
   details: Pick<TitleDetails, "trailers" | "originalLanguage">,

@@ -8,6 +8,7 @@ import {
   Film,
   HardDrive,
   Info,
+  LifeBuoy,
   MonitorSmartphone,
   Play,
   Plug,
@@ -33,6 +34,7 @@ export type SettingsSectionId =
   | "devices"
   | "connectedTools"
   | "system"
+  | "support"
   | "about";
 
 export type SettingsGroupId = "player" | "library" | "account" | "system";
@@ -64,6 +66,7 @@ const SecuritySection = lazy(() => import("./sections/SecuritySection"));
 const DevicesSection = lazy(() => import("./sections/DevicesSection"));
 const ConnectedToolsSection = lazy(() => import("./sections/ConnectedToolsSection"));
 const SystemSection = lazy(() => import("./sections/SystemSection"));
+const SupportSection = lazy(() => import("./sections/SupportSection"));
 const AboutSection = lazy(() => import("./sections/AboutSection"));
 
 export const SETTINGS_SECTIONS: SettingsSectionDef[] = [
@@ -81,6 +84,7 @@ export const SETTINGS_SECTIONS: SettingsSectionDef[] = [
   { id: "devices", group: "account", icon: MonitorSmartphone, Component: DevicesSection },
   { id: "connectedTools", group: "account", icon: Plug, Component: ConnectedToolsSection },
   { id: "system", group: "system", icon: Cog, Component: SystemSection },
+  { id: "support", group: "system", icon: LifeBuoy, Component: SupportSection },
   { id: "about", group: "system", icon: Info, Component: AboutSection },
 ];
 
@@ -88,7 +92,7 @@ export const SETTINGS_GROUPS: SettingsGroupDef[] = [
   { id: "player", sections: ["general", "playback", "trailers", "downloads", "offlineContent"] },
   { id: "library", sections: ["transcoding", "metadata", "performance"] },
   { id: "account", sections: ["account", "profiles", "security", "devices", "connectedTools"] },
-  { id: "system", sections: ["system", "about"] },
+  { id: "system", sections: ["system", "support", "about"] },
 ];
 
 export const DEFAULT_SECTION: SettingsSectionId = "general";

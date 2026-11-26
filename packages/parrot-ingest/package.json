@@ -17,12 +17,15 @@
     "@space/media-crypto": "workspace:*",
     "@space/parrot-core": "workspace:*",
     "@space/parrot-library-db-definition": "workspace:*",
+    "@space/runtime-jobs": "workspace:*",
+    "@space/runtime-jobs-engine": "workspace:*",
     "@space/shared": "workspace:*",
     "jpeg-js": "^0.4.4",
     "music-metadata": "^12.5.0",
     "pngjs": "^7.0.0"
   },
   "devDependencies": {
+    "@space/content-core": "workspace:*",
     "@space/shared": "workspace:*"
   }
 }

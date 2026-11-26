@@ -37,9 +37,9 @@
 
 import type { Hono } from "hono";
 import type { AppId } from "../types";
-import type { EngineV2, RuntimeJobEvent } from "../core/jobs/engineV2";
-import type { EventLog } from "../core/jobs/eventLog";
-import type { ListFilter } from "../core/jobs/engineV2";
+import type { EngineV2, RuntimeJobEvent } from "@space/runtime-jobs-engine/engineV2";
+import type { EventLog } from "@space/runtime-jobs-engine/eventLog";
+import type { ListFilter } from "@space/runtime-jobs-engine/engineV2";
 import type { BadgerFailedJobs } from "../modules/badger/failedJobs";
 import {
   runtimeJobsEventSchema,
@@ -55,7 +55,7 @@ import {
   type RuntimeJobsRetryResult,
   type RuntimeJobsSubscribeHandshakeResponse,
 } from "@space/runtime-contracts/runtime/jobs";
-import type { EventRow } from "../core/jobs/eventLog";
+import type { EventRow } from "@space/runtime-jobs-engine/eventLog";
 import {
   isTerminalIngestJobStatus,
   type IngestJobRecord,

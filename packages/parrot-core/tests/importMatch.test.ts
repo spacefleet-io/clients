@@ -15,6 +15,7 @@ import {
   parrotAlbumKey,
   parrotImportFromMatch,
   parrotImportMissingTracks,
+  PARROT_LOOKUP_RETRY_DELAYS_MS,
   type ParrotImportFileQuestion,
 } from "../src/importMatch";
 
@@ -55,7 +56,8 @@ const fold = (text: string) => text.toLowerCase().replace(/[^a-z0-9]/g, "");
 const base = (text: string) => fold(text.replace(/\(.*?\)/g, ""));
 
 /** The fake lookups and what they were asked; `failFor` titles throw. */
-const fakeLookups = (options: { failFor?: string[]; albumsFail?: boolean; rivalFable?: boolean } = {}) => {
+const fakeLookups = (options: { failFor?: string[]; albumsFail?: boolean; rivalFable?: boolean; failFirst?: () => Error; failFirstTimes?: number } = {}) => {
+  let failsLeft = options.failFirstTimes ?? 0;
   const asked = { recordings: [] as MusicRecordingsQuery[], albums: [] as MusicAlbumsQuery[] };
   let running = 0;
   const peak = { value: 0 };
@@ -69,6 +71,10 @@ const fakeLookups = (options: { failFor?: string[]; albumsFail?: boolean; rivalF
       for (let turn = 0; turn < 3; turn += 1) await Promise.resolve();
       running -= 1;
       if (options.failFor?.includes(question.title)) throw new Error("music lookup answered 501");
+      if (options.failFirst && failsLeft > 0) {
+        failsLeft -= 1;
+        throw options.failFirst();
+      }
       const results: MusicRecording[] = [];
       for (const found of ALBUMS) {
         if (found === BEST_OF && !options.rivalFable) continue;
@@ -587,6 +593,47 @@ describe(`${T} albums asked by id`, () => {
       { artist: "Linnet Park", album: "Hollow Signal", id: "hollow-rg" },
       { artist: "Linnet Park", album: "Hollow Signal", limit: 5 },
     ]);
-    expect(result.albums.map((found) => [found.album.title, found.files.map((placed) => placed.number)])).toEqual([["Hollow Signal (Deluxe Edition)", [1, 2, 3, 4]]]);
+    // The bonus song no recording answer names sits in the same folder as four songs sure on the deluxe edition, whose
+    // free fifth track carries its title and length: it joins them (PAR-UP-10).
+    expect(result.albums.map((found) => [found.album.title, found.files.map((placed) => placed.number)])).toEqual([["Hollow Signal (Deluxe Edition)", [1, 2, 3, 4, 5]]]);
+    expect(result.unidentified).toEqual([]);
+  });
+});
+
+/**
+ * @test-id PARROT-CORE-IMPORT-MATCH-RETRY-001
+ * @req PAR-UP-11[parrot]
+ * @why PAR-UP-11 (Chris 2026-11-26): a metadata blip (503 `ticket_store_unavailable` for ~2 s) left a whole 24-song
+ *   album unmatched because each lookup was asked once. A 5xx or a network error is asked again after a short wait.
+ */
+describe("[PARROT-CORE-IMPORT-MATCH-RETRY-001] lookup retry", () => {
+  const unavailable = () => Object.assign(new Error("metadata service unavailable (503)"), { status: 503 });
+  const songs = () => [file("fable.mp3", "Fable", "Meltway", 162_000), file("nook.mp3", "Nook", "Meltway", 185_000)];
+
+  it("a lookup answered 503 and then found ends matched", async () => {
+    const lookups = fakeLookups({ failFirst: unavailable, failFirstTimes: 2 });
+    const result = await matchParrotImport(songs(), { ...lookups, retryDelaysMs: [1, 1, 1] });
+    expect(result.unidentified).toEqual([]);
+    expect(result.albums.map((found) => found.album.title)).toEqual(["Meltway"]);
+  });
+
+  it("a network error is asked again too", async () => {
+    const lookups = fakeLookups({ failFirst: () => new TypeError("fetch failed"), failFirstTimes: 1 });
+    const result = await matchParrotImport(songs(), { ...lookups, retryDelaysMs: [1] });
+    expect(result.unidentified).toEqual([]);
+  });
+
+  it("stops after its tries: still down is lookup-failed; a 4xx is not asked again", async () => {
+    const down = fakeLookups({ failFirst: unavailable, failFirstTimes: 100 });
+    const result = await matchParrotImport([file("fable.mp3", "Fable", "Meltway", 162_000)], { ...down, retryDelaysMs: [1, 1] });
+    expect(result.unidentified).toEqual([{ file: "/m/fable.mp3", reason: "lookup-failed" }]);
+    expect(down.asked.recordings.length).toBe(3);
+    const refused = fakeLookups({ failFirst: () => Object.assign(new Error("metadata request failed (400)"), { status: 400 }), failFirstTimes: 100 });
+    await matchParrotImport([file("fable.mp3", "Fable", "Meltway", 162_000)], { ...refused, retryDelaysMs: [1, 1] });
+    expect(refused.asked.recordings.length).toBe(1);
+  });
+
+  it("waits 1 s, 2.5 s and 5 s by default: within 10 s", () => {
+    expect(PARROT_LOOKUP_RETRY_DELAYS_MS).toEqual([1000, 2500, 5000]);
   });
 });

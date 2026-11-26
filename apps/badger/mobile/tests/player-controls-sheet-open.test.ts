@@ -10,7 +10,7 @@ import {
   PlayerControls,
   type PlayerControlsHandle,
   type PlayerControlsLabels,
-} from "../../../../packages/mobile-mpv-playback/src/components/PlayerControls";
+} from "@space/mobile-mpv-playback/PlayerControls";
 
 const TAG = "[player-controls-sheet-open]";
 
@@ -60,7 +60,7 @@ vi.mock("react-native", async () => {
     BackHandler: { addEventListener: () => ({ remove: () => undefined }) },
   };
 });
-vi.mock("../../../../packages/mobile-mpv-playback/src/MpvControl", () => ({
+vi.mock("@space/mobile-mpv-playback/MpvControl", () => ({
   MpvControl: new Proxy({}, { get: () => () => Promise.resolve([]) }),
 }));
 

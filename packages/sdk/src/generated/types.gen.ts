@@ -785,6 +785,40 @@ export type AccountOverQuota = {
     deleting: boolean;
 } | null;
 
+export type AccountNotice = {
+    id: string;
+    /**
+     * One per thing the news is about: a device seeing the same key again replaces its entry.
+     */
+    key: string;
+    level: 'info' | 'success' | 'warning' | 'error';
+    title: AccountNoticeText;
+    message?: AccountNoticeText;
+    action?: {
+        label: AccountNoticeText;
+        /**
+         * The screen the app opens for it.
+         */
+        target: 'devices' | 'billing' | 'storage';
+    };
+    createdAt: string;
+};
+
+export type AccountNoticeText = {
+    /**
+     * A text key of the shared notice texts (`notify.account.*`), shown in the device's language.
+     */
+    key: string;
+    /**
+     * Values for the text; a `{key}` value is itself a text key, translated too.
+     */
+    vars?: {
+        [key: string]: string | number | {
+            key: string;
+        };
+    };
+};
+
 export type Profiles = {
     /**
      * Every profile of the account, oldest first.
@@ -4915,6 +4949,55 @@ export type GetAccountOverQuotaTitlesResponses = {
 
 export type GetAccountOverQuotaTitlesResponse = GetAccountOverQuotaTitlesResponses[keyof GetAccountOverQuotaTitlesResponses];
 
+export type ListAccountNoticesData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/account/notices';
+};
+
+export type ListAccountNoticesErrors = {
+    /**
+     * Missing, unknown or revoked token.
+     */
+    401: {
+        error: 'unauthorized';
+    };
+    /**
+     * The account is blocked or scheduled for deletion, or the personal token lacks the scope of the route (`requiredScope`).
+     */
+    403: {
+        error: 'account_blocked' | 'account_deleted' | 'insufficient_scope';
+        requiredScope?: string;
+    };
+    /**
+     * This personal token made too many requests this minute; wait `retryAfterSeconds` (also sent as the `Retry-After` header).
+     */
+    429: {
+        error: 'token_rate_limited';
+        retryAfterSeconds: number;
+    };
+    /**
+     * The news could not be read.
+     */
+    503: {
+        error: 'account_notices_unavailable';
+    };
+};
+
+export type ListAccountNoticesError = ListAccountNoticesErrors[keyof ListAccountNoticesErrors];
+
+export type ListAccountNoticesResponses = {
+    /**
+     * The account's news.
+     */
+    200: {
+        notices: Array<AccountNotice>;
+    };
+};
+
+export type ListAccountNoticesResponse = ListAccountNoticesResponses[keyof ListAccountNoticesResponses];
+
 export type ListProfilesData = {
     body?: never;
     path?: never;
@@ -7378,6 +7461,57 @@ export type SayDailyHelloResponses = {
 };
 
 export type SayDailyHelloResponse = SayDailyHelloResponses[keyof SayDailyHelloResponses];
+
+export type CountWebsitePageViewData = {
+    body: {
+        /**
+         * The page shown, without its language.
+         */
+        page: 'home' | 'pricing' | 'badger' | 'parrot' | 'downloads' | 'downloads/kodi' | 'downloads/jellyfin' | 'start' | 'key-storage' | 'developers/api' | 'report' | 'support' | 'signup' | 'legal-notice' | 'privacy' | 'terms' | 'account-deletion' | 'security' | 'security-acknowledgments';
+        /**
+         * The host name of the site that linked to the page, never its path.
+         */
+        referrer?: string;
+        /**
+         * The `utm_source` of the page address.
+         */
+        utmSource?: string;
+        /**
+         * The `utm_campaign` of the page address.
+         */
+        utmCampaign?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/usage/page-view';
+};
+
+export type CountWebsitePageViewErrors = {
+    /**
+     * The body is not valid, or the page is not one the website counts.
+     */
+    400: {
+        error: 'invalid_request';
+    };
+    /**
+     * Too many attempts; wait `retryAfterSeconds` (also sent as the `Retry-After` header).
+     */
+    429: {
+        error: 'rate_limited';
+        retryAfterSeconds: number;
+    };
+};
+
+export type CountWebsitePageViewError = CountWebsitePageViewErrors[keyof CountWebsitePageViewErrors];
+
+export type CountWebsitePageViewResponses = {
+    /**
+     * Counted, or not counted for a robot.
+     */
+    204: void;
+};
+
+export type CountWebsitePageViewResponse = CountWebsitePageViewResponses[keyof CountWebsitePageViewResponses];
 
 export type KeepEmailAddressData = {
     body?: never;

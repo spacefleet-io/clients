@@ -112,22 +112,6 @@
       },
       "clearFinished": "Abgeschlossene entfernen"
     },
-    "notifications": {
-      "title": "Benachrichtigungen",
-      "subtitle_one": "{{count}} neuer Eintrag",
-      "subtitle_other": "{{count}} neue Einträge",
-      "subtitle_many": "{{count}} neue Einträge",
-      "empty": "Noch keine Benachrichtigungen.",
-      "open": "Öffnen",
-      "filterAll": "Alle",
-      "filterError": "Fehler",
-      "filterWarning": "Warnung",
-      "filterInfo": "Info",
-      "filterSuccess": "Erfolg",
-      "clearAll": "Alle löschen",
-      "dismiss": "Schließen",
-      "subtitle": "{{count}} neue Einträge"
-    },
     "account": "Konto"
   },
   "authApiHost": {
@@ -647,7 +631,6 @@
         "originalTitle": "Originaltitel",
         "originalLanguage": "Originalsprache",
         "year": "Erscheinungsjahr",
-        "rating": "Bewertung",
         "genres": "Genres",
         "overview": "Handlung",
         "poster": "Poster",
@@ -1081,6 +1064,7 @@
       "devices": "Angemeldete Geräte",
       "connectedTools": "Verbundene Tools",
       "system": "System",
+      "support": "Hilfe und Feedback",
       "about": "Info & Updates"
     },
     "sectionDesc": {
@@ -1098,7 +1082,12 @@
       "devices": "Sieh dir die bei deinem Konto angemeldeten Geräte an und melde sie ab.",
       "connectedTools": "Tools, denen du Zugriff auf deine Mediathek erlaubt hast, und was sie jeweils dürfen.",
       "system": "Hintergrunddienst und Fehlerberichte.",
+      "support": "Schick uns eine Nachricht zur App.",
       "about": "Deine Version und Updates, dann wer die Film- und Seriendaten liefert, die die App zeigt."
+    },
+    "support": {
+      "feedback": "Feedback senden",
+      "feedbackBody": "Sag uns, was funktioniert und was nicht."
     },
     "system": {
       "runtime": {
@@ -1954,6 +1943,8 @@
       "unpaidBanner": "Dein Abo ist abgelaufen. Du kannst deine Dateien noch bis {{date}} herunterladen; danach werden sie gelöscht.",
       "unpaidBannerNoDate": "Dein Abo ist abgelaufen. Du kannst deine Dateien noch für begrenzte Zeit herunterladen; danach werden sie gelöscht.",
       "unpaidBannerHint": "Nutze „Offline speichern“ bei einem Titel, um ihn auf diesen Computer herunterzuladen.",
+      "unpaidSign": "Abo abgelaufen",
+      "unpaidHeadsUpTitle": "Dein Abo ist abgelaufen",
       "playbackBlocked": "Die Wiedergabe ist pausiert, weil dein Abo abgelaufen ist. Du kannst deine Dateien noch bis {{date}} herunterladen.",
       "playbackBlockedNoDate": "Die Wiedergabe ist pausiert, weil dein Abo abgelaufen ist. Du kannst deine Dateien noch für begrenzte Zeit herunterladen.",
       "uploadBlocked": "Uploads sind pausiert, weil dein Abo abgelaufen ist. Du kannst deine Dateien noch bis {{date}} herunterladen; danach werden sie gelöscht.",
@@ -1966,8 +1957,9 @@
       "removedBanner_one": "{{count}} Titel wurde entfernt, weil dein Speicher überschritten war.",
       "removedBanner_other": "{{count}} Titel wurden entfernt, weil dein Speicher überschritten war.",
       "upgrade": "Tarif upgraden",
-      "seeTitles": "Titel anzeigen",
       "dismiss": "Schließen",
+      "sign": "Speicher überschritten",
+      "removedSign": "Titel entfernt",
       "dialogTitle": "Mediathek über dem Speicherlimit",
       "options": "Wechsle in einen Tarif, in den deine Mediathek passt, oder lösche Titel aus deiner Mediathek, bis sie passt. Du kannst einen Titel vorher herunterladen, um eine Kopie zu behalten.",
       "loading": "Titel in deiner Mediathek werden gesucht…",
@@ -2011,7 +2003,7 @@
       "title": "„{{name}}“ Zugriff auf deine Mediathek erlauben?",
       "description": {
         "read": "Dieses Tool möchte deine Mediathek sehen: Titel, Details, Playlists, Fortschritt und was auf diesem Computer heruntergeladen ist. Es kann nichts ändern.",
-        "write": "Dieses Tool möchte deine Mediathek sehen und Teile davon ändern: Wiedergabefortschritt, Titeldetails (Name, Beschreibung, Jahr, Bewertung) und deine Playlists. Es kann keine Titel löschen und keine Einstellungen oder Schlüssel anfassen."
+        "write": "Dieses Tool möchte deine Mediathek sehen und Teile davon ändern: Wiedergabefortschritt, Titeldetails (Name, Beschreibung, Jahr) und deine Playlists. Es kann keine Titel löschen und keine Einstellungen oder Schlüssel anfassen."
       },
       "selfDeclared": "Der Name stammt vom Tool selbst und ist nicht überprüft. Erlaube nur ein Tool, das du gerade selbst gestartet hast.",
       "reason": "Angegebener Grund: {{reason}}",

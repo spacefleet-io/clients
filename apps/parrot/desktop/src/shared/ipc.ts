@@ -1,12 +1,16 @@
+import type { HiddenJobNoticesBridge } from "@space/desktop-shell/hidden-job-notices-preload";
 import type { ErrorReportsBridge } from "@space/error-report/desktop";
 import type { UpdaterBridge } from "@space/desktop-shell/updater";
 import type { LibraryKeyEraseOutcome } from "@space/desktop-shell/library-key-erase";
+import type { AccountKeyResult } from "@space/desktop-shell/account-key-check";
 import type { DesktopPasswordResetActions } from "@space/desktop-shell/password-reset";
 import type { DesktopFeedbackInput } from "@space/error-report/desktop-feedback";
 import type { SignInFailure } from "@space/shared/signInError";
+import type { KeyStepMetaErrorClass } from "@space/shared/keyStepMetaRead";
 import type { StorageUnitBase } from "@space/shared/format";
 import type { ProviderReturnBridge, ProviderSignInErrorCode } from "@space/shared/providerSignIn";
-import type { SignInProvider } from "@space/shared/api";
+import type { AccountNoticesList, SignInProvider } from "@space/shared/api";
+import type { AccountAccess } from "@space/shared/accountAccess";
 import type { ResendVerificationFailure, SignUpFailure, VerifyEmailFailure } from "@space/shared/signUp";
 import type { ProfileAvatarId } from "@space/shared/profileAvatars";
 import type { CreditsProduct, SourceCredits } from "@space/metadata-client/credits";
@@ -147,8 +151,6 @@ export type ParrotProviderSignInBridge = ProviderReturnBridge & {
 /** What an approved phone sign-in tells the window: main keeps the token and the key, the window only learns the check. */
 export type ParrotPairedSignIn = { check: PairedKeyCheck };
 
-export type ParrotKeyResult = { ok: true } | { ok: false; error: "format" | "wrongKey" | "network"; message?: string };
-
 export type ParrotImportStatus = {
   running: boolean;
   /**
@@ -194,7 +196,33 @@ export type ParrotImportJob = {
    * still where it was; main checks each time it sends the list.
    */
   sourcesMissing?: boolean;
+  /**
+   * UX-JOBS-02 / PAR-UP-13: the running import's songs, one bucket each with its song's job and its light-copy job,
+   * read from the job engine; absent once the import ended (its card then counts what it added).
+   */
+  songs?: ParrotImportSong[];
 };
+
+/** UX-JOBS-02: one job row of a song in the Jobs panel: the song's own job (upload), or its light copy (PAR-UP-13). */
+export type ParrotImportRow = {
+  jobId: string;
+  status: "queued" | "running" | "succeeded" | "failed" | "cancelled" | "interrupted";
+  /** The step it is at (`probe`, `identify`, `extract`, `transcode`, `upload`, `commit`), or `queued`. */
+  stage: string;
+  progressPct: number;
+  /** 1-based place among the jobs of its kind still waiting to start; null once it runs or ended. */
+  placeInLine: number | null;
+  error: string | null;
+};
+
+/** UX-JOBS-02: a song of the running import, its bucket in the Jobs panel. */
+export type ParrotImportSong = { file: string; source: ParrotImportRow; light: ParrotImportRow | null };
+
+/**
+ * PAR-UP-15: what imports do while a song plays on this computer (full speed, slowed down, or paused until it stops).
+ * `picked` is false while the user never chose: `mode` is then this computer's hardware recommendation.
+ */
+export type ParrotUploadsWhilePlaying = { mode: "full" | "throttle" | "pause"; recommended: "full" | "throttle" | "pause"; picked: boolean };
 
 /**
  * UX-JOBS-03: the answer to "Import again" or "Find the folder". Started, the job is replaced by the new import,
@@ -410,7 +438,7 @@ export type ParrotBridge = {
    * The key as base64 (typed words' `keyBase64`, or a new key once written down). Checked against the account; on an
    * account with no key yet it becomes the account's (its probe written) and is kept.
    */
-  setLibraryKey(keyBase64: string): Promise<ParrotKeyResult>;
+  setLibraryKey(keyBase64: string): Promise<AccountKeyResult>;
   /**
    * The key step's first question: an account with no library and no key probe gets a new key's 12 words to show
    * (nothing kept until `setLibraryKey`); an account that has a key answers "hasLibrary" and the step asks for it.
@@ -471,6 +499,15 @@ export type ParrotBridge = {
   retryImportJob(id: string): Promise<ParrotImportRetry>;
   /** UX-JOBS-03 "Find the folder": main asks for the folder, then imports it in place of the job; nothing picked answers cancelled. */
   findImportJobFolder(id: string): Promise<ParrotImportRetry | { cancelled: true }>;
+  /** UX-JOBS-02: tries a song's failed job (or its light copy) again while its import runs; false when it cannot. */
+  retryImportSong(jobId: string): Promise<boolean>;
+  /** UX-JOBS-02: stops one song's job (or its light copy) of the running import; false when it already ended. */
+  cancelImportSong(jobId: string): Promise<boolean>;
+  /** PAR-UP-15: this computer's "Uploads while playing" setting. */
+  getUploadsWhilePlaying(): Promise<ParrotUploadsWhilePlaying>;
+  setUploadsWhilePlaying(mode: ParrotUploadsWhilePlaying["mode"]): Promise<ParrotUploadsWhilePlaying>;
+  /** PAR-UP-15: a song is playing (renewed every few seconds while it plays) or stopped. */
+  playbackActive(active: boolean): void;
   /** OFFL-FILE-01 / ACCT-EXPORT-01: how many songs "Download everything" would save, and their size. */
   previewExport(): Promise<ParrotExportPreview>;
   /** Asks for a folder, then saves the whole library there as plain audio files, in the background (Jobs panel). */
@@ -569,6 +606,13 @@ export type ParrotBridge = {
   /** Settings' data credits (META-SRC-09): main asks the lookups' metadata service (`GET /credits`); rejects offline. */
   sourceCredits(product: CreditsProduct, language: string): Promise<SourceCredits>;
   getSubscription(): Promise<ParrotBillingResult<ParrotSubscription>>;
+  /**
+   * ACCT-UNPAID-05/06: the account's access from a fresh `/auth/me` (null when the API gave none), for the unpaid sign
+   * in the top bar and the setup step that creates the library.
+   */
+  getAccountAccess(): Promise<ParrotBillingResult<AccountAccess | null>>;
+  /** UX-NOTICE-05: the account's news (`GET /account/notices`), for the bell's history. */
+  listAccountNotices(): Promise<ParrotBillingResult<AccountNoticesList>>;
   /** `GET /billing/status`: the provider, `checkoutAllowed` and why not. */
   getBillingStatus(): Promise<ParrotBillingResult<BillingStatus>>;
   /** The server applies, books (`effectiveAt`), drops a booking, or refuses the plan (ACCT-PLAN-07/08/12). */
@@ -599,6 +643,8 @@ export type ParrotBridge = {
   /** "Remove from this computer": the songs no other kept item holds are deleted. */
   unkeep(kind: KeptKind, id: string): Promise<KeptStatus>;
   onKept(listener: (status: KeptStatus) => void): () => void;
+  /** UX-NOTICE-06: the hidden-window job notification's setting, and the Jobs request its click left. */
+  hiddenJobNotices?: HiddenJobNoticesBridge;
   /** The account's profiles (`GET/POST /profiles`, `PATCH/DELETE /profiles/{id}`), asked by main with the token. */
   listProfiles(): Promise<ParrotProfilesResult<ProfilesResponse>>;
   createProfile(body: { name: string; avatarId?: ProfileAvatarId; features?: ProfileFeatures }): Promise<ParrotProfilesResult<ParrotProfileAnswer>>;
@@ -607,10 +653,15 @@ export type ParrotBridge = {
   deleteProfile(id: string): Promise<ParrotProfilesResult<ProfilesResponse>>;
 };
 
-/** UX-KEY-01: a new key comes with its 12 words, which the user saves; `keyBase64` is what every key path uses. */
+/**
+ * UX-KEY-01: a new key comes with its 12 words, which the user saves; `keyBase64` is what every key path uses.
+ * UX-KEY-02: "network" means main could not tell whether the account has a key (its meta or library could not be
+ * read, or not in time): the step shows Retry, and `errorClass` picks why.
+ */
 export type ParrotCreateKeyResult =
   | { ok: true; keyBase64: string; words: string[] }
-  | { ok: false; error: "hasLibrary" | "network"; message?: string };
+  | { ok: false; error: "hasLibrary" }
+  | { ok: false; error: "network"; message?: string; errorClass: KeyStepMetaErrorClass };
 
 export const PARROT_IPC = {
   getState: "parrot:state:get",
@@ -662,6 +713,11 @@ export const PARROT_IPC = {
   importJobsEvent: "parrot:import:jobs-event",
   dismissImportJob: "parrot:import:jobs-dismiss",
   retryImportJob: "parrot:import:jobs-retry",
+  retryImportSong: "parrot:import:song-retry",
+  cancelImportSong: "parrot:import:song-cancel",
+  getUploadsWhilePlaying: "parrot:uploads-while-playing:get",
+  setUploadsWhilePlaying: "parrot:uploads-while-playing:set",
+  playbackActive: "parrot:playback-active",
   findImportJobFolder: "parrot:import:jobs-find-folder",
   previewExport: "parrot:export:preview",
   exportMusic: "parrot:export:start",
@@ -705,6 +761,8 @@ export const PARROT_IPC = {
   pairingPoll: "parrot:sign-in-pairing:poll",
   pairingCancel: "parrot:sign-in-pairing:cancel",
   getSubscription: "parrot:billing:subscription",
+  getAccountAccess: "parrot:account:access",
+  listAccountNotices: "parrot:account:notices",
   getBillingStatus: "parrot:billing:status",
   sourceCredits: "parrot:credits:get",
   updateSubscription: "parrot:billing:update",

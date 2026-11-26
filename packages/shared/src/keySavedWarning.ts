@@ -19,8 +19,9 @@ export type KeySavedWarningText = {
   back: string;
 };
 
-// Every library noun below is feminine (fr, de, es) or takes "je" (nl), so one sentence fits both apps.
-const LIBRARY: Record<KeySavedWarningApp, Record<ClientUiLanguage, string>> = {
+// Every library noun below is feminine (fr, de, es) or takes "je" (nl), so one sentence fits both apps. The unpaid
+// setup screen (`unpaidLibrarySetup.ts`) names the library with the same nouns.
+export const LIBRARY_NOUN: Record<KeySavedWarningApp, Record<ClientUiLanguage, string>> = {
   badger: { en: "media library", fr: "médiathèque", nl: "mediatheek", de: "Mediathek", es: "mediateca" },
   parrot: { en: "library", fr: "bibliothèque", nl: "bibliotheek", de: "Bibliothek", es: "biblioteca" },
 };
@@ -79,4 +80,4 @@ const TEXT: Record<ClientUiLanguage, (library: string) => KeySavedWarningText> =
 };
 
 export const keySavedWarningText = (language: ClientUiLanguage, app: KeySavedWarningApp): KeySavedWarningText =>
-  TEXT[language](LIBRARY[app][language]);
+  TEXT[language](LIBRARY_NOUN[app][language]);

@@ -26,7 +26,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { createConnection } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { requireMediaBinary } from "@space/media-deps";
+import { REAL_MEDIA_TESTS_ENV, realMediaTestsRequested, requireMediaBinary } from "@space/media-deps";
 import { resolveExternalMpvTarget } from "../src/external";
 import { resolveMpvOscScript } from "../src/index";
 
@@ -38,13 +38,18 @@ const oscScript = resolveMpvOscScript();
 const oscDir = oscScript ? join(oscScript, "..") : null;
 const xvfbRun = spawnSync("sh", ["-c", "command -v xvfb-run"]).status === 0;
 const ffmpeg = spawnSync("sh", ["-c", "command -v ffmpeg"]).status === 0;
-requireMediaBinary("mpv (shipped bundle) + sf.lua", Boolean(target && target.kind !== "fallback" && oscScript));
-requireMediaBinary("xvfb-run", xvfbRun);
-requireMediaBinary("ffmpeg", ffmpeg);
-const runnable = Boolean(target && target.kind !== "fallback" && oscScript && xvfbRun && ffmpeg);
+// Real-mpv fullscreen click timing: only in the dedicated media-real-test job (SF_REAL_MEDIA_TESTS=1, ci.yaml), never
+// in a unit job on a loaded shared runner, where mpv stalls for seconds.
+const realMedia = realMediaTestsRequested();
+if (realMedia) {
+  requireMediaBinary("mpv (shipped bundle) + sf.lua", Boolean(target && target.kind !== "fallback" && oscScript));
+  requireMediaBinary("xvfb-run", xvfbRun);
+  requireMediaBinary("ffmpeg", ffmpeg);
+}
+const runnable = realMedia && Boolean(target && target.kind !== "fallback" && oscScript && xvfbRun && ffmpeg);
 if (!runnable) {
   console.warn(
-    `${TAG} SKIP: platform=${process.platform} mpv=${target?.kind ?? "n/a"} osc=${oscScript ?? "none"} xvfb-run=${xvfbRun} ffmpeg=${ffmpeg}. Run \`bun run setup:binaries\` and install xvfb + ffmpeg.`,
+    `${TAG} SKIP: ${REAL_MEDIA_TESTS_ENV}=${realMedia ? "1" : "unset"} platform=${process.platform} mpv=${target?.kind ?? "n/a"} osc=${oscScript ?? "none"} xvfb-run=${xvfbRun} ffmpeg=${ffmpeg}. Run \`bun run setup:binaries\`, install xvfb + ffmpeg and set ${REAL_MEDIA_TESTS_ENV}=1.`,
   );
 }
 

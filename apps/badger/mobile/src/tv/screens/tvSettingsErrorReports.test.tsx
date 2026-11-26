@@ -139,7 +139,7 @@ const boot = async (storedAnswer: { errorReports: boolean; errorReportsDecided: 
   stopFollowing = followErrorReportSetting(reporting, { load: loadAppSettings, get: getAppSettings, subscribe: subscribeAppSettings });
   await flush();
   await act(async () => {
-    renderer = create(<TvSettingsScreen />);
+    renderer = create(<TvSettingsScreen history={null} />);
   });
   await flush();
 };
@@ -223,7 +223,7 @@ describe("TV Settings: error reports switch", () => {
     setErrorReportsOffered("");
     try {
       await act(async () => {
-        renderer = create(<TvSettingsScreen />);
+        renderer = create(<TvSettingsScreen history={null} />);
       });
       await flush();
       const ids = renderer!.root.findAll((node) => typeof (node.type as unknown) === "string" && typeof node.props.testID === "string").map((node) => node.props.testID as string);

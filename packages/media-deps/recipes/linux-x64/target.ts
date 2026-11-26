@@ -20,6 +20,8 @@ const target: DepsTarget = {
     "amf",
     "libvpl",
     "libdrm",
+    "wayland",
+    "wayland-protocols",
     "libva",
     "libplacebo",
   ],
@@ -55,12 +57,13 @@ const target: DepsTarget = {
     "-Dunwind=disabled",
     "-Dxxhash=disabled",
   ],
-  // GPU path (#25): `--vo=gpu` renders through OpenGL on an EGL context on X11 (x11egl; Wayland sessions reach it
-  // through XWayland); `--hwdec=auto-safe` decodes through NVDEC (CUDA/GL interop) or VA-API (dmabuf/EGL interop).
-  // Software GL (llvmpipe) is rejected by mpv's context probe, which then falls through to the CPU `x11` vo.
-  // Not built: Vulkan, DRM/KMS outputs (egl-drm, vaapi-drm, gbm, and the `drm` feature need libdisplay-info),
-  // native Wayland (mpv 0.41 needs wayland >= 1.21 / wayland-protocols >= 1.31; the jammy builder has 1.20 / 1.25),
-  // legacy GLX and VDPAU.
+  // GPU path (#25): `--vo=gpu` renders through OpenGL on an EGL context, native on both display servers (MPV-GPU-04):
+  // `wayland` (egl-wayland) in a Wayland session, `x11egl` in an X11 one; `--hwdec=auto-safe` decodes through NVDEC
+  // (CUDA/GL interop) or VA-API (dmabuf/EGL interop, vaapi-wayland / vaapi-x11). Software GL (llvmpipe) is rejected by
+  // mpv's context probe, which then falls through to the CPU vo of the session: `wlshm` (Wayland shared memory) or `x11`.
+  // wayland >= 1.21 / wayland-protocols >= 1.31 (mpv 0.41) are built from the pinned forks: the jammy builder has 1.20 / 1.25.
+  // Not built: Vulkan (so no `waylandvk`), DRM/KMS outputs (egl-drm, vaapi-drm, gbm, and the `drm` feature need
+  // libdisplay-info), legacy GLX and VDPAU.
   mpvMesonOptions: [
     "-Dx11=enabled",
     "-Dx11-clipboard=disabled",
@@ -80,9 +83,12 @@ const target: DepsTarget = {
     "-Ddrm=auto",
     "-Dgbm=disabled",
     "-Degl-drm=disabled",
-    "-Degl-wayland=disabled",
     "-Dvaapi-drm=disabled",
-    "-Dvaapi-wayland=disabled",
+    // MPV-GPU-04: a native Wayland window (overrides the shared list's `-Dwayland=disabled`; meson keeps the last -D).
+    "-Dwayland=enabled",
+    "-Degl-wayland=enabled",
+    "-Dvaapi-wayland=enabled",
+    "-Ddmabuf-wayland=enabled",
     "-Dvdpau=disabled",
     "-Dvdpau-gl-x11=disabled",
     "-Dplain-gl=disabled",
@@ -101,14 +107,23 @@ const target: DepsTarget = {
     "dmabuf-interop-gl",
     "cuda-hwaccel",
     "cuda-interop",
+    "wayland",
+    "egl-wayland",
+    "vaapi-wayland",
+    "dmabuf-wayland",
   ],
-  mpvRequiredVideoOutputs: ["x11"],
+  mpvRequiredVideoOutputs: ["x11", "wlshm", "dmabuf-wayland"],
   mpvRequiredHwdecs: ["vaapi", "vaapi-copy", "nvdec", "nvdec-copy"],
-  mpvRequiredGpuContexts: ["x11egl"],
+  mpvRequiredGpuContexts: ["x11egl", "wayland"],
   ipc: "unix-socket",
   // Left to the host, never bundled: glibc; the graphics stack a host GPU driver is part of (GL/GLX/EGL dispatch,
-  // libdrm, gbm, Vulkan loader, Wayland, X11/xcb); and the runtime that driver links (mesa links libstdc++, libgcc_s,
+  // libdrm, gbm, Vulkan loader, X11/xcb); and the runtime that driver links (mesa links libstdc++, libgcc_s,
   // expat, zlib). The driver is loaded into mpv from the host, so a bundled copy would shadow the host's.
+  // libwayland-client / -cursor / -egl are BUNDLED (our 1.24 build, MPV-GPU-04): mpv built against 1.24 binds
+  // wl_compositor v6, and an older host libwayland-client aborts on events its interface tables lack (jammy's 1.20:
+  // "interface 'wl_surface' has no event 2", mpv hangs). libwayland-client is backward compatible, so a host EGL driver
+  // that links it binds to the copy already loaded.
+  // libxkbcommon (mpv's Wayland keyboard) is NEEDED by the app's own Electron, so every host running the app has it.
   // libva stays bundled: drivers are dlopen'd from the host and bind to the libva already loaded (pinned at least at
   // the libva current Mesa is built against, src/sources.ts).
   // Size: the X11 client libraries the app's own Electron loads (it NEEDS libX11, libxcb, libXext, libXfixes,
@@ -140,7 +155,7 @@ const target: DepsTarget = {
     "libgbm*",
     "libdrm*",
     "libvulkan*",
-    "libwayland-*",
+    "libxkbcommon.so*",
     "libxcb*",
     "libX11*",
     "libXext*",

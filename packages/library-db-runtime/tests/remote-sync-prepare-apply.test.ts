@@ -1392,7 +1392,8 @@ describe("LIB-SYNC-23 — a reopened device applies every change made elsewhere 
     await waitFor("progress 20 uploaded", () => drained(offline), 15_000);
     const uploadCalls = fake.calls.slice(callsBefore).filter((call) => call.startsWith("putLibraryOp"));
     log("upload calls", uploadCalls);
-    expect(uploadCalls.some((call) => call.includes("409"))).toBe(false);
+    // The fake logs a refusal as "<call> -> 409 …"; a bare "409" also matched op ids such as op=409a1b91 (run 52346).
+    expect(uploadCalls.some((call) => call.includes("-> 409"))).toBe(false);
     expect(await serverProgress(mediaId)).toBe(20);
     offline.close();
   }, 30_000);

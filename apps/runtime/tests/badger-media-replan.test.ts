@@ -20,7 +20,7 @@
  * handler is pure orchestration over those two seams.
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { EngineV2 } from "../src/core/jobs/engineV2";
+import type { EngineV2 } from "@space/runtime-jobs-engine/engineV2";
 import type { BadgerLibraryDbService } from "../src/modules/badgerLibraryDb";
 import { createBadgerMediaReplanQualitiesHandler } from "../src/modules/badger/mediaReplan";
 import type { BadgerMediaReplanQualitiesPayload } from "@space/runtime-contracts/badger/ingest";

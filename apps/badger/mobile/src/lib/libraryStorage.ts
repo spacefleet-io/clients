@@ -2,6 +2,7 @@ import { Platform } from "react-native";
 import { Buffer } from "buffer";
 import RNFS from "react-native-fs";
 import { SNAPSHOT_TAIL_BYTES_THRESHOLD } from "@space/library-db-definition/opClass";
+import { appFilesDir, appSqliteDb, type AppDirs } from "@space/mobile-shell/app-data";
 
 export type LibraryCache = {
   version: number;
@@ -40,14 +41,19 @@ export type PendingOp = {
   payload: Record<string, unknown>;
 };
 
+const appDirs: AppDirs = {
+  document: RNFS.DocumentDirectoryPath,
+  library: RNFS.LibraryDirectoryPath,
+  caches: RNFS.CachesDirectoryPath,
+};
 /**
- * Folder for the library's files and (on Apple platforms) its databases. Apple TV only lets an app write to
- * Caches (Documents is read-only on the hardware; the simulator does not enforce it), so the tvOS app keeps
- * everything there; the patched SQLite plugin opens "Documents" databases in Caches on tvOS to match. The system
- * may purge Caches while the app is not running: the library then reloads from the server, as on a fresh install.
+ * Folder for the library's files: Caches on Apple TV, the one folder tvOS lets an app write (`@space/mobile-shell/app-data`,
+ * shared with Parrot). The system may purge Caches while the app is not running: the library then reloads from the
+ * server, as on a fresh install.
  */
-const APP_DATA_DIR =
-  Platform.OS === "ios" && Platform.isTV ? RNFS.CachesDirectoryPath : RNFS.DocumentDirectoryPath;
+const APP_DATA_DIR = appFilesDir(Platform.OS, Platform.isTV, appDirs);
+/** Where a library database lives: Badger's iPhone keeps them in Documents (`location: "Documents"`). */
+export const librarySqliteDb = (name: string) => appSqliteDb(Platform.OS, Platform.isTV, appDirs, name, "documents");
 const libraryDir = () => `${APP_DATA_DIR}/library`;
 const cacheFile = () => `${libraryDir()}/cache.json`;
 const cacheBlobFile = () => `${libraryDir()}/cache.blob`;
@@ -76,13 +82,7 @@ const resolveLibraryFilePath = (savedPath: string) => {
   return resolved;
 };
 
-const dbFile = (name: string) => {
-  if (Platform.OS === "android") {
-    const base = RNFS.DocumentDirectoryPath.replace(/\/files$/, "");
-    return `${base}/databases/${name}`;
-  }
-  return `${APP_DATA_DIR}/${name}`;
-};
+const dbFile = (name: string) => librarySqliteDb(name).path;
 const coreDbFile = () => dbFile("library.core.sqlite");
 const metadataDbFile = () => dbFile("library.metadata.sqlite");
 const playbackDbFile = () => dbFile("library.playback.sqlite");

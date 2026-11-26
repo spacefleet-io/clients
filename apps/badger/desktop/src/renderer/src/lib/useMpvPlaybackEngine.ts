@@ -169,6 +169,8 @@ const mpvLog = rendererLogger.child({ scope: "mpv" });
 const mpvSubtitleLog = rendererLogger.child({ scope: "mpv-subtitle" });
 const subPipelineLog = rendererLogger.child({ scope: "sub-pipeline" });
 const abrLog = rendererLogger.child({ scope: "playback-abr" });
+/** UX-NOTICE-11: every automatic quality change (cap, decoder fallback, down- or upshift) is one notice that replaces itself. */
+export const ABR_SWITCH_NOTICE_KEY = "abr-switch";
 
 // ABR decision cadence: the high-frequency poll runs at 250ms for time-pos and
 // other UI state. The ABR decision only needs ~1 Hz — running it every cycle
@@ -3984,6 +3986,7 @@ export const useMpvPlaybackEngine = ({
           if (target?.kind === "switch" && target.id !== capRequestedRef.current) {
             capRequestedRef.current = target.id;
             notify({
+              key: ABR_SWITCH_NOTICE_KEY,
               title: t("player.abrToastTitle"),
               message: t(cap === "480p" ? "player.capToast480p" : "player.capToast1080p"),
               level: "info",
@@ -4090,6 +4093,7 @@ export const useMpvPlaybackEngine = ({
             "abr force-quality insufficient",
           );
           notify({
+            key: "abr-insufficient",
             title: t("player.abrToastTitle"),
             message: t("player.abrInsufficient", {
               current: currentFmt.quality,
@@ -4118,13 +4122,15 @@ export const useMpvPlaybackEngine = ({
             },
             "abr device-too-weak",
           );
+          // UX-NOTICE-11: like every notice it leaves after its time (8 s idle with a button, UX-NOTICE-03) and stays in
+          // the bell; a repeat for the same file replaces it instead of piling up.
           const message = t("player.deviceTooWeak.message");
           notify({
+            key: `abr-too-weak:${currentFmt.id}`,
             title: t("player.abrToastTitle"),
             message: action.pinned ? `${message} ${t("player.deviceTooWeak.pinnedHint")}` : message,
             level: "warning",
             toastOptions: {
-              duration: Infinity,
               action: {
                 label: t("player.deviceTooWeak.keepWatching"),
                 onClick: () => abrLog.info({ current: currentFmt.quality }, "abr device-too-weak keep-watching"),
@@ -4168,6 +4174,7 @@ export const useMpvPlaybackEngine = ({
             "abr decode-fallback",
           );
           notify({
+            key: ABR_SWITCH_NOTICE_KEY,
             title: t("player.abrToastTitle"),
             message: t("player.abrDecodeFallback", { quality: targetQualityLabel }),
             level: "warning",
@@ -4188,6 +4195,7 @@ export const useMpvPlaybackEngine = ({
             "abr downshift",
           );
           notify({
+            key: ABR_SWITCH_NOTICE_KEY,
             title: t("player.abrToastTitle"),
             message: t("player.abrDownshift", {
               quality: targetQualityLabel,
@@ -4204,6 +4212,7 @@ export const useMpvPlaybackEngine = ({
           "abr upshift",
         );
         notify({
+          key: ABR_SWITCH_NOTICE_KEY,
           title: t("player.abrToastTitle"),
           message: t("player.abrUpshift", { quality: targetQualityLabel }),
           level: "info",

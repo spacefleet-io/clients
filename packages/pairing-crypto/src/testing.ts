@@ -27,7 +27,7 @@ const call = async (http: Http, path: string, init: RequestInit = {}): Promise<P
     headers: { "content-type": "application/json", "x-space-app": http.app, ...(init.headers ?? {}) },
   });
   const text = await res.text();
-  let body: Record<string, unknown> = {};
+  let body: Record<string, unknown>;
   try {
     body = text ? (JSON.parse(text) as Record<string, unknown>) : {};
   } catch {

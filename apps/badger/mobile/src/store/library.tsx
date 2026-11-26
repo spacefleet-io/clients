@@ -28,6 +28,7 @@ import { setMediaKeyFromBase64 } from "../lib/mediaCrypto";
 import { decryptBase64ToBytes } from "../lib/crypto";
 import { checkKeptLibraryKey, keptLibraryKeyIsStale, keptLibraryKeyVerdict, type KeptLibraryKeyVerdict } from "@space/mobile-shell/kept-library-key";
 import { classifyLibraryMeta, LibrarySyncUnavailableError } from "@space/shared/libraryMetaState";
+import { isUnpaidLibrarySetupRefusal } from "@space/shared/unpaidLibrarySetup";
 import { onNetworkRecover } from "../lib/networkListener";
 import { computeStreamBackoff } from "../lib/streamBackoff";
 import { createForegroundSyncScheduler, type AppStateLike } from "../lib/foregroundSync";
@@ -162,6 +163,8 @@ type LibraryActionsValue = {
   /** Deletes a title with everything attached to it (files, progress, playlist entries) and syncs the deletion. */
   deleteMedia: (mediaId: string) => Promise<void>;
   getSystemPlaylistId: (slug: "favorites" | "watchlist") => Promise<string | null>;
+  /** A library-wide setting (never a profile's `p:` key), e.g. the Home layout the computer saves (UX-HOME-06); null when none. */
+  readSetting: (key: string) => Promise<string | null>;
   setProgress: (mediaId: string, progressPct: number) => Promise<void>;
   /** `final` (pause/exit/background) also refreshes list state + rebuilds the snapshot cache. */
   setPlaybackProgress: (
@@ -806,7 +809,23 @@ export const LibraryProvider = ({ children }: { children: React.ReactNode }) => 
             }
             console.warn("library.load.no_library.create", JSON.stringify({ keyVerdict: keptKey }));
             setLoadStatus({ kind: "loading", phase: "snapshot" });
-            const createdDb = await LibraryDb.open(token, key, fetchedMeta ?? undefined);
+            let createdDb: LibraryDb;
+            try {
+              createdDb = await LibraryDb.open(token, key, fetchedMeta ?? undefined);
+            } catch (createErr) {
+              if (!isUnpaidLibrarySetupRefusal(createErr)) throw createErr;
+              // ACCT-UNPAID-06: the plan has ended, so the API refuses the first library (402). The key step says so in
+              // its place and goes on from there once the plan is renewed; the account's key stays. Waiting here left
+              // Home on "Loading library…" for good.
+              console.warn("library.load.no_library.unpaid");
+              settleOnExit = false;
+              setSettled(false);
+              setNeedsKey(true);
+              setError(null);
+              setLoadStatus({ kind: "needs_key" });
+              setDatasetStatus({ core: false, metadata: false, playback: false });
+              return;
+            }
             openedDb = createdDb;
             await adoptDb(createdDb);
             await createdDb.flushPending();
@@ -1653,6 +1672,14 @@ export const LibraryProvider = ({ children }: { children: React.ReactNode }) => 
     [db]
   );
 
+  const readSetting = useCallback(
+    async (key: string) => {
+      if (!db) return null;
+      return await db.readSetting(key);
+    },
+    [db]
+  );
+
   const setProgress = useCallback(
     async (mediaId: string, progressPct: number) => {
       if (!db) return;
@@ -1832,6 +1859,7 @@ export const LibraryProvider = ({ children }: { children: React.ReactNode }) => 
       removeFromPlaylist,
       deleteMedia,
       getSystemPlaylistId,
+      readSetting,
       setProgress,
       setPlaybackProgress,
       acknowledgeKey,
@@ -1860,6 +1888,7 @@ export const LibraryProvider = ({ children }: { children: React.ReactNode }) => 
       deleteMedia,
       removeFromPlaylist,
       getSystemPlaylistId,
+      readSetting,
       setProgress,
       setPlaybackProgress,
       acknowledgeKey,

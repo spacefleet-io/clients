@@ -23,14 +23,18 @@
  */
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
-import { fallbackCopyReason, decideFallbackCopy, type TranscodeHardware } from "@space/shared/transcodeHardware";
+import {
+  decideFallbackCopy,
+  decideUploadsDuringPlayback,
+  fallbackCopyReason,
+  uploadsDuringPlaybackReason,
+  type TranscodeHardware,
+} from "@space/shared/transcodeHardware";
 import { fallbackCopyForAnswer, formatTranscodeDefaultLog, type FallbackCopyAnswer, type DeviceTranscodeSettings } from "../shared/transcodeDefault";
 import {
-  decideUploadsDuringPlayback,
   formatUploadsDefaultLog,
   isUploadsDuringPlayback,
   uploadsDuringPlaybackForAnswer,
-  uploadsDuringPlaybackReason,
   type DeviceUploadsDuringPlaybackSettings,
   type UploadsDuringPlayback,
   type UploadsDuringPlaybackAnswer,

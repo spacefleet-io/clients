@@ -27,7 +27,7 @@ import { describe, expect, it } from "vitest";
  *      (source pin) — it must not hand mpv `backdropUrl` again.
  */
 
-const MPV_EXTERNAL = new URL("../../../../packages/mpv/src/external.ts", import.meta.url).href;
+const MPV_EXTERNAL = "@space/mpv/external";
 const EXTERNAL_MPV_MAIN = new URL("../src/main/externalMpv.ts", import.meta.url);
 
 const STREAM_URL = "http://127.0.0.1:3000/playback/hls/test/master.m3u8";

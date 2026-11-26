@@ -241,7 +241,6 @@ describe("desktop LibraryDb", () => {
       originalLanguage: "en",
       overview: "A girl and a dragon.",
       year: "2010",
-      rating: 7,
       posterPath: null,
       backdropPath: null,
       genres: [],
