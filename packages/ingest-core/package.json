@@ -30,6 +30,7 @@
     "tesseract.js": "^7.0.0"
   },
   "devDependencies": {
+    "@space/desktop-platform-linux": "workspace:*",
     "@space/media-deps": "workspace:*",
     "vitest": "^5.1.0"
   }

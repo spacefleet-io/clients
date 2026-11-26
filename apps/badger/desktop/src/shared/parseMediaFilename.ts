@@ -1,1 +1,1 @@
-export { parseFilename, parseMediaTitle } from "../../../../../packages/ingest-core/src/parseMediaFilename";
+export { parseFilename, parseMediaTitle } from "@space/ingest-core/parseMediaFilename";

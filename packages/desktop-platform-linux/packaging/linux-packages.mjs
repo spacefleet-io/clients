@@ -59,15 +59,30 @@ const ELECTRON_DEPENDS = {
 
 /**
  * What Badger's bundled mpv/ffmpeg leave to the host (the NEEDED sonames outside the bundle: GL/EGL, DRM, X11/xcb,
- * the text stack, ALSA, D-Bus, zlib). Most already come with Electron's dependencies; they are named anyway so a
- * package never relies on that by accident.
+ * xkbcommon (MPV-GPU-04 Wayland keyboard), the text stack, ALSA, D-Bus, zlib). libwayland is bundled (media-deps
+ * hostLibraries). Most already come with Electron's dependencies; they are named anyway so a package never relies
+ * on that by accident. pacman leaves xkbcommon out: gtk3 pulls `libxkbcommon`, and the AUR packages'
+ * `_release_depends` must match the released list.
  */
 const MPV_HOST_DEPENDS = {
-  deb: ["libegl1", "libx11-xcb1", "libxcb-dri3-0", "libdrm2", "libfontconfig1", "libfreetype6", "libfribidi0", "libharfbuzz0b", "libdbus-1-3", "zlib1g"],
+  deb: [
+    "libegl1",
+    "libx11-xcb1",
+    "libxcb-dri3-0",
+    "libxkbcommon0",
+    "libdrm2",
+    "libfontconfig1",
+    "libfreetype6",
+    "libfribidi0",
+    "libharfbuzz0b",
+    "libdbus-1-3",
+    "zlib1g",
+  ],
   rpm: [
     "libEGL.so.1()(64bit)",
     "libX11-xcb.so.1()(64bit)",
     "libxcb-dri3.so.0()(64bit)",
+    "libxkbcommon.so.0()(64bit)",
     "libdrm.so.2()(64bit)",
     "libfontconfig.so.1()(64bit)",
     "libfreetype.so.6()(64bit)",

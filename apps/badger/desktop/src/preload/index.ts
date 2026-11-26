@@ -9,6 +9,7 @@ import type { MpvCommand, MpvExternalMessage, MpvResponse, OscActionFile, Subtit
 import type { PairingStartOptions } from "@space/desktop-shell/pairing";
 import type { BadgerExportEstimatePayload, BadgerExportSubmitPayload } from "@space/runtime-contracts/badger/export";
 import { SIBLING_IPC } from "@space/desktop-shell/sibling";
+import { createHiddenJobNoticesBridge } from "@space/desktop-shell/hidden-job-notices-preload";
 import { scopeLogger } from "../main/logger";
 import type { AppWindowVisibility as AppWindowVisibilityState } from "../main/appWindowVisibility";
 import { initTestIpcRecorder } from "./testIpcRecorder";
@@ -863,7 +864,7 @@ const clientIdentity = (() => {
 })();
 
 contextBridge.exposeInMainWorld("sf", {
-  version: "0.1.68",
+  version: "0.1.77",
   clientIdentity,
   // REL-CD-29: a "please update" refusal the runtime got on its own API call, forwarded by main.
   onAppUpdateRequired: (callback: (refusal: { status: number; payload: Record<string, unknown> }) => void) => {
@@ -884,6 +885,7 @@ contextBridge.exposeInMainWorld("sf", {
   getPlaybackBaseUrl: () => ipcRenderer.invoke("sf-playback-base-url"),
   setPlaybackToken: (token: string | null) => ipcRenderer.invoke("sf-playback-set-token", token),
   setAuthToken: (token: string | null) => ipcRenderer.invoke("sf-auth-set-token", token),
+  sendFeedback: (input: { message: string; attachLog: boolean; requestIds?: string[] }) => ipcRenderer.invoke("sf-feedback-send", input),
   setMediaKey: (key: string | null) => ipcRenderer.invoke("sf-media-set-key", key),
   forwardKeyToRuntime: (userId: string, keyBase64: string) =>
     ipcRenderer.invoke("sf-media-forward-key-to-runtime", { userId, keyBase64 }),
@@ -1155,6 +1157,8 @@ contextBridge.exposeInMainWorld("sf", {
     adoptCapacity: (seed: DeviceCapacityValues) => ipcRenderer.invoke("sf-device-capacity-adopt", seed),
     setCapacity: (values: DeviceCapacityValues) => ipcRenderer.invoke("sf-device-capacity-set", values),
   },
+  /** UX-NOTICE-06: the hidden-window job notification's setting, and the Jobs request its click left. */
+  hiddenJobNotices: createHiddenJobNoticesBridge(ipcRenderer),
   errorReports: createErrorReportsBridge(ipcRenderer),
   /** MPV-PREV-07: the skip-detection catch-up for the Jobs tab (null when the runtime is not reachable). */
   skipCatchUp: {

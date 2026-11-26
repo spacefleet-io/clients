@@ -8,7 +8,7 @@
  */
 import { afterEach, describe, expect, it } from "vitest";
 import type { IngestJobRecord } from "@space/runtime-jobs";
-import { createEngineV2, type EngineV2, type RuntimeJobEvent } from "../src/core/jobs/engineV2";
+import { createEngineV2, type EngineV2, type RuntimeJobEvent } from "@space/runtime-jobs-engine/engineV2";
 
 const ts = "2026-01-01T00:00:00.000Z";
 const T = "jobs-engine-v2-session-gate";

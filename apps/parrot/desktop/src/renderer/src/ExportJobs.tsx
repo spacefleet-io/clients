@@ -19,20 +19,26 @@ import {
 import { formatLocalizedStorage } from "@space/shared/format";
 import { EXPORT_FOLDER_MISSING, EXPORT_NO_SPACE, type ParrotExportJob, type ParrotLanguage } from "../../shared/ipc";
 import { countText, pluralForm, translator, type ParrotStringKey, type Translate } from "./i18n";
-import type { NotificationPart } from "./notificationText";
+import type { JobOutcome } from "@space/notify-core/kinds";
 
-/** Puts a line in the tray (Library binds it to its notification store). */
-export type ExportNotify = (level: "info" | "success" | "error", title: NotificationPart, message: NotificationPart) => void;
+/** A string key and its values, or text shown as it is (a folder name, a server's error). */
+type ExportPart = { key: ParrotStringKey; vars?: Record<string, string | number> } | string;
+
+/**
+ * Says an export ended (Library binds it to its notices): a toast either way, and a history entry only for a failure
+ * (UX-NOTICE-10). `key` is the job's, so the same export saying it again replaces its notice (UX-NOTICE-11).
+ */
+export type ExportNotify = (notice: { key: string; outcome: JobOutcome; title: ExportPart; message: ExportPart }) => void;
 
 const folderName = (path: string) => path.split(/[\\/]/).filter(Boolean).pop() ?? path;
 
 export const exportJobEnded = (job: ParrotExportJob) => job.phase === "done" || job.phase === "failed" || job.phase === "cancelled";
 
 /** Why an export stopped, as the user reads it: a full disk and a folder gone are said in words. */
-export const exportErrorPart = (error: string | null): NotificationPart =>
+export const exportErrorPart = (error: string | null): ExportPart =>
   error === EXPORT_NO_SPACE ? { key: "export.job.noSpace" } : error === EXPORT_FOLDER_MISSING ? { key: "export.job.folderMissing" } : { key: "export.job.failed", vars: { error: error ?? "" } };
 
-const partText = (t: Translate, part: NotificationPart) => (typeof part === "string" ? part : t(part.key, part.vars));
+const partText = (t: Translate, part: ExportPart) => (typeof part === "string" ? part : t(part.key, part.vars));
 
 /** Which filter chips list an export (UX-JOBS-01). */
 export function exportJobMatches(job: ParrotExportJob, filter: DesktopJobFilter): boolean {
@@ -68,12 +74,12 @@ export function useExportJobs(): ParrotExportJob[] | null {
 }
 
 /** "1 song saved in Music", "2 songs saved in Music": the language's own plural form (the tray and the Jobs row). */
-const doneText = (language: ParrotLanguage, job: ParrotExportJob): NotificationPart => ({
+const doneText = (language: ParrotLanguage, job: ParrotExportJob): ExportPart => ({
   key: "export.job.done",
   vars: { songs: countText(language, translator(language), "song", job.doneSongs), folder: folderName(job.dest) },
 });
 
-/** One tray line when an export ends: saved, stopped by a full disk, or failed (UX-JOBS-01). */
+/** One notice when an export ends: saved, stopped by a full disk, or failed (UX-JOBS-01). */
 export function useExportNotifications(language: ParrotLanguage, notify: ExportNotify): void {
   const phases = useRef<Map<string, ParrotExportJob["phase"]> | null>(null);
   const notifyRef = useRef(notify);
@@ -88,10 +94,11 @@ export function useExportNotifications(language: ParrotLanguage, notify: ExportN
       for (const job of jobs) {
         const was = before.get(job.id);
         if (!was || exportJobEnded({ ...job, phase: was }) || !exportJobEnded(job)) continue;
+        const key = `export:${job.id}`;
         if (job.phase === "done") {
-          notifyRef.current("success", { key: "export.notify.done" }, doneText(languageRef.current, job));
+          notifyRef.current({ key, outcome: "done", title: { key: "export.notify.done" }, message: doneText(languageRef.current, job) });
         } else if (job.phase === "failed") {
-          notifyRef.current("error", { key: "export.notify.failed" }, exportErrorPart(job.error));
+          notifyRef.current({ key, outcome: "failed", title: { key: "export.notify.failed" }, message: exportErrorPart(job.error) });
         }
       }
     };

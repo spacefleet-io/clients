@@ -12,7 +12,7 @@ import { setClientIdentity, setLibraryReadOpStreamVersion } from "@space/shared/
 import { logFailedApiCalls } from "@space/shared/apiFailure";
 import { DEFAULT_SPACE_APP_ID } from "@space/shared/appScope";
 import { READ_OP_STREAM_VERSION } from "@space/library-db-definition/ops";
-import type { MetadataSkipMarkersResult, TitleType } from "@space/shared/api";
+import type { KeyStepMetaOptions, MetadataSkipMarkersResult, TitleType } from "@space/shared/api";
 import type { createUserStorageTunnelClient, StorageTunnelPurpose } from "@space/shared/storageTunnel";
 import type { StorageObjectCounting } from "@space/shared/storageCounting";
 import { resolveInitialApiBaseUrl } from "./lib/apiBaseUrl";
@@ -183,7 +183,7 @@ export const completeProviderSignIn = async (code: string, clientVerifier: strin
 export const getLibraryMeta = (token: string) =>
   sharedGetLibraryMeta(token, DEFAULT_SPACE_APP_ID, READ_OP_STREAM_VERSION); // op-stream: read
 
-export const getLibraryMetaForKeyStep = (token: string) =>
-  sharedGetLibraryMetaForKeyStep(token, DEFAULT_SPACE_APP_ID, undefined, READ_OP_STREAM_VERSION); // op-stream: read
+export const getLibraryMetaForKeyStep = (token: string, onRead?: KeyStepMetaOptions["onRead"]) =>
+  sharedGetLibraryMetaForKeyStep(token, DEFAULT_SPACE_APP_ID, { readOpStreamVersion: READ_OP_STREAM_VERSION, onRead }); // op-stream: read
 
 export * from "@space/shared/api";

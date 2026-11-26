@@ -4150,7 +4150,6 @@ export class LibraryDb {
       originalLanguage: item.originalLanguage ?? null,
       overview: item.overview ?? null,
       year: item.year ?? null,
-      rating: item.rating ?? null,
       posterPath: item.posterPath ?? null,
       backdropPath: item.backdropPath ?? null,
       totalEpisodes: item.totalEpisodes ?? null,
@@ -4239,7 +4238,7 @@ export class LibraryDb {
           originalLanguage: normalized.originalLanguage,
           overview: normalized.overview,
           year: normalized.year,
-          rating: normalized.rating,
+          rating: null, // META-SRC-05: the metadata service sends no rating.
           posterPath: normalized.posterPath,
           backdropPath: normalized.backdropPath,
           addedAt: claimTimestamp,
@@ -4329,7 +4328,7 @@ export class LibraryDb {
           originalLanguage: normalized.originalLanguage,
           overview: normalized.overview,
           year: normalized.year,
-          rating: normalized.rating,
+          rating: null, // META-SRC-05: the metadata service sends no rating.
           posterPath: normalized.posterPath,
           backdropPath: normalized.backdropPath,
           totalEpisodes: normalized.totalEpisodes,
@@ -4348,7 +4347,7 @@ export class LibraryDb {
           originalLanguage: normalized.originalLanguage,
           overview: normalized.overview,
           year: normalized.year,
-          rating: normalized.rating,
+          rating: null, // META-SRC-05: the metadata service sends no rating.
           posterPath: normalized.posterPath,
           backdropPath: normalized.backdropPath,
           addedAt: timestamp,

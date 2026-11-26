@@ -20,7 +20,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { TRACK_LIST_CORPUS, type MpvTrack } from "./fixtures/track-list-corpus";
+import { TRACK_LIST_CORPUS, type MpvTrack } from "@space/mpv-protocol/tests/track-list-corpus";
 
 // ----- Inline copy of useMpvPlaybackEngine.ts:1513–1518 -----
 // this mirrors useMpvPlaybackEngine.ts:1513–1518 and will be moved to

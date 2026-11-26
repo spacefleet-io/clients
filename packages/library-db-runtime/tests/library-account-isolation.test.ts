@@ -253,7 +253,6 @@ const addMovie = async (db: Db, id: number, title: string) => {
     originalLanguage: "en",
     overview: null,
     year: "2026",
-    rating: null,
     posterPath: null,
     backdropPath: null,
     genres: [],

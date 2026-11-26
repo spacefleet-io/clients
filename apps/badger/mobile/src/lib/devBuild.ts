@@ -1,8 +1,14 @@
 /**
- * What the build decided, all inlined at build time: Metro's `__DEV__`, `SF_DEV_TICKET_KEY` and `SF_DEV_API_BASE_URL`
- * (babel-plugin-dev-ticket-key.js; the second only ever set next to `SF_DEV_TICKET_KEY=1`).
+ * What the build decided, all inlined at build time: Metro's `__DEV__`, `SF_DEV_TICKET_KEY`, `SF_DEV_API_BASE_URL`
+ * (babel-plugin-dev-ticket-key.js; the second only ever set next to `SF_DEV_TICKET_KEY=1`) and `SF_SIMULATOR_BUILD`
+ * ("1" in a bundle Xcode built for the iOS or tvOS simulator, "" everywhere else; REL-TEST-36's lane override).
  */
-export type MobileBuildEnv = { dev: boolean; devTicketKeyFlag: string | undefined; devApiBaseUrl?: string | undefined };
+export type MobileBuildEnv = {
+  dev: boolean;
+  devTicketKeyFlag: string | undefined;
+  devApiBaseUrl?: string | undefined;
+  simulatorBuild?: string | undefined;
+};
 
 /**
  * Whether this is a development build, phone and TV alike: `__DEV__`, or a `profile` build made for dev-stack testing
@@ -17,4 +23,5 @@ export const currentMobileBuildEnv = (): MobileBuildEnv => ({
   dev: __DEV__,
   devTicketKeyFlag: process.env.SF_DEV_TICKET_KEY,
   devApiBaseUrl: process.env.SF_DEV_API_BASE_URL,
+  simulatorBuild: process.env.SF_SIMULATOR_BUILD,
 });

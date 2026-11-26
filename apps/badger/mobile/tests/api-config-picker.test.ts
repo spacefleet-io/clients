@@ -15,7 +15,10 @@ import {
   initApiConfig,
   serverPickerAllowed,
   setStoredApiHost,
+  SMOKE_API_LAUNCH_ARGUMENT,
+  smokeApiBaseUrl,
 } from "../src/lib/apiConfig";
+const devTicketKeyPlugin = require("../babel-plugin-dev-ticket-key.js");
 
 const state = vi.hoisted(() => ({ storage: new Map<string, string>(), applied: [] as string[] }));
 
@@ -124,6 +127,43 @@ describe("server picker in development builds only", () => {
       current = picked;
       console.info(`[api-config-picker] dev env ${JSON.stringify(env)} switched server to ${picked}`);
     }
+    console.info("[api-config-picker] done");
+  });
+});
+
+// @req ACCT-AUTH-09[badger-mobile,badger-tv]
+describe("release smoke lane override (simulator bundles only)", () => {
+  const launchArgs = (value: unknown) => (name: string) => (name === SMOKE_API_LAUNCH_ARGUMENT ? value : undefined);
+  const SIM_RELEASE = { dev: false, devTicketKeyFlag: "", simulatorBuild: "1" };
+
+  it("inlines SF_SIMULATOR_BUILD from Xcode's platform: 1 for a simulator SDK, empty for a device archive and Android", () => {
+    console.info("[api-config-picker] start simulator flag");
+    expect(devTicketKeyPlugin.simulatorBuildValue({ PLATFORM_NAME: "iphonesimulator" })).toBe("1");
+    expect(devTicketKeyPlugin.simulatorBuildValue({ PLATFORM_NAME: "appletvsimulator" })).toBe("1");
+    expect(devTicketKeyPlugin.simulatorBuildValue({ PLATFORM_NAME: "iphoneos" })).toBe("");
+    expect(devTicketKeyPlugin.simulatorBuildValue({ PLATFORM_NAME: "appletvos" })).toBe("");
+    expect(devTicketKeyPlugin.simulatorBuildValue({})).toBe("");
+    console.info("[api-config-picker] done");
+  });
+
+  it("starts a simulator release bundle on the smoke's loopback lane, and every device bundle on production", () => {
+    console.info("[api-config-picker] start smoke lane override");
+    const lane = "http://127.0.0.1:41234";
+    expect(smokeApiBaseUrl(SIM_RELEASE, launchArgs(lane))).toBe(lane);
+    expect(smokeApiBaseUrl(SIM_RELEASE, launchArgs(`${lane}/`))).toBe(lane);
+    expect(defaultApiBaseUrl(SIM_RELEASE, launchArgs(lane))).toBe(lane);
+    expect(defaultApiBaseUrl(SIM_RELEASE, launchArgs(undefined))).toBe(PRODUCTION_API_BASE_URL);
+    // Only a loopback address: never another server, never HTTPS hosts elsewhere.
+    for (const other of ["http://203.0.113.20:3000", "https://api.example.com", "http://127.0.0.1", "file:///x", 42]) {
+      expect(defaultApiBaseUrl(SIM_RELEASE, launchArgs(other))).toBe(PRODUCTION_API_BASE_URL);
+    }
+    // A device bundle (TestFlight, App Store) or an Android one never reads the argument.
+    for (const env of RELEASE_ENVS) {
+      expect(smokeApiBaseUrl(env, launchArgs(lane))).toBeNull();
+      expect(defaultApiBaseUrl(env, launchArgs(lane))).toBe(PRODUCTION_API_BASE_URL);
+    }
+    // The override is no picker: a simulator release bundle still has none and ignores a stored address.
+    expect(serverPickerAllowed(SIM_RELEASE)).toBe(false);
     console.info("[api-config-picker] done");
   });
 });

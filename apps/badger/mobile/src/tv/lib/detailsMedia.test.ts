@@ -16,7 +16,6 @@ import { getStorageUnitBase, setStorageUnitBase } from "@space/shared/format";
 import {
   codecLabel,
   episodeMediaBlocks,
-  formatRating,
   formatSizeMb,
   initials,
   mediaBlockForFile,
@@ -159,22 +158,28 @@ describe("TV details media mapping (TV-DETAILS-MEDIA-001)", () => {
     expect(tvVersionChips({ type: "tv", editions }, block)).toEqual([]);
   });
 
-  it("@req UX-TV-40[badger-tv] lists the library's titles of the same kind sharing the most genres, best rated next, never the title itself", () => {
+  it("@req UX-TV-40[badger-tv] @req META-SRC-05[badger-tv] lists the library's titles of the same kind sharing the most genres, newest next, never by rating, never the title itself", () => {
+    // The synced rows still carry a rating; it must not order anything.
     const row = (id: string, type: "movie" | "tv", genres: number[], rating: number | null, addedAt = "2026-10-01T00:00:00Z") =>
       ({ id, type, genres, rating, addedAt, title: id }) as unknown as MediaRow;
     const media = [
       row("self", "movie", [878, 18], 8),
-      row("one-shared-high", "movie", [878], 9),
+      row("one-shared-low", "movie", [18], 1),
       row("two-shared", "movie", [878, 18, 53], 5),
-      row("one-shared-low", "movie", [18], 4),
-      row("one-shared-low-newer", "movie", [18], 4, "2026-11-01T00:00:00Z"),
+      row("one-shared-high", "movie", [878], 9.9),
+      row("one-shared-newer", "movie", [18], null, "2026-11-01T00:00:00Z"),
       row("no-genre-shared", "movie", [35], 10),
       row("a-show", "tv", [878, 18], 9),
     ];
     const similar = similarTitles({ id: "self", type: "movie", genres: [878, 18] }, media);
     log("similar", similar.map((item) => item.id));
-    expect(similar.map((item) => item.id)).toEqual(["two-shared", "one-shared-high", "one-shared-low-newer", "one-shared-low"]);
-    expect(similarTitles({ id: "self", type: "movie", genres: [878, 18] }, media, 2).map((item) => item.id)).toEqual(["two-shared", "one-shared-high"]);
+    expect(similar.map((item) => item.id)).toEqual(["two-shared", "one-shared-newer", "one-shared-high", "one-shared-low"]);
+    expect(similarTitles({ id: "self", type: "movie", genres: [878, 18] }, media, 2).map((item) => item.id)).toEqual(["two-shared", "one-shared-newer"]);
+    // Swapping the two ratings changes nothing.
+    const swapped = media.map((item) =>
+      item.id === "one-shared-low" ? { ...item, rating: 9.9 } : item.id === "one-shared-high" ? { ...item, rating: 1 } : item,
+    );
+    expect(similarTitles({ id: "self", type: "movie", genres: [878, 18] }, swapped).map((item) => item.id)).toEqual(similar.map((item) => item.id));
     expect(similarTitles({ id: "self", type: "movie", genres: [] }, media)).toEqual([]);
   });
 
@@ -257,20 +262,20 @@ describe("TV details media mapping (TV-DETAILS-MEDIA-001)", () => {
     expect(binary).toEqual({ small: "850 MB", large: "2.3 GB" });
   });
 
-  // @bugfix @regression-proof — German TV showed "6.3 GB" and "★ 7.4": sizes and ratings used a dot whatever the language.
+  // @bugfix @regression-proof — German TV showed "6.3 GB": sizes used a dot whatever the language.
   // English last, so the tests after this one run in the default language again.
   // @req STOR-UNIT-02[badger-tv]
-  for (const [lng, size, rating] of [
-    ["de", "6,3 GB", "7,4"],
-    ["nl", "6,3 GB", "7,4"],
-    ["fr", "6,3 Go", "7,4"],
-    ["en", "6.3 GB", "7.4"],
+  for (const [lng, size] of [
+    ["de", "6,3 GB"],
+    ["nl", "6,3 GB"],
+    ["fr", "6,3 Go"],
+    ["en", "6.3 GB"],
   ] as const) {
-    it(`[TV-DECIMAL-001] ${lng}: sizes and ratings use the language's decimal mark ("${size}", "${rating}")`, async () => {
+    it(`[TV-DECIMAL-001] ${lng}: sizes use the language's decimal mark ("${size}")`, async () => {
       await changeLanguage(lng);
-      const got = { size: formatSizeMb(6451), small: formatSizeMb(850), rating: formatRating(7.4) };
+      const got = { size: formatSizeMb(6451), small: formatSizeMb(850) };
       log(`decimal mark ${lng}`, got);
-      expect(got).toEqual({ size, small: lng === "fr" ? "850 Mo" : "850 MB", rating });
+      expect(got).toEqual({ size, small: lng === "fr" ? "850 Mo" : "850 MB" });
     });
   }
 

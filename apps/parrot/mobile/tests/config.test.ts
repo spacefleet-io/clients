@@ -8,10 +8,19 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { PRODUCTION_API_BASE_URL } from "@space/shared/productionApi";
 
 // config.ts states the build's identity from the SpaceAppInfo native module (REL-CD-29).
+// `native` drives the iOS launch-argument read (Settings) in the release smoke cases below; Android by default.
+const native = vi.hoisted(() => ({ os: "android", launchArgs: (_name: string): unknown => undefined }));
 vi.mock("react-native", () => ({
   NativeModules: { SpaceAppInfo: { appVersion: "0.1.3", installer: "org.fdroid.fdroid" } },
-  Platform: { OS: "android", isTV: false },
+  Platform: {
+    get OS() {
+      return native.os;
+    },
+    isTV: false,
+  },
+  Settings: { get: (name: string) => native.launchArgs(name) },
 }));
+const apiBaseUrlPlugin = require("../babel-plugin-api-base-url.js");
 
 const log = (testId: string, phase: string, data?: unknown) =>
   console.info(`[PARROT-MOBILE-CONFIG-001] ${testId} ${phase}`, data === undefined ? "" : JSON.stringify(data));
@@ -45,5 +54,74 @@ describe("Parrot phone API target", () => {
     const sent = clientIdentityHeaders();
     log(testId, "sent", sent);
     expect(sent).toEqual({ "x-space-client": "parrot/android/0.1.3+fdroid" });
+  });
+});
+
+// @req REL-TEST-36[ci]
+// The Apple release smoke starts the release configuration of the TestFlight commit, built for the simulator, on a
+// dev-stack lane through `-SFSmokeApiBaseUrl`. A device bundle (TestFlight, App Store) and an Android one never read it.
+describe("release smoke lane override (simulator bundles only)", () => {
+  const lane = "http://127.0.0.1:41234";
+  const launchArgs = (value: unknown) => (name: string) => (name === "SFSmokeApiBaseUrl" ? value : undefined);
+
+  afterEach(() => {
+    native.os = "android";
+    native.launchArgs = () => undefined;
+  });
+
+  it("inlines SF_SIMULATOR_BUILD from Xcode's platform: 1 for a simulator SDK, empty for a device archive and Android", () => {
+    const testId = "simulator-flag";
+    log(testId, "start");
+    expect(apiBaseUrlPlugin.simulatorBuildValue({ PLATFORM_NAME: "iphonesimulator" })).toBe("1");
+    expect(apiBaseUrlPlugin.simulatorBuildValue({ PLATFORM_NAME: "appletvsimulator" })).toBe("1");
+    expect(apiBaseUrlPlugin.simulatorBuildValue({ PLATFORM_NAME: "iphoneos" })).toBe("");
+    expect(apiBaseUrlPlugin.simulatorBuildValue({ PLATFORM_NAME: "appletvos" })).toBe("");
+    expect(apiBaseUrlPlugin.simulatorBuildValue({})).toBe("");
+    log(testId, "done");
+  });
+
+  it("a simulator bundle honours a loopback lane only; a device bundle never reads the argument", async () => {
+    const testId = "smoke-lane";
+    vi.stubEnv("PARROT_API_BASE_URL", "");
+    const { SMOKE_API_LAUNCH_ARGUMENT, smokeApiBaseUrl } = await import("../src/config");
+    log(testId, "start", { argument: SMOKE_API_LAUNCH_ARGUMENT });
+    expect(SMOKE_API_LAUNCH_ARGUMENT).toBe("SFSmokeApiBaseUrl");
+    expect(smokeApiBaseUrl("1", launchArgs(lane))).toBe(lane);
+    expect(smokeApiBaseUrl("1", launchArgs(`${lane}/`))).toBe(lane);
+    expect(smokeApiBaseUrl("1", launchArgs("http://localhost:3001"))).toBe("http://localhost:3001");
+    expect(smokeApiBaseUrl("1", launchArgs(undefined))).toBeNull();
+    // Only a loopback address with a port: never another server, never an HTTPS host elsewhere.
+    for (const other of ["http://203.0.113.20:3000", "https://api.example.com", "http://127.0.0.1", "file:///x", 42]) {
+      log(testId, "refused", other);
+      expect(smokeApiBaseUrl("1", launchArgs(other))).toBeNull();
+    }
+    for (const deviceBuild of ["", undefined, "true"]) {
+      expect(smokeApiBaseUrl(deviceBuild, launchArgs(lane))).toBeNull();
+    }
+    log(testId, "done");
+  });
+
+  it("a simulator bundle started on a lane talks to it; without the argument, or on a device, to production", async () => {
+    const testId = "smoke-target";
+    vi.stubEnv("PARROT_API_BASE_URL", "");
+    vi.stubEnv("SF_SIMULATOR_BUILD", "1");
+    native.os = "ios";
+    native.launchArgs = launchArgs(lane);
+    const onLane = await import("../src/config");
+    log(testId, "lane", onLane.API_BASE_URL);
+    expect(onLane.API_BASE_URL).toBe(lane);
+
+    vi.resetModules();
+    native.launchArgs = launchArgs(undefined);
+    const noArgument = await import("../src/config");
+    log(testId, "no argument", noArgument.API_BASE_URL);
+    expect(noArgument.API_BASE_URL).toBe(PRODUCTION_API_BASE_URL);
+
+    vi.resetModules();
+    vi.stubEnv("SF_SIMULATOR_BUILD", "");
+    native.launchArgs = launchArgs(lane);
+    const device = await import("../src/config");
+    log(testId, "device bundle", device.API_BASE_URL);
+    expect(device.API_BASE_URL).toBe(PRODUCTION_API_BASE_URL);
   });
 });

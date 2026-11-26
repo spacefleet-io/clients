@@ -9,6 +9,8 @@
 
 import { translate } from "@space/mobile-shell/i18n";
 import { deviceTypeLabel, sessionDeviceType } from "@space/mobile-shell/pairing-approve";
+import type { Notice } from "@space/notify-core/kinds";
+import { notifyTexts } from "@space/notify-core/texts";
 
 export type NewDeviceInfo = {
   sessionId: string | null;
@@ -27,8 +29,33 @@ type SessionLike = {
 export const newDeviceMessage = (info: Pick<NewDeviceInfo, "deviceName" | "deviceType">): string =>
   translate("pairing.newDevice.message", { name: info.deviceName, type: deviceTypeLabel(info.deviceType) });
 
-/** One notice per device: the push and the device-list check announcing the same session show it once. */
-export const newDeviceKey = (info: NewDeviceInfo): string => info.sessionId ?? `${info.deviceType ?? ""}:${info.deviceName}`;
+/**
+ * One notice per device: the push and the device-list check announcing the same session show it once, and the key is
+ * the one the account's news gives that sign-in (UX-NOTICE-05), so the phone's own entry and the news are one entry.
+ */
+export const newDeviceKey = (info: NewDeviceInfo): string =>
+  info.sessionId ? `new-device-${info.sessionId}` : `${info.deviceType ?? ""}:${info.deviceName}`;
+
+/** The device's kind as a text key, so the entry names it in the language the history is read in (UX-NOTICE-13). */
+const deviceTypeKey = (deviceType: string | null): string =>
+  `notify.account.deviceType.${deviceType && Object.hasOwn(notifyTexts.en.account.deviceType, deviceType) ? deviceType : "other"}`;
+
+/** Where a new-device entry in the notice history leads: Settings, at "Your devices". */
+export const DEVICES_TARGET = "devices";
+
+/**
+ * The new device as a notice-history entry (UX-NOTICE-04), the same on the phone and the TV: the same device again
+ * replaces its entry (UX-NOTICE-11), and its texts are keys, so the entry follows a change of language (UX-NOTICE-13).
+ */
+export const newDeviceHistoryNotice = (info: NewDeviceInfo): Notice => ({
+  key: newDeviceKey(info),
+  kind: "headsUp",
+  level: "info",
+  scope: "account",
+  title: { key: "notify.account.newDevice" },
+  message: { key: "notify.account.newDeviceMessage", vars: { name: info.deviceName, type: { key: deviceTypeKey(info.deviceType) } } },
+  action: { label: { key: "account.devices.title" }, target: DEVICES_TARGET },
+});
 
 const asRecord = (value: unknown): Record<string, unknown> | null =>
   value && typeof value === "object" ? (value as Record<string, unknown>) : null;

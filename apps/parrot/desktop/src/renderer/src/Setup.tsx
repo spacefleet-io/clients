@@ -5,6 +5,7 @@ import { MASCOT_GLOW } from "@space/ui/floating-mascot";
 import { CLIENT_UI_LANGUAGES, isClientUiLanguage } from "@space/shared/i18n";
 import {
   ChoiceList,
+  DesktopKeyLoadFailedRetry,
   DesktopStartupCard,
   DesktopStartupControls,
   ErrorReportsLink,
@@ -14,6 +15,7 @@ import {
   type LibraryKeyEraseOutcome,
   type LibraryKeyTyped,
 } from "@space/desktop-shell/components";
+import { keyStepLoadFailedText, type KeyStepMetaErrorClass } from "@space/shared/keyStepMetaRead";
 import mascotUrl from "@space/parrot-core/mascot.webp";
 import { needsProfileSetupStep } from "@space/desktop-shell/profile-setup";
 import {
@@ -28,6 +30,7 @@ import { applyErrorReports } from "./errorReports";
 import type { ParrotStringKey, Translate } from "./i18n";
 import { useSignOutWithKeyCheck } from "./SignOutKeyCheck";
 import { ParrotProfileSetupStep, useParrotCurrentProfile, useParrotDesktopProfileStore } from "./profiles";
+import { ParrotUnpaidSetupStep } from "./UnpaidSetupStep";
 
 type Props = { t: Translate; state: ParrotState; onState: (state: ParrotState) => void };
 
@@ -57,12 +60,19 @@ export default function Setup({ t, state, onState }: Props) {
   const [draft, setDraft] = useState<ParrotSetupState>(setup);
   const [busy, setBusy] = useState(false);
   // UX-KEY-01, the shared key step Badger desktop shows too: an account with no key yet is shown a new one ("show"),
-  // an account that has one is asked for it ("enter"); "checking" asks main which, on arriving at the step.
-  const [keyMode, setKeyMode] = useState<"checking" | "show" | "enter">("checking");
+  // an account that has one is asked for it ("enter"); "checking" asks main which, on arriving at the step. "failed":
+  // main could not tell (UX-KEY-02), so the step says why and offers Retry, deciding nothing.
+  const [keyMode, setKeyMode] = useState<"checking" | "show" | "enter" | "failed">("checking");
+  const [keyLoadFailed, setKeyLoadFailed] = useState<KeyStepMetaErrorClass>("unknown");
   const [newKey, setNewKey] = useState<{ keyBase64: string; words: string[] } | null>(null);
   const [keyError, setKeyError] = useState<string | null>(null);
   const [savingKey, setSavingKey] = useState(false);
   const onKeyStep = setup.step === "libraryKey" && !state.hasLibraryKey;
+  // ACCT-UNPAID-06: the key main refused to make the account's first library with, because the plan has ended. The
+  // step says so in its place and keeps the key, so Try again (or a renewal) goes on from here with it.
+  const [unpaidKey, setUnpaidKey] = useState<string | null>(null);
+  const [unpaidRefusedAgain, setUnpaidRefusedAgain] = useState(false);
+  const [retryingUnpaid, setRetryingUnpaid] = useState(false);
 
   const go = async (step: ParrotSetupStep, patch: Partial<ParrotSetupState> = {}) => {
     setBusy(true);
@@ -91,14 +101,20 @@ export default function Setup({ t, state, onState }: Props) {
     setKeyMode("checking");
     setKeyError(null);
     const made = await window.parrot.createLibraryKey();
-    console.info(`[parrot:key-step] ${made.ok ? "no key on the account yet: showing a new one" : `asking for the account's key (${made.error})`}`);
     if (made.ok) {
+      console.info("[parrot:key-step] no key on the account yet: showing a new one");
       setNewKey({ keyBase64: made.keyBase64, words: made.words });
       setKeyMode("show");
       return;
     }
     setNewKey(null);
-    if (made.error === "network") setKeyError(t("key.error.network"));
+    if (made.error === "network") {
+      console.info(`[parrot:key-step] could not tell whether the account has a key (${made.errorClass}): offering Retry`);
+      setKeyLoadFailed(made.errorClass);
+      setKeyMode("failed");
+      return;
+    }
+    console.info(`[parrot:key-step] asking for the account's key (${made.error})`);
     setKeyMode("enter");
   };
   useEffect(() => {
@@ -115,10 +131,28 @@ export default function Setup({ t, state, onState }: Props) {
     const result = await window.parrot.setLibraryKey(keyBase64);
     console.info(`[parrot:key-step] key ${result.ok ? "accepted" : `refused (${result.error})`}`);
     if (!result.ok) {
-      setKeyError(result.error === "wrongKey" ? libraryKeyStepText(setup.language, "parrot")("wrongKey") : t(`key.error.${result.error}`));
+      const error = result.error;
+      if (error === "unpaid") {
+        console.info(`[parrot:key-step] the plan has ended: the library waits for a renewal (${result.message ?? "subscription_unpaid"})`);
+        setUnpaidRefusedAgain(unpaidKey !== null);
+        setUnpaidKey(keyBase64);
+        return;
+      }
+      setUnpaidKey(null);
+      setKeyError(error === "wrongKey" ? libraryKeyStepText(setup.language, "parrot")("wrongKey") : t(`key.error.${error}`));
       return;
     }
+    setUnpaidKey(null);
     await keyAccepted();
+  };
+  const retryUnpaidKey = async () => {
+    if (!unpaidKey) return;
+    setRetryingUnpaid(true);
+    try {
+      await submitKey(unpaidKey);
+    } finally {
+      setRetryingUnpaid(false);
+    }
   };
   const saveNewKey = async () => {
     if (!newKey) return;
@@ -218,11 +252,11 @@ export default function Setup({ t, state, onState }: Props) {
                 },
                 log: keyPairLog,
               }}
-              // Main could not tell whether the account has a key (offline): making one stays possible once it can.
-              onCreateKey={keyError === t("key.error.network") ? askKeyMode : undefined}
               onErase={eraseLibrary}
               secondary={backButton}
             />
+          ) : keyMode === "failed" ? (
+            <DesktopKeyLoadFailedRetry language={setup.language} errorClass={keyLoadFailed} onRetry={() => void askKeyMode()} back={backButton} />
           ) : (
             <div className="flex justify-center py-6" data-testid="key-checking">
               <Spinner />
@@ -348,6 +382,24 @@ export default function Setup({ t, state, onState }: Props) {
     );
   }
 
+  // ACCT-UNPAID-06: in place of the key step, the plan has ended and the library waits for a renewal; Renew is here.
+  if (onKeyStep && unpaidKey) {
+    return (
+      <div className="flex min-h-screen items-center justify-center p-8 pt-32 [@media(max-height:700px)]:pb-4 [@media(max-height:700px)]:pt-16">
+        <DesktopStartupControls>{languageMenu}</DesktopStartupControls>
+        <ParrotUnpaidSetupStep
+          t={t}
+          language={setup.language}
+          progress={{ current, total: numbered.length, label: t("stepOf", { n: current, m: numbered.length }), testId: "setup-progress" }}
+          onTryAgain={() => void retryUnpaidKey()}
+          tryingAgain={retryingUnpaid}
+          refusedAgain={unpaidRefusedAgain}
+          secondary={<AccountLine t={t} state={state} onState={onState} />}
+        />
+      </div>
+    );
+  }
+
   const answerOf = (step: ParrotSetupStep): Partial<ParrotSetupState> =>
     step === "language"
       ? { language: draft.language }
@@ -356,6 +408,7 @@ export default function Setup({ t, state, onState }: Props) {
         : step === "startAtLogin"
           ? { startAtLogin: draft.startAtLogin }
           : {};
+  const loadFailedText = onKeyStep && keyMode === "failed" ? keyStepLoadFailedText(setup.language, keyLoadFailed) : null;
 
   // The fleet's startup card with the Parrot mascot on it (UX-THEME-02, UX-SETUP-08), the same card Badger's first setup uses.
   // The key step (the shared LibraryKeyStep, Badger's too) is the tallest: with the shared tighter spacing it fits the
@@ -374,15 +427,19 @@ export default function Setup({ t, state, onState }: Props) {
       <div className={onKeyStep ? `w-full max-w-xl ${LIBRARY_KEY_STEP_FIT}` : "w-full max-w-xl"} data-testid={`setup-${setup.step}`}>
         <DesktopStartupCard
           progress={current > 0 ? { current, total: numbered.length, label: t("stepOf", { n: current, m: numbered.length }), testId: "setup-progress" } : undefined}
-          // UX-KEY-01: typing a key in and being shown a new one never share a title.
-          title={t(
-            setup.step === "libraryKey"
-              ? onKeyStep && keyMode === "enter"
-                ? "key.enterTitle"
-                : "key.title"
-              : (`${setup.step}.title` as ParrotStringKey),
-          )}
-          description={onKeyStep && keyMode === "enter" ? t("key.explain") : undefined}
+          // UX-KEY-01: typing a key in and being shown a new one never share a title. UX-KEY-02: a failed load says so.
+          title={
+            loadFailedText
+              ? loadFailedText.title
+              : t(
+                  setup.step === "libraryKey"
+                    ? onKeyStep && keyMode === "enter"
+                      ? "key.enterTitle"
+                      : "key.title"
+                    : (`${setup.step}.title` as ParrotStringKey),
+                )
+          }
+          description={loadFailedText ? loadFailedText.body : onKeyStep && keyMode === "enter" ? t("key.explain") : undefined}
           mascotSrc={mascotUrl}
           mascotGlowClassName={MASCOT_GLOW.parrot}
           maxWidthClassName="max-w-xl"

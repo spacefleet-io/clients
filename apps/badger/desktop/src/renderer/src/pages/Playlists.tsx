@@ -1,4 +1,3 @@
-import { formatRating } from "@/lib/localeFormat";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
@@ -164,11 +163,6 @@ export function PlaylistsManager({ playback }: { playback: InlinePlaybackControl
                         alt={item.title}
                         className="h-full w-full object-cover transition group-hover:scale-[1.03]"
                       />
-                      {item.rating ? (
-                        <span className="absolute right-2 top-2 rounded-full bg-[#ffaa54] px-2 py-0.5 text-[11px] font-semibold text-[#0d1117]">
-                          {formatRating(item.rating)}
-                        </span>
-                      ) : null}
                       {!disabled ? (
                         <PlayPosterOverlay
                           mediaId={item.id}

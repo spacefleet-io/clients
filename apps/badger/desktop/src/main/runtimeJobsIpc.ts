@@ -1,3 +1,4 @@
+import type { RuntimeJobLike } from "./hiddenRuntimeJobs";
 import { dialog, ipcMain } from "electron";
 import type {
   RuntimeJobsAvailabilityResult,
@@ -184,6 +185,20 @@ export const setRuntimeJobsBackendToken = (token: string | null | undefined) => 
  * `all-newly-added-jobs-cuddly-cookie`, Fix 2b.
  */
 export const getRuntimeJobsBackendToken = (): string | null => backendToken;
+
+/** UX-NOTICE-06: the runtime's jobs for main's hidden-window watch; null when signed out or the runtime is down. */
+export const listRuntimeJobsForMain = async (): Promise<RuntimeJobLike[] | null> => {
+  if (!backendToken) return null;
+  try {
+    const snap = (await httpFetch("/runtime/jobs/v2/list", { method: "POST", body: JSON.stringify({ filter: {} }) })) as {
+      jobs?: RuntimeJobLike[];
+    } | null;
+    return Array.isArray(snap?.jobs) ? snap.jobs : null;
+  } catch (err) {
+    log.debug({ error: String(err) }, "hidden_watch_list_failed");
+    return null;
+  }
+};
 
 export const registerRuntimeJobsIpc = (config: {
   runtimeBaseUrl: string;

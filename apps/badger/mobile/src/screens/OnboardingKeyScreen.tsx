@@ -23,12 +23,27 @@ import { isClientUiLanguage } from "@space/shared/i18n";
 import { keySavedWarningText } from "@space/shared/keySavedWarning";
 import { MobileKeySavedWarning } from "@space/mobile-shell/key-saved-warning";
 import { MobileLibraryKeyStep } from "@space/mobile-shell/library-key-step";
+import { MobileUnpaidSetupStep } from "@space/mobile-shell/unpaid-setup-step";
+import { MobileKeyLoadFailedStep } from "@space/mobile-shell/key-load-failed-step";
+import {
+  KEY_STEP_META_LOG_EVENT,
+  keyStepMetaErrorClass,
+  type KeyStepMetaErrorClass,
+  type KeyStepMetaRead,
+} from "@space/shared/keyStepMetaRead";
+import { isUnpaidLibrarySetupRefusal, unpaidLibrarySetupText } from "@space/shared/unpaidLibrarySetup";
 import { KeyFromAnotherDevice } from "./KeyFromAnotherDevice";
 
 const log = scopeLogger("onboarding");
 
+// UX-KEY-02: every key-step meta read is logged with anonymous fields (step, outcome, duration, attempts, class).
+const logMetaRead = (read: KeyStepMetaRead) =>
+  read.outcome === "ok" ? log.info(KEY_STEP_META_LOG_EVENT, { ...read }) : log.warn(KEY_STEP_META_LOG_EVENT, { ...read });
+
+const readMeta = (token: string) =>
+  getLibraryMetaForKeyStep(token, "badger", { readOpStreamVersion: libraryReadOpStreamVersion, onRead: logMetaRead });
+
 type OnboardingError =
-  | "checkStatus"
   | "generate"
   | "initialize"
   | "noLibrary"
@@ -47,7 +62,8 @@ const createOwnLibrary = async (token: string, keyBase64: string) => {
 export const OnboardingKeyScreen = () => {
   const { t, i18n } = useTranslation();
   const uiLanguage = i18n?.language;
-  const keyWarningText = keySavedWarningText(isClientUiLanguage(uiLanguage) ? uiLanguage : "en", "badger");
+  const lang = isClientUiLanguage(uiLanguage) ? uiLanguage : "en";
+  const keyWarningText = keySavedWarningText(lang, "badger");
   const { token, user } = useAuth();
   // A key already stored here (shown, not yet confirmed) asks whether it was saved first (ACCT-DEV-03).
   const signOut = useSignOut();
@@ -64,22 +80,34 @@ export const OnboardingKeyScreen = () => {
   const [error, setError] = useState<OnboardingError | null>(null);
   const [continuing, setContinuing] = useState(false);
   const continueInFlight = useRef(false);
+  // ACCT-UNPAID-06: the key the account's first Badger library was refused with (402 `subscription_unpaid`): the step
+  // says the plan has ended in its place and keeps the key, so Try again goes on from here once the plan is renewed.
+  const [unpaidKey, setUnpaidKey] = useState<string | null>(null);
+  const [unpaidNote, setUnpaidNote] = useState<string | null>(null);
+  // UX-KEY-02: the meta read failed (no answer in time, no connection, a server error): the Retry screen, never
+  // new words nor the enter boxes; Retry runs the load again.
+  const [loadFailed, setLoadFailed] = useState<KeyStepMetaErrorClass | null>(null);
+  const [loadAttempt, setLoadAttempt] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
       setLoading(true);
       setError(null);
+      setLoadFailed(null);
       const existing = await getStoredLibraryKey().catch(() => null);
       if (cancelled) return;
       if (existing && token) {
-        const meta = await getLibraryMetaForKeyStep(token, "badger", undefined, libraryReadOpStreamVersion).catch(() => null);
+        let failure: unknown = null;
+        const meta = await readMeta(token).catch((err: unknown) => {
+          failure = err;
+          return null;
+        });
         if (cancelled) return;
         if (!meta) {
-          // Status unknown (API unreachable): keep the stored key; it may be the
-          // user's only copy on this device. Ask to retry or enter it.
-          setError("checkStatus");
-          setMode("enter");
+          // Status unknown (API unreachable or too slow): keep the stored key; it may be the user's only copy on this
+          // device. A failed read decides nothing (PRIV-KEY-09): Retry reads again.
+          setLoadFailed(keyStepMetaErrorClass(failure));
           setLoading(false);
           return;
         }
@@ -96,7 +124,14 @@ export const OnboardingKeyScreen = () => {
             if (classifyLibraryMeta(meta) === "absent") await createOwnLibrary(token, existing);
             await acknowledgeKey();
             return;
-          } catch {
+          } catch (err) {
+            // The key is the account's, but its first Badger library was refused: the plan has ended (ACCT-UNPAID-06).
+            if (isUnpaidLibrarySetupRefusal(err)) {
+              log.warn("library.create.unpaid", { from: "stored_key" });
+              setUnpaidKey(existing);
+              setLoading(false);
+              return;
+            }
             await clearLibraryKey().catch(() => undefined);
           }
         }
@@ -105,11 +140,14 @@ export const OnboardingKeyScreen = () => {
         setLoading(false);
         return;
       }
-      let metaState: LibraryMetaState | null = null;
+      let metaState: LibraryMetaState;
       try {
-        metaState = accountKeyState(await getLibraryMetaForKeyStep(token, "badger", undefined, libraryReadOpStreamVersion));
-      } catch {
-        setError("checkStatus");
+        metaState = accountKeyState(await readMeta(token));
+      } catch (err) {
+        if (cancelled) return;
+        setLoadFailed(keyStepMetaErrorClass(err));
+        setLoading(false);
+        return;
       }
       if (cancelled) return;
       if (keyOnboardingStart(metaState) === "enter") {
@@ -130,7 +168,7 @@ export const OnboardingKeyScreen = () => {
     return () => {
       cancelled = true;
     };
-  }, [token]);
+  }, [token, loadAttempt]);
 
   const runContinue = useCallback(async () => {
     setError(null);
@@ -142,7 +180,7 @@ export const OnboardingKeyScreen = () => {
       }
       try {
         log.info("library.create.start");
-        const meta = await getLibraryMetaForKeyStep(token, "badger", undefined, libraryReadOpStreamVersion).catch(() => null);
+        const meta = await readMeta(token).catch(() => null);
         const action = generatedKeyAction(meta ? accountKeyState(meta) : null);
         if (action === "retry") {
           setError("unavailable");
@@ -159,6 +197,11 @@ export const OnboardingKeyScreen = () => {
         log.info("library.create.done");
         await acknowledgeKey();
       } catch (err) {
+        if (isUnpaidLibrarySetupRefusal(err)) {
+          log.warn("library.create.unpaid", { from: "new_key" });
+          setUnpaidKey(libraryKey);
+          return;
+        }
         log.error("library.create.failed", { error: err instanceof Error ? err.message : String(err) });
         setError("initialize");
       }
@@ -172,7 +215,7 @@ export const OnboardingKeyScreen = () => {
 
     setLoading(true);
     try {
-      const meta = await getLibraryMetaForKeyStep(token, "badger", undefined, libraryReadOpStreamVersion);
+      const meta = await readMeta(token);
       log.info("validate.meta", { exists: meta.exists, hasKeyProbe: Boolean(meta.keyProbe) });
       // The account's key may have been made in Parrot: a probe from either app means a key exists, even with no
       // Badger library yet (KeyProbeFix 791aa12f8, same rule as Badger desktop bd8b196c2).
@@ -204,6 +247,12 @@ export const OnboardingKeyScreen = () => {
       log.info("validate.acknowledged");
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
+      if (isUnpaidLibrarySetupRefusal(err)) {
+        // The key is stored and right; only the library waits for a renewal.
+        log.warn("library.create.unpaid", { from: "entered_key" });
+        setUnpaidKey(normalized);
+        return;
+      }
       log.error("validate.error", { error: msg });
       setError(err instanceof Error && err.message === "DECRYPT_FAILED" ? "mismatch" : "validate");
     } finally {
@@ -225,6 +274,33 @@ export const OnboardingKeyScreen = () => {
       setContinuing(false);
     }
   }, [runContinue]);
+
+  // ACCT-UNPAID-06: Try again creates the library with the kept key; still refused, the step says it is not renewed yet.
+  const retryUnpaid = useCallback(async () => {
+    if (!token || !unpaidKey || continueInFlight.current) return;
+    continueInFlight.current = true;
+    setContinuing(true);
+    setUnpaidNote(null);
+    try {
+      log.info("library.create.retry_after_unpaid");
+      await createOwnLibrary(token, unpaidKey);
+      log.info("library.create.done");
+      setUnpaidKey(null);
+      await acknowledgeKey();
+    } catch (err) {
+      if (isUnpaidLibrarySetupRefusal(err)) {
+        log.warn("library.create.unpaid", { from: "retry" });
+        setUnpaidNote(unpaidLibrarySetupText(lang, "badger", "phone").notRenewed);
+        return;
+      }
+      log.error("library.create.failed", { error: err instanceof Error ? err.message : String(err), from: "retry" });
+      setUnpaidKey(null);
+      setError("initialize");
+    } finally {
+      continueInFlight.current = false;
+      setContinuing(false);
+    }
+  }, [acknowledgeKey, lang, token, unpaidKey]);
 
   const handleRegenerate = useCallback(async () => {
     const generated = generateLibraryKeyWords(uiLanguage);
@@ -258,6 +334,32 @@ export const OnboardingKeyScreen = () => {
       <MobileScreen>
         <Text style={styles.muted}>{t("onboarding.loading")}</Text>
       </MobileScreen>
+    );
+  }
+
+  if (loadFailed) {
+    return (
+      <MobileKeyLoadFailedStep
+        language={lang}
+        errorClass={loadFailed}
+        header={<SetupStepBar />}
+        onBack={() => void signOut()}
+        onRetry={() => setLoadAttempt((attempt) => attempt + 1)}
+      />
+    );
+  }
+
+  if (unpaidKey) {
+    return (
+      <MobileUnpaidSetupStep
+        language={lang}
+        app="badger"
+        header={<SetupStepBar />}
+        onBack={() => void signOut()}
+        onTryAgain={() => void retryUnpaid()}
+        tryingAgain={continuing}
+        message={unpaidNote}
+      />
     );
   }
 

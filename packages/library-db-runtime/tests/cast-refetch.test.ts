@@ -55,7 +55,6 @@ const addMovie = (db: LibraryDb, id: number, title: string, cast: CastMember[]) 
     originalLanguage: "de",
     overview: null,
     year: "1919",
-    rating: null,
     posterPath: null,
     backdropPath: null,
     genres: [],

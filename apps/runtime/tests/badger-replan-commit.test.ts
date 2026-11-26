@@ -19,7 +19,7 @@
  * payload's `fileId`.
  */
 import { describe, expect, it, vi } from "vitest";
-import type { EngineV2, StepHandlerCtx } from "../src/core/jobs/engineV2";
+import type { EngineV2, StepHandlerCtx } from "@space/runtime-jobs-engine/engineV2";
 import type { BadgerLibraryDbService } from "../src/modules/badgerLibraryDb";
 import { createBadgerMediaReplanQualitiesHandler } from "../src/modules/badger/mediaReplan";
 import { commitStepHandler } from "../src/modules/badger/steps";
@@ -29,7 +29,7 @@ import {
   type BadgerStepDeps,
   type CommitInput,
 } from "../src/modules/badger/steps/deps";
-import type { StoredStepRecord } from "../src/core/jobs/stepStore";
+import type { StoredStepRecord } from "@space/runtime-jobs-engine/stepStore";
 import type { IngestJobRecord } from "@space/runtime-jobs";
 
 const SUITE = "badger-replan-commit";

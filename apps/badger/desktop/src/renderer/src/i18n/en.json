@@ -112,22 +112,6 @@
       },
       "clearFinished": "Clear finished"
     },
-    "notifications": {
-      "title": "Notifications",
-      "subtitle_one": "{{count}} recent item",
-      "subtitle_other": "{{count}} recent items",
-      "subtitle_many": "{{count}} recent items",
-      "empty": "No notifications yet.",
-      "open": "Open",
-      "filterAll": "All",
-      "filterError": "Error",
-      "filterWarning": "Warning",
-      "filterInfo": "Info",
-      "filterSuccess": "Success",
-      "clearAll": "Clear all",
-      "dismiss": "Dismiss",
-      "subtitle": "{{count}} recent items"
-    },
     "account": "Account"
   },
   "authApiHost": {
@@ -647,7 +631,6 @@
         "originalTitle": "Original title",
         "originalLanguage": "Original language",
         "year": "Release year",
-        "rating": "Rating",
         "genres": "Genres",
         "overview": "Overview",
         "poster": "Poster",
@@ -1081,6 +1064,7 @@
       "devices": "Signed-in devices",
       "connectedTools": "Connected tools",
       "system": "System",
+      "support": "Help & feedback",
       "about": "About & updates"
     },
     "sectionDesc": {
@@ -1098,7 +1082,12 @@
       "devices": "See the devices signed in to your account and sign them out.",
       "connectedTools": "Tools you approved to use your library, and what each can do.",
       "system": "Background service and error reports.",
+      "support": "Send us a message about the app.",
       "about": "Your version and updates, then who provides the film and series data the app shows."
+    },
+    "support": {
+      "feedback": "Send feedback",
+      "feedbackBody": "Tell us what works and what doesn't."
     },
     "system": {
       "runtime": {
@@ -1954,6 +1943,8 @@
       "unpaidBanner": "Your subscription ended. You can still download your files until {{date}}; after that they're deleted.",
       "unpaidBannerNoDate": "Your subscription ended. You can still download your files for a limited time; after that they're deleted.",
       "unpaidBannerHint": "Use “Save offline” on a title to download it to this computer.",
+      "unpaidSign": "Plan ended",
+      "unpaidHeadsUpTitle": "Your subscription ended",
       "playbackBlocked": "Playback is paused because your subscription ended. You can still download your files until {{date}}.",
       "playbackBlockedNoDate": "Playback is paused because your subscription ended. You can still download your files for a limited time.",
       "uploadBlocked": "Uploads are paused because your subscription ended. You can still download your files until {{date}}; after that they're deleted.",
@@ -1966,8 +1957,9 @@
       "removedBanner_one": "{{count}} title was removed for exceeding your storage.",
       "removedBanner_other": "{{count}} titles were removed for exceeding your storage.",
       "upgrade": "Upgrade plan",
-      "seeTitles": "See titles",
       "dismiss": "Dismiss",
+      "sign": "Over storage",
+      "removedSign": "Titles removed",
       "dialogTitle": "Library over storage",
       "options": "Upgrade to a plan that fits your library, or delete titles from your library until it fits. You can download a title first to keep a copy.",
       "loading": "Finding the titles in your library…",
@@ -2011,7 +2003,7 @@
       "title": "Allow \"{{name}}\" to use your library?",
       "description": {
         "read": "This tool wants to see your library: titles, details, playlists, progress and what is downloaded on this computer. It cannot change anything.",
-        "write": "This tool wants to see your library and change some of it: watch progress, title details (name, overview, year, rating) and your playlists. It cannot delete titles or touch settings or keys."
+        "write": "This tool wants to see your library and change some of it: watch progress, title details (name, overview, year) and your playlists. It cannot delete titles or touch settings or keys."
       },
       "selfDeclared": "The name comes from the tool itself and is not verified. Only approve a tool you just started.",
       "reason": "Reason given: {{reason}}",

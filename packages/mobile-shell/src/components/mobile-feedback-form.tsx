@@ -1,9 +1,10 @@
 import React, { useState } from "react";
 import { Pressable, StyleSheet, Switch, Text, TextInput, View } from "react-native";
 import type { FeedbackInput } from "@space/shared/api";
+import { FEEDBACK_MESSAGE_MAX } from "@space/shared/feedback";
 import { useTranslation } from "../i18n";
 import { useMobileShellTheme } from "../theme";
-import { FEEDBACK_MESSAGE_MAX, buildFeedback, feedbackFailure, type FeedbackDevice, type FeedbackFailure } from "../feedback";
+import { buildFeedback, feedbackFailure, type FeedbackDevice, type FeedbackFailure } from "../feedback";
 import { MobileButtonFace } from "./mobile-button-face";
 
 type Props = {
