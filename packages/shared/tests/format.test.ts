@@ -1,8 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   bucketRelativeTime,
-  formatRating,
-  formatStarRating,
   formatClock,
   formatRelativeTimeEnglish,
   formatStorageBytes,
@@ -164,14 +162,13 @@ const parsePlain = (text: string, base: StorageUnitBase) => {
 describe("STOR-UNIT-01 storage units follow the device's file manager", () => {
   it("[STOR-UNIT-01-BASE] picks 1024 for Windows and KDE, 1000 for macOS, iOS, Android, GNOME and unknown desktops", () => {
     const cases: [string, string | undefined, StorageUnitBase][] = [
-      ["win32", undefined, 1024],
       ["windows", undefined, 1024],
       ["linux", "KDE", 1024],
       ["linux", "ubuntu:KDE", 1024],
       ["linux", "GNOME", 1000],
       ["linux", "ubuntu:GNOME", 1000],
       ["linux", undefined, 1000],
-      ["darwin", undefined, 1000],
+      ["macos", undefined, 1000],
       ["ios", undefined, 1000],
       ["android", undefined, 1000],
     ];
@@ -430,17 +427,16 @@ describe("formatClock", () => {
   });
 });
 
-describe("localizedDecimal / formatRating", () => {
+describe("localizedDecimal", () => {
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
   it("writes the decimals the way the locale writes them (UX-I18N-01)", () => {
-    expect(formatRating(7.5, "en")).toBe("7.5");
-    expect(formatRating(7.5, "fr")).toBe("7,5");
-    expect(formatRating(7.5, "de")).toBe("7,5");
-    expect(formatRating(7, "nl")).toBe("7,0");
-    expect(formatStarRating(8.25, "en")).toBe("★ 8.3");
+    expect(localizedDecimal(7.5, "en")).toBe("7.5");
+    expect(localizedDecimal(7.5, "fr")).toBe("7,5");
+    expect(localizedDecimal(7.5, "de")).toBe("7,5");
+    expect(localizedDecimal(7, "nl")).toBe("7,0");
     expect(localizedDecimal(1234.567, "en", 2)).toBe("1234.57");
     expect(localizedDecimal(1234.567, "de", 0)).toBe("1235");
     expect(localizedDecimal(Number.NaN, "en", 1)).toBe("0.0");
@@ -461,7 +457,7 @@ describe("localizedDecimal / formatRating", () => {
       return new NumberFormat(...args);
     } as unknown as typeof Intl.NumberFormat);
     const outputs = new Set<string>();
-    for (let i = 0; i < 200; i += 1) outputs.add(formatRating(6.4, "en-GB"));
+    for (let i = 0; i < 200; i += 1) outputs.add(localizedDecimal(6.4, "en-GB"));
     console.info(
       `[#2461:formatter-reuse] calls=200 toLocaleString=${toLocaleString.mock.calls.length} NumberFormat=${constructed} outputs=${JSON.stringify([...outputs])}`,
     );

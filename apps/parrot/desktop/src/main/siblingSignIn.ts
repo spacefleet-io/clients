@@ -49,10 +49,10 @@ export const createParrotSiblingHost = (options: {
       namedPipe: platform.id === "windows",
     },
     launch: siblingLaunchTarget({ execPath: process.execPath, argv: process.argv, defaultApp: Boolean(process.defaultApp), env: process.env }),
-    deviceName: resolveDeviceName(hostname()),
+    deviceName: resolveDeviceName(hostname(), platform.id),
     api: { lookup: lookupPairing, approveLocal: approvePairingLocal, deny: denyPairing },
     // Its own pairing client: the "Sign in with another device" screen keeps its own request.
-    pairing: createDesktopPairingClient({ getApiBaseUrl: options.getApiBaseUrl, appId: "parrot", log }),
+    pairing: createDesktopPairingClient({ getApiBaseUrl: options.getApiBaseUrl, appId: "parrot", platform: platform.id, log }),
     log,
     onAnswered: options.onAnswered,
   });

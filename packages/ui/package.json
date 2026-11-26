@@ -71,6 +71,7 @@
     "@radix-ui/react-slot": "^1.5.0",
     "@radix-ui/react-switch": "^1.4.1",
     "@space/error-report": "workspace:*",
+    "@space/notify-core": "workspace:*",
     "@space/parrot-core": "workspace:*",
     "@space/profile-avatars": "workspace:*",
     "@space/shared": "workspace:*",

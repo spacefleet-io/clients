@@ -7,9 +7,9 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { platform as linux } from "../../desktop-platform-linux/src/index";
-import { platform as macos } from "../../desktop-platform-macos/src/index";
-import { platform as windows } from "../../desktop-platform-windows/src/index";
+import { platform as linux } from "@space/desktop-platform-linux";
+import { platform as macos } from "@space/desktop-platform-macos";
+import { platform as windows } from "@space/desktop-platform-windows";
 import { resolveAppIdentity, type AppIdentitySpec } from "../src/main-shell/appIdentity";
 
 const T = "app-identity";

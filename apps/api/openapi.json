@@ -2256,6 +2256,103 @@
         ],
         "description": "The running timeline (as on `access.overQuota`); null when none runs."
       },
+      "AccountNotice": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string",
+            "description": "One per thing the news is about: a device seeing the same key again replaces its entry."
+          },
+          "level": {
+            "type": "string",
+            "enum": [
+              "info",
+              "success",
+              "warning",
+              "error"
+            ]
+          },
+          "title": {
+            "$ref": "#/components/schemas/AccountNoticeText"
+          },
+          "message": {
+            "$ref": "#/components/schemas/AccountNoticeText"
+          },
+          "action": {
+            "type": "object",
+            "properties": {
+              "label": {
+                "$ref": "#/components/schemas/AccountNoticeText"
+              },
+              "target": {
+                "type": "string",
+                "enum": [
+                  "devices",
+                  "billing",
+                  "storage"
+                ],
+                "description": "The screen the app opens for it."
+              }
+            },
+            "required": [
+              "label",
+              "target"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-10-19T12:00:00.000Z"
+          }
+        },
+        "required": [
+          "id",
+          "key",
+          "level",
+          "title",
+          "createdAt"
+        ]
+      },
+      "AccountNoticeText": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "A text key of the shared notice texts (`notify.account.*`), shown in the device's language."
+          },
+          "vars": {
+            "type": "object",
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "key"
+                  ]
+                }
+              ]
+            },
+            "description": "Values for the text; a `{key}` value is itself a text key, translated too."
+          }
+        },
+        "required": [
+          "key"
+        ]
+      },
       "Profiles": {
         "type": "object",
         "properties": {
@@ -13211,6 +13308,149 @@
         }
       }
     },
+    "/account/notices": {
+      "get": {
+        "operationId": "listAccountNotices",
+        "tags": [
+          "Account"
+        ],
+        "summary": "Account news for the notice history",
+        "description": "UX-NOTICE-05: the account's news every device shows in its notice history, newest first, at most 50: a device signed in (never the one asking), a payment received or refused, the storage over its limit. Nothing about the library. Use case: each app polls it and merges the items into its history by key, keeping what was read or removed there.\n\nPersonal token: accepted with the `account:read` scope (login sessions always work). Each token has its own request limit: 429 `token_rate_limited`.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "x-token-scope": "account:read",
+        "responses": {
+          "200": {
+            "description": "The account's news.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "notices": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/AccountNotice"
+                      }
+                    }
+                  },
+                  "required": [
+                    "notices"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, unknown or revoked token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "unauthorized"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The account is blocked or scheduled for deletion, or the personal token lacks the scope of the route (`requiredScope`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "account_blocked",
+                        "account_deleted",
+                        "insufficient_scope"
+                      ]
+                    },
+                    "requiredScope": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "This personal token made too many requests this minute; wait `retryAfterSeconds` (also sent as the `Retry-After` header).",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "string",
+                  "description": "Seconds to wait before retrying.",
+                  "example": "30"
+                },
+                "required": true,
+                "description": "Seconds to wait before retrying."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "token_rate_limited"
+                      ]
+                    },
+                    "retryAfterSeconds": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "error",
+                    "retryAfterSeconds"
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The news could not be read.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "account_notices_unavailable"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/profiles": {
       "get": {
         "operationId": "listProfiles",
@@ -19486,6 +19726,122 @@
                       "type": "string",
                       "enum": [
                         "invalid_client"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many attempts; wait `retryAfterSeconds` (also sent as the `Retry-After` header).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "rate_limited"
+                      ]
+                    },
+                    "retryAfterSeconds": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "error",
+                    "retryAfterSeconds"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/usage/page-view": {
+      "post": {
+        "operationId": "countWebsitePageView",
+        "tags": [
+          "Usage"
+        ],
+        "summary": "Website page view (anonymous)",
+        "description": "Sent by the website when it shows a public page (OPS-BIZ-06). Adds one view to today's total (UTC) for the page, its source (the `utmSource`, else the site of `referrer` by name, else `direct`) and its campaign; nothing else is kept, no id, cookie, address or user agent. Robots and scripts are not counted. Needs no login and ignores any `Authorization` header. Limited to 300 per network address an hour (429).",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "page": {
+                    "type": "string",
+                    "enum": [
+                      "home",
+                      "pricing",
+                      "badger",
+                      "parrot",
+                      "downloads",
+                      "downloads/kodi",
+                      "downloads/jellyfin",
+                      "start",
+                      "key-storage",
+                      "developers/api",
+                      "report",
+                      "support",
+                      "signup",
+                      "legal-notice",
+                      "privacy",
+                      "terms",
+                      "account-deletion",
+                      "security",
+                      "security-acknowledgments"
+                    ],
+                    "description": "The page shown, without its language."
+                  },
+                  "referrer": {
+                    "type": "string",
+                    "maxLength": 253,
+                    "description": "The host name of the site that linked to the page, never its path."
+                  },
+                  "utmSource": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "description": "The `utm_source` of the page address."
+                  },
+                  "utmCampaign": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "description": "The `utm_campaign` of the page address."
+                  }
+                },
+                "required": [
+                  "page"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Counted, or not counted for a robot."
+          },
+          "400": {
+            "description": "The body is not valid, or the page is not one the website counts.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "invalid_request"
                       ]
                     }
                   },

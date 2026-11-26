@@ -727,6 +727,7 @@
       }
     },
     "access": {
+      "unpaidSign": "Abonnement beëindigd",
       "unpaidBanner": "Je abonnement is beëindigd. Afspelen en uploaden zijn gestopt. Je bestanden worden verwijderd op {{date}}.",
       "unpaidBannerNoDate": "Je abonnement is beëindigd. Afspelen en uploaden zijn gestopt. Je bestanden worden na een beperkte tijd verwijderd.",
       "playbackBlocked": "Afspelen is gestopt omdat je abonnement is beëindigd. Je bestanden worden verwijderd op {{date}}.",
@@ -1002,7 +1003,6 @@
     "validate": "Sleutel controleren",
     "signOut": "Uitloggen",
     "errors": {
-      "checkStatus": "De status van de mediatheek kon niet worden gecontroleerd.",
       "generate": "Er kon geen nieuwe sleutel worden aangemaakt.",
       "initialize": "Je mediatheek kon niet worden ingesteld.",
       "noLibrary": "Er is geen mediatheek gevonden voor dit account.",
@@ -1024,7 +1024,11 @@
       "recentlyAdded": "Recent toegevoegd",
       "movies": "Films",
       "shows": "Series",
-      "favorites": "Favorieten"
+      "favorites": "Favorieten",
+      "unwatched": "Nog niet gezien",
+      "rewatch": "Opnieuw kijken",
+      "playlist": "Afspeellijst",
+      "genre": "Genre"
     },
     "seeAll": "Alles bekijken",
     "hero": {

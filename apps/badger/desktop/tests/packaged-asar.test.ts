@@ -4,7 +4,7 @@ import { dirname, join, relative, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { createBuilderConfig } from "../electron-builder.config.mjs";
-import { SIGNED_WINDOWS_ENV } from "../../../../packages/desktop-platform-windows/packaging/signedWindowsEnv";
+import { SIGNED_WINDOWS_ENV } from "@space/desktop-platform-windows/packaging/signedWindowsEnv";
 import {
   asarFileExcludes,
   checkPackagedAsarEntries,

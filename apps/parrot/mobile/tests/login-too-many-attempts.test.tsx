@@ -12,7 +12,7 @@ import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import i18next, { type i18n as I18n } from "i18next";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import type * as SharedApi from "@space/shared/api";
-import type * as SignInForm from "../../../../packages/mobile-shell/src/components/mobile-password-sign-in-form";
+import type * as SignInForm from "@space/mobile-shell/password-sign-in-form";
 import { withSignInErrorTexts } from "@space/shared/signInError";
 
 const h = vi.hoisted(() => ({ i18n: null as I18n | null, login: vi.fn() }));
@@ -25,7 +25,7 @@ vi.mock("react-native", () => ({
 }));
 vi.mock("lucide-react-native", () => ({ ArrowRight: "Icon", Lock: "Icon", Mail: "Icon" }));
 // The shared form is real (its fields are what the screen shows); its inputs and buttons are host elements.
-vi.mock("../../../../packages/mobile-shell/src/components/mobile-auth-form", () => ({
+vi.mock("@space/mobile-shell/auth-form", () => ({
   MobileAuthInput: "MobileAuthInput",
   MobileAuthButton: "MobileAuthButton",
   MobileAuthLink: "MobileAuthLink",

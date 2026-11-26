@@ -57,7 +57,7 @@ vi.mock("react-native-sqlite-storage", () => ({
   },
 }));
 // The cover-copy maker (PAR-META-16) reads a picture's size and resizes it with the phone's image codec; no cover is
-// picked here, so both natives only need to exist. Platform picks where the library file lives (src/lib/dbPath.ts).
+// picked here, so both natives only need to exist. Platform picks where the library file lives (@space/mobile-shell/app-data).
 vi.mock("react-native", () => ({ Image: { getSize: async () => ({ width: 0, height: 0 }) }, Platform: { OS: "android" } }));
 vi.mock("@bam.tech/react-native-image-resizer", () => ({ default: { createResizedImage: async () => ({ path: "" }) } }));
 vi.mock("@space/shared/api", () => ({

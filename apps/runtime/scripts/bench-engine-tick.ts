@@ -17,9 +17,9 @@
  * Handlers do nothing but await a release, so the numbers are the scheduler's.
  */
 import type { IngestJobRecord } from "@space/runtime-jobs";
-import type * as EngineModule from "../src/core/jobs/engineV2";
+import type * as EngineModule from "@space/runtime-jobs-engine/engineV2";
 
-const engineModule = process.env.BENCH_ENGINE_MODULE ?? "../src/core/jobs/engineV2";
+const engineModule = process.env.BENCH_ENGINE_MODULE ?? "@space/runtime-jobs-engine/engineV2";
 const { createEngineV2 } = (await import(engineModule)) as typeof EngineModule;
 
 const pairs = Number(process.argv[2] ?? 300);

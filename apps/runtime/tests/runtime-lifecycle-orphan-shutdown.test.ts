@@ -18,7 +18,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { LifecycleManager, LIFECYCLE_ORPHANED_REASON } from "../src/lifecycle";
 import { RuntimeState } from "../src/state";
-import { createEngineV2, type EngineV2 } from "../src/core/jobs/engineV2";
+import { createEngineV2, type EngineV2 } from "@space/runtime-jobs-engine/engineV2";
 import type { IngestJobRecord } from "@space/runtime-jobs";
 
 const SUITE = "runtime-lifecycle-orphan-shutdown";

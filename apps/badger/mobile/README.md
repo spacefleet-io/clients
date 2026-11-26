@@ -12,7 +12,7 @@ This client uses Jest (React Native preset) instead of Vitest because RN-specifi
 
 ## Phone e2e + performance harness (`e2e-phone/`)
 
-Drives the debug app on a real, USB-attached Android phone over adb and measures latency against the same budgets as the desktop e2e (`apps/desktop/e2e-ultimate/lib/metrics.ts`). Bun + TypeScript, no Maestro.
+Drives the debug app on a real, USB-attached Android phone over adb and measures latency against the same budgets as the desktop e2e (`@space/desktop-e2e/budgets`, `packages/desktop-e2e/src/budgets.ts`). Bun + TypeScript, no Maestro.
 
 ```sh
 bun run --cwd apps/badger/mobile test:phone --serial S --profile normal    # stock phone

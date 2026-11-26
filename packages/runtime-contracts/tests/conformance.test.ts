@@ -105,7 +105,7 @@ import {
   badgerOfflineReconcile,
 } from "../src/badger/offline";
 import { badgerExportEstimate, badgerExportSubmit } from "../src/badger/export";
-import { badgerPreviewsGetCatchUp, badgerPreviewsGetStatus, badgerPreviewsRetryCatchUp } from "../src/badger/previews";
+import { badgerPreviewsGetCatchUp, badgerPreviewsGetStatus, badgerPreviewsRetryCatchUp, badgerPreviewsSetCatchUpVideo } from "../src/badger/previews";
 
 /**
  * Registry of ALL badger command contracts. When you add a new contract,
@@ -175,6 +175,7 @@ const ALL_BADGER_CONTRACTS: CommandContract[] = [
   // skip-detection catch-up in the Jobs tab (MPV-PREV-07)
   badgerPreviewsGetCatchUp,
   badgerPreviewsRetryCatchUp,
+  badgerPreviewsSetCatchUpVideo,
 ];
 
 /**
@@ -239,6 +240,7 @@ const RUNTIME_HANDLED_COMMANDS = new Set([
   "badger.previews.get_status",
   "badger.previews.get_catch_up",
   "badger.previews.retry_catch_up",
+  "badger.previews.set_catch_up_video",
 ]);
 
 describe("contract conformance", () => {

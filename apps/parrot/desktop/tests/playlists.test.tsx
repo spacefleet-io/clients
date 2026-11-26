@@ -265,7 +265,7 @@ describe("Parrot desktop playlists", () => {
     console.log(SUITE, "after failed save", titles("playlist-tracks"));
     expect(titles("playlist-tracks")).toHaveLength(1);
     expect(titles("playlist-tracks")[0]).toContain("Gale");
-    expect(q("nav-notifications-unread")).toHaveLength(1);
+    expect(q("nav-notifications-count")[0]?.textContent).toBe("1");
     await click(q("nav-notifications")[0]);
     expect(document.body.textContent).toContain("Your playlist change was not saved");
   });

@@ -3,14 +3,18 @@
  *
  * Every Wayland-only Linux launch passed `--wayland-appid`, which is not an mpv
  * option ("Error parsing option wayland-appid (option not found)", mpv exits at
- * once), and the bundled mpv has no Wayland gpu context at all (media-deps builds
- * -Dwayland=disabled; `--gpu-context=help` lists only x11egl). Playback died
- * with nothing said. Now the launch asks the mpv in use whether it has Wayland:
- * yes -> `--wayland-app-id`, no -> `noWindow` (the app shows a message).
+ * once), and the bundled mpv then had no Wayland gpu context at all
+ * (`--gpu-context=help` listed only x11egl). Playback died with nothing said.
+ * Now the launch asks the mpv in use whether it has Wayland: yes ->
+ * `--wayland-app-id` in a native Wayland window, no -> an X11 window when
+ * there is a DISPLAY, else `noWindow` (the app shows a message).
+ * MPV-GPU-04: the bundled mpv has Wayland (media-deps -Dwayland=enabled), and
+ * a Wayland session uses it with DISPLAY taken out of mpv's environment.
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
+  applyMpvWindowEnv,
   buildExternalMpvArgs,
   mpvHasWayland,
   parseMpvGpuContexts,
@@ -23,8 +27,10 @@ import {
 
 const TAG = "[mpv-wayland-probe]";
 
-// Captured 2026-11-13: the bundled linux-x64 mpv 0.41.0, and Arch's mpv 0.41.0.
-const BUNDLED_HELP = "Available GPU contexts:\n  auto             Auto detect\n  x11egl           X11/EGL\n";
+// Captured 2026-11-13: the bundled linux-x64 mpv 0.41.0 before MPV-GPU-04 (built -Dwayland=disabled), and Arch's mpv 0.41.0.
+const NO_WAYLAND_HELP = "Available GPU contexts:\n  auto             Auto detect\n  x11egl           X11/EGL\n";
+// The bundled linux-x64 mpv since MPV-GPU-04 (-Dwayland=enabled; media-deps verify printed "auto,wayland,x11egl").
+const BUNDLED_HELP = "Available GPU contexts:\n  auto             Auto detect\n  wayland          Wayland/EGL\n  x11egl           X11/EGL\n";
 const DISTRO_HELP = [
   "Available GPU contexts:",
   "  auto             Auto detect",
@@ -52,22 +58,31 @@ afterEach(() => {
 describe("parseMpvGpuContexts", () => {
   it("lists the contexts, without auto", () => {
     const bundled = parseMpvGpuContexts(BUNDLED_HELP);
+    const noWayland = parseMpvGpuContexts(NO_WAYLAND_HELP);
     const distroContexts = parseMpvGpuContexts(DISTRO_HELP);
-    console.info(`${TAG} bundled=${bundled.join(",")} distro=${distroContexts.join(",")}`);
-    expect(bundled).toEqual(["x11egl"]);
+    console.info(`${TAG} bundled=${bundled.join(",")} noWayland=${noWayland.join(",")} distro=${distroContexts.join(",")}`);
+    expect(bundled).toEqual(["wayland", "x11egl"]);
+    expect(noWayland).toEqual(["x11egl"]);
     expect(distroContexts).toEqual(["waylandvk", "x11vk", "wayland", "x11egl", "x11", "drm", "displayvk"]);
     expect(parseMpvGpuContexts("")).toEqual([]);
   });
 });
 
 describe("mpvHasWayland", () => {
-  it("is false for the bundled mpv and true for an mpv with a wayland context", () => {
-    const probe = fakeProbe({ [bundle.bin]: { output: BUNDLED_HELP, error: null }, [distro.bin]: { output: DISTRO_HELP, error: null } });
+  it("is true for the bundled and a distro mpv, false for an mpv without a wayland context @req MPV-GPU-04[badger-desktop]", () => {
+    const old: ResolvedExternalMpvTarget = { bin: "/opt/old/mpv", kind: "system", libDirs: [] };
+    const probe = fakeProbe({
+      [bundle.bin]: { output: BUNDLED_HELP, error: null },
+      [distro.bin]: { output: DISTRO_HELP, error: null },
+      [old.bin]: { output: NO_WAYLAND_HELP, error: null },
+    });
     const bundled = mpvHasWayland(bundle, probe);
     const system = mpvHasWayland(distro, probe);
-    console.info(`${TAG} bundle=${bundled} system=${system} calls=${JSON.stringify(probe.mock.calls.map(([t]) => t.bin))}`);
-    expect(bundled).toBe(false);
+    const withoutWayland = mpvHasWayland(old, probe);
+    console.info(`${TAG} bundle=${bundled} system=${system} noWayland=${withoutWayland} calls=${JSON.stringify(probe.mock.calls.map(([t]) => t.bin))}`);
+    expect(bundled).toBe(true);
     expect(system).toBe(true);
+    expect(withoutWayland).toBe(false);
   });
 
   it("asks each binary once per app session", () => {
@@ -91,27 +106,40 @@ describe("mpvHasWayland", () => {
 describe.runIf(process.platform === "linux")("resolveExternalMpvWindow on Linux", () => {
   const waylandOnly = { WAYLAND_DISPLAY: "wayland-0", XDG_SESSION_TYPE: "wayland" };
 
-  it("Wayland-only + bundled mpv: no window, no wayland flag", () => {
-    const probe = fakeProbe({ [bundle.bin]: { output: BUNDLED_HELP, error: null } });
-    const window = resolveExternalMpvWindow({ appId: "spacebadger", target: bundle, env: waylandOnly, probe });
-    console.info(`${TAG} wayland-only bundle -> ${JSON.stringify(window)}`);
+  it("Wayland-only + mpv without Wayland: no window, no wayland flag", () => {
+    const old: ResolvedExternalMpvTarget = { bin: "/opt/old/mpv", kind: "system", libDirs: [] };
+    const probe = fakeProbe({ [old.bin]: { output: NO_WAYLAND_HELP, error: null } });
+    const window = resolveExternalMpvWindow({ appId: "spacebadger", target: old, env: waylandOnly, probe });
+    console.info(`${TAG} wayland-only no-wayland mpv -> ${JSON.stringify(window)}`);
     expect(window.noWindow).toBe("mpv_no_display");
     expect(window.args).toEqual([]);
   });
 
-  it("Wayland-only + mpv with Wayland: --wayland-app-id, never --wayland-appid", () => {
-    const probe = fakeProbe({ [distro.bin]: { output: DISTRO_HELP, error: null } });
-    const window = resolveExternalMpvWindow({ appId: "spacebadger", target: distro, env: waylandOnly, probe });
-    console.info(`${TAG} wayland-only distro -> ${JSON.stringify(window)}`);
-    expect(window.noWindow).toBeNull();
-    expect(window.args).toEqual(["--wayland-app-id=spacebadger"]);
+  it("Wayland-only + bundled mpv: native Wayland window, --wayland-app-id, wlshm CPU vo @req MPV-GPU-04[badger-desktop]", () => {
+    const probe = fakeProbe({ [bundle.bin]: { output: BUNDLED_HELP, error: null } });
+    const window = resolveExternalMpvWindow({ appId: "spacebadger", target: bundle, env: waylandOnly, probe });
+    console.info(`${TAG} wayland-only bundle -> ${JSON.stringify(window)}`);
+    expect(window).toEqual({ defaultVo: "gpu,wlshm", cpuVo: "wlshm", args: ["--wayland-app-id=spacebadger"], unsetEnv: [], noWindow: null });
+    expect(window.args.some((arg) => arg.startsWith("--wayland-appid"))).toBe(false);
   });
 
-  it("an X display needs no probe", () => {
-    const probe = fakeProbe({});
+  it("Wayland session with XWayland + bundled mpv: Wayland window, DISPLAY taken out of mpv's env @req MPV-GPU-04[badger-desktop]", () => {
+    const probe = fakeProbe({ [bundle.bin]: { output: BUNDLED_HELP, error: null } });
     const window = resolveExternalMpvWindow({ appId: "spacebadger", target: bundle, env: { ...waylandOnly, DISPLAY: ":0" }, probe });
-    console.info(`${TAG} xwayland -> ${JSON.stringify(window)} calls=${probe.mock.calls.length}`);
-    expect(window).toEqual({ defaultVo: "gpu,x11", cpuVo: "x11", args: ["--x11-name=spacebadger"], noWindow: null });
+    const env = applyMpvWindowEnv({ DISPLAY: ":0", WAYLAND_DISPLAY: "wayland-0", KEEP: "1" }, window);
+    console.info(`${TAG} xwayland bundle -> ${JSON.stringify(window)} env=${JSON.stringify(env)} calls=${probe.mock.calls.length}`);
+    expect(window).toEqual({ defaultVo: "gpu,wlshm", cpuVo: "wlshm", args: ["--wayland-app-id=spacebadger"], unsetEnv: ["DISPLAY"], noWindow: null });
+    expect(env).toEqual({ WAYLAND_DISPLAY: "wayland-0", KEEP: "1" });
+    expect(probe).toHaveBeenCalledOnce();
+  });
+
+  it("an X11 session needs no probe @req MPV-GPU-04[badger-desktop]", () => {
+    const probe = fakeProbe({});
+    const window = resolveExternalMpvWindow({ appId: "spacebadger", target: bundle, env: { DISPLAY: ":0", XDG_SESSION_TYPE: "x11" }, probe });
+    const base = { DISPLAY: ":0" };
+    console.info(`${TAG} x11 -> ${JSON.stringify(window)} calls=${probe.mock.calls.length}`);
+    expect(window).toEqual({ defaultVo: "gpu,x11", cpuVo: "x11", args: ["--x11-name=spacebadger"], unsetEnv: [], noWindow: null });
+    expect(applyMpvWindowEnv(base, window)).toBe(base);
     expect(probe).not.toHaveBeenCalled();
   });
 
@@ -124,11 +152,11 @@ describe.runIf(process.platform === "linux")("resolveExternalMpvWindow on Linux"
     expect(windowArgs).toEqual([]);
   });
 
-  // The real bundled binary, when this checkout has it (vendor/deps): it must answer "no Wayland".
+  // The real bundled binary, when this checkout has it (vendor/deps): since MPV-GPU-04 it lists a Wayland context.
   const real = resolveExternalMpvTarget();
-  it.runIf(real.kind === "bundle")("the real bundled mpv reports no Wayland gpu context", () => {
+  it.runIf(real.kind === "bundle")("the real bundled mpv reports a Wayland gpu context @req MPV-GPU-04[badger-desktop]", () => {
     const hasWayland = mpvHasWayland(real);
     console.info(`${TAG} real bundle ${real.bin} hasWayland=${hasWayland}`);
-    expect(hasWayland).toBe(false);
+    expect(hasWayland).toBe(true);
   });
 });

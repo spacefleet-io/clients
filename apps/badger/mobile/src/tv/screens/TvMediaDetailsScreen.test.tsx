@@ -156,7 +156,7 @@ vi.mock("../../lib/useMediaImage", () => ({
 }));
 vi.mock("../../components/MediaArtwork", () => ({ MediaArtwork: () => null }));
 vi.mock("@space/mobile-shell/tv/TvFocusable", () => ({ TvFocusable: "TvFocusable", FOCUS_SCALE: 1.05 }));
-vi.mock("../components/TvListDialog", () => ({ TvListDialog: "TvListDialog" }));
+vi.mock("@space/mobile-shell/tv/TvListDialog", () => ({ TvListDialog: "TvListDialog" }));
 vi.mock("../components/TvPosterCard", () => ({ TvPosterCard: "TvPosterCard", tvPosterCardHeight: () => 132 }));
 vi.mock("../ui/BadgerTvTopBar", () => ({ BadgerTvTopBar: "TvTopBar" }));
 vi.mock("@space/mobile-shell/tv/TvTopBar", () => ({ TvTopBar: "TvTopBar", tvBrowseTabs: () => [], TV_SETTINGS_TAB: "settings" }));
@@ -709,14 +709,16 @@ describe("TV title page tabs and buttons (TV-DETAILS-TABS-001)", () => {
     expect(ctl.queriedUrls).toEqual([]);
   });
 
-  it("@req UX-TV-06 shows the year, runtime, rating and language on one line, the genres as pills and the synopsis", async () => {
+  it("@req UX-TV-06 @req META-SRC-05[badger-tv] shows the year, runtime and language on one line, never the rating, the genres as pills and the synopsis", async () => {
+    // The synced title carries `rating: 7.8`; the title page must not show it.
     ctl.details["movie-genres"] = { ...movie, id: "movie-genres", genres: [18, 10749] } as MediaDetails;
     const renderer = await render("movie-genres");
     const meta = textOf(one(renderer, "tv-details-meta"));
     const genres = one(renderer, "tv-details-genres").findAll((node) => typeof node.props.testID === "string" && node.props.testID.startsWith("tv-details-genre-") && typeof node.type === "string");
-    console.info("[TV-DETAILS-TABS-001] meta", JSON.stringify({ meta, genres: genres.map((node) => textOf(node)) }));
+    console.info("[TV-DETAILS-TABS-001] meta", JSON.stringify({ meta, rating: movie.rating, genres: genres.map((node) => textOf(node)) }));
     expect(meta.startsWith("2005 · ")).toBe(true);
-    expect(meta).toContain("7.8");
+    expect(meta).not.toContain("7.8");
+    expect(meta).not.toContain("★");
     expect(meta.endsWith("English")).toBe(true);
     expect(genres.map((node) => node.props.testID)).toEqual(["tv-details-genre-18", "tv-details-genre-10749"]);
     expect(genres.map((node) => textOf(node))).toEqual(["Drama", "Romance"]);

@@ -16,7 +16,7 @@ RUN apt-get update \
     build-essential pkg-config nasm yasm cmake ninja-build python3 python3-pip \
     patchelf pax-utils clang \
     libasound2-dev libpulse-dev libluajit-5.1-dev libx11-dev libxext-dev libxrandr-dev libxfixes-dev \
-    libx11-xcb-dev libxcb1-dev libxcb-dri3-dev \
+    libx11-xcb-dev libxcb1-dev libxcb-dri3-dev libxkbcommon-dev libffi-dev libexpat1-dev \
     libxpresent-dev libxss-dev libgl1-mesa-dev libegl1-mesa-dev libfreetype-dev \
     libfribidi-dev libharfbuzz-dev libjpeg-dev libass-dev libepoxy-dev libzimg-dev zlib1g-dev \
   && python3 -m pip install --no-cache-dir "meson>=1.3.0,<2" \
@@ -86,8 +86,9 @@ RUN --mount=type=secret,id=forge_auth fetch-source libvpl "$SRC_LIBVPL_URL" "$SR
   && sed -i 's/^Libs\.private:.*/Libs.private: -lstdc++/' $PREFIX/lib/pkgconfig/vpl.pc
 
 # libva ships as SHARED libraries inside the bundle (VA-API drivers are dlopen'd from the host and bind to the
-# libva already loaded); at least the libva current Mesa is built against (src/sources.ts). libva-x11 gives mpv's vaapi hwdec an
-# X11 display (x11egl). libdrm is built only to link against: at runtime it is the host's (HOST_LIBRARIES).
+# libva already loaded); at least the libva current Mesa is built against (src/sources.ts). libva-x11 / libva-wayland
+# give mpv's vaapi hwdec the session's display (x11egl / wayland). libdrm is built only to link against: at runtime it
+# is the host's (HOST_LIBRARIES).
 ARG SRC_LIBDRM_URL
 ARG SRC_LIBDRM_SHA
 RUN --mount=type=secret,id=forge_auth fetch-source libdrm "$SRC_LIBDRM_URL" "$SRC_LIBDRM_SHA" /work/libdrm \
@@ -97,11 +98,28 @@ RUN --mount=type=secret,id=forge_auth fetch-source libdrm "$SRC_LIBDRM_URL" "$SR
        -Dvalgrind=disabled -Dman-pages=disabled -Dudev=false \
   && meson compile -C /work/libdrm/build && meson install -C /work/libdrm/build
 
+# Wayland (MPV-GPU-04): mpv 0.41's wayland context needs wayland >= 1.21 and wayland-protocols >= 1.31, newer than
+# jammy's. libwayland-client / -cursor / -egl are bundled (target.ts hostLibraries: a host 1.20 aborts on the
+# wl_surface v6 events mpv binds); wayland-scanner and the protocol XML are build-time only.
+ARG SRC_WAYLAND_URL
+ARG SRC_WAYLAND_SHA
+RUN --mount=type=secret,id=forge_auth fetch-source wayland "$SRC_WAYLAND_URL" "$SRC_WAYLAND_SHA" /work/wayland \
+  && meson setup /work/wayland/build /work/wayland --prefix=$PREFIX --libdir=lib --buildtype=release \
+       -Ddocumentation=false -Dtests=false -Ddtd_validation=false \
+  && meson compile -C /work/wayland/build && meson install -C /work/wayland/build
+ENV PATH=/opt/deps/bin:$PATH
+
+ARG SRC_WAYLAND_PROTOCOLS_URL
+ARG SRC_WAYLAND_PROTOCOLS_SHA
+RUN --mount=type=secret,id=forge_auth fetch-source wayland-protocols "$SRC_WAYLAND_PROTOCOLS_URL" "$SRC_WAYLAND_PROTOCOLS_SHA" /work/wayland-protocols \
+  && meson setup /work/wayland-protocols/build /work/wayland-protocols --prefix=$PREFIX --buildtype=release -Dtests=false \
+  && meson compile -C /work/wayland-protocols/build && meson install -C /work/wayland-protocols/build
+
 ARG SRC_LIBVA_URL
 ARG SRC_LIBVA_SHA
 RUN --mount=type=secret,id=forge_auth fetch-source libva "$SRC_LIBVA_URL" "$SRC_LIBVA_SHA" /work/libva \
   && meson setup /work/libva/build /work/libva --prefix=$PREFIX --libdir=lib --buildtype=release \
-       -Ddisable_drm=false -Dwith_x11=yes -Dwith_glx=no -Dwith_wayland=no -Denable_docs=false \
+       -Ddisable_drm=false -Dwith_x11=yes -Dwith_glx=no -Dwith_wayland=yes -Denable_docs=false \
        -Ddriverdir=/usr/lib/x86_64-linux-gnu/dri:/usr/lib64/dri:/usr/lib/dri \
   && meson compile -C /work/libva/build && meson install -C /work/libva/build
 

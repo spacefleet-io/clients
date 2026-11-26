@@ -6,17 +6,16 @@
  * @bugfix @regression-proof
  */
 import { describe, expect, it } from "vitest";
+import { uploadsDuringPlaybackForAnswer, type UploadsDuringPlayback } from "../src/shared/uploadPlaybackDefault";
 import {
   UPLOADS_FULL_MIN_CORES,
   UPLOADS_FULL_MIN_RAM_GB,
   UPLOADS_PAUSE_MAX_CORES,
   UPLOADS_PAUSE_BELOW_RAM_GB,
   decideUploadsDuringPlayback,
-  uploadsDuringPlaybackForAnswer,
   uploadsDuringPlaybackReason,
-  type UploadsDuringPlayback,
-} from "../src/shared/uploadPlaybackDefault";
-import type { TranscodeHardware } from "@space/shared/transcodeHardware";
+  type TranscodeHardware,
+} from "@space/shared/transcodeHardware";
 
 const P = "[upload-playback-default-rule]";
 

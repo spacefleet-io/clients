@@ -36,7 +36,7 @@ vi.mock("@space/ui", () => ({
 }));
 
 vi.mock("@space/desktop-shell/components", async () => ({
-  ...(await vi.importActual<object>("../../../../packages/desktop-shell/src/components/desktop-job-card")),
+  ...(await vi.importActual<object>("@space/desktop-shell/desktop-job-card")),
   AnimatedDismissRow: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
   DesktopJobsFilterBar: ({ trailing }: { trailing?: React.ReactNode }) => <div>{trailing}</div>,
   DesktopJobsEmpty: () => <div data-testid="jobs-empty" />,

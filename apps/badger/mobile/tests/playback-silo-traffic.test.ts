@@ -9,8 +9,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Variant } from "@space/playback-abr";
 import type { StorageTraffic } from "@space/shared/storageTunnel";
-import en from "../../../../packages/mobile-shell/src/i18n/en.json";
-import fr from "../../../../packages/mobile-shell/src/i18n/fr.json";
+import en from "@space/mobile-shell/i18n/en.json";
+import fr from "@space/mobile-shell/i18n/fr.json";
 import {
   TRAFFIC_POLL_MS,
   activeQualityCap,

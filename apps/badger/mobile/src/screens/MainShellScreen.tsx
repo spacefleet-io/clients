@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AppState, StyleSheet, View } from "react-native";
-import { useIsFocused } from "@react-navigation/native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useIsFocused, useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Home, LibraryBig, ListVideo, Search, Settings } from "lucide-react-native";
 import {
   MobileShellFrame,
@@ -15,16 +17,29 @@ import {
 } from "@space/mobile-shell/components";
 import { useTranslation } from "@space/mobile-shell/i18n";
 import { useNoticeQueue } from "@space/mobile-shell/notice-queue";
+import { useAccountNoticeHistory } from "@space/mobile-shell/notice-history";
+import { useAccountNews } from "@space/mobile-shell/account-news";
+import { MobileNoticeBell } from "@space/mobile-shell/notice-bell";
+import { historyStorageKey } from "@space/notify-core/history";
+import { getUnpaidAccessInfo } from "@space/mobile-shell/unpaid-access";
+import { UnpaidAccessSign } from "@space/mobile-shell/unpaid-access-sign";
 import { founderWatch, useFounderWatch } from "@space/mobile-shell/founder";
 import { offlineNoticeEdge } from "@space/shared/offlineNotice";
 import { phoneSearchStrings } from "@space/shared/searchPaletteStrings";
 import { useAuth } from "../store/auth";
+import type { RootStackParamList } from "../navigation/AppNavigator";
 import { checkForNewDevices, markDeviceSeen } from "../lib/pairing/deviceWatch";
-import { newDeviceKey, newDeviceMessage, subscribeNewDevice, type NewDeviceInfo } from "../lib/pairing/newDevice";
+import {
+  DEVICES_TARGET,
+  newDeviceHistoryNotice,
+  newDeviceKey,
+  newDeviceMessage,
+  subscribeNewDevice,
+  type NewDeviceInfo,
+} from "../lib/pairing/newDevice";
 import { useOpenDevices } from "../lib/pairing/useOpenDevices";
 import { useLibraryData, useLibraryStatus } from "../store/library";
 import { librarySyncProgress } from "../lib/librarySyncStatus";
-import { UnpaidAccessBanner } from "@space/mobile-shell/unpaid-access-banner";
 import { PlaylistsPanel } from "../components/PlaylistsPanel";
 import { PhoneSearch } from "../components/PhoneSearch";
 import { HomeScreen } from "./HomeScreen";
@@ -72,6 +87,11 @@ export const MainShellScreen = () => {
   const { loadStatus, reload, refresh, syncState } = useLibraryStatus();
   const isFocused = useIsFocused();
   const { token, user } = useAuth();
+  // UX-NOTICE-04: the bell's history, one per signed-in user, under the computers' key (`sf.notifications.<user>`).
+  const history = useAccountNoticeHistory(user ? historyStorageKey(user.id) : null, AsyncStorage);
+  // UX-NOTICE-05: the account's news from any device (another sign-in, a payment, storage over its limit) joins it.
+  useAccountNews(history, token);
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [activeTab, setActiveTab] = useState("home");
   // Home's "See all" opens the Library on that row's scope, or Playlists for Favorites (UX-PHONE-01, UX-PHONE-07).
   const [libraryScopeRequest, setLibraryScopeRequest] = useState<{ scope: LibraryScope } | null>(null);
@@ -128,7 +148,15 @@ export const MainShellScreen = () => {
   const current = notices.current;
   const { show: showNotice, withdraw: withdrawNotice, setHeld: holdNotices } = notices;
   useEffect(() => holdNotices(!isFocused), [holdNotices, isFocused]);
-  useEffect(() => subscribeNewDevice((info) => showNotice({ kind: "device", info })), [showNotice]);
+  useEffect(
+    () =>
+      subscribeNewDevice((info) => {
+        // UX-NOTICE-04: the bell keeps it, so a notice missed on screen can be found again.
+        history?.record(newDeviceHistoryNotice(info));
+        showNotice({ kind: "device", info });
+      }),
+    [history, showNotice],
+  );
   // Said once when the app goes offline (or the cause changes), taken back when the connection returns; a re-render
   // while the state lasts says nothing (`offlineNoticeEdge`).
   const lastOfflineVariant = useRef<MobileOfflineVariant | null>(null);
@@ -154,6 +182,29 @@ export const MainShellScreen = () => {
   // WAIT-FOUND-04: founder status at start, sign-in and each return to the foreground; the notice once after a claim.
   useFounderWatch(token, () => showNotice({ kind: "founder" }));
 
+  const libraryBadge =
+    loadStatus.kind === "offline" ? (
+      <MobileOfflineIndicator pendingOps={loadStatus.pendingOps} variant={loadStatus.reason} onRetry={reload} />
+    ) : syncState.kind === "idle" ? null : (
+      // LIB-SYNC-13: the library's update sign; a failed sync retries as a pull would.
+      <MobileSyncIndicator
+        state={syncState.kind === "syncing" ? { kind: "syncing", progress: librarySyncProgress(syncState) } : syncState}
+        onRetry={() => void refresh()}
+      />
+    );
+  // ACCT-UNPAID-05, UX-NOTICE-08: on the tab pages the unpaid sign sits on the tab bar's edge, beside the offline or
+  // update sign; the screen layout leaves its floating one out here.
+  const unpaidBadge = getUnpaidAccessInfo(user?.access).unpaid ? <UnpaidAccessSign access={user?.access} inline /> : null;
+  const tabBarBadge =
+    unpaidBadge && libraryBadge ? (
+      <View pointerEvents="box-none" style={styles.badgeRow}>
+        {unpaidBadge}
+        {libraryBadge}
+      </View>
+    ) : (
+      unpaidBadge ?? libraryBadge
+    );
+
   const offlineCopy =
     current?.kind === "offline"
       ? {
@@ -171,16 +222,17 @@ export const MainShellScreen = () => {
       backdropPaused={!isFocused}
       tabBarLook="badger"
       tabBarAction={searchAction}
-      tabBarBadge={
-        loadStatus.kind === "offline" ? (
-          <MobileOfflineIndicator pendingOps={loadStatus.pendingOps} variant={loadStatus.reason} onRetry={reload} />
-        ) : syncState.kind === "idle" ? null : (
-          // LIB-SYNC-13: the library's update sign; a failed sync retries as a pull would.
-          <MobileSyncIndicator
-            state={syncState.kind === "syncing" ? { kind: "syncing", progress: librarySyncProgress(syncState) } : syncState}
-            onRetry={() => void refresh()}
-          />
-        )
+      tabBarBadge={tabBarBadge}
+      header={
+        <MobileNoticeBell
+          history={history}
+          onOpenTarget={(target) => {
+            console.info("notify.history.open", JSON.stringify({ target }));
+            if (target === DEVICES_TARGET) openDevices();
+            // A payment or the storage limit: the plan page, where both are shown.
+            else if (target === "billing" || target === "storage") navigation.navigate("Subscription");
+          }}
+        />
       }
       overlay={
         <>
@@ -226,7 +278,6 @@ export const MainShellScreen = () => {
     >
       {(tabId) => (
         <View style={styles.tab}>
-          <UnpaidAccessBanner access={user?.access} />
           <SkyRegion style={styles.content}>
             {tabId === "home" ? (
               <HomeScreen onSeeAll={seeAll} />
@@ -247,4 +298,5 @@ export const MainShellScreen = () => {
 const styles = StyleSheet.create({
   tab: { flex: 1 },
   content: { flex: 1 },
+  badgeRow: { flexDirection: "row", alignItems: "center", gap: 6 },
 });

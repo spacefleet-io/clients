@@ -135,6 +135,11 @@ interface Window {
     __e2eSetPendingOscAction?: (action: _OscActionFile) => Promise<number>;
     setPlaybackToken?: (token: string | null) => Promise<void>;
     setAuthToken?: (token: string | null) => Promise<void>;
+    /**
+     * Settings > Help & feedback (UX-SUP-05): main sends it with the session it holds; the log only when ticked, and
+     * `requestIds` (the window's last failed API calls, UX-SUP-07) merged with main's.
+     */
+    sendFeedback?: (input: { message: string; attachLog: boolean; requestIds?: string[] }) => Promise<{ ok: boolean; error?: string }>;
     createPlaybackStream?: (payload: {
       initKey: string;
       initSize: number;
@@ -359,6 +364,8 @@ interface Window {
       /** Settings change of this computer's parallel transcodes, parallel extractions or watched folders. */
       setCapacity: (values: _DeviceCapacityValues) => Promise<_DeviceCapacitySettings>;
     };
+    /** UX-NOTICE-06: the hidden-window job notification's setting, and the Jobs request its click left. */
+    hiddenJobNotices?: import("@space/desktop-shell/hidden-job-notices-preload").HiddenJobNoticesBridge;
     /**
      * REL-LOG-06: whether this computer sends error reports to SpaceFleet (@space/error-report/desktop-main,
      * `<userData>/error-reports.json`), never synced to the account. Off until the user opts in.

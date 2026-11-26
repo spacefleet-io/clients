@@ -29,6 +29,7 @@ const SOURCE_PACKAGES = [
   "@space/legal",
   "@space/profile-avatars",
   "@space/ingest-core",
+  "@space/notify-core",
 ];
 
 function workspaceExportAliases(): { find: RegExp; replacement: string }[] {

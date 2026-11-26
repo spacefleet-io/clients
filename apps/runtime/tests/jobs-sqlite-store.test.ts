@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   createSqliteRuntimeJobsStore,
   type SqliteRuntimeJobsStore,
-} from "../src/core/jobs/sqliteStore";
+} from "@space/runtime-jobs-engine/sqliteStore";
 import type { IngestJobRecord } from "@space/runtime-jobs";
 
 const baseJob = (overrides: Partial<IngestJobRecord> = {}): IngestJobRecord => ({
