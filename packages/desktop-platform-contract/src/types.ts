@@ -131,6 +131,12 @@ export type PathLayer = {
    * `@sf/desktop`); macOS: `appData/productName` (`~/Library/Application Support/Badger`, PLAT-DESK-07).
    */
   appUserDataDir: (options: { appData: string; productName: string; legacyDir: string[] }) => string;
+  /**
+   * Where the desktop's trash keeps a deleted file of that name (`basename(filename)`), to tell "the user deleted it"
+   * from "it is gone": Linux `$XDG_DATA_HOME/Trash/files/<name>` (else `~/.local/share`); macOS `~/.Trash/<name>`;
+   * Windows none (the Recycle Bin renames what it keeps, so there is no plain path).
+   */
+  trashPaths: (filename: string, env?: Env) => string[];
 };
 
 // ---------------------------------------------------------------------------

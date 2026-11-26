@@ -164,14 +164,13 @@ const parsePlain = (text: string, base: StorageUnitBase) => {
 describe("STOR-UNIT-01 storage units follow the device's file manager", () => {
   it("[STOR-UNIT-01-BASE] picks 1024 for Windows and KDE, 1000 for macOS, iOS, Android, GNOME and unknown desktops", () => {
     const cases: [string, string | undefined, StorageUnitBase][] = [
-      ["win32", undefined, 1024],
       ["windows", undefined, 1024],
       ["linux", "KDE", 1024],
       ["linux", "ubuntu:KDE", 1024],
       ["linux", "GNOME", 1000],
       ["linux", "ubuntu:GNOME", 1000],
       ["linux", undefined, 1000],
-      ["darwin", undefined, 1000],
+      ["macos", undefined, 1000],
       ["ios", undefined, 1000],
       ["android", undefined, 1000],
     ];

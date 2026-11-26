@@ -201,4 +201,5 @@ export const linuxPaths: PathLayer = {
   },
   // Existing installs keep their directory.
   appUserDataDir: ({ appData, legacyDir }) => join(appData, ...legacyDir),
+  trashPaths: (filename, env = process.env) => [join(linuxPaths.userDataBase(env), "Trash", "files", basename(filename))],
 };

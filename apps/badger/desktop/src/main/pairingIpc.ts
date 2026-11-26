@@ -4,6 +4,7 @@
  */
 import { hostname as osHostname } from "node:os";
 import { ipcMain } from "electron";
+import { getDesktopPlatform } from "@space/desktop-platform";
 import { pairingModeOf, type PairingPollResult, type PairingStartResult } from "@space/desktop-shell/pairing";
 import {
   createDesktopPairingClient,
@@ -22,6 +23,7 @@ export const registerPairingIpc = (): DesktopPairingClient => {
   const client = createDesktopPairingClient({
     getApiBaseUrl,
     appId: "badger",
+    platform: getDesktopPlatform().id,
     log: (message, extra) => logger.info(extra ?? {}, message),
     sessionToken: () => windowSessionToken,
   });
@@ -48,7 +50,7 @@ export const registerPairingIpc = (): DesktopPairingClient => {
       return { ok: false, ...pairingRefusalOf(err) };
     }
   });
-  ipcMain.handle("sf-pairing-device-name", () => resolveDeviceName(osHostname()));
+  ipcMain.handle("sf-pairing-device-name", () => resolveDeviceName(osHostname(), getDesktopPlatform().id));
   ipcMain.handle("sf-pairing-cancel", () => client.cancel());
   return client;
 };

@@ -12,12 +12,12 @@ export const PLAN_GB_BYTES = 1024 ** 3;
 export const planGbToBytes = (gb: number): number => gb * PLAN_GB_BYTES;
 
 /**
- * The base the device's own file manager uses (STOR-UNIT-01). `os` is `process.platform` style ("win32", "darwin",
- * "linux") or a React Native `Platform.OS` ("ios", "android"); `desktop` is Linux's `XDG_CURRENT_DESKTOP`
- * ("KDE", "GNOME", "ubuntu:GNOME"): KDE means 1024, any other or unknown desktop 1000.
+ * The base the device's own file manager uses (STOR-UNIT-01). `os` is a desktop system as the platform layer names it
+ * ("windows", "macos", "linux") or a React Native `Platform.OS` ("ios", "android"); `desktop` is Linux's
+ * `XDG_CURRENT_DESKTOP` ("KDE", "GNOME", "ubuntu:GNOME"): KDE means 1024, any other or unknown desktop 1000.
  */
 export const storageUnitBaseFor = (os: string, desktop?: string | null): StorageUnitBase => {
-  if (os === "win32" || os === "windows") return 1024;
+  if (os === "windows") return 1024;
   if (os === "linux") return (desktop ?? "").split(":").some((part) => part.trim().toUpperCase() === "KDE") ? 1024 : 1000;
   return 1000;
 };

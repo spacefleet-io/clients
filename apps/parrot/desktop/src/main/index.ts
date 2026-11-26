@@ -284,7 +284,13 @@ setApiClientType(CLIENT_TYPE);
 // REL-CD-29: every API call says which build is calling (`parrot/desktop/0.1.3`, `+flatpak`/`+appimage`/`+system` on
 // Linux). The window reaches the API only through this process, so the main process alone states it.
 setClientIdentity(
-  desktopClientIdentity({ app: "parrot", version: app.getVersion(), packaged: app.isPackaged, os: process.platform, env: process.env }),
+  desktopClientIdentity({
+    app: "parrot",
+    version: app.getVersion(),
+    packaged: app.isPackaged,
+    os: getDesktopPlatform().id,
+    env: process.env,
+  }),
 );
 
 // PLAT-DESK-14: every release keeps `<appData>/spaceparrot` (the dir existing installs use, on every OS); a development
@@ -329,7 +335,7 @@ const fail = (line: string) => {
 log(`[parrot] start v${app.getVersion()} ${process.platform}-${process.arch} api=${apiBaseUrl} devBuild=${isDevBuild} userData=${userDataDir}`);
 // STOR-UNIT-01: storage figures follow this computer's file manager (1024 on Windows and KDE, 1000 elsewhere); the
 // preload reads the base synchronously so the window sets it before its first render.
-serveStorageUnitBase(ipcMain, { platform: process.platform, desktop: process.env.XDG_CURRENT_DESKTOP, log });
+serveStorageUnitBase(ipcMain, { platform: getDesktopPlatform().id, desktop: process.env.XDG_CURRENT_DESKTOP, log });
 // REL-ENV-36: an agent's lane run or a test launch (SF_SILENT=1) never sends a sound stream to the sound server, even
 // when started without the harness's Chromium flags (an AppImage by hand). The user's own run is untouched.
 const silentSwitches = applySilentAudio(app.commandLine, process.env);
@@ -2771,7 +2777,7 @@ const registerIpc = () => {
     try {
       const session = await login(email, input.password, input.twoFactorCode?.trim() || undefined, undefined, {
         deviceType: "desktop",
-        deviceName: resolveDeviceName(hostname()),
+        deviceName: resolveDeviceName(hostname(), getDesktopPlatform().id),
       });
       const user = await acceptSession(session);
       log(`[auth] signed in as user ${session.user.id}`);
@@ -2886,7 +2892,7 @@ const registerIpc = () => {
           String(input.verifier),
           input.twoFactorCode?.trim() || undefined,
           input.resendTwoFactor === true ? true : undefined,
-          { deviceType: "desktop", deviceName: resolveDeviceName(hostname()) }
+          { deviceType: "desktop", deviceName: resolveDeviceName(hostname(), getDesktopPlatform().id) }
         );
         const user = await acceptSession(session);
         log(`[provider-sign-in] signed in as user ${session.user.id}`);
@@ -2908,6 +2914,7 @@ const registerIpc = () => {
   const signInPairing = createDesktopPairingClient({
     getApiBaseUrl: () => apiBaseUrl,
     appId: PARROT_APP_ID,
+    platform: getDesktopPlatform().id,
     log: (message, extra) => log(`[pairing] ${message} ${JSON.stringify(extra ?? {})}`),
     sessionToken: () => store.token(),
   });
