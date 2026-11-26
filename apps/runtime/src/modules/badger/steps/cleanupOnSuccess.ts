@@ -11,7 +11,7 @@
  * for a badger `source` or `format` job. Failed and cancelled jobs are not
  * touched here (cancelled format jobs have {@link registerFormatCancelCleanup}).
  */
-import type { EngineV2 } from "../../../core/jobs/engineV2";
+import type { EngineV2 } from "@space/runtime-jobs-engine/engineV2";
 import { getBadgerStepDeps } from "./deps";
 
 export const registerIngestSuccessCleanup = (engine: EngineV2): void => {

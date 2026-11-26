@@ -33,7 +33,7 @@ const seeded = vi.hoisted(() => {
   return { dataDir, token, grantId: grant.id, userId: grant.userId, origin: grant.origin };
 });
 
-vi.mock("../../../packages/library-db-runtime/src/libraryDb", () => {
+vi.mock("@space/library-db-runtime/libraryDb", () => {
   const open = () => ({
     setSyncEnabled: () => undefined,
     getSnapshot: () => ({ media: [], playlists: [] }),

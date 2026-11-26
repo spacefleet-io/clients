@@ -1,5 +1,13 @@
 import React from "react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { MAX_VISIBLE } from "@space/notify-core/kinds";
+
+// `Notifications()` is called as a plain function to read its toaster's props: its one effect (watching hover and
+// focus to hold the toasts) cannot run outside a render, so it is a no-op here.
+vi.mock("react", async (importOriginal) => {
+  const actual: typeof React = await importOriginal();
+  return { ...actual, default: actual, useEffect: () => {} };
+});
 import { Button } from "../src/button";
 import { Notifications } from "../src/notifications";
 import { cn } from "../src/utils";
@@ -82,7 +90,9 @@ describe("@space/ui shared primitives", () => {
         `[ui-primitives:notifications] config closeButton=${JSON.stringify(element.props.closeButton)} duration=${JSON.stringify(element.props.duration)} position=${JSON.stringify(element.props.position)} offset=${JSON.stringify(element.props.offset)} richColors=${JSON.stringify(element.props.richColors)} expand=${JSON.stringify(element.props.expand)}`,
       );
       expect(element.props.closeButton).toBe(true);
-      expect(element.props.duration).toBe(4000);
+      // Each toast carries its own time from its kind (UX-NOTICE-02, @space/notify-core); none is set on the toaster.
+      expect(element.props.duration).toBeUndefined();
+      expect(element.props.visibleToasts).toBe(MAX_VISIBLE.desktop);
       expect(element.props.position).toBe("top-right");
       expect(element.props.offset).toBe(96);
       expect(element.props.richColors).toBe(true);

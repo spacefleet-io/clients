@@ -22,7 +22,7 @@ import {
   badgerIngestAttachMetadata,
   badgerIngestPlanOutputs,
 } from "@space/runtime-contracts/badger/ingest";
-import type { EngineV2 } from "../../core/jobs/engineV2";
+import type { EngineV2 } from "@space/runtime-jobs-engine/engineV2";
 import { readJobPlacementId } from "./steps/placement";
 import { fingerprintSourceFile } from "./failedJobs";
 import type {

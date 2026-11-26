@@ -101,4 +101,39 @@ describe("SHARED-RETRY-001 retry", () => {
     expect(waits).toEqual([1000, 2000, 4000]);
     log("SHARED-RETRY-001 phase=done", { waits });
   });
+
+  it("tries again on a result retryValue accepts, and returns the last try's result as it came", async () => {
+    log("SHARED-RETRY-001 phase=retry-value");
+    const answers = ["busy", "busy", "busy"];
+    const calls: number[] = [];
+    const { waits, sleep } = recorder();
+    const told: Array<{ attempt: number; value: unknown; error: unknown }> = [];
+    const run = async (attempt: number) => {
+      calls.push(attempt);
+      return answers[attempt - 1] ?? "ok";
+    };
+    const options = {
+      retryValue: (value: string) => value === "busy",
+      backoffMs: () => 500,
+      onRetry: ({ attempt, value, error }: { attempt: number; value?: string; error?: unknown }) =>
+        told.push({ attempt, value, error }),
+      sleep,
+    };
+    await expect(retry(run, { attempts: 4, ...options })).resolves.toBe("ok");
+    expect(calls).toEqual([1, 2, 3, 4]);
+    expect(waits).toEqual([500, 500, 500]);
+    expect(told[0]).toEqual({ attempt: 1, value: "busy", error: undefined });
+
+    calls.length = 0;
+    waits.length = 0;
+    await expect(retry(run, { attempts: 2, ...options })).resolves.toBe("busy");
+    expect(calls).toEqual([1, 2]);
+    expect(waits).toEqual([500]);
+
+    // A result's wait over the longest one returns that result at once, like a failure is thrown at once.
+    calls.length = 0;
+    await expect(retry(run, { attempts: 4, ...options, maxWaitMs: 100 })).resolves.toBe("busy");
+    expect(calls).toEqual([1]);
+    log("SHARED-RETRY-001 phase=retry-value-done", { told });
+  });
 });

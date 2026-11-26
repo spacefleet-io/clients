@@ -50,7 +50,8 @@ describe("desktop notification tray", () => {
     // block with no overflow handling, and the body wrapper had no flex sizing
     // so children grew unbounded. The shell now owns the scroll container so
     // every consumer of DesktopNotificationTray gets scroll for free.
-    const sheetFlexPattern = /SheetContent[\s\S]*?className=["'][^"']*\bflex\b[^"']*\bflex-col\b/;
+    // The classes may sit in `cn("…", layerClassName)` (a page's z-index layer added to them).
+    const sheetFlexPattern = /SheetContent[\s\S]*?className=(?:\{cn\()?["'][^"']*\bflex\b[^"']*\bflex-col\b/;
     if (!sheetFlexPattern.test(source)) {
       dumpTraySnapshot("scrollable-body", source, ["SheetContent ... className=...flex...flex-col"]);
     }

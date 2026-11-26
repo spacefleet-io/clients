@@ -112,22 +112,6 @@
       },
       "clearFinished": "Borrar las terminadas"
     },
-    "notifications": {
-      "title": "Notificaciones",
-      "subtitle_one": "{{count}} elemento reciente",
-      "subtitle_other": "{{count}} elementos recientes",
-      "subtitle_many": "{{count}} elementos recientes",
-      "empty": "Aún no hay notificaciones.",
-      "open": "Abrir",
-      "filterAll": "Todas",
-      "filterError": "Error",
-      "filterWarning": "Advertencia",
-      "filterInfo": "Información",
-      "filterSuccess": "Éxito",
-      "clearAll": "Borrar todo",
-      "dismiss": "Descartar",
-      "subtitle": "{{count}} elementos recientes"
-    },
     "account": "Cuenta"
   },
   "authApiHost": {
@@ -647,7 +631,6 @@
         "originalTitle": "Título original",
         "originalLanguage": "Idioma original",
         "year": "Año de estreno",
-        "rating": "Valoración",
         "genres": "Géneros",
         "overview": "Sinopsis",
         "poster": "Póster",
@@ -1081,6 +1064,7 @@
       "devices": "Dispositivos conectados",
       "connectedTools": "Herramientas conectadas",
       "system": "Sistema",
+      "support": "Ayuda y comentarios",
       "about": "Acerca de y actualizaciones"
     },
     "sectionDesc": {
@@ -1098,7 +1082,12 @@
       "devices": "Consulta los dispositivos conectados a tu cuenta y cierra su sesión.",
       "connectedTools": "Herramientas que autorizaste a usar tu mediateca y lo que puede hacer cada una.",
       "system": "Servicio en segundo plano e informes de errores.",
+      "support": "Envíanos un mensaje sobre la app.",
       "about": "Tu versión y las actualizaciones, y quién proporciona los datos de películas y series que muestra la app."
+    },
+    "support": {
+      "feedback": "Enviar comentarios",
+      "feedbackBody": "Cuéntanos qué funciona y qué no."
     },
     "system": {
       "runtime": {
@@ -1954,6 +1943,8 @@
       "unpaidBanner": "Tu suscripción terminó. Puedes seguir descargando tus archivos hasta el {{date}}; después se eliminarán.",
       "unpaidBannerNoDate": "Tu suscripción terminó. Puedes seguir descargando tus archivos durante un tiempo limitado; después se eliminarán.",
       "unpaidBannerHint": "Usa «Guardar sin conexión» en un título para descargarlo en esta computadora.",
+      "unpaidSign": "Suscripción terminada",
+      "unpaidHeadsUpTitle": "Tu suscripción terminó",
       "playbackBlocked": "La reproducción está en pausa porque tu suscripción terminó. Puedes seguir descargando tus archivos hasta el {{date}}.",
       "playbackBlockedNoDate": "La reproducción está en pausa porque tu suscripción terminó. Puedes seguir descargando tus archivos durante un tiempo limitado.",
       "uploadBlocked": "Las subidas están en pausa porque tu suscripción terminó. Puedes seguir descargando tus archivos hasta el {{date}}; después se eliminarán.",
@@ -1966,8 +1957,9 @@
       "removedBanner_one": "Se eliminó {{count}} título por superar tu almacenamiento.",
       "removedBanner_other": "Se eliminaron {{count}} títulos por superar tu almacenamiento.",
       "upgrade": "Mejorar el plan",
-      "seeTitles": "Ver los títulos",
       "dismiss": "Descartar",
+      "sign": "Almacenamiento superado",
+      "removedSign": "Títulos eliminados",
       "dialogTitle": "Mediateca por encima del almacenamiento",
       "options": "Cámbiate a un plan en el que quepa tu mediateca o elimina títulos de tu mediateca hasta que quepa. Puedes descargar antes un título para conservar una copia.",
       "loading": "Buscando los títulos de tu mediateca…",
@@ -2011,7 +2003,7 @@
       "title": "¿Permitir que «{{name}}» use tu mediateca?",
       "description": {
         "read": "Esta herramienta quiere ver tu mediateca: títulos, detalles, listas, progreso y lo que está descargado en esta computadora. No puede cambiar nada.",
-        "write": "Esta herramienta quiere ver tu mediateca y cambiar parte de ella: el progreso de visualización, los detalles de los títulos (nombre, sinopsis, año, valoración) y tus listas. No puede eliminar títulos ni tocar los ajustes ni las claves."
+        "write": "Esta herramienta quiere ver tu mediateca y cambiar parte de ella: el progreso de visualización, los detalles de los títulos (nombre, sinopsis, año) y tus listas. No puede eliminar títulos ni tocar los ajustes ni las claves."
       },
       "selfDeclared": "El nombre lo indica la propia herramienta y no está verificado. Autoriza solo una herramienta que acabes de iniciar.",
       "reason": "Motivo indicado: {{reason}}",

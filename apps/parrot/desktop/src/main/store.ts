@@ -7,6 +7,7 @@ import {
 import { safeStorage } from "electron";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { isUploadsDuringPlayback, type UploadsDuringPlayback } from "@space/content-core/uploadPlaybackGate";
 import { keepsKeyOnSignIn, keyAfterSignedOut, type SignedOutReason } from "@space/shared/keptLibraryKey";
 import { PARROT_SETUP_STEPS, type ParrotLanguage, type ParrotSetupState, type ParrotUser } from "../shared/ipc";
 import { createSaveChain, type SaveChain } from "./saveChain";
@@ -14,9 +15,17 @@ import { createSaveChain, type SaveChain } from "./saveChain";
 /**
  * What Parrot keeps in `<userData>/parrot.json`: the setup answers, who is signed in, and whose library key stayed
  * after the server refused their session (only that account gets it back), and the automatic-updates setting
- * (REL-UPD-01, ON unless turned off). Never the token or the key.
+ * (REL-UPD-01, ON unless turned off), and what imports do while a song plays on this computer (PAR-UP-15; null
+ * until the user picks: the hardware's recommendation applies). Never the token or the key.
  */
-type StoredState = { version: 1; setup: ParrotSetupState; user: ParrotUser | null; keyOwnerId: string | null; autoUpdate: boolean };
+type StoredState = {
+  version: 1;
+  setup: ParrotSetupState;
+  user: ParrotUser | null;
+  keyOwnerId: string | null;
+  autoUpdate: boolean;
+  uploadsWhilePlaying: UploadsDuringPlayback | null;
+};
 
 /**
  * The settings file plus the two secrets (session token, library key), each in its own `<name>.secret` file sealed
@@ -30,6 +39,10 @@ export type ParrotStore = {
   readonly autoUpdate: boolean;
   /** The in-memory value changes at once; resolves once `parrot.json` is durable, rejects if it cannot be written. */
   setAutoUpdate(enabled: boolean): Promise<void>;
+  /** PAR-UP-15: this computer's pick, null while none (the hardware's recommendation applies). */
+  readonly uploadsWhilePlaying: UploadsDuringPlayback | null;
+  /** The in-memory value changes at once; resolves once `parrot.json` is durable, rejects if it cannot be written. */
+  setUploadsWhilePlaying(mode: UploadsDuringPlayback): Promise<void>;
   /** The in-memory value changes at once; resolves once `parrot.json` is durable, rejects if it cannot be written. */
   updateSetup(patch: Partial<ParrotSetupState>): Promise<void>;
   signIn(user: ParrotUser, token: string): Promise<void>;
@@ -77,9 +90,10 @@ export const openParrotStore = async (input: {
         keyOwnerId: typeof parsed.keyOwnerId === "string" ? parsed.keyOwnerId : null,
         // A file from before REL-UPD-01 has no answer: automatic updates are on.
         autoUpdate: parsed.autoUpdate !== false,
+        uploadsWhilePlaying: isUploadsDuringPlayback(parsed.uploadsWhilePlaying) ? parsed.uploadsWhilePlaying : null,
       };
     } catch {
-      return { version: 1, setup: input.defaultSetup(), user: null, keyOwnerId: null, autoUpdate: true };
+      return { version: 1, setup: input.defaultSetup(), user: null, keyOwnerId: null, autoUpdate: true, uploadsWhilePlaying: null };
     }
   };
   let state = readState();
@@ -107,6 +121,13 @@ export const openParrotStore = async (input: {
     },
     setAutoUpdate(enabled: boolean) {
       state = { ...state, autoUpdate: enabled };
+      return save();
+    },
+    get uploadsWhilePlaying(): UploadsDuringPlayback | null {
+      return state.uploadsWhilePlaying;
+    },
+    setUploadsWhilePlaying(mode: UploadsDuringPlayback) {
+      state = { ...state, uploadsWhilePlaying: mode };
       return save();
     },
     updateSetup(patch: Partial<ParrotSetupState>) {

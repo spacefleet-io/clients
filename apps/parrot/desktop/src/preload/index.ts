@@ -3,6 +3,7 @@ import "@space/error-report/electron-preload";
 import { contextBridge, ipcRenderer, webUtils } from "electron";
 import { createErrorReportsBridge } from "@space/error-report/desktop";
 import { createUpdaterBridge } from "@space/desktop-shell/updater-preload";
+import { createHiddenJobNoticesBridge } from "@space/desktop-shell/hidden-job-notices-preload";
 import { readStorageUnitBase } from "@space/desktop-shell/storage-units";
 import { SIBLING_IPC } from "@space/desktop-shell/sibling";
 import { PARROT_IPC, type KeyChangeState, type ParrotBackgroundWork, type ParrotBridge, type ParrotCoverCutRequest, type ParrotExportJob, type ParrotImportJob, type ParrotImportStatus } from "../shared/ipc";
@@ -13,6 +14,7 @@ import type { AppUpdateRequiredPayload } from "@space/shared/appVersion";
 
 const bridge: ParrotBridge = {
   getState: () => ipcRenderer.invoke(PARROT_IPC.getState),
+  hiddenJobNotices: createHiddenJobNoticesBridge(ipcRenderer),
   saveSetup: (patch) => ipcRenderer.invoke(PARROT_IPC.saveSetup, patch),
   getAccountLanguage: () => ipcRenderer.invoke(PARROT_IPC.getAccountLanguage),
   saveAccountLanguage: (language) => ipcRenderer.invoke(PARROT_IPC.saveAccountLanguage, language),
@@ -106,6 +108,11 @@ const bridge: ParrotBridge = {
   },
   dismissImportJob: (id) => ipcRenderer.invoke(PARROT_IPC.dismissImportJob, id),
   retryImportJob: (id) => ipcRenderer.invoke(PARROT_IPC.retryImportJob, id),
+  retryImportSong: (jobId) => ipcRenderer.invoke(PARROT_IPC.retryImportSong, jobId),
+  cancelImportSong: (jobId) => ipcRenderer.invoke(PARROT_IPC.cancelImportSong, jobId),
+  getUploadsWhilePlaying: () => ipcRenderer.invoke(PARROT_IPC.getUploadsWhilePlaying),
+  setUploadsWhilePlaying: (mode) => ipcRenderer.invoke(PARROT_IPC.setUploadsWhilePlaying, mode),
+  playbackActive: (active) => ipcRenderer.send(PARROT_IPC.playbackActive, active),
   findImportJobFolder: (id) => ipcRenderer.invoke(PARROT_IPC.findImportJobFolder, id),
   previewExport: () => ipcRenderer.invoke(PARROT_IPC.previewExport),
   exportMusic: () => ipcRenderer.invoke(PARROT_IPC.exportMusic),
@@ -184,6 +191,8 @@ const bridge: ParrotBridge = {
   storageUnitBase: readStorageUnitBase(ipcRenderer),
   sourceCredits: (product, language) => ipcRenderer.invoke(PARROT_IPC.sourceCredits, product, language),
   getSubscription: () => ipcRenderer.invoke(PARROT_IPC.getSubscription),
+  getAccountAccess: () => ipcRenderer.invoke(PARROT_IPC.getAccountAccess),
+  listAccountNotices: () => ipcRenderer.invoke(PARROT_IPC.listAccountNotices),
   getBillingStatus: () => ipcRenderer.invoke(PARROT_IPC.getBillingStatus),
   updateSubscription: (plan, options) => ipcRenderer.invoke(PARROT_IPC.updateSubscription, plan, options),
   startCheckout: (input) => ipcRenderer.invoke(PARROT_IPC.startCheckout, input),

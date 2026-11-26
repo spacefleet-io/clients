@@ -20,7 +20,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import path from "node:path";
 import { appendFileSync, existsSync, mkdirSync, mkdtempSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { createEngineV2, type EngineV2 } from "../src/core/jobs/engineV2";
+import { createEngineV2, type EngineV2 } from "@space/runtime-jobs-engine/engineV2";
 import { registerBadgerStepHandlers } from "../src/modules/badger/steps";
 import { buildBadgerStepDeps } from "../src/modules/badger/steps/deps-adapter";
 import { configureBadgerStepDeps, __resetBadgerStepDeps, type BadgerStepDeps } from "../src/modules/badger/steps/deps";

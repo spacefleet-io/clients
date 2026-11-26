@@ -6,9 +6,9 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { platform as linux } from "../../../../packages/desktop-platform-linux/src/index";
-import { platform as macos } from "../../../../packages/desktop-platform-macos/src/index";
-import { platform as windows } from "../../../../packages/desktop-platform-windows/src/index";
+import { platform as linux } from "@space/desktop-platform-linux";
+import { platform as macos } from "@space/desktop-platform-macos";
+import { platform as windows } from "@space/desktop-platform-windows";
 import { BADGER_IDENTITY } from "../src/main/appIdentity";
 import { buildApplicationMenu, resolveAppIdentity, type AppIdentityPlatform } from "@space/desktop-shell/main-shell";
 

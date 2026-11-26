@@ -32,7 +32,7 @@
 
 import { describe, expect, it, vi } from "vitest";
 import type { MockInstance } from "vitest";
-import type { MpvTrack } from "./fixtures/track-list-corpus";
+import type { MpvTrack } from "@space/mpv-protocol/tests/track-list-corpus";
 
 // On assertion failure, dump the recorded mpv request/command mock call args
 // so we can see exactly what the eager-apply block issued. Body in try/catch
