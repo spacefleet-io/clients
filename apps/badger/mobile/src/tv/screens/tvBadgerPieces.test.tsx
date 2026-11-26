@@ -57,7 +57,7 @@ vi.mock("@space/mobile-shell/components", async () => ({
   SkyCover: "SkyCover",
   useSkyScroll: () => ({}),
   // The real shared screen, so the test sees its texts and testIDs; the barrel would pull in every shell component.
-  MobileEmptyLibrary: (await import("../../../../../../packages/mobile-shell/src/components/mobile-empty-library")).MobileEmptyLibrary,
+  MobileEmptyLibrary: (await import("@space/mobile-shell/empty-library")).MobileEmptyLibrary,
 }));
 vi.mock("@space/mobile-shell/i18n", () => ({ useTranslation: () => ({ t: (key: string) => key, i18n: { language: ctl.language } }) }));
 vi.mock("@space/mobile-shell/pairing-qr", () => ({ QrCode: "QrCode" }));

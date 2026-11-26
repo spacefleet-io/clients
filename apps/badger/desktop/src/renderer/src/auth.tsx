@@ -15,7 +15,7 @@ import { resetClientStorage } from "@/lib/clientReset";
 import { logoutStep } from "@/lib/logoutStep";
 import { setMetadataUrlOverride, startMetadataTicketsAfterKeyStep, stopMetadataTickets } from "@/lib/metadataTickets";
 import { isLibraryKeyAcknowledged, onLibraryKeyAcknowledged } from "@/lib/onboarding";
-import { shouldClearSessionFromAuthError } from "@/authSession";
+import { isSessionRejected } from "@space/shared/api";
 import { clearLastAuthenticatedRoute } from "@/lib/routePersistence";
 import { persistSessionToMain } from "@/lib/sessionMirror";
 import { AUTH_TOKEN_KEY as TOKEN_KEY } from "../../shared/sessionKeys";
@@ -149,7 +149,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         // `access` rides on the user object; fall back to the top-level copy of older APIs.
         setUser({ ...result.user, access: result.user.access ?? result.access });
       } catch (error) {
-        if (shouldClearSessionFromAuthError(error)) {
+        if (isSessionRejected(error)) {
           localStorage.removeItem(TOKEN_KEY);
           localStorage.removeItem(USER_KEY);
           void stopMetadataTickets();

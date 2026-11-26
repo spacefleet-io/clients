@@ -60,4 +60,24 @@ class ParrotLimiterTest {
         assertTrue(worst < 1e-6f)
         assertEquals(1.0, limiter.currentGain, 0.0)
     }
+
+    @Test
+    fun aSeekForgetsTheLoudSongBeforeIt() {
+        val limiter = ParrotLimiter(rate, 2)
+        val loud = stereoSine(3.0, 0.2)
+        limiter.process(loud, loud.size / 2)
+        val duckedGain = limiter.currentGain
+        // The audio sink flushes on a seek; the next song is quiet and must play at once, unducked.
+        limiter.reset()
+        val quiet = stereoSine(0.3, 0.1)
+        val output = quiet.copyOf()
+        limiter.process(output, output.size / 2)
+        val leadIn = output.copyOfRange(0, limiter.latency * 2).maxOf { abs(it) }
+        var worst = 0f
+        for (index in limiter.latency * 2 until output.size) worst = maxOf(worst, abs(output[index] - quiet[index - limiter.latency * 2]))
+        println("[PARROT-LIMITER-KT] ducked gain $duckedGain, after reset: lead-in peak $leadIn, largest difference $worst, gain ${limiter.currentGain}")
+        assertTrue(duckedGain < 0.5)
+        assertEquals(0f, leadIn)
+        assertTrue(worst < 1e-6f)
+    }
 }

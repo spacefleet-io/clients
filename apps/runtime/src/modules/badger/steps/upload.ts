@@ -22,7 +22,7 @@
  * cancel cascade's artifact-cleanup is a separate concern (plan §4).
  */
 
-import type { StepHandler } from "../../../core/jobs/engineV2";
+import type { StepHandler } from "@space/runtime-jobs-engine/engineV2";
 import { getBadgerStepDeps, type UploadResult } from "./deps";
 import { armUploadFaultForJob, checkProgressFault } from "../../badger";
 import { discardFormatOutputsIfCancelled } from "./discardOnCancel";

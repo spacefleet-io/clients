@@ -2,6 +2,7 @@
  * @test-id MOBILE-SHELL-OFFLINE-NOTICE-001
  * @level unit
  * @req UX-NOTICE-02[badger-mobile] @req UX-NOTICE-01[badger-mobile] @req LIB-SYNC-13[badger-mobile]
+ * @req ACCT-UNPAID-05[badger-mobile] @req UX-NOTICE-08[badger-mobile]
  * @why Chris 2026-11-13 (design feedback on a dev build that could not reach its server): the phone showed a big red
  *   "Offline" box above every page plus the line "Offline mode: using cached media library." under it, about a quarter
  *   of the screen for as long as it stayed offline. Offline is a normal state (downloads and the saved library work
@@ -9,15 +10,19 @@
  *   time, and a small sign stays on the tab bar while offline. Nothing in the page moves. When the connection returns
  *   the sign goes and nothing else is shown. Real screen, real queue and real translations; the frame is a stand-in
  *   that renders the active page, the overlay and the tab bar's badge side by side; fake timers for the auto-dismiss.
+ *   Chris 2026-11-26 (ACCT-UNPAID-05, UX-NOTICE-08): the unpaid sign sits in the same tab bar slot, beside the offline
+ *   or update sign, so the tab pages show it without covering their titles.
  */
 import { createElement, type ReactNode } from "react";
 import { act, create, type ReactTestInstance, type ReactTestRenderer } from "react-test-renderer";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { initI18n } from "@space/mobile-shell/i18n";
 import type * as I18nModule from "@space/mobile-shell/i18n";
-import { NOTICE_DURATION_MS } from "@space/mobile-shell/notice-queue";
+import { NOTICE_TIMINGS } from "@space/notify-core/kinds";
 import { announceNewDevice } from "../src/lib/pairing/newDevice";
 import { MainShellScreen } from "../src/screens/MainShellScreen";
+
+const NOTICE_DURATION_MS = NOTICE_TIMINGS.headsUpMs;
 
 type LoadStatus =
   | { kind: "ready" }
@@ -30,6 +35,7 @@ const state = vi.hoisted(() => ({
   reloads: 0,
   refreshes: 0,
   focused: true,
+  access: null as { state: string; paidUntil: string | null; wipeAt: string | null } | null,
 }));
 
 vi.mock("react-native", async () => {
@@ -47,7 +53,8 @@ vi.mock("@space/mobile-shell/i18n", async (importOriginal) => {
   const actual = await importOriginal<typeof I18nModule>();
   return { ...actual, useTranslation: () => ({ t: actual.translate, i18n: { language: actual.getCurrentLanguage() } }) };
 });
-vi.mock("@react-navigation/native", () => ({ useIsFocused: () => state.focused }));
+vi.mock("@react-navigation/native", () => ({ useIsFocused: () => state.focused, useNavigation: () => ({ navigate: () => undefined }) }));
+vi.mock("@space/mobile-shell/account-news", () => ({ useAccountNews: () => undefined }));
 vi.mock("lucide-react-native", () => ({ Home: "Icon", LibraryBig: "Icon", ListVideo: "Icon", Search: "Icon", Settings: "Icon" }));
 vi.mock("@space/mobile-shell/components", () => {
   const passthrough = (props: { children?: ReactNode }) => createElement("Region", null, props.children);
@@ -73,7 +80,11 @@ vi.mock("@space/mobile-shell/components", () => {
     SkyRegion: passthrough,
   };
 });
-vi.mock("../src/store/auth", () => ({ useAuth: () => ({ token: null }) }));
+vi.mock("../src/store/auth", () => ({ useAuth: () => ({ token: null, user: state.access ? { access: state.access } : null }) }));
+// The real sign is tested in mobile-shell; here only where the shell puts it matters.
+vi.mock("@space/mobile-shell/unpaid-access-sign", () => ({
+  UnpaidAccessSign: (props: Record<string, unknown>) => createElement("UnpaidSign", props),
+}));
 vi.mock("../src/store/library", () => ({
   useLibraryData: () => ({ media: [] }),
   useLibraryStatus: () => ({
@@ -91,7 +102,6 @@ vi.mock("../src/lib/pairing/deviceWatch", () => ({
   checkForNewDevices: async () => [],
   markDeviceSeen: async () => undefined,
 }));
-vi.mock("@space/mobile-shell/unpaid-access-banner", () => ({ UnpaidAccessBanner: () => null }));
 vi.mock("../src/screens/HomeScreen", () => ({ HomeScreen: () => createElement("HomeScreen") }));
 vi.mock("../src/screens/LibraryScreen", () => ({ LibraryScreen: () => null }));
 // The Playlists tab (#2220) renders this panel; the real one pulls react-native modules this stand-in shell cannot load.
@@ -99,6 +109,9 @@ vi.mock("../src/components/PlaylistsPanel", () => ({ PlaylistsPanel: () => null 
 // The phone Search overlay (UX-PHONE-12) pulls react-native-fs and the real shell components, which plain node cannot load.
 vi.mock("../src/components/PhoneSearch", () => ({ PhoneSearch: () => null }));
 vi.mock("../src/screens/SettingsScreen", () => ({ SettingsScreen: () => createElement("SettingsScreen") }));
+// The header bell (MOBILE-SHELL-NOTICE-HISTORY-001) and its device storage load native modules plain node cannot load.
+vi.mock("@space/mobile-shell/notice-bell", () => ({ MobileNoticeBell: () => null }));
+vi.mock("@react-native-async-storage/async-storage", () => ({ default: { getItem: async () => null, setItem: async () => undefined } }));
 
 const log = (step: string, detail: unknown) => console.info(`[MOBILE-SHELL-OFFLINE-NOTICE-001] ${step}`, JSON.stringify(detail));
 
@@ -289,5 +302,52 @@ describe("offline on the phone: a passing notice and a small sign, never a banne
       tree.update(createElement(MainShellScreen));
     });
     expect(tree.root.findAll(isType("SyncIndicator"))).toHaveLength(0);
+  });
+});
+
+describe("the unpaid sign on the tab pages sits on the tab bar (ACCT-UNPAID-05, UX-NOTICE-08)", () => {
+  const UNPAID = { state: "unpaid", paidUntil: "2020-01-01T00:00:00.000Z", wipeAt: "2099-12-16T12:00:00.000Z" };
+  beforeAll(async () => {
+    Reflect.set(globalThis, "IS_REACT_ACT_ENVIRONMENT", true);
+    await initI18n("en");
+  });
+  beforeEach(() => {
+    state.loadStatus = { kind: "ready" };
+    state.syncState = { kind: "idle" };
+    state.focused = true;
+    state.access = UNPAID;
+  });
+  afterEach(() => {
+    state.access = null;
+    for (const tree of mounted.splice(0)) act(() => tree.unmount());
+  });
+  const tabBar = (tree: ReactTestRenderer) => tree.root.find(isType("TabBar"));
+
+  it("an unpaid account sees the sign in the tab bar's slot, the bare pill, and not in the page", () => {
+    const tree = render();
+    const signs = tabBar(tree).findAll(isType("UnpaidSign"));
+    log("unpaid tab bar", signs.map((n) => n.props));
+    expect(signs).toHaveLength(1);
+    expect(signs[0].props).toMatchObject({ access: UNPAID, inline: true });
+    expect(tree.root.find(isType("Pager")).findAll(isType("UnpaidSign"))).toHaveLength(0);
+  });
+
+  it("offline too: both signs share the slot, side by side", () => {
+    state.loadStatus = OFFLINE;
+    const tree = render();
+    expect(tabBar(tree).findAll(isType("UnpaidSign"))).toHaveLength(1);
+    expect(tabBar(tree).findAll(isType("OfflineIndicator"))).toHaveLength(1);
+  });
+
+  it("a paid or free account, or one not yet known, gets no sign and an empty slot", () => {
+    for (const access of [
+      { state: "paid", paidUntil: "2099-01-01T00:00:00.000Z", wipeAt: null },
+      { state: "free", paidUntil: null, wipeAt: null },
+      null,
+    ]) {
+      state.access = access;
+      const tree = render();
+      expect(tabBar(tree).children, String(access?.state ?? "unknown")).toHaveLength(0);
+    }
   });
 });

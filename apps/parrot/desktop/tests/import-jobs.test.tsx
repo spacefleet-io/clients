@@ -24,6 +24,7 @@ import {
   type ParrotBackgroundWork,
   type ParrotImportJob,
   type ParrotImportRetry,
+  type ParrotImportRow,
   type ParrotImportStatus,
   type ParrotLanguage,
 } from "../src/shared/ipc";
@@ -121,6 +122,8 @@ describe("Parrot desktop Jobs panel", () => {
         cancelImport: vi.fn(async () => running.status),
         retryImportJob: vi.fn(async (_id: string): Promise<ParrotImportRetry> => ({ started: true })),
         findImportJobFolder: vi.fn(async (_id: string): Promise<ParrotImportRetry | { cancelled: true }> => ({ started: true })),
+        retryImportSong: vi.fn(async (_jobId: string) => true),
+        cancelImportSong: vi.fn(async (_jobId: string) => true),
         getBackgroundWork: vi.fn(async () => [{ kind: "lyrics", done: 3, total: 12 }]),
         onBackgroundWork: vi.fn((listener: (work: ParrotBackgroundWork[]) => void) => {
           pushWork = listener;
@@ -452,6 +455,71 @@ describe("Parrot desktop Jobs panel", () => {
     // The start time is written the app language's way, not the system's.
     expect(en?.textContent).toContain(new Date(blackMarket.startedAt).toLocaleString("en"));
     expect(fr?.textContent).toContain(new Date(blackMarket.startedAt).toLocaleString("fr"));
+  });
+
+  // @req UX-JOBS-02[parrot]
+  // @req PAR-UP-13
+  it("a running import shows one bucket per song with its upload and light-copy rows, place in line, retry and cancel", async () => {
+    act(() => root.unmount());
+    container.remove();
+    const row = (jobId: string, patch: Partial<ParrotImportRow>): ParrotImportRow => ({
+      jobId,
+      status: "queued",
+      stage: "queued",
+      progressPct: 0,
+      placeInLine: null,
+      error: null,
+      ...patch,
+    });
+    const dir = "/home/me/Music/Song Album/";
+    const album = job(
+      "Song Album",
+      {
+        songs: [
+          { file: `${dir}01 Begin.m4a`, source: row("a-src", { status: "succeeded", stage: "commit", progressPct: 100 }), light: row("a-light", { status: "running", stage: "transcode", progressPct: 40 }) },
+          { file: `${dir}02 Second.m4a`, source: row("b-src", { status: "running", stage: "upload", progressPct: 60 }), light: null },
+          { file: `${dir}03 Third.m4a`, source: row("c-src", { placeInLine: 2 }), light: null },
+          { file: `${dir}04 Fourth.m4a`, source: row("d-src", { status: "failed", stage: "upload", error: "fetch failed" }), light: null },
+        ],
+      },
+      { running: true, phase: "uploading", done: 1, total: 4, bytesDone: 1_000_000, bytesTotal: 4_000_000 }
+    );
+    current = [album];
+    await mount(Promise.resolve(current));
+    await openPanel();
+    const songs = all("import-song") as HTMLElement[];
+    const song = (name: string) => songs.find((el) => el.textContent?.includes(name));
+    const songRow = (name: string, kind: "source" | "light") => song(name)?.querySelector(`[data-testid="import-song-row"][data-kind="${kind}"]`);
+    const rowPill = (name: string, kind: "source" | "light") => songRow(name, kind)?.querySelector('[data-testid="import-song-status"]')?.textContent;
+    console.info(SUITE, "songs", songs.map((el) => el.textContent));
+    expect(songs).toHaveLength(4);
+    expect(card("Song Album")?.outerHTML).not.toContain("/home/me/");
+    expect(rowPill("01 Begin.m4a", "source")).toBe("Done");
+    expect(rowPill("01 Begin.m4a", "light")).toBe("Making the light copy");
+    expect(rowPill("02 Second.m4a", "source")).toBe("Uploading");
+    expect(songRow("02 Second.m4a", "source")?.querySelector('[data-testid="import-song-bar"]')?.textContent).toContain("60%");
+    // A song still waiting stays closed, its place in line on the bucket's own pill; a click opens it.
+    expect(songRow("03 Third.m4a", "source")).toBeNull();
+    expect(song("03 Third.m4a")?.querySelector('[data-testid="import-song-badge"]')?.textContent).toBe("Waiting · #2 in line");
+    await act(async () => (song("03 Third.m4a")?.querySelector('[role="button"]') as HTMLElement).click());
+    expect(rowPill("03 Third.m4a", "source")).toBe("Waiting · #2 in line");
+    expect(rowPill("04 Fourth.m4a", "source")).toBe("Failed");
+    expect(songRow("04 Fourth.m4a", "source")?.textContent).toContain("1 file could not be sent: the connection was lost.");
+    expect(songRow("04 Fourth.m4a", "source")?.outerHTML).not.toContain("fetch failed");
+    // A row that ended well has no button; a live row has its X; a failed one its "Try again".
+    expect(songRow("01 Begin.m4a", "source")?.querySelector("button")).toBeNull();
+    await act(async () => (songRow("03 Third.m4a", "source")?.querySelector('[data-testid="import-song-cancel"]') as HTMLButtonElement).click());
+    expect(window.parrot.cancelImportSong).toHaveBeenCalledWith("c-src");
+    await act(async () => (songRow("04 Fourth.m4a", "source")?.querySelector('[data-testid="import-song-retry"]') as HTMLButtonElement).click());
+    expect(window.parrot.retryImportSong).toHaveBeenCalledWith("d-src");
+    // French: the same rows in the app's language.
+    act(() => root.unmount());
+    container.remove();
+    await mount(Promise.resolve(current), "fr");
+    await openPanel();
+    const fr = all("import-song") as HTMLElement[];
+    expect(fr.find((el) => el.textContent?.includes("03 Third.m4a"))?.querySelector('[data-testid="import-song-badge"]')?.textContent).toBe("En attente · n° 2 dans la file");
+    expect(fr.find((el) => el.textContent?.includes("01 Begin.m4a"))?.querySelector('[data-kind="light"] [data-testid="import-song-status"]')?.textContent).toBe("Création de la copie légère");
   });
 
   // @req UX-JOBS-03[parrot]

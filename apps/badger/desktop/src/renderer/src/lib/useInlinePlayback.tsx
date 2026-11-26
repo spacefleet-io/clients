@@ -247,7 +247,9 @@ export function useInlinePlayback(): InlinePlayback {
       onError: (error, [id, options]) => {
         const message = error instanceof Error ? error.message : String(error);
         playTraceLog.warn({ id, error: message }, "inline-play failed");
-        notifyError(message || "Playback failed to start");
+        // The raw error stays in the log; the user reads the same translated failure as the player's (UX-NOTICE-13),
+        // one entry however often it repeats (UX-NOTICE-11).
+        notifyError(t("player.abrLaunchFailed"), undefined, { key: "playback-failed:inline" });
         options?.onFailed?.(message || "playback_failed");
       },
     },

@@ -727,6 +727,7 @@
       }
     },
     "access": {
+      "unpaidSign": "Tarif abgelaufen",
       "unpaidBanner": "Dein Tarif ist abgelaufen. Wiedergabe und Uploads sind gestoppt. Deine Dateien werden am {{date}} gelöscht.",
       "unpaidBannerNoDate": "Dein Tarif ist abgelaufen. Wiedergabe und Uploads sind gestoppt. Deine Dateien werden nach einer begrenzten Zeit gelöscht.",
       "playbackBlocked": "Die Wiedergabe ist gestoppt, weil dein Tarif abgelaufen ist. Deine Dateien werden am {{date}} gelöscht.",
@@ -1002,7 +1003,6 @@
     "validate": "Schlüssel prüfen",
     "signOut": "Abmelden",
     "errors": {
-      "checkStatus": "Der Status der Mediathek konnte nicht geprüft werden.",
       "generate": "Es konnte kein neuer Schlüssel erzeugt werden.",
       "initialize": "Deine Mediathek konnte nicht eingerichtet werden.",
       "noLibrary": "Für dieses Konto wurde keine Mediathek gefunden.",
@@ -1024,7 +1024,11 @@
       "recentlyAdded": "Kürzlich hinzugefügt",
       "movies": "Filme",
       "shows": "Serien",
-      "favorites": "Favoriten"
+      "favorites": "Favoriten",
+      "unwatched": "Noch nicht gesehen",
+      "rewatch": "Nochmal schauen",
+      "playlist": "Playlist",
+      "genre": "Genre"
     },
     "seeAll": "Alle ansehen",
     "hero": {

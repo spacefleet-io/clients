@@ -74,8 +74,12 @@ vi.mock("../src/renderer/src/lib/config", () => ({
   saveClientConfig: vi.fn(),
 }));
 vi.mock("../src/renderer/src/lib/accountUiLanguage", () => ({ pickUiLanguage: vi.fn() }));
-vi.mock("../src/renderer/src/lib/pairedSignIn", () => ({ verifyPairedKey: mocks.verifyPairedKey }));
-vi.mock("../src/renderer/src/lib/pairedSignInDeps", () => ({ pairedKeyCheckDeps: { name: "pairedKeyCheckDeps" } }));
+// A typed key goes through the real shared account key check (PRIV-KEY-01) on the mocked API, crypto and library;
+// a key from another device is checked by `verifyPairedKey`, mocked here to drive each answer.
+vi.mock("../src/renderer/src/lib/pairedSignIn", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  verifyPairedKey: mocks.verifyPairedKey,
+}));
 vi.mock("../src/renderer/src/lib/crypto", async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   decryptBase64ToBytes: mocks.decryptBase64ToBytes,
@@ -85,7 +89,7 @@ vi.mock("@space/ui", async (importOriginal) => ({
   LanguageMenu: () => <div data-testid="language-menu" />,
 }));
 // The shared key step (UX-KEY-01) opens the pairing view from its own file.
-vi.mock("../../../../packages/desktop-shell/src/components/pair-with-phone", async (importOriginal) => ({
+vi.mock("@space/desktop-shell/pair-with-phone", async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   default: (props: NonNullable<typeof mocks.pairProps>) => {
     mocks.pairProps = props;
@@ -174,7 +178,12 @@ describe("@req ACCT-PAIR-01 Badger desktop key screen: get the key from another 
     await flush();
     dump("approved");
     expect(check).toBe("verified");
-    expect(mocks.verifyPairedKey).toHaveBeenCalledWith({ name: "pairedKeyCheckDeps" }, "own-session", "KEY-FROM-PHONE", "u1");
+    expect(mocks.verifyPairedKey).toHaveBeenCalledWith(
+      expect.objectContaining({ getLibraryMeta: expect.any(Function), decryptProbe: expect.any(Function) }),
+      "own-session",
+      "KEY-FROM-PHONE",
+      "u1",
+    );
     expect(mocks.storeLibraryKey).toHaveBeenCalledWith("KEY-FROM-PHONE", null);
     expect(mocks.acknowledgeLibraryKey).toHaveBeenCalled();
     expect(mocks.activateRemoteLibrary).toHaveBeenCalledWith("own-session", "KEY-FROM-PHONE");

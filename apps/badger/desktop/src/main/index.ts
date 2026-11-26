@@ -1,11 +1,11 @@
 import "./packagedNodeEnv";
 import "./devBuildEnv";
-import { app, BrowserWindow, shell, ipcMain, screen, dialog, Menu, Tray, powerMonitor, session as electronSession } from "electron";
+import { app, BrowserWindow, shell, ipcMain, screen, dialog, Menu, Notification, Tray, powerMonitor, session as electronSession } from "electron";
 import { NEUTRAL_USER_AGENT } from "@space/metadata-client";
 import { existsSync } from "node:fs";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
-import { tmpdir } from "node:os";
+import { release, tmpdir } from "node:os";
 import { isValidPlacementId } from "@space/shared/storagePlacement";
 import { resolveExternalMpvTarget } from "@space/mpv";
 import { getDesktopPlatform } from "@space/desktop-platform";
@@ -37,6 +37,8 @@ import { registerFfmpegIpc } from "./ffmpegIpc";
 import { FfmpegRuntimeBridge } from "./ffmpegRuntimeBridge";
 import { registerToolAccessIpc } from "./toolAccessIpc";
 import { registerPairingIpc } from "./pairingIpc";
+import { recordRendererConsole, registerFeedbackIpc } from "./feedbackIpc";
+import { sendFeedback } from "./api";
 import {
   getApiBaseUrl,
   getCustomApiBaseUrl,
@@ -57,6 +59,7 @@ import { createBadgerSiblingHost, registerSiblingIpc, siblingAccountOf } from ".
 import { SIBLING_SIGN_IN_ARG, armSiblingHiddenQuit, isSiblingSignInLaunch, type SiblingHiddenQuit } from "@space/desktop-shell/sibling-main";
 import { setClientIdentity } from "@space/shared/appVersion";
 import { logFailedApiCalls } from "@space/shared/apiFailure";
+import { createErrorLog } from "@space/error-report/error-log";
 import { CLIENT_IDENTITY_CHANNEL, desktopClientIdentity } from "@space/desktop-shell/client-identity";
 import { serveStorageUnitBase } from "@space/desktop-shell/storage-units";
 import { PROVIDER_RETURN_IPC } from "../shared/providerReturn";
@@ -75,6 +78,11 @@ import {
   attachDevShortcuts,
   buildTrayActions,
   createAppTray,
+  createHiddenJobNotices,
+  createOpenJobsRequest,
+  HIDDEN_JOB_NOTICE_CHANNELS,
+  registerHiddenJobNoticesIpc,
+  systemNoticeShower,
   MAIN_SHELL_STRINGS,
   describeAppLink,
   registerTrayTestIpc,
@@ -96,7 +104,9 @@ import { badgerLinks, decideLaunchVisibility, shouldShowOnActivate } from "./pro
 import { registerHandoffIpc, type HandoffRuntimeBridge } from "./handoffIpc";
 import { requestRendererFlush } from "./rendererFlush";
 import { installE2ePerfProbe } from "./e2ePerfProbe";
-import { markAppWindowVisibility, registerAppWindowVisibilityIpc, trackAppWindowVisibility } from "./appWindowVisibility";
+import { markAppWindowVisibility, onAppWindowVisibilityChange, registerAppWindowVisibilityIpc, trackAppWindowVisibility } from "./appWindowVisibility";
+import { watchHiddenRuntimeJobs } from "./hiddenRuntimeJobs";
+import { notifyLanguage } from "@space/notify-core/texts";
 import { forwardEscapeKey } from "./escapeKeyForward";
 import { BADGER_IDENTITY } from "./appIdentity";
 import { registerErrorReportsIpc } from "@space/error-report/desktop-main";
@@ -282,12 +292,25 @@ const clientIdentity = desktopClientIdentity({
   app: "badger",
   version: app.getVersion(),
   packaged: app.isPackaged,
-  os: process.platform,
+  os: getDesktopPlatform().id,
   env: process.env,
 });
 setClientIdentity(clientIdentity);
+// UX-SUP-05: the newest warning and error lines (scrubbed as recorded), sent only with feedback the user attaches it to.
+const errorLog = createErrorLog();
 // REL-LOG-31: one local line per failed API call of this process, with the server's request id (never reported).
-logFailedApiCalls((fields) => logger.warn({ event: "api_call_failed", ...fields }, "api: call failed"));
+logFailedApiCalls((fields) => {
+  logger.warn({ event: "api_call_failed", ...fields }, "api: call failed");
+  errorLog.record("warn", "api", `call failed status=${fields.status} code=${fields.code} requestId=${fields.requestId}`);
+});
+const feedbackLogger = scopeLogger("feedback");
+const feedbackIpc = registerFeedbackIpc(ipcMain, {
+  errorLog,
+  appVersion: app.getVersion(),
+  platform: `${getDesktopPlatform().id} ${release()}`,
+  send: sendFeedback,
+  log: (line) => feedbackLogger.info(line),
+});
 ipcMain.on(CLIENT_IDENTITY_CHANNEL, (event) => {
   event.returnValue = clientIdentity;
 });
@@ -448,7 +471,7 @@ const deviceSettings = registerDeviceSettingsIpc();
 // STOR-UNIT-01: storage figures follow this computer's file manager (1024 on Windows and KDE, 1000 elsewhere); the
 // preload reads the base synchronously so the window sets it before its first render.
 serveStorageUnitBase(ipcMain, {
-  platform: process.platform,
+  platform: getDesktopPlatform().id,
   desktop: process.env.XDG_CURRENT_DESKTOP,
   log: (line) => logger.info(line),
 });
@@ -586,6 +609,34 @@ const showMainWindow = () => {
   markAppWindowVisibility(mainWindow, false, "show-main-window");
 };
 
+// UX-NOTICE-06: a job that ends while nobody sees the window shows one system notification; its click brings the
+// window back (recreated when close-to-tray destroyed it) with Jobs open. Not while external mpv plays over it.
+const isMainWindowUnseen = () =>
+  !isExternalMpvAlive() && (!mainWindow || mainWindow.isDestroyed() || !mainWindow.isVisible() || mainWindow.isMinimized());
+const openJobsRequest = createOpenJobsRequest(() => {
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(HIDDEN_JOB_NOTICE_CHANNELS.openJobs);
+});
+const hiddenJobNotices = createHiddenJobNotices({
+  file: join(app.getPath("userData"), "system-notifications.json"),
+  isWindowHidden: isMainWindowUnseen,
+  language: () => notifyLanguage(mainUiLanguage()),
+  show: systemNoticeShower(Notification),
+  openJobs: () => {
+    showMainWindow();
+    openJobsRequest.request();
+  },
+  log: (line) => logger.info(line),
+});
+registerHiddenJobNoticesIpc(ipcMain, hiddenJobNotices, openJobsRequest);
+const hiddenRuntimeJobs = watchHiddenRuntimeJobs({
+  isHidden: isMainWindowUnseen,
+  list: async () => (await import("./runtimeJobsIpc")).listRuntimeJobsForMain(),
+  onEnd: (end) => hiddenJobNotices.jobEnded(end),
+});
+onAppWindowVisibilityChange((_win, next) => {
+  if (next.hidden) void hiddenRuntimeJobs.check();
+});
+
 // PLAT-DESK-11: macOS gets the minimal app / Edit / Window menu bar with "Quit Badger"; Linux and Windows have
 // no menu bar, in dev builds too.
 let applicationMenuInstalled = false;
@@ -687,6 +738,7 @@ const createWindow = (options: { show?: boolean } = {}) => {
     return { action: "deny" };
   });
   mainWindow = win;
+  win.webContents.on("console-message", (details) => recordRendererConsole(errorLog, details.level, details.message));
   trackAppWindowVisibility(win);
   forwardEscapeKey(win.webContents);
   if (!show) markAppWindowVisibility(win, true, "handoff-background-start");
@@ -799,6 +851,7 @@ app.whenReady().then(async () => {
     },
   });
   ipcMain.handle("sf-auth-set-token", (_event, token: string | null) => {
+    feedbackIpc.setToken(token ?? null);
     toolAccessBridge?.setAuthToken(token ?? null);
     handoffBridge?.setAuthToken(token ?? null);
     ffmpegRuntimeBridge.setBackendToken(token ?? null);

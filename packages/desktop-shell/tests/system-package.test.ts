@@ -10,7 +10,7 @@ import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { describe, expect, it, vi } from "vitest";
 
-import { SYSTEM_UPDATE_EXIT as PACKAGING_EXIT } from "../../desktop-platform-linux/packaging/system-update.mjs";
+import { SYSTEM_UPDATE_EXIT as PACKAGING_EXIT } from "@space/desktop-platform-linux/packaging/system-update";
 import {
   SYSTEM_UPDATE_EXIT,
   canAskPassword,

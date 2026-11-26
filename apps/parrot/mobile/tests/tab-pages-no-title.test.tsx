@@ -6,15 +6,14 @@
  *   page is open (as on Badger's phone, UX-PHONE-01, UX-PHONE-02). The real MainScreen is rendered with the real shared
  *   tab bar: tapping each tab marks that tab selected (and only it) and opens its page, and nothing on screen is a
  *   heading. The Playlists page starts on its "New playlist" row. Home, Library and Settings are checked in their own
- *   tests (home-screen, library-tabs, settings-order). The account's access from the session reaches the shared unpaid
- *   notice above the pages (ACCT-UNPAID-03, Chris 2026-11-23); the notice itself is tested in mobile-shell.
+ *   tests (home-screen, library-tabs, settings-order). The unpaid notice sits around every screen of the navigator,
+ *   not on the tab pages (ACCT-UNPAID-05): see screen-layout.test.tsx.
  */
 import { createElement, type ReactElement } from "react";
 import { act, create, type ReactTestInstance, type ReactTestRenderer } from "react-test-renderer";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
 const log = (step: string, detail: unknown) => console.info(`[PARROT-MOBILE-TAB-NO-TITLE-001] ${step}`, JSON.stringify(detail));
-const account = vi.hoisted(() => ({ access: null as { state: string; wipeAt: string | null } | null }));
 
 vi.mock("react-native", () => {
   class Value {
@@ -46,7 +45,7 @@ vi.mock("@space/mobile-shell/theme", () => ({
   UNAVAILABLE_LOOK: { opacity: 0.4 },
   useMobileShellTheme: () => ({ colors: { accent: "#40dd8f", textMuted: "#b6bace", textDim: "#555" }, font: { family: { sans: "Inter" } } }),
 }));
-vi.mock("../../../../packages/mobile-shell/src/components/mobile-sky-cover", () => ({
+vi.mock("@space/mobile-shell/sky-cover", () => ({
   SkyCover: ({ children, ...props }: { children?: unknown }) => createElement("SkyCover", props, children as never),
   useSkyScroll: () => ({}),
 }));
@@ -57,13 +56,12 @@ vi.mock("@space/mobile-shell/i18n", () => ({
 vi.mock("@space/mobile-shell/components", async () => ({
   SkyCover: "SkyCover",
   useSkyScroll: () => ({}),
-  MobileTabPager: (await vi.importActual<typeof import("../../../../packages/mobile-shell/src/components/mobile-tab-pager")>(
+  MobileTabPager: (await vi.importActual<typeof import("@space/mobile-shell/tab-pager")>(
     "../../../../packages/mobile-shell/src/components/mobile-tab-pager"
   )).MobileTabPager,
   MobileFounderNoticeHost: () => null,
 }));
 vi.mock("@space/mobile-shell/render-boundary", () => ({ guardRenderItem: (_id: string, fn: unknown) => fn }));
-vi.mock("@space/mobile-shell/unpaid-access-banner", () => ({ UnpaidAccessBanner: "UnpaidAccessBanner" }));
 vi.mock("@react-navigation/native", () => ({ useNavigation: () => ({ navigate: () => undefined }), useIsFocused: () => true }));
 vi.mock("../src/theme", () => ({ colors: { accent: "#40dd8f", text: "#fff", textMuted: "#aaa", surface: "#111", border: "#333" }, spacing: { xs: 4, sm: 8, md: 12, lg: 16, xl: 24 } }));
 vi.mock("../src/screens/sky", () => ({
@@ -75,10 +73,11 @@ vi.mock("../src/screens/PlaylistsView", () => ({ PlaylistsView: "PlaylistsView" 
 vi.mock("../src/screens/SettingsScreen", () => ({ SettingsScreen: "SettingsScreen" }));
 vi.mock("../src/screens/NowPlayingBar", () => ({ NowPlayingBar: "NowPlayingBar" }));
 vi.mock("../src/screens/PhoneSearch", () => ({ PhoneSearch: "PhoneSearch" }));
+vi.mock("../src/screens/NoticeBell", () => ({ ParrotNoticeBell: "ParrotNoticeBell" }));
 vi.mock("../src/screens/ui", () => ({ Body: "Body" }));
 vi.mock("../src/screens/kept", () => ({ useOfflineReach: () => null }));
 vi.mock("../src/state/session", () => ({
-  useSession: () => ({ library: { status: "ready", version: 1 }, localChanges: 0, reloadLibrary: async () => undefined, access: account.access }),
+  useSession: () => ({ library: { status: "ready", version: 1 }, localChanges: 0, reloadLibrary: async () => undefined }),
 }));
 vi.mock("../src/state/useQuery", () => ({
   useQuery: () => ({ data: [{ id: "liked", name: "Liked songs", trackCount: 3 }, { id: "pl-1", name: "Hollow Signal mix", trackCount: 12 }], error: null, loading: false }),
@@ -161,21 +160,5 @@ describe("the phone's tab pages have no page title", () => {
     log("swiped", { selected: selectedTabs(tree), page: pageShown(tree) });
     expect(selectedTabs(tree)).toEqual(["tab-playlists"]);
     expect(pageShown(tree)).toContain(PAGES.playlists);
-  });
-
-  /** @req ACCT-UNPAID-03[parrot] */
-  it("an unpaid account's access reaches the notice above every tab page", async () => {
-    account.access = { state: "unpaid", wipeAt: "2027-01-22T00:00:00.000Z" };
-    let tree!: ReactTestRenderer;
-    await act(async () => {
-      tree = create(createElement(MainScreen, { navigation: { navigate: () => undefined }, route: {} } as never));
-    });
-    const banners = () => tree.root.findAll((node) => String(node.type) === "UnpaidAccessBanner");
-    log("unpaid", { banners: banners().map((node) => node.props) });
-    expect(banners()).toHaveLength(1);
-    expect(banners()[0]!.props.access).toEqual(account.access);
-    await act(async () => tabButton(tree, "settings").props.onPress());
-    expect(banners()).toHaveLength(1);
-    account.access = null;
   });
 });

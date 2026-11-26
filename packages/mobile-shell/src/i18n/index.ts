@@ -8,6 +8,7 @@ import { withProfilesTexts } from "@space/shared/profileTexts";
 import { withAccountDeletionLabels } from "@space/shared/accountDeletionLabels";
 import { CLIENT_UI_LANGUAGES, isClientUiLanguage, type ClientUiLanguage, type ClientUiLanguageOption } from "@space/shared/i18n";
 import { installClientPluralRules } from "@space/shared/pluralRules";
+import { withNotifyTexts } from "@space/notify-core/texts";
 import de from "./de.json";
 import en from "./en.json";
 import es from "./es.json";
@@ -40,18 +41,22 @@ export const isMobileUiLanguage = isClientUiLanguage;
  * The sign-in error sentences (`login.errors`) come from `@space/shared/signInError`, the Google, Apple and Microsoft
  * sign-in words (`login.provider`, ACCT-SIGNIN-05) from `@space/shared/providerSignIn`, the title-language choice
  * (`titleLanguage`, ACCT-PROF-03) from `@space/shared/titleLanguage`, the Subtitle language setting (`subtitleLanguage`) from `@space/shared/profileSettings`, the profile texts from `@space/shared/profileTexts`, and the labels on the way to account deletion from
- * `@space/shared/accountDeletionLabels` (the legal page prints them too, WEB-LEGAL-04), shared by every app.
+ * `@space/shared/accountDeletionLabels` (the legal page prints them too, WEB-LEGAL-04), shared by every app. The notices'
+ * own words (`notify`: the bell, the history, the account's messages; UX-NOTICE-13) come from `@space/notify-core/texts`.
  */
 export const withSharedTexts = <T extends Record<string, unknown>>(translation: T, language: MobileUiLanguage): T =>
-  withAccountDeletionLabels(
-    withProfilesTexts(
-      withSubtitleLanguageTexts(
-        withTitleLanguageTexts(withProviderSignInTexts(withSignInErrorTexts(translation, language), language), language),
+  withNotifyTexts(
+    withAccountDeletionLabels(
+      withProfilesTexts(
+        withSubtitleLanguageTexts(
+          withTitleLanguageTexts(withProviderSignInTexts(withSignInErrorTexts(translation, language), language), language),
+          language,
+        ),
         language,
       ),
+      "mobile",
       language,
     ),
-    "mobile",
     language,
   );
 

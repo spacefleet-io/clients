@@ -7,7 +7,7 @@ import { describe, expect, it } from "vitest";
 
 import { createBuilderConfig, DEFAULT_UPDATE_FEED_URL } from "../electron-builder.config.mjs";
 import { linuxArtifactPatterns, PACKAGE_TARGETS } from "../scripts/package-targets.mjs";
-import { SIGNED_WINDOWS_ENV } from "../../../../packages/desktop-platform-windows/packaging/signedWindowsEnv";
+import { SIGNED_WINDOWS_ENV } from "@space/desktop-platform-windows/packaging/signedWindowsEnv";
 
 const log = (line: string, data?: unknown) =>
   console.info(`[parrot-update-feed] ${line}${data === undefined ? "" : ` ${JSON.stringify(data)}`}`);

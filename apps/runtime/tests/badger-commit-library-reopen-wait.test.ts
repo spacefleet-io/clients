@@ -34,8 +34,8 @@ import {
   type CommitResult,
 } from "../src/modules/badger/steps/deps";
 import { commitStepHandler } from "../src/modules/badger/steps";
-import type { StepHandlerCtx } from "../src/core/jobs/engineV2";
-import type { StoredStepRecord } from "../src/core/jobs/stepStore";
+import type { StepHandlerCtx } from "@space/runtime-jobs-engine/engineV2";
+import type { StoredStepRecord } from "@space/runtime-jobs-engine/stepStore";
 import { BadgerLibraryDbService } from "../src/modules/badgerLibraryDb";
 
 const SUITE = "badger-commit-library-reopen-wait";

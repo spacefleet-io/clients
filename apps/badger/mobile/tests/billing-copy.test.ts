@@ -4,8 +4,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import i18next from "i18next";
 import { changeLanguage } from "@space/mobile-shell/i18n";
 import { getStorageUnitBase, setStorageUnitBase } from "@space/shared/format";
-import en from "../../../../packages/mobile-shell/src/i18n/en.json";
-import fr from "../../../../packages/mobile-shell/src/i18n/fr.json";
+import en from "@space/mobile-shell/i18n/en.json";
+import fr from "@space/mobile-shell/i18n/fr.json";
 import { SubscriptionScreen } from "../src/screens/SubscriptionScreen";
 
 const ctl = vi.hoisted(() => ({
@@ -37,8 +37,8 @@ vi.mock("react-native", () => ({
 // The real i18n module wires react-i18next, which resolves a second copy of React under bun's layout and cannot
 // run next to react-test-renderer. Same dictionaries and the same i18next lookups, minus the React binding.
 vi.mock("@space/mobile-shell/i18n", async () => {
-  const enDict = (await import("../../../../packages/mobile-shell/src/i18n/en.json")).default;
-  const frDict = (await import("../../../../packages/mobile-shell/src/i18n/fr.json")).default;
+  const enDict = (await import("@space/mobile-shell/i18n/en.json")).default;
+  const frDict = (await import("@space/mobile-shell/i18n/fr.json")).default;
   await i18next.init({
     resources: { en: { translation: enDict }, fr: { translation: frDict } },
     lng: "en",
@@ -60,7 +60,7 @@ vi.mock("@react-navigation/native", () => ({
 }));
 // The founder badge (WAIT-FOUND-04) has its own test in mobile-shell; the shared plan panel imports it from its own
 // folder. Leaf UI components pull in native-only modules (SVG sky, Animated), so stand-ins keep their labels and children.
-vi.mock("../../../../packages/mobile-shell/src/components/mobile-founder", () => ({ MobileFounderBadge: () => null }));
+vi.mock("@space/mobile-shell/founder-badge", () => ({ MobileFounderBadge: () => null }));
 vi.mock("@space/mobile-shell/components", () => ({
   MobileIconButton: ({ label, onPress }: { label: string; onPress: () => void }) =>
     React.createElement("Pressable", { accessibilityLabel: label, onPress }),

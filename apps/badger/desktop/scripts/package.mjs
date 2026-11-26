@@ -37,12 +37,12 @@ import {
   stageDirFor,
   unpackedResourcesDir,
 } from "./package-targets.mjs";
-import { listAsarEntries } from "../../../../packages/desktop-platform/packaging/asar-entries.mjs";
-import { createPackageRun } from "../../../../packages/desktop-platform/packaging/package-steps.mjs";
+import { listAsarEntries } from "@space/desktop-platform/packaging/asar-entries";
+import { createPackageRun } from "@space/desktop-platform/packaging/package-steps";
 import { checkPackagedAsarEntries } from "./packaged-asar-lib.mjs";
 import { packageClosure, SUBTITLE_OCR_DIR, SUBTITLE_OCR_EXTERNAL, subtitleOcrBuildArgs } from "./subtitle-ocr-stage-lib.mjs";
-import { LINUX_FORMATS } from "../../../../packages/desktop-platform-linux/packaging/linux-packages.mjs";
-import { packageBuildEnv, TEST_BUILD_FLAG } from "../../../../packages/desktop-platform/packaging/test-build-lib.mjs";
+import { LINUX_FORMATS } from "@space/desktop-platform-linux/packaging/linux-packages";
+import { packageBuildEnv, TEST_BUILD_FLAG } from "@space/desktop-platform/packaging/test-build-lib";
 
 const appDir = resolve(import.meta.dirname, "..");
 const repoRoot = resolve(appDir, "..", "..", "..");

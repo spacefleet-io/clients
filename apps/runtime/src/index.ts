@@ -14,7 +14,7 @@ import { publishOwnerSecret, type OwnerSecretFile } from "./core/ownerSecret";
 import { WS_CLOSE_SESSION_EXPIRED } from "./state";
 import { isValidWsServerFrame, parseWsClientFrame } from "./validation";
 import type { RuntimeEventFrame } from "./types";
-import { createEngineV2, type EngineV2 } from "./core/jobs/engineV2";
+import { createEngineV2, type EngineV2 } from "@space/runtime-jobs-engine/engineV2";
 import { getEffectiveCpuCount } from "@space/ffmpeg/hostCpu";
 import {
   assertNoRuntimeAlready,
@@ -23,12 +23,12 @@ import {
 import {
   createEventLog,
   type EventLog,
-} from "./core/jobs/eventLog";
-import { createSqliteEventLogDeps } from "./core/jobs/sqliteEventLogDeps";
+} from "@space/runtime-jobs-engine/eventLog";
+import { createSqliteEventLogDeps } from "@space/runtime-jobs-engine/sqliteEventLogDeps";
 import {
   createSqliteRuntimeJobsStore,
   type SqliteRuntimeJobsStore,
-} from "./core/jobs/sqliteStore";
+} from "@space/runtime-jobs-engine/sqliteStore";
 import {
   createRuntimeJobsV2Handler,
   type RuntimeJobsV2Handler,

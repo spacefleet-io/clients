@@ -8,13 +8,23 @@
 //   and the tickets flag from the dev stack's target where the shell set nothing (META-ANON-09, getMetroMetadataInline
 //   in scripts/dev-stack-lib.mjs): the dev stack's default production metadata target without tickets, or with
 //   SF_LOCAL_METADATA=1 tickets on and the metadata-api beside the API (META-ANON-08).
+// - `process.env.SF_SIMULATOR_BUILD` (REL-TEST-36): "1" in a bundle Xcode builds for the iOS or tvOS simulator (its
+//   PLATFORM_NAME), "" in every other build (a device archive for TestFlight, Android). Only a simulator bundle honours
+//   the release smoke's `-SFSmokeApiBaseUrl` loopback lane (src/config.ts), so a TestFlight or App Store build talks
+//   to production only (ACCT-AUTH-09). Same flag and rule as Badger's babel-plugin-dev-ticket-key.js.
 // metro.config.js puts every value it reads in Metro's cache key.
 'use strict';
 
 const API_NAME = 'PARROT_API_BASE_URL';
 const TICKETS_NAME = 'PARROT_METADATA_TICKETS';
 const METADATA_URL_NAME = 'EXPO_PUBLIC_METADATA_URL';
-const READ = [API_NAME, TICKETS_NAME, METADATA_URL_NAME, 'SF_LOCAL_METADATA'];
+const SIMULATOR_NAME = 'SF_SIMULATOR_BUILD';
+const READ = [API_NAME, TICKETS_NAME, METADATA_URL_NAME, 'SF_LOCAL_METADATA', 'PLATFORM_NAME'];
+
+/** "1" when Xcode bundles for a simulator SDK, "" otherwise. */
+function simulatorBuildValue(env) {
+  return /^(iphonesimulator|appletvsimulator)$/.test((env.PLATFORM_NAME ?? '').trim()) ? '1' : '';
+}
 
 const DEV_STACK_LIB = require('node:path').join(__dirname, '../../../scripts/dev-stack-lib.mjs');
 let warnedNoDevStack = false;
@@ -50,6 +60,7 @@ module.exports = function apiBaseUrlPlugin(api) {
     [API_NAME, (process.env[API_NAME] ?? '').trim()],
     [TICKETS_NAME, metadata.tickets],
     [METADATA_URL_NAME, metadata.url],
+    [SIMULATOR_NAME, simulatorBuildValue(process.env)],
   ];
   return {
     name: 'parrot-api-base-url',
@@ -65,3 +76,5 @@ module.exports = function apiBaseUrlPlugin(api) {
     },
   };
 };
+
+module.exports.simulatorBuildValue = simulatorBuildValue;

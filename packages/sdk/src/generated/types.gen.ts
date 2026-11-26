@@ -785,6 +785,40 @@ export type AccountOverQuota = {
     deleting: boolean;
 } | null;
 
+export type AccountNotice = {
+    id: string;
+    /**
+     * One per thing the news is about: a device seeing the same key again replaces its entry.
+     */
+    key: string;
+    level: 'info' | 'success' | 'warning' | 'error';
+    title: AccountNoticeText;
+    message?: AccountNoticeText;
+    action?: {
+        label: AccountNoticeText;
+        /**
+         * The screen the app opens for it.
+         */
+        target: 'devices' | 'billing' | 'storage';
+    };
+    createdAt: string;
+};
+
+export type AccountNoticeText = {
+    /**
+     * A text key of the shared notice texts (`notify.account.*`), shown in the device's language.
+     */
+    key: string;
+    /**
+     * Values for the text; a `{key}` value is itself a text key, translated too.
+     */
+    vars?: {
+        [key: string]: string | number | {
+            key: string;
+        };
+    };
+};
+
 export type Profiles = {
     /**
      * Every profile of the account, oldest first.
@@ -4914,6 +4948,55 @@ export type GetAccountOverQuotaTitlesResponses = {
 };
 
 export type GetAccountOverQuotaTitlesResponse = GetAccountOverQuotaTitlesResponses[keyof GetAccountOverQuotaTitlesResponses];
+
+export type ListAccountNoticesData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/account/notices';
+};
+
+export type ListAccountNoticesErrors = {
+    /**
+     * Missing, unknown or revoked token.
+     */
+    401: {
+        error: 'unauthorized';
+    };
+    /**
+     * The account is blocked or scheduled for deletion, or the personal token lacks the scope of the route (`requiredScope`).
+     */
+    403: {
+        error: 'account_blocked' | 'account_deleted' | 'insufficient_scope';
+        requiredScope?: string;
+    };
+    /**
+     * This personal token made too many requests this minute; wait `retryAfterSeconds` (also sent as the `Retry-After` header).
+     */
+    429: {
+        error: 'token_rate_limited';
+        retryAfterSeconds: number;
+    };
+    /**
+     * The news could not be read.
+     */
+    503: {
+        error: 'account_notices_unavailable';
+    };
+};
+
+export type ListAccountNoticesError = ListAccountNoticesErrors[keyof ListAccountNoticesErrors];
+
+export type ListAccountNoticesResponses = {
+    /**
+     * The account's news.
+     */
+    200: {
+        notices: Array<AccountNotice>;
+    };
+};
+
+export type ListAccountNoticesResponse = ListAccountNoticesResponses[keyof ListAccountNoticesResponses];
 
 export type ListProfilesData = {
     body?: never;

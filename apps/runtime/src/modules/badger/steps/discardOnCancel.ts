@@ -30,7 +30,7 @@ import {
   isEngineShutdownAbort,
   type EngineV2,
   type StepHandlerCtx,
-} from "../../../core/jobs/engineV2";
+} from "@space/runtime-jobs-engine/engineV2";
 import { getBadgerStepDeps } from "./deps";
 
 export const discardFormatOutputsIfCancelled = async (

@@ -12,8 +12,8 @@
  *   with the top bar, where Back on a tab other than Home returns Home (PAR-TV-10). The TV screens are the shared
  *   mobile-shell ones and are tried on a TV; this pins Parrot's order and wiring, and the packaging (launcher entry,
  *   banner, phone-only portrait lock, the separate ParrotTV target and scheme) that makes the same app a TV app. An
- *   unpaid account sees the shared unpaid notice (wipe date, playback stopped, no pay pointer) under the top bar on
- *   every section, sized for the TV (ACCT-UNPAID-03, Chris 2026-11-23).
+ *   unpaid account sees the shared unpaid sign (wipe date and playback stopped as its spoken label, no pay pointer)
+ *   under the top bar on every section, sized for the TV (ACCT-UNPAID-03, UX-NOTICE-08, Chris 2026-11-26).
  * @covers apps/parrot/mobile/src/tv/TvGates.tsx
  * @covers apps/parrot/mobile/src/tv/TvMainShell.tsx
  * @covers apps/parrot/mobile/src/tv/tvPages.tsx
@@ -65,7 +65,7 @@ vi.mock("@space/mobile-shell/tv/TvProfiles", () => ({ TvProfilesView: (_: unknow
 vi.mock("@space/mobile-shell/tv/TvSignIn", () => ({ TvSignInScreen: (_: unknown) => null }));
 vi.mock("../src/tv/TvPlayerSky", () => ({ TvPlayerSky: ({ children }: { children?: React.ReactNode }) => <>{children}</> }));
 vi.mock("@space/mobile-shell/tv/TvTopBar", () => ({ TvTopBar: (_: unknown) => null }));
-vi.mock("@space/mobile-shell/unpaid-access-banner", () => ({ UnpaidAccessBanner: (_: unknown) => null }));
+vi.mock("@space/mobile-shell/unpaid-access-sign", () => ({ UnpaidAccessSign: (_: unknown) => null }));
 vi.mock("@space/mobile-shell/tv/useTvMenuKey", () => ({
   useTvMenuKeyHold: (reason: string, active: boolean) => void h.menuHolds.push([reason, active]),
 }));
@@ -77,6 +77,7 @@ vi.mock("../src/screens/LoginScreen", () => ({ LoginScreen: () => null }));
 vi.mock("../src/state/session", () => ({
   useSession: () => ({ session: h.session, libraryKey: h.libraryKey, access: h.access }),
 }));
+vi.mock("../src/state/notices", () => ({ useParrotNoticeHistory: () => null }));
 vi.mock("../src/tv/useTvPairing", () => ({ useTvPairing: () => ({ state: { status: "idle" }, restart: () => undefined }) }));
 vi.mock("@space/mobile-shell/render-boundary", () => ({ MobileRenderBoundary: ({ children }: { children?: React.ReactNode }) => <>{children}</> }));
 vi.mock("../src/tv/useTvRemoteKeys", () => ({ useTvRemoteKeys: () => void (h.remoteKeys += 1) }));
@@ -123,7 +124,7 @@ import { TvLanguageView } from "@space/mobile-shell/tv/TvLanguage";
 import { TvProfilesView } from "@space/mobile-shell/tv/TvProfiles";
 import { TvSignInScreen } from "@space/mobile-shell/tv/TvSignIn";
 import { TvTopBar } from "@space/mobile-shell/tv/TvTopBar";
-import { UnpaidAccessBanner } from "@space/mobile-shell/unpaid-access-banner";
+import { UnpaidAccessSign } from "@space/mobile-shell/unpaid-access-sign";
 import { LibraryKeyScreen } from "../src/screens/LibraryKeyScreen";
 import { LoginScreen } from "../src/screens/LoginScreen";
 import { TvGates, tvStartScreen } from "../src/tv/TvGates";
@@ -357,16 +358,52 @@ describe("@req PAR-TV-10[parrot-tv] Parrot TV shell: the top bar, the page stack
   });
 });
 
-describe("@req ACCT-UNPAID-03[parrot-tv] Parrot TV: the unpaid notice", () => {
-  it("shows the account's access under the top bar, sized for the TV, whatever section is open", async () => {
+describe("@req ACCT-UNPAID-03[parrot-tv] @req UX-NOTICE-08[parrot-tv] Parrot TV: the unpaid sign", () => {
+  it("shows the account's access as the TV's sign under the top bar, sized for the TV, whatever section is open", async () => {
     h.access = { state: "unpaid", wipeAt: "2027-01-22T00:00:00.000Z" };
     await mount(<TvMainShell />);
-    const banner = props(UnpaidAccessBanner);
-    console.info(`${SUITE} unpaid`, JSON.stringify(banner));
-    expect(banner.access).toEqual(h.access);
-    expect(banner.scale).toBeGreaterThan(0);
+    const sign = props(UnpaidAccessSign);
+    console.info(`${SUITE} unpaid`, JSON.stringify(sign));
+    expect(sign.access).toEqual(h.access);
+    expect(sign.tv).toBe(true);
+    expect(sign.underBar).toBeUndefined();
+    expect(sign.scale).toBeGreaterThan(0);
     await act(async () => void props(TvTopBar).onSelect("settings"));
-    expect(props(UnpaidAccessBanner).access).toEqual(h.access);
+    expect(props(UnpaidAccessSign).access).toEqual(h.access);
+  });
+});
+
+describe("@req ACCT-UNPAID-05[parrot-tv] Parrot TV: the unpaid sign on every page but the player", () => {
+  const banners = () => renderer!.root.findAllByType(UnpaidAccessSign);
+
+  it("an album opened under the bar keeps the notice above it", async () => {
+    console.info(`${SUITE} ACCT-UNPAID-05 album: start`);
+    h.access = { state: "unpaid", wipeAt: "2027-01-22T00:00:00.000Z" };
+    await mount(<TvMainShell />);
+    await act(async () => h.pages!.push({ kind: "album", albumId: "a1" }));
+    console.info(`${SUITE} ACCT-UNPAID-05 album: banners`, banners().length);
+    expect(has(TvAlbumPage)).toBe(true);
+    expect(banners()).toHaveLength(1);
+    expect(banners()[0]!.props.access).toEqual(h.access);
+  });
+
+  it("Who's listening?, full screen, carries its own notice; Now playing and Up next carry none", async () => {
+    console.info(`${SUITE} ACCT-UNPAID-05 full-screen pages: start`);
+    h.access = { state: "unpaid", wipeAt: "2027-01-22T00:00:00.000Z" };
+    await mount(<TvMainShell />);
+    await act(async () => h.pages!.push({ kind: "profiles", mode: "manage" }));
+    // The bar's sign stays mounted under the full-screen page (hidden); Who's listening? adds its own at the safe margin.
+    console.info(`${SUITE} ACCT-UNPAID-05 profiles: signs`, banners().length);
+    expect(banners()).toHaveLength(2);
+    expect(banners()[1]!.props.underBar).toBe(false);
+    for (const sign of banners()) expect(sign.props.access).toEqual(h.access);
+    await act(async () => props(TvProfilesView).onClose!());
+    await act(async () => h.pages!.push({ kind: "nowPlaying" }));
+    await act(async () => h.pages!.push({ kind: "queue" }));
+    // Only the hidden bar's notice is left: the player pages add none.
+    console.info(`${SUITE} ACCT-UNPAID-05 player: banners`, banners().length);
+    expect(has(TvQueuePage)).toBe(true);
+    expect(banners()).toHaveLength(1);
   });
 });
 
