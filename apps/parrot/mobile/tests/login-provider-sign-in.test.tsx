@@ -19,11 +19,11 @@ import i18next from "i18next";
 import type { i18n as I18n } from "i18next";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type * as SharedApi from "@space/shared/api";
-import type * as ProviderRows from "../../../../packages/mobile-shell/src/components/mobile-provider-sign-in-rows";
-import type * as SignInForm from "../../../../packages/mobile-shell/src/components/mobile-password-sign-in-form";
+import type * as ProviderRows from "@space/mobile-shell/provider-sign-in-rows";
+import type * as SignInForm from "@space/mobile-shell/password-sign-in-form";
 import { withSignInErrorTexts } from "@space/shared/signInError";
 import { providerSignInTexts, withProviderSignInTexts } from "@space/shared/providerSignIn";
-import en from "../../../../packages/mobile-shell/src/i18n/en.json";
+import en from "@space/mobile-shell/i18n/en.json";
 import parrotEn from "../src/i18n/en.json";
 
 const h = vi.hoisted(() => ({
@@ -47,7 +47,7 @@ vi.mock("react-native", () => ({
 vi.mock("react-native-svg", () => ({ default: "Svg", Path: "Path", Rect: "Rect" }));
 vi.mock("lucide-react-native", () => ({ ArrowRight: "Icon", Lock: "Icon", Mail: "Icon" }));
 // The shared form is real (its fields are what the screen shows); its inputs and buttons are host elements.
-vi.mock("../../../../packages/mobile-shell/src/components/mobile-auth-form", () => ({
+vi.mock("@space/mobile-shell/auth-form", () => ({
   MobileAuthInput: "MobileAuthInput",
   MobileAuthButton: "MobileAuthButton",
   MobileAuthLink: "MobileAuthLink",

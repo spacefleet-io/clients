@@ -25,4 +25,11 @@ declare module "react-native-sqlite-storage" {
 }
 
 // Inlined at build time by babel-plugin-api-base-url.js; React Native has no `process` otherwise.
-declare const process: { env: { PARROT_API_BASE_URL?: string; PARROT_METADATA_TICKETS?: string; EXPO_PUBLIC_METADATA_URL?: string } };
+declare const process: {
+  env: {
+    PARROT_API_BASE_URL?: string;
+    PARROT_METADATA_TICKETS?: string;
+    EXPO_PUBLIC_METADATA_URL?: string;
+    SF_SIMULATOR_BUILD?: string;
+  };
+};

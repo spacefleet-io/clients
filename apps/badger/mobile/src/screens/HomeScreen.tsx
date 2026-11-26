@@ -13,10 +13,10 @@ import { RootStackParamList } from "../navigation/AppNavigator";
 import { PosterRail } from "../components/PosterRail";
 import { libraryContent } from "@space/shared/libraryContent";
 import { ContinueHero } from "../components/ContinueHero";
-import { homeRailEntries, selectHomeRails, type HomeRailId } from "../lib/homeRails";
+import type { HomeSectionConfig } from "@space/shared/homeLayout";
 import { phoneHomeLayout, seeAllTarget, type SeeAllTarget } from "../lib/phoneHome";
 import { websiteUrl } from "@space/shared/websiteLinks";
-import { useFavoriteIds } from "../lib/useFavoriteIds";
+import { useHomeRails } from "../lib/useHomeRails";
 import { usePullRefreshScroll, usePullToRefresh } from "../lib/usePullToRefresh";
 import { theme } from "../theme/theme";
 
@@ -26,15 +26,15 @@ const MASCOT = require("../assets/mascot.webp");
 const RAIL_CARD_WIDTH = Math.round(Dimensions.get("window").width * 0.34);
 
 type HomeScreenProps = {
-  /** A row's "See all": opens the Library tab on that row's scope, or the Playlists tab for Favorites. */
+  /** A row's "See all": opens the Library tab on that row's scope, or the Playlists tab for Favorites and playlists. */
   onSeeAll?: (target: SeeAllTarget) => void;
 };
 
 /**
- * Home tab (UX-PHONE-01): no page title (the tab bar names the page), the latest started title as a hero card, then
- * rows of posters (recently added, movies, TV shows, favorites) with "See all". Empty: the computer's empty library on
- * the phone (UX-EMPTY-01, UX-PHONE-03), whose one button opens the download page of Badger for computer — only once the
- * library is known to be empty; until then the app's opening screen says "Loading library" (UX-WAIT-04).
+ * Home tab (UX-PHONE-01, UX-HOME-06): no page title (the tab bar names the page), the latest started title as a hero
+ * card, then the rows of the Home layout set on the computer, in its order, with "See all". Empty: the computer's empty
+ * library on the phone (UX-EMPTY-01, UX-PHONE-03), whose one button opens the download page of Badger for computer —
+ * only once the library is known to be empty; until then the app's opening screen says "Loading library" (UX-WAIT-04).
  */
 export const HomeScreen = memo(({ onSeeAll }: HomeScreenProps) => {
   const { t } = useTranslation();
@@ -42,7 +42,7 @@ export const HomeScreen = memo(({ onSeeAll }: HomeScreenProps) => {
   const { settled, error, refresh } = useLibraryStatus();
   const navigation = useNavigation<Nav>();
   const { getMediaDetails } = useLibraryActions();
-  const favoriteIds = useFavoriteIds();
+  const homeRails = useHomeRails(media);
   const pull = usePullToRefresh(refresh);
   const skyScroll = usePullRefreshScroll(pull, useSkyScroll());
 
@@ -51,7 +51,7 @@ export const HomeScreen = memo(({ onSeeAll }: HomeScreenProps) => {
     [navigation],
   );
 
-  const { hero, rails } = useMemo(() => phoneHomeLayout(homeRailEntries(selectHomeRails(media, favoriteIds))), [favoriteIds, media]);
+  const { hero, rails } = useMemo(() => phoneHomeLayout(media, homeRails), [homeRails, media]);
 
   // Resume plays at once: a film, or the episode of a show its title page's Play would (the one the hero names), at
   // the saved position, as on the TV (UX-TV-05).
@@ -63,7 +63,7 @@ export const HomeScreen = memo(({ onSeeAll }: HomeScreenProps) => {
     },
     [getMediaDetails, navigation, openMedia],
   );
-  const seeAll = useCallback((railId: HomeRailId) => onSeeAll?.(seeAllTarget(railId)), [onSeeAll]);
+  const seeAll = useCallback((section: HomeSectionConfig) => onSeeAll?.(seeAllTarget(section)), [onSeeAll]);
 
   const refreshControl = (
     <RefreshControl
@@ -118,12 +118,12 @@ export const HomeScreen = memo(({ onSeeAll }: HomeScreenProps) => {
       {rails.map((rail) => (
         <PosterRail
           key={rail.id}
-          title={t(rail.titleKey)}
+          title={rail.title}
           items={rail.items}
           cardWidth={RAIL_CARD_WIDTH}
           onOpenMedia={openMedia}
           showProgress={rail.showProgress}
-          seeAll={onSeeAll ? { label: t("home.seeAll"), onPress: () => seeAll(rail.id) } : undefined}
+          seeAll={onSeeAll ? { label: t("home.seeAll"), onPress: () => seeAll(rail.section) } : undefined}
           testID={`home-rail-${rail.id}`}
         />
       ))}

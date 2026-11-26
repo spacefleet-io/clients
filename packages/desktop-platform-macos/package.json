@@ -5,7 +5,9 @@
   "type": "module",
   "sideEffects": false,
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./packaging/mac-after-pack-lib": "./packaging/mac-after-pack-lib.mjs",
+    "./packaging/mac-signing-lib": "./packaging/mac-signing-lib.mjs"
   },
   "scripts": {
     "test": "bunx vitest run"

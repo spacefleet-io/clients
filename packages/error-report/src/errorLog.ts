@@ -1,3 +1,4 @@
+import { FEEDBACK_LOG_MAX_BYTES } from "@space/shared/feedback";
 import { scrubText } from "./scrub";
 
 /**
@@ -28,10 +29,7 @@ export function createErrorLog(options: { maxLines?: number; now?: () => Date } 
   };
 }
 
-/** The API's limit for an attached log (feedback route). */
-export const FEEDBACK_LOG_MAX_BYTES = 200 * 1024;
-
-/** The newest part of the log that fits the API's 200 KB. */
+/** The newest part of the log that fits the API's limit (`FEEDBACK_LOG_MAX_BYTES`, 200 KB). */
 export const clampLog = (log: string): string => {
   if (log.length <= FEEDBACK_LOG_MAX_BYTES / 2) return log;
   let out = log;

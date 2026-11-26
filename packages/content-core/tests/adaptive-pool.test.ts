@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { AdaptivePool } from "../src/storageTransport/adaptivePool";
-import { StorageTunnelError } from "../../shared/src/storageTunnel";
+import { StorageTunnelError } from "@space/shared/storageTunnel";
 
 // On assertion failure, dump pool stats + task call count so a retry/circuit
 // mismatch is diagnosable offline. try/catch so a dump failure can't mask the

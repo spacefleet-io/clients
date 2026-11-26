@@ -10,7 +10,7 @@
 //    update zip electron-builder builds next (listed in latest-mac.yml) and the dmg both carry a notarized app.
 import { join } from "node:path";
 
-import { finishMacApp } from "../../../../packages/desktop-platform-macos/packaging/mac-after-pack-lib.mjs";
+import { finishMacApp } from "@space/desktop-platform-macos/packaging/mac-after-pack-lib";
 
 /** @param {{ electronPlatformName: string; appOutDir: string; packager: { appInfo: { productFilename: string } } }} context */
 export default async function afterPack(context) {

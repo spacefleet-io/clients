@@ -130,6 +130,9 @@ describe("integration library metadata (INTG-META-01)", () => {
 
     expect(library.movies).toHaveLength(1);
     const movie = library.movies[0]!;
+    // @req META-SRC-05[badger-jellyfin]: the synced row holds rating 7.6; the title handed to Jellyfin carries none.
+    phase(test, "META-SRC-05", { rowRating: MOVIE.rating, keys: Object.keys(movie) });
+    expect(movie).not.toHaveProperty("rating");
     // The catalog id stays in the library: neither the shortcut folders nor the .nfo files name it (META-SRC-09).
     expect(movie).not.toHaveProperty("catalogId");
     expect(movie).toMatchObject({
@@ -138,7 +141,6 @@ describe("integration library metadata (INTG-META-01)", () => {
       originalTitle: "Arrival",
       year: 2016,
       overview: MOVIE.overview,
-      rating: 7.6,
       genres: ["Drama", "Science Fiction"],
       posterPath: MOVIE.posterPath,
       backdropPath: MOVIE.backdropPath,

@@ -26,10 +26,10 @@ import {
   type UploadResult,
   type CommitResult,
 } from "../src/modules/badger/steps/deps";
-import type { StepHandlerCtx } from "../src/core/jobs/engineV2";
-import { createEngineV2 } from "../src/core/jobs/engineV2";
+import type { StepHandlerCtx } from "@space/runtime-jobs-engine/engineV2";
+import { createEngineV2 } from "@space/runtime-jobs-engine/engineV2";
 import type { IngestJobRecord } from "@space/runtime-jobs";
-import type { StoredStepRecord } from "../src/core/jobs/stepStore";
+import type { StoredStepRecord } from "@space/runtime-jobs-engine/stepStore";
 
 const ts = "2026-01-01T00:00:00.000Z";
 

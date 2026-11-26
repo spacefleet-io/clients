@@ -44,11 +44,16 @@ extension XCTestCase {
   }
 
   /// A fresh app process, silent (REL-ENV-36: the player keeps running at output volume 0) and in English.
+  /// `SMOKE_API_BASE_URL` (the Apple CHECKED and FULL suites, REL-TEST-29/32, run these tests on the Release build a
+  /// TestFlight upload ships) points that build at the lane's API through the `SFSmokeApiBaseUrl` launch argument,
+  /// honoured by simulator builds only, as the release smoke does; without it the app uses its build's own API.
   func launchParrot(language: String = "en") -> XCUIApplication {
     let app = XCUIApplication()
     app.launchEnvironment["SF_SILENT"] = "1"
     app.launchArguments += ["-AppleLanguages", "(\(language))", "-AppleLocale", "\(language)_US"]
-    ParrotLog.line("launch the Parrot target app (runner \(Bundle.main.bundleIdentifier ?? "?")) SF_SILENT=1 language=\(language)")
+    let api = ParrotEnv.value("SMOKE_API_BASE_URL")
+    if let api { app.launchArguments += ["-SFSmokeApiBaseUrl", api] }
+    ParrotLog.line("launch the Parrot target app (runner \(Bundle.main.bundleIdentifier ?? "?")) SF_SILENT=1 language=\(language) api=\(api ?? "the build's own")")
     app.launch()
     ParrotLog.line("launched state=\(app.state.rawValue)")
     return app

@@ -1,7 +1,8 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu, powerMonitor, shell, Tray } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, Menu, Notification, powerMonitor, shell, Tray } from "electron";
 import { appendFileSync, existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { hostname, release } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
+import { notifyLanguage } from "@space/notify-core/texts";
 import { fileURLToPath } from "node:url";
 import { createHash, randomUUID } from "node:crypto";
 import { readFile, stat } from "node:fs/promises";
@@ -20,6 +21,7 @@ import {
   getKeyRotationReadiness,
   getLibraryMetaForKeyStep,
   getSubscription,
+  listAccountNotices,
   listProfiles,
   createProfile,
   updateProfile,
@@ -49,6 +51,7 @@ import { keyOpensProbe } from "@space/pairing-crypto";
 import { paymentPageLang } from "@space/shared/billingCheckout";
 import { createProviderReturnMailbox, providerReturnAddress, type ProviderReturn } from "@space/shared/providerSignIn";
 import { generateLibraryKeyWords } from "@space/shared/libraryKeyWords";
+import { keyStepMetaReadLine, type KeyStepMetaRead } from "@space/shared/keyStepMetaRead";
 import { isPlanId, type BillingPeriod } from "@space/shared/storagePlans";
 import { isAllowedExternalUrl } from "@space/desktop-shell/externalUrl";
 import {
@@ -58,8 +61,13 @@ import {
   attachDevShortcuts,
   buildTrayActions,
   createAppTray,
+  createHiddenJobNotices,
+  createOpenJobsRequest,
   describeAppLink,
+  HIDDEN_JOB_NOTICE_CHANNELS,
   MAIN_SHELL_STRINGS,
+  registerHiddenJobNoticesIpc,
+  systemNoticeShower,
   registerTrayTestIpc,
   resolveAppIdentity,
   resolveTrayIconPath,
@@ -70,7 +78,10 @@ import {
 import { getDesktopPlatform } from "@space/desktop-platform";
 import { PARROT_IDENTITY, parrotLinks } from "./appIdentity";
 import { probeHostCapacity } from "@space/desktop-platform/host-capacity";
-import { decideFallbackCopy, fallbackCopyReason } from "@space/shared/transcodeHardware";
+import { decideFallbackCopy, decideUploadsDuringPlayback, fallbackCopyReason } from "@space/shared/transcodeHardware";
+import { createUploadPlaybackGate, isUploadsDuringPlayback, PLAYBACK_LEASE_MS_DEFAULT } from "@space/content-core/uploadPlaybackGate";
+import { isTerminalIngestJobStatus, type IngestJobRecord } from "@space/runtime-jobs";
+import { createEngineV2 } from "@space/runtime-jobs-engine/engineV2";
 import { PRODUCTION_API_BASE_URL } from "@space/shared/productionApi";
 import { accountLanguageOf } from "@space/shared/accountLanguage";
 import { isAccountLanguage } from "@space/shared/i18n";
@@ -86,14 +97,14 @@ import {
   publishLibrarySnapshot,
   reencryptLibrariesForRotation,
   sealLibrarySnapshot,
-  type FetchedLibrarySnapshot,
 } from "@space/library-db-runtime/snapshotTransport";
 import { rewriteLibraryBytesForReseal } from "@space/library-db-runtime/resealSnapshot";
 import { registerNodeSqlite } from "@space/library-db-runtime/nodeSqlite";
 import { createParrotKeyChange } from "./keyChange";
-import { deleteStorageObjects, downloadStorageObjectViaTunnel, uploadStorageObjectViaTunnel } from "@space/library-db-runtime/api";
+import { deleteStorageObjects, downloadStorageObjectViaTunnel, uploadStorageObjectViaTunnel, watchLibraryTunnelWarnings } from "@space/library-db-runtime/api";
 import { decryptBase64ToBytes } from "@space/library-db-runtime/crypto";
-import { checkKeyAgainstAccount, makeAccountKey } from "./libraryKeyCheck";
+import { KEY_CHECK_APP_IDS, makeAccountKey } from "./makeAccountKey";
+import { checkKeyAgainstAccount, type AccountKeyResult } from "@space/desktop-shell/account-key-check";
 import { createParrotExportJobs } from "./exportJobs";
 import { checkKeptLibraryKey } from "@space/desktop-shell/library-kept-key";
 import { serveStorageUnitBase } from "@space/desktop-shell/storage-units";
@@ -179,7 +190,11 @@ import {
   type ParrotCoverImage,
   type ParrotImportScan,
   getParrotFile,
-  importParrotFiles,
+  createParrotImportSession,
+  registerParrotImportHandlers,
+  runParrotImport,
+  PARROT_IMPORT_APP,
+  type ParrotImportSession,
   listParrotAlbums,
   listParrotArtists,
   listParrotPlaylists,
@@ -208,6 +223,7 @@ import {
   type ParrotImportJob,
   importJobRetryable,
   type ParrotImportRetry,
+  type ParrotUploadsWhilePlaying,
   type ParrotBillingResult,
   type ParrotCheckoutInput,
   type ParrotCreateKeyResult,
@@ -219,7 +235,6 @@ import {
   type ParrotImportPicture,
   type ParrotImportSelection,
   type ParrotImportStatus,
-  type ParrotKeyResult,
   type ParrotDeletePreview,
   type ParrotEditValues,
   type ParrotFetchLyricsResult,
@@ -251,7 +266,20 @@ import { createParrotPairingApprover } from "./pairingApprove";
 import { completeParrotKeyPairing, completeParrotPairedSignIn, type ParrotPairedSignInDeps } from "./pairedSignIn";
 import { createDesktopStreamSlots } from "./streamSlot";
 import { importCoverOf, PARROT_MUSIC_ID, searchParrotImportAlbums } from "./importSearch";
-import { importEnded, importStopError, restoreImportJobs, retrySources, withSourcesMissing, type StoredImportJob } from "./importJobs";
+import {
+  importEnded,
+  importResumeRecord,
+  importSongRows,
+  importStopError,
+  readImportResume,
+  restoreImportJobs,
+  resumePlan,
+  retrySources,
+  withSourcesMissing,
+  type ParrotImportResume,
+  type ParrotImportResumeRecord,
+  type StoredImportJob,
+} from "./importJobs";
 import { createDesktopPairingClient, pairingRefusalOf, resolveDeviceName } from "@space/desktop-shell/pairing-main";
 import { SIBLING_SIGN_IN_ARG, armSiblingHiddenQuit, isSiblingSignInLaunch, type SiblingHiddenQuit } from "@space/desktop-shell/sibling-main";
 import { SIBLING_IPC, type SiblingSignInResult } from "@space/desktop-shell/sibling";
@@ -284,7 +312,13 @@ setApiClientType(CLIENT_TYPE);
 // REL-CD-29: every API call says which build is calling (`parrot/desktop/0.1.3`, `+flatpak`/`+appimage`/`+system` on
 // Linux). The window reaches the API only through this process, so the main process alone states it.
 setClientIdentity(
-  desktopClientIdentity({ app: "parrot", version: app.getVersion(), packaged: app.isPackaged, os: process.platform, env: process.env }),
+  desktopClientIdentity({
+    app: "parrot",
+    version: app.getVersion(),
+    packaged: app.isPackaged,
+    os: getDesktopPlatform().id,
+    env: process.env,
+  }),
 );
 
 // PLAT-DESK-14: every release keeps `<appData>/spaceparrot` (the dir existing installs use, on every OS); a development
@@ -318,6 +352,8 @@ const errorText = (error: unknown) => (error instanceof Error ? error.message : 
 // REL-LOG-31: one line per failed API call of this process (the window reaches the API only through it), with the
 // server's request id so the server's line about it is found by one search. The main log only, never a report.
 logFailedApiCalls(({ status, code, requestId }) => log(`[api] call failed status=${status} code=${code} requestId=${requestId}`));
+// PAR-UP-12: a storage transfer's retries, resumes and fallbacks (ids, keys and messages only), so a slow upload says why.
+watchLibraryTunnelWarnings((event, payload) => log(`[tunnel] ${event} ${JSON.stringify(payload)}`));
 // UX-SUP-05: the newest warning and error lines (scrubbed as recorded), sent only with feedback the user attaches it to.
 const errorLog = createErrorLog();
 /** A failure line: the main log, and the error log feedback can carry. */
@@ -329,7 +365,7 @@ const fail = (line: string) => {
 log(`[parrot] start v${app.getVersion()} ${process.platform}-${process.arch} api=${apiBaseUrl} devBuild=${isDevBuild} userData=${userDataDir}`);
 // STOR-UNIT-01: storage figures follow this computer's file manager (1024 on Windows and KDE, 1000 elsewhere); the
 // preload reads the base synchronously so the window sets it before its first render.
-serveStorageUnitBase(ipcMain, { platform: process.platform, desktop: process.env.XDG_CURRENT_DESKTOP, log });
+serveStorageUnitBase(ipcMain, { platform: getDesktopPlatform().id, desktop: process.env.XDG_CURRENT_DESKTOP, log });
 // REL-ENV-36: an agent's lane run or a test launch (SF_SILENT=1) never sends a sound stream to the sound server, even
 // when started without the harness's Chromium flags (an AppImage by hand). The user's own run is untouched.
 const silentSwitches = applySilentAudio(app.commandLine, process.env);
@@ -441,6 +477,21 @@ const showMainWindow = () => {
   if (!mainWindow) return createWindow();
   revealWindow(mainWindow);
 };
+// UX-NOTICE-06: an import or export that ends while nobody sees the window (closed to the tray, minimised) shows one
+// system notification; its click brings the window back with Jobs open.
+const openJobsRequest = createOpenJobsRequest(() => mainWindow?.webContents.send(HIDDEN_JOB_NOTICE_CHANNELS.openJobs));
+const hiddenJobNotices = createHiddenJobNotices({
+  file: join(userDataDir, "system-notifications.json"),
+  isWindowHidden: () => !mainWindow || mainWindow.isDestroyed() || !mainWindow.isVisible() || mainWindow.isMinimized(),
+  language: () => notifyLanguage(store?.setup.language),
+  show: systemNoticeShower(Notification),
+  openJobs: () => {
+    showMainWindow();
+    openJobsRequest.request();
+  },
+  log,
+});
+registerHiddenJobNoticesIpc(ipcMain, hiddenJobNotices, openJobsRequest);
 const appTray = createAppTray({
   createTray: (iconPath) => new Tray(iconPath),
   buildMenu: (items) => Menu.buildFromTemplate(items),
@@ -527,6 +578,10 @@ const exportJobs = createParrotExportJobs({
       });
     }),
   emit: (jobs) => mainWindow?.webContents.send(PARROT_IPC.exportJobsEvent, jobs),
+  // UX-NOTICE-06: an export that ends while nobody sees the window; a cancelled one tells nothing.
+  onEnded: (job) => {
+    if (job.phase === "done" || job.phase === "failed") hiddenJobNotices.jobEnded({ kind: "export", outcome: job.phase, name: basename(job.dest) });
+  },
   log,
 });
 
@@ -585,7 +640,11 @@ const applyStartAtLogin = (on: boolean) => {
 const closeLibrary = () => setLibrary(null);
 
 const resetToSignIn = (reason: SignedOutReason) => {
-  void store.signOut(reason).catch((error: unknown) => fail(`[store] signed-out state not saved: ${errorText(error)}`));
+  // RT-JOBS-07: the signed-out account's queued import jobs wait for its next sign-in.
+  void store.signOut(reason).then(
+    () => parrotJobs.sessionChanged(),
+    (error: unknown) => fail(`[store] signed-out state not saved: ${errorText(error)}`)
+  );
   // ACCT-PAIR-07: signed out, Badger on this computer is offered nothing.
   void siblingHost.setAccount(null);
   closeLibrary();
@@ -677,6 +736,60 @@ log(
   `[light-copy] ${lightCopyHardware.cores} cores, ${lightCopyHardware.ramGB} GB: songs over 90 minutes ` +
     (lightCopyLongSongs ? "get their light copy automatically" : `wait for a stronger computer (${fallbackCopyReason(lightCopyHardware)})`)
 );
+/**
+ * PAR-UP-13: imports run as jobs on the job engine Badger's runtime runs (RT-JOBS-02): each song a source job (probe →
+ * identify → extract → upload → commit) and its light copy a format job, with Badger's lanes, caps and host clamp.
+ * The jobs live in userData/parrot-jobs.sqlite, so an import Parrot quit in the middle of resumes at the next start
+ * (RT-LIFE-04); a job runs only while its account is the signed-in one (RT-JOBS-07).
+ */
+const parrotJobs = createEngineV2({
+  dbPath: join(userDataDir, "parrot-jobs.sqlite"),
+  validateEvents: false,
+  hostCpuCount: lightCopyHardware.cores,
+  session: { activeUserId: () => store.user?.id ?? null, apiOrigin: () => new URL(apiBaseUrl).origin },
+});
+let parrotJobsStarted: Promise<void> | null = null;
+const importLightDir = join(userDataDir, "import-light");
+const importResumeDir = join(userDataDir, "import-resume");
+const importResumeFile = (importId: string) => join(importResumeDir, `${importId}.json`);
+/** Each running import's session, by import id: its jobs' steps wait for it (a resumed import's open after the start). */
+const importSessions = new Map<string, PromiseWithResolvers<ParrotImportSession>>();
+const importSessionOf = (importId: string): PromiseWithResolvers<ParrotImportSession> => {
+  let slot = importSessions.get(importId);
+  if (!slot) {
+    slot = Promise.withResolvers<ParrotImportSession>();
+    slot.promise.catch(() => undefined);
+    importSessions.set(importId, slot);
+  }
+  return slot;
+};
+registerParrotImportHandlers(
+  parrotJobs,
+  (job) => importSessionOf(job.groupId).promise,
+  (job) => join(importLightDir, `${job.jobId}.light`)
+);
+
+/**
+ * PAR-UP-15: what imports do while a song plays here, through content-core's gate (Badger's, #25): the window says a
+ * song plays (renewed every few seconds, so a window that died stops holding uploads), this computer's setting (or
+ * the shared hardware rule's recommendation) says full, throttle or pause.
+ */
+const uploadGate = createUploadPlaybackGate();
+let songPlaying = false;
+let uploadGateLogged = "";
+const uploadsWhilePlaying = (): ParrotUploadsWhilePlaying => {
+  const recommended = decideUploadsDuringPlayback(lightCopyHardware);
+  const picked = store.uploadsWhilePlaying;
+  return { mode: picked ?? recommended, recommended, picked: picked !== null };
+};
+const applyUploadGate = () => {
+  uploadGate.update({ mode: uploadsWhilePlaying().mode, playbackActive: songPlaying, leaseMs: PLAYBACK_LEASE_MS_DEFAULT });
+  const { mode, playbackActive, effective } = uploadGate.getState();
+  const line = JSON.stringify({ mode, playbackActive, effective });
+  if (line !== uploadGateLogged) log(`[upload-gate] ${line}`);
+  uploadGateLogged = line;
+};
+
 const lightCopyAbort = new AbortController();
 let lightCopyBackfillFor: string | null = null;
 const startLightCopyBackfill = () => {
@@ -863,7 +976,8 @@ const accountImportJobs = (): ParrotImportJob[] =>
 const sendImportJobs = (save: boolean) => {
   if (save) {
     try {
-      writeFileSync(importJobsFile, JSON.stringify(importJobs));
+      // The per-song rows are the engine's (UX-JOBS-02), read again while the import runs: never written here.
+      writeFileSync(importJobsFile, JSON.stringify(importJobs, (key, value: unknown) => (key === "songs" ? undefined : value)));
     } catch (error) {
       fail(`[import] jobs list not saved: ${errorText(error)}`);
     }
@@ -966,8 +1080,13 @@ const setImportStatus = (next: ParrotImportStatus, failures?: ParrotImportJob["f
   const ended = importEnded(next.phase) && !next.running;
   if (ended) {
     job.finishedAt = Date.now();
+    delete job.songs;
     currentImportJob = null;
     log(`[import] job ${job.id} ${next.phase}: ${next.imported} added, ${next.skipped} already there, ${next.failed} failed`);
+    // UX-NOTICE-06: told by a system notification when nobody sees the window; a cancelled import tells nothing.
+    if (next.phase !== "cancelled") {
+      hiddenJobNotices.jobEnded({ kind: "import", outcome: next.phase === "done" ? "done" : "failed", name: job.sources[0] ? basename(job.sources[0]) : null });
+    }
   }
   sendImportJobs(phaseChanged || ended || albumsChanged);
 };
@@ -1014,6 +1133,8 @@ const loadLibrary = async (): Promise<ParrotLibraryResult> => {
   // The tickets are asked for once the library loads after sign-in, never by a first lookup (META-ANON-02).
   startLookup();
   void keeping?.reconcile();
+  // PAR-UP-13: an import Parrot quit in the middle of runs on.
+  void resumeImports().catch((error: unknown) => fail(`[import] could not resume: ${errorText(error)}`));
   // An import publishes song after song: a lookup pass publishing meanwhile only races it (each side then replays on
   // the other's snapshot). The import's end starts them.
   if (!importStatus.running) {
@@ -1959,6 +2080,8 @@ const matchImportAlbum = async (question: unknown): Promise<ParrotImportAlbumMat
       log,
       // PAR-META-03: the library's albums pull a song into their empty slots and keep their edition.
       library,
+      // PAR-UP-11: "Import as is" ends a lookup's wait before asking again.
+      signal: lookup.signal,
     });
     if (lookup.signal.aborted || pendingScan !== scan) {
       log(`[import] match ${id}: stopped, ${entries.length} song(s) imported as is`);
@@ -2286,10 +2409,55 @@ const confirmImport = (selection: ParrotImportSelection): ParrotImportStatus => 
     return importStatus;
   }
   // UX-JOBS-01: the files the scan could not read are this import's first failed files.
-  const unreadable = scan.unreadable;
+  runImport({
+    importId: currentImportJob?.id ?? randomUUID(),
+    files,
+    edits,
+    folders: scan.folders,
+    unreadable: scan.unreadable,
+    pictures: reviewPictures,
+    reviewPhotos,
+    token,
+    key,
+    user,
+  });
+  return importStatus;
+};
+
+type ImportRun = {
+  importId: string;
+  files: string[];
+  edits: ReadonlyMap<string, ParrotImportEdit>;
+  folders: string[];
+  unreadable: Array<{ file: string; error: string }>;
+  /** PAR-UP-08: the pictures the review could choose; the import takes the chosen ones from here. */
+  pictures: ReadonlyMap<string, ParrotCoverImage>;
+  /** PAR-UP-06: the photos the review already fetched are the import's first answer for those artists. */
+  reviewPhotos: ReadonlyMap<string, Promise<ParrotImportArtistPhoto>>;
+  token: string;
+  key: string;
+  user: { id: string };
+  /** PAR-UP-13: the jobs of an import Parrot quit in the middle of, resumed instead of submitted. */
+  resumed?: IngestJobRecord[];
+};
+
+/** PAR-UP-13: the review's decisions, kept while the import runs so it resumes after a quit. */
+const writeImportResume = (record: ParrotImportResumeRecord) => {
+  try {
+    mkdirSync(importResumeDir, { recursive: true });
+    writeFileSync(importResumeFile(record.importId), JSON.stringify(record));
+  } catch (error) {
+    fail(`[import] resume record for ${record.importId} not saved, the import cannot resume after a quit: ${errorText(error)}`);
+  }
+};
+const removeImportResume = (importId: string) => rmSync(importResumeFile(importId), { force: true });
+
+/** Uploads the confirmed (or resumed) songs on the job engine, then reloads, as the import's end. */
+const runImport = (input: ImportRun) => {
+  const { importId, files, edits, folders, unreadable, pictures, reviewPhotos, token, key, user, resumed } = input;
   setImportStatus({ ...idleImport, running: true, phase: "uploading", total: files.length, failed: unreadable.length }, unreadable);
+  if (!resumed) writeImportResume(importResumeRecord({ importId, userId: user.id, files, edits, folders, unreadable, pictures }));
   loudnessGate.pause();
-  const folders = scan.folders;
   // PAR-LYR-06: a song whose lyrics the import could not ask says "Looking for lyrics…" until the pass after it.
   const lyricsHolds: Array<{ release: () => void }> = [];
   const importingAlbums: string[] = [];
@@ -2297,11 +2465,16 @@ const confirmImport = (selection: ParrotImportSelection): ParrotImportStatus => 
   const run = new AbortController();
   importRun = run;
   void (async () => {
+    const sessionSlot = importSessionOf(importId);
     try {
-      const covers = await importCovers([...edits.values()], reviewPictures);
+      const covers = await importCovers([...edits.values()], pictures);
       // PAR-FMT-01: songs are stored in parts only once the API turns it on for this account (`PARROT_SPLIT_ORIGINALS`).
       const { splitOriginals = false } = await getLibraryMeta(token, PARROT_APP_ID);
-      const result = await importParrotFiles(files, {
+      const sizes = await Promise.all(files.map((file) => stat(file).then((info) => info.size, () => 0)));
+      const session = createParrotImportSession(files, {
+        sizes,
+        // PAR-UP-15: the import's chunks (and light-copy encodes) follow this computer's uploads-while-playing gate.
+        uploadGate,
         token,
         roots: folders,
         userId: user.id,
@@ -2346,6 +2519,10 @@ const confirmImport = (selection: ParrotImportSelection): ParrotImportStatus => 
             running: true,
           }),
       });
+      await session.open();
+      sessionSlot.resolve(session);
+      // PAR-UP-13: each song's jobs run on the lasting engine; the user's stop cancels them, a quit leaves them queued.
+      const result = await runParrotImport({ engine: parrotJobs, session, userId: user.id, importId, files, light: true, signal: run.signal, resumed });
       for (const failure of result.failed) fail(`[import] failed: ${failure.file}: ${failure.error}`);
       log(`[import] done: ${result.imported.length} imported, ${result.skipped.length} already there, ${result.failed.length} failed`);
       // The library the last publish left is the server's (#2509): kept and filled from here, not read back again.
@@ -2370,6 +2547,7 @@ const confirmImport = (selection: ParrotImportSelection): ParrotImportStatus => 
         [...unreadable, ...result.failed]
       );
     } catch (error) {
+      sessionSlot.reject(error);
       if (run.signal.aborted && !importAbort.signal.aborted) {
         log(`[import] stopped by the user: ${importStatus.imported} added, ${importStatus.skipped} already there before the stop`);
         // A publish already taken (#2509) is shown first, so the reload never races its patch.
@@ -2382,6 +2560,9 @@ const confirmImport = (selection: ParrotImportSelection): ParrotImportStatus => 
       }
     } finally {
       if (importRun === run) importRun = null;
+      importSessions.delete(importId);
+      // A quit keeps the record: the import resumes from it at the next start (PAR-UP-13).
+      if (!importAbort.signal.aborted) removeImportResume(importId);
     }
     // The lookups and the measured loudness wait for imports (PAR-LYR-01, PAR-META-15, PAR-PLAY-03): they run now,
     // whatever the import's outcome.
@@ -2395,44 +2576,145 @@ const confirmImport = (selection: ParrotImportSelection): ParrotImportStatus => 
   return importStatus;
 };
 
+/** UX-KEY-02: every key-step meta read is logged as one anonymous line (outcome, time, attempts, why it failed). */
+const logKeyStepMetaRead = (read: KeyStepMetaRead) => (read.outcome === "ok" ? log : fail)(keyStepMetaReadLine(read));
+const readKeyProbe = async (token: string) =>
+  (await getLibraryMetaForKeyStep(token, PARROT_APP_ID, { onRead: logKeyStepMetaRead })).keyProbe ?? null;
+
 /**
- * Whether `key` is the account's key, checked with `token` (see `checkKeyAgainstAccount`); stores nothing, except
- * that an account with no key at all is claimed: Parrot's first (empty) library is published with the key, which
- * writes the account's key probe, so Badger and every other device check their keys against it (PRIV-KEY-01).
- * `onParrotLibrary` gets the opened Parrot library when there is one (the key step keeps it open).
+ * PAR-UP-13 / RT-LIFE-04: at the first library load of an account, its import Parrot quit in the middle of runs on
+ * from its jobs: the newest one whose resume record is there (its review's decisions); its songs already in count
+ * as done. Every other import of the account left unfinished has its waiting jobs dropped (its card says to import
+ * it again, UX-JOBS-03).
  */
-const verifyLibraryKey = (
-  token: string,
-  key: string,
-  onParrotLibrary?: (snapshot: FetchedLibrarySnapshot) => void,
-): Promise<ParrotKeyResult> =>
-  checkKeyAgainstAccount(
-    key,
-    {
-      fetchSnapshot: (appId) => fetchLibrarySnapshot({ token, keyBase64: key, appId }),
-      fetchKeyProbe: async () => (await getLibraryMetaForKeyStep(token, PARROT_APP_ID)).keyProbe ?? null,
-      decryptProbe: decryptBase64ToBytes,
-      claimAccount: async (claimed) => {
-        const empty = openParrotLibrary(null);
-        try {
-          const published = await publishLibrarySnapshot({
-            token,
-            keyBase64: claimed,
-            dbBytes: serializeParrotLibrary(empty),
-            baseVersion: 0,
-            appId: PARROT_APP_ID,
-            opStreamVersion: PARROT_OP_STREAM_VERSION,
-          });
-          log(`[key] first Parrot library published as v${published.version}: the account's key probe is written`);
-        } finally {
-          empty.close();
-        }
+let resumeCheckedFor: string | null = null;
+const resumeImports = async () => {
+  const user = store.user;
+  const token = store.token();
+  const key = store.libraryKey();
+  if (!user || !token || !key || !parrotJobsStarted || resumeCheckedFor === user.id) return;
+  resumeCheckedFor = user.id;
+  await parrotJobsStarted;
+  const { jobs } = await parrotJobs.list({ app: PARROT_IMPORT_APP });
+  const plan = resumePlan(jobs, user.id, (importId) => existsSync(importResumeFile(importId)));
+  const drop = (dropped: IngestJobRecord[], why: string) => {
+    for (const job of dropped) {
+      importSessionOf(job.groupId).reject(new Error(why));
+      void parrotJobs.cancel(job.jobId, "import-not-resumed").catch(() => undefined);
+    }
+    if (dropped.length > 0) log(`[import] ${dropped.length} unfinished job(s) dropped: ${why}`);
+  };
+  drop(plan.drop, "an older import, or one without its resume record");
+  if (!plan.resume) return;
+  const { importId } = plan.resume;
+  let record: ParrotImportResume | null = null;
+  try {
+    record = readImportResume(JSON.parse(readFileSync(importResumeFile(importId), "utf8")));
+  } catch (error) {
+    fail(`[import] resume record of ${importId} unreadable: ${errorText(error)}`);
+  }
+  const unfinished = plan.resume.jobs.filter((job) => !isTerminalIngestJobStatus(job.status));
+  if (!record || record.userId !== user.id || importStatus.running || importStatus.phase === "review") {
+    drop(unfinished, record ? "another import is running" : "its resume record is unreadable");
+    removeImportResume(importId);
+    return;
+  }
+  const stored = importJobs.find((job) => job.id === importId) ?? {
+    id: importId,
+    userId: user.id,
+    sources: record.folders,
+    startedAt: Date.now(),
+    finishedAt: null,
+    status: importStatus,
+    failures: [],
+  };
+  stored.finishedAt = null;
+  currentImportJob = stored;
+  importJobs = [stored, ...importJobs.filter((job) => job !== stored)].slice(0, IMPORT_JOBS_KEPT);
+  log(`[import] job ${importId} resumed: ${record.files.length} song(s), ${unfinished.length} of ${plan.resume.jobs.length} job(s) not ended`);
+  runImport({ ...record, reviewPhotos: new Map(), token, key, user, resumed: plan.resume.jobs });
+};
+
+/** UX-JOBS-02: the running import's per-song rows, read from the engine as its jobs move (at most every 250 ms). */
+let songRowsTimer: NodeJS.Timeout | null = null;
+const refreshSongRows = () => {
+  if (songRowsTimer) return;
+  songRowsTimer = setTimeout(() => {
+    songRowsTimer = null;
+    const job = currentImportJob;
+    if (!job || !importStatus.running) return;
+    void parrotJobs.list({ app: PARROT_IMPORT_APP, groupId: job.id }).then(
+      ({ jobs }) => {
+        if (currentImportJob !== job || !importStatus.running) return;
+        job.songs = importSongRows(jobs);
+        sendImportJobs(false);
       },
-      log,
-      fail,
+      (error: unknown) => fail(`[import] song rows not read: ${errorText(error)}`)
+    );
+  }, 250);
+};
+parrotJobs.subscribe(() => refreshSongRows());
+
+/** A job of the running import (a song's own or its light copy), or null. */
+const runningImportSongJob = async (jobId: string): Promise<IngestJobRecord | null> => {
+  const current = currentImportJob;
+  if (!current || !importStatus.running) return null;
+  const found = await parrotJobs.get(jobId);
+  return found && found.job.app === PARROT_IMPORT_APP && found.job.groupId === current.id ? found.job : null;
+};
+
+/** UX-JOBS-02 "Try again" on a song's row: only while its import runs (after, the card's "Import again" does it). */
+const retryImportSong = async (jobId: string): Promise<boolean> => {
+  const job = await runningImportSongJob(jobId);
+  if (!job || (job.status !== "failed" && job.status !== "cancelled")) {
+    log(`[import] song job ${jobId} not tried again: ${job ? job.status : "not in the running import"}`);
+    return false;
+  }
+  const { retried, reason } = await parrotJobs.retry(jobId, { steps: "unfinished" });
+  log(`[import] song job ${jobId} (${job.kind}) ${retried ? "tried again" : `not tried again: ${reason}`}`);
+  return retried;
+};
+
+/** UX-JOBS-02: the X on a song's row stops that job (a song's own job takes its light copy with it). */
+const cancelImportSong = async (jobId: string): Promise<boolean> => {
+  const job = await runningImportSongJob(jobId);
+  if (!job || isTerminalIngestJobStatus(job.status)) return false;
+  const { cancelledIds } = await parrotJobs.cancel(jobId, "user-cancelled");
+  log(`[import] song job ${jobId} (${job.kind}) stopped by the user: ${cancelledIds.length} job(s) cancelled`);
+  return cancelledIds.length > 0;
+};
+
+/**
+ * Whether `key` is the account's key, checked with `token` (the desktops' shared `checkKeyAgainstAccount`); stores
+ * nothing, except that an account with no key at all is claimed: Parrot's first (empty) library is published with the
+ * key, which writes the account's key probe, so Badger and every other device check their keys against it
+ * (PRIV-KEY-01). The library itself is opened later, by `loadLibrary`, once the key is kept.
+ */
+const verifyLibraryKey = (token: string, key: string): Promise<AccountKeyResult> =>
+  checkKeyAgainstAccount(key, {
+    appIds: KEY_CHECK_APP_IDS,
+    fetchSnapshot: (appId) => fetchLibrarySnapshot({ token, keyBase64: key, appId }),
+    fetchKeyProbe: () => readKeyProbe(token),
+    decryptProbe: decryptBase64ToBytes,
+    claimAccount: async (claimed) => {
+      const empty = openParrotLibrary(null);
+      try {
+        const published = await publishLibrarySnapshot({
+          token,
+          keyBase64: claimed,
+          dbBytes: serializeParrotLibrary(empty),
+          baseVersion: 0,
+          appId: PARROT_APP_ID,
+          opStreamVersion: PARROT_OP_STREAM_VERSION,
+        });
+        log(`[key] first Parrot library published as v${published.version}: the account's key probe is written`);
+      } finally {
+        empty.close();
+      }
     },
-    onParrotLibrary,
-  );
+    log,
+    fail,
+  });
 
 const storeLibraryKey = async (key: string) => {
   await store.setLibraryKey(key);
@@ -2440,13 +2722,11 @@ const storeLibraryKey = async (key: string) => {
   readingChunkLoader.clear();
 };
 
-const checkLibraryKey = async (raw: string): Promise<ParrotKeyResult> => {
+const checkLibraryKey = async (raw: string): Promise<AccountKeyResult> => {
   const token = store.token();
   if (!token) return { ok: false, error: "network", message: "not signed in" };
   const key = raw.replace(/\s+/g, "");
-  const verdict = await verifyLibraryKey(token, key, (snapshot) => {
-    setLibrary({ db: openParrotLibrary(snapshot.dbBytes), version: snapshot.snapshotVersion });
-  });
+  const verdict = await verifyLibraryKey(token, key);
   if (!verdict.ok) return verdict;
   await storeLibraryKey(key);
   return { ok: true };
@@ -2458,11 +2738,11 @@ const checkLibraryKey = async (raw: string): Promise<ParrotKeyResult> => {
  */
 const createLibraryKey = async (): Promise<ParrotCreateKeyResult> => {
   const token = store.token();
-  if (!token) return { ok: false, error: "network", message: "not signed in" };
+  if (!token) return { ok: false, error: "network", message: "not signed in", errorClass: "session" };
   const newKey = generateLibraryKeyWords(store.setup.language);
   return makeAccountKey(newKey, {
     fetchSnapshot: (appId) => fetchLibrarySnapshot({ token, keyBase64: newKey.keyBase64, appId }),
-    fetchKeyProbe: async () => (await getLibraryMetaForKeyStep(token, PARROT_APP_ID)).keyProbe ?? null,
+    fetchKeyProbe: () => readKeyProbe(token),
     log,
     fail,
   });
@@ -2587,6 +2867,16 @@ const registerBillingIpc = () => {
       };
     }),
   );
+  ipcMain.handle(PARROT_IPC.getAccountAccess, () =>
+    billingCall("access", async (token) => {
+      const me = await getMe(token);
+      const access = me.access ?? me.user.access ?? null;
+      log(`[account] access: ${access?.state ?? "none"}`);
+      return access;
+    }),
+  );
+  // UX-NOTICE-05: the account's news for the bell, read by the window now, every minute and when it comes back.
+  ipcMain.handle(PARROT_IPC.listAccountNotices, () => billingCall("notices", (token) => listAccountNotices(token)));
   ipcMain.handle(PARROT_IPC.getBillingStatus, () =>
     billingCall("status", async (token) => {
       const status = await getBillingStatus(token);
@@ -2763,6 +3053,7 @@ const registerIpc = () => {
     }
     await store.signIn({ id: session.user.id, email: session.user.email }, session.token);
     sessionChecked = Promise.resolve();
+    parrotJobs.sessionChanged();
     publishSiblingAccount();
     return { id: session.user.id, email: session.user.email };
   };
@@ -2771,7 +3062,7 @@ const registerIpc = () => {
     try {
       const session = await login(email, input.password, input.twoFactorCode?.trim() || undefined, undefined, {
         deviceType: "desktop",
-        deviceName: resolveDeviceName(hostname()),
+        deviceName: resolveDeviceName(hostname(), getDesktopPlatform().id),
       });
       const user = await acceptSession(session);
       log(`[auth] signed in as user ${session.user.id}`);
@@ -2886,7 +3177,7 @@ const registerIpc = () => {
           String(input.verifier),
           input.twoFactorCode?.trim() || undefined,
           input.resendTwoFactor === true ? true : undefined,
-          { deviceType: "desktop", deviceName: resolveDeviceName(hostname()) }
+          { deviceType: "desktop", deviceName: resolveDeviceName(hostname(), getDesktopPlatform().id) }
         );
         const user = await acceptSession(session);
         log(`[provider-sign-in] signed in as user ${session.user.id}`);
@@ -2908,6 +3199,7 @@ const registerIpc = () => {
   const signInPairing = createDesktopPairingClient({
     getApiBaseUrl: () => apiBaseUrl,
     appId: PARROT_APP_ID,
+    platform: getDesktopPlatform().id,
     log: (message, extra) => log(`[pairing] ${message} ${JSON.stringify(extra ?? {})}`),
     sessionToken: () => store.token(),
   });
@@ -2922,6 +3214,7 @@ const registerIpc = () => {
     signIn: async (user, token) => {
       await store.signIn(user, token);
       sessionChecked = Promise.resolve();
+      parrotJobs.sessionChanged();
       publishSiblingAccount();
     },
     storeKey: storeLibraryKey,
@@ -3103,6 +3396,20 @@ const registerIpc = () => {
   ipcMain.handle(PARROT_IPC.getImportJobs, () => accountImportJobs());
   ipcMain.handle(PARROT_IPC.dismissImportJob, (_event, id: unknown) => dismissImportJob(String(id)));
   ipcMain.handle(PARROT_IPC.retryImportJob, (_event, id: unknown) => retryImportJob(String(id)));
+  ipcMain.handle(PARROT_IPC.retryImportSong, (_event, jobId: unknown) => retryImportSong(String(jobId)));
+  ipcMain.handle(PARROT_IPC.cancelImportSong, (_event, jobId: unknown) => cancelImportSong(String(jobId)));
+  ipcMain.handle(PARROT_IPC.getUploadsWhilePlaying, () => uploadsWhilePlaying());
+  ipcMain.handle(PARROT_IPC.setUploadsWhilePlaying, async (_event, mode: unknown) => {
+    if (!isUploadsDuringPlayback(mode)) return uploadsWhilePlaying();
+    await store.setUploadsWhilePlaying(mode);
+    log(`[upload-gate] uploads while playing set to ${mode} (recommended here: ${uploadsWhilePlaying().recommended})`);
+    applyUploadGate();
+    return uploadsWhilePlaying();
+  });
+  ipcMain.on(PARROT_IPC.playbackActive, (_event, active: unknown) => {
+    songPlaying = active === true;
+    applyUploadGate();
+  });
   ipcMain.handle(PARROT_IPC.findImportJobFolder, (_event, id: unknown) => findImportJobFolder(String(id)));
   ipcMain.handle(PARROT_IPC.previewExport, () => exportJobs.preview());
   ipcMain.handle(PARROT_IPC.exportMusic, () => exportJobs.start());
@@ -3289,6 +3596,9 @@ const quitGuard = createQuitGuard({
   onQuit: () => {
     isQuitting = true;
     appTray.destroy();
+    // PAR-UP-13: the engine stops first, so the import's running steps are requeued (resumed at the next start)
+    // rather than failed by the abort below.
+    void parrotJobs.stop().catch((error: unknown) => fail(`[import] job engine did not stop cleanly: ${errorText(error)}`));
     importAbort.abort();
     exportJobs.pause();
     lightCopyAbort.abort();
@@ -3324,6 +3634,9 @@ void app.whenReady().then(async () => {
   }
   // ACCT-PAIR-07: signed in, Badger on this computer can offer this account.
   publishSiblingAccount();
+  mkdirSync(importLightDir, { recursive: true });
+  parrotJobsStarted = parrotJobs.start().catch((error: unknown) => fail(`[import] job engine did not start: ${errorText(error)}`));
+  applyUploadGate();
   reapplyStartAtLoginAtLaunch({ platform: process.platform, setup: store.setup, applyStartAtLogin, fail });
   // OPS-BIZ-20: the daily hello (once per local day, a few seconds after start, silent on failure); its date and
   // tallies live in `<userData>/daily-hello.json`.

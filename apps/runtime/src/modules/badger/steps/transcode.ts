@@ -17,7 +17,7 @@
  * a stable input file is the engine's job — this handler trusts the path.
  */
 
-import type { StepHandler } from "../../../core/jobs/engineV2";
+import type { StepHandler } from "@space/runtime-jobs-engine/engineV2";
 import { getBadgerStepDeps } from "./deps";
 import { checkProgressFault } from "../../badger";
 import { discardFormatOutputsIfCancelled } from "./discardOnCancel";

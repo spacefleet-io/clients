@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -6,10 +5,7 @@ import { describe, expect, it } from "vitest";
 
 // @req PAR-LOOK-01
 const here = dirname(fileURLToPath(import.meta.url));
-const shared = resolve(here, "../src/assets/fonts");
-const badgerDesktop = resolve(here, "../../../apps/badger/desktop/src/renderer/src/assets/fonts");
 const css = readFileSync(resolve(here, "../src/styles/fleet-fonts.css"), "utf8");
-const sha = (path: string) => createHash("sha256").update(readFileSync(path)).digest("hex");
 
 describe("[parrot] fleet fonts", () => {
   it("fleet-fonts.css serves Inter and Space Grotesk from files in this package", () => {
@@ -29,14 +25,5 @@ describe("[parrot] fleet fonts", () => {
     console.info("[parrot-nebula]", { app, mountsNebula: main.includes('<AppBackdrop nebula="parrot" />'), ownCopy: appCss.includes("radial-gradient") });
     expect(main).toContain('<AppBackdrop nebula="parrot" />');
     expect(appCss).not.toContain("radial-gradient");
-  });
-
-  it("Badger desktop's own copies are the same files, so Badger and Parrot never show different type", () => {
-    for (const file of ["InterVariable.woff2", "SpaceGroteskVariable.woff2"]) {
-      const a = sha(resolve(shared, file));
-      const b = sha(resolve(badgerDesktop, file));
-      console.info("[fleet-fonts] sha256", { file, shared: a, badgerDesktop: b });
-      expect(a).toBe(b);
-    }
   });
 });

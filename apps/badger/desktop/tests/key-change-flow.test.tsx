@@ -57,14 +57,14 @@ vi.mock("../src/renderer/src/api", async () => ({
   ...api,
 }));
 vi.mock("@space/shared/api", async (original) => ({ ...(await original<typeof import("@space/shared/api")>()), ...api }));
-vi.mock("../../../../packages/media-reseal/src/run", async (original) => ({
-  ...(await original<typeof import("../../../../packages/media-reseal/src/run")>()),
+vi.mock("@space/media-reseal/run", async (original) => ({
+  ...(await original<typeof import("@space/media-reseal/run")>()),
   collectResealCopies: reseal.collectResealCopies,
   resealIoForRun: reseal.resealIoForRun,
   runMediaReseal: reseal.runMediaReseal,
 }));
-vi.mock("../../../../packages/media-reseal/src/sealing", async (original) => ({
-  ...(await original<typeof import("../../../../packages/media-reseal/src/sealing")>()),
+vi.mock("@space/media-reseal/sealing", async (original) => ({
+  ...(await original<typeof import("@space/media-reseal/sealing")>()),
   importResealKeyFromBase64: reseal.importResealKeyFromBase64,
 }));
 vi.mock("../src/renderer/src/lib/libraryDb", () => ({ LibraryDb: libraryDb }));

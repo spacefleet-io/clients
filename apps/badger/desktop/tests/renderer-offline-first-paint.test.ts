@@ -10,6 +10,7 @@
  */
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
+import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
@@ -18,6 +19,8 @@ const TAG = "[renderer-offline-first-paint]";
 const rendererDir = resolve(dirname(fileURLToPath(import.meta.url)), "../src/renderer");
 const indexHtmlPath = join(rendererDir, "index.html");
 const stylesPath = join(rendererDir, "src/styles.css");
+const mainPath = join(rendererDir, "src/main.tsx");
+const fleetFontsPath = createRequire(import.meta.url).resolve("@space/ui/styles/fleet-fonts.css");
 
 const REMOTE_URL = /^(https?:)?\/\//i;
 
@@ -50,10 +53,14 @@ describe("[@bugfix][@regression-proof] renderer first paint does not depend on t
     expect(remote).toEqual([]);
   });
 
-  it("styles.css imports no remote CSS and serves Inter + Space Grotesk from bundled files", () => {
+  // REL-FAM-05: the fonts are the fleet's one copy in `@space/ui` (fleet-fonts.css), loaded by main.tsx; styles.css
+  // keeps no @font-face of its own.
+  it("the renderer imports no remote CSS and serves Inter + Space Grotesk from the shared bundled files", () => {
     const css = readFileSync(stylesPath, "utf8");
-    const remoteImports = [...css.matchAll(/@import\s+(?:url\()?\s*["']?((?:https?:)?\/\/[^"')\s]+)/gi)].map((m) => m[1]);
-    const fontFaces = [...css.matchAll(/@font-face\s*{([^}]*)}/gi)].map((m) => {
+    const main = readFileSync(mainPath, "utf8");
+    const fonts = readFileSync(fleetFontsPath, "utf8");
+    const remoteImports = [...`${css}\n${fonts}`.matchAll(/@import\s+(?:url\()?\s*["']?((?:https?:)?\/\/[^"')\s]+)/gi)].map((m) => m[1]);
+    const fontFaces = [...fonts.matchAll(/@font-face\s*{([^}]*)}/gi)].map((m) => {
       const body = m[1];
       return {
         family: /font-family\s*:\s*["']?([^"';]+)["']?/i.exec(body)?.[1]?.trim(),
@@ -61,14 +68,16 @@ describe("[@bugfix][@regression-proof] renderer first paint does not depend on t
       };
     });
     const missingFiles = fontFaces.flatMap((face) =>
-      face.urls.filter((url) => REMOTE_URL.test(url) || !existsSync(resolve(dirname(stylesPath), url))),
+      face.urls.filter((url) => REMOTE_URL.test(url) || !existsSync(resolve(dirname(fleetFontsPath), url))),
     );
     const families = fontFaces.map((face) => face.family);
-    if (remoteImports.length > 0 || missingFiles.length > 0 || !families.includes("Inter") || !families.includes("Space Grotesk")) {
-      console.error(
-        `${TAG} styles.css: remoteImports=${JSON.stringify(remoteImports)} fontFaces=${JSON.stringify(fontFaces)} missingOrRemote=${JSON.stringify(missingFiles)}`,
-      );
-    }
+    const loadsSharedFonts = main.includes('import "@space/ui/styles/fleet-fonts.css";');
+    const ownFontFaces = /@font-face/i.test(css);
+    console.info(
+      `${TAG} main loads shared fonts=${loadsSharedFonts} styles.css own @font-face=${ownFontFaces} remoteImports=${JSON.stringify(remoteImports)} fontFaces=${JSON.stringify(fontFaces)} missingOrRemote=${JSON.stringify(missingFiles)}`,
+    );
+    expect(loadsSharedFonts).toBe(true);
+    expect(ownFontFaces).toBe(false);
     expect(remoteImports).toEqual([]);
     expect(families).toEqual(expect.arrayContaining(["Inter", "Space Grotesk"]));
     expect(missingFiles).toEqual([]);

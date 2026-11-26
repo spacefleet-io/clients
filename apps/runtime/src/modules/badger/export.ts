@@ -21,7 +21,7 @@ import type {
 import { offlineQualityHeight } from "@space/shared/offlineQualityChoice";
 import { buildOfflineFilename } from "@space/shared/offlineFilename";
 import type { IngestJobRecord } from "@space/runtime-jobs";
-import type { EngineV2 } from "../../core/jobs/engineV2";
+import type { EngineV2 } from "@space/runtime-jobs-engine/engineV2";
 import type { BadgerLibraryDbService } from "../badgerLibraryDb";
 
 // Same margin as offline saves (OFFL-SAFE-02): never fill the destination disk to the last byte.

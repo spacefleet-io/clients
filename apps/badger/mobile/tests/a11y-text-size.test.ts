@@ -13,7 +13,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { defaultMobileShellTheme } from "../../../../packages/mobile-shell/src/theme";
+import { defaultMobileShellTheme } from "@space/mobile-shell/theme";
 
 const MIN_PT = 11;
 const repo = path.resolve(__dirname, "../../../..");

@@ -36,6 +36,7 @@ import { tooManyAttemptsText } from "@space/shared/signInError";
 import {
   DesktopStartupCard,
   DesktopStartupControls,
+  DesktopKeyLoadFailedStep,
   DesktopStartupPage,
   LIBRARY_KEY_STEP_FIT,
   LibraryKeyStep,
@@ -45,7 +46,8 @@ import {
   type LibraryKeyTyped,
 } from "@space/desktop-shell/components";
 import mascotWebp from "@/assets/mascot.webp";
-import { verifyPairedKey, type ApprovedPairing, type PairedKeyCheck } from "@/lib/pairedSignIn";
+import type { PairedKeyCheck } from "@space/desktop-shell/pairing";
+import { checkKeyForBadger, verifyPairedKey, type ApprovedPairing } from "@/lib/pairedSignIn";
 import { pairedKeyCheckDeps } from "@/lib/pairedSignInDeps";
 import { rendererLogger } from "@/logger";
 import { loadFirstSetup } from "../components/firstSetupSteps";
@@ -53,8 +55,20 @@ import SetupLanguageMenu from "@/components/SetupLanguageMenu";
 import { useProfiles } from "@/lib/profileStore";
 import { needsProfileSetupStep } from "@space/desktop-shell/profile-setup";
 import { noteSetupRun, titleQuestionExpected } from "@/lib/titleLanguageSetup";
+import { isUnpaidLibrarySetupRefusal } from "@space/shared/unpaidLibrarySetup";
+import { UnpaidSetupStep } from "@/components/UnpaidSetupStep";
+import {
+  KEY_STEP_META_LOG_EVENT,
+  keyStepMetaErrorClass,
+  type KeyStepMetaErrorClass,
+  type KeyStepMetaRead,
+} from "@space/shared/keyStepMetaRead";
 
 const log = rendererLogger.child({ scope: "onboarding.key" });
+
+// UX-KEY-02: every key-step meta read is logged with anonymous fields (step, outcome, duration, attempts, class).
+const logMetaRead = (read: KeyStepMetaRead) =>
+  read.outcome === "ok" ? log.info({ ...read }, KEY_STEP_META_LOG_EVENT) : log.warn({ ...read }, KEY_STEP_META_LOG_EVENT);
 
 export default function OnboardingKey() {
   const { user, token, logout } = useAuth();
@@ -100,6 +114,12 @@ export default function OnboardingKey() {
   const [recoverError, setRecoverError] = useState<string | null>(null);
   const [recoverNotice, setRecoverNotice] = useState<string | null>(null);
   const [generateRequested, setGenerateRequested] = useState(false);
+  // ACCT-UNPAID-06: the API refused to create the library because the plan has ended (402 subscription_unpaid).
+  const [unpaidSetup, setUnpaidSetup] = useState(false);
+  const [unpaidRefusedAgain, setUnpaidRefusedAgain] = useState(false);
+  // UX-KEY-02: the meta read failed (no answer in time, no connection, a server error): the Retry screen, never words.
+  const [loadFailed, setLoadFailed] = useState<KeyStepMetaErrorClass | null>(null);
+  const [loadAttempt, setLoadAttempt] = useState(0);
 
   const syncActiveMediaKey = async (key: string | null) => {
     await window.sf?.setMediaKey?.(key ?? null).catch(() => undefined);
@@ -129,6 +149,7 @@ export default function OnboardingKey() {
     // tla: VaultKeys/ManageKey
     const load = async () => {
       setLoadingKey(true);
+      setLoadFailed(null);
       step("start", { hasToken: Boolean(token), libraryError: Boolean(libraryError) });
       const [keyAck, existingKey] = await Promise.all([
         isLibraryKeyAcknowledged().catch(() => false),
@@ -140,9 +161,11 @@ export default function OnboardingKey() {
 
       if (existingKey) {
         if (token) {
+          let metaRead = false;
           try {
             step("existingKey.meta.start");
-            const meta = await getLibraryMetaForKeyStep(token);
+            const meta = await getLibraryMetaForKeyStep(token, logMetaRead);
+            metaRead = true;
             step("existingKey.meta.done", { remoteExists: meta.exists, hasKeyProbe: Boolean(meta.keyProbe) });
             // PRIV-KEY-08: a probe is checked even when this app has no library yet; never new words over it.
             const stored = deriveStoredKeyDecision(meta);
@@ -178,6 +201,13 @@ export default function OnboardingKey() {
           } catch (err) {
             if (err instanceof ApiError && err.status === 401) {
               await logout("sessionRejected");
+              return;
+            }
+            if (!metaRead) {
+              // UX-KEY-02 / PRIV-KEY-09: a failed read decides nothing: the stored key stays, the Retry screen shows.
+              if (cancelled) return;
+              setLoadFailed(keyStepMetaErrorClass(err));
+              setLoadingKey(false);
               return;
             }
             if (isDecryptFailureMessage(err)) {
@@ -217,7 +247,7 @@ export default function OnboardingKey() {
       let decision: OnboardingRemoteDecision;
       try {
         step("meta.start");
-        const meta = await getLibraryMetaForKeyStep(token);
+        const meta = await getLibraryMetaForKeyStep(token, logMetaRead);
         step("meta.done", { remoteExists: meta.exists, bootstrapRequired: meta.bootstrapRequired });
         decision = deriveNoStoredKeyDecision(meta);
       } catch (err) {
@@ -226,11 +256,9 @@ export default function OnboardingKey() {
           return;
         }
         if (cancelled) return;
+        // UX-KEY-02: no answer is not "no library": the Retry screen, never new words nor the enter form.
         setAcknowledged(false);
-        setMode("enter");
-        setPromptReason("remote");
-        setLibraryKey(null);
-        setEnterError(t("onboarding.key.errorValidate"));
+        setLoadFailed(keyStepMetaErrorClass(err));
         setLoadingKey(false);
         return;
       }
@@ -250,7 +278,7 @@ export default function OnboardingKey() {
     return () => {
       cancelled = true;
     };
-  }, [token, libraryError, logout, t, reload, navigate]);
+  }, [token, libraryError, logout, t, reload, navigate, loadAttempt]);
 
   useEffect(() => {
     if (libraryError && mode === "enter") {
@@ -321,6 +349,28 @@ export default function OnboardingKey() {
     );
   }
 
+  if (loadFailed) {
+    return (
+      <DesktopStartupPage
+        nebula="badger"
+        controls={
+          <DesktopStartupControls>
+            <SetupLanguageMenu />
+          </DesktopStartupControls>
+        }
+        mainClassName="pb-8 pt-32 [@media(max-height:700px)]:pb-4 [@media(max-height:700px)]:pt-16"
+      >
+        <DesktopKeyLoadFailedStep
+          language={pairLanguage}
+          errorClass={loadFailed}
+          progress={setupProgress}
+          mascotSrc={mascotWebp}
+          onRetry={() => setLoadAttempt((attempt) => attempt + 1)}
+        />
+      </DesktopStartupPage>
+    );
+  }
+
   if (acknowledged && !libraryError) {
     return <Navigate to="/home" replace />;
   }
@@ -335,13 +385,14 @@ export default function OnboardingKey() {
       const step = (name: string, extra?: Record<string, unknown>) =>
         log.info({ step: name, elapsedMs: Date.now() - startedAt, ...extra }, "continueNext step");
       step("meta.start");
-      const meta = token ? await getLibraryMetaForKeyStep(token).catch(() => null) : null;
+      const meta = token ? await getLibraryMetaForKeyStep(token, logMetaRead).catch(() => null) : null;
       step("meta.done", { exists: meta?.exists ?? null });
       if (token && !meta?.exists) {
         step("activate.start");
         await activateRemoteLibrary(token, libraryKey);
         step("activate.done");
       }
+      setUnpaidSetup(false);
       await syncActiveMediaKey(libraryKey);
       step("syncMediaKey.done");
       await acknowledgeLibraryKey();
@@ -371,6 +422,13 @@ export default function OnboardingKey() {
         // deployments can diagnose why the user sees the generic
         // "Could not create the initial library" message.
         log.error({ err }, "continueNext failed");
+        if (isUnpaidLibrarySetupRefusal(err, user?.access)) {
+          // The key stays stored: Try again (or a renewal) runs this step again with it.
+          log.warn({ accessState: user?.access?.state ?? null, retry: unpaidSetup }, "continueNext refused: plan ended");
+          setUnpaidRefusedAgain(unpaidSetup);
+          setUnpaidSetup(true);
+          return;
+        }
         const actionableMessage = getActionableDesktopErrorMessage(err);
         if (actionableMessage) {
           setGenerateError(actionableMessage);
@@ -430,52 +488,56 @@ export default function OnboardingKey() {
   const completeKeyPairing = async (approved: ApprovedPairing): Promise<PairedKeyCheck> => {
     const check = await verifyPairedKey(pairedKeyCheckDeps, approved.token, approved.libraryKey, approved.user.id);
     log.info({ check, userId: approved.user.id }, "key from another device checked");
-    if (check === "verified") await keepKeyAndOpenLibrary(approved.token, approved.libraryKey);
+    if (check === "verified") {
+      try {
+        await keepKeyAndOpenLibrary(approved.token, approved.libraryKey);
+      } catch (err) {
+        if (!isUnpaidLibrarySetupRefusal(err, user?.access)) throw err;
+        log.warn({ accessState: user?.access?.state ?? null }, "paired key: library refused, plan ended");
+        setLibraryKey(approved.libraryKey);
+        setUnpaidSetup(true);
+      }
+    }
     return check;
   };
 
-  /** The step's Continue: the step keeps the typed words and shows "Validating…" until this settles. */
+  /**
+   * The step's Continue: the step keeps the typed words and shows "Validating…" until this settles. The key goes
+   * through the desktops' one account key check (PRIV-KEY-01), like a key from another device.
+   */
   // tla: VaultKeys/Enter
   const submitEnteredKey = async ({ keyBase64, words }: LibraryKeyTyped) => {
     if (!token) return;
     setEnterError(null);
     try {
-      // Lightweight validation: ensure the API has a DB and that we can decrypt it later.
+      if (!user) throw new Error("LIBRARY_USER_MISSING");
       const meta = await getLibraryMetaForKeyStep(token);
-      // The account's key probe decides first (PRIV-KEY-01: one key per account, the probe is the account's): with
-      // no Badger library yet, a key made in Parrot is still the only right one, and a wrong key here would encrypt
-      // Badger's library under it and split the apps for good. WebCrypto rejects a wrong key with a bare
-      // OperationError, so any failure to open the probe is a wrong key.
-      if (meta.keyProbe) {
-        const opened = await decryptBase64ToBytes(keyBase64, meta.keyProbe).then(
-          () => true,
-          () => false,
-        );
-        if (!opened) {
-          setEnterError(libraryKeyStepText(pairLanguage, "badger")("wrongKey"));
+      const result = await checkKeyForBadger(pairedKeyCheckDeps, token, keyBase64, user.id, meta);
+      if (!result.ok) {
+        if (result.error === "unpaid") {
+          setLibraryKey(keyBase64);
+          setUnpaidSetup(true);
           return;
         }
+        setEnterError(result.error === "network" ? t("onboarding.key.errorValidate") : libraryKeyStepText(pairLanguage, "badger")("wrongKey"));
+        return;
       }
-      if (!meta.exists) {
-        if (meta.bootstrapRequired) {
-          await keepKeyAndOpenLibrary(token, keyBase64, words);
-          return;
-        }
+      if (!meta.exists && !meta.bootstrapRequired) {
         // Keep typed key in local state and avoid wiping stored key on transient/remote issues.
         setMode("enter");
         setPromptReason("missing");
         setEnterError(t("onboarding.key.errorNoRemote"));
         return;
       }
-
-      if (!meta.keyProbe) {
-        if (!user) throw new Error("LIBRARY_USER_MISSING");
-        const testDb = await LibraryDb.open(token, keyBase64, user.id);
-        testDb.close();
-      }
-
       await keepKeyAndOpenLibrary(token, keyBase64, words);
     } catch (err) {
+      if (isUnpaidLibrarySetupRefusal(err, user?.access)) {
+        // An account whose key was made elsewhere but has no library yet: the library step is this one too.
+        log.warn({ accessState: user?.access?.state ?? null }, "entered key: library refused, plan ended");
+        setLibraryKey(keyBase64);
+        setUnpaidSetup(true);
+        return;
+      }
       setEnterError(isDecryptFailureMessage(err) ? libraryKeyStepText(pairLanguage, "badger")("wrongKey") : t("onboarding.key.errorValidate"));
     }
   };
@@ -576,6 +638,28 @@ export default function OnboardingKey() {
     await startGenerateFlow();
     return { status: "erased" };
   };
+
+  if (unpaidSetup) {
+    return (
+      <DesktopStartupPage
+        nebula="badger"
+        controls={
+          <DesktopStartupControls>
+            <SetupLanguageMenu />
+          </DesktopStartupControls>
+        }
+        mainClassName="pb-8 pt-32 [@media(max-height:700px)]:pb-4 [@media(max-height:700px)]:pt-16"
+      >
+        <UnpaidSetupStep
+          language={pairLanguage}
+          progress={setupProgress}
+          onTryAgain={continueNext}
+          tryingAgain={savingKey}
+          refusedAgain={unpaidRefusedAgain}
+        />
+      </DesktopStartupPage>
+    );
+  }
 
   if (mode === "generate" && !libraryKey) {
     return (

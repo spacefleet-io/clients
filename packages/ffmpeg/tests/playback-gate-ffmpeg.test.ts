@@ -10,7 +10,7 @@
 
 import { execSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -54,6 +54,44 @@ const taskAllowedLists = (pid: number): string[] =>
     .trim()
     .split("\n")
     .map((tid) => allowedList(Number(tid)));
+
+/** Per thread of `pid`: utime + stime in clock ticks and the CPU it is on (field 39 of /proc/<pid>/task/<tid>/stat). */
+const threadCpus = (pid: number): Map<string, { ticks: number; cpu: number }> => {
+  const out = new Map<string, { ticks: number; cpu: number }>();
+  for (const tid of readdirSync(`/proc/${pid}/task`)) {
+    try {
+      const stat = readFileSync(`/proc/${pid}/task/${tid}/stat`, "utf8");
+      const rest = stat.slice(stat.lastIndexOf(")") + 2).split(" ");
+      out.set(tid, { ticks: Number(rest[11]) + Number(rest[12]), cpu: Number(rest[36]) });
+    } catch {
+      // the thread exited between ls and read
+    }
+  }
+  return out;
+};
+
+/**
+ * Samples `pid`'s threads every 50 ms for `ms` and returns the CPUs a thread was on right after it used CPU time.
+ * Unlike a CPU-time total, this does not depend on how busy the rest of the host is.
+ */
+const cpusRunOn = async (pid: number, ms: number): Promise<{ cpus: Set<number>; samples: number }> => {
+  const cpus = new Set<number>();
+  let prev = threadCpus(pid);
+  let samples = 0;
+  for (const end = performance.now() + ms; performance.now() < end; ) {
+    await sleep(50);
+    const now = threadCpus(pid);
+    for (const [tid, { ticks, cpu }] of now) {
+      const before = prev.get(tid);
+      if (before && ticks > before.ticks) {
+        cpus.add(cpu);
+        samples += 1;
+      }
+    }
+    prev = now;
+  }
+  return { cpus, samples };
+};
 
 const cpuCount = (list: string): number =>
   list.split(",").reduce((n, part) => {
@@ -99,12 +137,20 @@ afterAll(() => rmSync(clipDir, { recursive: true, force: true }));
 
 describe.skipIf(!linux || !ffmpegAvailable)("playback gate with a real ffmpeg (Linux) @bugfix @regression-proof", () => {
   it("pause: the frozen ffmpeg uses ~0 CPU, makes no progress, and its output is byte-identical to an uninterrupted run", async () => {
+    // The baseline runs alongside the gated encode, not before it: it is not playbackGated, so the pause leaves it
+    // alone, and the test waits for one niced single-thread encode instead of two in a row. Back to back, the two
+    // took over 58 s with three other suites on the CI runner (quick-checks run 52421; about 37 s in run 52397).
+    const started = performance.now();
     const baselineOut = join(clipDir, "baseline.mkv");
-    await createFfmpegTask(deterministicEncodeArgs(12, baselineOut), {
+    const baselineTask = createFfmpegTask(deterministicEncodeArgs(12, baselineOut), {
       progress: { output: "stderr" },
-    }).promise;
-    const baselineMd5 = md5OfFile(baselineOut);
-    console.info("[playback-gate-ffmpeg:identical] baseline md5 =", baselineMd5);
+    });
+    const baseline = baselineTask.promise.then(() => {
+      const md5 = md5OfFile(baselineOut);
+      console.info(`[playback-gate-ffmpeg:identical] baseline md5 = ${md5} after ${Math.round(performance.now() - started)} ms`);
+      return md5;
+    });
+    baseline.catch(() => {}); // awaited below; this only keeps an early failure from reading as an unhandled rejection
 
     let pid: number | undefined;
     let frames = 0;
@@ -123,6 +169,7 @@ describe.skipIf(!linux || !ffmpegAvailable)("playback gate with a real ffmpeg (L
     });
     try {
       for (let waited = 0; frames < 40 && waited < 20_000; waited += 20) await sleep(20);
+      console.info(`[playback-gate-ffmpeg:identical] ${frames} frames after ${Math.round(performance.now() - started)} ms`);
       expect(frames).toBeGreaterThanOrEqual(40);
       expect(pid).toBeTypeOf("number");
 
@@ -143,12 +190,17 @@ describe.skipIf(!linux || !ffmpegAvailable)("playback gate with a real ffmpeg (L
 
       encodePlaybackGate.setPolicy("full", { reason: "test" });
       await task.promise;
-      console.info(`[playback-gate-ffmpeg:identical] resumed run md5 = ${md5OfFile(resumedOut)}, frames = ${frames}`);
+      const baselineMd5 = await baseline;
+      console.info(
+        `[playback-gate-ffmpeg:identical] resumed run md5 = ${md5OfFile(resumedOut)}, frames = ${frames}, after ${Math.round(performance.now() - started)} ms`
+      );
       expect(md5OfFile(resumedOut)).toBe(baselineMd5);
       expect(frames).toBe(12 * 25);
     } finally {
       resetGate();
       task.cancel();
+      baselineTask.cancel();
+      await baseline.catch(() => {});
     }
   }, 60_000);
 
@@ -176,25 +228,37 @@ describe.skipIf(!linux || !ffmpegAvailable)("playback gate with a real ffmpeg (L
     try {
       await sleep(1500);
       expect(pid).toBeTypeOf("number");
+      // Before the throttle every thread may run on every allowed CPU, so the throttle is what confines it.
+      const fullLists = taskAllowedLists(pid!);
+      let since = performance.now();
       const fullBefore = readProc(pid!)!;
-      await sleep(1000);
+      const fullRun = await cpusRunOn(pid!, 1000);
       const fullAfter = readProc(pid!)!;
-      const fullCores = (fullAfter.ticks - fullBefore.ticks) / clkTck / 1.0;
+      // Divided by the measured wall time: sampling makes the window run past its nominal length.
+      const fullCores = (fullAfter.ticks - fullBefore.ticks) / clkTck / ((performance.now() - since) / 1000);
 
       encodePlaybackGate.setPolicy("throttle", { reason: "test" });
       await sleep(300);
       const lists = taskAllowedLists(pid!);
+      since = performance.now();
       const t0 = readProc(pid!)!;
-      await sleep(2000);
+      const throttledRun = await cpusRunOn(pid!, 2000);
       const t1 = readProc(pid!)!;
-      const throttledCores = (t1.ticks - t0.ticks) / clkTck / 2.0;
+      const throttledCores = (t1.ticks - t0.ticks) / clkTck / ((performance.now() - since) / 1000);
+      // CPU time is logged, not compared: the encoder runs niced (INGS-LANE-01), so how much it gets in each window
+      // depends on the rest of the host (quick-checks run 52284: 0.80 core at full, 0.94 throttled).
       console.info(
-        `[playback-gate-ffmpeg:throttle] original=${original} allowed per thread=${[...new Set(lists)].join("|")} full=${fullCores.toFixed(2)} cores throttled=${throttledCores.toFixed(2)} cores`
+        `[playback-gate-ffmpeg:throttle] original=${original} before=${[...new Set(fullLists)].join("|")} allowed per thread=${[...new Set(lists)].join("|")}` +
+          ` full=${fullCores.toFixed(2)} cores on cpus ${[...fullRun.cpus].sort((a, b) => a - b).join(",")} (${fullRun.samples} samples)` +
+          ` throttled=${throttledCores.toFixed(2)} cores on cpus ${[...throttledRun.cpus].sort((a, b) => a - b).join(",")} (${throttledRun.samples} samples)`
       );
+      expect(new Set(fullLists)).toEqual(new Set([original]));
       expect(new Set(lists).size).toBe(1);
       expect(cpuCount(lists[0]!)).toBe(1);
+      // Live: every thread that used CPU while throttled was on that one core, and the encode kept running.
+      expect(throttledRun.samples).toBeGreaterThan(0);
+      expect([...throttledRun.cpus]).toEqual([Number(lists[0])]);
       expect(throttledCores).toBeLessThan(1.25);
-      expect(fullCores).toBeGreaterThan(throttledCores);
 
       encodePlaybackGate.setPolicy("full", { reason: "test" });
       await sleep(300);

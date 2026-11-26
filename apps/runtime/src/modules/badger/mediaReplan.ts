@@ -44,7 +44,7 @@ import {
 } from "@space/runtime-contracts/badger/ingest";
 import { pickReTranscodeSource, QUALITY_ORDER, type QualityPreset } from "@space/ingest-core/quality";
 import { parseMediaPlacementIdFromObjectKey } from "@space/shared/storagePlacement";
-import type { EngineV2 } from "../../core/jobs/engineV2";
+import type { EngineV2 } from "@space/runtime-jobs-engine/engineV2";
 import type { BadgerLibraryDbService } from "../badgerLibraryDb";
 import type { IngestJobRecord, IngestJobStatus } from "@space/runtime-jobs";
 

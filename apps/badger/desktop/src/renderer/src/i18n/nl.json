@@ -112,22 +112,6 @@
       },
       "clearFinished": "Afgeronde taken wissen"
     },
-    "notifications": {
-      "title": "Meldingen",
-      "subtitle_one": "{{count}} recent item",
-      "subtitle_other": "{{count}} recente items",
-      "subtitle_many": "{{count}} recente items",
-      "empty": "Nog geen meldingen.",
-      "open": "Openen",
-      "filterAll": "Alle",
-      "filterError": "Fout",
-      "filterWarning": "Waarschuwing",
-      "filterInfo": "Info",
-      "filterSuccess": "Gelukt",
-      "clearAll": "Alles wissen",
-      "dismiss": "Sluiten",
-      "subtitle": "{{count}} recente items"
-    },
     "account": "Account"
   },
   "authApiHost": {
@@ -647,7 +631,6 @@
         "originalTitle": "Originele titel",
         "originalLanguage": "Originele taal",
         "year": "Jaar van uitgave",
-        "rating": "Beoordeling",
         "genres": "Genres",
         "overview": "Samenvatting",
         "poster": "Poster",
@@ -1081,6 +1064,7 @@
       "devices": "Ingelogde apparaten",
       "connectedTools": "Gekoppelde tools",
       "system": "Systeem",
+      "support": "Hulp en feedback",
       "about": "Over en updates"
     },
     "sectionDesc": {
@@ -1098,7 +1082,12 @@
       "devices": "Bekijk welke apparaten bij je account zijn ingelogd en log ze uit.",
       "connectedTools": "Tools die je toegang tot je mediatheek hebt gegeven, en wat elk ervan mag.",
       "system": "Achtergronddienst en foutrapporten.",
+      "support": "Stuur ons een bericht over de app.",
       "about": "Je versie en updates, daarna wie de film- en seriegegevens levert die de app toont."
+    },
+    "support": {
+      "feedback": "Feedback sturen",
+      "feedbackBody": "Vertel ons wat werkt en wat niet."
     },
     "system": {
       "runtime": {
@@ -1954,6 +1943,8 @@
       "unpaidBanner": "Je abonnement is beëindigd. Je kunt je bestanden nog downloaden tot {{date}}; daarna worden ze verwijderd.",
       "unpaidBannerNoDate": "Je abonnement is beëindigd. Je kunt je bestanden nog een beperkte tijd downloaden; daarna worden ze verwijderd.",
       "unpaidBannerHint": "Gebruik “Offline opslaan” bij een titel om hem naar deze computer te downloaden.",
+      "unpaidSign": "Abonnement beëindigd",
+      "unpaidHeadsUpTitle": "Je abonnement is beëindigd",
       "playbackBlocked": "Afspelen is gepauzeerd omdat je abonnement is beëindigd. Je kunt je bestanden nog downloaden tot {{date}}.",
       "playbackBlockedNoDate": "Afspelen is gepauzeerd omdat je abonnement is beëindigd. Je kunt je bestanden nog een beperkte tijd downloaden.",
       "uploadBlocked": "Uploaden is gepauzeerd omdat je abonnement is beëindigd. Je kunt je bestanden nog downloaden tot {{date}}; daarna worden ze verwijderd.",
@@ -1966,8 +1957,9 @@
       "removedBanner_one": "{{count}} titel is verwijderd omdat je opslag vol was.",
       "removedBanner_other": "{{count}} titels zijn verwijderd omdat je opslag vol was.",
       "upgrade": "Abonnement upgraden",
-      "seeTitles": "Titels bekijken",
       "dismiss": "Sluiten",
+      "sign": "Opslag vol",
+      "removedSign": "Titels verwijderd",
       "dialogTitle": "Mediatheek groter dan opslag",
       "options": "Stap over naar een abonnement waarin je mediatheek past, of verwijder titels uit je mediatheek tot alles past. Je kunt een titel eerst downloaden om een kopie te houden.",
       "loading": "Titels in je mediatheek zoeken…",
@@ -2011,7 +2003,7 @@
       "title": "\"{{name}}\" toegang geven tot je mediatheek?",
       "description": {
         "read": "Deze tool wil je mediatheek bekijken: titels, details, afspeellijsten, voortgang en wat er op deze computer is gedownload. Hij kan niets wijzigen.",
-        "write": "Deze tool wil je mediatheek bekijken en deels wijzigen: kijkvoortgang, titeldetails (naam, beschrijving, jaar, beoordeling) en je afspeellijsten. Hij kan geen titels verwijderen en niet aan instellingen of sleutels komen."
+        "write": "Deze tool wil je mediatheek bekijken en deels wijzigen: kijkvoortgang, titeldetails (naam, beschrijving, jaar) en je afspeellijsten. Hij kan geen titels verwijderen en niet aan instellingen of sleutels komen."
       },
       "selfDeclared": "De naam komt van de tool zelf en is niet gecontroleerd. Keur alleen een tool goed die je net zelf hebt gestart.",
       "reason": "Opgegeven reden: {{reason}}",

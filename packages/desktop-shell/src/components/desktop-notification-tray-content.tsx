@@ -1,58 +1,44 @@
 import { type ReactNode, useState } from "react";
 import { ChevronDown, ChevronRight, Trash2, X } from "lucide-react";
-import type { NotificationLevel, ShellNotification } from "../services/notifications";
+import type { HistoryEntry } from "@space/notify-core/history";
+import type { NoticeLevel } from "@space/notify-core/kinds";
+import { partText, titleText, type Translate } from "@space/notify-core/texts";
 import { AnimatedDismissRow, useStaggeredDismiss } from "./animated-dismiss-row";
 
-export type NotificationTrayLabels = {
-  filterAll: string;
-  filterError: string;
-  filterWarning: string;
-  filterInfo: string;
-  filterSuccess: string;
-  clearAll: string;
-  dismiss: string;
-};
-
 export type NotificationTrayContentProps = {
-  notifications: ShellNotification[];
-  labels: NotificationTrayLabels;
+  entries: readonly HistoryEntry[];
+  /**
+   * Translates the shared `notify.*` texts (UX-NOTICE-13) and the app's own keys an entry was saved with, in the
+   * language of the moment, so the history follows a language change.
+   */
+  t: Translate;
   onRemove: (id: string) => void;
   onClearAll: () => void;
-  renderActions?: (notification: ShellNotification) => ReactNode;
+  /** Follows an entry's button or target (UX-NOTICE-11: a warning's button still works from its history entry). */
+  onOpenTarget?: (target: string) => void;
+  renderActions?: (entry: HistoryEntry) => ReactNode;
 };
 
 const FILTERS = ["all", "error", "warning", "info", "success"] as const;
-type Filter = NotificationLevel | "all";
+type Filter = NoticeLevel | "all";
 
-const filterLabel = (filter: (typeof FILTERS)[number], labels: NotificationTrayLabels) => {
-  if (filter === "all") return labels.filterAll;
-  if (filter === "error") return labels.filterError;
-  if (filter === "warning") return labels.filterWarning;
-  if (filter === "info") return labels.filterInfo;
-  return labels.filterSuccess;
-};
+const filterLabel = (filter: Filter, t: Translate) => (filter === "all" ? t("notify.filterAll") : t(`notify.filter.${filter}`));
 
-const borderColorClass = (level: NotificationLevel) => {
+const borderColorClass = (level: NoticeLevel) => {
   if (level === "error") return "border-l-destructive";
   if (level === "warning") return "border-l-yellow-500";
   if (level === "success") return "border-l-green-500";
   return "border-l-primary";
 };
 
-export function NotificationTrayContent({
-  notifications,
-  labels,
-  onRemove,
-  onClearAll,
-  renderActions,
-}: NotificationTrayContentProps) {
+export function NotificationTrayContent({ entries, t, onRemove, onClearAll, onOpenTarget, renderActions }: NotificationTrayContentProps) {
   const [filter, setFilter] = useState<Filter>("all");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const { dismissing, scheduleDismiss } = useStaggeredDismiss();
 
   const handleRemove = (id: string) => scheduleDismiss(id, () => onRemove(id));
 
-  const filtered = filter === "all" ? notifications : notifications.filter((n) => n.level === filter);
+  const filtered = filter === "all" ? entries : entries.filter((n) => n.level === filter);
 
   return (
     <>
@@ -69,16 +55,17 @@ export function NotificationTrayContent({
                   : "bg-secondary/50 text-muted-foreground hover:bg-secondary"
               }`}
             >
-              {filterLabel(level, labels)}
+              {filterLabel(level, t)}
             </button>
           ))}
         </div>
-        {notifications.length > 0 ? (
+        {entries.length > 0 ? (
           <button
             type="button"
             onClick={onClearAll}
             className="shrink-0 text-[10px] font-semibold text-muted-foreground hover:text-destructive"
-            title={labels.clearAll}
+            title={t("notify.clearAll")}
+            aria-label={t("notify.clearAll")}
           >
             <Trash2 className="h-3.5 w-3.5" />
           </button>
@@ -88,6 +75,8 @@ export function NotificationTrayContent({
         const isExpanded = expandedId === n.id;
         const isRemoving = dismissing.has(n.id);
         const actions = renderActions?.(n);
+        const openTo = n.action?.target ?? n.target;
+        const message = partText(t, n.message);
         return (
           <AnimatedDismissRow
             key={n.id}
@@ -98,6 +87,7 @@ export function NotificationTrayContent({
               role="button"
               tabIndex={isRemoving ? -1 : 0}
               className="flex cursor-pointer items-center gap-2 px-3 py-2"
+              data-testid={`notice-entry-${n.key}`}
               onClick={() => {
                 if (isRemoving) return;
                 setExpandedId(isExpanded ? null : n.id);
@@ -115,7 +105,8 @@ export function NotificationTrayContent({
               ) : (
                 <ChevronRight className="h-3 w-3 shrink-0 text-muted-foreground" />
               )}
-              <div className="min-w-0 flex-1 truncate font-medium text-foreground">{n.title}</div>
+              {n.read ? null : <span className="size-1.5 shrink-0 rounded-full bg-primary" aria-hidden="true" />}
+              <div className="min-w-0 flex-1 truncate font-medium text-foreground">{titleText(t, n)}</div>
               <div className="shrink-0 text-[10px] text-muted-foreground">
                 {new Date(n.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
               </div>
@@ -127,14 +118,27 @@ export function NotificationTrayContent({
                   e.stopPropagation();
                   handleRemove(n.id);
                 }}
-                title={labels.dismiss}
+                title={t("notify.remove")}
+                aria-label={t("notify.remove")}
               >
                 <X className="h-3 w-3" />
               </button>
             </div>
             {isExpanded ? (
               <div className="border-t border-border/40 px-3 py-2 text-xs text-muted-foreground">
-                {n.message}
+                {message}
+                {onOpenTarget && openTo ? (
+                  <div className="mt-2">
+                    <button
+                      type="button"
+                      className="rounded-md bg-secondary/60 px-2 py-1 text-[11px] font-semibold text-foreground hover:bg-secondary"
+                      data-testid={`notice-entry-open-${n.key}`}
+                      onClick={() => onOpenTarget(openTo)}
+                    >
+                      {n.action ? partText(t, n.action.label) : t("notify.open")}
+                    </button>
+                  </div>
+                ) : null}
                 {actions ? <div className="mt-2">{actions}</div> : null}
               </div>
             ) : null}

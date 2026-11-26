@@ -4,7 +4,7 @@
  * jobs queued before placement ids existed.
  */
 import { describe, expect, it, vi } from "vitest";
-import type { IngestJobRecord } from "../src/core/jobs/engineV2";
+import type { IngestJobRecord } from "@space/runtime-jobs-engine/engineV2";
 import { readJobPlacementId, resolveJobPlacementId } from "../src/modules/badger/steps/placement";
 
 const SUITE = "badger-step-placement";

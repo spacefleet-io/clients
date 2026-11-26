@@ -70,7 +70,6 @@ const details = (catalogId: number, status: string | null, nextEpisodeAirDate: s
   originalLanguage: "en",
   overview: null,
   year: "2024",
-  rating: null,
   posterPath: null,
   backdropPath: null,
   cast: [],

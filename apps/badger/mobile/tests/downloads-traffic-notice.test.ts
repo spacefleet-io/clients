@@ -14,8 +14,8 @@ vi.mock("react-native", () => ({ NativeModules: {}, DeviceEventEmitter: { addLis
 import { parseDownloadsState } from "@space/mobile-media-proxy/downloads";
 import { trafficNoticeKey } from "../src/lib/downloads/trafficNotice";
 import type { DownloadItem, DownloadsState } from "@space/mobile-media-proxy/downloads";
-import en from "../../../../packages/mobile-shell/src/i18n/en.json";
-import fr from "../../../../packages/mobile-shell/src/i18n/fr.json";
+import en from "@space/mobile-shell/i18n/en.json";
+import fr from "@space/mobile-shell/i18n/fr.json";
 
 const item = (status: DownloadItem["status"]): DownloadItem => ({
   id: "f1", mediaId: "m1", title: "T", subtitle: null, kind: "movie", seasonNumber: null, episodeNumber: null,

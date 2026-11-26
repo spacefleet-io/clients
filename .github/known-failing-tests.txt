@@ -27,7 +27,6 @@ packages/desktop-platform-linux/tests/conformance.test.ts	the helper child does 
 packages/desktop-platform-linux/tests/processes.test.ts	waits for an orphaned child that does not exit; fails upstream too
 packages/desktop-platform/tests/selector.test.ts	expects the unsupported-OS error to point at the setup guide in the old wording; fails upstream too
 packages/desktop-shell/tests/desktop-top-nav-frame.test.tsx	expects the centred nav class left-1/2, which the grid layout replaced; fails upstream too
-packages/ffmpeg/tests/playback-gate-ffmpeg.test.ts	the one-core throttle measures 0.8 core where the test needs more than 0.845; fails upstream too
 packages/ingest-core/tests/aac-channel-layout.integration.test.ts	the shipped media-deps ffmpeg (8.1.3, fl1-9b8110a5df24) has no lavfi sine filter, so the fixtures cannot be made; fails upstream too
 packages/library-db-definition/tests/multi-group-migrations.test.ts	two multi-database migration cases assert true and get false; fails upstream too
 packages/library-db-runtime/	each full run fails a different set of 5 to 12 cases (library sync, persistence, preview sheets) that pass when their file runs alone; fails upstream too

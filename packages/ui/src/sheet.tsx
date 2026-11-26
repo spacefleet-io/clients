@@ -54,19 +54,21 @@ interface SheetContentProps
     VariantProps<typeof sheetVariants> {
   /** Screen-reader label of the corner close button; defaults to the `CloseLabelProvider` label. */
   closeLabel?: string;
+  /** Extra backdrop classes, e.g. a z-index above a page's own fixed header (pair it with the same z on `className`). */
+  overlayClassName?: string;
 }
 
 const SheetContent = React.forwardRef<
   React.ElementRef<typeof SheetPrimitive.Content>,
   SheetContentProps
->(({ side = "right", className, children, closeLabel, ...props }, ref) => {
+>(({ side = "right", className, children, closeLabel, overlayClassName, ...props }, ref) => {
   const label = useCloseLabel(closeLabel);
   const popup = React.useContext(PopupCloseContext);
   return (
     // UX-CRASH-01: a crash inside the sheet (or the portal's own update loop) closes it; the window guard says why.
     <RenderBoundary name="sheet" variant="overlay" resetKey={popup?.open} onDismiss={popup?.close}>
       <SheetPortal>
-        <SheetOverlay />
+        <SheetOverlay className={overlayClassName} />
         <SheetPrimitive.Content ref={ref} className={cn(sheetVariants({ side }), className)} {...props}>
           {children}
           <SheetPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none">
