@@ -11,18 +11,20 @@
 import { randomBytes } from "node:crypto";
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import { Database } from "bun:sqlite";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "bun:test";
 import { decryptMediaObject } from "@space/media-crypto";
-import { TRACK_FILE_CHUNK_SIZE_BYTES } from "@space/parrot-library-db-definition";
-import { parrotCoverMime } from "@space/parrot-core";
+import { buildParrotOpStatements, parrotLibraryMigrationStatements, TRACK_FILE_CHUNK_SIZE_BYTES } from "@space/parrot-library-db-definition";
+import { parrotCoverMime, parrotLyricsQuery, type ParrotLibraryQuery } from "@space/parrot-core";
 import jpeg from "jpeg-js";
 import { openParrotCover } from "../src/covers";
 import { parrotAudioFormatFor } from "../src/formats";
 import { parrotChunkKey, parrotPlacementId, parrotTagsKey, parrotTrackIds, sha256Hex } from "../src/ids";
-import { PARROT_APP_ID, type ParrotImportProgress, type ParrotImportTransport } from "../src/importer";
+import { buildParrotTrackOps, PARROT_APP_ID, type ParrotImportProgress, type ParrotImportTransport } from "../src/importer";
 import { importParrotFiles } from "../src/importJobs";
 import { getParrotFile, listParrotAlbums, listParrotTracks, openParrotLibrary, serializeParrotLibrary } from "../src/library";
 import { readParrotTrackInfo, type ParrotTrackInfo } from "../src/readTrack";
+import { applyParrotImportEdit, type ParrotImportEdit } from "../src/scan";
 import { PARROT_FIRST_PAYLOAD_PIECE_BYTES, splitParrotOriginal } from "../src/splitOriginal";
 import { makeAudioFixture, makeCoverPicture, makeTempDir, testLog } from "./helpers";
 
@@ -943,6 +945,36 @@ describe("importParrotFiles lyrics and artist photos", () => {
     expect(lyricsIn(slow.state.dbBytes!)).toEqual([{ title: "Fable", plain: null, source: null }]);
   });
 
+  it("stores lyrics placed in the review as the user's own, on a new song and on one the library already has", async () => {
+    const server = createFakeServer();
+    const messages: string[] = [];
+    const asked: string[] = [];
+    const placed = (words: string) => async (file: string) => ({ ...(await matched(file)), ...(file === nook ? { lyrics: { plain: words, synced: null, user: true } } : {}) });
+    const first = await importParrotFiles([nook, fable], {
+      ...base(server, messages),
+      readInfo: placed("Placed words"),
+      lookupLyrics: async (question) => {
+        asked.push(question.title);
+        return { plain: null, synced: null };
+      },
+    });
+    llog("placed", { first, asked, lyrics: lyricsIn(server.state.dbBytes!) });
+    expect(asked).toEqual(["Fable"]);
+    expect(lyricsIn(server.state.dbBytes!)).toEqual([
+      { title: "Fable", plain: null, source: "none" },
+      { title: "Nook", plain: "Placed words", source: "user" },
+    ]);
+
+    // PAR-LYR-09: the same song imported again with other words placed on it keeps its file, and takes the words.
+    const again = await importParrotFiles([nook], { ...base(server, messages), readInfo: placed("Placed again") });
+    llog("again", { again, lyrics: lyricsIn(server.state.dbBytes!) });
+    expect(again.skipped).toEqual([nook]);
+    expect(lyricsIn(server.state.dbBytes!)).toEqual([
+      { title: "Fable", plain: null, source: "none" },
+      { title: "Nook", plain: "Placed again", source: "user" },
+    ]);
+  });
+
   it("stores the matched artist's photo during the import, asked once, and says which artists are being asked", async () => {
     const server = createFakeServer();
     const messages: string[] = [];
@@ -981,6 +1013,43 @@ describe("importParrotFiles lyrics and artist photos", () => {
     expect(albumsImporting).toEqual([parrotTrackIds({ ...(await matched(nook)), fileHash: "x" }).albumId]);
   });
 
+  // @req PAR-META-31
+  it("keeps the photo the user gave the artist on another device while the import looked one up", async () => {
+    const server = createFakeServer();
+    const messages: string[] = [];
+    const { promise: held, resolve: release } = Promise.withResolvers<void>();
+    let photoSet = false;
+    const result = await importParrotFiles([nook], {
+      ...base(server, messages),
+      artistPhoto: async () => {
+        await held;
+        return { bytes: photo, credit: CREDIT };
+      },
+      onProgress: (event) => {
+        if (event.done !== 1 || photoSet) return;
+        photoSet = true;
+        // Another device gives the artist the user's photo; this import's next publish meets it.
+        server.state.conflictOnce = () => {
+          const other = openParrotLibrary(server.state.dbBytes);
+          other.exec("UPDATE artists SET picture_object_key = 'pic/user', picture_thumb_object_key = 'pic/user-thumb'");
+          server.state.dbBytes = serializeParrotLibrary(other);
+          other.close();
+          server.state.version += 1;
+          llog("other device set the user's photo", { version: server.state.version });
+        };
+        release();
+      },
+    });
+    llog("run", { result, publishes: server.publishes.map((call) => call.baseVersion) });
+    llog("importer log", messages.filter((message) => message.includes("photo")));
+    expect(result.failed).toEqual([]);
+    expect(photoSet).toBe(true);
+    const [artist] = artistsIn(server.state.dbBytes!);
+    llog("artist", artist);
+    expect(artist).toMatchObject({ name: "Linnet Park", pictureObjectKey: "pic/user", thumb: "pic/user-thumb", triedAt: expect.any(Number) });
+    expect(messages.some((message) => message.includes("not kept"))).toBe(true);
+  });
+
   it("records 'no photo' when the lookup has none, and nothing when it fails, so the pass asks again", async () => {
     const none = createFakeServer();
     const messages: string[] = [];
@@ -1004,5 +1073,45 @@ describe("importParrotFiles lyrics and artist photos", () => {
     llog("failed photo", { failed, failedAsked });
     expect(failed).toMatchObject({ musicId: LP_ID, pictureObjectKey: null, triedAt: null });
     expect(failedAsked.at(-1)).toEqual([]);
+  });
+});
+
+// @bugfix: the import stored every song without its catalog id, though the review knew the matched track, so a
+// lyrics lookup never carried it and our lyrics copy's direct read by song id went unused.
+// @req PAR-LYR-01[parrot]
+describe("the matched song's catalog id", () => {
+  const SONG_ID = "6f1c2a3b-0000-4000-8000-00000000c0de";
+  const imported = (edit: Partial<ParrotImportEdit>) => {
+    const db = new Database(":memory:");
+    for (const sql of parrotLibraryMigrationStatements(0)) db.run(sql);
+    const song = applyParrotImportEdit(info("/music/13 - Nook.mp3", { title: "Nook", durationMs: 185_000 }), { artist: "", album: "", title: "", ...edit });
+    const ops = buildParrotTrackOps({ info: song, fileHash: "a", sizeBytes: 10, chunks: [{ idx: 0, objectKey: "a/chunk-0", plainOffset: 0, plainSize: 10 }], now: 1 });
+    db.transaction(() => {
+      for (const op of ops)
+        for (const statements of Object.values(buildParrotOpStatements(op)))
+          for (const { sql, params } of statements ?? []) db.prepare(sql).run(...(params as never[]));
+    })();
+    const query: ParrotLibraryQuery = <Row>(sql: string, params: readonly (string | number | null)[] = []) => db.prepare(sql).all(...(params as never[])) as Row[];
+    const upsert = ops.find((op) => op.type === "track.upsert");
+    return { musicId: (upsert?.payload as { musicId: string | null }).musicId, trackId: parrotTrackIds({ ...song, fileHash: "a" }).trackId, query };
+  };
+
+  it("is stored on the song at import and sent with its lyrics lookup", async () => {
+    const song = imported({ trackMusicId: SONG_ID });
+    log("matched song", { musicId: song.musicId });
+    expect(song.musicId).toBe(SONG_ID);
+    expect(await parrotLyricsQuery(song.query, song.trackId)).toMatchObject({ artist: "Linnet Park", title: "Nook", id: SONG_ID });
+  });
+
+  it("stays empty for a song confirmed without a matched track", async () => {
+    const song = imported({});
+    expect(song.musicId).toBeNull();
+    expect(await parrotLyricsQuery(song.query, song.trackId)).not.toHaveProperty("id");
+  });
+
+  it("drops an id that is not from our music copy (an outside source's id)", async () => {
+    const song = imported({ trackMusicId: "dQw4w9WgXcQ" });
+    log("outside id", { musicId: song.musicId });
+    expect(song.musicId).toBeNull();
   });
 });

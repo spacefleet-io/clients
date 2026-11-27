@@ -19,6 +19,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { mkdir, rename, rm, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { gunzipSync } from "node:zlib";
+import { parseRetryAfterSeconds } from "@space/shared/retryAfter";
 import { TESSERACT_LANG_DATA_SHA256 } from "./langDataHashes";
 import type { SubtitleOcrLog } from "./types";
 
@@ -66,15 +67,6 @@ const abortableSleep = (ms: number, signal?: AbortSignal): Promise<void> => {
   };
   signal?.addEventListener("abort", onAbort, { once: true });
   return promise;
-};
-
-/** Retry-After as delta-seconds or HTTP date → ms; null when absent/unparseable. */
-export const parseRetryAfterMs = (value: string | null, now = Date.now()): number | null => {
-  if (!value) return null;
-  const seconds = Number(value.trim());
-  if (Number.isFinite(seconds)) return Math.max(0, seconds * 1000);
-  const date = Date.parse(value);
-  return Number.isNaN(date) ? null : Math.max(0, date - now);
 };
 
 const fileSize = async (path: string): Promise<number | null> => {
@@ -150,8 +142,8 @@ const download = async (options: EnsureLangDataOptions, path: string): Promise<L
     if (response && !response.ok && response.status !== 429 && response.status !== 503) {
       throw new Error(`language data download failed: HTTP ${response.status} for ${url}`);
     }
-    const retryAfterMs = response ? parseRetryAfterMs(response.headers.get("retry-after")) : null;
-    const retryDelayMs = Math.min(MAX_BACKOFF_MS, retryAfterMs ?? backoffMs);
+    const retryAfterSeconds = response ? parseRetryAfterSeconds(response.headers.get("retry-after"), Date.now()) : undefined;
+    const retryDelayMs = Math.min(MAX_BACKOFF_MS, retryAfterSeconds === undefined ? backoffMs : retryAfterSeconds * 1000);
     if (attempt >= MAX_ATTEMPTS) {
       throw new Error(`language data download for ${tesseractLang} gave up after ${attempt} attempts (${reason})`);
     }

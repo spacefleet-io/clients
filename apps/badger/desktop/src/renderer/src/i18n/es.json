@@ -149,7 +149,8 @@
     "resendError": "No se pudo reenviar el código.",
     "provider": {
       "continueInBrowser": "Termina de iniciar sesión en tu navegador. Badger volverá cuando acabes."
-    }
+    },
+    "serviceUpdate": "Actualización del servicio en curso. Actualiza o reinicia la app y vuelve a intentarlo."
   },
   "signup": {
     "title": "Crear cuenta",
@@ -1476,7 +1477,8 @@
       "title": "Favoritos",
       "subtitle": "Tus películas y series marcadas con estrella.",
       "empty": "Aún no hay favoritos."
-    }
+    },
+    "reorderSection": "Reordenar sección"
   },
   "lab": {
     "title": "Gestión de archivos",
@@ -2146,6 +2148,10 @@
       "preparingSample": "Preparando la muestra…",
       "subtitleSampleAlt": "Muestra de subtítulos",
       "resolveVideoTitle": "Resolver los videos añadidos",
+      "resolveVideoProgress": "Decisión {{current}} de {{total}}",
+      "unavailableTitle": "Importación no disponible",
+      "unavailableCode": "código: {{code}}",
+      "unavailableDismiss": "Descartar",
       "noVideoDecisions": "No hay decisiones de video pendientes.",
       "dummyTitle": "Añadir con datos de prueba",
       "movie": "Película",

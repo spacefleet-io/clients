@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { AlertCircle, BookCheck, Crop as CropIcon, Disc3, Eraser, FileAudio, GripVertical, ImageUp, Pencil, SearchX, WifiOff } from "lucide-react";
 import {
   Button,
@@ -27,6 +27,7 @@ import { ParrotEditSuggestList, suggestionName, type ParrotEditSuggest } from "@
 import { formatLocalizedStorage } from "@space/shared/format";
 import {
   cleanParrotTitles,
+  isParrotCopyId,
   matchParrotImportTracks,
   mergeParrotEditSuggestions,
   parrotAlbumArtists,
@@ -48,7 +49,9 @@ import type {
   ParrotLanguage,
   ParrotScanEntry,
 } from "../../shared/ipc";
+import type { ParrotLibraryTrack } from "@space/parrot-ingest";
 import { editSuggestLabels } from "./editSuggest";
+import { ImportLyricsLine, ImportLyricsList, useImportLyrics } from "./ImportReviewLyrics";
 import { countText, pluralForm, type Translate } from "./i18n";
 
 /** "Frame the cover" (PAR-META-22) in the window's language, for the import dialog and Edit details. */
@@ -62,7 +65,8 @@ export const coverFrameLabels = (t: Translate): ParrotCoverFrameLabels => ({
   use: t("import.frame.use"),
 });
 
-type Props = { t: Translate; language: ParrotLanguage; scan: ParrotImportScan; onDone: () => void; suggest?: ParrotEditSuggest };
+/** `tracks`: the library's songs, which the drop's lyrics files can go on too (PAR-LYR-09). */
+type Props = { t: Translate; language: ParrotLanguage; scan: ParrotImportScan; tracks: readonly ParrotLibraryTrack[]; onDone: () => void; suggest?: ParrotEditSuggest };
 
 /** An album of our music library songs are placed on, with whether its tracklist is whole (false: the album lookup failed). */
 type FoundAlbum = ParrotImportFoundAlbum & { tracklistKnown: boolean };
@@ -385,7 +389,7 @@ function ArtistField({
  * PAR-META-22); a file album's songs reorder by dragging and their numbers follow. Import turns on once no album is
  * looking up; it uploads only the ticked songs, Cancel nothing. Built on the family's import review (REL-FAM-02).
  */
-export default function ImportReview({ t, language, scan, onDone, suggest }: Props) {
+export default function ImportReview({ t, language, scan, tracks, onDone, suggest }: Props) {
   const fileAlbums = useMemo(() => parrotFileAlbums(scan.entries), [scan]);
   /** PAR-META-23: the clean-ups each file album proposes for its names, by its key, and the ones the user undid. */
   const [undone, setUndone] = useState<Record<string, ReadonlySet<ParrotTitleCleanupRule>>>({});
@@ -411,12 +415,18 @@ export default function ImportReview({ t, language, scan, onDone, suggest }: Pro
     }
     return shown;
   }, [scan, fileAlbums, cleanups]);
+  const lyrics = useImportLyrics(scan, entries, tracks);
   const rankOf = useMemo(() => new Map(fileAlbums.flatMap((album, rank) => album.files.map((file) => [file, rank] as const))), [fileAlbums]);
 
   const [lookups, setLookups] = useState<Record<string, Lookup>>(() => Object.fromEntries(fileAlbums.map((album) => [album.key, "searching" as const])));
   const stopped = useRef(new Set<string>());
   const [albums, setAlbums] = useState<Record<string, FoundAlbum>>({});
   const [places, setPlaces] = useState<Record<string, Place>>({});
+  /**
+   * PAR-UP-10 (Chris 2026-11-27, "(A) looks best"): songs kept with their folder's album that are also on another
+   * album of the artist: where they sit by default (`home`) and the track "Move there" puts them on (`there`).
+   */
+  const [alsoOn, setAlsoOn] = useState<Record<string, { home: Place; there: Place }>>({});
   /** Songs the lookup could place nowhere: imported as is, marked to be identified later. */
   const [lost, setLost] = useState<ReadonlySet<string>>(new Set());
   /** Albums whose "Check" the user answered with "Looks right". */
@@ -452,11 +462,26 @@ export default function ImportReview({ t, language, scan, onDone, suggest }: Pro
       }
       const failed = answer.albums.length === 0 && answer.unidentified.length > 0 && answer.unidentified.every((file) => file.reason === "lookup-failed");
       console.info(`[import-review] album ${JSON.stringify(album.title)}: ${answer.albums.length} album(s) found, ${answer.unidentified.length} song(s) as is${failed ? " (lookup failed)" : ""}`);
+      const elsewhere = answer.albums.flatMap((found) =>
+        found.files.flatMap((file) => {
+          if (!file.alsoOn) return [];
+          const there = { album: file.alsoOn.album, cover: null, tracklistKnown: file.alsoOn.tracklistKnown };
+          const home: Place = { albumKey: parrotAlbumKey(found.album), disc: file.disc, number: file.number, sure: file.sure };
+          // With no tracklist the other album's card cannot show the track: the song goes there with no number.
+          const thereTrack = file.alsoOn.tracklistKnown ? file.alsoOn.number : null;
+          return [{ file: file.file, found: there, home, there: { albumKey: parrotAlbumKey(file.alsoOn.album), disc: file.alsoOn.disc, number: thereTrack, sure: file.alsoOn.sure } }];
+        }),
+      );
       setAlbums((previous) => {
         const next = { ...previous };
         for (const { files: _files, ...found } of answer.albums) next[parrotAlbumKey(found.album)] ??= found;
+        for (const { found } of elsewhere) next[parrotAlbumKey(found.album)] ??= found;
         return next;
       });
+      if (elsewhere.length > 0) {
+        console.info(`[import-review] album ${JSON.stringify(album.title)}: ${elsewhere.length} song(s) kept here, also on another album`);
+        setAlsoOn((previous) => ({ ...previous, ...Object.fromEntries(elsewhere.map(({ file, home, there }) => [file, { home, there }])) }));
+      }
       setPlaces((previous) => ({
         ...previous,
         ...Object.fromEntries(answer.albums.flatMap((found) => found.files.map((file) => [file.file, { albumKey: parrotAlbumKey(found.album), disc: file.disc, number: file.number, sure: file.sure }]))),
@@ -464,7 +489,7 @@ export default function ImportReview({ t, language, scan, onDone, suggest }: Pro
       if (answer.unidentified.length > 0) setLost((previous) => new Set([...previous, ...answer.unidentified.map((file) => file.file)]));
       setLookups((previous) => ({ ...previous, [album.key]: failed ? "failed" : "done" }));
       // The covers come after the albums (#2509): a few at a time, each drawn as it comes; the disc shows meanwhile.
-      const ids = [...new Set(answer.albums.flatMap((found) => (!found.cover && found.album.id ? [found.album.id] : [])))];
+      const ids = [...new Set([...answer.albums, ...elsewhere.map(({ found }) => found)].flatMap((found) => (!found.cover && found.album.id ? [found.album.id] : [])))];
       void askCovers(ids, () => live, (id, cover) => {
         if (!cover) return;
         setAlbums((previous) => Object.fromEntries(Object.entries(previous).map(([key, found]) => [key, found.album.id === id && !found.cover ? { ...found, cover } : found])));
@@ -650,6 +675,8 @@ export default function ImportReview({ t, language, scan, onDone, suggest }: Pro
       ...(tracklistKnown ? { tracklist: album.tracks.map(({ disc, number, title, durationMs }) => ({ disc, number, title, durationMs })) } : {}),
       // The album's id in the metadata (PAR-COPY-01), so later refreshes and the cover pass find it.
       ...(album.id ? { albumMusicId: album.id } : {}),
+      // The matched song's id in our music copy (PAR-LYR-01), so its lyrics lookup reads our copy by it; never an outside source's id (PAR-META-26).
+      ...(track?.id && isParrotCopyId(track.id) ? { trackMusicId: track.id } : {}),
       ...(cover && album.id ? { coverId: album.id } : {}),
       ...coverEdit(card),
     };
@@ -657,6 +684,8 @@ export default function ImportReview({ t, language, scan, onDone, suggest }: Pro
 
   /** The ticked songs as the review shows them (PAR-META-23: their album's clean-ups applied). */
   const importing = scan.entries.flatMap((entry) => (unticked.has(entry.file) ? [] : [entries.get(entry.file) ?? entry]));
+  /** The lyrics files that go on a song: an import song's only while it is ticked (PAR-LYR-09). */
+  const keptLyrics = lyrics.choices(new Set(importing.map((entry) => entry.file)));
   const importingBytes = importing.reduce((sum, entry) => sum + entry.size, 0);
 
   const setTicked = (files: string[], on: boolean) =>
@@ -684,6 +713,80 @@ export default function ImportReview({ t, language, scan, onDone, suggest }: Pro
     Object.entries(places)
       .filter(([file, placed]) => placed.albumKey === albumKey && placed.number !== null && !except.includes(file))
       .map(([, placed]) => ({ disc: placed.disc, number: placed.number as number }));
+  /** "In the End (2001)": an album as the "Also on" line names it. */
+  const albumLabel = (album: FoundAlbum["album"]) => (album.year ? `${album.title} (${album.year})` : album.title);
+  /** PAR-UP-10 "Move there" / "Move back": one song changes album; the rest of its folder stays where it is. */
+  const moveAlsoOn = (file: string, to: "there" | "home") => {
+    const flag = alsoOn[file];
+    if (!flag) return;
+    console.info(`[import-review] ${JSON.stringify(fileName(file))} moved ${to === "there" ? `to ${flag.there.albumKey}` : `back to ${flag.home.albumKey}`}`);
+    setPlaces((previous) => ({ ...previous, [file]: flag[to] }));
+    setLost((previous) => new Set([...previous].filter((one) => one !== file)));
+  };
+  /** A flagged song has its "Also on" line while it sits on either album the flag names (not after Not this album or Wrong album). */
+  const alsoOnShows = (file: string) => {
+    const flag = alsoOn[file];
+    const place = places[file];
+    return !!flag && !!place && !!albums[flag.home.albumKey] && !!albums[flag.there.albumKey] && (place.albumKey === flag.home.albumKey || place.albumKey === flag.there.albumKey);
+  };
+  /** The "Also on" line under a flagged song: Keep here (the default) or Move there on its album, Move back on the other. */
+  const alsoOnLine = (card: Card, entry: ParrotScanEntry) => {
+    if (card.kind !== "library" || !alsoOnShows(entry.file)) return null;
+    const flag = alsoOn[entry.file]!;
+    const place = places[entry.file]!;
+    const home = albums[flag.home.albumKey]!;
+    const there = albums[flag.there.albumKey]!;
+    const line = "flex flex-wrap items-center gap-2 border-b border-border/30 bg-amber-400/5 py-1.5 pl-[4.75rem] pr-3 text-xs last:border-b-0";
+    /** Another song of the dialog already holds the track this song would go to (no number holds none). */
+    const held = (target: Place) => target.number !== null && takenOn(target.albumKey, [entry.file]).some((track) => track.disc === target.disc && track.number === target.number);
+    if (place.albumKey === flag.there.albumKey) {
+      const backTaken = held(flag.home);
+      return (
+        <div key={`also-${entry.file}`} className={line} data-testid="import-also-on" data-file={entry.file} data-state="moved">
+          <span className="text-muted-foreground">{t("import.match.movedFrom", { album: albumLabel(home.album) })}</span>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 px-2 text-xs"
+            disabled={backTaken}
+            title={backTaken ? t("import.match.moveThereTaken") : undefined}
+            onClick={() => moveAlsoOn(entry.file, "home")}
+            data-testid="import-also-back"
+          >
+            {t("import.match.moveBack")}
+          </Button>
+        </div>
+      );
+    }
+    if (place.albumKey !== flag.home.albumKey) return null;
+    const target = flag.there;
+    const taken = held(target);
+    const total = there.tracklistKnown ? there.album.tracks.length : 0;
+    const n = Object.values(places).filter((placed) => placed.albumKey === target.albumKey).length + 1;
+    const album = albumLabel(there.album);
+    const choice = "h-7 rounded-md px-2.5 text-xs";
+    return (
+      <div key={`also-${entry.file}`} className={line} data-testid="import-also-on" data-file={entry.file} data-state="kept">
+        <span className="text-amber-200">{t("import.match.alsoOn", { album })}</span>
+        <span className="inline-flex rounded-lg border border-border/60 p-0.5" role="group" aria-label={t("import.match.alsoOn", { album })}>
+          <button type="button" aria-pressed className={`${choice} bg-muted text-foreground`} data-testid="import-also-keep">
+            {t("import.match.keepHere")}
+          </button>
+          <button
+            type="button"
+            aria-pressed={false}
+            disabled={taken}
+            title={taken ? t("import.match.moveThereTaken") : undefined}
+            className={`${choice} text-muted-foreground hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50`}
+            onClick={() => moveAlsoOn(entry.file, "there")}
+            data-testid="import-also-move"
+          >
+            {total > 0 ? t(`import.match.moveThereCount.${pluralForm(language, total)}`, { album, n, total }) : t("import.match.moveThere", { album })}
+          </button>
+        </span>
+      </div>
+    );
+  };
 
   /**
    * "Wrong album? Search", or one of this import's own albums (PAR-UP-10): the card's songs move onto the picked
@@ -766,13 +869,21 @@ export default function ImportReview({ t, language, scan, onDone, suggest }: Pro
     console.info(
       `[import-review] confirm: ${selection.length} of ${scan.entries.length} song(s) on ${cards.length} album(s), ${asIs} to identify later, ${Object.keys(typed).length + Object.keys(albumTyped).length} edited, ${framed} cover(s) framed`,
     );
-    await window.parrot.confirmImport(selection);
+    console.info(`[import-review] confirm: ${keptLyrics.length} of ${scan.lyrics.length} lyrics file(s) go on a song`);
+    await window.parrot.confirmImport(selection, keptLyrics);
     onDone();
   };
 
   const cardTitle = (card: Card) => albumTyped[card.key]?.album ?? (card.kind === "file" ? card.source.title : card.found.album.title);
   const cardArtist = (card: Card) => albumTyped[card.key]?.artist ?? (card.kind === "file" ? card.source.artist : artistNames(card.found));
   const cardYear = (card: Card) => albumTyped[card.key]?.year ?? String((card.kind === "file" ? card.source.year : card.found.album.year) ?? "");
+  /** PAR-UP-10: with songs also on other albums, the footer names the albums the import makes, as the songs sit now. */
+  const goesIn =
+    !Object.keys(alsoOn).some(alsoOnShows)
+      ? []
+      : cards
+          .filter((card) => card.files.some((entry) => !unticked.has(entry.file)))
+          .map((card) => (cardYear(card) ? `${cardTitle(card)} (${cardYear(card)})` : cardTitle(card)));
 
   /**
    * PAR-UP-06 (Chris 2026-11-12): who a found album is by: each artist's small round photo (or the drawn picture the
@@ -966,8 +1077,8 @@ export default function ImportReview({ t, language, scan, onDone, suggest }: Pro
     const title = named(entry, card).title;
     const movable = card.kind === "file";
     return (
+      <Fragment key={entry.file}>
       <div
-        key={entry.file}
         className={`grid grid-cols-[1.25rem_1.25rem_1.75rem_1fr_2.75rem] items-center gap-2 border-b border-border/30 px-3 py-1.5 last:border-b-0 ${dragging === entry.file ? "opacity-40" : ""} ${on ? "" : "opacity-60"}`}
         onDragOver={
           movable && dragging
@@ -1046,6 +1157,8 @@ export default function ImportReview({ t, language, scan, onDone, suggest }: Pro
         </div>
         <span className="text-right text-xs tabular-nums text-muted-foreground">{duration(entry.durationMs)}</span>
       </div>
+      <ImportLyricsLine t={t} lyrics={lyrics} songFile={entry.file} />
+      </Fragment>
     );
   };
   const dropLine = (at: number) => (dragging && dropAt === at ? <div key={`drop-${at}`} className="mx-3 my-0.5 h-0.5 rounded-full bg-primary" data-testid="import-drop-line" /> : null);
@@ -1078,7 +1191,7 @@ export default function ImportReview({ t, language, scan, onDone, suggest }: Pro
           {found.album.tracks.map((track, index) => {
             const entry = byTrack.get(trackKey(track));
             return entry ? (
-              songRow(card, entry, index, String(track.number))
+              [songRow(card, entry, index, String(track.number)), alsoOnLine(card, entry)]
             ) : (
               <div
                 key={trackKey(track)}
@@ -1097,7 +1210,7 @@ export default function ImportReview({ t, language, scan, onDone, suggest }: Pro
               </div>
             );
           })}
-          {added.map((entry, index) => songRow(card, entry, found.album.tracks.length + index, "+"))}
+          {added.map((entry, index) => [songRow(card, entry, found.album.tracks.length + index, "+"), alsoOnLine(card, entry)])}
         </div>
       </div>
     );
@@ -1272,7 +1385,13 @@ export default function ImportReview({ t, language, scan, onDone, suggest }: Pro
     >
       <ImportReviewBody>
         {scan.entries.length === 0 ? (
-          <div className="flex flex-1 items-center justify-center p-8 text-muted-foreground">{t("import.review.empty")}</div>
+          scan.lyrics.length > 0 ? (
+            <ImportReviewList className="flex-1" data-testid="import-review-list">
+              <ImportLyricsList t={t} lyrics={lyrics} all />
+            </ImportReviewList>
+          ) : (
+            <div className="flex flex-1 items-center justify-center p-8 text-muted-foreground">{t("import.review.empty")}</div>
+          )
         ) : (
           <>
             <ImportReviewList data-testid="import-review-list">
@@ -1363,6 +1482,7 @@ export default function ImportReview({ t, language, scan, onDone, suggest }: Pro
                   {t(`import.review.unreadable.${pluralForm(language, scan.unreadable.length)}`, { n: scan.unreadable.length })}
                 </ImportReviewSection>
               ) : null}
+              <ImportLyricsList t={t} lyrics={lyrics} all={false} />
             </ImportReviewList>
             <ImportReviewDetail>{current ? albumDetail(current) : null}</ImportReviewDetail>
           </>
@@ -1370,11 +1490,18 @@ export default function ImportReview({ t, language, scan, onDone, suggest }: Pro
       </ImportReviewBody>
       <ImportReviewFooter>
         <ImportReviewSummary data-testid="import-review-summary">
-          {t(`import.review.summary.${pluralForm(language, scan.entries.length)}`, {
-            selected: importing.length,
-            total: scan.entries.length,
-            size: formatLocalizedStorage(importingBytes, language),
-          })}
+          {scan.entries.length > 0
+            ? t(`import.review.summary.${pluralForm(language, scan.entries.length)}`, {
+                selected: importing.length,
+                total: scan.entries.length,
+                size: formatLocalizedStorage(importingBytes, language),
+              })
+            : null}
+          {keptLyrics.length > 0 ? (
+            <div className={scan.entries.length > 0 ? "text-xs" : undefined} data-testid="import-review-lyrics-count">
+              {t(`import.lyrics.count.${pluralForm(language, keptLyrics.length)}`, { n: keptLyrics.length })}
+            </div>
+          ) : null}
           {looking > 0 ? (
             <div className="text-xs" data-testid="import-review-still-looking">
               {t(looking === 1 ? "import.review.stillLooking.one" : "import.review.stillLooking.other", { n: looking })}
@@ -1383,6 +1510,11 @@ export default function ImportReview({ t, language, scan, onDone, suggest }: Pro
           {pending.length > 0 ? (
             <div className="text-xs text-amber-300" data-testid="import-review-to-check">
               {t(`import.review.toCheck.${pluralForm(language, pending.length)}`, { n: pending.length })}
+            </div>
+          ) : null}
+          {goesIn.length > 0 ? (
+            <div className="text-xs" data-testid="import-review-goes-in">
+              {t(`import.review.goesIn.${pluralForm(language, goesIn.length)}`, { n: goesIn.length, albums: goesIn.join(", ") })}
             </div>
           ) : null}
         </ImportReviewSummary>
@@ -1395,8 +1527,10 @@ export default function ImportReview({ t, language, scan, onDone, suggest }: Pro
               {t(`import.review.walk.${pluralForm(language, pending.length)}`, { n: pending.length })}
             </Button>
           ) : null}
-          <Button disabled={busy || importing.length === 0 || looking > 0 || pending.length > 0} onClick={() => void confirm()} data-testid="import-review-confirm">
-            {t(`import.review.confirm.${new Intl.PluralRules(language).select(importing.length) === "one" ? "one" : "other"}`, { n: importing.length })}
+          <Button disabled={busy || (importing.length === 0 && keptLyrics.length === 0) || looking > 0 || pending.length > 0} onClick={() => void confirm()} data-testid="import-review-confirm">
+            {importing.length > 0
+              ? t(`import.review.confirm.${pluralForm(language, importing.length)}`, { n: importing.length })
+              : t(`import.lyrics.confirm.${pluralForm(language, keptLyrics.length)}`, { n: keptLyrics.length })}
           </Button>
         </ImportReviewActions>
       </ImportReviewFooter>

@@ -9,6 +9,8 @@ import { useWindowFileDrop, WindowDropOverlay } from "@space/desktop-shell/windo
 import { DesktopTourHost, startDesktopTour } from "@space/desktop-shell/tour";
 import tourDropVideo from "./assets/tour-drop.webm";
 import { isParrotAudioFile } from "@space/parrot-ingest/audio-formats";
+import { isParrotLyricsFileName } from "@space/parrot-core";
+import { useOwnLyrics } from "./ownLyrics";
 import { RenderBoundary } from "@space/ui/render-boundary";
 import { Button, Notifications, toast } from "@space/ui";
 import { BadgerIconButton, badgerTopBarIcons } from "@space/ui/badger";
@@ -34,10 +36,16 @@ import {
 import { ParrotNameLink } from "@space/ui/parrot";
 import { ParrotAlbumMenu, parrotCardControls, type ParrotCardPlayer } from "@space/ui/parrot/card-actions";
 import { ParrotConfirmDialog, ParrotPlaylistArt, ParrotPlaylistTile, useParrotPlaylistEditor } from "@space/ui/parrot/playlists";
-import { type ParrotMenuItem } from "@space/ui/parrot/menu";
+import { ParrotMenu, type ParrotMenuItem } from "@space/ui/parrot/menu";
 import { parrotLibraryToolbarLabels, ParrotLibraryToolbar, useParrotLibraryPrefs, useParrotLibraryShown } from "@space/ui/parrot/library-toolbar";
 import { ParrotKeepButton, ParrotKeepChoiceDialog, ParrotKeptLine, type ParrotKeepState } from "@space/ui/parrot/offline";
-import { ParrotEditMetadataDialog, type ParrotCoverInput, type ParrotEditFields } from "@space/ui/parrot/manage";
+import {
+  ParrotEditArtistDialog,
+  ParrotEditMetadataDialog,
+  type ParrotArtistPictureChoice,
+  type ParrotCoverInput,
+  type ParrotEditFields,
+} from "@space/ui/parrot/manage";
 import { ParrotNowPlaying, type ParrotLyricsFetchControl, type ParrotNowPlayingTab } from "@space/ui/parrot/screens";
 import { ParrotSearchPalette } from "@space/ui/parrot/search-palette";
 import { UnpaidAccessSign } from "./UnpaidAccessSign";
@@ -77,6 +85,7 @@ import {
   type KeepCopyChoice,
   type KeptKind,
   type KeptStatus,
+  PARROT_COVER_MAX_BYTES,
 } from "@space/parrot-core";
 import type { ParrotLibraryTrack } from "@space/parrot-ingest";
 import type { ParrotImportScan, ParrotImportStatus, ParrotLibrary, ParrotState } from "../../shared/ipc";
@@ -253,6 +262,8 @@ export default function Library({ t, state, onState }: Props) {
   } | null>(null);
   const [editError, setEditError] = useState<string | null>(null);
   const [editBusy, setEditBusy] = useState(false);
+  /** The artist edit dialog (PAR-META-31): the artist's current name and photo. */
+  const [editingArtist, setEditingArtist] = useState<{ id: string; name: string; pictureUrl: string | null } | null>(null);
 
   // PAR-UP-07: artists whose photo the import stopped fetching keep their loading picture until a library read started
   // after that (by load number) is in, so a found photo replaces the shimmer without a drawn picture in between.
@@ -275,24 +286,34 @@ export default function Library({ t, state, onState }: Props) {
     }
   };
 
+  // UX-ADD-01: what the "+", the empty library or a drop asked to scan. Asked while an import runs or waits in its
+  // review, main keeps the sources and scans them once it is over: the window says so and keeps the status it shows.
+  const scanned = (status: ParrotImportStatus) => {
+    if (status.queuedSources === undefined) {
+      setImportStatus(status);
+      return;
+    }
+    console.info(`[parrot:import] ${status.queuedSources} source(s) wait behind the import`);
+    toast.info(t("addMusic.dropQueued"));
+  };
+
   // UX-ADD-01: song files or folders dropped anywhere on the window are scanned like the "+" picks them, so the same
-  // confirm dialog (PAR-UP-05) shows what was found; only audio files are read (PAR-UP-01). UX-ADD-02: images are
-  // left out silently, any other file gets a short toast.
+  // confirm dialog (PAR-UP-05) shows what was found; audio files are read as songs and .lrc/.txt files as lyrics
+  // (PAR-UP-01, PAR-LYR-09), which the same review places on songs. UX-ADD-02: images are left out silently, any other
+  // file gets a short toast. A drop during an import waits behind it (above).
   const drop = useWindowFileDrop({
     getPathForFile: window.parrot.getPathForFile,
-    isImportableFile: isParrotAudioFile,
+    isImportableFile: (path) => isParrotAudioFile(path) || isParrotLyricsFileName(path),
     onRefused: (names) => {
       console.info(`[parrot:window-drop] refused ${names.length} file(s)`);
       toast.info(t("addMusic.dropOnlySongs"));
     },
-    // An import already under way is not interrupted, like the "+" (an open dialog is handled by the shared drop).
-    standAside: () => Boolean(importStatus?.running) || importStatus?.phase === "review",
     onDrop: (paths) => {
       console.info(`[parrot:window-drop] dropped ${paths.length} path(s)`);
       void window.parrot.scanImport(paths).then(
         (status) => {
-          setImportStatus(status);
-          if (status.phase !== "scanning") drop.stopProcessing();
+          scanned(status);
+          if (status.phase !== "scanning" || status.queuedSources !== undefined) drop.stopProcessing();
         },
         (error: unknown) => {
           console.error("[parrot:window-drop] scan failed", error);
@@ -309,7 +330,7 @@ export default function Library({ t, state, onState }: Props) {
     console.info(`[parrot:empty-library] picked ${kind}`, paths.length);
     if (paths.length === 0) return false;
     try {
-      setImportStatus(await window.parrot.scanImport(paths));
+      scanned(await window.parrot.scanImport(paths));
     } catch (error) {
       console.error("[parrot:empty-library] scan failed", error);
       toast.error(error instanceof Error ? error.message : String(error));
@@ -349,6 +370,32 @@ export default function Library({ t, state, onState }: Props) {
       if (status.phase === "failed") notifyJob("import", "failed", { key: "notify.job.importFailed" }, importErrorPart(status.error ?? ""));
     });
   }, []);
+  // UX-ADD-01: a review with no confirm dialog on screen (its dialog closed while main kept the review, or its scan
+  // never came) blocks nothing: the scan is read again and the dialog reopens, or main has none and the review ends.
+  const orphanReview = importStatus?.phase === "review" && !importScan;
+  useEffect(() => {
+    if (!orphanReview) return;
+    let current = true;
+    void (async () => {
+      const scan = await window.parrot.getImportScan();
+      if (!current) return;
+      if (scan) {
+        setImportScan(scan);
+        return;
+      }
+      const now = await window.parrot.getImportStatus();
+      if (!current) return;
+      if (now.phase !== "review" || now.running) {
+        setImportStatus(now);
+        return;
+      }
+      console.warn("[parrot:import] review without a scan cleared");
+      setImportStatus(await window.parrot.cancelImport());
+    })();
+    return () => {
+      current = false;
+    };
+  }, [orphanReview]);
   useEffect(() => {
     void window.parrot.getKept().then(setKept);
     return window.parrot.onKept(setKept);
@@ -594,11 +641,28 @@ export default function Library({ t, state, onState }: Props) {
   };
   // PAR-META-18: the fields' connected autocomplete; PAR-LYR-05: the dialog's Lyrics section. Nothing is saved before Save.
   const editSuggest = useEditSuggest({ artists, albums, tracks: library?.tracks ?? [] });
-  const editLyrics = useEditLyrics({
+  const editLyricsSection = useEditLyrics({
     target: editing?.target ?? null,
     songIds: editing?.target.kind === "album" ? tracks.filter((track) => track.albumId === editing.target.id).map((track) => track.id) : [],
     lyricsChanges,
   });
+  // PAR-LYR-10: the user's own lyrics editor and Remove (PAR-LYR-11).
+  const ownLyrics = useOwnLyrics({
+    t,
+    tracks,
+    playingId,
+    playing,
+    clock,
+    onSeek: (ms) => seekRef.current?.(ms),
+    onToggle: () => toggleRef.current?.(),
+    onPlaySong: (trackId) => {
+      const track = tracks.find((row) => row.id === trackId);
+      if (track) play([track], 0);
+    },
+  });
+  // PAR-LYR-10: the song's "Add lyrics" / "Edit lyrics" opens the editor over the dialog.
+  const editLyrics =
+    editLyricsSection?.kind === "track" && editing ? { ...editLyricsSection, onEditOwn: () => void ownLyrics.openEditor(editing.target.id) } : editLyricsSection;
   const saveEdit = async (fields: ParrotEditFields, cover: ParrotCoverInput | null) => {
     if (!editing) return;
     const { target } = editing;
@@ -616,6 +680,34 @@ export default function Library({ t, state, onState }: Props) {
     setLibrary(result.library);
     setEditing(null);
   };
+  /** Opens the artist dialog with the artist's current name and photo (PAR-META-31). */
+  const askEditArtist = async (id: string) => {
+    const values = await window.parrot.getArtistEditValues(id);
+    if (!values) {
+      notices.notifyError(id, { key: "manage.saveFailed", vars: { reason: "not found" } }, { key: `save-failed:artist:${id}` });
+      return;
+    }
+    setEditError(null);
+    setEditingArtist({ id, ...values });
+  };
+  // PAR-META-31: a new photo goes as the cover beside the edit; "automatic" hands the artist back to the fetch.
+  const saveArtist = async (name: string, picture: ParrotArtistPictureChoice) => {
+    if (!editingArtist) return;
+    setEditBusy(true);
+    setEditError(null);
+    const result = await window.parrot.editDetails(
+      { kind: "artist", id: editingArtist.id, edit: { name, ...(picture === "automatic" ? { picture: "automatic" as const } : {}) } },
+      picture && picture !== "automatic" ? picture : null
+    );
+    setEditBusy(false);
+    if (!result.ok) {
+      setEditError(t("manage.saveFailed", { reason: result.error }));
+      return;
+    }
+    setLibrary(result.library);
+    setEditingArtist(null);
+  };
+  const coverTooLarge = t("manage.coverTooLarge", { max: String(PARROT_COVER_MAX_BYTES / 2 ** 20) });
 
   // Every song that starts goes to the front of this computer's history (Home's "Jump back in").
   const playingKey = currentEntry(queue)?.key;
@@ -678,7 +770,10 @@ export default function Library({ t, state, onState }: Props) {
       more
     );
   const artistControls = (artist: { id: string }) =>
-    parrotCardControls(t, () => tracks.filter((track) => track.artistId === artist.id), cardPlayer, { onAddToPlaylist: playlistEditor.addTo });
+    parrotCardControls(t, () => tracks.filter((track) => track.artistId === artist.id), cardPlayer, {
+      onAddToPlaylist: playlistEditor.addTo,
+      onEdit: () => void askEditArtist(artist.id),
+    });
   const playlistControls = (playlist: ParrotPlaylist) => parrotCardControls(t, () => playlistSongs(playlist), cardPlayer);
   const songLabels = {
     song: t("library.song"),
@@ -896,6 +991,11 @@ export default function Library({ t, state, onState }: Props) {
           back={{ label: t("back"), onClick: back }}
           track={playingTrack}
           lyrics={lyrics?.trackId === playingTrack.id ? lyrics.lyrics : undefined}
+          ownLyrics={{
+            onEdit: () => void ownLyrics.openEditor(playingTrack.id),
+            onRemove: () => void ownLyrics.remove(playingTrack.id),
+            labels: { add: t("lyrics.add"), edit: t("lyrics.edit"), remove: t("lyrics.remove") },
+          }}
           fetchLyrics={{
             state: lyricsFetch?.trackId === playingTrack.id ? lyricsFetch.state : "idle",
             onFetch: () => fetchPlayingLyrics(playingTrack.id),
@@ -932,6 +1032,8 @@ export default function Library({ t, state, onState }: Props) {
             searchingLyricsBody: t("nowPlaying.searchingLyricsBody"),
             syncedLyricsSource: t("nowPlaying.syncedLyricsSource"),
             plainLyricsSource: t("nowPlaying.plainLyricsSource"),
+            ownSyncedLyricsSource: t("nowPlaying.ownSyncedLyricsSource"),
+            ownPlainLyricsSource: t("nowPlaying.ownPlainLyricsSource"),
             fetchedSyncedLyricsSource: t("nowPlaying.fetchedSyncedLyricsSource"),
             fetchedPlainLyricsSource: t("nowPlaying.fetchedPlainLyricsSource"),
             nothingNext: t("nowPlaying.nothingNext"),
@@ -1062,10 +1164,16 @@ export default function Library({ t, state, onState }: Props) {
             titleTestId="artist-title"
             detail={`${countText(language, t, "album", artistAlbums.length)} · ${countText(language, t, "song", songs.length)}`}
             actions={
-              <>
+              <div className="flex items-center gap-2.5">
                 <PlayAll t={t} disabled={songs.length === 0} onClick={() => play(songs, 0)} />
                 <DeleteButton t={t} onClick={() => void askDelete({ kind: "artist", id: route.id }, artist?.name ?? "")} />
-              </>
+                {/* PAR-META-31: the artist card's menu without Play, which the page shows as a button. */}
+                <ParrotMenu
+                  label={t("card.more")}
+                  items={artistControls({ id: route.id }).actions.filter((action) => action.id !== "play")}
+                  testId="artist-menu"
+                />
+              </div>
             }
           />
           {albumTiles(artistAlbums)}
@@ -1216,7 +1324,7 @@ export default function Library({ t, state, onState }: Props) {
               label={t("addMusic.label")}
               icon={badgerTopBarIcons.add}
               onClick={() => {
-                if (!importStatus?.running && importStatus?.phase !== "review") setAddOpen(true);
+                setAddOpen(true);
               }}
               testId="library-import"
             />
@@ -1262,8 +1370,9 @@ export default function Library({ t, state, onState }: Props) {
           {() => page()}
         </RenderBoundary>
       </main>
-      <AddMusic t={t} open={addOpen} onOpenChange={setAddOpen} onScanned={setImportStatus} />
+      <AddMusic t={t} open={addOpen} onOpenChange={setAddOpen} onScanned={scanned} />
       <Notifications />
+      {ownLyrics.dialogs}
       <WindowDropOverlay
         drop={drop}
         labels={{
@@ -1283,9 +1392,9 @@ export default function Library({ t, state, onState }: Props) {
         onPlaying={setPlaying}
         startAt={startAt}
         onPosition={(track, ms) => saveHistory((current) => recordPosition(current, track, ms))}
-        // The lyrics follow the exact time; elsewhere whole seconds are enough (Home's "Resume 1:18", PAR-HOME-01),
-        // and Home redraws once a second rather than at every tick (nothing else reads the clock).
-        onClock={route.kind === "nowPlaying" ? clock.write : (ms) => clock.write(ms - (ms % 1000))}
+        // The lyrics (and the lyrics editor's taps, PAR-LYR-10) follow the exact time; elsewhere whole seconds are enough
+        // (Home's "Resume 1:18", PAR-HOME-01), and Home redraws once a second rather than at every tick.
+        onClock={route.kind === "nowPlaying" || ownLyrics.editing ? clock.write : (ms) => clock.write(ms - (ms % 1000))}
         seekRef={seekRef}
         toggleRef={toggleRef}
         coverFor={coverFor}
@@ -1408,6 +1517,7 @@ export default function Library({ t, state, onState }: Props) {
             coverHint: t("manage.coverHint"),
             coverPick: t("manage.coverPick"),
             coverFrame: t("import.cover.frame"),
+            coverTooLarge,
             frame: coverFrameLabels(t),
           }}
           error={editError}
@@ -1419,7 +1529,32 @@ export default function Library({ t, state, onState }: Props) {
           onSubmit={(fields, cover) => void saveEdit(fields, cover)}
         />
       ) : null}
-      {importScan && importStatus?.phase === "review" ? <ImportReview t={t} language={language} scan={importScan} suggest={editSuggest} onDone={() => setImportScan(null)} /> : null}
+      {editingArtist ? (
+        <ParrotEditArtistDialog
+          open
+          onOpenChange={(next) => !next && !editBusy && setEditingArtist(null)}
+          initialName={editingArtist.name}
+          pictureUrl={editingArtist.pictureUrl}
+          labels={{
+            title: t("manage.editTitle.artist"),
+            name: t("manage.field.name"),
+            photo: t("manage.field.photo"),
+            photoHint: t("manage.photoHint"),
+            photoPick: t("manage.photoPick"),
+            photoFrame: t("manage.photoFrame"),
+            automatic: t("manage.photoAutomatic"),
+            tooLarge: coverTooLarge,
+            changed: t("manage.changed"),
+            cancel: t("manage.cancel"),
+            submit: t("manage.save"),
+            frame: { ...coverFrameLabels(t), title: t("manage.photoFrameTitle"), hint: t("manage.photoFrameHint") },
+          }}
+          error={editError}
+          busy={editBusy}
+          onSubmit={(name, picture) => void saveArtist(name, picture)}
+        />
+      ) : null}
+      {importScan && importStatus?.phase === "review" ? <ImportReview t={t} language={language} scan={importScan} tracks={tracks} suggest={editSuggest} onDone={() => setImportScan(null)} /> : null}
       <span className="hidden" data-testid="signed-in-user">
         {state.user?.email}
       </span>

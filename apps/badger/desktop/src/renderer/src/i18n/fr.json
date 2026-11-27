@@ -149,7 +149,8 @@
     "resendError": "Impossible de renvoyer le code.",
     "provider": {
       "continueInBrowser": "Terminez la connexion dans votre navigateur. Badger revient ensuite au premier plan."
-    }
+    },
+    "serviceUpdate": "Mise à jour du service en cours. Mettez à jour ou redémarrez l’application, puis réessayez."
   },
   "signup": {
     "title": "Créer un compte",
@@ -1476,7 +1477,8 @@
       "title": "Favoris",
       "subtitle": "Vos films et séries préférés.",
       "empty": "Aucun favori pour le moment."
-    }
+    },
+    "reorderSection": "Réorganiser la section"
   },
   "lab": {
     "title": "Gestion des fichiers",
@@ -1543,7 +1545,7 @@
       "cleanupFailed": "Le nettoyage a échoué. Réessayez.",
       "fileCount": "{{count}} fichier",
       "episodeFileCount": "{{count}} fichiers épisode",
-      "episodeShort": "{{count}} eps"
+      "episodeShort": "{{count}} ép."
     },
     "status": {
       "waiting": "En attente",
@@ -1576,7 +1578,7 @@
       "episode": "Épisode",
       "episodeLabel": "Épisode {{number}}",
       "outputFormats": "Formats de sortie",
-      "estimate": "Est. {{size}}",
+      "estimate": "Env. {{size}}",
       "audioTracks": "Pistes audio",
       "subtitleTracks": "Sous-titres",
       "tracksOnly": "Pistes uniquement",
@@ -2146,6 +2148,10 @@
       "preparingSample": "Préparation de l'extrait…",
       "subtitleSampleAlt": "Exemple de sous-titre",
       "resolveVideoTitle": "Résoudre les ajouts vidéo",
+      "resolveVideoProgress": "Décision {{current}} sur {{total}}",
+      "unavailableTitle": "Import indisponible",
+      "unavailableCode": "code\u202f: {{code}}",
+      "unavailableDismiss": "Masquer",
       "noVideoDecisions": "Aucune décision vidéo en attente.",
       "dummyTitle": "Ajouter avec données dummy",
       "movie": "Film",

@@ -516,7 +516,9 @@ export default function MediaPlaybackController({
   }, [clearLaunchUi, deferForPrompt, isLaunching, playbackOpen, resumePromptOpen]);
 
   useEffect(() => {
-    if (!playbackOpen) return;
+    // PLAY-RESUME-01: while the resume prompt waits for an answer, no mpv runs for this playback. An exit then is an
+    // earlier mpv's, quit just before Play with its exit landing after the prompt opened: it must not close the prompt.
+    if (!playbackOpen || deferForPrompt) return;
     const unsubscribe = window.sf?.onMpvExternalMessage?.((msg) => {
       if (msg.type !== "exit") return;
       clearLaunchUi();
@@ -529,7 +531,7 @@ export default function MediaPlaybackController({
         unsubscribe();
       }
     };
-  }, [clearLaunchUi, playbackOpen]);
+  }, [clearLaunchUi, deferForPrompt, playbackOpen]);
 
   // ACCT-STREAM-01..04: the stream gate requests with this session's token, and closes this player when the user
   // cancels at "Play here instead?" or another device takes the place over (lib/streamSlot.ts).

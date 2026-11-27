@@ -7,7 +7,7 @@
  * (PAR-META-20).
  */
 import { useEffect, useId, useRef, useState, type ClipboardEvent, type DragEvent, type FormEvent, type KeyboardEvent } from "react";
-import { Crop, ImagePlus, RotateCcw, RotateCw } from "lucide-react";
+import { Crop, ImagePlus, PenLine, RotateCcw, RotateCw, Sparkles } from "lucide-react";
 import { Button } from "../button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../dialog";
 import { Input } from "../input";
@@ -16,6 +16,7 @@ import { ParrotCover } from "./components";
 import { ParrotCoverFrameDialog, ParrotFramedCover, type ParrotCoverFrameLabels } from "./cover-frame";
 import {
   applyParrotEditSuggestion,
+  PARROT_COVER_MAX_BYTES,
   mergeParrotEditSuggestions,
   parrotEditFieldChanged,
   parrotEditNumber as numberOrNull,
@@ -38,9 +39,12 @@ export type { ParrotEditSuggest, ParrotEditSuggestLabels } from "./editSuggest";
 // PAR-UP-08: the import review's artist field shows the same list.
 export { ParrotEditSuggestList, suggestionName } from "./editSuggest";
 
-/** The dialog's Lyrics section (PAR-LYR-05): a song's words, or how many of an album's songs have some. */
+/**
+ * The dialog's Lyrics section (PAR-LYR-05): a song's words, or how many of an album's songs have some. `onEditOwn` opens
+ * the lyrics editor for the song (PAR-LYR-10), where the app has one.
+ */
 export type ParrotEditLyrics =
-  | { kind: "track"; state: ParrotEditLyricsState; onSearchAgain: () => void }
+  | { kind: "track"; state: ParrotEditLyricsState; onSearchAgain: () => void; onEditOwn?: () => void }
   | { kind: "album"; state: ParrotEditAlbumLyricsState; onSearchMissing: () => void };
 
 export type ParrotEditLyricsLabels = {
@@ -51,6 +55,9 @@ export type ParrotEditLyricsLabels = {
   lyricsFailed: (reason: string) => string;
   albumLyrics: (found: number, count: number) => string;
   albumLyricsSearch: string;
+  /** "Add lyrics" / "Edit lyrics", for the song's editor button (PAR-LYR-10). */
+  lyricsAdd?: string;
+  lyricsEdit?: string;
 };
 
 /** A shimmering line standing for text still on its way (PAR-META-20). */
@@ -100,10 +107,17 @@ function LyricsSection({ lyrics, labels }: { lyrics: ParrotEditLyrics; labels: P
         {again(labels.lyricsSearchAgain, lyrics.onSearchAgain)}
       </div>
     );
+  const editOwn = lyrics.kind === "track" && lyrics.onEditOwn && state.status !== "loading" ? lyrics.onEditOwn : null;
+  const editLabel = state.status === "found" ? labels.lyricsEdit : labels.lyricsAdd;
   return (
     <section className="grid gap-1.5 rounded-lg border border-border p-3" data-testid="manage-lyrics" data-state={state.status}>
       <span className="text-sm text-muted-foreground">{labels.lyrics}</span>
       {body}
+      {editOwn && editLabel ? (
+        <Button type="button" variant="ghost" size="sm" className="justify-start px-0" onClick={editOwn} data-testid="manage-lyrics-edit">
+          <PenLine className="size-4" /> {editLabel}
+        </Button>
+      ) : null}
     </section>
   );
 }
@@ -125,9 +139,61 @@ export type ParrotEditLabels = {
   /** "Frame the cover…" (PAR-META-22): shown, with `frame`, once a new picture is given. */
   coverFrame?: string;
   frame?: ParrotCoverFrameLabels;
+  /** Shown when the picked or dropped file is over the size cap (PAR-META-31). */
+  coverTooLarge?: string;
 };
 
 const isImageUrl = (text: string) => /^https?:\/\/\S+$/i.test(text.trim());
+
+/**
+ * The picture the user drops, picks or pastes in an edit dialog: a file, or a link to one. A file over the cap is
+ * refused before it is read, with `tooLarge` set for the dialog to say so (PAR-META-31).
+ */
+function usePictureInput(initial: ParrotCoverInput | null) {
+  const [cover, setPicked] = useState<ParrotCoverInput | null>(initial);
+  const [tooLarge, setTooLarge] = useState(false);
+  const [preview, setPreview] = useState<string | null>(null);
+  const setCover = (next: ParrotCoverInput | null) => {
+    setTooLarge(false);
+    setPicked(next);
+  };
+
+  useEffect(() => {
+    if (!cover) return setPreview(null);
+    if (cover.kind === "url") return setPreview(cover.url);
+    const url = URL.createObjectURL(new Blob([new Uint8Array(cover.bytes)], { type: cover.mime }));
+    setPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [cover]);
+
+  const takeFile = async (file: File | undefined) => {
+    if (!file || !file.type.startsWith("image/")) return;
+    if (file.size > PARROT_COVER_MAX_BYTES) {
+      console.warn(`[parrot] picture ${file.name} refused: ${file.size} bytes, at most ${PARROT_COVER_MAX_BYTES}`);
+      setTooLarge(true);
+      return;
+    }
+    setCover({ kind: "file", bytes: new Uint8Array(await file.arrayBuffer()), mime: file.type });
+  };
+  const onDrop = (event: DragEvent) => {
+    event.preventDefault();
+    const url = event.dataTransfer.getData("text/uri-list") || event.dataTransfer.getData("text/plain");
+    if (event.dataTransfer.files.length) void takeFile(event.dataTransfer.files[0]);
+    else if (isImageUrl(url)) setCover({ kind: "url", url: url.trim() });
+  };
+  const onPaste = (event: ClipboardEvent) => {
+    const file = [...event.clipboardData.files].find((f) => f.type.startsWith("image/"));
+    const text = event.clipboardData.getData("text/plain");
+    if (file) {
+      event.preventDefault();
+      void takeFile(file);
+    } else if (isImageUrl(text)) {
+      event.preventDefault();
+      setCover({ kind: "url", url: text.trim() });
+    }
+  };
+  return { cover, setCover, tooLarge, preview, takeFile, onDrop, onPaste };
+}
 
 /** Wait after the last keystroke before the lookup is asked (the library answers at once). */
 const LOOKUP_PAUSE_MS = 250;
@@ -187,9 +253,8 @@ export function ParrotEditMetadataDialog({
   onSubmit: (fields: ParrotEditFields, cover: ParrotCoverInput | null) => void;
 }) {
   const [texts, setTexts] = useState<Texts>(() => textsOf(initial));
-  const [cover, setCover] = useState<ParrotCoverInput | null>(initialCover);
+  const { cover, setCover, tooLarge, preview, takeFile, onDrop, onPaste } = usePictureInput(initialCover);
   const [framing, setFraming] = useState(false);
-  const [preview, setPreview] = useState<string | null>(null);
   const [list, setList] = useState<SuggestState | null>(null);
   const [active, setActive] = useState(0);
   const [filled, setFilled] = useState<Filled | null>(null);
@@ -219,36 +284,6 @@ export function ParrotEditMetadataDialog({
     setFilled(null);
     typedFrom.current = {};
   }, [open, initial, initialCover]);
-
-  useEffect(() => {
-    if (!cover) return setPreview(null);
-    if (cover.kind === "url") return setPreview(cover.url);
-    const url = URL.createObjectURL(new Blob([new Uint8Array(cover.bytes)], { type: cover.mime }));
-    setPreview(url);
-    return () => URL.revokeObjectURL(url);
-  }, [cover]);
-
-  const takeFile = async (file: File | undefined) => {
-    if (!file || !file.type.startsWith("image/")) return;
-    setCover({ kind: "file", bytes: new Uint8Array(await file.arrayBuffer()), mime: file.type });
-  };
-  const onDrop = (event: DragEvent) => {
-    event.preventDefault();
-    const url = event.dataTransfer.getData("text/uri-list") || event.dataTransfer.getData("text/plain");
-    if (event.dataTransfer.files.length) void takeFile(event.dataTransfer.files[0]);
-    else if (isImageUrl(url)) setCover({ kind: "url", url: url.trim() });
-  };
-  const onPaste = (event: ClipboardEvent) => {
-    const file = [...event.clipboardData.files].find((f) => f.type.startsWith("image/"));
-    const text = event.clipboardData.getData("text/plain");
-    if (file) {
-      event.preventDefault();
-      void takeFile(file);
-    } else if (isImageUrl(text)) {
-      event.preventDefault();
-      setCover({ kind: "url", url: text.trim() });
-    }
-  };
 
   const fieldsOf = (t: Texts): ParrotEditFields => ({
     title: t.title.trim(),
@@ -478,6 +513,11 @@ export function ParrotEditMetadataDialog({
                     ) : null}
                   </span>
                   <span className="text-xs text-muted-foreground">{labels.coverHint}</span>
+                  {tooLarge && labels.coverTooLarge ? (
+                    <span className="text-xs text-destructive" role="alert" data-testid="manage-cover-too-large">
+                      {labels.coverTooLarge}
+                    </span>
+                  ) : null}
                   <div className="flex flex-wrap gap-x-3">
                     <Button type="button" variant="ghost" size="sm" className="justify-start px-0" onClick={() => fileInput.current?.click()} data-testid="manage-cover-pick">
                       <ImagePlus className="size-4" /> {labels.coverPick}
@@ -517,6 +557,181 @@ export function ParrotEditMetadataDialog({
               {labels.cancel}
             </Button>
             <Button type="submit" disabled={!fields.title || busy} data-testid="manage-edit-submit">
+              {labels.submit}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+export type ParrotEditArtistLabels = {
+  title: string;
+  body?: string;
+  name: string;
+  photo: string;
+  photoHint: string;
+  photoPick: string;
+  photoFrame?: string;
+  automatic: string;
+  tooLarge: string;
+  changed: string;
+  cancel: string;
+  submit: string;
+  frame?: ParrotCoverFrameLabels;
+};
+
+/** What the artist dialog hands back: a new photo, the automatic one again, or `null` to keep the current photo. */
+export type ParrotArtistPictureChoice = ParrotCoverInput | "automatic" | null;
+
+/**
+ * Edit an artist's name and photo (PAR-META-31): the same dialog as a song's or an album's, the photo shown round.
+ * The photo is a picked, dropped or pasted file or picture link, framed to a square; "Use automatic photo" hands the
+ * artist back to the automatic fetch. Testids: `manage-artist-dialog`, `-name`, `-preview`, `-drop`, `-pick`,
+ * `-file`, `-frame`, `-automatic`, `-too-large`, `-error`, `-submit`.
+ */
+export function ParrotEditArtistDialog({
+  open,
+  onOpenChange,
+  initialName,
+  pictureUrl,
+  labels,
+  error,
+  busy = false,
+  onSubmit,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  initialName: string;
+  /** The photo the artist shows now, custom or automatic; `null` when it has none. */
+  pictureUrl: string | null;
+  labels: ParrotEditArtistLabels;
+  error?: string | null;
+  busy?: boolean;
+  onSubmit: (name: string, picture: ParrotArtistPictureChoice) => void;
+}) {
+  const [name, setName] = useState(initialName);
+  const { cover, setCover, tooLarge, preview, takeFile, onDrop, onPaste } = usePictureInput(null);
+  const [automatic, setAutomatic] = useState(false);
+  const [framing, setFraming] = useState(false);
+  const fileInput = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    setName(initialName);
+    setCover(null);
+    setAutomatic(false);
+    setFraming(false);
+  }, [open, initialName]);
+
+  const trimmed = name.trim();
+  const picture: ParrotArtistPictureChoice = cover ?? (automatic ? "automatic" : null);
+  const changed = picture !== null || trimmed !== initialName;
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    if (!trimmed || !changed || busy) return;
+    onSubmit(trimmed, picture);
+  };
+  const takePicked = (file: File | undefined) => {
+    setAutomatic(false);
+    void takeFile(file);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg" closeLabel={labels.cancel} data-testid="manage-artist-dialog" onPaste={(event) => { setAutomatic(false); onPaste(event); }}>
+        <form onSubmit={submit} className="grid gap-4">
+          <DialogHeader>
+            <DialogTitle>{labels.title}</DialogTitle>
+            {labels.body ? <DialogDescription>{labels.body}</DialogDescription> : null}
+          </DialogHeader>
+          <label className="grid gap-1 text-sm">
+            <span className="text-muted-foreground">{labels.name}</span>
+            <Input value={name} onChange={(event) => setName(event.target.value)} autoComplete="off" data-testid="manage-artist-name" />
+          </label>
+          <div
+            className="flex items-center gap-3 rounded-lg border border-dashed border-border p-3"
+            onDragOver={(event) => event.preventDefault()}
+            onDrop={(event) => {
+              setAutomatic(false);
+              onDrop(event);
+            }}
+            data-testid="manage-artist-drop"
+          >
+            <div className="size-20 shrink-0 overflow-hidden rounded-full" data-testid="manage-artist-preview" data-framed={cover?.crop ? "true" : undefined} data-automatic={automatic ? "true" : undefined}>
+              {preview && cover?.crop ? (
+                <ParrotFramedCover src={preview} crop={cover.crop} className="size-full" />
+              ) : (
+                <ParrotCover seed={initialName} label={initialName} rounded="rounded-full" src={preview ?? (automatic ? null : pictureUrl)} />
+              )}
+            </div>
+            <div className="grid gap-1 text-sm">
+              <span className="flex items-center gap-2 text-muted-foreground">
+                {labels.photo}
+                {picture !== null ? (
+                  <span className="rounded bg-primary/15 px-1.5 text-[11px] text-primary" data-testid="manage-artist-changed-photo">
+                    {labels.changed}
+                  </span>
+                ) : null}
+              </span>
+              <span className="text-xs text-muted-foreground">{labels.photoHint}</span>
+              {tooLarge ? (
+                <span className="text-xs text-destructive" role="alert" data-testid="manage-artist-too-large">
+                  {labels.tooLarge}
+                </span>
+              ) : null}
+              <div className="flex flex-wrap gap-x-3">
+                <Button type="button" variant="ghost" size="sm" className="justify-start px-0" onClick={() => fileInput.current?.click()} data-testid="manage-artist-pick">
+                  <ImagePlus className="size-4" /> {labels.photoPick}
+                </Button>
+                {preview && cover && labels.frame && labels.photoFrame ? (
+                  <Button type="button" variant="ghost" size="sm" className="justify-start px-0" onClick={() => setFraming(true)} data-testid="manage-artist-frame-open">
+                    <Crop className="size-4" /> {labels.photoFrame}
+                  </Button>
+                ) : null}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="justify-start px-0"
+                  disabled={automatic && !cover}
+                  onClick={() => {
+                    setCover(null);
+                    setAutomatic(true);
+                  }}
+                  data-testid="manage-artist-automatic"
+                >
+                  <Sparkles className="size-4" /> {labels.automatic}
+                </Button>
+              </div>
+              <input ref={fileInput} type="file" accept="image/*" hidden onChange={(event) => takePicked(event.target.files?.[0])} data-testid="manage-artist-file" />
+              {framing && preview && cover && labels.frame ? (
+                <ParrotCoverFrameDialog
+                  labels={labels.frame}
+                  testId="manage-artist-frame"
+                  round
+                  src={preview}
+                  crop={cover.crop ?? null}
+                  onCancel={() => setFraming(false)}
+                  onUse={(crop) => {
+                    setCover({ ...cover, crop });
+                    setFraming(false);
+                  }}
+                />
+              ) : null}
+            </div>
+          </div>
+          {error ? (
+            <p className="text-sm text-destructive" role="alert" data-testid="manage-artist-error">
+              {error}
+            </p>
+          ) : null}
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+              {labels.cancel}
+            </Button>
+            <Button type="submit" disabled={!trimmed || !changed || busy} data-testid="manage-artist-submit">
               {labels.submit}
             </Button>
           </DialogFooter>

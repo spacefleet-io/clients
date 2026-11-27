@@ -149,7 +149,8 @@
     "resendError": "Could not resend the code.",
     "provider": {
       "continueInBrowser": "Finish signing in in your browser. Badger comes back once you're done."
-    }
+    },
+    "serviceUpdate": "Service update in progress. Please update/restart the app and try again."
   },
   "signup": {
     "title": "Create account",
@@ -1476,7 +1477,8 @@
       "title": "Favorites",
       "subtitle": "Your starred movies and shows.",
       "empty": "No favorites yet."
-    }
+    },
+    "reorderSection": "Reorder section"
   },
   "lab": {
     "title": "File management",
@@ -2146,6 +2148,10 @@
       "preparingSample": "Preparing sample…",
       "subtitleSampleAlt": "Subtitle sample",
       "resolveVideoTitle": "Resolve video additions",
+      "resolveVideoProgress": "Decision {{current}} of {{total}}",
+      "unavailableTitle": "Ingest unavailable",
+      "unavailableCode": "code: {{code}}",
+      "unavailableDismiss": "Dismiss",
       "noVideoDecisions": "No video decisions pending.",
       "dummyTitle": "Add with dummy data",
       "movie": "Movie",

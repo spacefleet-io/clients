@@ -4,6 +4,7 @@
  * @req PAR-LOOK-06[parrot]
  * @req PAR-LIB-03[parrot]
  * @req UX-A11Y-05[parrot]
+ * @req PAR-META-31[parrot]
  * @why Chris, 2026-11-21 (chat, morning review): of the three artist page drafts he picked A (the photo edge to edge, the
  *   ARTIST chip, the name and counts over the fade, a big Play, round Shuffle / Save offline / Play next / More),
  *   with no Overview tab ("no point next to Albums and Songs"): two tabs, Albums first and open, and the Albums tab is
@@ -62,7 +63,7 @@ vi.mock("react-native-svg", () => ({ default: "Svg", Defs: "Defs", LinearGradien
 vi.mock("react-native-safe-area-context", () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) }));
 vi.mock("lucide-react-native", () =>
   Object.fromEntries(
-    ["ArrowDownToLine", "ArrowLeft", "ChevronLeft", "CircleCheck", "Ellipsis", "ListEnd", "ListPlus", "ListStart", "Play", "Shuffle", "Trash2"].map((name) => [name, `Icon:${name}`])
+    ["ArrowDownToLine", "ArrowLeft", "ChevronLeft", "CircleCheck", "Ellipsis", "ListEnd", "ListPlus", "ListStart", "Pencil", "Play", "Shuffle", "Trash2"].map((name) => [name, `Icon:${name}`])
   )
 );
 vi.mock("@react-navigation/native", () => ({
@@ -73,6 +74,8 @@ vi.mock("@space/mobile-shell/i18n", () => ({ useTranslation: () => ({ t: (key: s
 vi.mock("@space/mobile-shell/components", async () => ({
   MobileRailScroll: (await vi.importActual<typeof import("@space/mobile-shell/rail")>("@space/mobile-shell/rail")).MobileRailScroll,
   MobileSkeletonPulse: "Shimmer",
+  MobileIconButton: "MobileIconButton",
+  MOBILE_ICON_BUTTON_SIZE: 48,
 }));
 vi.mock("../src/state/session", () => ({ useSession: () => ({ library: { status: "ready", version: 1 } }) }));
 vi.mock("../src/state/useQuery", () => ({
@@ -95,6 +98,7 @@ vi.mock("../src/state/usePlay", () => ({
 vi.mock("../src/state/usePlayerState", () => ({ useNowPlaying: () => null }));
 vi.mock("../src/state/manage", () => ({
   useManage: () => ({
+    editArtist: (artistId: string) => void fake.calls.push(`edit:artist:${artistId}`),
     remove: (target: { kind: string; id: string }, title: string, onDeleted?: () => void) => {
       fake.calls.push(`delete:${target.kind}:${target.id}:${title}`);
       onDeleted?.();
@@ -242,6 +246,11 @@ describe("PARROT-MOBILE-ARTIST-PAGE-001 Delete is only in the More sheet", () =>
     expect(sheet.actions.filter((action) => action.id === "delete")).toHaveLength(1);
     expect(sheet.actions.at(-1)).toMatchObject({ id: "delete", testID: "artist-menu-delete", destructive: true, icon: "Icon:Trash2" });
     expect(sheet.actions.slice(0, -1).every((action) => !action.destructive)).toBe(true);
+    // PAR-META-31: Edit details sits just above Delete and opens the artist form.
+    expect(sheet.actions.at(-2)).toMatchObject({ id: "edit", testID: "artist-menu-edit", label: "shell.manage.edit", icon: "Icon:Pencil" });
+    sheet.actions.at(-2)!.onSelect();
+    expect(fake.calls).toEqual(["edit:artist:ar-kg"]);
+    fake.calls.length = 0;
     sheet.actions.at(-1)!.onSelect();
     // manage.remove is the existing confirm (PARROT-MOBILE-MANAGE-001): it asks, deletes, then runs onDeleted.
     expect(fake.calls).toEqual(["delete:artist:ar-kg:Radiohead"]);

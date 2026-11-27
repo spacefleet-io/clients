@@ -149,7 +149,8 @@
     "resendError": "Kan de code niet opnieuw sturen.",
     "provider": {
       "continueInBrowser": "Rond het inloggen af in je browser. Badger komt daarna terug."
-    }
+    },
+    "serviceUpdate": "Er wordt een service-update uitgevoerd. Werk de app bij of start hem opnieuw en probeer het nog eens."
   },
   "signup": {
     "title": "Account aanmaken",
@@ -1476,7 +1477,8 @@
       "title": "Favorieten",
       "subtitle": "Je films en series met een ster.",
       "empty": "Nog geen favorieten."
-    }
+    },
+    "reorderSection": "Sectie verplaatsen"
   },
   "lab": {
     "title": "Bestandsbeheer",
@@ -2146,6 +2148,10 @@
       "preparingSample": "Voorbeeld voorbereiden…",
       "subtitleSampleAlt": "Ondertitelvoorbeeld",
       "resolveVideoTitle": "Videotoevoegingen afhandelen",
+      "resolveVideoProgress": "Keuze {{current}} van {{total}}",
+      "unavailableTitle": "Importeren niet beschikbaar",
+      "unavailableCode": "code: {{code}}",
+      "unavailableDismiss": "Sluiten",
       "noVideoDecisions": "Geen openstaande videokeuzes.",
       "dummyTitle": "Toevoegen met dummydata",
       "movie": "Film",

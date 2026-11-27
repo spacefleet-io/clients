@@ -54,7 +54,9 @@ vi.mock("react-native", async () => {
     View: host("View"),
   };
 });
-vi.mock("lucide-react-native", () => ({ Mic: "Icon:Mic" }));
+vi.mock("lucide-react-native", () => ({ Mic: "Icon:Mic", Pencil: "Icon:Pencil", Trash2: "Icon:Trash2" }));
+// The editor is covered by player-own-lyrics.test.tsx; here it stays closed.
+vi.mock("../src/screens/LyricsEditor", () => ({ LyricsEditor: () => null }));
 // The lyrics scroll in the shared sheet's scroll view (UX-SHEET-01); here it is a plain ScrollView.
 vi.mock("@space/mobile-shell/bottom-sheet", async () => {
   const react = await vi.importActual<typeof React>("react");
@@ -118,12 +120,12 @@ const texts = () =>
     .join(" | ");
 const mount = async (trackId: string) => {
   await act(async () => {
-    tree = create(<PlayerLyrics trackId={trackId} positionMs={0} />);
+    tree = create(<PlayerLyrics trackId={trackId} title="Song" positionMs={0} playing={false} />);
   });
   await settle();
 };
 const rerender = async (trackId: string) => {
-  await act(async () => tree.update(<PlayerLyrics trackId={trackId} positionMs={0} />));
+  await act(async () => tree.update(<PlayerLyrics trackId={trackId} title="Song" positionMs={0} playing={false} />));
   await settle();
 };
 const expectSearching = (where: string) => {

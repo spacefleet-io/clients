@@ -76,7 +76,8 @@ const album = (id: string, title: string, kind: string, tracks: Array<[string, n
   artist: ARTIST,
   tracks: tracks.map(([title, durationMs], index) => ({ disc: 1, number: index + 1, title, durationMs, id: `${id}-${index + 1}` })),
 });
-const MELTWAY = album("rg-meltway", "Meltway", "Album", [
+// Our copy's ids (PAR-META-26: the import asks an album by id only when the id is our copy's).
+const MELTWAY = album("00000000-0000-4000-8000-00000000a001", "Meltway", "Album", [
   ["Forecast", 13_000],
   ["Don't Linger", 187_000],
   ["Somewhere I Wander", 213_000],
@@ -92,11 +93,11 @@ const MELTWAY = album("rg-meltway", "Meltway", "Album", [
   ["Nook", 187_000],
 ]);
 /** Releases listing a song under the spelling the user's tags carry, so that spelling is never answered on Meltway. */
-const RARITIES = album("rg-rarities", "Rarities", "Album + Compilation", [
+const RARITIES = album("00000000-0000-4000-8000-00000000a002", "Rarities", "Album + Compilation", [
   ["Nobody's Watchin'", 178_000],
   ["Lost Ferry", 201_000],
 ]);
-const UNDERGROUND = album("rg-underground", "Underground 4.0", "EP", [
+const UNDERGROUND = album("00000000-0000-4000-8000-00000000a003", "Underground 4.0", "EP", [
   ["Easier 2 Swim", 205_000],
   ["Pale Gate", 190_000],
 ]);
@@ -141,7 +142,7 @@ describe(`${T} made-up releases with the same trap`, () => {
     songs[5] = ["Easier 2 Swim", 204_600];
     songs[10] = ["Nobody's Watchin'", 178_300];
     const result = await run(meltwayFolder(songs), "spelled like other releases");
-    expect(result.albums.map((found) => found.album.id)).toEqual(["rg-meltway"]);
+    expect(result.albums.map((found) => found.album.id)).toEqual([MELTWAY.id]);
     expect(result.albums[0]!.files.length).toBe(13);
     expect(result.albums[0]!.files.every((one) => one.sure)).toBe(true);
     expect(result.unidentified).toEqual([]);
@@ -152,13 +153,13 @@ describe(`${T} made-up releases with the same trap`, () => {
     songs.push(["Pale Gate", 190_400]);
     const result = await run(meltwayFolder(songs), "unrelated stray");
     const byId = Object.fromEntries(result.albums.map((found) => [found.album.id, found.files.length]));
-    expect(byId).toEqual({ "rg-meltway": 12, "rg-underground": 1 });
+    expect(byId).toEqual({ [MELTWAY.id!]: 12, [UNDERGROUND.id!]: 1 });
   });
 
   it("a stray song with the right title but a length far off the free track stays where its own match put it", async () => {
     const songs = MELTWAY.tracks.map((track): [string, number] => [track.title, track.durationMs! + 400]);
     songs[10] = ["Nobody's Watchin'", 320_000];
     const result = await run(meltwayFolder(songs), "length far off");
-    expect(result.albums.find((found) => found.album.id === "rg-meltway")!.files.length).toBe(12);
+    expect(result.albums.find((found) => found.album.id === MELTWAY.id)!.files.length).toBe(12);
   });
 });
