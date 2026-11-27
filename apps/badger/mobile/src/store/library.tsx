@@ -366,6 +366,14 @@ export const LibraryProvider = ({ children }: { children: React.ReactNode }) => 
   });
   const [reloadNonce, setReloadNonce] = useState(0);
   const loadInFlight = useRef<Promise<void> | null>(null);
+  // Bumped whenever the open library is closed from outside a load (a reload, the load effect re-run): a load that
+  // started before then can only end with nothing open, so a load asked for meanwhile must not just join it.
+  const dbDropEpochRef = useRef(0);
+  const loadInFlightDropEpochRef = useRef(0);
+  // `logout` changes identity with every fresh `user` object from auth; `load` reads it here so that swap never
+  // re-runs the load effect (whose cleanup closes the library).
+  const logoutRef = useRef(logout);
+  logoutRef.current = logout;
   const loadGenerationRef = useRef(0);
   const activeDbRef = useRef<LibraryDb | null>(null);
   const hasLoadedOnce = useRef(false);
@@ -455,6 +463,7 @@ export const LibraryProvider = ({ children }: { children: React.ReactNode }) => 
     setSettled(false);
     console.warn("library.content.unsettled", JSON.stringify({ where: "reload" }));
     activeDbRef.current = null;
+    dbDropEpochRef.current += 1;
     setDb((prev) => {
       prev?.close().catch((error: unknown) => {
         console.warn("library.db.close.failed", JSON.stringify({ where: "reload", error: describeError(error) }));
@@ -509,14 +518,18 @@ export const LibraryProvider = ({ children }: { children: React.ReactNode }) => 
       return;
     }
 
-    if (loadInFlight.current) {
-      console.warn("library.load.inflight");
+    // A load already running is joined, unless the library it opens was closed after it started (a reload, or the
+    // load effect re-run): that load ends with nothing open, so this one runs again once it has finished.
+    while (loadInFlight.current) {
+      const stale = loadInFlightDropEpochRef.current !== dbDropEpochRef.current;
+      console.warn("library.load.inflight", JSON.stringify({ stale }));
       await loadInFlight.current;
-      return;
+      if (!stale) return;
     }
 
     const generation = ++loadGenerationRef.current;
     const settleEpoch = settleEpochRef.current;
+    loadInFlightDropEpochRef.current = dbDropEpochRef.current;
     // UX-WAIT-04: the library's content is known from here on (see `settled`). A reload since this load began wins.
     const settle = (where: string) => {
       if (settleEpochRef.current !== settleEpoch) return;
@@ -747,7 +760,7 @@ export const LibraryProvider = ({ children }: { children: React.ReactNode }) => 
           const metaStartedAt = Date.now();
           const metaRequest = withNetworkTimeout(readLibraryMeta(token), PREFLIGHT_TIMEOUT_MS, "library meta").catch((err) => {
             if (err instanceof ApiError && err.status === 401) {
-              void logout("sessionRejected");
+              void logoutRef.current("sessionRejected");
             }
             metaError = err;
             console.warn(
@@ -1028,7 +1041,7 @@ export const LibraryProvider = ({ children }: { children: React.ReactNode }) => 
     })();
 
     await loadInFlight.current;
-  }, [authLoading, forgetKeptKey, logout, refreshListsFrom, token, userId]);
+  }, [authLoading, forgetKeptKey, refreshListsFrom, token, userId]);
 
   useEffect(() => {
     if (authLoading || !token || !userId) return;
@@ -1042,6 +1055,7 @@ export const LibraryProvider = ({ children }: { children: React.ReactNode }) => 
       settleEpochRef.current += 1;
       setSettled(false);
       activeDbRef.current = null;
+      dbDropEpochRef.current += 1;
       setDb((prev) => {
         prev?.close().catch((error: unknown) => {
           console.warn("library.db.close.failed", JSON.stringify({ where: "unmount", error: describeError(error) }));

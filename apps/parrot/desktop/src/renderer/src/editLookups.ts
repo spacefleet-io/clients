@@ -25,6 +25,8 @@ export const editLyricsLabels = (t: Translate): ParrotEditLyricsLabels => ({
   lyricsFailed: (reason) => t("manage.lyricsFailed", { reason }),
   albumLyrics: (found, count) => t("manage.albumLyrics", { found, count }),
   albumLyricsSearch: t("manage.albumLyricsSearch"),
+  lyricsAdd: t("lyrics.add"),
+  lyricsEdit: t("lyrics.edit"),
 });
 
 /**

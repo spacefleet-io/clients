@@ -50,17 +50,24 @@ describe("[parrot] song list on a big library (#3350 C4)", () => {
 
   const rows = () => container.querySelectorAll('[data-testid="library-track"]').length;
 
-  it("draws 200 rows of 1,000 at first, then 200 more each time the end comes near, and stops at the last song", () => {
-    act(() => root.render(<ParrotSongList tracks={songs(1_000)} labels={labels} playingId={undefined} playing={false} showAlbum={false} onPlay={() => undefined} onToggle={() => undefined} />));
+  // 450 songs: two full pages, then a short last one. Every page re-renders every row drawn so far, so 1,000 songs
+  // (3,000 row renders in jsdom) took ~1 s on an idle host and over 5 s on a loaded CI host; 450 prove the same paging.
+  it("draws 200 rows of 450 at first, then 200 more when the end comes near, and stops at the last song", () => {
+    act(() => root.render(<ParrotSongList tracks={songs(450)} labels={labels} playingId={undefined} playing={false} showAlbum={false} onPlay={() => undefined} onToggle={() => undefined} />));
     console.info("[parrot-song-list] first draw", rows());
     expect(rows()).toBe(200);
     expect(container.querySelector('[data-testid="library-tracks-more"]')).not.toBeNull();
     reach();
+    console.info("[parrot-song-list] after one reach", rows());
     expect(rows()).toBe(400);
-    for (let i = 0; i < 5; i += 1) reach();
-    console.info("[parrot-song-list] after scrolling to the end", rows());
-    expect(rows()).toBe(1_000);
+    expect(container.querySelector('[data-testid="library-tracks-more"]')).not.toBeNull();
+    reach();
+    console.info("[parrot-song-list] after the last page", rows());
+    expect(rows()).toBe(450);
     expect(container.querySelector('[data-testid="library-tracks-more"]')).toBeNull();
+    reach();
+    console.info("[parrot-song-list] a reach past the end", rows());
+    expect(rows()).toBe(450);
   });
 
   it("a short list is drawn whole, with no end marker", () => {

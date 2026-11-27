@@ -1,9 +1,9 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import type { ParrotCoverCrop } from "@space/parrot-core";
+import { isParrotLyricsFileName, PARROT_LYRICS_FILE_MAX_BYTES, type ParrotCoverCrop } from "@space/parrot-core";
 import type { ParrotListedTrack } from "@space/parrot-library-db-definition";
 import type { ParrotCoverImage } from "./covers";
-import { findParrotAudioFiles } from "./formats";
+import { findParrotFiles, isParrotAudioFile } from "./formats";
 import { readParrotTrackInfo, type ParrotTrackInfo } from "./readTrack";
 
 /** One song of a matched album's full tracklist (PAR-LIB-05): `{ disc, number, title, durationMs }`. */
@@ -45,10 +45,18 @@ export type ParrotImportEdit = {
   tracklist?: ParrotListedTrack[];
   /** The matched album's id in the metadata (PAR-COPY-01): the copy-changes refresh and the cover pass find the album by it. */
   albumMusicId?: string | null;
+  /** The matched song's id in our music copy (PAR-LYR-01): its lyrics lookup reads our lyrics copy by it. */
+  trackMusicId?: string | null;
   coverId?: string;
   coverPicture?: string;
   coverCrop?: ParrotCoverCrop;
   unidentified?: boolean;
+  /**
+   * The lyrics the user placed on this song in the review (PAR-LYR-09): a value is the lyrics file they chose, stored
+   * as their own lyrics in place of a same-name `.lrc` or the tags' lyrics; `null` is "Remove": the song takes no
+   * lyrics from the import's files, so the lookup finds them as for any song. `synced` is LRC text.
+   */
+  lyrics?: { synced: string | null; plain: string | null } | null;
 };
 
 /**
@@ -74,6 +82,11 @@ export type ParrotImportScan = {
   totalBytes: number;
   /** Audio files whose tags could not be read: the import would fail on them too, so they are left out. */
   unreadable: Array<{ file: string; error: string }>;
+  /**
+   * The lyrics files (`.lrc`, `.txt`) found beside the music (PAR-UP-01): their text, else why it was not read. The
+   * review places each on a song (PAR-LYR-09); a scan of lyrics files alone has no `entries`.
+   */
+  lyrics: Array<{ file: string; text?: string; error?: "tooBig" | "unreadable" }>;
 };
 
 export type ParrotScanOptions = {
@@ -88,14 +101,32 @@ const SCAN_LANES = 4;
 
 /**
  * PAR-UP-05: lists the audio files under `folders` and reads each one's tags with the importer's own reader, so the
- * dialog shows exactly the artist, album and title the import would store. Uploads nothing.
+ * dialog shows exactly the artist, album and title the import would store. Lyrics files found in the same walk are
+ * read too (PAR-UP-01). Uploads nothing.
  */
 export const scanParrotImport = async (folders: string[], options: ParrotScanOptions = {}): Promise<ParrotImportScan> => {
   const log = options.log ?? (() => {});
   const readInfo = options.readInfo ?? readParrotTrackInfo;
   const rootOf = parrotRootFinder(folders);
-  const files = await findParrotAudioFiles(folders, (entry, reason) => log(`[parrot-scan] skipped ${entry}: ${reason}`));
-  log(`[parrot-scan] ${files.length} audio file(s) in ${folders.length} folder(s)`);
+  const walked = await findParrotFiles(
+    folders,
+    (file) => isParrotAudioFile(file) || isParrotLyricsFileName(file),
+    (entry, reason) => log(`[parrot-scan] skipped ${entry}: ${reason}`)
+  );
+  const files = walked.filter(isParrotAudioFile);
+  // One at a time: lyrics files are small, and a folder of thousands of `.txt` must not open them all at once.
+  const lyrics: ParrotImportScan["lyrics"] = [];
+  for (const file of walked.filter((entry) => !isParrotAudioFile(entry))) {
+    if (options.signal?.aborted) throw new Error("scan stopped");
+    try {
+      if ((await fs.stat(file)).size > PARROT_LYRICS_FILE_MAX_BYTES) lyrics.push({ file, error: "tooBig" });
+      else lyrics.push({ file, text: await fs.readFile(file, "utf8") });
+    } catch (error) {
+      log(`[parrot-scan] could not read ${file}: ${error instanceof Error ? error.message : String(error)}`);
+      lyrics.push({ file, error: "unreadable" });
+    }
+  }
+  log(`[parrot-scan] ${files.length} audio file(s) and ${lyrics.length} lyrics file(s) in ${folders.length} folder(s)`);
   const found: Array<ParrotScanEntry | null> = new Array(files.length).fill(null);
   const unreadable: ParrotImportScan["unreadable"] = [];
   let next = 0;
@@ -139,6 +170,7 @@ export const scanParrotImport = async (folders: string[], options: ParrotScanOpt
     artists: new Set(entries.map((entry) => entry.artist)).size,
     totalBytes: entries.reduce((sum, entry) => sum + entry.size, 0),
     unreadable,
+    lyrics,
   };
 };
 
@@ -171,7 +203,9 @@ export const applyParrotImportEdit = (info: ParrotTrackInfo, edit: ParrotImportE
     ...(cover ? { cover, ...(edit.coverCrop ? { coverCrop: edit.coverCrop } : {}) } : {}),
     ...(edit.tracklist?.length ? { tracklist: edit.tracklist } : {}),
     ...(edit.albumMusicId ? { albumMusicId: edit.albumMusicId } : {}),
+    ...(edit.trackMusicId ? { trackMusicId: edit.trackMusicId } : {}),
     ...(edit.unidentified ? { unidentified: true } : {}),
+    ...(edit.lyrics !== undefined ? { lyrics: edit.lyrics ? { ...edit.lyrics, user: true } : null } : {}),
   };
 };
 

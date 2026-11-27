@@ -1,7 +1,7 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu, Notification, powerMonitor, shell, Tray } from "electron";
 import { appendFileSync, existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { hostname, release } from "node:os";
-import { basename, dirname, join, resolve } from "node:path";
+import { basename, dirname, extname, join, resolve } from "node:path";
 import { notifyLanguage } from "@space/notify-core/texts";
 import { fileURLToPath } from "node:url";
 import { createHash, randomUUID } from "node:crypto";
@@ -122,6 +122,8 @@ import {
   parrotPlaylistEditOps,
   parrotAlbumEditValues,
   parrotTrackEditValues,
+  parrotArtistEditValues,
+  PARROT_COVER_MAX_BYTES,
   planParrotDelete,
   planParrotTrackLoudness,
   saveParrotEdit,
@@ -157,11 +159,22 @@ import {
   type ParrotPlaylistEdit,
   type ParrotTrackPlacement,
   createParrotChunkReads,
+  isParrotCopyId,
   isParrotCoverCrop,
   parrotCoverMime,
   type ParrotCoverCopies,
   type ParrotCoverCrop,
   type ParrotImportLibraryAlbum,
+  parrotLyricsOpsToKeep,
+  planParrotOwnLyrics,
+  planParrotRemoveOwnLyrics,
+  parseParrotLyricsFile,
+  parrotOwnLyricsText,
+  PARROT_LYRICS_SONGS_SQL,
+  type ParrotLyricsFile,
+  type ParrotLyricsSong,
+  PARROT_LYRICS_KEEP_SQL,
+  type ParrotOwnLyrics,
 } from "@space/parrot-core";
 import { createSessionMetadata, metadataTicketsForBuild, NEUTRAL_USER_AGENT, refillLogLine, resolveMetadataUrl } from "@space/metadata-client";
 import { createFileKeyValueStorage } from "@space/metadata-client/fileStorage";
@@ -206,7 +219,6 @@ import {
   parrotCoverPreview,
   parrotCoverProblem,
   readParrotTrackInfo,
-  PARROT_COVER_MAX_BYTES,
   PARROT_APP_ID,
   PARROT_AUDIO_FORMATS,
   uploadParrotCover,
@@ -233,11 +245,13 @@ import {
   type ParrotImportArtistPhoto,
   type ParrotImportMatchedAlbum,
   type ParrotImportPicture,
+  type ParrotImportLyricsChoice,
   type ParrotImportSelection,
   type ParrotImportStatus,
   type ParrotDeletePreview,
   type ParrotEditValues,
   type ParrotFetchLyricsResult,
+  type ParrotOwnLyricsResult,
   type ParrotEditSuggestResult,
   type ParrotLibraryResult,
   type ParrotMeasuredLoudness,
@@ -271,6 +285,7 @@ import {
   importResumeRecord,
   importSongRows,
   importStopError,
+  nextImportSources,
   readImportResume,
   restoreImportJobs,
   resumePlan,
@@ -966,6 +981,8 @@ let importJobs: StoredImportJob[] = (() => {
   }
 })();
 let currentImportJob: StoredImportJob | null = null;
+/** UX-ADD-01: the sources dropped or picked while an import ran or waited in its review, scanned once it is over. */
+let queuedImportSources: string[] = [];
 
 const accountImportJobs = (): ParrotImportJob[] =>
   importJobs
@@ -1059,6 +1076,13 @@ const findImportJobFolder = async (id: string): Promise<ParrotImportRetry | { ca
 const setImportStatus = (next: ParrotImportStatus, failures?: ParrotImportJob["failures"]) => {
   importStatus = next;
   mainWindow?.webContents.send(PARROT_IPC.importStatusEvent, next);
+  // UX-ADD-01: the import is over (ended, or its review answered): the sources that waited behind it are scanned
+  // next, after this status has settled (never inside the run that is ending). A quit starts nothing.
+  if (nextImportSources(next, queuedImportSources, []).start && !importAbort.signal.aborted) {
+    setImmediate(() => {
+      if (!importAbort.signal.aborted) scanImport([]);
+    });
+  }
   const job = currentImportJob;
   if (!job) return;
   if (next.phase === "idle") {
@@ -1376,9 +1400,25 @@ const getEditValues = async (target: unknown): Promise<ParrotEditValues> => {
   return { kind: "album", edit };
 };
 
+/** PAR-META-31: the name and the photo the artist edit dialog opens with; the photo by the local server, as the library shows it. */
+const getArtistEditValues = async (artistId: unknown): Promise<{ name: string; pictureUrl: string | null } | null> => {
+  if (typeof artistId !== "string") return null;
+  if (!library) await loadLibrary();
+  if (!library) return null;
+  const values = await parrotArtistEditValues(currentLibraryQuery, artistId);
+  if (!values) return null;
+  const server = values.pictureObjectKey
+    ? await ensurePlayback().catch((error: unknown) => {
+        fail(`[edit] artist ${artistId}: could not start the local server, the dialog shows a drawn picture: ${errorText(error)}`);
+        return null;
+      })
+    : null;
+  return { name: values.name, pictureUrl: values.pictureObjectKey && server ? server.coverUrlFor(values.pictureObjectKey) : null };
+};
+
 /**
- * PAR-META-16: saves the user's edits to a song or an album through the shared `saveParrotEdit`; this side wires
- * storage, the publish and the save chain shared with playlist edits and deletes.
+ * PAR-META-16 / PAR-META-31: saves the user's edits to a song, an album or an artist through the shared
+ * `saveParrotEdit`; this side wires storage, the publish and the save chain shared with playlist edits and deletes.
  */
 const editDetails = (target: unknown, cover: unknown): Promise<ParrotLibraryResult> => {
   const run = async (): Promise<ParrotLibraryResult> => {
@@ -1395,8 +1435,9 @@ const editDetails = (target: unknown, cover: unknown): Promise<ParrotLibraryResu
       cover,
       db: opened,
       query: libraryQuery,
-      // PAR-META-22: an album's new cover is cut to the square the user framed, else its centre one.
-      makeCoverCopies: (bytes, crop) => albumCoverCopies({ bytes, mime: parrotCoverMime(bytes) ?? "" }, crop),
+      // PAR-META-22 / PAR-META-31: a new cover or artist photo is cut to the square the user framed, else its centre
+      // one, and always re-encoded at the stored sizes, never kept as the user gave it.
+      makeCoverCopies: (bytes, crop) => albumCoverCopies({ bytes, mime: parrotCoverMime(bytes) ?? "" }, crop, true),
       storeCover: (bytes) =>
         uploadParrotCover({ token, libraryKeyBase64: key, bytes, clientType: CLIENT_TYPE, appId: PARROT_APP_ID, upload: uploadStorageObjectViaTunnel }),
       publish: (ops, build) => publishLibraryChange("edit", what, opened, ops, build, token, key),
@@ -1513,11 +1554,10 @@ const autoLyrics = () => {
   const stop = new AbortController();
   autoLyricsStop = stop;
   autoLyricsAgain = false;
-  const songExists = (db: ParrotLibraryDb, trackId: string) => db.prepare("SELECT 1 FROM tracks WHERE id = ?").all(trackId).length > 0;
   const publish = (ops: ParrotLibraryOp[]) => {
     const run = async (): Promise<boolean> => {
       if (stop.signal.aborted || !library) return false;
-      const keep = (db: ParrotLibraryDb) => ops.filter((op) => op.type === "lyrics.set" && songExists(db, op.payload.trackId));
+      const keep = (db: ParrotLibraryDb) => lyricsOpsToKeep(db, ops);
       if (keep(library.db).length === 0) return true;
       const result = await publishLibraryChange("lyrics", `${ops.length} song(s) looked up`, library.db, keep(library.db), keep, token, key);
       if (result.ok) mainWindow?.webContents.send(PARROT_IPC.lyricsChangedEvent);
@@ -1917,7 +1957,7 @@ const fetchLyrics = (trackId: unknown): Promise<ParrotFetchLyricsResult> => {
     // "No lyrics" is kept too, so every device shows it as final (PAR-LYR-04); a later "Fetch lyrics" asks again.
     if (found.kind === "found" || found.kind === "none") {
       const op = found.op;
-      const published = await publishLibraryChange("lyrics", `song ${trackId}`, opened, [op], () => [op], token, key);
+      const published = await publishLibraryChange("lyrics", `song ${trackId}`, opened, [op], (db) => lyricsOpsToKeep(db, [op]), token, key);
       if (!published.ok) return { ok: false, error: published.error };
     }
     const lyrics = library ? getParrotLyrics(library.db, trackId) : null;
@@ -1927,6 +1967,65 @@ const fetchLyrics = (trackId: unknown): Promise<ParrotFetchLyricsResult> => {
   const hold = typeof trackId === "string" ? lyricsPending.hold([trackId]) : null;
   return librarySaves.run(run).finally(() => hold?.release());
 };
+
+/** PAR-LYR-08: of lyrics ops about to go out, the ones still to keep: never a lookup over the user's own lyrics. */
+const lyricsOpsToKeep = (db: ParrotLibraryDb, ops: readonly ParrotLibraryOp[]) =>
+  parrotLyricsOpsToKeep(ops, db.prepare(PARROT_LYRICS_KEEP_SQL).all() as { id: string; source: string | null }[]);
+
+/** PAR-LYR-08: a song's names and length, written in the header of the LRC kept as the user's own lyrics. */
+const lyricsSong = (db: ParrotLibraryDb, trackId: string) => db.prepare(`${PARROT_LYRICS_SONGS_SQL} WHERE t.id = ?`).get(trackId) as ParrotLyricsSong | undefined;
+
+/**
+ * PAR-LYR-08/09/11: publishes the lyrics ops `plan` makes on the library (none: the lyrics had no words) and tells the
+ * window. Runs on the caller's save chain.
+ */
+const publishOwnLyrics = async (
+  what: string,
+  plan: (db: ParrotLibraryDb, context: { now: number; newId: () => string }) => ParrotLibraryOp[]
+): Promise<{ ok: true } | { ok: false; error: string }> => {
+  const token = store.token();
+  const key = store.libraryKey();
+  if (!token || !key) return { ok: false, error: "not signed in" };
+  if (!library) await loadLibrary();
+  if (!library) return { ok: false, error: "library not loaded" };
+  const ops = plan(library.db, { now: Date.now(), newId: randomUUID });
+  if (ops.length === 0) return { ok: false, error: "The lyrics have no words." };
+  const keep = (db: ParrotLibraryDb) => lyricsOpsToKeep(db, ops);
+  const published = await publishLibraryChange("lyrics", what, library.db, keep(library.db), keep, token, key);
+  if (!published.ok) return { ok: false, error: published.error };
+  mainWindow?.webContents.send(PARROT_IPC.lyricsChangedEvent);
+  return { ok: true };
+};
+
+/**
+ * PAR-LYR-08/11: keeps (`lyrics` given) or removes (null) the user's own lyrics of a song, on the same save chain as
+ * edits, and answers with what the Lyrics tab shows now.
+ */
+const saveOwnLyrics = (trackId: unknown, lyrics: ParrotOwnLyrics | null): Promise<ParrotOwnLyricsResult> =>
+  librarySaves.run(async (): Promise<ParrotOwnLyricsResult> => {
+    if (typeof trackId !== "string") return { ok: false, error: "invalid song" };
+    const published = await publishOwnLyrics(`${lyrics ? "own lyrics of" : "own lyrics removed from"} song ${trackId}`, (db, context) => {
+      const op = lyrics ? planParrotOwnLyrics(trackId, lyrics, context, lyricsSong(db, trackId)) : planParrotRemoveOwnLyrics(trackId, context);
+      return op ? [op] : [];
+    });
+    if (!published.ok) return published;
+    log(`[lyrics] song ${trackId}: own lyrics ${lyrics ? "kept" : "removed"}`);
+    return { ok: true, lyrics: library ? getParrotLyrics(library.db, trackId) : null };
+  });
+
+/** PAR-LYR-09: keeps the lyrics files the import review placed on songs already in the library, as their own lyrics. */
+const keepImportedLyrics = (placed: ReadonlyArray<{ trackId: string; lyrics: ParrotLyricsFile }>) =>
+  librarySaves.run(async () => {
+    const published = await publishOwnLyrics(`own lyrics of ${placed.length} song(s) from an import`, (db, context) =>
+      placed.flatMap(({ trackId, lyrics }) => {
+        const song = lyricsSong(db, trackId);
+        const op = song ? planParrotOwnLyrics(trackId, lyrics, context, song) : null;
+        return op ? [op] : [];
+      })
+    );
+    if (published.ok) log(`[lyrics] import: own lyrics kept on ${placed.length} song(s) of the library`);
+    else fail(`[lyrics] import: own lyrics of ${placed.length} song(s) of the library not kept: ${published.error}`);
+  });
 
 const isMeasuredLoudness = (value: unknown): value is ParrotMeasuredLoudness => {
   const entry = value as Partial<ParrotMeasuredLoudness> | null;
@@ -2204,17 +2303,19 @@ const cutCoverInWindow = (cover: ParrotCoverImage, crop: ParrotCoverCrop | null)
 
 /**
  * PAR-META-22: the copies of an album cover, cut to its square, `crop` else the centre one, whatever its source (the
- * files, our music library, a picked image). Here for a JPEG or PNG; by the window for any other picture.
+ * files, our music library, a picked image). Here for a JPEG or PNG; by the window for any other picture. `reencode`:
+ * a picture the user gave in an edit (a cover or an artist photo, PAR-META-31), checked against the size caps and
+ * always re-encoded at the stored sizes.
  */
-const albumCoverCopies = async (cover: ParrotCoverImage, crop: ParrotCoverCrop | null): Promise<ParrotCoverCopies | null> => {
-  if (parrotCoverDecodable(cover.bytes)) return makeParrotCoverCopies(cover.bytes, log, { square: true, crop });
+const albumCoverCopies = async (cover: ParrotCoverImage, crop: ParrotCoverCrop | null, reencode = false): Promise<ParrotCoverCopies | null> => {
+  if (parrotCoverDecodable(cover.bytes)) return makeParrotCoverCopies(cover.bytes, log, { square: true, crop, reencode });
   const cut = await cutCoverInWindow(cover, crop);
   if (!cut) {
     fail(`[covers] ${cover.mime || "unknown"} picture: the window could not cut it to a square`);
-    return makeParrotCoverCopies(cover.bytes, log, { square: true, crop });
+    return makeParrotCoverCopies(cover.bytes, log, { square: true, crop, reencode });
   }
   log(`[covers] ${cover.mime || "unknown"} picture cut to a square by the window: ${parrotCoverMime(cut)}, ${cut.length} bytes`);
-  return makeParrotCoverCopies(cut, log, { square: true });
+  return makeParrotCoverCopies(cut, log, { square: true, reencode });
 };
 
 /**
@@ -2299,15 +2400,22 @@ const importArtistPhoto = (artistId: unknown): Promise<ParrotImportArtistPhoto> 
 
 /**
  * PAR-UP-05: setup and the Import button only scan. The songs found wait in the confirm dialog until the user
- * confirms; nothing is uploaded before that (Chris 2026-11-09).
+ * confirms; nothing is uploaded before that (Chris 2026-11-09). UX-ADD-01: asked while an import runs or waits in its
+ * review, the sources wait behind it and are scanned once it is over; called with none, it starts the waiting ones.
  */
-const scanImport = (folders: string[]): ParrotImportStatus => {
-  if (importStatus.running) return importStatus;
+const scanImport = (dropped: string[]): ParrotImportStatus => {
+  const next = nextImportSources(importStatus, queuedImportSources, dropped);
+  queuedImportSources = next.queued;
+  const folders = next.start;
+  if (!folders) {
+    if (dropped.length > 0) log(`[import] ${dropped.length} source(s) wait behind the import (${importStatus.phase}); ${queuedImportSources.length} waiting`);
+    return { ...importStatus, queuedSources: queuedImportSources.length };
+  }
   pendingScan = null;
   forgetImportReview();
   startImportJob(folders);
   setImportStatus({ ...idleImport, running: true, phase: "scanning" });
-  log(`[import] scan: ${folders.length} folder(s)`);
+  log(`[import] scan: ${folders.length} folder(s)${dropped.length === 0 ? ", waiting since the last import" : ""}`);
   const run = new AbortController();
   importRun = run;
   void (async () => {
@@ -2319,7 +2427,7 @@ const scanImport = (folders: string[]): ParrotImportStatus => {
       });
       run.signal.throwIfAborted();
       pendingScan = scan;
-      log(`[import] scan found ${scan.entries.length} song(s), ${scan.albums} album(s), ${scan.totalBytes} bytes; ${scan.unreadable.length} unreadable; waiting for confirm`);
+      log(`[import] scan found ${scan.entries.length} song(s), ${scan.albums} album(s), ${scan.totalBytes} bytes, ${scan.lyrics.length} lyrics file(s); ${scan.unreadable.length} unreadable; waiting for confirm`);
       setImportStatus({ ...idleImport, phase: "review", total: scan.entries.length, bytesTotal: scan.totalBytes });
     } catch (error) {
       if (run.signal.aborted && !importAbort.signal.aborted) {
@@ -2352,7 +2460,7 @@ const cancelImport = (): ParrotImportStatus => {
   return importStatus;
 };
 
-const confirmImport = (selection: ParrotImportSelection): ParrotImportStatus => {
+const confirmImport = (selection: ParrotImportSelection, lyricsChoices: ParrotImportLyricsChoice[]): ParrotImportStatus => {
   const scan = pendingScan;
   if (importStatus.running || importStatus.phase !== "review" || !scan) return importStatus;
   const token = store.token();
@@ -2370,6 +2478,24 @@ const confirmImport = (selection: ParrotImportSelection): ParrotImportStatus => 
   forgetImportReview();
   // Only files the scan found: the window cannot name any other path.
   const scanned = new Map(scan.entries.map((entry) => [entry.file, entry]));
+  // PAR-LYR-09: only lyrics files the scan read, each kept once, on the song the review left it on.
+  const lyricsTexts = new Map(scan.lyrics.flatMap((item) => (item.text === undefined ? [] : [[item.file, item.text] as const])));
+  const importLyrics = new Map<string, ParrotLyricsFile>();
+  const libraryLyrics: Array<{ trackId: string; lyrics: ParrotLyricsFile }> = [];
+  const placedFiles = new Set<string>();
+  for (const choice of lyricsChoices) {
+    const lyricsFile = String(choice?.lyricsFile);
+    const text = lyricsTexts.get(lyricsFile);
+    if (text === undefined || placedFiles.has(lyricsFile) || !choice.song || typeof choice.song !== "object") continue;
+    const lyrics = parseParrotLyricsFile(text, basename(lyricsFile));
+    if (lyrics.problems.length > 0) {
+      log(`[import] lyrics ${lyricsFile} not kept: ${lyrics.problems.map((problem) => problem.kind).join(", ")}`);
+      continue;
+    }
+    placedFiles.add(lyricsFile);
+    if ("file" in choice.song && scanned.has(String(choice.song.file))) importLyrics.set(String(choice.song.file), lyrics);
+    else if ("trackId" in choice.song && typeof choice.song.trackId === "string") libraryLyrics.push({ trackId: choice.song.trackId, lyrics });
+  }
   const edits = new Map<string, ParrotImportEdit>();
   for (const item of selection) {
     const entry = scanned.get(String(item.file));
@@ -2389,6 +2515,8 @@ const confirmImport = (selection: ParrotImportSelection): ParrotImportStatus => 
       tracklist: parseParrotTracklist(JSON.stringify(item.tracklist ?? null)) ?? undefined,
       // The matched album's id in the metadata (PAR-COPY-01): the copy-changes refresh and the cover pass find the album by it.
       albumMusicId: typeof item.albumMusicId === "string" && PARROT_MUSIC_ID.test(item.albumMusicId) ? item.albumMusicId : undefined,
+      // The matched song's id in our music copy (PAR-LYR-01), for its lyrics lookup; an outside source's id is dropped (PAR-META-26).
+      trackMusicId: typeof item.trackMusicId === "string" && isParrotCopyId(item.trackMusicId) ? item.trackMusicId : undefined,
       // The matched album's cover the review showed (PAR-META-04), fetched once per album before the upload.
       coverId: typeof item.coverId === "string" && PARROT_MUSIC_ID.test(item.coverId) ? item.coverId : undefined,
       // PAR-UP-08: a picture the review chose instead (built into a scanned file, or picked); only one it was given.
@@ -2397,13 +2525,23 @@ const confirmImport = (selection: ParrotImportSelection): ParrotImportStatus => 
       coverCrop: isParrotCoverCrop(item.coverCrop) ? { left: item.coverCrop.left, top: item.coverCrop.top, size: item.coverCrop.size } : undefined,
       unidentified: item.unidentified === true || undefined,
     };
-    edits.set(entry.file, edit);
+    // PAR-LYR-09: the lyrics file placed on this song, with the song's names in its header; a same-name `.lrc` the
+    // review took off it (removed or placed elsewhere) is not read.
+    const placed = importLyrics.get(entry.file);
+    const twin = join(dirname(entry.file), `${basename(entry.file, extname(entry.file))}.lrc`);
+    const lyrics = placed
+      ? parrotOwnLyricsText(placed, { title: edit.title.trim() || entry.title, artist: edit.artist.trim() || entry.artist, album: edit.album.trim() || entry.album, durationMs: entry.durationMs })
+      : lyricsTexts.has(twin)
+        ? null
+        : undefined;
+    edits.set(entry.file, lyrics === undefined ? edit : { ...edit, lyrics });
     if (edit.artist !== entry.artist || edit.album !== entry.album || edit.title !== entry.title || edit.year || edit.number !== entry.number || edit.disc !== entry.disc) {
       log(`[import] edited ${entry.file}: ${JSON.stringify(edit)}`);
     }
   }
   const files = [...edits.keys()];
-  log(`[import] confirmed: ${files.length} of ${scan.entries.length} song(s)`);
+  log(`[import] confirmed: ${files.length} of ${scan.entries.length} song(s); lyrics files kept on ${importLyrics.size} of them and on ${libraryLyrics.length} song(s) of the library`);
+  if (libraryLyrics.length > 0) void keepImportedLyrics(libraryLyrics);
   if (files.length === 0) {
     setImportStatus(idleImport);
     return importStatus;
@@ -3388,8 +3526,8 @@ const registerIpc = () => {
   });
   ipcMain.handle(PARROT_IPC.importArtistPhoto, (_event, artistId: unknown) => importArtistPhoto(artistId));
   ipcMain.handle(PARROT_IPC.importCover, (_event, albumId: unknown) => importCover(albumId));
-  ipcMain.handle(PARROT_IPC.confirmImport, (_event, selection: ParrotImportSelection) =>
-    confirmImport(Array.isArray(selection) ? selection : [])
+  ipcMain.handle(PARROT_IPC.confirmImport, (_event, selection: ParrotImportSelection, lyrics: ParrotImportLyricsChoice[]) =>
+    confirmImport(Array.isArray(selection) ? selection : [], Array.isArray(lyrics) ? lyrics : [])
   );
   ipcMain.handle(PARROT_IPC.cancelImport, () => cancelImport());
   ipcMain.handle(PARROT_IPC.getImportStatus, () => importStatus);
@@ -3429,8 +3567,15 @@ const registerIpc = () => {
   ipcMain.handle(PARROT_IPC.previewDelete, (_event, target: unknown) => previewDelete(target));
   ipcMain.handle(PARROT_IPC.deleteFromLibrary, (_event, target: unknown) => deleteFromLibrary(target));
   ipcMain.handle(PARROT_IPC.getEditValues, (_event, target: unknown) => getEditValues(target));
+  ipcMain.handle(PARROT_IPC.getArtistEditValues, (_event, artistId: unknown) => getArtistEditValues(artistId));
   ipcMain.handle(PARROT_IPC.editDetails, (_event, target: unknown, cover: unknown) => editDetails(target, cover));
   ipcMain.handle(PARROT_IPC.fetchLyrics, (_event, trackId: unknown) => fetchLyrics(trackId));
+  ipcMain.handle(PARROT_IPC.setOwnLyrics, (_event, trackId: unknown, lyrics: unknown) => {
+    const given = lyrics as Partial<ParrotOwnLyrics> | null;
+    const valid = !!given && (given.plain === null || typeof given.plain === "string") && (given.synced === null || Array.isArray(given.synced));
+    return valid ? saveOwnLyrics(trackId, { plain: given.plain ?? null, synced: given.synced ?? null }) : { ok: false, error: "invalid lyrics" };
+  });
+  ipcMain.handle(PARROT_IPC.removeOwnLyrics, (_event, trackId: unknown) => saveOwnLyrics(trackId, null));
   ipcMain.handle(PARROT_IPC.saveLoudness, (_event, measured: unknown) =>
     Array.isArray(measured) && measured.every(isMeasuredLoudness)
       ? loudnessGate.save(measured)
