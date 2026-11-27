@@ -30,6 +30,7 @@ import type { MetadataClient } from "@space/metadata-client";
 import {
   buildParrotPlaylists,
   parrotAlbumEditValues,
+  parrotArtistEditValues,
   parrotTrackEditValues,
   planParrotDelete,
   saveParrotEdit,
@@ -603,6 +604,9 @@ export const getEditValues = async (target: ParrotManageTarget): Promise<ParrotE
   const { coverObjectKey: _cover, ...edit } = values;
   return { kind: "album", edit };
 };
+
+/** The artist form's values (PAR-META-31): the artist's name and the key of its photo's small copy; null when it is gone. */
+export const getArtistEditValues = (artistId: string) => parrotArtistEditValues(libraryQuery, artistId);
 
 /**
  * PAR-META-16/17: saves edited details of a song or an album, and an album's new cover (sealed with the library key

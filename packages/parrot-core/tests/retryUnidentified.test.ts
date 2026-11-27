@@ -40,7 +40,8 @@ const MELTWAY_TRACKS: Array<[string, number]> = [
   ["Nook", 185_000],
 ];
 const MELTWAY: MusicAlbum = {
-  id: "meltway-album",
+  // Our copy's id: the import asks an album by id only when the id is our copy's (PAR-META-26).
+  id: "00000000-0000-4000-8000-00000000b001",
   title: "Meltway",
   year: 2003,
   kind: "Album",

@@ -29,6 +29,7 @@ export const PARROT_ARTIST_PICTURES_DUE_SQL = `SELECT ar.id AS id FROM artists a
   ORDER BY ar.sort_name COLLATE NOCASE, ar.id`;
 
 const ARTIST_ROW_SQL = "SELECT id, music_id AS musicId, name, sort_name AS sortName FROM artists ar WHERE id = ?";
+const ARTIST_REBASE_SQL = "SELECT id, music_id AS musicId, name, sort_name AS sortName, picture_object_key AS pictureObjectKey FROM artists WHERE id = ?";
 
 /** How many of an artist's albums (or songs) are asked about to find its id. */
 const IDENTIFY_TRIES = 2;
@@ -228,14 +229,18 @@ export const runParrotAutoArtistPictures = async (args: ParrotAutoArtistPictures
 
 /**
  * The pass's ops planned again on `query`'s library (another device published meanwhile): artists gone are left out,
- * and each op takes the artist's current name and id, so a rename made elsewhere is never undone by the photo.
+ * and each op takes the artist's current name and id, so a rename made elsewhere is never undone by the photo; an artist
+ * that got the user's photo meanwhile keeps it, the op only records the asked time (PAR-META-31).
  */
 export const rebaseParrotArtistPictureOps = async (query: ParrotLibraryQuery, ops: readonly ParrotLibraryOp[]): Promise<ParrotLibraryOp[]> => {
   const rebased: ParrotLibraryOp[] = [];
   for (const op of ops) {
     if (op.type !== "artist.upsert") continue;
-    const current = (await query<ArtistRow>(ARTIST_ROW_SQL, [op.payload.id]))[0];
-    if (current) rebased.push({ ...op, payload: { ...op.payload, musicId: current.musicId ?? op.payload.musicId, name: current.name, sortName: current.sortName } });
+    const current = (await query<ArtistRow & { pictureObjectKey: string | null }>(ARTIST_REBASE_SQL, [op.payload.id]))[0];
+    if (!current) continue;
+    const { pictureObjectKey, pictureThumbObjectKey, pictureCredit, ...rest } = op.payload;
+    const picture = current.pictureObjectKey ? {} : { pictureObjectKey, pictureThumbObjectKey, pictureCredit };
+    rebased.push({ ...op, payload: { ...rest, ...picture, musicId: current.musicId ?? op.payload.musicId, name: current.name, sortName: current.sortName } });
   }
   return rebased;
 };

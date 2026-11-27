@@ -157,6 +157,7 @@ const bridge: ParrotBridge = {
   previewDelete: (target) => ipcRenderer.invoke(PARROT_IPC.previewDelete, target),
   deleteFromLibrary: (target) => ipcRenderer.invoke(PARROT_IPC.deleteFromLibrary, target),
   getEditValues: (target) => ipcRenderer.invoke(PARROT_IPC.getEditValues, target),
+  getArtistEditValues: (artistId) => ipcRenderer.invoke(PARROT_IPC.getArtistEditValues, artistId),
   editDetails: (target, cover) => ipcRenderer.invoke(PARROT_IPC.editDetails, target, cover),
   fetchLyrics: (trackId) => ipcRenderer.invoke(PARROT_IPC.fetchLyrics, trackId),
   wantLyrics: (trackId) => ipcRenderer.invoke(PARROT_IPC.wantLyrics, trackId),
