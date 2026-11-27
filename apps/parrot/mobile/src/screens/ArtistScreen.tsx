@@ -9,6 +9,7 @@ import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View, typ
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ArrowDownToLine, ChevronLeft, CircleCheck, Ellipsis, ListStart, Play, Shuffle } from "lucide-react-native";
+import { MobileIconButton } from "@space/mobile-shell/components";
 import { colors, parrotShellTheme, spacing } from "../theme";
 import { Discography } from "./artist/Discography";
 import { ArtistHero, ArtistTopBar, PhotoCredit, SongRows, useTopBarScroll } from "./artist/pieces";
@@ -63,9 +64,9 @@ export const ArtistScreen = ({ route, navigation }: NativeStackScreenProps<RootS
             <ArtistHero artistId={artistId} name={name} page={page} width={width} height={heroHeight} />
           </View>
           <View style={[styles.heroTopRow, { paddingTop: insets.top + spacing.sm }]}>
-            <Pressable testID="page-back" style={styles.heroRoundButton} onPress={back} accessibilityRole="button" accessibilityLabel={t("parrot.nav.back")} hitSlop={8}>
+            <MobileIconButton testID="page-back" label={t("parrot.nav.back")} onPress={back} style={styles.heroRoundButton}>
               <ChevronLeft size={28} color={colors.text} strokeWidth={2.75} />
-            </Pressable>
+            </MobileIconButton>
           </View>
           <View style={[styles.heroMeta, { paddingTop: insets.top + PAGE_BACK_ROW }]} pointerEvents="box-none">
             <View style={styles.chipRow}>
@@ -160,15 +161,11 @@ export const ArtistScreen = ({ route, navigation }: NativeStackScreenProps<RootS
 // photo, a smaller name, a slimmer Play, smaller round buttons and tabs, and shorter gaps.
 const styles = StyleSheet.create({
   heroTopRow: { position: "absolute", left: 0, right: 0, top: 0, flexDirection: "row", paddingHorizontal: 14 },
+  // The dark round behind the back arrow over the photo; the shared icon button gives its 48 dp size and press.
   heroRoundButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
     backgroundColor: "rgba(0,0,0,0.62)",
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.28)",
-    alignItems: "center",
-    justifyContent: "center",
   },
   heroBox: { minHeight: HERO, justifyContent: "flex-end" },
   heroMeta: { paddingHorizontal: 20 },

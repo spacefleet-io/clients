@@ -10,6 +10,7 @@
  * (loud-fail rule).
  */
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { AlertTriangle, X } from "lucide-react";
 import type { RuntimeIngestError } from "@/lib/runtimeIngestJobs";
 
@@ -41,6 +42,7 @@ export default function IngestUnavailableBanner({
   runtimeError,
   className,
 }: IngestUnavailableBannerProps) {
+  const { t } = useTranslation();
   // Dismissal is keyed to the specific error signature (code+status) so a
   // dismissed banner re-appears if a *different* error occurs, but stays
   // dismissed for the same one until health is restored.
@@ -76,19 +78,19 @@ export default function IngestUnavailableBanner({
     >
       <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
       <div className="flex-1 leading-snug">
-        <div className="font-medium">Ingest unavailable</div>
+        <div className="font-medium">{t("ingestion.ui.unavailableTitle")}</div>
         <div className="text-xs opacity-90">{formatMessage(runtimeError)}</div>
         {runtimeError.errorCode &&
           !ENGINE_DOWN_CODES.has(runtimeError.errorCode) && (
             <div className="mt-1 font-mono text-[10px] opacity-70">
-              code: {runtimeError.errorCode}
+              {t("ingestion.ui.unavailableCode", { code: runtimeError.errorCode })}
               {runtimeError.status ? ` (HTTP ${runtimeError.status})` : ""}
             </div>
           )}
       </div>
       <button
         type="button"
-        aria-label="Dismiss"
+        aria-label={t("ingestion.ui.unavailableDismiss")}
         data-testid="ingest-unavailable-banner-dismiss"
         onClick={() => setDismissedKey(errorKey)}
         className="shrink-0 rounded p-0.5 opacity-70 transition-opacity hover:opacity-100"
