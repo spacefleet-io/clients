@@ -11,7 +11,7 @@ import type { ParrotPhotoCredit } from "@space/parrot-library-db-definition/ops"
 import { colors, spacing } from "../../theme";
 import { ParrotArt } from "../art";
 import { PAGE_BACK_ROW } from "../pageBack";
-import { MobileSkeletonPulse } from "@space/mobile-shell/components";
+import { MOBILE_ICON_BUTTON_SIZE, MobileSkeletonPulse } from "@space/mobile-shell/components";
 import { SongListRow } from "../SongListRow";
 import type { ArtistPage, ArtistSong } from "./useArtistPage";
 
@@ -149,8 +149,8 @@ export const ArtistTopBar = ({ name }: { name: string }) => {
   );
 };
 
-/** Past the back button (44) and its margins. */
-const TOP_BAR_NAME_LEFT = spacing.lg + 44 + spacing.md;
+/** Past the back button (the shared 48 dp icon button) and its margins. */
+const TOP_BAR_NAME_LEFT = spacing.lg + MOBILE_ICON_BUTTON_SIZE + spacing.md;
 
 const styles = StyleSheet.create({
   credit: { color: colors.textMuted, fontSize: 11, marginTop: spacing.xs, textAlign: "center" },

@@ -174,6 +174,11 @@ export type ParrotImportStatus = {
   importingAlbums?: string[];
   /** PAR-UP-07: the artists whose photo this import is still fetching; they show a loading picture, not a drawn one. */
   fetchingArtists?: string[];
+  /**
+   * UX-ADD-01: on scanImport's answer only, the sources waiting behind the import under way (running, or its scan in
+   * the review); they are scanned once it ends or its review is answered.
+   */
+  queuedSources?: number;
 };
 
 /**

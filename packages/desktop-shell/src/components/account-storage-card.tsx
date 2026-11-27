@@ -1,5 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { formatLocalizedStorage, formatLocalizedStorageUsage, storageUsedPercent } from "@space/shared/format";
+import { isClientUiLanguage } from "@space/shared/i18n";
+import { accountStorageCardStrings } from "./account-storage-card-strings";
 
 export type AccountStorageCardData = {
   plan: string;
@@ -76,6 +78,7 @@ export const AccountStorageCard = ({ data, locale, onUpgrade, upgradeLabel, unli
   const percentage = limitBytes !== null ? storageUsedPercent(data.usedBytes, limitBytes) : 0;
   const usage = limitBytes === null ? null : formatLocalizedStorageUsage(data.usedBytes, limitBytes, locale);
   const size = (bytes: number) => formatLocalizedStorage(bytes, locale);
+  const text = accountStorageCardStrings[isClientUiLanguage(locale) ? locale : "en"];
 
   const [phase, setPhase] = useState<RecomputePhase>("idle");
   const [dryRunResult, setDryRunResult] = useState<RecomputeDryRunResult | null>(null);
@@ -133,7 +136,7 @@ export const AccountStorageCard = ({ data, locale, onUpgrade, upgradeLabel, unli
           {limitBytes === null ? (
             <>
               <div className="text-sm font-semibold" data-testid="account-storage-used">
-                {size(data.usedBytes)} used
+                {text.used(size(data.usedBytes))}
               </div>
               <div className="text-xs text-muted-foreground" data-testid="account-storage-unlimited">
                 {unlimitedLabel ?? "Admin: unlimited storage"}
@@ -145,7 +148,7 @@ export const AccountStorageCard = ({ data, locale, onUpgrade, upgradeLabel, unli
                 {usage?.used} / {usage?.limit}
               </div>
               <div className={["text-xs", textColorClass(data.warningLevel)].join(" ")}>
-                {percentage}% used
+                {text.percentUsed(percentage)}
               </div>
             </>
           )}
@@ -187,7 +190,7 @@ export const AccountStorageCard = ({ data, locale, onUpgrade, upgradeLabel, unli
 
       {data.reservedBytes > 0 && (
         <div className="text-xs text-muted-foreground">
-          {size(data.reservedBytes)} reserved by active uploads
+          {text.reserved(size(data.reservedBytes))}
         </div>
       )}
 
@@ -244,7 +247,7 @@ export const AccountStorageCard = ({ data, locale, onUpgrade, upgradeLabel, unli
       {data.apps.length > 0 && (
         <div className="space-y-1.5 pt-1">
           <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground/80">
-            Storage by app
+            {text.byApp}
           </div>
           {data.apps.map((app) => {
             const appPercentage =

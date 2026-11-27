@@ -73,6 +73,8 @@ vi.mock("@space/mobile-shell/i18n", () => ({ useTranslation: () => ({ t: (key: s
 vi.mock("@space/mobile-shell/components", async () => ({
   MobileRailScroll: (await vi.importActual<typeof import("@space/mobile-shell/rail")>("@space/mobile-shell/rail")).MobileRailScroll,
   MobileSkeletonPulse: "Shimmer",
+  MobileIconButton: "MobileIconButton",
+  MOBILE_ICON_BUTTON_SIZE: 48,
 }));
 vi.mock("../src/state/session", () => ({ useSession: () => ({ library: { status: "ready", version: 1 } }) }));
 vi.mock("../src/state/useQuery", () => ({

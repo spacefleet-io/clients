@@ -204,7 +204,7 @@ describe("privacy policy", () => {
       const privacy = pageText(LEGAL_CONTENT[lang], "privacy");
       for (const fact of facts[lang]) expect(privacy, lang).toContain(fact);
       console.info(`[legal:request-counts] ${lang}: ${facts[lang].length} fact(s) present`);
-      expect(LEGAL_CONTENT[lang].updated).toMatch(/22/);
+      expect(LEGAL_CONTENT[lang].updated).toMatch(/26/);
     }
   });
 
@@ -304,7 +304,7 @@ describe("privacy policy", () => {
       const tracking = items.filter((item) => typeof item !== "string" && item.id === "news-tracking");
       console.info(`[legal:news-tracking] ${lang}: ${tracking.length} item(s)`);
       expect(tracking).toHaveLength(1);
-      expect(LEGAL_CONTENT[lang].updated).toMatch(/22/);
+      expect(LEGAL_CONTENT[lang].updated).toMatch(/26/);
     }
   });
 
@@ -498,7 +498,7 @@ describe("terms of service and sale", () => {
       expect(consent.signup).toContain("(page:terms)");
       expect(consent.signup).toContain("(page:privacy)");
       expect(pageText(LEGAL_CONTENT[lang], "terms")).toContain("L221-25");
-      expect(LEGAL_CONTENT[lang].updated).toMatch(/22/);
+      expect(LEGAL_CONTENT[lang].updated).toMatch(/26/);
     }
     expect(LEGAL_CONTENT.fr.consent.terms).toBe("J'accepte les [Conditions générales d'utilisation et de vente](page:terms).");
     expect(LEGAL_CONTENT.fr.consent.startNow).toContain("avant la fin du délai de rétractation de 14 jours");

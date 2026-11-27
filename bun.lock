@@ -27,7 +27,7 @@
     },
     "apps/badger/desktop": {
       "name": "@space/badger-desktop",
-      "version": "0.1.82",
+      "version": "0.1.83",
       "dependencies": {
         "better-sqlite3": "^13.2.0",
         "drizzle-orm": "^0.45.3",
@@ -239,7 +239,7 @@
     },
     "apps/parrot/desktop": {
       "name": "@space/parrot-desktop",
-      "version": "0.1.72",
+      "version": "0.1.73",
       "devDependencies": {
         "@playwright/test": "~1.65.1",
         "@rolldown/plugin-babel": "^0.3.1",
@@ -536,7 +536,6 @@
         "@space/desktop-platform": "workspace:*",
         "@space/ffmpeg": "workspace:*",
         "@space/library-db-definition": "workspace:*",
-        "@space/logger": "workspace:*",
         "@space/shared": "workspace:*",
         "franc": "^6.2.0",
         "pngjs": "^7.0.0",
