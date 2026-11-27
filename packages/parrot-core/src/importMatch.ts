@@ -29,15 +29,23 @@ export const IMPORT_LOOKUP_LANES = 3;
 /**
  * PAR-UP-11: a lookup the service could not answer (5xx, e.g. a 503 `ticket_store_unavailable` blip) or that never
  * reached it (a network error) is asked again after these waits, so a blip of a few seconds leaves no song unmatched.
- * A refusal (4xx, 429, no ticket) and a stopped lookup are not asked again.
+ * A lookup refused as too many (429) is asked again as many times, each after the service's Retry-After (these waits
+ * when it names none), at most PARROT_LOOKUP_RETRY_AFTER_CAP_MS. Any other refusal (4xx, no ticket) and a stopped
+ * lookup are not asked again.
  */
 export const PARROT_LOOKUP_RETRY_DELAYS_MS: readonly number[] = [1000, 2500, 5000];
+/** The longest a 429's Retry-After makes the import wait before asking again (PAR-UP-11, Chris 2026-11-27). */
+export const PARROT_LOOKUP_RETRY_AFTER_CAP_MS = 60_000;
 /** A compilation's file longer or shorter than its track by more than this is a match to check (PAR-UP-05). */
 export const IMPORT_SURE_DURATION_MS = 5_000;
 /** How many recordings one file asks for: enough to see a close competing album. */
 const RECORDINGS_PER_FILE = 5;
 /** A file with no album to go by asks for more, so the song's original studio album is among them. */
 const RECORDINGS_PER_FILE_NO_ALBUM = 10;
+/** Our copy's album ids are UUIDs; any other id (an outside source's) the server cannot look up (PAR-META-26). */
+const COPY_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
+/** Whether an id is one of our music copy's (a UUID), never an outside source's (PAR-META-26). */
+export const isParrotCopyId = (id: string): boolean => COPY_ID.test(id);
 
 /**
  * The weights of the import's matching (PAR-META-03, Chris 2026-11-15). Every place a file could go starts at `bias`
@@ -189,14 +197,23 @@ export type ParrotImportLookups = {
   library?: ParrotImportLibraryAlbum[];
   /** Waits before asking a failed lookup again (PARROT_LOOKUP_RETRY_DELAYS_MS); tests shorten them. */
   retryDelaysMs?: readonly number[];
+  /** The longest wait a 429's Retry-After asks for (PARROT_LOOKUP_RETRY_AFTER_CAP_MS); tests shorten it. */
+  retryAfterCapMs?: number;
   /** A stopped match ("Import as is") ends its waits at once. */
   signal?: AbortSignal;
 };
 
-/** A 5xx answer, or a fetch that never got one (fetch's TypeError): worth asking again. */
+/** A 5xx answer, a 429 refusal, or a fetch that never got one (fetch's TypeError): worth asking again. */
 const lookupWorthRetrying = (error: unknown) => {
   const status = (error as { status?: unknown } | null)?.status;
-  return typeof status === "number" ? status >= 500 : error instanceof TypeError;
+  return typeof status === "number" ? status >= 500 || status === 429 : error instanceof TypeError;
+};
+
+/** The wait before asking again: a 429's Retry-After (capped), else this try's own wait. */
+const retryWaitMs = (error: unknown, fallbackMs: number, capMs: number) => {
+  const refusal = error as { status?: unknown; retryAfterSeconds?: unknown } | null;
+  if (refusal?.status !== 429 || typeof refusal.retryAfterSeconds !== "number") return fallbackMs;
+  return Math.min(Math.max(0, refusal.retryAfterSeconds * 1000), capMs);
 };
 
 const pause = (ms: number, signal: AbortSignal | undefined) =>
@@ -206,9 +223,10 @@ const pause = (ms: number, signal: AbortSignal | undefined) =>
     signal?.addEventListener("abort", () => (clearTimeout(timer), resolve()), { once: true });
   });
 
-/** The lookups with each question asked again on a 5xx or a network error (PAR-UP-11). */
+/** The lookups with each question asked again on a 5xx, a 429 (after its Retry-After) or a network error (PAR-UP-11). */
 const retryingLookups = (lookups: ParrotImportLookups, log: (line: string) => void): ParrotImportLookups => {
   const delays = lookups.retryDelaysMs ?? PARROT_LOOKUP_RETRY_DELAYS_MS;
+  const capMs = lookups.retryAfterCapMs ?? PARROT_LOOKUP_RETRY_AFTER_CAP_MS;
   const retrying =
     <Q, A>(what: string, ask: (question: Q) => Promise<A>) =>
     async (question: Q): Promise<A> => {
@@ -217,8 +235,9 @@ const retryingLookups = (lookups: ParrotImportLookups, log: (line: string) => vo
           return await ask(question);
         } catch (error) {
           if (attempt >= delays.length || !lookupWorthRetrying(error) || lookups.signal?.aborted) throw error;
-          log(`[import-match] ${what} lookup retry ${attempt + 1}/${delays.length} in ${delays[attempt]}ms: ${errorText(error)}`);
-          await pause(delays[attempt]!, lookups.signal);
+          const waitMs = retryWaitMs(error, delays[attempt]!, capMs);
+          log(`[import-match] ${what} lookup retry ${attempt + 1}/${delays.length} in ${waitMs}ms: ${errorText(error)}`);
+          await pause(waitMs, lookups.signal);
         }
       }
     };
@@ -236,6 +255,12 @@ export const parrotComparableName = (title: string): string => {
 
 /** A title without its bracketed parts ("Nook (Live)" → "nook"), for a looser pairing; a title that is all brackets stays whole. */
 const baseTitle = (title: string): string => parrotComparableName(title.replace(/\s*[([][^)\]]*[)\]]/gu, " ")) || parrotComparableName(title);
+
+/**
+ * A credit's names (PAR-META-29): the credit itself and, for a joined credit ("Ella Fitzgerald & Louis Armstrong",
+ * "A feat. B"), each artist it names, so a duo's file finds the album our copy credits to both artists apart.
+ */
+const creditNames = (credit: string): string[] => [credit, ...credit.split(/\s*(?:&|,|\band\b|\bwith\b|\bfeat\.?|\bft\.|\bfeaturing\b)\s*/iu)];
 
 const LIVE = /\blive\b/iu;
 /** A concert bootleg's name, as the metadata lists them: "2007-06-24: The Lantern Room, Millbrook, NC, USA". */
@@ -545,26 +570,31 @@ export const matchParrotImport = async (questions: ParrotImportFileQuestion[], a
   }
 
   // The albums in reach: those answered for any file, and the library's albums of the same artists with one of the
-  // files' titles. An answered album with an id is first asked by it (PAR-META-03): that answer is our copy's alone,
-  // so a compilation or DJ set a song sits on never falls to the slow, paced name search of an outside source
+  // files' titles. An answered album with our copy's id is first asked by it (PAR-META-03): that answer is our copy's
+  // alone, so a compilation or DJ set a song sits on never falls to the slow, paced name search of an outside source
   // (PAR-META-19). Only an album credited to the song's own artist is then also asked by name, which finds it in our
   // copy and answers its other editions alongside; an album without an id and the library's are asked by name alone.
+  // An album only an outside source knows (its id is not our copy's) is not asked at all (PAR-META-26): the server
+  // cannot look it up by that id, so the ask would be one paced outside album search per candidate; it is kept from
+  // its recordings below.
   const reach = new Map<string, ReachAlbum>();
   for (const [key, found] of whole) reach.set(key, { album: found.album, tracklistKnown: true });
   const official = new Map<string, boolean>();
   const byId = new Map<string, MusicAlbumsQuery>();
   const byName = new Map<string, MusicAlbumsQuery>();
+  const outside = new Set<string>();
   const askByName = (artist: string, album: string) => byName.set(`${parrotComparableName(artist)}\u0000${parrotComparableName(album)}`, { artist, album, limit: 5 });
   for (const file of files) {
     for (const { recording } of file.answers) {
       const key = parrotAlbumKey(recording.album);
       if (recording.album.official !== undefined) official.set(key, recording.album.official);
       if (whole.has(key)) continue;
-      if (recording.album.id) byId.set(recording.album.id, { artist: recording.artist.name, album: recording.album.title, id: recording.album.id });
-      else askByName(recording.artist.name, recording.album.title);
+      if (!recording.album.id) askByName(recording.artist.name, recording.album.title);
+      else if (COPY_ID.test(recording.album.id)) byId.set(recording.album.id, { artist: recording.artist.name, album: recording.album.title, id: recording.album.id });
+      else outside.add(recording.album.id);
     }
   }
-  const ownArtists = (file: AnsweredFile) => [file.question.artist, file.question.albumArtist ?? "", ...file.answers.map((answer) => answer.recording.artist.name)];
+  const ownArtists = (file: AnsweredFile) => [file.question.artist, file.question.albumArtist ?? "", ...file.answers.map((answer) => answer.recording.artist.name)].flatMap(creditNames);
   const importArtists = new Set(files.flatMap(ownArtists).map(parrotComparableName).filter(Boolean));
   const library = new Map<string, ParrotImportLibraryAlbum>();
   for (const owned of lookups.library ?? []) {
@@ -587,7 +617,9 @@ export const matchParrotImport = async (questions: ParrotImportFileQuestion[], a
     });
   const libraryAndNameless = byName.size;
   await askAlbums([...byId.values()]);
-  log(`[import-match] album lookups: ${byId.size} by id, then ${byName.size - libraryAndNameless} by name (the song's own artist's), ${libraryAndNameless} by name only`);
+  log(
+    `[import-match] album lookups: ${byId.size} by id, then ${byName.size - libraryAndNameless} by name (the song's own artist's), ${libraryAndNameless} by name only, ${outside.size} with an outside id not asked`
+  );
   await askAlbums([...byName.values()]);
   const unknown = new Map<string, Answer[]>();
   for (const file of files) {
@@ -596,7 +628,30 @@ export const matchParrotImport = async (questions: ParrotImportFileQuestion[], a
       if (!reach.has(key)) unknown.set(key, [...(unknown.get(key) ?? []), answer]);
     }
   }
+  // An album known only from its recordings that is one our copy answered (PAR-META-30: an outside "Ella and Louis"
+  // and our copy's, same title, year and artists, every song of it on ours) is that album: its answers go to ours, so
+  // one album never shows as two cards under two keys.
+  const sameAs = new Map<string, string>();
+  const artistsOf = (album: MusicAlbum) => new Set(parrotAlbumArtists(album).flatMap((artist) => creditNames(artist.name)).map(parrotComparableName).filter(Boolean));
   for (const [key, list] of unknown) {
+    const album = albumFromRecordings(list);
+    const artists = artistsOf(album);
+    const copy = [...reach].find(
+      ([, entry]) =>
+        entry.tracklistKnown &&
+        entry.album.id !== null &&
+        COPY_ID.test(entry.album.id) &&
+        parrotComparableName(entry.album.title) === parrotComparableName(album.title) &&
+        (entry.album.year == null || album.year == null || entry.album.year === album.year) &&
+        [...artistsOf(entry.album)].some((artist) => artists.has(artist)) &&
+        list.every((answer) => trackForRecording(answer.recording, entry.album.tracks))
+    );
+    if (!copy) continue;
+    sameAs.set(key, copy[0]);
+    log(`[import-match] album ${key} (${album.title}) is ${copy[0]}`);
+  }
+  for (const [key, list] of unknown) {
+    if (sameAs.has(key)) continue;
     log(`[import-match] album ${key} (${list[0]!.recording.album.title}) not in its own lookup; kept from its recordings`);
     reach.set(key, { album: albumFromRecordings(list), tracklistKnown: false });
   }
@@ -677,7 +732,7 @@ export const matchParrotImport = async (questions: ParrotImportFileQuestion[], a
     const folder = folders.get(folderOf(question.file))!;
     const options = new Map<string, { key: string; track: MusicAlbumTrack; rank: number | null; title: string; durationMs: number | null }>();
     for (const answer of file.answers) {
-      const key = parrotAlbumKey(answer.recording.album);
+      const key = sameAs.get(parrotAlbumKey(answer.recording.album)) ?? parrotAlbumKey(answer.recording.album);
       const track = trackForRecording(answer.recording, reach.get(key)!.album.tracks);
       const id = `${key}|${track?.disc}:${track?.number}`;
       if (track && !options.has(id)) options.set(id, { key, track, rank: answer.rank, title: answer.recording.title, durationMs: answer.recording.durationMs ?? track.durationMs });

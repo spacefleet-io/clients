@@ -162,6 +162,27 @@ describe("Parrot desktop import review: what the import stores", () => {
     for (const item of selection.values()) expect(item.unidentified).toBeUndefined();
   });
 
+  // @bugfix: the review knew each song's matched track but handed the import only its album's id, so no song's
+  // lyrics lookup carried its own id.
+  // @req PAR-LYR-01[parrot]
+  it("hands the import each matched song's own track id from our copy, never an outside source's id", async () => {
+    const paperboat = entry("/music/Hollow Signal/01 Paperboat.mp3", { artist: "Linnet Park", album: "Hollow Signal", title: "Paperboat", number: 1 });
+    const whatIveDone = entry("/music/Minutes/06 What I've Kept.mp3", { artist: "Linnet Park", album: "Minutes to Daybreak", title: "What I've Kept", number: 6 });
+    // An album whose last track only an outside source answered: its id is not one of our copy's.
+    const outside = { ...minutes, tracks: minutes.tracks.map((track) => (track.number === 6 ? { ...track, id: "dQw4w9WgXcQ" } : track)) };
+    await show(
+      scanOf([paperboat, whatIveDone]),
+      lookupOf([
+        { album: hollowSignal, cover: null, tracklistKnown: true, files: [{ file: paperboat.file, disc: 1, number: 1, sure: true }] },
+        { album: outside, cover: null, tracklistKnown: true, files: [{ file: whatIveDone.file, disc: 1, number: 6, sure: true }] },
+      ]),
+    );
+    const selection = new Map((await confirmImport()).map((item) => [item.file, item]));
+    expect(selection.get(paperboat.file)).toMatchObject({ album: "Hollow Signal", trackMusicId: hollowSignal.tracks[0]!.id });
+    expect(selection.get(whatIveDone.file)).toMatchObject({ album: "Minutes to Daybreak", albumMusicId: minutes.id });
+    expect(selection.get(whatIveDone.file)?.trackMusicId).toBeUndefined();
+  });
+
   // @req PAR-UP-08
   it("shows every album at once from its tags; each looks itself up on its own and Import waits for all of them", async () => {
     const paperboat = entry("/music/Hollow Signal/01 Paperboat.mp3", { artist: "Linnet Park", album: "Hollow Signal", title: "Paperboat", number: 1 });
