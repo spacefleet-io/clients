@@ -4,6 +4,8 @@
  * @req PAR-LOOK-06[parrot]
  * @req PAR-LIB-03[parrot]
  * @req UX-A11Y-05[parrot]
+ * @req PAR-SYNC-01[parrot]
+ * @req PAR-META-31[parrot]
  * @why Chris, 2026-11-21 (chat, morning review): of the three artist page drafts he picked A (the photo edge to edge, the
  *   ARTIST chip, the name and counts over the fade, a big Play, round Shuffle / Save offline / Play next / More),
  *   with no Overview tab ("no point next to Albums and Songs"): two tabs, Albums first and open, and the Albums tab is
@@ -23,6 +25,8 @@ const fake = vi.hoisted(() => ({
   albums: [] as Record<string, unknown>[],
   songs: [] as Record<string, unknown>[],
   picture: null as null | Record<string, unknown>,
+  /** The artist's name in the open library now (`readArtistName`); null: not read yet. */
+  storedName: null as null | string,
   /** The tab the page's state holds; the mocked useState hands it out in place of the first tab. */
   tab: null as null | string,
   calls: [] as string[],
@@ -62,7 +66,7 @@ vi.mock("react-native-svg", () => ({ default: "Svg", Defs: "Defs", LinearGradien
 vi.mock("react-native-safe-area-context", () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) }));
 vi.mock("lucide-react-native", () =>
   Object.fromEntries(
-    ["ArrowDownToLine", "ArrowLeft", "ChevronLeft", "CircleCheck", "Ellipsis", "ListEnd", "ListPlus", "ListStart", "Play", "Shuffle", "Trash2"].map((name) => [name, `Icon:${name}`])
+    ["ArrowDownToLine", "ArrowLeft", "ChevronLeft", "CircleCheck", "Ellipsis", "ListEnd", "ListPlus", "ListStart", "Pencil", "Play", "Shuffle", "Trash2"].map((name) => [name, `Icon:${name}`])
   )
 );
 vi.mock("@react-navigation/native", () => ({
@@ -73,16 +77,24 @@ vi.mock("@space/mobile-shell/i18n", () => ({ useTranslation: () => ({ t: (key: s
 vi.mock("@space/mobile-shell/components", async () => ({
   MobileRailScroll: (await vi.importActual<typeof import("@space/mobile-shell/rail")>("@space/mobile-shell/rail")).MobileRailScroll,
   MobileSkeletonPulse: "Shimmer",
+  MobileIconButton: "MobileIconButton",
+  MOBILE_ICON_BUTTON_SIZE: 48,
 }));
 vi.mock("../src/state/session", () => ({ useSession: () => ({ library: { status: "ready", version: 1 } }) }));
 vi.mock("../src/state/useQuery", () => ({
   useQuery: (load: () => unknown) => {
     const source = String(load);
-    const data = source.includes("listArtistAlbums") ? fake.albums : source.includes("readArtistPicture") ? fake.picture : fake.songs;
+    const data = source.includes("listArtistAlbums")
+      ? fake.albums
+      : source.includes("readArtistPicture")
+        ? fake.picture
+        : source.includes("readArtistName")
+          ? fake.storedName
+          : fake.songs;
     return { data, loading: false, error: null };
   },
 }));
-vi.mock("../src/lib/library", () => ({ listArtistAlbums: async () => [], listSongs: async () => [], readArtistPicture: async () => null }));
+vi.mock("../src/lib/library", () => ({ listArtistAlbums: async () => [], listSongs: async () => [], readArtistPicture: async () => null, readArtistName: async () => null }));
 vi.mock("../src/lib/picturesWaiting", () => ({ artistPicturesWaiting: { has: () => false, onChange: () => () => undefined } }));
 vi.mock("../src/state/usePlay", () => ({
   usePlay: () => ({
@@ -95,6 +107,7 @@ vi.mock("../src/state/usePlay", () => ({
 vi.mock("../src/state/usePlayerState", () => ({ useNowPlaying: () => null }));
 vi.mock("../src/state/manage", () => ({
   useManage: () => ({
+    editArtist: (artistId: string) => void fake.calls.push(`edit:artist:${artistId}`),
     remove: (target: { kind: string; id: string }, title: string, onDeleted?: () => void) => {
       fake.calls.push(`delete:${target.kind}:${target.id}:${title}`);
       onDeleted?.();
@@ -160,7 +173,7 @@ const library = (count: number) => {
 };
 
 beforeEach(() => {
-  Object.assign(fake, { albums: [], songs: [], picture: null, tab: null, calls: [], played: [], wentBack: 0, sheet: null, setTab: [], heroHeight: null, fontScale: 1 });
+  Object.assign(fake, { albums: [], songs: [], picture: null, storedName: null, tab: null, calls: [], played: [], wentBack: 0, sheet: null, setTab: [], heroHeight: null, fontScale: 1 });
 });
 
 describe("PARROT-MOBILE-ARTIST-PAGE-001 the tabs", () => {
@@ -209,18 +222,44 @@ describe("PARROT-MOBILE-ARTIST-PAGE-001 the Albums tab is the discography timeli
     expect(fake.played).toEqual([{ ids: ["al-27-t1", "al-27-t2"], index: 0 }]);
   });
 
-  it("a one-album artist with no photo still reads as a page: the drawn picture with initials, one release, its songs under it", () => {
+  it("a one-album artist with no photo still reads as a page: the drawn picture without its motif, the initials in a round above the name, one release, its songs under it", () => {
     library(1);
     const page = render("Lowtide Radio");
     const hero = byTestId(page, "artist-hero");
     const art = all(hero, (el) => el.type === "ParrotArt");
-    log("one-album", { art: art.map((el) => el.props.coverKey), heroTexts: texts(hero), releases: byTestId(page, "artist-release").length });
+    const round = byTestId(page, "artist-initials");
+    log("one-album", { art: art.map((el) => ({ coverKey: el.props.coverKey, plain: el.props.plain })), initials: texts(round), releases: byTestId(page, "artist-release").length });
     expect(art).toHaveLength(1);
     expect(art[0]!.props.coverKey).toBeUndefined();
-    expect(texts(hero)).toContain("LR");
+    // The hero is wider than tall: its motif's circle would stretch into an oval, so it is drawn plain.
+    expect(art[0]!.props.plain).toBe(true);
+    // The initials sit in their own round in the page's flow, not over the hero where they ran into the chip and name.
+    expect(texts(hero)).not.toContain("LR");
+    expect(round).toHaveLength(1);
+    expect(texts(round)).toEqual(["LR"]);
     expect(byTestId(page, "artist-release")).toHaveLength(1);
     expect(byTestId(page, "artist-year")).toHaveLength(0);
     expect(all(byTestId(page, "artist-discography-songs"), (el) => el.type === "SongListRow")).toHaveLength(2);
+  });
+
+  it("grows the initials' round with the phone's text size, never below 96, and never turns the text size off for its letters", () => {
+    library(1);
+    const round = (scale: number) => {
+      fake.fontScale = scale;
+      const [el] = byTestId(render("Lowtide Radio"), "artist-initials");
+      const style = Object.assign({}, ...(el!.props.style as object[])) as { width: number; height: number; borderRadius: number };
+      const [letters] = all(el!, (node) => node.type === "Text");
+      return { ...style, allowFontScaling: letters!.props.allowFontScaling };
+    };
+    const rounds = [0.85, 1, 1.3, 2].map(round);
+    log("initials-round", { rounds });
+    expect(rounds.map((r) => [r.width, r.height, r.borderRadius])).toEqual([
+      [96, 96, 48],
+      [96, 96, 48],
+      [125, 125, 62.5],
+      [192, 192, 96],
+    ]);
+    expect(rounds.every((r) => r.allowFontScaling === undefined)).toBe(true);
   });
 });
 
@@ -242,10 +281,33 @@ describe("PARROT-MOBILE-ARTIST-PAGE-001 Delete is only in the More sheet", () =>
     expect(sheet.actions.filter((action) => action.id === "delete")).toHaveLength(1);
     expect(sheet.actions.at(-1)).toMatchObject({ id: "delete", testID: "artist-menu-delete", destructive: true, icon: "Icon:Trash2" });
     expect(sheet.actions.slice(0, -1).every((action) => !action.destructive)).toBe(true);
+    // PAR-META-31: Edit details sits just above Delete and opens the artist form.
+    expect(sheet.actions.at(-2)).toMatchObject({ id: "edit", testID: "artist-menu-edit", label: "shell.manage.edit", icon: "Icon:Pencil" });
+    sheet.actions.at(-2)!.onSelect();
+    expect(fake.calls).toEqual(["edit:artist:ar-kg"]);
+    fake.calls.length = 0;
     sheet.actions.at(-1)!.onSelect();
     // manage.remove is the existing confirm (PARROT-MOBILE-MANAGE-001): it asks, deletes, then runs onDeleted.
     expect(fake.calls).toEqual(["delete:artist:ar-kg:Radiohead"]);
     expect(fake.wentBack).toBe(1);
+  });
+});
+
+describe("PARROT-MOBILE-ARTIST-PAGE-001 a rename saved on another device shows on the open page (PAR-SYNC-01)", () => {
+  const title = (page: unknown) => all(page, (el) => el.type === "Text" && el.props.accessibilityRole === "header")[0]?.props.children;
+
+  it("shows the library's name over the one the page was opened with", () => {
+    library(1);
+    fake.storedName = "NULLREDUX";
+    const page = render("NULLREDUX_EXE");
+    log("renamed", { title: title(page) });
+    expect(title(page)).toBe("NULLREDUX");
+    expect(texts(page)).not.toContain("NULLREDUX_EXE");
+  });
+
+  it("keeps the name it was opened with until the library has been read", () => {
+    library(1);
+    expect(title(render("NULLREDUX_EXE"))).toBe("NULLREDUX_EXE");
   });
 });
 

@@ -9,7 +9,6 @@ export { parseFfprobeHexDump, probeSubtitlePackets } from "./ffprobePackets";
 export {
   ensureTesseractLangData,
   type LangDataFetch,
-  parseRetryAfterMs,
   TESSERACT_LANG_DATA_USER_AGENT,
   tesseractLangDataPath,
   tesseractLangDataUrl,

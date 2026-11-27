@@ -8,8 +8,8 @@
 // on "Search again". "Search again" shows only once a lookup came back empty or failed, never while one is on its way
 // (Chris 2026-11-16).
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import type { ParrotLyrics } from "@space/parrot-core";
-import { fetchTrackLyrics, lyricsPending, readTrackLyrics } from "../lib/library";
+import type { ParrotLyrics, ParrotOwnLyrics } from "@space/parrot-core";
+import { fetchTrackLyrics, lyricsPending, readTrackLyrics, saveOwnLyrics } from "../lib/library";
 import { lookupClient } from "../lib/lookup";
 import { useSession } from "./session";
 
@@ -21,8 +21,9 @@ type Settled = { trackId: string };
 export type TrackLyricsView =
   /** The library is being read. */
   | { kind: "reading" }
-  | { kind: "synced"; lines: NonNullable<ParrotLyrics["synced"]>; fetched: boolean }
-  | { kind: "plain"; text: string; fetched: boolean }
+  /** `own`: the user's own lyrics (PAR-LYR-08). */
+  | { kind: "synced"; lines: NonNullable<ParrotLyrics["synced"]>; fetched: boolean; own?: true }
+  | { kind: "plain"; text: string; fetched: boolean; own?: true }
   /** "Looking for lyrics…" (PAR-LYR-06). */
   | { kind: "searching" }
   /**
@@ -33,7 +34,16 @@ export type TrackLyricsView =
 
 const log = (event: string, payload: Record<string, unknown>) => console.log(`parrot.lyrics ${event} ${JSON.stringify(payload)}`);
 
-export const useTrackLyrics = (trackId: string): { view: TrackLyricsView; searchAgain: () => void } => {
+export const useTrackLyrics = (
+  trackId: string
+): {
+  view: TrackLyricsView;
+  /** The song's lyrics as read (null: none, or not read yet), the editor's starting words. */
+  lyrics: ParrotLyrics | null;
+  searchAgain: () => void;
+  /** PAR-LYR-08/11: keeps the user's own lyrics (null removes them); the screen shows what the library holds after. */
+  saveOwn: (lyrics: ParrotOwnLyrics | null) => Promise<void>;
+} => {
   // A new library version (e.g. the automatic lookup found this song's words, PAR-LYR-01) is read again.
   const { library, wantLyrics } = useSession();
   const libraryVersion = library.version;
@@ -107,7 +117,14 @@ export const useTrackLyrics = (trackId: string): { view: TrackLyricsView; search
     wantLyrics(trackId);
   }, [neverLookedUp, autoPending, staleRead, state, trackId, wantLyrics]);
 
-  return { view: lyricsView({ read: lyrics?.trackId === trackId, current, state, autoPending, staleRead, neverLookedUp }), searchAgain };
+  const saveOwn = async (own: ParrotOwnLyrics | null) => {
+    const saved = await saveOwnLyrics(trackId, own);
+    log(own ? "own_saved" : "own_removed", { trackId, synced: saved?.synced?.length ?? 0, plain: Boolean(saved?.plain) });
+    // An editor pinned to a song that has stopped playing saves it without touching the song now read.
+    setLyrics((now) => (now && now.trackId !== trackId ? now : { trackId, lyrics: saved, after }));
+  };
+
+  return { view: lyricsView({ read: lyrics?.trackId === trackId, current, state, autoPending, staleRead, neverLookedUp }), lyrics: current, searchAgain, saveOwn };
 };
 
 /** What shows, from where the reading and the lookups stand (pure, for the tests). */
@@ -121,8 +138,9 @@ export const lyricsView = (input: {
 }): TrackLyricsView => {
   const { read, current, state, autoPending, staleRead, neverLookedUp } = input;
   if (!read) return { kind: "reading" };
-  if (current?.synced) return { kind: "synced", lines: current.synced, fetched: current.fetched };
-  if (current?.plain) return { kind: "plain", text: current.plain, fetched: current.fetched };
+  const own = current?.own ? { own: true as const } : {};
+  if (current?.synced) return { kind: "synced", lines: current.synced, fetched: current.fetched, ...own };
+  if (current?.plain) return { kind: "plain", text: current.plain, fetched: current.fetched, ...own };
   if (state === "busy" || autoPending || staleRead || (neverLookedUp && state === "idle")) return { kind: "searching" };
   // A song every source was asked about: the final "No lyrics" (PAR-LYR-04). "Search again" (PAR-LYR-05) only after a
   // lookup came back empty or failed.
@@ -150,10 +168,14 @@ export const lyricsNoneText = (view: Extract<TrackLyricsView, { kind: "none" }>)
 
 /** The i18n key of the line naming where the lyrics came from. */
 export const lyricsSourceKey = (view: Extract<TrackLyricsView, { kind: "synced" | "plain" }>): string =>
-  view.kind === "synced"
-    ? view.fetched
-      ? "shell.nowPlaying.fetchedSyncedLyricsSource"
-      : "shell.nowPlaying.syncedLyricsSource"
-    : view.fetched
-      ? "shell.nowPlaying.fetchedPlainLyricsSource"
-      : "shell.nowPlaying.plainLyricsSource";
+  view.own
+    ? view.kind === "synced"
+      ? "shell.nowPlaying.ownSyncedLyricsSource"
+      : "shell.nowPlaying.ownPlainLyricsSource"
+    : view.kind === "synced"
+      ? view.fetched
+        ? "shell.nowPlaying.fetchedSyncedLyricsSource"
+        : "shell.nowPlaying.syncedLyricsSource"
+      : view.fetched
+        ? "shell.nowPlaying.fetchedPlainLyricsSource"
+        : "shell.nowPlaying.plainLyricsSource";

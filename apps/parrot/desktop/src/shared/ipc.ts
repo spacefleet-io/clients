@@ -16,7 +16,7 @@ import type { ProfileAvatarId } from "@space/shared/profileAvatars";
 import type { CreditsProduct, SourceCredits } from "@space/metadata-client/credits";
 import type { ProfileFeatures } from "@space/shared/appFeatures";
 import type { ParrotImportEdit, ParrotImportScan, ParrotLibraryAlbum, ParrotLibraryArtist, ParrotLibraryTrack } from "@space/parrot-ingest";
-import type { KeepCopyChoice, KeptKind, KeptStatus, ParrotEditTarget, ParrotLyrics, ParrotManageTarget, ParrotPlaylist, ParrotPlaylistEdit } from "@space/parrot-core";
+import type { KeepCopyChoice, KeptKind, KeptStatus, ParrotEditTarget, ParrotLyrics, ParrotManageTarget, ParrotOwnLyrics, ParrotPlaylist, ParrotPlaylistEdit } from "@space/parrot-core";
 import type { ParrotPhotoCredit } from "@space/parrot-library-db-definition";
 import type { ParrotCoverCrop, ParrotImportPlacedFile, ParrotImportUnidentifiedFile } from "@space/parrot-core";
 import type { ParrotLibraryPatch } from "./libraryPatch";
@@ -53,8 +53,13 @@ export type ParrotKeyChangeBridge = {
   onState(listener: (state: KeyChangeState) => void): () => void;
 };
 export type { ParrotImportEdit, ParrotImportScan, ParrotScanEntry } from "@space/parrot-ingest";
-/** The songs the user ticked in the confirm dialog, with the names they confirmed (PAR-UP-05). */
-export type ParrotImportSelection = Array<ParrotImportEdit & { file: string }>;
+/** The songs the user ticked in the confirm dialog, with the names they confirmed (PAR-UP-05); their lyrics come with {@link ParrotImportLyricsChoice}. */
+export type ParrotImportSelection = Array<Omit<ParrotImportEdit, "lyrics"> & { file: string }>;
+/**
+ * PAR-LYR-09: a lyrics file of the waiting scan the user left placed on a song in the review: one of the import's (its
+ * audio file) or of the library (its id). A same-name `.lrc` not among them was removed from its song.
+ */
+export type ParrotImportLyricsChoice = { lyricsFile: string; song: { file: string } | { trackId: string } };
 /** Settings › Manage offline content (OFFL-MANAGE-01): each kept item's song files, and the bytes each kept file takes here. */
 export type ParrotKeptSizes = { entries: Array<{ kind: KeptKind; id: string; fileIds: string[] }>; bytes: Record<string, number> };
 import type { BillingStatus, PaidPlanId, PaymentOutcome, SubscriptionChangeAnswer } from "@space/shared/billingCheckout";
@@ -174,6 +179,11 @@ export type ParrotImportStatus = {
   importingAlbums?: string[];
   /** PAR-UP-07: the artists whose photo this import is still fetching; they show a loading picture, not a drawn one. */
   fetchingArtists?: string[];
+  /**
+   * UX-ADD-01: on scanImport's answer only, the sources waiting behind the import under way (running, or its scan in
+   * the review); they are scanned once it ends or its review is answered.
+   */
+  queuedSources?: number;
 };
 
 /**
@@ -320,6 +330,8 @@ export type ParrotLibraryResult = { ok: true; library: ParrotLibrary } | { ok: f
 export type ParrotMeasuredLoudness = { trackId: string; gainDb: number; peak: number };
 /** PAR-LYR-05: `found` with the song's lyrics now kept in the library, or `none` when our lyrics library had none. */
 export type ParrotFetchLyricsResult = { ok: true; outcome: "found" | "none"; lyrics: ParrotLyrics | null } | { ok: false; error: string };
+/** PAR-LYR-08/11: the user's own lyrics kept or removed, with what the Lyrics tab shows now. */
+export type ParrotOwnLyricsResult = { ok: true; lyrics: ParrotLyrics | null } | { ok: false; error: string };
 
 /** What deleting a song, an album or an artist would remove, for the confirm dialog (PAR-LIB-03). */
 export type ParrotDeletePreview = { ok: true; trackCount: number; albumCount: number } | { ok: false; error: string };
@@ -484,8 +496,11 @@ export type ParrotBridge = {
   importArtistPhoto(artistId: string): Promise<ParrotImportArtistPhoto>;
   /** A searched album's 500 px cover as a data: URL (PAR-UP-05), asked once per waiting scan; none or a failure answers null. */
   importCover(albumId: string): Promise<string | null>;
-  /** Uploads only the ticked songs of the waiting scan, with the user's edits; files not in that scan are ignored. */
-  confirmImport(selection: ParrotImportSelection): Promise<ParrotImportStatus>;
+  /**
+   * Uploads only the ticked songs of the waiting scan, with the user's edits, and keeps the lyrics files where the
+   * review placed them (PAR-LYR-09); files not in that scan are ignored.
+   */
+  confirmImport(selection: ParrotImportSelection, lyrics: ParrotImportLyricsChoice[]): Promise<ParrotImportStatus>;
   /** Drops the waiting scan (nothing is uploaded), or stops the running import: the songs already published stay. */
   cancelImport(): Promise<ParrotImportStatus>;
   getImportStatus(): Promise<ParrotImportStatus>;
@@ -548,10 +563,16 @@ export type ParrotBridge = {
   deleteFromLibrary(target: ParrotManageTarget): Promise<ParrotLibraryResult>;
   /** A song's or an album's current details, for the edit dialog. */
   getEditValues(target: ParrotManageTarget): Promise<ParrotEditValues>;
-  /** PAR-META-16: saves edited details (and an album's new cover), publishes; result is library after it. */
+  /** PAR-META-31: an artist's name and the photo it shows now (custom or automatic), for the artist edit dialog. */
+  getArtistEditValues(artistId: string): Promise<{ name: string; pictureUrl: string | null } | null>;
+  /** PAR-META-16 / PAR-META-31: saves edited details (and an album's new cover or an artist's new photo), publishes; result is library after it. */
   editDetails(target: ParrotEditTarget, cover: ParrotEditCover | null): Promise<ParrotLibraryResult>;
   /** PAR-LYR-05: asks our lyrics library for a song whose file has none and keeps what it finds in the library. */
   fetchLyrics(trackId: string): Promise<ParrotFetchLyricsResult>;
+  /** PAR-LYR-08: keeps the user's own lyrics of a song; they win over any found ones. */
+  setOwnLyrics(trackId: string, lyrics: ParrotOwnLyrics): Promise<ParrotOwnLyricsResult>;
+  /** PAR-LYR-11: removes the user's own lyrics; the song falls back to the usual sources. */
+  removeOwnLyrics(trackId: string): Promise<ParrotOwnLyricsResult>;
   /**
    * PAR-COPY-01: a playing song never looked up goes first in the automatic lyrics pass (the window itself never looks
    * it up); it is "Looking for lyrics…" until the pass kept its answer.
@@ -738,8 +759,11 @@ export const PARROT_IPC = {
   previewDelete: "parrot:library:delete-preview",
   deleteFromLibrary: "parrot:library:delete",
   getEditValues: "parrot:library:edit-values",
+  getArtistEditValues: "parrot:library:artist-edit-values",
   editDetails: "parrot:library:edit",
   fetchLyrics: "parrot:library:fetch-lyrics",
+  setOwnLyrics: "parrot:library:set-own-lyrics",
+  removeOwnLyrics: "parrot:library:remove-own-lyrics",
   wantLyrics: "parrot:library:want-lyrics",
   saveLoudness: "parrot:library:save-loudness",
   suggestEdit: "parrot:library:suggest-edit",

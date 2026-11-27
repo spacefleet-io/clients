@@ -51,9 +51,10 @@ interface ChunkFetcher {
   /**
    * Aborts the network fetches in flight for the keys [matches] accepts (a rung switch drops the variant it leaves, so its
    * read-ahead stops taking the link from the segment the switch needs, PLAY-ABR-04), including one that has not reached
-   * the wire yet (still opening the session), which is aborted as it starts. Another read that joined such a fetch fetches
-   * the object again rather than failing. Returns how many fetches were aborted; the default (no network of its own)
-   * aborts nothing.
+   * the wire yet (still opening the session), which is aborted as it starts. Only loads ahead ([prefetch]) are aborted: a
+   * fetch the player's own read ([openObject]) owns or joined is skipped, since aborting it fails that read with a 502
+   * (PAR-PLAY-12), and a player read joining a fetch after it was aborted fetches the object again. Returns how many
+   * fetches were aborted; the default (no network of its own) aborts nothing.
    */
   fun cancelInFlight(matches: (String) -> Boolean): Int = 0
 

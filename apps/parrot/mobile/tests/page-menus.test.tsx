@@ -84,9 +84,11 @@ vi.mock("../src/lib/playback", () => ({ setPlaybackShuffle: async () => undefine
 vi.mock("../src/state/usePlayerState", () => ({ usePlayerState: () => fake.player, useNowPlaying: () => null }));
 vi.mock("../src/state/useUpNext", () => ({ useUpNext: () => [] }));
 vi.mock("../src/state/session", () => ({ useSession: () => ({ library: { status: "ready", version: 1 }, localChanges: 0 }) }));
-vi.mock("../src/state/useQuery", () => ({ useQuery: () => ({ data: [], loading: false, error: null }) }));
+vi.mock("../src/state/useQuery", () => ({
+  useQuery: (load: () => unknown) => ({ data: String(load).includes("readArtistName") ? null : [], loading: false, error: null }),
+}));
 vi.mock("../src/state/usePlay", () => ({ usePlay: () => ({ play: async () => undefined, starting: null, error: null }) }));
-vi.mock("../src/lib/library", () => ({ listArtistAlbums: async () => [], readArtistPicture: async () => null, listPlaylistSongs: async () => [] }));
+vi.mock("../src/lib/library", () => ({ listArtistAlbums: async () => [], readArtistPicture: async () => null, readArtistName: async () => null, listPlaylistSongs: async () => [] }));
 vi.mock("../src/lib/picturesWaiting", () => ({ artistPicturesWaiting: { has: () => false, onChange: () => () => undefined } }));
 vi.mock("../src/state/manage", () => ({
   useManage: () => ({ remove: (target: { kind: string; id: string }, title: string, onDeleted?: () => void) => {

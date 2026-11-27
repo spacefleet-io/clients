@@ -3,7 +3,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useR
 import { AppState, Platform } from "react-native";
 import type { ShellAuthSession } from "@space/mobile-shell/services/auth";
 import type { AccountAccess } from "@space/shared/accountAccess";
-import { getLibraryMeta, getMe, logout, type User } from "@space/shared/api";
+import { getApiBaseUrl, getLibraryMeta, getMe, logout, type User } from "@space/shared/api";
 import { decryptBase64ToBytes } from "@space/mobile-shell/libraryEnvelope";
 import {
   checkKeptLibraryKey,
@@ -12,7 +12,8 @@ import {
   type KeptLibraryKeyVerdict,
 } from "@space/mobile-shell/kept-library-key";
 import { keptKeyOwnerStore, libraryKeyStore, sessionStore, setupStore } from "../lib/stores";
-import { autoFetchAlbumCovers, autoFetchArtistPictures, autoFetchLyrics, autoRefreshCopyChanges, lyricsPending, onLibraryChanged, openLibrary, openLibraryCopy, queueAutoLyrics, removeLibrary, saveLibraryEdits } from "../lib/library";
+import { autoFetchAlbumCovers, autoFetchArtistPictures, autoFetchLyrics, autoRefreshCopyChanges, catchUpLibrary, lyricsPending, onLibraryChanged, openLibrary, openLibraryCopy, queueAutoLyrics, removeLibrary, saveLibraryEdits } from "../lib/library";
+import { followLibrarySnapshots } from "../lib/libraryStream";
 import { albumCoversWaiting, artistPicturesWaiting } from "../lib/picturesWaiting";
 import { aboveTicketFloor, lookupClient, startLookup, stopLookup } from "../lib/lookup";
 import { clearKeeping, keptLibraryLoaded, startKeeping } from "../lib/kept";
@@ -399,6 +400,43 @@ export const SessionProvider = ({ children }: { children: React.ReactNode }) => 
   useEffect(() => {
     if (session && libraryKey) void load(session.token, libraryKey);
   }, [session, libraryKey, load]);
+
+  // Live while open (PAR-SYNC-01, LIB-SYNC-05/09): the API tells every connected device when the library changes; a newer
+  // snapshot than the one open here opens at once, so a photo, name or heart saved on another device shows in seconds.
+  // In the background the stream stops; back in front it connects again, and its first status catches up.
+  const libraryOpen = library.status === "ready";
+  useEffect(() => {
+    if (!session || !libraryKey || !libraryOpen) return;
+    const { token } = session;
+    let live = true;
+    let stop: (() => void) | null = null;
+    const follow = () => {
+      stop ??= followLibrarySnapshots({
+        apiBaseUrl: getApiBaseUrl(),
+        token,
+        log: (event, details) => log.info(event, details),
+        onSnapshot: (snapshotVersion) => {
+          void catchUpLibrary(snapshotVersion).then(
+            (version) => {
+              if (version !== null && live) setLibrary({ status: "ready", error: null, version });
+            },
+            (error: unknown) => log.warn("library.catch_up_failed", { message: error instanceof Error ? error.message : String(error) })
+          );
+        },
+      });
+    };
+    const pause = () => {
+      stop?.();
+      stop = null;
+    };
+    if (AppState.currentState !== "background") follow();
+    const subscription = AppState.addEventListener("change", (state) => (state === "active" ? follow() : state === "background" ? pause() : undefined));
+    return () => {
+      live = false;
+      subscription.remove();
+      pause();
+    };
+  }, [session, libraryKey, libraryOpen]);
 
   // Back to the front: the library may have been erased, or its key remade, on another device meanwhile (UX-KEY-01).
   // The start check is in `load`; this one runs on each foreground only.

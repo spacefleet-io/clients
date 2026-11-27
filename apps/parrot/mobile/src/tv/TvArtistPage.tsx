@@ -11,7 +11,7 @@ import { TvPillButton } from "@space/mobile-shell/tv/TvPillButton";
 import { TvBody, TvEyebrow, TvTitle } from "@space/mobile-shell/tv/TvText";
 import { TV_SPACE, TV_TYPE } from "@space/mobile-shell/tv/tokens";
 import { useTvScale, useTvStyles } from "@space/mobile-shell/tv/tvScale";
-import { listAlbumTracks, listArtistAlbums, readArtistPicture } from "../lib/library";
+import { listAlbumTracks, listArtistAlbums, readArtistName, readArtistPicture } from "../lib/library";
 import { ParrotArt } from "../screens/art";
 import { useSession } from "../state/session";
 import { useNowPlaying } from "../state/usePlayerState";
@@ -28,12 +28,14 @@ const PHOTO = 130;
 const CARD = 118;
 const CARD_GAP = 19;
 
-export const TvArtistPage = ({ artistId, name }: { artistId: string; name: string }) => {
+export const TvArtistPage = ({ artistId, name: openedName }: { artistId: string; name: string }) => {
   const { t } = useTranslation();
   const { library } = useSession();
   const version = library.status === "ready" ? library.version : -1;
   const albums = useQuery(() => listArtistAlbums(artistId), [artistId, version]);
   const picture = useQuery(() => readArtistPicture(artistId), [artistId, version]);
+  // A rename saved on another device shows while the page is open (PAR-SYNC-01).
+  const name = useQuery(() => readArtistName(artistId), [artistId, version]).data ?? openedName;
   const { push } = useTvPages();
   const { play, starting } = useTvPlay();
   const now = useNowPlaying();

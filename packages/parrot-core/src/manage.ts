@@ -205,12 +205,26 @@ export type ParrotAlbumEdit = {
   cover?: { coverObjectKey: string; coverThumbObjectKey: string | null };
 };
 
-export type ParrotEditTarget = { kind: "track"; id: string; edit: ParrotTrackEdit } | { kind: "album"; id: string; edit: ParrotAlbumEdit };
+/**
+ * The artist edit (PAR-META-31): the name, and either a new photo already uploaded or "automatic" (the stored photo
+ * goes and the automatic pass asks again); absent keeps the current photo.
+ */
+export type ParrotArtistEdit = {
+  name: string;
+  picture?: { pictureObjectKey: string; pictureThumbObjectKey: string | null } | "automatic";
+};
+
+export type ParrotEditTarget =
+  | { kind: "track"; id: string; edit: ParrotTrackEdit }
+  | { kind: "album"; id: string; edit: ParrotAlbumEdit }
+  | { kind: "artist"; id: string; edit: ParrotArtistEdit };
 
 export type ParrotEditPlan = {
   ops: ParrotLibraryOp[];
-  /** Stored objects nothing points at after the edit (a replaced cover, the cover of an album a move emptied). */
+  /** Stored objects nothing points at after the edit (a replaced cover or photo, the cover of an album a move emptied). */
   objectKeys: string[];
+  /** Why the edit cannot be made (nothing is published): a rename onto another artist of the library (PAR-META-31). */
+  error?: string;
 };
 
 const clean = (value: string) => value.replace(/\s+/g, " ").trim();
@@ -247,6 +261,20 @@ export const parrotAlbumEditValues = async (query: ParrotLibraryQuery, albumId: 
   };
 };
 
+export const parrotArtistEditValues = async (query: ParrotLibraryQuery, artistId: string): Promise<{ name: string; pictureObjectKey: string | null } | null> => {
+  const artist = await first(
+    query<{ name: string; large: string | null; thumb: string | null }>(
+      "SELECT name, picture_object_key AS large, picture_thumb_object_key AS thumb FROM artists WHERE id = ?",
+      [artistId]
+    )
+  );
+  return artist ? { name: artist.name, pictureObjectKey: artist.large ? (artist.thumb ?? artist.large) : null } : null;
+};
+
+/** The artist of the library already called `name` (letter case aside), if any. */
+const artistNamed = (query: ParrotLibraryQuery, name: string) =>
+  first(query<ArtistRow>("SELECT id, music_id AS musicId, name, sort_name AS sortName FROM artists WHERE lower(name) = lower(?) ORDER BY id LIMIT 1", [name]));
+
 /**
  * The ops that apply the user's edit (PAR-LIB-04). Row IDs never change: an edit rewrites the row. A typed artist or
  * album that does not exist yet is created under the importer's ID; an album or artist the edit leaves unused goes.
@@ -257,13 +285,34 @@ export const planParrotEdit = async (query: ParrotLibraryQuery, target: ParrotEd
   const ensureArtist = async (rawName: string, fallbackId: string) => {
     const name = clean(rawName);
     if (!name) return fallbackId;
-    const id = ctx.ids.artistId(name);
-    const existing = await artistRow(query, id);
-    if (!existing || existing.name !== name) {
+    // PAR-META-31: an artist the user renamed is found under its new name, whatever ID the importer gave it; one found
+    // only by the ID of the name typed was renamed away from it and keeps the user's name.
+    const named = await artistNamed(query, name);
+    const id = named?.id ?? ctx.ids.artistId(name);
+    const existing = named ?? (await artistRow(query, id));
+    if (!existing || (named && existing.name !== name)) {
       ops.push(createParrotOp("artist.upsert", { id, musicId: existing?.musicId ?? null, name, sortName: name }, meta()));
     }
     return id;
   };
+
+  if (target.kind === "artist") {
+    const artist = await artistRow(query, target.id);
+    if (!artist) return { ops: [], objectKeys: [] };
+    const e = target.edit;
+    const name = clean(e.name) || artist.name;
+    // PAR-META-31 (agent reading): a rename onto another artist of the library is refused, never merged; a new letter
+    // case of its own name is a respell.
+    const other = await artistNamed(query, name);
+    if (other && other.id !== artist.id) return { ops: [], objectKeys: [], error: `An artist named ${other.name} is already in your library` };
+    // The row keeps its ID: its albums and songs point at it and follow the new name with no op of their own.
+    const picture = e.picture === "automatic" ? { clearPicture: true } : (e.picture ?? {});
+    ops.push(createParrotOp("artist.upsert", { id: artist.id, musicId: artist.musicId ?? null, name, sortName: name, ...picture }, meta()));
+    const replaced = e.picture
+      ? (await pictureKeys(query, [artist.id])).filter((k) => e.picture === "automatic" || (k !== e.picture?.pictureObjectKey && k !== e.picture?.pictureThumbObjectKey))
+      : [];
+    return { ops, objectKeys: replaced };
+  }
 
   if (target.kind === "album") {
     const album = await albumRow(query, target.id);
@@ -459,7 +508,7 @@ export const planParrotTrackPlacements = async (
     const tracklist = placement.album.tracks.map((t) => ({ disc: t.disc, number: t.number, title: t.title, durationMs: t.durationMs }));
     if (!album && !targets.has(albumId)) {
       if (!(await artistRow(query, albumArtistId)) && !newArtists.has(albumArtistId)) {
-        ops.push(createParrotOp("artist.upsert", { id: albumArtistId, musicId: placement.album.artist.id, name: albumArtist, sortName: albumArtist }, meta()));
+        ops.push(createParrotOp("artist.upsert", { id: albumArtistId, musicId: placement.album.artist.id, name: albumArtist, sortName: albumArtist, keepName: true }, meta()));
         newArtists.add(albumArtistId);
       }
       ops.push(

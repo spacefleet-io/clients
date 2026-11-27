@@ -62,7 +62,7 @@
     },
     "album": {
       "noPlayableFile": "This album has no playable file yet.",
-      "playFailed": "Couldn't play this song ({{error}}).",
+      "playFailed": "Couldn't play this song. Try again in a moment.",
       "noSongs": "No songs.",
       "play": "Play {{title}}",
       "pause": "Pause {{title}}"
@@ -75,7 +75,7 @@
       "next": "Next",
       "open": "Open player",
       "playing": "Playing",
-      "error": "Playback error: {{error}}",
+      "error": "This song stopped playing. Try again in a moment.",
       "playingFromAlbum": "Playing from album",
       "close": "Close",
       "more": "More",

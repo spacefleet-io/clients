@@ -15,7 +15,7 @@ import { TV_COLOR, TV_TYPE, useTvAccent } from "@space/mobile-shell/tv/tokens";
 import { useTvScale, useTvStyles } from "@space/mobile-shell/tv/tvScale";
 import { nextRepeatMode, parrotCoverThumbKey } from "@space/parrot-core";
 import { nowPlayingTitles } from "../lib/nowPlaying";
-import { setPlaybackShuffle } from "../lib/playback";
+import { isRecovering, setPlaybackShuffle } from "../lib/playback";
 import { ParrotArt } from "../screens/art";
 import { usePlaylistEditor } from "../state/playlistEditor";
 import { usePlayerState } from "../state/usePlayerState";
@@ -160,7 +160,8 @@ const NowPlaying = ({ state, trackId, shown }: { state: AudioPlaybackState; trac
           <TvPillButton testID="tv-now-lyrics" icon={MicVocal} label={t("shell.player.lyrics")} hasTVPreferredFocus={shown && opened === "lyrics"} onPress={() => open("lyrics")} />
           <TvPillButton testID="tv-now-up-next" icon={ListMusic} label={t("shell.nowPlaying.upNext")} hasTVPreferredFocus={shown && opened === "queue"} onPress={() => open("queue")} />
         </View>
-        {state.error ? <TvBody style={{ color: TV_COLOR.danger }}>{t("parrot.player.error", { error: state.error })}</TvBody> : null}
+        {/* The raw player code goes to the log only, never the screen (PAR-PLAY-12, UX-COPY-02). */}
+        {state.error && !isRecovering(state) ? <TvBody style={{ color: TV_COLOR.danger }}>{t("parrot.player.error")}</TvBody> : null}
         {peek ? (
           <View style={styles.peek} testID="tv-now-lyrics-peek">
             <Text style={[styles.peekLine, { color: accent }]} numberOfLines={1}>

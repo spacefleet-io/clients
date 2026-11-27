@@ -7,9 +7,10 @@
 // requirements") plus what Electron itself loads; electron-builder's own defaults miss libgbm and ALSA (Electron
 // needs both) and, for pacman, name packages Arch no longer ships (http-parser, libappindicator-gtk3).
 
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
-import { dirname, join } from "node:path";
+import { join } from "node:path";
+import { writeGeneratedFile } from "./generated-files.mjs";
 import { systemUpdateFpmFiles } from "./system-update.mjs";
 
 /** The formats, in build order. AppImage first: electron-builder writes latest-linux.yml's top-level `path:` from the first one, and AppImage clients older than this list read that field. */
@@ -119,13 +120,8 @@ export const builderLinuxTemplate = (appDir, name) => {
   return { shebang, body };
 };
 
-/** Writes a generated package script for the app at `appDir` (under its node_modules/.cache) and returns its path. */
-export const writeLinuxScript = (appDir, name, lines) => {
-  const path = join(appDir, "node_modules", ".cache", "spacefleet-linux", name);
-  mkdirSync(dirname(path), { recursive: true });
-  writeFileSync(path, lines.join("\n"));
-  return path;
-};
+/** Writes a generated package script for the app at `appDir` (under its node_modules/.cache, atomically) and returns its path. */
+export const writeLinuxScript = (appDir, name, lines) => writeGeneratedFile(appDir, name, lines.join("\n"));
 
 /**
  * REL-DIST-14: the lines the after-remove script runs first, so only a real removal drops the /usr/bin link and the

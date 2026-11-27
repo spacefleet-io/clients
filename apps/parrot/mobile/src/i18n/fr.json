@@ -62,7 +62,7 @@
     },
     "album": {
       "noPlayableFile": "Cet album n'a pas encore de fichier lisible.",
-      "playFailed": "Impossible de lire ce titre ({{error}}).",
+      "playFailed": "Impossible de lire ce titre. Réessaie dans un instant.",
       "noSongs": "Aucun titre.",
       "play": "Lire {{title}}",
       "pause": "Mettre en pause {{title}}"
@@ -75,7 +75,7 @@
       "next": "Suivant",
       "open": "Ouvrir le lecteur",
       "playing": "En lecture",
-      "error": "Erreur de lecture : {{error}}",
+      "error": "La lecture de ce titre s'est arrêtée. Réessaie dans un instant.",
       "playingFromAlbum": "Lecture depuis l'album",
       "close": "Fermer",
       "more": "Plus",
