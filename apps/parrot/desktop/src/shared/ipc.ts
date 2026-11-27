@@ -174,6 +174,11 @@ export type ParrotImportStatus = {
   importingAlbums?: string[];
   /** PAR-UP-07: the artists whose photo this import is still fetching; they show a loading picture, not a drawn one. */
   fetchingArtists?: string[];
+  /**
+   * UX-ADD-01: on scanImport's answer only, the sources waiting behind the import under way (running, or its scan in
+   * the review); they are scanned once it ends or its review is answered.
+   */
+  queuedSources?: number;
 };
 
 /**
@@ -548,7 +553,9 @@ export type ParrotBridge = {
   deleteFromLibrary(target: ParrotManageTarget): Promise<ParrotLibraryResult>;
   /** A song's or an album's current details, for the edit dialog. */
   getEditValues(target: ParrotManageTarget): Promise<ParrotEditValues>;
-  /** PAR-META-16: saves edited details (and an album's new cover), publishes; result is library after it. */
+  /** PAR-META-31: an artist's name and the photo it shows now (custom or automatic), for the artist edit dialog. */
+  getArtistEditValues(artistId: string): Promise<{ name: string; pictureUrl: string | null } | null>;
+  /** PAR-META-16 / PAR-META-31: saves edited details (and an album's new cover or an artist's new photo), publishes; result is library after it. */
   editDetails(target: ParrotEditTarget, cover: ParrotEditCover | null): Promise<ParrotLibraryResult>;
   /** PAR-LYR-05: asks our lyrics library for a song whose file has none and keeps what it finds in the library. */
   fetchLyrics(trackId: string): Promise<ParrotFetchLyricsResult>;
@@ -738,6 +745,7 @@ export const PARROT_IPC = {
   previewDelete: "parrot:library:delete-preview",
   deleteFromLibrary: "parrot:library:delete",
   getEditValues: "parrot:library:edit-values",
+  getArtistEditValues: "parrot:library:artist-edit-values",
   editDetails: "parrot:library:edit",
   fetchLyrics: "parrot:library:fetch-lyrics",
   wantLyrics: "parrot:library:want-lyrics",

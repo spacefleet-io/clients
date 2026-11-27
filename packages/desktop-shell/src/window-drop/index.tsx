@@ -215,19 +215,24 @@ export function useWindowFileDrop({
   );
 
   useEffect(() => {
-    // Says once per drag and per reason why a file drag from outside is not taken: the renderer's warnings reach the
-    // main log, the only trace Chris's Wayland session leaves of a drop that "doesn't work" (UX-ADD-01, MPV-GPU-04).
-    let warned: string | null = null;
-    const warnOnce = (reason: string) => {
-      if (reason === warned) return;
-      warned = reason;
-      console.warn(`[window-drop] file drag not taken: ${reason}`);
+    // Says once per drag why a drag from outside is not taken: the renderer's warnings reach the main log, the only
+    // trace Chris's Wayland session leaves of a drop that "doesn't work" (UX-ADD-01, MPV-GPU-04). A drag from the file
+    // manager comes in from outside and never gets a dragend or a mousemove here, so the next drag starts when the last
+    // one left the window or dropped. The line names the reason and the drag's types, never a file or a path.
+    let warned = false;
+    const warnOnce = (reason: string, e: DragEvent) => {
+      if (warned) return;
+      warned = true;
+      console.warn(`[window-drop] file drag not taken: ${reason}; types ${JSON.stringify(Array.from(e.dataTransfer?.types ?? []))}`);
+    };
+    const dragOver = () => {
+      warned = false;
     };
 
     const asideFor = (e: DragEvent) => {
       const reason = windowDropStandsAside(latest.current.standAside);
       if (!reason) return false;
-      if (isExternalFileDrag(e.dataTransfer)) warnOnce(reason);
+      if (!internalDrag) warnOnce(reason, e);
       // Keep the window from opening the file, but let the element under the pointer take the drop.
       e.preventDefault();
       dragCounter.current = 0;
@@ -249,38 +254,42 @@ export function useWindowFileDrop({
     };
     const handleDragEnd = () => {
       internalDrag = false;
-      warned = null;
+      dragOver();
     };
     // No mouse event fires while a drag is under way, so a move means the last drag is over even if its dragend never
     // came (dropped outside the window, cancelled by the compositor): a later drag from the file manager is taken
     // again instead of being refused as the window's own (UX-ADD-01).
     const handleMouseMove = () => {
       internalDrag = false;
-      warned = null;
+      dragOver();
     };
     const takes = (e: DragEvent) => {
       if (!isExternalFileDrag(e.dataTransfer)) return false;
       if (internalDrag) {
-        warnOnce("the drag started inside the window");
+        warnOnce("the drag started inside the window", e);
         return false;
       }
       return true;
     };
     /**
-     * A drag from outside that lists `text/uri-list` but no "Files": Chromium on Wayland sometimes hands a file manager's
-     * drag over this way, and only the drop can read whether its URIs are files (UX-ADD-01). The window lets it drop
-     * without the overlay and sorts it then; a web link drops to nothing, as before.
+     * A drag from outside that lists `text/uri-list` but no "Files", or no type at all yet: Chromium on Wayland hands a
+     * file manager's drag over this way, and only the drop can read whether it holds files (UX-ADD-01). The window lets
+     * it drop without the overlay and sorts it then; a web link drops to nothing, as before.
      */
-    const mayHoldFiles = (e: DragEvent) => !internalDrag && Array.from(e.dataTransfer?.types ?? []).includes("text/uri-list");
+    const mayHoldFiles = (e: DragEvent) => {
+      if (internalDrag || !e.dataTransfer) return false;
+      const types = Array.from(e.dataTransfer.types);
+      return types.length === 0 || types.includes("text/uri-list");
+    };
     /** A drag the window does not take: the window still never opens it, and the pointer says nothing drops here. */
     const refuse = (e: DragEvent) => {
       e.preventDefault();
       if (mayHoldFiles(e)) {
-        warnOnce(`no "Files" in the drag, deciding at the drop: types ${JSON.stringify(Array.from(e.dataTransfer!.types))}`);
+        warnOnce('no "Files" in the drag, deciding at the drop', e);
         e.dataTransfer!.dropEffect = "copy";
         return;
       }
-      if (!internalDrag && e.dataTransfer && e.dataTransfer.types.length > 0) warnOnce(`not a file drag: types ${JSON.stringify(Array.from(e.dataTransfer.types))}`);
+      if (!internalDrag) warnOnce("not a file drag", e);
       if (e.dataTransfer) e.dataTransfer.dropEffect = "none";
     };
 
@@ -294,15 +303,17 @@ export function useWindowFileDrop({
     };
 
     const handleDragLeave = (e: DragEvent) => {
-      if (asideFor(e)) return;
-      if (!takes(e)) return;
-      e.preventDefault();
-      e.stopPropagation();
-      dragCounter.current -= 1;
-      if (dragCounter.current <= 0) {
-        dragCounter.current = 0;
-        setDragging(false);
+      // Leaving the window (no element to go to): the next dragenter is another drag, with its own line.
+      if (!asideFor(e) && takes(e)) {
+        e.preventDefault();
+        e.stopPropagation();
+        dragCounter.current -= 1;
+        if (dragCounter.current <= 0) {
+          dragCounter.current = 0;
+          setDragging(false);
+        }
       }
+      if (!e.relatedTarget) dragOver();
     };
 
     const handleDragOver = (e: DragEvent) => {
@@ -314,10 +325,13 @@ export function useWindowFileDrop({
     };
 
     const handleDrop = (e: DragEvent) => {
-      if (asideFor(e)) return;
+      if (asideFor(e)) {
+        dragOver();
+        return;
+      }
       const external = takes(e) || mayHoldFiles(e);
       internalDrag = false;
-      warned = null;
+      dragOver();
       e.preventDefault();
       if (!external) return;
       e.stopPropagation();

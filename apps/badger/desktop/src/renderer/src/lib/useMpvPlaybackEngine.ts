@@ -9,6 +9,7 @@ import {
 import { buildChunkMapFromFormat, buildHlsTrackFromChunkMap, type ChunkMap } from "@/lib/mpvPlaybackMaps";
 import {
   autoPlayAllowed,
+  createMpvPauseReports,
   isUserPause,
   markSentPauseSeen,
   shouldForceResumeExternalPlayback,
@@ -367,6 +368,8 @@ export const useMpvPlaybackEngine = ({
     phaseStore,
     deriveIsReadyToReveal,
   );
+  // MPV-PAUSE-01: mpv's pause reports, per mpv process (forgotten when the lifecycle goes idle below).
+  const [mpvPauseReports] = useState(createMpvPauseReports);
 
   // Synchronous lifecycle mirror — subscribe directly to the shared mpv
   // client so `lifecycleRef.current` reflects the latest cached state
@@ -391,10 +394,12 @@ export const useMpvPlaybackEngine = ({
         // `phase.lastLaunchedKey` in addition to resetting kind→idle.
         if (state.kind === "idle") {
           dispatchPhase({ type: "process_gone" });
+          // MPV-PAUSE-01: the next mpv starts with no pause report; its paused launch is not a user pause.
+          mpvPauseReports.processGone();
         }
       }
     });
-  }, [dispatchPhase, mpvClient]);
+  }, [dispatchPhase, mpvClient, mpvPauseReports]);
 
   // Tier-4 — feature-flagged observe_property snapshot cache. When the flag
   // is on, the 6 push-friendly properties (time-pos, duration, pause, mute,
@@ -1416,13 +1421,11 @@ export const useMpvPlaybackEngine = ({
   // picture, Space) is caught from mpv's pause reports.
   const userPausedAtRef = useRef<number | null>(null);
   const playRequestedAtRef = useRef(0);
-  const lastReportedPauseRef = useRef<boolean | null>(null);
   // `eof`: mpv's `eof-reached` from the same read. keep-open's own pause at the
   // end of the file is not the user's (it would block the premature-EOF
   // recovery's play).
   const noteMpvPause = (next: unknown, eof: unknown) => {
-    const previous = lastReportedPauseRef.current;
-    if (typeof next === "boolean") lastReportedPauseRef.current = next;
+    const previous = mpvPauseReports.note(next);
     if (isUserPause({ previous, next, eof, lastSentPause: lastSentPauseRef.current, now: Date.now() })) {
       userPausedRef.current = true;
       userPausedAtRef.current = Date.now();

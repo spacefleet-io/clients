@@ -3,6 +3,7 @@ import { DndContext, PointerSensor, closestCenter, useSensor, useSensors } from 
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Film, Pencil, Plus, Tv, X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import { Button, Card, CardContent, CardHeader } from "@space/ui";
 import type { HomeLibraryScope, HomeSectionConfig } from "@space/shared/homeLayout";
@@ -53,6 +54,7 @@ const SortableSection = ({
   onSetStyle,
   styleOptions,
 }: SortableSectionProps) => {
+  const { t } = useTranslation();
   const [canRender, setCanRender] = useState(false);
   const sectionRef = useRef<HTMLDivElement | null>(null);
 
@@ -93,7 +95,7 @@ const SortableSection = ({
             className="flex items-center justify-between gap-3 rounded-xl border border-[#30363d] bg-[#0f141b]/80 px-3 py-2 text-xs uppercase tracking-[0.2em] text-[#8b949e] shadow-sm cursor-grab active:cursor-grabbing select-none"
             {...attributes}
             {...listeners}
-            aria-label="Reorder section"
+            aria-label={t("dashboard.reorderSection")}
           >
             <div className="flex items-center gap-2 text-xs font-semibold">
               {icon}

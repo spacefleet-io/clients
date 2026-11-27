@@ -8,6 +8,16 @@ export const PARROT_COVER_THUMB_WIDTH = 500;
 /** Width of the large copy shown on the album page and the player (the size written into song files). */
 export const PARROT_COVER_LARGE_WIDTH = 1200;
 
+/**
+ * A picture file larger than this is not read at all (PAR-META-31): a picture the user picks, drops or links is
+ * refused before its bytes are read whole, and an import skips such a picture in a song file.
+ */
+export const PARROT_COVER_MAX_BYTES = 32 * 1024 * 1024;
+/** A picture declaring more pixels than this is refused before it is decoded (PAR-META-31). */
+export const PARROT_PICTURE_MAX_PIXELS = 50_000_000;
+/** A picture declaring a side longer than this is refused before it is decoded (PAR-META-31). */
+export const PARROT_PICTURE_MAX_SIDE = 12_000;
+
 /** The image type from the picture's first bytes, or null for anything a browser or phone would not show. */
 export const parrotCoverMime = (bytes: Uint8Array): string | null => {
   const at = (offset: number, ...values: number[]) => values.every((value, i) => bytes[offset + i] === value);
@@ -15,6 +25,74 @@ export const parrotCoverMime = (bytes: Uint8Array): string | null => {
   if (at(0, 0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a)) return "image/png";
   if (at(0, 0x52, 0x49, 0x46, 0x46) && at(8, 0x57, 0x45, 0x42, 0x50)) return "image/webp";
   if (at(0, 0x47, 0x49, 0x46, 0x38)) return "image/gif";
+  return null;
+};
+
+const bigEndian = (bytes: Uint8Array, offset: number, length: number) => {
+  let value = 0;
+  for (let i = 0; i < length; i++) value = value * 256 + bytes[offset + i]!;
+  return value;
+};
+
+const littleEndian = (bytes: Uint8Array, offset: number, length: number) => {
+  let value = 0;
+  for (let i = length - 1; i >= 0; i--) value = value * 256 + bytes[offset + i]!;
+  return value;
+};
+
+/**
+ * The size a picture declares in its header, read without decoding it, or null when the header is cut short or of a
+ * kind not read. JPEG: the first start-of-frame marker. PNG: IHDR. GIF: the logical screen. WebP: the `VP8 `, `VP8L`
+ * or `VP8X` chunk's size.
+ */
+export const parrotPictureSize = (bytes: Uint8Array): { width: number; height: number } | null => {
+  const mime = parrotCoverMime(bytes);
+  if (mime === "image/png") return bytes.length >= 24 ? { width: bigEndian(bytes, 16, 4), height: bigEndian(bytes, 20, 4) } : null;
+  if (mime === "image/gif") return bytes.length >= 10 ? { width: littleEndian(bytes, 6, 2), height: littleEndian(bytes, 8, 2) } : null;
+  if (mime === "image/jpeg") {
+    let at = 2;
+    while (at + 9 < bytes.length) {
+      if (bytes[at] !== 0xff) return null;
+      const marker = bytes[at + 1]!;
+      if (marker === 0xff) {
+        at += 1;
+        continue;
+      }
+      if (marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc) {
+        return { width: bigEndian(bytes, at + 7, 2), height: bigEndian(bytes, at + 5, 2) };
+      }
+      if (marker === 0xd8 || marker === 0x01 || (marker >= 0xd0 && marker <= 0xd7)) {
+        at += 2;
+        continue;
+      }
+      at += 2 + bigEndian(bytes, at + 2, 2);
+    }
+    return null;
+  }
+  if (mime !== "image/webp") return null;
+  const chunk = String.fromCharCode(...bytes.subarray(12, 16));
+  if (chunk === "VP8 " && bytes.length >= 30) return { width: littleEndian(bytes, 26, 2) & 0x3fff, height: littleEndian(bytes, 28, 2) & 0x3fff };
+  if (chunk === "VP8L" && bytes.length >= 25) {
+    const bits = littleEndian(bytes, 21, 4);
+    return { width: 1 + (bits & 0x3fff), height: 1 + (Math.floor(bits / 0x4000) & 0x3fff) };
+  }
+  if (chunk === "VP8X" && bytes.length >= 30) return { width: 1 + littleEndian(bytes, 24, 3), height: 1 + littleEndian(bytes, 27, 3) };
+  return null;
+};
+
+/**
+ * PAR-META-31: why a picture the user gave is refused before it is decoded, or null when it may be decoded: over
+ * PARROT_COVER_MAX_BYTES, not a JPEG, PNG, WebP or GIF, a header that does not say its size, or a size over
+ * PARROT_PICTURE_MAX_SIDE or PARROT_PICTURE_MAX_PIXELS.
+ */
+export const parrotPictureSizeProblem = (bytes: Uint8Array): string | null => {
+  if (bytes.length > PARROT_COVER_MAX_BYTES) return `picture too large (${bytes.length} bytes, at most ${PARROT_COVER_MAX_BYTES})`;
+  if (!parrotCoverMime(bytes)) return "not a JPEG, PNG, WebP or GIF picture";
+  const size = parrotPictureSize(bytes);
+  if (!size || size.width < 1 || size.height < 1) return "the picture's size could not be read";
+  if (size.width > PARROT_PICTURE_MAX_SIDE || size.height > PARROT_PICTURE_MAX_SIDE || size.width * size.height > PARROT_PICTURE_MAX_PIXELS) {
+    return `picture too large (${size.width} × ${size.height} pixels, at most ${PARROT_PICTURE_MAX_SIDE} per side and ${PARROT_PICTURE_MAX_PIXELS} in all)`;
+  }
   return null;
 };
 

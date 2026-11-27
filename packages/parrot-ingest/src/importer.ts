@@ -7,6 +7,7 @@ import { openStorageUploadSession, uploadStorageObjectViaTunnel } from "@space/l
 import { fetchLibrarySnapshot, publishLibrarySnapshot } from "@space/library-db-runtime/snapshotTransport";
 import type { MusicLyrics, MusicLyricsQuery } from "@space/shared/api";
 import {
+  isParrotCopyId,
   isParrotPublishConflict,
   PARROT_ARTIST_PICTURE_RETRY_MS,
   PARROT_AUTO_LYRICS_GAP_MS,
@@ -342,16 +343,27 @@ export const buildParrotTrackOps = (input: {
   const { info, now } = input;
   const ids = parrotTrackIds({ ...info, fileHash: input.fileHash });
   const meta = () => ({ id: crypto.randomUUID(), createdAt: new Date(now).toISOString() });
+  // PAR-META-31: an artist already in the library keeps its name, the one the user may have given it.
   const ops: ParrotLibraryOp[] = [
     createParrotOp(
       "artist.upsert",
-      { id: ids.artistId, musicId: info.artistMusicId ?? (ids.albumArtistId === ids.artistId ? info.albumArtistMusicId : null) ?? null, name: info.artist, sortName: info.artist },
+      {
+        id: ids.artistId,
+        musicId: info.artistMusicId ?? (ids.albumArtistId === ids.artistId ? info.albumArtistMusicId : null) ?? null,
+        name: info.artist,
+        sortName: info.artist,
+        keepName: true,
+      },
       meta()
     ),
   ];
   if (ids.albumArtistId !== ids.artistId) {
     ops.push(
-      createParrotOp("artist.upsert", { id: ids.albumArtistId, musicId: info.albumArtistMusicId ?? null, name: info.albumArtist, sortName: info.albumArtist }, meta())
+      createParrotOp(
+        "artist.upsert",
+        { id: ids.albumArtistId, musicId: info.albumArtistMusicId ?? null, name: info.albumArtist, sortName: info.albumArtist, keepName: true },
+        meta()
+      )
     );
   }
   ops.push(
@@ -385,7 +397,9 @@ export const buildParrotTrackOps = (input: {
         title: info.title,
         artistId: ids.artistId,
         durationMs: info.durationMs,
-        musicId: null,
+        // The matched song's id in our music copy (PAR-LYR-01), so its lyrics lookup reads our copy by it; an
+        // outside source's id (PAR-META-26) is never stored.
+        musicId: info.trackMusicId && isParrotCopyId(info.trackMusicId) ? info.trackMusicId : null,
         genre: info.genre ?? null,
         ...(info.loudness ?? {}),
         // Kept as is at import (PAR-UP-05); absent keeps the stored flag.
@@ -609,9 +623,12 @@ export const createParrotImportSession = (files: readonly string[], options: Par
     for (const found of [...photosReady]) {
       const row = artistRow(found.artistId);
       if (!row) continue;
+      // PAR-META-31: a photo the user gave the artist meanwhile wins over the one found for it.
+      const picture = row.pictureObjectKey ? null : found.picture;
+      if (row.pictureObjectKey && found.picture) log(`[parrot-import] artist photo for ${row.id} not kept: the artist has the user's photo`);
       const op = createParrotOp(
         "artist.upsert",
-        { id: row.id, musicId: row.musicId ?? found.musicId, name: row.name, sortName: row.sortName, ...found.picture, pictureTriedAt: found.at },
+        { id: row.id, musicId: row.musicId ?? found.musicId, name: row.name, sortName: row.sortName, keepName: true, ...picture, pictureTriedAt: found.at },
         { id: crypto.randomUUID(), createdAt: new Date(found.at).toISOString() }
       );
       applyParrotOps(db(), [op]);
@@ -619,6 +636,20 @@ export const createParrotImportSession = (files: readonly string[], options: Par
       photosPublishing.push(found.artistId);
       photosReady.splice(photosReady.indexOf(found), 1);
     }
+  };
+  /**
+   * PAR-META-31: a photo op replayed on a newer library (another device published meanwhile) where the artist got the
+   * user's photo only records the asked time; any other op is replayed as it is.
+   */
+  const keepUserPhoto = (latest: ParrotLibraryDb, op: ParrotLibraryOp): ParrotLibraryOp => {
+    if (op.type !== "artist.upsert" || !op.payload.pictureObjectKey) return op;
+    const current = latest.prepare("SELECT picture_object_key AS pictureObjectKey FROM artists WHERE id = ?").get(op.payload.id) as
+      | { pictureObjectKey: string | null }
+      | undefined;
+    if (!current?.pictureObjectKey || current.pictureObjectKey === op.payload.pictureObjectKey) return op;
+    const { pictureObjectKey: _found, pictureThumbObjectKey: _thumb, pictureCredit: _credit, ...rest } = op.payload;
+    log(`[parrot-import] artist photo for ${op.payload.id} not kept on the newer library: the artist has the user's photo`);
+    return { ...op, payload: rest };
   };
 
   /**
@@ -649,7 +680,7 @@ export const createParrotImportSession = (files: readonly string[], options: Par
       try {
         for (let attempt = 1; ; attempt += 1) {
           try {
-            result.snapshotVersion = await publishParrotEdits(state!, () => batch, publishOptions);
+            result.snapshotVersion = await publishParrotEdits(state!, (latest) => batch.map((op) => keepUserPhoto(latest, op)), publishOptions);
             break;
           } catch (error) {
             if (!isParrotPublishConflict(error) || attempt >= PUBLISH_ATTEMPTS) throw error;
