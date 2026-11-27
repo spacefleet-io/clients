@@ -2,7 +2,7 @@
   "name": "@space/parrot-desktop",
   "productName": "Parrot",
   "desktopName": "spaceparrot.desktop",
-  "version": "0.1.72",
+  "version": "0.1.73",
   "description": "Parrot desktop app: your own music, uploaded to your SpaceFleet storage and played anywhere",
   "author": "SpaceFleet",
   "license": "GPL-3.0-only",

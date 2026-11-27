@@ -38,6 +38,8 @@ export const IMPORT_SURE_DURATION_MS = 5_000;
 const RECORDINGS_PER_FILE = 5;
 /** A file with no album to go by asks for more, so the song's original studio album is among them. */
 const RECORDINGS_PER_FILE_NO_ALBUM = 10;
+/** Our copy's album ids are UUIDs; any other id (an outside source's) the server cannot look up (PAR-META-26). */
+const COPY_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
 
 /**
  * The weights of the import's matching (PAR-META-03, Chris 2026-11-15). Every place a file could go starts at `bias`
@@ -236,6 +238,12 @@ export const parrotComparableName = (title: string): string => {
 
 /** A title without its bracketed parts ("Nook (Live)" → "nook"), for a looser pairing; a title that is all brackets stays whole. */
 const baseTitle = (title: string): string => parrotComparableName(title.replace(/\s*[([][^)\]]*[)\]]/gu, " ")) || parrotComparableName(title);
+
+/**
+ * A credit's names (PAR-META-29): the credit itself and, for a joined credit ("Ella Fitzgerald & Louis Armstrong",
+ * "A feat. B"), each artist it names, so a duo's file finds the album our copy credits to both artists apart.
+ */
+const creditNames = (credit: string): string[] => [credit, ...credit.split(/\s*(?:&|,|\band\b|\bwith\b|\bfeat\.?|\bft\.|\bfeaturing\b)\s*/iu)];
 
 const LIVE = /\blive\b/iu;
 /** A concert bootleg's name, as the metadata lists them: "2007-06-24: The Lantern Room, Millbrook, NC, USA". */
@@ -545,26 +553,31 @@ export const matchParrotImport = async (questions: ParrotImportFileQuestion[], a
   }
 
   // The albums in reach: those answered for any file, and the library's albums of the same artists with one of the
-  // files' titles. An answered album with an id is first asked by it (PAR-META-03): that answer is our copy's alone,
-  // so a compilation or DJ set a song sits on never falls to the slow, paced name search of an outside source
+  // files' titles. An answered album with our copy's id is first asked by it (PAR-META-03): that answer is our copy's
+  // alone, so a compilation or DJ set a song sits on never falls to the slow, paced name search of an outside source
   // (PAR-META-19). Only an album credited to the song's own artist is then also asked by name, which finds it in our
   // copy and answers its other editions alongside; an album without an id and the library's are asked by name alone.
+  // An album only an outside source knows (its id is not our copy's) is not asked at all (PAR-META-26): the server
+  // cannot look it up by that id, so the ask would be one paced outside album search per candidate; it is kept from
+  // its recordings below.
   const reach = new Map<string, ReachAlbum>();
   for (const [key, found] of whole) reach.set(key, { album: found.album, tracklistKnown: true });
   const official = new Map<string, boolean>();
   const byId = new Map<string, MusicAlbumsQuery>();
   const byName = new Map<string, MusicAlbumsQuery>();
+  const outside = new Set<string>();
   const askByName = (artist: string, album: string) => byName.set(`${parrotComparableName(artist)}\u0000${parrotComparableName(album)}`, { artist, album, limit: 5 });
   for (const file of files) {
     for (const { recording } of file.answers) {
       const key = parrotAlbumKey(recording.album);
       if (recording.album.official !== undefined) official.set(key, recording.album.official);
       if (whole.has(key)) continue;
-      if (recording.album.id) byId.set(recording.album.id, { artist: recording.artist.name, album: recording.album.title, id: recording.album.id });
-      else askByName(recording.artist.name, recording.album.title);
+      if (!recording.album.id) askByName(recording.artist.name, recording.album.title);
+      else if (COPY_ID.test(recording.album.id)) byId.set(recording.album.id, { artist: recording.artist.name, album: recording.album.title, id: recording.album.id });
+      else outside.add(recording.album.id);
     }
   }
-  const ownArtists = (file: AnsweredFile) => [file.question.artist, file.question.albumArtist ?? "", ...file.answers.map((answer) => answer.recording.artist.name)];
+  const ownArtists = (file: AnsweredFile) => [file.question.artist, file.question.albumArtist ?? "", ...file.answers.map((answer) => answer.recording.artist.name)].flatMap(creditNames);
   const importArtists = new Set(files.flatMap(ownArtists).map(parrotComparableName).filter(Boolean));
   const library = new Map<string, ParrotImportLibraryAlbum>();
   for (const owned of lookups.library ?? []) {
@@ -587,7 +600,9 @@ export const matchParrotImport = async (questions: ParrotImportFileQuestion[], a
     });
   const libraryAndNameless = byName.size;
   await askAlbums([...byId.values()]);
-  log(`[import-match] album lookups: ${byId.size} by id, then ${byName.size - libraryAndNameless} by name (the song's own artist's), ${libraryAndNameless} by name only`);
+  log(
+    `[import-match] album lookups: ${byId.size} by id, then ${byName.size - libraryAndNameless} by name (the song's own artist's), ${libraryAndNameless} by name only, ${outside.size} with an outside id not asked`
+  );
   await askAlbums([...byName.values()]);
   const unknown = new Map<string, Answer[]>();
   for (const file of files) {
@@ -596,7 +611,30 @@ export const matchParrotImport = async (questions: ParrotImportFileQuestion[], a
       if (!reach.has(key)) unknown.set(key, [...(unknown.get(key) ?? []), answer]);
     }
   }
+  // An album known only from its recordings that is one our copy answered (PAR-META-30: an outside "Ella and Louis"
+  // and our copy's, same title, year and artists, every song of it on ours) is that album: its answers go to ours, so
+  // one album never shows as two cards under two keys.
+  const sameAs = new Map<string, string>();
+  const artistsOf = (album: MusicAlbum) => new Set(parrotAlbumArtists(album).flatMap((artist) => creditNames(artist.name)).map(parrotComparableName).filter(Boolean));
   for (const [key, list] of unknown) {
+    const album = albumFromRecordings(list);
+    const artists = artistsOf(album);
+    const copy = [...reach].find(
+      ([, entry]) =>
+        entry.tracklistKnown &&
+        entry.album.id !== null &&
+        COPY_ID.test(entry.album.id) &&
+        parrotComparableName(entry.album.title) === parrotComparableName(album.title) &&
+        (entry.album.year == null || album.year == null || entry.album.year === album.year) &&
+        [...artistsOf(entry.album)].some((artist) => artists.has(artist)) &&
+        list.every((answer) => trackForRecording(answer.recording, entry.album.tracks))
+    );
+    if (!copy) continue;
+    sameAs.set(key, copy[0]);
+    log(`[import-match] album ${key} (${album.title}) is ${copy[0]}`);
+  }
+  for (const [key, list] of unknown) {
+    if (sameAs.has(key)) continue;
     log(`[import-match] album ${key} (${list[0]!.recording.album.title}) not in its own lookup; kept from its recordings`);
     reach.set(key, { album: albumFromRecordings(list), tracklistKnown: false });
   }
@@ -677,7 +715,7 @@ export const matchParrotImport = async (questions: ParrotImportFileQuestion[], a
     const folder = folders.get(folderOf(question.file))!;
     const options = new Map<string, { key: string; track: MusicAlbumTrack; rank: number | null; title: string; durationMs: number | null }>();
     for (const answer of file.answers) {
-      const key = parrotAlbumKey(answer.recording.album);
+      const key = sameAs.get(parrotAlbumKey(answer.recording.album)) ?? parrotAlbumKey(answer.recording.album);
       const track = trackForRecording(answer.recording, reach.get(key)!.album.tracks);
       const id = `${key}|${track?.disc}:${track?.number}`;
       if (track && !options.has(id)) options.set(id, { key, track, rank: answer.rank, title: answer.recording.title, durationMs: answer.recording.durationMs ?? track.durationMs });

@@ -271,6 +271,7 @@ import {
   importResumeRecord,
   importSongRows,
   importStopError,
+  nextImportSources,
   readImportResume,
   restoreImportJobs,
   resumePlan,
@@ -966,6 +967,8 @@ let importJobs: StoredImportJob[] = (() => {
   }
 })();
 let currentImportJob: StoredImportJob | null = null;
+/** UX-ADD-01: the sources dropped or picked while an import ran or waited in its review, scanned once it is over. */
+let queuedImportSources: string[] = [];
 
 const accountImportJobs = (): ParrotImportJob[] =>
   importJobs
@@ -1059,6 +1062,13 @@ const findImportJobFolder = async (id: string): Promise<ParrotImportRetry | { ca
 const setImportStatus = (next: ParrotImportStatus, failures?: ParrotImportJob["failures"]) => {
   importStatus = next;
   mainWindow?.webContents.send(PARROT_IPC.importStatusEvent, next);
+  // UX-ADD-01: the import is over (ended, or its review answered): the sources that waited behind it are scanned
+  // next, after this status has settled (never inside the run that is ending). A quit starts nothing.
+  if (nextImportSources(next, queuedImportSources, []).start && !importAbort.signal.aborted) {
+    setImmediate(() => {
+      if (!importAbort.signal.aborted) scanImport([]);
+    });
+  }
   const job = currentImportJob;
   if (!job) return;
   if (next.phase === "idle") {
@@ -2299,15 +2309,22 @@ const importArtistPhoto = (artistId: unknown): Promise<ParrotImportArtistPhoto> 
 
 /**
  * PAR-UP-05: setup and the Import button only scan. The songs found wait in the confirm dialog until the user
- * confirms; nothing is uploaded before that (Chris 2026-11-09).
+ * confirms; nothing is uploaded before that (Chris 2026-11-09). UX-ADD-01: asked while an import runs or waits in its
+ * review, the sources wait behind it and are scanned once it is over; called with none, it starts the waiting ones.
  */
-const scanImport = (folders: string[]): ParrotImportStatus => {
-  if (importStatus.running) return importStatus;
+const scanImport = (dropped: string[]): ParrotImportStatus => {
+  const next = nextImportSources(importStatus, queuedImportSources, dropped);
+  queuedImportSources = next.queued;
+  const folders = next.start;
+  if (!folders) {
+    if (dropped.length > 0) log(`[import] ${dropped.length} source(s) wait behind the import (${importStatus.phase}); ${queuedImportSources.length} waiting`);
+    return { ...importStatus, queuedSources: queuedImportSources.length };
+  }
   pendingScan = null;
   forgetImportReview();
   startImportJob(folders);
   setImportStatus({ ...idleImport, running: true, phase: "scanning" });
-  log(`[import] scan: ${folders.length} folder(s)`);
+  log(`[import] scan: ${folders.length} folder(s)${dropped.length === 0 ? ", waiting since the last import" : ""}`);
   const run = new AbortController();
   importRun = run;
   void (async () => {
