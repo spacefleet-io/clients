@@ -307,7 +307,12 @@ const PlayerSheet = ({
     >
       {kind === "lyrics" ? (
         state.mediaId ? (
-          <PlayerLyrics trackId={state.mediaId} positionMs={state.positionMs} />
+          <PlayerLyrics
+            trackId={state.mediaId}
+            title={nowPlayingTitles.get(state.mediaId)?.title ?? t("parrot.player.unknownSong")}
+            positionMs={state.positionMs}
+            playing={showsPause(state)}
+          />
         ) : (
           <Text style={styles.sheetTitle}>{t("shell.nowPlaying.noLyricsTitle")}</Text>
         )

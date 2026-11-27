@@ -34,6 +34,16 @@ export type ArtistRow = {
   pictureCredit?: ParrotPhotoCredit | null;
   /** When the photo was asked for (ms); absent or null keeps the stored time. */
   pictureTriedAt?: number | null;
+  /**
+   * An import's upsert (PAR-META-31): a stored artist keeps the name it has, so a song tagged with the name the user
+   * renamed away from never brings it back. Absent: the name is the payload's.
+   */
+  keepName?: boolean;
+  /**
+   * PAR-META-31 "Use automatic photo": empties the stored photo, its credit and its asked time, so the automatic pass
+   * asks for one again (PAR-META-15). Wins over `pictureObjectKey`.
+   */
+  clearPicture?: boolean;
 };
 
 /** One song of an album's full tracklist from the metadata, owned or not (PAR-LIB-05). */
@@ -235,7 +245,8 @@ const statementsFor = (op: ParrotLibraryOp): ParrotSqlStatement[] => {
         {
           sql: `INSERT INTO artists (id, music_id, name, sort_name, picture_object_key, picture_thumb_object_key, picture_author, picture_licence, picture_licence_url, picture_tried_at)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-ON CONFLICT(id) DO UPDATE SET music_id = COALESCE(artists.music_id, excluded.music_id), name = excluded.name, sort_name = excluded.sort_name,
+ON CONFLICT(id) DO UPDATE SET music_id = COALESCE(artists.music_id, excluded.music_id),
+  name = CASE WHEN ? = 1 THEN artists.name ELSE excluded.name END, sort_name = CASE WHEN ? = 1 THEN artists.sort_name ELSE excluded.sort_name END,
   picture_object_key = COALESCE(excluded.picture_object_key, artists.picture_object_key),
   picture_thumb_object_key = CASE WHEN excluded.picture_object_key IS NULL THEN artists.picture_thumb_object_key ELSE excluded.picture_thumb_object_key END,
   picture_author = CASE WHEN excluded.picture_object_key IS NULL THEN artists.picture_author ELSE excluded.picture_author END,
@@ -253,8 +264,19 @@ ON CONFLICT(id) DO UPDATE SET music_id = COALESCE(artists.music_id, excluded.mus
             a.pictureObjectKey ? (a.pictureCredit?.licence ?? null) : null,
             a.pictureObjectKey ? (a.pictureCredit?.licenceUrl ?? null) : null,
             a.pictureTriedAt ?? null,
+            a.keepName ? 1 : 0,
+            a.keepName ? 1 : 0,
           ],
         },
+        ...(a.clearPicture
+          ? [
+              {
+                sql: `UPDATE artists SET picture_object_key = NULL, picture_thumb_object_key = NULL, picture_author = NULL, picture_licence = NULL,
+  picture_licence_url = NULL, picture_tried_at = NULL WHERE id = ?`,
+                params: [a.id],
+              },
+            ]
+          : []),
       ];
     }
     case "artist.delete":
@@ -452,7 +474,7 @@ ON CONFLICT(track_id) DO UPDATE SET plain = excluded.plain, synced = excluded.sy
   }
 };
 
-const TABLE_PATTERN = /^(?:INSERT INTO|DELETE FROM)\s+(\w+)/;
+const TABLE_PATTERN = /^(?:INSERT INTO|DELETE FROM|UPDATE)\s+(\w+)/;
 
 /**
  * The SQL that applies `op`, by library group. Statements within a group run in order; the

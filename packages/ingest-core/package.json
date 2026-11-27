@@ -23,7 +23,6 @@
     "@space/desktop-platform": "workspace:*",
     "@space/ffmpeg": "workspace:*",
     "@space/library-db-definition": "workspace:*",
-    "@space/logger": "workspace:*",
     "@space/shared": "workspace:*",
     "franc": "^6.2.0",
     "pngjs": "^7.0.0",

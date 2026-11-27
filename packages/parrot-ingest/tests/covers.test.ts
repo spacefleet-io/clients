@@ -11,17 +11,10 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { encryptBytesToBytes } from "@space/library-db-runtime/crypto";
-import { PARROT_COVER_LARGE_WIDTH, PARROT_COVER_THUMB_WIDTH, parrotCoverMime, parrotCoverSquare } from "@space/parrot-core";
+import { PARROT_COVER_LARGE_WIDTH, PARROT_COVER_MAX_BYTES, PARROT_COVER_THUMB_WIDTH, parrotCoverMime, parrotCoverSquare, parrotPictureSize, parrotPictureSizeProblem } from "@space/parrot-core";
 import jpeg from "jpeg-js";
 import { PNG } from "pngjs";
-import {
-  createParrotCoverLoader,
-  makeParrotCoverCopies,
-  parrotCoverProblem,
-  parrotWebpGifSize,
-  PARROT_COVER_KEEP_MAX_BYTES,
-  PARROT_COVER_MAX_BYTES,
-} from "../src/covers";
+import { createParrotCoverLoader, makeParrotCoverCopies, parrotCoverProblem, PARROT_COVER_KEEP_MAX_BYTES } from "../src/covers";
 import { PARROT_APP_ID } from "../src/importer";
 import { makeTempDir, testLog } from "./helpers";
 
@@ -257,12 +250,12 @@ describe("makeParrotCoverCopies", () => {
   };
 
   it("reads a WebP's or GIF's size from its header", () => {
-    expect(parrotWebpGifSize(gif(640, 480))).toEqual({ width: 640, height: 480 });
-    expect(parrotWebpGifSize(webp("VP8 ", 1200, 675))).toEqual({ width: 1200, height: 675 });
-    expect(parrotWebpGifSize(webp("VP8L", 3000, 2000))).toEqual({ width: 3000, height: 2000 });
-    expect(parrotWebpGifSize(webp("VP8X", 1201, 900))).toEqual({ width: 1201, height: 900 });
-    expect(parrotWebpGifSize(new TextEncoder().encode("RIFF....WEBPVP8 "))).toBeNull();
-    expect(parrotWebpGifSize(JPEG)).toBeNull();
+    expect(parrotPictureSize(gif(640, 480))).toEqual({ width: 640, height: 480 });
+    expect(parrotPictureSize(webp("VP8 ", 1200, 675))).toEqual({ width: 1200, height: 675 });
+    expect(parrotPictureSize(webp("VP8L", 3000, 2000))).toEqual({ width: 3000, height: 2000 });
+    expect(parrotPictureSize(webp("VP8X", 1201, 900))).toEqual({ width: 1201, height: 900 });
+    expect(parrotPictureSize(new TextEncoder().encode("RIFF....WEBPVP8 "))).toBeNull();
+    expect(parrotPictureSize(new Uint8Array([1, 2, 3]))).toBeNull();
   });
 
   it("keeps a WebP or GIF at most 1200 px wide as it is with no small copy, and skips a wider or unreadable one", () => {
@@ -275,6 +268,88 @@ describe("makeParrotCoverCopies", () => {
     }
     clog("skipped", messages);
     expect(messages.filter((m) => m.includes("skipped"))).toHaveLength(5);
+  });
+
+  // A PNG that declares `width` × `height` in its IHDR and carries nothing else: decoding it would fail or, were it
+  // real, need gigabytes; the caps must refuse it from the header alone.
+  const pngHeader = (width: number, height: number) => {
+    const bytes = new Uint8Array(64);
+    bytes.set([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13, 0x49, 0x48, 0x44, 0x52]);
+    new DataView(bytes.buffer).setUint32(16, width);
+    new DataView(bytes.buffer).setUint32(20, height);
+    return bytes;
+  };
+
+  // @req PAR-META-31
+  it("reads a JPEG's and a PNG's size from the header, past the segments before the frame", () => {
+    const real = new Uint8Array(jpeg.encode({ width: 37, height: 21, data: new Uint8Array(37 * 21 * 4) }, 80).data);
+    clog("jpeg header", { bytes: real.length, size: parrotPictureSize(real) });
+    expect(parrotPictureSize(real)).toEqual({ width: 37, height: 21 });
+    const png = new PNG({ width: 64, height: 9 });
+    expect(parrotPictureSize(new Uint8Array(PNG.sync.write(png)))).toEqual({ width: 64, height: 9 });
+    expect(parrotPictureSize(pngHeader(20000, 15000))).toEqual({ width: 20000, height: 15000 });
+  });
+
+  // @req PAR-META-31
+  it("refuses a picture the user gave over the file or pixel cap before decoding it, and says why", () => {
+    const messages: string[] = [];
+    for (const [label, bytes] of [
+      ["side over 12000", pngHeader(20000, 10)],
+      ["50 MP over", pngHeader(8000, 8000)],
+      ["file over 32 MiB", (() => { const b = new Uint8Array(PARROT_COVER_MAX_BYTES + 1); b.set(real4k.subarray(0, 600)); return b; })()],
+    ] as const) {
+      const problem = parrotPictureSizeProblem(bytes);
+      clog("refused", { label, problem });
+      expect(problem).toContain("too large");
+      expect(makeParrotCoverCopies(bytes, (m) => messages.push(m), { square: true, reencode: true })).toBeNull();
+    }
+    clog("refusal log", messages);
+    expect(messages.filter((m) => m.includes("refused before decoding"))).toHaveLength(3);
+    expect(parrotPictureSizeProblem(pngHeader(7000, 7000))).toBeNull();
+  });
+
+  // A smooth 4000 × 3000 photo-like JPEG, the size a phone camera gives; built once.
+  const real4k = (() => {
+    const width = 4000;
+    const height = 3000;
+    const data = new Uint8Array(width * height * 4);
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const at = (y * width + x) * 4;
+        data[at] = (x * 255) / width;
+        data[at + 1] = (y * 255) / height;
+        data[at + 2] = 128 + 100 * Math.sin((x + y) / 200);
+        data[at + 3] = 255;
+      }
+    }
+    return new Uint8Array(jpeg.encode({ width, height, data }, 95).data);
+  })();
+
+  // @req PAR-META-31
+  it("stores a huge picture the user gave at the standard sizes within the byte budget, never the original", () => {
+    const messages: string[] = [];
+    const started = performance.now();
+    const copies = makeParrotCoverCopies(real4k, (m) => messages.push(m), { square: true, crop: { left: 0.1, top: 0, size: 1 }, reencode: true })!;
+    clog("huge picture", { ms: Math.round(performance.now() - started), original: real4k.length, large: copies.large.length, thumb: copies.thumb?.length, messages });
+    expect(size(copies.large)).toEqual({ width: PARROT_COVER_LARGE_WIDTH, height: PARROT_COVER_LARGE_WIDTH, mime: "image/jpeg" });
+    expect(size(copies.thumb!)).toEqual({ width: PARROT_COVER_THUMB_WIDTH, height: PARROT_COVER_THUMB_WIDTH, mime: "image/jpeg" });
+    expect(copies.large.length).toBeLessThan(600 * 1024);
+    expect(copies.thumb!.length).toBeLessThan(150 * 1024);
+    expect(copies.large).not.toEqual(real4k);
+  }, 60_000);
+
+  // @req PAR-META-31
+  it("re-encodes even a small picture the user gave, and refuses a WebP, GIF or undecodable one rather than keep it as it is", () => {
+    const small = new Uint8Array(jpeg.encode({ width: 300, height: 300, data: new Uint8Array(300 * 300 * 4).fill(200) }, 100).data);
+    const copies = makeParrotCoverCopies(small, (m) => clog(m), { square: true, reencode: true })!;
+    clog("small re-encoded", { original: small.length, large: copies.large.length, thumb: copies.thumb });
+    expect(copies.large).not.toBe(small);
+    expect(size(copies.large)).toEqual({ width: 300, height: 300, mime: "image/jpeg" });
+    expect(copies.thumb).toBeNull();
+    const messages: string[] = [];
+    for (const kept of [gif(400, 400), webp("VP8X", 400, 400), JPEG]) expect(makeParrotCoverCopies(kept, (m) => messages.push(m), { reencode: true })).toBeNull();
+    clog("refused kinds", messages);
+    expect(messages).toHaveLength(3);
   });
 });
 

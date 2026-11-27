@@ -56,6 +56,7 @@
     "./parrot/menu": "./src/parrot/menu.tsx",
     "./parrot/playlists": "./src/parrot/playlists.tsx",
     "./parrot/offline": "./src/parrot/offline.tsx",
+    "./parrot/own-lyrics": "./src/parrot/own-lyrics.tsx",
     "./parrot/screens": "./src/parrot/screens.tsx",
     "./styles/badger-dark.css": "./src/styles/badger-dark.css",
     "./styles/fleet-fonts.css": "./src/styles/fleet-fonts.css",

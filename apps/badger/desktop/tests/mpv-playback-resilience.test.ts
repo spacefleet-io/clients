@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   autoPlayAllowed,
+  createMpvPauseReports,
   isUserPause,
   markSentPauseSeen,
   shouldForceResumeExternalPlayback,
@@ -262,6 +263,38 @@ describe("user pause wins over automatic play", () => {
     const src = readFileSync(resolve(__dirname, "../src/renderer/src/lib/useMpvPlaybackEngine.ts"), "utf8");
     expect(src).toContain("noteMpvPause(paused, eof)");
     expect(src).toContain("noteMpvPause(value, observedEofRef.current)");
+  });
+
+  // @bugfix @regression-proof @req MPV-PAUSE-01 stale-pause-across-mpv-processes (desktop-e2e run 54147, 0.1.85):
+  // the last pause report outlived the mpv process that sent it. mpv was quit while playing (pause=false), a
+  // resume from a position relaunched it with --pause, and that launch's first pause=true was read against the
+  // dead process's pause=false: "user paused in mpv", so the deferred launch's automatic play was skipped and the
+  // film stayed paused. A new mpv process starts with no pause report of its own.
+  it("[@bugfix][@regression-proof] a paused relaunch after mpv exited while playing is not a user pause", () => {
+    const now = 10_000;
+    const reports = createMpvPauseReports();
+    const steps: string[] = [];
+    const note = (label: string, next: unknown, eof: unknown = false) => {
+      const previous = reports.note(next);
+      const user = isUserPause({ previous, next, eof, lastSentPause: null, now });
+      steps.push(`${label}: previous=${String(previous)} next=${String(next)} userPause=${user}`);
+      return user;
+    };
+    try {
+      expect(note("first launch, paused", true)).toBe(false);
+      expect(note("first mpv plays", false)).toBe(false);
+      reports.processGone();
+      steps.push("mpv exited");
+      expect(note("relaunch with --pause", true)).toBe(false);
+      expect(note("relaunch plays", false)).toBe(false);
+      // The tracking still catches a real pause in the new process.
+      expect(note("user pauses the new mpv", true)).toBe(true);
+    } finally {
+      console.info(`[mpv-playback-resilience:stale-pause] ${steps.join(" | ")}`);
+    }
+    // The engine forgets the report when mpv's lifecycle goes idle (the process is gone).
+    const src = readFileSync(resolve(__dirname, "../src/renderer/src/lib/useMpvPlaybackEngine.ts"), "utf8");
+    expect(src).toMatch(/state\.kind === "idle"\)\s*\{[\s\S]{0,300}?mpvPauseReports\.processGone\(\);\s*\}/);
   });
 
   it("[@bugfix][@regression-proof] an automatic play never overrides a pause made after the play request", () => {

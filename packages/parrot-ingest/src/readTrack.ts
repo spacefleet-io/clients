@@ -29,8 +29,11 @@ export type ParrotTrackInfo = {
   cover?: ParrotCoverImage | null;
   /** PAR-META-22: the square of `cover` the user framed in the import review; absent, the centre square. */
   coverCrop?: ParrotCoverCrop | null;
-  /** The song's own lyrics (PAR-LYR-01): synced as LRC text, plain as text; null when the file and its `.lrc` hold none. */
-  lyrics?: { synced: string | null; plain: string | null } | null;
+  /**
+   * The song's own lyrics (PAR-LYR-01): synced as LRC text, plain as text; null when the file and its `.lrc` hold none.
+   * `user`: the lyrics file the user placed on the song in the review (PAR-LYR-09), stored as their own lyrics.
+   */
+  lyrics?: { synced: string | null; plain: string | null; user?: boolean } | null;
   /** The file's own ReplayGain tags for even volume (PAR-PLAY-03); null when it has none and the app measures the song. */
   loudness?: { gainDb: number; peak: number | null; albumGainDb: number | null; albumPeak: number | null } | null;
   /** The artist's and the album artist's ids in the metadata (PAR-META-15): from the file's tags, or the confirmed import's match; null when unknown or credited to several. */
@@ -40,6 +43,8 @@ export type ParrotTrackInfo = {
   tracklist?: ParrotListedTrack[] | null;
   /** The matched album's id in the metadata from the confirmed import (PAR-COPY-01); never read from the file. */
   albumMusicId?: string | null;
+  /** The matched song's id in our music copy from the confirmed import (PAR-LYR-01); never read from the file. */
+  trackMusicId?: string | null;
   /** The user kept the song as is at import, matched to nothing (PAR-UP-05). */
   unidentified?: boolean;
 };
