@@ -6,6 +6,7 @@
  * @req PAR-LYR-05[parrot]
  * @req PAR-META-20[parrot]
  * @req PAR-LIB-03[parrot]
+ * @req PAR-META-31[parrot]
  * @why The phone's Edit and Delete do what the desktop's do. Edit opens the form filled with the library's details and
  *   saves the typed ones as one library change. Chris 2026-11-16: the form looks things up on its own, like Badger's
  *   intro lookup, and there is no separate "fetch" action any more. Chris 2026-11-20 (PAR-META-18): "Look it up again"
@@ -28,6 +29,7 @@ import React from "react";
 import { act, create, type ReactTestRenderer, type ReactTestInstance } from "react-test-renderer";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SHELL_EN } from "@space/parrot-core/shell-strings";
+import { PARROT_COVER_MAX_BYTES } from "@space/parrot-core";
 
 const log = (phase: string, detail: unknown = {}) => console.info(`[PARROT-MOBILE-MANAGE-001] phase=${phase}`, JSON.stringify(detail));
 
@@ -58,6 +60,11 @@ const fake = vi.hoisted(() => ({
   lyricsAsked: [] as string[],
   /** While set, lyrics lookups wait for it. */
   lyricsGate: null as Promise<void> | null,
+  /** The artist form's values (PAR-META-31); null: the artist is gone. */
+  artistValues: null as unknown,
+  /** What the gallery hands back on the next pick, and every option set it was opened with. */
+  picked: { assets: [] } as unknown,
+  pickerOptions: [] as unknown[],
   albumTracks: [] as string[],
 }));
 
@@ -81,7 +88,12 @@ vi.mock("react-native", async () => {
   };
 });
 vi.mock("lucide-react-native", () => ({ ImagePlus: () => null, RotateCcw: () => null, RotateCw: () => null }));
-vi.mock("react-native-image-picker", () => ({ launchImageLibrary: async () => ({ assets: [] }) }));
+vi.mock("react-native-image-picker", () => ({
+  launchImageLibrary: async (options: unknown) => {
+    fake.pickerOptions.push(options);
+    return fake.picked;
+  },
+}));
 vi.mock("@space/mobile-shell/i18n", () => ({
   useTranslation: () => ({
     i18n: { language: "en" },
@@ -117,6 +129,10 @@ vi.mock("../src/lib/library", async () => {
   getEditValues: async (target: { kind: string; id: string }) => {
     fake.calls.push(`values:${target.kind}:${target.id}`);
     return fake.editValues;
+  },
+  getArtistEditValues: async (artistId: string) => {
+    fake.calls.push(`artist-values:${artistId}`);
+    return fake.artistValues;
   },
   editDetails: async (target: unknown, cover: unknown) => {
     fake.calls.push(`save:${JSON.stringify(target)}:cover=${cover ? "yes" : "no"}`);
@@ -284,6 +300,9 @@ beforeEach(async () => {
     lyricsAsked: [],
     lyricsGate: null,
     albumTracks: [],
+    artistValues: { name: "Adele", pictureObjectKey: "pictures/adele-thumb" },
+    picked: { assets: [] },
+    pickerOptions: [],
   });
   await act(async () => {
     tree = create(
@@ -634,5 +653,71 @@ describe("PARROT-MOBILE-MANAGE-001 edit, look up, lyrics and delete on the phone
       Object.defineProperty(Intl, "PluralRules", { value: real, configurable: true, writable: true });
     }
     log("done", { case: "delete-hermes-intl" });
+  });
+});
+
+describe("PARROT-MOBILE-MANAGE-001 artist details on the phone (PAR-META-31)", () => {
+  // Chris 2026-11-27: "I have no way of editing an artist on parrot"; the photo is cut and re-encoded at the standard
+  // artist size, never uploaded as picked.
+  it("PAR-META-31: Edit details opens the artist form with its name and round photo, and saves a rename", async () => {
+    log("start", { case: "artist-rename" });
+    await act(async () => manage!.editArtist("ar-adele"));
+    await flush();
+    one("manage-artist-dialog");
+    expect(texts()).toContain(SHELL_EN["manage.editTitle.artist"]);
+    expect(one("manage-artist-name").props.value).toBe("Adele");
+    expect(byTestId("manage-artist-changed-photo")).toHaveLength(0);
+    await act(async () => one("manage-artist-name").props.onChangeText("ADELE"));
+    expect(texts()).toContain(SHELL_EN["manage.changed"]);
+    await press("manage-artist-submit");
+    log("saved", { calls: fake.calls });
+    expect(fake.calls).toEqual(["artist-values:ar-adele", "change:edit", `save:${JSON.stringify({ kind: "artist", id: "ar-adele", edit: { name: "ADELE" } })}:cover=no`]);
+    expect(byTestId("manage-artist-dialog")).toHaveLength(0);
+    log("done", { case: "artist-rename" });
+  });
+
+  it("PAR-META-31: a photo from the gallery is asked at 2400 px at most, previewed and saved as the cover beside the edit", async () => {
+    log("start", { case: "artist-photo" });
+    fake.picked = { assets: [{ base64: Buffer.from([1, 2, 3, 4]).toString("base64"), type: "image/png" }] };
+    await act(async () => manage!.editArtist("ar-adele"));
+    await flush();
+    await press("manage-artist-pick");
+    log("picked", { options: fake.pickerOptions });
+    expect(fake.pickerOptions).toEqual([expect.objectContaining({ mediaType: "photo", maxWidth: 2400, maxHeight: 2400 })]);
+    one("manage-artist-preview");
+    one("manage-artist-changed-photo");
+    await press("manage-artist-submit");
+    log("saved", { calls: fake.calls });
+    expect(fake.calls.at(-1)).toBe(`save:${JSON.stringify({ kind: "artist", id: "ar-adele", edit: { name: "Adele" } })}:cover=yes`);
+    log("done", { case: "artist-photo" });
+  });
+
+  it("PAR-META-31: a picture over the byte cap is refused with a plain sentence and nothing is saved with it", async () => {
+    log("start", { case: "artist-too-large" });
+    fake.picked = { assets: [{ base64: Buffer.alloc(PARROT_COVER_MAX_BYTES + 1).toString("base64"), type: "image/jpeg" }] };
+    await act(async () => manage!.editArtist("ar-adele"));
+    await flush();
+    await press("manage-artist-pick");
+    const message = one("manage-artist-too-large").props.children as string;
+    log("refused", { message });
+    expect(message).toBe(SHELL_EN["manage.coverTooLarge"].replace("{max}", String(PARROT_COVER_MAX_BYTES / 2 ** 20)));
+    expect(byTestId("manage-artist-preview")).toHaveLength(0);
+    log("done", { case: "artist-too-large" });
+  });
+
+  it("PAR-META-31: Use automatic photo hands the artist back to the fetch; a blocked rename keeps the form open and says why", async () => {
+    log("start", { case: "artist-automatic" });
+    await act(async () => manage!.editArtist("ar-adele"));
+    await flush();
+    await press("manage-artist-automatic");
+    expect(byTestId("manage-artist-automatic")).toHaveLength(0);
+    one("manage-artist-changed-photo");
+    fake.saveError = new Error("An artist named Adele 2 is already in your library");
+    await press("manage-artist-submit");
+    log("refused", { calls: fake.calls });
+    expect(fake.calls.at(-1)).toBe(`save:${JSON.stringify({ kind: "artist", id: "ar-adele", edit: { name: "Adele", picture: "automatic" } })}:cover=no`);
+    one("manage-artist-dialog");
+    expect(one("manage-artist-error").props.children).toBe("Could not save: An artist named Adele 2 is already in your library");
+    log("done", { case: "artist-automatic" });
   });
 });

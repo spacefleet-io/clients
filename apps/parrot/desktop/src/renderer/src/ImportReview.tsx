@@ -27,6 +27,7 @@ import { ParrotEditSuggestList, suggestionName, type ParrotEditSuggest } from "@
 import { formatLocalizedStorage } from "@space/shared/format";
 import {
   cleanParrotTitles,
+  isParrotCopyId,
   matchParrotImportTracks,
   mergeParrotEditSuggestions,
   parrotAlbumArtists,
@@ -650,6 +651,8 @@ export default function ImportReview({ t, language, scan, onDone, suggest }: Pro
       ...(tracklistKnown ? { tracklist: album.tracks.map(({ disc, number, title, durationMs }) => ({ disc, number, title, durationMs })) } : {}),
       // The album's id in the metadata (PAR-COPY-01), so later refreshes and the cover pass find it.
       ...(album.id ? { albumMusicId: album.id } : {}),
+      // The matched song's id in our music copy (PAR-LYR-01), so its lyrics lookup reads our copy by it; never an outside source's id (PAR-META-26).
+      ...(track?.id && isParrotCopyId(track.id) ? { trackMusicId: track.id } : {}),
       ...(cover && album.id ? { coverId: album.id } : {}),
       ...coverEdit(card),
     };

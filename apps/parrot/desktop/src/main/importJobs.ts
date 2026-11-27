@@ -55,6 +55,22 @@ export const withSourcesMissing = (job: ParrotImportJob, exists: (path: string) 
   importJobRetryable(job) ? { ...job, sourcesMissing: retrySources(job).every((path) => !exists(path)) } : job;
 
 /**
+ * UX-ADD-01: what a scan asked for does next. While an import runs or its scan waits in the review, songs dropped on
+ * the window or picked with the "+" wait behind it, each source once, instead of being refused; once it has ended
+ * (or its review was answered) they start the next scan, which stops at its own review. `dropped` is empty when main
+ * asks whether the waiting sources may start now.
+ */
+export const nextImportSources = (
+  status: Pick<ParrotImportStatus, "running" | "phase">,
+  queued: readonly string[],
+  dropped: readonly string[]
+): { start: string[] | null; queued: string[] } => {
+  const sources = [...new Set([...queued, ...dropped])];
+  if (status.running || status.phase === "scanning" || status.phase === "review") return { start: null, queued: sources };
+  return { start: sources.length > 0 ? sources : null, queued: [] };
+};
+
+/**
  * PAR-UP-13 / RT-LIFE-04: what an import's review decided, kept in userData/import-resume/<importId>.json while it
  * runs so its jobs resume after Parrot quits: the songs, the user's edits, the folders, the files the scan could not
  * read and the pictures an edit chose. The artist photos the review fetched are not kept (they are fetched again).

@@ -1,11 +1,11 @@
 // What the artist page (PAR-LOOK-06) reads and does: the artist's albums (newest last, as `listArtistAlbums` orders
 // them), every song on them, the photo with its shimmer (PAR-META-15, PAR-META-20), Play / Shuffle / Play next over all
 // the songs, Save offline (each album kept, since the kept list has no artist kind, PAR-OFFL-01) and the "…" sheet
-// with Delete last (PAR-LIB-03).
+// with Edit details (PAR-META-31) and Delete last (PAR-LIB-03).
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { ArrowDownToLine, CircleCheck, ListEnd, ListPlus, ListStart, Trash2 } from "lucide-react-native";
+import { ArrowDownToLine, CircleCheck, ListEnd, ListPlus, ListStart, Pencil, Trash2 } from "lucide-react-native";
 import { useTranslation } from "@space/mobile-shell/i18n";
 import { parrotCardActionList, type OfflineReach, type ParrotCardActionId, type ParrotCardPlayer, type SongRow } from "@space/parrot-core";
 import type { ParrotPhotoCredit } from "@space/parrot-library-db-definition/ops";
@@ -123,6 +123,13 @@ export const useArtistPage = (artistId: string, name: string): ArtistPage => {
           icon: allKept ? CircleCheck : ArrowDownToLine,
           onSelect: toggleKeep,
           testID: allKept ? "artist-menu-unkeep" : "artist-menu-keep",
+        },
+        {
+          id: "edit",
+          label: t("shell.manage.edit"),
+          icon: Pencil,
+          onSelect: () => manage.editArtist(artistId),
+          testID: "artist-menu-edit",
         },
         {
           id: "delete",

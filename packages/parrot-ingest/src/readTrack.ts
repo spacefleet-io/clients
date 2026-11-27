@@ -40,6 +40,8 @@ export type ParrotTrackInfo = {
   tracklist?: ParrotListedTrack[] | null;
   /** The matched album's id in the metadata from the confirmed import (PAR-COPY-01); never read from the file. */
   albumMusicId?: string | null;
+  /** The matched song's id in our music copy from the confirmed import (PAR-LYR-01); never read from the file. */
+  trackMusicId?: string | null;
   /** The user kept the song as is at import, matched to nothing (PAR-UP-05). */
   unidentified?: boolean;
 };

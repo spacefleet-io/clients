@@ -15,12 +15,18 @@ import {
   parrotAlbumKey,
   parrotImportFromMatch,
   parrotImportMissingTracks,
+  PARROT_LOOKUP_RETRY_AFTER_CAP_MS,
   PARROT_LOOKUP_RETRY_DELAYS_MS,
   type ParrotImportFileQuestion,
 } from "../src/importMatch";
 
 const T = "[PARROT-CORE-IMPORT-MATCH-001]";
 const LP = { id: "lp", name: "Linnet Park" };
+/** An album id our copy knows (a release group's UUID, PAR-META-26), spelled from a readable name. */
+const rg = (name: string) => {
+  const hex = [...name].map((char) => char.charCodeAt(0).toString(16).padStart(2, "0")).join("").slice(0, 32).padEnd(32, "0");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+};
 
 const album = (id: string, title: string, year: number, tracks: Array<[string, number]>): MusicAlbum => ({
   id,
@@ -31,25 +37,25 @@ const album = (id: string, title: string, year: number, tracks: Array<[string, n
   tracks: tracks.map(([name, durationMs], index) => ({ disc: 1, number: index + 1, title: name, durationMs, id: `${id}-${index + 1}` })),
 });
 
-const HYBRID = album("hybrid", "Hollow Signal", 2000, [
+const HYBRID = album(rg("hybrid"), "Hollow Signal", 2000, [
   ["Paperboat", 185_000],
   ["One Step Farther", 157_000],
   ["Near You", 203_000],
   ["At the Gate", 216_000],
 ]);
-const MELTWAY = album("meltway", "Meltway", 2003, [
+const MELTWAY = album(rg("meltway"), "Meltway", 2003, [
   ["Forecast", 13_000],
   ["Don't Linger", 188_000],
   ["Somewhere I Wander", 214_000],
   ["Fable", 162_000],
   ["Nook", 185_000],
 ]);
-const LIVE = album("live", "Live in Tarvo", 2003, [
+const LIVE = album(rg("live"), "Live in Tarvo", 2003, [
   ["Somewhere I Wander (Live)", 220_000],
   ["Nook (Live)", 190_000],
 ]);
 // A compilation carrying the very same song, to make a close competing album.
-const BEST_OF = album("best", "Greatest Hits", 2010, [["Fable", 162_000]]);
+const BEST_OF = album(rg("best"), "Greatest Hits", 2010, [["Fable", 162_000]]);
 const ALBUMS = [HYBRID, MELTWAY, LIVE, BEST_OF];
 
 const fold = (text: string) => text.toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -228,9 +234,11 @@ describe(`${T} the album's artists`, () => {
   });
 });
 
-describe(`${T} albums known only by an opaque id`, () => {
-  // @req PAR-META-19[parrot] @req META-SRC-09[parrot]
-  it("matches files on an album by its opaque id, never mixing two such albums", async () => {
+describe(`${T} albums only an outside source knows`, () => {
+  // @req PAR-META-19[parrot] @req META-SRC-09[parrot] @req PAR-META-26[parrot]
+  // @bugfix: "Ella and Louis" (11 songs, prod 2026-11-26) asked each of 30 outside candidate albums by its outside
+  // id; the copy never knows such an id, so each became a paced outside read, 3 min 5 s in all.
+  it("matches files on such an album from the song answers, never asking it by id, never mixing two such albums", async () => {
     const opaqueAlbum = (id: string, title: string, tracks: string[]): MusicAlbum => ({
       id,
       title,
@@ -239,32 +247,101 @@ describe(`${T} albums known only by an opaque id`, () => {
       artist: { id: "artist-opaque-lp", name: "Linnet Park" },
       tracks: tracks.map((name, index) => ({ disc: 1, number: index + 1, title: name, durationMs: 180_000, id: `${id}-v${index + 1}` })),
     });
-    const demos = opaqueAlbum("album-opaque-demos01", "Demos", ["Pictureboard", "Esaul"]);
-    const other = opaqueAlbum("album-opaque-other01", "Other Demos", ["Pictureboard"]);
+    const demos = opaqueAlbum("outside_demos01", "Demos", ["Pictureboard", "Esaul"]);
+    const other = opaqueAlbum("outside_other01", "Other Demos", ["Pictureboard"]);
     const recording = (on: MusicAlbum, index: number): MusicRecording => ({
       id: on.tracks[index]!.id,
       title: on.tracks[index]!.title,
       durationMs: 180_000,
       artist: on.artist,
-      album: { id: on.id, title: on.title, year: on.year, trackNumber: null, disc: null },
+      album: { id: on.id, title: on.title, year: on.year, trackNumber: index + 1, disc: 1 },
     });
+    const asked: MusicAlbumsQuery[] = [];
+    const lines: string[] = [];
     const result = await matchParrotImport(
       [file("esaul.mp3", "Esaul", "Demos", 180_000), file("picture.mp3", "Pictureboard", "Demos", 180_000)],
       {
         recordings: async (question) => ({ results: question.title === "Esaul" ? [recording(demos, 1)] : [recording(demos, 0), recording(other, 0)] }),
-        albums: async () => ({ results: [other, demos] }),
+        albums: async (question) => {
+          asked.push(question);
+          return { results: [] };
+        },
+        log: (line) => lines.push(line),
       }
     );
-    console.info(`${T} opaque ids:`, JSON.stringify(result.albums.map((found) => [found.album.id, found.tracklistKnown, found.files])));
+    console.info(`${T} only an outside source knows: ${JSON.stringify(result.albums.map((found) => [found.album.id, found.tracklistKnown, found.files]))}; asked ${JSON.stringify(asked)}\n${lines.join("\n")}`);
+    expect(asked.filter((question) => question.id)).toEqual([]);
+    expect(lines.some((line) => line.includes("2 with an outside id not asked"))).toBe(true);
     expect(result.unidentified).toEqual([]);
     expect(result.albums).toHaveLength(1);
-    expect(result.albums[0]!.album).toBe(demos);
-    expect(result.albums[0]!.tracklistKnown).toBe(true);
+    expect(result.albums[0]!.album.id).toBe(demos.id);
+    expect(result.albums[0]!.tracklistKnown).toBe(false);
     expect(result.albums[0]!.files.map((placed) => [placed.file, placed.number])).toEqual([
       ["/m/picture.mp3", 1],
       ["/m/esaul.mp3", 2],
     ]);
     expect(parrotAlbumKey(demos)).not.toBe(parrotAlbumKey(other));
+  });
+
+  // @req PAR-META-29[parrot] @req PAR-META-30[parrot]
+  // @bugfix: Chris's folder "Ella and Louis (1956)" (11 m4a, album tag "Ella and Louis", tracks 1-11, prod 2026-11-26)
+  // split over 3 albums: our copy's "Ella and Louis" (2 files), an outside "Ella and Louis, Vol. 46" (7) and the outside
+  // own "Ella and Louis" (2), shown as two identical "Ella and Louis · 1956" cards. The copy answered only 2 songs, and
+  // its album, credited to Ella Fitzgerald and Louis Armstrong apart, was never offered for the other 9: the files'
+  // artist "Ella Fitzgerald & Louis Armstrong" named neither of them.
+  it("lands a folder agreeing on its album tag and numbering on our copy's album, a duo's credit naming each artist, one card for one album", async () => {
+    const titles = [
+      "Can't We Be Friends",
+      "Isn't This a Lovely Day",
+      "Moonlight in Vermont",
+      "They Can't Take That Away From Me",
+      "Under a Blanket of Blue",
+      "Tenderly",
+      "A Foggy Day",
+      "Stars Fell on Alabama",
+      "Cheek to Cheek",
+      "The Nearness of You",
+      "April in Paris",
+    ];
+    const ELLA = { id: "ella", name: "Ella Fitzgerald" };
+    const LOUIS = { id: "louis", name: "Louis Armstrong" };
+    const DUO = { id: "duo-outside", name: "Ella Fitzgerald & Louis Armstrong" };
+    const lengthOf = (index: number) => 180_000 + index * 7_000;
+    const tracksOf = (id: string, picked: number[], shift = 0) =>
+      picked.map((index) => ({ disc: 1, number: index + 1, title: titles[index]!, durationMs: lengthOf(index) + shift, id: `${id}-${index + 1}` }));
+    const all = titles.map((_, index) => index);
+    const copy: MusicAlbum = { id: rg("ella and louis"), title: "Ella and Louis", year: 1956, kind: "album", artist: ELLA, artists: [ELLA, LOUIS], tracks: tracksOf(rg("ella and louis"), all) };
+    const vol46: MusicAlbum = { id: "outside_vol46", title: "Ella and Louis, Vol. 46", year: 2020, kind: "album", artist: DUO, tracks: tracksOf("outside_vol46", all, 12_000) };
+    const outsideOwn: MusicAlbum = { id: "outside_ella", title: "Ella and Louis", year: 1956, kind: "album", artist: DUO, tracks: tracksOf("outside_ella", [6, 10]) };
+    const recording = (on: MusicAlbum, index: number, artist = on.artist): MusicRecording => {
+      const track = on.tracks.find((one) => one.number === index + 1)!;
+      return { id: track.id, title: track.title, durationMs: track.durationMs, artist, album: { id: on.id, title: on.title, year: on.year, trackNumber: track.number, disc: 1 } };
+    };
+    const questions = titles.map((title, index) => ({
+      file: `/m/Ella and Louis (1956)/${String(index + 1).padStart(2, "0")} - ${title}.m4a`,
+      title,
+      artist: "Ella Fitzgerald & Louis Armstrong",
+      album: "Ella and Louis",
+      durationMs: lengthOf(index),
+      disc: 1,
+      number: index + 1,
+    }));
+    const lines: string[] = [];
+    const result = await matchParrotImport(questions, {
+      recordings: async (question) => {
+        const index = titles.indexOf(question.title);
+        // Prod before PAR-META-25: the copy answered "Can't We Be Friends" and "Isn't This a Lovely Day" alone.
+        if (index < 2) return { results: [recording(copy, index, { id: "duo", name: "Louis Armstrong & Ella Fitzgerald" })] };
+        return { results: [...(index === 6 || index === 10 ? [recording(outsideOwn, index)] : []), recording(vol46, index)] };
+      },
+      albums: async (question) => ({ results: question.id === copy.id || question.album === copy.title ? [copy] : [] }),
+      log: (line) => lines.push(line),
+    });
+    console.info(`${T} Ella and Louis: ${JSON.stringify(result.albums.map((found) => [found.album.id, found.files.length]))}\n${lines.join("\n")}`);
+    expect(result.unidentified).toEqual([]);
+    expect(result.albums.map((found) => found.album.id)).toEqual([copy.id]);
+    expect(result.albums[0]!.files.map((placed) => placed.number)).toEqual(all.map((index) => index + 1));
+    expect(lines.some((line) => line.includes(`album ${outsideOwn.id} (Ella and Louis) is ${parrotAlbumKey(copy)}`))).toBe(true);
   });
 });
 
@@ -272,7 +349,7 @@ describe(`${T} compilations and bootlegs`, () => {
   const VA = { id: "va", name: "Various Artists" };
   const track = (id: string, number: number, title: string, durationMs: number) => ({ disc: 1, number, title, durationMs, id: `${id}-${number}` });
   const CLOCKWORKERS: MusicAlbum = {
-    id: "clockworkers",
+    id: rg("clockworkers"),
     title: "Clockworkers: The Album",
     year: 2007,
     kind: "Album + Soundtrack",
@@ -284,10 +361,10 @@ describe(`${T} compilations and bootlegs`, () => {
       track("clockworkers", 4, "What It Feels Like for a Girl", 211_000),
     ],
   };
-  const CLOCKWORKERS_LIVE: MusicAlbum = { ...CLOCKWORKERS, id: "clockworkers-live", title: "Clockworkers: The Album (Live)", kind: "Album + Live" };
-  const MINUTES = album("minutes", "Minutes to Daybreak", 2007, [["What I've Kept", 205_000]]);
-  const ZEPHYRINE: MusicAlbum = { ...album("zephyrine", "Zephyrine", 2007, [["Doomsday Bell", 223_000]]), artist: { id: "sp", name: "The Smashing Lanterns" } };
-  const BOOTLEG = { id: "lantern-room", title: "2007-06-24: The Lantern Room, Millbrook, NC, USA", year: 2007, trackNumber: 1, disc: 1 };
+  const CLOCKWORKERS_LIVE: MusicAlbum = { ...CLOCKWORKERS, id: rg("clockworkers-live"), title: "Clockworkers: The Album (Live)", kind: "Album + Live" };
+  const MINUTES = album(rg("minutes"), "Minutes to Daybreak", 2007, [["What I've Kept", 205_000]]);
+  const ZEPHYRINE: MusicAlbum = { ...album(rg("zephyrine"), "Zephyrine", 2007, [["Doomsday Bell", 223_000]]), artist: { id: "sp", name: "The Smashing Lanterns" } };
+  const BOOTLEG = { id: rg("lantern-room"), title: "2007-06-24: The Lantern Room, Millbrook, NC, USA", year: 2007, trackNumber: 1, disc: 1 };
 
   const compilationFile = (number: number, artist: string, title: string, extra: Partial<ParrotImportFileQuestion> = {}): ParrotImportFileQuestion => ({
     file: `/m/Clockworkers/${number}.mp3`,
@@ -326,7 +403,7 @@ describe(`${T} compilations and bootlegs`, () => {
     const result = await matchParrotImport(files, {
       recordings: async (question) => {
         asked.recordings.push(question);
-        return { results: question.title === "Nook" ? [recordingOn({ id: "meltway", title: "Meltway", year: 2003 }, "Nook", LP, 185_000)] : [] };
+        return { results: question.title === "Nook" ? [recordingOn(MELTWAY, "Nook", LP, 185_000)] : [] };
       },
       albums: async (question) => {
         asked.albums.push(question);
@@ -350,7 +427,7 @@ describe(`${T} compilations and bootlegs`, () => {
         ],
       ],
     ]);
-    const soundtrack = result.albums.find((found) => found.album.id === "clockworkers")!;
+    const soundtrack = result.albums.find((found) => found.album.id === CLOCKWORKERS.id)!;
     expect(soundtrack.tracklistKnown).toBe(true);
     // 15 s files against 3-4 min tracks: on the album, but to check.
     expect(soundtrack.files.every((placed) => !placed.sure)).toBe(true);
@@ -399,7 +476,7 @@ describe(`${T} compilations and bootlegs`, () => {
       artist: LP,
       album: { id, title, year, trackNumber, disc: 1, ...(kind ? { kind } : {}), ...(official !== undefined ? { official } : {}) },
     });
-    const MELTWAY: MusicAlbum = { ...album("meltway-rg", "Meltway", 2003, []), tracks: Array.from({ length: 13 }, (_, i) => track("meltway-rg", i + 1, i === 6 ? "Fable" : `Track ${i + 1}`, 162_000)) };
+    const MELTWAY: MusicAlbum = { ...album(rg("meltway-rg"), "Meltway", 2003, []), tracks: Array.from({ length: 13 }, (_, i) => track("meltway-rg", i + 1, i === 6 ? "Fable" : `Track ${i + 1}`, 162_000)) };
     const asked: MusicRecordingsQuery[] = [];
     const run = (results: MusicRecording[]) =>
       matchParrotImport([fable], {
@@ -413,10 +490,10 @@ describe(`${T} compilations and bootlegs`, () => {
       });
     // The lookup's own answers on prod, the game first: it is the take closest to the file's length.
     const typed = [
-      on("8bit-rg", "8-Bit Uprising!", 2010, 4, 146_000, "Album + Soundtrack", true),
-      on("colorado-rg", "2002-02-02: Colorado Springs, CO, USA", 2002, 13, 160_000, "Album + Live", false),
-      on("meltway20-rg", "Meltway (20th anniversary edition)", 2023, 8, 166_431, "Album", true),
-      on("meltway-rg", "Meltway", 2003, 7, 162_106, "Album", true),
+      on(rg("8bit-rg"), "8-Bit Uprising!", 2010, 4, 146_000, "Album + Soundtrack", true),
+      on(rg("colorado-rg"), "2002-02-02: Colorado Springs, CO, USA", 2002, 13, 160_000, "Album + Live", false),
+      on(rg("meltway20-rg"), "Meltway (20th anniversary edition)", 2023, 8, 166_431, "Album", true),
+      on(rg("meltway-rg"), "Meltway", 2003, 7, 162_106, "Album", true),
     ];
     const typedResult = await run(typed);
     expect(typedResult.albums.map((found) => [found.album.title, found.files.map((placed) => placed.number)])).toEqual([["Meltway", [7]]]);
@@ -456,11 +533,11 @@ describe(`${T} albums asked by id`, () => {
     ["Near You", 203_000],
     ["At the Gate", 216_000],
   ];
-  const STUDIO = album("hollow-rg", "Hollow Signal", 2000, SONGS);
+  const STUDIO = album(rg("hollow-rg"), "Hollow Signal", 2000, SONGS);
   // Each song also sits on a compilation of its own and on a DJ set: 1 studio album + 8 others in reach.
   const OTHERS: MusicAlbum[] = SONGS.flatMap(([title, durationMs], index) => [
-    { ...album(`lounge-${index}`, `Lounge Sessions ${index + 1}`, 2010, [[title, durationMs]]), kind: "Album + Compilation", artist: VA },
-    { ...album(`set-${index}`, `Live From Lost Village ${index + 1}`, 2019, [[title, durationMs]]), kind: "Album + DJ-mix", artist: DJ },
+    { ...album(rg(`lounge-${index}`), `Lounge Sessions ${index + 1}`, 2010, [[title, durationMs]]), kind: "Album + Compilation", artist: VA },
+    { ...album(rg(`set-${index}`), `Live From Lost Village ${index + 1}`, 2019, [[title, durationMs]]), kind: "Album + DJ-mix", artist: DJ },
   ]);
   const CATALOG = [STUDIO, ...OTHERS];
 
@@ -563,7 +640,7 @@ describe(`${T} albums asked by id`, () => {
   // Trilogy Soundtrack" (found only by the name search of an answered album of his) fell out of reach, and 56 files
   // went to the three film soundtracks.
   it("still asks the songs' own artist's album by name, so its other editions stay in reach", async () => {
-    const DELUXE: MusicAlbum = { ...album("hollow-deluxe-rg", "Hollow Signal (Deluxe Edition)", 2020, [...SONGS, ["Midnight Reprise", 199_000]]), kind: "Album" };
+    const DELUXE: MusicAlbum = { ...album(rg("hollow-deluxe-rg"), "Hollow Signal (Deluxe Edition)", 2020, [...SONGS, ["Midnight Reprise", 199_000]]), kind: "Album" };
     const asked: MusicAlbumsQuery[] = [];
     const files = [...SONGS, ["Midnight Reprise", 199_000] as [string, number]].map(([title, durationMs], index) => ({
       file: `/m/Hollow Signal (Deluxe Edition)/${index + 1} ${title}.mp3`,
@@ -590,7 +667,7 @@ describe(`${T} albums asked by id`, () => {
     });
     console.info(`${T} asked ${JSON.stringify(asked)}`);
     expect(asked).toEqual([
-      { artist: "Linnet Park", album: "Hollow Signal", id: "hollow-rg" },
+      { artist: "Linnet Park", album: "Hollow Signal", id: rg("hollow-rg") },
       { artist: "Linnet Park", album: "Hollow Signal", limit: 5 },
     ]);
     // The bonus song no recording answer names sits in the same folder as four songs sure on the deluxe edition, whose
@@ -635,5 +712,50 @@ describe("[PARROT-CORE-IMPORT-MATCH-RETRY-001] lookup retry", () => {
 
   it("waits 1 s, 2.5 s and 5 s by default: within 10 s", () => {
     expect(PARROT_LOOKUP_RETRY_DELAYS_MS).toEqual([1000, 2500, 5000]);
+  });
+});
+
+/**
+ * @test-id PARROT-CORE-IMPORT-MATCH-RETRY-002
+ * @req PAR-UP-11[parrot]
+ * @why PAR-UP-11 (Chris 2026-11-27, metadata audit finding M-counters-parrot-import-drops-429-songs): 37 lookups an
+ *   hour were refused with 429 and each left its song unmatched. A 429 is asked again after its Retry-After, capped
+ *   at 60 s, up to 3 times.
+ */
+describe("[PARROT-CORE-IMPORT-MATCH-RETRY-002] lookup refused as too many (429)", () => {
+  const tooMany = (retryAfterSeconds: number | undefined) => () =>
+    Object.assign(new Error("metadata service unavailable (429)"), { name: "MetadataUnavailableError", status: 429, retryAfterSeconds, code: "rate_limited" });
+  const fable = () => [file("fable.mp3", "Fable", "Meltway", 162_000)];
+
+  it("a lookup refused 429 waits its Retry-After and then ends matched", async () => {
+    const lookups = fakeLookups({ failFirst: tooMany(0.005), failFirstTimes: 1 });
+    const lines: string[] = [];
+    const result = await matchParrotImport(fable(), { ...lookups, retryDelaysMs: [1, 1, 1], log: (line) => lines.push(line) });
+    expect(result.unidentified).toEqual([]);
+    expect(result.albums.map((found) => found.album.title)).toEqual(["Meltway"]);
+    expect(lines.filter((line) => line.includes("lookup retry"))).toEqual([
+      "[import-match] recordings lookup retry 1/3 in 5ms: metadata service unavailable (429)",
+    ]);
+  });
+
+  it("a Retry-After longer than the cap waits the cap; with none it waits the usual delay", async () => {
+    const long = fakeLookups({ failFirst: tooMany(3600), failFirstTimes: 1 });
+    const lines: string[] = [];
+    const result = await matchParrotImport(fable(), { ...long, retryDelaysMs: [1, 1, 1], retryAfterCapMs: 7, log: (line) => lines.push(line) });
+    expect(result.unidentified).toEqual([]);
+    const unnamed = fakeLookups({ failFirst: tooMany(undefined), failFirstTimes: 1 });
+    await matchParrotImport(fable(), { ...unnamed, retryDelaysMs: [3, 1, 1], log: (line) => lines.push(line) });
+    expect(lines.filter((line) => line.includes("lookup retry")).map((line) => line.split(" in ")[1]!.split(":")[0])).toEqual(["7ms", "3ms"]);
+  });
+
+  it("asks at most 3 more times, then the song is lookup-failed", async () => {
+    const refused = fakeLookups({ failFirst: tooMany(0.001), failFirstTimes: 100 });
+    const result = await matchParrotImport(fable(), { ...refused, retryDelaysMs: [1, 1, 1] });
+    expect(result.unidentified).toEqual([{ file: "/m/fable.mp3", reason: "lookup-failed" }]);
+    expect(refused.asked.recordings.length).toBe(4);
+  });
+
+  it("waits at most 60 s by default", () => {
+    expect(PARROT_LOOKUP_RETRY_AFTER_CAP_MS).toBe(60_000);
   });
 });

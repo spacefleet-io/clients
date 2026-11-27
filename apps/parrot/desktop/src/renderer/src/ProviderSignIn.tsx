@@ -134,12 +134,13 @@ export function ProviderSecondStep({ t, flow, message }: { t: Translate; flow: P
         {flow.busy ? <Spinner size="sm" /> : t("signIn.submit")}
       </Button>
       <div className="flex justify-between text-sm">
-        <button type="button" className="text-primary hover:underline" disabled={flow.busy} onClick={() => void flow.resendSecondStep()} data-testid="provider-second-step-resend">
+        {/* UX-BTN-01: the plain text buttons are the shared ghost button, as in Badger. */}
+        <Button type="button" variant="ghost" disabled={flow.busy} onClick={() => void flow.resendSecondStep()} data-testid="provider-second-step-resend">
           {t("verify.resend")}
-        </button>
-        <button type="button" className="text-muted-foreground hover:underline" disabled={flow.busy} onClick={flow.cancel} data-testid="provider-second-step-cancel">
+        </Button>
+        <Button type="button" variant="ghost" disabled={flow.busy} onClick={flow.cancel} data-testid="provider-second-step-cancel">
           {t("signIn.signOut")}
-        </button>
+        </Button>
       </div>
     </form>
   );

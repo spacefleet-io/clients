@@ -24,8 +24,8 @@ vi.mock("@space/ui", async () => {
   return {
     RenderBoundary,
     Button: ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { size?: string; variant?: string }) => {
-      const { size: _size, variant: _variant, ...rest } = props;
-      return <button {...rest}>{children}</button>;
+      const { size: _size, variant, ...rest } = props;
+      return <button data-variant={variant} {...rest}>{children}</button>;
     },
     Input: (props: React.InputHTMLAttributes<HTMLInputElement>) => <input {...props} />,
     Spinner: () => <span />,
@@ -213,6 +213,8 @@ describe("Parrot desktop: creating an account (ACCT-AUTH-10)", () => {
     await type("verify-code", "000000");
     await submit("verify-submit");
     expect(host.querySelector('[role="alert"]')?.textContent).toBe("That code is wrong or has expired. Try again or ask for a new one.");
+    // UX-BTN-01: "Resend code" is the shared ghost button, as in Badger.
+    expect($("verify-resend")?.getAttribute("data-variant")).toBe("ghost");
     await click("verify-resend");
     expect(resendVerification).toHaveBeenCalledWith("celeste@example.com");
     expect(host.querySelector('[role="status"]')?.textContent).toBe("New code sent. Check your inbox.");
