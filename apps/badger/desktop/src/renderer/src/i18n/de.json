@@ -149,7 +149,8 @@
     "resendError": "Der Code konnte nicht erneut gesendet werden.",
     "provider": {
       "continueInBrowser": "Schließe die Anmeldung in deinem Browser ab. Danach kommt Badger wieder nach vorne."
-    }
+    },
+    "serviceUpdate": "Der Dienst wird gerade aktualisiert. Aktualisiere die App oder starte sie neu und versuch es dann erneut."
   },
   "signup": {
     "title": "Konto erstellen",
@@ -1476,7 +1477,8 @@
       "title": "Favoriten",
       "subtitle": "Deine mit Stern markierten Filme und Serien.",
       "empty": "Noch keine Favoriten."
-    }
+    },
+    "reorderSection": "Bereich verschieben"
   },
   "lab": {
     "title": "Dateiverwaltung",
@@ -2146,6 +2148,10 @@
       "preparingSample": "Beispiel wird vorbereitet…",
       "subtitleSampleAlt": "Untertitelbeispiel",
       "resolveVideoTitle": "Video-Ergänzungen klären",
+      "resolveVideoProgress": "Entscheidung {{current}} von {{total}}",
+      "unavailableTitle": "Import nicht verfügbar",
+      "unavailableCode": "Code: {{code}}",
+      "unavailableDismiss": "Schließen",
       "noVideoDecisions": "Keine offenen Videoentscheidungen.",
       "dummyTitle": "Mit Dummy-Daten hinzufügen",
       "movie": "Film",

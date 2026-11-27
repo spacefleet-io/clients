@@ -295,7 +295,7 @@ export default function Login() {
             <form className="grid gap-4" onSubmit={onSubmit}>
               {systemIssue ? (
                 <NoticeSurface tone="info">
-                  Service update in progress. Please update/restart the app and try again.
+                  {t("login.serviceUpdate")}
                 </NoticeSurface>
               ) : null}
               {error ? <NoticeSurface tone="error">{error}</NoticeSurface> : null}

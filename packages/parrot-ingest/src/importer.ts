@@ -7,6 +7,7 @@ import { openStorageUploadSession, uploadStorageObjectViaTunnel } from "@space/l
 import { fetchLibrarySnapshot, publishLibrarySnapshot } from "@space/library-db-runtime/snapshotTransport";
 import type { MusicLyrics, MusicLyricsQuery } from "@space/shared/api";
 import {
+  isParrotCopyId,
   isParrotPublishConflict,
   PARROT_ARTIST_PICTURE_RETRY_MS,
   PARROT_AUTO_LYRICS_GAP_MS,
@@ -385,7 +386,9 @@ export const buildParrotTrackOps = (input: {
         title: info.title,
         artistId: ids.artistId,
         durationMs: info.durationMs,
-        musicId: null,
+        // The matched song's id in our music copy (PAR-LYR-01), so its lyrics lookup reads our copy by it; an
+        // outside source's id (PAR-META-26) is never stored.
+        musicId: info.trackMusicId && isParrotCopyId(info.trackMusicId) ? info.trackMusicId : null,
         genre: info.genre ?? null,
         ...(info.loudness ?? {}),
         // Kept as is at import (PAR-UP-05); absent keeps the stored flag.
