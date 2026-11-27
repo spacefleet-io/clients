@@ -28,7 +28,6 @@ import { Loader2, Clock, Check, AlertCircle, Film, Tv, X, Upload, Plus, Play, Sq
 import { guessQualityLabel, qualityRank, type LabQueueAction } from "@/lib/labJobs";
 import { useAuth } from "@/auth";
 import { useClientConfig } from "@/lib/useClientConfig";
-import { trailerEmbedUrl } from "@/lib/trailers";
 import { useDeviceFallbackCopy } from "@/lib/deviceTranscode";
 import { applyFallbackCopyToOutputs } from "../../../shared/transcodeDefault";
 import { getTitleDetailsForLibrary, getTitleTrailersForLanguages, localizeSearchResultForLibrary, searchTitles } from "@/lib/metadata";
@@ -49,7 +48,7 @@ import {
   showEpisodeKey,
 } from "../../../shared/skipMarkerCache";
 import { rendererLogger } from "@/logger";
-import { notify, notifyError, notifySuccess } from "@/lib/notify";
+import { notify, notifySuccess } from "@/lib/notify";
 import type { AccountStorageSummary } from "@space/shared/api";
 import { estimateImportItemBytes, estimatePendingLocalBytes, evaluateImportQuota, storageWarningLevel } from "@/lib/importQuota";
 import { loadBillingPeriod } from "@space/shared/storagePlans";
@@ -654,7 +653,6 @@ export default function FileIngestionDialog({ paths: initialPaths, pathsNonce, o
 
     if (types.size !== 1) {
       notify({
-        key: "ingestion-queued",
         title: t("ingestion.toasts.queuedTitle"),
         message: baseMessage,
         level: "success",
@@ -670,7 +668,6 @@ export default function FileIngestionDialog({ paths: initialPaths, pathsNonce, o
 
     const only = Array.from(types)[0];
     notify({
-      key: "ingestion-queued",
       title: t("ingestion.toasts.queuedTitle"),
       message: baseMessage,
       level: "success",
@@ -1007,7 +1004,14 @@ export default function FileIngestionDialog({ paths: initialPaths, pathsNonce, o
     if (["srt", "vtt", "ass", "ssa", "sub", "sup"].includes(ext)) return ext;
     return null;
   };
-  const buildTrailerUrl = (key: string) => trailerEmbedUrl(clientConfig.trailerSource, key);
+  const buildTrailerUrl = (key: string) => {
+    const source = clientConfig.trailerSource;
+    if (source.provider === "invidious" && source.validated && source.invidiousUrl.trim()) {
+      const base = source.invidiousUrl.trim().replace(/\/+$/, "");
+      return `${base}/embed/${key}`;
+    }
+    return `https://www.youtube.com/embed/${key}`;
+  };
 
   const pickPreferredTrailersByLanguage = (trailers: Trailer[]) => {
     const grouped = new Map<string, Trailer[]>();
@@ -2678,8 +2682,7 @@ export default function FileIngestionDialog({ paths: initialPaths, pathsNonce, o
             originalLanguage: details.originalLanguage ?? null,
             overview: details.overview ?? null,
             year: details.year ?? null,
-            // META-SRC-05: the metadata service sends no rating.
-            rating: null,
+            rating: details.rating ?? null,
             posterPath: details.posterPath ?? null,
             backdropPath: details.backdropPath ?? null,
             genres: details.genres ?? [],
@@ -3085,7 +3088,7 @@ export default function FileIngestionDialog({ paths: initialPaths, pathsNonce, o
         { message: err instanceof Error ? err.message : String(err) },
         "queueFailed",
       );
-      notifyError(t("ingestion.toasts.queueFailed"), undefined, { key: "ingestion-queue-failed" });
+      notify({ title: "Error", message: t("ingestion.toasts.queueFailed"), level: "error" });
     } finally {
       setAdding(false);
     }
@@ -3216,7 +3219,10 @@ export default function FileIngestionDialog({ paths: initialPaths, pathsNonce, o
                                   : `${fileCount} ${fileCount === 1 ? t("ingestion.ui.file") : t("ingestion.ui.files")}`}
                               </div>
                               <div className="mt-2 text-[11px] text-amber-300">
-                                {t("ingestion.ui.videoDecisionsPending", { count: unresolvedCount })}
+                                {t("ingestion.ui.videoDecisionsPending", {
+                                  count: unresolvedCount,
+                                  decisionLabel: unresolvedCount === 1 ? t("ingestion.ui.videoDecision") : t("ingestion.ui.videoDecisions"),
+                                })}
                               </div>
                             </div>
                             <div className="shrink-0 flex items-center gap-2">

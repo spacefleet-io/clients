@@ -201,31 +201,6 @@ describe("parrot library ops", () => {
     expect(picture()).toEqual({ large: "assets/p2", thumb: null, author: null, licence: null, url: null, tried: 300 });
   });
 
-  // @req PAR-META-31: a name the user typed survives an import's upsert (keepName), which still creates a missing
-  // artist under its tag name; "automatic photo" (clearPicture) empties the photo and its asked time, so the
-  // automatic pass asks again.
-  it("@req PAR-META-31 keeps a renamed artist's name through an import's upsert and clears the photo when asked", () => {
-    const db = openLibrary();
-    const row = () =>
-      db
-        .query<{ name: string; sortName: string; large: string | null; thumb: string | null; author: string | null; tried: number | null }, [string]>(
-          `SELECT name, sort_name AS sortName, picture_object_key AS large, picture_thumb_object_key AS thumb, picture_author AS author,
-                  picture_tried_at AS tried FROM artists WHERE id = ?`
-        )
-        .get(nook.artist.id);
-    apply(db, createParrotOp("artist.upsert", { ...nook.artist, keepName: true }, meta));
-    console.info("[parrot-ops] artist created by an import", row());
-    expect(row()?.name).toBe(nook.artist.name);
-    const credit = { author: "Jane Doe", licence: "CC BY-SA 4.0", licenceUrl: "https://creativecommons.org/licenses/by-sa/4.0" };
-    apply(db, createParrotOp("artist.upsert", { ...nook.artist, name: "Linnet Park (live)", sortName: "Linnet Park (live)", pictureObjectKey: "assets/p1", pictureThumbObjectKey: "assets/pt1", pictureCredit: credit, pictureTriedAt: 200 }, meta));
-    apply(db, createParrotOp("artist.upsert", { ...nook.artist, keepName: true }, meta));
-    console.info("[parrot-ops] renamed artist after an import's upsert", row());
-    expect(row()).toEqual({ name: "Linnet Park (live)", sortName: "Linnet Park (live)", large: "assets/p1", thumb: "assets/pt1", author: "Jane Doe", tried: 200 });
-    apply(db, createParrotOp("artist.upsert", { ...nook.artist, name: "Linnet Park (live)", sortName: "Linnet Park (live)", clearPicture: true }, meta));
-    console.info("[parrot-ops] artist after automatic photo", row());
-    expect(row()).toEqual({ name: "Linnet Park (live)", sortName: "Linnet Park (live)", large: null, thumb: null, author: null, tried: null });
-  });
-
   it("@req PAR-FMT-01 stores a song's original file as ordered whole-file chunks", () => {
     const db = openLibrary();
     seedNook(db);

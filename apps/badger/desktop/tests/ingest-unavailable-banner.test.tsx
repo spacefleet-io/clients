@@ -13,10 +13,9 @@
 //   - useRuntimeIngestJobs clears runtimeError when health probe succeeds
 import React, { useEffect } from "react";
 import { act } from "react";
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createRoot, type Root } from "react-dom/client";
 import IngestUnavailableBanner from "@/components/IngestUnavailableBanner";
-import { initI18n } from "@/i18n";
 import { useRuntimeIngestJobs } from "@/lib/runtimeIngestJobs";
 
 (globalThis as typeof globalThis & {
@@ -66,11 +65,6 @@ const dumpHookSnapshot = (
     console.error(`(snapshot failed: ${err instanceof Error ? err.message : String(err)})`);
   }
 };
-
-// The banner's title, code line and dismiss label come from the English locale.
-beforeAll(async () => {
-  await initI18n("en");
-});
 
 beforeEach(() => {
   console.info(`[ingest-unavailable-banner:setup] mounting root + enabling fake timers`);

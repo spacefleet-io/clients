@@ -1,4 +1,4 @@
-import { isSessionRejected } from "@space/shared/api";
+import { shouldClearSessionFromAuthError } from "@/authSession";
 
 export const shouldLogoutAfterAuthProbe = async (input: {
   probe: () => Promise<unknown>;
@@ -12,7 +12,7 @@ export const shouldLogoutAfterAuthProbe = async (input: {
       await input.probe();
       return false;
     } catch (error) {
-      if (!isSessionRejected(error)) {
+      if (!shouldClearSessionFromAuthError(error)) {
         return false;
       }
       if (attempt < attempts && delayMs > 0) {

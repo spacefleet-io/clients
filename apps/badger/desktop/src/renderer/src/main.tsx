@@ -6,9 +6,6 @@ import ReactDOM from "react-dom/client";
 import App from "./App";
 import { RenderBoundary } from "@space/ui/render-boundary";
 import mascotUrl from "./assets/mascot.webp";
-// The fleet's UI fonts, shared with Parrot (`@space/ui`). They load through Vite, not through styles.css:
-// @tailwindcss/postcss inlines a CSS @import without rebasing its relative url()s, so the font files would not ship.
-import "@space/ui/styles/fleet-fonts.css";
 import "./styles.css";
 import { applyTheme, getInitialTheme } from "./theme";
 import { hydrateSessionFromMain } from "./lib/sessionMirror";

@@ -26,7 +26,7 @@ import { getBadgerLibraryDbService, onKeySet } from "../src/modules";
 import { DESKTOP_HANDOFF_LIMITS } from "../src/core/desktopHandoff";
 
 // Same library stand-in as runtime-tool-access.test.ts: no SQLite needed.
-vi.mock("@space/library-db-runtime/libraryDb", () => {
+vi.mock("../../../packages/library-db-runtime/src/libraryDb", () => {
   const open = () => ({
     setSyncEnabled: () => undefined,
     getSnapshot: () => ({ media: [], playlists: [] }),

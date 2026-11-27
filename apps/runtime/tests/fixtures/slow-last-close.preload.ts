@@ -7,7 +7,7 @@
  * for 4.7–14.2 s while its listening socket stayed open.
  *
  * Patches both SQLite drivers the runtime may resolve (`node:sqlite` first,
- * then `bun:sqlite` — see packages/runtime-jobs-engine/src/sqliteStore.ts) so closing the last live
+ * then `bun:sqlite` — see core/jobs/sqliteStore.ts) so closing the last live
  * handle on a file whose path ends with SF_TEST_SLOW_CLOSE_SUFFIX busy-waits
  * SF_TEST_SLOW_CLOSE_MS first. A handle counts as live from its first
  * exec/query/prepare (every store runs a PRAGMA right after opening) until

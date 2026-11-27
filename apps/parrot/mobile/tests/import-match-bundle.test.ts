@@ -16,7 +16,7 @@ import { join } from "node:path";
 import { transformSync as untypedTransformSync } from "@babel/core";
 import { describe, expect, it } from "vitest";
 import type { MusicAlbum } from "@space/shared/api";
-import * as source from "@space/parrot-core/importMatch";
+import * as source from "../../../../packages/parrot-core/src/importMatch";
 
 const appRoot = join(__dirname, "..");
 const file = join(appRoot, "../../../packages/parrot-core/src/importMatch.ts");

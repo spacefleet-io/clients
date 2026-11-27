@@ -162,6 +162,7 @@ public class SbTitle : SbUnit
     public string? OriginalTitle { get; set; }
     public int? Year { get; set; }
     public string? Overview { get; set; }
+    public double? Rating { get; set; }
     public List<string> Genres { get; set; } = new();
     public string? AddedAt { get; set; }
     public string? PosterPath { get; set; }

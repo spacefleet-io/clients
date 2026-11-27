@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from "react-native";
+import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { useMobileShellTheme } from "../theme";
 import { TV_FOCUS_RING_WIDTH, TV_FOCUS_SCALE } from "./tv-focus";
 
@@ -14,8 +14,6 @@ export type MobileButtonFaceProps = {
   loading?: boolean;
   variant?: "primary" | "secondary" | "ghost" | "danger";
   testID?: string;
-  /** The screen's own placement, laid last (a button sized to its label in a row of them). */
-  style?: StyleProp<ViewStyle>;
   /** TV: the remote starts on this button when its screen or dialog opens (a dialog's safe action). */
   hasTVPreferredFocus?: boolean;
 };
@@ -32,7 +30,6 @@ export const MobileButtonFace = ({
   loading,
   variant = "primary",
   testID,
-  style,
   hasTVPreferredFocus,
 }: MobileButtonFaceProps) => {
   const theme = useMobileShellTheme();
@@ -84,7 +81,6 @@ export const MobileButtonFace = ({
         tv && styles.tvRing,
         tv && focused && { borderColor: theme.colors.text, transform: [{ scale: TV_FOCUS_SCALE }] },
         disabled && styles.disabled,
-        style,
       ]}
       onFocus={tv ? () => setFocused(true) : undefined}
       onBlur={tv ? () => setFocused(false) : undefined}

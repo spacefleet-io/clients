@@ -9,7 +9,6 @@ import {
 import { buildChunkMapFromFormat, buildHlsTrackFromChunkMap, type ChunkMap } from "@/lib/mpvPlaybackMaps";
 import {
   autoPlayAllowed,
-  createMpvPauseReports,
   isUserPause,
   markSentPauseSeen,
   shouldForceResumeExternalPlayback,
@@ -31,7 +30,6 @@ import { formatNowPlayingParts } from "@space/shared/nowPlaying";
 import { isOcrTwin } from "@space/shared/subtitleTwins";
 import { isRemovableSubtitleSource } from "@space/shared/subtitleFetch";
 import { useMpvSubtitleFetch } from "@/lib/useMpvSubtitleFetch";
-import { useMpvSkipEdit } from "@/lib/useMpvSkipEdit";
 import { getDecryptedAssetUrl, isAssetKey } from "@/lib/assets";
 import { getStoredLibraryKey } from "@/lib/onboarding";
 import { objectUrlToDataUrl, resolvePlaybackBackdrop } from "@/lib/playbackBackdrop";
@@ -42,7 +40,6 @@ import {
   missingPreviewsFor,
   sourcePreviewSheets,
   oscMenuPrompts,
-  oscSkipLabels,
   type ExternalPlaybackMetadataPayload,
 } from "@/lib/mpvExternalMetadata";
 import { createPreviewSheetsHandoff } from "@/lib/previewSheetsHandoff";
@@ -170,8 +167,6 @@ const mpvLog = rendererLogger.child({ scope: "mpv" });
 const mpvSubtitleLog = rendererLogger.child({ scope: "mpv-subtitle" });
 const subPipelineLog = rendererLogger.child({ scope: "sub-pipeline" });
 const abrLog = rendererLogger.child({ scope: "playback-abr" });
-/** UX-NOTICE-11: every automatic quality change (cap, decoder fallback, down- or upshift) is one notice that replaces itself. */
-export const ABR_SWITCH_NOTICE_KEY = "abr-switch";
 
 // ABR decision cadence: the high-frequency poll runs at 250ms for time-pos and
 // other UI state. The ABR decision only needs ~1 Hz — running it every cycle
@@ -222,7 +217,6 @@ export const useMpvPlaybackEngine = ({
   addSubtitleTrack,
   removeSubtitleTrack,
   getMediaObjectKeys,
-  skipEditLibrary,
   t,
 }: UsePlaybackEngineParams) => {
   const playerRef = useRef<HTMLCanvasElement | null>(null);
@@ -368,8 +362,6 @@ export const useMpvPlaybackEngine = ({
     phaseStore,
     deriveIsReadyToReveal,
   );
-  // MPV-PAUSE-01: mpv's pause reports, per mpv process (forgotten when the lifecycle goes idle below).
-  const [mpvPauseReports] = useState(createMpvPauseReports);
 
   // Synchronous lifecycle mirror — subscribe directly to the shared mpv
   // client so `lifecycleRef.current` reflects the latest cached state
@@ -394,12 +386,10 @@ export const useMpvPlaybackEngine = ({
         // `phase.lastLaunchedKey` in addition to resetting kind→idle.
         if (state.kind === "idle") {
           dispatchPhase({ type: "process_gone" });
-          // MPV-PAUSE-01: the next mpv starts with no pause report; its paused launch is not a user pause.
-          mpvPauseReports.processGone();
         }
       }
     });
-  }, [dispatchPhase, mpvClient, mpvPauseReports]);
+  }, [dispatchPhase, mpvClient]);
 
   // Tier-4 — feature-flagged observe_property snapshot cache. When the flag
   // is on, the 6 push-friendly properties (time-pos, duration, pause, mute,
@@ -836,14 +826,6 @@ export const useMpvPlaybackEngine = ({
     () => media.subtitleTracks.find((track) => track.id === selectedSubtitleId) ?? null,
     [media.subtitleTracks, selectedSubtitleId]
   );
-  useMpvSkipEdit({
-    open,
-    isExternalPlayer: () => mpvFlagsRef.current.externalPlayer,
-    media,
-    episodeId: episodeId ?? null,
-    library: skipEditLibrary,
-    sendExternalCommand,
-  });
   const { getMoreSubtitlesLabel, tryAnotherVersionLabel, addSubtitleFileLabel } = useMpvSubtitleFetch({
     open,
     isExternalPlayer: () => mpvFlagsRef.current.externalPlayer,
@@ -1065,7 +1047,6 @@ export const useMpvPlaybackEngine = ({
         audioOptions: [],
         subtitlesOffLabel: t("player.subtitlesOff"),
         menuPrompts: oscMenuPrompts(t),
-        skipLabels: oscSkipLabels(t),
         skipMarkers: [],
         title: nowPlaying.title,
         meta: nowPlaying.meta,
@@ -1183,8 +1164,6 @@ export const useMpvPlaybackEngine = ({
       tryAnotherVersionLabel: tryAnotherVersionLabelRef.current,
       addSubtitleFileLabel: addSubtitleFileLabelRef.current,
       menuPrompts: oscMenuPrompts(t),
-      skipLabels: oscSkipLabels(t),
-      skipMenu: episode != null,
       skipMarkers: currentSkipMarkers,
       title: nowPlaying.title,
       meta: nowPlaying.meta,
@@ -1421,11 +1400,13 @@ export const useMpvPlaybackEngine = ({
   // picture, Space) is caught from mpv's pause reports.
   const userPausedAtRef = useRef<number | null>(null);
   const playRequestedAtRef = useRef(0);
+  const lastReportedPauseRef = useRef<boolean | null>(null);
   // `eof`: mpv's `eof-reached` from the same read. keep-open's own pause at the
   // end of the file is not the user's (it would block the premature-EOF
   // recovery's play).
   const noteMpvPause = (next: unknown, eof: unknown) => {
-    const previous = mpvPauseReports.note(next);
+    const previous = lastReportedPauseRef.current;
+    if (typeof next === "boolean") lastReportedPauseRef.current = next;
     if (isUserPause({ previous, next, eof, lastSentPause: lastSentPauseRef.current, now: Date.now() })) {
       userPausedRef.current = true;
       userPausedAtRef.current = Date.now();
@@ -3989,7 +3970,6 @@ export const useMpvPlaybackEngine = ({
           if (target?.kind === "switch" && target.id !== capRequestedRef.current) {
             capRequestedRef.current = target.id;
             notify({
-              key: ABR_SWITCH_NOTICE_KEY,
               title: t("player.abrToastTitle"),
               message: t(cap === "480p" ? "player.capToast480p" : "player.capToast1080p"),
               level: "info",
@@ -4096,7 +4076,6 @@ export const useMpvPlaybackEngine = ({
             "abr force-quality insufficient",
           );
           notify({
-            key: "abr-insufficient",
             title: t("player.abrToastTitle"),
             message: t("player.abrInsufficient", {
               current: currentFmt.quality,
@@ -4125,15 +4104,13 @@ export const useMpvPlaybackEngine = ({
             },
             "abr device-too-weak",
           );
-          // UX-NOTICE-11: like every notice it leaves after its time (8 s idle with a button, UX-NOTICE-03) and stays in
-          // the bell; a repeat for the same file replaces it instead of piling up.
           const message = t("player.deviceTooWeak.message");
           notify({
-            key: `abr-too-weak:${currentFmt.id}`,
             title: t("player.abrToastTitle"),
             message: action.pinned ? `${message} ${t("player.deviceTooWeak.pinnedHint")}` : message,
             level: "warning",
             toastOptions: {
+              duration: Infinity,
               action: {
                 label: t("player.deviceTooWeak.keepWatching"),
                 onClick: () => abrLog.info({ current: currentFmt.quality }, "abr device-too-weak keep-watching"),
@@ -4177,7 +4154,6 @@ export const useMpvPlaybackEngine = ({
             "abr decode-fallback",
           );
           notify({
-            key: ABR_SWITCH_NOTICE_KEY,
             title: t("player.abrToastTitle"),
             message: t("player.abrDecodeFallback", { quality: targetQualityLabel }),
             level: "warning",
@@ -4198,7 +4174,6 @@ export const useMpvPlaybackEngine = ({
             "abr downshift",
           );
           notify({
-            key: ABR_SWITCH_NOTICE_KEY,
             title: t("player.abrToastTitle"),
             message: t("player.abrDownshift", {
               quality: targetQualityLabel,
@@ -4215,7 +4190,6 @@ export const useMpvPlaybackEngine = ({
           "abr upshift",
         );
         notify({
-          key: ABR_SWITCH_NOTICE_KEY,
           title: t("player.abrToastTitle"),
           message: t("player.abrUpshift", { quality: targetQualityLabel }),
           level: "info",

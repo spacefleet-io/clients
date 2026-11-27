@@ -14,7 +14,7 @@ import { publishOwnerSecret, type OwnerSecretFile } from "./core/ownerSecret";
 import { WS_CLOSE_SESSION_EXPIRED } from "./state";
 import { isValidWsServerFrame, parseWsClientFrame } from "./validation";
 import type { RuntimeEventFrame } from "./types";
-import { createEngineV2, type EngineV2 } from "@space/runtime-jobs-engine/engineV2";
+import { createEngineV2, type EngineV2 } from "./core/jobs/engineV2";
 import { getEffectiveCpuCount } from "@space/ffmpeg/hostCpu";
 import {
   assertNoRuntimeAlready,
@@ -23,18 +23,17 @@ import {
 import {
   createEventLog,
   type EventLog,
-} from "@space/runtime-jobs-engine/eventLog";
-import { createSqliteEventLogDeps } from "@space/runtime-jobs-engine/sqliteEventLogDeps";
+} from "./core/jobs/eventLog";
+import { createSqliteEventLogDeps } from "./core/jobs/sqliteEventLogDeps";
 import {
   createSqliteRuntimeJobsStore,
   type SqliteRuntimeJobsStore,
-} from "@space/runtime-jobs-engine/sqliteStore";
+} from "./core/jobs/sqliteStore";
 import {
   createRuntimeJobsV2Handler,
   type RuntimeJobsV2Handler,
 } from "./routes/runtimeJobsV2";
 import { registerBadgerStepHandlers } from "./modules/badger/steps";
-import { createBadgerFailedJobs } from "./modules/badger/failedJobs";
 import { getApiBaseUrl } from "@space/library-db-runtime";
 import {
   getBadgerSessionUserId,
@@ -157,14 +156,9 @@ if (isEngineV2Enabled()) {
     v2EventLogStore = createSqliteRuntimeJobsStore(v2DbPath);
     v2EventLog = createEventLog(createSqliteEventLogDeps(v2EventLogStore.db));
 
-    // UX-JOBS-03 / INGS-KEEP-01: the failed imports' actions, and the sweep of
-    // their kept processed copies (boot, then hourly).
-    const failedJobs = createBadgerFailedJobs({ engine: engineV2 });
-    failedJobs.startSweeper();
     v2Handler = createRuntimeJobsV2Handler({
       engine: engineV2,
       eventLog: v2EventLog,
-      failedJobs,
     });
     setRuntimeJobsV2Handler(v2Handler);
     setEngineV2BootStatus({ state: "ready" });

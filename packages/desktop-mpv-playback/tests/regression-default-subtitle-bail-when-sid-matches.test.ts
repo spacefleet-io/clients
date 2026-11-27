@@ -25,7 +25,7 @@
 
 import { describe, expect, it, vi } from "vitest";
 import type { MockInstance } from "vitest";
-import type { MpvTrack } from "@space/mpv-protocol/tests/track-list-corpus";
+import type { MpvTrack } from "./fixtures/track-list-corpus";
 
 // On assertion failure, dump the outcome + recorded mpv mock call args so the
 // bail-vs-apply decision is diagnosable offline. Body in try/catch so a dump

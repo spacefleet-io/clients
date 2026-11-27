@@ -135,7 +135,7 @@ describe("REL-CD-29 desktop: the build says its version", () => {
       { version: "0.0", packaged: true },
     ].map((input) => ({
       ...input,
-      identity: desktopClientIdentity({ app: "badger", ...input, os: "windows", env: {} }),
+      identity: desktopClientIdentity({ app: "badger", ...input, os: "win32", env: {} }),
     }));
     log(testId, "cases", cases);
     expect(cases.map((c) => c.identity)).toEqual([

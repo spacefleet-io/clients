@@ -96,9 +96,6 @@ type BunSinkLike = {
   end: () => unknown;
   flush?: () => Promise<number> | number | undefined;
 };
-/** How long a cancelled ffmpeg gets to exit on SIGTERM before it is SIGKILLed (Bun path; the node path SIGKILLs). */
-const FFMPEG_KILL_GRACE_MS = 750;
-
 type BunSpawnLike = {
   spawn: (
     command: string[],
@@ -489,19 +486,6 @@ const spawnCommand = async (
       kill: () => {
         gate.resumeNow();
         proc.kill();
-        // MPV-PREV-07 (imports always first): SIGTERM lets ffmpeg tear down at its own pace (a hardware decoder took
-        // seconds); a cancel must free the machine within about a second, so the kill escalates.
-        const escalate = setTimeout(() => {
-          try {
-            proc.kill("SIGKILL");
-          } catch {
-            // Already gone.
-          }
-        }, FFMPEG_KILL_GRACE_MS);
-        void proc.exited.then(
-          () => clearTimeout(escalate),
-          () => clearTimeout(escalate)
-        );
       },
       pid: proc.pid,
       gate,

@@ -14,8 +14,8 @@ import {
   stageDirFor,
   unpackedResourcesDir,
 } from "../scripts/package-targets.mjs";
-import { LINUX_FORMATS, LINUX_TOOL_PACKAGES, missingLinuxPackageTools } from "@space/desktop-platform-linux/packaging/linux-packages";
-import { SIGNED_WINDOWS_ENV } from "@space/desktop-platform-windows/packaging/signedWindowsEnv";
+import { LINUX_FORMATS, LINUX_TOOL_PACKAGES, missingLinuxPackageTools } from "../../../../packages/desktop-platform-linux/packaging/linux-packages.mjs";
+import { SIGNED_WINDOWS_ENV } from "../../../../packages/desktop-platform-windows/packaging/signedWindowsEnv";
 
 type Builder = {
   appId: string;

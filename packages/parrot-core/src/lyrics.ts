@@ -10,11 +10,10 @@ export type ParrotLyricLine = { ms: number; text: string };
 /**
  * What the Lyrics tab draws: synced lines when the song has them (shown over plain ones), else plain text, else nothing.
  * `fetched`: the words came from our lyrics library (PAR-LYR-05), not from the song's own file (PAR-LYR-01).
- * `own`: the user gave these words themselves (PAR-LYR-08): they win over every found source and can be removed.
  * `notFound`: no words, and the lookup already looked everywhere for them (PAR-LYR-04's final "No lyrics").
  * `searching`: no words yet, and a lookup for the song is queued or running (PAR-LYR-06): never "No lyrics" meanwhile.
  */
-export type ParrotLyrics = { synced: ParrotLyricLine[] | null; plain: string | null; fetched: boolean; own?: true; notFound?: true; searching?: true };
+export type ParrotLyrics = { synced: ParrotLyricLine[] | null; plain: string | null; fetched: boolean; notFound?: true; searching?: true };
 
 /** What the Lyrics tab draws for a song with no words whose lookup is queued or running (PAR-LYR-06). */
 export const PARROT_LYRICS_SEARCHING: ParrotLyrics = { synced: null, plain: null, fetched: false, searching: true };
@@ -35,9 +34,6 @@ export const PARROT_LYRICS_NOT_FOUND = "none";
 
 /** The `source` of a row holding words the lyrics lookup found (META-SRC-09: never the name of where they came from). */
 export const PARROT_LYRICS_FETCHED = "fetched";
-
-/** The `source` of a row holding words the user gave themselves (PAR-LYR-08): a lookup never replaces it. */
-export const PARROT_LYRICS_USER = "user";
 
 /** The lyrics of one song (parameter: track id); zero or one row. */
 export const TRACK_LYRICS_SQL = "SELECT synced, plain, source FROM lyrics WHERE track_id = ?";
@@ -100,10 +96,7 @@ export const toParrotLyrics = (row: ParrotLyricsRow | null | undefined): ParrotL
   if (!row) return null;
   const synced = row.synced ? parseLrc(row.synced) : null;
   const plain = row.plain?.trim() ? row.plain.trim() : null;
-  if (synced || plain) {
-    if (row.source === PARROT_LYRICS_USER) return { synced, plain, fetched: false, own: true };
-    return { synced, plain, fetched: (row.source ?? "file") !== "file" };
-  }
+  if (synced || plain) return { synced, plain, fetched: (row.source ?? "file") !== "file" };
   return row.source === PARROT_LYRICS_NOT_FOUND ? { synced: null, plain: null, fetched: true, notFound: true } : null;
 };
 

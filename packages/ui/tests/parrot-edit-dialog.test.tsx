@@ -60,8 +60,6 @@ const lyricsLabels: ParrotEditLyricsLabels = {
   lyricsFailed: (reason) => `Couldn't look for lyrics: ${reason}`,
   albumLyrics: (found, count) => `${found} of ${count} songs have lyrics`,
   albumLyricsSearch: "Look for the missing ones",
-  lyricsAdd: "Add lyrics",
-  lyricsEdit: "Edit lyrics",
 };
 const suggestLabels: ParrotEditSuggestLabels = {
   fits: "Fits this song",
@@ -392,21 +390,6 @@ describe("[parrot] edit panel lyrics", () => {
     await act(async () => root!.unmount());
     get = await open({ kind: "album", lyrics: { kind: "album", state: { status: "counted", found: 12, count: 12, missing: 0 }, onSearchMissing } });
     expect(get("manage-lyrics-search")).toBeNull();
-  });
-
-  it("@req PAR-LYR-10 a song offers Add lyrics when it has none and Edit lyrics when it has some, never while loading", async () => {
-    const onEditOwn = vi.fn();
-    let get = await open({ lyrics: { kind: "track", state: { status: "none" }, onSearchAgain: () => {}, onEditOwn } });
-    console.info(T, "own lyrics: none", get("manage-lyrics-edit")?.textContent);
-    expect(get("manage-lyrics-edit")?.textContent).toContain("Add lyrics");
-    await act(async () => get("manage-lyrics-edit")!.click());
-    expect(onEditOwn).toHaveBeenCalledTimes(1);
-    await act(async () => root!.unmount());
-    get = await open({ lyrics: { kind: "track", state: { status: "found", synced: false, preview: ["Words"] }, onSearchAgain: () => {}, onEditOwn } });
-    expect(get("manage-lyrics-edit")?.textContent).toContain("Edit lyrics");
-    await act(async () => root!.unmount());
-    get = await open({ lyrics: { kind: "track", state: { status: "loading" }, onSearchAgain: () => {}, onEditOwn } });
-    expect(get("manage-lyrics-edit")).toBeNull();
   });
 });
 

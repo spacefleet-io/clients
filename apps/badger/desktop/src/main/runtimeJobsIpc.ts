@@ -1,9 +1,4 @@
-import type { RuntimeJobLike } from "./hiddenRuntimeJobs";
-import { dialog, ipcMain } from "electron";
-import type {
-  RuntimeJobsAvailabilityResult,
-  RuntimeJobsRetryResult,
-} from "@space/runtime-contracts/runtime/jobs";
+import { ipcMain } from "electron";
 import { createRuntimeSession, type RuntimeSessionHandle } from "@space/runtime-client/session";
 import { createRuntimeCommandClient } from "@space/runtime-client/command";
 import {
@@ -29,8 +24,6 @@ import {
   type BadgerExportSubmitPayload,
 } from "@space/runtime-contracts/badger/export";
 import { isPickedExportFolder } from "./fileSystem";
-import { mainUiStrings } from "./uiStrings";
-import { VIDEO_EXTENSIONS } from "../shared/importableMedia";
 import { applyFallbackCopyToFormats } from "../shared/transcodeDefault";
 import { scopeLogger } from "./logger";
 import { runtimeOwnerSecretProvider } from "./runtimeOwnerSecret";
@@ -186,20 +179,6 @@ export const setRuntimeJobsBackendToken = (token: string | null | undefined) => 
  */
 export const getRuntimeJobsBackendToken = (): string | null => backendToken;
 
-/** UX-NOTICE-06: the runtime's jobs for main's hidden-window watch; null when signed out or the runtime is down. */
-export const listRuntimeJobsForMain = async (): Promise<RuntimeJobLike[] | null> => {
-  if (!backendToken) return null;
-  try {
-    const snap = (await httpFetch("/runtime/jobs/v2/list", { method: "POST", body: JSON.stringify({ filter: {} }) })) as {
-      jobs?: RuntimeJobLike[];
-    } | null;
-    return Array.isArray(snap?.jobs) ? snap.jobs : null;
-  } catch (err) {
-    log.debug({ error: String(err) }, "hidden_watch_list_failed");
-    return null;
-  }
-};
-
 export const registerRuntimeJobsIpc = (config: {
   runtimeBaseUrl: string;
   /** This computer's "fallback 360p copy" value (main/deviceSettings.ts). */
@@ -257,51 +236,13 @@ export const registerRuntimeJobsIpc = (config: {
     }
   );
 
-  // UX-JOBS-03: "Upload again" / "Process again". The renderer never sends a file path here: a moved
-  // source is only re-pointed through `sf-runtime-jobs-find-file`, where main owns the picker.
   ipcMain.handle(
     "sf-runtime-jobs-retry",
-    async (_event, payload: { jobId: string; mode?: "upload" | "process" }) => {
-      const body = { jobId: payload.jobId, ...(payload.mode ? { mode: payload.mode } : {}) };
-      log.info(body, "runtime_jobs_retry_requested");
+    async (_event, payload: { jobId: string }) => {
       return httpFetch("/runtime/jobs/v2/retry", {
         method: "POST",
-        body: JSON.stringify(body),
+        body: JSON.stringify(payload),
       });
-    }
-  );
-
-  // UX-JOBS-03: which single action each failed job offers, from what is still on disk.
-  ipcMain.handle(
-    "sf-runtime-jobs-availability",
-    async (_event, payload: { jobIds: string[] }) => {
-      return httpFetch("/runtime/jobs/v2/availability", {
-        method: "POST",
-        body: JSON.stringify({ jobIds: payload.jobIds }),
-      }) as Promise<RuntimeJobsAvailabilityResult>;
-    }
-  );
-
-  // UX-JOBS-03 "Find the file": the source moved. The user picks it again; the runtime checks the
-  // picked file is the same video (size + sampled hash) before processing it again from there.
-  ipcMain.handle(
-    "sf-runtime-jobs-find-file",
-    async (_event, payload: { jobId: string }): Promise<RuntimeJobsRetryResult | { cancelled: true }> => {
-      const videoExtensions = Array.from(VIDEO_EXTENSIONS).map((e) => e.replace(".", ""));
-      const picked = await dialog.showOpenDialog({
-        properties: ["openFile"],
-        filters: [{ name: mainUiStrings().filterVideos, extensions: videoExtensions }],
-      });
-      const [path] = picked.filePaths;
-      if (picked.canceled || !path) {
-        log.info({ jobId: payload.jobId }, "runtime_jobs_find_file_cancelled");
-        return { cancelled: true };
-      }
-      log.info({ jobId: payload.jobId, path }, "runtime_jobs_find_file_picked");
-      return httpFetch("/runtime/jobs/v2/retry", {
-        method: "POST",
-        body: JSON.stringify({ jobId: payload.jobId, mode: "relocate", path }),
-      }) as Promise<RuntimeJobsRetryResult>;
     }
   );
 

@@ -20,7 +20,7 @@ import { runFfmpeg } from "@space/ffmpeg";
 import { buildExportPath } from "@space/shared/exportLayout";
 import { placeExportFile } from "@space/shared/exportPlacement";
 import { HELD_SATURATED_STAGE_CODE, SLOWED_HIGH_TRAFFIC_STAGE_CODE } from "@space/shared/storageTrafficStage";
-import type { StepHandler, StepHandlerCtx } from "@space/runtime-jobs-engine/engineV2";
+import type { StepHandler, StepHandlerCtx } from "../../../core/jobs/engineV2";
 import { getBadgerOfflineDeps, type BadgerOfflineDeps } from "../offlineDownloadDeps";
 import {
   HELD_SATURATED_STAGE_LABEL,

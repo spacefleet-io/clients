@@ -1,1 +1,1 @@
-export * from "@space/ingest-core/labQueueShared";
+export * from "../../../../../packages/ingest-core/src/labQueueShared";

@@ -2,15 +2,13 @@
 /**
  * Parrot desktop's "Send feedback" (UX-SUP-05) matches Badger: an "Attach the app's error log" tick, unticked by
  * default, and the log goes along only when ticked, scrubbed (REL-LOG-06) and clamped to the API's 200 KiB.
- * Main's sender runs with the real shared error log; only the API call is recorded. The form is the shared desktop
- * form (`@space/desktop-shell`, REL-FAM-05) wired as Parrot wires it, with `window.parrot` mocked; its five languages
- * are tested in the package (`packages/desktop-shell/tests/desktop-feedback.test.tsx`).
+ * Main's sender runs with the real shared error log; only the API call is recorded. The form is the real component
+ * with `window.parrot` mocked.
  */
 import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createErrorLog } from "@space/error-report/error-log";
-import { FEEDBACK_LOG_MAX_BYTES } from "@space/shared/feedback";
+import { createErrorLog, FEEDBACK_LOG_MAX_BYTES } from "@space/error-report/error-log";
 import type { FeedbackInput } from "@space/shared/api";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -22,11 +20,13 @@ vi.mock("@space/ui", () => ({
     const { size: _size, variant: _variant, ...rest } = props;
     return <button {...rest}>{children}</button>;
   },
+  Input: (props: React.InputHTMLAttributes<HTMLInputElement>) => <input {...props} />,
   Spinner: () => <span />,
 }));
 
 import { createDesktopFeedbackSender } from "@space/error-report/desktop-feedback";
-import { DesktopFeedbackDialog } from "@space/desktop-shell/components";
+import { Feedback } from "../src/renderer/src/Library";
+import { translator } from "../src/renderer/src/i18n";
 
 const SECRET_EMAIL = "alice.secret@example.com";
 const SECRET_PATH = "/home/alice/Music/Private Album/03 Hidden Track.flac";
@@ -175,8 +175,8 @@ describe("@req UX-SUP-05[parrot] the feedback form's attach-log tick", () => {
   });
 
   const typeMessage = (text: string) => {
-    const input = container.querySelector<HTMLTextAreaElement>('[data-testid="feedback-message"]')!;
-    const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")!.set!;
+    const input = container.querySelector<HTMLInputElement>("input:not([type=checkbox])")!;
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!;
     act(() => {
       setter.call(input, text);
       input.dispatchEvent(new Event("input", { bubbles: true }));
@@ -188,9 +188,7 @@ describe("@req UX-SUP-05[parrot] the feedback form's attach-log tick", () => {
   };
 
   it("is unticked by default and sends attachLog=false; ticking it sends attachLog=true", async () => {
-    act(() =>
-      root.render(<DesktopFeedbackDialog language="en" send={(input) => window.parrot.sendFeedback(input)} onClose={() => undefined} />),
-    );
+    act(() => root.render(<Feedback t={translator("en")} onClose={() => undefined} />));
     const tick = container.querySelector<HTMLInputElement>('[data-testid="feedback-attach-log"]')!;
     console.info(`${SUITE} form text: ${container.textContent}`);
     expect(tick.checked).toBe(false);
@@ -206,5 +204,14 @@ describe("@req UX-SUP-05[parrot] the feedback form's attach-log tick", () => {
     typeMessage("second");
     await clickSend();
     expect(calls.at(-1)).toEqual({ message: "second", attachLog: true });
+  });
+
+  it("every language has the tick and its hint", () => {
+    for (const language of ["en", "fr", "nl", "de", "es"] as const) {
+      const t = translator(language);
+      console.info(`${SUITE} ${language}: ${t("feedback.attachLog")} / ${t("feedback.attachLogHint")}`);
+      expect(t("feedback.attachLog")).not.toBe("feedback.attachLog");
+      expect(t("feedback.attachLogHint")).not.toBe("feedback.attachLogHint");
+    }
   });
 });

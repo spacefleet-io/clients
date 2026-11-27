@@ -48,8 +48,6 @@ vi.mock("react-native-safe-area-context", () => ({ SafeAreaView: ({ children }: 
 vi.mock("@space/mobile-shell/i18n", () => ({ useTranslation: () => ({ t: (key: string) => key, i18n: { language: "en" } }) }));
 // The step stand-in renders nothing, so the warning is read from the `overlay` element Parrot hands it.
 vi.mock("@space/mobile-shell/key-saved-warning", () => ({ MobileKeySavedWarning: () => null }));
-vi.mock("@space/mobile-shell/unpaid-setup-step", () => ({ MobileUnpaidSetupStep: () => null }));
-vi.mock("@space/mobile-shell/key-load-failed-step", () => ({ MobileKeyLoadFailedStep: () => null }));
 vi.mock("@space/mobile-shell/mascot-loader", () => ({ MobileMascotLoader: () => null }));
 vi.mock("../src/brand", () => ({ PARROT_MASCOT: 1 }));
 vi.mock("@space/mobile-shell/logger", () => ({ scopeLogger: () => ({ info: () => undefined, warn: () => undefined }) }));

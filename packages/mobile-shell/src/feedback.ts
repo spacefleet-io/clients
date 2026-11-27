@@ -8,7 +8,9 @@
 import { clampLog } from "@space/error-report/error-log";
 import { ApiError, type FeedbackInput } from "@space/shared/api";
 import { recentFailedRequestIds } from "@space/shared/apiFailure";
-import { FEEDBACK_MESSAGE_MAX } from "@space/shared/feedback";
+
+/** The API's limits (feedback route). */
+export const FEEDBACK_MESSAGE_MAX = 4000;
 
 export type FeedbackDevice = {
   app: FeedbackInput["app"];

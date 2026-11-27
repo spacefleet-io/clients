@@ -60,8 +60,7 @@ vi.mock("@space/ui", async (importOriginal) => ({
   ImportReviewSummary: (props: React.HTMLAttributes<HTMLDivElement>) => <div {...props} />,
   ImportReviewActions: (props: React.HTMLAttributes<HTMLDivElement>) => <div {...props} />,
   Input: (props: React.InputHTMLAttributes<HTMLInputElement>) => <input {...props} />,
-  // The failure path goes through notifyError → toast.error (UX-NOTICE-11 keyed notice).
-  toast: Object.assign(vi.fn(), { success: vi.fn(), info: vi.fn(), warning: vi.fn(), error: vi.fn(), dismiss: vi.fn() }),
+  toast: vi.fn(),
 }));
 
 vi.mock("react-i18next", () => ({

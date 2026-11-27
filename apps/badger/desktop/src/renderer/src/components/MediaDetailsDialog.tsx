@@ -1,8 +1,8 @@
+import { formatRating } from "@/lib/localeFormat";
 import { Suspense, lazy, startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useMediaDetailHistory } from "@/lib/mediaDetailHistory";
 import { useAuth } from "@/auth";
-import { SkipLeftOutChip, SkipLeftOutRetryAll, SkipTimesChips, SkipTimesMenu, type SkipTimesLibrary } from "@/components/SkipTimesEditor";
 import { deleteStorageObjects } from "@/api";
 import { extractAssetObjectKey } from "@/lib/assets";
 import { findMediaPlacementId } from "@space/shared/mediaPlacement";
@@ -15,7 +15,6 @@ import { useLibraryOnline } from "@/lib/useLibraryOnline";
 import { subtitleFormatFromName, subtitleLanguageFromName } from "@space/shared/libraryTypes";
 import { crewLines } from "@space/shared/libraryCrew";
 import { loadClientConfig } from "@/lib/config";
-import { trailerEmbedUrl } from "@/lib/trailers";
 import { isClientUiLanguage } from "@space/shared";
 import { getTitleTrailersForLanguages, trailerOriginalLanguage } from "@/lib/metadata";
 import { useLocalizedOverview } from "@/lib/useLocalizedOverview";
@@ -125,7 +124,15 @@ const replanErrorLabel = (
     ? t(`library.qualities.errors.${code}`)
     : code ?? t("library.qualities.errors.media-not-found");
 
-const buildTrailerUrl = (key: string) => trailerEmbedUrl(loadClientConfig().trailerSource, key);
+const buildTrailerUrl = (key: string) => {
+  const config = loadClientConfig();
+  const source = config.trailerSource;
+  if (source.provider === "invidious" && source.validated && source.invidiousUrl.trim()) {
+    const base = source.invidiousUrl.trim().replace(/\/+$/, "");
+    return `${base}/embed/${key}`;
+  }
+  return `https://www.youtube.com/embed/${key}`;
+};
 
 const trailerLanguageLabel = (lang: string, t: (key: string) => string) => {
   if (lang === "fr") return t("library.trailerLanguage.fr");
@@ -195,6 +202,7 @@ type MediaEditDraft = {
   originalLanguage: string;
   overview: string;
   year: string;
+  rating: string;
   genres: number[];
   poster: ImageDraft;
   backdrop: ImageDraft;
@@ -241,9 +249,6 @@ export default function MediaDetailsDialog({ selectedId, onClose }: MediaDetails
     updateSubtitleTrack,
     setDefaultAudioTrack,
     setDefaultSubtitleTrack,
-    listSkipAnalysis,
-    upsertSkipAnalysis,
-    replaceSkipMarkers,
   } = useLibraryActions();
   const { showLoading, hideLoading } = useLoadingModal();
   const detailsLoadingRef = useRef<string | null>(null);
@@ -390,6 +395,7 @@ export default function MediaDetailsDialog({ selectedId, onClose }: MediaDetails
     originalLanguage: details.originalLanguage ?? "",
     overview: details.overview ?? "",
     year: details.year ?? "",
+    rating: details.rating !== null && details.rating !== undefined ? String(details.rating) : "",
     genres: Array.isArray(details.genres) ? details.genres : [],
     poster: toImageDraft(details.posterPath),
     backdrop: toImageDraft(details.backdropPath),
@@ -432,20 +438,6 @@ export default function MediaDetailsDialog({ selectedId, onClose }: MediaDetails
       return;
     }
     setSelectedDetails(getMediaDetails(selectedId));
-  };
-
-  // PLAY-SKIP-09: the episode rows' times panel writes like the player's; the show reloads from the library after.
-  const skipTimesLibrary: SkipTimesLibrary = {
-    listSkipAnalysis,
-    upsertSkipAnalysis,
-    replaceSkipMarkers,
-    onChanged: () => {
-      const mediaId = selectedId;
-      if (!mediaId) return;
-      void fetchMediaDetails(mediaId).then((details) => {
-        if (details) setSelectedDetails((current) => (current?.id === mediaId ? details : current));
-      });
-    },
   };
 
   // Fetch media details when dialog opens (selectedId changes).
@@ -1069,6 +1061,9 @@ export default function MediaDetailsDialog({ selectedId, onClose }: MediaDetails
         }))
       );
 
+      const ratingValue = draft.rating.trim();
+      const rating = ratingValue ? Number(ratingValue) : null;
+
       await updateMediaMetadata({
         mediaId: selectedDetails.id,
         media: {
@@ -1077,6 +1072,7 @@ export default function MediaDetailsDialog({ selectedId, onClose }: MediaDetails
           originalLanguage: draft.originalLanguage.trim() || null,
           overview: draft.overview.trim() || null,
           year: draft.year.trim() || null,
+          rating: Number.isFinite(rating) ? rating : null,
           posterPath,
           backdropPath,
           genres: Array.isArray(draft.genres) ? draft.genres : [],
@@ -1890,8 +1886,9 @@ export default function MediaDetailsDialog({ selectedId, onClose }: MediaDetails
             );
           })()}
           meta={(() => {
-            // META-SRC-05: the year only, never a rating.
-            const base = selectedDetails.year ?? "";
+            const base = [selectedDetails.year ?? null, selectedDetails.rating ? formatRating(selectedDetails.rating) : null]
+              .filter(Boolean)
+              .join(" · ");
             // PLAY-OPEN-04: a film with two or more editions shows each edition's length next to its name.
             const editions = selectedDetails.type === "movie" ? listEditions(selectedDetails, null) : [];
             if (editions.length < 2) return base;
@@ -2180,6 +2177,17 @@ export default function MediaDetailsDialog({ selectedId, onClose }: MediaDetails
                       <div className="space-y-2">
                         <Label>{t("library.edit.fields.year")}</Label>
                         <Input value={draft.year} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDraft({ ...draft, year: e.target.value })} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>{t("library.edit.fields.rating")}</Label>
+                        <Input
+                          type="number"
+                          min="0"
+                          max="10"
+                          step="0.1"
+                          value={draft.rating}
+                          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDraft({ ...draft, rating: e.target.value })}
+                        />
                       </div>
                       <div className="md:col-span-2">
                         <BadgerMultiSelect
@@ -2516,7 +2524,6 @@ export default function MediaDetailsDialog({ selectedId, onClose }: MediaDetails
                                 : t("library.episodes.empty")
                             }
                           >
-                            <SkipLeftOutRetryAll media={selectedDetails} />
                             {selectedDetails.episodes
                                   .filter((ep) => ep.seasonNumber === selectedSeason)
                                   .map((episode) => {
@@ -2580,8 +2587,6 @@ export default function MediaDetailsDialog({ selectedId, onClose }: MediaDetails
                                                     {t("library.labels.subtitles")} {subtitleCount}
                                                   </span>
                                                 ) : null}
-                                                {selectedDetails ? <SkipTimesChips media={selectedDetails} episodeId={episode.id} /> : null}
-                                                {selectedDetails ? <SkipLeftOutChip media={selectedDetails} episodeId={episode.id} /> : null}
                                           </>
                                         }
                                         chips={
@@ -2753,22 +2758,6 @@ export default function MediaDetailsDialog({ selectedId, onClose }: MediaDetails
                                                     </div>
                                                   );
                                                 })()}
-                                                {selectedDetails ? (
-                                                  <SkipTimesMenu
-                                                    media={selectedDetails}
-                                                    episodeId={episode.id}
-                                                    episodeLine={t("library.skipTimes.episodeLine", {
-                                                      show: selectedDetails.title,
-                                                      season: episode.seasonNumber,
-                                                      episode: episode.episodeNumber,
-                                                      title:
-                                                        localizedEpisodes.get(`${episode.seasonNumber}:${episode.episodeNumber}`)?.name ??
-                                                        episode.name,
-                                                    })}
-                                                    library={skipTimesLibrary}
-                                                    playbackToken={token ?? null}
-                                                  />
-                                                ) : null}
                                               </>
                                             ) : null
                                         }

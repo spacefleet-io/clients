@@ -58,7 +58,7 @@ export type ParrotCoverFrameLabels = {
  * the rest dimmed. Dragging inside the square moves it, dragging a corner resizes it (the opposite corner stays); the
  * arrow keys move it too. The preview shows what the album gets. The framing is kept in shares of the picture; a
  * square left at the centre is answered as no crop. Test ids start with `testId` (`-square`, `-corner-nw`, `-size`,
- * `-centre`, `-cancel`, `-use`). `round` frames an artist photo (PAR-META-31): the same square is kept, shown round.
+ * `-centre`, `-cancel`, `-use`).
  *
  * A dialog of its own, nested in the one that opens it: Radix keeps the pointer, focus and Escape on the top one (a
  * plain overlay outside an open dialog gets no pointer events).
@@ -69,7 +69,6 @@ export function ParrotCoverFrameDialog({
   size: ownSize,
   crop,
   testId,
-  round = false,
   onCancel,
   onUse,
 }: {
@@ -79,7 +78,6 @@ export function ParrotCoverFrameDialog({
   size?: { width: number; height: number } | null;
   crop: ParrotCoverCrop | null;
   testId: string;
-  round?: boolean;
   onCancel: () => void;
   onUse: (crop: ParrotCoverCrop | null) => void;
 }) {
@@ -157,7 +155,7 @@ export function ParrotCoverFrameDialog({
                 tabIndex={0}
                 aria-label={labels.title}
                 aria-valuetext={labels.size({ width: size.width, height: size.height, side: square.side })}
-                className={`absolute cursor-move border-2 border-white shadow-[0_0_0_9999px_rgba(0,0,0,0.6)] outline-none focus-visible:ring-2 focus-visible:ring-ring ${round ? "rounded-full" : ""}`}
+                className="absolute cursor-move border-2 border-white shadow-[0_0_0_9999px_rgba(0,0,0,0.6)] outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 style={{ left: pct(square.x, size.width), top: pct(square.y, size.height), width: pct(square.side, size.width), height: pct(square.side, size.height) }}
                 onPointerDown={grab("move")}
                 onPointerMove={follow}
@@ -191,7 +189,7 @@ export function ParrotCoverFrameDialog({
           )}
           <div className="w-36 shrink-0 space-y-2">
             <div className="text-xs text-muted-foreground">{labels.preview}</div>
-            <ParrotFramedCover src={src} crop={framed} className={`aspect-square w-full shadow-lg ${round ? "rounded-full" : "rounded-lg"}`} />
+            <ParrotFramedCover src={src} crop={framed} className="aspect-square w-full rounded-lg shadow-lg" />
             {size && square ? (
               <div className="text-[11px] text-muted-foreground" data-testid={`${testId}-size`}>
                 {labels.size({ width: size.width, height: size.height, side: square.side })}

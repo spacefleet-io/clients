@@ -236,8 +236,6 @@ describe("UpdateAvailableModal (Part E4)", async () => {
     manualCommand: null,
     failure: null,
     failureDetail: null,
-    remindLater: null,
-    ignoredVersion: null,
   };
 
   it("does not render when open=false", () => {
@@ -421,8 +419,6 @@ describe("server-mandatory update (Part E1/E4) — app-level gate, library gate 
     install: vi.fn(),
     runFullUpdate: vi.fn(async () => {}),
     reset: vi.fn(),
-    remindLater: vi.fn(async () => {}),
-    ignoreVersion: vi.fn(async () => {}),
   };
 
   beforeEach(() => {
@@ -505,7 +501,7 @@ describe("server-mandatory update (Part E1/E4) — app-level gate, library gate 
     expect(install).toHaveBeenCalledTimes(1);
   });
 
-  it("@req REL-UPD-01 the gate no longer pushes the auto-update setting (usePushStoredAutoUpdate does)", () => {
+  it("@req REL-UPD-01 the gate no longer pushes the auto-update setting (UpdateReadyNotice does)", () => {
     const setAutoUpdate = vi.fn(async () => undefined);
     vi.stubGlobal("spaceBadger", { updater: { setAutoUpdate } });
     mockUseUpdater.mockReturnValue({ ...baseUpdaterReturn });

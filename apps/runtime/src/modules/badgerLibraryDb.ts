@@ -6,16 +6,15 @@
  * commands for writes and receives snapshot pushes via WebSocket for reads.
  */
 import { AsyncLocalStorage } from "node:async_hooks";
-import { retry } from "@space/shared/retry";
 import type {
   BadgerIngestSkipMarker,
   BadgerIngestShowSkipCache,
 } from "@space/runtime-contracts/badger/ingest";
-import type { LibraryMeta } from "@space/library-db-runtime/api";
-import type { LibraryAccount } from "@space/library-db-runtime/libraryAccount";
+import type { LibraryMeta } from "../../../../packages/library-db-runtime/src/api";
+import type { LibraryAccount } from "../../../../packages/library-db-runtime/src/libraryAccount";
 // Lazy import to avoid pulling bun:sqlite at module load time
 // (vitest can't resolve bun: protocol, but this is only called at runtime)
-type LibraryDb = import("@space/library-db-runtime/libraryDb").LibraryDb;
+type LibraryDb = import("../../../../packages/library-db-runtime/src/libraryDb").LibraryDb;
 type LibrarySnapshot = import("@space/shared/libraryTypes").LibrarySnapshot;
 
 /**
@@ -28,7 +27,7 @@ type LibrarySnapshot = import("@space/shared/libraryTypes").LibrarySnapshot;
 const EXTERNAL_SKIP_MARKER_SHOW_KIND = "external-skip-markers-show-v2";
 
 const getLibraryDbClass = async () => {
-  const mod = await import("@space/library-db-runtime/libraryDb");
+  const mod = await import("../../../../packages/library-db-runtime/src/libraryDb");
   return mod.LibraryDb;
 };
 
@@ -72,8 +71,6 @@ const READ_ONLY_METHODS: Record<string, true> = {
   listViewingProfileIds: true,
   listSubtitleOcrCandidates: true,
   listPreviewSheetCandidates: true,
-  countPreviewSheetVideos: true,
-  listSkipCatchUpVideos: true,
   listArtworkToCopy: true,
   listMediaWithArtworkToCopy: true,
   listMediaWithCollapsedCast: true,
@@ -536,54 +533,47 @@ export class BadgerLibraryDbService {
   // tla: LibrarySync/SyncApply
   private async runRemoteSync(request: SyncRequest): Promise<boolean> {
     let meta = request.meta;
-    const outcome = await retry(
-      async (attempt) => {
-        // An open/close queued ahead of this sync decides which instance it
-        // talks to; wait for it as the pre-split (fully gated) sync did,
-        // instead of failing LIBRARY_DB_NOT_OPEN mid-reopen.
-        if (this.lifecycleDepth > 0) {
-          await this.runExclusive("syncFromRemoteIfNewer:await-lifecycle", "call", async () => undefined);
+    for (let attempt = 1; attempt <= SYNC_PREPARE_ATTEMPTS; attempt += 1) {
+      // An open/close queued ahead of this sync decides which instance it
+      // talks to; wait for it as the pre-split (fully gated) sync did,
+      // instead of failing LIBRARY_DB_NOT_OPEN mid-reopen.
+      if (this.lifecycleDepth > 0) {
+        await this.runExclusive("syncFromRemoteIfNewer:await-lifecycle", "call", async () => undefined);
+      }
+      const db = this.db;
+      if (!db) throw new Error("LIBRARY_DB_NOT_OPEN");
+      const prepareStartedAt = performance.now();
+      const prepared = await db.prepareRemoteSync(meta);
+      const prepareMs = performance.now() - prepareStartedAt;
+      if (prepareMs >= GATE_SLOW_LOG_MS) {
+        console.warn(
+          `[badger-library-db] sync prepare (outside gate) ${JSON.stringify({
+            attempt,
+            kind: prepared.kind,
+            prepareMs: Math.round(prepareMs),
+            joined: request.joined,
+            gateDepth: this.gateDepth,
+          })}`
+        );
+      }
+      if (prepared.kind === "none") return false;
+      const outcome = await this.runExclusive("syncFromRemoteIfNewer:apply", "sync-apply", async () => {
+        // Re-opened (or closed) while preparing: the fetch belongs to the
+        // old instance. Run the full sync on whatever is open now, as a
+        // queued pre-split sync would have.
+        if (this.db !== db) {
+          return (await this.executeCallBody("syncFromRemoteIfNewer", [meta], { publish: true })) as boolean;
         }
-        const db = this.db;
-        if (!db) throw new Error("LIBRARY_DB_NOT_OPEN");
-        const prepareStartedAt = performance.now();
-        const prepared = await db.prepareRemoteSync(meta);
-        const prepareMs = performance.now() - prepareStartedAt;
-        if (prepareMs >= GATE_SLOW_LOG_MS) {
-          console.warn(
-            `[badger-library-db] sync prepare (outside gate) ${JSON.stringify({
-              attempt,
-              kind: prepared.kind,
-              prepareMs: Math.round(prepareMs),
-              joined: request.joined,
-              gateDepth: this.gateDepth,
-            })}`
-          );
-        }
-        if (prepared.kind === "none") return false;
-        const applied = await this.runExclusive("syncFromRemoteIfNewer:apply", "sync-apply", async () => {
-          // Re-opened (or closed) while preparing: the fetch belongs to the
-          // old instance. Run the full sync on whatever is open now, as a
-          // queued pre-split sync would have.
-          if (this.db !== db) {
-            return (await this.executeCallBody("syncFromRemoteIfNewer", [meta], { publish: true })) as boolean;
-          }
-          const result = await db.applyPreparedRemoteSync(prepared);
-          if (result !== "stale") this.publishIfVersionMoved("syncFromRemoteIfNewer");
-          return result;
-        });
-        if (applied === "stale") {
-          this.gateCounters.staleSyncApplies += 1;
-          // Our own ops flush moved the base mid-prepare; the override meta is
-          // now older than what we know, so re-read meta fresh.
-          meta = null;
-        }
+        const applied = await db.applyPreparedRemoteSync(prepared);
+        if (applied !== "stale") this.publishIfVersionMoved("syncFromRemoteIfNewer");
         return applied;
-      },
-      // A failure is thrown as it came; only a stale apply prepares again, at once.
-      { attempts: SYNC_PREPARE_ATTEMPTS, retryable: () => false, retryValue: (applied) => applied === "stale" }
-    );
-    if (outcome !== "stale") return outcome;
+      });
+      if (outcome !== "stale") return outcome;
+      this.gateCounters.staleSyncApplies += 1;
+      // Our own ops flush moved the base mid-prepare; the override meta is
+      // now older than what we know, so re-read meta fresh.
+      meta = null;
+    }
     // Base kept moving under every prepare (heavy local write traffic):
     // fall back to the original fully gated sync so it still converges.
     return this.runExclusive("syncFromRemoteIfNewer:fallback", "sync-apply", async () =>
@@ -667,28 +657,21 @@ export class BadgerLibraryDbService {
   }
 
   /**
-   * Write per-episode skip markers in `media_skip_markers` kind by kind, keeping a higher-ranked marker already
-   * there (the user's times, then detection or chapters, then the metadata service; PLAY-SKIP-08).
+   * Persist the service-fetched per-episode markers in `media_skip_markers`.
+   * Idempotent — `replaceSkipMarkers` deletes existing rows for the
+   * (mediaId, episodeId) scope and reinserts the supplied set.
    *
-   * Used by the badger commit step for the service-fetched markers and by the shared-audio detection after commit
-   * (META-SKIP-04). Callers must NOT invoke this for movies (markers omitted by design).
+   * Used by the badger commit step after a source-job finalises a TV file's
+   * library row. Callers must NOT invoke this for movies (markers omitted by
+   * design); the commit step gates on `payload.skipMarkers` being a
+   * non-empty array, which is only true for TV ingest paths.
    */
-  async mergeSkipMarkers(
+  async replaceSkipMarkers(
     mediaId: string,
     episodeId: string | null,
     markers: BadgerIngestSkipMarker[]
   ): Promise<void> {
-    await this.call("mergeSkipMarkers", [mediaId, episodeId, markers]);
-  }
-
-  /** Store one analysis row (`media_skip_analysis`, local to this device). */
-  async upsertSkipAnalysis(
-    mediaId: string,
-    episodeId: string | null,
-    kind: string,
-    payload: Record<string, unknown>
-  ): Promise<void> {
-    await this.call("upsertSkipAnalysis", [mediaId, episodeId, kind, payload]);
+    await this.call("replaceSkipMarkers", [mediaId, episodeId, markers]);
   }
 
   /**

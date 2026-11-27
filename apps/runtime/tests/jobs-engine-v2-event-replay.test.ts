@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createEngineV2, type EngineV2, type RuntimeJobEvent } from "@space/runtime-jobs-engine/engineV2";
+import { createEngineV2, type EngineV2, type RuntimeJobEvent } from "../src/core/jobs/engineV2";
 import type { IngestJobRecord } from "@space/runtime-jobs";
-import { createEventLog } from "@space/runtime-jobs-engine/eventLog";
-import { createSqliteEventLogDeps } from "@space/runtime-jobs-engine/sqliteEventLogDeps";
-import { createSqliteRuntimeJobsStore } from "@space/runtime-jobs-engine/sqliteStore";
+import { createEventLog } from "../src/core/jobs/eventLog";
+import { createSqliteEventLogDeps } from "../src/core/jobs/sqliteEventLogDeps";
+import { createSqliteRuntimeJobsStore } from "../src/core/jobs/sqliteStore";
 
 const ts = "2026-01-01T00:00:00.000Z";
 

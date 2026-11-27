@@ -13,10 +13,7 @@
     "./seekPreview": "./src/seekPreview.ts",
     "./trackRows": "./src/trackRows.ts",
     "./gestures": "./src/gestures.ts",
-    "./package.json": "./package.json",
-    "./PlayerControls": "./src/components/PlayerControls.tsx",
-    "./types": "./src/types.ts",
-    "./MpvControl": "./src/MpvControl.ts"
+    "./package.json": "./package.json"
   },
   "files": [
     "src",
@@ -43,7 +40,6 @@
   },
   "devDependencies": {
     "@react-native/typescript-config": "0.88.1",
-    "@space/media-deps": "workspace:*",
     "@types/react": "^19.3.0",
     "react": "19.3.1",
     "react-native": "npm:react-native-tvos@0.88.1-0",

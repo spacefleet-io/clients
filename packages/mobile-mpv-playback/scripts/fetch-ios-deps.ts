@@ -2,16 +2,10 @@ import { execFileSync } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import {
-  MANIFEST_FILE_NAME,
-  bundleEntries,
-  computeRecipeHash,
-  fetchDeps,
-  getPackageRoot,
-  isBundleCurrent,
-  loadTarget,
-  readManifest,
-} from "@space/media-deps";
+import { MANIFEST_FILE_NAME, bundleEntries, readManifest } from "../../media-deps/src/bundle";
+import { computeRecipeHash, getPackageRoot } from "../../media-deps/src/plan";
+import { fetchDeps, isBundleCurrent } from "../../media-deps/src/registry";
+import { loadTarget } from "../../media-deps/src/targets";
 
 /**
  * Puts the Apple media-deps bundles of one platform where `MpvPlayback.podspec` vendors them: Libmpv, the six FFmpeg

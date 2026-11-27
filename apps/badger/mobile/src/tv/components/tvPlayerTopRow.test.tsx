@@ -19,7 +19,7 @@ import {
   type PlayerControlsHandle,
   type PlayerControlsLabels,
   type PlayerControlsProps,
-} from "@space/mobile-mpv-playback/PlayerControls";
+} from "../../../../../../packages/mobile-mpv-playback/src/components/PlayerControls";
 
 const TAG = "[tv-player-top-row]";
 
@@ -78,7 +78,7 @@ vi.mock("react-native", async () => {
     BackHandler: { addEventListener: () => ({ remove: () => undefined }) },
   };
 });
-vi.mock("@space/mobile-mpv-playback/MpvControl", () => ({
+vi.mock("../../../../../../packages/mobile-mpv-playback/src/MpvControl", () => ({
   MpvControl: new Proxy({}, { get: () => () => Promise.resolve([]) }),
 }));
 

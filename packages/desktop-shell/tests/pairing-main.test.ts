@@ -205,14 +205,7 @@ describe("pairing client (new device)", () => {
       }
       return Response.json({ status: "pending" });
     }) as unknown as typeof fetch;
-    const client = createDesktopPairingClient({
-      getApiBaseUrl: () => "http://api.test",
-      appId: "badger",
-      fetchImpl,
-      hostname: () => "pc",
-      platform: "linux",
-      log,
-    });
+    const client = createDesktopPairingClient({ getApiBaseUrl: () => "http://api.test", appId: "badger", fetchImpl, hostname: () => "pc", log });
 
     const slow = client.start();
     client.cancel();
@@ -239,14 +232,7 @@ describe("pairing client (new device)", () => {
         expiresAt: "2099-01-01T00:00:00.000Z",
       });
     }) as unknown as typeof fetch;
-    const client = createDesktopPairingClient({
-      getApiBaseUrl: () => "http://api.test",
-      appId: "badger",
-      fetchImpl,
-      hostname: () => "pc",
-      platform: "linux",
-      log,
-    });
+    const client = createDesktopPairingClient({ getApiBaseUrl: () => "http://api.test", appId: "badger", fetchImpl, hostname: () => "pc", log });
     const pending = client.start();
     client.cancel();
     releaseFirst();
@@ -255,9 +241,9 @@ describe("pairing client (new device)", () => {
   });
 
   it("@req ACCT-PAIR-05 names the computer by its system and hostname, without the .local suffix", () => {
-    expect(resolveDeviceName("Studio-Mac.local", "macos")).toBe("macOS (Studio-Mac)");
+    expect(resolveDeviceName("Studio-Mac.local", "darwin")).toBe("macOS (Studio-Mac)");
     expect(resolveDeviceName("chris-pc", "linux")).toBe("Linux (chris-pc)");
-    expect(resolveDeviceName("DESKTOP-1", "windows")).toBe("Windows (DESKTOP-1)");
+    expect(resolveDeviceName("DESKTOP-1", "win32")).toBe("Windows (DESKTOP-1)");
     expect(resolveDeviceName("  ", "linux")).toBe("Linux");
   });
 

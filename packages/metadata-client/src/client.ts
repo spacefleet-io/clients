@@ -141,8 +141,7 @@ export type LookupBody = Record<string, unknown> & {
     | "musicCover"
     | "musicArtistImage"
     | "subtitles"
-    | "subtitleFile"
-    | "skipContribution";
+    | "subtitleFile";
 };
 
 /** One movie, or one episode of a show. `durationSeconds` (the file's length) only closes an end-of-file credits time. */

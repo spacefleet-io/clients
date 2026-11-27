@@ -30,8 +30,8 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createSqliteRuntimeJobsStore } from "@space/runtime-jobs-engine/sqliteStore";
-import { createEngineV2 } from "@space/runtime-jobs-engine/engineV2";
+import { createSqliteRuntimeJobsStore } from "../src/core/jobs/sqliteStore";
+import { createEngineV2 } from "../src/core/jobs/engineV2";
 import type {
   IngestJobRecord,
   IngestJobStatus,

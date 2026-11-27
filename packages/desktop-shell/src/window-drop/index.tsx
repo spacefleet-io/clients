@@ -160,19 +160,9 @@ const TAKES_ITS_OWN_DROPS = '[role="dialog"]:not([data-window-drop="pass"]), [ro
 /**
  * While one of those is on screen, or the app asks it to, the window drop stands aside: no overlay, and the drop
  * reaches the element under the pointer. The browser's default (opening the file) is still prevented.
- * Returns why it stands aside (for the diagnostic warning), or null when it takes the drag.
  */
-const windowDropStandsAside = (standAside?: () => boolean): string | null => {
-  const own = document.querySelector(TAKES_ITS_OWN_DROPS);
-  if (own) {
-    const role = own.getAttribute("role");
-    const testId = own.getAttribute("data-testid");
-    const mark = own.getAttribute("data-window-drop");
-    const attrs = [role && `role="${role}"`, testId && `data-testid="${testId}"`, mark && `data-window-drop="${mark}"`];
-    return `stands aside for <${[own.tagName.toLowerCase(), ...attrs.filter(Boolean)].join(" ")}> on screen`;
-  }
-  return standAside?.() ? "stands aside: the app asked it to stand aside" : null;
-};
+const windowDropStandsAside = (standAside?: () => boolean): boolean =>
+  document.querySelector(TAKES_ITS_OWN_DROPS) !== null || Boolean(standAside?.());
 
 /** Listens for file drags on the whole document, in the capture phase so no page element swallows them. */
 export function useWindowFileDrop({
@@ -200,8 +190,7 @@ export function useWindowFileDrop({
   const dropPayload = useCallback(
     (dt: DataTransfer | null) => {
       const { importable, images, refused } = sortDrop(dt, latest.current.isImportableFile, latest.current.getPathForFile);
-      // A warning, not info: the desktop apps forward only renderer warnings and errors to the main log (UX-ADD-01).
-      console.warn(`[window-drop] ${importable.length} importable, ${images.length} image(s) left out, ${refused.length} refused`);
+      console.info(`[window-drop] ${importable.length} importable, ${images.length} image(s) left out, ${refused.length} refused`);
       if (refused.length > 0) latest.current.onRefused?.(refused.map((key) => key.split(/[\\/]/).pop() ?? key));
       if (importable.length === 0) {
         dragCounter.current = 0;
@@ -215,24 +204,8 @@ export function useWindowFileDrop({
   );
 
   useEffect(() => {
-    // Says once per drag why a drag from outside is not taken: the renderer's warnings reach the main log, the only
-    // trace Chris's Wayland session leaves of a drop that "doesn't work" (UX-ADD-01, MPV-GPU-04). A drag from the file
-    // manager comes in from outside and never gets a dragend or a mousemove here, so the next drag starts when the last
-    // one left the window or dropped. The line names the reason and the drag's types, never a file or a path.
-    let warned = false;
-    const warnOnce = (reason: string, e: DragEvent) => {
-      if (warned) return;
-      warned = true;
-      console.warn(`[window-drop] file drag not taken: ${reason}; types ${JSON.stringify(Array.from(e.dataTransfer?.types ?? []))}`);
-    };
-    const dragOver = () => {
-      warned = false;
-    };
-
     const asideFor = (e: DragEvent) => {
-      const reason = windowDropStandsAside(latest.current.standAside);
-      if (!reason) return false;
-      if (!internalDrag) warnOnce(reason, e);
+      if (!windowDropStandsAside(latest.current.standAside)) return false;
       // Keep the window from opening the file, but let the element under the pointer take the drop.
       e.preventDefault();
       dragCounter.current = 0;
@@ -254,42 +227,11 @@ export function useWindowFileDrop({
     };
     const handleDragEnd = () => {
       internalDrag = false;
-      dragOver();
     };
-    // No mouse event fires while a drag is under way, so a move means the last drag is over even if its dragend never
-    // came (dropped outside the window, cancelled by the compositor): a later drag from the file manager is taken
-    // again instead of being refused as the window's own (UX-ADD-01).
-    const handleMouseMove = () => {
-      internalDrag = false;
-      dragOver();
-    };
-    const takes = (e: DragEvent) => {
-      if (!isExternalFileDrag(e.dataTransfer)) return false;
-      if (internalDrag) {
-        warnOnce("the drag started inside the window", e);
-        return false;
-      }
-      return true;
-    };
-    /**
-     * A drag from outside that lists `text/uri-list` but no "Files", or no type at all yet: Chromium on Wayland hands a
-     * file manager's drag over this way, and only the drop can read whether it holds files (UX-ADD-01). The window lets
-     * it drop without the overlay and sorts it then; a web link drops to nothing, as before.
-     */
-    const mayHoldFiles = (e: DragEvent) => {
-      if (internalDrag || !e.dataTransfer) return false;
-      const types = Array.from(e.dataTransfer.types);
-      return types.length === 0 || types.includes("text/uri-list");
-    };
+    const takes = (e: DragEvent) => !internalDrag && isExternalFileDrag(e.dataTransfer);
     /** A drag the window does not take: the window still never opens it, and the pointer says nothing drops here. */
     const refuse = (e: DragEvent) => {
       e.preventDefault();
-      if (mayHoldFiles(e)) {
-        warnOnce('no "Files" in the drag, deciding at the drop', e);
-        e.dataTransfer!.dropEffect = "copy";
-        return;
-      }
-      if (!internalDrag) warnOnce("not a file drag", e);
       if (e.dataTransfer) e.dataTransfer.dropEffect = "none";
     };
 
@@ -303,17 +245,15 @@ export function useWindowFileDrop({
     };
 
     const handleDragLeave = (e: DragEvent) => {
-      // Leaving the window (no element to go to): the next dragenter is another drag, with its own line.
-      if (!asideFor(e) && takes(e)) {
-        e.preventDefault();
-        e.stopPropagation();
-        dragCounter.current -= 1;
-        if (dragCounter.current <= 0) {
-          dragCounter.current = 0;
-          setDragging(false);
-        }
+      if (asideFor(e)) return;
+      if (!takes(e)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      dragCounter.current -= 1;
+      if (dragCounter.current <= 0) {
+        dragCounter.current = 0;
+        setDragging(false);
       }
-      if (!e.relatedTarget) dragOver();
     };
 
     const handleDragOver = (e: DragEvent) => {
@@ -325,20 +265,15 @@ export function useWindowFileDrop({
     };
 
     const handleDrop = (e: DragEvent) => {
-      if (asideFor(e)) {
-        dragOver();
-        return;
-      }
-      const external = takes(e) || mayHoldFiles(e);
+      if (asideFor(e)) return;
+      const external = takes(e);
       internalDrag = false;
-      dragOver();
       e.preventDefault();
       if (!external) return;
       e.stopPropagation();
       dropPayload(e.dataTransfer);
     };
 
-    document.addEventListener("mousemove", handleMouseMove, true);
     document.addEventListener("dragstart", handleDragStart, true);
     document.addEventListener("dragend", handleDragEnd, true);
     document.addEventListener("dragenter", handleDragEnter, true);
@@ -346,7 +281,6 @@ export function useWindowFileDrop({
     document.addEventListener("dragover", handleDragOver, true);
     document.addEventListener("drop", handleDrop, true);
     return () => {
-      document.removeEventListener("mousemove", handleMouseMove, true);
       document.removeEventListener("dragstart", handleDragStart, true);
       document.removeEventListener("dragend", handleDragEnd, true);
       document.removeEventListener("dragenter", handleDragEnter, true);

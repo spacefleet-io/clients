@@ -196,6 +196,7 @@ export const toolOperationInputSchemas = {
           originalLanguage: optionalText(16),
           overview: optionalText(5000),
           year: optionalText(16),
+          rating: z.number().min(0).max(10).nullable().optional(),
         })
         .strict()
         .refine((value) => Object.keys(value).length > 0, { message: "media must set at least one field" }),

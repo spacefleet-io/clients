@@ -53,7 +53,7 @@ const WRITE_METHODS = new Set([
   "addSubtitleTrack", "removeSubtitleTrack", "removeAudioTrack", "updateAudioTrack",
   "updateSubtitleTrack", "setDefaultAudioTrack", "setDefaultSubtitleTrack",
   "setTrackPrefs", "addAudioTrackWithChunks", "addSubtitleTrackWithObject",
-  "addChaptersForFormat", "replaceSkipMarkers", "mergeSkipMarkers", "upsertSkipAnalysis",
+  "addChaptersForFormat", "replaceSkipMarkers", "upsertSkipAnalysis",
   "purgeMissingObjects", "createPlaylist", "deletePlaylist", "addToPlaylist",
   "removeFromPlaylist", "deleteMedia", "wipeProfileViewing", "promoteProfileToMain", "healMainPromotion",
 ]);

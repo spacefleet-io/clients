@@ -65,16 +65,12 @@ let relauncher: ChildProcess | null = null;
  * Electron's `app.relaunch()` is not used: its relaunch helper is this process's own executable (`/proc/self/exe`),
  * which the update replaced, and the old binary would start against the new version's resources. Here a detached
  * `sh` holds the read end of a pipe whose write end only this process holds (libuv opens it close-on-exec, so no
- * renderer or GPU process inherits it): `cat` returns when the app has closed its files, single-instance lock released.
- * The kernel closes them a moment before the process itself is dead, so the helper then waits until `/proc` shows the
- * app (`$PPID`, kept from the helper's start) gone, a zombie or dead, and `exec` starts the new binary at the same path
- * with the same arguments.
+ * renderer or GPU process inherits it): `cat` returns when the app has exited, single-instance lock released, and
+ * `exec` starts the new binary at the same path with the same arguments.
  */
 const relaunchAfterExit = (command: string, args: readonly string[]): void => {
   if (relauncher) return;
-  const script =
-    'cat >/dev/null; while case "$(sed -n "s/^State:[[:space:]]*//p" "/proc/$PPID/status" 2>/dev/null)" in ""|Z*|X*) false;; esac; do sleep 0.05; done; exec "$@"';
-  relauncher = nodeSpawn("/bin/sh", ["-c", script, "sf-relaunch", command, ...args], {
+  relauncher = nodeSpawn("/bin/sh", ["-c", 'cat >/dev/null; exec "$@"', "sf-relaunch", command, ...args], {
     detached: true,
     stdio: ["pipe", "ignore", "ignore"],
     shell: false,
@@ -162,11 +158,11 @@ const FAILURE_BY_EXIT: Record<number, SystemUpdateFailure> = {
 };
 
 /**
- * The package manager's own words (and Flatpak's, flatpakPortal.ts) for "the repository's server could not be
- * reached" (DNS, refused or failed connection, timeout): libcurl's messages as pacman, dnf, zypper and flatpak print
- * them, and apt's. A 404 or a bad signature is not a network failure.
+ * The package manager's own words for "the repository's server could not be reached" (DNS, refused or failed
+ * connection, timeout): libcurl's messages as pacman, dnf and zypper print them, and apt's. A 404 or a bad signature is
+ * not a network failure.
  */
-export const NETWORK_FAILURE =
+const NETWORK_FAILURE =
   /could(?: no|n'?)t (?:resolve|connect)|failed to connect|unable to connect|connection (?:refused|timed out|reset)|temporary failure (?:in name )?resolv|name or service not known|network is unreachable|no route to host|timeout was reached|operation too slow|curl error \((?:5|6|7|28|35|52|56)\)/i;
 
 /** Runs `pkexec <helper>` (nothing else on the command line) and reads its answer. */

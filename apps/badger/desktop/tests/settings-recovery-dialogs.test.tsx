@@ -6,37 +6,12 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { generateLibraryKeyWords } from "@space/shared/libraryKeyWords";
 import type SettingsRecoveryDialogsComponent from "../src/renderer/src/pages/SettingsRecoveryDialogs";
-import type { KeyChangeDialogView } from "@space/desktop-shell/components";
-import { keyChangeText } from "@space/shared/keyChangeText";
-
-/** The shared key change dialog's own English text (REL-FAM-02). */
-const kc = keyChangeText("en");
-
-/** The key change before Start: no run, so the dialog shows its form. */
-const idleKeyChange = (): KeyChangeDialogView => ({
-  phase: "form",
-  progress: null,
-  etaSeconds: null,
-  uploadsInFlight: 0,
-  canSwitchNow: false,
-  switchNow: vi.fn(),
-  stopConfirmOpen: false,
-  setStopConfirmOpen: vi.fn(),
-  stop: vi.fn(),
-  unreadableOpen: false,
-  setUnreadableOpen: vi.fn(),
-  unreadableFiles: null,
-  unreadableBusy: false,
-  showUnreadableFiles: vi.fn(),
-  deleteUnreadableFiles: vi.fn(),
-});
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string) => key,
-    i18n: { language: "en" },
   }),
 }));
 
@@ -153,7 +128,6 @@ describe("SettingsRecoveryDialogs", () => {
           recoveryError={null}
           recoveryBusy={false}
           submitRecovery={noop}
-          keyChange={idleKeyChange()}
           resetOpen={false}
           setResetOpen={noop}
           resetConfirmed={false}
@@ -240,7 +214,6 @@ describe("SettingsRecoveryDialogs", () => {
           recoveryError={null}
           recoveryBusy={false}
           submitRecovery={submitRecovery}
-          keyChange={idleKeyChange()}
           resetOpen
           setResetOpen={setResetOpen}
           resetConfirmed
@@ -276,9 +249,7 @@ describe("SettingsRecoveryDialogs", () => {
     };
 
     const buttons = Array.from(container.querySelectorAll("button"));
-    const copyButtons = buttons.filter((button) =>
-      ["settings.recovery.show.copyButton", "settings.recovery.rotate.copyButton", kc("copyButton")].includes(button.getAttribute("aria-label") ?? ""),
-    );
+    const copyButtons = buttons.filter((button) => button.getAttribute("aria-label") === "settings.recovery.rotate.copyButton");
     console.info(`[settings-recovery-dialogs:render] mounted buttons=${buttons.length} copyButtons=${copyButtons.length}`);
     if (copyButtons.length !== 2) {
       dumpRecoveryDialogsSnapshot("copy-buttons-count", container, allMocks);
@@ -290,12 +261,12 @@ describe("SettingsRecoveryDialogs", () => {
       copyButtons[0]?.click();
       copyButtons[1]?.click();
       buttons.find((button) => button.textContent?.includes("settings.recovery.show.submit"))?.click();
-      buttons.find((button) => button.textContent?.includes(kc("submit")))?.click();
+      buttons.find((button) => button.textContent?.includes("settings.recovery.rotate.submit"))?.click();
       buttons.find((button) => button.textContent?.includes("settings.recovery.reset.submit"))?.click();
       buttons.find((button) => button.textContent?.includes("settings.recovery.reset.resend"))?.click();
       buttons.find((button) => button.getAttribute("data-checked") === "true")?.click();
       buttons.find((button) => button.textContent?.includes("settings.recovery.show.cancel"))?.click();
-      buttons.find((button) => button.textContent === kc("cancel"))?.click();
+      buttons.find((button) => button.textContent?.includes("settings.recovery.rotate.cancel"))?.click();
       buttons.find((button) => button.textContent?.includes("settings.recovery.reset.cancel"))?.click();
       await Promise.resolve();
     });
@@ -366,7 +337,7 @@ describe("SettingsRecoveryDialogs", () => {
       await act(async () => button.click());
     };
     await click("settings.recovery.show.submit");
-    await click(kc("submit"));
+    await click("settings.recovery.rotate.submit");
     await click("settings.recovery.reset.submit");
     expect(submitShowKey).toHaveBeenCalledTimes(1);
     expect(submitRecovery).toHaveBeenCalledTimes(1);

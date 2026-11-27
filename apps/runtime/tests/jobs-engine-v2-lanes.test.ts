@@ -4,12 +4,12 @@ import {
   DEFAULT_LANE_CAPS,
   releaseLane,
   tryReserveLane,
-} from "@space/runtime-jobs-engine/engineV2Lanes";
+} from "../src/core/jobs/engineV2Lanes";
 import {
   createEngineV2,
   type EngineV2,
   type RuntimeJobEvent,
-} from "@space/runtime-jobs-engine/engineV2";
+} from "../src/core/jobs/engineV2";
 import type { IngestJobRecord } from "@space/runtime-jobs";
 
 // ---------------------------------------------------------------------------
@@ -377,7 +377,7 @@ describe("engineV2.setLaneCaps", () => {
 // Host-aware lane ceilings: on the reference 4-core machine only ONE libx264
 // encode may run at a time, whatever the user's "parallel transcodes" setting.
 // ---------------------------------------------------------------------------
-import { clampLaneCapsForHost, maxLaneCapsForHost } from "@space/runtime-jobs-engine/engineV2Lanes";
+import { clampLaneCapsForHost, maxLaneCapsForHost } from "../src/core/jobs/engineV2Lanes";
 
 describe("host-aware lane caps", () => {
   it("maxLaneCapsForHost: one encode per 4 cores (min 1), one extract per 2 cores (min 1)", () => {

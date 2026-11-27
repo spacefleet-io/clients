@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger, cn } from "@space/ui";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@space/ui";
 
 type DesktopNotificationTrayProps = {
   open: boolean;
@@ -8,8 +8,6 @@ type DesktopNotificationTrayProps = {
   title: string;
   subtitle: string;
   emptyMessage: string;
-  /** A z-index class for the tray and its backdrop, above a page's own fixed header (the website's top bar is z-100). */
-  layerClassName?: string;
   children?: ReactNode;
 };
 
@@ -20,7 +18,6 @@ export function DesktopNotificationTray({
   title,
   subtitle,
   emptyMessage,
-  layerClassName,
   children,
 }: DesktopNotificationTrayProps) {
   const hasContent = Boolean(children);
@@ -30,8 +27,7 @@ export function DesktopNotificationTray({
       <SheetTrigger asChild>{trigger}</SheetTrigger>
       <SheetContent
         side="right"
-        className={cn("flex w-[340px] flex-col bg-[#0d1117] text-white", layerClassName)}
-        overlayClassName={layerClassName}
+        className="flex w-[340px] flex-col bg-[#0d1117] text-white"
       >
         <SheetHeader className="shrink-0">
           <SheetTitle>{title}</SheetTitle>

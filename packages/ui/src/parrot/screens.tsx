@@ -4,16 +4,15 @@
  * now-playing page. Texts come in already translated; data and playback stay with each app.
  */
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { ListMusic, Loader2, Mic2, Pause, PenLine, Play, Repeat, Repeat1, Shuffle, SkipBack, SkipForward } from "lucide-react";
+import { ListMusic, Loader2, Mic2, Pause, Play, Repeat, Repeat1, Shuffle, SkipBack, SkipForward } from "lucide-react";
 import { activeLyricIndex, formatDuration, homeJumpButton, homeRecentlyAdded, homeView } from "@space/parrot-core";
 import type { HistoryAlbum, HomeNowPlaying, ListeningHistory, ParrotAlbumSort, ParrotLyrics, RepeatMode } from "@space/parrot-core";
 import { Button } from "../button";
 import { GuardedItems, RenderBoundary } from "../render-boundary";
-import { usePlayPauseShortcut } from "../play-pause-shortcut";
 import { cn } from "../utils";
 import { ParrotCardOverlay, type ParrotCardControls } from "./card-actions";
 import { ParrotCover, ParrotEqualizer, ParrotNameLink, ParrotWaveSeek } from "./components";
-import { ParrotAlbumTile, ParrotBackButton } from "./library";
+import { ParrotAlbumTile } from "./library";
 
 const time = (ms: number) => formatDuration(Math.max(0, ms)) || "0:00";
 
@@ -220,13 +219,11 @@ const iconButton = "h-9 w-9 text-muted-foreground hover:bg-white/5 hover:text-fo
 
 /**
  * The bottom player bar in the approved design (PAR-LOOK-01): cover, title and artist and the like button; shuffle,
- * previous, play, next and repeat over the waveform seek bar; lyrics, queue and volume on the right. While it is
- * shown, space plays or pauses from anywhere in the window (PAR-PLAY-11).
+ * previous, play, next and repeat over the waveform seek bar; lyrics, queue and volume on the right.
  */
 export function ParrotPlayerBar(props: ParrotPlayerBarProps) {
   const { track, coverSrc, playing, positionMs, durationMs, error, shuffle, repeat, canPrevious, canNext, labels, openTab = null } = props;
   const [waveWidth, waveBox] = useBoxWidth();
-  usePlayPauseShortcut(props.onToggle);
   const repeatLabel = repeat === "one" ? labels.repeatOne : repeat === "all" ? labels.repeatAll : labels.repeatOff;
   return (
     <footer
@@ -363,9 +360,6 @@ export type ParrotNowPlayingLabels = {
   /** The same line for lyrics fetched from our lyrics library (PAR-LYR-05). */
   fetchedSyncedLyricsSource: string;
   fetchedPlainLyricsSource: string;
-  /** The same line for lyrics the user gave the song themselves (PAR-LYR-08); the plain source line where left out. */
-  ownSyncedLyricsSource?: string;
-  ownPlainLyricsSource?: string;
   nothingNext: string;
   nowPlaying: string;
   /** `onOpen`: the value is an artist or album name that opens its page (PAR-NAV-05). */
@@ -383,16 +377,6 @@ export type ParrotLyricsFetchControl = {
   labels: { body: string; button: string; none: string; failed: string };
 };
 
-/**
- * The user's own lyrics for the song (PAR-LYR-08): "Add lyrics" on a song with none, "Edit lyrics" under its words,
- * "Remove" once they are the user's own (the song falls back to its file's or the found ones).
- */
-export type ParrotOwnLyricsControl = {
-  onEdit: () => void;
-  onRemove?: () => void;
-  labels: { add: string; edit: string; remove: string };
-};
-
 type NowPlayingEntry = { key: number; track: { id: string; title: string; artistName: string; artistId?: string | null; albumId: string; durationMs: number | null } };
 
 type ParrotNowPlayingProps = {
@@ -407,14 +391,10 @@ type ParrotNowPlayingProps = {
   entries: NowPlayingEntry[];
   position: number;
   onJump: (index: number) => void;
-  /** Pauses or resumes the song playing now: what a click on its queue row does (PAR-PLAY-10). */
-  onToggle: () => void;
   coverFor: (albumId: string) => string | null | undefined;
   labels: ParrotNowPlayingLabels;
   /** The like button (PAR-PL-04), next to the title. */
   like?: ReactNode;
-  /** The page's Back, at its top like every other page's (PAR-NAV-07): returns to the page Now playing was opened from. */
-  back: { label: string; onClick: () => void };
   onOpenAlbum: () => void;
   /** The artist's name, under the title and in the queue, opens the artist's page (PAR-NAV-05). */
   onOpenArtist?: (id: string) => void;
@@ -428,39 +408,7 @@ type ParrotNowPlayingProps = {
   onSeek?: (ms: number) => void;
   /** Offers to fetch the lyrics of a song with none; left out where the app cannot fetch them. */
   fetchLyrics?: ParrotLyricsFetchControl;
-  /** Lets the user add, edit or remove the song's lyrics; left out where the app cannot (the TV). */
-  ownLyrics?: ParrotOwnLyricsControl;
 };
-
-type ParrotLyricsPaneProps = Pick<ParrotNowPlayingProps, "lyrics" | "positionMs" | "onSeek" | "labels" | "fetchLyrics" | "ownLyrics">;
-
-/**
- * The Lyrics tab: the song's words, then the user's own lyrics actions (PAR-LYR-08).
- */
-export function ParrotLyricsPane(props: ParrotLyricsPaneProps) {
-  const { lyrics, ownLyrics } = props;
-  if (!ownLyrics) return <LyricsWords {...props} />;
-  const { labels } = ownLyrics;
-  const hasWords = Boolean(lyrics?.synced || lyrics?.plain);
-  return (
-    <div data-testid="lyrics-pane">
-      <LyricsWords {...props} />
-      {lyrics !== undefined && (
-        <div className="mt-4 flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" className="rounded-full" onClick={ownLyrics.onEdit} data-testid={hasWords ? "lyrics-edit" : "lyrics-add"}>
-            <PenLine className="mr-2 h-4 w-4" aria-hidden />
-            {hasWords ? labels.edit : labels.add}
-          </Button>
-          {lyrics?.own && ownLyrics.onRemove && (
-            <Button variant="ghost" size="sm" className="rounded-full" onClick={ownLyrics.onRemove} data-testid="lyrics-remove">
-              {labels.remove}
-            </Button>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
 
 /**
  * The Lyrics tab's words. Synced lines (PAR-LYR-01) light up as they are sung, as in the design: the line sung now big
@@ -470,7 +418,7 @@ export function ParrotLyricsPane(props: ParrotLyricsPaneProps) {
  * spinner (PAR-LYR-06). A song with none says "No lyrics yet" (PAR-LYR-04); once the lookup came back empty it says
  * "No lyrics" with "Search again" (PAR-LYR-05), so loading never looks like nothing found (PAR-META-20).
  */
-function LyricsWords({ lyrics, positionMs, onSeek, labels, fetchLyrics }: ParrotLyricsPaneProps) {
+export function ParrotLyricsPane({ lyrics, positionMs, onSeek, labels, fetchLyrics }: Pick<ParrotNowPlayingProps, "lyrics" | "positionMs" | "onSeek" | "labels" | "fetchLyrics">) {
   const active = lyrics?.synced ? activeLyricIndex(lyrics.synced, positionMs) : -1;
   const current = useRef<HTMLButtonElement | null>(null);
   useEffect(() => {
@@ -503,9 +451,7 @@ function LyricsWords({ lyrics, positionMs, onSeek, labels, fetchLyrics }: Parrot
             );
           })}
         </div>
-        <p className="mt-6 text-xs text-muted-foreground">
-          {lyrics.own ? (labels.ownSyncedLyricsSource ?? labels.syncedLyricsSource) : lyrics.fetched ? labels.fetchedSyncedLyricsSource : labels.syncedLyricsSource}
-        </p>
+        <p className="mt-6 text-xs text-muted-foreground">{lyrics.fetched ? labels.fetchedSyncedLyricsSource : labels.syncedLyricsSource}</p>
       </div>
     );
   }
@@ -515,9 +461,7 @@ function LyricsWords({ lyrics, positionMs, onSeek, labels, fetchLyrics }: Parrot
         <p className="max-h-[min(60vh,560px)] overflow-y-auto whitespace-pre-line text-xl font-semibold leading-relaxed text-foreground/80" data-testid="lyrics-plain">
           {lyrics.plain}
         </p>
-        <p className="mt-6 text-xs text-muted-foreground">
-          {lyrics.own ? (labels.ownPlainLyricsSource ?? labels.plainLyricsSource) : lyrics.fetched ? labels.fetchedPlainLyricsSource : labels.plainLyricsSource}
-        </p>
+        <p className="mt-6 text-xs text-muted-foreground">{lyrics.fetched ? labels.fetchedPlainLyricsSource : labels.plainLyricsSource}</p>
       </div>
     );
   }
@@ -565,10 +509,9 @@ function LyricsWords({ lyrics, positionMs, onSeek, labels, fetchLyrics }: Parrot
 }
 
 /**
- * The now-playing page (PAR-LOOK-01): Back at the top like every other page (PAR-NAV-07), then the large cover with the
- * title, artist and album under it, and on the right the Lyrics / Up next / About tabs. The Lyrics tab shows the song's
- * own lyrics, synced line by line when they can be (`ParrotLyricsPane`), and says "No lyrics yet" plainly for a song
- * with none (PAR-LYR-04).
+ * The now-playing page (PAR-LOOK-01): the large cover with the title, artist and album under it, and on the right the
+ * Lyrics / Up next / About tabs. The Lyrics tab shows the song's own lyrics, synced line by line when they can be
+ * (`ParrotLyricsPane`), and says "No lyrics yet" plainly for a song with none (PAR-LYR-04).
  */
 export function ParrotNowPlaying(props: ParrotNowPlayingProps) {
   const { track, coverSrc, playing, tab, labels, entries, position } = props;
@@ -578,115 +521,105 @@ export function ParrotNowPlaying(props: ParrotNowPlayingProps) {
     { value: "about", label: labels.about },
   ];
   return (
-    <section data-testid="now-playing">
-      <ParrotBackButton label={props.back.label} onClick={props.back.onClick} />
-      <div className="grid grid-cols-[minmax(0,520px)_1fr] gap-16 px-10 pb-10">
-        <div className="min-w-0">
-          <button type="button" className="block w-full" onClick={props.onOpenAlbum} aria-label={track.albumTitle} data-testid="now-playing-cover">
-            <ParrotCover seed={track.albumId} src={coverSrc} fetching={props.coverFetching} label={track.albumTitle} className="w-full shadow-2xl" />
-          </button>
-          <div className="mt-6 flex items-start justify-between gap-4">
-            <div className="min-w-0">
-              <h1 className="truncate font-['Space_Grotesk'] text-3xl font-bold tracking-tight" data-testid="now-playing-title">
-                {track.title}
-              </h1>
-              <p className="mt-1 truncate text-muted-foreground">
-                <ParrotNameLink onOpen={track.artistId && props.onOpenArtist ? () => props.onOpenArtist!(track.artistId!) : undefined} testId="now-playing-artist-link">
-                  {track.artistName}
-                </ParrotNameLink>
-                {" · "}
-                <ParrotNameLink onOpen={props.onOpenAlbum} testId="now-playing-album-link">
-                  {track.albumTitle}
-                </ParrotNameLink>
-              </p>
-            </div>
-            {props.like}
+    <section className="grid grid-cols-[minmax(0,520px)_1fr] gap-16 px-10 py-10" data-testid="now-playing">
+      <div className="min-w-0">
+        <button type="button" className="block w-full" onClick={props.onOpenAlbum} aria-label={track.albumTitle} data-testid="now-playing-cover">
+          <ParrotCover seed={track.albumId} src={coverSrc} fetching={props.coverFetching} label={track.albumTitle} className="w-full shadow-2xl" />
+        </button>
+        <div className="mt-6 flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <h1 className="truncate font-['Space_Grotesk'] text-3xl font-bold tracking-tight" data-testid="now-playing-title">
+              {track.title}
+            </h1>
+            <p className="mt-1 truncate text-muted-foreground">
+              <ParrotNameLink onOpen={track.artistId && props.onOpenArtist ? () => props.onOpenArtist!(track.artistId!) : undefined} testId="now-playing-artist-link">
+                {track.artistName}
+              </ParrotNameLink>
+              {" · "}
+              <ParrotNameLink onOpen={props.onOpenAlbum} testId="now-playing-album-link">
+                {track.albumTitle}
+              </ParrotNameLink>
+            </p>
           </div>
+          {props.like}
         </div>
-        <div className="min-w-0">
-          <div className="inline-flex gap-1 rounded-full border border-[#30363d] bg-card/60 p-1" role="tablist">
-            {tabs.map((item) => (
-              <button
-                key={item.value}
-                type="button"
-                role="tab"
-                aria-selected={tab === item.value}
-                className={cn(
-                  "rounded-full px-4 py-1.5 text-sm font-semibold transition-colors",
-                  tab === item.value ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
-                )}
-                onClick={() => props.onTab(item.value)}
-                data-testid={`now-playing-tab-${item.value}`}
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>
-          <div className="mt-8" data-testid={`now-playing-${tab}`}>
-            {tab === "lyrics" && (
-              <ParrotLyricsPane
-                lyrics={props.lyrics}
-                positionMs={props.positionMs}
-                onSeek={props.onSeek}
-                labels={labels}
-                fetchLyrics={props.fetchLyrics}
-                ownLyrics={props.ownLyrics}
-              />
-            )}
-            {tab === "queue" && (
-              <ol className="max-w-2xl space-y-1">
-                {entries.slice(position).map((entry, offset) => {
-                  const index = position + offset;
-                  const current = offset === 0;
-                  return (
-                    // The row's button lies under the whole row; the artist's name sits over it so it opens the artist
-                    // instead (PAR-NAV-05): a button may not hold another.
-                    <li key={entry.key} className={cn("relative flex w-full items-center gap-3 rounded-lg px-2 py-2 hover:bg-card/70", current && "bg-card/60")}>
-                      <button
-                        type="button"
-                        className="absolute inset-0 rounded-lg"
-                        onClick={() => (current ? props.onToggle() : props.onJump(index))}
-                        aria-label={entry.track.title}
-                        data-testid="now-playing-queue-row"
-                        data-current={current}
-                      />
-                      <ParrotCover seed={entry.track.albumId} src={props.coverFor(entry.track.albumId)} className="pointer-events-none h-10 w-10 shrink-0" />
-                      <span className="pointer-events-none min-w-0 flex-1">
-                        <span className={cn("block truncate text-sm font-semibold", current && "text-primary")}>{entry.track.title}</span>
-                        <span className="block truncate text-xs text-muted-foreground">
-                          {current ? (
-                            labels.nowPlaying
-                          ) : (
-                            <ParrotNameLink
-                              className="pointer-events-auto relative"
-                              onOpen={entry.track.artistId && props.onOpenArtist ? () => props.onOpenArtist!(entry.track.artistId!) : undefined}
-                              testId="now-playing-queue-artist-link"
-                            >
-                              {entry.track.artistName}
-                            </ParrotNameLink>
-                          )}
-                        </span>
+      </div>
+      <div className="min-w-0">
+        <div className="inline-flex gap-1 rounded-full border border-[#30363d] bg-card/60 p-1" role="tablist">
+          {tabs.map((item) => (
+            <button
+              key={item.value}
+              type="button"
+              role="tab"
+              aria-selected={tab === item.value}
+              className={cn(
+                "rounded-full px-4 py-1.5 text-sm font-semibold transition-colors",
+                tab === item.value ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+              )}
+              onClick={() => props.onTab(item.value)}
+              data-testid={`now-playing-tab-${item.value}`}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+        <div className="mt-8" data-testid={`now-playing-${tab}`}>
+          {tab === "lyrics" && (
+            <ParrotLyricsPane lyrics={props.lyrics} positionMs={props.positionMs} onSeek={props.onSeek} labels={labels} fetchLyrics={props.fetchLyrics} />
+          )}
+          {tab === "queue" && (
+            <ol className="max-w-2xl space-y-1">
+              {entries.slice(position).map((entry, offset) => {
+                const index = position + offset;
+                const current = offset === 0;
+                return (
+                  // The row's button lies under the whole row; the artist's name sits over it so it opens the artist
+                  // instead (PAR-NAV-05): a button may not hold another.
+                  <li key={entry.key} className={cn("relative flex w-full items-center gap-3 rounded-lg px-2 py-2 hover:bg-card/70", current && "bg-card/60")}>
+                    <button
+                      type="button"
+                      className="absolute inset-0 rounded-lg"
+                      onClick={() => props.onJump(index)}
+                      aria-label={entry.track.title}
+                      data-testid="now-playing-queue-row"
+                      data-current={current}
+                    />
+                    <ParrotCover seed={entry.track.albumId} src={props.coverFor(entry.track.albumId)} className="pointer-events-none h-10 w-10 shrink-0" />
+                    <span className="pointer-events-none min-w-0 flex-1">
+                      <span className={cn("block truncate text-sm font-semibold", current && "text-primary")}>{entry.track.title}</span>
+                      <span className="block truncate text-xs text-muted-foreground">
+                        {current ? (
+                          labels.nowPlaying
+                        ) : (
+                          <ParrotNameLink
+                            className="pointer-events-auto relative"
+                            onOpen={entry.track.artistId && props.onOpenArtist ? () => props.onOpenArtist!(entry.track.artistId!) : undefined}
+                            testId="now-playing-queue-artist-link"
+                          >
+                            {entry.track.artistName}
+                          </ParrotNameLink>
+                        )}
                       </span>
-                      {current ? <ParrotEqualizer animated={playing} /> : <span className="text-xs tabular-nums text-muted-foreground">{formatDuration(entry.track.durationMs)}</span>}
-                    </li>
-                  );
-                })}
-                {entries.length - position <= 1 && <li className="px-2 py-3 text-sm text-muted-foreground">{labels.nothingNext}</li>}
-              </ol>
-            )}
-            {tab === "about" && (
-              <dl className="grid max-w-xl grid-cols-[auto_1fr] gap-x-8 gap-y-3 text-sm">
-                {labels.aboutRows.map((row) => (
-                  <div key={row.label} className="contents">
-                    <dt className="text-muted-foreground">{row.label}</dt>
-                    <dd className="truncate font-medium">
-                      <ParrotNameLink onOpen={row.onOpen}>{row.value}</ParrotNameLink>
-                    </dd>
-                  </div>
-                ))}
-              </dl>
-            )}
-          </div>
+                    </span>
+                    {current ? <ParrotEqualizer animated={playing} /> : <span className="text-xs tabular-nums text-muted-foreground">{formatDuration(entry.track.durationMs)}</span>}
+                  </li>
+                );
+              })}
+              {entries.length - position <= 1 && <li className="px-2 py-3 text-sm text-muted-foreground">{labels.nothingNext}</li>}
+            </ol>
+          )}
+          {tab === "about" && (
+            <dl className="grid max-w-xl grid-cols-[auto_1fr] gap-x-8 gap-y-3 text-sm">
+              {labels.aboutRows.map((row) => (
+                <div key={row.label} className="contents">
+                  <dt className="text-muted-foreground">{row.label}</dt>
+                  <dd className="truncate font-medium">
+                    <ParrotNameLink onOpen={row.onOpen}>{row.value}</ParrotNameLink>
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          )}
         </div>
       </div>
     </section>

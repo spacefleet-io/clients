@@ -12,7 +12,17 @@
 // The app (packages/desktop-shell/src/updater/systemPackage.ts) reads the exit code; the table below is mirrored there
 // as SYSTEM_UPDATE_EXIT and a test keeps the two equal.
 
-import { writeGeneratedFile } from "./generated-files.mjs";
+import { chmodSync, mkdirSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+
+/** Writes a generated package file under the app's node_modules/.cache with its final mode and returns its path. */
+const writePackageFile = (appDir, name, content, mode) => {
+  const path = join(appDir, "node_modules", ".cache", "spacefleet-linux", name);
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, content);
+  chmodSync(path, mode);
+  return path;
+};
 
 /** Exit codes of the helper (pkexec itself answers 126 when the dialog is dismissed and 127 when it cannot ask). */
 export const SYSTEM_UPDATE_EXIT = {
@@ -233,8 +243,8 @@ export const systemUpdatePolicy = (packageName, productName) => {
  * @returns {string[]}
  */
 export const systemUpdateFpmFiles = ({ appDir, packageName, productName }) => {
-  const helper = writeGeneratedFile(appDir, `${packageName}-system-update`, systemUpdateHelperLines(packageName).join("\n"), 0o755);
-  const policy = writeGeneratedFile(appDir, `${systemUpdateActionId(packageName)}.policy`, systemUpdatePolicy(packageName, productName), 0o644);
+  const helper = writePackageFile(appDir, `${packageName}-system-update`, systemUpdateHelperLines(packageName).join("\n"), 0o755);
+  const policy = writePackageFile(appDir, `${systemUpdateActionId(packageName)}.policy`, systemUpdatePolicy(packageName, productName), 0o644);
   return [
     `${helper}=${systemUpdateHelperPath(packageName)}`,
     `${policy}=/usr/share/polkit-1/actions/${systemUpdateActionId(packageName)}.policy`,

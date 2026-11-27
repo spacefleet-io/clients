@@ -129,7 +129,6 @@ export default function MediaPlaybackController({
     addSubtitleTrack,
     removeSubtitleTrackNow,
     getMediaObjectKeys,
-    mergeSkipMarkers,
     replaceSkipMarkers,
     upsertSkipAnalysis,
     listSkipAnalysis,
@@ -516,9 +515,7 @@ export default function MediaPlaybackController({
   }, [clearLaunchUi, deferForPrompt, isLaunching, playbackOpen, resumePromptOpen]);
 
   useEffect(() => {
-    // PLAY-RESUME-01: while the resume prompt waits for an answer, no mpv runs for this playback. An exit then is an
-    // earlier mpv's, quit just before Play with its exit landing after the prompt opened: it must not close the prompt.
-    if (!playbackOpen || deferForPrompt) return;
+    if (!playbackOpen) return;
     const unsubscribe = window.sf?.onMpvExternalMessage?.((msg) => {
       if (msg.type !== "exit") return;
       clearLaunchUi();
@@ -531,7 +528,7 @@ export default function MediaPlaybackController({
         unsubscribe();
       }
     };
-  }, [clearLaunchUi, deferForPrompt, playbackOpen]);
+  }, [clearLaunchUi, playbackOpen]);
 
   // ACCT-STREAM-01..04: the stream gate requests with this session's token, and closes this player when the user
   // cancels at "Play here instead?" or another device takes the place over (lib/streamSlot.ts).
@@ -599,15 +596,6 @@ export default function MediaPlaybackController({
     addSubtitleTrack,
     removeSubtitleTrack: removeSubtitleTrackNow,
     getMediaObjectKeys,
-    skipEditLibrary: {
-      listSkipAnalysis,
-      upsertSkipAnalysis,
-      replaceSkipMarkers,
-      onChanged: async () => {
-        const refreshed = await fetchMediaDetails(currentMedia.id);
-        if (refreshed) setCurrentMedia(scopeToEdition(refreshed, activeEditionRef.current));
-      },
-    },
     t,
   });
 
@@ -1051,21 +1039,32 @@ export default function MediaPlaybackController({
           );
         }
 
-        // By source priority: the user's own times stay, the detected ones give way (PLAY-SKIP-08).
-        const fetched = result.markers.flatMap((marker) =>
-          marker.endSeconds == null
-            ? []
-            : [
-                {
-                  type: marker.type,
-                  startSeconds: marker.startSeconds,
-                  endSeconds: marker.endSeconds,
-                  source: marker.source,
-                  confidence: marker.confidence,
-                },
-              ]
+        const existingEpisodeMarkers = currentMedia.skipMarkers.filter(
+          (marker) => marker.episodeId === currentEpisode.id
         );
-        if (fetched.length > 0) await mergeSkipMarkers(currentMedia.id, currentEpisode.id, fetched);
+        const fetchedTypes = new Set(result.markers.map((marker) => marker.type));
+        const merged = [
+          ...existingEpisodeMarkers
+            .filter((marker) => !fetchedTypes.has(marker.type))
+            .map((marker) => ({
+              type: marker.type,
+              startSeconds: marker.startSeconds,
+              endSeconds: marker.endSeconds,
+              source: marker.source,
+              confidence: marker.confidence,
+            })),
+          ...result.markers
+            .filter((marker) => marker.endSeconds != null)
+            .map((marker) => ({
+              type: marker.type,
+              startSeconds: marker.startSeconds,
+              endSeconds: marker.endSeconds as number,
+              source: marker.source,
+              confidence: marker.confidence,
+            })),
+        ].sort((left, right) => left.startSeconds - right.startSeconds);
+
+        await replaceSkipMarkers(currentMedia.id, currentEpisode.id, merged);
         const refreshed = await fetchMediaDetails(currentMedia.id);
         if (refreshed) {
           setCurrentMedia(refreshed);
@@ -1080,7 +1079,7 @@ export default function MediaPlaybackController({
     fetchMediaDetails,
     getStoredDuration,
     listSkipAnalysis,
-    mergeSkipMarkers,
+    replaceSkipMarkers,
     upsertSkipAnalysis,
   ]);
 
@@ -1155,7 +1154,7 @@ export default function MediaPlaybackController({
         hideLoading(loadingTokenRef.current);
         loadingTokenRef.current = null;
       }
-      notifyError(t("player.abrLaunchFailed"), undefined, { key: "playback-failed:launch-timeout" });
+      notifyError(t("player.abrLaunchFailed"));
       onLaunchFailedRef.current?.("launch_timeout");
     }, 60000);
     return () => {
@@ -1187,16 +1186,12 @@ export default function MediaPlaybackController({
     // 402 `account_over_quota` (ACCT-OVER-02); mpv only reports a generic load failure, so say what actually happened (#145).
     const unpaidAccess = getUnpaidAccessInfo(user?.access);
     const frozen = user?.access?.overQuota?.phase === "frozen" ? user.access.overQuota : null;
-    // UX-NOTICE-11: the same failure replaces its earlier notice and bell entry instead of adding another.
-    const reason = unpaidAccess.unpaid ? "unpaid" : frozen ? "frozen" : (playback.streamError ?? "stream");
     notifyError(
       unpaidAccess.unpaid
         ? unpaidMessage(t, "playbackBlocked", unpaidAccess.wipeAt, i18n?.language)
         : frozen
           ? t("account.overQuota.playbackBlocked", { date: formatAccessDate(frozen.deletionAt, i18n?.language) })
-          : (playback.streamError ?? t("player.abrLaunchFailed")),
-      undefined,
-      { key: `playback-failed:${reason}` },
+          : (playback.streamError ?? "Stream error")
     );
     playTraceLog.info({ closeCause: "stream-error", streamError: playback.streamError }, "MediaPlaybackController: closing playback");
     onLaunchFailedRef.current?.(`stream_error: ${playback.streamError}`);

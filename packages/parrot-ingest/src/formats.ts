@@ -5,13 +5,12 @@ import { isParrotAudioFile } from "./audioFormats";
 export * from "./audioFormats";
 
 /**
- * Every file `accept` takes under the given files and folders, sorted, each once. Hidden files and folders (dot names)
- * are skipped; a folder that cannot be read is reported through `onSkip` and the walk goes on. Each real folder is
+ * Every audio file under the given files and folders, sorted, each once. Hidden files and folders (dot names) are
+ * skipped; a folder that cannot be read is reported through `onSkip` and the walk goes on. Each real folder is
  * walked once, so a symlink back to an ancestor (or a second link to the same folder) cannot loop or repeat it.
  */
-export const findParrotFiles = async (
+export const findParrotAudioFiles = async (
   roots: string[],
-  accept: (file: string) => boolean,
   onSkip: (entry: string, reason: string) => void = () => {}
 ): Promise<string[]> => {
   const found = new Set<string>();
@@ -25,7 +24,7 @@ export const findParrotFiles = async (
       return;
     }
     if (stat.isFile()) {
-      if (accept(entry)) found.add(path.resolve(entry));
+      if (isParrotAudioFile(entry)) found.add(path.resolve(entry));
       return;
     }
     if (!stat.isDirectory()) return;

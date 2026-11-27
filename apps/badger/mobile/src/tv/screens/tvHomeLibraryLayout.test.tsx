@@ -2,8 +2,7 @@
  * @test-id TV-HOME-LIBRARY-LAYOUT-001
  * @level component
  * @why The v2 TV redesign (Chris 2026-11-12 (chat): "your tv client redesign is good, you can implement it"): Home is the
- *   Continue watching card (Resume has the focus), then the rows of the Home layout set on the computer, in its order
- *   (UX-HOME-06, Chris 2026-11-26 (chat)), on the sky; without a title in progress the
+ *   Continue watching card (Resume has the focus) and ONE "Recently added" row on the sky; without a title in progress the
  *   first poster takes the focus. The Library has the Movies / TV shows switch at the left and the sort chip at the right
  *   of one line, then eight captioned posters across at the screen margin, with no title, count or focused-title line.
  *   Playlists is its own top-bar section, not a Library tab (Chris 2026-11-13, as on the phone): one chip per playlist
@@ -15,7 +14,6 @@
  *   shared chips (`TvSegmented`, `TvChip`) are the real ones.
  *
  * @req UX-TV-05[badger-tv]
- * @req UX-HOME-06[badger-tv]
  * @req UX-TV-09[badger-tv]
  * @req UX-TV-11[badger-tv]
  * @req UX-TV-18[badger-tv]
@@ -29,8 +27,7 @@ import { act, create, type ReactTestInstance, type ReactTestRenderer } from "rea
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { MediaRow, PlaylistRow } from "@space/shared/libraryTypes";
 import { TV_LIBRARY_COLUMNS, TV_LIBRARY_GAP_X, TV_LIBRARY_GAP_Y, TV_SCREEN_X, tvHomeCardWidth, tvLibraryCardWidth } from "@space/mobile-shell/tv/layout";
-import { createHomeSection } from "@space/shared/homeLayout";
-import { TvHomeScreen } from "./TvHomeScreen";
+import { homeRows, TvHomeScreen } from "./TvHomeScreen";
 import { nextLibrarySort, TvLibraryScreen } from "./TvLibraryScreen";
 import { TvPlaylistsScreen, tvPlaylistName, tvPlaylistOrder, tvPlaylistTitles } from "./TvPlaylistsScreen";
 
@@ -58,8 +55,6 @@ const ctl = vi.hoisted(() => ({
   /** What the library store reports: the load error line and the load status (UX-TV-14). */
   error: null as string | null,
   loadStatus: { kind: "ready" } as { kind: string },
-  /** The Home layout the computer saved (`dashboard_layout_v1`); null = never edited. */
-  homeLayout: null as string | null,
 }));
 
 vi.mock("react-native", async () => {
@@ -82,13 +77,12 @@ vi.mock("lucide-react-native", () => ({
   ChevronDown: "ChevronDownIcon",
 }));
 vi.mock("@space/mobile-shell/components", () => ({ SkyCover: "SkyCover", MobileLibraryLoading: "MobileLibraryLoading", useSkyScroll: () => ({}) }));
-vi.mock("@space/mobile-shell/i18n", () => ({ useTranslation: () => ({ t: (key: string) => key }), getCurrentLanguage: () => "en" }));
+vi.mock("@space/mobile-shell/i18n", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 vi.mock("@react-navigation/native", () => ({ useNavigation: () => ({ navigate: (...args: unknown[]) => ctl.navigate(...args) }) }));
 /** One actions object for the whole run, as the real store gives: a new one per render would refetch forever. */
 const libraryActions = vi.hoisted(() => ({
   getMediaDetails: async () => null,
   listPlaylistItems: async (id: string) => ctl.playlistItems[id] ?? [],
-  readSetting: async (key: string) => (key === "dashboard_layout_v1" ? ctl.homeLayout : null),
 }));
 vi.mock("../../store/library", () => ({
   useLibraryData: () => ({ media: ctl.media, playlists: ctl.playlists }),
@@ -96,6 +90,7 @@ vi.mock("../../store/library", () => ({
   useLibraryActions: () => libraryActions,
 }));
 vi.mock("../../lib/resume", () => ({ getLastPlayedEpisodeId: async () => null }));
+vi.mock("../../lib/useFavoriteIds", () => ({ useFavoriteIds: () => new Set<string>() }));
 vi.mock("../../lib/appSettings", () => ({ useAppSettings: () => [ctl.settings, (patch: unknown) => ctl.updateSettings(patch)] }));
 vi.mock("../../lib/libraryScreenState", () => ({
   selectLibraryItems: ({ media, tab }: { media: readonly MediaRow[]; tab: string }) => media.filter((item) => item.type === tab),
@@ -118,7 +113,6 @@ const row = (id: string, type: "movie" | "tv", patch: Partial<MediaRow> = {}): M
     lastWatchedAt: null,
     addedAt: "2026-10-01T00:00:00.000Z",
     createdAt: "2026-10-01T00:00:00.000Z",
-    updatedAt: "2026-10-01T00:00:00.000Z",
     ...patch,
   }) as MediaRow;
 
@@ -164,15 +158,14 @@ beforeEach(() => {
   ctl.loadStatus = { kind: "ready" };
   ctl.playlists = [];
   ctl.playlistItems = {};
-  ctl.homeLayout = null;
   ctl.reload = vi.fn();
   ctl.navigate = vi.fn();
   ctl.updateSettings = vi.fn();
   ctl.playerParams = vi.fn(async () => ({ mediaId: "m1", episodeId: null, startAt: "resume" }));
 });
 
-describe("TV Home: the Continue watching card and the computer's Home rows (TV-BADGER-HOME-LIBRARY-001)", () => {
-  it("@req UX-TV-05 @req UX-HOME-06 opens on the card for the last title started, then the default Home rows; Resume has the focus, no poster does", () => {
+describe("TV Home: the Continue watching card and one row (TV-BADGER-HOME-LIBRARY-001)", () => {
+  it("@req UX-TV-05 opens on the card for the last title started, then only Recently added; Resume has the focus, no poster does", () => {
     const tree = render(<TvHomeScreen />);
     const scroll = tree.root.find((node) => isType(node, "ScrollView"));
     const children = childElements(scroll);
@@ -180,48 +173,34 @@ describe("TV Home: the Continue watching card and the computer's Home rows (TV-B
     expect(isType(children[0], "TvContinueHero")).toBe(true);
     expect(children[0].props.item.id).toBe("m1");
     const rails = tree.root.findAll((node) => isType(node, "TvRail"));
-    console.info("[UX-HOME-06] default rails", JSON.stringify(rails.map((rail) => [rail.props.title, rail.props.items.map((item: MediaRow) => item.id)])));
-    // The desktop's default layout: Continue watching (without the card's title), Recently added, Unwatched picks.
-    expect(rails.map((rail) => rail.props.title)).toEqual(["home.sections.continueWatching", "home.sections.recentlyAdded", "home.sections.unwatched"]);
-    expect(rails[0].props.items.map((item: MediaRow) => item.id)).toEqual(["s2"]);
-    expect(rails.every((rail) => rail.props.preferredFocusIndex === null)).toBe(true);
+    expect(rails.map((rail) => rail.props.title)).toEqual(["home.sections.recentlyAdded"]);
+    // s2 is also in progress, but there is no Continue watching row any more: the card is the only one.
+    expect(rails[0].props.preferredFocusIndex).toBeNull();
     expect(rails[0].props.cardWidth).toBe(tvHomeCardWidth(1));
     expect(rails[0].props.cardWidth).toBe(107);
     // The watched check and the bar inside started posters.
     expect(rails[0].props.showProgress).toBe(true);
   });
 
-  it("@req UX-TV-05 without a title in progress shows no card, and the first poster of the first row takes the focus", () => {
+  it("@req UX-TV-05 without a title in progress shows no card, and the first poster of Recently added takes the focus", () => {
     const tree = render(<TvHomeScreen />, MEDIA.map((item) => ({ ...item, progressPct: 0, lastWatchedAt: null })));
     expect(tree.root.findAll((node) => isType(node, "TvContinueHero"))).toHaveLength(0);
     const rails = tree.root.findAll((node) => isType(node, "TvRail"));
     console.info("[UX-TV-05] no-hero rails", JSON.stringify(rails.map((rail) => [rail.props.title, rail.props.preferredFocusIndex])));
-    expect(rails.map((rail) => rail.props.title)).toEqual(["home.sections.recentlyAdded", "home.sections.unwatched"]);
-    expect(rails.map((rail) => rail.props.preferredFocusIndex)).toEqual([0, null]);
+    expect(rails).toHaveLength(1);
+    expect(rails[0].props.preferredFocusIndex).toBe(0);
   });
 
-  it("@req UX-HOME-06 shows the sections the computer saved, in its order", async () => {
-    ctl.playlists = PLAYLISTS;
-    ctl.playlistItems = { "p-road": ["s1", "m2"], "p-fav": ["m2"] };
-    ctl.homeLayout = JSON.stringify({
-      sections: [createHomeSection("playlist", "p-road"), createHomeSection("favorites"), { ...createHomeSection("recent"), libraries: ["tv"] }],
-    });
-    console.info("[UX-HOME-06] phase=saved-layout", ctl.homeLayout);
-    const tree = render(<TvHomeScreen />);
-    await act(async () => {
-      const { promise, resolve } = Promise.withResolvers<void>();
-      setTimeout(resolve, 0);
-      await promise;
-    });
-    const rails = tree.root.findAll((node) => isType(node, "TvRail"));
-    const shown = rails.map((rail) => [rail.props.title, rail.props.titleTestID, rail.props.items.map((item: MediaRow) => item.id).sort()]);
-    console.info("[UX-HOME-06] phase=rails", JSON.stringify(shown));
-    expect(shown).toEqual([
-      ["Road trip", "tv-rail-title-section-playlist-p-road", ["m2", "s1"]],
-      ["home.sections.favorites", "tv-rail-title-section-favorites", ["m2"]],
-      ["home.sections.recentlyAdded", "tv-rail-title-section-recent", ["s1", "s2"]],
-    ]);
-    expect(tree.root.find((node) => isType(node, "TvContinueHero")).props.item.id).toBe("m1");
+  it("@req UX-TV-05 homeRows keeps only a Recently added row with titles", () => {
+    const a = row("a", "movie");
+    const rails = homeRows([
+      { id: "continueWatching", titleKey: "c", items: [a], showProgress: true },
+      { id: "recent", titleKey: "r", items: [a], showProgress: false },
+      { id: "movies", titleKey: "m", items: [a], showProgress: false },
+      { id: "favorites", titleKey: "f", items: [a], showProgress: false },
+    ] as never);
+    expect(rails.map((rail) => rail.id)).toEqual(["recent"]);
+    expect(homeRows([{ id: "recent", titleKey: "r", items: [], showProgress: false }] as never)).toEqual([]);
   });
 
   it("@req UX-TV-05 Details opens the title page; Resume and Start over open the player at that point", async () => {
@@ -504,9 +483,8 @@ describe("TV Home and library on an Apple TV (TV-SCALE-HOME-001)", () => {
     const android = at(960, 540, home);
     const apple = at(1920, 1080, home);
     console.info("[TV-SCALE-HOME-001] home", JSON.stringify({ android, apple }));
-    // The default layout's three rails (UX-HOME-06): Continue watching, Recently added, Unwatched picks, all one card width.
-    expect(android.cardWidths).toEqual([107, 107, 107]);
-    expect(apple.cardWidths).toEqual([214, 214, 214]);
+    expect(android.cardWidths).toEqual([107]);
+    expect(apple.cardWidths).toEqual([214]);
     for (const [key, before] of Object.entries(android.content)) {
       if (typeof before !== "number") continue;
       expect(apple.content[key]).toBe(UNSCALED[key] ? before : before * 2);

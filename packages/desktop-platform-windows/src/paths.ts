@@ -23,6 +23,4 @@ export const windowsPaths: PathLayer = {
   userDataBase: (env = process.env) => localAppData(env),
   // Existing installs keep their directory.
   appUserDataDir: ({ appData, legacyDir }) => win32.join(appData, ...legacyDir),
-  // The Recycle Bin renames what it keeps ($R…): no plain path tells a deleted file apart.
-  trashPaths: () => [],
 };

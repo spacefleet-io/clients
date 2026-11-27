@@ -22,7 +22,7 @@ import {
 } from "../src/modules/badger/offlineDownload";
 import { configureBadgerOfflineDeps } from "../src/modules/badger/offlineDownloadDeps";
 import type { BadgerLibraryDbService } from "../src/modules/badgerLibraryDb";
-import type { EngineV2 } from "@space/runtime-jobs-engine/engineV2";
+import type { EngineV2 } from "../src/core/jobs/engineV2";
 
 const movieDetails = {
   id: "media-movie-1",

@@ -1,3 +1,4 @@
+import { formatRating } from "@/lib/localeFormat";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { BadgerLibraryList } from "@space/ui/badger";
@@ -9,6 +10,7 @@ export type LibraryListRowModel = {
   title: string;
   year: string | null;
   posterPath: string | null;
+  rating: number | null;
   overview: string | null;
   /** Localised genre names, already resolved by the caller. */
   genres: string[];
@@ -73,6 +75,7 @@ export default function LibraryListRows({
           row.seasonCount ? t("library.row.seasons", { count: row.seasonCount }) : null,
           row.runtimeMinutes ? formatRuntime(t, row.runtimeMinutes) : null,
         ].filter((entry): entry is string => Boolean(entry)),
+        ratingText: row.rating ? formatRating(row.rating) : null,
         genres: row.genres,
         overview: row.overview?.trim() ? row.overview : t("library.row.noOverview"),
         progressPct: row.progressPct,

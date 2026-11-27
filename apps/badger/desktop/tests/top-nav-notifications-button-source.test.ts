@@ -26,19 +26,20 @@ const dumpTopNavSnapshot = (
 };
 
 describe("TopNavNotificationsButton source", () => {
-  it("@bugfix @regression-proof uses the shared bell, whose tray content only mounts while it is open", () => {
-    // The "content only while open" half is proven on NoticeBell itself (packages/desktop-shell/tests/notice-bell.test.tsx).
-    console.info(`[top-nav-notifications-button-source:shared-bell] reading ${SOURCE_PATH}`);
+  it("@bugfix @regression-proof only mounts notification sheet content while the panel is open", () => {
+    console.info(`[top-nav-notifications-button-source:lazy-mount] reading ${SOURCE_PATH}`);
     const source = readFileSync(SOURCE_PATH, "utf8");
     const tokens = {
-      "<NoticeBell": source.includes("<NoticeBell"),
-      "no own tray": !source.includes("<DesktopNotificationTray"),
+      "<DesktopNotificationTray": source.includes("<DesktopNotificationTray"),
+      "{notifications.length > 0 ? (": source.includes("{notifications.length > 0 ? ("),
+      "<NotificationTrayContent": source.includes("<NotificationTrayContent"),
     };
-    console.info(`[top-nav-notifications-button-source:shared-bell] tokens=${JSON.stringify(tokens)}`);
-    if (Object.values(tokens).some((v) => !v)) dumpTopNavSnapshot("shared-bell", source, tokens);
+    console.info(`[top-nav-notifications-button-source:lazy-mount] tokens=${JSON.stringify(tokens)}`);
+    if (Object.values(tokens).some((v) => !v)) dumpTopNavSnapshot("lazy-mount", source, tokens);
 
-    expect(source).toContain("<NoticeBell");
-    expect(source).not.toContain("<DesktopNotificationTray");
+    expect(source).toContain("<DesktopNotificationTray");
+    expect(source).toContain("{notifications.length > 0 ? (");
+    expect(source).toContain("<NotificationTrayContent");
   });
 
   it("memoizes the notification tray shell so parent rerenders do not always remount it", () => {

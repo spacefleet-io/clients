@@ -66,10 +66,6 @@ public sealed class LibraryWriterMetadataTests : IDisposable
         Assert.Equal("A linguist works with the military to communicate with alien lifeforms.", movie.Element("plot")!.Value);
         Assert.Equal("2016", movie.Element("year")!.Value);
         Assert.Empty(movie.Elements("uniqueid"));
-        // META-SRC-05: no rating of any kind reaches Jellyfin.
-        Assert.Empty(movie.Elements("rating"));
-        Assert.Empty(movie.Elements("criticrating"));
-        Assert.Empty(movie.Elements("ratings"));
         Assert.Equal(new[] { "Drama", "Science Fiction" }, movie.Elements("genre").Select(e => e.Value));
         // Jellyfin's own metadata refresh stays allowed: nothing is locked.
         Assert.Null(movie.Element("lockdata"));
@@ -173,6 +169,7 @@ public sealed class LibraryWriterMetadataTests : IDisposable
         OriginalTitle = "Arrival",
         Year = 2016,
         Overview = "A linguist works with the military to communicate with alien lifeforms.",
+        Rating = 7.6,
         Genres = { "Drama", "Science Fiction" },
         AddedAt = "2026-01-01T00:00:00.000Z",
         PosterPath = "/arrival-poster.jpg",

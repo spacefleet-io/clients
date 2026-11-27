@@ -58,6 +58,7 @@ const MEDIA_FIELDS = [
   "originalLanguage",
   "overview",
   "year",
+  "rating",
   "posterPath",
   "backdropPath",
   "genres",

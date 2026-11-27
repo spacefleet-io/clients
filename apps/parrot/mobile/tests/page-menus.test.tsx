@@ -73,7 +73,7 @@ vi.mock("@react-navigation/native", () => ({
   useNavigation: () => ({ navigate: (...args: unknown[]) => void fake.navigated.push(args), goBack: () => void (fake.wentBack += 1) }),
 }));
 vi.mock("@space/mobile-shell/i18n", () => ({ useTranslation: () => ({ t: (key: string) => key, i18n: { language: "en" } }) }));
-vi.mock("@space/mobile-shell/components", () => ({ SkyCover: "SkyCover", MobileSkeletonPulse: "Shimmer", MobileIconButton: "MobileIconButton", MOBILE_ICON_BUTTON_SIZE: 48, useSkyScroll: () => ({}) }));
+vi.mock("@space/mobile-shell/components", () => ({ SkyCover: "SkyCover", useSkyScroll: () => ({}) }));
 vi.mock("@space/mobile-shell/render-boundary", () => ({ guardRenderItem: (_name: string, render: unknown) => render }));
 vi.mock("@space/mobile-audio-playback", () => ({
   AudioPlayback: { canShowOutputSwitcher: async () => false },
@@ -84,11 +84,9 @@ vi.mock("../src/lib/playback", () => ({ setPlaybackShuffle: async () => undefine
 vi.mock("../src/state/usePlayerState", () => ({ usePlayerState: () => fake.player, useNowPlaying: () => null }));
 vi.mock("../src/state/useUpNext", () => ({ useUpNext: () => [] }));
 vi.mock("../src/state/session", () => ({ useSession: () => ({ library: { status: "ready", version: 1 }, localChanges: 0 }) }));
-vi.mock("../src/state/useQuery", () => ({
-  useQuery: (load: () => unknown) => ({ data: String(load).includes("readArtistName") ? null : [], loading: false, error: null }),
-}));
+vi.mock("../src/state/useQuery", () => ({ useQuery: () => ({ data: [], loading: false, error: null }) }));
 vi.mock("../src/state/usePlay", () => ({ usePlay: () => ({ play: async () => undefined, starting: null, error: null }) }));
-vi.mock("../src/lib/library", () => ({ listArtistAlbums: async () => [], readArtistPicture: async () => null, readArtistName: async () => null, listPlaylistSongs: async () => [] }));
+vi.mock("../src/lib/library", () => ({ listArtistAlbums: async () => [], readArtistPicture: async () => null, listPlaylistSongs: async () => [] }));
 vi.mock("../src/lib/picturesWaiting", () => ({ artistPicturesWaiting: { has: () => false, onChange: () => () => undefined } }));
 vi.mock("../src/state/manage", () => ({
   useManage: () => ({ remove: (target: { kind: string; id: string }, title: string, onDeleted?: () => void) => {
@@ -117,6 +115,7 @@ vi.mock("../src/screens/sky", () => ({ ParrotSky: "ParrotSky", PLAYER_TINT: "tin
 vi.mock("../src/screens/art", () => ({ ParrotArt: "ParrotArt", WaveSeek: "WaveSeek" }));
 vi.mock("../src/screens/PlayerLyrics", () => ({ PlayerLyrics: "PlayerLyrics" }));
 vi.mock("../src/screens/AlbumGrid", () => ({ AlbumGrid: "AlbumGrid" }));
+vi.mock("../src/screens/shimmer", () => ({ Shimmer: "Shimmer" }));
 vi.mock("../src/screens/pageBack", () => ({ PageBackButton: "PageBackButton", PAGE_BACK_ROW: 60, usePageTop: () => 100 }));
 vi.mock("../src/screens/SongListRow", () => ({ SongListRow: "SongListRow", songRowNames: () => [] }));
 

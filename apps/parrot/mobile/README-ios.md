@@ -25,8 +25,7 @@ The Debug id installs beside the TestFlight build. Team `8766H6KW4V`, automatic 
 
 The library database lives in `Library/LocalDatabase/parrot.library.sqlite` on the iPhone (react-native-sqlite-storage's
 `default` location on iOS). On the Apple TV it lives in `Library/Caches/parrot.library.sqlite`: tvOS lets an app write
-only to Caches on the device, and the patched plugin keeps a `Documents` database there
-(`packages/mobile-shell/src/appData.ts`, shared with Badger).
+only to Caches on the device, and the patched plugin keeps a `Documents` database there (`src/lib/dbPath.ts`).
 
 ## Build (simulator)
 

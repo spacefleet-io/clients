@@ -23,7 +23,7 @@
  * budget; failure indicates the shared builder grew an O(n²) loop, or
  * statement preparation inside the hot path was reintroduced.
  */
-import { Database, type Statement } from "bun:sqlite";
+import { Database } from "bun:sqlite";
 import { describe, expect, it } from "bun:test";
 import {
   ALL_LIBRARY_DB_GROUPS,
@@ -236,37 +236,6 @@ const closeAllDbs = (dbs: GroupDbs) => {
   for (const db of Object.values(dbs)) db.close();
 };
 
-type StatementRunStats = { count: number; prepares: number; prepareMs: number };
-
-/**
- * Runs statements the way `LibraryDb.executeOpStatementGroups` does: each distinct SQL text is prepared once per
- * file and reused, so a timed transaction measures applying the ops, not compiling the same few texts 19,000 times.
- * Prepare time is counted apart so a log shows how much of a transaction went to compiling.
- */
-const runStatementsCached = (
-  db: Database,
-  lists: Iterable<ReadonlyArray<{ sql: string; params: ReadonlyArray<unknown> }> | undefined>,
-  cache: Map<string, Statement>,
-): StatementRunStats => {
-  const stats: StatementRunStats = { count: 0, prepares: 0, prepareMs: 0 };
-  for (const list of lists) {
-    if (!list) continue;
-    for (const stmt of list) {
-      let prepared = cache.get(stmt.sql);
-      if (!prepared) {
-        const prepareStart = performance.now();
-        prepared = db.prepare(stmt.sql);
-        stats.prepareMs += performance.now() - prepareStart;
-        stats.prepares++;
-        cache.set(stmt.sql, prepared);
-      }
-      prepared.run(...toBindings(stmt.params));
-      stats.count++;
-    }
-  }
-  return stats;
-};
-
 /**
  * Apply ops the way the runtime actually does: build statements once,
  * then run a single per-group transaction containing every statement
@@ -289,18 +258,24 @@ const applyOpsRuntimeStyle = (
   const totalStart = performance.now();
   for (const group of ALL_LIBRARY_DB_GROUPS) {
     const db = dbs[group];
-    let run: StatementRunStats = { count: 0, prepares: 0, prepareMs: 0 };
+    let count = 0;
     const txStart = performance.now();
     const tx = db.transaction(() => {
-      run = runStatementsCached(db, built.map((stmts) => stmts[group]), new Map());
+      for (const stmts of built) {
+        const list = stmts[group];
+        if (!list) continue;
+        for (const stmt of list) {
+          db.prepare(stmt.sql).run(...toBindings(stmt.params));
+          count++;
+        }
+      }
     });
     tx();
     const elapsed = performance.now() - txStart;
-    const count = run.count;
     perGroupMs[group] = elapsed;
     perGroupStmtCount[group] = count;
     console.info(
-      `[cold-sync-perf:${label}:tx] group=${group} stmts=${count} prepares=${run.prepares} prepareMs=${run.prepareMs.toFixed(1)} elapsed=${elapsed.toFixed(1)}ms throughput=${count > 0 ? (count / (elapsed / 1000)).toFixed(0) : "n/a"}/s`,
+      `[cold-sync-perf:${label}:tx] group=${group} stmts=${count} elapsed=${elapsed.toFixed(1)}ms throughput=${count > 0 ? (count / (elapsed / 1000)).toFixed(0) : "n/a"}/s`,
     );
   }
   const totalMs = performance.now() - totalStart;
@@ -466,15 +441,21 @@ describe("cold-sync — 1000 media.upsert ops via buildOpStatements", () => {
         `[cold-sync-perf:playback-hotpath] starting isolated playback transaction (1000 ops)`,
       );
       const start = performance.now();
-      let run: StatementRunStats = { count: 0, prepares: 0, prepareMs: 0 };
+      let stmtCount = 0;
       const tx = dbs.playback.transaction(() => {
-        run = runStatementsCached(dbs.playback, built.map((stmts) => stmts.playback), new Map());
+        for (const stmts of built) {
+          const list = stmts.playback;
+          if (!list) continue;
+          for (const stmt of list) {
+            dbs.playback.prepare(stmt.sql).run(...toBindings(stmt.params));
+            stmtCount++;
+          }
+        }
       });
       tx();
       const elapsed = performance.now() - start;
-      const stmtCount = run.count;
       console.info(
-        `[cold-sync-perf:playback-hotpath] elapsed=${elapsed.toFixed(1)}ms stmts=${stmtCount} prepares=${run.prepares} prepareMs=${run.prepareMs.toFixed(1)} budget=2000ms`,
+        `[cold-sync-perf:playback-hotpath] elapsed=${elapsed.toFixed(1)}ms stmts=${stmtCount} budget=2000ms`,
       );
       try {
         expect(elapsed).toBeLessThan(2000);

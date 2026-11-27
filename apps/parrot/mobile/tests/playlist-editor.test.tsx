@@ -40,8 +40,6 @@ const fake = vi.hoisted(() => ({
   language: "en" as "en" | "fr",
   keepChoices: [] as KeepCopyChoice[],
   keeps: [] as string[],
-  /** The sheet slide out a row started: `onClose`, then what the row runs once the sheet is gone. */
-  sliding: null as (() => void) | null,
 }));
 
 vi.mock("react-native", async () => {
@@ -81,21 +79,11 @@ vi.mock("@space/mobile-shell/i18n", () => ({
 vi.mock("@space/mobile-shell/components", () => ({ MobileNoticeBanner: ({ message, tone }: { message: string; tone: string }) => `${tone}:${message}` }));
 vi.mock("@space/mobile-shell/render-boundary", () => ({ MobileRenderBoundary: ({ children }: { children: React.ReactNode }) => children }));
 // The shared sheet: drawn only while shown; its tap outside, Back and drag all end in `onClose` (MOBILE-SHELL-BOTTOM-SHEET-001).
-// `useMobileSheetClose` starts the slide out; `slideOut()` ends it: `onClose`, then what the row runs after.
 vi.mock("@space/mobile-shell/bottom-sheet", async () => {
   const react = await vi.importActual<typeof import("react")>("react");
-  const Close = react.createContext<(after?: () => void) => void>(() => undefined);
   return {
-    MobileBottomSheet: (props: { visible: boolean; onClose: () => void; children?: React.ReactNode }) =>
-      props.visible
-        ? react.createElement(
-            Close.Provider,
-            { value: (after?: () => void) => void (fake.sliding = () => (props.onClose(), after?.())) },
-            react.createElement("MobileBottomSheet", props, props.children)
-          )
-        : null,
+    MobileBottomSheet: (props: { visible: boolean; children?: React.ReactNode }) => (props.visible ? react.createElement("MobileBottomSheet", props, props.children) : null),
     MobileSheetScrollView: (props: { children?: React.ReactNode }) => react.createElement("ScrollView", props, props.children),
-    useMobileSheetClose: () => react.useContext(Close),
   };
 });
 vi.mock("../src/theme", () => ({ colors: { textMuted: "#888", accent: "#0f0", danger: "danger" }, spacing: { xs: 2, sm: 4, md: 8, lg: 16 } }));
@@ -188,13 +176,6 @@ const run = async (call: () => void) => {
   await act(async () => call());
   await flush();
 };
-/** Ends the slide out a sheet row started. */
-const slideOut = async () => {
-  const sliding = fake.sliding;
-  if (!sliding) throw new Error("no sheet sliding out");
-  fake.sliding = null;
-  await run(sliding);
-};
 /** Settles the oldest publish still waiting. */
 const settle = async (error?: Error) => {
   const publish = fake.publishes.shift();
@@ -206,7 +187,7 @@ const settle = async (error?: Error) => {
 const named = (name: string) => fake.playlists.find((playlist) => playlist.name === name);
 
 beforeEach(async () => {
-  Object.assign(fake, { playlists: [], localChanges: 0, publishes: [], alerts: [], uuid: 0, language: "en", keepChoices: [], keeps: [], sliding: null });
+  Object.assign(fake, { playlists: [], localChanges: 0, publishes: [], alerts: [], uuid: 0, language: "en", keepChoices: [], keeps: [] });
   fake.listeners.clear();
   editor = null;
   await act(async () => {
@@ -230,10 +211,6 @@ describe("the phone's playlist editing", () => {
     expect(byTestId("playlist-picker")).toHaveLength(1);
     expect(labels("picker-liked")).toEqual(["Liked songs"]);
     await press(one("picker-new"));
-    // The name dialog waits for the picker to be gone: on iOS a Modal asked for while another leaves never shows (#3350 S47).
-    expect(byTestId("playlist-name-dialog")).toHaveLength(0);
-    await slideOut();
-    expect(byTestId("playlist-picker")).toHaveLength(0);
     expect(one("playlist-name-submit").props.disabled).toBe(true);
     await typeName("   ");
     expect(one("playlist-name-submit").props.disabled).toBe(true);
@@ -457,9 +434,6 @@ describe("the phone's playlist editing", () => {
     expect(byTestId("artist-menu")).toHaveLength(0);
     await run(() => ed().openActions("Nova", actions, "artist-menu"));
     await press(one("artist-menu-delete"));
-    // The pick runs once the sheet is out of sight: its Alert or dialog would not show over a leaving Modal on iOS.
-    expect(deleted).toBe(0);
-    await slideOut();
     expect(deleted).toBe(1);
     expect(byTestId("artist-menu")).toHaveLength(0);
   });

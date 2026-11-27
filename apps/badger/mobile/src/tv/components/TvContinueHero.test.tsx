@@ -23,7 +23,7 @@ import React from "react";
 import { act, create, type ReactTestInstance, type ReactTestRenderer } from "react-test-renderer";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import i18next from "i18next";
-import en from "@space/mobile-shell/i18n/en.json";
+import en from "../../../../../../packages/mobile-shell/src/i18n/en.json";
 import type { MediaRow } from "@space/shared/libraryTypes";
 import { heroText, resumeClock, TvContinueHero } from "./TvContinueHero";
 

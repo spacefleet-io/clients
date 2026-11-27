@@ -26,8 +26,7 @@ import mascotWebp from "@/assets/mascot.webp";
 import { validateDesktopSignupInput } from "@/lib/signupValidation";
 import { newsOptInText } from "@space/legal";
 import SetupLanguageMenu from "@/components/SetupLanguageMenu";
-import { DesktopProviderSignIn } from "@space/desktop-shell/provider-sign-in";
-import { listBadgerProviders, startBadgerProviderSignIn } from "@/lib/providerSignIn";
+import { ProviderSignIn } from "@/components/ProviderSignIn";
 import { useProviderReturnNudge } from "@space/desktop-shell/provider-return";
 
 export default function Signup() {
@@ -157,11 +156,8 @@ export default function Signup() {
               >
                 {loading ? t("signup.creating") : t("signup.button")} {!loading ? <Check size={18} /> : null}
               </DesktopAuthPrimaryButton>
-              <DesktopProviderSignIn
-                language={i18n.language}
-                mode="signUp"
-                list={listBadgerProviders}
-                start={(provider, clientChallenge) => startBadgerProviderSignIn(provider, clientChallenge, t, i18n.language)}
+              <ProviderSignIn
+                mode="signup"
                 onStarted={() => {
                   setError(null);
                   setInfo(t("login.provider.continueInBrowser"));

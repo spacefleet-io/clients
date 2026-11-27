@@ -1,7 +1,4 @@
 import { useTranslation } from "react-i18next";
-import { KeyChangeDialog, type KeyChangeDialogView } from "@space/desktop-shell/components";
-import { isClientUiLanguage } from "@space/shared";
-import { SPACE_APP_NAMES } from "@space/shared/appScope";
 import { Button, Checkbox, Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, Input, Label } from "@space/ui";
 import { Copy } from "lucide-react";
 import { LibraryKeyWordsGrid } from "@space/ui/library-key-words";
@@ -42,7 +39,6 @@ type RecoveryDialogsProps = {
   recoveryError: string | null;
   recoveryBusy: boolean;
   submitRecovery: () => void | Promise<void>;
-  keyChange: KeyChangeDialogView;
   resetOpen: boolean;
   setResetOpen: (open: boolean) => void;
   resetConfirmed: boolean;
@@ -92,7 +88,6 @@ export default function SettingsRecoveryDialogs({
   recoveryError,
   recoveryBusy,
   submitRecovery,
-  keyChange,
   resetOpen,
   setResetOpen,
   resetConfirmed,
@@ -110,7 +105,7 @@ export default function SettingsRecoveryDialogs({
   resetResending,
   resendResetCode,
 }: RecoveryDialogsProps) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   // ACCT-AUTH-04: an account without a password confirms each of these with a code alone.
   const hasPassword = useHasPassword();
 
@@ -204,28 +199,90 @@ export default function SettingsRecoveryDialogs({
         </DialogContent>
       </Dialog>
 
-      <KeyChangeDialog
-        language={isClientUiLanguage(i18n.language) ? i18n.language : "en"}
-        app={SPACE_APP_NAMES.badger}
-        open={recoveryOpen}
-        onOpenChange={setRecoveryOpen}
-        words={recoveryKey?.words ?? null}
-        onCopyWords={copyRecoveryKey}
-        confirmed={recoveryConfirmed}
-        onConfirmedChange={setRecoveryConfirmed}
-        hasPassword={hasPassword}
-        password={recoveryPassword}
-        onPasswordChange={setRecoveryPassword}
-        needsCode={recoveryNeedsCode}
-        code={recoveryCode}
-        onCodeChange={setRecoveryCode}
-        method={recoveryMethod}
-        notice={recoveryNotice}
-        error={recoveryError}
-        busy={recoveryBusy}
-        onSubmit={submitRecovery}
-        view={keyChange}
-      />
+      <Dialog open={recoveryOpen} onOpenChange={setRecoveryOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{t("settings.recovery.rotate.dialogTitle")}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2 text-sm">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <div className="font-semibold">{t("settings.recovery.rotate.keyLabel")}</div>
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  className="h-8 w-8"
+                  onClick={copyRecoveryKey}
+                  disabled={!recoveryKey}
+                  aria-label={t("settings.recovery.rotate.copyButton")}
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+              {recoveryKey ? (
+                <LibraryKeyWordsGrid words={recoveryKey.words} className="rounded-md border border-border p-3" />
+              ) : null}
+              <div className="text-xs text-muted-foreground">{t("settings.recovery.rotate.keyHint")}</div>
+            </div>
+
+            <label className="flex cursor-pointer items-center gap-3 rounded-md border border-border p-3">
+              <Checkbox checked={recoveryConfirmed} onCheckedChange={(checked) => setRecoveryConfirmed(Boolean(checked))} />
+              <span>{t("settings.recovery.rotate.confirmLabel")}</span>
+            </label>
+
+            <div className="grid gap-3">
+              <ReauthPasswordField
+                id="recoveryPassword"
+                label={t("settings.recovery.rotate.passwordLabel")}
+                value={recoveryPassword}
+                onChange={setRecoveryPassword}
+              />
+              {recoveryNeedsCode ? (
+                <div className="grid gap-2">
+                  <Label htmlFor="recoveryCode">{t("settings.recovery.rotate.codeLabel")}</Label>
+                  <Input
+                    id="recoveryCode"
+                    value={recoveryCode}
+                    onChange={(e) => setRecoveryCode(e.target.value)}
+                    placeholder="123456"
+                    autoComplete="one-time-code"
+                  />
+                  <div className="text-xs text-muted-foreground">
+                    {recoveryMethod === "totp"
+                      ? t("settings.recovery.rotate.codeHintTotp")
+                      : t("settings.recovery.rotate.codeHintEmail")}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+
+            {recoveryNotice ? (
+              <div className="rounded-md border border-primary/30 bg-primary/10 px-3 py-2 text-sm text-primary">
+                {recoveryNotice}
+              </div>
+            ) : null}
+            {recoveryError ? (
+              <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                {recoveryError}
+              </div>
+            ) : null}
+          </div>
+          <DialogFooter className="gap-2">
+            <Button type="button" variant="ghost" onClick={() => setRecoveryOpen(false)}>
+              {t("settings.recovery.rotate.cancel")}
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => void submitRecovery()}
+              disabled={!recoveryConfirmed || (hasPassword && !recoveryPassword.trim()) || recoveryBusy}
+            >
+              {recoveryBusy ? t("settings.recovery.rotate.working") : t("settings.recovery.rotate.submit")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={resetOpen} onOpenChange={setResetOpen}>
         <DialogContent className="max-w-lg">

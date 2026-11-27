@@ -170,25 +170,6 @@ export const SOURCES = {
     sha: "38ec7dbd4df3141441afafe5ac62dfc9df36a77e",
     license: "MIT",
   },
-  // MPV-GPU-04: mpv's Wayland context needs wayland-client >= 1.21 and wayland-protocols >= 1.31 at build time; Ubuntu
-  // 22.04 (the builder, #3961) ships 1.20 / 1.25. libwayland-client / -cursor / -egl ship in the bundle: an older host
-  // libwayland-client aborts on the newer events mpv binds (recipes/linux-x64/target.ts hostLibraries).
-  wayland: {
-    version: "1.24.0",
-    repo: "wayland",
-    upstream: { kind: "git", url: "https://gitlab.freedesktop.org/wayland/wayland.git" },
-    upstreamRef: "1.24.0",
-    sha: "736d12ac67c20c60dc406dc49bb06be878501f86",
-    license: "MIT",
-  },
-  "wayland-protocols": {
-    version: "1.47",
-    repo: "wayland-protocols",
-    upstream: { kind: "git", url: "https://gitlab.freedesktop.org/wayland/wayland-protocols.git" },
-    upstreamRef: "1.47",
-    sha: "88223018d1b578d0d8869866da66d9608e05f928",
-    license: "MIT",
-  },
   libva: {
     // Mesa's VA drivers export only `__vaDriverInit_<their libva's API>`, and libva tries its own API version down to
     // 1.0: the bundled libva must be at least the one the user's Mesa was built against (Mesa 26 needs 1.24).

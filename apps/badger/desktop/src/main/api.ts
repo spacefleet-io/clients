@@ -2,7 +2,6 @@ import * as sdk from "@space/sdk";
 import { ApiError, SPACE_APP_HEADER, unwrap, type ApiErrorPayload } from "@space/sdk";
 import { getApiBaseUrl } from "./apiHost";
 import type { SpaceAppId } from "@space/shared/appScope";
-import type { FeedbackInput } from "@space/shared/api";
 import type { StorageObjectCounting } from "@space/shared/storageCounting";
 import {
   createUserStorageTunnelClient,
@@ -150,9 +149,6 @@ export const listStorageObjects = (token: string) => unwrap(sdk.listStorageObjec
 
 export const deleteStorageObjects = (token: string, keys: string[]) =>
   unwrap(sdk.deleteStorageObjects({ ...accountCall(token), body: { keys } }));
-
-/** UX-SUP-05: Settings > Help & feedback, sent by main with the window's session (`feedbackIpc.ts`). */
-export const sendFeedback = (token: string, body: FeedbackInput) => unwrap(sdk.sendFeedback({ ...accountCall(token), body }));
 
 // ACCT-PAIR-07: approving Parrot's sign-in on this computer (the local channel, `@space/desktop-shell/sibling-main`).
 export const lookupPairing = (token: string, code: string) => unwrap(sdk.lookupPairing({ ...accountCall(token), query: { code } }));

@@ -4,8 +4,9 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { requireMediaBinary } from "@space/media-deps";
 import { resolveSubtitleOutput } from "../src/mediaProcessor";
-// The component recipe lives in @space/media-deps: @space/ffmpeg exports only its runtime API.
-import { COMPONENT_LIST_ARGS, ffmpegComponentFlags, findMissingComponents, type ListedComponentKind } from "@space/media-deps";
+// Test-only reach into the sibling package: @space/ffmpeg exports only its runtime API.
+import { COMPONENT_LIST_ARGS, findMissingComponents, type ListedComponentKind } from "../../media-deps/src/components";
+import { ffmpegComponentFlags } from "../../media-deps/src/features";
 
 // @bugfix @regression-proof (issue #25, review of PR #41): packaged desktop builds run a reduced ffmpeg
 // (`--disable-everything`). The first build enabled only the dash/image2/matroska/mp4 muxers, so

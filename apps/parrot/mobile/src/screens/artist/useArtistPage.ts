@@ -1,16 +1,16 @@
 // What the artist page (PAR-LOOK-06) reads and does: the artist's albums (newest last, as `listArtistAlbums` orders
 // them), every song on them, the photo with its shimmer (PAR-META-15, PAR-META-20), Play / Shuffle / Play next over all
 // the songs, Save offline (each album kept, since the kept list has no artist kind, PAR-OFFL-01) and the "…" sheet
-// with Edit details (PAR-META-31) and Delete last (PAR-LIB-03).
+// with Delete last (PAR-LIB-03).
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { ArrowDownToLine, CircleCheck, ListEnd, ListPlus, ListStart, Pencil, Trash2 } from "lucide-react-native";
+import { ArrowDownToLine, CircleCheck, ListEnd, ListPlus, ListStart, Trash2 } from "lucide-react-native";
 import { useTranslation } from "@space/mobile-shell/i18n";
 import { parrotCardActionList, type OfflineReach, type ParrotCardActionId, type ParrotCardPlayer, type SongRow } from "@space/parrot-core";
 import type { ParrotPhotoCredit } from "@space/parrot-library-db-definition/ops";
 import { artistPicturesWaiting } from "../../lib/picturesWaiting";
-import { listArtistAlbums, listSongs, readArtistName, readArtistPicture, type AlbumWithCover, type WithCoverKeys } from "../../lib/library";
+import { listArtistAlbums, listSongs, readArtistPicture, type AlbumWithCover, type WithCoverKeys } from "../../lib/library";
 import type { NowPlaying } from "../../lib/nowPlaying";
 import { useQuery } from "../../state/useQuery";
 import { useManage } from "../../state/manage";
@@ -40,8 +40,6 @@ export type ArtistAlbum = AlbumWithCover;
 /** Everything the artist page lays out. */
 export type ArtistPage = {
   t: (key: string, options?: Record<string, unknown>) => string;
-  /** The name the library has now: a rename saved on another device shows while the page is open (PAR-SYNC-01). */
-  name: string;
   albums: ArtistAlbum[];
   songs: ArtistSong[];
   /** "N albums · N songs · 3 h 12 min". */
@@ -65,15 +63,13 @@ export type ArtistPage = {
   openSong: (song: ArtistSong) => void;
 };
 
-export const useArtistPage = (artistId: string, openedName: string): ArtistPage => {
+export const useArtistPage = (artistId: string, name: string): ArtistPage => {
   const { t } = useTranslation();
   const { library } = useSession();
   const version = library.status === "ready" ? library.version : -1;
   const albumsQuery = useQuery(() => listArtistAlbums(artistId), [artistId, version]);
   const songsQuery = useQuery(() => listSongs(), [version]);
   const picture = useQuery(() => readArtistPicture(artistId), [artistId, version]);
-  const storedName = useQuery(() => readArtistName(artistId), [artistId, version]);
-  const name = storedName.data ?? openedName;
   const navigation = useNavigation<NativeStackNavigationProp<RootStack>>();
   const manage = useManage();
   const editor = usePlaylistEditor();
@@ -129,13 +125,6 @@ export const useArtistPage = (artistId: string, openedName: string): ArtistPage 
           testID: allKept ? "artist-menu-unkeep" : "artist-menu-keep",
         },
         {
-          id: "edit",
-          label: t("shell.manage.edit"),
-          icon: Pencil,
-          onSelect: () => manage.editArtist(artistId),
-          testID: "artist-menu-edit",
-        },
-        {
           id: "delete",
           label: t("shell.manage.delete"),
           icon: Trash2,
@@ -158,7 +147,6 @@ export const useArtistPage = (artistId: string, openedName: string): ArtistPage 
 
   return {
     t,
-    name,
     albums,
     songs,
     counts,

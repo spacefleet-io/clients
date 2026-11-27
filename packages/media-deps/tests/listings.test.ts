@@ -111,14 +111,12 @@ describe("@bugfix @regression-proof host libraries never ride in the linux-x64 b
     const hostStack = [
       "libGL.so.1", "libGLX.so.0", "libGLX_mesa.so.0", "libGLdispatch.so.0", "libGLESv2.so.2", "libOpenGL.so.0", "libEGL.so.1",
       "libEGL_mesa.so.0", "libglapi.so.0", "libgbm.so.1", "libdrm.so.2", "libdrm_amdgpu.so.1", "libvulkan.so.1",
-      "libxkbcommon.so.0", "libxcb-dri3.so.0", "libxcb-present.so.0", "libxshmfence.so.1",
+      "libwayland-client.so.0", "libwayland-egl.so.1", "libxcb-dri3.so.0", "libxcb-present.so.0", "libxshmfence.so.1",
       "libc.so.6", "libm.so.6", "ld-linux-x86-64.so.2", "libpthread.so.0", "libnss_files.so.2",
     ];
     expect(findBundledHostLibraries(hostStack, patterns)).toEqual(hostStack);
     // libva stays bundled: drivers bind to the libva already loaded (it must be at least the host Mesa's libva).
-    // libwayland too (MPV-GPU-04): a host older than the 1.24 mpv is built against aborts on its wl_surface v6 events.
-    const bundled = ["libva.so.2", "libva-x11.so.2", "libva-drm.so.2", "libva-wayland.so.2", "libwayland-client.so.0", "libwayland-cursor.so.0", "libwayland-egl.so.1", "libffi.so.8", "libzimg.so.2", "libzstd.so.1"];
-    expect(findBundledHostLibraries(bundled, patterns)).toEqual([]);
+    expect(findBundledHostLibraries(["libva.so.2", "libva-x11.so.2", "libva-drm.so.2", "libzimg.so.2", "libzstd.so.1"], patterns)).toEqual([]);
   });
 
   // Size (#25): every X11 client library the app's own Electron loads is on any host that runs the app, so the

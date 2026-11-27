@@ -67,7 +67,7 @@ int fdatasync(int fd) { static int (*real)(int); if (!real) real = dlsym(RTLD_NE
 `;
 
 const fixtureSource = (dataDir: string) => `
-import { createSqliteRuntimeJobsStore, prepareSqliteRuntimeJobsStore } from ${JSON.stringify(join(REPO, "packages/runtime-jobs-engine/src/sqliteStore.ts"))};
+import { createSqliteRuntimeJobsStore, prepareSqliteRuntimeJobsStore } from ${JSON.stringify(join(REPO, "apps/runtime/src/core/jobs/sqliteStore.ts"))};
 import { LibraryDb } from ${JSON.stringify(join(REPO, "packages/library-db-runtime/src/libraryDb.ts"))};
 
 const server = Bun.serve({ port: 0, hostname: "127.0.0.1", fetch: () => new Response("ok") });

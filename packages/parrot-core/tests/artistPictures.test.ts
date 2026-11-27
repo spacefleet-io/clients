@@ -7,7 +7,7 @@
  *   album or song only when the match bears its name (never replacing an id already set), and the pass's ops follow a
  *   rename made on another device. PAR-META-20: the pass reports the artists it still has to answer for, an artist
  *   leaving that list only once its answer is kept (or its lookup failed), so a photo never looks missing while it is
- *   on its way. PAR-META-31: a photo the user gave the artist meanwhile is never replaced by the pass's.
+ *   on its way.
  */
 import { Database } from "bun:sqlite";
 import { describe, expect, it } from "bun:test";
@@ -222,30 +222,6 @@ describe("runParrotAutoArtistPictures", () => {
     const payloads = rebased.flatMap((op) => (op.type === "artist.upsert" ? [op.payload] : []));
     expect(payloads.map((payload) => payload.id).sort()).toEqual(["ar-local", "ar-lp"]);
     expect(payloads.find((payload) => payload.id === "ar-lp")).toMatchObject({ name: "LINNET PARK", pictureCredit: LP_PHOTO.credit });
-  });
-
-  it("@req PAR-META-31 keeps the photo the user gave an artist meanwhile when its ops are planned again", async () => {
-    const db = seed();
-    const h = harness(db, { publish: async (ops) => (h.published.push(ops), true) });
-    await runParrotAutoArtistPictures(h.args);
-    const ops = h.published.flat();
-    apply(db, [
-      createParrotOp(
-        "artist.upsert",
-        { id: "ar-lp", musicId: ID_LP, name: "Linnet Park", sortName: "Linnet Park", pictureObjectKey: "pic/user", pictureThumbObjectKey: "pic/user-thumb" },
-        meta
-      ),
-    ]);
-    const rebased = await rebaseParrotArtistPictureOps(queryOf(db), ops);
-    console.info(`${T} rebased over the user's photo=${JSON.stringify(rebased.map((op) => op.payload))}`);
-    const lp = rebased.flatMap((op) => (op.type === "artist.upsert" && op.payload.id === "ar-lp" ? [op.payload] : []))[0];
-    expect(lp?.pictureObjectKey).toBeUndefined();
-    expect(lp?.pictureThumbObjectKey).toBeUndefined();
-    expect(lp?.pictureTriedAt).toBeDefined();
-    apply(db, rebased);
-    const row = db.prepare("SELECT picture_object_key AS k, picture_thumb_object_key AS t FROM artists WHERE id = ?").get("ar-lp") as { k: string; t: string };
-    console.info(`${T} row after the rebased ops=${JSON.stringify(row)}`);
-    expect(row).toEqual({ k: "pic/user", t: "pic/user-thumb" });
   });
 
   // @req PAR-META-15: an existing artist without an id (none of the importer's ever had one) gets it from its matched album.

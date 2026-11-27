@@ -21,12 +21,11 @@ configuration (`MOBILE_FEATURES`), no ffmpeg/ffprobe programs.
 | `android-x64` | same, emulator / x86 devices | `lib/x86_64/*.so` | same |
 | `android-ia32` | same, 32-bit x86 (ffmpeg without assembly: Android refuses text relocations) | `lib/x86/*.so` | same |
 
-The app picks the GPU path on Linux (`--vo=gpu,wlshm` in a Wayland session, `--vo=gpu,x11` in an X11 one, both
-with `--hwdec=auto-safe`; `--vo=gpu --hwdec=auto-safe` on Windows) and falls back to the CPU by itself (#25).
-Linux mpv is native on both display servers (MPV-GPU-04): `wayland` and `x11egl` GPU contexts, `wlshm` /
-`dmabuf-wayland` / `x11` outputs. mpv 0.41's Wayland needs wayland ≥ 1.21 / wayland-protocols ≥ 1.31 where the
-jammy builder has 1.20 / 1.25, so both are built from their pinned forks. Linux has no Vulkan and no DRM/KMS
-output: `egl-drm` / `vaapi-drm` / mpv's `drm` need libdisplay-info (no fork).
+The app picks the GPU path (`--vo=gpu,x11 --hwdec=auto-safe` on Linux, `--vo=gpu --hwdec=auto-safe` on
+Windows) and falls back to the CPU by itself (#25). Linux has no Vulkan, no DRM/KMS output and no native
+Wayland: `egl-drm` / `vaapi-drm` / mpv's `drm` need libdisplay-info (no fork), and mpv 0.41's Wayland needs
+wayland ≥ 1.21 / wayland-protocols ≥ 1.31 where the jammy builder has 1.20 / 1.25. Wayland sessions run the
+X11 path through XWayland.
 
 The phone and TV apps embed **libmpv** from a second, shared mobile configuration (`MOBILE_FEATURES` in
 `src/features.ts`, REL-DEPS-11): the desktop list's demuxers, parsers and decoders, playback only, no encoder,
@@ -90,12 +89,9 @@ library is reachable only through a host library.
 
 The host needs glibc ≥ 2.35 and a libstdc++ from GCC ≥ 11 (built on Ubuntu 22.04), plus — Debian/Ubuntu
 package names — `libegl1 libgl1 libdrm2 libx11-6 libx11-xcb1 libxcb1 libxcb-dri3-0 libxext6 libxfixes3 libxrandr2
-libxrender1 libxkbcommon0 libexpat1 zlib1g libstdc++6
-libgcc-s1 libasound2t64 libglib2.0-0t64 libdbus-1-3 libfontconfig1 libfreetype6 libharfbuzz0b libfribidi0`
-(`libasound2 libglib2.0-0` before the 64-bit time_t transition: Ubuntu 22.04, Debian 12). Every desktop has
-them; our CI images install them. libxkbcommon is the host's (mpv's Wayland keyboard; Electron needs it too).
-libwayland-client / -cursor / -egl are bundled from our 1.24 build: mpv built against 1.24 binds wl_compositor v6,
-and jammy's 1.20 aborts on an event it doesn't know ("interface 'wl_surface' has no event 2", mpv hangs).
+libxrender1 libexpat1 zlib1g libstdc++6 libgcc-s1 libasound2t64 libglib2.0-0t64 libdbus-1-3 libfontconfig1
+libfreetype6 libharfbuzz0b libfribidi0` (`libasound2 libglib2.0-0` before the 64-bit time_t transition: Ubuntu
+22.04, Debian 12). Every desktop has them; our CI images install them.
 
 The Linux and Android recipes stay on `ubuntu:22.04` (Chris, 2026-11-23, dependency audit #3378 D33). Moving to
 24.04 would raise the minimum host to glibc 2.39 and drop Ubuntu 22.04 and Debian 12 hosts. Revisit when 22.04
@@ -132,7 +128,7 @@ releases and forks while they are private and to publish.
 
 ## Sources: forks only
 
-Nothing is built from upstream. Every library (the 32 pins in `src/sources.ts` plus libplacebo's 6 submodules, in 34 fork repositories) has a
+Nothing is built from upstream. Every library (the 30 pins in `src/sources.ts` plus libplacebo's 6 submodules, in 32 fork repositories) has a
 fork in the GitHub org [spacefleet-io](https://github.com/spacefleet-io), and the recipes fetch **one exact commit** from it
 (`recipes/_shared/fetch-source.sh` refuses any other commit). Our patches live on `sf/<version>` branches; the
 nightly `forks sync` mirrors every upstream branch and tag into the forks and never touches `sf/*`.

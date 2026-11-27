@@ -59,6 +59,7 @@ const addMovie = (db: LibraryDb, id: number, title: string) =>
     originalLanguage: "en",
     overview: `${title} synopsis`,
     year: "1926",
+    rating: 7.5,
     posterPath: `/poster-${id}.jpg`,
     backdropPath: null,
     genres: [],

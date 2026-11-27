@@ -3,13 +3,12 @@ import { DndContext, PointerSensor, closestCenter, useSensor, useSensors } from 
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Film, Pencil, Plus, Tv, X } from "lucide-react";
-import { useTranslation } from "react-i18next";
 
 import { Button, Card, CardContent, CardHeader } from "@space/ui";
-import type { HomeLibraryScope, HomeSectionConfig } from "@space/shared/homeLayout";
+import type { DashboardSectionConfig, LibraryScope } from "@/lib/dashboardLayoutTypes";
 
 type SortableSectionProps = {
-  section: HomeSectionConfig;
+  section: DashboardSectionConfig;
   title: string;
   icon: ReactNode;
   isEditing: boolean;
@@ -18,26 +17,26 @@ type SortableSectionProps = {
   tvLabel: string;
   onRemove: (id: string) => void;
   onEdit: (id: string) => void;
-  onToggleLibrary: (section: HomeSectionConfig, library: HomeLibraryScope) => void;
-  onSetStyle: (section: HomeSectionConfig, styleId: number) => void;
+  onToggleLibrary: (section: DashboardSectionConfig, library: LibraryScope) => void;
+  onSetStyle: (section: DashboardSectionConfig, styleId: number) => void;
   styleOptions: { id: number; label: string }[];
 };
 
 type DashboardEditLayoutProps = {
-  sections: HomeSectionConfig[];
+  sections: DashboardSectionConfig[];
   editingSectionId: string | null;
   moviesLabel: string;
   tvLabel: string;
   styleOptions: { id: number; label: string }[];
   openAddSection: (index: number) => void;
   onRemoveSection: (id: string) => void;
-  onToggleLibrary: (section: HomeSectionConfig, library: HomeLibraryScope) => void;
-  onSetStyle: (section: HomeSectionConfig, styleId: number) => void;
+  onToggleLibrary: (section: DashboardSectionConfig, library: LibraryScope) => void;
+  onSetStyle: (section: DashboardSectionConfig, styleId: number) => void;
   onToggleEditingSection: (id: string) => void;
-  onReorderSections: (updater: (items: HomeSectionConfig[]) => HomeSectionConfig[]) => void;
-  sectionLabel: (section: HomeSectionConfig) => string;
-  sectionIcon: (section: HomeSectionConfig) => ReactNode;
-  renderSectionRows: (section: HomeSectionConfig) => ReactNode;
+  onReorderSections: (updater: (items: DashboardSectionConfig[]) => DashboardSectionConfig[]) => void;
+  sectionLabel: (section: DashboardSectionConfig) => string;
+  sectionIcon: (section: DashboardSectionConfig) => ReactNode;
+  renderSectionRows: (section: DashboardSectionConfig) => ReactNode;
 };
 
 const SortableSection = ({
@@ -54,7 +53,6 @@ const SortableSection = ({
   onSetStyle,
   styleOptions,
 }: SortableSectionProps) => {
-  const { t } = useTranslation();
   const [canRender, setCanRender] = useState(false);
   const sectionRef = useRef<HTMLDivElement | null>(null);
 
@@ -95,7 +93,7 @@ const SortableSection = ({
             className="flex items-center justify-between gap-3 rounded-xl border border-[#30363d] bg-[#0f141b]/80 px-3 py-2 text-xs uppercase tracking-[0.2em] text-[#8b949e] shadow-sm cursor-grab active:cursor-grabbing select-none"
             {...attributes}
             {...listeners}
-            aria-label={t("dashboard.reorderSection")}
+            aria-label="Reorder section"
           >
             <div className="flex items-center gap-2 text-xs font-semibold">
               {icon}

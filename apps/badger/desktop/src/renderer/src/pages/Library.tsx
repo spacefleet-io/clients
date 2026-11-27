@@ -1,3 +1,4 @@
+import { formatStarRating } from "@/lib/localeFormat";
 import { Suspense, lazy, useDeferredValue, useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { mediaDetailPath } from "@/lib/mediaDetailRoute";
@@ -588,7 +589,7 @@ export default function Library() {
             className={[menuOpenId === item.id ? "" : "library-card-cv", disabled && !unavailable ? "opacity-60 grayscale" : ""].join(" ")}
             unavailable={unavailable}
             title={item.title}
-            meta={item.year || "—"}
+            meta={[item.year, item.rating ? formatStarRating(item.rating) : null].filter(Boolean).join(" · ") || "—"}
             watched={progressBand === "watched"}
             progressPct={progressBand === "in-progress" ? getVisibleProgressPct(item.progressPct ?? 0) : 0}
             watchedLabel={t("library.watched")}
@@ -783,6 +784,7 @@ export default function Library() {
           title: item.title,
           year: item.year ?? null,
           posterPath: item.posterPath ?? null,
+          rating: null,
           overview: null,
           genres: [],
           seasonCount: null,
@@ -802,6 +804,7 @@ export default function Library() {
         title: item.title,
         year: item.year,
         posterPath: item.posterPath,
+        rating: item.rating,
         overview: item.overview,
         genres: (item.genres ?? []).flatMap((id) => getGenreName(item.type, id, i18n.language) ?? []),
         seasonCount: item.type === "tv" && details ? details.seasons.length : null,

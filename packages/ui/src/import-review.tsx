@@ -328,8 +328,8 @@ export function ImportReviewMatchResult({ artwork, artworkShape = "poster", titl
           {actions}
         </div>
       </div>
-      <div className="text-xs font-semibold truncate" title={typeof title === "string" ? title : undefined}>{title}</div>
-      {meta !== undefined ? <div className="text-[10px] text-muted-foreground truncate" title={typeof meta === "string" ? meta : undefined}>{meta}</div> : null}
+      <div className="text-xs font-semibold truncate">{title}</div>
+      {meta !== undefined ? <div className="text-[10px] text-muted-foreground">{meta}</div> : null}
     </div>
   );
 }

@@ -32,7 +32,7 @@ import {
   type OfflinePieceTrack,
 } from "@space/library-db-runtime/offlinePieceStore";
 import { offlineDiskSpaceErrorMessage } from "@space/shared/offlineDiskSpace";
-import type { StepHandler, StepHandlerCtx } from "@space/runtime-jobs-engine/engineV2";
+import type { StepHandler, StepHandlerCtx } from "../../../core/jobs/engineV2";
 import { FREE_DISK_SAFETY_MARGIN_BYTES, freeDiskBytesAt, getBadgerOfflineDeps } from "../offlineDownloadDeps";
 import { HELD_SATURATED_STAGE_CODE, SLOWED_HIGH_TRAFFIC_STAGE_CODE } from "@space/shared/storageTrafficStage";
 import {

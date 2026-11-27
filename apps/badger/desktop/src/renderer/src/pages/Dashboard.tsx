@@ -1,3 +1,4 @@
+import { formatRating } from "@/lib/localeFormat";
 import { lazy, memo, Suspense, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { mediaDetailPath } from "@/lib/mediaDetailRoute";
@@ -28,9 +29,11 @@ import {
   type DashboardActiveJobState,
   reuseSameIdSet,
   reuseUnchangedActiveJobStates,
+  filterDashboardItems,
   pageLibraryContent,
   selectDashboardImportingMedia,
   selectDashboardVisibleMedia,
+  sortDashboardItems,
 } from "@/lib/dashboardState";
 import { useIngestion } from "@/lib/ingestionContext";
 import { useLabJobsData } from "@/lib/labJobs";
@@ -51,31 +54,18 @@ import { DesktopTourHost } from "@space/desktop-shell/tour";
 import tourDropVideo from "../assets/tour-drop.webm";
 import DashboardContinueHero from "@/components/DashboardContinueHero";
 import { continueWatchingTitles } from "@space/shared/continueWatching";
-import { MediaRow } from "@/lib/libraryDb";
-import {
-  buildDefaultHomeLayout,
-  createHomeGenreSection,
-  createHomeSection,
-  ensureHomeLibraries,
-  HOME_LAYOUT_KEY,
-  homeMediaVersion,
-  homeSectionLabel,
-  mergeHomeSectionItems,
-  parseHomeLayout,
-  selectHomeSectionLibrary,
-  type HomeLibraryScope,
-  type HomeSectionConfig,
-  type HomeSectionType,
-} from "@space/shared/homeLayout";
-import { getGenreOptions } from "@/lib/genres";
+import { MediaRow, PlaylistRow } from "@/lib/libraryDb";
+import type { DashboardSectionConfig, LibraryScope, SectionType } from "@/lib/dashboardLayoutTypes";
+import { getGenreName, getGenreOptions } from "@/lib/genres";
 import { genreIcon } from "@space/ui/badger/genre-icons";
-import { getVisibleProgressPct } from "@space/shared/progressBand";
+import { getProgressBand, getVisibleProgressPct } from "@space/shared/progressBand";
 import { ShellErrorCard } from "@space/desktop-shell/components";
 import { useInlinePlayback } from "@/lib/useInlinePlayback";
 import PlayPosterOverlay from "@/components/PlayPosterOverlay";
 import { LibraryLoading } from "@/components/LoadingScreen";
 
 const MAX_SECTION_ITEMS = 10;
+const DASHBOARD_LAYOUT_KEY = "dashboard_layout_v1";
 const DashboardEditLayout = lazy(() => import("@/components/DashboardEditLayout"));
 const DashboardAddSectionDialog = lazy(() => import("./DashboardAddSectionDialog"));
 
@@ -113,6 +103,114 @@ const ImportProgressOverlay = ({
     </div>
   </div>
 );
+
+const hashSeed = (seed: string) => {
+  let hash = 2166136261;
+  for (let i = 0; i < seed.length; i += 1) {
+    hash ^= seed.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+};
+
+const seededShuffle = <T,>(items: T[], seed: string) => {
+  const result = [...items];
+  let state = hashSeed(seed) || 1;
+  for (let i = result.length - 1; i > 0; i -= 1) {
+    state ^= state << 13;
+    state ^= state >>> 17;
+    state ^= state << 5;
+    const idx = Math.abs(state) % (i + 1);
+    [result[i], result[idx]] = [result[idx], result[i]];
+  }
+  return result;
+};
+
+const pickRandom = <T,>(items: T[], count: number, seed: string) =>
+  seededShuffle(items, seed).slice(0, count);
+
+const ensureLibraries = (libraries: unknown): LibraryScope[] => {
+  const values = Array.isArray(libraries) ? libraries : [];
+  const filtered = values.filter((value): value is LibraryScope => value === "movies" || value === "tv");
+  return filtered.length ? filtered : ["movies", "tv"];
+};
+
+const createSection = (type: SectionType, playlistId?: string | null, fixedId?: string): DashboardSectionConfig => ({
+  id: fixedId ?? (playlistId ? `section-playlist-${playlistId}` : `section-${type}`),
+  type,
+  playlistId: playlistId ?? null,
+  genreId: null,
+  genreType: null,
+  libraries: ["movies", "tv"],
+  styleId: 0,
+});
+
+const createGenreSection = (genreType: "movie" | "tv", genreId: number): DashboardSectionConfig => ({
+  id: `section-genre-${genreType}-${genreId}`,
+  type: "genre",
+  playlistId: null,
+  genreId,
+  genreType,
+  libraries: [genreType === "tv" ? "tv" : "movies"],
+  styleId: 0,
+});
+
+const buildDefaultLayout = (playlists: PlaylistRow[]): DashboardSectionConfig[] => {
+  const watchlistId = playlists.find((playlist) => playlist.slug === "watchlist")?.id ?? null;
+  const base: DashboardSectionConfig[] = [
+    createSection("continue"),
+    createSection("recent"),
+    createSection("unwatched"),
+    createSection("favorites"),
+  ];
+  if (watchlistId) {
+    base.push(createSection("playlist", watchlistId));
+  }
+  return base;
+};
+
+const parseLayout = (raw: string | null | undefined, playlists: PlaylistRow[]): DashboardSectionConfig[] => {
+  const fallback = buildDefaultLayout(playlists);
+  if (!raw) return fallback;
+  try {
+    const parsed = JSON.parse(raw) as { sections?: DashboardSectionConfig[] };
+    if (!parsed?.sections || !Array.isArray(parsed.sections)) return fallback;
+    const playlistIds = new Set(playlists.map((playlist) => playlist.id));
+    const watchlistId = playlists.find((playlist) => playlist.slug === "watchlist")?.id ?? null;
+    const sections = parsed.sections
+      .filter((section) => section && typeof section === "object")
+      .map((section) => {
+        const rawType = String(section.type ?? "");
+        const normalizedType = rawType === "watchlist" ? "playlist" : rawType;
+        const playlistId =
+          normalizedType === "playlist"
+            ? rawType === "watchlist"
+              ? watchlistId
+              : section.playlistId ?? null
+            : null;
+        return {
+        id: typeof section.id === "string" ? section.id : crypto.randomUUID(),
+        type: normalizedType as DashboardSectionConfig["type"],
+        playlistId,
+        genreId: Number.isFinite(Number(section.genreId)) ? Number(section.genreId) : null,
+        genreType: section.genreType === "tv" ? "tv" : section.genreType === "movie" ? "movie" : null,
+        libraries:
+          normalizedType === "genre"
+            ? [section.genreType === "tv" ? "tv" : "movies"]
+            : ensureLibraries(section.libraries),
+        styleId: Number.isFinite(Number(section.styleId)) ? Number(section.styleId) : 0,
+        } as DashboardSectionConfig;
+      })
+      .filter((section) => {
+        if (section.type === "playlist") return section.playlistId && playlistIds.has(section.playlistId);
+        if (section.type === "genre") return section.genreId !== null && section.genreType !== null;
+        return ["continue", "recent", "unwatched", "rewatch", "favorites"].includes(section.type);
+      });
+    return sections.length ? sections : fallback;
+  } catch {
+    return fallback;
+  }
+};
 
 type DashboardCardProps = {
   item: MediaRow;
@@ -185,6 +283,11 @@ const DashboardCard = memo(function DashboardCard({
             alt={item.title}
             className="h-full w-full object-cover transition group-hover:scale-[1.03]"
           />
+          {item.rating ? (
+            <span className="absolute right-2 top-2 rounded-full bg-[#ffaa54] px-2 py-0.5 text-[11px] font-semibold text-[#0d1117]">
+              {formatRating(item.rating)}
+            </span>
+          ) : null}
           {/* Stamp ONLY when fully offline (matches the movie treatment) — partial coverage shows no stamp. */}
           {offlineState === "full" ? (
             <div className="absolute left-2 top-2 z-10 pointer-events-none">
@@ -417,8 +520,8 @@ export default function Dashboard() {
   const editRequested = searchParams.get("edit") === "1";
   const returnToSettings = searchParams.get("returnTo") === "settings";
   const [editMode, setEditMode] = useState(false);
-  const [draftLayout, setDraftLayout] = useState<HomeSectionConfig[]>([]);
-  const [layout, setLayout] = useState<HomeSectionConfig[]>(() => buildDefaultHomeLayout([]));
+  const [draftLayout, setDraftLayout] = useState<DashboardSectionConfig[]>([]);
+  const [layout, setLayout] = useState<DashboardSectionConfig[]>(() => buildDefaultLayout([]));
   const [savingLayout, setSavingLayout] = useState(false);
   const [addSectionOpen, setAddSectionOpen] = useState(false);
   const [addAtIndex, setAddAtIndex] = useState<number | null>(null);
@@ -511,10 +614,9 @@ export default function Dashboard() {
     return () => window.removeEventListener("sf:ingestion-closed", onIngestionClosed);
   }, [setSearchParams]);
 
-  // UX-HOME-06: the one Home layout every Badger app draws (the phone, TV and web player read this setting too).
-  const layoutSetting = getSharedSetting(HOME_LAYOUT_KEY);
+  const layoutSetting = getSharedSetting(DASHBOARD_LAYOUT_KEY);
   const parsedLayout = useMemo(
-    () => parseHomeLayout(layoutSetting?.value, deferredPlaylists),
+    () => parseLayout(layoutSetting?.value, deferredPlaylists),
     [layoutSetting?.value, deferredPlaylists]
   );
 
@@ -572,6 +674,10 @@ export default function Dashboard() {
     [listPlaylistItems, favoritesId]
   );
 
+  const playlistLookup = useMemo(
+    () => new Map(deferredPlaylists.map((playlist) => [playlist.id, playlist])),
+    [deferredPlaylists]
+  );
   const playlistItemsById = useMemo(() => {
     const map = new Map<string, Set<string>>();
     deferredPlaylists.forEach((playlist) => {
@@ -580,24 +686,81 @@ export default function Dashboard() {
     return map;
   }, [deferredPlaylists, listPlaylistItems]);
 
-  const mediaVersion = useMemo(() => homeMediaVersion(playableMedia), [playableMedia]);
+  const mediaVersion = useMemo(() => {
+    let latest = "";
+    playableMedia.forEach((item) => {
+      if (item.updatedAt && item.updatedAt > latest) {
+        latest = item.updatedAt;
+      }
+    });
+    return `${playableMedia.length}:${latest}`;
+  }, [playableMedia]);
 
   const sectionItemsById = useMemo(() => {
     const map = new Map<string, { movies: MediaRow[]; tv: MediaRow[] }>();
-    const sources = { favorites: favoritesSet, playlistItems: playlistItemsById, mediaVersion, limit: MAX_SECTION_ITEMS };
     parsedLayout.forEach((section) => {
-      map.set(section.id, {
-        movies: selectHomeSectionLibrary(section, "movies", movies, sources),
-        tv: selectHomeSectionLibrary(section, "tv", tv, sources),
-      });
+      const buildForLibrary = (library: LibraryScope) => {
+        const source = (library === "movies" ? movies : tv).filter((item) => item.hasFiles);
+        const seedBase = `${section.id}:${section.type}:${library}:${mediaVersion}:${section.genreId ?? ""}`;
+        switch (section.type) {
+          case "continue":
+            return filterDashboardItems(source.filter((item) => getProgressBand(item.progressPct) === "in-progress"), "").slice(0, MAX_SECTION_ITEMS);
+          case "recent":
+            return sortDashboardItems(source, "added", "desc").slice(0, MAX_SECTION_ITEMS);
+          case "unwatched":
+            return pickRandom(
+              source.filter((item) => getProgressBand(item.progressPct) === "not-started"),
+              MAX_SECTION_ITEMS,
+              seedBase
+            );
+          case "rewatch":
+            return pickRandom(
+              source.filter((item) => getProgressBand(item.progressPct) === "watched"),
+              MAX_SECTION_ITEMS,
+              seedBase
+            );
+          case "favorites":
+            return filterDashboardItems(source.filter((item) => favoritesSet.has(item.id)), "").slice(0, MAX_SECTION_ITEMS);
+          case "playlist": {
+            if (!section.playlistId) return [];
+            const set = playlistItemsById.get(section.playlistId) ?? new Set();
+            return filterDashboardItems(source.filter((item) => set.has(item.id)), "").slice(0, MAX_SECTION_ITEMS);
+          }
+          case "genre": {
+            if (section.genreId === null || section.genreId === undefined || !section.genreType) return [];
+            const genreId = section.genreId;
+            if (section.genreType === "tv" && library !== "tv") return [];
+            if (section.genreType === "movie" && library !== "movies") return [];
+            return pickRandom(
+              source.filter((item) => (item.genres ?? []).includes(genreId)),
+              MAX_SECTION_ITEMS,
+              seedBase
+            );
+          }
+          default:
+            return [];
+        }
+      };
+      map.set(section.id, { movies: buildForLibrary("movies"), tv: buildForLibrary("tv") });
     });
     return map;
-  }, [parsedLayout, movies, tv, favoritesSet, playlistItemsById, mediaVersion]);
+  }, [parsedLayout, movies, tv, favoritesSet, listPlaylistItems, mediaVersion]);
 
-  const sectionLabel = (section: HomeSectionConfig): string =>
-    homeSectionLabel(section, deferredPlaylists, i18n.language, (type) => t(`dashboard.sections.${type}`));
+  const sectionLabel = (section: DashboardSectionConfig): string => {
+    if (section.type === "playlist") {
+      const playlist = section.playlistId ? playlistLookup.get(section.playlistId) : null;
+      return playlist ? playlist.name : t("dashboard.sections.playlist");
+    }
+    if (section.type === "genre" && section.genreId && section.genreType) {
+      return (
+        getGenreName(section.genreType, section.genreId, i18n.language) ??
+        t("dashboard.sections.genre")
+      );
+    }
+    return t(`dashboard.sections.${section.type}`);
+  };
 
-  const sectionIcon = (section: HomeSectionConfig) => {
+  const sectionIcon = (section: DashboardSectionConfig) => {
     switch (section.type) {
       case "continue":
         return <PlayCircle className="h-4 w-4 text-primary" />;
@@ -621,11 +784,11 @@ export default function Dashboard() {
     }
   };
 
-  const handleToggleLibrary = (section: HomeSectionConfig, library: HomeLibraryScope) => {
+  const handleToggleLibrary = (section: DashboardSectionConfig, library: LibraryScope) => {
     const nextLibraries = section.libraries.includes(library)
       ? section.libraries.filter((entry) => entry !== library)
       : [...section.libraries, library];
-    const normalized = ensureHomeLibraries(nextLibraries);
+    const normalized = ensureLibraries(nextLibraries);
     setDraftLayout((prev) =>
       prev.map((entry) => (entry.id === section.id ? { ...entry, libraries: normalized } : entry))
     );
@@ -649,14 +812,14 @@ export default function Dashboard() {
     setDraftLayout((prev) => prev.filter((section) => section.id !== id));
   };
 
-  const handleSetStyle = (section: HomeSectionConfig, styleId: number) => {
+  const handleSetStyle = (section: DashboardSectionConfig, styleId: number) => {
     setDraftLayout((prev) =>
       prev.map((entry) => (entry.id === section.id ? { ...entry, styleId } : entry))
     );
   };
 
-  const handleAddSection = (type: HomeSectionType, playlistId?: string | null) => {
-    const newSection = createHomeSection(type, playlistId);
+  const handleAddSection = (type: SectionType, playlistId?: string | null) => {
+    const newSection = createSection(type, playlistId);
     setDraftLayout((prev) => {
       const next = [...prev];
       const insertionIndex = addAtIndex === null ? next.length : Math.max(0, Math.min(addAtIndex, next.length));
@@ -669,7 +832,7 @@ export default function Dashboard() {
   };
 
   const handleAddGenreSection = (genreType: "movie" | "tv", genreId: number) => {
-    const newSection = createHomeGenreSection(genreType, genreId);
+    const newSection = createGenreSection(genreType, genreId);
     setDraftLayout((prev) => {
       const next = [...prev];
       const insertionIndex = addAtIndex === null ? next.length : Math.max(0, Math.min(addAtIndex, next.length));
@@ -685,7 +848,7 @@ export default function Dashboard() {
     setSavingLayout(true);
     try {
       const payload = JSON.stringify({ updatedAt: new Date().toISOString(), sections: draftLayout });
-      await setSharedSetting(HOME_LAYOUT_KEY, payload);
+      await setSharedSetting(DASHBOARD_LAYOUT_KEY, payload);
       setLayout(draftLayout);
       exitEditMode();
     } finally {
@@ -709,7 +872,7 @@ export default function Dashboard() {
   );
 
   const sectionsToRender = editMode ? draftLayout : layout;
-  const sectionHasContent = (section: HomeSectionConfig) => {
+  const sectionHasContent = (section: DashboardSectionConfig) => {
     if (section.type === "genre") {
       const library = section.genreType === "tv" ? "tv" : "movies";
       const items = sectionItemsById.get(section.id)?.[library] ?? [];
@@ -735,7 +898,7 @@ export default function Dashboard() {
     return { movieItems, tvItems, ghosts, hasAny: movieItems.length > 0 || tvItems.length > 0 || ghosts.length > 0 };
   };
 
-  const renderSectionRows = (section: HomeSectionConfig) => {
+  const renderSectionRows = (section: DashboardSectionConfig) => {
     const { movieItems, tvItems, ghosts, hasAny } = sectionHasContent(section);
     if (!hasAny) {
       return <div className="text-sm text-muted-foreground">{t("dashboard.sectionEmpty")}</div>;
@@ -752,9 +915,23 @@ export default function Dashboard() {
       );
     }
     const showProgress = section.type === "continue";
-    // Every multi-library section renders movies + TV interleaved in a single carousel row, ordered like on every
-    // Badger app (UX-HOME-06, `mergeHomeSectionItems`).
-    const ordered = mergeHomeSectionItems(section, movieItems, tvItems, mediaVersion);
+    // Every multi-library section renders movies + TV interleaved in a single
+    // carousel row (matching "Continue watching"). "unwatched" is seeded-shuffled
+    // rather than sorted so the merged row preserves its random-discovery intent
+    // (the per-library pickRandom already chose the candidates).
+    const merged = [...movieItems, ...tvItems];
+    const ordered =
+      section.type === "unwatched"
+        ? seededShuffle(merged, `${section.id}:${section.type}:merged:${mediaVersion}`)
+        : merged.sort((a, b) => {
+            if (section.type === "recent") {
+              return b.addedAt.localeCompare(a.addedAt);
+            }
+            if (section.type === "continue") {
+              return (b.lastWatchedAt ?? b.updatedAt).localeCompare(a.lastWatchedAt ?? a.updatedAt);
+            }
+            return b.updatedAt.localeCompare(a.updatedAt);
+          });
     return (
       <CarouselRow
         items={ordered.slice(0, Math.max(0, MAX_SECTION_ITEMS - ghosts.length))}
@@ -958,7 +1135,7 @@ export default function Dashboard() {
               query={sectionQuery}
               onQueryChange={setSectionQuery}
               matchesQuery={matchesQuery}
-              onAddSystemSection={(type) => handleAddSection(type as HomeSectionType)}
+              onAddSystemSection={(type) => handleAddSection(type as SectionType)}
               movieGenreOptions={movieGenreOptions}
               tvGenreOptions={tvGenreOptions}
               onAddGenreSection={handleAddGenreSection}

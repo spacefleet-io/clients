@@ -1,11 +1,11 @@
 import "./packagedNodeEnv";
 import "./devBuildEnv";
-import { app, BrowserWindow, shell, ipcMain, screen, dialog, Menu, Notification, Tray, powerMonitor, session as electronSession } from "electron";
+import { app, BrowserWindow, shell, ipcMain, screen, dialog, Menu, Tray, session as electronSession } from "electron";
 import { NEUTRAL_USER_AGENT } from "@space/metadata-client";
 import { existsSync } from "node:fs";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
-import { release, tmpdir } from "node:os";
+import { tmpdir } from "node:os";
 import { isValidPlacementId } from "@space/shared/storagePlacement";
 import { resolveExternalMpvTarget } from "@space/mpv";
 import { getDesktopPlatform } from "@space/desktop-platform";
@@ -37,8 +37,6 @@ import { registerFfmpegIpc } from "./ffmpegIpc";
 import { FfmpegRuntimeBridge } from "./ffmpegRuntimeBridge";
 import { registerToolAccessIpc } from "./toolAccessIpc";
 import { registerPairingIpc } from "./pairingIpc";
-import { recordRendererConsole, registerFeedbackIpc } from "./feedbackIpc";
-import { sendFeedback } from "./api";
 import {
   getApiBaseUrl,
   getCustomApiBaseUrl,
@@ -59,7 +57,6 @@ import { createBadgerSiblingHost, registerSiblingIpc, siblingAccountOf } from ".
 import { SIBLING_SIGN_IN_ARG, armSiblingHiddenQuit, isSiblingSignInLaunch, type SiblingHiddenQuit } from "@space/desktop-shell/sibling-main";
 import { setClientIdentity } from "@space/shared/appVersion";
 import { logFailedApiCalls } from "@space/shared/apiFailure";
-import { createErrorLog } from "@space/error-report/error-log";
 import { CLIENT_IDENTITY_CHANNEL, desktopClientIdentity } from "@space/desktop-shell/client-identity";
 import { serveStorageUnitBase } from "@space/desktop-shell/storage-units";
 import { PROVIDER_RETURN_IPC } from "../shared/providerReturn";
@@ -78,21 +75,15 @@ import {
   attachDevShortcuts,
   buildTrayActions,
   createAppTray,
-  createHiddenJobNotices,
-  createOpenJobsRequest,
-  HIDDEN_JOB_NOTICE_CHANNELS,
-  registerHiddenJobNoticesIpc,
-  systemNoticeShower,
   MAIN_SHELL_STRINGS,
-  describeAppLink,
+  protocolClientArgs,
   registerTrayTestIpc,
-  resolveAppIdentity,
   resolveTrayIconPath,
   revealWindow,
   shouldQuitWhenAllWindowsClosed,
   trayLabelsFor,
 } from "@space/desktop-shell/main-shell";
-import { createDesktopUpdater, ignoredVersionFileStore } from "@space/desktop-shell/updater-main";
+import { createDesktopUpdater } from "@space/desktop-shell/updater-main";
 // electron-updater is CommonJS: Node's ESM loader does not synthesize its named exports, so `import { autoUpdater }`
 // throws when the built main bundle loads. Default import, read lazily (reading `autoUpdater` builds the OS updater).
 import electronUpdater from "electron-updater";
@@ -100,30 +91,37 @@ import { mainUiLanguage, mainUiStrings, seedMainUiLanguage, setMainUiLanguage } 
 import { sendNotification, type NotifyInput } from "./notifications";
 import { handleSecondInstance } from "./secondInstanceHandler";
 import { createProviderReturnMailbox } from "@space/shared/providerSignIn";
-import { badgerLinks, decideLaunchVisibility, shouldShowOnActivate } from "./protocolLink";
+import {
+  BADGER_PROTOCOL_SCHEME,
+  decideLaunchVisibility,
+  findBadgerLink,
+  paymentReturnOf,
+  providerReturnOf,
+  shouldShowOnActivate,
+} from "./protocolLink";
 import { registerHandoffIpc, type HandoffRuntimeBridge } from "./handoffIpc";
 import { requestRendererFlush } from "./rendererFlush";
 import { installE2ePerfProbe } from "./e2ePerfProbe";
-import { markAppWindowVisibility, onAppWindowVisibilityChange, registerAppWindowVisibilityIpc, trackAppWindowVisibility } from "./appWindowVisibility";
-import { watchHiddenRuntimeJobs } from "./hiddenRuntimeJobs";
-import { notifyLanguage } from "@space/notify-core/texts";
+import { markAppWindowVisibility, registerAppWindowVisibilityIpc, trackAppWindowVisibility } from "./appWindowVisibility";
 import { forwardEscapeKey } from "./escapeKeyForward";
-import { BADGER_IDENTITY } from "./appIdentity";
-import { registerErrorReportsIpc } from "@space/error-report/desktop-main";
-import { createDesktopErrorReports } from "@space/error-report/desktop-main-reports";
+import { resolveAppIdentity } from "./appIdentity";
+import { createConsentFile } from "@space/error-report/consent-file";
+import { createElectronMainReporting } from "@space/error-report/electron-main";
+import { resolveDsn } from "@space/error-report";
+import { createErrorReports, registerErrorReportsIpc } from "@space/error-report/desktop-main";
+import { parseForcedErrorReports } from "@space/error-report/desktop";
 const logger = scopeLogger("app-main");
 installE2ePerfProbe();
 
 // Name + userData per OS (appIdentity.ts): "Badger" everywhere; Linux/Windows keep
 // <appData>/@sf/desktop, macOS uses Application Support/Badger. A development
 // build uses the same dir with `-dev` appended (PLAT-DESK-14).
-const appIdentity = resolveAppIdentity({
-  ...BADGER_IDENTITY,
-  platform: getDesktopPlatform(),
-  appData: app.getPath("appData"),
-  env: process.env,
-  devBuild: isDesktopDevBuild(currentDesktopBuildEnv()),
-});
+const appIdentity = resolveAppIdentity(
+  getDesktopPlatform(),
+  app.getPath("appData"),
+  process.env,
+  isDesktopDevBuild(currentDesktopBuildEnv()),
+);
 app.setName(appIdentity.name);
 // The Linux window class is the packaged .desktop entry's StartupWMClass (package.json desktopName "spacebadger"),
 // so the taskbar shows that entry's name, "Badger" (REL-MAC-09), not the class.
@@ -184,36 +182,44 @@ let lastBadgerLinkAt: number | null = null;
 // ACCT-SIGNIN-05: the provider sign-in outcome waits here for the sign-in screen to pull it (a launch through the
 // link on Windows / Linux carries it in argv).
 const providerReturns = createProviderReturnMailbox();
-const launchLink = badgerLinks.fromArgv(process.argv);
-if (launchLink?.kind === "provider-return") {
-  console.info("[provider-sign-in] started through a return link", { link: describeAppLink(launchLink) });
-  providerReturns.put(launchLink.outcome);
+const launchLink = findBadgerLink(process.argv);
+const launchProviderReturn = launchLink === null ? null : providerReturnOf(launchLink);
+if (launchProviderReturn !== null) {
+  console.info("[provider-sign-in] started through a return link", {
+    outcome: "code" in launchProviderReturn ? "code" : launchProviderReturn.error,
+  });
+  providerReturns.put(launchProviderReturn);
 }
-const onBadgerLink = (raw: string, source: "argv" | "second-instance" | "open-url") => {
+const onBadgerLink = (link: string, source: "argv" | "second-instance" | "open-url") => {
   const hasWindow = Boolean(mainWindow && !mainWindow.isDestroyed());
-  const link = badgerLinks.classify(raw);
   // ACCT-SIGNIN-05: back from a Google, Apple or Microsoft sign-in. The app comes forward and the sign-in screen
   // trades the code (pulled through PROVIDER_RETURN_IPC.pending, so a window still loading gets it on mount).
-  if (link.kind === "provider-return") {
-    console.info("[provider-sign-in] return link received: app brought forward", { source, link: describeAppLink(link), hasWindow });
-    providerReturns.put(link.outcome);
+  const providerReturn = providerReturnOf(link);
+  if (providerReturn !== null) {
+    console.info("[provider-sign-in] return link received: app brought forward", {
+      source,
+      outcome: "code" in providerReturn ? "code" : providerReturn.error,
+      hasWindow,
+    });
+    providerReturns.put(providerReturn);
     showMainWindow();
     if (hasWindow) mainWindow?.webContents.send(PROVIDER_RETURN_IPC.returned);
     return;
   }
   // ACCT-PAY-05: back from Stancer's payment page. The app comes forward and its plan change checks the payment at
   // once; with no window yet, the webhook and the next check settle it (the renderer holds the session).
-  if (link.kind === "payment-return") {
-    console.info("[billing] payment return link received: app brought forward", { source, paymentId: link.paymentId, hasWindow });
+  const paymentId = paymentReturnOf(link);
+  if (paymentId !== null) {
+    console.info("[billing] payment return link received: app brought forward", { source, paymentId, hasWindow });
     showMainWindow();
-    if (hasWindow) mainWindow?.webContents.send("sf-billing-payment-return", link.paymentId);
+    if (hasWindow) mainWindow?.webContents.send("sf-billing-payment-return", paymentId);
     return;
   }
   lastBadgerLinkAt = Date.now();
   if (!hasWindow) openUrlBeforeWindow = true;
   console.info("[handoff] badger link received: app kept in the background", {
     source,
-    link: raw,
+    link,
     hasWindow,
     windowVisible: hasWindow ? mainWindow?.isVisible() : null,
   });
@@ -222,27 +228,32 @@ app.on("open-url", (event, url) => {
   event.preventDefault();
   onBadgerLink(url, "open-url");
 });
-// Tests (SF_E2E=1) must not rewrite the machine's `badger:` handler; they pass the link in argv instead.
-console.info("[handoff] badger:// protocol registration", badgerLinks.register({
-  app,
-  primary: gotSingleInstanceLock,
-  env: process.env,
-  defaultApp: Boolean(process.defaultApp),
-  execPath: process.execPath,
-  argv: process.argv,
-  resolvePath: (path) => resolve(path),
-}));
+if (process.env.SF_E2E === "1") {
+  // Tests must not rewrite the machine's `badger:` handler; they pass the link in argv instead.
+  console.info("[handoff] SF_E2E=1: badger:// protocol registration skipped");
+} else {
+  const protocolArgs = protocolClientArgs(BADGER_PROTOCOL_SCHEME, {
+    defaultApp: Boolean(process.defaultApp),
+    execPath: process.execPath,
+    argv: process.argv,
+    resolvePath: (path) => resolve(path),
+  });
+  const registered = protocolArgs.length === 3
+    ? app.setAsDefaultProtocolClient(protocolArgs[0], protocolArgs[1], protocolArgs[2])
+    : app.setAsDefaultProtocolClient(protocolArgs[0]);
+  console.info("[handoff] badger:// protocol registration", { registered, args: protocolArgs });
+}
 
 // REL-LOG-06: error reports are off until the user opts in (setup step or Settings). The answer
 // lives in <userData>/error-reports.json; the SDK is only initialised for "on", as early as the
 // userData path is known so startup crashes are covered.
 const errorReportsLogger = scopeLogger("error-report");
-const errorReports = createDesktopErrorReports({
-  app: "badger",
-  userDataDir: app.getPath("userData"),
-  dsn: __SF_BUGSINK_DSN__,
+const errorReports = createErrorReports({
+  consent: createConsentFile(join(app.getPath("userData"), "error-reports.json")),
+  reporting: createElectronMainReporting({ dsn: __SF_BUGSINK_DSN__, release: app.getVersion(), app: "badger", platform: "desktop" }),
+  available: resolveDsn(__SF_BUGSINK_DSN__) !== null,
   release: app.getVersion(),
-  forcedRaw: process.env.SF_ERROR_REPORTS,
+  forced: parseForcedErrorReports(process.env.SF_ERROR_REPORTS),
   log: (line) => errorReportsLogger.info(line),
   logError: (line) => errorReportsLogger.error(line),
 });
@@ -292,25 +303,12 @@ const clientIdentity = desktopClientIdentity({
   app: "badger",
   version: app.getVersion(),
   packaged: app.isPackaged,
-  os: getDesktopPlatform().id,
+  os: process.platform,
   env: process.env,
 });
 setClientIdentity(clientIdentity);
-// UX-SUP-05: the newest warning and error lines (scrubbed as recorded), sent only with feedback the user attaches it to.
-const errorLog = createErrorLog();
 // REL-LOG-31: one local line per failed API call of this process, with the server's request id (never reported).
-logFailedApiCalls((fields) => {
-  logger.warn({ event: "api_call_failed", ...fields }, "api: call failed");
-  errorLog.record("warn", "api", `call failed status=${fields.status} code=${fields.code} requestId=${fields.requestId}`);
-});
-const feedbackLogger = scopeLogger("feedback");
-const feedbackIpc = registerFeedbackIpc(ipcMain, {
-  errorLog,
-  appVersion: app.getVersion(),
-  platform: `${getDesktopPlatform().id} ${release()}`,
-  send: sendFeedback,
-  log: (line) => feedbackLogger.info(line),
-});
+logFailedApiCalls((fields) => logger.warn({ event: "api_call_failed", ...fields }, "api: call failed"));
 ipcMain.on(CLIENT_IDENTITY_CHANNEL, (event) => {
   event.returnValue = clientIdentity;
 });
@@ -471,7 +469,7 @@ const deviceSettings = registerDeviceSettingsIpc();
 // STOR-UNIT-01: storage figures follow this computer's file manager (1024 on Windows and KDE, 1000 elsewhere); the
 // preload reads the base synchronously so the window sets it before its first render.
 serveStorageUnitBase(ipcMain, {
-  platform: getDesktopPlatform().id,
+  platform: process.platform,
   desktop: process.env.XDG_CURRENT_DESKTOP,
   log: (line) => logger.info(line),
 });
@@ -531,16 +529,6 @@ const requestExplicitQuit = () => {
 
 let playbackServer: PlaybackServer | null = null;
 const playbackRuntimeBridge = new PlaybackRuntimeBridge(fetch, undefined, logger);
-// MPV-PREV-07: the Jobs tab polls the skip-detection catch-up while it is open.
-ipcMain.handle("sf-skip-catch-up-status", () => playbackRuntimeBridge.getCatchUpStatus());
-ipcMain.handle("sf-skip-catch-up-retry", (_event, formatId: unknown) =>
-  playbackRuntimeBridge.retryCatchUp(typeof formatId === "string" && formatId.length > 0 ? formatId : null)
-);
-ipcMain.handle("sf-skip-catch-up-set-video", (_event, formatId: unknown, action: unknown) =>
-  typeof formatId === "string" && formatId.length > 0 && (action === "cancel" || action === "dismiss")
-    ? playbackRuntimeBridge.setCatchUpVideo(formatId, action)
-    : false
-);
 
 // #25 "uploads while a video plays": tells the runtime this computer's mode while mpv is alive.
 // Armed after the first-start detection (armUploadPlaybackPolicy); Settings changes arrive live.
@@ -608,34 +596,6 @@ const showMainWindow = () => {
   revealWindow(mainWindow);
   markAppWindowVisibility(mainWindow, false, "show-main-window");
 };
-
-// UX-NOTICE-06: a job that ends while nobody sees the window shows one system notification; its click brings the
-// window back (recreated when close-to-tray destroyed it) with Jobs open. Not while external mpv plays over it.
-const isMainWindowUnseen = () =>
-  !isExternalMpvAlive() && (!mainWindow || mainWindow.isDestroyed() || !mainWindow.isVisible() || mainWindow.isMinimized());
-const openJobsRequest = createOpenJobsRequest(() => {
-  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(HIDDEN_JOB_NOTICE_CHANNELS.openJobs);
-});
-const hiddenJobNotices = createHiddenJobNotices({
-  file: join(app.getPath("userData"), "system-notifications.json"),
-  isWindowHidden: isMainWindowUnseen,
-  language: () => notifyLanguage(mainUiLanguage()),
-  show: systemNoticeShower(Notification),
-  openJobs: () => {
-    showMainWindow();
-    openJobsRequest.request();
-  },
-  log: (line) => logger.info(line),
-});
-registerHiddenJobNoticesIpc(ipcMain, hiddenJobNotices, openJobsRequest);
-const hiddenRuntimeJobs = watchHiddenRuntimeJobs({
-  isHidden: isMainWindowUnseen,
-  list: async () => (await import("./runtimeJobsIpc")).listRuntimeJobsForMain(),
-  onEnd: (end) => hiddenJobNotices.jobEnded(end),
-});
-onAppWindowVisibilityChange((_win, next) => {
-  if (next.hidden) void hiddenRuntimeJobs.check();
-});
 
 // PLAT-DESK-11: macOS gets the minimal app / Edit / Window menu bar with "Quit Badger"; Linux and Windows have
 // no menu bar, in dev builds too.
@@ -738,7 +698,6 @@ const createWindow = (options: { show?: boolean } = {}) => {
     return { action: "deny" };
   });
   mainWindow = win;
-  win.webContents.on("console-message", (details) => recordRendererConsole(errorLog, details.level, details.message));
   trackAppWindowVisibility(win);
   forwardEscapeKey(win.webContents);
   if (!show) markAppWindowVisibility(win, true, "handoff-background-start");
@@ -851,13 +810,9 @@ app.whenReady().then(async () => {
     },
   });
   ipcMain.handle("sf-auth-set-token", (_event, token: string | null) => {
-    feedbackIpc.setToken(token ?? null);
     toolAccessBridge?.setAuthToken(token ?? null);
     handoffBridge?.setAuthToken(token ?? null);
     ffmpegRuntimeBridge.setBackendToken(token ?? null);
-    // MPV-PREV-07: the Jobs card's catch-up status, Cancel and Try again go through this bridge; it needs the session
-    // from sign-in, not only once the player has opened.
-    playbackRuntimeBridge.setBackendToken(token ?? null);
     void import("./runtimeJobsIpc").then(({ setRuntimeJobsBackendToken }) => {
       setRuntimeJobsBackendToken(token ?? null);
     }).catch(() => undefined);
@@ -994,35 +949,27 @@ app.whenReady().then(async () => {
   registerSiblingIpc(siblingHost);
   // In-app updates (REL-UPD-01), from `<api>/desktop/badger/`. `getWindow` is resolved lazily so a recreated window
   // still receives update events. The renderer arms the background check by pushing its `autoUpdate` setting (ON by
-  // default) once it has loaded. REL-UPD-08: it also checks when the computer wakes and when a window comes back.
-  const updaterLogger = scopeLogger("updater");
-  const desktopUpdater = createDesktopUpdater({
+  // default) once it has loaded.
+  createDesktopUpdater({
     app: "badger",
     electron: { app, ipcMain },
     loadAutoUpdater: () => electronUpdater.autoUpdater,
     getApiBaseUrl,
     getPlatformId: () => getDesktopPlatform().id,
-    logger: updaterLogger,
+    logger: scopeLogger("updater"),
     // REL-UPD-07: a .deb/.rpm/.pacman copy updates through /usr/lib/spacebadger/system-update.
     linuxPackageName: "spacebadger",
-    // REL-UPD-08: the version the user chose to ignore, kept across restarts.
-    ignoredVersionStore: ignoredVersionFileStore(join(app.getPath("userData"), "updater-ignored-version.json"), updaterLogger),
     // The windows close instead of going to the tray; `before-quit` still asks about work in progress.
     onQuitForUpdate: () => {
       isQuitting = true;
     },
-  });
-  desktopUpdater.register(() => mainWindow);
-  powerMonitor.on("resume", () => desktopUpdater.nudge("resume"));
-  // REL-UPD-08: the window back in front checks only after an absence of an hour; a blur starts the absence.
-  app.on("browser-window-blur", () => desktopUpdater.nudge("blur"));
-  app.on("browser-window-focus", () => desktopUpdater.nudge("focus"));
+  }).register(() => mainWindow);
 
   await sessionLoaded;
   const launchVisibility = decideLaunchVisibility({ argv: process.argv, openUrlBeforeWindow });
   if (launchVisibility === "background") {
     console.info("[handoff] started through a badger:// link: main window created hidden", {
-      argvLink: launchLink?.link ?? null,
+      argvLink: findBadgerLink(process.argv),
       openUrlBeforeWindow,
     });
   }

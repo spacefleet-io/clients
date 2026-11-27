@@ -217,12 +217,11 @@ const mpvWaylandByBin = new Map<string, boolean>();
 
 /**
  * Whether `target` can open a native Wayland window: its `--gpu-context=help`
- * lists a `wayland*` context. The bundled Linux mpv lists `x11egl` and
- * `wayland` (media-deps builds -Dwayland=enabled, MPV-GPU-04); a distro or
- * Flatpak mpv set through SF_MPV_SYSTEM_BIN usually lists `wayland` and
- * `waylandvk`. Asked once per binary per app session (about 1 s on the first
- * run, 80-100 ms after), and only on a Linux Wayland session (with or
- * without an X display).
+ * lists a `wayland*` context. The bundled mpv lists only `x11egl` (media-deps
+ * builds -Dwayland=disabled); a distro or Flatpak mpv set through
+ * SF_MPV_SYSTEM_BIN usually lists `wayland` and `waylandvk`. Asked once per
+ * binary per app session (about 1 s on the first run, 80-100 ms after),
+ * and only on a Wayland-only Linux session.
  * A probe that fails counts as no Wayland.
  */
 export const mpvHasWayland = (target: ResolvedExternalMpvTarget, probe: MpvGpuContextProbe = runMpvGpuContextHelp): boolean => {
@@ -259,17 +258,6 @@ export const resolveExternalMpvWindow = (options: {
     env: options.env,
     mpvHasWayland: () => mpvHasWayland(options.target ?? resolveExternalMpvTarget({ env: options.env }), options.probe),
   });
-
-/**
- * `env` for the mpv that opens `window`: without the variables the plan takes out (`unsetEnv`, e.g. DISPLAY on a
- * Wayland session so mpv never falls back to an XWayland window, MPV-GPU-04).
- */
-export const applyMpvWindowEnv = (env: NodeJS.ProcessEnv, window: Pick<MpvWindow, "unsetEnv">): NodeJS.ProcessEnv => {
-  if (window.unsetEnv.length === 0) return env;
-  const out = { ...env };
-  for (const key of window.unsetEnv) delete out[key];
-  return out;
-};
 
 // 1x1 PNG: the smallest input that makes mpv set up its OSD (and fonts).
 const FONT_WARMUP_PNG = Buffer.from(

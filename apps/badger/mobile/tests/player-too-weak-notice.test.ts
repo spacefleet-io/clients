@@ -9,10 +9,10 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import en from "@space/mobile-shell/i18n/en.json";
-import fr from "@space/mobile-shell/i18n/fr.json";
-import nl from "@space/mobile-shell/i18n/nl.json";
-import de from "@space/mobile-shell/i18n/de.json";
+import en from "../../../../packages/mobile-shell/src/i18n/en.json";
+import fr from "../../../../packages/mobile-shell/src/i18n/fr.json";
+import nl from "../../../../packages/mobile-shell/src/i18n/nl.json";
+import de from "../../../../packages/mobile-shell/src/i18n/de.json";
 
 const read = (relative: string) => readFileSync(resolve(__dirname, "..", relative), "utf8");
 

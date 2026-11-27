@@ -4,8 +4,8 @@
 // (REL-UPD-01: app-update.yml in the package, latest-*.yml next to the installers). Nothing here inspects the
 // host: the target is always named (or defaults to DEFAULT_TARGET), so Linux cross-builds the Windows installer.
 
-import { LINUX_FORMATS, linuxArtifactPatterns as sharedLinuxArtifactPatterns } from "@space/desktop-platform-linux/packaging/linux-packages";
-import { ELECTRON_LANGUAGES, LPROJ_EXTENSION, MAC_ELECTRON_LANGUAGES, PAK_EXTENSION } from "@space/desktop-platform/packaging/packaged-locales-lib";
+import { LINUX_FORMATS, linuxArtifactPatterns as sharedLinuxArtifactPatterns } from "../../../../packages/desktop-platform-linux/packaging/linux-packages.mjs";
+import { ELECTRON_LANGUAGES, LPROJ_EXTENSION, MAC_ELECTRON_LANGUAGES, PAK_EXTENSION } from "../../../../packages/desktop-platform/packaging/packaged-locales-lib.mjs";
 
 /**
  * Chromium locale files kept in the package: the languages of Parrot's own UI (en, fr, nl, de, es:
@@ -16,7 +16,7 @@ import { ELECTRON_LANGUAGES, LPROJ_EXTENSION, MAC_ELECTRON_LANGUAGES, PAK_EXTENS
 export { ELECTRON_LANGUAGES, MAC_ELECTRON_LANGUAGES };
 
 /** PLAT-DESK-02: the oldest macOS the desktop apps run on (shared with Badger). */
-export { MAC_MINIMUM_SYSTEM_VERSION } from "@space/desktop-platform-macos/packaging/mac-after-pack-lib";
+export { MAC_MINIMUM_SYSTEM_VERSION } from "../../../../packages/desktop-platform-macos/packaging/mac-after-pack-lib.mjs";
 
 /** Linux package formats (PLAT-DESK-01): one app, four formats, shared with Badger (packages/desktop-platform-linux/packaging/linux-packages.mjs). */
 export { LINUX_FORMATS };

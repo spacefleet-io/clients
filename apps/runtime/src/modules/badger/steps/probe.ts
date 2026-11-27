@@ -14,7 +14,7 @@
  * Idempotent: re-running on the same file produces identical outputs.
  */
 
-import type { StepHandler } from "@space/runtime-jobs-engine/engineV2";
+import type { StepHandler } from "../../../core/jobs/engineV2";
 import { getBadgerStepDeps } from "./deps";
 
 const requireFilename = (job: { payload: Record<string, unknown> }): string => {

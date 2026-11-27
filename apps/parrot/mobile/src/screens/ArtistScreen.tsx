@@ -9,10 +9,9 @@ import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View, typ
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ArrowDownToLine, ChevronLeft, CircleCheck, Ellipsis, ListStart, Play, Shuffle } from "lucide-react-native";
-import { MobileIconButton } from "@space/mobile-shell/components";
 import { colors, parrotShellTheme, spacing } from "../theme";
 import { Discography } from "./artist/Discography";
-import { ArtistHero, ArtistInitials, ArtistTopBar, PhotoCredit, SongRows, useTopBarScroll } from "./artist/pieces";
+import { ArtistHero, ArtistTopBar, PhotoCredit, SongRows, useTopBarScroll } from "./artist/pieces";
 import { useArtistPage } from "./artist/useArtistPage";
 import { PAGE_BACK_ROW, PageBackButton } from "./pageBack";
 import type { RootStack } from "./routes";
@@ -33,9 +32,9 @@ const HERO = 280;
 const BAR_BEFORE_END = 240;
 
 export const ArtistScreen = ({ route, navigation }: NativeStackScreenProps<RootStack, "Artist">) => {
-  const { artistId } = route.params;
-  const page = useArtistPage(artistId, route.params.name);
-  const { t, name } = page;
+  const { artistId, name } = route.params;
+  const page = useArtistPage(artistId, name);
+  const { t } = page;
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const [heroHeight, setHeroHeight] = useState(HERO);
@@ -61,19 +60,14 @@ export const ArtistScreen = ({ route, navigation }: NativeStackScreenProps<RootS
       <ScrollView ref={scroll} onScroll={bar.onScroll} scrollEventThrottle={32} contentContainerStyle={{ paddingBottom: spacing.xl * 2 }} testID="artist-page">
         <View testID="artist-hero-box" style={styles.heroBox} onLayout={(event) => setHeroHeight(Math.max(HERO, Math.round(event.nativeEvent.layout.height)))}>
           <View style={StyleSheet.absoluteFill}>
-            <ArtistHero artistId={artistId} page={page} width={width} height={heroHeight} />
+            <ArtistHero artistId={artistId} name={name} page={page} width={width} height={heroHeight} />
           </View>
           <View style={[styles.heroTopRow, { paddingTop: insets.top + spacing.sm }]}>
-            <MobileIconButton testID="page-back" label={t("parrot.nav.back")} onPress={back} style={styles.heroRoundButton}>
+            <Pressable testID="page-back" style={styles.heroRoundButton} onPress={back} accessibilityRole="button" accessibilityLabel={t("parrot.nav.back")} hitSlop={8}>
               <ChevronLeft size={28} color={colors.text} strokeWidth={2.75} />
-            </MobileIconButton>
+            </Pressable>
           </View>
           <View style={[styles.heroMeta, { paddingTop: insets.top + PAGE_BACK_ROW }]} pointerEvents="box-none">
-            {!page.photo && !page.photoWaiting ? (
-              <View style={styles.initialsRow}>
-                <ArtistInitials name={name} />
-              </View>
-            ) : null}
             <View style={styles.chipRow}>
               <View style={styles.chip}>
                 <Text style={styles.chipText}>{t("parrot.artist.label").toUpperCase()}</Text>
@@ -166,15 +160,18 @@ export const ArtistScreen = ({ route, navigation }: NativeStackScreenProps<RootS
 // photo, a smaller name, a slimmer Play, smaller round buttons and tabs, and shorter gaps.
 const styles = StyleSheet.create({
   heroTopRow: { position: "absolute", left: 0, right: 0, top: 0, flexDirection: "row", paddingHorizontal: 14 },
-  // The dark round behind the back arrow over the photo; the shared icon button gives its 48 dp size and press.
   heroRoundButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: "rgba(0,0,0,0.62)",
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.28)",
+    alignItems: "center",
+    justifyContent: "center",
   },
   heroBox: { minHeight: HERO, justifyContent: "flex-end" },
   heroMeta: { paddingHorizontal: 20 },
-  initialsRow: { alignItems: "center", marginBottom: spacing.md },
   chipRow: { flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 6 },
   chip: { minHeight: 22, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2, justifyContent: "center", backgroundColor: parrotShellTheme.colors.accentSoft },
   chipText: { color: colors.accent, fontSize: 11.5, fontWeight: "700" },

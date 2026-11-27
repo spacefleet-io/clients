@@ -44,7 +44,7 @@ export default function FileIngestionResolveVideoDialog({
         {activeItem ? (
           <div className="space-y-4">
             <div className="text-xs text-muted-foreground">
-              {t("ingestion.ui.resolveVideoProgress", { current: Math.min(resolveIndex + 1, totalCount), total: totalCount })}
+              Decision {Math.min(resolveIndex + 1, totalCount)} of {totalCount}
             </div>
             <div className="rounded-lg border border-border bg-muted/20 p-4 space-y-2">
               <div className="text-sm font-semibold text-foreground">{activeItem.title}</div>

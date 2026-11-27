@@ -51,25 +51,20 @@ vi.mock("lucide-react-native", () =>
 vi.mock("@space/mobile-shell/i18n", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 // The real rail (Discography's year row, UX-PHONE-09) without the barrel's native modules (reanimated).
 vi.mock("@space/mobile-shell/components", async () => ({
-  MobileRailScroll: (await vi.importActual<typeof import("@space/mobile-shell/rail")>("@space/mobile-shell/rail")).MobileRailScroll,
-  MobileSkeletonPulse: "Shimmer",
-  MobileIconButton: "MobileIconButton",
-  MOBILE_ICON_BUTTON_SIZE: 48,
+  MobileRailScroll: (await vi.importActual<typeof import("../../../../packages/mobile-shell/src/components/mobile-rail")>("../../../../packages/mobile-shell/src/components/mobile-rail")).MobileRailScroll,
 }));
 vi.mock("../src/state/useQuery", () => ({
-  useQuery: (load: () => unknown) =>
-    String(load).includes("readArtistPicture")
-      ? fake.picture
-      : { loading: false, error: null, data: String(load).includes("readArtistName") ? null : [] },
+  useQuery: (load: () => unknown) => (String(load).includes("readArtistPicture") ? fake.picture : { loading: false, error: null, data: [] }),
 }));
 vi.mock("../src/state/manage", () => ({ useManage: () => ({ remove: () => undefined }) }));
 vi.mock("../src/state/session", () => ({ useSession: () => ({ library: { status: "ready", error: null, version: 3 } }) }));
 vi.mock("../src/state/usePlay", () => ({ usePlay: () => ({ play: async () => undefined, queue: async () => undefined, starting: null, error: null }) }));
 vi.mock("../src/state/usePlayerState", () => ({ useNowPlaying: () => null }));
 vi.mock("../src/state/playlistEditor", () => ({ usePlaylistEditor: () => ({}) }));
-vi.mock("../src/lib/library", () => ({ listArtistAlbums: async () => [], listSongs: async () => [], readArtistPicture: async () => null, readArtistName: async () => null }));
+vi.mock("../src/lib/library", () => ({ listArtistAlbums: async () => [], listSongs: async () => [], readArtistPicture: async () => null }));
 vi.mock("../src/screens/kept", () => ({ useKept: () => ({ entry: () => undefined }), useOfflineReach: () => null }));
 vi.mock("../src/screens/art", () => ({ ParrotArt: "ParrotArt" }));
+vi.mock("../src/screens/shimmer", () => ({ Shimmer: "Shimmer" }));
 vi.mock("../src/screens/ui", () => ({ ErrorText: "ErrorText" }));
 vi.mock("../src/screens/sky", () => ({ ParrotSky: "ParrotSky" }));
 vi.mock("../src/screens/pageBack", () => ({ PageBackButton: "PageBackButton", PAGE_BACK_ROW: 60, usePageTop: () => 120 }));
@@ -99,14 +94,13 @@ const all = (node: unknown, match: (el: Element) => boolean, out: Element[] = []
 const render = () =>
   expand((ArtistScreen as unknown as (props: unknown) => unknown)({ route: { params: { artistId: "ar-lp", name: "Linnet Park" } }, navigation: { goBack: () => undefined } }));
 const shown = () => {
-  const page = render();
-  const hero = all(page, (el) => el.props?.testID === "artist-hero");
+  const hero = all(render(), (el) => el.props?.testID === "artist-hero");
   const art = all(hero, (el) => el.type === "ParrotArt");
   const result = {
     shimmer: all(hero, (el) => el.props?.testID === "artist-photo-shimmer").length,
     photo: art.filter((el) => el.props.coverKey).length,
     drawn: art.filter((el) => !el.props.coverKey).length,
-    initials: all(all(page, (el) => el.props?.testID === "artist-initials"), (el) => el.type === "Text" && el.props.children === "LP").length,
+    initials: all(hero, (el) => el.type === "Text" && el.props.children === "LP").length,
   };
   log("shown", { picture: fake.picture, ...result });
   return result;

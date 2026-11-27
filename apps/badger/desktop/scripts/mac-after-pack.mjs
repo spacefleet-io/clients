@@ -22,7 +22,7 @@
 import { existsSync, mkdirSync, readdirSync, renameSync } from "node:fs";
 import { join, relative } from "node:path";
 
-import { finishMacApp, runMacTool } from "@space/desktop-platform-macos/packaging/mac-after-pack-lib";
+import { finishMacApp, runMacTool } from "../../../../packages/desktop-platform-macos/packaging/mac-after-pack-lib.mjs";
 
 /** The helper app, in the deps bundle and in the packaged app (Contents/Helpers), REL-MAC-09. */
 export const PLAYER_HELPER_NAME = "Badger Player";

@@ -14,8 +14,6 @@ export const createUpdaterBridge = (ipcRenderer: UpdaterIpcRenderer): UpdaterBri
   installAndRestart: () => ipcRenderer.invoke(UPDATER_CHANNELS.install),
   setAutoUpdate: (enabled) => ipcRenderer.invoke(UPDATER_CHANNELS.setAuto, Boolean(enabled)),
   getState: () => ipcRenderer.invoke(UPDATER_CHANNELS.state),
-  remindLater: () => ipcRenderer.invoke(UPDATER_CHANNELS.remindLater),
-  ignoreVersion: () => ipcRenderer.invoke(UPDATER_CHANNELS.ignore),
   onEvent: (listener) => {
     const handler = (_event: unknown, payload: UpdaterEvent) => listener(payload);
     ipcRenderer.on(UPDATER_CHANNELS.event, handler);

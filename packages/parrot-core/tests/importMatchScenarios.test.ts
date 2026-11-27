@@ -21,21 +21,9 @@ import {
 const T = "[PARROT-CORE-IMPORT-SCENARIOS-001]";
 const LP = { id: "lp", name: "Linnet Park" };
 
-/**
- * Our copy's id for a release named `name` here (PAR-META-26: the import asks an album by id only when the id is our
- * copy's, so these releases, our copy's, carry such ids); `nameOf` reads the name back for the expectations.
- */
-const names = new Map<string, string>();
-const copyId = (name: string) => {
-  const id = `00000000-0000-4000-8000-${String(names.size + 1).padStart(12, "0")}`;
-  names.set(id, name);
-  return id;
-};
-const nameOf = (id: string | null) => names.get(id ?? "") ?? id;
-
 type Release = MusicAlbum & { official: boolean };
 const release = (id: string, title: string, year: number, kind: string, tracks: Array<[string, number]>, official = true): Release => ({
-  id: copyId(id),
+  id,
   title,
   year,
   kind,
@@ -170,7 +158,7 @@ const fakeLookups = (hide: Record<string, string[]> = {}) => {
       asked.recordings.push(question);
       const found: Array<{ recording: MusicRecording; hinted: boolean }> = [];
       for (const album of CATALOG) {
-        if (hide[question.title]?.includes(nameOf(album.id)!)) continue;
+        if (hide[question.title]?.includes(album.id!)) continue;
         for (const track of album.tracks) {
           if (base(track.title) !== base(question.title)) continue;
           found.push({
@@ -424,7 +412,7 @@ describe(`${T} import scenarios`, () => {
       const result = await matchParrotImport(scenario.files, { ...lookups, library: scenario.library, log: (line) => lines.push(line) });
       const byFile = new Map(scenario.files.map((file) => [file.file, file.title]));
       const got = Object.fromEntries(
-        result.albums.map((found) => [nameOf(found.album.id), found.files.map((placed) => byFile.get(placed.file)!).sort()])
+        result.albums.map((found) => [found.album.id, found.files.map((placed) => byFile.get(placed.file)!).sort()])
       );
       const checked = result.albums.flatMap((found) => found.files.filter((placed) => !placed.sure).map((placed) => placed.file));
       console.info(
@@ -439,7 +427,7 @@ describe(`${T} import scenarios`, () => {
           const track = found.album.tracks.find((one) => one.disc === placed.disc && one.number === placed.number)!;
           expect(base(track.title)).toBe(base(byFile.get(placed.file)!));
         }
-        const missing = scenario.missing?.[nameOf(found.album.id)!];
+        const missing = scenario.missing?.[found.album.id!];
         if (missing) expect(parrotImportMissingTracks(found.album, found.files).map((track) => track.title)).toEqual(missing);
       }
     });

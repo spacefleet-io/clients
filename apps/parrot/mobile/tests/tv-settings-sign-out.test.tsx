@@ -2,33 +2,19 @@
  * @test-id PARROT-TV-SETTINGS-SIGN-OUT-001
  * @level unit
  * @req ACCT-DEV-03[parrot]
- * @req UX-NOTICE-04[parrot-tv]
- * @req UX-NOTICE-12[parrot-tv]
- * @req UX-NOTICE-13[parrot-tv]
- * @bugfix #3350 S49: on a TV that holds the library key, Sign out asks whether the key was saved. The row stayed
- *   disabled until a failure, so Cancel left Sign out dead until the app restarted.
+ * @bugfix #3350 S49: on a TV that holds the library key, Sign out asks whether the key was saved
+ *   (`signOutAskingForSavedKey` resolves "asked" as soon as the question is shown). The row stayed disabled until a
+ *   failure, so Cancel left Sign out dead until the app restarted.
  * @covers apps/parrot/mobile/src/tv/TvSettingsSection.tsx
- *
- * REL-FAM-05: Parrot TV asks in the shared TV dialog (`@space/mobile-shell/tv/TvSignOutKeyDialog`, Badger TV's), not
- * the phone `Alert.alert`.
- *
- * UX-NOTICE-04 / UX-NOTICE-12: Account carries the shared Notifications row (`@space/mobile-shell/tv/TvNoticeHistory`,
- * Badger TV's); OK opens the history dialog, and closing it or choosing an entry gives the focus back to the row.
  */
 import React from "react";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
-type DialogProps = { text: { title: string; body: string; cancel: string; confirm: string }; onCancel: () => void; onConfirm: () => void };
-
 const h = vi.hoisted(() => ({
-  signOut: vi.fn((): Promise<void> => Promise.resolve()),
-  key: (() => Promise.resolve("user-1")) as () => Promise<string | null>,
-  rows: new Map<string, { disabled?: boolean; hasTVPreferredFocus?: boolean; onPress?: () => void }>(),
+  signOut: (() => Promise.resolve()) as () => Promise<void>,
+  rows: new Map<string, { disabled?: boolean; onPress?: () => void }>(),
   groups: new Map<string, { onPress?: () => void }>(),
-  dialog: null as DialogProps | null,
-  noticesRow: null as { history: unknown; hasTVPreferredFocus?: boolean; onPress: () => void } | null,
-  noticesDialog: null as { history: unknown; onClose: () => void; onOpenTarget: (target: string) => void } | null,
   /** Draws its children only: the layout views and text the test does not look at. */
   Pass: ({ children }: { children?: React.ReactNode }) => children ?? null,
 }));
@@ -58,27 +44,11 @@ vi.mock("@space/mobile-shell/tv/TvFocusable", () => ({
   },
 }));
 vi.mock("@space/mobile-shell/tv/TvRow", () => ({
-  TvRow: (props: { testID: string; disabled?: boolean; hasTVPreferredFocus?: boolean; onPress?: () => void }) => {
+  TvRow: (props: { testID: string; disabled?: boolean; onPress?: () => void }) => {
     h.rows.set(props.testID, props);
     return null;
   },
   TvRowList: h.Pass,
-}));
-vi.mock("@space/mobile-shell/tv/TvSignOutKeyDialog", () => ({
-  TvSignOutKeyDialog: (props: DialogProps) => {
-    h.dialog = props;
-    return null;
-  },
-}));
-vi.mock("@space/mobile-shell/tv/TvNoticeHistory", () => ({
-  TvNotificationsRow: (props: { history: unknown; hasTVPreferredFocus?: boolean; onPress: () => void }) => {
-    h.noticesRow = props;
-    return null;
-  },
-  TvNoticeHistoryDialog: (props: { history: unknown; onClose: () => void; onOpenTarget: (target: string) => void }) => {
-    h.noticesDialog = props;
-    return null;
-  },
 }));
 vi.mock("@space/mobile-shell/tv/TvText", () => ({ TvBody: h.Pass, TvTitle: h.Pass }));
 vi.mock("@space/mobile-shell/tv/tokens", () => ({ TV_COLOR: {}, TV_SPACE: {}, TV_TYPE: { body: {} }, useTvAccent: () => ({ color: "#0f0" }) }));
@@ -92,8 +62,8 @@ vi.mock("../src/lib/errorReports", () => ({ getErrorReportsSetting: () => ({ err
 vi.mock("../src/lib/evenVolume", () => ({ getEvenVolume: () => ({ on: false }), setEvenVolume: async () => {}, subscribeEvenVolume: () => () => {} }));
 vi.mock("../src/lib/lookup", () => ({ parrotCreditsSource: {} }));
 vi.mock("../src/lib/profiles", () => ({ useProfiles: () => ({ profiles: [], activeId: null }) }));
-vi.mock("../src/lib/stores", () => ({ libraryKeyStore: { get: () => h.key() } }));
-vi.mock("../src/state/session", () => ({ useSession: () => ({ session: { token: "t", user: { email: "a@b.c" } }, signOut: () => h.signOut() }) }));
+vi.mock("../src/state/session", () => ({ useSession: () => ({ session: { token: "t", user: { email: "a@b.c" } } }) }));
+vi.mock("../src/state/useSignOut", () => ({ useSignOut: () => () => h.signOut() }));
 vi.mock("../src/tv/tvModel", () => ({ tvSettingsGroupIds: () => ["profiles", "account"] }));
 vi.mock("../src/tv/tvPages", () => ({ useTvPages: () => ({ push: () => {} }) }));
 
@@ -111,106 +81,36 @@ afterEach(() => {
   renderer = null;
   h.rows.clear();
   h.groups.clear();
-  h.dialog = null;
-  h.noticesRow = null;
-  h.noticesDialog = null;
-  h.signOut.mockReset();
-  h.signOut.mockImplementation(() => Promise.resolve());
-  h.key = () => Promise.resolve("user-1");
 });
-
-const HISTORY = { entries: [], unread: 0 } as never;
 
 const openAccount = async () => {
   await act(async () => {
-    renderer = create(<TvSettingsSection history={HISTORY} />);
+    renderer = create(<TvSettingsSection />);
   });
   await act(async () => h.groups.get("tv-settings-group-account")?.onPress?.());
 };
 const signOutRow = () => h.rows.get("tv-settings-sign-out")!;
-const pressSignOut = () => act(async () => signOutRow().onPress?.());
 
-describe(`${SUITE} Parrot TV Sign out`, () => {
-  it("asks in the shared TV dialog when the TV holds the key, and the row comes back", async () => {
+describe(`${SUITE} Parrot TV Sign out row`, () => {
+  it("comes back after the key question is shown, so Cancel never leaves it disabled", async () => {
+    const asked = Promise.withResolvers<void>();
+    h.signOut = () => asked.promise;
     await openAccount();
     expect(signOutRow().disabled).toBe(false);
-    await pressSignOut();
-    console.info(SUITE, "asked", { dialog: h.dialog?.text, disabled: signOutRow().disabled });
-    expect(h.dialog?.text).toEqual({
-      title: "parrot.settings.signOutKey.title",
-      body: "parrot.settings.signOutKey.body",
-      cancel: "parrot.settings.signOutKey.cancel",
-      confirm: "parrot.settings.signOutKey.confirm",
-    });
-    expect(h.signOut).not.toHaveBeenCalled();
+
+    await act(async () => signOutRow().onPress?.());
+    console.info(SUITE, "while asking", { disabled: signOutRow().disabled });
+    expect(signOutRow().disabled).toBe(true);
+
+    await act(async () => asked.resolve());
+    console.info(SUITE, "after the question", { disabled: signOutRow().disabled });
     expect(signOutRow().disabled).toBe(false);
-  });
-
-  it("Cancel closes the question, keeps the session and gives the focus back to Sign out", async () => {
-    await openAccount();
-    await pressSignOut();
-    await act(async () => h.dialog?.onCancel());
-    expect(h.signOut).not.toHaveBeenCalled();
-    expect(signOutRow().hasTVPreferredFocus).toBe(true);
-    expect(signOutRow().disabled).toBe(false);
-    h.dialog = null;
-    await act(async () => {});
-    expect(h.dialog).toBeNull();
-  });
-
-  it("Confirm signs out", async () => {
-    await openAccount();
-    await pressSignOut();
-    await act(async () => h.dialog?.onConfirm());
-    expect(h.signOut).toHaveBeenCalledTimes(1);
-  });
-
-  it("signs out at once on a TV without the key", async () => {
-    h.key = () => Promise.resolve(null);
-    await openAccount();
-    await pressSignOut();
-    expect(h.dialog).toBeNull();
-    expect(h.signOut).toHaveBeenCalledTimes(1);
-    expect(signOutRow().disabled).toBe(false);
-  });
-
-  it("asks when the key store cannot be read", async () => {
-    h.key = () => Promise.reject(new Error("keychain locked"));
-    await openAccount();
-    await pressSignOut();
-    expect(h.dialog).not.toBeNull();
-    expect(h.signOut).not.toHaveBeenCalled();
   });
 
   it("comes back after a failed sign-out", async () => {
-    h.key = () => Promise.resolve(null);
-    h.signOut.mockImplementation(() => Promise.reject(new Error("offline")));
+    h.signOut = () => Promise.reject(new Error("offline"));
     await openAccount();
-    await pressSignOut();
+    await act(async () => signOutRow().onPress?.());
     expect(signOutRow().disabled).toBe(false);
-  });
-});
-
-describe(`${SUITE} Parrot TV notice history`, () => {
-  it("Account shows the Notifications row with the shell's history, and OK opens the dialog", async () => {
-    await openAccount();
-    expect(h.noticesRow?.history).toBe(HISTORY);
-    expect(h.noticesDialog).toBeNull();
-    await act(async () => h.noticesRow?.onPress());
-    expect(h.noticesDialog?.history).toBe(HISTORY);
-  });
-
-  it("closing the dialog, or choosing an entry, closes it on Account and focuses the row again", async () => {
-    for (const leave of [(d: NonNullable<typeof h.noticesDialog>) => d.onClose(), (d: NonNullable<typeof h.noticesDialog>) => d.onOpenTarget("billing")]) {
-      await openAccount();
-      await act(async () => h.noticesRow?.onPress());
-      const dialog = h.noticesDialog!;
-      h.noticesDialog = null;
-      await act(async () => leave(dialog));
-      expect(h.noticesDialog).toBeNull();
-      expect(h.noticesRow?.hasTVPreferredFocus).toBe(true);
-      act(() => renderer?.unmount());
-      renderer = null;
-    }
   });
 });

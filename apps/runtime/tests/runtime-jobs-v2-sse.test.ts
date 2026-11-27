@@ -20,9 +20,9 @@ import {
   createRuntimeJobsV2Handler,
   type RuntimeJobsV2Handler,
 } from "../src/routes/runtimeJobsV2";
-import { createEventLog, type EventLogDeps, type EventRow } from "@space/runtime-jobs-engine/eventLog";
-import type { EngineV2, RuntimeJobEvent } from "@space/runtime-jobs-engine/engineV2";
-import { DEFAULT_LANE_CAPS } from "@space/runtime-jobs-engine/engineV2Lanes";
+import { createEventLog, type EventLogDeps, type EventRow } from "../src/core/jobs/eventLog";
+import type { EngineV2, RuntimeJobEvent } from "../src/core/jobs/engineV2";
+import { DEFAULT_LANE_CAPS } from "../src/core/jobs/engineV2Lanes";
 import type { IngestJobRecord } from "@space/runtime-jobs";
 
 const ALL_APPS = ["badger", "parrot"];

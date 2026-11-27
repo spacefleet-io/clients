@@ -1,7 +1,7 @@
 {
   "keyStepWords": {
     "collection": "library",
-    "collectionKey": "media library key"
+    "collectionKey": "library key"
   },
   "parrot": {
     "artist": {
@@ -24,15 +24,17 @@
       "nowPlaying": "Now playing"
     },
     "login": {
-      "sameAsBadger": "Use the same email and password as Badger."
+      "sameAsBadger": "Use the same email and password as Badger.",
+      "codeTotp": "Code from your authenticator app",
+      "codeEmail": "Code we emailed you"
     },
     "key": {
-      "title": "Enter your media library key",
-      "showTitle": "Your media library key",
+      "title": "Enter your library key",
+      "showTitle": "Your library key",
       "body": "Type the 12 words you saved when you created your library.",
-      "field": "Media library key",
+      "field": "Library key",
       "continue": "Continue",
-      "saved": "Your media library key is saved on this phone.",
+      "saved": "Your library key is saved on this phone.",
       "errors": {
         "unavailable": "Can't check the key right now. Check your connection and try again."
       }
@@ -62,10 +64,9 @@
     },
     "album": {
       "noPlayableFile": "This album has no playable file yet.",
-      "playFailed": "Couldn't play this song. Try again in a moment.",
+      "playFailed": "Couldn't play this song ({{error}}).",
       "noSongs": "No songs.",
-      "play": "Play {{title}}",
-      "pause": "Pause {{title}}"
+      "play": "Play {{title}}"
     },
     "player": {
       "nothing": "Nothing is playing.",
@@ -75,7 +76,7 @@
       "next": "Next",
       "open": "Open player",
       "playing": "Playing",
-      "error": "This song stopped playing. Try again in a moment.",
+      "error": "Playback error: {{error}}",
       "playingFromAlbum": "Playing from album",
       "close": "Close",
       "more": "More",
@@ -86,8 +87,8 @@
       "signOut": "Sign out",
       "language": "Language",
       "signOutKey": {
-        "title": "Have you saved your media library key?",
-        "body": "Signing out removes your media library key from this phone. To sign back in you will have to type it, because signing in with a QR code only works while another of your devices still has the key. Without the key, your library can't be opened.",
+        "title": "Have you saved your library key?",
+        "body": "Signing out removes your library key from this phone. To sign back in you will have to type it, because signing in with a QR code only works while another of your devices still has the key. Without the key, your library can't be opened.",
         "cancel": "Cancel",
         "confirm": "I saved it, sign out"
       },

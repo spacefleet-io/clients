@@ -18,7 +18,7 @@
  * is already true (the existing legacy short-circuit).
  */
 
-import type { StepHandler } from "@space/runtime-jobs-engine/engineV2";
+import type { StepHandler } from "../../../core/jobs/engineV2";
 import { getBadgerStepDeps } from "./deps";
 import { resolveJobPlacementId } from "./placement";
 import { runWithStepLog } from "./jobLog";

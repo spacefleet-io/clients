@@ -68,10 +68,6 @@ describe("linux paths", () => {
     expect(linuxPaths.userDataBase({ XDG_DATA_HOME: "/x/data" })).toBe("/x/data");
     expect(linuxPaths.userDataBase({})).toBe(join(homedir(), ".local", "share"));
   });
-
-  it("finds a trashed file under the user data base's Trash/files, by its base name", () => {
-    expect(linuxPaths.trashPaths("/media/a/Movie.mkv", { XDG_DATA_HOME: "/x/data" })).toEqual(["/x/data/Trash/files/Movie.mkv"]);
-  });
 });
 
 describe("linux prepareRuntimeDataDir", () => {

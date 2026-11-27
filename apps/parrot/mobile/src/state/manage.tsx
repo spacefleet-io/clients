@@ -1,5 +1,5 @@
 // Managing the library from the phone, as the desktop does: editing a song's or an album's details and an album's cover
-// (PAR-META-16/17), an artist's name and photo (PAR-META-31), and deleting a song, an album or an artist (PAR-LIB-03). The form, the changed marks and the edit it
+// (PAR-META-16/17) and deleting a song, an album or an artist (PAR-LIB-03). The form, the changed marks and the edit it
 // saves are the shared ones of @space/parrot-core; this provider only draws them, asks before a delete, saves through
 // the session (a new encrypted library snapshot) and says how it went in a short notice. The form looks things up on
 // its own (`useEditLookups`): the fields that name something suggest as the user types, connected to every other field
@@ -12,7 +12,7 @@ import { launchImageLibrary } from "react-native-image-picker";
 import { Buffer } from "buffer";
 import { KeyboardAvoidingForm } from "@space/mobile-shell/keyboard";
 import { useTranslation } from "@space/mobile-shell/i18n";
-import { MobileNoticeBanner, MobileSkeletonPulse } from "@space/mobile-shell/components";
+import { MobileNoticeBanner } from "@space/mobile-shell/components";
 import { MobileRenderBoundary } from "@space/mobile-shell/render-boundary";
 import {
   applyParrotEditSuggestion,
@@ -20,7 +20,6 @@ import {
   parrotEditFields,
   parrotEditNumber,
   parrotEditTarget,
-  PARROT_COVER_MAX_BYTES,
   type ParrotEditCover,
   type ParrotEditFields,
   type ParrotEditSuggestion,
@@ -28,8 +27,9 @@ import {
   type ParrotManageTarget,
 } from "@space/parrot-core";
 import { shellPluralForm } from "@space/parrot-core/shell-strings";
-import { deleteFromLibrary, editDetails, getArtistEditValues, getEditValues, previewDelete } from "../lib/library";
+import { deleteFromLibrary, editDetails, getEditValues, previewDelete } from "../lib/library";
 import { ParrotArt } from "../screens/art";
+import { Shimmer } from "../screens/shimmer";
 import { colors, spacing } from "../theme";
 import { useEditLookups, type EditLookups } from "./editLookups";
 import { useSession } from "./session";
@@ -38,26 +38,10 @@ import { useSession } from "./session";
 export type EditableItem = { kind: "track" | "album"; id: string; title: string; coverKey?: string | null };
 
 type Editing = { item: EditableItem; fields: ParrotEditFields };
-/** The artist the artist form edits (PAR-META-31): its name and the key of its current photo. */
-type EditingArtist = { id: string; name: string; pictureKey: string | null };
-
-/** A photo or cover picked from the gallery (PAR-META-31): the gallery hands a copy no larger than 2400 px a side, so
- * a huge original never reaches the app whole; a copy still over the byte cap is refused with a plain sentence. */
-const pickPicture = async (tooLarge: string): Promise<ParrotEditCover | { tooLarge: string } | null> => {
-  const picked = await launchImageLibrary({ mediaType: "photo", includeBase64: true, selectionLimit: 1, maxWidth: 2400, maxHeight: 2400, quality: 0.9 });
-  const asset = picked.assets?.[0];
-  if (!asset?.base64) return null;
-  const bytes = new Uint8Array(Buffer.from(asset.base64, "base64"));
-  if (bytes.length > PARROT_COVER_MAX_BYTES) return { tooLarge };
-  return { kind: "file", bytes, mime: asset.type ?? "image/jpeg" };
-};
-
 
 export type Manage = {
   /** Opens the edit form with the item's current details. */
   edit: (item: EditableItem) => void;
-  /** Opens the artist form with the artist's current name and photo (PAR-META-31). */
-  editArtist: (artistId: string) => void;
   /** Counts what would go, asks, then deletes; `onDeleted` runs once the library is saved without it. */
   remove: (target: ParrotManageTarget, title: string, onDeleted?: () => void) => void;
   /** A short notice under the screens. */
@@ -81,7 +65,6 @@ export const ManageProvider = ({ children }: { children: React.ReactNode }) => {
   const [editing, setEditing] = useState<Editing | null>(null);
   const [busy, setBusy] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
-  const [editingArtist, setEditingArtist] = useState<EditingArtist | null>(null);
   const [notice, setNotice] = useState<{ message: string; tone: "info" | "error" } | null>(null);
   const noticeTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => () => clearTimeout(noticeTimer.current), []);
@@ -108,16 +91,6 @@ export const ManageProvider = ({ children }: { children: React.ReactNode }) => {
             if (!values) return notify(t("shell.manage.saveFailed", { reason: "not found" }), "error");
             setEditError(null);
             setEditing({ item, fields: parrotEditFields(values) });
-          },
-          (error: unknown) => notify(t("shell.manage.saveFailed", { reason: errorText(error) }), "error")
-        );
-      },
-      editArtist: (artistId) => {
-        void getArtistEditValues(artistId).then(
-          (values) => {
-            if (!values) return notify(t("shell.manage.saveFailed", { reason: "not found" }), "error");
-            setEditError(null);
-            setEditingArtist({ id: artistId, name: values.name, pictureKey: values.pictureObjectKey });
           },
           (error: unknown) => notify(t("shell.manage.saveFailed", { reason: errorText(error) }), "error")
         );
@@ -161,22 +134,6 @@ export const ManageProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  // PAR-META-31: a new photo goes as the cover beside the edit; "automatic" hands the artist back to the fetch.
-  const saveArtist = async (name: string, picture: ParrotEditCover | "automatic" | null) => {
-    if (!editingArtist) return;
-    setBusy(true);
-    setEditError(null);
-    try {
-      const edit = { name, ...(picture === "automatic" ? { picture: "automatic" as const } : {}) };
-      await changeLibrary("edit", () => editDetails({ kind: "artist", id: editingArtist.id, edit }, picture && picture !== "automatic" ? picture : null));
-      setEditingArtist(null);
-    } catch (error) {
-      setEditError(t("shell.manage.saveFailed", { reason: errorText(error) }));
-    } finally {
-      setBusy(false);
-    }
-  };
-
   return (
     <ManageContext.Provider value={value}>
       {children}
@@ -186,13 +143,6 @@ export const ManageProvider = ({ children }: { children: React.ReactNode }) => {
         </View>
       ) : null}
       <EditDetailsDialog editing={editing} busy={busy} error={editError} onClose={() => !busy && setEditing(null)} onSubmit={(fields, cover) => void save(fields, cover)} />
-      <EditArtistDialog
-        artist={editingArtist}
-        busy={busy}
-        error={editError}
-        onClose={() => !busy && setEditingArtist(null)}
-        onSubmit={(name, picture) => void saveArtist(name, picture)}
-      />
     </ManageContext.Provider>
   );
 };
@@ -274,13 +224,11 @@ export const EditDetailsDialog = ({
   });
   const canSave = title.trim().length > 0 && !busy;
 
-  const [coverTooLarge, setCoverTooLarge] = useState<string | null>(null);
   const pickCover = async () => {
-    const picked = await pickPicture(t("shell.manage.coverTooLarge", { max: String(PARROT_COVER_MAX_BYTES / 2 ** 20) }));
-    if (!picked) return;
-    if ("tooLarge" in picked) return setCoverTooLarge(picked.tooLarge);
-    setCoverTooLarge(null);
-    setCover(picked);
+    const picked = await launchImageLibrary({ mediaType: "photo", includeBase64: true, selectionLimit: 1 });
+    const asset = picked.assets?.[0];
+    if (!asset?.base64) return;
+    setCover({ kind: "file", bytes: new Uint8Array(Buffer.from(asset.base64, "base64")), mime: asset.type ?? "image/jpeg" });
   };
 
   const closeSuggestions = () => {
@@ -447,11 +395,6 @@ export const EditDetailsDialog = ({
                   ) : null}
                 </View>
               ) : null}
-              {coverTooLarge ? (
-                <Text style={styles.error} accessibilityRole="alert" testID="manage-cover-too-large">
-                  {coverTooLarge}
-                </Text>
-              ) : null}
               {lookups ? <LyricsSection lyrics={lookups.lyrics} /> : null}
               {error ? (
                 <Text style={styles.error} accessibilityRole="alert" testID="manage-edit-error">
@@ -468,140 +411,6 @@ export const EditDetailsDialog = ({
                   accessibilityState={{ disabled: !canSave, busy }}
                   disabled={!canSave}
                   onPress={() => onSubmit(fields(), cover)}
-                  style={[styles.button, styles.submit, !canSave && { opacity: 0.4 }]}
-                >
-                  <Text style={styles.submitText}>{t("shell.manage.save")}</Text>
-                </Pressable>
-              </View>
-            </ScrollView>
-          </View>
-        </KeyboardAvoidingForm>
-      </MobileRenderBoundary>
-    </Modal>
-  );
-};
-
-/**
- * The phone's artist form (PAR-META-31): the artist's name and its photo from the gallery, shown round as the artist
- * page shows it, cut to its centre square when saved; "Use automatic photo" hands the artist back to the automatic
- * fetch. A rename onto another artist of the library is refused by the shared plan and says so here.
- */
-export const EditArtistDialog = ({
-  artist,
-  busy,
-  error,
-  onClose,
-  onSubmit,
-}: {
-  artist: EditingArtist | null;
-  busy: boolean;
-  error: string | null;
-  onClose: () => void;
-  onSubmit: (name: string, picture: ParrotEditCover | "automatic" | null) => void;
-}) => {
-  const { t } = useTranslation();
-  const [name, setName] = useState("");
-  const [picture, setPicture] = useState<ParrotEditCover | "automatic" | null>(null);
-  const [tooLarge, setTooLarge] = useState<string | null>(null);
-  useEffect(() => {
-    if (!artist) return;
-    setName(artist.name);
-    setPicture(null);
-    setTooLarge(null);
-  }, [artist]);
-
-  const pick = async () => {
-    const picked = await pickPicture(t("shell.manage.coverTooLarge", { max: String(PARROT_COVER_MAX_BYTES / 2 ** 20) }));
-    if (!picked) return;
-    if ("tooLarge" in picked) return setTooLarge(picked.tooLarge);
-    setTooLarge(null);
-    setPicture(picked);
-  };
-  const canSave = name.trim().length > 0 && !busy;
-  const preview = picture && picture !== "automatic" ? coverPreview(picture) : null;
-  const renamed = artist !== null && name.trim() !== artist.name;
-  return (
-    <Modal visible={artist !== null} transparent animationType="fade" onRequestClose={onClose}>
-      <MobileRenderBoundary name="modal:manage-edit-artist" onDismiss={onClose}>
-        <KeyboardAvoidingForm style={styles.scrim}>
-          <View style={styles.dialog} testID="manage-artist-dialog">
-            <ScrollView contentContainerStyle={{ gap: spacing.md }} keyboardShouldPersistTaps="handled">
-              <Text style={styles.title}>{t("shell.manage.editTitle.artist")}</Text>
-              <View style={styles.field}>
-                <View style={styles.labelRow}>
-                  <Text style={styles.label}>{t("shell.manage.field.name")}</Text>
-                  {renamed ? <Text style={styles.changed}>{t("shell.manage.changed")}</Text> : null}
-                </View>
-                <TextInput
-                  testID="manage-artist-name"
-                  value={name}
-                  onChangeText={setName}
-                  accessibilityLabel={t("shell.manage.field.name")}
-                  placeholderTextColor={colors.textMuted}
-                  style={styles.input}
-                />
-              </View>
-              <View style={styles.coverRow}>
-                <Pressable testID="manage-artist-pick" accessibilityRole="button" accessibilityLabel={t("shell.manage.photoPick")} onPress={() => void pick()} style={styles.cover}>
-                  {preview ? (
-                    <Image source={{ uri: preview }} style={[styles.coverImage, { borderRadius: 32 }]} testID="manage-artist-preview" />
-                  ) : (
-                    <ParrotArt seed={artist?.id ?? ""} size={64} radius={32} coverKey={picture === "automatic" ? null : (artist?.pictureKey ?? null)} />
-                  )}
-                  <View style={{ flex: 1, gap: spacing.xs }}>
-                    <View style={styles.labelRow}>
-                      <Text style={styles.label}>{t("shell.manage.field.photo")}</Text>
-                      {picture ? (
-                        <Text style={styles.changed} testID="manage-artist-changed-photo">
-                          {t("shell.manage.changed")}
-                        </Text>
-                      ) : null}
-                    </View>
-                    <View style={styles.labelRow}>
-                      <ImagePlus size={18} color={colors.accent} />
-                      <Text style={styles.pick}>{t("shell.manage.photoPick")}</Text>
-                    </View>
-                  </View>
-                </Pressable>
-                {picture ? (
-                  <Pressable
-                    testID="manage-artist-restore-photo"
-                    accessibilityRole="button"
-                    accessibilityLabel={t("shell.manage.suggestRestore", { value: t("shell.manage.field.photo") })}
-                    hitSlop={12}
-                    onPress={() => setPicture(null)}
-                    style={styles.restoreCover}
-                  >
-                    <RotateCcw size={18} color={colors.accent} />
-                  </Pressable>
-                ) : null}
-              </View>
-              {artist?.pictureKey && picture !== "automatic" ? (
-                <Pressable testID="manage-artist-automatic" accessibilityRole="button" onPress={() => setPicture("automatic")} style={styles.again}>
-                  <RotateCw size={16} color={colors.accent} />
-                  <Text style={styles.pick}>{t("shell.manage.photoAutomatic")}</Text>
-                </Pressable>
-              ) : null}
-              {tooLarge ? (
-                <Text style={styles.error} accessibilityRole="alert" testID="manage-artist-too-large">
-                  {tooLarge}
-                </Text>
-              ) : null}
-              {error ? (
-                <Text style={styles.error} accessibilityRole="alert" testID="manage-artist-error">
-                  {error}
-                </Text>
-              ) : null}
-              <View style={styles.buttons}>
-                <Pressable testID="manage-artist-cancel" accessibilityRole="button" onPress={onClose} style={styles.button}>
-                  <Text style={styles.cancelText}>{t("shell.manage.cancel")}</Text>
-                </Pressable>
-                <Pressable
-                  testID="manage-artist-submit"
-                  accessibilityRole="button"
-                  accessibilityState={{ disabled: !canSave, busy }}
-                  disabled={!canSave}
-                  onPress={() => onSubmit(name.trim(), picture)}
                   style={[styles.button, styles.submit, !canSave && { opacity: 0.4 }]}
                 >
                   <Text style={styles.submitText}>{t("shell.manage.save")}</Text>
@@ -714,7 +523,7 @@ const SuggestList = ({
       ) : null}
       {asking ? (
         <View style={styles.asking} testID="manage-suggest-asking">
-          <MobileSkeletonPulse style={[styles.shimmerLine, { flex: 1 }]} />
+          <Shimmer style={[styles.shimmerLine, { flex: 1 }]} />
           <Text style={styles.suggestAbout}>{t("shell.manage.suggestStillAsking")}</Text>
         </View>
       ) : null}
@@ -745,8 +554,8 @@ const LyricsSection = ({ lyrics }: { lyrics: EditLookups["lyrics"] }) => {
     body = (
       <View style={{ gap: spacing.sm }} accessibilityState={{ busy: true }} testID="manage-lyrics-loading">
         <Text style={styles.label}>{t("shell.nowPlaying.searchingLyricsTitle")}</Text>
-        <MobileSkeletonPulse style={[styles.shimmerLine, { width: "75%" }]} />
-        <MobileSkeletonPulse style={[styles.shimmerLine, { width: "50%" }]} />
+        <Shimmer style={[styles.shimmerLine, { width: "75%" }]} />
+        <Shimmer style={[styles.shimmerLine, { width: "50%" }]} />
       </View>
     );
   else if (state.status === "found")

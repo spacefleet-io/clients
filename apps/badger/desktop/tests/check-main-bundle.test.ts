@@ -14,7 +14,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { findUnbundledWorkspaceImports } from "@space/desktop-platform/packaging/check-main-bundle-lib";
+import { findUnbundledWorkspaceImports } from "../../../../packages/desktop-platform/packaging/check-main-bundle-lib.mjs";
 
 const APP_DIR = join(__dirname, "..");
 const CHECK_MAIN_BUNDLE = join(APP_DIR, "../../../packages/desktop-platform/packaging/check-main-bundle.mjs");

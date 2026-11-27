@@ -4,8 +4,9 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ArrowLeft, RotateCw, Trash2, X } from "lucide-react-native";
-import { MobileEmptyState, MobileIconButton } from "@space/mobile-shell/components";
+import { MobileEmptyState } from "@space/mobile-shell/components";
 import { RootStackParamList } from "../navigation/AppNavigator";
+import { IconButton } from "../components/IconButton";
 import { RIPPLE } from "../components/PosterCard";
 import { useDownloads } from "../lib/downloads/downloadsStore";
 import { removeDownloads, retryDownloads } from "../lib/downloads/downloadActions";
@@ -97,13 +98,13 @@ const DownloadRow = memo(({ item, networkAllowed, wifiOnly, onOpen, onDelete, on
         ) : null}
       </View>
       {failed && item.errorCode !== "insufficient_space" ? (
-        <MobileIconButton label={t("downloads.row.retry")} onPress={handleRetry}>
+        <IconButton label={t("downloads.row.retry")} onPress={handleRetry}>
           <RotateCw size={20} color={theme.colors.accent} />
-        </MobileIconButton>
+        </IconButton>
       ) : null}
-      <MobileIconButton label={active ? t("downloads.row.cancel") : t("downloads.row.delete")} onPress={handleDelete}>
+      <IconButton label={active ? t("downloads.row.cancel") : t("downloads.row.delete")} onPress={handleDelete}>
         {active ? <X size={20} color={theme.colors.textMuted} /> : <Trash2 size={20} color={theme.colors.textMuted} />}
-      </MobileIconButton>
+      </IconButton>
     </Pressable>
   );
 });
@@ -170,9 +171,9 @@ export const DownloadsScreen = () => {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
-        <MobileIconButton label={t("downloads.back")} onPress={goBack}>
+        <IconButton label={t("downloads.back")} onPress={goBack}>
           <ArrowLeft size={22} color={theme.colors.text} />
-        </MobileIconButton>
+        </IconButton>
         <View style={styles.headerText}>
           <Text style={styles.title} accessibilityRole="header">
             {t("downloads.title")}
@@ -180,9 +181,9 @@ export const DownloadsScreen = () => {
           <Text style={styles.summary}>{t("downloads.summary", { count: items.length, size: formatBytes(totalBytes) })}</Text>
         </View>
         {items.length > 0 ? (
-          <MobileIconButton label={t("downloads.deleteAll.label")} onPress={confirmDeleteAll}>
+          <IconButton label={t("downloads.deleteAll.label")} onPress={confirmDeleteAll}>
             <Trash2 size={20} color={theme.colors.textMuted} />
-          </MobileIconButton>
+          </IconButton>
         ) : null}
       </View>
       {state.wifiOnly && !state.networkAllowed && items.some((i) => isActiveStatus(i.status)) ? (

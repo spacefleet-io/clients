@@ -15,7 +15,6 @@ export * from "./publish-edits";
 export * from "./lyrics";
 export * from "./fetchLyrics";
 export * from "./autoLyrics";
-export * from "./ownLyrics";
 export * from "./artistPictures";
 export * from "./albumCovers";
 export * from "./copyChanges";

@@ -8,23 +8,18 @@
  *   with what each added, found already there and could not import, and why. Chris 2026-11-16 (chat, via Main): the
  *   cards inside are Badger's too (UX-JOBS-02): same pills and words, the X stops a running import, the bin removes
  *   an ended one with the same animation, the loading cards, one quiet line for the lookups running on their own.
- *   Chris 2026-11-24 (chat): "the import jobs on parrot's jobs bar don't look like the ones on badger … this is
- *   terrible": each import is Badger's group card (cover, album, counts, pill, X or bin, chevron), and the files it
- *   could not take read as one plain line per reason, never a raw error or a path.
  */
 import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { translator } from "../src/renderer/src/i18n";
-import { ImportJobs, importFailureReason, type ImportFailureReason, type ImportJobAlbum } from "../src/renderer/src/ImportJobs";
+import { ImportJobs } from "../src/renderer/src/ImportJobs";
 import { setStorageUnitBase } from "@space/shared/format";
 import { exportBridgeStub } from "./exportBridge";
 import {
   IMPORT_INTERRUPTED,
   type ParrotBackgroundWork,
   type ParrotImportJob,
-  type ParrotImportRetry,
-  type ParrotImportRow,
   type ParrotImportStatus,
   type ParrotLanguage,
 } from "../src/shared/ipc";
@@ -98,11 +93,9 @@ describe("Parrot desktop Jobs panel", () => {
   const cards = () => all("import-job") as HTMLElement[];
   const card = (name: string) => cards().find((el) => el.textContent?.includes(name));
   const pill = (name: string) => card(name)?.querySelector('[data-testid="import-job-status"]')?.textContent;
-  // The group card's header: cover, title, the counts line, pill, X or bin, chevron.
-  const header = (el: Element | undefined) => el?.querySelector('[data-testid="import-job-card"]') as HTMLElement | null | undefined;
   const dump = () => console.info(SUITE, "panel", document.querySelector('[data-testid="import-jobs"]')?.textContent);
 
-  const mount = async (jobs: Promise<ParrotImportJob[]>, language: ParrotLanguage = "en", albumFor: (albumId: string) => ImportJobAlbum | undefined = () => undefined) => {
+  const mount = async (jobs: Promise<ParrotImportJob[]>, language: ParrotLanguage = "en") => {
     Object.defineProperty(window, "parrot", {
       configurable: true,
       value: {
@@ -120,10 +113,6 @@ describe("Parrot desktop Jobs panel", () => {
           return current;
         }),
         cancelImport: vi.fn(async () => running.status),
-        retryImportJob: vi.fn(async (_id: string): Promise<ParrotImportRetry> => ({ started: true })),
-        findImportJobFolder: vi.fn(async (_id: string): Promise<ParrotImportRetry | { cancelled: true }> => ({ started: true })),
-        retryImportSong: vi.fn(async (_jobId: string) => true),
-        cancelImportSong: vi.fn(async (_jobId: string) => true),
         getBackgroundWork: vi.fn(async () => [{ kind: "lyrics", done: 3, total: 12 }]),
         onBackgroundWork: vi.fn((listener: (work: ParrotBackgroundWork[]) => void) => {
           pushWork = listener;
@@ -134,7 +123,7 @@ describe("Parrot desktop Jobs panel", () => {
     container = document.createElement("div");
     document.body.appendChild(container);
     root = createRoot(container);
-    await act(async () => root.render(<ImportJobs t={translator(language)} language={language} onReview={onReview} albumFor={albumFor} />));
+    await act(async () => root.render(<ImportJobs t={translator(language)} language={language} onReview={onReview} />));
     await flush();
   };
 
@@ -166,11 +155,10 @@ describe("Parrot desktop Jobs panel", () => {
     await openPanel();
     expect(cards()).toHaveLength(6);
     expect(card("Running Album")?.querySelector('[data-testid="import-job-progress"]')?.textContent).toContain("Uploading 2 of 5");
-    expect(header(card("Finished Album"))?.textContent).toContain("3 added · 1 already there · 0 failed");
+    expect(card("Finished Album")?.querySelector('[data-testid="import-job-counts"]')?.textContent).toBe("3 added · 1 already there · 0 failed");
     const broken = card("Broken Album");
-    expect(header(broken)?.textContent).toContain("2 added · 0 already there · 1 failed");
-    expect(broken?.querySelector('[data-testid="import-job-failures"]')?.textContent).toContain("1 file is not a song Parrot can import.");
-    expect(broken?.querySelector('[data-testid="import-job-failures"]')?.textContent).toContain("03 broken.mp3");
+    expect(broken?.querySelector('[data-testid="import-job-counts"]')?.textContent).toBe("2 added · 0 already there · 1 failed");
+    expect(broken?.querySelector('[data-testid="import-job-failures"]')?.textContent).toContain("03 broken.mp3 · not an audio file");
     const cut = card("Cut Album");
     expect(pill("Cut Album")).toBe("Failed");
     expect(cut?.querySelector('[data-testid="import-job-error"]')?.textContent).toContain("Parrot closed before this import finished");
@@ -286,7 +274,7 @@ describe("Parrot desktop Jobs panel", () => {
     await openPanel();
     expect(cards()).toHaveLength(1);
     expect(cards()[0]?.querySelector('[data-testid="import-job-status"]')?.textContent).toBe("Done");
-    expect(header(cards()[0])?.textContent).toContain("5 added · 0 already there · 0 failed");
+    expect(cards()[0]?.querySelector('[data-testid="import-job-counts"]')?.textContent).toBe("5 added · 0 already there · 0 failed");
   });
 
   // @req UX-JOBS-01[parrot]
@@ -297,263 +285,6 @@ describe("Parrot desktop Jobs panel", () => {
     console.info(SUITE, "early done card", only?.textContent);
     expect(only?.querySelector('[data-testid="import-job-status"]')?.textContent).toBe("Uploading");
     expect(only?.querySelector('[data-testid="import-job-remove"]')).toBeNull();
-    expect(header(only)?.textContent).not.toContain("added");
-  });
-
-  // @req UX-JOBS-03[parrot]
-  it("a stopped import and one that left files out say what happened, what it means, and offer Import again", async () => {
-    await openPanel();
-    const cut = card("Cut Album")?.querySelector('[data-testid="import-job-failed"]');
-    const broken = card("Broken Album")?.querySelector('[data-testid="import-job-failed"]');
-    console.info(SUITE, "failed details", { cut: cut?.textContent, broken: broken?.textContent });
-    expect(cut?.textContent).toContain("Parrot closed before this import finished.");
-    expect(cut?.textContent).toContain("Songs already added stay in the library. Importing again adds only what is missing.");
-    expect(broken?.textContent).toContain("Some files were not added.");
-    // Nothing to try again on a finished, stopped-by-the-user or running import.
-    for (const name of ["Finished Album", "Stopped Album", "Running Album", "Review Album"]) {
-      expect(card(name)?.querySelector('[data-testid="import-job-failed"]'), name).toBeNull();
-    }
-    const again = card("Cut Album")?.querySelector('[data-testid="import-job-retry"]') as HTMLButtonElement;
-    expect(again.textContent).toBe("Import again");
-    await act(async () => again.click());
-    await flush();
-    console.info(SUITE, "retry calls", vi.mocked(window.parrot.retryImportJob).mock.calls);
-    expect(window.parrot.retryImportJob).toHaveBeenCalledWith("Cut Album");
-    expect(window.parrot.findImportJobFolder).not.toHaveBeenCalled();
-    // The bin stays beside the one action.
-    expect(card("Cut Album")?.querySelector('[data-testid="import-job-remove"]')).not.toBeNull();
-  });
-
-  // @req UX-JOBS-03[parrot]
-  it("when the folder is gone the card offers Find the folder, and turns to it when Import again finds nothing", async () => {
-    vi.mocked(window.parrot.retryImportJob).mockResolvedValueOnce({ started: false, reason: "missing" });
-    await openPanel();
-    const button = () => card("Cut Album")?.querySelector('[data-testid="import-job-retry"]') as HTMLButtonElement;
-    await act(async () => button().click());
-    await flush();
-    const detail = card("Cut Album")?.querySelector('[data-testid="import-job-failed"]')?.textContent;
-    console.info(SUITE, "after missing", { label: button().textContent, detail });
-    expect(button().textContent).toBe("Find the folder");
-    expect(detail).toContain("The folder is no longer where it was. Find it to import again.");
-    await act(async () => button().click());
-    await flush();
-    expect(window.parrot.findImportJobFolder).toHaveBeenCalledWith("Cut Album");
-    // Main's own list says so as well; the card keeps offering the picker.
-    await act(async () => push([{ ...partly, sourcesMissing: true }]));
-    expect(card("Broken Album")?.querySelector('[data-testid="import-job-retry"]')?.textContent).toBe("Find the folder");
-  });
-
-  // @req UX-JOBS-03[parrot]
-  it("another import under way: the card says to try again once it ends; French reads in French", async () => {
-    vi.mocked(window.parrot.retryImportJob).mockResolvedValueOnce({ started: false, reason: "busy" });
-    await openPanel();
-    await act(async () => (card("Cut Album")?.querySelector('[data-testid="import-job-retry"]') as HTMLButtonElement).click());
-    await flush();
-    expect(card("Cut Album")?.querySelector('[data-testid="import-job-failed"]')?.textContent).toContain("Another import is under way. Try again once it ends.");
-    act(() => root.unmount());
-    container.remove();
-    await mount(Promise.resolve(current), "fr");
-    await openPanel();
-    const french = card("Cut Album")?.querySelector('[data-testid="import-job-failed"]')?.textContent;
-    console.info(SUITE, "french detail", french);
-    expect(french).toContain("Parrot s’est fermé avant la fin de cet import.");
-    expect(card("Cut Album")?.querySelector('[data-testid="import-job-retry"]')?.textContent).toBe("Importer à nouveau");
-  });
-
-  it("the counts and the other sources read in the right plural form: 1 ajouté, 2 ajoutés, et 1 autre, et 2 autres", async () => {
-    const one = job("One", { finishedAt: 6, sources: ["/home/me/Music/One", "/home/me/Music/Extra"] }, { phase: "done", imported: 1, skipped: 1, failed: 1 });
-    const two = job("Two", { finishedAt: 7, sources: ["/home/me/Music/Two", "/x", "/y"] }, { phase: "done", imported: 2, skipped: 2, failed: 2 });
-    const read = async (language: ParrotLanguage) => {
-      act(() => root.unmount());
-      container.remove();
-      current = [one, two];
-      await mount(Promise.resolve(current), language);
-      await openPanel();
-      const lines = cards().map((el) => header(el)?.textContent?.match(/\d+ (?:added|ajoutés?) · .*?(?:failed|en échec)/u)?.[0] ?? "");
-      console.info(SUITE, language, "plural lines", JSON.stringify(lines));
-      return lines;
-    };
-    const en = await read("en");
-    expect(en.sort()).toEqual(["1 added · 1 already there · 1 failed", "2 added · 2 already there · 2 failed"]);
-    expect(cards().some((el) => el.textContent?.includes("One and 1 more"))).toBe(true);
-    expect(cards().some((el) => el.textContent?.includes("Two and 2 more"))).toBe(true);
-    const fr = await read("fr");
-    expect(fr.sort()).toEqual(["1 ajouté · 1 déjà présent · 1 en échec", "2 ajoutés · 2 déjà présents · 2 en échec"]);
-    expect(cards().some((el) => el.textContent?.includes("One et 1 autre") && !el.textContent?.includes("One et 1 autres"))).toBe(true);
-    expect(cards().some((el) => el.textContent?.includes("Two et 2 autres"))).toBe(true);
-  });
-
-  // The real job Chris saw on 2026-11-24, made anonymous: 15 songs, 2 added, the folder deleted under the import.
-  const gone = (n: number) => `${String(n).padStart(2, "0")} - Song ${n}.m4a`;
-  const blackMarket = job(
-    "Black Market Stuff (2018)",
-    {
-      finishedAt: 8,
-      albumIds: ["alb-bm"],
-      failures: Array.from({ length: 13 }, (_, i) => ({
-        file: `/home/me/Music/Band/Black Market Stuff (2018)/${gone(i + 3)}`,
-        error: `ENOENT: no such file or directory, open '/home/me/Music/Band/Black Market Stuff (2018)/${gone(i + 3)}'`,
-      })),
-    },
-    { phase: "done", done: 15, total: 15, imported: 2, skipped: 0, failed: 13 }
-  );
-  const albums = (albumId: string): ImportJobAlbum | undefined =>
-    albumId === "alb-bm" ? { title: "Black Market Stuff", cover: "parrot-cover://alb-bm" } : undefined;
-
-  // @req UX-JOBS-02[parrot]
-  // @req UX-JOBS-03[parrot]
-  it("an import is Badger's group card: cover, album title, counts, pill and bin; one that left files out opens on its own", async () => {
-    act(() => root.unmount());
-    container.remove();
-    current = [blackMarket, finished];
-    await mount(Promise.resolve(current), "en", albums);
-    await openPanel();
-    const head = header(card("Black Market Stuff"));
-    console.info(SUITE, "group card header", head?.textContent, head?.getAttribute("aria-expanded"));
-    expect(head?.textContent).toContain("Black Market Stuff");
-    expect(head?.textContent).toContain("2 added · 0 already there · 13 failed");
-    expect(head?.querySelector("img")?.getAttribute("src")).toBe("parrot-cover://alb-bm");
-    expect(head?.querySelector('[data-testid="import-job-status"]')?.textContent).toBe("Done");
-    expect(head?.querySelector('[data-testid="import-job-remove"]')).not.toBeNull();
-    expect(head?.getAttribute("aria-expanded")).toBe("true");
-    expect(card("Black Market Stuff")?.querySelector('[data-testid="import-job-retry"]')?.textContent).toBe("Import again");
-    // A finished import with nothing to do stays closed until its chevron opens it.
-    const done = header(card("Finished Album"));
-    expect(done?.getAttribute("aria-expanded")).toBe("false");
-    await act(async () => done?.click());
-    expect(header(card("Finished Album"))?.getAttribute("aria-expanded")).toBe("true");
-  });
-
-  // @req UX-JOBS-03[parrot]
-  it("13 files deleted under the import read as one plain line with the names behind Show files, never ENOENT or a path; French too", async () => {
-    const read = async (language: ParrotLanguage) => {
-      act(() => root.unmount());
-      container.remove();
-      current = [blackMarket];
-      await mount(Promise.resolve(current), language, albums);
-      await openPanel();
-      return card("Black Market Stuff");
-    };
-    const en = await read("en");
-    const groups = en?.querySelectorAll('[data-testid="import-job-failures"] > li');
-    console.info(SUITE, "reason groups", [...(groups ?? [])].map((li) => li.querySelector("summary")?.textContent));
-    expect(groups).toHaveLength(1);
-    expect(groups?.[0]?.getAttribute("data-reason")).toBe("missing");
-    expect(groups?.[0]?.querySelector("summary")?.textContent).toContain("13 files not found: they were moved or deleted after you chose them.");
-    expect(groups?.[0]?.querySelector("summary")?.textContent).toContain("Show files");
-    expect(groups?.[0]?.querySelectorAll("details li")).toHaveLength(13);
-    expect(groups?.[0]?.querySelector("details li")?.textContent).toBe("03 - Song 3.m4a");
-    expect(en?.querySelector('[data-testid="import-job-failed"]')?.textContent).toContain("Some files were not added.");
-    // Neither the words nor any attribute carry the raw error, the errno or the folder.
-    for (const leak of ["ENOENT", "no such file", "/home/", "open '"]) expect(en?.outerHTML, leak).not.toContain(leak);
-    const fr = await read("fr");
-    expect(fr?.querySelector('[data-testid="import-job-failures"] summary')?.textContent).toContain(
-      "13 fichiers introuvables\u202f: ils ont été déplacés ou supprimés après votre choix."
-    );
-    expect(fr?.querySelector('[data-testid="import-job-failures"] summary')?.textContent).toContain("Voir les fichiers");
-    for (const leak of ["ENOENT", "/home/"]) expect(fr?.outerHTML, leak).not.toContain(leak);
-    // The start time is written the app language's way, not the system's.
-    expect(en?.textContent).toContain(new Date(blackMarket.startedAt).toLocaleString("en"));
-    expect(fr?.textContent).toContain(new Date(blackMarket.startedAt).toLocaleString("fr"));
-  });
-
-  // @req UX-JOBS-02[parrot]
-  // @req PAR-UP-13
-  it("a running import shows one bucket per song with its upload and light-copy rows, place in line, retry and cancel", async () => {
-    act(() => root.unmount());
-    container.remove();
-    const row = (jobId: string, patch: Partial<ParrotImportRow>): ParrotImportRow => ({
-      jobId,
-      status: "queued",
-      stage: "queued",
-      progressPct: 0,
-      placeInLine: null,
-      error: null,
-      ...patch,
-    });
-    const dir = "/home/me/Music/Song Album/";
-    const album = job(
-      "Song Album",
-      {
-        songs: [
-          { file: `${dir}01 Begin.m4a`, source: row("a-src", { status: "succeeded", stage: "commit", progressPct: 100 }), light: row("a-light", { status: "running", stage: "transcode", progressPct: 40 }) },
-          { file: `${dir}02 Second.m4a`, source: row("b-src", { status: "running", stage: "upload", progressPct: 60 }), light: null },
-          { file: `${dir}03 Third.m4a`, source: row("c-src", { placeInLine: 2 }), light: null },
-          { file: `${dir}04 Fourth.m4a`, source: row("d-src", { status: "failed", stage: "upload", error: "fetch failed" }), light: null },
-        ],
-      },
-      { running: true, phase: "uploading", done: 1, total: 4, bytesDone: 1_000_000, bytesTotal: 4_000_000 }
-    );
-    current = [album];
-    await mount(Promise.resolve(current));
-    await openPanel();
-    const songs = all("import-song") as HTMLElement[];
-    const song = (name: string) => songs.find((el) => el.textContent?.includes(name));
-    const songRow = (name: string, kind: "source" | "light") => song(name)?.querySelector(`[data-testid="import-song-row"][data-kind="${kind}"]`);
-    const rowPill = (name: string, kind: "source" | "light") => songRow(name, kind)?.querySelector('[data-testid="import-song-status"]')?.textContent;
-    console.info(SUITE, "songs", songs.map((el) => el.textContent));
-    expect(songs).toHaveLength(4);
-    expect(card("Song Album")?.outerHTML).not.toContain("/home/me/");
-    expect(rowPill("01 Begin.m4a", "source")).toBe("Done");
-    expect(rowPill("01 Begin.m4a", "light")).toBe("Making the light copy");
-    expect(rowPill("02 Second.m4a", "source")).toBe("Uploading");
-    expect(songRow("02 Second.m4a", "source")?.querySelector('[data-testid="import-song-bar"]')?.textContent).toContain("60%");
-    // A song still waiting stays closed, its place in line on the bucket's own pill; a click opens it.
-    expect(songRow("03 Third.m4a", "source")).toBeNull();
-    expect(song("03 Third.m4a")?.querySelector('[data-testid="import-song-badge"]')?.textContent).toBe("Waiting · #2 in line");
-    await act(async () => (song("03 Third.m4a")?.querySelector('[role="button"]') as HTMLElement).click());
-    expect(rowPill("03 Third.m4a", "source")).toBe("Waiting · #2 in line");
-    expect(rowPill("04 Fourth.m4a", "source")).toBe("Failed");
-    expect(songRow("04 Fourth.m4a", "source")?.textContent).toContain("1 file could not be sent: the connection was lost.");
-    expect(songRow("04 Fourth.m4a", "source")?.outerHTML).not.toContain("fetch failed");
-    // A row that ended well has no button; a live row has its X; a failed one its "Try again".
-    expect(songRow("01 Begin.m4a", "source")?.querySelector("button")).toBeNull();
-    await act(async () => (songRow("03 Third.m4a", "source")?.querySelector('[data-testid="import-song-cancel"]') as HTMLButtonElement).click());
-    expect(window.parrot.cancelImportSong).toHaveBeenCalledWith("c-src");
-    await act(async () => (songRow("04 Fourth.m4a", "source")?.querySelector('[data-testid="import-song-retry"]') as HTMLButtonElement).click());
-    expect(window.parrot.retryImportSong).toHaveBeenCalledWith("d-src");
-    // French: the same rows in the app's language.
-    act(() => root.unmount());
-    container.remove();
-    await mount(Promise.resolve(current), "fr");
-    await openPanel();
-    const fr = all("import-song") as HTMLElement[];
-    expect(fr.find((el) => el.textContent?.includes("03 Third.m4a"))?.querySelector('[data-testid="import-song-badge"]')?.textContent).toBe("En attente · n° 2 dans la file");
-    expect(fr.find((el) => el.textContent?.includes("01 Begin.m4a"))?.querySelector('[data-kind="light"] [data-testid="import-song-status"]')?.textContent).toBe("Création de la copie légère");
-  });
-
-  // @req UX-JOBS-03[parrot]
-  it("a stopped import says why in plain words, never the raw error", async () => {
-    act(() => root.unmount());
-    container.remove();
-    const lost = job("Lost Album", { finishedAt: 9 }, { phase: "failed", total: 4, error: "ENOENT: no such file or directory, scandir '/home/me/Music/Lost Album'" });
-    current = [lost];
-    await mount(Promise.resolve(current));
-    await openPanel();
-    const text = card("Lost Album")?.querySelector('[data-testid="import-job-error"]')?.textContent;
-    console.info(SUITE, "stopped reason", text);
-    expect(text).toBe("This import stopped: its folder or files were moved or deleted after you chose them.");
-    expect(card("Lost Album")?.outerHTML).not.toContain("ENOENT");
-  });
-});
-
-describe("importFailureReason", () => {
-  // @req UX-JOBS-03[parrot]
-  it("sorts the importer's raw errors into the reasons the card names", () => {
-    const cases: Record<string, ImportFailureReason> = {
-      "ENOENT: no such file or directory, open '/x/a.m4a'": "missing",
-      "ENOTDIR: not a directory, open '/x/a.m4a'": "missing",
-      "not an audio file": "unsupported",
-      "EACCES: permission denied, open '/x/a.m4a'": "unreadable",
-      "EISDIR: illegal operation on a directory, read": "unreadable",
-      "fetch failed": "network",
-      "connect ECONNREFUSED 127.0.0.1:443": "network",
-      "upload failed: HTTP 503": "network",
-      "version_conflict": "conflict",
-      "something odd": "other",
-    };
-    const got = Object.fromEntries(Object.keys(cases).map((error) => [error, importFailureReason(error)]));
-    console.info(SUITE, "reasons", got);
-    expect(got).toEqual(cases);
+    expect(only?.querySelector('[data-testid="import-job-counts"]')).toBeNull();
   });
 });

@@ -28,7 +28,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { performance } from "node:perf_hooks";
 import type * as ServiceModule from "../src/modules/badgerLibraryDb";
-import type * as LibraryDbModule from "@space/library-db-runtime/libraryDb";
+import type * as LibraryDbModule from "../../../packages/library-db-runtime/src/libraryDb";
 
 const serviceModule = process.env.BENCH_SERVICE_MODULE ?? "../src/modules/badgerLibraryDb";
 const libraryDbModule = process.env.BENCH_LIBRARY_DB_MODULE ?? "../../../packages/library-db-runtime/src/libraryDb";

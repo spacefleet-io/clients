@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import path from "node:path";
 import { appendFileSync, existsSync, mkdtempSync, openSync, readFileSync, readdirSync, rmSync, statSync, utimesSync, writeFileSync, writeSync, closeSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { rotateLogIfLarge, RUNTIME_LOG_KEEP_FILES, RUNTIME_LOG_MAX_BYTES } from "@space/runtime-host/logRotation";
+import { rotateLogIfLarge, RUNTIME_LOG_KEEP_FILES, RUNTIME_LOG_MAX_BYTES } from "../../../packages/runtime-host/src/logRotation";
 
 describe("runtime.log rotation (guardian side)", () => {
   let dir = "";

@@ -8,7 +8,7 @@ import Svg, { Circle, Defs, LinearGradient, Rect, Stop } from "react-native-svg"
 import { parrotCoverArt, parrotWaveBars } from "@space/parrot-core/art";
 import { albumCoversWaiting, artistPicturesWaiting } from "../lib/picturesWaiting";
 import { phoneCoverFace, phoneCoverSource } from "../lib/covers";
-import { MobileSkeletonPulse } from "@space/mobile-shell/components";
+import { Shimmer } from "./shimmer";
 import { colors, spacing } from "../theme";
 
 /** How long a cover that just arrived takes to fade in over the drawn picture. */
@@ -31,11 +31,6 @@ type ArtProps = {
   coverKey?: string | null;
   /** A cover already kept on the phone shown at once under `coverKey` while that one loads (the small copy). */
   previewKey?: string | null;
-  /**
-   * Only the gradient, without the motif: for a picture stretched to a shape that is not square (the artist page's
-   * hero), where the motif's circle would stretch into an oval.
-   */
-  plain?: boolean;
 };
 
 /**
@@ -127,7 +122,7 @@ const Motif = ({ motif, light }: { motif: string; light: string }) => {
  * cover is on its way, a shimmer stands in for the drawing (PAR-META-20): the cover downloading, its picture not loaded
  * yet, or (no cover yet) the automatic cover pass (album `seed`) or photo pass (artist `seed`) still to ask.
  */
-export const ParrotArt = ({ seed, size, radius = 12, label, playing = false, style, coverKey, previewKey, plain = false }: ArtProps) => {
+export const ParrotArt = ({ seed, size, radius = 12, label, playing = false, style, coverKey, previewKey }: ArtProps) => {
   const art = useMemo(() => parrotCoverArt(seed), [seed]);
   const gradientId = `parrot-art-${seed}`;
   const cover = useCoverUri(coverKey);
@@ -157,7 +152,7 @@ export const ParrotArt = ({ seed, size, radius = 12, label, playing = false, sty
       style={[{ width: size, height: size, borderRadius: radius }, styles.art, playing && styles.playing, style]}
     >
       {shimmer ? (
-        <MobileSkeletonPulse testID="parrot-art-shimmer" style={StyleSheet.absoluteFill} />
+        <Shimmer testID="parrot-art-shimmer" style={StyleSheet.absoluteFill} />
       ) : (
         <>
           <Svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none">
@@ -168,7 +163,7 @@ export const ParrotArt = ({ seed, size, radius = 12, label, playing = false, sty
               </LinearGradient>
             </Defs>
             <Rect x={0} y={0} width={100} height={100} fill={`url(#${gradientId})`} />
-            {plain ? null : <Motif motif={art.motif} light={art.light} />}
+            <Motif motif={art.motif} light={art.light} />
           </Svg>
           {label ? (
             <Text style={[styles.label, { fontSize: Math.max(9, Math.round(size / 14)) }]} numberOfLines={1}>

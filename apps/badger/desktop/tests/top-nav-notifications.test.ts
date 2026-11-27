@@ -1,52 +1,99 @@
-/**
- * @test-id badger-desktop-notice-history
- * @level integration
- * @req UX-NOTICE-04[badger-desktop] @req UX-NOTICE-12[badger-desktop]
- * @why Badger's bell reads the signed-in user's history under `sf.notifications.<user>`, the key older versions saved
- * it under: a different key or an unreadable old entry would empty everyone's bell on update.
- */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createDesktopNoticeHistory, type NoticeHistory } from "@space/desktop-shell/services/notifications";
-import { badgeLabel, historyStorageKey } from "@space/notify-core/history";
+import { createNotificationStore } from "@space/desktop-shell/services/notifications";
 
-const dump = (label: string, history: NoticeHistory) =>
-  console.info(`[badger-desktop-notice-history:${label}]`, JSON.stringify({ unread: history.unreadCount(), entries: history.getAll() }));
+// Dump-on-failure: surface the full store contents (ids, read flags, meta) so a
+// merge/dedupe/ordering mismatch is diagnosable without rerunning. Wrapped in
+// try/catch so a dump failure can never mask the real assertion.
+const dumpNotificationStoreSnapshot = (
+  label: string,
+  store: ReturnType<typeof createNotificationStore>,
+) => {
+  try {
+    const all = store.getAll();
+    console.error(`=== [top-nav-notifications-integration:${label}] snapshot ===`);
+    console.error(`count=${all.length} unread=${store.countUnread()}`);
+    console.error(`items:\n${JSON.stringify(all, null, 2)}`);
+  } catch (err) {
+    console.error(`(snapshot failed: ${err instanceof Error ? err.message : String(err)})`);
+  }
+};
 
-describe("badger notice history", () => {
+describe("badger notification store integration", () => {
   beforeEach(() => {
+    console.info(`[top-nav-notifications-integration:setup] stubbing in-memory localStorage`);
     const backing = new Map<string, string>();
     vi.stubGlobal("localStorage", {
       getItem: (key: string) => backing.get(key) ?? null,
-      setItem: (key: string, value: string) => void backing.set(key, value),
-      removeItem: (key: string) => void backing.delete(key),
+      setItem: (key: string, value: string) => {
+        backing.set(key, value);
+      },
+      removeItem: (key: string) => {
+        backing.delete(key);
+      },
       clear: () => backing.clear(),
     });
   });
-  afterEach(() => vi.unstubAllGlobals());
 
-  it("@req UX-NOTICE-04 keeps the key older versions used and reads their entries", () => {
-    expect(historyStorageKey("user1")).toBe("sf.notifications.user1");
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("loads only valid stored notifications", () => {
+    console.info(`[top-nav-notifications-integration:load] seeding 1 valid + 1 malformed entry`);
     localStorage.setItem(
       "sf.notifications.user1",
       JSON.stringify([
         { id: "1", title: "Title", message: "Message", timestamp: 1, level: "info", read: false, meta: { transport: "p2p" } },
         { bad: true },
-      ]),
+      ])
     );
-    const history = createDesktopNoticeHistory(historyStorageKey("user1"));
-    dump("legacy", history);
-    expect(history.getAll()).toHaveLength(1);
-    expect(history.getAll()[0]).toMatchObject({ id: "1", key: "1", title: "Title", message: "Message", read: false });
+    const store = createNotificationStore({ storageKey: "sf.notifications.user1" });
+    console.info(
+      `[top-nav-notifications-integration:load] loaded count=${store.getAll().length} firstId=${String(store.getAll()[0]?.id)}`,
+    );
+    if (store.getAll().length !== 1 || store.getAll()[0]?.id !== "1") {
+      dumpNotificationStoreSnapshot("load", store);
+    }
+    expect(store.getAll()).toHaveLength(1);
+    expect(store.getAll()[0]?.id).toBe("1");
   });
 
-  it("@req UX-NOTICE-12 the bell counts unread entries, 9+ above nine, and opening it reads them all", () => {
-    const history = createDesktopNoticeHistory(historyStorageKey("user1"));
-    for (let i = 0; i < 10; i += 1) history.record({ key: `k${i}`, kind: "headsUp", level: "warning", message: `m${i}` });
-    dump("count", history);
-    expect(badgeLabel(history.unreadCount())).toBe("9+");
-    history.markAllRead();
-    expect(badgeLabel(history.unreadCount())).toBeNull();
-    // Saved, so the next start shows the same bell.
-    expect(createDesktopNoticeHistory(historyStorageKey("user1")).getAll()).toHaveLength(10);
+  it("merges incoming notifications by id and keeps newest first", () => {
+    console.info(`[top-nav-notifications-integration:merge] merging 3 notifications (1 dup id)`);
+    const store = createNotificationStore({ storageKey: "sf.notifications.user1" });
+    store.merge({ id: "1", title: "Old", message: "Old", timestamp: 1, level: "info", read: true, meta: { transport: "p2p" } });
+    store.merge({ id: "2", title: "Other", message: "Other", timestamp: 2, level: "info", read: false, meta: { transport: "p2p" } });
+    store.merge({ id: "1", title: "New", message: "New", timestamp: 3, level: "success", read: false, meta: { transport: "relay" } });
+
+    const all = store.getAll();
+    console.info(
+      `[top-nav-notifications-integration:merge] resulting ids=${JSON.stringify(all.map((item) => item.id))} head=${JSON.stringify(all[0])}`,
+    );
+    if (JSON.stringify(all.map((item) => item.id)) !== JSON.stringify(["1", "2"])) {
+      dumpNotificationStoreSnapshot("merge", store);
+    }
+    expect(all.map((item) => item.id)).toEqual(["1", "2"]);
+    expect(all[0]).toMatchObject({ title: "New", meta: { transport: "relay" }, read: false });
+  });
+
+  it("marks all as read and counts unread correctly", () => {
+    console.info(`[top-nav-notifications-integration:mark-read] merging 1 unread then markAllRead`);
+    const store = createNotificationStore({ storageKey: "sf.notifications.user1" });
+    store.merge({ id: "1", title: "A", message: "A", timestamp: 1, level: "info", read: false });
+
+    const unreadBefore = store.countUnread();
+    if (unreadBefore !== 1) {
+      dumpNotificationStoreSnapshot("mark-read-before", store);
+    }
+    expect(store.countUnread()).toBe(1);
+    store.markAllRead();
+    console.info(
+      `[top-nav-notifications-integration:mark-read] unreadBefore=${unreadBefore} unreadAfter=${store.countUnread()} headRead=${String(store.getAll()[0]?.read)}`,
+    );
+    if (store.countUnread() !== 0 || store.getAll()[0]?.read !== true) {
+      dumpNotificationStoreSnapshot("mark-read-after", store);
+    }
+    expect(store.countUnread()).toBe(0);
+    expect(store.getAll()[0]?.read).toBe(true);
   });
 });

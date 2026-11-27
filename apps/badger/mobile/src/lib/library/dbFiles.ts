@@ -1,4 +1,5 @@
 import RNFS from "react-native-fs";
+import { Platform } from "react-native";
 import SQLite from "react-native-sqlite-storage";
 import {
   ensureSchema,
@@ -14,7 +15,6 @@ import {
   getPlaybackDbPath,
   getIngestDbPath,
   getSnapshotDbPath,
-  librarySqliteDb,
 } from "../libraryStorage";
 
 export const CORE_DB_NAME = "library.core.sqlite";
@@ -23,8 +23,10 @@ export const PLAYBACK_DB_NAME = "library.playback.sqlite";
 export const INGEST_DB_NAME = "library.ingest.sqlite";
 export const SNAPSHOT_DB_NAME = "library.snapshot.sqlite";
 
-export const openSqliteDb = async (name: string) =>
-  await SQLite.openDatabase({ name, location: librarySqliteDb(name).location });
+export const openSqliteDb = async (name: string) => {
+  const location = Platform.OS === "ios" ? "Documents" : "default";
+  return await SQLite.openDatabase({ name, location });
+};
 
 export const openCoreDb = async () => {
   const db = await openSqliteDb(CORE_DB_NAME);

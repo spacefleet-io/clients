@@ -4,7 +4,7 @@ import {
   REPLAY_LIMIT_DEFAULT,
   type EventLogDeps,
   type EventRow,
-} from "@space/runtime-jobs-engine/eventLog";
+} from "../src/core/jobs/eventLog";
 
 const buildStubDeps = (): EventLogDeps & { rows: EventRow[]; nextId: number } => {
   const rows: EventRow[] = [];

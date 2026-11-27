@@ -172,11 +172,6 @@ class StorageTunnelClient(
     private var error: Throwable? = null
     /** Set by [cancelInFlight]: the fetch is aborted, also when its download had not started yet (see [download]). */
     @Volatile var cancelled = false
-    /**
-     * Set when the player itself reads this object ([openObject]), as the fetch's owner or a reader joining it: the player
-     * is waiting on it, so [cancelInFlight] leaves it alone (PAR-PLAY-12).
-     */
-    @Volatile var playerWanted = false
 
     fun resolve(v: ObjectBody.InMemory?) {
       lock.withLock { value = v; done = true; ready.signalAll() }
@@ -195,17 +190,7 @@ class StorageTunnelClient(
     }
   }
 
-  override fun openObject(key: String): ObjectBody = open(key, player = true)
-
-  /**
-   * Loads [key] ahead of the player (PAR-PLAY-07 preloads, the proxy's read-ahead): unlike [openObject] the fetch stays
-   * cancellable until the player itself asks for the object.
-   */
-  override fun prefetch(key: String) {
-    open(key, player = false).release()
-  }
-
-  private fun open(key: String, player: Boolean): ObjectBody {
+  override fun openObject(key: String): ObjectBody {
     cacheLock.withLock {
       val cached = cache.remove(key)
       if (cached != null) {
@@ -215,20 +200,16 @@ class StorageTunnelClient(
     }
     spool?.open(key)?.let { return it }
 
-    val newDeferred = Deferred().also { it.playerWanted = player }
+    val newDeferred = Deferred()
     val existing = pending.putIfAbsent(key, newDeferred)
     if (existing != null) {
-      if (player) existing.playerWanted = true
-      Log.d(TAG, "fetch.dedup.wait key=$key player=$player")
+      Log.d(TAG, "fetch.dedup.wait key=$key")
       val inMemory = try {
         existing.await()
       } catch (e: Throwable) {
-        // The fetch this read joined was cancelled before the player joined it (a preload yielding, PAR-PLAY-07; a rung
-        // switch): the player still wants the object, so it fetches it itself. A load ahead stays cancelled.
-        if (existing.cancelled && player) {
-          Log.i(TAG, "fetch.refetch_after_cancel key=$key")
-          return open(key, player = true)
-        }
+        // The fetch this read joined was cancelled for another reader (a preload yielding, PAR-PLAY-07; a rung switch):
+        // this read still wants the object, so it fetches it itself.
+        if (existing.cancelled) return openObject(key)
         throw e
       }
       if (inMemory != null) return inMemory
@@ -258,23 +239,12 @@ class StorageTunnelClient(
     }
   }
 
-  /**
-   * Aborts the fetches loading [matches] keys ahead of the player. A fetch the player itself is waiting on is skipped
-   * (PAR-PLAY-12, Chris 2026-11-27): aborting it made the proxy answer the player's request with a 502, which the player
-   * shows as ERROR_CODE_IO_BAD_HTTP_STATUS and stops on.
-   */
   override fun cancelInFlight(matches: (String) -> Boolean): Int {
     var aborted = 0
     for (key in (pending.keys + calls.keys).filter(matches)) {
-      val deferred = pending[key]
-      if (deferred?.playerWanted == true) {
-        Log.i(TAG, "fetch.cancel_skipped_player_read key=$key")
-        continue
-      }
       // Marked before the call is looked up: a fetch still opening the session or refreshing traffic has no call yet and
       // is aborted by [download] the moment it makes one, so a cancel never misses a fetch that has not reached the wire.
-      // A player joining it after this mark fetches the object again (see [open]).
-      deferred?.cancelled = true
+      pending[key]?.cancelled = true
       calls[key]?.cancel()
       aborted += 1
       Log.i(TAG, "fetch.cancelled key=$key")
@@ -531,9 +501,7 @@ class StorageTunnelClient(
    * POSTs the tunnel download of [key] and hands the response body (the still-encrypted SFV1 envelope) and headers to [read].
    * A 404 `invalid_session` means the gateway forgot the session (it expired while the app slept or stayed paused past
    * the session TTL, or the gateway restarted): the session is dropped, a new one opened and the download tried once
-   * more (STOR-GATEWAY-02, "the client opens a new one"). The same holds for every refusal a new session can fix — a 401,
-   * 403 or 410 and a 400 `session_not_started` — so a player read never fails on a stale session (PAR-PLAY-12,
-   * Chris 2026-11-27); any other status (a 404 `object_not_found`) fails at once.
+   * more (STOR-GATEWAY-02, "the client opens a new one").
    */
   private fun <T> download(
     key: String,
@@ -554,7 +522,7 @@ class StorageTunnelClient(
       .post(body.toString().toRequestBody(JSON_TYPE))
       .build()
     val startMs = System.currentTimeMillis()
-    var refusal = ""
+    var sessionGone = false
     val call = http.newCall(req)
     calls[key] = call
     if (pending[key]?.cancelled == true) call.cancel()
@@ -562,10 +530,8 @@ class StorageTunnelClient(
       call.execute().use { res ->
         if (!res.isSuccessful) {
           val code = emitTraffic("download", res.code, runCatching { res.body?.string() }.getOrNull() ?: "")
-          if (renewed || !sessionRenewable(res.code, code)) {
-            throw TunnelHttpException(res.code, "tunnel_download_failed: ${res.code} key=$key code=${code.ifEmpty { "-" }}")
-          }
-          refusal = "${res.code}/${code.ifEmpty { "-" }}"
+          sessionGone = res.code == 404 && code == "invalid_session" && !renewed
+          if (!sessionGone) throw TunnelHttpException(res.code, "tunnel_download_failed: ${res.code} key=$key")
         } else {
           val resBody = res.body ?: throw IllegalStateException("tunnel_download_empty: $key")
           return read(resBody, startMs, res.headers)
@@ -575,15 +541,10 @@ class StorageTunnelClient(
       calls.remove(key, call)
     }
     dropSession(sid)
-    Log.w(TAG, "session.renew reason=$refusal sid=$sid key=$key")
+    Log.w(TAG, "session.renew reason=invalid_session sid=$sid key=$key")
     ensureSession()
     return download(key, renewed = true, read = read)
   }
-
-  /** Whether a download refused with [status] / [code] is worth one retry on a new session (see [download]). */
-  private fun sessionRenewable(status: Int, code: String): Boolean =
-    status == 401 || status == 403 || status == 410 ||
-      (status == 404 && code == "invalid_session") || (status == 400 && code == "session_not_started")
 
   /**
    * Reads at most [READ_PIECE_BYTES] per call while feeding [NetworkMeter] every [METER_SLICE_MS], so a segment that

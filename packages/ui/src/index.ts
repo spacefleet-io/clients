@@ -2,7 +2,7 @@ export { default as LanguageMenu } from "./LanguageMenu";
 export { LanguageSelect, type LanguageSelectItem, type LanguageSelectProps } from "./language-select";
 export { Flag, FLAG_CODES } from "./flag";
 export { default as AppBrand, APP_BRAND_WIGGLE } from "./app-brand";
-export { Notifications, toast, toastDuration, type ExternalToast, type NoticeToastOptions } from "./notifications";
+export { Notifications, toast, type ExternalToast } from "./notifications";
 export * from "./account-language-dialog";
 export * from "./button";
 export * from "./spinner";

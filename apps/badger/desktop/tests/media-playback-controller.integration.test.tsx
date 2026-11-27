@@ -53,7 +53,7 @@ const libraryState = vi.hoisted(() => ({
       updatedAt: "2026-03-16T22:00:00.000Z",
     });
   }),
-  mergeSkipMarkers: vi.fn(async () => undefined),
+  replaceSkipMarkers: vi.fn(async () => undefined),
   fetchMediaDetails: vi.fn(async (mediaId: string) => libraryState.mediaDetails.get(mediaId) ?? null),
   upsertSkipAnalysis: vi.fn(async (mediaId: string, episodeId: string | null, kind: string, payload: Record<string, unknown>) => {
     const next = {
@@ -192,7 +192,7 @@ vi.mock("@/lib/libraryContext", () => ({
     getSharedSetting: (key: string): SharedSetting => libraryState.sharedSettings.get(key) ?? null,
     setMediaFormatChunks: vi.fn(async () => undefined),
     setProgress: libraryState.setProgress,
-    mergeSkipMarkers: libraryState.mergeSkipMarkers,
+    replaceSkipMarkers: libraryState.replaceSkipMarkers,
     upsertSkipAnalysis: libraryState.upsertSkipAnalysis,
     listSkipAnalysis: libraryState.listSkipAnalysis,
     awaitDatasetReady: vi.fn(async () => undefined),
@@ -295,7 +295,7 @@ const dumpControllerSnapshot = (label: string, container: HTMLDivElement | null)
     );
     console.error(`startFrom.calls=${JSON.stringify(startFromMock.mock.calls)}`);
     console.error(`setProgress.calls=${JSON.stringify(libraryState.setProgress.mock.calls)}`);
-    console.error(`mergeSkipMarkers.calls=${JSON.stringify(libraryState.mergeSkipMarkers.mock.calls)}`);
+    console.error(`replaceSkipMarkers.calls=${JSON.stringify(libraryState.replaceSkipMarkers.mock.calls)}`);
     console.error(`upsertSkipAnalysis.calls=${JSON.stringify(libraryState.upsertSkipAnalysis.mock.calls)}`);
     console.error(`getMetadataSkipMarkers.calls=${JSON.stringify(getMetadataSkipMarkersMock.mock.calls)}`);
     console.error(`skipAnalysisRows=${JSON.stringify(libraryState.skipAnalysisRows, null, 2)}`);
@@ -325,7 +325,7 @@ describe("MediaPlaybackController", () => {
     libraryState.sharedSettings.clear();
     libraryState.skipAnalysisRows.length = 0;
     libraryState.setProgress.mockClear();
-    libraryState.mergeSkipMarkers.mockClear();
+    libraryState.replaceSkipMarkers.mockClear();
     libraryState.fetchMediaDetails.mockClear();
     libraryState.upsertSkipAnalysis.mockClear();
     libraryState.listSkipAnalysis.mockClear();
@@ -549,30 +549,6 @@ describe("MediaPlaybackController", () => {
     expectFreshPlaybackMetadata();
   });
 
-  // @bugfix @regression-proof @req PLAY-RESUME-01 late-mpv-exit-closes-resume-prompt (desktop-e2e run 54147, 0.1.85):
-  // mpv was closed and Play pressed at once; the closed mpv's exit reached the renderer ~30 ms after Play, once the
-  // resume prompt was open, and closed it as if this playback's mpv had exited. While the prompt waits for an answer
-  // nothing runs for this playback, so an exit then is an earlier mpv's.
-  it("[@bugfix][@regression-proof] a late exit of the previous mpv leaves the resume prompt open", async () => {
-    libraryState.mediaDetails.set("media-1", { ...freshMedia, progressPct: 25 });
-    await renderController({ ...freshMedia, progressPct: 25 }, 109);
-    const promptText = "Continue from 00:04:10 or start over.";
-    console.info(
-      `[media-playback-controller-integration:late-exit] prompt shown before exit=${container?.textContent?.includes(promptText)}`,
-    );
-    expect(container?.textContent).toContain(promptText);
-
-    await dispatchExternalMpvExit();
-    const stillShown = container?.textContent?.includes(promptText) ?? false;
-    console.info(`[media-playback-controller-integration:late-exit] prompt shown after exit=${stillShown}`);
-    if (!stillShown) dumpControllerSnapshot("late-exit-closed-prompt", container);
-    expect(container?.textContent).toContain(promptText);
-
-    await clickButton("Resume");
-    if (startFromMock.mock.calls.at(-1)?.[0] !== 250) dumpControllerSnapshot("late-exit-resume-startFrom", container);
-    expect(startFromMock).toHaveBeenLastCalledWith(250, true);
-  });
-
   it("[@bugfix][@regression-proof] fetches proxied skip markers for older episodes without provider-backed markers", async () => {
     getMetadataSkipMarkersMock.mockResolvedValueOnce({
       fetchedAt: "2026-03-20T12:00:00.000Z",
@@ -611,12 +587,12 @@ describe("MediaPlaybackController", () => {
       await Promise.resolve();
     });
     console.info(
-      `[media-playback-controller-integration:skip-markers-fetch] post-flush: getMetadataSkipMarkers.calls=${JSON.stringify(getMetadataSkipMarkersMock.mock.calls)} mergeSkipMarkers.calls=${libraryState.mergeSkipMarkers.mock.calls.length} upsertSkipAnalysis.calls=${libraryState.upsertSkipAnalysis.mock.calls.length}`,
+      `[media-playback-controller-integration:skip-markers-fetch] post-flush: getMetadataSkipMarkers.calls=${JSON.stringify(getMetadataSkipMarkersMock.mock.calls)} replaceSkipMarkers.calls=${libraryState.replaceSkipMarkers.mock.calls.length} upsertSkipAnalysis.calls=${libraryState.upsertSkipAnalysis.mock.calls.length}`,
     );
 
     try {
       expect(getMetadataSkipMarkersMock).toHaveBeenCalledWith("", "tv", 48891, 1, 2, 1000);
-      expect(libraryState.mergeSkipMarkers).toHaveBeenCalledWith(
+      expect(libraryState.replaceSkipMarkers).toHaveBeenCalledWith(
         "media-1",
         "ep-2",
         expect.arrayContaining([
@@ -682,12 +658,12 @@ describe("MediaPlaybackController", () => {
       await Promise.resolve();
     });
     console.info(
-      `[media-playback-controller-integration:skip-markers-cached-miss] post-flush: getMetadataSkipMarkers.calls=${getMetadataSkipMarkersMock.mock.calls.length} mergeSkipMarkers.calls=${libraryState.mergeSkipMarkers.mock.calls.length}`,
+      `[media-playback-controller-integration:skip-markers-cached-miss] post-flush: getMetadataSkipMarkers.calls=${getMetadataSkipMarkersMock.mock.calls.length} replaceSkipMarkers.calls=${libraryState.replaceSkipMarkers.mock.calls.length}`,
     );
 
     try {
       expect(getMetadataSkipMarkersMock).not.toHaveBeenCalled();
-      expect(libraryState.mergeSkipMarkers).not.toHaveBeenCalled();
+      expect(libraryState.replaceSkipMarkers).not.toHaveBeenCalled();
     } catch (err) {
       dumpControllerSnapshot("skip-markers-cached-miss-unexpected-fetch", container);
       throw err;

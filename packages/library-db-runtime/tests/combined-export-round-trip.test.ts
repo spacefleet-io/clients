@@ -50,6 +50,7 @@ const seedMediaAndPlaylist = async (db: LibraryDb) => {
     originalLanguage: "en",
     overview: "An overview",
     year: "2026",
+    rating: 7.5,
     posterPath: null,
     backdropPath: null,
     genres: [],

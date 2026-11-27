@@ -58,12 +58,12 @@ export const pairDeviceStrings: Record<
       "Only approve a code shown on a screen in front of you. Someone who sent you a code is trying to get into your account.",
     "confirm.passwordLabel": "Your account password",
     "confirm.passwordHint":
-      "Confirms it is you before the device gets your media library key.",
+      "Confirms it is you before the device gets your library key.",
     "confirm.approve": "Approve",
     "confirm.approving": "Approving…",
     "confirm.deny": "Decline",
     "confirm.noPasswordHint":
-      "Your account has no password, so a code confirms it is you before the device gets your media library key.",
+      "Your account has no password, so a code confirms it is you before the device gets your library key.",
     "confirm.codeLabel": "Code",
     "confirm.codeSentEmail": "We emailed you a code. Type it here.",
     "confirm.codeTotp": "Type the code from your authenticator app.",
@@ -78,7 +78,7 @@ export const pairDeviceStrings: Record<
     "errors.already_used":
       "This code was already used. Get a new code on the device.",
     "errors.no_library_key":
-      "This computer does not have your media library key, so it cannot pass it on.",
+      "This computer does not have your library key, so it cannot pass it on.",
     "errors.password_missing": "Type your account password to approve.",
     "errors.wrong_password": "Wrong password. Try again.",
     "errors.code_required": "Type the code to approve.",
@@ -118,12 +118,12 @@ export const pairDeviceStrings: Record<
       "N’approuvez qu’un code affiché sur un écran devant vous. Quelqu’un qui vous envoie un code essaie d’entrer dans votre compte.",
     "confirm.passwordLabel": "Le mot de passe de votre compte",
     "confirm.passwordHint":
-      "Confirme que c’est bien vous avant que l’appareil reçoive votre clé de médiathèque.",
+      "Confirme que c’est bien vous avant que l’appareil reçoive la clé de votre bibliothèque.",
     "confirm.approve": "Approuver",
     "confirm.approving": "Approbation…",
     "confirm.deny": "Refuser",
     "confirm.noPasswordHint":
-      "Votre compte n’a pas de mot de passe : un code confirme que c’est bien vous avant que l’appareil reçoive votre clé de médiathèque.",
+      "Votre compte n’a pas de mot de passe : un code confirme que c’est bien vous avant que l’appareil reçoive la clé de votre bibliothèque.",
     "confirm.codeLabel": "Code",
     "confirm.codeSentEmail": "Nous vous avons envoyé un code par e-mail. Saisissez-le ici.",
     "confirm.codeTotp": "Saisissez le code de votre application d’authentification.",
@@ -139,7 +139,7 @@ export const pairDeviceStrings: Record<
     "errors.already_used":
       "Ce code a déjà servi. Obtenez un nouveau code sur l’appareil.",
     "errors.no_library_key":
-      "Cet ordinateur n’a pas votre clé de médiathèque, il ne peut donc pas la transmettre.",
+      "Cet ordinateur n’a pas la clé de votre bibliothèque, il ne peut donc pas la transmettre.",
     "errors.password_missing":
       "Saisissez le mot de passe de votre compte pour approuver.",
     "errors.wrong_password": "Mot de passe incorrect. Réessayez.",
@@ -180,12 +180,12 @@ export const pairDeviceStrings: Record<
       "Keur alleen een code goed die op een scherm voor je staat. Wie je een code stuurt, probeert in je account te komen.",
     "confirm.passwordLabel": "Het wachtwoord van je account",
     "confirm.passwordHint":
-      "Bevestigt dat jij het bent voordat het apparaat je mediatheeksleutel krijgt.",
+      "Bevestigt dat jij het bent voordat het apparaat je bibliotheeksleutel krijgt.",
     "confirm.approve": "Goedkeuren",
     "confirm.approving": "Goedkeuren…",
     "confirm.deny": "Weigeren",
     "confirm.noPasswordHint":
-      "Je account heeft geen wachtwoord, dus een code bevestigt dat jij het bent voordat het apparaat je mediatheeksleutel krijgt.",
+      "Je account heeft geen wachtwoord, dus een code bevestigt dat jij het bent voordat het apparaat je bibliotheeksleutel krijgt.",
     "confirm.codeLabel": "Code",
     "confirm.codeSentEmail": "We hebben je een code gemaild. Typ hem hier.",
     "confirm.codeTotp": "Typ de code uit je authenticator-app.",
@@ -201,7 +201,7 @@ export const pairDeviceStrings: Record<
     "errors.already_used":
       "Deze code is al gebruikt. Vraag een nieuwe code op het apparaat.",
     "errors.no_library_key":
-      "Deze computer heeft je mediatheeksleutel niet en kan hem dus niet doorgeven.",
+      "Deze computer heeft je bibliotheeksleutel niet en kan hem dus niet doorgeven.",
     "errors.password_missing":
       "Typ het wachtwoord van je account om goed te keuren.",
     "errors.wrong_password": "Onjuist wachtwoord. Probeer het opnieuw.",
@@ -242,12 +242,12 @@ export const pairDeviceStrings: Record<
       "Gib nur einen Code frei, der auf einem Bildschirm vor dir steht. Wer dir einen Code schickt, will in dein Konto.",
     "confirm.passwordLabel": "Das Passwort deines Kontos",
     "confirm.passwordHint":
-      "Bestätigt, dass du es bist, bevor das Gerät deinen Mediathek-Schlüssel erhält.",
+      "Bestätigt, dass du es bist, bevor das Gerät deinen Bibliotheksschlüssel erhält.",
     "confirm.approve": "Freigeben",
     "confirm.approving": "Wird freigegeben…",
     "confirm.deny": "Ablehnen",
     "confirm.noPasswordHint":
-      "Dein Konto hat kein Passwort, deshalb bestätigt ein Code, dass du es bist, bevor das Gerät deinen Mediathek-Schlüssel bekommt.",
+      "Dein Konto hat kein Passwort, deshalb bestätigt ein Code, dass du es bist, bevor das Gerät deinen Bibliotheksschlüssel bekommt.",
     "confirm.codeLabel": "Code",
     "confirm.codeSentEmail": "Wir haben dir einen Code per E-Mail geschickt. Gib ihn hier ein.",
     "confirm.codeTotp": "Gib den Code aus deiner Authenticator-App ein.",
@@ -263,7 +263,7 @@ export const pairDeviceStrings: Record<
     "errors.already_used":
       "Dieser Code wurde schon benutzt. Hol dir einen neuen Code auf dem Gerät.",
     "errors.no_library_key":
-      "Dieser Computer hat deinen Mediathek-Schlüssel nicht und kann ihn daher nicht weitergeben.",
+      "Dieser Computer hat deinen Bibliotheksschlüssel nicht und kann ihn daher nicht weitergeben.",
     "errors.password_missing":
       "Gib das Passwort deines Kontos ein, um freizugeben.",
     "errors.wrong_password": "Falsches Passwort. Versuch es noch einmal.",
@@ -309,7 +309,7 @@ export const pairDeviceStrings: Record<
     "confirm.approving": "Aprobando…",
     "confirm.deny": "Rechazar",
     "confirm.noPasswordHint":
-      "Tu cuenta no tiene contraseña, así que un código confirma que eres tú antes de que el dispositivo reciba la clave de tu mediateca.",
+      "Tu cuenta no tiene contraseña, así que un código confirma que eres tú antes de que el dispositivo reciba la clave de tu biblioteca.",
     "confirm.codeLabel": "Código",
     "confirm.codeSentEmail": "Te enviamos un código por correo. Escríbelo aquí.",
     "confirm.codeTotp": "Escribe el código de tu app de autenticación.",

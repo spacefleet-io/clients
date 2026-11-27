@@ -40,7 +40,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createEngineV2, type EngineV2 } from "@space/runtime-jobs-engine/engineV2";
+import { createEngineV2, type EngineV2 } from "../src/core/jobs/engineV2";
 import {
   __resetBadgerStepDeps,
   configureBadgerStepDeps,

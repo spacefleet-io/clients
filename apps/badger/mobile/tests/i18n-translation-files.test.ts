@@ -19,14 +19,18 @@
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { MOBILE_UI_LANGUAGES, withSharedTexts } from "@space/mobile-shell/i18n";
+import { MOBILE_UI_LANGUAGES } from "@space/mobile-shell/i18n";
+import { withSubtitleLanguageTexts } from "@space/shared/profileSettings";
+import { withTitleLanguageTexts } from "@space/shared/titleLanguage";
+import { withProfilesTexts } from "@space/shared/profileTexts";
+import { withAccountDeletionLabels } from "@space/shared/accountDeletionLabels";
 import { BARE_LIBRARY as SHARED_BARE_LIBRARY, bareLibraryOutside } from "@space/shared/libraryName";
 import { keySavedWarningText } from "@space/shared/keySavedWarning";
-import de from "@space/mobile-shell/i18n/de.json";
-import en from "@space/mobile-shell/i18n/en.json";
-import es from "@space/mobile-shell/i18n/es.json";
-import fr from "@space/mobile-shell/i18n/fr.json";
-import nl from "@space/mobile-shell/i18n/nl.json";
+import de from "../../../../packages/mobile-shell/src/i18n/de.json";
+import en from "../../../../packages/mobile-shell/src/i18n/en.json";
+import es from "../../../../packages/mobile-shell/src/i18n/es.json";
+import fr from "../../../../packages/mobile-shell/src/i18n/fr.json";
+import nl from "../../../../packages/mobile-shell/src/i18n/nl.json";
 
 type Tree = { [key: string]: string | Tree };
 
@@ -279,9 +283,8 @@ describe("mobile translation files", () => {
 
   /** @req UX-I18N-02[badger-mobile,badger-tv] */
   it("every key the code looks up exists in the English file", () => {
-    // The texts shared by every app (sign-in, profiles, the notices' `notify.*` of UX-NOTICE-13, …) are added at load
-    // by the same `withSharedTexts` that `initI18n` uses, so this list cannot drift from the app's.
-    const known = baseKeys(flatten(withSharedTexts(en, "en") as Tree));
+    // The texts shared by every app are added at load, as `initI18n` does.
+    const known = baseKeys(flatten(withAccountDeletionLabels(withProfilesTexts(withSubtitleLanguageTexts(withTitleLanguageTexts(en, "en"), "en"), "en"), "mobile", "en")));
     const lookups: Array<{ file: string; key: string }> = [];
     for (const file of SOURCES) {
       const text = stripComments(readFileSync(file, "utf8"));

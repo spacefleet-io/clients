@@ -10,13 +10,10 @@ import { downloadStorageObjectViaTunnel, type uploadStorageObjectViaTunnel } fro
 import {
   PARROT_COVER_KEEP_BYTES,
   PARROT_COVER_LARGE_WIDTH,
-  PARROT_COVER_MAX_BYTES,
   PARROT_COVER_THUMB_WIDTH,
   parrotCoverMime,
   parrotCoverSquare,
   parrotCoversToDrop,
-  parrotPictureSize,
-  parrotPictureSizeProblem,
   type ParrotCoverCopies,
   type ParrotCoverCrop,
 } from "@space/parrot-core";
@@ -29,6 +26,11 @@ import {
  * under random names, so the apps show it from the user's own copy and never ask a server for it (PAR-COPY-01).
  */
 
+/**
+ * A picture larger than this is not read at all; the next song of the album may carry a usable one. Below it, a JPEG or
+ * PNG of any size is shrunk to the stored widths (a 4000 px scan of 5 MB, as some real album files carry, included).
+ */
+export const PARROT_COVER_MAX_BYTES = 32 * 1024 * 1024;
 /** A picture this module cannot decode or shrink is stored as it is only up to this size, and skipped above it. */
 export const PARROT_COVER_KEEP_MAX_BYTES = 4 * 1024 * 1024;
 
@@ -96,6 +98,30 @@ const shrinkToJpeg = (source: Pixels, width: number, quality: number): Uint8Arra
   return new Uint8Array(jpeg.encode({ data: out, width, height }, quality).data);
 };
 
+const littleEndian = (bytes: Uint8Array, offset: number, length: number) => {
+  let value = 0;
+  for (let i = length - 1; i >= 0; i--) value = value * 256 + bytes[offset + i]!;
+  return value;
+};
+
+/**
+ * The size a WebP or GIF picture declares in its header (neither is decoded here), or null when the header is cut
+ * short or of a kind not read. GIF: the logical screen. WebP: the `VP8 `, `VP8L` or `VP8X` chunk's size.
+ */
+export const parrotWebpGifSize = (bytes: Uint8Array): { width: number; height: number } | null => {
+  const mime = parrotCoverMime(bytes);
+  if (mime === "image/gif") return bytes.length >= 10 ? { width: littleEndian(bytes, 6, 2), height: littleEndian(bytes, 8, 2) } : null;
+  if (mime !== "image/webp") return null;
+  const chunk = String.fromCharCode(...bytes.subarray(12, 16));
+  if (chunk === "VP8 " && bytes.length >= 30) return { width: littleEndian(bytes, 26, 2) & 0x3fff, height: littleEndian(bytes, 28, 2) & 0x3fff };
+  if (chunk === "VP8L" && bytes.length >= 25) {
+    const bits = littleEndian(bytes, 21, 4);
+    return { width: 1 + (bits & 0x3fff), height: 1 + (Math.floor(bits / 0x4000) & 0x3fff) };
+  }
+  if (chunk === "VP8X" && bytes.length >= 30) return { width: 1 + littleEndian(bytes, 24, 3), height: 1 + littleEndian(bytes, 27, 3) };
+  return null;
+};
+
 /** Whether this module can decode, cut and shrink the picture (a JPEG or PNG); a WebP or GIF the window cuts instead. */
 export const parrotCoverDecodable = (bytes: Uint8Array): boolean => {
   const mime = parrotCoverMime(bytes);
@@ -114,11 +140,9 @@ const cutSquare = (source: Pixels, square: { x: number; y: number; side: number 
 
 /**
  * `square`: the picture is an album cover, cut to a square (PAR-META-22): `crop`, the square the user framed, else the
- * centre one. An artist photo from a lookup keeps its shape. `reencode`: the picture is one the user gave (an edited
- * cover or artist photo, PAR-META-31): it is refused when its header declares more than the pixel cap or cannot be
- * read, and never stored as it is, the large copy always re-encoded to a JPEG of at most 1200 px.
+ * centre one. An artist photo keeps its shape.
  */
-export type ParrotCoverCopyOptions = { square?: boolean; crop?: ParrotCoverCrop | null; reencode?: boolean };
+export type ParrotCoverCopyOptions = { square?: boolean; crop?: ParrotCoverCrop | null };
 
 /**
  * The large and small copies of a file's picture (PAR-COPY-01). A JPEG or PNG already no wider than 1200 px is kept
@@ -128,22 +152,14 @@ export type ParrotCoverCopyOptions = { square?: boolean; crop?: ParrotCoverCrop 
  * decodes, is kept as it is with no small copy when its header says it is at most 1200 px wide, and skipped (null)
  * otherwise, so no stored cover is wider than the large size (PAR-META-04); the desktop has its window cut such a
  * cover before it comes here. A JPEG or PNG that cannot be decoded is kept as it is with no small copy, or skipped
- * (null) when over PARROT_COVER_KEEP_MAX_BYTES. A picture the user gave (`reencode`) is checked against the caps first
- * and always re-encoded (PAR-META-31).
+ * (null) when over PARROT_COVER_KEEP_MAX_BYTES.
  */
 export const makeParrotCoverCopies = (bytes: Uint8Array, log: (message: string) => void = () => {}, options: ParrotCoverCopyOptions = {}): ParrotCoverCopies | null => {
   const mime = parrotCoverMime(bytes);
-  if (options.reencode) {
-    const problem = parrotPictureSizeProblem(bytes);
-    if (problem) {
-      log(`[covers] picture refused before decoding: ${problem}`);
-      return null;
-    }
-  }
   if (mime === "image/webp" || mime === "image/gif") {
-    const size = parrotPictureSize(bytes);
-    if (options.reencode || size === null || size.width > PARROT_COVER_LARGE_WIDTH) {
-      log(`[covers] ${mime} picture skipped: ${options.reencode ? "a picture the user gave is re-encoded, and this kind is not decoded here" : size === null ? "its width could not be read" : `${size.width} px wide, over ${PARROT_COVER_LARGE_WIDTH}`}`);
+    const size = parrotWebpGifSize(bytes);
+    if (size === null || size.width > PARROT_COVER_LARGE_WIDTH) {
+      log(`[covers] ${mime} picture skipped: ${size === null ? "its width could not be read" : `${size.width} px wide, over ${PARROT_COVER_LARGE_WIDTH}`}`);
       return null;
     }
     if (options.square && size.width !== size.height) log(`[covers] ${mime} picture ${size.width} × ${size.height} kept as it is, not cut to a square here`);
@@ -157,8 +173,8 @@ export const makeParrotCoverCopies = (bytes: Uint8Array, log: (message: string) 
     failure = error instanceof Error ? error.message : String(error);
   }
   if (!pixels) {
-    if (options.reencode || bytes.length > PARROT_COVER_KEEP_MAX_BYTES) {
-      log(`[covers] picture skipped, it could not be decoded (${failure}) and ${options.reencode ? "a picture the user gave is never stored as it is" : `is too big to keep as it is (${bytes.length} bytes)`}`);
+    if (bytes.length > PARROT_COVER_KEEP_MAX_BYTES) {
+      log(`[covers] picture skipped, it could not be decoded (${failure}) and is too big to keep as it is (${bytes.length} bytes)`);
       return null;
     }
     log(`[covers] picture kept as it is, it could not be decoded: ${failure}`);
@@ -174,9 +190,8 @@ export const makeParrotCoverCopies = (bytes: Uint8Array, log: (message: string) 
     }
   }
   const heavy = bytes.length > PARROT_COVER_KEEP_MAX_BYTES;
-  if (options.reencode) log(`[covers] ${pixels.width} × ${pixels.height} picture re-encoded to at most ${PARROT_COVER_LARGE_WIDTH} px`);
   return {
-    large: pixels.width > PARROT_COVER_LARGE_WIDTH || heavy || cut || options.reencode ? shrinkToJpeg(pixels, Math.min(pixels.width, PARROT_COVER_LARGE_WIDTH), 90) : bytes,
+    large: pixels.width > PARROT_COVER_LARGE_WIDTH || heavy || cut ? shrinkToJpeg(pixels, Math.min(pixels.width, PARROT_COVER_LARGE_WIDTH), 90) : bytes,
     thumb: pixels.width > PARROT_COVER_THUMB_WIDTH ? shrinkToJpeg(pixels, PARROT_COVER_THUMB_WIDTH, 85) : null,
   };
 };
@@ -190,7 +205,7 @@ export const parrotCoverPreview = (bytes: Uint8Array): { bytes: Uint8Array; mime
   const mime = parrotCoverMime(bytes);
   if (!mime) return null;
   if (!parrotCoverDecodable(bytes)) {
-    const size = parrotPictureSize(bytes);
+    const size = parrotWebpGifSize(bytes);
     return size ? { bytes, mime, ...size } : null;
   }
   let pixels: Pixels | null = null;

@@ -131,12 +131,6 @@ export type PathLayer = {
    * `@sf/desktop`); macOS: `appData/productName` (`~/Library/Application Support/Badger`, PLAT-DESK-07).
    */
   appUserDataDir: (options: { appData: string; productName: string; legacyDir: string[] }) => string;
-  /**
-   * Where the desktop's trash keeps a deleted file of that name (`basename(filename)`), to tell "the user deleted it"
-   * from "it is gone": Linux `$XDG_DATA_HOME/Trash/files/<name>` (else `~/.local/share`); macOS `~/.Trash/<name>`;
-   * Windows none (the Recycle Bin renames what it keeps, so there is no plain path).
-   */
-  trashPaths: (filename: string, env?: Env) => string[];
 };
 
 // ---------------------------------------------------------------------------
@@ -394,24 +388,18 @@ export type MpvWindow = {
   /** The vo list used when the caller does not pick one: GPU first, then the platform's CPU fallback. */
   defaultVo: string;
   /**
-   * The CPU entry of `defaultVo` (Linux: `wlshm` in a Wayland session, `x11` in an X11 one), the vo a launch
+   * The CPU entry of `defaultVo` (Linux `x11` with an X display), the vo a launch
    * goes straight to when this machine's GPU vo is remembered to fail (#25). null
    * when the CPU path lives inside the GPU vo (Windows d3d11 WARP) or no CPU vo
-   * can open: every launch then probes.
+   * can open (Wayland-only session): every launch then probes.
    */
   cpuVo: string | null;
   /** Flags that give the window its app id. */
   args: string[];
   /**
-   * Variables removed from mpv's environment. Linux Wayland session with a Wayland mpv: `DISPLAY`, so neither the
-   * gpu vo's context probe (`x11egl` after a rejected `wayland`) nor anything else can open an XWayland window
-   * (MPV-GPU-04). Empty elsewhere.
-   */
-  unsetEnv: string[];
-  /**
    * Why no mpv window can open in this session, or null when one can. Linux: a
-   * Wayland-only session (no X display) with an mpv built without Wayland (a
-   * system mpv set through SF_MPV_SYSTEM_BIN, `mpv_no_display`). The launch reports it to the user
+   * Wayland-only session (no X display) with an mpv built without Wayland, like
+   * the bundled one (`mpv_no_display`). The launch reports it to the user
    * instead of starting an mpv that exits at once. Windows / macOS: always null.
    */
   noWindow: string | null;
@@ -432,17 +420,15 @@ export type ShellLayer = {
   /**
    * The window-system part of mpv's command line: the video output list used
    * when the caller does not pick one (GPU first; mpv falls through to the
-   * next entry when a GPU vo cannot start, #25: Linux `gpu,wlshm` in a Wayland
-   * session with a Wayland mpv and `gpu,x11` otherwise, Windows
+   * next entry when a GPU vo cannot start, #25: Linux `gpu,x11`, Windows
    * `gpu` whose d3d11 falls back to a WARP device, macOS `gpu-next` on
-   * Vulkan/MoltenVK, MPV-GPU-03), the flags that give the window its app
+   * Vulkan/MoltenVK, MPV-GPU-03), and the flags that give the window its app
    * id or graphics API (Linux: `--x11-name` / `--wayland-app-id`; Windows:
    * none, the id comes from the AppUserModelId; macOS: `--gpu-api=vulkan
-   * --gpu-context=macvk`, the id comes from the helper app), and the variables
-   * taken out of mpv's environment (`unsetEnv`). Reads the window-system
+   * --gpu-context=macvk`, the id comes from the helper app). Reads the window-system
    * hints from `env`. `mpvHasWayland` says whether the mpv in use can open a
    * native Wayland window (it lists a `wayland*` gpu context); it is called only
-   * when the answer matters (Linux, Wayland session), and omitted means no.
+   * when the answer matters (Linux, Wayland-only session), and omitted means no.
    */
   mpvWindow: (options: { appId: string; env?: Env; mpvHasWayland?: () => boolean }) => MpvWindow;
   /**

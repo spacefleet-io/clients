@@ -1,4 +1,4 @@
-import { Platform, Settings } from "react-native";
+import { Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { setApiBaseUrl, setApiClientType, setStorageTunnelOptions } from "@space/shared/api";
 import { setClientIdentity, setLibraryReadOpStreamVersion } from "@space/shared/appVersion";
@@ -39,50 +39,14 @@ const metroServerUrl = (): string | null => {
 };
 
 /**
- * REL-TEST-36: the launch argument the iPhone release smoke starts the app with (`xcrun simctl launch <sim>
- * com.spacebadger.mobile -SFSmokeApiBaseUrl http://127.0.0.1:<lane api port>`), read through the iOS user defaults
- * (the argument domain). Honoured only by a bundle built for the iOS or tvOS simulator (`SF_SIMULATOR_BUILD`, inlined
- * at build time from Xcode's PLATFORM_NAME), and only for a loopback address: the smoke runs the release
- * configuration of the TestFlight commit on a simulator against a dev-stack lane on the same Mac. A device build's
- * bundle never reads it, so a TestFlight or App Store build talks to production only (ACCT-AUTH-09). Like the
- * desktop's `SF_API_BASE_URL` environment override, this is not a picker: nothing in the app sets it.
- */
-export const SMOKE_API_LAUNCH_ARGUMENT = "SFSmokeApiBaseUrl";
-
-const readLaunchArgument = (name: string): unknown => {
-  if (Platform.OS !== "ios") return undefined;
-  try {
-    return Settings.get(name);
-  } catch {
-    return undefined;
-  }
-};
-
-/** The release smoke's lane API (see SMOKE_API_LAUNCH_ARGUMENT), or null. */
-export const smokeApiBaseUrl = (
-  env: MobileBuildEnv = currentMobileBuildEnv(),
-  read: (name: string) => unknown = readLaunchArgument,
-): string | null => {
-  if (env.simulatorBuild !== "1") return null;
-  const value = read(SMOKE_API_LAUNCH_ARGUMENT);
-  if (typeof value !== "string") return null;
-  const url = value.trim().replace(/\/+$/u, "");
-  return /^http:\/\/(127\.0\.0\.1|localhost):\d{1,5}$/u.test(url) ? url : null;
-};
-
-/**
  * The server a build talks to until one is picked: a dev-testing build that names its dev stack at build time
  * (`SF_DEV_API_BASE_URL`, the guided test build, REL-TEST-05) starts there; a Metro (`__DEV__`) build, the one run
- * against a local dev stack, starts on that stack, as the desktop app's dev run does; a simulator bundle started by the
- * release smoke starts on the smoke's lane (REL-TEST-36); every other build starts on the production API.
+ * against a local dev stack, starts on that stack, as the desktop app's dev run does; every other build starts on the
+ * production API.
  */
-export const defaultApiBaseUrl = (
-  env: MobileBuildEnv = currentMobileBuildEnv(),
-  read: (name: string) => unknown = readLaunchArgument,
-): string => {
+export const defaultApiBaseUrl = (env: MobileBuildEnv = currentMobileBuildEnv()): string => {
   if (env.devApiBaseUrl && isMobileDevBuild(env)) return env.devApiBaseUrl;
-  if (env.dev === true) return devStackApiBaseUrl(metroServerUrl());
-  return smokeApiBaseUrl(env, read) ?? PRODUCTION_API_BASE_URL;
+  return env.dev === true ? devStackApiBaseUrl(metroServerUrl()) : PRODUCTION_API_BASE_URL;
 };
 
 export const platformBridge: MobilePlatformBridge = createAsyncStoragePlatformBridge({

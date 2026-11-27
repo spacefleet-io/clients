@@ -101,13 +101,7 @@ final class StorageTunnelClient: ChunkFetcher {
 
   // MARK: ChunkFetcher
 
-  func getObject(_ key: String) throws -> Data { try open(key, player: true) }
-
-  /// Loads `key` ahead of the player (PAR-PLAY-07 preloads, the proxy's read-ahead): unlike `getObject` the fetch stays
-  /// cancellable until the player itself asks for the object.
-  func prefetch(_ key: String) throws { _ = try open(key, player: false) }
-
-  private func open(_ key: String, player: Bool) throws -> Data {
+  func getObject(_ key: String) throws -> Data {
     cacheLock.lock()
     if let cached = cache[key] {
       touchLocked(key)
@@ -115,21 +109,16 @@ final class StorageTunnelClient: ChunkFetcher {
       return cached
     }
     if let existing = pending[key] {
-      if player { existing.playerWanted = true }
       cacheLock.unlock()
-      PlaybackLog.debug("fetch.dedup.wait key=\(key) player=\(player)")
       do {
         return try existing.waitValue()
       } catch {
-        // The fetch this read joined was cancelled before the player joined it (a preload yielding, PAR-PLAY-07; a rung
-        // switch): the player still wants the object, so it fetches it itself. A load ahead stays cancelled.
+        // The fetch this read joined was cancelled for another reader (a preload yielding, PAR-PLAY-07; a rung switch):
+        // this read still wants the object, so it fetches it itself.
         cacheLock.lock()
         let cancelled = existing.cancelled
         cacheLock.unlock()
-        if cancelled && player {
-          PlaybackLog.info("fetch.refetch_after_cancel key=\(key)")
-          return try open(key, player: true)
-        }
+        if cancelled { return try getObject(key) }
         throw error
       }
     }
@@ -138,7 +127,6 @@ final class StorageTunnelClient: ChunkFetcher {
       return spooled
     }
     let deferred = FetchDeferred()
-    deferred.playerWanted = player
     pending[key] = deferred
     cacheLock.unlock()
 
@@ -165,22 +153,15 @@ final class StorageTunnelClient: ChunkFetcher {
     }
   }
 
-  /// Aborts the fetches loading `matches` keys ahead of the player. A fetch the player itself is waiting on is skipped
-  /// (PAR-PLAY-12, Chris 2026-11-27): aborting it made the proxy answer the player's request with a 502, which the player
-  /// shows as a bad HTTP status and stops on.
   func cancelInFlight(_ matches: (String) -> Bool) -> Int {
     cacheLock.lock()
-    let candidates = Set(pending.keys).union(tasks.keys).filter(matches)
-    let skipped = candidates.filter { pending[$0]?.playerWanted == true }
-    let keys = candidates.subtracting(skipped)
+    let keys = Set(pending.keys).union(tasks.keys).filter(matches)
     // Marked under the lock `fetchRaw` registers its task under: a fetch still opening the session has no task yet and
-    // is aborted the moment it makes one, so a cancel never misses a fetch that has not reached the wire. A player
-    // joining it after this mark fetches the object again (see `open`).
+    // is aborted the moment it makes one, so a cancel never misses a fetch that has not reached the wire.
     for key in keys { pending[key]?.cancelled = true }
     let hits = keys.compactMap { tasks[$0] }
     cacheLock.unlock()
     for task in hits { task.cancel() }
-    for key in skipped { PlaybackLog.info("fetch.cancel_skipped_player_read key=\(key)") }
     for key in keys { PlaybackLog.info("fetch.cancelled key=\(key)") }
     return keys.count
   }
@@ -377,9 +358,7 @@ final class StorageTunnelClient: ChunkFetcher {
 
   /// A 404 `invalid_session` means the gateway forgot the session (it expired while the app slept or stayed paused past
   /// the session TTL, or the gateway restarted): the session is dropped, a new one opened and the download tried once
-  /// more (STOR-GATEWAY-02, "the client opens a new one"). The same holds for every refusal a new session can fix — a
-  /// 401, 403 or 410 and a 400 `session_not_started` — so a player read never fails on a stale session (PAR-PLAY-12,
-  /// Chris 2026-11-27); any other status (a 404 `object_not_found`) fails at once.
+  /// more (STOR-GATEWAY-02, "the client opens a new one").
   private func fetchRaw(_ key: String, renewed: Bool = false) throws -> Data {
     sessionLock.lock()
     let sid = sessionId
@@ -400,22 +379,16 @@ final class StorageTunnelClient: ChunkFetcher {
     }
     guard (200..<300).contains(status) else {
       let code = emitTraffic("download", status, data)
-      if !renewed && Self.sessionRenewable(status, code) {
+      if status == 404 && code == "invalid_session" && !renewed {
         dropSession(sid)
-        PlaybackLog.warn("session.renew reason=\(status)/\(code.isEmpty ? "-" : code) sid=\(sid) key=\(key)")
+        PlaybackLog.warn("session.renew reason=invalid_session sid=\(sid) key=\(key)")
         try ensureSession()
         return try fetchRaw(key, renewed: true)
       }
-      throw TunnelError(message: "tunnel_download_failed: \(status) key=\(key) code=\(code.isEmpty ? "-" : code)")
+      throw TunnelError(message: "tunnel_download_failed: \(status) key=\(key)")
     }
     NetworkMeter.shared.record(bytes: data.count, start: start, end: Date().timeIntervalSince1970)
     return data
-  }
-
-  /// Whether a download refused with `status` / `code` is worth one retry on a new session (see `fetchRaw`).
-  static func sessionRenewable(_ status: Int, _ code: String) -> Bool {
-    status == 401 || status == 403 || status == 410 || (status == 404 && code == "invalid_session")
-      || (status == 400 && code == "session_not_started")
   }
 
   /// Fetches and decrypts `key`. Up to `spoolThresholdBytes` (an HLS segment) the plaintext is decrypted in memory for

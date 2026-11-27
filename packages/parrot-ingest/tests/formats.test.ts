@@ -8,7 +8,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "bun:test";
-import { findParrotFiles, isParrotAudioFile, PARROT_AUDIO_FORMATS, parrotAudioFormatFor } from "../src/formats";
+import { findParrotAudioFiles, isParrotAudioFile, PARROT_AUDIO_FORMATS, parrotAudioFormatFor } from "../src/formats";
 import { makeTempDir, testLog } from "./helpers";
 
 const log = testLog("PARROT-INGEST-FORMATS-001");
@@ -39,7 +39,7 @@ describe("parrot audio formats", () => {
   });
 });
 
-describe("findParrotFiles", () => {
+describe("findParrotAudioFiles", () => {
   let root: string;
 
   beforeAll(async () => {
@@ -71,7 +71,7 @@ describe("findParrotFiles", () => {
 
   it("walks folders, keeps audio only, skips hidden entries, and sorts", async () => {
     const skipped: Array<[string, string]> = [];
-    const found = await findParrotFiles([root], isParrotAudioFile, (entry, reason) => skipped.push([entry, reason]));
+    const found = await findParrotAudioFiles([root], (entry, reason) => skipped.push([entry, reason]));
     log("found", found.map((file) => path.relative(root, file)));
     log("skipped", skipped);
     expect(found.map((file) => path.relative(root, file))).toEqual(
@@ -93,9 +93,8 @@ describe("findParrotFiles", () => {
     const nook = path.join(root, "Linnet Park/Meltway/13 - Nook.flac");
     const missing = path.join(root, "does-not-exist");
     const skipped: Array<[string, string]> = [];
-    const found = await findParrotFiles(
+    const found = await findParrotAudioFiles(
       [nook, path.join(root, "Linnet Park/Meltway"), path.join(root, "Linnet Park/Meltway/cover.jpg"), missing],
-      isParrotAudioFile,
       (entry, reason) => skipped.push([entry, reason])
     );
     log("found", found);
@@ -116,7 +115,7 @@ describe("findParrotFiles", () => {
     await fs.chmod(locked, 0o000);
     try {
       const skipped: Array<[string, string]> = [];
-      const found = await findParrotFiles([root], isParrotAudioFile, (entry, reason) => skipped.push([entry, reason]));
+      const found = await findParrotAudioFiles([root], (entry, reason) => skipped.push([entry, reason]));
       log("found", found.length);
       log("skipped", skipped);
       expect(skipped.map(([entry]) => entry)).toEqual([locked]);
@@ -144,7 +143,7 @@ describe("findParrotFiles", () => {
         return;
       }
       const skipped: Array<[string, string]> = [];
-      const found = await findParrotFiles([loopRoot], isParrotAudioFile, (entry, reason) => skipped.push([entry, reason]));
+      const found = await findParrotAudioFiles([loopRoot], (entry, reason) => skipped.push([entry, reason]));
       log("found", found);
       log("skipped", skipped);
       expect(found).toHaveLength(1);

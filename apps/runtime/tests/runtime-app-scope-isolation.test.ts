@@ -11,9 +11,9 @@ import { runtimeState } from "../src/runtime";
 import { RuntimeState } from "../src/state";
 import { __resetEngineV2BootStatusForTests, setEngineV2BootStatus } from "../src/core/jobs/engineV2BootStatus";
 import { createRuntimeJobsV2Handler, registerRuntimeJobsV2Routes, type RuntimeJobsV2Handler } from "../src/routes/runtimeJobsV2";
-import { createEventLog, type EventLogDeps, type EventRow } from "@space/runtime-jobs-engine/eventLog";
-import type { EngineV2, RuntimeJobEvent } from "@space/runtime-jobs-engine/engineV2";
-import { DEFAULT_LANE_CAPS } from "@space/runtime-jobs-engine/engineV2Lanes";
+import { createEventLog, type EventLogDeps, type EventRow } from "../src/core/jobs/eventLog";
+import type { EngineV2, RuntimeJobEvent } from "../src/core/jobs/engineV2";
+import { DEFAULT_LANE_CAPS } from "../src/core/jobs/engineV2Lanes";
 import type { IngestJobRecord } from "@space/runtime-jobs";
 import type { RuntimeEventFrame } from "../src/types";
 
@@ -351,7 +351,6 @@ describe("v2 job routes are scoped to the session's apps", () => {
       handleCancel: async (input) => record("handleCancel", input, { cancelled: true }),
       handleDismiss: async (input) => record("handleDismiss", input, { dismissed: true }),
       handleRetry: async (input) => record("handleRetry", input, { retried: true }),
-      handleAvailability: async (input) => record("handleAvailability", input, { jobs: [], keptBytesTotal: 0 }),
     };
     const app = new Hono();
     registerRuntimeJobsV2Routes(app, () => handler);
@@ -398,14 +397,6 @@ describe("v2 job routes are scoped to the session's apps", () => {
       expect(calls.map((c) => c.method)).toEqual([handlerMethod]);
     });
   }
-
-  it("availability leaves out another app's jobs @req RT-SEC-03[runtime]", async () => {
-    const { app, calls } = buildApp();
-    const badger = runtimeState.login("t", ["badger"], "u");
-    const res = await post(app, "/runtime/jobs/v2/availability", badger.token, { jobIds: ["k1", "b1"] });
-    expect(res.status).toBe(200);
-    expect(calls).toEqual([{ method: "handleAvailability", payload: { jobIds: ["b1"] } }]);
-  });
 
   it("cancel-by-group: 403 forbidden_scope on another app's group, 200 on its own @req RT-SEC-03[runtime]", async () => {
     const { app, calls } = buildApp();

@@ -13,7 +13,7 @@
 import { listProfiles } from "@space/shared/api";
 import { mainProfileId } from "@space/shared/profiles";
 import { MediaProxy, resolveGatewayCandidates } from "@space/mobile-media-proxy";
-import { AudioPlayback, type AudioPlaybackState, type AudioQueueInsert, type AudioQueueItem } from "@space/mobile-audio-playback";
+import { AudioPlayback, type AudioQueueInsert, type AudioQueueItem } from "@space/mobile-audio-playback";
 import {
   createParrotCopyPicker,
   parrotEvenVolumeLimits,
@@ -70,7 +70,6 @@ const watchCopies = () => {
   let playingKey: string | null = null;
   let neighbours = "";
   const states = AudioPlayback.onState((state) => {
-    recoverFailedSong(state);
     if (!state.key) return;
     const started = state.key !== playingKey;
     if (started) {
@@ -157,69 +156,6 @@ let queuedTracks: QueueTrack[] = [];
 let queueMixed = false;
 let queueShuffled = false;
 const queueGains = (shuffle: boolean) => parrotQueueGainsDb(queuedTracks, shuffle || queueMixed, getEvenVolume());
-
-// A song the player stops on with an error (ERROR_CODE_IO_BAD_HTTP_STATUS: the proxy's read of a chunk failed) is
-// queued again once, from where it stopped, through a freshly checked proxy (PAR-PLAY-12). The raw code is logged,
-// never shown (UX-COPY-02); a second failure of the same song shows the plain message. A retry that never reached the
-// player (the phone was offline, so the song had no playable file) is given back: the next error the player reports
-// for that song (Play tapped once the network is back) gets it, and the player is never handed a queue in a loop.
-let lastPlay: { token: string; libraryKey: string; albumTitle?: string } | null = null;
-/** Songs (track ids) given their one retry since the queue was last started. */
-const retriedTracks = new Set<string>();
-/** The error already handled (`key:error`): the player repeats its state while it sits on an error. */
-let handledError: string | null = null;
-/** The error (`key:error`) whose one retry is being prepared now. */
-let recovering: string | null = null;
-
-/**
- * Whether the error the player sits on is having its one retry prepared: the screens hold the plain message back
- * until that retry fails, is dropped, or the song fails again (PAR-PLAY-12).
- */
-export const isRecovering = (state: Pick<AudioPlaybackState, "key" | "error"> | null): boolean =>
-  !!state?.error && !!state.key && recovering === `${state.key}:${state.error}`;
-
-const recoverFailedSong = (state: AudioPlaybackState) => {
-  if (!state.error || !state.key) {
-    if (!state.error) handledError = null;
-    return;
-  }
-  const seen = `${state.key}:${state.error}`;
-  if (seen === handledError) return;
-  handledError = seen;
-  const trackId = state.mediaId ?? state.key.split("~")[0];
-  const index = queuedTracks.findIndex((track) => track.id === trackId);
-  const play = lastPlay;
-  const skipped = !play ? "no_queue" : index < 0 ? "not_queued" : retriedTracks.has(trackId) ? "already_retried" : null;
-  console.log(
-    "parrot.playback.error",
-    JSON.stringify({ error: state.error, key: state.key, trackId, positionMs: state.positionMs, retry: skipped ? `skipped:${skipped}` : "once" }),
-  );
-  if (!play || skipped) return;
-  retriedTracks.add(trackId);
-  const positionMs = Math.max(0, state.positionMs ?? 0);
-  const tracks = queuedTracks;
-  const previousKeys = [...openCopies.keys()];
-  recovering = seen;
-  void (async () => {
-    try {
-      const { items, start } = await queueItems({ ...play, tracks, startIndex: index, playsNow: true, gains: queueGains(queueShuffled) });
-      // The queue was replaced (a new play, sign out) while the proxy was checked: that one stands.
-      if (lastPlay !== play || queuedTracks !== tracks) {
-        for (const item of items) if (item.key) openCopies.delete(item.key);
-        return console.log("parrot.playback.recover_dropped", JSON.stringify({ trackId, reason: "queue_replaced" }));
-      }
-      for (const key of previousKeys) openCopies.delete(key);
-      await AudioPlayback.setQueue(items, start, positionMs);
-      await AudioPlayback.setShuffle(queueShuffled).catch(() => undefined);
-      console.log("parrot.playback.recovered", JSON.stringify({ trackId, error: state.error, positionMs, items: items.length }));
-    } catch (error) {
-      retriedTracks.delete(trackId);
-      console.log("parrot.playback.recover_failed", JSON.stringify({ trackId, message: error instanceof Error ? error.message : String(error), retry: "given_back" }));
-    } finally {
-      if (recovering === seen) recovering = null;
-    }
-  })();
-};
 
 /** Applies the setting to the playing queue at once: its gains, and the limiter that Loud needs. */
 const applyEvenVolume = async () => {
@@ -327,9 +263,6 @@ export const playTracks = async (input: {
   queuedTracks = input.tracks;
   queueMixed = false;
   queueShuffled = shuffled;
-  lastPlay = { token: input.token, libraryKey: input.libraryKey, albumTitle: input.albumTitle };
-  retriedTracks.clear();
-  handledError = null;
   await AudioPlayback.setLimiting(parrotEvenVolumeLimits(getEvenVolume())).catch(() => undefined);
   // The new list replaces the queue: the songs of the old one never play.
   for (const key of previousKeys) openCopies.delete(key);
@@ -347,15 +280,13 @@ export const queueTracks = async (input: { token: string; libraryKey: string; al
   const fresh = notYetQueued([now.mediaId, ...upNext], input.tracks, (track) => track.id);
   console.log("parrot.queue.add", JSON.stringify({ where: input.where, asked: input.tracks.length, added: fresh.length, playing: now.mediaId, upNext: upNext.length }));
   if (fresh.length === 0) return 0;
-  // A queue with songs added is no longer one album in order: every song plays at its track value. Each added song
-  // keeps its album's title, so a retry (PAR-PLAY-12) names it as this call did.
-  const tracks = [...queuedTracks, ...fresh.map((track) => ({ ...track, albumTitle: track.albumTitle ?? input.albumTitle }))];
+  // A queue with songs added is no longer one album in order: every song plays at its track value.
+  const tracks = [...queuedTracks, ...fresh];
   const gains = parrotQueueGainsDb(tracks, true, getEvenVolume());
   const { items, streamed } = await queueItems({ ...input, tracks: fresh, startIndex: 0, playsNow: false, gains });
   await ensureStream(input.token, streamed, items);
   queuedTracks = tracks;
   queueMixed = true;
-  lastPlay ??= { token: input.token, libraryKey: input.libraryKey };
   await AudioPlayback.addItems(items, input.where);
   await AudioPlayback.setGains(gains).catch(() => undefined);
   return fresh.length;
@@ -381,7 +312,4 @@ export const stopPlayback = async () => {
   profileIdCache = null;
   queuedTracks = [];
   queueShuffled = false;
-  lastPlay = null;
-  retriedTracks.clear();
-  handledError = null;
 };

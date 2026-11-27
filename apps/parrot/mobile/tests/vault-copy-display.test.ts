@@ -49,11 +49,10 @@ describe(`${TEST_ID} the phone's and the TV's screens show only the library's co
       const isImport = hit.source.lastIndexOf("\n", hit.at) === hit.source.lastIndexOf("\nimport ", hit.at);
       return !isImport && !(hit.at > start && hit.at < end);
     });
-    // Every view that takes `searchAgain` from the hook calls it from a button's onPress, never from an effect; the phone
-    // view hands it to its words view in the same file (`searchAgain={searchAgain}`), whose use is checked here too.
-    const callers = sources.filter(({ source }) => /\{ view,[^}]*\bsearchAgain\b[^}]*\} = useTrackLyrics\(/.test(source));
+    // Every view that takes `searchAgain` from the hook calls it from a button's onPress, never from an effect.
+    const callers = sources.filter(({ source }) => /\{ view, searchAgain \} = useTrackLyrics\(/.test(source));
     const calls = callers.flatMap(({ file, source }) =>
-      [...source.matchAll(/(?<![.\w])searchAgain\b(?=\(|\})/g)].map((match) => ({
+      [...source.matchAll(/(?<![.\w])searchAgain\b(?! \} = useTrackLyrics)(?!:)/g)].map((match) => ({
         file,
         before: source.slice(Math.max(0, match.index! - 140), match.index!),
       }))
@@ -61,7 +60,7 @@ describe(`${TEST_ID} the phone's and the TV's screens show only the library's co
     log("assert", { offending: offending.map((hit) => `${hit.file}:${hit.name}`), callers: callers.map((c) => c.file), calls: calls.length });
     expect(offending).toEqual([]);
     expect(callers.map((c) => c.file).sort()).toEqual(["screens/PlayerLyrics.tsx", "tv/TvLyricsPage.tsx"]);
-    expect(calls).toHaveLength(3);
-    for (const call of calls) expect(call.before).toMatch(/onPress=\{[^}]*$|onPress=\{\(\) => \{[\s\S]*$|\ssearchAgain=\{$/);
+    expect(calls).toHaveLength(2);
+    for (const call of calls) expect(call.before).toMatch(/onPress=\{[^}]*$|onPress=\{\(\) => \{[\s\S]*$/);
   });
 });

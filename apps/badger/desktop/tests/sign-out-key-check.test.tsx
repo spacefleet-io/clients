@@ -41,7 +41,7 @@ vi.mock("@/lib/libraryContext", () => ({
   useLibraryActions: () => ({ sealLibraryForRotation: vi.fn(), clearLocalCache: vi.fn() }),
 }));
 // `t` must be referentially stable: effects depend on it.
-const i18n = vi.hoisted(() => ({ t: (key: string) => key, i18n: { language: "en" } }));
+const i18n = vi.hoisted(() => ({ t: (key: string) => key }));
 vi.mock("react-i18next", () => ({ useTranslation: () => i18n }));
 vi.mock("@/logger", () => {
   const log = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn(), child: () => log };

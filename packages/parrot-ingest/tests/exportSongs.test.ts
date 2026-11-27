@@ -14,7 +14,6 @@
  * @req OFFL-SAFE-01[parrot]
  * @req OFFL-SAFE-02[parrot]
  * @req ACCT-EXPORT-01[parrot]
- * @req PAR-LYR-11[parrot]
  */
 import { execFileSync } from "node:child_process";
 import { createHash, randomBytes } from "node:crypto";
@@ -262,10 +261,6 @@ describe("exporting songs as plain files", () => {
       stored.db.prepare("UPDATE albums SET cover_object_key = ? WHERE id = ?").run(coverKey, albumId);
       stored.objects.set(coverKey, await encryptBytesToBytes(stored.key, jpeg));
     }
-    // The user's own lyrics (PAR-LYR-08) go into the exported file like any lyrics the library holds (PAR-LYR-11).
-    stored.db
-      .prepare("INSERT INTO lyrics (track_id, plain, synced, source, fetched_at) VALUES ('t-guest', NULL, ?, 'user', 1)")
-      .run("[00:01.00]Own first line\n[00:04.50]Own second line");
     const asked: string[] = [];
     const dest = await makeTempDir("export-split");
     const result = await run(stored, dest, {
@@ -293,7 +288,6 @@ describe("exporting songs as plain files", () => {
     expect(tags.album_artist).toBe("Various Artists");
     expect(tags.track).toBe("3");
     expect(tags.mood).toBe("calm");
-    expect(tags.lyrics).toContain("Own first line");
     expect(probe.streams.find((stream) => stream.codec_type === "video")).toMatchObject({ codec_name: "mjpeg", width: 120, height: 120 });
     // Same sound: every audio packet's md5 is the upload's.
     const sound = (file: string) => execFileSync("ffprobe", ["-v", "error", "-select_streams", "a:0", "-show_data_hash", "md5", "-show_entries", "packet=pts,size,data_hash", "-of", "compact", file]).toString().trim();

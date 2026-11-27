@@ -67,10 +67,6 @@ const createFakeHandler = (calls: Call[]): RuntimeJobsV2Handler => ({
     calls.push({ method: "handleRetry", payload: input });
     return { retried: false };
   },
-  handleAvailability: async (input) => {
-    calls.push({ method: "handleAvailability", payload: input });
-    return { jobs: [], keptBytesTotal: 0 };
-  },
 });
 
 const dumpAuthSnapshot = async (
@@ -104,7 +100,6 @@ const protectedRoutes = [
   { path: "/runtime/jobs/v2/cancel", body: { jobId: "j1" }, handlerMethod: "handleCancel" },
   { path: "/runtime/jobs/v2/dismiss", body: { jobId: "j1" }, handlerMethod: "handleDismiss" },
   { path: "/runtime/jobs/v2/retry", body: { jobId: "j1" }, handlerMethod: "handleRetry" },
-  { path: "/runtime/jobs/v2/availability", body: { jobIds: ["j1"] }, handlerMethod: "handleAvailability" },
 ] as const;
 
 beforeEach(() => {

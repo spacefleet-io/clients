@@ -1,6 +1,6 @@
 /* The fleet's UI fonts (Inter for text, Space Grotesk for titles; variable woff2, SIL OFL), shipped inside the app so
    first paint never waits on a third-party fetch. `badger-dark.css` names the families; import this file next to it.
-   The fleet's one copy: both desktops and both web players load these files (REL-FAM-05). */
+   Badger desktop still carries its own copy of the same two files (tests/fleet-fonts.test.ts keeps them identical). */
 @font-face {
   font-family: "Inter";
   font-style: normal;

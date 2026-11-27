@@ -31,11 +31,6 @@ type MobileShellFrameProps = {
   tabBarBadge?: React.ReactNode;
   /** A button among the tabs that is not a page (`MobileTabBar`'s `action`, UX-PHONE-12): the pager never stops on it. */
   tabBarAction?: MobileTabBarAction;
-  /**
-   * The shell's header, a thin row above every page, end-aligned: the bell that opens the notices' history
-   * (`MobileNoticeBell`, UX-NOTICE-04). The pages start below it, so it never covers a page's title.
-   */
-  header?: React.ReactNode;
   children: (activeTab: string) => React.ReactNode;
 };
 
@@ -50,7 +45,6 @@ export const MobileShellFrame = ({
   overlay,
   tabBarBadge,
   tabBarAction,
-  header,
   children,
 }: MobileShellFrameProps) => {
   const theme = useMobileShellTheme();
@@ -77,11 +71,6 @@ export const MobileShellFrame = ({
         {showBackdrop ? <MobileAppBackdrop paused={backdropPaused} comets={comets} /> : null}
 
         <View style={[styles.main, { paddingTop: insets.top + 4 }]}>
-          {header ? (
-            <View style={styles.header} testID="shell-header">
-              {header}
-            </View>
-          ) : null}
           <MobileTabPager tabIds={visibleTabIds} activeTab={activeTab} onTabChange={onTabChange} pageStyle={styles.page}>
             {children}
           </MobileTabPager>
@@ -112,12 +101,6 @@ const styles = StyleSheet.create({
   },
   main: {
     flex: 1,
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    alignItems: "center",
-    paddingHorizontal: 8,
   },
   page: {
     paddingHorizontal: 16,

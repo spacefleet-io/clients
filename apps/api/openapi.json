@@ -900,56 +900,6 @@
           "nextAfter"
         ]
       },
-      "MediaResealCopies": {
-        "type": "object",
-        "properties": {
-          "copies": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/MediaResealCopy"
-            }
-          },
-          "nextAfter": {
-            "type": [
-              "string",
-              "null"
-            ]
-          }
-        },
-        "required": [
-          "copies",
-          "nextAfter"
-        ]
-      },
-      "MediaResealCopy": {
-        "type": "object",
-        "properties": {
-          "oldKey": {
-            "type": "string"
-          },
-          "newKey": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "The live copy that replaces `oldKey`; null when kept."
-          },
-          "kept": {
-            "type": "boolean",
-            "description": "The old key could not open it: it stays as it is (STOR-RESEAL-05)."
-          },
-          "sizeBytes": {
-            "type": "integer",
-            "description": "Stored size of the old object."
-          }
-        },
-        "required": [
-          "oldKey",
-          "newKey",
-          "kept",
-          "sizeBytes"
-        ]
-      },
       "P2pPeer": {
         "type": "object",
         "properties": {
@@ -2255,103 +2205,6 @@
           "deleting"
         ],
         "description": "The running timeline (as on `access.overQuota`); null when none runs."
-      },
-      "AccountNotice": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "key": {
-            "type": "string",
-            "description": "One per thing the news is about: a device seeing the same key again replaces its entry."
-          },
-          "level": {
-            "type": "string",
-            "enum": [
-              "info",
-              "success",
-              "warning",
-              "error"
-            ]
-          },
-          "title": {
-            "$ref": "#/components/schemas/AccountNoticeText"
-          },
-          "message": {
-            "$ref": "#/components/schemas/AccountNoticeText"
-          },
-          "action": {
-            "type": "object",
-            "properties": {
-              "label": {
-                "$ref": "#/components/schemas/AccountNoticeText"
-              },
-              "target": {
-                "type": "string",
-                "enum": [
-                  "devices",
-                  "billing",
-                  "storage"
-                ],
-                "description": "The screen the app opens for it."
-              }
-            },
-            "required": [
-              "label",
-              "target"
-            ]
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time",
-            "example": "2026-10-19T12:00:00.000Z"
-          }
-        },
-        "required": [
-          "id",
-          "key",
-          "level",
-          "title",
-          "createdAt"
-        ]
-      },
-      "AccountNoticeText": {
-        "type": "object",
-        "properties": {
-          "key": {
-            "type": "string",
-            "description": "A text key of the shared notice texts (`notify.account.*`), shown in the device's language."
-          },
-          "vars": {
-            "type": "object",
-            "additionalProperties": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "number"
-                },
-                {
-                  "type": "object",
-                  "properties": {
-                    "key": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "key"
-                  ]
-                }
-              ]
-            },
-            "description": "Values for the text; a `{key}` value is itself a text key, translated too."
-          }
-        },
-        "required": [
-          "key"
-        ]
       },
       "Profiles": {
         "type": "object",
@@ -4850,7 +4703,7 @@
           "Library"
         ],
         "summary": "Rotate library key",
-        "description": "Rotates the library encryption key after re-auth with 2FA. Use case: user suspects key compromise and re-encrypts the library. Badger and Parrot both call it (`X-Space-App`); each sends the other app's library as its copy. The body carries the caller's library as a snapshot under the new key (`manifestBase64`, its `chunkRefs` uploaded already, as `PUT /library/db` sends it) with the storage format and op stream it is written in, and the new key's `keyProbe`, plus `otherLibraries`: every other app's latest snapshot, opened by the rotating device with the old key and re-encrypted under the new one (chunks already uploaded), each with the version it was read at. In one step the caller's library and every other library are replaced by their copies under the new key and every session of the account is revoked; nothing is deleted. A declared format below the stored one answers 409 `library_format_downgrade`. An app whose library changed since it was read answers 409 `version_conflict` with its `appId` (read again and retry); an app with a library and no copy answers 409 `library_not_reencrypted`; an account that stores media sealed with the key (songs, videos, covers) names its re-seal run (`mediaReseal`), switched in the same transaction (STOR-RESEAL-11): without one it answers 409 `rotation_needs_media_reseal`, and while a media file has no copy or another upload runs, 409 `media_reseal_incomplete` / `uploads_in_flight`. Nothing is written on a refusal. ACCT-KEYCHG-03: a request naming the account's open run from the session that re-authenticated when it opened or last resumed that run (`POST /library/media-reseal/runs`) needs no `password` nor `twoFactorCode`; any other request is asked them (401).\n\nPersonal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.",
+        "description": "Rotates the library encryption key after re-auth with 2FA. Use case: user suspects key compromise and re-encrypts the library. The body carries the caller's library as a snapshot under the new key (`manifestBase64`, its `chunkRefs` uploaded already, as `PUT /library/db` sends it) with the storage format and op stream it is written in, and the new key's `keyProbe`, plus `otherLibraries`: every other app's latest snapshot, opened by the rotating device with the old key and re-encrypted under the new one (chunks already uploaded), each with the version it was read at. In one step the caller's library and every other library are replaced by their copies under the new key and every session of the account is revoked; nothing is deleted. A declared format below the stored one answers 409 `library_format_downgrade`. An app whose library changed since it was read answers 409 `version_conflict` with its `appId` (read again and retry); an app with a library and no copy answers 409 `library_not_reencrypted`; an account that stores media sealed with the key (songs, videos, covers) answers 409 `rotation_needs_media_reseal` until rotation re-seals media too. Nothing is written on a refusal.\n\nPersonal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.",
         "security": [
           {
             "bearerAuth": []
@@ -4978,24 +4831,6 @@
                       ]
                     },
                     "description": "Every other app's library re-encrypted under the new key. Required for each app that has a library; omitted by builds from before 2026-11-23, which are refused (409 `library_not_reencrypted`) when another library exists."
-                  },
-                  "mediaReseal": {
-                    "type": "object",
-                    "properties": {
-                      "runId": {
-                        "type": "string",
-                        "format": "uuid",
-                        "description": "The account's open re-seal run, every media file copied under the new key (STOR-RESEAL-01)."
-                      },
-                      "switchNow": {
-                        "type": "boolean",
-                        "description": "\"Switch now\" (STOR-RESEAL-10): cancel the account's other running uploads, once the run's `switchNowAt` has passed."
-                      }
-                    },
-                    "required": [
-                      "runId"
-                    ],
-                    "description": "Required when the account stores media sealed with the key: the run is switched in the same transaction as the new key (STOR-RESEAL-11). Omitted with such media: 409 `rotation_needs_media_reseal`."
                   }
                 },
                 "required": [
@@ -5118,7 +4953,7 @@
             }
           },
           "409": {
-            "description": "The library already uses a newer format than this client writes, a library changed since it was read (`version_conflict`), another app's library came without its re-encrypted copy (`library_not_reencrypted`), the account stores media sealed with the key and no re-seal run was named (`rotation_needs_media_reseal`), the named run is not open (`reseal_run_not_open`), a media file has no copy yet (`media_reseal_incomplete`, STOR-RESEAL-04) or another upload of the account is running (`uploads_in_flight`, STOR-RESEAL-08). Nothing is written.",
+            "description": "The library already uses a newer format than this client writes, a library changed since it was read (`version_conflict`), another app's library came without its re-encrypted copy (`library_not_reencrypted`), or the account stores media sealed with the key (`rotation_needs_media_reseal`). Nothing is written.",
             "content": {
               "application/json": {
                 "schema": {
@@ -5205,70 +5040,6 @@
                       },
                       "required": [
                         "error"
-                      ]
-                    },
-                    {
-                      "type": "object",
-                      "properties": {
-                        "error": {
-                          "type": "string",
-                          "enum": [
-                            "reseal_run_not_open"
-                          ]
-                        }
-                      },
-                      "required": [
-                        "error"
-                      ]
-                    },
-                    {
-                      "type": "object",
-                      "properties": {
-                        "error": {
-                          "type": "string",
-                          "enum": [
-                            "media_reseal_incomplete"
-                          ]
-                        },
-                        "pendingFiles": {
-                          "type": "integer",
-                          "description": "Media files with neither a copy nor an unreadable mark."
-                        },
-                        "pendingBytes": {
-                          "type": "integer"
-                        }
-                      },
-                      "required": [
-                        "error",
-                        "pendingFiles",
-                        "pendingBytes"
-                      ]
-                    },
-                    {
-                      "type": "object",
-                      "properties": {
-                        "error": {
-                          "type": "string",
-                          "enum": [
-                            "uploads_in_flight"
-                          ]
-                        },
-                        "uploadsInFlight": {
-                          "type": "integer",
-                          "description": "Other running uploads of the account the switch waits for."
-                        },
-                        "switchNowAt": {
-                          "type": [
-                            "string",
-                            "null"
-                          ],
-                          "description": "When \"Switch now\" opens (STOR-RESEAL-10); null before the switch first waited."
-                        }
-                      },
-                      "required": [
-                        "error",
-                        "uploadsInFlight",
-                        "switchNowAt"
                       ]
                     }
                   ]
@@ -5596,39 +5367,12 @@
           "Library"
         ],
         "summary": "Open or resume a media reseal run",
-        "description": "STOR-RESEAL-02: starts re-sealing the account's media under its next media library key, or answers the run already open (one per account), so a device that stopped (closed, crashed, offline) resumes where the account stands. Use case: a device asked to change the media library key opens the run, then uploads a copy of each pending object with `resealRunId` and `resealOf`. ACCT-KEYCHG-03: opening or resuming asks the account password and a code every time (the authenticator's when it is on, else one emailed: a call without `twoFactorCode` sends it and answers 401 `two_factor_required`). The run then records that this session re-authenticated: the key change that names the run (`POST /library/recovery/rotate` with `mediaReseal.runId`) from this same session, while the run is open, asks nothing again. Another session, another run, or a run switched or abandoned asks again.\n\nPersonal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.",
+        "description": "STOR-RESEAL-02: starts re-sealing the account's media under its next media library key, or answers the run already open (one per account), so a device that stopped (closed, crashed, offline) resumes where the account stands. Use case: a device asked to change the media library key opens the run, then uploads a copy of each pending object with `resealRunId` and `resealOf`.\n\nPersonal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.",
         "security": [
           {
             "bearerAuth": []
           }
         ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "password": {
-                    "type": "string",
-                    "description": "The account password; an account without one sends none and is asked the code alone (ACCT-AUTH-04)."
-                  },
-                  "twoFactorCode": {
-                    "type": [
-                      "string",
-                      "null"
-                    ],
-                    "description": "The authenticator's code, or the emailed one; missing, the answer is 401 `two_factor_required`."
-                  },
-                  "restart": {
-                    "type": "boolean",
-                    "description": "Abandon the run already open (its copies are deleted, STOR-RESEAL-07) and open a new one, under the same re-authentication. For a device that does not hold the key the open run's copies were sealed with (the key lives only in the key change it started)."
-                  }
-                }
-              }
-            }
-          }
-        },
         "responses": {
           "200": {
             "description": "The open run; `created` is false when it was already open.",
@@ -5653,7 +5397,7 @@
             }
           },
           "401": {
-            "description": "The password is wrong, or the code is needed or wrong (`method`: `email` when it was just emailed, `totp` for the authenticator).",
+            "description": "Missing or unknown token.",
             "content": {
               "application/json": {
                 "schema": {
@@ -5662,17 +5406,7 @@
                     "error": {
                       "type": "string",
                       "enum": [
-                        "unauthorized",
-                        "invalid_password",
-                        "two_factor_required",
-                        "two_factor_invalid"
-                      ]
-                    },
-                    "method": {
-                      "type": "string",
-                      "enum": [
-                        "email",
-                        "totp"
+                        "unauthorized"
                       ]
                     }
                   },
@@ -5854,152 +5588,6 @@
           },
           "503": {
             "description": "The progress could not be read.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "enum": [
-                        "media_reseal_unavailable"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ]
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/library/media-reseal/runs/{id}/copies": {
-      "get": {
-        "operationId": "listMediaResealCopies",
-        "tags": [
-          "Library"
-        ],
-        "summary": "Copies and kept objects of a media reseal run",
-        "description": "STOR-RESEAL-01/05: one page, by old key, of the run's old objects that have a live copy (with its key) or are kept. Use case: before the key switch the device rewrites its library's references to the copies, including copies another device made; the kept ones are listed to the user as unreadable files (ACCT-KEYCHG-07).\n\nPersonal token: refused with 403 `personal_token_not_allowed`; this route needs a login session.",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "required": true,
-            "name": "id",
-            "in": "path"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "description": "`nextAfter` of the previous page."
-            },
-            "required": false,
-            "description": "`nextAfter` of the previous page.",
-            "name": "after",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 500,
-              "description": "Page size, 200 when absent, at most 500."
-            },
-            "required": false,
-            "description": "Page size, 200 when absent, at most 500.",
-            "name": "limit",
-            "in": "query"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "One page of copies and kept objects.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/MediaResealCopies"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Missing or unknown token.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "enum": [
-                        "unauthorized"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ]
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "The account is blocked or scheduled for deletion, or a personal token was used on a route that needs a login session.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "enum": [
-                        "account_blocked",
-                        "account_deleted",
-                        "personal_token_not_allowed"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ]
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "No reseal run with this id on the account.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "enum": [
-                        "reseal_run_not_found"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ]
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "The copies could not be read.",
             "content": {
               "application/json": {
                 "schema": {
@@ -13308,149 +12896,6 @@
         }
       }
     },
-    "/account/notices": {
-      "get": {
-        "operationId": "listAccountNotices",
-        "tags": [
-          "Account"
-        ],
-        "summary": "Account news for the notice history",
-        "description": "UX-NOTICE-05: the account's news every device shows in its notice history, newest first, at most 50: a device signed in (never the one asking), a payment received or refused, the storage over its limit. Nothing about the library. Use case: each app polls it and merges the items into its history by key, keeping what was read or removed there.\n\nPersonal token: accepted with the `account:read` scope (login sessions always work). Each token has its own request limit: 429 `token_rate_limited`.",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "x-token-scope": "account:read",
-        "responses": {
-          "200": {
-            "description": "The account's news.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "notices": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/AccountNotice"
-                      }
-                    }
-                  },
-                  "required": [
-                    "notices"
-                  ]
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Missing, unknown or revoked token.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "enum": [
-                        "unauthorized"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ]
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "The account is blocked or scheduled for deletion, or the personal token lacks the scope of the route (`requiredScope`).",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "enum": [
-                        "account_blocked",
-                        "account_deleted",
-                        "insufficient_scope"
-                      ]
-                    },
-                    "requiredScope": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ]
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "This personal token made too many requests this minute; wait `retryAfterSeconds` (also sent as the `Retry-After` header).",
-            "headers": {
-              "Retry-After": {
-                "schema": {
-                  "type": "string",
-                  "description": "Seconds to wait before retrying.",
-                  "example": "30"
-                },
-                "required": true,
-                "description": "Seconds to wait before retrying."
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "enum": [
-                        "token_rate_limited"
-                      ]
-                    },
-                    "retryAfterSeconds": {
-                      "type": "integer"
-                    }
-                  },
-                  "required": [
-                    "error",
-                    "retryAfterSeconds"
-                  ]
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "The news could not be read.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "enum": [
-                        "account_notices_unavailable"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ]
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/profiles": {
       "get": {
         "operationId": "listProfiles",
@@ -19726,122 +19171,6 @@
                       "type": "string",
                       "enum": [
                         "invalid_client"
-                      ]
-                    }
-                  },
-                  "required": [
-                    "error"
-                  ]
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Too many attempts; wait `retryAfterSeconds` (also sent as the `Retry-After` header).",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "enum": [
-                        "rate_limited"
-                      ]
-                    },
-                    "retryAfterSeconds": {
-                      "type": "integer"
-                    }
-                  },
-                  "required": [
-                    "error",
-                    "retryAfterSeconds"
-                  ]
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/usage/page-view": {
-      "post": {
-        "operationId": "countWebsitePageView",
-        "tags": [
-          "Usage"
-        ],
-        "summary": "Website page view (anonymous)",
-        "description": "Sent by the website when it shows a public page (OPS-BIZ-06). Adds one view to today's total (UTC) for the page, its source (the `utmSource`, else the site of `referrer` by name, else `direct`) and its campaign; nothing else is kept, no id, cookie, address or user agent. Robots and scripts are not counted. Needs no login and ignores any `Authorization` header. Limited to 300 per network address an hour (429).",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "page": {
-                    "type": "string",
-                    "enum": [
-                      "home",
-                      "pricing",
-                      "badger",
-                      "parrot",
-                      "downloads",
-                      "downloads/kodi",
-                      "downloads/jellyfin",
-                      "start",
-                      "key-storage",
-                      "developers/api",
-                      "report",
-                      "support",
-                      "signup",
-                      "legal-notice",
-                      "privacy",
-                      "terms",
-                      "account-deletion",
-                      "security",
-                      "security-acknowledgments"
-                    ],
-                    "description": "The page shown, without its language."
-                  },
-                  "referrer": {
-                    "type": "string",
-                    "maxLength": 253,
-                    "description": "The host name of the site that linked to the page, never its path."
-                  },
-                  "utmSource": {
-                    "type": "string",
-                    "maxLength": 100,
-                    "description": "The `utm_source` of the page address."
-                  },
-                  "utmCampaign": {
-                    "type": "string",
-                    "maxLength": 100,
-                    "description": "The `utm_campaign` of the page address."
-                  }
-                },
-                "required": [
-                  "page"
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "204": {
-            "description": "Counted, or not counted for a robot."
-          },
-          "400": {
-            "description": "The body is not valid, or the page is not one the website counts.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "error": {
-                      "type": "string",
-                      "enum": [
-                        "invalid_request"
                       ]
                     }
                   },

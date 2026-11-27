@@ -55,16 +55,7 @@ type Harness = {
 };
 
 const harness = (
-  opts: {
-    folder?: string | null;
-    free?: number;
-    user?: string;
-    file?: string;
-    run?: ParrotExportRun;
-    exists?: (dir: string) => boolean;
-    library?: ParrotExportSong[];
-    onEnded?: (job: ParrotExportJob) => void;
-  } = {},
+  opts: { folder?: string | null; free?: number; user?: string; file?: string; run?: ParrotExportRun; exists?: (dir: string) => boolean; library?: ParrotExportSong[] } = {},
 ): Harness => {
   const dir = mkdtempSync(join(tmpdir(), "parrot-export-jobs-"));
   const file = opts.file ?? join(dir, "export-jobs.json");
@@ -108,7 +99,6 @@ const harness = (
     folderExists: opts.exists ?? (() => true),
     run: opts.run ?? defaultRun,
     emit: (list) => emitted.push(list),
-    onEnded: opts.onEnded,
     log: (line) => log(line),
   });
   const release = async () => {
@@ -233,28 +223,6 @@ describe("Parrot export jobs", () => {
     const [job] = h.jobs.list();
     log("job", job);
     expect(job).toMatchObject({ phase: "failed", error: EXPORT_NO_SPACE, failures: [{ title: "Song a2", reason: "storage unreachable" }] });
-  });
-
-  // @req UX-NOTICE-06[parrot]: main hears each export end once, for the system notification while the window is hidden.
-  it("tells main once when each export ends: done, failed or cancelled", async () => {
-    const ended: Array<[string, string]> = [];
-    const done = harness({ onEnded: (job) => ended.push([job.phase, job.dest]) });
-    await done.jobs.start();
-    await drain(done);
-    const noSpace = harness({
-      onEnded: (job) => ended.push([job.phase, job.dest]),
-      run: async () => ({ written: [], failed: [], stopped: "no-space" }),
-    });
-    await noSpace.jobs.start();
-    await noSpace.jobs.idle();
-    const cancelled = harness({ onEnded: (job) => ended.push([job.phase, job.dest]) });
-    const started = await cancelled.jobs.start();
-    if (!started.ok) throw new Error("did not start");
-    cancelled.jobs.cancel(started.job.id);
-    await drain(cancelled);
-    log("ended", ended);
-    expect(ended.map(([phase]) => phase)).toEqual(["done", "failed", "cancelled"]);
-    expect(ended[0]![1]).toBe("/media/stick/Music");
   });
 
   it("goes on at the next start with the songs not yet saved, for that account only", async () => {

@@ -1,16 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Download, House, LibraryBig, ListEnd, ListMusic, Loader2, Pencil, Play, Search, Settings, Shuffle, Trash2 } from "lucide-react";
-import { DesktopAppTopNav, DesktopFeedbackDialog, desktopTopNavIconActionClassName, desktopTopNavItemClassName, NoticeBell } from "@space/desktop-shell/components";
-import { createDesktopNoticeHistory } from "@space/desktop-shell/services/notifications";
-import { createNotify } from "@space/desktop-shell/services/notify";
-import type { JobOutcome, NoticeAction, NoticePart } from "@space/notify-core/kinds";
-import { useAccountNews, useOnline } from "@space/desktop-shell/hooks";
+import { Bell, Download, House, LibraryBig, ListEnd, ListMusic, Loader2, Pencil, Play, Search, Settings, Shuffle, Trash2 } from "lucide-react";
+import { DesktopAppTopNav, DesktopNotificationTray, desktopTopNavIconActionClassName, desktopTopNavItemClassName, NotificationTrayContent } from "@space/desktop-shell/components";
+import { createNotificationStore, useNotificationStore } from "@space/desktop-shell/services/notifications";
+import { useOnline } from "@space/desktop-shell/hooks";
 import { useWindowFileDrop, WindowDropOverlay } from "@space/desktop-shell/window-drop";
 import { DesktopTourHost, startDesktopTour } from "@space/desktop-shell/tour";
 import tourDropVideo from "./assets/tour-drop.webm";
 import { isParrotAudioFile } from "@space/parrot-ingest/audio-formats";
-import { isParrotLyricsFileName } from "@space/parrot-core";
-import { useOwnLyrics } from "./ownLyrics";
 import { RenderBoundary } from "@space/ui/render-boundary";
 import { Button, Notifications, toast } from "@space/ui";
 import { BadgerIconButton, badgerTopBarIcons } from "@space/ui/badger";
@@ -20,7 +16,7 @@ import { libraryContent } from "@space/shared/libraryContent";
 import { ImportJobList, ImportJobs, importErrorPart, useImportJobs } from "./ImportJobs";
 import { useExportNotifications, type ExportNotify } from "./ExportJobs";
 import { MediaDetailTabs } from "@space/ui/badger/media-detail";
-import { noticeTranslator } from "./noticeText";
+import { keyedNotification, shownNotification } from "./notificationText";
 import {
   ParrotAlbumPageCover,
   ParrotAlbumTile,
@@ -36,19 +32,12 @@ import {
 import { ParrotNameLink } from "@space/ui/parrot";
 import { ParrotAlbumMenu, parrotCardControls, type ParrotCardPlayer } from "@space/ui/parrot/card-actions";
 import { ParrotConfirmDialog, ParrotPlaylistArt, ParrotPlaylistTile, useParrotPlaylistEditor } from "@space/ui/parrot/playlists";
-import { ParrotMenu, type ParrotMenuItem } from "@space/ui/parrot/menu";
+import { type ParrotMenuItem } from "@space/ui/parrot/menu";
 import { parrotLibraryToolbarLabels, ParrotLibraryToolbar, useParrotLibraryPrefs, useParrotLibraryShown } from "@space/ui/parrot/library-toolbar";
 import { ParrotKeepButton, ParrotKeepChoiceDialog, ParrotKeptLine, type ParrotKeepState } from "@space/ui/parrot/offline";
-import {
-  ParrotEditArtistDialog,
-  ParrotEditMetadataDialog,
-  type ParrotArtistPictureChoice,
-  type ParrotCoverInput,
-  type ParrotEditFields,
-} from "@space/ui/parrot/manage";
+import { ParrotEditMetadataDialog, type ParrotCoverInput, type ParrotEditFields } from "@space/ui/parrot/manage";
 import { ParrotNowPlaying, type ParrotLyricsFetchControl, type ParrotNowPlayingTab } from "@space/ui/parrot/screens";
 import { ParrotSearchPalette } from "@space/ui/parrot/search-palette";
-import { UnpaidAccessSign } from "./UnpaidAccessSign";
 import { useSearchPaletteShortcut } from "@space/ui";
 import { searchPaletteStrings } from "@space/shared/searchPaletteStrings";
 import {
@@ -85,17 +74,16 @@ import {
   type KeepCopyChoice,
   type KeptKind,
   type KeptStatus,
-  PARROT_COVER_MAX_BYTES,
 } from "@space/parrot-core";
 import type { ParrotLibraryTrack } from "@space/parrot-ingest";
 import type { ParrotImportScan, ParrotImportStatus, ParrotLibrary, ParrotState } from "../../shared/ipc";
 import { applyParrotLibraryPatch } from "../../shared/libraryPatch";
 import { SettingsPage, type ParrotSettingsSection } from "./AccountSettings";
-import { ParrotProfileSetupOverlays, profilesLog, useParrotDesktopProfileStore } from "./profiles";
-import { ParrotProfileMenu } from "@space/ui/profiles";
+import { ParrotProfileMenu, ParrotProfileSetupOverlays, useParrotDesktopProfileStore } from "./profiles";
 import { FounderBanner } from "@space/ui/founder";
 import { useParrotFounderStatus } from "./founder";
 import AddMusic from "./AddMusic";
+import { Feedback } from "./Feedback";
 import Home, { EmptyMusicLibrary } from "./Home";
 import { countText, type ParrotStringKey, type Translate } from "./i18n";
 import { editLyricsLabels, useEditLyrics } from "./editLookups";
@@ -110,27 +98,11 @@ import { startLoudnessPass } from "./loudness";
 import { useNoteScreen } from "./noteScreen";
 import { formatLocalizedStorage } from "@space/shared/format";
 import { useAppPlaybackMark } from "@space/ui/app-playback-mark";
-import { usePlaybackUploadsLease } from "./playbackUploads";
 
+export { Feedback } from "./Feedback";
 export { waveBarsFor } from "@space/ui/parrot/screens";
 
 type Props = { t: Translate; state: ParrotState; onState: (state: ParrotState) => void };
-
-/** Where a failed job's notice leads: the Jobs panel (UX-NOTICE-10). */
-const JOBS_TARGET = "jobs";
-const OPEN_JOBS: NoticeAction = { label: { key: "notify.job.openJobs" }, target: JOBS_TARGET };
-/**
- * The account news' neutral targets (UX-NOTICE-05). Parrot keeps a new device, the plan and the storage under
- * Settings ▸ Account: pairing another device, the plan panel and its storage.
- */
-const ACCOUNT_NEWS_TARGETS = new Set(["devices", "billing", "storage"]);
-/** The account's news through main, which holds the session; a refused read throws its code for the log. */
-const fetchAccountNews = async () => {
-  const result = await window.parrot.listAccountNotices();
-  if (!result.ok) throw new Error(result.code);
-  return result.value;
-};
-const onAccountNewsError = (message: string, error: unknown) => console.warn(`[parrot:account-news] ${message}`, error instanceof Error ? error.message : String(error));
 
 /** A queued song is the same song as another when the ids match: the library hands out fresh rows (PAR-CARD-02). */
 const songId = (track: ParrotLibraryTrack) => track.id;
@@ -206,43 +178,20 @@ export default function Library({ t, state, onState }: Props) {
   const [queue, setQueue] = useState<PlayQueue<ParrotLibraryTrack>>(emptyQueue);
   // The shooting stars behind every page (Home included: it renders inside this component) pause while music plays.
   useAppPlaybackMark(playing);
-  // PAR-UP-15: imports slow down or pause while a song plays, as this computer's setting says.
-  usePlaybackUploadsLease(playing);
   const [startAt, setStartAt] = useState<{ key: number; ms: number } | null>(null);
   const [history, setHistory] = useState<ListeningHistory>(() => parseHistory(localStorage.getItem(historyStorageKey(userId))));
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [planOpen, setPlanOpen] = useState(false);
   const [pairOpen, setPairOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
-  const [jobsOpen, setJobsOpen] = useState(false);
-  // UX-NOTICE-06: a click on the system notification of a job that ended while the window was hidden opens Jobs.
-  useEffect(() => window.parrot.hiddenJobNotices?.onOpenJobs(() => setJobsOpen(true)), []);
+  const [trayOpen, setTrayOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   useSearchPaletteShortcut(() => setSearchOpen(true), true);
-  // UX-NOTICE-04: the history behind the bell, one per user (the key an older version saved it under).
-  const noticeHistory = useMemo(() => createDesktopNoticeHistory(notificationsStorageKey(userId)), [userId]);
-  // UX-NOTICE-13: entries keep their text keys, so the tray and the toasts follow a language change.
-  const noticeT = useMemo(() => noticeTranslator(language, t), [language, t]);
-  /**
-   * A notice's button or history entry leads here: "jobs" opens the Jobs panel (UX-NOTICE-10), the account's news
-   * opens Settings ▸ Account (UX-NOTICE-05).
-   */
-  const openNoticeTarget = useCallback((target: string) => {
-    if (target === JOBS_TARGET) setJobsOpen(true);
-    if (!ACCOUNT_NEWS_TARGETS.has(target)) return;
-    settingsVisits.current += 1;
-    setPrevious([]);
-    setRoute({ kind: "settings", section: "account", visit: settingsVisits.current });
-  }, []);
-  // UX-NOTICE-05: the account's news joins the history now, every minute and when the window comes back.
-  useAccountNews({ history: noticeHistory, fetchNews: fetchAccountNews, onError: onAccountNewsError });
-  const notices = useMemo(() => createNotify({ history: noticeHistory, t: noticeT, openTarget: openNoticeTarget }), [noticeHistory, noticeT, openNoticeTarget]);
-  // The import and export listeners are set up once; they reach the notices of the moment through this.
-  const noticesRef = useRef(notices);
-  noticesRef.current = notices;
-  /** A job's end: a toast either way; a failure also goes in the history with "Open Jobs" (UX-NOTICE-10). */
-  const notifyJob = (key: string, outcome: JobOutcome, title: NoticePart, message: NoticePart) =>
-    noticesRef.current.notify({ key, outcome, level: outcome === "done" ? "success" : "error", title, message, ...(outcome === "failed" ? { action: OPEN_JOBS } : {}) });
+  const notifications = useMemo(() => createNotificationStore({ storageKey: notificationsStorageKey(userId) }), [userId]);
+  const storedNotifications = useNotificationStore(notifications);
+  // UX-I18N-01: each notification is translated when shown, so the tray follows a language change.
+  const notificationList = useMemo(() => storedNotifications.map((item) => shownNotification(t, item)), [storedNotifications, t]);
+  const unread = notificationList.filter((item) => !item.read).length;
   const { requestSignOut, dialog: signOutKeyCheckDialog } = useSignOutWithKeyCheck({ t, state, onSignedOut: onState });
   /** The song, album or artist waiting in the delete confirm, with what the delete would remove (PAR-LIB-03). */
   const [removing, setRemoving] = useState<{ target: ParrotManageTarget; title: string; trackCount: number } | null>(null);
@@ -262,8 +211,6 @@ export default function Library({ t, state, onState }: Props) {
   } | null>(null);
   const [editError, setEditError] = useState<string | null>(null);
   const [editBusy, setEditBusy] = useState(false);
-  /** The artist edit dialog (PAR-META-31): the artist's current name and photo. */
-  const [editingArtist, setEditingArtist] = useState<{ id: string; name: string; pictureUrl: string | null } | null>(null);
 
   // PAR-UP-07: artists whose photo the import stopped fetching keep their loading picture until a library read started
   // after that (by load number) is in, so a found photo replaces the shimmer without a drawn picture in between.
@@ -286,34 +233,24 @@ export default function Library({ t, state, onState }: Props) {
     }
   };
 
-  // UX-ADD-01: what the "+", the empty library or a drop asked to scan. Asked while an import runs or waits in its
-  // review, main keeps the sources and scans them once it is over: the window says so and keeps the status it shows.
-  const scanned = (status: ParrotImportStatus) => {
-    if (status.queuedSources === undefined) {
-      setImportStatus(status);
-      return;
-    }
-    console.info(`[parrot:import] ${status.queuedSources} source(s) wait behind the import`);
-    toast.info(t("addMusic.dropQueued"));
-  };
-
   // UX-ADD-01: song files or folders dropped anywhere on the window are scanned like the "+" picks them, so the same
-  // confirm dialog (PAR-UP-05) shows what was found; audio files are read as songs and .lrc/.txt files as lyrics
-  // (PAR-UP-01, PAR-LYR-09), which the same review places on songs. UX-ADD-02: images are left out silently, any other
-  // file gets a short toast. A drop during an import waits behind it (above).
+  // confirm dialog (PAR-UP-05) shows what was found; only audio files are read (PAR-UP-01). UX-ADD-02: images are
+  // left out silently, any other file gets a short toast.
   const drop = useWindowFileDrop({
     getPathForFile: window.parrot.getPathForFile,
-    isImportableFile: (path) => isParrotAudioFile(path) || isParrotLyricsFileName(path),
+    isImportableFile: isParrotAudioFile,
     onRefused: (names) => {
       console.info(`[parrot:window-drop] refused ${names.length} file(s)`);
       toast.info(t("addMusic.dropOnlySongs"));
     },
+    // An import already under way is not interrupted, like the "+" (an open dialog is handled by the shared drop).
+    standAside: () => Boolean(importStatus?.running) || importStatus?.phase === "review",
     onDrop: (paths) => {
       console.info(`[parrot:window-drop] dropped ${paths.length} path(s)`);
       void window.parrot.scanImport(paths).then(
         (status) => {
-          scanned(status);
-          if (status.phase !== "scanning" || status.queuedSources !== undefined) drop.stopProcessing();
+          setImportStatus(status);
+          if (status.phase !== "scanning") drop.stopProcessing();
         },
         (error: unknown) => {
           console.error("[parrot:window-drop] scan failed", error);
@@ -330,7 +267,7 @@ export default function Library({ t, state, onState }: Props) {
     console.info(`[parrot:empty-library] picked ${kind}`, paths.length);
     if (paths.length === 0) return false;
     try {
-      scanned(await window.parrot.scanImport(paths));
+      setImportStatus(await window.parrot.scanImport(paths));
     } catch (error) {
       console.error("[parrot:empty-library] scan failed", error);
       toast.error(error instanceof Error ? error.message : String(error));
@@ -361,41 +298,15 @@ export default function Library({ t, state, onState }: Props) {
       // end shows the library main holds, read back from the server no more. A stopped import (UX-JOBS-02) keeps
       // what it already published, so its end shows the library too.
       if (status.phase === "done" || status.phase === "cancelled") void load(false);
-      // A finished import says so once (UX-JOBS-01); a failed one stays in the history (UX-NOTICE-10).
+      // A finished import says so in the tray, once (UX-JOBS-01).
       if (!phaseChanged) return;
       if (status.phase === "done") {
         const counts = { imported: status.imported, skipped: status.skipped, failed: status.failed };
-        notifyJob("import", "done", { key: "notify.job.importDone" }, { key: "import.done", vars: counts });
+        notifications.push(keyedNotification(t, "success", { key: "notifications.importDone" }, { key: "import.done", vars: counts }));
       }
-      if (status.phase === "failed") notifyJob("import", "failed", { key: "notify.job.importFailed" }, importErrorPart(status.error ?? ""));
+      if (status.phase === "failed") notifications.push(keyedNotification(t, "error", { key: "notifications.importFailed" }, importErrorPart(status.error ?? "")));
     });
   }, []);
-  // UX-ADD-01: a review with no confirm dialog on screen (its dialog closed while main kept the review, or its scan
-  // never came) blocks nothing: the scan is read again and the dialog reopens, or main has none and the review ends.
-  const orphanReview = importStatus?.phase === "review" && !importScan;
-  useEffect(() => {
-    if (!orphanReview) return;
-    let current = true;
-    void (async () => {
-      const scan = await window.parrot.getImportScan();
-      if (!current) return;
-      if (scan) {
-        setImportScan(scan);
-        return;
-      }
-      const now = await window.parrot.getImportStatus();
-      if (!current) return;
-      if (now.phase !== "review" || now.running) {
-        setImportStatus(now);
-        return;
-      }
-      console.warn("[parrot:import] review without a scan cleared");
-      setImportStatus(await window.parrot.cancelImport());
-    })();
-    return () => {
-      current = false;
-    };
-  }, [orphanReview]);
   useEffect(() => {
     void window.parrot.getKept().then(setKept);
     return window.parrot.onKept(setKept);
@@ -569,7 +480,8 @@ export default function Library({ t, state, onState }: Props) {
     },
     t: (key, vars) => t(key as Parameters<Translate>[0], vars),
     detail: (playlist) => countText(language, t, "song", playlistSongs(playlist).length),
-    notify: ({ level, title, message, titleKey, titleVars }) => notices.notify({ level, title: titleKey ? { key: titleKey, vars: titleVars } : title, message }),
+    notify: ({ level, title, message, titleKey, titleVars }) =>
+      notifications.push(titleKey ? keyedNotification(t, level, { key: titleKey as ParrotStringKey, vars: titleVars }, message) : { level, title, message }),
     onCreated: (id) => open({ kind: "playlist", id }),
     onDeleted: (id) => {
       if (route.kind === "playlist" && route.id === id) back();
@@ -577,8 +489,8 @@ export default function Library({ t, state, onState }: Props) {
   });
   const playlistName = playlistEditor.name;
   const like = (track: { id: string }) => playlistEditor.heart(track.id);
-  /** "Download everything" (Settings, OFFL-FILE-01) runs in the background: its end shows as a notice. */
-  const notifyExport: ExportNotify = ({ key, outcome, title, message }) => notifyJob(key, outcome, title, message);
+  /** "Download everything" (Settings, OFFL-FILE-01) runs in the background: its end shows in the tray. */
+  const notifyExport: ExportNotify = (level, title, message) => notifications.push(keyedNotification(t, level, title, message));
   useExportNotifications(language, notifyExport);
   /**
    * A song row's "Add to queue" (PAR-CARD-02), heart and "Add to playlist", plus edit (PAR-META-16) and delete outside a
@@ -607,7 +519,7 @@ export default function Library({ t, state, onState }: Props) {
   const askDelete = async (target: ParrotManageTarget, title: string) => {
     const preview = await window.parrot.previewDelete(target);
     if (!preview.ok) {
-      notices.notifyError(preview.error, { key: "manage.deleteFailed", vars: { reason: preview.error } }, { key: `delete-failed:${target.kind}:${target.id}` });
+      notifications.push(keyedNotification(t, "error", { key: "manage.deleteFailed", vars: { reason: preview.error } }, preview.error));
       return;
     }
     setRemoving({ target, title, trackCount: preview.trackCount });
@@ -618,7 +530,7 @@ export default function Library({ t, state, onState }: Props) {
     setRemoving(null);
     const result = await window.parrot.deleteFromLibrary(target);
     if (!result.ok) {
-      notices.notifyError(result.error, { key: "manage.deleteFailed", vars: { reason: result.error } }, { key: `delete-failed:${target.kind}:${target.id}` });
+      notifications.push(keyedNotification(t, "error", { key: "manage.deleteFailed", vars: { reason: result.error } }, result.error));
       return;
     }
     setLibrary(result.library);
@@ -632,7 +544,7 @@ export default function Library({ t, state, onState }: Props) {
   const askEdit = async (target: ParrotManageTarget & { kind: "track" | "album" }, coverUrl: string | null = null) => {
     const values = await window.parrot.getEditValues(target);
     if (!values) {
-      notices.notifyError(target.id, { key: "manage.saveFailed", vars: { reason: "not found" } }, { key: `save-failed:${target.kind}:${target.id}` });
+      notifications.push(keyedNotification(t, "error", { key: "manage.saveFailed", vars: { reason: "not found" } }, target.id));
       return;
     }
     setEditError(null);
@@ -641,28 +553,11 @@ export default function Library({ t, state, onState }: Props) {
   };
   // PAR-META-18: the fields' connected autocomplete; PAR-LYR-05: the dialog's Lyrics section. Nothing is saved before Save.
   const editSuggest = useEditSuggest({ artists, albums, tracks: library?.tracks ?? [] });
-  const editLyricsSection = useEditLyrics({
+  const editLyrics = useEditLyrics({
     target: editing?.target ?? null,
     songIds: editing?.target.kind === "album" ? tracks.filter((track) => track.albumId === editing.target.id).map((track) => track.id) : [],
     lyricsChanges,
   });
-  // PAR-LYR-10: the user's own lyrics editor and Remove (PAR-LYR-11).
-  const ownLyrics = useOwnLyrics({
-    t,
-    tracks,
-    playingId,
-    playing,
-    clock,
-    onSeek: (ms) => seekRef.current?.(ms),
-    onToggle: () => toggleRef.current?.(),
-    onPlaySong: (trackId) => {
-      const track = tracks.find((row) => row.id === trackId);
-      if (track) play([track], 0);
-    },
-  });
-  // PAR-LYR-10: the song's "Add lyrics" / "Edit lyrics" opens the editor over the dialog.
-  const editLyrics =
-    editLyricsSection?.kind === "track" && editing ? { ...editLyricsSection, onEditOwn: () => void ownLyrics.openEditor(editing.target.id) } : editLyricsSection;
   const saveEdit = async (fields: ParrotEditFields, cover: ParrotCoverInput | null) => {
     if (!editing) return;
     const { target } = editing;
@@ -680,34 +575,6 @@ export default function Library({ t, state, onState }: Props) {
     setLibrary(result.library);
     setEditing(null);
   };
-  /** Opens the artist dialog with the artist's current name and photo (PAR-META-31). */
-  const askEditArtist = async (id: string) => {
-    const values = await window.parrot.getArtistEditValues(id);
-    if (!values) {
-      notices.notifyError(id, { key: "manage.saveFailed", vars: { reason: "not found" } }, { key: `save-failed:artist:${id}` });
-      return;
-    }
-    setEditError(null);
-    setEditingArtist({ id, ...values });
-  };
-  // PAR-META-31: a new photo goes as the cover beside the edit; "automatic" hands the artist back to the fetch.
-  const saveArtist = async (name: string, picture: ParrotArtistPictureChoice) => {
-    if (!editingArtist) return;
-    setEditBusy(true);
-    setEditError(null);
-    const result = await window.parrot.editDetails(
-      { kind: "artist", id: editingArtist.id, edit: { name, ...(picture === "automatic" ? { picture: "automatic" as const } : {}) } },
-      picture && picture !== "automatic" ? picture : null
-    );
-    setEditBusy(false);
-    if (!result.ok) {
-      setEditError(t("manage.saveFailed", { reason: result.error }));
-      return;
-    }
-    setLibrary(result.library);
-    setEditingArtist(null);
-  };
-  const coverTooLarge = t("manage.coverTooLarge", { max: String(PARROT_COVER_MAX_BYTES / 2 ** 20) });
 
   // Every song that starts goes to the front of this computer's history (Home's "Jump back in").
   const playingKey = currentEntry(queue)?.key;
@@ -770,10 +637,7 @@ export default function Library({ t, state, onState }: Props) {
       more
     );
   const artistControls = (artist: { id: string }) =>
-    parrotCardControls(t, () => tracks.filter((track) => track.artistId === artist.id), cardPlayer, {
-      onAddToPlaylist: playlistEditor.addTo,
-      onEdit: () => void askEditArtist(artist.id),
-    });
+    parrotCardControls(t, () => tracks.filter((track) => track.artistId === artist.id), cardPlayer, { onAddToPlaylist: playlistEditor.addTo });
   const playlistControls = (playlist: ParrotPlaylist) => parrotCardControls(t, () => playlistSongs(playlist), cardPlayer);
   const songLabels = {
     song: t("library.song"),
@@ -781,8 +645,7 @@ export default function Library({ t, state, onState }: Props) {
     album: t("library.album"),
     time: t("library.time"),
     unknownArtist: t("library.unknownArtist"),
-    play: (title: string) => t("library.playSong", { title }),
-    pause: (title: string) => t("library.pauseSong", { title }),
+    play: () => t("player.play"),
     missing: t("library.missingTrack"),
     unidentified: t("library.unidentified"),
   };
@@ -897,7 +760,6 @@ export default function Library({ t, state, onState }: Props) {
               showAlbum
               labels={songLabels}
               onPlay={(i) => play(shown.shownSongs, i)}
-              onToggle={() => toggleRef.current?.()}
               actions={songActions()}
               unavailable={songAway}
               links={nameLinks}
@@ -988,14 +850,8 @@ export default function Library({ t, state, onState }: Props) {
       return (
         <ClockedNowPlaying
           like={like(playingTrack)}
-          back={{ label: t("back"), onClick: back }}
           track={playingTrack}
           lyrics={lyrics?.trackId === playingTrack.id ? lyrics.lyrics : undefined}
-          ownLyrics={{
-            onEdit: () => void ownLyrics.openEditor(playingTrack.id),
-            onRemove: () => void ownLyrics.remove(playingTrack.id),
-            labels: { add: t("lyrics.add"), edit: t("lyrics.edit"), remove: t("lyrics.remove") },
-          }}
           fetchLyrics={{
             state: lyricsFetch?.trackId === playingTrack.id ? lyricsFetch.state : "idle",
             onFetch: () => fetchPlayingLyrics(playingTrack.id),
@@ -1016,7 +872,6 @@ export default function Library({ t, state, onState }: Props) {
           entries={queue.entries}
           position={queue.position}
           onJump={(index) => setQueue((current) => jumpTo(current, index))}
-          onToggle={() => toggleRef.current?.()}
           coverFor={(albumId) => coverFor(albumId)?.coverThumbUrl}
           onOpenAlbum={() => open({ kind: "album", id: playingTrack.albumId })}
           onOpenArtist={(id) => open({ kind: "artist", id })}
@@ -1032,8 +887,6 @@ export default function Library({ t, state, onState }: Props) {
             searchingLyricsBody: t("nowPlaying.searchingLyricsBody"),
             syncedLyricsSource: t("nowPlaying.syncedLyricsSource"),
             plainLyricsSource: t("nowPlaying.plainLyricsSource"),
-            ownSyncedLyricsSource: t("nowPlaying.ownSyncedLyricsSource"),
-            ownPlainLyricsSource: t("nowPlaying.ownPlainLyricsSource"),
             fetchedSyncedLyricsSource: t("nowPlaying.fetchedSyncedLyricsSource"),
             fetchedPlainLyricsSource: t("nowPlaying.fetchedPlainLyricsSource"),
             nothingNext: t("nowPlaying.nothingNext"),
@@ -1116,7 +969,7 @@ export default function Library({ t, state, onState }: Props) {
           ) : null}
           {jobsTab ? (
             <div className="mt-6" data-testid="album-jobs">
-              <ImportJobList t={t} language={language} jobs={albumJobs} onReview={reviewImport} variant="row" />
+              <ImportJobList t={t} language={language} jobs={albumJobs} onReview={reviewImport} />
             </div>
           ) : (
             // The album's songs the user does not have sit greyed between them, never played (PAR-LIB-05).
@@ -1128,7 +981,6 @@ export default function Library({ t, state, onState }: Props) {
               showAlbum={false}
               labels={songLabels}
               onPlay={(i) => play(songs, i)}
-              onToggle={() => toggleRef.current?.()}
               actions={songActions()}
               unavailable={songAway}
               links={nameLinks}
@@ -1164,16 +1016,10 @@ export default function Library({ t, state, onState }: Props) {
             titleTestId="artist-title"
             detail={`${countText(language, t, "album", artistAlbums.length)} · ${countText(language, t, "song", songs.length)}`}
             actions={
-              <div className="flex items-center gap-2.5">
+              <>
                 <PlayAll t={t} disabled={songs.length === 0} onClick={() => play(songs, 0)} />
                 <DeleteButton t={t} onClick={() => void askDelete({ kind: "artist", id: route.id }, artist?.name ?? "")} />
-                {/* PAR-META-31: the artist card's menu without Play, which the page shows as a button. */}
-                <ParrotMenu
-                  label={t("card.more")}
-                  items={artistControls({ id: route.id }).actions.filter((action) => action.id !== "play")}
-                  testId="artist-menu"
-                />
-              </div>
+              </>
             }
           />
           {albumTiles(artistAlbums)}
@@ -1243,7 +1089,6 @@ export default function Library({ t, state, onState }: Props) {
               showAlbum
               labels={songLabels}
               onPlay={(i) => play(songs, i)}
-              onToggle={() => toggleRef.current?.()}
               actions={songActions((track, index) => playlistEditor.removeSong(playlist, track.id, entries[index]?.position ?? index))}
               testId="playlist-tracks"
               unavailable={songAway}
@@ -1300,16 +1145,6 @@ export default function Library({ t, state, onState }: Props) {
         logoAlt=""
         title="Parrot"
         desktopLayout="balanced"
-        // ACCT-UNPAID-05, UX-NOTICE-08: an unpaid account is said by a small sign inside the fixed bar, on every page.
-        status={
-          <UnpaidAccessSign
-            language={language}
-            onOpen={() => {
-              settingsVisits.current += 1;
-              go({ kind: "settings", section: "account", visit: settingsVisits.current });
-            }}
-          />
-        }
         desktopNav={
           <nav className="flex items-center gap-1">
             {tab("home", t("nav.home"), House, "home-tab")}
@@ -1324,33 +1159,54 @@ export default function Library({ t, state, onState }: Props) {
               label={t("addMusic.label")}
               icon={badgerTopBarIcons.add}
               onClick={() => {
-                setAddOpen(true);
+                if (!importStatus?.running && importStatus?.phase !== "review") setAddOpen(true);
               }}
               testId="library-import"
             />
             {/* UX-JOBS-01: imports and how they went live in the Jobs panel, as in Badger, not in a strip. */}
-            <ImportJobs
-              t={t}
-              language={language}
-              onReview={reviewImport}
-              albumFor={(albumId) => {
-                const album = coverFor(albumId);
-                return album ? { title: album.title, cover: album.coverThumbUrl ?? album.coverUrl } : undefined;
-              }}
-              open={jobsOpen}
-              onOpenChange={setJobsOpen}
-            />
+            <ImportJobs t={t} language={language} onReview={reviewImport} />
           </>
         }
         notificationAction={
-          <NoticeBell history={noticeHistory} t={noticeT} onOpenTarget={openNoticeTarget} />
+          <DesktopNotificationTray
+            open={trayOpen}
+            onOpenChange={(next) => {
+              setTrayOpen(next);
+              if (next) notifications.markAllRead();
+            }}
+            title={t("nav.notifications")}
+            subtitle={t("notifications.subtitle")}
+            emptyMessage={t("notifications.empty")}
+            trigger={
+              <Button variant="ghost" size="icon" className={desktopTopNavIconActionClassName} aria-label={t("nav.notifications")} title={t("nav.notifications")} data-testid="nav-notifications">
+                <Bell className="size-4" aria-hidden />
+                {unread > 0 && <span className="absolute right-1.5 top-1.5 size-2 rounded-full bg-primary" data-testid="nav-notifications-unread" />}
+              </Button>
+            }
+          >
+            {notificationList.length > 0 ? (
+              <NotificationTrayContent
+                notifications={notificationList}
+                onRemove={notifications.remove}
+                onClearAll={notifications.clearAll}
+                labels={{
+                  filterAll: t("notifications.filterAll"),
+                  filterError: t("notifications.filterError"),
+                  filterWarning: t("notifications.filterWarning"),
+                  filterInfo: t("notifications.filterInfo"),
+                  filterSuccess: t("notifications.filterSuccess"),
+                  clearAll: t("notifications.clearAll"),
+                  dismiss: t("notifications.dismiss"),
+                }}
+              />
+            ) : null}
+          </DesktopNotificationTray>
         }
         accountAction={iconAction(t("nav.settings"), Settings, () => go({ kind: "settings" }), "nav-settings", { active: route.kind === "settings" })}
         signOutAction={
           profileStore ? (
             <ParrotProfileMenu
               store={profileStore}
-              log={profilesLog}
               language={language}
               signOutLabel={t("library.signOut")}
               onSignOut={() => void requestSignOut()}
@@ -1370,9 +1226,8 @@ export default function Library({ t, state, onState }: Props) {
           {() => page()}
         </RenderBoundary>
       </main>
-      <AddMusic t={t} open={addOpen} onOpenChange={setAddOpen} onScanned={scanned} />
+      <AddMusic t={t} open={addOpen} onOpenChange={setAddOpen} onScanned={setImportStatus} />
       <Notifications />
-      {ownLyrics.dialogs}
       <WindowDropOverlay
         drop={drop}
         labels={{
@@ -1392,9 +1247,9 @@ export default function Library({ t, state, onState }: Props) {
         onPlaying={setPlaying}
         startAt={startAt}
         onPosition={(track, ms) => saveHistory((current) => recordPosition(current, track, ms))}
-        // The lyrics (and the lyrics editor's taps, PAR-LYR-10) follow the exact time; elsewhere whole seconds are enough
-        // (Home's "Resume 1:18", PAR-HOME-01), and Home redraws once a second rather than at every tick.
-        onClock={route.kind === "nowPlaying" || ownLyrics.editing ? clock.write : (ms) => clock.write(ms - (ms % 1000))}
+        // The lyrics follow the exact time; elsewhere whole seconds are enough (Home's "Resume 1:18", PAR-HOME-01),
+        // and Home redraws once a second rather than at every tick (nothing else reads the clock).
+        onClock={route.kind === "nowPlaying" ? clock.write : (ms) => clock.write(ms - (ms % 1000))}
         seekRef={seekRef}
         toggleRef={toggleRef}
         coverFor={coverFor}
@@ -1429,7 +1284,7 @@ export default function Library({ t, state, onState }: Props) {
       <StreamSlotPrompt language={language} closeLabel={t("close")} />
       {feedbackOpen && (
         <RenderBoundary name="feedback" variant="overlay">
-          <DesktopFeedbackDialog language={language} send={(input) => window.parrot.sendFeedback(input)} onClose={() => setFeedbackOpen(false)} />
+          <Feedback t={t} onClose={() => setFeedbackOpen(false)} />
         </RenderBoundary>
       )}
       {planOpen && (
@@ -1517,7 +1372,6 @@ export default function Library({ t, state, onState }: Props) {
             coverHint: t("manage.coverHint"),
             coverPick: t("manage.coverPick"),
             coverFrame: t("import.cover.frame"),
-            coverTooLarge,
             frame: coverFrameLabels(t),
           }}
           error={editError}
@@ -1529,32 +1383,7 @@ export default function Library({ t, state, onState }: Props) {
           onSubmit={(fields, cover) => void saveEdit(fields, cover)}
         />
       ) : null}
-      {editingArtist ? (
-        <ParrotEditArtistDialog
-          open
-          onOpenChange={(next) => !next && !editBusy && setEditingArtist(null)}
-          initialName={editingArtist.name}
-          pictureUrl={editingArtist.pictureUrl}
-          labels={{
-            title: t("manage.editTitle.artist"),
-            name: t("manage.field.name"),
-            photo: t("manage.field.photo"),
-            photoHint: t("manage.photoHint"),
-            photoPick: t("manage.photoPick"),
-            photoFrame: t("manage.photoFrame"),
-            automatic: t("manage.photoAutomatic"),
-            tooLarge: coverTooLarge,
-            changed: t("manage.changed"),
-            cancel: t("manage.cancel"),
-            submit: t("manage.save"),
-            frame: { ...coverFrameLabels(t), title: t("manage.photoFrameTitle"), hint: t("manage.photoFrameHint") },
-          }}
-          error={editError}
-          busy={editBusy}
-          onSubmit={(name, picture) => void saveArtist(name, picture)}
-        />
-      ) : null}
-      {importScan && importStatus?.phase === "review" ? <ImportReview t={t} language={language} scan={importScan} tracks={tracks} suggest={editSuggest} onDone={() => setImportScan(null)} /> : null}
+      {importScan && importStatus?.phase === "review" ? <ImportReview t={t} language={language} scan={importScan} suggest={editSuggest} onDone={() => setImportScan(null)} /> : null}
       <span className="hidden" data-testid="signed-in-user">
         {state.user?.email}
       </span>

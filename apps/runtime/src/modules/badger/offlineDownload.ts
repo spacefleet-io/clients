@@ -52,7 +52,7 @@ import {
   buildOfflineFilename,
   sanitizeOfflineFilename,
 } from "@space/shared/offlineFilename";
-import type { EngineV2 } from "@space/runtime-jobs-engine/engineV2";
+import type { EngineV2 } from "../../core/jobs/engineV2";
 import type {
   IngestJobRecord,
   IngestJobStatus,

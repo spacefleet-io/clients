@@ -2,7 +2,7 @@
  * Divergence-resolving findExternalSubtitle test.
  *
  * Re-uses the fixture corpus harvested in Phase 1a
- * (tests/track-list-corpus.ts) so the
+ * (packages/desktop-mpv-playback/tests/fixtures/track-list-corpus.ts) so the
  * new consolidated matcher is judged against the SAME inputs the Lua and
  * old JS rules were measured against.
  *
@@ -29,7 +29,7 @@ import { findExternalSubtitle } from "../src/trackList";
 import {
   TRACK_LIST_CORPUS,
   type MpvTrack as FixtureMpvTrack,
-} from "./track-list-corpus";
+} from "../../desktop-mpv-playback/tests/fixtures/track-list-corpus";
 
 /**
  * Which fixtures the divergence resolution flips relative to the old JS

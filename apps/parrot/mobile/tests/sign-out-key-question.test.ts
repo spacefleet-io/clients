@@ -57,8 +57,8 @@ const run = async (store: LibraryKeyStore) => {
 };
 
 describe("Parrot phone Sign out asks a key holder whether the key was saved (ACCT-DEV-03)", () => {
-  it("every Parrot language has the question, naming the media library key (ACCT-KEYCHG-02)", () => {
-    const keyWord = { en: "media library key", fr: "clé de médiathèque", nl: "mediatheeksleutel", de: "Mediathek-Schlüssel", es: "clave de la mediateca" };
+  it("every Parrot language has the question, in Parrot's word for the key", () => {
+    const keyWord = { en: "library key", fr: "clé de bibliothèque", nl: "bibliotheeksleutel", de: "Bibliotheksschlüssel", es: "clave de biblioteca" };
     for (const language of ["en", "fr", "nl", "de", "es"] as const) {
       const text = textFor(language);
       log("text", { language, text });
@@ -66,7 +66,7 @@ describe("Parrot phone Sign out asks a key holder whether the key was saved (ACC
       expect(text.title).toContain(keyWord[language]);
       expect(text.body).toContain("QR");
     }
-    expect(textFor("en").title).toBe("Have you saved your media library key?");
+    expect(textFor("en").title).toBe("Have you saved your library key?");
   });
 
   it("holder: asks, Cancel first and changes nothing; the confirm signs out once and forgets the key", async () => {

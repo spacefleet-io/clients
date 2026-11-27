@@ -35,9 +35,9 @@ import {
   type UploadResult,
 } from "../src/modules/badger/steps/deps";
 import { buildBadgerStepDeps } from "../src/modules/badger/steps/deps-adapter";
-import type { StepHandlerCtx } from "@space/runtime-jobs-engine/engineV2";
+import type { StepHandlerCtx } from "../src/core/jobs/engineV2";
 import type { IngestJobRecord } from "@space/runtime-jobs";
-import type { StoredStepRecord } from "@space/runtime-jobs-engine/stepStore";
+import type { StoredStepRecord } from "../src/core/jobs/stepStore";
 import type { ProducedMedia } from "@space/ingest-core/mediaProcessor";
 
 const ts = "2026-01-01T00:00:00.000Z";
@@ -285,7 +285,7 @@ describe("@bugfix @regression-proof Bug #11 — format-job commit step", () => {
     // — we read the current step set indirectly through the engine surface to
     // avoid relying on the constant export. Submit a format job and assert the
     // commit step exists.
-    const { createEngineV2 } = await import("@space/runtime-jobs-engine/engineV2");
+    const { createEngineV2 } = await import("../src/core/jobs/engineV2");
     const engine = createEngineV2({ dbPath: ":memory:", progressThrottleMs: 0 });
     await engine.start();
     const fmtJob: IngestJobRecord = makeFormatJob({

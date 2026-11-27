@@ -7,11 +7,9 @@ import { openStorageUploadSession, uploadStorageObjectViaTunnel } from "@space/l
 import { fetchLibrarySnapshot, publishLibrarySnapshot } from "@space/library-db-runtime/snapshotTransport";
 import type { MusicLyrics, MusicLyricsQuery } from "@space/shared/api";
 import {
-  isParrotCopyId,
   isParrotPublishConflict,
   PARROT_ARTIST_PICTURE_RETRY_MS,
   PARROT_AUTO_LYRICS_GAP_MS,
-  PARROT_LYRICS_USER,
   parrotAutoLyricsOnError,
   planParrotLyrics,
   planParrotLyricsNotFound,
@@ -26,24 +24,27 @@ import {
 } from "@space/parrot-library-db-definition";
 import { makeParrotCoverCopies, parrotCoverProblem, uploadParrotCover, type ParrotCoverImage } from "./covers";
 import type { ParrotCoverCopies, ParrotCoverCrop } from "@space/parrot-core";
-import { createParrotChunkSlots, type ParrotChunkSlots, type ParrotPlaybackGate } from "./uploadGate";
 import { parrotChunkKey, parrotPlacementId, parrotTagsKey, parrotTrackIds, sha256Hex } from "./ids";
-import { applyParrotOps, getParrotAlbumRow, getParrotFile, type ParrotLibraryDb } from "./library";
-import {
-  buildParrotLightCopyOp,
-  hasParrotLightCopy,
-  parrotCopyTagsOf,
-  parrotLightCopyMadeLine,
-  parrotLightCopyToMake,
-  parrotOriginalOnDisk,
-  type ParrotLightCopyMaker,
-} from "./lightCopy";
-import { fetchParrotLibraryState, PARROT_APP_ID, publishParrotEdits, type ParrotLibraryState, type ParrotSnapshotTransport } from "./publish";
+import { applyParrotOps, getParrotAlbumRow, getParrotFile, type ParrotLibraryDb, type ParrotLibraryFile } from "./library";
+import { addParrotLightCopy, parrotOriginalInMemory, type ParrotLightCopyMaker } from "./lightCopy";
+import { fetchParrotLibraryState, PARROT_APP_ID, publishParrotEdits, type ParrotSnapshotTransport } from "./publish";
 import { parrotSplitPieces, splitParrotOriginal } from "./splitOriginal";
 
 export { PARROT_APP_ID };
 import { readParrotTrackInfo, type ParrotTrackInfo } from "./readTrack";
 import { parrotRootFinder } from "./scan";
+
+/** A file read, hashed and tagged before its song joins the library; `stored` when its original was stored now. */
+type PreparedFile = {
+  bytes: Uint8Array;
+  fileHash: string;
+  info: ParrotTrackInfo;
+  ids: { fileId: string; albumId: string; trackId: string; artistId: string; albumArtistId: string };
+} & (
+  | { existing: ParrotLibraryFile; stored: null; lyricsAsked: null }
+  | { existing: null; stored: ParrotStoredOriginal; lyricsAsked: Promise<ParrotLibraryOp | null> }
+);
+type PreparedOutcome = { ok: true; value: PreparedFile } | { ok: false; error: unknown };
 
 /** The network calls an import makes; tests swap them for in-memory fakes. */
 export type ParrotImportTransport = ParrotSnapshotTransport & {
@@ -90,7 +91,7 @@ export type ParrotImportOptions = {
   /** Sent with every upload (`parrot-desktop`, `parrot-seed-script`…). */
   clientType: string;
   transport?: ParrotImportTransport;
-  /** The folders (or files) the user picked, as given to findParrotFiles: folder names above them are not used. */
+  /** The folders (or files) the user picked, as given to findParrotAudioFiles: folder names above them are not used. */
   roots?: string[];
   /** Reads a file's tags (`root`: the picked folder it was found under); the seed script passes names given on its command line. */
   readInfo?: (file: string, root?: string) => Promise<ParrotTrackInfo>;
@@ -100,10 +101,8 @@ export type ParrotImportOptions = {
    * every Parrot channel carries the build that reads songs stored in parts (`PARROT_SPLIT_ORIGINALS`).
    */
   splitOriginals?: boolean;
-  /** PAR-UP-14: publishes once this many songs wait (PARROT_PUBLISH_BATCH_SONGS by default)... */
-  publishBatchSongs?: number;
-  /** ...or this long after the first of them (PARROT_PUBLISH_BATCH_MS), or at once when nothing else can join. */
-  publishBatchMs?: number;
+  /** Publishes the library after this many new songs (default 1: each song shows as soon as it is stored). */
+  publishEvery?: number;
   /**
    * Makes each song's light copy (PAR-FMT-02); the desktop passes its encoder. Without it no light copy is made (the
    * seed script, tests). A song whose light copy fails is still imported; the backfill retries it.
@@ -117,8 +116,6 @@ export type ParrotImportOptions = {
   onProgress?: (progress: ParrotImportProgress) => void;
   log?: (message: string) => void;
   signal?: AbortSignal;
-  /** PAR-UP-15: this computer's uploads-while-playing gate; without it uploads always run at full. */
-  uploadGate?: ParrotPlaybackGate;
   /**
    * PAR-LYR-01: asks the lyrics of each new song whose file carries none while the file uploads, so the song is
    * published with its words (or the final "no lyrics") and is never playable without them. A lookup that fails, or
@@ -217,8 +214,6 @@ export type ParrotFileUpload = {
   openUploadSession?: ParrotImportTransport["openUploadSession"];
   onChunk?: (declaredBytes: number) => void;
   signal?: AbortSignal;
-  /** PAR-UP-15: the import's chunk slots; each chunk holds one while it uploads. */
-  slots?: ParrotChunkSlots;
 };
 
 export const uploadParrotFile = async (input: ParrotFileUpload): Promise<TrackFileChunkRow[]> => {
@@ -240,27 +235,19 @@ export const uploadParrotFile = async (input: ParrotFileUpload): Promise<TrackFi
     try {
       while (!failed && next < count) {
         input.signal?.throwIfAborted();
-        const release = await input.slots?.take(input.signal);
-        try {
-          // A cancel or a failed lane while this one waited for its slot: it takes no new chunk.
-          input.signal?.throwIfAborted();
-          if (failed || next >= count) break;
-          const idx = next++;
-          const offset = offsets[idx]!;
-          const plain = pieces[idx]!;
-          const sealed = new Uint8Array(sealMediaObjectWithPadding(plain, input.libraryKey));
-          const key = parrotChunkKey(input.fileId, idx);
-          // STOR-USE-02: the song counts at the size of the file the user picked, one piece's share at a time.
-          const declaredBytes = input.declaredBytes?.[idx] ?? plain.length;
-          const pieceOptions = { ...objectOptions, counting: { role: "source" as const, declaredBytes } };
-          const objectKey = session
-            ? await session.upload(key, sealed, pieceOptions)
-            : await input.upload(input.token, key, sealed, { ...pieceOptions, placementId, clientType: input.clientType }, PARROT_APP_ID);
-          chunks[idx] = { idx, objectKey, plainOffset: offset, plainSize: plain.length };
-          input.onChunk?.(declaredBytes);
-        } finally {
-          await release?.();
-        }
+        const idx = next++;
+        const offset = offsets[idx]!;
+        const plain = pieces[idx]!;
+        const sealed = new Uint8Array(sealMediaObjectWithPadding(plain, input.libraryKey));
+        const key = parrotChunkKey(input.fileId, idx);
+        // STOR-USE-02: the song counts at the size of the file the user picked, one piece's share at a time.
+        const declaredBytes = input.declaredBytes?.[idx] ?? plain.length;
+        const pieceOptions = { ...objectOptions, counting: { role: "source" as const, declaredBytes } };
+        const objectKey = session
+          ? await session.upload(key, sealed, pieceOptions)
+          : await input.upload(input.token, key, sealed, { ...pieceOptions, placementId, clientType: input.clientType }, PARROT_APP_ID);
+        chunks[idx] = { idx, objectKey, plainOffset: offset, plainSize: plain.length };
+        input.onChunk?.(declaredBytes);
       }
     } catch (error) {
       failed = true;
@@ -306,7 +293,6 @@ export const uploadParrotOriginal = async (
   let tagsObjectKey: string | null = null;
   if (tags) {
     const declaredBytes = shares.at(-1)!;
-    const release = await input.slots?.take(input.signal);
     tagsObjectKey = await input.upload(
       input.token,
       parrotTagsKey(input.fileId),
@@ -319,7 +305,7 @@ export const uploadParrotOriginal = async (
         clientType: input.clientType,
       },
       PARROT_APP_ID
-    ).finally(() => release?.());
+    );
     input.onChunk?.(declaredBytes);
     input.signal?.throwIfAborted();
   }
@@ -340,41 +326,20 @@ export const buildParrotTrackOps = (input: {
   /** How the file was cut when stored (PAR-FMT-01); absent or null: stored whole. */
   split?: ParrotSplitStored | null;
   now: number;
-  /**
-   * True for an artist the library did not have when this import opened it. Such an artist takes the name the music
-   * library matched (an op with a catalog id), whichever of its songs created it. Absent: every artist keeps its name.
-   */
-  newArtist?: (artistId: string) => boolean;
 }): ParrotLibraryOp[] => {
   const { info, now } = input;
   const ids = parrotTrackIds({ ...info, fileHash: input.fileHash });
   const meta = () => ({ id: crypto.randomUUID(), createdAt: new Date(now).toISOString() });
-  // PAR-META-31: an artist already in the library keeps its name, the one the user may have given it. One this import
-  // created keeps it too, unless this song brings the matched name: a song left as is ("linkin park") imported before
-  // the matched ones ("Linkin Park") must not name the artist for all of them.
-  const keepName = (artistId: string, musicId: string | null) => !(musicId && input.newArtist?.(artistId));
-  const artistMusicId = info.artistMusicId ?? (ids.albumArtistId === ids.artistId ? info.albumArtistMusicId : null) ?? null;
   const ops: ParrotLibraryOp[] = [
     createParrotOp(
       "artist.upsert",
-      { id: ids.artistId, musicId: artistMusicId, name: info.artist, sortName: info.artist, keepName: keepName(ids.artistId, artistMusicId) },
+      { id: ids.artistId, musicId: info.artistMusicId ?? (ids.albumArtistId === ids.artistId ? info.albumArtistMusicId : null) ?? null, name: info.artist, sortName: info.artist },
       meta()
     ),
   ];
   if (ids.albumArtistId !== ids.artistId) {
-    const albumArtistMusicId = info.albumArtistMusicId ?? null;
     ops.push(
-      createParrotOp(
-        "artist.upsert",
-        {
-          id: ids.albumArtistId,
-          musicId: albumArtistMusicId,
-          name: info.albumArtist,
-          sortName: info.albumArtist,
-          keepName: keepName(ids.albumArtistId, albumArtistMusicId),
-        },
-        meta()
-      )
+      createParrotOp("artist.upsert", { id: ids.albumArtistId, musicId: info.albumArtistMusicId ?? null, name: info.albumArtist, sortName: info.albumArtist }, meta())
     );
   }
   ops.push(
@@ -408,9 +373,7 @@ export const buildParrotTrackOps = (input: {
         title: info.title,
         artistId: ids.artistId,
         durationMs: info.durationMs,
-        // The matched song's id in our music copy (PAR-LYR-01), so its lyrics lookup reads our copy by it; an
-        // outside source's id (PAR-META-26) is never stored.
-        musicId: info.trackMusicId && isParrotCopyId(info.trackMusicId) ? info.trackMusicId : null,
+        musicId: null,
         genre: info.genre ?? null,
         ...(info.loudness ?? {}),
         // Kept as is at import (PAR-UP-05); absent keeps the stored flag.
@@ -442,55 +405,32 @@ export const buildParrotTrackOps = (input: {
       meta()
     )
   );
-  if (info.lyrics) ops.push(parrotFileLyricsOp(ids.trackId, info.lyrics, now, meta()));
+  if (info.lyrics) {
+    ops.push(createParrotOp("lyrics.set", { trackId: ids.trackId, plain: info.lyrics.plain, synced: info.lyrics.synced, source: "file", fetchedAt: now }, meta()));
+  }
   return ops;
 };
 
-/** The lyrics a song takes from the import's files: the user's own when they placed the file in the review (PAR-LYR-09). */
-const parrotFileLyricsOp = (trackId: string, lyrics: NonNullable<ParrotTrackInfo["lyrics"]>, now: number, meta: { id: string; createdAt: string }) =>
-  createParrotOp("lyrics.set", { trackId, plain: lyrics.plain, synced: lyrics.synced, source: lyrics.user ? PARROT_LYRICS_USER : "file", fetchedAt: now }, meta);
-
-/** The ids a song's file gives it (`parrotTrackIds`). */
-export type ParrotSongIds = { fileId: string; albumId: string; trackId: string; artistId: string; albumArtistId: string };
-
-/** What the probe of one picked file found: its size, hash and ids, and the song already holding it when the library has the file. */
-export type ParrotSongProbe = { size: number; fileHash: string; ids: ParrotSongIds; existingTrackId: string | null };
-
-/** A light copy made and written to `path`, waiting to be uploaded (PAR-FMT-02). */
-export type ParrotLightCopyMade = { path: string; fileId: string; bytes: number; fileHash: string; originalBytes: number; codec: string; ms: number };
-
-/** PAR-UP-14: a publish goes out once this many songs wait for one... */
-export const PARROT_PUBLISH_BATCH_SONGS = 8;
-/** ...or this long after the first of them, or at once when nothing else of the import can join it. */
-export const PARROT_PUBLISH_BATCH_MS = 2000;
-
-/** A job of the import as the session sees it, so it knows when nothing more can join a publish. */
-type ParrotSessionJob = { file: string; light: boolean; parentId: string | null };
-
 /**
- * One import of picked files into the account's Parrot library (PAR-UP-13): the library it changes, the lookups it
- * started, its progress and result, and the steps each song's jobs run on the shared job engine (`importJobs.ts`).
- * Every change to the library goes through one writer: it waits while a publish is out (a publish that meets another
- * device's save swaps the library for the latest one and would drop ops applied meanwhile), and songs are published
- * in batches (PAR-UP-14). A song's commit resolves once its song is published.
+ * Imports audio files into the account's Parrot library: each new file is uploaded split as encrypted chunks
+ * (PAR-FMT-01), its song added to the library, and the library snapshot published. A file already in the
+ * library (same content) is skipped, so running the same import again after a stop resumes it. One file that
+ * fails does not stop the others. An album without a cover takes the picture built into the first of its files
+ * that has one (PAR-META-04's third source), stored encrypted in the user's storage; files already in the library
+ * still give their picture to an album that has none, so importing again fills in covers missed before.
  */
-export type ParrotImportSession = ReturnType<typeof createParrotImportSession>;
-
-export const createParrotImportSession = (files: readonly string[], options: ParrotImportOptions & { sizes?: readonly number[] }) => {
+export const importParrotFiles = async (files: string[], options: ParrotImportOptions): Promise<ParrotImportResult> => {
   const transport = options.transport ?? defaultParrotImportTransport;
   const log = options.log ?? (() => {});
   const readInfo = options.readInfo ?? readParrotTrackInfo;
   const rootOf = parrotRootFinder(options.roots ?? []);
+  // PAR-UP-03: each song is published as soon as it is stored, so the library shows it right away.
+  const publishEvery = Math.max(1, options.publishEvery ?? 1);
   const libraryKey = Buffer.from(options.libraryKeyBase64, "base64");
   if (libraryKey.length !== 32) throw new Error("the library key must be 32 bytes of base64");
-  const batchSongs = Math.max(1, options.publishBatchSongs ?? PARROT_PUBLISH_BATCH_SONGS);
-  const batchMs = options.publishBatchMs ?? PARROT_PUBLISH_BATCH_MS;
-  const waitMs = options.lookupWaitMs ?? PARROT_IMPORT_LOOKUP_WAIT_MS;
-  // PAR-UP-15: every chunk of this import, all songs and light copies, goes through these slots.
-  const slots = createParrotChunkSlots(options.uploadGate, log);
 
   const result: ParrotImportResult = { imported: [], skipped: [], failed: [], snapshotVersion: null };
-  const sizeOf = new Map(files.map((file, index) => [file, options.sizes?.[index] ?? 0]));
+  const sizes = await Promise.all(files.map((file) => fs.stat(file).then((stat) => stat.size, () => 0)));
   const progress: ParrotImportProgress = {
     phase: "uploading",
     total: files.length,
@@ -500,95 +440,151 @@ export const createParrotImportSession = (files: readonly string[], options: Par
     failed: 0,
     currentFile: null,
     bytesDone: 0,
-    bytesTotal: [...sizeOf.values()].reduce((sum, size) => sum + size, 0),
+    bytesTotal: sizes.reduce((sum, size) => sum + size, 0),
     published: 0,
   };
   const report = (patch: Partial<ParrotImportProgress>) => {
     Object.assign(progress, patch);
     options.onProgress?.({ ...progress });
   };
-  // Bytes of whole files through (stored, already there or failed) and the bytes sent so far of files still uploading.
-  let filesBytes = 0;
-  const sending = new Map<string, number>();
-  const bytesDone = () => filesBytes + [...sending.values()].reduce((sum, sent) => sum + sent, 0);
 
   const publishOptions = { transport, token: options.token, libraryKeyBase64: options.libraryKeyBase64, log };
-  let state: ParrotLibraryState | null = null;
-  /** The artists the library had when this import opened it (`buildParrotTrackOps`' `newArtist`). */
-  let artistsBefore = new Set<string>();
-  const db = () => {
-    if (!state) throw new Error("the import has not opened the library yet");
-    return state.db;
+  const state = await fetchParrotLibraryState(publishOptions);
+  let unpublished: ParrotLibraryOp[] = [];
+  // Albums whose cover upload failed in this run: their other songs do not retry it (the next import does).
+  const coverFailed = new Set<string>();
+  /** Seals one album cover or artist photo copy with the library key and stores it; resolves to its object key. */
+  const storeCover = (bytes: Uint8Array) =>
+    uploadParrotCover({ token: options.token, libraryKeyBase64: options.libraryKeyBase64, bytes, clientType: options.clientType, appId: PARROT_APP_ID, upload: transport.upload });
+
+  /**
+   * Gives an album already in the library the matched tracklist when it has none yet (PAR-LIB-05): an album imported
+   * before tracklists were stored gets its missing songs listed once its files are imported again.
+   */
+  const fillAlbumTracklist = (info: ParrotTrackInfo, albumId: string) => {
+    if (!info.tracklist?.length) return;
+    const album = getParrotAlbumRow(state.db, albumId);
+    if (!album || album.tracklist?.length) return;
+    const op = createParrotOp("album.upsert", { ...album, tracklist: info.tracklist }, { id: crypto.randomUUID(), createdAt: new Date().toISOString() });
+    applyParrotOps(state.db, [op]);
+    unpublished.push(op);
+    log(`[parrot-import] tracklist for ${albumId} from ${path.basename(info.file)}: ${info.tracklist.length} song(s)`);
   };
 
-  // The jobs of this import still live, and what each one waits for.
-  const jobs = new Map<string, ParrotSessionJob>();
-  /** Jobs whose commit waits for its ops to be published. */
-  const waitingPublish = new Set<string>();
-  /** Light copies made and uploaded: their commit waits for their song to be in the library. */
-  const lightReady = new Set<string>();
-
-  // Each song in the library (or ended without it): its light copy's commit waits for it.
-  const songsIn = new Map<string, PromiseWithResolvers<void>>();
-  const songIn = (file: string) => {
-    let gate = songsIn.get(file);
-    if (!gate) {
-      gate = Promise.withResolvers<void>();
-      songsIn.set(file, gate);
-    }
-    return gate;
-  };
-
-  // The tags of each file, read once while one of its jobs is live (a resumed job reads them again).
-  const infos = new Map<string, Promise<ParrotTrackInfo>>();
-  const infoOf = (file: string) => {
-    let info = infos.get(file);
-    if (!info) {
-      info = readInfo(file, rootOf(file));
-      infos.set(file, info);
-      info.catch(() => infos.delete(file));
-    }
-    return info;
-  };
-
-  // ---- the library writer and batched publish (PAR-UP-14) ----
-  let pending: ParrotLibraryOp[] = [];
-  let waiters: Array<{ jobId: string; resolve: () => void; reject: (error: unknown) => void }> = [];
-  let publishing: Promise<void> | null = null;
-  let publishTimer: ReturnType<typeof setTimeout> | null = null;
-  let publishFailures = 0;
-
-  /** Applies the ops `build` makes from the library as it is now, once no publish is out; they go out with the next publish. */
-  const apply = async (build: (library: ParrotLibraryDb) => ParrotLibraryOp[]): Promise<ParrotLibraryOp[]> => {
-    while (publishing) await publishing;
-    const ops = build(db());
-    if (!ops.length) return ops;
-    applyParrotOps(db(), ops);
-    pending.push(...ops);
-    return ops;
-  };
-
-  /** True when some live job of the import may still add ops to the next publish soon. */
-  const othersBusy = () => {
-    for (const [jobId, job] of jobs) {
-      if (waitingPublish.has(jobId)) continue;
-      // A light copy ready to record waits for its song, which waits for this publish.
-      if (job.light && lightReady.has(jobId) && job.parentId && jobs.has(job.parentId)) continue;
-      return true;
-    }
-    return false;
-  };
-
-  const schedulePublish = () => {
-    if (publishing || (!pending.length && !waiters.length)) return;
-    if (waiters.length >= batchSongs || !othersBusy()) {
-      void publish(false);
+  /**
+   * Gives `albumId` the file's picture when the album has no cover yet, or when its cover predates the small copy
+   * (one full-size object, from an import before small copies existed) and the picture is wide enough to need one.
+   * A failure leaves the song imported without a new cover.
+   */
+  const addAlbumCover = async (info: ParrotTrackInfo, albumId: string) => {
+    const cover = info.cover;
+    if (!cover || coverFailed.has(albumId)) return;
+    const album = getParrotAlbumRow(state.db, albumId);
+    if (!album || (album.coverObjectKey && album.coverThumbObjectKey)) return;
+    const problem = parrotCoverProblem(cover);
+    if (problem) {
+      log(`[parrot-import] cover of ${path.basename(info.file)} not used for ${albumId}: ${problem}`);
       return;
     }
-    publishTimer ??= setTimeout(() => {
-      publishTimer = null;
-      void publish(false);
-    }, batchMs);
+    try {
+      const copies = options.albumCoverCopies
+        ? await options.albumCoverCopies(cover, info.coverCrop ?? null)
+        : makeParrotCoverCopies(cover.bytes, log, { square: true, crop: info.coverCrop ?? null });
+      // A WebP or GIF wider than the large size, or an undecodable picture too big to keep as it is, is skipped (the
+      // `[covers]` line says which); the album's next song may bring a usable picture.
+      if (!copies) {
+        log(`[parrot-import] cover of ${path.basename(info.file)} not used for ${albumId}: no copy could be made of it`);
+        return;
+      }
+      // Already a single small (or undecodable) picture: nothing to add.
+      if (album.coverObjectKey && !copies.thumb) return;
+      const coverObjectKey = await storeCover(copies.large);
+      const coverThumbObjectKey = copies.thumb ? await storeCover(copies.thumb) : null;
+      const op = createParrotOp(
+        "album.upsert",
+        { ...album, coverObjectKey, coverThumbObjectKey },
+        { id: crypto.randomUUID(), createdAt: new Date().toISOString() }
+      );
+      applyParrotOps(state.db, [op]);
+      unpublished.push(op);
+      log(
+        `[parrot-import] album cover for ${albumId} from ${path.basename(info.file)} (${cover.bytes.length} bytes, ${cover.mime}) stored as ` +
+          `${coverObjectKey} (${copies.large.length} bytes) and small copy ${coverThumbObjectKey ?? "none"} (${copies.thumb?.length ?? 0} bytes)`
+      );
+    } catch (error) {
+      if (options.signal?.aborted) throw error;
+      coverFailed.add(albumId);
+      log(`[parrot-import] could not store the cover of ${albumId} from ${path.basename(info.file)}: ${errorText(error)}`);
+    }
+  };
+
+  /** Adds the light copy of a stored original when the app makes them and the song has none yet (PAR-FMT-02). */
+  const addLightCopy = async (input: { info: ParrotTrackInfo; bytes: Uint8Array; fileId: string; trackId: string }) => {
+    const make = options.makeLightCopy;
+    if (!make) return;
+    try {
+      const op = await addParrotLightCopy({
+        db: state.db,
+        trackId: input.trackId,
+        originalFileId: input.fileId,
+        original: parrotOriginalInMemory(input.bytes),
+        info: input.info,
+        longSongs: options.lightCopyLongSongs ?? false,
+        make,
+        upload: ({ fileId, fileHash, bytes }) =>
+          uploadParrotFile({
+            token: options.token,
+            userId: options.userId,
+            libraryKey,
+            fileId,
+            fileHash,
+            bytes,
+            clientType: options.clientType,
+            upload: transport.upload,
+            openUploadSession: transport.openUploadSession,
+            signal: options.signal,
+          }),
+        log,
+      });
+      if (op) unpublished.push(op);
+    } catch (error) {
+      if (options.signal?.aborted) throw error;
+      log(`[parrot-import] could not make the light copy of ${path.basename(input.info.file)}: ${errorText(error)}`);
+    }
+  };
+
+  const waitMs = options.lookupWaitMs ?? PARROT_IMPORT_LOOKUP_WAIT_MS;
+
+  // PAR-LYR-01: lookups start at most one every `lyricsGapMs`; after the lookup gives up (no ticket, too many failures
+  // in a row, asked to wait) the rest of the import asks nothing and the pass after it takes over.
+  let lyricsStopped = !options.lookupLyrics;
+  let lyricsFailedInARow = 0;
+  let lastLyricsAsk = 0;
+  /** Starts the lyrics lookup of a new song without words in its file; resolves to its `lyrics.set` op, or null. */
+  const askLyrics = async (info: ParrotTrackInfo, trackId: string): Promise<ParrotLibraryOp | null> => {
+    const lookup = options.lookupLyrics;
+    const artist = info.artist.trim();
+    const title = info.title.trim();
+    if (!lookup || lyricsStopped || info.lyrics || !artist || !title) return null;
+    await pause(lastLyricsAsk + (options.lyricsGapMs ?? PARROT_AUTO_LYRICS_GAP_MS) - Date.now(), options.signal);
+    if (options.signal?.aborted || lyricsStopped) return null;
+    lastLyricsAsk = Date.now();
+    const album = info.album.trim();
+    const question: MusicLyricsQuery = { artist, title, ...(album ? { album } : {}), ...(info.durationMs && info.durationMs > 0 ? { durationMs: info.durationMs } : {}) };
+    try {
+      const answer = await lookup(question);
+      lyricsFailedInARow = 0;
+      const ctx = { now: Date.now(), newId: () => crypto.randomUUID() };
+      const op = planParrotLyrics(trackId, answer, ctx);
+      log(`[parrot-import] lyrics of ${path.basename(info.file)}: ${op ? "found" : "none anywhere"}`);
+      return op ?? planParrotLyricsNotFound(trackId, ctx);
+    } catch (error) {
+      lyricsFailedInARow += 1;
+      const next = parrotAutoLyricsOnError(error, lyricsFailedInARow);
+      if (next.kind !== "skip") lyricsStopped = true;
+      log(`[parrot-import] lyrics lookup of ${path.basename(info.file)} failed (${errorText(error)})${lyricsStopped ? "; the rest wait for the pass after the import" : ""}`);
+      return null;
+    }
   };
 
   // PAR-META-15: one photo lookup per artist, its op kept until the artist is in the library and a publish goes out.
@@ -603,12 +599,9 @@ export const createParrotImportSession = (files: readonly string[], options: Par
     options.onArtistPhotosAsked?.([...photosOut]);
   };
   const artistRow = (id: string) =>
-    db()
+    state.db
       .prepare("SELECT id, music_id AS musicId, name, sort_name AS sortName, picture_object_key AS pictureObjectKey, picture_tried_at AS pictureTriedAt FROM artists WHERE id = ?")
       .get(id) as (ArtistRow & { pictureObjectKey: string | null; pictureTriedAt: number | null }) | undefined;
-  /** Seals one album cover or artist photo copy with the library key and stores it; resolves to its object key. */
-  const storeCover = (bytes: Uint8Array) =>
-    uploadParrotCover({ token: options.token, libraryKeyBase64: options.libraryKeyBase64, bytes, clientType: options.clientType, appId: PARROT_APP_ID, upload: transport.upload });
   const askPhoto = (artistId: string, musicId: string | null | undefined) => {
     const lookup = options.artistPhoto;
     if (!lookup || !musicId || photosAsked.has(artistId)) return;
@@ -633,483 +626,175 @@ export const createParrotImportSession = (files: readonly string[], options: Par
     })();
     photosAsked.set(artistId, asked);
   };
-  /** Moves the photos found so far, of artists now in the library, into the next publish (only while no publish is out). */
+  /** Moves the photos found so far, of artists now in the library, into the next publish. */
   const takePhotos = () => {
     for (const found of [...photosReady]) {
       const row = artistRow(found.artistId);
       if (!row) continue;
-      // PAR-META-31: a photo the user gave the artist meanwhile wins over the one found for it.
-      const picture = row.pictureObjectKey ? null : found.picture;
-      if (row.pictureObjectKey && found.picture) log(`[parrot-import] artist photo for ${row.id} not kept: the artist has the user's photo`);
       const op = createParrotOp(
         "artist.upsert",
-        { id: row.id, musicId: row.musicId ?? found.musicId, name: row.name, sortName: row.sortName, keepName: true, ...picture, pictureTriedAt: found.at },
+        { id: row.id, musicId: row.musicId ?? found.musicId, name: row.name, sortName: row.sortName, ...found.picture, pictureTriedAt: found.at },
         { id: crypto.randomUUID(), createdAt: new Date(found.at).toISOString() }
       );
-      applyParrotOps(db(), [op]);
-      pending.push(op);
+      applyParrotOps(state.db, [op]);
+      unpublished.push(op);
       photosPublishing.push(found.artistId);
       photosReady.splice(photosReady.indexOf(found), 1);
     }
   };
-  /**
-   * PAR-META-31: a photo op replayed on a newer library (another device published meanwhile) where the artist got the
-   * user's photo only records the asked time; any other op is replayed as it is.
-   */
-  const keepUserPhoto = (latest: ParrotLibraryDb, op: ParrotLibraryOp): ParrotLibraryOp => {
-    if (op.type !== "artist.upsert" || !op.payload.pictureObjectKey) return op;
-    const current = latest.prepare("SELECT picture_object_key AS pictureObjectKey FROM artists WHERE id = ?").get(op.payload.id) as
-      | { pictureObjectKey: string | null }
-      | undefined;
-    if (!current?.pictureObjectKey || current.pictureObjectKey === op.payload.pictureObjectKey) return op;
-    const { pictureObjectKey: _found, pictureThumbObjectKey: _thumb, pictureCredit: _credit, ...rest } = op.payload;
-    log(`[parrot-import] artist photo for ${op.payload.id} not kept on the newer library: the artist has the user's photo`);
-    return { ...op, payload: rest };
-  };
 
   /**
-   * Publishes every op applied so far, in one snapshot PUT. `final`: the last publish of the import, shown as
-   * "publishing", whose failure fails the import. Another writer (a lyrics or picture save, another device) may
-   * publish meanwhile: the helper replays the batch on its snapshot once and, when that meets yet another save,
-   * `state` already holds the latest library with the batch applied, so it is simply published again, up to
-   * PUBLISH_ATTEMPTS times. A publish between songs that still fails keeps its ops for the next one and its songs
-   * waiting; after PUBLISH_ATTEMPTS such failures in a row, the songs waiting for it fail.
+   * `final`: the last publish of the import, shown as "publishing"; the ones between songs keep "uploading".
+   * Another writer (a lyrics or picture save, another device) may publish meanwhile: the helper replays this batch
+   * on its snapshot once and, when that meets yet another save, `state` already holds the latest library with the
+   * batch applied, so it is simply published again, up to PUBLISH_ATTEMPTS times. A publish between songs that still
+   * fails does not fail the song just uploaded: its ops stay in `unpublished` and go out with the next publish.
    */
-  const publish = (final: boolean): Promise<void> => {
-    if (publishing) return publishing.then(() => (final ? publish(true) : undefined));
-    if (publishTimer) clearTimeout(publishTimer);
-    publishTimer = null;
-    const run = async () => {
-      takePhotos();
-      const batch = pending;
-      const batchWaiters = waiters;
-      if (!batch.length) {
-        for (const waiter of batchWaiters) waiter.resolve();
-        waiters = [];
-        return;
-      }
-      pending = [];
-      waiters = [];
-      if (final) report({ phase: "publishing" });
-      log(`[parrot-import] publishing ${batch.length} op(s) of ${batchWaiters.length} job(s)${final ? " (last publish of the import)" : ""}`);
-      try {
-        for (let attempt = 1; ; attempt += 1) {
-          try {
-            result.snapshotVersion = await publishParrotEdits(state!, (latest) => batch.map((op) => keepUserPhoto(latest, op)), publishOptions);
-            break;
-          } catch (error) {
-            if (!isParrotPublishConflict(error) || attempt >= PUBLISH_ATTEMPTS) throw error;
-            log(`[parrot-import] publish attempt ${attempt} met other saves twice (${errorText(error)}); publishing again on v${state!.baseVersion}`);
-          }
-        }
-      } catch (error) {
-        pending = [...batch, ...pending];
-        publishFailures += 1;
-        if (final || publishFailures >= PUBLISH_ATTEMPTS) {
-          for (const waiter of batchWaiters) waiter.reject(error);
-          if (final) throw error;
-          log(`[parrot-import] publish failed ${publishFailures} times in a row (${errorText(error)}); its ${batchWaiters.length} job(s) fail, its ${batch.length} op(s) go out with the next publish`);
-          return;
-        }
-        waiters = [...batchWaiters, ...waiters];
-        log(`[parrot-import] publish failed (${errorText(error)}); its ${batch.length} op(s) go out with the next publish`);
-        return;
-      }
-      publishFailures = 0;
-      if (result.snapshotVersion !== null) options.onPublished?.({ version: result.snapshotVersion, db: db() });
-      photosSettled(photosPublishing);
-      photosPublishing = [];
-      for (const waiter of batchWaiters) waiter.resolve();
-      report({ phase: final ? "publishing" : "uploading", published: progress.published + 1 });
-    };
-    const out = run().finally(() => {
-      publishing = null;
-      // A failed publish between songs is tried again after the batch wait.
-      if (pending.length || waiters.length) schedulePublish();
-    });
-    publishing = out.catch(() => undefined);
-    return out;
-  };
-
-  /** Waits until the ops applied so far (this job's) are published. */
-  const published = (jobId: string): Promise<void> => {
-    const { promise, resolve, reject } = Promise.withResolvers<void>();
-    waiters.push({ jobId, resolve, reject });
-    waitingPublish.add(jobId);
-    schedulePublish();
-    return promise.finally(() => waitingPublish.delete(jobId));
-  };
-
-  // ---- lookups started while a song uploads (PAR-LYR-01, PAR-META-15) ----
-  // PAR-LYR-01: lookups start at most one every `lyricsGapMs`; after the lookup gives up (no ticket, too many failures
-  // in a row, asked to wait) the rest of the import asks nothing and the pass after it takes over.
-  let lyricsStopped = !options.lookupLyrics;
-  let lyricsFailedInARow = 0;
-  let lastLyricsAsk = 0;
-  const lyricsAsked = new Map<string, Promise<ParrotLibraryOp | null>>();
-  let lyricsTurn: Promise<void> = Promise.resolve();
-  /** Starts the lyrics lookup of a new song without words in its file; resolves to its `lyrics.set` op, or null. */
-  const askLyrics = async (info: ParrotTrackInfo, trackId: string): Promise<ParrotLibraryOp | null> => {
-    const lookup = options.lookupLyrics;
-    const artist = info.artist.trim();
-    const title = info.title.trim();
-    if (!lookup || lyricsStopped || info.lyrics || !artist || !title) return null;
-    // Lookups wait their turn one at a time, each after the gap.
-    const turn = lyricsTurn;
-    const { promise: mine, resolve: done } = Promise.withResolvers<void>();
-    lyricsTurn = mine;
-    await turn;
+  const publish = async (final: boolean) => {
+    takePhotos();
+    if (!unpublished.length) return;
+    if (final) report({ phase: "publishing" });
     try {
-      await pause(lastLyricsAsk + (options.lyricsGapMs ?? PARROT_AUTO_LYRICS_GAP_MS) - Date.now(), options.signal);
-      if (options.signal?.aborted || lyricsStopped) return null;
-      lastLyricsAsk = Date.now();
-    } finally {
-      done();
-    }
-    const album = info.album.trim();
-    const question: MusicLyricsQuery = { artist, title, ...(album ? { album } : {}), ...(info.durationMs && info.durationMs > 0 ? { durationMs: info.durationMs } : {}) };
-    try {
-      const answer = await lookup(question);
-      lyricsFailedInARow = 0;
-      const ctx = { now: Date.now(), newId: () => crypto.randomUUID() };
-      const op = planParrotLyrics(trackId, answer, ctx);
-      log(`[parrot-import] lyrics of ${path.basename(info.file)}: ${op ? "found" : "none anywhere"}`);
-      return op ?? planParrotLyricsNotFound(trackId, ctx);
+      for (let attempt = 1; ; attempt += 1) {
+        try {
+          result.snapshotVersion = await publishParrotEdits(state, () => unpublished, publishOptions);
+          break;
+        } catch (error) {
+          if (!isParrotPublishConflict(error) || attempt >= PUBLISH_ATTEMPTS) throw error;
+          log(`[parrot-import] publish attempt ${attempt} met other saves twice (${errorText(error)}); publishing again on v${state.baseVersion}`);
+        }
+      }
     } catch (error) {
-      lyricsFailedInARow += 1;
-      const next = parrotAutoLyricsOnError(error, lyricsFailedInARow);
-      if (next.kind !== "skip") lyricsStopped = true;
-      log(`[parrot-import] lyrics lookup of ${path.basename(info.file)} failed (${errorText(error)})${lyricsStopped ? "; the rest wait for the pass after the import" : ""}`);
-      return null;
-    }
-  };
-
-  // ---- album covers and tracklists ----
-  // Albums whose cover upload failed in this import: their other songs do not retry it (the next import does).
-  const coverFailed = new Set<string>();
-  // One cover at a time per album: songs of one album finish side by side and would each store the same picture.
-  const coverTurns = new Map<string, Promise<void>>();
-
-  /**
-   * Gives an album already in the library the matched tracklist when it has none yet (PAR-LIB-05): an album imported
-   * before tracklists were stored gets its missing songs listed once its files are imported again.
-   */
-  const fillAlbumTracklist = (info: ParrotTrackInfo, albumId: string) =>
-    apply((library) => {
-      if (!info.tracklist?.length) return [];
-      const album = getParrotAlbumRow(library, albumId);
-      if (!album || album.tracklist?.length) return [];
-      log(`[parrot-import] tracklist for ${albumId} from ${path.basename(info.file)}: ${info.tracklist.length} song(s)`);
-      return [createParrotOp("album.upsert", { ...album, tracklist: info.tracklist }, { id: crypto.randomUUID(), createdAt: new Date().toISOString() })];
-    });
-
-  /**
-   * Gives `albumId` the file's picture when the album has no cover yet, or when its cover predates the small copy
-   * (one full-size object, from an import before small copies existed) and the picture is wide enough to need one.
-   * A failure leaves the song imported without a new cover.
-   */
-  const addAlbumCover = (info: ParrotTrackInfo, albumId: string): Promise<void> => {
-    const before = coverTurns.get(albumId) ?? Promise.resolve();
-    const turn = before.then(() => addAlbumCoverNow(info, albumId));
-    const settled = turn.catch(() => undefined);
-    coverTurns.set(albumId, settled);
-    void settled.finally(() => {
-      if (coverTurns.get(albumId) === settled) coverTurns.delete(albumId);
-    });
-    return turn;
-  };
-  const addAlbumCoverNow = async (info: ParrotTrackInfo, albumId: string) => {
-    const cover = info.cover;
-    if (!cover || coverFailed.has(albumId)) return;
-    const album = getParrotAlbumRow(db(), albumId);
-    if (!album || (album.coverObjectKey && album.coverThumbObjectKey)) return;
-    const problem = parrotCoverProblem(cover);
-    if (problem) {
-      log(`[parrot-import] cover of ${path.basename(info.file)} not used for ${albumId}: ${problem}`);
+      if (final) throw error;
+      log(`[parrot-import] publish between songs failed (${errorText(error)}); its ${unpublished.length} op(s) go out with the next publish`);
       return;
     }
-    try {
-      const copies = options.albumCoverCopies
-        ? await options.albumCoverCopies(cover, info.coverCrop ?? null)
-        : makeParrotCoverCopies(cover.bytes, log, { square: true, crop: info.coverCrop ?? null });
-      // A WebP or GIF wider than the large size, or an undecodable picture too big to keep as it is, is skipped (the
-      // `[covers]` line says which); the album's next song may bring a usable picture.
-      if (!copies) {
-        log(`[parrot-import] cover of ${path.basename(info.file)} not used for ${albumId}: no copy could be made of it`);
-        return;
-      }
-      // Already a single small (or undecodable) picture: nothing to add.
-      if (album.coverObjectKey && !copies.thumb) return;
-      const coverObjectKey = await storeCover(copies.large);
-      const coverThumbObjectKey = copies.thumb ? await storeCover(copies.thumb) : null;
-      // The album as it is now: another song of it may have changed it while the cover uploaded.
-      await apply((library) => {
-        const now = getParrotAlbumRow(library, albumId);
-        return now ? [createParrotOp("album.upsert", { ...now, coverObjectKey, coverThumbObjectKey }, { id: crypto.randomUUID(), createdAt: new Date().toISOString() })] : [];
-      });
-      log(
-        `[parrot-import] album cover for ${albumId} from ${path.basename(info.file)} (${cover.bytes.length} bytes, ${cover.mime}) stored as ` +
-          `${coverObjectKey} (${copies.large.length} bytes) and small copy ${coverThumbObjectKey ?? "none"} (${copies.thumb?.length ?? 0} bytes)`
-      );
-    } catch (error) {
-      if (options.signal?.aborted) throw error;
-      coverFailed.add(albumId);
-      log(`[parrot-import] could not store the cover of ${albumId} from ${path.basename(info.file)}: ${errorText(error)}`);
-    }
+    unpublished = [];
+    if (result.snapshotVersion !== null) options.onPublished?.({ version: result.snapshotVersion, db: state.db });
+    photosSettled(photosPublishing);
+    photosPublishing = [];
+    report({ phase: final ? "publishing" : "uploading", published: progress.published + 1 });
   };
 
   const albumsImporting = new Set<string>();
+  // Bytes of whole files through (stored, already there or failed) and the bytes sent so far of files still uploading.
+  let filesBytes = 0;
+  const sending = new Map<number, number>();
+  const bytesDone = () => filesBytes + [...sending.values()].reduce((sum, sent) => sum + sent, 0);
 
-  /** Reads a picked file again for a step that needs its bytes; it must not have changed since its probe. */
-  const readSame = async (file: string, probe: ParrotSongProbe) => {
+  /**
+   * What a file needs before its song can join the library: its bytes, hash and tags, and, when the library does not
+   * have it yet, its original stored and its lookups started. Touches the library only to read it, so the next file's
+   * runs while the song before it gets its light copy and is published (PAR-UP-02).
+   */
+  const prepare = async (file: string, index: number): Promise<PreparedFile> => {
     const bytes = new Uint8Array(await fs.readFile(file));
-    if (sha256Hex(bytes) !== probe.fileHash) throw new Error(`${path.basename(file)} changed on disk during the import`);
-    return bytes;
+    const fileHash = sha256Hex(bytes);
+    const info = await readInfo(file, rootOf(file));
+    const ids = parrotTrackIds({ ...info, fileHash });
+    const existing = getParrotFile(state.db, ids.fileId);
+    if (existing) return { bytes, fileHash, info, ids, existing, stored: null, lyricsAsked: null };
+    const { fileId, albumId, trackId, artistId, albumArtistId } = ids;
+    log(`[parrot-import] uploading ${path.basename(file)} (${bytes.length} bytes) as ${fileId}: ${info.artist} / ${info.album} / ${info.title}`);
+    if (!albumsImporting.has(albumId)) {
+      albumsImporting.add(albumId);
+      options.onAlbumImporting?.(albumId);
+    }
+    // The lookups run while the file uploads (PAR-LYR-01, PAR-META-15).
+    askPhoto(artistId, info.artistMusicId ?? (albumArtistId === artistId ? info.albumArtistMusicId : null));
+    if (albumArtistId !== artistId) askPhoto(albumArtistId, info.albumArtistMusicId);
+    const lyricsAsked = askLyrics(info, trackId);
+    sending.set(index, 0);
+    const stored = await uploadParrotOriginal({
+      token: options.token,
+      userId: options.userId,
+      libraryKey,
+      fileId,
+      fileHash,
+      bytes,
+      container: info.format.container,
+      clientType: options.clientType,
+      split: options.splitOriginals ?? false,
+      upload: transport.upload,
+      openUploadSession: transport.openUploadSession,
+      onChunk: (declaredBytes) => {
+        sending.set(index, Math.min(sizes[index], (sending.get(index) ?? 0) + declaredBytes));
+        report({ bytesDone: bytesDone() });
+      },
+      signal: options.signal,
+      log,
+    });
+    return { bytes, info, ids, existing: null, stored, fileHash, lyricsAsked };
   };
+  // A settled outcome, so a file that fails while the one before it is still finishing is no unhandled rejection.
+  const start = (index: number): Promise<PreparedOutcome> | null =>
+    index < files.length
+      ? prepare(files[index], index).then(
+          (value): PreparedOutcome => ({ ok: true, value }),
+          (error: unknown): PreparedOutcome => ({ ok: false, error })
+        )
+      : null;
 
-  const close = () => {
-    if (publishTimer) clearTimeout(publishTimer);
-    publishTimer = null;
-    photosSettled([...photosOut]);
-    state?.db.close();
-    state = null;
-  };
-
-  return {
-    files,
-    result,
-    progress: () => ({ ...progress }),
-    log,
-    /** Reads the account's latest library; every step works on it. */
-    async open() {
-      if (state) return;
-      state = await fetchParrotLibraryState(publishOptions);
-      artistsBefore = new Set((state.db.prepare("SELECT id FROM artists").all() as Array<{ id: string }>).map((row) => row.id));
-    },
-    /** A job of this import, live until `jobEnded`. */
-    track(jobId: string, job: ParrotSessionJob) {
-      jobs.set(jobId, job);
-    },
-    jobEnded(jobId: string) {
-      const job = jobs.get(jobId);
-      jobs.delete(jobId);
-      lightReady.delete(jobId);
-      if (job && ![...jobs.values()].some((other) => other.file === job.file)) infos.delete(job.file);
-      schedulePublish();
-    },
-
-    // ---- the song's own job (PAR-UP-13): probe → identify → extract → upload → commit ----
-    /** Reads, hashes and tags the file; finds out whether the library already has it. */
-    async probe(file: string): Promise<ParrotSongProbe> {
+  try {
+    let sinceLastPublish = 0;
+    let next = start(0);
+    for (const [index, file] of files.entries()) {
+      const outcome = await next!;
+      options.signal?.throwIfAborted();
+      // The next file is read and uploaded while this one's song is finished below.
+      next = start(index + 1);
       report({ currentFile: file });
-      const bytes = new Uint8Array(await fs.readFile(file));
-      const fileHash = sha256Hex(bytes);
-      const info = await infoOf(file);
-      const ids = parrotTrackIds({ ...info, fileHash });
-      const existing = getParrotFile(db(), ids.fileId);
-      if (!sizeOf.get(file)) {
-        sizeOf.set(file, bytes.length);
-        report({ bytesTotal: [...sizeOf.values()].reduce((sum, size) => sum + size, 0) });
-      }
-      return { size: bytes.length, fileHash, ids, existingTrackId: existing?.trackId ?? null };
-    },
-    /** Starts the lookups of a new song (lyrics, artist photos), which run while it uploads. */
-    async identify(file: string, probe: ParrotSongProbe) {
-      if (probe.existingTrackId) return;
-      const info = await infoOf(file);
-      const { fileId, albumId, trackId, artistId, albumArtistId } = probe.ids;
-      log(`[parrot-import] uploading ${path.basename(file)} (${probe.size} bytes) as ${fileId}: ${info.artist} / ${info.album} / ${info.title}`);
-      if (!albumsImporting.has(albumId)) {
-        albumsImporting.add(albumId);
-        options.onAlbumImporting?.(albumId);
-      }
-      askPhoto(artistId, info.artistMusicId ?? (albumArtistId === artistId ? info.albumArtistMusicId : null));
-      if (albumArtistId !== artistId) askPhoto(albumArtistId, info.albumArtistMusicId);
-      const asked = askLyrics(info, trackId);
-      lyricsAsked.set(fileId, asked);
-      // Never an unhandled rejection: the commit reads it, or the song failed before.
-      asked.catch(() => undefined);
-    },
-    /** The file is still there as probed (the light copy is made from it). */
-    async extract(file: string, probe: ParrotSongProbe) {
-      const stat = await fs.stat(file);
-      if (stat.size !== probe.size) throw new Error(`${path.basename(file)} changed on disk during the import`);
-    },
-    /** Stores the original (PAR-FMT-01), its chunks side by side (PAR-UP-02). */
-    async upload(file: string, probe: ParrotSongProbe, signal: AbortSignal, onProgress: (fraction: number) => void): Promise<ParrotStoredOriginal | null> {
-      if (probe.existingTrackId) return null;
-      const bytes = await readSame(file, probe);
-      const info = await infoOf(file);
-      sending.set(file, 0);
-      return uploadParrotOriginal({
-        token: options.token,
-        userId: options.userId,
-        libraryKey,
-        fileId: probe.ids.fileId,
-        fileHash: probe.fileHash,
-        bytes,
-        container: info.format.container,
-        clientType: options.clientType,
-        split: options.splitOriginals ?? false,
-        upload: transport.upload,
-        openUploadSession: transport.openUploadSession,
-        onChunk: (declaredBytes) => {
-          const sent = Math.min(probe.size, (sending.get(file) ?? 0) + declaredBytes);
-          sending.set(file, sent);
-          onProgress(probe.size ? sent / probe.size : 1);
-          report({ bytesDone: bytesDone() });
-        },
-        signal,
-        slots,
-        log,
-      });
-    },
-    /** Adds the song (or, for a file the library has, its album's missing cover and tracklist) and waits until it is published. */
-    async commit(jobId: string, file: string, probe: ParrotSongProbe, stored: ParrotStoredOriginal | null, signal: AbortSignal) {
-      const info = await infoOf(file);
-      const { fileId, albumId, trackId } = probe.ids;
-      if (probe.existingTrackId || !stored) {
-        log(`[parrot-import] already in the library: ${path.basename(file)} (${fileId})`);
-        await addAlbumCover(info, albumId);
-        await fillAlbumTracklist(info, albumId);
-        // PAR-LYR-09: lyrics the user placed on a song the library already has still go on it.
-        const ownLyrics = info.lyrics?.user ? info.lyrics : null;
-        if (ownLyrics && probe.existingTrackId) {
-          const trackOf = probe.existingTrackId;
-          await apply(() => [parrotFileLyricsOp(trackOf, ownLyrics, Date.now(), { id: crypto.randomUUID(), createdAt: new Date().toISOString() })]);
+      const through = () => {
+        sending.delete(index);
+        filesBytes += sizes[index];
+        return bytesDone();
+      };
+      try {
+        if (!outcome.ok) throw outcome.error;
+        const { bytes, fileHash, info, ids, existing, stored } = outcome.value;
+        const { fileId, albumId, trackId } = ids;
+        if (existing) {
+          log(`[parrot-import] already in the library: ${path.basename(file)} (${fileId})`);
+          result.skipped.push(file);
+          await addAlbumCover(info, albumId);
+          fillAlbumTracklist(info, albumId);
+          // Imported before light copies existed: importing it again adds its light copy.
+          await addLightCopy({ info, bytes, fileId, trackId: existing.trackId });
+          report({ done: progress.done + 1, skipped: progress.skipped + 1, bytesDone: through() });
+          continue;
         }
-        songIn(file).resolve();
-        await published(jobId);
-        return "skipped" as const;
+        const ops = buildParrotTrackOps({ info, fileHash, ...stored!, now: Date.now() });
+        const lyrics = await within(outcome.value.lyricsAsked!, waitMs, options.signal);
+        if (lyrics !== TIMED_OUT && lyrics) ops.push(lyrics);
+        else if (options.lookupLyrics && !info.lyrics) {
+          if (lyrics === TIMED_OUT) log(`[parrot-import] lyrics of ${path.basename(file)} still out after ${waitMs} ms; the song goes out without them`);
+          options.onLyricsUnasked?.(trackId);
+        }
+        applyParrotOps(state.db, ops);
+        unpublished.push(...ops);
+        await addAlbumCover(info, albumId);
+        await addLightCopy({ info, bytes, fileId, trackId });
+        result.imported.push(file);
+        report({ done: progress.done + 1, imported: progress.imported + 1, bytesDone: through() });
+        sinceLastPublish += 1;
+        if (sinceLastPublish >= publishEvery) {
+          await publish(false);
+          sinceLastPublish = 0;
+        }
+      } catch (error) {
+        if (options.signal?.aborted) throw error;
+        log(`[parrot-import] failed ${file}: ${errorText(error)}`);
+        result.failed.push({ file, error: errorText(error) });
+        report({ done: progress.done + 1, failed: progress.failed + 1, bytesDone: through() });
       }
-      const asked = lyricsAsked.get(fileId);
-      lyricsAsked.delete(fileId);
-      const lyrics = asked ? await within(asked, waitMs, signal) : null;
-      const extra: ParrotLibraryOp[] = [];
-      if (lyrics !== TIMED_OUT && lyrics) extra.push(lyrics);
-      else if (options.lookupLyrics && !info.lyrics) {
-        if (lyrics === TIMED_OUT) log(`[parrot-import] lyrics of ${path.basename(file)} still out after ${waitMs} ms; the song goes out without them`);
-        options.onLyricsUnasked?.(trackId);
-      }
-      await apply(() => [
-        ...buildParrotTrackOps({ info, fileHash: probe.fileHash, ...stored, now: Date.now(), newArtist: (artistId) => !artistsBefore.has(artistId) }),
-        ...extra,
-      ]);
-      songIn(file).resolve();
-      await addAlbumCover(info, albumId);
-      await published(jobId);
-      return "imported" as const;
-    },
-    /** The song's own job ended: counted as imported, already there or failed. */
-    songEnded(file: string, outcome: "imported" | "skipped" | { error: string }) {
-      songIn(file).resolve();
-      sending.delete(file);
-      filesBytes += sizeOf.get(file) ?? 0;
-      // Counted here, not at the commit: a resumed import counts the songs done before Parrot quit too (RT-LIFE-04).
-      if (typeof outcome === "object") {
-        log(`[parrot-import] failed ${file}: ${outcome.error}`);
-        result.failed.push({ file, error: outcome.error });
-      } else (outcome === "imported" ? result.imported : result.skipped).push(file);
-      report({
-        done: progress.done + 1,
-        imported: progress.imported + (outcome === "imported" ? 1 : 0),
-        skipped: progress.skipped + (outcome === "skipped" ? 1 : 0),
-        failed: progress.failed + (typeof outcome === "object" ? 1 : 0),
-        bytesDone: bytesDone(),
-      });
-    },
-
-    /** A failed song's job runs again (its row's "Try again", UX-JOBS-02): its failure is no longer counted. */
-    songRetried(file: string) {
-      const at = result.failed.findIndex((failure) => failure.file === file);
-      if (at < 0) return;
-      result.failed.splice(at, 1);
-      songsIn.delete(file);
-      filesBytes -= sizeOf.get(file) ?? 0;
-      log(`[parrot-import] trying ${file} again`);
-      report({ done: progress.done - 1, failed: progress.failed - 1, bytesDone: bytesDone() });
-    },
-
-    // ---- the song's light copy (PAR-FMT-02), a job of its own: transcode → upload → commit ----
-    /** Makes the light copy into `out`; null when the song needs none made here. */
-    async transcodeLight(file: string, probe: ParrotSongProbe, out: string, signal?: AbortSignal): Promise<ParrotLightCopyMade | null> {
-      const make = options.makeLightCopy;
-      if (!make) return null;
-      // PAR-UP-15: in `pause` the encoder waits too, so nothing competes with the song playing.
-      await slots.whileHeld(signal);
-      const info = await infoOf(file);
-      const trackId = probe.existingTrackId ?? probe.ids.trackId;
-      const fileId = parrotLightCopyToMake({ db: db(), trackId, originalFileId: probe.ids.fileId, durationMs: info.durationMs, longSongs: options.lightCopyLongSongs ?? false, log });
-      if (!fileId) return null;
-      const started = Date.now();
-      const handle = await fs.open(file, "r");
-      let bytes: Uint8Array;
-      try {
-        const original = parrotOriginalOnDisk(handle, probe.size);
-        bytes = await make({
-          size: original.size,
-          read: original.read,
-          container: info.format.container,
-          codec: info.format.codec,
-          durationMs: info.durationMs,
-          tags: parrotCopyTagsOf(info),
-        });
-      } finally {
-        await handle.close();
-      }
-      await fs.mkdir(path.dirname(out), { recursive: true });
-      await fs.writeFile(out, bytes);
-      return { path: out, fileId, bytes: bytes.length, fileHash: sha256Hex(bytes), originalBytes: probe.size, codec: info.format.codec, ms: Date.now() - started };
-    },
-    async uploadLight(made: ParrotLightCopyMade, signal: AbortSignal): Promise<TrackFileChunkRow[]> {
-      const bytes = new Uint8Array(await fs.readFile(made.path));
-      if (sha256Hex(bytes) !== made.fileHash) throw new Error(`the light copy ${made.path} changed on disk`);
-      return uploadParrotFile({
-        token: options.token,
-        userId: options.userId,
-        libraryKey,
-        fileId: made.fileId,
-        fileHash: made.fileHash,
-        bytes,
-        clientType: options.clientType,
-        upload: transport.upload,
-        openUploadSession: transport.openUploadSession,
-        signal,
-        slots,
-      });
-    },
-    /** The light copy is made and stored: its commit waits for its song to be published first. */
-    lightReady(jobId: string) {
-      lightReady.add(jobId);
-      schedulePublish();
-    },
-    async commitLight(jobId: string, file: string, probe: ParrotSongProbe, made: ParrotLightCopyMade, chunks: TrackFileChunkRow[]) {
-      // A song of this import: its own commit puts it in the library first (a resumed import whose song job ended finds it there).
-      if ([...jobs.entries()].some(([id, job]) => id !== jobId && job.file === file && !job.light)) await songIn(file).promise;
-      const trackId = probe.existingTrackId ?? probe.ids.trackId;
-      await apply((library) =>
-        hasParrotLightCopy(library, trackId) || !library.prepare("SELECT 1 FROM tracks WHERE id = ?").get(trackId)
-          ? []
-          : [buildParrotLightCopyOp({ trackId, fileId: made.fileId, sizeBytes: made.bytes, chunks, now: Date.now() })]
-      );
-      log(parrotLightCopyMadeLine({ trackId, fileId: made.fileId, originalBytes: made.originalBytes, codec: made.codec, copyBytes: made.bytes, ms: made.ms }));
-      await published(jobId);
-      await fs.rm(made.path, { force: true });
-    },
-
-    /** Every job ended: the photos still out get a last chance, then the last publish. Closes the library. */
-    async finish(signal?: AbortSignal): Promise<ParrotImportResult> {
-      try {
-        signal?.throwIfAborted();
-        // The photos still out get a last chance to go out with the import (PAR-META-15); the rest wait for the pass.
-        if (photosOut.size > 0) await within(Promise.all(photosAsked.values()), waitMs, signal);
-        await publish(true);
-        report({ phase: "done", currentFile: null });
-        return result;
-      } finally {
-        close();
-      }
-    },
-    close,
-  };
+    }
+    // The photos still out get a last chance to go out with the import (PAR-META-15); the rest wait for the pass.
+    if (photosOut.size > 0) await within(Promise.all(photosAsked.values()), waitMs, options.signal);
+    await publish(true);
+    report({ phase: "done", currentFile: null });
+    return result;
+  } finally {
+    photosSettled([...photosOut]);
+    state.db.close();
+  }
 };

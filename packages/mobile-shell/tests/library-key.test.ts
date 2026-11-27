@@ -9,7 +9,6 @@ import nodeCrypto from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
 import {
   checkLibraryKey,
-  createKeptKeyOwnerStore,
   createLibraryKeyStore,
   isLibraryKeyShape,
   LIBRARY_KEY_ACK_STORAGE,
@@ -143,20 +142,5 @@ describe("checkLibraryKey", () => {
     expect(derived).toBe(words.keyBase64);
     expect(await checkLibraryKey(derived, wordProbe, aesGcmOpen)).toBe("ok");
     expect(await checkLibraryKey(derived, probe, aesGcmOpen)).toBe("wrong");
-  });
-});
-
-describe("@req PRIV-KEY-03 @req REL-FAM-03 kept key owner store", () => {
-  it("reads back the owner written, under the app's own key, and forgets it", async () => {
-    const storage = memoryStorage();
-    const owner = createKeptKeyOwnerStore({ asyncStorage: storage, key: "test.libraryKeyOwner" });
-    expect(await owner.read()).toBeNull();
-    await owner.write("u1");
-    console.info("[library-key] owner stored", Object.fromEntries(storage.items));
-    expect(storage.items.get("test.libraryKeyOwner")).toBe("u1");
-    expect(await owner.read()).toBe("u1");
-    await owner.forget();
-    expect(await owner.read()).toBeNull();
-    expect(storage.items.size).toBe(0);
   });
 });

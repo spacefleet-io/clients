@@ -8,7 +8,7 @@
  *   textDim #878ca1 on surface #242638 was 4.47:1 (< 4.5:1).
  */
 import { describe, expect, it } from "vitest";
-import { defaultMobileShellTheme } from "@space/mobile-shell/theme";
+import { defaultMobileShellTheme } from "../../../../packages/mobile-shell/src/theme";
 
 const { colors, accentHex, accentTextHex } = defaultMobileShellTheme;
 

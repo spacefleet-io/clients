@@ -1,6 +1,6 @@
 import { mkdirSync } from "node:fs";
 import { homedir } from "node:os";
-import { basename, join } from "node:path";
+import { join } from "node:path";
 import type { PathLayer } from "@space/desktop-platform-contract";
 import { restrictDirToOwnerPosix, restrictFileToOwnerPosix } from "@space/desktop-platform-contract";
 
@@ -22,5 +22,4 @@ export const macosPaths: PathLayer = {
   // Electron's userData is `<appData>/<product name>`: ~/Library/Application Support/Badger (PLAT-DESK-07). macOS has
   // no earlier install whose directory must be kept.
   appUserDataDir: ({ appData, productName }) => join(appData, productName),
-  trashPaths: (filename) => [join(homedir(), ".Trash", basename(filename))],
 };

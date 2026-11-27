@@ -33,7 +33,6 @@ import { mergeSnapshotDelta, readLibraryFrame, type LibrarySnapshotDelta } from 
 import type { LibrarySnapshot } from "../shared/libraryTypes";
 import { setActivePlaybackProfileId } from "./activePlaybackProfile";
 import { parseActiveProfileArg, type ActiveProfileArg } from "./activeProfileArg";
-import { retry } from "@space/shared/retry";
 
 const logger = scopeLogger("library-db-proxy");
 
@@ -1340,9 +1339,6 @@ export const reopenAfterRuntimeRespawn = async (): Promise<{ reopened: boolean; 
  *  second respawn, so one failed re-open must not strand the library for the session. */
 export const REOPEN_RETRY_DELAYS_MS: readonly number[] = [1_000, 2_000, 4_000, 8_000, 15_000];
 
-/** A newer `reopenAfterRuntimeReady` (next respawn) or a logout took over: the running loop stops without another try. */
-class ReopenSuperseded extends Error {}
-
 /**
  * F5 (ultimate stress, issue #25): called on every guardian "ready". Re-fires the
  * library open (see `reopenAfterRuntimeRespawn`) and, if that fails, retries on
@@ -1352,31 +1348,22 @@ class ReopenSuperseded extends Error {}
 export const reopenAfterRuntimeReady = async (): Promise<{ reopened: boolean; reason?: string }> => {
   const generation = ++reopenGeneration;
   const maxAttempts = REOPEN_RETRY_DELAYS_MS.length + 1;
-  const attemptFailed = (attempt: number, error: unknown, retryInMs: number | null) => {
-    const message = error instanceof Error ? error.message : String(error);
-    logger.warn({ attempt, maxAttempts, error: message, retryInMs }, "reopen after runtime ready: attempt failed");
-  };
-  try {
-    return await retry(
-      async (attempt) => {
-        if (generation !== reopenGeneration) {
-          logger.info({ attempt, generation }, "reopen after runtime ready: superseded");
-          throw new ReopenSuperseded();
-        }
-        const result = await reopenAfterRuntimeRespawn();
-        logger.info({ attempt, maxAttempts, ...result }, "reopen after runtime ready: done");
-        return result;
-      },
-      {
-        attempts: maxAttempts,
-        retryable: (error) => !(error instanceof ReopenSuperseded),
-        backoffMs: (attempt) => REOPEN_RETRY_DELAYS_MS[attempt - 1] ?? 0,
-        onRetry: ({ attempt, waitMs, error }) => attemptFailed(attempt, error, waitMs),
-      }
-    );
-  } catch (error) {
-    if (error instanceof ReopenSuperseded) return { reopened: false, reason: "superseded" };
-    attemptFailed(maxAttempts, error, null);
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    if (generation !== reopenGeneration) {
+      logger.info({ attempt, generation }, "reopen after runtime ready: superseded");
+      return { reopened: false, reason: "superseded" };
+    }
+    try {
+      const result = await reopenAfterRuntimeRespawn();
+      logger.info({ attempt, maxAttempts, ...result }, "reopen after runtime ready: done");
+      return result;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const delayMs = REOPEN_RETRY_DELAYS_MS[attempt - 1];
+      logger.warn({ attempt, maxAttempts, error: message, retryInMs: delayMs ?? null }, "reopen after runtime ready: attempt failed");
+      if (delayMs === undefined) break;
+      await new Promise<void>((resolve) => setTimeout(resolve, delayMs));
+    }
   }
   logger.error({ maxAttempts }, "reopen after runtime ready: retries exhausted");
   releaseRestartGate("reopen-retries-exhausted");

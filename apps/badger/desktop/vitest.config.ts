@@ -23,6 +23,9 @@ export default defineConfig({
       { find: "@space/runtime-client/ownerSecretFile", replacement: resolve(__dirname, "../../../packages/runtime-client/src/ownerSecretFile.ts") },
       { find: "@space/runtime-client/ownerSecretIpc", replacement: resolve(__dirname, "../../../packages/runtime-client/src/ownerSecretIpc.ts") },
       { find: "@space/runtime-client", replacement: resolve(__dirname, "../../../packages/runtime-client/src/index.ts") },
+      // The CI-binary helpers live in media-deps; desktop declares no dependency on it (its `file:` deps make bun
+      // re-resolve them as copies when the manifest changes), so the tests reach it by path.
+      { find: "@space/media-deps", replacement: resolve(__dirname, "../../../packages/media-deps/src/index.ts") },
       { find: "@", replacement: resolve(__dirname, "src/renderer/src") },
     ],
   },

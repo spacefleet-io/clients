@@ -44,14 +44,14 @@ vi.mock("react-native", () => ({
   View: stubs.ViewStub,
 }));
 
-import { KeyboardAvoidingForm, keyboardCoverage, keyboardInsetAfter, keyboardLiftFor } from "../src/keyboard";
+import { KeyboardAvoidingForm, keyboardInsetAfter, keyboardLiftFor } from "../src/keyboard";
 
 type Element = { type: unknown; props: Record<string, unknown> };
-const render = (os: string, version: number | string, translucentModal?: boolean): Element => {
+const render = (os: string, version: number | string): Element => {
   stubs.platform.OS = os;
   stubs.platform.Version = version;
   stubs.listeners.length = 0;
-  return KeyboardAvoidingForm({ style: { flex: 1 }, iosOffset: 90, translucentModal, children: "form" }) as unknown as Element;
+  return KeyboardAvoidingForm({ style: { flex: 1 }, iosOffset: 90, children: "form" }) as unknown as Element;
 };
 
 describe("keyboardLiftFor", () => {
@@ -76,15 +76,6 @@ describe("keyboardLiftFor", () => {
       expect(lift).toBe("window-resize");
     }
   });
-
-  it("pads by the keyboard on any Android inside a statusBarTranslucent Modal, whose window never shrinks", () => {
-    for (const api of [26, 34, 36]) {
-      const lift = keyboardLiftFor("android", api, true);
-      console.info("keyboard lift", { os: "android", api, translucentModal: true, lift });
-      expect(lift).toBe("keyboard-inset");
-    }
-    expect(keyboardLiftFor("ios", "18.0", true)).toBe("avoiding-view");
-  });
 });
 
 describe("keyboardInsetAfter", () => {
@@ -94,19 +85,6 @@ describe("keyboardInsetAfter", () => {
     console.info("keyboard inset", { shown, hidden });
     expect(shown).toBe(297);
     expect(hidden).toBe(0);
-  });
-});
-
-// A statusBarTranslucent Modal runs under the navigation bar, which the keyboard's reported height leaves out: on op9
-// (804 dp screen) the keyboard's top sat at 505 dp but its height read 283, so padding by the height hid the buttons.
-describe("keyboardCoverage", () => {
-  it("is the stretch of the form below the keyboard's top edge, and nothing while it is hidden or unmeasured", () => {
-    const covered = keyboardCoverage(804, 505);
-    console.info("keyboard coverage", { covered, hidden: keyboardCoverage(804, null), unmeasured: keyboardCoverage(null, 505) });
-    expect(covered).toBe(299);
-    expect(keyboardCoverage(804, null)).toBe(0);
-    expect(keyboardCoverage(null, 505)).toBe(0);
-    expect(keyboardCoverage(400, 505)).toBe(0);
   });
 });
 
@@ -132,15 +110,6 @@ describe("KeyboardAvoidingForm", () => {
     expect(element.type).toBe(stubs.ViewStub);
     expect(element.props.style).toEqual([{ flex: 1 }, { paddingBottom: 0 }]);
     expect(stubs.listeners).toEqual([]);
-  });
-
-  it("in a statusBarTranslucent Modal on older Android listens for the keyboard", () => {
-    const element = render("android", 34, true);
-    console.info("android 14 modal form", { isView: element.type === stubs.ViewStub, listeners: [...stubs.listeners] });
-    expect(element.type).toBe(stubs.ViewStub);
-    expect(element.props.style).toEqual([{ flex: 1 }, { paddingBottom: 0 }]);
-    expect(typeof element.props.onLayout).toBe("function");
-    expect(stubs.listeners).toEqual(["keyboardDidShow", "keyboardDidHide"]);
   });
 });
 

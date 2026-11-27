@@ -5,7 +5,6 @@
 import React, { useEffect, useMemo, useRef, useSyncExternalStore } from "react";
 import { Animated, Easing, Text } from "react-native";
 import { ArrowDownToLine, CircleCheck, LoaderCircle } from "lucide-react-native";
-import { MobileIconButton } from "@space/mobile-shell/components";
 import { useTranslation } from "@space/mobile-shell/i18n";
 import { formatLocalizedStorage } from "@space/shared/format";
 import { offlineReach, type KeptKind, type KeptStatus, type OfflineReach } from "@space/parrot-core";
@@ -15,6 +14,7 @@ import { listSongs } from "../lib/library";
 import { useSession } from "../state/session";
 import { useQuery } from "../state/useQuery";
 import { colors } from "../theme";
+import { IconButton } from "./ui";
 
 export type KeepState = "off" | "downloading" | "kept";
 
@@ -83,11 +83,14 @@ const Spinning = ({ size, color }: { size?: number; color?: string }) => {
 /** The keep toggle of an album or a playlist header; pressing it keeps the item or turns keeping off. */
 export const KeepButton = ({ state, onPress, testID = "keep-toggle" }: { state: KeepState; onPress: () => void; testID?: string }) => {
   const { t } = useTranslation();
-  const Icon = state === "kept" ? CircleCheck : state === "downloading" ? Spinning : ArrowDownToLine;
   return (
-    <MobileIconButton testID={testID} label={state === "off" ? t("parrot.kept.keep") : t("parrot.kept.remove")} onPress={onPress}>
-      <Icon size={22} color={state === "off" ? colors.text : colors.accent} />
-    </MobileIconButton>
+    <IconButton
+      testID={testID}
+      icon={state === "kept" ? CircleCheck : state === "downloading" ? Spinning : ArrowDownToLine}
+      color={state === "off" ? colors.text : colors.accent}
+      label={state === "off" ? t("parrot.kept.keep") : t("parrot.kept.remove")}
+      onPress={onPress}
+    />
   );
 };
 

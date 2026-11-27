@@ -295,27 +295,6 @@ export type MediaResealProgress = {
     nextAfter: string | null;
 };
 
-export type MediaResealCopies = {
-    copies: Array<MediaResealCopy>;
-    nextAfter: string | null;
-};
-
-export type MediaResealCopy = {
-    oldKey: string;
-    /**
-     * The live copy that replaces `oldKey`; null when kept.
-     */
-    newKey: string | null;
-    /**
-     * The old key could not open it: it stays as it is (STOR-RESEAL-05).
-     */
-    kept: boolean;
-    /**
-     * Stored size of the old object.
-     */
-    sizeBytes: number;
-};
-
 export type P2pPeer = {
     peerId: string;
     kind: 'tv' | 'mobile';
@@ -784,40 +763,6 @@ export type AccountOverQuota = {
      */
     deleting: boolean;
 } | null;
-
-export type AccountNotice = {
-    id: string;
-    /**
-     * One per thing the news is about: a device seeing the same key again replaces its entry.
-     */
-    key: string;
-    level: 'info' | 'success' | 'warning' | 'error';
-    title: AccountNoticeText;
-    message?: AccountNoticeText;
-    action?: {
-        label: AccountNoticeText;
-        /**
-         * The screen the app opens for it.
-         */
-        target: 'devices' | 'billing' | 'storage';
-    };
-    createdAt: string;
-};
-
-export type AccountNoticeText = {
-    /**
-     * A text key of the shared notice texts (`notify.account.*`), shown in the device's language.
-     */
-    key: string;
-    /**
-     * Values for the text; a `{key}` value is itself a text key, translated too.
-     */
-    vars?: {
-        [key: string]: string | number | {
-            key: string;
-        };
-    };
-};
 
 export type Profiles = {
     /**
@@ -1820,19 +1765,6 @@ export type RotateLibraryKeyData = {
             storageFormatVersion: number;
             opStreamVersion: number;
         }>;
-        /**
-         * Required when the account stores media sealed with the key: the run is switched in the same transaction as the new key (STOR-RESEAL-11). Omitted with such media: 409 `rotation_needs_media_reseal`.
-         */
-        mediaReseal?: {
-            /**
-             * The account's open re-seal run, every media file copied under the new key (STOR-RESEAL-01).
-             */
-            runId: string;
-            /**
-             * "Switch now" (STOR-RESEAL-10): cancel the account's other running uploads, once the run's `switchNowAt` has passed.
-             */
-            switchNow?: boolean;
-        };
     };
     headers: {
         /**
@@ -1866,7 +1798,7 @@ export type RotateLibraryKeyErrors = {
         error: 'account_blocked' | 'account_deleted' | 'personal_token_not_allowed';
     };
     /**
-     * The library already uses a newer format than this client writes, a library changed since it was read (`version_conflict`), another app's library came without its re-encrypted copy (`library_not_reencrypted`), the account stores media sealed with the key and no re-seal run was named (`rotation_needs_media_reseal`), the named run is not open (`reseal_run_not_open`), a media file has no copy yet (`media_reseal_incomplete`, STOR-RESEAL-04) or another upload of the account is running (`uploads_in_flight`, STOR-RESEAL-08). Nothing is written.
+     * The library already uses a newer format than this client writes, a library changed since it was read (`version_conflict`), another app's library came without its re-encrypted copy (`library_not_reencrypted`), or the account stores media sealed with the key (`rotation_needs_media_reseal`). Nothing is written.
      */
     409: {
         error: 'library_format_downgrade';
@@ -1882,25 +1814,6 @@ export type RotateLibraryKeyErrors = {
         appId: string;
     } | {
         error: 'rotation_needs_media_reseal';
-    } | {
-        error: 'reseal_run_not_open';
-    } | {
-        error: 'media_reseal_incomplete';
-        /**
-         * Media files with neither a copy nor an unreadable mark.
-         */
-        pendingFiles: number;
-        pendingBytes: number;
-    } | {
-        error: 'uploads_in_flight';
-        /**
-         * Other running uploads of the account the switch waits for.
-         */
-        uploadsInFlight: number;
-        /**
-         * When "Switch now" opens (STOR-RESEAL-10); null before the switch first waited.
-         */
-        switchNowAt: string | null;
     };
     /**
      * Too many attempts; wait `retryAfterSeconds` (also sent as the `Retry-After` header).
@@ -2015,20 +1928,7 @@ export type ResetLibraryResponses = {
 export type ResetLibraryResponse = ResetLibraryResponses[keyof ResetLibraryResponses];
 
 export type OpenMediaResealRunData = {
-    body: {
-        /**
-         * The account password; an account without one sends none and is asked the code alone (ACCT-AUTH-04).
-         */
-        password?: string;
-        /**
-         * The authenticator's code, or the emailed one; missing, the answer is 401 `two_factor_required`.
-         */
-        twoFactorCode?: string | null;
-        /**
-         * Abandon the run already open (its copies are deleted, STOR-RESEAL-07) and open a new one, under the same re-authentication. For a device that does not hold the key the open run's copies were sealed with (the key lives only in the key change it started).
-         */
-        restart?: boolean;
-    };
+    body?: never;
     path?: never;
     query?: never;
     url: '/library/media-reseal/runs';
@@ -2036,11 +1936,10 @@ export type OpenMediaResealRunData = {
 
 export type OpenMediaResealRunErrors = {
     /**
-     * The password is wrong, or the code is needed or wrong (`method`: `email` when it was just emailed, `totp` for the authenticator).
+     * Missing or unknown token.
      */
     401: {
-        error: 'unauthorized' | 'invalid_password' | 'two_factor_required' | 'two_factor_invalid';
-        method?: 'email' | 'totp';
+        error: 'unauthorized';
     };
     /**
      * The account is blocked or scheduled for deletion, or a personal token was used on a route that needs a login session.
@@ -2125,62 +2024,6 @@ export type GetMediaResealRunResponses = {
 };
 
 export type GetMediaResealRunResponse = GetMediaResealRunResponses[keyof GetMediaResealRunResponses];
-
-export type ListMediaResealCopiesData = {
-    body?: never;
-    path: {
-        id: string;
-    };
-    query?: {
-        /**
-         * `nextAfter` of the previous page.
-         */
-        after?: string;
-        /**
-         * Page size, 200 when absent, at most 500.
-         */
-        limit?: number;
-    };
-    url: '/library/media-reseal/runs/{id}/copies';
-};
-
-export type ListMediaResealCopiesErrors = {
-    /**
-     * Missing or unknown token.
-     */
-    401: {
-        error: 'unauthorized';
-    };
-    /**
-     * The account is blocked or scheduled for deletion, or a personal token was used on a route that needs a login session.
-     */
-    403: {
-        error: 'account_blocked' | 'account_deleted' | 'personal_token_not_allowed';
-    };
-    /**
-     * No reseal run with this id on the account.
-     */
-    404: {
-        error: 'reseal_run_not_found';
-    };
-    /**
-     * The copies could not be read.
-     */
-    503: {
-        error: 'media_reseal_unavailable';
-    };
-};
-
-export type ListMediaResealCopiesError = ListMediaResealCopiesErrors[keyof ListMediaResealCopiesErrors];
-
-export type ListMediaResealCopiesResponses = {
-    /**
-     * One page of copies and kept objects.
-     */
-    200: MediaResealCopies;
-};
-
-export type ListMediaResealCopiesResponse = ListMediaResealCopiesResponses[keyof ListMediaResealCopiesResponses];
 
 export type MarkMediaResealKeptData = {
     body: {
@@ -4949,55 +4792,6 @@ export type GetAccountOverQuotaTitlesResponses = {
 
 export type GetAccountOverQuotaTitlesResponse = GetAccountOverQuotaTitlesResponses[keyof GetAccountOverQuotaTitlesResponses];
 
-export type ListAccountNoticesData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/account/notices';
-};
-
-export type ListAccountNoticesErrors = {
-    /**
-     * Missing, unknown or revoked token.
-     */
-    401: {
-        error: 'unauthorized';
-    };
-    /**
-     * The account is blocked or scheduled for deletion, or the personal token lacks the scope of the route (`requiredScope`).
-     */
-    403: {
-        error: 'account_blocked' | 'account_deleted' | 'insufficient_scope';
-        requiredScope?: string;
-    };
-    /**
-     * This personal token made too many requests this minute; wait `retryAfterSeconds` (also sent as the `Retry-After` header).
-     */
-    429: {
-        error: 'token_rate_limited';
-        retryAfterSeconds: number;
-    };
-    /**
-     * The news could not be read.
-     */
-    503: {
-        error: 'account_notices_unavailable';
-    };
-};
-
-export type ListAccountNoticesError = ListAccountNoticesErrors[keyof ListAccountNoticesErrors];
-
-export type ListAccountNoticesResponses = {
-    /**
-     * The account's news.
-     */
-    200: {
-        notices: Array<AccountNotice>;
-    };
-};
-
-export type ListAccountNoticesResponse = ListAccountNoticesResponses[keyof ListAccountNoticesResponses];
-
 export type ListProfilesData = {
     body?: never;
     path?: never;
@@ -7461,57 +7255,6 @@ export type SayDailyHelloResponses = {
 };
 
 export type SayDailyHelloResponse = SayDailyHelloResponses[keyof SayDailyHelloResponses];
-
-export type CountWebsitePageViewData = {
-    body: {
-        /**
-         * The page shown, without its language.
-         */
-        page: 'home' | 'pricing' | 'badger' | 'parrot' | 'downloads' | 'downloads/kodi' | 'downloads/jellyfin' | 'start' | 'key-storage' | 'developers/api' | 'report' | 'support' | 'signup' | 'legal-notice' | 'privacy' | 'terms' | 'account-deletion' | 'security' | 'security-acknowledgments';
-        /**
-         * The host name of the site that linked to the page, never its path.
-         */
-        referrer?: string;
-        /**
-         * The `utm_source` of the page address.
-         */
-        utmSource?: string;
-        /**
-         * The `utm_campaign` of the page address.
-         */
-        utmCampaign?: string;
-    };
-    path?: never;
-    query?: never;
-    url: '/usage/page-view';
-};
-
-export type CountWebsitePageViewErrors = {
-    /**
-     * The body is not valid, or the page is not one the website counts.
-     */
-    400: {
-        error: 'invalid_request';
-    };
-    /**
-     * Too many attempts; wait `retryAfterSeconds` (also sent as the `Retry-After` header).
-     */
-    429: {
-        error: 'rate_limited';
-        retryAfterSeconds: number;
-    };
-};
-
-export type CountWebsitePageViewError = CountWebsitePageViewErrors[keyof CountWebsitePageViewErrors];
-
-export type CountWebsitePageViewResponses = {
-    /**
-     * Counted, or not counted for a robot.
-     */
-    204: void;
-};
-
-export type CountWebsitePageViewResponse = CountWebsitePageViewResponses[keyof CountWebsitePageViewResponses];
 
 export type KeepEmailAddressData = {
     body?: never;

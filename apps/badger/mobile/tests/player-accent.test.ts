@@ -12,7 +12,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { defaultMobileShellTheme } from "@space/mobile-shell/theme";
+import { defaultMobileShellTheme } from "../../../../packages/mobile-shell/src/theme";
 
 const ROOT = resolve(__dirname, "../../../..");
 const read = (rel: string) => readFileSync(resolve(ROOT, rel), "utf8");

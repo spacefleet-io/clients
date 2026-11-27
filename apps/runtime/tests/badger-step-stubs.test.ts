@@ -30,9 +30,9 @@ import {
   type UploadResult,
   type CommitResult,
 } from "../src/modules/badger/steps/deps";
-import type { StepHandlerCtx } from "@space/runtime-jobs-engine/engineV2";
+import type { StepHandlerCtx } from "../src/core/jobs/engineV2";
 import type { IngestJobRecord } from "@space/runtime-jobs";
-import type { StoredStepRecord } from "@space/runtime-jobs-engine/stepStore";
+import type { StoredStepRecord } from "../src/core/jobs/stepStore";
 
 const SUITE = "badger-step-stubs";
 

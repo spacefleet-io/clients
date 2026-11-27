@@ -14,16 +14,14 @@ import { TvTopBar } from "@space/mobile-shell/tv/TvTopBar";
 import { setCurrentTvSection, subscribeTvSectionRequest, type TvSectionId } from "@space/mobile-shell/tv/tvSection";
 import { useTvMenuKeyHold } from "@space/mobile-shell/tv/useTvMenuKey";
 import { TvFocusGuide } from "@space/mobile-shell/tv/TvFocusGuide";
+import { TV_SAFE_MARGIN_X } from "@space/mobile-shell/tv/layout";
 import { useTvScale } from "@space/mobile-shell/tv/tvScale";
-import { UnpaidAccessSign } from "@space/mobile-shell/unpaid-access-sign";
+import { UnpaidAccessBanner } from "@space/mobile-shell/unpaid-access-banner";
 import type { TvViewInstance } from "@space/mobile-shell/tv/tvViewInstance";
-import type { NoticeHistory } from "@space/notify-core/history";
 import type { ParrotAlbumSort } from "@space/parrot-core";
 import { PARROT_TV_ICON } from "../brand";
-import { NO_LIBRARY_MOVES } from "@space/shared/profileStore";
-import { profileStore } from "../lib/profiles";
+import { parrotProfileMoves, profileStore } from "../lib/profiles";
 import { useSession } from "../state/session";
-import { useParrotNoticeHistory } from "../state/notices";
 import { TvAlbumPage } from "./TvAlbumPage";
 import { TvArtistPage } from "./TvArtistPage";
 import { TvHomeSection } from "./TvHomeSection";
@@ -44,14 +42,9 @@ const log = scopeLogger("parrot.tv.shell");
 
 const profilesLog = (event: string, data: Record<string, unknown>) => console.info(`parrot.tv.profiles.${event}`, JSON.stringify(data));
 
-type SectionProps = {
-  id: TvSectionId;
-  onSeeAll: (albumSort?: ParrotAlbumSort) => void;
-  librarySort: ParrotAlbumSort | null;
-  history: NoticeHistory | null;
-};
+type SectionProps = { id: TvSectionId; onSeeAll: (albumSort?: ParrotAlbumSort) => void; librarySort: ParrotAlbumSort | null };
 
-const Section = ({ id, onSeeAll, librarySort, history }: SectionProps) => {
+const Section = ({ id, onSeeAll, librarySort }: SectionProps) => {
   switch (id) {
     case "home":
       return <TvHomeSection onSeeAll={onSeeAll} />;
@@ -62,7 +55,7 @@ const Section = ({ id, onSeeAll, librarySort, history }: SectionProps) => {
     case "search":
       return <TvSearchSection />;
     case "settings":
-      return <TvSettingsSection history={history} />;
+      return <TvSettingsSection />;
     default:
       return null;
   }
@@ -83,15 +76,12 @@ const Page = ({ page, pop, shown }: { page: TvPage; pop: () => void; shown: bool
     case "queue":
       return <TvQueuePage />;
     case "profiles":
-      return <TvProfilesView store={profileStore} moves={NO_LIBRARY_MOVES} startMode={page.mode} inApp audience="listening" onPicked={pop} onClose={pop} log={profilesLog} />;
+      return <TvProfilesView store={profileStore} moves={parrotProfileMoves} startMode={page.mode} inApp audience="listening" onPicked={pop} onClose={pop} log={profilesLog} />;
   }
 };
 
 export const TvMainShell = () => {
   const { access } = useSession();
-  // UX-NOTICE-04 / UX-NOTICE-05: the TV's notice history, read by Settings ▸ Account; kept here so the account's news
-  // keeps arriving while another section shows.
-  const history = useParrotNoticeHistory();
   const scale = useTvScale();
   const [active, setActive] = useState<TvSectionId>("home");
   // The album order Home's "See all" asked the Library for ("Recently added": newest first, PAR-HOME-01); null when the
@@ -206,6 +196,11 @@ export const TvMainShell = () => {
             returns to the same card and scroll position. */}
         <View style={[styles.shell, fullScreen && styles.hidden]} testID="parrot-tv-shell">
           <TvTopBar brandIcon={PARROT_TV_ICON} playlistsIcon={ListMusic} active={active} onSelect={select} />
+          {/* ACCT-UNPAID-03: while the account is unpaid, every main screen says playback is stopped and when the files
+              go. It only informs and is not focusable: nothing on the TV links to paying (ACCT-PAY-02). */}
+          <View style={styles.unpaid}>
+            <UnpaidAccessBanner access={access} scale={scale} />
+          </View>
           <View style={styles.content}>
             {layers.map((layer) => (
               <TvFocusGuide
@@ -219,30 +214,17 @@ export const TvMainShell = () => {
                 testID={layer.page ? `parrot-tv-page-${layer.page.kind}` : `parrot-tv-section-${active}`}
               >
                 <MobileRenderBoundary name={layer.page ? `tv-page:${tvPageKey(layer.page)}` : `tv-section:${active}`} resetKey={layer.key}>
-                  {layer.page ? (
-                    <Page page={layer.page} pop={pages.pop} shown={layer === shown} />
-                  ) : (
-                    <Section id={active} onSeeAll={seeAll} librarySort={librarySort} history={history} />
-                  )}
+                  {layer.page ? <Page page={layer.page} pop={pages.pop} shown={layer === shown} /> : <Section id={active} onSeeAll={seeAll} librarySort={librarySort} />}
                 </MobileRenderBoundary>
               </TvFocusGuide>
             ))}
           </View>
-          {/* ACCT-UNPAID-05, UX-NOTICE-08: while the account is unpaid, every section and every page opened under the
-              bar (an album, an artist, a playlist) shows the small unpaid sign under the bar. It floats over the page,
-              only informs and is not focusable: nothing on the TV links to paying (ACCT-PAY-02). */}
-          <UnpaidAccessSign access={access} tv scale={scale} />
         </View>
         {screens.map((page) => (
           <View key={tvPageKey(page)} style={[StyleSheet.absoluteFill, page !== top && styles.hidden]} testID={`parrot-tv-page-${page.kind}`}>
-            <View style={styles.content}>
-              <MobileRenderBoundary name={`tv-page:${tvPageKey(page)}`} resetKey={tvPageKey(page)}>
-                <Page page={page} pop={pages.pop} shown={page === top} />
-              </MobileRenderBoundary>
-            </View>
-            {/* ACCT-UNPAID-05: Who's listening? fills the screen, so it carries the sign itself; Now playing, its
-                lyrics and Up next are the player, which stays clear of it. */}
-            {page.kind === "profiles" ? <UnpaidAccessSign access={access} tv underBar={false} scale={scale} /> : null}
+            <MobileRenderBoundary name={`tv-page:${tvPageKey(page)}`} resetKey={tvPageKey(page)}>
+              <Page page={page} pop={pages.pop} shown={page === top} />
+            </MobileRenderBoundary>
           </View>
         ))}
       </TvPlayerSky>
@@ -254,4 +236,5 @@ const styles = StyleSheet.create({
   shell: { flex: 1 },
   hidden: { display: "none" },
   content: { flex: 1 },
+  unpaid: { paddingHorizontal: TV_SAFE_MARGIN_X - 4 },
 });

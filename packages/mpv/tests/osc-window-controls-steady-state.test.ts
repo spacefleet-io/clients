@@ -218,28 +218,6 @@ const waitLine = async (h: Harness, re: RegExp, from: number, ms: number): Promi
   return { lines, at: -1 };
 };
 
-/**
- * The input bindings once the section commands have stopped: no enable/disable-section line for 400 ms (at most 5 s).
- * A re-layout right after load can briefly disable and re-enable tog4in1's sections (run 47564: disable at 0.237 s,
- * enable at 0.255 s); a snapshot inside that gap reads window-controls as absent although the settled stack has it.
- */
-const settledBindings = async (h: Harness, ipc: (c: unknown[]) => Promise<Reply>): Promise<unknown> => {
-  const deadline = Date.now() + 5_000;
-  const count = () => readFileSync(h.logFile, "utf8").split("\n").filter((l) => /(enable|disable)-section/.test(l)).length;
-  let seen = count();
-  let quietSince = Date.now();
-  while (Date.now() < deadline && Date.now() - quietSince < 400) {
-    await sleep(50);
-    const now = count();
-    if (now !== seen) {
-      seen = now;
-      quietSince = Date.now();
-    }
-  }
-  console.info(`${TAG} section commands settled=${Date.now() - quietSince >= 400} after ${seen} lines`);
-  return (await ipc(["get_property", "input-bindings"])).data;
-};
-
 afterEach(() => {
   for (const c of conns.splice(0)) c.destroy();
   for (const h of live.splice(0)) {
@@ -293,7 +271,7 @@ describe.skipIf(!runnable)("tog4in1 window-controls section while the OSC stays 
     // the snapshot that first showed the ready line.
     const wcAfterReady = ready < 0 ? -1 : (await waitLine(h, WC_ENABLE_LINE, ready + 1, 5_000)).at;
     console.info(`${TAG} log order: last sf section enable=${lastSfEnable} sf-bindings-ready=${ready} window-controls enable after it=${wcAfterReady}`);
-    const final = await settledBindings(h, ipc);
+    const final = (await ipc(["get_property", "input-bindings"])).data;
     const wcFinal = mbtnLeft(final, "window-controls");
     const sfFinal = mbtnLeft(final, "input_forced_sf");
     console.info(`${TAG} MBTN_LEFT priority first-live wc=${wc} sf=${sf}; final wc=${wcFinal} sf=${sfFinal}`);
@@ -321,7 +299,7 @@ describe.skipIf(!runnable)("tog4in1 window-controls section while the OSC stays 
     const reply = await waitLine(h, SF_READY_LINE, loadAt, 5_000);
     // The re-push lands a few ms after the reply line: wait for it too.
     const wcAfterReply = reply.at < 0 ? -1 : (await waitLine(h, WC_ENABLE_LINE, reply.at + 1, 5_000)).at;
-    const final = await settledBindings(h, ipc);
+    const final = (await ipc(["get_property", "input-bindings"])).data;
     const wcFinal = mbtnLeft(final, "window-controls");
     const sfFinal = mbtnLeft(final, "input_forced_sf");
     console.info(

@@ -19,7 +19,7 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { runFfmpeg } from "@space/ffmpeg";
 import type { ProducedMedia } from "@space/ingest-core/mediaProcessor";
-import { createEngineV2, type EngineV2 } from "@space/runtime-jobs-engine/engineV2";
+import { createEngineV2, type EngineV2 } from "../src/core/jobs/engineV2";
 import type * as StorageBridgeModule from "../src/core/content/storageBridge";
 import { __resetBadgerStepDeps, getBadgerStepDeps } from "../src/modules/badger/steps/deps";
 import { setEngineV2ForBadgerIngest, setBadgerModuleForTests } from "../src/modules";

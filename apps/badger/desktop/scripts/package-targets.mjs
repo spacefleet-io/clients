@@ -7,8 +7,8 @@
 
 import { join } from "node:path";
 
-import { linuxArtifactPatterns } from "@space/desktop-platform-linux/packaging/linux-packages";
-import { ELECTRON_LANGUAGES, LPROJ_EXTENSION, MAC_ELECTRON_LANGUAGES, PAK_EXTENSION } from "@space/desktop-platform/packaging/packaged-locales-lib";
+import { linuxArtifactPatterns } from "../../../../packages/desktop-platform-linux/packaging/linux-packages.mjs";
+import { ELECTRON_LANGUAGES, LPROJ_EXTENSION, MAC_ELECTRON_LANGUAGES, PAK_EXTENSION } from "../../../../packages/desktop-platform/packaging/packaged-locales-lib.mjs";
 
 /**
  * @typedef {{
@@ -38,7 +38,7 @@ const MAC_APP_BUNDLE = "Badger.app";
 export const MAC_PLAYER_HELPER = "../Helpers/Badger Player.app";
 
 /** PLAT-DESK-02: the oldest macOS the desktop apps run on (shared with Parrot). */
-export { MAC_MINIMUM_SYSTEM_VERSION } from "@space/desktop-platform-macos/packaging/mac-after-pack-lib";
+export { MAC_MINIMUM_SYSTEM_VERSION } from "../../../../packages/desktop-platform-macos/packaging/mac-after-pack-lib.mjs";
 
 /**
  * @param {"arm64" | "x64"} arch

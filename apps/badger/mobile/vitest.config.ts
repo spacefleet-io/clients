@@ -21,7 +21,6 @@ const SOURCE_PACKAGES = [
   "@space/privacy-pass",
   "@space/pairing-crypto",
   "@space/media-crypto",
-  "@space/media-reseal",
   "@space/media-session",
   "@space/mobile-media-session",
   "@space/playback-abr",
@@ -29,7 +28,6 @@ const SOURCE_PACKAGES = [
   "@space/legal",
   "@space/profile-avatars",
   "@space/ingest-core",
-  "@space/notify-core",
 ];
 
 function workspaceExportAliases(): { find: RegExp; replacement: string }[] {

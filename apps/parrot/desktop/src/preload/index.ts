@@ -3,10 +3,9 @@ import "@space/error-report/electron-preload";
 import { contextBridge, ipcRenderer, webUtils } from "electron";
 import { createErrorReportsBridge } from "@space/error-report/desktop";
 import { createUpdaterBridge } from "@space/desktop-shell/updater-preload";
-import { createHiddenJobNoticesBridge } from "@space/desktop-shell/hidden-job-notices-preload";
 import { readStorageUnitBase } from "@space/desktop-shell/storage-units";
 import { SIBLING_IPC } from "@space/desktop-shell/sibling";
-import { PARROT_IPC, type KeyChangeState, type ParrotBackgroundWork, type ParrotBridge, type ParrotCoverCutRequest, type ParrotExportJob, type ParrotImportJob, type ParrotImportStatus } from "../shared/ipc";
+import { PARROT_IPC, type ParrotBackgroundWork, type ParrotBridge, type ParrotCoverCutRequest, type ParrotExportJob, type ParrotImportJob, type ParrotImportStatus } from "../shared/ipc";
 import type { ParrotLibraryPatch } from "../shared/libraryPatch";
 import type { KeptStatus } from "@space/parrot-core";
 import type { StreamSlotGateState } from "@space/stream-slots";
@@ -14,7 +13,6 @@ import type { AppUpdateRequiredPayload } from "@space/shared/appVersion";
 
 const bridge: ParrotBridge = {
   getState: () => ipcRenderer.invoke(PARROT_IPC.getState),
-  hiddenJobNotices: createHiddenJobNoticesBridge(ipcRenderer),
   saveSetup: (patch) => ipcRenderer.invoke(PARROT_IPC.saveSetup, patch),
   getAccountLanguage: () => ipcRenderer.invoke(PARROT_IPC.getAccountLanguage),
   saveAccountLanguage: (language) => ipcRenderer.invoke(PARROT_IPC.saveAccountLanguage, language),
@@ -58,22 +56,6 @@ const bridge: ParrotBridge = {
   setLibraryKey: (keyBase64) => ipcRenderer.invoke(PARROT_IPC.setLibraryKey, keyBase64),
   createLibraryKey: () => ipcRenderer.invoke(PARROT_IPC.createLibraryKey),
   eraseLibrary: (password, twoFactorCode) => ipcRenderer.invoke(PARROT_IPC.eraseLibrary, password, twoFactorCode),
-  keyChange: {
-    readiness: () => ipcRenderer.invoke(PARROT_IPC.keyChangeReadiness),
-    open: () => ipcRenderer.invoke(PARROT_IPC.keyChangeOpen),
-    submit: (password, twoFactorCode) => ipcRenderer.invoke(PARROT_IPC.keyChangeSubmit, password, twoFactorCode),
-    switchNow: () => ipcRenderer.invoke(PARROT_IPC.keyChangeSwitchNow),
-    poll: () => ipcRenderer.invoke(PARROT_IPC.keyChangePoll),
-    stop: () => ipcRenderer.invoke(PARROT_IPC.keyChangeStop),
-    pause: () => ipcRenderer.invoke(PARROT_IPC.keyChangePause),
-    unreadableFiles: () => ipcRenderer.invoke(PARROT_IPC.keyChangeUnreadableFiles),
-    deleteUnreadableFiles: (files) => ipcRenderer.invoke(PARROT_IPC.keyChangeDeleteUnreadableFiles, files),
-    onState: (listener) => {
-      const handler = (_event: Electron.IpcRendererEvent, state: KeyChangeState) => listener(state);
-      ipcRenderer.on(PARROT_IPC.keyChangeStateEvent, handler);
-      return () => ipcRenderer.off(PARROT_IPC.keyChangeStateEvent, handler);
-    },
-  },
   pickFolders: () => ipcRenderer.invoke(PARROT_IPC.pickFolders),
   pickFiles: () => ipcRenderer.invoke(PARROT_IPC.pickFiles),
   getPathForFile: (file) => webUtils.getPathForFile(file),
@@ -92,7 +74,7 @@ const bridge: ParrotBridge = {
   coverCut: (id, bytes) => ipcRenderer.invoke(PARROT_IPC.coverCut, id, bytes),
   importArtistPhoto: (artistId) => ipcRenderer.invoke(PARROT_IPC.importArtistPhoto, artistId),
   importCover: (albumId) => ipcRenderer.invoke(PARROT_IPC.importCover, albumId),
-  confirmImport: (selection, lyrics) => ipcRenderer.invoke(PARROT_IPC.confirmImport, selection, lyrics),
+  confirmImport: (selection) => ipcRenderer.invoke(PARROT_IPC.confirmImport, selection),
   cancelImport: () => ipcRenderer.invoke(PARROT_IPC.cancelImport),
   getImportStatus: () => ipcRenderer.invoke(PARROT_IPC.getImportStatus),
   onImportStatus: (listener) => {
@@ -107,13 +89,6 @@ const bridge: ParrotBridge = {
     return () => ipcRenderer.off(PARROT_IPC.importJobsEvent, handler);
   },
   dismissImportJob: (id) => ipcRenderer.invoke(PARROT_IPC.dismissImportJob, id),
-  retryImportJob: (id) => ipcRenderer.invoke(PARROT_IPC.retryImportJob, id),
-  retryImportSong: (jobId) => ipcRenderer.invoke(PARROT_IPC.retryImportSong, jobId),
-  cancelImportSong: (jobId) => ipcRenderer.invoke(PARROT_IPC.cancelImportSong, jobId),
-  getUploadsWhilePlaying: () => ipcRenderer.invoke(PARROT_IPC.getUploadsWhilePlaying),
-  setUploadsWhilePlaying: (mode) => ipcRenderer.invoke(PARROT_IPC.setUploadsWhilePlaying, mode),
-  playbackActive: (active) => ipcRenderer.send(PARROT_IPC.playbackActive, active),
-  findImportJobFolder: (id) => ipcRenderer.invoke(PARROT_IPC.findImportJobFolder, id),
   previewExport: () => ipcRenderer.invoke(PARROT_IPC.previewExport),
   exportMusic: () => ipcRenderer.invoke(PARROT_IPC.exportMusic),
   getExportJobs: () => ipcRenderer.invoke(PARROT_IPC.getExportJobs),
@@ -157,11 +132,8 @@ const bridge: ParrotBridge = {
   previewDelete: (target) => ipcRenderer.invoke(PARROT_IPC.previewDelete, target),
   deleteFromLibrary: (target) => ipcRenderer.invoke(PARROT_IPC.deleteFromLibrary, target),
   getEditValues: (target) => ipcRenderer.invoke(PARROT_IPC.getEditValues, target),
-  getArtistEditValues: (artistId) => ipcRenderer.invoke(PARROT_IPC.getArtistEditValues, artistId),
   editDetails: (target, cover) => ipcRenderer.invoke(PARROT_IPC.editDetails, target, cover),
   fetchLyrics: (trackId) => ipcRenderer.invoke(PARROT_IPC.fetchLyrics, trackId),
-  setOwnLyrics: (trackId, lyrics) => ipcRenderer.invoke(PARROT_IPC.setOwnLyrics, trackId, lyrics),
-  removeOwnLyrics: (trackId) => ipcRenderer.invoke(PARROT_IPC.removeOwnLyrics, trackId),
   wantLyrics: (trackId) => ipcRenderer.invoke(PARROT_IPC.wantLyrics, trackId),
   saveLoudness: (measured) => ipcRenderer.invoke(PARROT_IPC.saveLoudness, measured),
   suggestEdit: (query) => ipcRenderer.invoke(PARROT_IPC.suggestEdit, query),
@@ -194,8 +166,6 @@ const bridge: ParrotBridge = {
   storageUnitBase: readStorageUnitBase(ipcRenderer),
   sourceCredits: (product, language) => ipcRenderer.invoke(PARROT_IPC.sourceCredits, product, language),
   getSubscription: () => ipcRenderer.invoke(PARROT_IPC.getSubscription),
-  getAccountAccess: () => ipcRenderer.invoke(PARROT_IPC.getAccountAccess),
-  listAccountNotices: () => ipcRenderer.invoke(PARROT_IPC.listAccountNotices),
   getBillingStatus: () => ipcRenderer.invoke(PARROT_IPC.getBillingStatus),
   updateSubscription: (plan, options) => ipcRenderer.invoke(PARROT_IPC.updateSubscription, plan, options),
   startCheckout: (input) => ipcRenderer.invoke(PARROT_IPC.startCheckout, input),

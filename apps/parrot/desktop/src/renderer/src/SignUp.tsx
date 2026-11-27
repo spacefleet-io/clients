@@ -175,10 +175,9 @@ export function VerifyEmailForm({
         <button type="button" className="hover:text-foreground" onClick={onBack} data-testid="verify-back">
           {t("verify.back")}
         </button>
-        {/* UX-BTN-01: "Resend code" is the shared ghost button, as in Badger. */}
-        <Button type="button" variant="ghost" onClick={() => void resend()} disabled={sending || !email.trim()} data-testid="verify-resend">
+        <button type="button" className="hover:text-foreground disabled:opacity-50" onClick={() => void resend()} disabled={sending || !email.trim()} data-testid="verify-resend">
           {t("verify.resend")}
-        </Button>
+        </button>
       </div>
     </form>
   );

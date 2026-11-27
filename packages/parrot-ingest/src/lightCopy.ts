@@ -103,33 +103,6 @@ export const parrotOriginalInMemory = (bytes: Uint8Array): ParrotLightCopyOrigin
 });
 
 /**
- * The file id the light copy of `originalFileId` gets when the song needs one made here; null when the song already
- * has one, or when it waits for a computer that makes light copies of long songs (`parrotLightCopyWait`, logged).
- */
-export const parrotLightCopyToMake = (input: {
-  db: ParrotLibraryDb;
-  trackId: string;
-  originalFileId: string;
-  durationMs: number | null;
-  longSongs: boolean;
-  log: (message: string) => void;
-}): string | null => {
-  const fileId = parrotLightFileId(input.originalFileId);
-  if (hasParrotLightCopy(input.db, input.trackId) || hasParrotFile(input.db, fileId)) return null;
-  const wait = parrotLightCopyWait({ durationMs: input.durationMs, longSongs: input.longSongs });
-  if (wait) {
-    input.log(`[parrot-light-copy] ${input.trackId}: no light copy here, ${wait}`);
-    return null;
-  }
-  return fileId;
-};
-
-/** The line each light copy made leaves in the log (from what to what, and how long it took). */
-export const parrotLightCopyMadeLine = (input: { trackId: string; fileId: string; originalBytes: number; codec: string; copyBytes: number; ms: number }): string =>
-  `[parrot-light-copy] ${input.trackId}: ${input.originalBytes} bytes of ${input.codec} -> ${input.copyBytes} bytes of Opus ` +
-  `${PARROT_LIGHT_COPY.bitrateKbps} kbps as ${input.fileId} in ${input.ms} ms`;
-
-/**
  * Makes, uploads and records the light copy of one original; returns its op (already applied to `db`). Null when the
  * song already has one, or when it waits for a computer that makes light copies of long songs (`parrotLightCopyWait`).
  */
@@ -148,8 +121,13 @@ export const addParrotLightCopy = async (input: {
   log: (message: string) => void;
   now?: () => number;
 }): Promise<ParrotLibraryOp | null> => {
-  const fileId = parrotLightCopyToMake({ ...input, durationMs: input.info.durationMs });
-  if (!fileId) return null;
+  const fileId = parrotLightFileId(input.originalFileId);
+  if (hasParrotLightCopy(input.db, input.trackId) || hasParrotFile(input.db, fileId)) return null;
+  const wait = parrotLightCopyWait({ durationMs: input.info.durationMs, longSongs: input.longSongs });
+  if (wait) {
+    input.log(`[parrot-light-copy] ${input.trackId}: no light copy here, ${wait}`);
+    return null;
+  }
   const started = Date.now();
   const bytes = await input.make({
     size: input.original.size,
@@ -163,7 +141,8 @@ export const addParrotLightCopy = async (input: {
   const op = buildParrotLightCopyOp({ trackId: input.trackId, fileId, sizeBytes: bytes.length, chunks, now: input.now?.() ?? Date.now() });
   applyParrotOps(input.db, [op]);
   input.log(
-    parrotLightCopyMadeLine({ trackId: input.trackId, fileId, originalBytes: input.original.size, codec: input.info.format.codec, copyBytes: bytes.length, ms: Date.now() - started })
+    `[parrot-light-copy] ${input.trackId}: ${input.original.size} bytes of ${input.info.format.codec} -> ${bytes.length} bytes of Opus ` +
+      `${PARROT_LIGHT_COPY.bitrateKbps} kbps as ${fileId} in ${Date.now() - started} ms`
   );
   return op;
 };

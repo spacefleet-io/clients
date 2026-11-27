@@ -11,20 +11,17 @@
 import { randomBytes } from "node:crypto";
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { Database } from "bun:sqlite";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "bun:test";
 import { decryptMediaObject } from "@space/media-crypto";
-import { buildParrotOpStatements, parrotLibraryMigrationStatements, TRACK_FILE_CHUNK_SIZE_BYTES } from "@space/parrot-library-db-definition";
-import { parrotCoverMime, parrotLyricsQuery, type ParrotLibraryQuery } from "@space/parrot-core";
+import { TRACK_FILE_CHUNK_SIZE_BYTES } from "@space/parrot-library-db-definition";
+import { parrotCoverMime } from "@space/parrot-core";
 import jpeg from "jpeg-js";
 import { openParrotCover } from "../src/covers";
 import { parrotAudioFormatFor } from "../src/formats";
 import { parrotChunkKey, parrotPlacementId, parrotTagsKey, parrotTrackIds, sha256Hex } from "../src/ids";
-import { buildParrotTrackOps, PARROT_APP_ID, type ParrotImportProgress, type ParrotImportTransport } from "../src/importer";
-import { importParrotFiles } from "../src/importJobs";
+import { importParrotFiles, PARROT_APP_ID, type ParrotImportProgress, type ParrotImportTransport } from "../src/importer";
 import { getParrotFile, listParrotAlbums, listParrotTracks, openParrotLibrary, serializeParrotLibrary } from "../src/library";
 import { readParrotTrackInfo, type ParrotTrackInfo } from "../src/readTrack";
-import { applyParrotImportEdit, type ParrotImportEdit } from "../src/scan";
 import { PARROT_FIRST_PAYLOAD_PIECE_BYTES, splitParrotOriginal } from "../src/splitOriginal";
 import { makeAudioFixture, makeCoverPicture, makeTempDir, testLog } from "./helpers";
 
@@ -201,8 +198,7 @@ describe("importParrotFiles", () => {
     log("importer log", messages);
     log("progress", progress);
 
-    // PAR-UP-14: both songs, stored side by side, go out in one publish.
-    expect(result).toEqual({ imported: [nookMp3, nookFlac], skipped: [], failed: [], snapshotVersion: 1 });
+    expect(result).toEqual({ imported: [nookMp3, nookFlac], skipped: [], failed: [], snapshotVersion: 2 });
     expect(server.fetches).toEqual([{ token: TOKEN, keyBase64, appId: PARROT_APP_ID }]);
     // PAR-FMT-01: each file goes up split: its header (none for an MP3), its sound, and its own tags in an object.
     expect(server.uploads).toHaveLength(5);
@@ -236,14 +232,14 @@ describe("importParrotFiles", () => {
       expect(tags).toEqual(split.tags);
     }
 
-    // PAR-UP-03 / PAR-UP-14: one publish for the batch, with both songs.
-    expect(server.publishes.map((call) => call.baseVersion)).toEqual([0]);
-    expect(listParrotTracks(openParrotLibrary(server.publishes[0]!.dbBytes)).map((track) => track.title).sort()).toEqual(["Nook", "Nook (Lossless)"]);
-    const publish = server.publishes[0]!;
+    // PAR-UP-03: one publish per stored song, the first with one song, the second with both.
+    expect(server.publishes.map((call) => call.baseVersion)).toEqual([0, 1]);
+    expect(listParrotTracks(openParrotLibrary(server.publishes[0]!.dbBytes)).map((track) => track.title)).toEqual(["Nook"]);
+    const publish = server.publishes[1]!;
     expect({ token: publish.token, keyBase64: publish.keyBase64, baseVersion: publish.baseVersion, appId: publish.appId }).toEqual({
       token: TOKEN,
       keyBase64,
-      baseVersion: 0,
+      baseVersion: 1,
       appId: PARROT_APP_ID,
     });
 
@@ -255,23 +251,22 @@ describe("importParrotFiles", () => {
       ["Linnet Park", "Meltway", 13, "Nook (Lossless)", "audio/flac"],
     ]);
     const file = getParrotFile(db, tracks[0]!.fileId!);
-    const placementOf = (fileId: string) => server.uploads.find((call) => call.objectKey.startsWith(`${fileId}/`))!.options.placementId;
     log("nook file row", file);
     // The players read header then sound: the stored size is theirs, the user's file size is kept beside it.
     const nookBytes = new Uint8Array(await fs.readFile(nookMp3));
     const nookSplit = splitParrotOriginal(nookBytes, "mp3");
     if (nookSplit.kind !== "split") throw new Error(nookSplit.reason);
-    expect(file!).toMatchObject({ sizeBytes: nookSplit.payload.length, headerBytes: 0, sourceSizeBytes: nookBytes.length, tagsObjectKey: `media/${placementOf(file!.id)}/${parrotTagsKey(file!.id)}` });
-    expect(file!.chunks).toEqual([{ idx: 0, objectKey: `media/${placementOf(file!.id)}/${parrotChunkKey(file!.id, 0)}`, plainOffset: 0, plainSize: file!.sizeBytes }]);
+    expect(file!).toMatchObject({ sizeBytes: nookSplit.payload.length, headerBytes: 0, sourceSizeBytes: nookBytes.length, tagsObjectKey: `media/${server.uploads[0]!.options.placementId}/${parrotTagsKey(file!.id)}` });
+    expect(file!.chunks).toEqual([{ idx: 0, objectKey: `media/${server.uploads[0]!.options.placementId}/${parrotChunkKey(file!.id, 0)}`, plainOffset: 0, plainSize: file!.sizeBytes }]);
     db.close();
 
-    // PAR-UP-04: the bytes go up as each file is through; `published` counts the library versions (one batch here, PAR-UP-14).
+    // PAR-UP-04: the bytes go up as each file is through; `published` counts the library versions.
     const sizes = [(await fs.stat(nookMp3)).size, (await fs.stat(nookFlac)).size];
     const bytesTotal = sizes[0]! + sizes[1]!;
     expect(progress.every((event) => event.bytesTotal === bytesTotal)).toBe(true);
     const afterFirst = progress.find((event) => event.done === 1)!;
-    expect(afterFirst).toMatchObject({ imported: 1, published: 1 });
-    expect(afterFirst.bytesDone).toBeGreaterThanOrEqual(Math.min(...sizes));
+    expect(afterFirst).toMatchObject({ imported: 1, bytesDone: sizes[0], published: 0 });
+    expect(progress.find((event) => event.published === 1)).toMatchObject({ done: 1, bytesDone: sizes[0] });
     const bytesSeen = progress.map((event) => event.bytesDone);
     expect(bytesSeen).toEqual([...bytesSeen].sort((a, b) => a - b));
     expect(progress.at(-1)).toEqual({
@@ -284,7 +279,7 @@ describe("importParrotFiles", () => {
       currentFile: null,
       bytesDone: bytesTotal,
       bytesTotal,
-      published: 1,
+      published: 2,
     });
     expect(messages.some((message) => message.includes("no library snapshot yet"))).toBe(true);
     expect(messages.some((message) => message.includes("published library snapshot v1"))).toBe(true);
@@ -437,8 +432,7 @@ describe("importParrotFiles", () => {
     expect(server.publishes).toHaveLength(2);
   });
 
-  // @req PAR-UP-14
-  it("publishes songs in batches, each batch as soon as it is full, so an interrupted import keeps what it uploaded", async () => {
+  it("publishes every N new songs so an interrupted import keeps what it uploaded", async () => {
     const server = createFakeServer();
     const shown: Array<{ version: number; songs: number }> = [];
     const files = [nookMp3, nookFlac, bigFile];
@@ -448,56 +442,57 @@ describe("importParrotFiles", () => {
       libraryKeyBase64: keyBase64,
       clientType: CLIENT_TYPE,
       transport: server.transport,
-      publishBatchSongs: 2,
-      // Only a full batch (or the end of the import) publishes.
-      publishBatchMs: 60_000,
+      publishEvery: 2,
       readInfo: async (file) => info(file, { number: files.indexOf(file) + 1 }),
       // #2509: the app shows each publish from the importer's own library, so it hears of each with its songs.
       onPublished: ({ version, db }) => shown.push({ version, songs: listParrotTracks(db).length }),
     });
     log("result", result);
     log("server", server.dump());
-    expect(result.imported).toEqual(files);
-    expect(server.publishes.length).toBeLessThanOrEqual(2);
-    expect(result.snapshotVersion).toBe(server.publishes.length);
-    const songs = server.publishes.map((call) => listParrotTracks(openParrotLibrary(call.dbBytes)).length);
-    expect(songs.at(-1)).toBe(3);
-    if (songs.length === 2) expect(songs[0]).toBeGreaterThanOrEqual(2);
-    expect(shown).toEqual(songs.map((count, index) => ({ version: index + 1, songs: count })));
+    expect(result.snapshotVersion).toBe(2);
+    expect(server.publishes.map((call) => call.baseVersion)).toEqual([0, 1]);
+    expect(listParrotTracks(openParrotLibrary(server.publishes[0]!.dbBytes))).toHaveLength(2);
+    expect(listParrotTracks(openParrotLibrary(server.publishes[1]!.dbBytes))).toHaveLength(3);
+    expect(shown).toEqual([
+      { version: 1, songs: 2 },
+      { version: 2, songs: 3 },
+    ]);
   });
 
-  // @req PAR-UP-02 PAR-UP-13
-  it("uploads the songs side by side and publishes them together once nothing else can join", async () => {
+  // @req PAR-UP-02
+  it("uploads the next file while the song before it is still being published", async () => {
     const server = createFakeServer();
     const files = [nookMp3, nookFlac];
     const events: string[] = [];
     const ids = await Promise.all(
       files.map(async (file) => parrotTrackIds({ ...info(file, { number: files.indexOf(file) + 1 }), fileHash: sha256Hex(new Uint8Array(await fs.readFile(file))) }).fileId)
     );
-    // The first song's upload waits until the second is uploading: run one after the other, the import never ends.
+    // The first publish waits until the second file is uploading: run one after the other, the import never ends.
     const secondUploading = Promise.withResolvers<void>();
     const upload: typeof server.transport.upload = async (token, objectKey, payload, options, appId) => {
       events.push(`upload ${objectKey.split("/")[0]}`);
       if (objectKey.startsWith(ids[1]!)) secondUploading.resolve();
-      else await secondUploading.promise;
       return server.transport.upload(token, objectKey, payload, options, appId);
     };
     const publishSnapshot: typeof server.transport.publishSnapshot = async (input) => {
-      events.push(`publish ${listParrotTracks(openParrotLibrary(input.dbBytes)).length}`);
+      const tracks = listParrotTracks(openParrotLibrary(input.dbBytes)).length;
+      events.push(`publish ${tracks} start`);
+      if (tracks === 1) await secondUploading.promise;
+      events.push(`publish ${tracks} end`);
       return server.transport.publishSnapshot(input);
     };
-    const result = await importParrotFiles(files, {
+    await importParrotFiles(files, {
       token: TOKEN,
       userId: USER_ID,
       libraryKeyBase64: keyBase64,
       clientType: CLIENT_TYPE,
       transport: { ...server.transport, upload, openUploadSession: undefined, publishSnapshot },
-      publishBatchMs: 60_000,
       readInfo: async (file) => info(file, { number: files.indexOf(file) + 1 }),
     });
     log("events", events);
-    expect(result.imported).toEqual(files);
-    expect(events.filter((event) => event.startsWith("publish"))).toEqual(["publish 2"]);
+    expect(events.indexOf(`upload ${ids[1]}`)).toBeGreaterThan(events.indexOf(`upload ${ids[0]}`));
+    expect(events.indexOf(`upload ${ids[1]}`)).toBeLessThan(events.indexOf("publish 1 end"));
+    expect(events.slice(-2)).toEqual(["publish 2 start", "publish 2 end"]);
   });
 
   // @bugfix: the picked folders reach readInfo, so folder names above them never become album or artist names.
@@ -518,10 +513,9 @@ describe("importParrotFiles", () => {
       },
     });
     log("readInfo calls", seen);
-    // Songs are probed side by side (PAR-UP-13): which one reaches readInfo first is not part of the contract.
-    expect([...seen].sort(([a], [b]) => a.localeCompare(b))).toEqual([
-      ["big.mp3", ""],
+    expect(seen).toEqual([
       [path.relative(root, nookMp3), path.join("Linnet Park", "Meltway")],
+      ["big.mp3", ""],
     ]);
   });
 
@@ -653,10 +647,8 @@ describe("importParrotFiles", () => {
     log("abort error", String(thrown));
     log("server", server.dump());
     expect(String(thrown)).toContain("user cancelled");
-    // How many chunks were in flight when the cancel came depends on the machine's load and on how many songs upload
-    // at once (PAR-UP-13), so only the cancel itself and the missing publish are fixed; that no chunk starts after a
-    // cancel is [PARROT-INGEST-PLAYBACK-GATE-001]'s slots test.
-    expect(server.uploads.length).toBeGreaterThanOrEqual(1);
+    // The three lanes had their chunks in flight when the cancel came; none takes a new one after it.
+    expect(server.uploads).toHaveLength(3);
     expect(server.publishes).toHaveLength(0);
   });
 });
@@ -745,8 +737,8 @@ describe("importParrotFiles album covers", () => {
     messages.length = 0;
     const second = await importParrotFiles([withPicture, withoutPicture], options);
     clog("second run", { second, messages, server: server.dump() });
-    // The first run published its two songs together (v1); the cover found now is v2.
-    expect(second).toEqual({ imported: [], skipped: [withPicture, withoutPicture], failed: [], snapshotVersion: 2 });
+    // The first run published once per song (v1, v2); the cover found now is v3.
+    expect(second).toEqual({ imported: [], skipped: [withPicture, withoutPicture], failed: [], snapshotVersion: 3 });
     const album = albumOf(server.state.dbBytes!);
     expect(album.coverObjectKey).toMatch(/^assets\//);
     expect(server.objects.has(album.coverObjectKey!)).toBe(true);
@@ -884,20 +876,14 @@ describe("importParrotFiles lyrics and artist photos", () => {
     llog("result", result);
     llog("questions", asked);
     expect(result.imported).toEqual([nook, fable]);
-    // The songs are identified side by side (PAR-UP-13): each is asked once, in either order.
-    expect(asked).toHaveLength(2);
-    expect(asked).toEqual(
-      expect.arrayContaining([
-        { artist: "Linnet Park", title: "Nook", album: "Meltway", durationMs: expect.any(Number) },
-        { artist: "Linnet Park", title: "Fable", album: "Meltway", durationMs: expect.any(Number) },
-      ])
-    );
-    // The first publish of each song already carries its lyrics: it is never playable without them.
-    for (const call of server.publishes) {
-      const published = lyricsIn(call.dbBytes);
-      llog("publish", published);
-      for (const row of published as Array<{ title: string; source: string | null }>) expect({ title: row.title, source: row.source }).toEqual({ title: row.title, source: row.title === "Nook" ? "fetched" : "none" });
-    }
+    expect(asked).toEqual([
+      { artist: "Linnet Park", title: "Nook", album: "Meltway", durationMs: expect.any(Number) },
+      { artist: "Linnet Park", title: "Fable", album: "Meltway", durationMs: expect.any(Number) },
+    ]);
+    // The first publish (Nook alone) already carries Nook's lyrics: it is never playable without them.
+    const first = lyricsIn(server.publishes[0]!.dbBytes);
+    llog("first publish", first);
+    expect(first).toEqual([{ title: "Nook", plain: "Fake plain lyric for a nook test tone", source: "fetched" }]);
     const last = lyricsIn(server.state.dbBytes!);
     llog("last publish", last);
     expect(last).toEqual([
@@ -945,36 +931,6 @@ describe("importParrotFiles lyrics and artist photos", () => {
     expect(lyricsIn(slow.state.dbBytes!)).toEqual([{ title: "Fable", plain: null, source: null }]);
   });
 
-  it("stores lyrics placed in the review as the user's own, on a new song and on one the library already has", async () => {
-    const server = createFakeServer();
-    const messages: string[] = [];
-    const asked: string[] = [];
-    const placed = (words: string) => async (file: string) => ({ ...(await matched(file)), ...(file === nook ? { lyrics: { plain: words, synced: null, user: true } } : {}) });
-    const first = await importParrotFiles([nook, fable], {
-      ...base(server, messages),
-      readInfo: placed("Placed words"),
-      lookupLyrics: async (question) => {
-        asked.push(question.title);
-        return { plain: null, synced: null };
-      },
-    });
-    llog("placed", { first, asked, lyrics: lyricsIn(server.state.dbBytes!) });
-    expect(asked).toEqual(["Fable"]);
-    expect(lyricsIn(server.state.dbBytes!)).toEqual([
-      { title: "Fable", plain: null, source: "none" },
-      { title: "Nook", plain: "Placed words", source: "user" },
-    ]);
-
-    // PAR-LYR-09: the same song imported again with other words placed on it keeps its file, and takes the words.
-    const again = await importParrotFiles([nook], { ...base(server, messages), readInfo: placed("Placed again") });
-    llog("again", { again, lyrics: lyricsIn(server.state.dbBytes!) });
-    expect(again.skipped).toEqual([nook]);
-    expect(lyricsIn(server.state.dbBytes!)).toEqual([
-      { title: "Fable", plain: null, source: "none" },
-      { title: "Nook", plain: "Placed again", source: "user" },
-    ]);
-  });
-
   it("stores the matched artist's photo during the import, asked once, and says which artists are being asked", async () => {
     const server = createFakeServer();
     const messages: string[] = [];
@@ -1013,78 +969,6 @@ describe("importParrotFiles lyrics and artist photos", () => {
     expect(albumsImporting).toEqual([parrotTrackIds({ ...(await matched(nook)), fileHash: "x" }).albumId]);
   });
 
-  // @req PAR-META-31
-  it("keeps the photo the user gave the artist on another device while the import looked one up", async () => {
-    const server = createFakeServer();
-    const messages: string[] = [];
-    const { promise: held, resolve: release } = Promise.withResolvers<void>();
-    let photoSet = false;
-    const result = await importParrotFiles([nook], {
-      ...base(server, messages),
-      artistPhoto: async () => {
-        await held;
-        return { bytes: photo, credit: CREDIT };
-      },
-      onProgress: (event) => {
-        if (event.done !== 1 || photoSet) return;
-        photoSet = true;
-        // Another device gives the artist the user's photo; this import's next publish meets it.
-        server.state.conflictOnce = () => {
-          const other = openParrotLibrary(server.state.dbBytes);
-          other.exec("UPDATE artists SET picture_object_key = 'pic/user', picture_thumb_object_key = 'pic/user-thumb'");
-          server.state.dbBytes = serializeParrotLibrary(other);
-          other.close();
-          server.state.version += 1;
-          llog("other device set the user's photo", { version: server.state.version });
-        };
-        release();
-      },
-    });
-    llog("run", { result, publishes: server.publishes.map((call) => call.baseVersion) });
-    llog("importer log", messages.filter((message) => message.includes("photo")));
-    expect(result.failed).toEqual([]);
-    expect(photoSet).toBe(true);
-    const [artist] = artistsIn(server.state.dbBytes!);
-    llog("artist", artist);
-    expect(artist).toMatchObject({ name: "Linnet Park", pictureObjectKey: "pic/user", thumb: "pic/user-thumb", triedAt: expect.any(Number) });
-    expect(messages.some((message) => message.includes("not kept"))).toBe(true);
-  });
-
-  // @bugfix @regression-proof: since PAR-META-31 an import's artist upsert kept the stored name, so the first song of
-  // an import to create the artist named it. A song left as is, tagged "linkin park", landed before the songs matched
-  // to "Linkin Park", and every one of them showed the tag's spelling (parrot-desktop-e2e import-album-match, 0.1.80).
-  // @req PAR-META-03[parrot] @req PAR-META-31[parrot]
-  it("names an artist the import creates from the music library's match, whichever of its songs comes first", async () => {
-    const asIs = async (file: string) => ({ ...(await readParrotTrackInfo(file)), artist: "linnet park", albumArtist: "linnet park" });
-    for (const order of [
-      [nook, fable],
-      [fable, nook],
-    ]) {
-      const server = createFakeServer();
-      const messages: string[] = [];
-      const result = await importParrotFiles(order, { ...base(server, messages), readInfo: (file) => (file === nook ? asIs(file) : matched(file)) });
-      const artists = artistsIn(server.state.dbBytes!);
-      llog("one import, as-is and matched", { order: order.map((file) => path.basename(file)), result, artists, tracks: server.dump().tracks });
-      expect(result.failed).toEqual([]);
-      expect(artists).toHaveLength(1);
-      expect(artists[0]).toMatchObject({ name: "Linnet Park", musicId: LP_ID });
-    }
-  });
-
-  // @req PAR-META-31[parrot]
-  it("keeps the name of an artist already in the library when a later import matches a song to it", async () => {
-    const server = createFakeServer();
-    const messages: string[] = [];
-    await importParrotFiles([nook], { ...base(server, messages), readInfo: async (file) => ({ ...(await readParrotTrackInfo(file)), artist: "linnet park", albumArtist: "linnet park" }) });
-    const before = artistsIn(server.state.dbBytes!);
-    const later = await importParrotFiles([fable], base(server, messages));
-    const after = artistsIn(server.state.dbBytes!);
-    llog("artist kept across imports", { before, later, after, tracks: server.dump().tracks });
-    expect(later.failed).toEqual([]);
-    expect(after).toHaveLength(1);
-    expect(after[0]).toMatchObject({ name: "linnet park", musicId: LP_ID });
-  });
-
   it("records 'no photo' when the lookup has none, and nothing when it fails, so the pass asks again", async () => {
     const none = createFakeServer();
     const messages: string[] = [];
@@ -1108,45 +992,5 @@ describe("importParrotFiles lyrics and artist photos", () => {
     llog("failed photo", { failed, failedAsked });
     expect(failed).toMatchObject({ musicId: LP_ID, pictureObjectKey: null, triedAt: null });
     expect(failedAsked.at(-1)).toEqual([]);
-  });
-});
-
-// @bugfix: the import stored every song without its catalog id, though the review knew the matched track, so a
-// lyrics lookup never carried it and our lyrics copy's direct read by song id went unused.
-// @req PAR-LYR-01[parrot]
-describe("the matched song's catalog id", () => {
-  const SONG_ID = "6f1c2a3b-0000-4000-8000-00000000c0de";
-  const imported = (edit: Partial<ParrotImportEdit>) => {
-    const db = new Database(":memory:");
-    for (const sql of parrotLibraryMigrationStatements(0)) db.run(sql);
-    const song = applyParrotImportEdit(info("/music/13 - Nook.mp3", { title: "Nook", durationMs: 185_000 }), { artist: "", album: "", title: "", ...edit });
-    const ops = buildParrotTrackOps({ info: song, fileHash: "a", sizeBytes: 10, chunks: [{ idx: 0, objectKey: "a/chunk-0", plainOffset: 0, plainSize: 10 }], now: 1 });
-    db.transaction(() => {
-      for (const op of ops)
-        for (const statements of Object.values(buildParrotOpStatements(op)))
-          for (const { sql, params } of statements ?? []) db.prepare(sql).run(...(params as never[]));
-    })();
-    const query: ParrotLibraryQuery = <Row>(sql: string, params: readonly (string | number | null)[] = []) => db.prepare(sql).all(...(params as never[])) as Row[];
-    const upsert = ops.find((op) => op.type === "track.upsert");
-    return { musicId: (upsert?.payload as { musicId: string | null }).musicId, trackId: parrotTrackIds({ ...song, fileHash: "a" }).trackId, query };
-  };
-
-  it("is stored on the song at import and sent with its lyrics lookup", async () => {
-    const song = imported({ trackMusicId: SONG_ID });
-    log("matched song", { musicId: song.musicId });
-    expect(song.musicId).toBe(SONG_ID);
-    expect(await parrotLyricsQuery(song.query, song.trackId)).toMatchObject({ artist: "Linnet Park", title: "Nook", id: SONG_ID });
-  });
-
-  it("stays empty for a song confirmed without a matched track", async () => {
-    const song = imported({});
-    expect(song.musicId).toBeNull();
-    expect(await parrotLyricsQuery(song.query, song.trackId)).not.toHaveProperty("id");
-  });
-
-  it("drops an id that is not from our music copy (an outside source's id)", async () => {
-    const song = imported({ trackMusicId: "dQw4w9WgXcQ" });
-    log("outside id", { musicId: song.musicId });
-    expect(song.musicId).toBeNull();
   });
 });

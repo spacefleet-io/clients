@@ -20,15 +20,6 @@ const NAME = 'SF_DEV_TICKET_KEY';
 const API_NAME = 'SF_DEV_API_BASE_URL';
 const TICKETS_NAME = 'SF_METADATA_TICKETS';
 const METADATA_URL_NAME = 'EXPO_PUBLIC_METADATA_URL';
-// REL-TEST-36: "1" in a bundle Xcode builds for the iOS or tvOS simulator (its PLATFORM_NAME), "" in every other build
-// (a device archive, Android, a Metro dev server). Only such a bundle honours the release smoke's lane launch argument
-// (apiConfig.ts smokeApiBaseUrl), so the TestFlight archive's bundle never can.
-const SIMULATOR_NAME = 'SF_SIMULATOR_BUILD';
-
-/** "1" when Xcode bundles for a simulator SDK, "" otherwise. */
-function simulatorBuildValue(env) {
-  return /^(iphonesimulator|appletvsimulator)$/.test((env.PLATFORM_NAME ?? '').trim()) ? '1' : '';
-}
 
 const DEV_STACK_LIB = require('node:path').join(__dirname, '../../../scripts/dev-stack-lib.mjs');
 let warnedNoDevStack = false;
@@ -80,11 +71,10 @@ function devTicketKeyPlugin(api) {
   // Babel caches a plugin's result; key it on the env it reads, so a changed flag is never served from that cache.
   api.cache.using(
     () =>
-      `${process.env[NAME] ?? ''}|${process.env[API_NAME] ?? ''}|${process.env[TICKETS_NAME] ?? ''}|${process.env[METADATA_URL_NAME] ?? ''}|${process.env.SF_LOCAL_METADATA ?? ''}|${process.env.CONFIGURATION ?? ''}|${process.env.PLATFORM_NAME ?? ''}`,
+      `${process.env[NAME] ?? ''}|${process.env[API_NAME] ?? ''}|${process.env[TICKETS_NAME] ?? ''}|${process.env[METADATA_URL_NAME] ?? ''}|${process.env.SF_LOCAL_METADATA ?? ''}|${process.env.CONFIGURATION ?? ''}`,
   );
   const value = devTicketKeyValue(process.env);
   const apiValue = devApiBaseUrlValue(process.env);
-  const simulatorValue = simulatorBuildValue(process.env);
   const metadata = metadataValues(process.env, api.env('development'));
   return {
     name: 'sf-dev-ticket-key',
@@ -94,7 +84,6 @@ function devTicketKeyPlugin(api) {
         else if (path.matchesPattern(`process.env.${API_NAME}`)) path.replaceWith(t.stringLiteral(apiValue));
         else if (path.matchesPattern(`process.env.${TICKETS_NAME}`)) path.replaceWith(t.stringLiteral(metadata.tickets));
         else if (path.matchesPattern(`process.env.${METADATA_URL_NAME}`)) path.replaceWith(t.stringLiteral(metadata.url));
-        else if (path.matchesPattern(`process.env.${SIMULATOR_NAME}`)) path.replaceWith(t.stringLiteral(simulatorValue));
       },
     },
   };
@@ -103,4 +92,3 @@ function devTicketKeyPlugin(api) {
 module.exports = devTicketKeyPlugin;
 module.exports.devTicketKeyValue = devTicketKeyValue;
 module.exports.devApiBaseUrlValue = devApiBaseUrlValue;
-module.exports.simulatorBuildValue = simulatorBuildValue;

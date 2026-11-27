@@ -27,7 +27,7 @@ vi.mock("@space/ui", () => ({
 // assertion path doesn't need to wait for the 220ms animation.
 vi.mock("@space/desktop-shell/components", async () => ({
   // The shared job cards themselves (UX-JOBS-02) render for real.
-  ...(await vi.importActual<object>("@space/desktop-shell/desktop-job-card")),
+  ...(await vi.importActual<object>("../../../../packages/desktop-shell/src/components/desktop-job-card")),
   AnimatedDismissRow: ({ children }: any) => <>{children}</>,
   // The shared Jobs panel pieces (UX-JOBS-01): five filter pills then the trailing action, and the empty state.
   DesktopJobsFilterBar: ({ labels, onChange, trailing }: any) => (
@@ -61,7 +61,6 @@ vi.mock("lucide-react", () => ({
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string, second?: unknown) => (typeof second === "string" ? second : key),
-    i18n: { language: "en" },
   }),
 }));
 

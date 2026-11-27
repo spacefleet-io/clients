@@ -14,7 +14,7 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { changeLanguage, initI18n } from "@space/mobile-shell/i18n";
 import { MainShellScreen } from "../src/screens/MainShellScreen";
 import type { SeeAllTarget } from "../src/lib/phoneHome";
-import { tabBarHalfFits, tabBarHalfWidth } from "@space/mobile-shell/tab-bar-geometry";
+import { tabBarHalfFits, tabBarHalfWidth } from "../../../../packages/mobile-shell/src/components/mobile-tab-bar-geometry";
 
 /**
  * Each shipped tab label's width in points as the bar draws it (Inter semibold 11 pt, as written), measured on an iOS
@@ -72,8 +72,7 @@ vi.mock("@space/mobile-shell/i18n", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@space/mobile-shell/i18n")>();
   return { ...actual, useTranslation: () => ({ t: actual.translate, i18n: { language: actual.getCurrentLanguage() } }) };
 });
-vi.mock("@react-navigation/native", () => ({ useIsFocused: () => true, useNavigation: () => ({ navigate: () => undefined }) }));
-vi.mock("@space/mobile-shell/account-news", () => ({ useAccountNews: () => undefined }));
+vi.mock("@react-navigation/native", () => ({ useIsFocused: () => true }));
 vi.mock("lucide-react-native", () => ({
   Home: "icon:Home",
   LibraryBig: "icon:LibraryBig",
@@ -98,8 +97,6 @@ vi.mock("@space/mobile-shell/notice-queue", () => ({
   useNoticeQueue: () => ({ current: null, show: () => undefined, setHeld: () => undefined, dismiss: () => undefined }),
 }));
 vi.mock("../src/store/auth", () => ({ useAuth: () => ({ token: null }) }));
-// The tab bar's unpaid sign (tested in mobile-shell) loads the real safe-area module, which plain node cannot load.
-vi.mock("@space/mobile-shell/unpaid-access-sign", () => ({ UnpaidAccessSign: () => null }));
 vi.mock("../src/store/library", () => ({
   useLibraryData: () => ({ media: shell.media }),
   useLibraryStatus: () => ({ loadStatus: { kind: "ready" }, syncState: { kind: "idle" }, reload: () => undefined }),
@@ -107,6 +104,7 @@ vi.mock("../src/store/library", () => ({
 vi.mock("../src/lib/pairing/deviceWatch", () => ({ checkForNewDevices: async () => undefined, markDeviceSeen: async () => undefined }));
 vi.mock("../src/lib/pairing/newDevice", () => ({ newDeviceKey: () => "", newDeviceMessage: () => "", subscribeNewDevice: () => () => undefined }));
 vi.mock("../src/lib/pairing/useOpenDevices", () => ({ useOpenDevices: () => ({ devicesRequest: null, openDevices: () => undefined }) }));
+vi.mock("@space/mobile-shell/unpaid-access-banner", () => ({ UnpaidAccessBanner: () => null }));
 vi.mock("../src/screens/HomeScreen", () => ({
   HomeScreen: (props: { onSeeAll: (target: SeeAllTarget) => void }) => {
     shell.onSeeAll = props.onSeeAll;
@@ -117,9 +115,6 @@ vi.mock("../src/screens/LibraryScreen", () => ({ LibraryScreen: "LibraryScreen" 
 vi.mock("../src/components/PlaylistsPanel", () => ({ PlaylistsPanel: "PlaylistsPanel" }));
 vi.mock("../src/components/PhoneSearch", () => ({ PhoneSearch: "PhoneSearch" }));
 vi.mock("../src/screens/SettingsScreen", () => ({ SettingsScreen: "SettingsScreen" }));
-// The header bell (MOBILE-SHELL-NOTICE-HISTORY-001) and its device storage load native modules plain node cannot load.
-vi.mock("@space/mobile-shell/notice-bell", () => ({ MobileNoticeBell: () => null }));
-vi.mock("@react-native-async-storage/async-storage", () => ({ default: { getItem: async () => null, setItem: async () => undefined } }));
 
 const render = () => {
   let tree!: ReactTestRenderer;

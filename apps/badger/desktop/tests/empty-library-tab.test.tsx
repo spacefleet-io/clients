@@ -55,8 +55,8 @@ vi.mock("@/lib/ingestionContext", () => ({ useIngestion: () => ({ openIngestion:
 vi.mock("@/components/TopNavNotificationsButton", () => ({ default: () => <span data-testid="notifications" /> }));
 vi.mock("@/components/TopNavJobsSidebar", () => ({ default: () => <span data-testid="jobs" /> }));
 vi.mock("@/components/DesktopOfflineIndicator", () => ({ DesktopOfflineIndicator: () => null }));
-vi.mock("@/components/UnpaidAccessSign", () => ({ UnpaidAccessSign: () => null }));
-vi.mock("@/components/OverQuotaSign", () => ({ OverQuotaSign: () => null }));
+vi.mock("@/components/UnpaidAccessBanner", () => ({ UnpaidAccessBanner: () => null }));
+vi.mock("@/components/OverQuotaBanner", () => ({ OverQuotaBanner: () => null }));
 vi.mock("@/components/SignOutKeyCheck", () => ({ useSignOutWithKeyCheck: () => ({ requestSignOut: () => undefined, dialog: null }) }));
 
 import TopNav from "../src/renderer/src/components/TopNav";
