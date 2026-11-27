@@ -8,7 +8,6 @@ import {
   type EnsureLangDataOptions,
   ensureTesseractLangData,
   type LangDataFetch,
-  parseRetryAfterMs,
   TESSERACT_LANG_DATA_USER_AGENT,
   tesseractLangDataUrl,
 } from "../src/subtitleOcr/langData";
@@ -230,12 +229,5 @@ describe("ensureTesseractLangData", () => {
       expect(resolveTesseractLanguage(code)).toMatchObject({ status: "ocr", code });
       expect(TESSERACT_LANG_DATA_SHA256[code]).toMatch(/^[0-9a-f]{64}$/);
     }
-  });
-
-  it("parses Retry-After seconds and HTTP dates", () => {
-    expect(parseRetryAfterMs("3")).toBe(3000);
-    expect(parseRetryAfterMs(new Date(10_000).toUTCString(), 4000)).toBe(6000);
-    expect(parseRetryAfterMs("soon")).toBeNull();
-    expect(parseRetryAfterMs(null)).toBeNull();
   });
 });

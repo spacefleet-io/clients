@@ -275,9 +275,20 @@ export default function Library({ t, state, onState }: Props) {
     }
   };
 
+  // UX-ADD-01: what the "+", the empty library or a drop asked to scan. Asked while an import runs or waits in its
+  // review, main keeps the sources and scans them once it is over: the window says so and keeps the status it shows.
+  const scanned = (status: ParrotImportStatus) => {
+    if (status.queuedSources === undefined) {
+      setImportStatus(status);
+      return;
+    }
+    console.info(`[parrot:import] ${status.queuedSources} source(s) wait behind the import`);
+    toast.info(t("addMusic.dropQueued"));
+  };
+
   // UX-ADD-01: song files or folders dropped anywhere on the window are scanned like the "+" picks them, so the same
   // confirm dialog (PAR-UP-05) shows what was found; only audio files are read (PAR-UP-01). UX-ADD-02: images are
-  // left out silently, any other file gets a short toast.
+  // left out silently, any other file gets a short toast. A drop during an import waits behind it (above).
   const drop = useWindowFileDrop({
     getPathForFile: window.parrot.getPathForFile,
     isImportableFile: isParrotAudioFile,
@@ -285,14 +296,12 @@ export default function Library({ t, state, onState }: Props) {
       console.info(`[parrot:window-drop] refused ${names.length} file(s)`);
       toast.info(t("addMusic.dropOnlySongs"));
     },
-    // An import already under way is not interrupted, like the "+" (an open dialog is handled by the shared drop).
-    standAside: () => Boolean(importStatus?.running) || importStatus?.phase === "review",
     onDrop: (paths) => {
       console.info(`[parrot:window-drop] dropped ${paths.length} path(s)`);
       void window.parrot.scanImport(paths).then(
         (status) => {
-          setImportStatus(status);
-          if (status.phase !== "scanning") drop.stopProcessing();
+          scanned(status);
+          if (status.phase !== "scanning" || status.queuedSources !== undefined) drop.stopProcessing();
         },
         (error: unknown) => {
           console.error("[parrot:window-drop] scan failed", error);
@@ -309,7 +318,7 @@ export default function Library({ t, state, onState }: Props) {
     console.info(`[parrot:empty-library] picked ${kind}`, paths.length);
     if (paths.length === 0) return false;
     try {
-      setImportStatus(await window.parrot.scanImport(paths));
+      scanned(await window.parrot.scanImport(paths));
     } catch (error) {
       console.error("[parrot:empty-library] scan failed", error);
       toast.error(error instanceof Error ? error.message : String(error));
@@ -349,6 +358,32 @@ export default function Library({ t, state, onState }: Props) {
       if (status.phase === "failed") notifyJob("import", "failed", { key: "notify.job.importFailed" }, importErrorPart(status.error ?? ""));
     });
   }, []);
+  // UX-ADD-01: a review with no confirm dialog on screen (its dialog closed while main kept the review, or its scan
+  // never came) blocks nothing: the scan is read again and the dialog reopens, or main has none and the review ends.
+  const orphanReview = importStatus?.phase === "review" && !importScan;
+  useEffect(() => {
+    if (!orphanReview) return;
+    let current = true;
+    void (async () => {
+      const scan = await window.parrot.getImportScan();
+      if (!current) return;
+      if (scan) {
+        setImportScan(scan);
+        return;
+      }
+      const now = await window.parrot.getImportStatus();
+      if (!current) return;
+      if (now.phase !== "review" || now.running) {
+        setImportStatus(now);
+        return;
+      }
+      console.warn("[parrot:import] review without a scan cleared");
+      setImportStatus(await window.parrot.cancelImport());
+    })();
+    return () => {
+      current = false;
+    };
+  }, [orphanReview]);
   useEffect(() => {
     void window.parrot.getKept().then(setKept);
     return window.parrot.onKept(setKept);
@@ -1216,7 +1251,7 @@ export default function Library({ t, state, onState }: Props) {
               label={t("addMusic.label")}
               icon={badgerTopBarIcons.add}
               onClick={() => {
-                if (!importStatus?.running && importStatus?.phase !== "review") setAddOpen(true);
+                setAddOpen(true);
               }}
               testId="library-import"
             />
@@ -1262,7 +1297,7 @@ export default function Library({ t, state, onState }: Props) {
           {() => page()}
         </RenderBoundary>
       </main>
-      <AddMusic t={t} open={addOpen} onOpenChange={setAddOpen} onScanned={setImportStatus} />
+      <AddMusic t={t} open={addOpen} onOpenChange={setAddOpen} onScanned={scanned} />
       <Notifications />
       <WindowDropOverlay
         drop={drop}

@@ -39,6 +39,27 @@ export const isUserPause = ({
   !(lastSentPause?.value === true && now - lastSentPause.at < APP_PAUSE_ECHO_MS);
 
 /**
+ * mpv's pause reports, one mpv process at a time: `note` records a report and
+ * returns the one before it (`previous` for `isUserPause`). A new process has
+ * reported nothing yet, so `processGone` forgets the last one: otherwise a
+ * relaunch (mpv starts with `--pause`) after mpv exited while playing reads as
+ * playing→paused, a user pause that blocks the launch's automatic play.
+ */
+export const createMpvPauseReports = () => {
+  let last: boolean | null = null;
+  return {
+    note(next: unknown): boolean | null {
+      const previous = last;
+      if (typeof next === "boolean") last = next;
+      return previous;
+    },
+    processGone() {
+      last = null;
+    },
+  };
+};
+
+/**
  * MPV-PAUSE-01: an automatic play (deferred launch, backdrop->stream handoff,
  * resume-from-position seek, poll retry) may run only when no user pause came
  * at or after the latest explicit play request.
