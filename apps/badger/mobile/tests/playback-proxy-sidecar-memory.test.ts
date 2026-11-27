@@ -63,7 +63,9 @@ describe("android playback proxy keeps large sidecars out of the Java heap", () 
     const src = read(KT, "StorageTunnelClient.kt");
     expect(src).toMatch(/cacheBudgetBytes: Long = minOf\(MAX_CACHE_BYTES, Runtime\.getRuntime\(\)\.maxMemory\(\) \/ 4\)/);
     expect(body(src, "private fun evictIfNeededLocked")).toContain("cacheSize > cacheBudgetBytes");
-    const open = body(src, "override fun openObject(key: String): ObjectBody");
+    // openObject is the player's read; it and the cancellable prefetch share `open` (PAR-PLAY-12).
+    expect(body(src, "override fun openObject(key: String): ObjectBody")).toContain("open(key, player = true)");
+    const open = body(src, "private fun open(key: String, player: Boolean): ObjectBody");
     expect(open).toContain("spool?.open(key)");
     expect(src).toContain("object.tunnel_and_spool");
   });

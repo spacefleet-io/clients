@@ -52,6 +52,7 @@ const scanOf = (entries: ParrotScanEntry[]): ParrotImportScan => ({
   artists: 1,
   totalBytes: entries.length * 1_000_000,
   unreadable: [],
+  lyrics: [],
 });
 /** A lookup that answers each album with the found albums and unplaced files among its own files. */
 const lookupOf =
@@ -116,7 +117,7 @@ describe("Parrot desktop import review: what the import stores", () => {
         }),
       },
     });
-    await act(async () => root.render(<ImportReview t={translator("en")} language="en" scan={scan} onDone={() => undefined} />));
+    await act(async () => root.render(<ImportReview t={translator("en")} language="en" scan={scan} tracks={[]} onDone={() => undefined} />));
     await flush();
   };
   const confirmImport = async () => {
@@ -160,6 +161,27 @@ describe("Parrot desktop import review: what the import stores", () => {
     // A real various-artists compilation keeps "Various Artists" as album artist, and each song its own artist.
     expect(selection.get(beforeTheLightsGo.file)).toMatchObject({ artist: "Tin Tin Kites", albumArtist: "Various Artists", albumArtistMusicId: VARIOUS.id, coverId: clockworkers.id });
     for (const item of selection.values()) expect(item.unidentified).toBeUndefined();
+  });
+
+  // @bugfix: the review knew each song's matched track but handed the import only its album's id, so no song's
+  // lyrics lookup carried its own id.
+  // @req PAR-LYR-01[parrot]
+  it("hands the import each matched song's own track id from our copy, never an outside source's id", async () => {
+    const paperboat = entry("/music/Hollow Signal/01 Paperboat.mp3", { artist: "Linnet Park", album: "Hollow Signal", title: "Paperboat", number: 1 });
+    const whatIveDone = entry("/music/Minutes/06 What I've Kept.mp3", { artist: "Linnet Park", album: "Minutes to Daybreak", title: "What I've Kept", number: 6 });
+    // An album whose last track only an outside source answered: its id is not one of our copy's.
+    const outside = { ...minutes, tracks: minutes.tracks.map((track) => (track.number === 6 ? { ...track, id: "dQw4w9WgXcQ" } : track)) };
+    await show(
+      scanOf([paperboat, whatIveDone]),
+      lookupOf([
+        { album: hollowSignal, cover: null, tracklistKnown: true, files: [{ file: paperboat.file, disc: 1, number: 1, sure: true }] },
+        { album: outside, cover: null, tracklistKnown: true, files: [{ file: whatIveDone.file, disc: 1, number: 6, sure: true }] },
+      ]),
+    );
+    const selection = new Map((await confirmImport()).map((item) => [item.file, item]));
+    expect(selection.get(paperboat.file)).toMatchObject({ album: "Hollow Signal", trackMusicId: hollowSignal.tracks[0]!.id });
+    expect(selection.get(whatIveDone.file)).toMatchObject({ album: "Minutes to Daybreak", albumMusicId: minutes.id });
+    expect(selection.get(whatIveDone.file)?.trackMusicId).toBeUndefined();
   });
 
   // @req PAR-UP-08
@@ -490,6 +512,153 @@ describe("Parrot desktop import review: what the import stores", () => {
     expect(item).toMatchObject({ title: "Untitled", album: "Meltway", albumMusicId: meltway.id });
     expect(item?.number).toBeUndefined();
     expect(item?.unidentified).toBeUndefined();
+  });
+
+  // Hybrid Theory (Chris 2026-11-27, "(A) looks best"): a 12-song folder stays one album; 3 of its songs are also on
+  // other albums of the band and say so on their own line, with Keep here as the default.
+  const LINKIN_PARK = { id: "f59c5b0f-5d1a-4a0f-8b62-2c6a8c4a0d01", name: "Linkin Park" };
+  const HT_TITLES = ["Papercut", "One Step Closer", "With You", "Points of Authority", "Crawling", "Runaway", "By Myself", "In the End", "A Place for My Head", "Forgotten", "Cure for the Itch", "Pushing Me Away"];
+  const hybridTheory = album("b3c1e2d4-0a1b-4c2d-9e3f-4a5b6c7d8e01", "Hybrid Theory", 2000, LINKIN_PARK, HT_TITLES);
+  const inTheEndSingle = album("b3c1e2d4-0a1b-4c2d-9e3f-4a5b6c7d8e02", "In the End", 2001, LINKIN_PARK, ["In the End", "Points of Authority (live)", "A Place for My Head (live)", "In the End (video)"]);
+  const papercuts = album("b3c1e2d4-0a1b-4c2d-9e3f-4a5b6c7d8e03", "Papercuts", 2024, LINKIN_PARK, Array.from({ length: 20 }, (_, index) => (index === 4 ? "Crawling" : `Papercuts ${index + 1}`)));
+  const anniversary = album("b3c1e2d4-0a1b-4c2d-9e3f-4a5b6c7d8e04", "Hybrid Theory (20th Anniversary Edition)", 2020, LINKIN_PARK, [...HT_TITLES, "My December"]);
+  /** `owned`: songs whose other album's track the library already has, so Move there is in doubt there. */
+  const hybridTheoryFolder = (owned: string[] = []) => {
+    const songs = HT_TITLES.map((title, index) => entry(`/music/Linkin Park/Hybrid Theory/${String(index + 1).padStart(2, "0")} ${title}.mp3`, { artist: "Linkin Park", album: "Hybrid Theory", title, number: index + 1 }));
+    const elsewhere: Record<string, { album: MusicAlbum; number: number }> = {
+      "In the End": { album: inTheEndSingle, number: 1 },
+      Crawling: { album: papercuts, number: 5 },
+      "Points of Authority": { album: anniversary, number: 4 },
+    };
+    const found: ParrotImportMatchedAlbum[] = [
+      {
+        album: hybridTheory,
+        cover: COVER,
+        tracklistKnown: true,
+        files: songs.map((song) => {
+          const other = elsewhere[song.title];
+          return { file: song.file, disc: 1, number: song.number, sure: true, ...(other ? { alsoOn: { album: other.album, tracklistKnown: true, disc: 1, number: other.number, sure: !owned.includes(song.title) } } : {}) };
+        }),
+      },
+    ];
+    return { songs, inTheEnd: songs[7], lookup: lookupOf(found) };
+  };
+  const alsoLine = (file: string) => byTestId("import-also-on").find((line) => line.dataset.file === file);
+
+  // @req PAR-UP-10
+  it("[PARROT-DESKTOP-IMPORT-EDIT-001] album first: a folder with songs also on other albums stays one album, Keep here by default, Import on", async () => {
+    const { songs, lookup } = hybridTheoryFolder();
+    await show(scanOf(songs), lookup);
+    const rows = byTestId("import-review-album").map((row) => row.dataset.album);
+    const lines = byTestId("import-also-on").map((line) => `${line.dataset.state}: ${line.textContent}`);
+    console.info(SUITE, "[album first] rows", rows, "flags", lines);
+    expect(rows).toEqual(["Hybrid Theory"]);
+    expect(lines).toEqual([
+      "kept: Also on Hybrid Theory (20th Anniversary Edition) (2020)Keep hereMove there → Hybrid Theory (20th Anniversary Edition) (2020), 1 of 13 songs",
+      "kept: Also on Papercuts (2024)Keep hereMove there → Papercuts (2024), 1 of 20 songs",
+      "kept: Also on In the End (2001)Keep hereMove there → In the End (2001), 1 of 4 songs",
+    ]);
+    expect(byTestId("import-review-walk")).toHaveLength(0);
+    expect(byTestId("import-review-goes-in")[0]?.textContent).toBe("Goes in as 1 album: Hybrid Theory (2000)");
+    expect(byTestId("import-review-confirm")[0]).toHaveProperty("disabled", false);
+    const selection = await confirmImport();
+    expect(selection).toHaveLength(12);
+    expect(new Set(selection.map((item) => item.album))).toEqual(new Set(["Hybrid Theory"]));
+  });
+
+  // @req PAR-UP-10
+  it("[PARROT-DESKTOP-IMPORT-EDIT-001] album first: Move there puts one song on the single, Move back returns it", async () => {
+    const { songs, inTheEnd, lookup } = hybridTheoryFolder();
+    await show(scanOf(songs), lookup);
+    await click(alsoLine(inTheEnd.file)?.querySelector('[data-testid="import-also-move"]'));
+    const rows = byTestId("import-review-album").map((row) => row.dataset.album);
+    console.info(SUITE, "[album first] after Move there", rows, alsoLine(inTheEnd.file)?.textContent);
+    expect(rows).toContain("In the End");
+    expect(alsoLine(inTheEnd.file)).toBeUndefined();
+    expect(byTestId("import-review-goes-in")[0]?.textContent).toBe("Goes in as 2 albums: Hybrid Theory (2000), In the End (2001)");
+    expect(byTestId("import-review-confirm")[0]).toHaveProperty("disabled", false);
+
+    // The single's card says where the song came from, with Move back.
+    await click(albumRow("In the End"));
+    expect(alsoLine(inTheEnd.file)?.dataset.state).toBe("moved");
+    expect(alsoLine(inTheEnd.file)?.textContent).toBe("Moved here from Hybrid Theory (2000)Move back");
+    await click(alsoLine(inTheEnd.file)?.querySelector('[data-testid="import-also-back"]'));
+    expect(byTestId("import-review-album").map((row) => row.dataset.album)).toEqual(["Hybrid Theory"]);
+    expect(byTestId("import-review-goes-in")[0]?.textContent).toBe("Goes in as 1 album: Hybrid Theory (2000)");
+
+    await click(byTestId("import-also-on").find((line) => line.dataset.file === inTheEnd.file)?.querySelector('[data-testid="import-also-move"]'));
+    const selection = new Map((await confirmImport()).map((item) => [item.file, item]));
+    expect(selection.get(inTheEnd.file)).toMatchObject({ album: "In the End", title: "In the End", number: 1 });
+    expect(selection.get(songs[0].file)).toMatchObject({ album: "Hybrid Theory", number: 1 });
+  });
+
+  // @req PAR-UP-10
+  it("[PARROT-DESKTOP-IMPORT-EDIT-001] album first: Move there onto a track the library already has asks for a Check", async () => {
+    const { songs, inTheEnd, lookup } = hybridTheoryFolder(["In the End"]);
+    await show(scanOf(songs), lookup);
+    await click(alsoLine(inTheEnd.file)?.querySelector('[data-testid="import-also-move"]'));
+    console.info(SUITE, "[album first] moved onto an owned track", byTestId("import-review-album").map((row) => row.dataset.album));
+    expect(byTestId("import-review-confirm")[0]).toHaveProperty("disabled", true);
+    await click(albumRow("In the End"));
+    await click(alsoLine(inTheEnd.file)?.querySelector('[data-testid="import-also-back"]'));
+    expect(byTestId("import-review-confirm")[0]).toHaveProperty("disabled", false);
+  });
+
+  // @req PAR-UP-10
+  it("[PARROT-DESKTOP-IMPORT-EDIT-001] album first: Not this album on the folder's album drops the Also on lines and the Goes in as footer", async () => {
+    const { songs, lookup } = hybridTheoryFolder();
+    await show(scanOf(songs), lookup);
+    await click(byTestId("import-match-clear")[0]);
+    console.info(SUITE, "[album first] after Not this album", byTestId("import-review-album").map((row) => `${row.dataset.album}:${row.dataset.state}`), byTestId("import-review-goes-in")[0]?.textContent);
+    expect(byTestId("import-also-on")).toHaveLength(0);
+    expect(byTestId("import-review-goes-in")).toHaveLength(0);
+  });
+
+  /** Hybrid Theory with its In the End also on the single, plus `extra` placed on the single or unidentified. */
+  const heldTrackFolder = (extra: "single" | "unidentified") => {
+    const { songs, inTheEnd } = hybridTheoryFolder();
+    const other =
+      extra === "single"
+        ? entry("/music/Linkin Park/In the End/01 In the End.mp3", { artist: "Linkin Park", album: "In the End", title: "In the End", number: 1 })
+        : entry("/music/Odd/In the End.mp3", { artist: "Linnet Park", album: "Odd Tapes", title: "In the End", number: 0 });
+    const found: ParrotImportMatchedAlbum[] = [
+      {
+        album: hybridTheory,
+        cover: COVER,
+        tracklistKnown: true,
+        files: songs.map((song) => ({ file: song.file, disc: 1, number: song.number, sure: true, ...(song === inTheEnd ? { alsoOn: { album: inTheEndSingle, tracklistKnown: true, disc: 1, number: 1, sure: true } } : {}) })),
+      },
+      ...(extra === "single" ? [{ album: inTheEndSingle, cover: COVER, tracklistKnown: true, files: [{ file: other.file, disc: 1, number: 1, sure: true }] }] : []),
+    ];
+    const unplaced: ParrotImportUnidentifiedFile[] = extra === "unidentified" ? [{ file: other.file, reason: "no-match" }] : [];
+    return { scan: scanOf([...songs, other]), inTheEnd, lookup: lookupOf(found, unplaced) };
+  };
+
+  // @req PAR-UP-08
+  it("[PARROT-DESKTOP-IMPORT-EDIT-001] album first: Move there is off while another song holds that track", async () => {
+    const { scan, inTheEnd, lookup } = heldTrackFolder("single");
+    await show(scan, lookup);
+    const move = alsoLine(inTheEnd.file)?.querySelector<HTMLButtonElement>('[data-testid="import-also-move"]');
+    console.info(SUITE, "[album first] Move there onto a held track", move?.disabled, move?.title);
+    expect(move?.disabled).toBe(true);
+    expect(move?.title).toBe("Another song of this import is already on that track");
+  });
+
+  // @req PAR-UP-08
+  it("[PARROT-DESKTOP-IMPORT-EDIT-001] album first: Move back is off once another song took the track it left", async () => {
+    const { scan, inTheEnd, lookup } = heldTrackFolder("unidentified");
+    await show(scan, lookup);
+    await click(alsoLine(inTheEnd.file)?.querySelector('[data-testid="import-also-move"]'));
+    await click(albumRow("Odd Tapes"));
+    window.parrot.searchImportAlbums = vi.fn(async () => ({ kind: "found" as const, results: [{ album: hybridTheory, cover: null }] }));
+    await click(byTestId("import-match-search-submit")[0]);
+    await click(byTestId("import-match-result")[0]?.querySelector("button"));
+    console.info(SUITE, "[album first] after Select", byTestId("import-review-album").map((row) => `${row.dataset.album}:${row.dataset.state}`));
+    await click(albumRow("In the End"));
+    const back = alsoLine(inTheEnd.file)?.querySelector<HTMLButtonElement>('[data-testid="import-also-back"]');
+    console.info(SUITE, "[album first] Move back onto a held track", back?.disabled, back?.title);
+    expect(back?.disabled).toBe(true);
+    expect(back?.title).toBe("Another song of this import is already on that track");
   });
 });
 

@@ -7,7 +7,7 @@ import {
   type ParrotLibraryOp,
 } from "@space/parrot-library-db-definition";
 import { parrotLibraryStatementsForOps } from "../src/librarySchema";
-import { parrotAlbumEditValues, parrotTrackEditValues, planParrotDelete, planParrotEdit, planParrotTrackLoudness, type ParrotLibraryQuery, type ParrotManageContext } from "../src/manage";
+import { parrotAlbumEditValues, parrotArtistEditValues, parrotTrackEditValues, planParrotDelete, planParrotEdit, planParrotTrackLoudness, type ParrotLibraryQuery, type ParrotManageContext } from "../src/manage";
 import { albumPageRows } from "../src/missingTracks";
 
 const T = "[PARROT-CORE-MANAGE]";
@@ -339,5 +339,72 @@ describe("planParrotTrackLoudness", () => {
     expect(await planParrotTrackLoudness(q, "gone", { gainDb: 3, peak: 0.5 }, ctx)).toBeNull();
     apply(db, (await planParrotEdit(q, { kind: "track", id: "nook", edit: { title: "Nook!", artist: "Linnet Park", album: "Meltway", number: 13, disc: 1, year: 2003, genre: null } }, ctx)).ops);
     expect(stored()).toEqual({ title: "Nook!", g: -7.5, p: 0.98 });
+  });
+});
+
+describe("planParrotEdit for an artist", () => {
+  const artists = (db: Database) =>
+    db.prepare("SELECT id, name, sort_name AS sortName, picture_object_key AS large, picture_thumb_object_key AS thumb FROM artists ORDER BY id").all();
+  const withPhoto = () => {
+    const db = seed();
+    apply(db, [createParrotOp("artist.upsert", { id: "ar-linnet park", musicId: null, name: "Linnet Park", sortName: "Linnet Park", pictureObjectKey: "pic/lp", pictureThumbObjectKey: "pic/lp-thumb", pictureTriedAt: 5 }, meta)]);
+    return db;
+  };
+
+  it("@req PAR-META-31 a rename rewrites the row under its ID: its albums and songs follow, and a song typed with the new name joins it", async () => {
+    const db = withPhoto();
+    const q = queryOf(db);
+    expect(await parrotArtistEditValues(q, "ar-linnet park")).toEqual({ name: "Linnet Park", pictureObjectKey: "pic/lp-thumb" });
+    const before = snapshot(db);
+    const plan = await planParrotEdit(q, { kind: "artist", id: "ar-linnet park", edit: { name: "  Linnet  Park Collective " } }, ctx);
+    console.log(T, "rename plan", plan.ops.map((o) => `${o.type}:${JSON.stringify(o.payload)}`), plan.objectKeys, plan.error);
+    expect(plan.error).toBeUndefined();
+    expect(plan.objectKeys).toEqual([]);
+    expect(plan.ops.map((o) => o.type)).toEqual(["artist.upsert"]);
+    apply(db, plan.ops);
+    console.log(T, "after rename", artists(db));
+    expect(snapshot(db)).toEqual(before);
+    expect(db.prepare("SELECT name, sort_name AS s, picture_object_key AS p FROM artists WHERE id = 'ar-linnet park'").get()).toEqual({ name: "Linnet Park Collective", s: "Linnet Park Collective", p: "pic/lp" });
+    expect(db.prepare("SELECT count(*) AS n FROM albums WHERE album_artist_id = 'ar-linnet park'").get()).toEqual({ n: 2 });
+
+    // A song typed with the new name finds the renamed row, though the importer would give that name another ID.
+    const move = await planParrotEdit(q, { kind: "track", id: "dirt", edit: { title: "dirt", artist: "Linnet Park Collective", album: "Crossing Current", number: 2, disc: 1, year: null, genre: null } }, ctx);
+    console.log(T, "song typed with the new name", move.ops.map((o) => `${o.type}:${JSON.stringify(o.payload)}`));
+    expect(move.ops.filter((o) => o.type === "artist.upsert")).toEqual([]);
+    apply(db, move.ops);
+    expect(db.prepare("SELECT artist_id AS a FROM tracks WHERE id = 'dirt'").get()).toEqual({ a: "ar-linnet park" });
+    expect(snapshot(db).artists).toEqual(before.artists);
+    expect(db.prepare("SELECT name FROM artists WHERE id = 'ar-linnet park'").get()).toEqual({ name: "Linnet Park Collective" });
+  });
+
+  it("@req PAR-META-31 a rename onto another artist of the library is refused; a new letter case of its own name is not", async () => {
+    const db = withPhoto();
+    const q = queryOf(db);
+    const merge = await planParrotEdit(q, { kind: "artist", id: "ar-linnet park", edit: { name: "JUN-O" } }, ctx);
+    console.log(T, "merge plan", merge);
+    expect(merge).toEqual({ ops: [], objectKeys: [], error: "An artist named Jun-O is already in your library" });
+    const respell = await planParrotEdit(q, { kind: "artist", id: "ar-linnet park", edit: { name: "LINNET PARK" } }, ctx);
+    console.log(T, "respell plan", respell.ops.map((o) => JSON.stringify(o.payload)), respell.error);
+    expect(respell.error).toBeUndefined();
+    apply(db, respell.ops);
+    expect(db.prepare("SELECT name FROM artists WHERE id = 'ar-linnet park'").get()).toEqual({ name: "LINNET PARK" });
+    expect(await planParrotEdit(q, { kind: "artist", id: "ar-gone", edit: { name: "Gone" } }, ctx)).toEqual({ ops: [], objectKeys: [] });
+  });
+
+  it("@req PAR-META-31 a new photo replaces both stored copies, which are returned for deletion; automatic clears it", async () => {
+    const db = withPhoto();
+    const q = queryOf(db);
+    const photo = await planParrotEdit(q, { kind: "artist", id: "ar-linnet park", edit: { name: "Linnet Park", picture: { pictureObjectKey: "pic/new", pictureThumbObjectKey: "pic/new-thumb" } } }, ctx);
+    console.log(T, "photo plan", photo.ops.map((o) => JSON.stringify(o.payload)), photo.objectKeys);
+    expect(photo.objectKeys.sort()).toEqual(["pic/lp", "pic/lp-thumb"]);
+    apply(db, photo.ops);
+    expect(db.prepare("SELECT picture_object_key AS p, picture_thumb_object_key AS t FROM artists WHERE id = 'ar-linnet park'").get()).toEqual({ p: "pic/new", t: "pic/new-thumb" });
+
+    const automatic = await planParrotEdit(q, { kind: "artist", id: "ar-linnet park", edit: { name: "Linnet Park", picture: "automatic" } }, ctx);
+    console.log(T, "automatic plan", automatic.ops.map((o) => JSON.stringify(o.payload)), automatic.objectKeys);
+    expect(automatic.objectKeys.sort()).toEqual(["pic/new", "pic/new-thumb"]);
+    apply(db, automatic.ops);
+    expect(db.prepare("SELECT picture_object_key AS p, picture_thumb_object_key AS t, picture_tried_at AS tried FROM artists WHERE id = 'ar-linnet park'").get()).toEqual({ p: null, t: null, tried: null });
+    expect(await parrotArtistEditValues(q, "ar-linnet park")).toEqual({ name: "Linnet Park", pictureObjectKey: null });
   });
 });

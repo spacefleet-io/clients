@@ -62,7 +62,7 @@
     },
     "album": {
       "noPlayableFile": "Este álbum todavía no tiene ningún archivo reproducible.",
-      "playFailed": "No se pudo reproducir esta canción ({{error}}).",
+      "playFailed": "No se pudo reproducir esta canción. Vuelve a intentarlo en un momento.",
       "noSongs": "No hay canciones.",
       "play": "Reproducir {{title}}",
       "pause": "Pausar {{title}}"
@@ -75,7 +75,7 @@
       "next": "Siguiente",
       "open": "Abrir el reproductor",
       "playing": "Reproduciendo",
-      "error": "Error de reproducción: {{error}}",
+      "error": "Esta canción dejó de sonar. Vuelve a intentarlo en un momento.",
       "playingFromAlbum": "Reproduciendo del álbum",
       "close": "Cerrar",
       "more": "Más",

@@ -62,7 +62,7 @@
     },
     "album": {
       "noPlayableFile": "Dieses Album hat noch keine abspielbare Datei.",
-      "playFailed": "Dieser Titel konnte nicht abgespielt werden ({{error}}).",
+      "playFailed": "Dieser Titel konnte nicht abgespielt werden. Versuch es gleich noch einmal.",
       "noSongs": "Keine Titel.",
       "play": "{{title}} abspielen",
       "pause": "{{title}} pausieren"
@@ -75,7 +75,7 @@
       "next": "Nächster Titel",
       "open": "Player öffnen",
       "playing": "Läuft",
-      "error": "Wiedergabefehler: {{error}}",
+      "error": "Dieser Titel wurde unterbrochen. Versuch es gleich noch einmal.",
       "playingFromAlbum": "Wiedergabe aus Album",
       "close": "Schließen",
       "more": "Mehr",

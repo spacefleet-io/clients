@@ -28,7 +28,7 @@ import {
   Volume2,
 } from "lucide-react-native";
 import { AudioPlayback, showsPause, type AudioPlaybackState } from "@space/mobile-audio-playback";
-import { setPlaybackShuffle } from "../lib/playback";
+import { isRecovering, setPlaybackShuffle } from "../lib/playback";
 import { useMediaVolume, VolumeSlider } from "@space/mobile-media-volume";
 import { useTranslation } from "@space/mobile-shell/i18n";
 import { MOBILE_ICON_BUTTON_SIZE, MobileIconButton, SkyCover } from "@space/mobile-shell/components";
@@ -210,7 +210,8 @@ export const PlayerScreen = () => {
             </Text>
           </View>
         </View>
-        {state.error ? <ErrorText>{t("parrot.player.error", { error: state.error })}</ErrorText> : null}
+        {/* The raw player code (ERROR_CODE_IO_BAD_HTTP_STATUS…) goes to the log only, never the screen (PAR-PLAY-12, UX-COPY-02). */}
+        {state.error && !isRecovering(state) ? <ErrorText>{t("parrot.player.error")}</ErrorText> : null}
 
         <View style={styles.controls}>
           <Control label={t("shell.player.shuffle")} active={state.shuffle} onPress={() => void setPlaybackShuffle(!state.shuffle)}>
@@ -307,7 +308,12 @@ const PlayerSheet = ({
     >
       {kind === "lyrics" ? (
         state.mediaId ? (
-          <PlayerLyrics trackId={state.mediaId} positionMs={state.positionMs} />
+          <PlayerLyrics
+            trackId={state.mediaId}
+            title={nowPlayingTitles.get(state.mediaId)?.title ?? t("parrot.player.unknownSong")}
+            positionMs={state.positionMs}
+            playing={showsPause(state)}
+          />
         ) : (
           <Text style={styles.sheetTitle}>{t("shell.nowPlaying.noLyricsTitle")}</Text>
         )

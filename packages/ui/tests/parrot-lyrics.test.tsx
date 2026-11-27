@@ -204,3 +204,53 @@ describe("[parrot] searching while a lookup runs", () => {
     expect(afterFetch).not.toContain('data-testid="lyrics-searching"');
   });
 });
+
+// @req PAR-LYR-08[parrot]
+// @req PAR-LYR-10[parrot]
+describe("[parrot] the user's own lyrics on the Lyrics tab", () => {
+  const T = "[parrot-lyrics:own]";
+  const own = { ...synced, own: true as const };
+  const ownLabels = { ...labels, ownSyncedLyricsSource: "Your synced lyrics", ownPlainLyricsSource: "Your lyrics" };
+  const control = (extra: Partial<{ onEdit: () => void; onRemove: () => void }> = {}) => ({
+    onEdit: extra.onEdit ?? vi.fn(),
+    onRemove: extra.onRemove,
+    labels: { add: "Add lyrics", edit: "Edit lyrics", remove: "Remove my lyrics" },
+  });
+
+  it("says the words are the user's own, and offers Edit and Remove", () => {
+    const html = renderToStaticMarkup(<ParrotLyricsPane lyrics={own} positionMs={0} labels={ownLabels} ownLyrics={control({ onRemove: vi.fn() })} />);
+    console.info(T, "own synced", html.length);
+    expect(html).toContain("Your synced lyrics");
+    expect(html).not.toContain("Synced lyrics from your file");
+    expect(html).toContain('data-testid="lyrics-edit"');
+    expect(html).toContain('data-testid="lyrics-remove"');
+  });
+
+  it("offers Add lyrics, not Remove, when the song has none", () => {
+    const none = { synced: null, plain: null, fetched: true, notFound: true } as const;
+    const html = renderToStaticMarkup(<ParrotLyricsPane lyrics={none} positionMs={0} labels={ownLabels} ownLyrics={control({ onRemove: vi.fn() })} />);
+    console.info(T, "no lyrics", html.length);
+    expect(html).toContain('data-testid="lyrics-add"');
+    expect(html).not.toContain('data-testid="lyrics-remove"');
+  });
+
+  it("found lyrics offer Edit but no Remove: only the user's own words can be removed", () => {
+    const html = renderToStaticMarkup(<ParrotLyricsPane lyrics={{ ...synced, fetched: true }} positionMs={0} labels={ownLabels} ownLyrics={control({ onRemove: vi.fn() })} />);
+    expect(html).toContain('data-testid="lyrics-edit"');
+    expect(html).not.toContain('data-testid="lyrics-remove"');
+  });
+
+  it("Edit opens the editor", async () => {
+    Reflect.set(globalThis, "IS_REACT_ACT_ENVIRONMENT", true);
+    const onEdit = vi.fn();
+    const host = document.createElement("div");
+    document.body.append(host);
+    const root = createRoot(host);
+    await act(async () => root.render(<ParrotLyricsPane lyrics={own} positionMs={0} labels={ownLabels} ownLyrics={control({ onEdit })} />));
+    await act(async () => host.querySelector<HTMLElement>('[data-testid="lyrics-edit"]')!.click());
+    console.info(T, "edit clicks", onEdit.mock.calls.length);
+    expect(onEdit).toHaveBeenCalledOnce();
+    await act(async () => root.unmount());
+    host.remove();
+  });
+});

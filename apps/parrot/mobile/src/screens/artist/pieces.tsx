@@ -1,8 +1,9 @@
 // The artist page's pieces (PAR-LOOK-06). The photo edge to edge (Badger's title hero, UX-PHONE-04) with its credit
-// line (PAR-META-15); with no photo, the artist's drawn picture (`ParrotArt`, PAR-LOOK-01) with their initials, never a
-// blank box; while a photo may still come, a shimmer (PAR-META-20).
+// line (PAR-META-15); with no photo, the artist's drawn picture (`ParrotArt`, PAR-LOOK-01, without its motif) and
+// their initials in a round above the chip and name (`ArtistInitials`), never a blank box; while a photo may still
+// come, a shimmer (PAR-META-20).
 import React from "react";
-import { Linking, StyleSheet, Text, View, type NativeScrollEvent, type NativeSyntheticEvent } from "react-native";
+import { Linking, StyleSheet, Text, View, useWindowDimensions, type NativeScrollEvent, type NativeSyntheticEvent } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";
 import { useTranslation } from "@space/mobile-shell/i18n";
@@ -11,7 +12,7 @@ import type { ParrotPhotoCredit } from "@space/parrot-library-db-definition/ops"
 import { colors, spacing } from "../../theme";
 import { ParrotArt } from "../art";
 import { PAGE_BACK_ROW } from "../pageBack";
-import { MobileSkeletonPulse } from "@space/mobile-shell/components";
+import { MOBILE_ICON_BUTTON_SIZE, MobileSkeletonPulse } from "@space/mobile-shell/components";
 import { SongListRow } from "../SongListRow";
 import type { ArtistPage, ArtistSong } from "./useArtistPage";
 
@@ -55,11 +56,32 @@ const initials = (name: string) =>
     .join("");
 
 /**
+ * The artist's initials in a round, for an artist with no photo. The page lays it out above the chip and the name
+ * (never over them); the letters follow the phone's text size (UX-A11Y-05) and the round grows with them, never
+ * below Home's 96, so they stay inside it; the screen reader skips it, as the name under it is read.
+ */
+export const ArtistInitials = ({ name }: { name: string }) => {
+  const size = Math.round(INITIALS_ROUND * Math.max(1, useWindowDimensions().fontScale ?? 1));
+  return (
+    <View
+      testID="artist-initials"
+      style={[styles.initialsRound, { width: size, height: size, borderRadius: size / 2 }]}
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+    >
+      <Text style={styles.initials} numberOfLines={1}>
+        {initials(name)}
+      </Text>
+    </View>
+  );
+};
+
+/**
  * The photo edge to edge, fading into the sky at the bottom (Badger's title hero). The fade is drawn at the hero's
  * size in numbers, not "100%": when a large text size grew the hero after its first layout, a percentage fade stayed
  * at its first size and the photo showed unfaded below it (UX-A11Y-05).
  */
-export const ArtistHero = ({ artistId, name, page, width, height }: { artistId: string; name: string; page: ArtistPage; width: number; height: number }) => (
+export const ArtistHero = ({ artistId, page, width, height }: { artistId: string; page: ArtistPage; width: number; height: number }) => (
   <View testID="artist-hero" style={{ width, height }}>
     {page.photoWaiting ? (
       <MobileSkeletonPulse testID="artist-photo-shimmer" style={StyleSheet.absoluteFill} />
@@ -68,16 +90,12 @@ export const ArtistHero = ({ artistId, name, page, width, height }: { artistId: 
         seed={artistId}
         size={width}
         radius={0}
+        plain
         style={{ height }}
         coverKey={page.photo?.pictureObjectKey}
         previewKey={page.photo?.pictureThumbObjectKey}
       />
     )}
-    {!page.photo && !page.photoWaiting ? (
-      <View style={[StyleSheet.absoluteFill, styles.centre]} pointerEvents="none">
-        <Text style={[styles.initials, { fontSize: height / 3.2 }]}>{initials(name)}</Text>
-      </View>
-    ) : null}
     <Svg testID="artist-hero-fade" style={StyleSheet.absoluteFill} width={width} height={height} pointerEvents="none">
       <Defs>
         <LinearGradient id="artistHeroFade" x1="0" y1="0" x2="0" y2="1">
@@ -149,13 +167,31 @@ export const ArtistTopBar = ({ name }: { name: string }) => {
   );
 };
 
-/** Past the back button (44) and its margins. */
-const TOP_BAR_NAME_LEFT = spacing.lg + 44 + spacing.md;
+/** Past the back button (the shared 48 dp icon button) and its margins. */
+const TOP_BAR_NAME_LEFT = spacing.lg + MOBILE_ICON_BUTTON_SIZE + spacing.md;
+
+/** The initials' round at the standard text size: the size of an artist's round picture on Home (`HomeScreen`, 96). */
+const INITIALS_ROUND = 96;
 
 const styles = StyleSheet.create({
   credit: { color: colors.textMuted, fontSize: 11, marginTop: spacing.xs, textAlign: "center" },
-  centre: { alignItems: "center", justifyContent: "center" },
-  initials: { color: "rgba(255,255,255,0.88)", fontWeight: "800", letterSpacing: 1, textShadowColor: "rgba(0,0,0,0.35)", textShadowRadius: 8 },
+  initialsRound: {
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(0,0,0,0.22)",
+    borderWidth: 1.5,
+    borderColor: "rgba(255,255,255,0.32)",
+  },
+  initials: {
+    color: "rgba(255,255,255,0.92)",
+    fontSize: 34,
+    lineHeight: 40,
+    fontWeight: "800",
+    textAlign: "center",
+    includeFontPadding: false,
+    textShadowColor: "rgba(0,0,0,0.35)",
+    textShadowRadius: 8,
+  },
   sectionRow: { flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", paddingHorizontal: spacing.lg },
   sectionTitle: { color: colors.textMuted, fontSize: 11, letterSpacing: 1.5, fontWeight: "900" },
   sectionRight: { color: colors.textMuted, fontSize: 12 },

@@ -4,7 +4,7 @@
  * now-playing page. Texts come in already translated; data and playback stay with each app.
  */
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { ListMusic, Loader2, Mic2, Pause, Play, Repeat, Repeat1, Shuffle, SkipBack, SkipForward } from "lucide-react";
+import { ListMusic, Loader2, Mic2, Pause, PenLine, Play, Repeat, Repeat1, Shuffle, SkipBack, SkipForward } from "lucide-react";
 import { activeLyricIndex, formatDuration, homeJumpButton, homeRecentlyAdded, homeView } from "@space/parrot-core";
 import type { HistoryAlbum, HomeNowPlaying, ListeningHistory, ParrotAlbumSort, ParrotLyrics, RepeatMode } from "@space/parrot-core";
 import { Button } from "../button";
@@ -363,6 +363,9 @@ export type ParrotNowPlayingLabels = {
   /** The same line for lyrics fetched from our lyrics library (PAR-LYR-05). */
   fetchedSyncedLyricsSource: string;
   fetchedPlainLyricsSource: string;
+  /** The same line for lyrics the user gave the song themselves (PAR-LYR-08); the plain source line where left out. */
+  ownSyncedLyricsSource?: string;
+  ownPlainLyricsSource?: string;
   nothingNext: string;
   nowPlaying: string;
   /** `onOpen`: the value is an artist or album name that opens its page (PAR-NAV-05). */
@@ -378,6 +381,16 @@ export type ParrotLyricsFetchControl = {
   state: "idle" | "busy" | "none" | "failed";
   onFetch: () => void;
   labels: { body: string; button: string; none: string; failed: string };
+};
+
+/**
+ * The user's own lyrics for the song (PAR-LYR-08): "Add lyrics" on a song with none, "Edit lyrics" under its words,
+ * "Remove" once they are the user's own (the song falls back to its file's or the found ones).
+ */
+export type ParrotOwnLyricsControl = {
+  onEdit: () => void;
+  onRemove?: () => void;
+  labels: { add: string; edit: string; remove: string };
 };
 
 type NowPlayingEntry = { key: number; track: { id: string; title: string; artistName: string; artistId?: string | null; albumId: string; durationMs: number | null } };
@@ -415,7 +428,39 @@ type ParrotNowPlayingProps = {
   onSeek?: (ms: number) => void;
   /** Offers to fetch the lyrics of a song with none; left out where the app cannot fetch them. */
   fetchLyrics?: ParrotLyricsFetchControl;
+  /** Lets the user add, edit or remove the song's lyrics; left out where the app cannot (the TV). */
+  ownLyrics?: ParrotOwnLyricsControl;
 };
+
+type ParrotLyricsPaneProps = Pick<ParrotNowPlayingProps, "lyrics" | "positionMs" | "onSeek" | "labels" | "fetchLyrics" | "ownLyrics">;
+
+/**
+ * The Lyrics tab: the song's words, then the user's own lyrics actions (PAR-LYR-08).
+ */
+export function ParrotLyricsPane(props: ParrotLyricsPaneProps) {
+  const { lyrics, ownLyrics } = props;
+  if (!ownLyrics) return <LyricsWords {...props} />;
+  const { labels } = ownLyrics;
+  const hasWords = Boolean(lyrics?.synced || lyrics?.plain);
+  return (
+    <div data-testid="lyrics-pane">
+      <LyricsWords {...props} />
+      {lyrics !== undefined && (
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Button variant="outline" size="sm" className="rounded-full" onClick={ownLyrics.onEdit} data-testid={hasWords ? "lyrics-edit" : "lyrics-add"}>
+            <PenLine className="mr-2 h-4 w-4" aria-hidden />
+            {hasWords ? labels.edit : labels.add}
+          </Button>
+          {lyrics?.own && ownLyrics.onRemove && (
+            <Button variant="ghost" size="sm" className="rounded-full" onClick={ownLyrics.onRemove} data-testid="lyrics-remove">
+              {labels.remove}
+            </Button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 /**
  * The Lyrics tab's words. Synced lines (PAR-LYR-01) light up as they are sung, as in the design: the line sung now big
@@ -425,7 +470,7 @@ type ParrotNowPlayingProps = {
  * spinner (PAR-LYR-06). A song with none says "No lyrics yet" (PAR-LYR-04); once the lookup came back empty it says
  * "No lyrics" with "Search again" (PAR-LYR-05), so loading never looks like nothing found (PAR-META-20).
  */
-export function ParrotLyricsPane({ lyrics, positionMs, onSeek, labels, fetchLyrics }: Pick<ParrotNowPlayingProps, "lyrics" | "positionMs" | "onSeek" | "labels" | "fetchLyrics">) {
+function LyricsWords({ lyrics, positionMs, onSeek, labels, fetchLyrics }: ParrotLyricsPaneProps) {
   const active = lyrics?.synced ? activeLyricIndex(lyrics.synced, positionMs) : -1;
   const current = useRef<HTMLButtonElement | null>(null);
   useEffect(() => {
@@ -458,7 +503,9 @@ export function ParrotLyricsPane({ lyrics, positionMs, onSeek, labels, fetchLyri
             );
           })}
         </div>
-        <p className="mt-6 text-xs text-muted-foreground">{lyrics.fetched ? labels.fetchedSyncedLyricsSource : labels.syncedLyricsSource}</p>
+        <p className="mt-6 text-xs text-muted-foreground">
+          {lyrics.own ? (labels.ownSyncedLyricsSource ?? labels.syncedLyricsSource) : lyrics.fetched ? labels.fetchedSyncedLyricsSource : labels.syncedLyricsSource}
+        </p>
       </div>
     );
   }
@@ -468,7 +515,9 @@ export function ParrotLyricsPane({ lyrics, positionMs, onSeek, labels, fetchLyri
         <p className="max-h-[min(60vh,560px)] overflow-y-auto whitespace-pre-line text-xl font-semibold leading-relaxed text-foreground/80" data-testid="lyrics-plain">
           {lyrics.plain}
         </p>
-        <p className="mt-6 text-xs text-muted-foreground">{lyrics.fetched ? labels.fetchedPlainLyricsSource : labels.plainLyricsSource}</p>
+        <p className="mt-6 text-xs text-muted-foreground">
+          {lyrics.own ? (labels.ownPlainLyricsSource ?? labels.plainLyricsSource) : lyrics.fetched ? labels.fetchedPlainLyricsSource : labels.plainLyricsSource}
+        </p>
       </div>
     );
   }
@@ -575,7 +624,14 @@ export function ParrotNowPlaying(props: ParrotNowPlayingProps) {
           </div>
           <div className="mt-8" data-testid={`now-playing-${tab}`}>
             {tab === "lyrics" && (
-              <ParrotLyricsPane lyrics={props.lyrics} positionMs={props.positionMs} onSeek={props.onSeek} labels={labels} fetchLyrics={props.fetchLyrics} />
+              <ParrotLyricsPane
+                lyrics={props.lyrics}
+                positionMs={props.positionMs}
+                onSeek={props.onSeek}
+                labels={labels}
+                fetchLyrics={props.fetchLyrics}
+                ownLyrics={props.ownLyrics}
+              />
             )}
             {tab === "queue" && (
               <ol className="max-w-2xl space-y-1">

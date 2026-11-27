@@ -71,7 +71,8 @@ export const usePlayWith = (openPlayer: () => void) => {
       // Cancel at "Already playing on {device}. Play here instead?" (ACCT-STREAM-02): the music stays as it was.
       if (message === "STREAM_CANCELLED") return log.info("play.stream_cancelled", {});
       log.warn("play.start_failed", { message });
-      setError(message === "NO_PLAYABLE_FILE" ? t("parrot.album.noPlayableFile") : t("parrot.album.playFailed", { error: message }));
+      // The raw message is in the log line above, never on screen (PAR-PLAY-12, UX-COPY-02).
+      setError(message === "NO_PLAYABLE_FILE" ? t("parrot.album.noPlayableFile") : t("parrot.album.playFailed"));
     } finally {
       setStarting(null);
     }
@@ -94,7 +95,7 @@ export const usePlayWith = (openPlayer: () => void) => {
         return null;
       }
       log.warn("play.queue_failed", { message, where });
-      setError(message === "NO_PLAYABLE_FILE" ? t("parrot.album.noPlayableFile") : t("parrot.album.playFailed", { error: message }));
+      setError(message === "NO_PLAYABLE_FILE" ? t("parrot.album.noPlayableFile") : t("parrot.album.playFailed"));
       return null;
     }
   };

@@ -30,6 +30,8 @@ describe("scanParrotImport", () => {
     makeAudioFixture(path.join(untagged, "08 At the Gate.mp3"), {}, 1, log);
     await fs.writeFile(path.join(meltway, "broken.mp3"), "not audio");
     await fs.writeFile(path.join(meltway, "notes.txt"), "not a song");
+    await fs.writeFile(path.join(meltway, "13 Nook.lrc"), "[ti:Nook]\n[00:01.00] Nook words");
+    await fs.writeFile(path.join(untagged, "huge.lrc"), "x".repeat(300 * 1024));
     log("fixtures", { root });
   });
 
@@ -56,7 +58,25 @@ describe("scanParrotImport", () => {
     expect(scan.totalBytes).toBe(scan.entries.reduce((sum, entry) => sum + entry.size, 0));
     expect(scan.totalBytes).toBeGreaterThan(0);
     expect(scan.unreadable.map((entry) => path.basename(entry.file))).toEqual(["broken.mp3"]);
+    // PAR-UP-01: lyrics files ride along with their text; one too big to be lyrics is named, not read.
+    expect(scan.lyrics.map((entry) => [path.basename(entry.file), entry.text ?? entry.error])).toEqual([
+      ["huge.lrc", "tooBig"],
+      ["13 Nook.lrc", "[ti:Nook]\n[00:01.00] Nook words"],
+      ["notes.txt", "not a song"],
+    ]);
     expect(progress.at(-1)).toEqual([4, 4]);
+  });
+
+  it("keeps the lyrics the user placed as their own, and Remove keeps none from the files", async () => {
+    const nook = path.join(music, "Linnet Park", "Meltway", "13 Nook.mp3");
+    const info = { ...(await readParrotTrackInfo(nook, music)), lyrics: { synced: "[00:01.00] sidecar", plain: "sidecar" } };
+    const placed = applyParrotImportEdit(info, { artist: "", album: "", title: "", lyrics: { synced: null, plain: "Mine" } });
+    const removed = applyParrotImportEdit(info, { artist: "", album: "", title: "", lyrics: null });
+    const untouched = applyParrotImportEdit(info, { artist: "", album: "", title: "" });
+    log("lyrics", { placed: placed.lyrics, removed: removed.lyrics, untouched: untouched.lyrics });
+    expect(placed.lyrics).toEqual({ synced: null, plain: "Mine", user: true });
+    expect(removed.lyrics).toBeNull();
+    expect(untouched.lyrics).toEqual(info.lyrics);
   });
 
   it("applies the user's edits on top of the tags, blank keeping the tag", async () => {

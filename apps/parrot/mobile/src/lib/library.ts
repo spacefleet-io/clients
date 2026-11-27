@@ -30,6 +30,7 @@ import type { MetadataClient } from "@space/metadata-client";
 import {
   buildParrotPlaylists,
   parrotAlbumEditValues,
+  parrotArtistEditValues,
   parrotTrackEditValues,
   planParrotDelete,
   saveParrotEdit,
@@ -61,6 +62,11 @@ import {
   PLAYLIST_TRACKS_SQL,
   PLAYLISTS_SQL,
   toParrotLyrics,
+  parrotLyricsOpsToKeep,
+  PARROT_LYRICS_KEEP_SQL,
+  planParrotOwnLyrics,
+  planParrotRemoveOwnLyrics,
+  type ParrotOwnLyrics,
   TRACK_LYRICS_SQL,
   type ParrotCanSpend,
   type ParrotLyrics,
@@ -604,6 +610,9 @@ export const getEditValues = async (target: ParrotManageTarget): Promise<ParrotE
   return { kind: "album", edit };
 };
 
+/** The artist form's values (PAR-META-31): the artist's name and the key of its photo's small copy; null when it is gone. */
+export const getArtistEditValues = (artistId: string) => parrotArtistEditValues(libraryQuery, artistId);
+
 /**
  * PAR-META-16/17: saves edited details of a song or an album, and an album's new cover (sealed with the library key
  * in both sizes), through the shared `saveParrotEdit`. Resolves to the library version after it; rejects when nothing
@@ -665,10 +674,25 @@ export const fetchTrackLyrics = async (
   // "No lyrics" is kept too, so every device shows it as final (PAR-LYR-04); a later fetch asks again.
   if (found.kind === "found" || found.kind === "none") {
     const op = found.op;
-    await saver.save(`lyrics for song ${trackId}`, () => [op]);
+    await saver.save(`lyrics for song ${trackId}`, async () => parrotLyricsOpsToKeep([op], await query<{ id: string; source: string | null }>(PARROT_LYRICS_KEEP_SQL)));
   }
   const lyrics = await readTrackLyrics(trackId);
   return { outcome: lyrics?.synced || lyrics?.plain ? "found" : "none", lyrics };
+};
+
+/**
+ * PAR-LYR-08/11: keeps (`lyrics` given) or removes (null) the user's own lyrics of a song like any edit, and resolves
+ * to what the sheet shows now. Lyrics with no words reject.
+ */
+export const saveOwnLyrics = async (trackId: string, lyrics: ParrotOwnLyrics | null): Promise<ParrotLyrics | null> => {
+  const context = { now: Date.now(), newId: () => crypto.randomUUID() };
+  const op = lyrics ? planParrotOwnLyrics(trackId, lyrics, context) : planParrotRemoveOwnLyrics(trackId, context);
+  if (!op) throw new Error("The lyrics have no words.");
+  await saver.save(`${lyrics ? "own lyrics of" : "own lyrics removed from"} song ${trackId}`, async () =>
+    parrotLyricsOpsToKeep([op], await query<{ id: string; source: string | null }>(PARROT_LYRICS_KEEP_SQL))
+  );
+  log(lyrics ? "lyrics.own_set" : "lyrics.own_remove", { trackId });
+  return readTrackLyrics(trackId);
 };
 
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
@@ -700,10 +724,7 @@ export const autoFetchLyrics = (args: {
     lookup: args.lookup,
     publish: async (ops) => {
       if (args.signal.aborted || !db) return false;
-      const existing = async () => {
-        const songs = new Set((await query<{ id: string }>("SELECT id FROM tracks")).map((row) => row.id));
-        return ops.filter((op) => op.type === "lyrics.set" && songs.has(op.payload.trackId));
-      };
+      const existing = async () => parrotLyricsOpsToKeep(ops, await query<{ id: string; source: string | null }>(PARROT_LYRICS_KEEP_SQL));
       if ((await existing()).length === 0) return true;
       try {
         const version = await saver.save(`lyrics for ${ops.length} song(s), looked up on their own`, existing);

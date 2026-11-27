@@ -26,8 +26,8 @@ vi.mock("@space/ui", () => {
   const Pass = ({ children, className }: { children?: React.ReactNode; className?: string }) => <div className={className}>{children}</div>;
   return {
     Button: ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { size?: string; variant?: string }) => {
-      const { size: _size, variant: _variant, ...rest } = props;
-      return <button {...rest}>{children}</button>;
+      const { size: _size, variant, ...rest } = props;
+      return <button data-variant={variant} {...rest}>{children}</button>;
     },
     Input: (props: React.InputHTMLAttributes<HTMLInputElement>) => <input {...props} />,
     Spinner: () => <span />,
@@ -304,6 +304,10 @@ describe("Parrot desktop: Google, Apple and Microsoft sign-in", () => {
     expect(host.querySelector('[data-testid="signin-email"]')).toBeNull();
     expect(rowIds()).toEqual([]);
     expect(host.textContent).toContain("Enter the code from your second sign-in step.");
+    // UX-BTN-01: the second step's text buttons are the shared ghost button, as in Badger.
+    for (const id of ["provider-second-step-resend", "provider-second-step-cancel"]) {
+      expect(host.querySelector(`[data-testid="${id}"]`)?.getAttribute("data-variant")).toBe("ghost");
+    }
     await act(async () => host.querySelector<HTMLButtonElement>('[data-testid="provider-second-step-resend"]')!.click());
     await flush();
     await type(host.querySelector<HTMLInputElement>('[data-testid="provider-second-step-code"]')!, " 123456 ");

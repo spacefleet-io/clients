@@ -53,6 +53,8 @@ vi.mock("@space/mobile-shell/i18n", () => ({ useTranslation: () => ({ t: (key: s
 vi.mock("@space/mobile-shell/components", async () => ({
   MobileRailScroll: (await vi.importActual<typeof import("@space/mobile-shell/rail")>("@space/mobile-shell/rail")).MobileRailScroll,
   MobileSkeletonPulse: "Shimmer",
+  MobileIconButton: "MobileIconButton",
+  MOBILE_ICON_BUTTON_SIZE: 48,
 }));
 vi.mock("../src/state/useQuery", () => ({
   useQuery: (load: () => unknown) => (String(load).includes("readArtistPicture") ? fake.picture : { loading: false, error: null, data: [] }),
@@ -94,13 +96,14 @@ const all = (node: unknown, match: (el: Element) => boolean, out: Element[] = []
 const render = () =>
   expand((ArtistScreen as unknown as (props: unknown) => unknown)({ route: { params: { artistId: "ar-lp", name: "Linnet Park" } }, navigation: { goBack: () => undefined } }));
 const shown = () => {
-  const hero = all(render(), (el) => el.props?.testID === "artist-hero");
+  const page = render();
+  const hero = all(page, (el) => el.props?.testID === "artist-hero");
   const art = all(hero, (el) => el.type === "ParrotArt");
   const result = {
     shimmer: all(hero, (el) => el.props?.testID === "artist-photo-shimmer").length,
     photo: art.filter((el) => el.props.coverKey).length,
     drawn: art.filter((el) => !el.props.coverKey).length,
-    initials: all(hero, (el) => el.type === "Text" && el.props.children === "LP").length,
+    initials: all(all(page, (el) => el.props?.testID === "artist-initials"), (el) => el.type === "Text" && el.props.children === "LP").length,
   };
   log("shown", { picture: fake.picture, ...result });
   return result;
