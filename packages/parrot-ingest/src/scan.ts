@@ -45,6 +45,8 @@ export type ParrotImportEdit = {
   tracklist?: ParrotListedTrack[];
   /** The matched album's id in the metadata (PAR-COPY-01): the copy-changes refresh and the cover pass find the album by it. */
   albumMusicId?: string | null;
+  /** The matched song's id in our music copy (PAR-LYR-01): its lyrics lookup reads our lyrics copy by it. */
+  trackMusicId?: string | null;
   coverId?: string;
   coverPicture?: string;
   coverCrop?: ParrotCoverCrop;
@@ -171,6 +173,7 @@ export const applyParrotImportEdit = (info: ParrotTrackInfo, edit: ParrotImportE
     ...(cover ? { cover, ...(edit.coverCrop ? { coverCrop: edit.coverCrop } : {}) } : {}),
     ...(edit.tracklist?.length ? { tracklist: edit.tracklist } : {}),
     ...(edit.albumMusicId ? { albumMusicId: edit.albumMusicId } : {}),
+    ...(edit.trackMusicId ? { trackMusicId: edit.trackMusicId } : {}),
     ...(edit.unidentified ? { unidentified: true } : {}),
   };
 };
